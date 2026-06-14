@@ -189,11 +189,16 @@ export interface Bridge {
    * when several IDEs share one backend; [panelId] then selects the exact panel
    * (session tab) inside that IDE so the notification — and its "Open session"
    * action — target the right tab.
+   *
+   * Returns whether the IDE balloon was shown (false when suppressed because the
+   * user is viewing the session) and whether the IDE window was focused. The
+   * caller raises a real OS notification when the IDE is NOT focused, since an
+   * in-IDE balloon is hidden behind other apps then.
    */
   showNotification(params: {
     title: string;
     body: string;
     workingDir?: string;
     panelId?: string;
-  }): Promise<void>;
+  }): Promise<{ shown: boolean; ideFocused: boolean }>;
 }

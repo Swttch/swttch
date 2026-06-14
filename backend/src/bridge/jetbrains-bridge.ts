@@ -465,8 +465,14 @@ export class JetBrainsBridge implements Bridge {
     body: string;
     workingDir?: string;
     panelId?: string;
-  }): Promise<void> {
-    await this.request('SHOW_NOTIFICATION', params);
+  }): Promise<{ shown: boolean; ideFocused: boolean }> {
+    const result = await this.request('SHOW_NOTIFICATION', params);
+    return {
+      shown: result['shown'] === true,
+      // Default ideFocused to true so we never raise a spurious OS notification
+      // when the field is missing/malformed.
+      ideFocused: result['ideFocused'] !== false,
+    };
   }
 }
 

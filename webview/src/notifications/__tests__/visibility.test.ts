@@ -8,17 +8,29 @@ function setHidden(hidden: boolean) {
   });
 }
 
+function setPanelId(id: string | null) {
+  window.history.replaceState({}, '', id ? `/?panelId=${id}` : '/');
+}
+
 describe('shouldNotifyForBackgroundEvent()', () => {
   afterEach(() => {
     setHidden(false);
+    setPanelId(null);
   });
 
-  it('returns true when the page is hidden (tab backgrounded / editor tab not selected)', () => {
+  it('always returns true in the IDE (panelId present), regardless of document.hidden', () => {
+    // JCEF document.hidden is unreliable, so the IDE host gates instead.
+    setPanelId('panel-1');
+    setHidden(false);
+    expect(shouldNotifyForBackgroundEvent()).toBe(true);
     setHidden(true);
     expect(shouldNotifyForBackgroundEvent()).toBe(true);
   });
 
-  it('returns false when the page is visible (user is looking at this session)', () => {
+  it('returns document.hidden in standalone (no panelId)', () => {
+    setPanelId(null);
+    setHidden(true);
+    expect(shouldNotifyForBackgroundEvent()).toBe(true);
     setHidden(false);
     expect(shouldNotifyForBackgroundEvent()).toBe(false);
   });

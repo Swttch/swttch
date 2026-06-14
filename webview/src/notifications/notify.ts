@@ -1,5 +1,6 @@
 import { api } from '@/api/ClaudeCodeApi';
 import { NOTIFICATION_TEMPLATES } from './templates';
+import { isIdeHost } from './host';
 import {
   NotificationKind,
   SOUND_OFF,
@@ -11,18 +12,18 @@ import {
  * Emits a desktop notification for the given event kind.
  *
  * Two delivery paths, chosen by environment:
+ *  - JetBrains IDE (JCEF): the page's own `Notification` API is unreliable, so we
+ *    ask the IDE host to raise a native notification via `SHOW_NOTIFICATION`. The
+ *    platform shows a balloon, or an OS notification when the IDE is backgrounded.
  *  - Browser / standalone: the page's own `Notification` API. No-ops when
- *    permission has not been granted yet, so callers can invoke unconditionally.
- *  - JCEF (JetBrains IDE): the page has no `Notification` API, so we ask the IDE
- *    host to raise a native notification via `SHOW_NOTIFICATION`. The host
- *    decides whether to suppress it (e.g. when its window is already focused).
+ *    permission has not been granted, so callers can invoke unconditionally.
  *
- * The notification is always created with `silent: true` on the browser path —
- * sound playback is delegated to the Node.js backend via `PLAY_SYSTEM_SOUND` so
- * we can play a specific OS sound consistently across browsers (the browser
- * `silent: false` path is too unreliable on Chrome/macOS). Sound is played in
- * both paths; when `soundSelection !== SOUND_OFF` the selected `soundId` is sent
- * to the backend in fire-and-forget fashion.
+ * On the browser path the notification is created with `silent: true` — sound is
+ * delegated to the Node.js backend via `PLAY_SYSTEM_SOUND` so we can play a
+ * specific OS sound consistently across browsers (the browser `silent: false`
+ * path is too unreliable on Chrome/macOS). Sound is played on both paths; when
+ * `soundSelection !== SOUND_OFF` the selected `soundId` is sent to the backend in
+ * fire-and-forget fashion.
  */
 
 const activeNotifications = new Set<Notification>();
@@ -37,10 +38,14 @@ export function notify(
   const template = NOTIFICATION_TEMPLATES[kind];
   const title = template.title(ctx);
 
-  if ('Notification' in window) {
+  if (isIdeHost()) {
+    // JetBrains IDE: delegate to the host (browser Notification API is
+    // present-but-broken in JCEF — CEF #2951 — so never use it here).
+    api.notifications.show({ title, body: template.body() }).catch((err: unknown) => {
+      console.warn('[notify] SHOW_NOTIFICATION failed:', err);
+    });
+  } else if ('Notification' in window && Notification.permission === 'granted') {
     // Browser / standalone mode: raise the notification ourselves.
-    if (Notification.permission !== 'granted') return;
-
     let n: Notification;
     try {
       n = new Notification(title, {
@@ -65,10 +70,8 @@ export function notify(
       activeNotifications.delete(n);
     };
   } else {
-    // JCEF (JetBrains IDE): no Notification API — delegate to the IDE host.
-    api.notifications.show({ title, body: template.body() }).catch((err: unknown) => {
-      console.warn('[notify] SHOW_NOTIFICATION failed:', err);
-    });
+    // Browser without notification permission/API — nothing to show, no sound.
+    return;
   }
 
   if (soundSelection !== SOUND_OFF) {

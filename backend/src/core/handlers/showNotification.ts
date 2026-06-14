@@ -1,6 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
+import { showOsNotification } from '../../system-notifications';
 
 /**
  * Handle SHOW_NOTIFICATION: ask the host (IDE) to raise a native desktop
@@ -39,7 +40,13 @@ export async function showNotificationHandler(
     : undefined;
 
   try {
-    await bridge.showNotification({ title, body, workingDir, panelId });
+    const { shown, ideFocused } = await bridge.showNotification({ title, body, workingDir, panelId });
+    // The IDE balloon is hidden behind other apps when the IDE is in the
+    // background, so raise a real OS notification in that case (only when the
+    // balloon was actually shown — i.e. the user isn't already viewing it).
+    if (shown && !ideFocused) {
+      await showOsNotification(title, body);
+    }
     connections.sendTo(connectionId, 'ACK', {
       requestId: message.requestId,
       status: 'ok',

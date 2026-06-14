@@ -17,6 +17,17 @@ import java.io.File
 import java.io.InputStreamReader
 
 /**
+ * Result of an RpcHandler.showNotification call.
+ *
+ * - [shown]: the IDE balloon was actually displayed (false when suppressed
+ *   because the user is already viewing the session).
+ * - [ideFocused]: the IDE window was focused at the time. When false and [shown]
+ *   is true, the backend additionally raises a real OS notification, since an
+ *   in-IDE balloon is hidden behind other apps.
+ */
+data class NotificationOutcome(val shown: Boolean, val ideFocused: Boolean)
+
+/**
  * Manages the Node.js backend process lifecycle.
  *
  * Responsibilities:
@@ -310,8 +321,14 @@ class NodeProcessManager(
          * browser notification (JCEF has no Notification API). [panelId] identifies
          * the originating session tab so the request is routed to the right panel
          * and its "Open session" action returns there.
+         *
+         * Returns whether the IDE balloon was actually shown (vs suppressed because
+         * the user is already viewing the session) and whether the IDE window is
+         * focused — the backend uses the latter to decide whether to additionally
+         * raise a real OS notification (an IDE balloon is hidden when the IDE is in
+         * the background).
          */
-        suspend fun showNotification(title: String, body: String, panelId: String?)
+        suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome
     }
 
     /**

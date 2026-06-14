@@ -73,6 +73,12 @@ function uninstallNotificationMock() {
   delete (globalThis as unknown as { Notification?: unknown }).Notification;
 }
 
+// notify() detects the IDE (JCEF) by the panelId in the page URL, NOT by the
+// presence of window.Notification.
+function setPanelId(id: string | null) {
+  window.history.replaceState({}, '', id ? `/?panelId=${id}` : '/');
+}
+
 beforeEach(() => {
   vi.resetModules();
   playMock.mockReset();
@@ -96,16 +102,21 @@ beforeEach(() => {
   originalFocus = window.focus.bind(window);
   focusSpy = vi.fn<() => void>();
   window.focus = focusSpy as unknown as typeof window.focus;
+
+  // Default to standalone (no panelId); IDE tests opt in via setPanelId.
+  setPanelId(null);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
   uninstallNotificationMock();
+  setPanelId(null);
   window.focus = originalFocus;
 });
 
 describe('notify()', () => {
-  it('delegates to api.notifications.show when window.Notification is unavailable (JCEF)', async () => {
+  it('delegates to api.notifications.show when panelId is present (IDE)', async () => {
+    setPanelId('panel-1');
     uninstallNotificationMock();
     const { notify } = await import('../notify');
     notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' }, SOUND_OFF);
@@ -114,11 +125,23 @@ describe('notify()', () => {
       title: 'My Session',
       body: 'Response complete',
     });
-    // SOUND_OFF → no sound on the JCEF path either.
+    // SOUND_OFF → no sound on the IDE path either.
     expect(playMock).not.toHaveBeenCalled();
   });
 
-  it('falls back to APP_NAME on the JCEF path when sessionTitle is null', async () => {
+  it('delegates to the host in the IDE even when window.Notification exists (CEF #2951)', async () => {
+    // Recent JCEF exposes a present-but-broken Notification object; panelId must
+    // win so we never take the dead browser path inside the IDE.
+    setPanelId('panel-1');
+    installNotificationMock('granted');
+    const { notify } = await import('../notify');
+    notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' }, SOUND_OFF);
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+    expect(constructorSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to APP_NAME on the IDE path when sessionTitle is null', async () => {
+    setPanelId('panel-1');
     uninstallNotificationMock();
     const { notify } = await import('../notify');
     notify(NotificationKind.STREAM_ERROR, { sessionTitle: null }, SOUND_OFF);
@@ -128,7 +151,8 @@ describe('notify()', () => {
     });
   });
 
-  it('plays the selected sound on the JCEF path', async () => {
+  it('plays the selected sound on the IDE path', async () => {
+    setPanelId('panel-1');
     uninstallNotificationMock();
     const { notify } = await import('../notify');
     notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: null }, 'Glass');

@@ -496,9 +496,11 @@ if ($dialog.ShowDialog() -eq 'OK') {
     body: string;
     workingDir?: string;
     panelId?: string;
-  }): Promise<void> {
+  }): Promise<{ shown: boolean; ideFocused: boolean }> {
     // no-op: browser mode raises notifications via the webview's own
-    // Notification API, so the backend is never asked to show one.
+    // Notification API, so the backend is never asked to show one. Report
+    // ideFocused=true so the caller never raises an OS notification here.
+    return { shown: false, ideFocused: true };
   }
 
   async openTerminal(workingDir: string): Promise<void> {
