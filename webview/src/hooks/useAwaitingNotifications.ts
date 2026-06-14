@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   NotificationKind,
   notify,
+  shouldNotifyForBackgroundEvent,
   type SoundSelection,
 } from '@/notifications';
 
@@ -19,8 +20,12 @@ interface AwaitingSignals {
  * the user's attention (currently: pending tool-permission, plan-approval, or
  * user-question prompts).
  *
- * Fires only while the tab is hidden. Ringing a bell at a screen the user is
- * already reading is noise, and the prompt itself is sitting right there.
+ * Gated by shouldNotifyForBackgroundEvent(): in the browser this fires only
+ * while the tab is hidden — if the user is already viewing the session, both
+ * the OS notification and the unread badge would be redundant noise. In JCEF it
+ * always fires and the IDE host focus-gates the native notification instead. The
+ * favicon is restored by useDocumentTitle's visibilitychange handler, which
+ * reads the DOM directly so any source can set the unread state.
  *
  * The favicon is NOT set here, though it used to be (issue #456). The badge and
  * the notification answer different questions: a notification asks whether to
@@ -47,7 +52,7 @@ export function useAwaitingNotifications(
   const wasPendingPermissionRef = useRef(false);
   useEffect(() => {
     const isPending = signals.pendingPermission;
-    if (isPending && !wasPendingPermissionRef.current && document.hidden) {
+    if (isPending && !wasPendingPermissionRef.current && shouldNotifyForBackgroundEvent()) {
       notify(
         NotificationKind.AWAITING_PERMISSION,
         { sessionTitle: sessionTitleRef.current },
@@ -60,7 +65,7 @@ export function useAwaitingNotifications(
   const wasPendingPlanRef = useRef(false);
   useEffect(() => {
     const isPending = signals.pendingPlanApproval;
-    if (isPending && !wasPendingPlanRef.current && document.hidden) {
+    if (isPending && !wasPendingPlanRef.current && shouldNotifyForBackgroundEvent()) {
       notify(
         NotificationKind.AWAITING_PLAN_APPROVAL,
         { sessionTitle: sessionTitleRef.current },
@@ -73,7 +78,7 @@ export function useAwaitingNotifications(
   const wasPendingUserAnswerRef = useRef(false);
   useEffect(() => {
     const isPending = signals.pendingUserAnswer;
-    if (isPending && !wasPendingUserAnswerRef.current && document.hidden) {
+    if (isPending && !wasPendingUserAnswerRef.current && shouldNotifyForBackgroundEvent()) {
       notify(
         NotificationKind.AWAITING_USER_INPUT,
         { sessionTitle: sessionTitleRef.current },

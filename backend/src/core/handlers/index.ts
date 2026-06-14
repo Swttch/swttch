@@ -137,6 +137,7 @@ import { openFolderDialogHandler } from './openFolderDialog';
 import { findBackgroundTaskOutputPathHandler } from './findBackgroundTaskOutputPathHandler';
 import { listSystemSoundsHandler } from './listSystemSounds';
 import { playSystemSoundHandler } from './playSystemSound';
+import { showNotificationHandler } from './showNotification';
 import { clientInfoHandler } from './clientInfo';
 import { clientErrorHandler } from './clientError';
 import { panelFocusedHandler } from './panelFocused';
@@ -594,6 +595,9 @@ export async function handleMessage(
       break;
     case MessageType.PLAY_SYSTEM_SOUND:
       await playSystemSoundHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SHOW_NOTIFICATION:
+      await showNotificationHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.CLIENT_INFO:
       clientInfoHandler(connectionId, message, connections, bridge);

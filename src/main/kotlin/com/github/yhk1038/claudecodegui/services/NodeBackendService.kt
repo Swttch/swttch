@@ -293,6 +293,14 @@ class NodeBackendService : Disposable {
                 any()?.requiresRestart() ?: run { warn("requiresRestart"); true }
 
             override suspend fun getIdeRoot(workingDir: String?): String? = basePath.ifBlank { null }
+
+            override suspend fun showNotification(title: String, body: String, panelId: String?) {
+                // Route to the originating panel so its "Open session" action returns
+                // to the right tab; fall back to any panel when the id is unknown
+                // (e.g. the tab was closed between send and completion).
+                val handler = panelId?.let { handlers[it] } ?: any()
+                handler?.showNotification(title, body, panelId) ?: warn("showNotification")
+            }
         }
 
         @Synchronized

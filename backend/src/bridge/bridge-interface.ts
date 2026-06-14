@@ -179,4 +179,21 @@ export interface Bridge {
    * instead of the OS default app.
    */
   isConnected?(): boolean;
+  /**
+   * Show a host-native desktop notification. Used for "agent needs your
+   * attention" / "response complete" events when the webview cannot raise its
+   * own browser notification (JCEF has no Notification API). In browser mode the
+   * webview shows the notification itself, so this is a no-op there.
+   *
+   * [workingDir] routes the request to the IDE host serving that project root
+   * when several IDEs share one backend; [panelId] then selects the exact panel
+   * (session tab) inside that IDE so the notification — and its "Open session"
+   * action — target the right tab.
+   */
+  showNotification(params: {
+    title: string;
+    body: string;
+    workingDir?: string;
+    panelId?: string;
+  }): Promise<void>;
 }

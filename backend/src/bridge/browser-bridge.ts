@@ -491,6 +491,16 @@ if ($dialog.ShowDialog() -eq 'OK') {
     // disabled without an IDE attached, so this is only a backstop.
   }
 
+  async showNotification(_params: {
+    title: string;
+    body: string;
+    workingDir?: string;
+    panelId?: string;
+  }): Promise<void> {
+    // no-op: browser mode raises notifications via the webview's own
+    // Notification API, so the backend is never asked to show one.
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     // The terminal is opened *in* this project, so its choice is resolved per
     // project too — global still applies when the project sets none (issue #7).

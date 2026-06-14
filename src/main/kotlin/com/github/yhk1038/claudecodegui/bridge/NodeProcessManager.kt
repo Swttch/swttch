@@ -304,6 +304,14 @@ class NodeProcessManager(
          * traversal in the working-directory dropdown.
          */
         suspend fun getIdeRoot(workingDir: String?): String?
+        /**
+         * Raise a host-native desktop notification for an "attention needed" /
+         * "response complete" event. Called when the webview cannot raise its own
+         * browser notification (JCEF has no Notification API). [panelId] identifies
+         * the originating session tab so the request is routed to the right panel
+         * and its "Open session" action returns there.
+         */
+        suspend fun showNotification(title: String, body: String, panelId: String?)
     }
 
     /**

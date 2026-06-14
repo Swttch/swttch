@@ -10,11 +10,15 @@ import { NotificationKind, SOUND_OFF } from '../types';
 // ---------------------------------------------------------------------------
 
 const playMock = vi.fn();
+const showNotificationMock = vi.fn();
 
 vi.mock('@/api/ClaudeCodeApi', () => ({
   api: {
     sounds: {
       play: (...args: unknown[]) => playMock(...args),
+    },
+    notifications: {
+      show: (...args: unknown[]) => showNotificationMock(...args),
     },
   },
 }));
@@ -73,6 +77,8 @@ beforeEach(() => {
   vi.resetModules();
   playMock.mockReset();
   playMock.mockResolvedValue(undefined);
+  showNotificationMock.mockReset();
+  showNotificationMock.mockResolvedValue(undefined);
   beforeUnloadListeners = [];
   originalAddEventListener = window.addEventListener.bind(window);
   vi.spyOn(window, 'addEventListener').mockImplementation(((
@@ -99,13 +105,42 @@ afterEach(() => {
 });
 
 describe('notify()', () => {
-  it('is a no-op when window.Notification is unavailable', async () => {
+  it('delegates to api.notifications.show when window.Notification is unavailable (JCEF)', async () => {
     uninstallNotificationMock();
     const { notify } = await import('../notify');
-    expect(() =>
-      notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: 't' }, SOUND_OFF),
-    ).not.toThrow();
+    notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' }, SOUND_OFF);
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+    expect(showNotificationMock).toHaveBeenCalledWith({
+      title: 'My Session',
+      body: 'Response complete',
+    });
+    // SOUND_OFF → no sound on the JCEF path either.
     expect(playMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to APP_NAME on the JCEF path when sessionTitle is null', async () => {
+    uninstallNotificationMock();
+    const { notify } = await import('../notify');
+    notify(NotificationKind.STREAM_ERROR, { sessionTitle: null }, SOUND_OFF);
+    expect(showNotificationMock).toHaveBeenCalledWith({
+      title: 'Claude Code',
+      body: 'Response failed',
+    });
+  });
+
+  it('plays the selected sound on the JCEF path', async () => {
+    uninstallNotificationMock();
+    const { notify } = await import('../notify');
+    notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: null }, 'Glass');
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+    expect(playMock).toHaveBeenCalledWith('Glass');
+  });
+
+  it('does NOT call api.notifications.show on the browser path', async () => {
+    installNotificationMock('granted');
+    const { notify } = await import('../notify');
+    notify(NotificationKind.SESSION_COMPLETE, { sessionTitle: 't' }, SOUND_OFF);
+    expect(showNotificationMock).not.toHaveBeenCalled();
   });
 
   it('is a no-op when permission is "default"', async () => {

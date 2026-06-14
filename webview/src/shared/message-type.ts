@@ -557,6 +557,10 @@ export enum MessageType {
   /** Play a system notification sound. */
   PLAY_SYSTEM_SOUND = 'PLAY_SYSTEM_SOUND',
 
+  // -- Host-native desktop notifications --
+  /** Ask the host (IDE) to raise a native desktop notification, carrying { title, body, workingDir?, panelId? }. inbound webview→backend */
+  SHOW_NOTIFICATION = 'SHOW_NOTIFICATION',
+
   // -- Native drag & drop --
   /** Flush buffered native-drop entries for the active drag. */
   NATIVE_DROP_FLUSH = 'NATIVE_DROP_FLUSH',

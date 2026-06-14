@@ -25,7 +25,12 @@ import com.intellij.ide.dnd.DnDManager
 import com.intellij.ide.dnd.DnDTarget
 import com.intellij.ide.dnd.FileCopyPasteUtil
 import com.intellij.ide.dnd.TransferableWrapper
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationAction
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -2246,6 +2251,36 @@ class ClaudeCodePanel(
                 // returns its own project root. The composite picks the right
                 // panel before this is ever reached.
                 return project.basePath
+            }
+
+            override suspend fun showNotification(title: String, body: String, panelId: String?) {
+                // panelId already routed us to the right panel (see NodeBackendService
+                // Router), so we act on our own tabId here.
+                ApplicationManager.getApplication().invokeLater {
+                    // No focus/visibility gating here: the webview only sends this when
+                    // its session view is hidden (document.hidden), so by the time we get
+                    // here the user is not looking at this session. The platform then
+                    // renders a balloon when the IDE is focused, or promotes it to an OS
+                    // notification (macOS Notification Center / Windows toast) when the
+                    // IDE itself is in the background.
+                    val notification = NotificationGroupManager.getInstance()
+                        .getNotificationGroup("claude-code-gui.attention")
+                        .createNotification(title, body, NotificationType.INFORMATION)
+
+                    // Offer a one-click jump back to the session tab that needs attention.
+                    if (ClaudeCodeVirtualFile.isTabOpen(project, tabId)) {
+                        notification.addAction(object : NotificationAction("Open session") {
+                            override fun actionPerformed(e: AnActionEvent, n: Notification) {
+                                val virtualFile = ClaudeCodeVirtualFile.getOrCreate(project, tabId)
+                                FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                                n.expire()
+                            }
+                        })
+                    }
+
+                    notification.notify(project)
+                    logger.info("Showed attention notification: $title")
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   NotificationKind,
   notify,
+  shouldNotifyForBackgroundEvent,
   type SoundSelection,
 } from '@/notifications';
 import { APP_NAME } from '@/config/app';
@@ -144,9 +145,11 @@ export function useDocumentTitle(
     return () => stopWorkingFavicon();
   }, [isStreaming, isAwaitingUser]);
 
-  // Detect streaming end while tab is hidden → show unread favicon + desktop notification
+  // Detect streaming end while the user isn't looking → show unread favicon +
+  // desktop notification. In JCEF the IDE host focus-gates instead (see
+  // shouldNotifyForBackgroundEvent).
   useEffect(() => {
-    if (!isStreaming && wasStreamingRef.current && document.hidden) {
+    if (!isStreaming && wasStreamingRef.current && shouldNotifyForBackgroundEvent()) {
       setUnreadFavicon();
       notify(
         errorRef.current ? NotificationKind.STREAM_ERROR : NotificationKind.SESSION_COMPLETE,

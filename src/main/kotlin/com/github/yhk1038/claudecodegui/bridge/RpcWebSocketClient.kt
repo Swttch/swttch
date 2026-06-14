@@ -413,6 +413,14 @@ class RpcWebSocketClient(
                     if (ideRoot != null) put("ideRoot", ideRoot) else put("ideRoot", JsonNull)
                 }
             }
+            "SHOW_NOTIFICATION" -> {
+                val title = params["title"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'title' param")
+                val body = params["body"]?.jsonPrimitive?.content ?: ""
+                val panelId = params["panelId"]?.jsonPrimitive?.content
+                rpcHandler.showNotification(title, body, panelId)
+                buildJsonObject {}
+            }
             else -> {
                 throw IllegalArgumentException("Unknown RPC method: $method")
             }

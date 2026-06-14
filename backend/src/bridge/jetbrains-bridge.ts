@@ -459,6 +459,15 @@ export class JetBrainsBridge implements Bridge {
     const ideRoot = result['ideRoot'];
     return typeof ideRoot === 'string' && ideRoot.length > 0 ? ideRoot : null;
   }
+
+  async showNotification(params: {
+    title: string;
+    body: string;
+    workingDir?: string;
+    panelId?: string;
+  }): Promise<void> {
+    await this.request('SHOW_NOTIFICATION', params);
+  }
 }
 
 /**
