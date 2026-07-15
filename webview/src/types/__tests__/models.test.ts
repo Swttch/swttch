@@ -15,10 +15,10 @@ import {
 import type { ModelInfo } from '../slashCommand';
 
 // A date inside the promo window and one past it, for the Fable fallback tests.
-// The window end is FABLE_PROMO_END (2026-07-12, extended from 07-07), so
-// AFTER_PROMO must sit past the 12th.
+// The window end is FABLE_PROMO_END (2026-07-19, extended 07-07 → 07-12 → 07-19),
+// so AFTER_PROMO must sit past the 19th.
 const DURING_PROMO = new Date('2026-07-03T00:00:00Z');
-const AFTER_PROMO = new Date('2026-07-13T00:00:00Z');
+const AFTER_PROMO = new Date('2026-07-20T00:00:00Z');
 
 function model(value: string, displayName = value): ModelInfo {
   return { value, displayName, description: `${displayName} desc` };
@@ -215,7 +215,7 @@ describe('modelChangeTarget', () => {
 describe('isFablePromoActive', () => {
   it('is true inside the promo window (incl. the end day)', () => {
     expect(isFablePromoActive(DURING_PROMO)).toBe(true);
-    expect(isFablePromoActive(new Date('2026-07-12T12:00:00Z'))).toBe(true);
+    expect(isFablePromoActive(new Date('2026-07-19T12:00:00Z'))).toBe(true); // end day, inclusive
   });
 
   it('is false after the promo window ends', () => {
@@ -262,10 +262,45 @@ describe('withFableFallback', () => {
     expect(withFableFallback([], DURING_PROMO, SUPPORTED_CLI)).toEqual([]);
   });
 
-  it('does not inject the fallback after the promo window ends', () => {
-    // Past the promo the hardcoded fallback is dropped — nothing to select.
+  it('does not inject the fallback after the promo window when no probe has run', () => {
+    // Past the promo, inclusion is per-account; without a confirming probe
+    // (probedAvailable omitted / undefined) we must not surface Fable.
     const merged = withFableFallback([def, opus], AFTER_PROMO, SUPPORTED_CLI);
     expect(merged).toEqual([def, opus]);
+  });
+
+  it('appends the fallback after the promo window when a probe confirms availability', () => {
+    // The probe made a real `--model fable` call and it succeeded for this
+    // account, so we keep offering Fable even though the promo date has passed.
+    const merged = withFableFallback([def, opus], AFTER_PROMO, SUPPORTED_CLI, true);
+    expect(merged).toHaveLength(3);
+    expect(merged[2]).toBe(FABLE_FALLBACK_MODEL);
+  });
+
+  it('does not append after the promo window when the probe says unavailable', () => {
+    const merged = withFableFallback([def, opus], AFTER_PROMO, SUPPORTED_CLI, false);
+    expect(merged).toEqual([def, opus]);
+  });
+
+  it('ignores a pending probe (null) after the promo window', () => {
+    // null = probe not resolved yet; stay conservative until it lands.
+    const merged = withFableFallback([def, opus], AFTER_PROMO, SUPPORTED_CLI, null);
+    expect(merged).toEqual([def, opus]);
+  });
+
+  it('does not append after the promo even if probed available when the CLI is too old', () => {
+    // The version gate runs before the probe check: an old CLI can't select
+    // Fable regardless of what the probe reported.
+    const merged = withFableFallback([def, opus], AFTER_PROMO, '2.1.169', true);
+    expect(merged).toEqual([def, opus]);
+  });
+
+  it('does not require a probe inside the promo window (offered without proof)', () => {
+    // Inside the window Fable is broadly included, so it is offered even with no
+    // probe result at all.
+    const merged = withFableFallback([def, opus], DURING_PROMO, SUPPORTED_CLI, undefined);
+    expect(merged).toHaveLength(3);
+    expect(merged[2]).toBe(FABLE_FALLBACK_MODEL);
   });
 
   it('still respects a CLI-served Fable entry after the promo (server decides)', () => {

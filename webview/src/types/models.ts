@@ -31,20 +31,24 @@ export function toModelAlias(value: string | null | undefined): string {
  * fine. To honour CLI equivalence ("what works in the CLI works in the GUI")
  * we surface Fable as a fallback item when the account's catalog omits it.
  *
- * `FABLE_PROMO_END` is the promotion window end used to gate the "included
+ * `FABLE_PROMO_END` is the public promotion window end. It gates the "included
  * until" badge (rendered from the `fableNotice.promoBadge` i18n string) and,
- * past that date, to stop offering the fallback.
+ * while the window is open, lets us offer the fallback without a probe. It is
+ * NOT the post-window gate: once the date passes, whether we keep offering Fable
+ * is decided by a real per-account availability probe (see `withFableFallback`),
+ * because Fable keeps working via `--model fable` (on prepaid credits) for many
+ * accounts even after inclusion ends.
  *
- * The window has already been extended once: Anthropic pushed the subscription
- * inclusion cutoff from 2026-07-07 to 2026-07-12 (after which Fable moves to
- * prepaid usage credits rather than being retired). The badge/date text is
- * server-supplied per account, not baked into the CLI binary, so we mirror the
- * publicly announced date here. When the window shifts again, update this date
- * AND the `fableNotice.promoBadge` string in every locale so the two agree.
- * TODO(after 2026-07-12): the promotion window ends; revisit the fallback,
- * badge, and announcement once Fable's post-promo availability is known.
+ * Anthropic has extended the subscription-inclusion cutoff twice: 2026-07-07 →
+ * 2026-07-12 → 2026-07-19 (after which Fable moves to prepaid usage credits
+ * rather than being retired). The badge/date text is server-supplied per
+ * account, not baked into the CLI binary, so we mirror the publicly announced
+ * date here. When the window shifts again, update this date AND the
+ * `fableNotice.promoBadge` string in every locale so the two agree.
+ * TODO(after 2026-07-19): revisit the badge/announcement copy once Fable's
+ * post-promo availability settles (the fallback itself is now probe-driven).
  */
-export const FABLE_PROMO_END = '2026-07-12';
+export const FABLE_PROMO_END = '2026-07-19';
 
 /**
  * Whether the Fable promotion window is still open on `now` (inclusive of the
@@ -88,8 +92,17 @@ export const FABLE_FALLBACK_MODEL: ModelInfo = {
  * (entitled account), that dynamic entry wins and the hardcoded item is skipped
  * via alias-based dedup, so this quietly no-ops once Fable is served natively.
  * A CLI-served Fable is respected regardless of the promo window — the server,
- * not us, decides post-promo availability; only our hardcoded fallback is
- * gated on the promo still being active (`now`).
+ * not us, decides post-promo availability.
+ *
+ * The hardcoded fallback's promo gate is two-phase. During the public promo
+ * window (`isFablePromoActive`) Fable is broadly included, so we offer the
+ * fallback without proof. Once the window ends, inclusion turns per-account and
+ * the catalog still omits it for many accounts that CAN nonetheless run
+ * `--model fable` — so we keep offering the fallback only when a real
+ * availability probe has confirmed THIS account (`probedAvailable === true`).
+ * `null`/`undefined` means the probe hasn't resolved yet (don't offer this open).
+ * The date (`FABLE_PROMO_END`) is retained for the notice/badge copy, NOT as the
+ * post-window gate.
  *
  * The hardcoded fallback is additionally gated on the CLI version: Fable landed
  * in CLI 2.1.170 (`FABLE_MIN_CLI_VERSION`), and older CLIs don't recognise
@@ -107,12 +120,14 @@ export function withFableFallback(
   models: ModelInfo[],
   now: Date,
   cliVersion: string | null | undefined,
+  probedAvailable?: boolean | null,
 ): ModelInfo[] {
   if (models.length === 0) return models;
   if (models.some((m) => toModelAlias(m.value) === 'fable')) return models; // CLI already serves it — always trust, regardless of version
-  if (!isFablePromoActive(now)) return models;
   if (!isFableSupportedCli(cliVersion)) return models; // an old CLI can't select Fable, so don't offer the fallback
-  return [...models, FABLE_FALLBACK_MODEL];
+  if (isFablePromoActive(now)) return [...models, FABLE_FALLBACK_MODEL]; // promo window: broadly included, offer without a probe
+  if (probedAvailable === true) return [...models, FABLE_FALLBACK_MODEL]; // past window: only if a real probe confirmed this account
+  return models;
 }
 
 /**

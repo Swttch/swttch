@@ -16,7 +16,7 @@
   "fableNotice": {
     "availableTitle": "이제 Fable을 사용할 수 있습니다",
     "updateRequiredTitle": "Fable 5를 사용하려면 업데이트하세요",
-    "promoBadge": "7월 12일까지 포함",
+    "promoBadge": "7월 19일까지 포함",
     "availableBody": "Fable 5에는 주간 한도의 최대 50%까지 사용할 수 있으며, 이후에는 사용 크레딧으로 전환됩니다. Fable 5는 Opus 4.8보다 사용량을 훨씬 빠르게 소모합니다.",
     "updateRequiredBody": "Fable 5를 사용하려면 Claude Code CLI v2.1.170 이상이 필요합니다. 설정 → 정보에서 CLI를 업데이트해 선택하세요.",
     "learnMore": "자세히 알아보기"

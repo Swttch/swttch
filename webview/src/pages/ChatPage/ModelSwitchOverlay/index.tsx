@@ -4,6 +4,8 @@ import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useBridge } from '@/hooks/useBridge';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
+import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
+import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { LoadedMessageType } from '@/types';
@@ -36,13 +38,29 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
+  const { probedAvailable, probeFableAvailability } = useFableProbe();
+  const { workingDirectory } = useWorkingDir();
   const panelRef = useRef<HTMLDivElement>(null);
 
   const now = new Date();
-  const models: ModelInfo[] = withFableFallback(controlResponse?.response?.response?.models ?? [], now, cliVersion);
+  const rawModels: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
+  const models: ModelInfo[] = withFableFallback(rawModels, now, cliVersion, probedAvailable);
   const currentInfo = resolveModelInfo(models, currentModel);
   const isMac = navigator.platform.toUpperCase().includes('MAC');
   const promoActive = isFablePromoActive(now);
+
+  // Past the promo window the catalog omits Fable for many accounts that can
+  // still run `--model fable`, so probe (once, non-blocking) whether THIS account
+  // keeps access and, if so, re-offer it. The probe is cached backend-side, so an
+  // open per session is cheap. Inside the window, or when the catalog already
+  // serves Fable, `shouldProbeFable` returns false and we skip it.
+  const shouldProbe = shouldProbeFable(rawModels, now, cliVersion);
+  const probeFiredRef = useRef(false);
+  useEffect(() => {
+    if (!shouldProbe || probeFiredRef.current) return;
+    probeFiredRef.current = true;
+    void probeFableAvailability(workingDirectory ?? undefined);
+  }, [shouldProbe, workingDirectory, probeFableAvailability]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
