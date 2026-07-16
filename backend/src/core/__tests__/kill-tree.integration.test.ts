@@ -3,7 +3,7 @@ import { spawn, type ChildProcess } from 'child_process';
 import { Claude } from '../claude';
 import { ConnectionManager } from '../../ws/connection-manager';
 
-// Real-process integration tests reproducing the orphaned-CLI bug.
+// Real-process integration tests for the orphaned-CLI hard-binding.
 // claude.test.ts mocks child_process entirely; the process-group kill semantics
 // verified here are exactly what mocks cannot prove. POSIX-only: the win32 branch
 // shells out to taskkill, which needs Windows (untested locally).
@@ -111,8 +111,8 @@ describe.skipIf(!isPosix)('Claude.killTree (POSIX, real processes)', () => {
   });
 });
 
-describe.skipIf(!isPosix)('ConnectionManager.shutdownAll', () => {
-  it('kill-sweeps every registered session tree', async () => {
+describe.skipIf(!isPosix)('ConnectionManager.killAllSessionProcesses', () => {
+  it('kill-sweeps every registered session tree and reports the count', async () => {
     const connections = new ConnectionManager();
     const procs = [
       spawn('sh', ['-c', 'sleep 30 & echo $!; wait'], {
@@ -133,8 +133,9 @@ describe.skipIf(!isPosix)('ConnectionManager.shutdownAll', () => {
       connections.getOrCreateSession('session-b');
       connections.setProcess('session-b', procs[1]);
 
-      connections.shutdownAll();
+      const killed = connections.killAllSessionProcesses('SIGKILL');
 
+      expect(killed).toBe(2);
       await waitUntil(() => procs.every((p) => p.exitCode !== null || p.signalCode !== null));
       await waitUntil(() => grandchildren.every((pid) => !pidAlive(pid)));
     } finally {

@@ -188,6 +188,21 @@ async function main() {
   // installs the quota-check hook the engine calls before delivering a reservation.
   registerAutoResumeHook(connections);
 
+  // Last-resort orphan guard: tie CLI lifetime to backend lifetime. Every soft
+  // cleanup path (grace timers, shutdownAll) needs a LIVE backend; this hook
+  // covers every death that still runs 'exit' hooks (process.exit, fatal
+  // main().catch, handled signals). uncaughtException/unhandledRejection above
+  // deliberately do NOT exit (survival style), so they reach this hook only if
+  // the process really dies. A hard SIGKILL bypasses JS entirely — that residual
+  // gap is narrowed by the graceful port reclaim (startServerWithRetry) and,
+  // later, orphan detection at startup.
+  process.on('exit', () => {
+    const killed = connections.killAllSessionProcesses('SIGKILL');
+    if (killed > 0) {
+      console.error('[node-backend]', `Exit sweep: SIGKILLed ${killed} CLI process tree(s)`);
+    }
+  });
+
   // Stash native drop paths on drag-enter; the webview will flush them on its drop event.
   // The page's HTML5 `dataTransfer` doesn't expose absolute paths (browser security), so
   // Kotlin sends the paths it received from CefDragHandler over /rpc, and we hold them

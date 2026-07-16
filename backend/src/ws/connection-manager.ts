@@ -3,6 +3,7 @@ import type { ChildProcess } from 'child_process';
 import type { IPCMessage, NativeDropEntry } from '../core/types';
 import { ClientEnv, MessageType } from '../shared';
 import { disableIdleShutdown } from '../config/environment';
+import { Claude } from '../core/claude';
 
 const SESSION_CLEANUP_GRACE_MS = 30_000;
 const IDLE_SHUTDOWN_GRACE_MS = 60_000;
@@ -536,6 +537,23 @@ export class ConnectionManager {
 
   // ─── Internal ───────────────────────────────────────────────────────────────
 
+  /**
+   * Kill-sweep over every live session CLI tree. shutdownAll uses it with
+   * SIGTERM (graceful path); the process 'exit' hook in server.ts uses it with
+   * SIGKILL as the last-resort orphan guard, so it must stay synchronous —
+   * 'exit' handlers cannot await.
+   */
+  killAllSessionProcesses(signal: NodeJS.Signals): number {
+    let killed = 0;
+    for (const session of this.sessionRegistry.values()) {
+      if (session.process) {
+        Claude.killTree(session.process, signal);
+        killed++;
+      }
+    }
+    return killed;
+  }
+
   shutdownAll(): void {
     // Clear all pending cleanup timers
     for (const timer of this.cleanupTimers.values()) {
@@ -545,15 +563,8 @@ export class ConnectionManager {
 
     this.cancelIdleShutdown();
 
-    let killedSessions = 0;
+    const killedSessions = this.killAllSessionProcesses('SIGTERM');
     let closedConnections = 0;
-
-    for (const session of this.sessionRegistry.values()) {
-      if (session.process) {
-        session.process.kill('SIGTERM');
-        killedSessions++;
-      }
-    }
 
     for (const ws of this.connectionMap.values()) {
       ws.close();
@@ -606,7 +617,7 @@ export class ConnectionManager {
         '[node-backend]',
         `Killing process for session ${sessionId} (PID: ${session.process.pid})`,
       );
-      session.process.kill('SIGTERM');
+      Claude.killTree(session.process);
       session.process = null;
     }
 

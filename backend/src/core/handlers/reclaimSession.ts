@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { markSessionAsSpawned } from '../claude-process';
+import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 import { loadAndSendSession } from './loadAndSendSession';
 
@@ -34,7 +35,7 @@ export async function reclaimSessionHandler(
   const session = connections.getSession(sessionId);
   if (session?.process) {
     console.error('[node-backend]', `Killing internal process for session ${sessionId}`);
-    session.process.kill('SIGTERM');
+    Claude.killTree(session.process);
     connections.setProcess(sessionId, null);
     await new Promise(resolve => setTimeout(resolve, 500));
   }
