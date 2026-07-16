@@ -7,6 +7,7 @@ import { authToken } from '../config/environment';
 import { ConnectionManager } from './connection-manager';
 import { handleEditorContextRequest } from './editor-context-route';
 import { handleIdeSelectionRequest } from './ide-selection-route';
+import { handleStatusRequest } from './status-route';
 import type { Bridge } from '../bridge/bridge-interface';
 import type { IPCMessage } from '../core/types';
 import { ClientEnv, MessageType } from '../shared';
@@ -299,7 +300,15 @@ export function startWebSocketServer(
       const clientEnv = envParam === ClientEnv.JETBRAINS ? ClientEnv.JETBRAINS : ClientEnv.BROWSER;
       const panelId = params.get('panelId');
 
-      const connectionId = connections.addConnection(ws, clientEnv, panelId);
+      // Origin was already validated during the upgrade; keep it on the record
+      // so connection types (panel / tunnel / browser) can be told apart in
+      // status reporting.
+      const connectionId = connections.addConnection(
+        ws,
+        clientEnv,
+        panelId,
+        request.headers.origin ?? null,
+      );
       console.error('[node-backend]', `Client connected: ${connectionId}`);
 
       // 연결 준비 신호 전송
@@ -412,6 +421,17 @@ export function startWebSocketServer(
             res.end(JSON.stringify({ error: 'Unauthorized' }));
             return;
           }
+        }
+
+        // Runtime status snapshot for the IDE status-bar card (and the future
+        // exit-confirm modal): keep-alive gate, connection counts by type,
+        // session/streaming counts. Read-only, no secrets. Sits after the
+        // /internal/* auth guard above, so it too requires the per-launch token.
+        if (req.method === 'GET' && urlPath === '/internal/status') {
+          const result = handleStatusRequest(connections);
+          res.writeHead(result.status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result.body));
+          return;
         }
 
         // IDE → backend editor selection push. Kotlin POSTs the active editor

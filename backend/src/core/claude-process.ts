@@ -428,6 +428,9 @@ export function sendMessageToProcess(
     : stdinMessage.trimEnd();
   console.error('[node-backend]', `Sending to stdin: ${logPreview}`);
   session.process.stdin.write(stdinMessage);
+  // Turn in flight — cleared on the CLI `result` event (turn end) or on
+  // STREAM_END (process death safety net inside broadcastToSession).
+  connections.setStreaming(sessionId, true);
   return true;
 }
 
@@ -571,6 +574,8 @@ function handleStreamEvent(
   // 백엔드 고유 사이드이펙트 (WebView 전달과 무관한 서버 내부 로직)
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
+    // Turn ended (success, error and interrupt alike emit a result event).
+    connections.setStreaming(targetSessionId, false);
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'upsert',
       session: {

@@ -184,6 +184,74 @@ describe('ConnectionManager', () => {
     });
   });
 
+  describe('getConnectionStats', () => {
+    it('classifies panelId connections as panels regardless of origin', () => {
+      cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1', 'http://localhost:63412');
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 1, tunnels: 0, browsers: 0 });
+    });
+
+    it('classifies *.trycloudflare.com origins without panelId as tunnels', () => {
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://demo-tunnel.trycloudflare.com');
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 0, tunnels: 1, browsers: 0 });
+    });
+
+    it('classifies everything else as browsers (incl. missing origin)', () => {
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://127.0.0.1:63412');
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, null);
+      expect(cm.getConnectionStats()).toEqual({ total: 2, panels: 0, tunnels: 0, browsers: 2 });
+    });
+
+    it('counts a mixed set and tracks removals', () => {
+      const panel = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1', null);
+      cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-2', null);
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://x.trycloudflare.com');
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://localhost:63412');
+      expect(cm.getConnectionStats()).toEqual({ total: 4, panels: 2, tunnels: 1, browsers: 1 });
+
+      cm.removeConnection(panel);
+      expect(cm.getConnectionStats()).toEqual({ total: 3, panels: 1, tunnels: 1, browsers: 1 });
+    });
+  });
+
+  describe('streaming flag / session counters', () => {
+    it('counts sessions and streaming sessions', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.getOrCreateSession('sess-2');
+      expect(cm.getSessionCount()).toBe(2);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+
+      cm.setStreaming('sess-1', true);
+      expect(cm.getStreamingSessionCount()).toBe(1);
+
+      cm.setStreaming('sess-1', false);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('ignores setStreaming for an unknown session', () => {
+      cm.setStreaming('nonexistent', true);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('clears the flag on STREAM_END broadcast (process death safety net)', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setStreaming('sess-1', true);
+      expect(cm.getStreamingSessionCount()).toBe(1);
+
+      cm.broadcastToSession('sess-1', MessageType.STREAM_END);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('does not clear the flag on other broadcasts', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setStreaming('sess-1', true);
+
+      cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, { type: 'assistant' });
+      expect(cm.getStreamingSessionCount()).toBe(1);
+    });
+  });
+
   describe('keep-alive gate (idle shutdown)', () => {
     const IDLE_GRACE = 60_000;
     let exitSpy: ReturnType<typeof vi.spyOn>;
