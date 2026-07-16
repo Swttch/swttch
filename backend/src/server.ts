@@ -39,10 +39,16 @@ import type { NativeDropEntry } from './core/types';
  * 5. Kotlin이 http://localhost:{port} 로 JCEF 로드 → /ws WebSocket 연결
  */
 
-function killProcessOnPort(port: number): void {
+const GRACEFUL_RECLAIM_MS = 2_500;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function listeningPidsOnPort(port: number): number[] {
   // CRITICAL: only ever target processes *LISTENING* on the port. A plain
   // `lsof -ti :PORT` also returns processes merely connected to it — including the
-  // IDE JVM's RPC WebSocket — and SIGKILLing those kills the entire IDE (exit 137).
+  // IDE JVM's RPC WebSocket — and killing those kills the entire IDE (exit 137).
   // Restricting to LISTEN sockets + filtering our own PID (selectKillablePids)
   // ensures we only reclaim the port from a stale backend, never the IDE.
   if (process.platform === 'win32') {
@@ -50,38 +56,54 @@ function killProcessOnPort(port: number): void {
       const output = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, {
         encoding: 'utf8',
       }).trim();
-      if (!output) return;
+      if (!output) return [];
       // Last column of each netstat row is the PID.
       const rawPids = output
         .split('\n')
         .map((line) => line.trim().split(/\s+/).pop() ?? '')
         .join('\n');
-      selectKillablePids(rawPids, process.pid).forEach((pid) => {
-        try {
-          execFileSync('taskkill', ['/F', '/PID', String(pid)]);
-          console.error('[node-backend]', `Killed listening process ${pid} on port ${port}`);
-        } catch {
-          // Process may have already exited — ignore
-        }
-      });
+      return selectKillablePids(rawPids, process.pid);
     } catch {
       // netstat/findstr returns non-zero when no match — ignore
+      return [];
     }
-  } else {
-    try {
-      // -sTCP:LISTEN restricts the query to listening sockets only.
-      const raw = execFileSync('lsof', ['-ti', `:${port}`, '-sTCP:LISTEN'], { encoding: 'utf8' });
-      selectKillablePids(raw, process.pid).forEach((pid) => {
-        try {
-          process.kill(pid, 'SIGKILL');
-          console.error('[node-backend]', `Killed listening process ${pid} on port ${port}`);
-        } catch {
-          // Process may have already exited — ignore
-        }
-      });
-    } catch {
-      // lsof returns non-zero when no process found — ignore
+  }
+  try {
+    // -sTCP:LISTEN restricts the query to listening sockets only.
+    const raw = execFileSync('lsof', ['-ti', `:${port}`, '-sTCP:LISTEN'], { encoding: 'utf8' });
+    return selectKillablePids(raw, process.pid);
+  } catch {
+    // lsof returns non-zero when no process found — ignore
+    return [];
+  }
+}
+
+/**
+ * Direct children of a stale backend, captured BEFORE it is killed. If the
+ * graceful phase fails and we SIGKILL the backend, it can no longer clean its
+ * CLI children up itself — we sweep the survivors from here instead. POSIX only
+ * (win32 uses taskkill /T, which tears the whole tree down by itself).
+ */
+function childPidsOf(pid: number): number[] {
+  try {
+    const raw = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' });
+    return selectKillablePids(raw, process.pid);
+  } catch {
+    // pgrep returns non-zero when there are no children — ignore
+    return [];
+  }
+}
+
+function sigkillPid(pid: number): void {
+  try {
+    if (process.platform === 'win32') {
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)]);
+    } else {
+      process.kill(pid, 'SIGKILL');
     }
+    console.error('[node-backend]', `SIGKILLed stale process ${pid}`);
+  } catch {
+    // Process may have already exited — ignore
   }
 }
 
@@ -89,18 +111,71 @@ async function startServerWithRetry(
   bridges: BridgeMap,
   logWs?: LogWebSocketServer,
 ): Promise<Awaited<ReturnType<typeof startWebSocketServer>>> {
+  const start = () =>
+    startWebSocketServer(serverPort, serverHost, bridges, handleMessage, webviewDir, logWs);
   try {
-    return await startWebSocketServer(serverPort, serverHost, bridges, handleMessage, webviewDir, logWs);
+    return await start();
   } catch (err: unknown) {
-    const nodeErr = err as NodeJS.ErrnoException;
-    if (nodeErr.code !== 'EADDRINUSE') throw err;
+    if ((err as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw err;
 
-    console.error('[node-backend]', `Port ${serverPort} already in use. Killing existing process and retrying...`);
-    killProcessOnPort(serverPort);
+    const stalePids = listeningPidsOnPort(serverPort);
+    console.error(
+      '[node-backend]',
+      `Port ${serverPort} already in use by PID(s) ${stalePids.join(', ') || '?'}. Reclaiming...`,
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    if (process.platform === 'win32') {
+      // Node emulates SIGTERM with TerminateProcess on Windows, so there is no
+      // graceful phase to offer — go straight to the tree kill (taskkill /T takes
+      // the stale backend's CLI children down with it).
+      stalePids.forEach(sigkillPid);
+      await delay(200);
+      return await start();
+    }
 
-    return await startWebSocketServer(serverPort, serverHost, bridges, handleMessage, webviewDir, logWs);
+    // Ask the stale backend to shut down FIRST: its SIGTERM handler runs
+    // shutdownAll(), which kills its CLI children. The previous straight-SIGKILL
+    // behavior orphaned them (measured with a real orphan: it kept making API
+    // calls for ~5 more minutes). Children are captured up front so that if we
+    // do have to escalate, we can sweep the CLI trees the SIGKILL leaves behind.
+    const staleChildren = stalePids.flatMap(childPidsOf);
+    stalePids.forEach((pid) => {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {
+        // Process may have already exited — ignore
+      }
+    });
+
+    // The dying backend frees the port at close() almost immediately; it may then
+    // linger flushing logs, which is fine — we only need the LISTEN socket.
+    const deadline = Date.now() + GRACEFUL_RECLAIM_MS;
+    while (Date.now() < deadline) {
+      await delay(250);
+      try {
+        return await start();
+      } catch (retryErr: unknown) {
+        if ((retryErr as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw retryErr;
+      }
+    }
+
+    console.error('[node-backend]', 'Graceful port reclaim timed out — escalating to SIGKILL');
+    stalePids.forEach(sigkillPid);
+    for (const child of staleChildren) {
+      // Group signal first: post-fix backends spawn chat CLIs as process-group
+      // leaders, so -pid takes the whole CLI tree; plain kill covers pre-fix ones.
+      try {
+        process.kill(-child, 'SIGKILL');
+      } catch {
+        try {
+          process.kill(child, 'SIGKILL');
+        } catch {
+          // Already gone — ignore
+        }
+      }
+    }
+    await delay(200);
+    return await start();
   }
 }
 
