@@ -171,6 +171,13 @@ export async function ensureClaudeProcess(
   const proc = await Claude.spawnAuthed(args, workingDir, {
     cwd: workingDir,
     stdio: ['pipe', 'pipe', 'pipe'],
+    // POSIX: detach the CLI into its own process group so every kill path can take
+    // down the WHOLE tree at once (Claude.killTree signals -pid: the CLI plus its
+    // subagent shells and background tasks). Trade-off: a detached CLI no longer
+    // shares the terminal's process group, so it stops receiving the terminal's
+    // SIGHUP alongside the backend — server.ts compensates with its own SIGHUP
+    // handler (graceful shutdownAll). Keep those two in sync.
+    detached: process.platform !== 'win32',
     env: {
       TERM: 'dumb',
       CI: 'true',

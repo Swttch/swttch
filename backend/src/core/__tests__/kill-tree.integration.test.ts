@@ -87,6 +87,19 @@ describe.skipIf(!isPosix)('Claude.killTree (POSIX, real processes)', () => {
     await waitUntil(() => !pidAlive(grandchildPid));
   });
 
+  it('supports SIGKILL (the exit-sweep signal) through the same path', async () => {
+    // The fixture shell ignores SIGTERM to prove the sweep's SIGKILL is what lands.
+    const proc = spawnDetachedTree('trap "" TERM; sleep 30 & echo $!; wait');
+    spawned.push(proc);
+    const grandchildPid = parseInt(await firstStdoutLine(proc), 10);
+    expect(pidAlive(grandchildPid)).toBe(true);
+
+    Claude.killTree(proc, 'SIGKILL');
+
+    await waitUntil(() => proc.exitCode !== null || proc.signalCode !== null);
+    await waitUntil(() => !pidAlive(grandchildPid));
+  });
+
   it('falls back to a plain signal for a non-detached (non-leader) child', async () => {
     const proc = spawn('sleep', ['30'], { stdio: 'ignore' });
     spawned.push(proc);

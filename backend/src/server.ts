@@ -277,6 +277,11 @@ async function main() {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
+  // SIGHUP (terminal window closed): MANDATORY now that chat CLIs run in their own
+  // process groups — they no longer receive the terminal's SIGHUP alongside the
+  // backend (pre-fix they died with us for free). Without
+  // this handler the process-group isolation itself would mint a new orphan class.
+  process.on('SIGHUP', () => shutdown('SIGHUP'));
 }
 
 main().catch((err) => {
