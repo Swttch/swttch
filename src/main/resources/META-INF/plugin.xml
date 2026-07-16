@@ -75,6 +75,11 @@
         <postStartupActivity
             implementation="com.github.yhk1038.claudecodegui.startup.IdeSelectionActivity"/>
 
+        <!-- Keep-alive eager start: spawn the project's backend on project open (no JCEF)
+             when the global "Keep backend running" toggle is ON -->
+        <postStartupActivity
+            implementation="com.github.yhk1038.claudecodegui.startup.BackendKeepAliveActivity"/>
+
         <!-- WebView resource server -->
         <httpRequestHandler
             implementation="com.github.yhk1038.claudecodegui.toolwindow.WebViewRequestHandler"/>
@@ -95,6 +100,11 @@
         <listener
             class="com.github.yhk1038.claudecodegui.startup.ResourceExtractionPrewarmActivity"
             topic="com.intellij.ide.AppLifecycleListener"/>
+        <!-- Per-project keep-alive clamp: release the keep-alive gate when a project
+             window closes so its backend cannot outlive the window forever -->
+        <listener
+            class="com.github.yhk1038.claudecodegui.startup.BackendProjectCloseListener"
+            topic="com.intellij.openapi.project.ProjectCloseListener"/>
     </applicationListeners>
 
     <!-- Clean up session state only on real tab close (not on tab move/split) -->

@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.settings
 
+import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
@@ -17,6 +18,7 @@ class ClaudeCodeSettingsConfigurable : Configurable {
     // UI 바인딩용 임시 변수
     private var cliPath: String = ""
     private var nodePath: String = ""
+    private var keepBackendRunning: Boolean = false
 
     override fun getDisplayName(): String = "Claude Code"
 
@@ -24,6 +26,7 @@ class ClaudeCodeSettingsConfigurable : Configurable {
         // 현재 설정값 로드
         cliPath = settings.get("cliPath")?.jsonPrimitive?.contentOrNull ?: ""
         nodePath = settings.get("nodePath")?.jsonPrimitive?.contentOrNull ?: ""
+        keepBackendRunning = KeepAliveSetting.get()
 
         panel = panel {
             group("CLI Configuration") {
@@ -40,6 +43,18 @@ class ClaudeCodeSettingsConfigurable : Configurable {
                         .comment("Path to the Node.js executable that runs the backend. Leave empty for auto-detection. Restart required after change.")
                 }
             }
+            group("Backend") {
+                row {
+                    checkBox("Keep backend running")
+                        .bindSelected(::keepBackendRunning)
+                        .comment(
+                            "Starts the backend when a project opens and keeps it running for " +
+                                "browser access (the URL is shown in the status-bar widget), until " +
+                                "the IDE exits. Off: the backend starts on demand and shuts down " +
+                                "when idle."
+                        )
+                }
+            }
         }
         return panel!!
     }
@@ -52,11 +67,18 @@ class ClaudeCodeSettingsConfigurable : Configurable {
             "cliPath" to if (cliPath.isBlank()) JsonNull else JsonPrimitive(cliPath),
             "nodePath" to if (nodePath.isBlank()) JsonNull else JsonPrimitive(nodePath)
         ))
+        // Route through the single toggle entry point (eager start + RPC pushes +
+        // widget refresh) — but only on a real change, so unrelated settings edits
+        // don't re-fire eager starts.
+        if (keepBackendRunning != KeepAliveSetting.get()) {
+            NodeBackendService.getInstance().applyKeepAlive(keepBackendRunning)
+        }
     }
 
     override fun reset() {
         cliPath = settings.get("cliPath")?.jsonPrimitive?.contentOrNull ?: ""
         nodePath = settings.get("nodePath")?.jsonPrimitive?.contentOrNull ?: ""
+        keepBackendRunning = KeepAliveSetting.get()
         panel?.reset()
     }
 }

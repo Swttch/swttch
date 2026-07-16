@@ -99,4 +99,28 @@ class NodeProcessManagerLifecycleTest {
         assertFalse(NodeProcessManager.shouldRequestRestart(143, disposed = false))
         assertFalse(NodeProcessManager.shouldRequestRestart(1, disposed = false))
     }
+
+    @Test
+    fun `isIntentionalExit is true only for a clean self-exit`() {
+        // Exit 0 with no dispose = the backend retired on its own (idle shutdown).
+        // Only this case stands the RPC reconnect/restart watchdog down — treating
+        // it as a crash respawned the backend ~15 s after every idle shutdown,
+        // forever (the D2 manual-pass restart loop).
+        assertTrue(
+            NodeProcessManager.isIntentionalExit(0, disposed = false),
+            "a clean self-exit must stand the RPC watchdog down",
+        )
+    }
+
+    @Test
+    fun `isIntentionalExit is false for dispose-driven and crash exits`() {
+        // dispose() kills on purpose (and typically yields 143, but even a 0 with the
+        // flag set is ours); any non-zero code is a crash and must keep the
+        // reconnect→restart recovery path intact.
+        assertFalse(NodeProcessManager.isIntentionalExit(0, disposed = true))
+        assertFalse(NodeProcessManager.isIntentionalExit(143, disposed = false))
+        assertFalse(NodeProcessManager.isIntentionalExit(137, disposed = false))
+        assertFalse(NodeProcessManager.isIntentionalExit(75, disposed = false))
+        assertFalse(NodeProcessManager.isIntentionalExit(1, disposed = false))
+    }
 }

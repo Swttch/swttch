@@ -72,6 +72,26 @@ class NodeProcessManager(
      */
     private val onRestartRequested: (() -> Unit)? = null,
     /**
+     * Invoked when the backend Node process exits **cleanly on its own decision**
+     * (exit code 0 and NOT caused by [dispose]) — in practice the idle
+     * self-shutdown. The managing side must stand its reconnect/restart watchdog
+     * down (dispose the RPC client) instead of treating the silence as a crash:
+     * otherwise the RPC reconnect loop respawns the backend ~15 s after every
+     * idle shutdown, forever (the mode-D manual pass caught exactly that loop —
+     * and before the D2 idle-gate fix the respawned backend never armed its idle
+     * timer, so the same trigger used to leak one silent eternal backend
+     * instead). Crash exits (non-zero) keep the restart recovery; exit code 75
+     * keeps [onRestartRequested]. Called off the EDT inside the start() coroutine.
+     */
+    private val onIntentionalExit: (() -> Unit)? = null,
+    /**
+     * Invoked on every [Lifecycle] transition (STARTING → RUNNING → DEAD), so the
+     * status-bar widget can reflect backend liveness without polling. Called from
+     * whichever thread performs the transition (start() coroutine or dispose());
+     * the listener is responsible for marshalling to the UI thread.
+     */
+    private val onLifecycleChanged: ((Lifecycle) -> Unit)? = null,
+    /**
      * The shared, application-scoped extraction gate. The plugin's webview/backend
      * resources are extracted once per (IDE product, plugin version) by
      * [com.github.yhk1038.claudecodegui.services.NodeBackendService]; every backend
@@ -151,6 +171,20 @@ class NodeProcessManager(
     @Volatile
     private var lifecycle = Lifecycle.STARTING
 
+    /** Current [Lifecycle] — read by the status-bar widget alongside [onLifecycleChanged]. */
+    val currentLifecycle: Lifecycle
+        get() = lifecycle
+
+    private fun setLifecycle(value: Lifecycle) {
+        lifecycle = value
+        try {
+            onLifecycleChanged?.invoke(value)
+        } catch (e: Exception) {
+            // A UI listener failure must never break process management.
+            logger.warn("onLifecycleChanged listener threw", e)
+        }
+    }
+
     // True once dispose() has run. dispose() destroys the process (typically SIGTERM →
     // exit 143), and also sets lifecycle = DEAD up front — so the natural exit observed
     // by proc.waitFor() can't be distinguished from a restart-signalled exit by lifecycle
@@ -216,7 +250,7 @@ class NodeProcessManager(
                         "  3. Or set the NODE_PATH_OVERRIDE environment variable to your node binary " +
                         "(e.g. ~/.nvm/versions/node/v24.16.0/bin/node)."
                 )
-                lifecycle = Lifecycle.DEAD
+                setLifecycle(Lifecycle.DEAD)
                 _portDeferred.completeExceptionally(
                     IllegalStateException("Node.js executable not found")
                 )
@@ -238,7 +272,7 @@ class NodeProcessManager(
                 }
             if (resources == null) {
                 logger.error("Plugin resources not ready (extraction gate absent or timed out).")
-                lifecycle = Lifecycle.DEAD
+                setLifecycle(Lifecycle.DEAD)
                 _portDeferred.completeExceptionally(
                     IllegalStateException("Plugin resources not ready")
                 )
@@ -356,7 +390,7 @@ class NodeProcessManager(
 
                 val proc = pb.start()
                 process = proc
-                lifecycle = Lifecycle.RUNNING
+                setLifecycle(Lifecycle.RUNNING)
                 onProgress?.invoke(LoadingPhase.WAITING_FOR_PORT)
 
                 // Read stdout: first line is PORT, rest are logged
@@ -388,7 +422,7 @@ class NodeProcessManager(
 
                 // Wait for process to exit and log the result
                 val exitCode = proc.waitFor()
-                lifecycle = Lifecycle.DEAD
+                setLifecycle(Lifecycle.DEAD)
                 logger.info("Node.js backend exited with code $exitCode")
 
                 if (!_portDeferred.isCompleted) {
@@ -408,11 +442,20 @@ class NodeProcessManager(
                         // A restart callback failure must not escape the start() coroutine.
                         logger.warn("onRestartRequested callback threw", e)
                     }
+                } else if (isIntentionalExit(exitCode, disposed)) {
+                    // Clean self-exit (idle shutdown): the managing side stands its
+                    // RPC reconnect/restart watchdog down instead of respawning.
+                    logger.info("Node.js backend exited intentionally (code 0) — not a crash")
+                    try {
+                        onIntentionalExit?.invoke()
+                    } catch (e: Exception) {
+                        logger.warn("onIntentionalExit callback threw", e)
+                    }
                 }
             } catch (e: CancellationException) {
                 // Normal shutdown
             } catch (e: Exception) {
-                lifecycle = Lifecycle.DEAD
+                setLifecycle(Lifecycle.DEAD)
                 logger.error("Failed to start Node.js backend", e)
                 if (!_portDeferred.isCompleted) {
                     _portDeferred.completeExceptionally(e)
@@ -634,7 +677,7 @@ class NodeProcessManager(
         // in start() must see this flag set, so it suppresses the restart callback for this
         // intentional shutdown rather than respawning a backend we're trying to kill.
         disposed = true
-        lifecycle = Lifecycle.DEAD
+        setLifecycle(Lifecycle.DEAD)
 
         stdoutJob?.cancel()
         stderrJob?.cancel()
@@ -692,5 +735,14 @@ class NodeProcessManager(
          */
         fun shouldRequestRestart(exitCode: Int, disposed: Boolean): Boolean =
             exitCode == RESTART_EXIT_CODE && !disposed
+
+        /**
+         * A clean exit the backend chose for itself (idle self-shutdown = exit 0),
+         * as opposed to a [dispose]-driven kill (SIGTERM → 143, `disposed` set) or
+         * a crash (any other non-zero code). Only this case stands the RPC
+         * reconnect/restart watchdog down — crash recovery stays untouched.
+         */
+        fun isIntentionalExit(exitCode: Int, disposed: Boolean): Boolean =
+            exitCode == 0 && !disposed
     }
 }
