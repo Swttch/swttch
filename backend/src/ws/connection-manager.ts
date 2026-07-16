@@ -68,12 +68,18 @@ export class ConnectionManager {
   private idleShutdownTimer: NodeJS.Timeout | null = null;
   /**
    * Idle-shutdown gate ("keep backend running"). While true the backend never
-   * schedules its zero-connection self-shutdown. Driven exclusively over the
-   * /rpc channel (SET_KEEP_ALIVE): Kotlin pushes the desired state on every
-   * RPC (re)connect and on user toggle; the parent watchdog flips it back to
-   * false when the IDE dies (keep-alive clamp).
+   * schedules its zero-connection self-shutdown.
+   *
+   * The boot value comes from the constructor: a standalone backend
+   * boots with the gate up and nothing ever lowers it — the operator owns the
+   * process lifetime (visible terminal, Ctrl+C → graceful shutdown), so the
+   * idle timer is never armed at all. In JetBrains mode the gate boots down
+   * and is driven exclusively over the /rpc channel (SET_KEEP_ALIVE): Kotlin
+   * pushes the desired state on every RPC (re)connect and on user toggle; the
+   * parent watchdog flips it back to false when the IDE dies (keep-alive
+   * clamp).
    */
-  private keepAlive = false;
+  private keepAlive: boolean;
   // Secondary index for O(1) panelId → connectionId resolution. Panel ↔ connection
   // is 1:1 (one JCEF browser per IDE panel, one /ws socket per browser), so this
   // map is always in sync with the panelId stored on each ClientRecord.
@@ -99,6 +105,10 @@ export class ConnectionManager {
   // panelIds need not be unique in the stack; pushes de-dupe only to keep it tidy.
   private lastFocusedPanelIdStack: string[] = [];
   private nextId = 0;
+
+  constructor(initialKeepAlive = false) {
+    this.keepAlive = initialKeepAlive;
+  }
 
   // ─── Connection lifecycle ───────────────────────────────────────────────────
 

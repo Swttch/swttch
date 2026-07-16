@@ -256,6 +256,28 @@ describe('ConnectionManager', () => {
       cm.setKeepAlive(false);
       expect(cm.isKeepAlive()).toBe(false);
     });
+
+    it('should boot with the gate up when constructed for standalone mode', () => {
+      // ws-server passes !isJetBrainsMode: a standalone backend never arms the
+      // idle timer — the operator owns its lifetime (Ctrl+C graceful shutdown).
+      const standalone = new ConnectionManager(true);
+      expect(standalone.isKeepAlive()).toBe(true);
+
+      const connId = standalone.addConnection(createMockWs());
+      standalone.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should keep the JetBrains boot default (gate down) with the no-arg constructor', () => {
+      const jetbrains = new ConnectionManager();
+      expect(jetbrains.isKeepAlive()).toBe(false);
+
+      const connId = jetbrains.addConnection(createMockWs());
+      jetbrains.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
   });
 
   describe('pending editor context buffer', () => {

@@ -10,6 +10,7 @@ import { handleIdeSelectionRequest } from './ide-selection-route';
 import type { Bridge } from '../bridge/bridge-interface';
 import type { IPCMessage } from '../core/types';
 import { ClientEnv, MessageType } from '../shared';
+import { isJetBrainsMode } from '../config/environment';
 import { getPluginVersion } from '../core/handlers/getVersion';
 import { cancelLogin } from '../core/handlers/login';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
@@ -273,7 +274,12 @@ export function startWebSocketServer(
   logWs?: LogWebSocketServer,
 ): Promise<WebSocketServerHandle> {
   return new Promise<WebSocketServerHandle>((resolve, reject) => {
-    const connections = new ConnectionManager();
+    // Standalone backends boot with the keep-alive gate up, so the
+    // idle-shutdown timer is never armed: the operator owns the process
+    // lifetime (visible terminal, Ctrl+C → graceful shutdown). Nothing lowers
+    // the gate in that mode — SET_KEEP_ALIVE only ever arrives from Kotlin,
+    // and the parent watchdog is JetBrains-only. SESSION_CLEANUP is untouched.
+    const connections = new ConnectionManager(!isJetBrainsMode);
     // Only relax Origin validation to strict same-origin when the operator
     // explicitly bound to a non-loopback address. Default loopback bind keeps
     // the historical allowlist-only behavior (DNS-rebinding stays closed).
