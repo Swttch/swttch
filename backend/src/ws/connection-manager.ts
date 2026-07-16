@@ -66,6 +66,14 @@ export class ConnectionManager {
   private sessionRegistry = new Map<string, SessionRecord>();
   private cleanupTimers = new Map<string, NodeJS.Timeout>();
   private idleShutdownTimer: NodeJS.Timeout | null = null;
+  /**
+   * Idle-shutdown gate ("keep backend running"). While true the backend never
+   * schedules its zero-connection self-shutdown. Driven exclusively over the
+   * /rpc channel (SET_KEEP_ALIVE): Kotlin pushes the desired state on every
+   * RPC (re)connect and on user toggle; the parent watchdog flips it back to
+   * false when the IDE dies (keep-alive clamp).
+   */
+  private keepAlive = false;
   // Secondary index for O(1) panelId → connectionId resolution. Panel ↔ connection
   // is 1:1 (one JCEF browser per IDE panel, one /ws socket per browser), so this
   // map is always in sync with the panelId stored on each ClientRecord.
@@ -583,7 +591,35 @@ export class ConnectionManager {
     );
   }
 
+  /**
+   * Toggle the idle-shutdown gate. Enabling cancels any armed timer. Disabling
+   * restores the normal regime — and, when there are no /ws connections at that
+   * moment, arms the timer immediately: removeConnection() only fires on a
+   * connection that existed, so a backend that never received one (eager start,
+   * prewarm) would otherwise linger forever.
+   */
+  setKeepAlive(enabled: boolean): void {
+    // No early return on an unchanged value: the initial state is false, yet the
+    // very first SET_KEEP_ALIVE(false) push must still arm the timer below when
+    // the backend has no /ws connections (the eager-start/prewarm case).
+    if (this.keepAlive !== enabled) {
+      console.error('[node-backend]', `Keep-alive ${enabled ? 'enabled' : 'disabled'}`);
+    }
+    this.keepAlive = enabled;
+
+    if (enabled) {
+      this.cancelIdleShutdown();
+    } else if (this.connectionMap.size === 0) {
+      this.scheduleIdleShutdown();
+    }
+  }
+
+  isKeepAlive(): boolean {
+    return this.keepAlive;
+  }
+
   private scheduleIdleShutdown(): void {
+    if (this.keepAlive) return;
     if (this.idleShutdownTimer !== null) return;
     // Dev/testing escape hatch: a standalone `pnpm dev` backend has no respawner,
     // so idle shutdown would kill it whenever the browser disconnects briefly.

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConnectionManager } from '../connection-manager';
 import { ClientEnv } from '../../shared';
 import { MessageType } from '../../shared';
@@ -181,6 +181,80 @@ describe('ConnectionManager', () => {
       cm.addConnection(createMockWs());
       cm.removeConnection(connId);
       expect(cm.getConnectionCount()).toBe(1);
+    });
+  });
+
+  describe('keep-alive gate (idle shutdown)', () => {
+    const IDLE_GRACE = 60_000;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+      exitSpy.mockClear();
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+    });
+
+    it('should idle-shutdown 60s after the last connection leaves (baseline)', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should not schedule idle shutdown while keep-alive is enabled', () => {
+      cm.setKeepAlive(true);
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should cancel an already-armed timer when keep-alive is enabled', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId); // arms the timer
+      cm.setKeepAlive(true);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should arm the timer on a false push with zero connections (prewarm-leak fix)', () => {
+      // Fresh manager, no /ws connection was ever added: removeConnection never
+      // fires, so without this push the backend would linger forever.
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should arm the timer when keep-alive is disabled at zero connections (keep-alive clamp)', () => {
+      cm.setKeepAlive(true);
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should not arm the timer when keep-alive is disabled with live connections', () => {
+      cm.addConnection(createMockWs());
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should cancel the setKeepAlive(false)-armed timer when a connection arrives', () => {
+      cm.setKeepAlive(false); // arms (zero connections)
+      cm.addConnection(createMockWs());
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should report the gate state via isKeepAlive', () => {
+      expect(cm.isKeepAlive()).toBe(false);
+      cm.setKeepAlive(true);
+      expect(cm.isKeepAlive()).toBe(true);
+      cm.setKeepAlive(false);
+      expect(cm.isKeepAlive()).toBe(false);
     });
   });
 

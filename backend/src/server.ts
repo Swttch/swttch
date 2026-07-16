@@ -17,7 +17,7 @@ import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
-import { ClientEnv } from './shared';
+import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
 
 /**
@@ -319,6 +319,15 @@ async function main() {
     if (!stashed) {
       console.error('[node-backend]', `[NATIVE_DROP] stash failed — no connection for panelId=${panelId}`);
     }
+  });
+
+  // Idle-shutdown gate ("keep backend running"). Kotlin pushes the
+  // desired state on every /rpc (re)connect and on user toggle; a `false` push
+  // with zero /ws connections arms the idle timer immediately (see
+  // ConnectionManager.setKeepAlive), which also closes the pre-existing
+  // prewarm leak where a backend that never received a /ws client lived forever.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.SET_KEEP_ALIVE, (_method, params) => {
+    connections.setKeepAlive(params.enabled === true);
   });
 
   // 4. Logger에 LogWS 참조 설정
