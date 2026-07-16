@@ -17,6 +17,7 @@ import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
+import { startParentWatchdog } from './core/parent-watchdog';
 import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
 
@@ -320,6 +321,21 @@ async function main() {
       console.error('[node-backend]', `[NATIVE_DROP] stash failed — no connection for panelId=${panelId}`);
     }
   });
+
+  // Keep-alive clamp: when the IDE (our parent) dies — clean close and
+  // crash alike — the backend does NOT exit; it only flips the keep-alive gate
+  // off, restoring the idle-shutdown regime. A live browser/tunnel client then
+  // keeps it alive; with zero /ws connections setKeepAlive(false) arms the
+  // idle timer immediately, so a truly orphaned client-less backend exits
+  // ~60s after IDE death (including the prewarm-leak case).
+  if (isJetBrainsMode) {
+    startParentWatchdog(() => connections.setKeepAlive(false));
+  } else {
+    // Standalone: the keep-alive gate boots up (see ws-server.ts), so
+    // the idle self-shutdown never arms — the operator owns the backend
+    // lifetime (Ctrl+C → graceful shutdown). SESSION_CLEANUP stays active.
+    console.error('[node-backend]', 'Standalone mode: idle self-shutdown disabled (operator owns the backend lifetime)');
+  }
 
   // Idle-shutdown gate ("keep backend running"). Kotlin pushes the
   // desired state on every /rpc (re)connect and on user toggle; a `false` push
