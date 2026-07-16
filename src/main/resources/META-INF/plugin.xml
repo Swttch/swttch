@@ -93,6 +93,11 @@
         <!-- Tab icon badge for unread streaming completions -->
         <fileIconPatcher
             implementation="com.github.yhk1038.claudecodegui.editor.ClaudeCodeFileIconPatcher"/>
+
+        <!-- Backend liveness dot + status card in the status bar -->
+        <statusBarWidgetFactory
+            id="ClaudeCodeGui.BackendStatus"
+            implementation="com.github.yhk1038.claudecodegui.statusbar.BackendStatusBarWidgetFactory"/>
     </extensions>
 
     <!-- Prewarm version-scoped resource extraction at app frame creation (issue #149) -->

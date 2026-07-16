@@ -230,6 +230,10 @@ class NodeProcessManager(
      * Start the Node.js backend process.
      */
     fun start() {
+        // The field is born STARTING, but a field initializer fires no listener —
+        // without this the status-bar dot never sees the STARTING phase (it keeps
+        // the last painted color, e.g. RED after a crash, until RUNNING/DEAD).
+        setLifecycle(Lifecycle.STARTING)
         // Everything here — node discovery, shell PATH capture, backend extraction —
         // can block for seconds (the `$SHELL -lic` capture is bounded only by a 10s
         // timeout). It must NOT run on the caller's thread (EDT): start() is reached
@@ -390,7 +394,11 @@ class NodeProcessManager(
 
                 val proc = pb.start()
                 process = proc
-                setLifecycle(Lifecycle.RUNNING)
+                // NOT RUNNING yet: the OS process exists but the server is still
+                // booting until it reports its PORT line (readStdout flips the
+                // lifecycle there). Flipping here made the STARTING (yellow) phase
+                // of the status-bar dot last mere milliseconds — the dot went
+                // straight to green while the backend was not even listening.
                 onProgress?.invoke(LoadingPhase.WAITING_FOR_PORT)
 
                 // Read stdout: first line is PORT, rest are logged
@@ -482,6 +490,10 @@ class NodeProcessManager(
                     val portNum = portStr.toIntOrNull()
                     if (portNum != null) {
                         logger.info("Node.js backend listening on port $portNum")
+                        // RUNNING means "listening on a known port". Set it BEFORE
+                        // completing the deferred: waiters resumed by complete() may
+                        // immediately read the lifecycle (portOf gates on RUNNING).
+                        setLifecycle(Lifecycle.RUNNING)
                         _portDeferred.complete(portNum)
                         portRead = true
                     } else {
