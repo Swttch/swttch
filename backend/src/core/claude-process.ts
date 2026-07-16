@@ -7,6 +7,7 @@ import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
+import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { MessageType } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
@@ -150,6 +151,37 @@ export async function ensureClaudeProcess(
     return;
   }
 
+  // Liveness guard before spawning: a live, identity-checked CLI may
+  // already be writing this session's JSONL — an orphan left by a hard-killed
+  // backend, or a session legitimately open under another live backend. Spawning
+  // a second CLI would mean two writers on one JSONL (branched history,
+  // false task verdicts, interleaved GUI) — so kill the orphan / refuse the takeover.
+  const conflict = findLiveCliForSession(targetSessionId);
+  if (conflict) {
+    if (conflict.ownerAlive) {
+      const reason =
+        `Session ${targetSessionId} is already active under another backend ` +
+        `(CLI PID ${conflict.entry.pid}, backend PID ${conflict.entry.owner.pid}). ` +
+        'Refusing to start a second writer on the same session.';
+      console.error('[node-backend]', reason);
+      connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
+        type: MessageType.SPAWN_ERROR,
+        reason,
+        error: reason,
+      });
+      connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
+      return;
+    }
+    console.error(
+      '[node-backend]',
+      `Killing orphaned CLI ${conflict.entry.pid} before respawning session ${targetSessionId}`,
+    );
+    await killRegisteredCli(conflict.entry);
+    // The orphan proves this session already ran — resume it instead of passing
+    // --session-id, which would fail with "already in use".
+    spawnedSessions.add(targetSessionId);
+  }
+
   const useResume = spawnedSessions.has(targetSessionId);
   const sessionFlag = useResume ? '--resume' : '--session-id';
 
@@ -228,6 +260,11 @@ export async function ensureClaudeProcess(
   // reservation can deliver to this fresh process. Idempotent (already-armed
   // timers are skipped) and fire-and-forget so it never blocks the stream start.
   void restoreSchedulesForSession(targetSessionId, connections);
+
+  // Record the live CLI in the on-disk registry: lets a FUTURE backend detect this
+  // process as an orphan (startup sweep) or as a conflicting writer (resume guard)
+  // if we die hard before the 'close' handler unregisters it.
+  registerCliProcess(proc, targetSessionId, workingDir);
 
   // 모든 구독자에게 스트림 시작 알림
   connections.broadcastToSession(targetSessionId, MessageType.STREAM_START);
@@ -317,6 +354,9 @@ export async function ensureClaudeProcess(
 
       // 프로세스 참조만 해제 (세션 레코드는 유지 — 구독자가 아직 있을 수 있음)
       connections.setProcess(targetSessionId, null);
+      // Clean CLI exit — drop its registry entry (hard backend deaths skip this;
+      // that is exactly what the startup orphan sweep is for).
+      unregisterCliProcess(proc.pid);
     } catch (err) {
       reportBackendError(err instanceof Error ? err : new Error(String(err)), {
         layer: 'claude_stream',

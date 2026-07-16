@@ -16,6 +16,7 @@ import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/en
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
+import { sweepOrphanCliProcesses } from './core/cli-registry';
 import { ClientEnv } from './shared';
 import type { NativeDropEntry } from './core/types';
 
@@ -243,6 +244,12 @@ async function main() {
 
   // Load CLI path from settings before any handler can spawn claude
   await Claude.refresh();
+
+  // Orphan sweep: a backend that died hard (SIGKILL bypasses every
+  // JS-level guard from the process-group hard-binding) leaves its CLI children running
+  // headless. The registry written at spawn time lets this fresh backend find
+  // and kill them before it starts serving.
+  await sweepOrphanCliProcesses();
 
   const bridges: BridgeMap = {
     [ClientEnv.BROWSER]: new BrowserBridge(),
