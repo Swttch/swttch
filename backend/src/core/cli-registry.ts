@@ -59,6 +59,10 @@ function pidAlive(pid: number): boolean {
 
 /** Group signal with plain-signal fallback — pid-based twin of Claude.killTree. */
 function killPidTree(pid: number, signal: NodeJS.Signals): void {
+  // process.kill(-0)/process.kill(-1) would signal our own (or every) process
+  // group — in JetBrains mode that can include the IDE JVM. Never let a corrupt
+  // or bogus registry pid reach the group signal.
+  if (!Number.isInteger(pid) || pid <= 1) return;
   try {
     process.kill(-pid, signal);
   } catch {
@@ -110,7 +114,7 @@ function readEntries(): CliRegistryEntry[] {
   for (const file of files) {
     try {
       const parsed = JSON.parse(readFileSync(join(registryDir(), file), 'utf8')) as CliRegistryEntry;
-      if (typeof parsed.pid === 'number' && typeof parsed.sessionId === 'string' && parsed.owner) {
+      if (Number.isInteger(parsed.pid) && parsed.pid > 1 && typeof parsed.sessionId === 'string' && parsed.owner) {
         entries.push(parsed);
       } else {
         rmSync(join(registryDir(), file), { force: true });

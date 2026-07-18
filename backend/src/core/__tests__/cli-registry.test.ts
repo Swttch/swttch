@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 // The registry lives under homedir()/.claude-code-gui — point homedir at a scratch
@@ -154,6 +154,35 @@ describe.skipIf(!isPosix)('cli-registry (POSIX, real processes)', () => {
 
     await waitUntil(() => !pidAlive(proc.pid as number));
     expect(existsSync(entryPath(proc.pid as number))).toBe(false);
+  });
+
+  it('drops a registry entry with a bogus pid (<= 1) without ever signalling', async () => {
+    // Defence in depth: a corrupt/bogus pid must never reach the group kill.
+    // process.kill(-0) signals our OWN process group and process.kill(-1) every
+    // group we may signal — in JetBrains mode that can include the IDE JVM.
+    mkdirSync(registryDir(), { recursive: true });
+    const bogus = join(registryDir(), '0.json');
+    writeFileSync(
+      bogus,
+      JSON.stringify({
+        pid: 0,
+        sessionId: 'sess-bogus',
+        workingDir: '/tmp/proj',
+        startedAt: new Date().toISOString(),
+        owner: { pid: 999999, argv1: 'node' },
+      }),
+    );
+
+    const killSpy = vi.spyOn(process, 'kill');
+    const result = await sweepOrphanCliProcesses();
+    const groupSignals = killSpy.mock.calls.filter(([p]) => typeof p === 'number' && p <= 0);
+    killSpy.mockRestore();
+
+    // readEntries rejects pid <= 1 up front, so the sweep never sees it, never
+    // signals a group, and GCs the corrupt file.
+    expect(groupSignals).toEqual([]);
+    expect(result).toEqual({ killed: 0, skipped: 0 });
+    expect(existsSync(bogus)).toBe(false);
   });
 
   it('sweep kills orphans, skips live-owner entries, and GCs dead ones', async () => {

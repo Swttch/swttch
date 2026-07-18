@@ -162,6 +162,12 @@ export class Claude {
    */
   static killTree(proc: ChildProcess, signal: NodeJS.Signals = 'SIGTERM'): void {
     if (!proc.pid) return;
+    // Once the child has been reaped, proc.pid is a stale number the OS may have
+    // reused. Signalling -proc.pid (or taskkill /T) then hits an unrelated process
+    // group/tree. proc.kill() would be a no-op here, but the raw group signal is
+    // not liveness-aware — bail before issuing it. (Guards e.g. an uncleared
+    // safety-timeout killTree firing after the process already closed.)
+    if (proc.exitCode !== null || proc.signalCode !== null) return;
     if (process.platform === 'win32') {
       try {
         execFileSync('taskkill', ['/F', '/T', '/PID', String(proc.pid)]);

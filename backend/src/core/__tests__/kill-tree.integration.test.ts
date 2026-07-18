@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
 import { Claude } from '../claude';
 import { ConnectionManager } from '../../ws/connection-manager';
@@ -108,6 +108,25 @@ describe.skipIf(!isPosix)('Claude.killTree (POSIX, real processes)', () => {
 
     await waitUntil(() => proc.exitCode !== null || proc.signalCode !== null);
     expect(proc.signalCode).toBe('SIGTERM');
+  });
+
+  it('does not raw-group-signal a reaped child (stale pid may be reused)', async () => {
+    // Regression: a stale killTree (e.g. an uncleared safety timeout) firing after
+    // the child closed must not signal -proc.pid — that pid may now belong to an
+    // unrelated reused process group. proc.kill() would no-op, but process.kill(-pid)
+    // is not liveness-aware, so killTree must bail on a reaped child.
+    const proc = spawn('sleep', ['30'], { stdio: 'ignore' });
+    spawned.push(proc);
+    proc.kill('SIGKILL');
+    await waitUntil(() => proc.exitCode !== null || proc.signalCode !== null);
+
+    const killSpy = vi.spyOn(process, 'kill');
+    try {
+      Claude.killTree(proc, 'SIGTERM');
+      expect(killSpy).not.toHaveBeenCalled();
+    } finally {
+      killSpy.mockRestore();
+    }
   });
 });
 

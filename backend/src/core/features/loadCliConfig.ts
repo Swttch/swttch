@@ -154,9 +154,13 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
 
   return new Promise((resolve) => {
     let resolved = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
     const safeResolve = (value: CliConfigControlResponse | null): void => {
       if (resolved) return;
       resolved = true;
+      // Clear the safety timeout so it cannot fire a stale killTree after the
+      // probe process has already closed and its pid may have been reused.
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       resolve(value);
     };
 
@@ -200,7 +204,7 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
     });
 
     // Safety timeout — kill process but let close event handle resolve
-    setTimeout(() => {
+    timeoutHandle = setTimeout(() => {
       console.error('[loadCliConfig] timeout — killing process');
       Claude.killTree(proc);
     }, 15000);
