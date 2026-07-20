@@ -19,10 +19,11 @@ import { basename, join } from 'path';
  * backends (JetBrains mode legitimately runs one backend per project).
  *
  * PID reuse safety: a pid alone is not an identity. Before acting on an entry we
- * re-read the live process argv (`ps -o args=`) and require it to still contain
- * the entry's sessionId (the chat spawn always passes `--session-id <id>` or
- * `--resume <id>`). win32 has no `ps`; identity is unknown there, so detection is
- * log-only and nothing is auto-killed (an honest, documented gap).
+ * re-read the live process argv (`ps -o args=` on POSIX, the CIM `Win32_Process`
+ * CommandLine on win32) and require it to still contain the entry's sessionId (the
+ * chat spawn always passes `--session-id <id>` or `--resume <id>`). If the argv is
+ * unreadable (e.g. a transient CIM failure) identity stays unknown and nothing is
+ * auto-killed — the conservative fallback, never a reused pid casualty.
  */
 
 export interface CliRegistryEntry {
@@ -38,9 +39,30 @@ function registryDir(): string {
   return join(homedir(), '.claude-code-gui', 'cli-registry');
 }
 
-/** Live argv of [pid] as one string, or null when unknown (dead pid / win32). */
+/** Live argv of [pid] as one string, or null when unknown (dead pid / unreadable). */
 function processArgs(pid: number): string | null {
-  if (process.platform === 'win32') return null;
+  if (!Number.isInteger(pid) || pid <= 1) return null;
+  if (process.platform === 'win32') {
+    try {
+      // Win32_Process.CommandLine is the full argv (incl. --session-id / --resume),
+      // the identity token our PID-reuse guard needs. `tasklist` only yields the
+      // image name, so it cannot verify identity. CIM is the portable, non-deprecated
+      // path (wmic is being removed from Windows). Empty output = pid gone / no argv.
+      const out = execFileSync(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`,
+        ],
+        { encoding: 'utf8', windowsHide: true },
+      ).trim();
+      return out.length > 0 ? out : null;
+    } catch {
+      return null; // CIM query failed — treat identity as unknown
+    }
+  }
   try {
     return execFileSync('ps', ['-o', 'args=', '-p', String(pid)], { encoding: 'utf8' }).trim();
   } catch {
@@ -57,12 +79,26 @@ function pidAlive(pid: number): boolean {
   }
 }
 
-/** Group signal with plain-signal fallback — pid-based twin of Claude.killTree. */
+/** Tree kill with plain-signal fallback — pid-based twin of Claude.killTree. */
 function killPidTree(pid: number, signal: NodeJS.Signals): void {
   // process.kill(-0)/process.kill(-1) would signal our own (or every) process
   // group — in JetBrains mode that can include the IDE JVM. Never let a corrupt
   // or bogus registry pid reach the group signal.
   if (!Number.isInteger(pid) || pid <= 1) return;
+  if (process.platform === 'win32') {
+    // No process groups on win32; `taskkill /T` walks the child tree, `/F` forces.
+    // `signal` is irrelevant here (taskkill always terminates) — both the SIGTERM
+    // and the escalated SIGKILL caller in killRegisteredCli map to the same tree
+    // kill. That collapses the grace ladder to an immediate hard kill, which is
+    // correct for an orphan (its owning backend is already gone). taskkill on an
+    // already-dead pid exits non-zero and is swallowed by the catch.
+    try {
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)], { windowsHide: true });
+    } catch {
+      // Already gone or not killable — ignore
+    }
+    return;
+  }
   try {
     process.kill(-pid, signal);
   } catch {
@@ -71,6 +107,39 @@ function killPidTree(pid: number, signal: NodeJS.Signals): void {
     } catch {
       // Already gone
     }
+  }
+}
+
+/**
+ * win32 only: pids of every LIVE process whose argv carries [sessionId]. The chat
+ * spawn wraps `claude` in a cmd.exe shell (win32 needs a shell to resolve the
+ * `.cmd`/`.ps1` launcher), so the pid the registry stored is the SHELL. When the
+ * backend dies the shell drops with the broken stdio pipe, but the real `claude`
+ * grandchild keeps running — a working orphan the stored pid can no longer reach.
+ * The session id rides in `--session-id`/`--resume`, which BOTH the shell and the
+ * grandchild carry in their CommandLine, so matching on it finds the survivor.
+ * Excludes our own CIM query (its command text contains the id too).
+ */
+function liveSessionProcs(sessionId: string): number[] {
+  if (process.platform !== 'win32') return [];
+  try {
+    const out = execFileSync(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${sessionId}*' -and $_.CommandLine -notlike '*Get-CimInstance*' } | ForEach-Object { $_.ProcessId }`,
+      ],
+      { encoding: 'utf8', windowsHide: true },
+    ).trim();
+    if (!out) return [];
+    return out
+      .split(/\r?\n/)
+      .map((s) => Number.parseInt(s.trim(), 10))
+      .filter((n) => Number.isInteger(n) && n > 1);
+  } catch {
+    return [];
   }
 }
 
@@ -128,14 +197,23 @@ function readEntries(): CliRegistryEntry[] {
 
 /**
  * Identity-checked liveness of an entry's CLI:
- * 'live' — pid alive and argv still carries the sessionId;
- * 'dead' — pid gone, or pid reused by an unrelated process (argv mismatch);
- * 'unknown' — pid alive but argv unreadable (win32) — do NOT auto-kill.
+ * 'live' — a live process still carries the sessionId;
+ * 'dead' — no live carrier, or the stored pid was reused by an unrelated process.
+ *
+ * win32 keys on the session id across ALL live processes, not the stored pid: that
+ * pid is the cmd.exe shell, which dies with the backend while the real `claude`
+ * grandchild orphans on. Keying on the shell pid alone would declare a live orphan
+ * 'dead' and leak it. POSIX spawns the CLI directly (no shell) and detached, so the
+ * stored pid IS the CLI — argv identity on that pid is exact. A transient argv-read
+ * failure resolves to 'dead' (GC the record) rather than risk killing a reused pid.
  */
-function cliState(entry: CliRegistryEntry): 'live' | 'dead' | 'unknown' {
+function cliState(entry: CliRegistryEntry): 'live' | 'dead' {
+  if (process.platform === 'win32') {
+    return liveSessionProcs(entry.sessionId).length > 0 ? 'live' : 'dead';
+  }
   if (!pidAlive(entry.pid)) return 'dead';
   const args = processArgs(entry.pid);
-  if (args === null) return process.platform === 'win32' ? 'unknown' : 'dead';
+  if (args === null) return 'dead';
   return args.includes(entry.sessionId) ? 'live' : 'dead';
 }
 
@@ -170,15 +248,6 @@ export function findLiveCliForSession(sessionId: string): CliConflict | null {
       unregisterCliProcess(entry.pid);
       continue;
     }
-    if (state === 'unknown') {
-      // win32: cannot verify identity — report nothing rather than risk acting
-      // on a reused pid.
-      console.error(
-        '[node-backend]',
-        `CLI registry: pid ${entry.pid} for session ${sessionId} is alive but unverifiable on this platform — ignoring`,
-      );
-      continue;
-    }
     return { entry, ownerAlive: ownerAlive(entry) };
   }
   return null;
@@ -186,6 +255,15 @@ export function findLiveCliForSession(sessionId: string): CliConflict | null {
 
 /** SIGTERM the entry's process group, escalate to SIGKILL after [graceMs]. */
 export async function killRegisteredCli(entry: CliRegistryEntry, graceMs = 3_000): Promise<void> {
+  if (process.platform === 'win32') {
+    // Kill by session id, not the stored shell pid: `taskkill /F /T` every live
+    // carrier — the orphaned `claude` grandchild (and any of its own children).
+    // No grace ladder; the owning backend is already gone, so there is nothing to
+    // shut down gracefully.
+    for (const pid of liveSessionProcs(entry.sessionId)) killPidTree(pid, 'SIGKILL');
+    unregisterCliProcess(entry.pid);
+    return;
+  }
   killPidTree(entry.pid, 'SIGTERM');
   const deadline = Date.now() + graceMs;
   while (Date.now() < deadline && cliState(entry) === 'live') {
@@ -210,14 +288,6 @@ export async function sweepOrphanCliProcesses(): Promise<{ killed: number; skipp
     const state = cliState(entry);
     if (state === 'dead') {
       unregisterCliProcess(entry.pid);
-      continue;
-    }
-    if (state === 'unknown') {
-      console.error(
-        '[node-backend]',
-        `Orphan sweep: pid ${entry.pid} (session ${entry.sessionId}) alive but unverifiable on this platform — left running`,
-      );
-      skipped++;
       continue;
     }
     if (ownerAlive(entry)) {
