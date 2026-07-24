@@ -44,9 +44,16 @@ function fireAndForget(p: Promise<void>): void {
 
 /** 진행 중인 모든 텔레메트리 전송이 끝날 때까지 기다린다(transport_error 재귀 포함). */
 export async function flushTelemetry(): Promise<void> {
-  while (inFlight.size > 0) {
-    await Promise.allSettled([...inFlight]);
-  }
+  // 완료된 전송이 자기 promise 안에서 2차 전송(transport_error 재귀)을 add하는데, 이는
+  // 원본이 inFlight에서 제거되는 것과 거의 같은 틱에 일어난다. Set이 빈 뒤에도 microtask를
+  // 한 번 양보하고 다시 확인해, 뒤늦게 추가된 재전송까지 반드시 기다린다(부하 시 fetch 횟수
+  // 경합 방지).
+  do {
+    while (inFlight.size > 0) {
+      await Promise.allSettled([...inFlight]);
+    }
+    await Promise.resolve();
+  } while (inFlight.size > 0);
 }
 
 // 서버사이드 전송이라 실제 브라우저 UA가 없다. Rybbit은 UA로 device/os를 파싱하는데,
