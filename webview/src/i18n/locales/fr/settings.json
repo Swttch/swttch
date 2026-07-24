@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "Ouvrez un projet pour utiliser les paramètres du projet"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "Langue",
       "description": "Langue de réponse préférée de Claude",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "Ouvrir les fichiers avec",
+      "label": "Ouvrir les fichiers avec",
+      "description": "Le programme qui ouvre une référence de fichier cliquée dans le chat.",
+      "jetbrainsDescription": "Les fichiers s'ouvrent dans votre IDE connecté.",
+      "jetbrainsFallback": "IDE connecté",
+      "systemDefault": "Par défaut du système",
+      "configureCustom": "Configurer un éditeur personnalisé…",
+      "pathPlaceholder": "Chemin vers l'exécutable",
+      "choose": "Choisir…",
+      "detecting": "Détection…"
+    },
     "terminal": {
       "title": "Terminal",
       "app": {

@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "برای استفاده از تنظیمات پروژه، یک پروژه را باز کنید"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "زبان",
       "description": "زبان ترجیحی Claude برای پاسخ‌دهی",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "باز کردن فایل‌ها با",
+      "label": "باز کردن فایل‌ها با",
+      "description": "اینکه چه برنامه‌ای ارجاع فایلِ کلیک‌شده در گفتگو را باز می‌کند.",
+      "jetbrainsDescription": "فایل‌ها در IDE متصل باز می‌شوند.",
+      "jetbrainsFallback": "IDE متصل",
+      "systemDefault": "پیش‌فرض سیستم",
+      "configureCustom": "پیکربندی ویرایشگر سفارشی…",
+      "pathPlaceholder": "مسیر فایل اجرایی",
+      "choose": "انتخاب…",
+      "detecting": "در حال شناسایی…"
+    },
     "terminal": {
       "title": "ترمینال",
       "app": {

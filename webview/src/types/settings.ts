@@ -20,8 +20,12 @@ export enum SettingKey {
   // Terminal
   TERMINAL_APP = 'terminalApp',
 
-  // Which program opens clicked file references (browser env; null = OS default)
+  // Which program opens clicked file references (browser env; null = OS default,
+  // '$custom' = use the custom editor below)
   OPEN_FILES_WITH = 'openFilesWith',
+
+  // Custom "open files with" program: { path, arguments }
+  OPEN_FILES_WITH_CUSTOM = 'openFilesWithCustom',
 
   // Host
   HOST_MODE = 'hostMode',
@@ -89,6 +93,15 @@ export enum LogLevel {
   ERROR = 'error',
 }
 
+/** Sentinel {@link SettingKey.OPEN_FILES_WITH} value selecting the custom editor. */
+export const OPEN_FILES_WITH_CUSTOM_VALUE = '$custom';
+
+/** A user-configured custom editor: executable/app path + argument template. */
+export interface OpenFileWithCustom {
+  path: string;
+  arguments: string;
+}
+
 /**
  * 설정 상태 인터페이스
  */
@@ -102,6 +115,7 @@ export interface SettingsState {
   [SettingKey.LOG_LEVEL]: LogLevel;
   [SettingKey.TERMINAL_APP]: string | null;
   [SettingKey.OPEN_FILES_WITH]: string | null;
+  [SettingKey.OPEN_FILES_WITH_CUSTOM]: OpenFileWithCustom | null;
   [SettingKey.HOST_MODE]: HostMode;
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
@@ -121,6 +135,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.LOG_LEVEL]: LogLevel.INFO,
   [SettingKey.TERMINAL_APP]: null,
   [SettingKey.OPEN_FILES_WITH]: null,
+  [SettingKey.OPEN_FILES_WITH_CUSTOM]: null,
   [SettingKey.HOST_MODE]: HostMode.EDITOR_TAB,
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,

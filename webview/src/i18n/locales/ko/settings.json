@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "프로젝트 설정을 사용하려면 프로젝트를 여세요"
   },
   "general": {
-    "openFilesWith": {
-      "label": "파일 열기 프로그램",
-      "description": "채팅에서 클릭한 파일 참조를 어떤 프로그램으로 열지 선택합니다.",
-      "jetbrainsDescription": "연결된 IDE에서 파일이 열립니다.",
-      "jetbrainsFallback": "연결된 IDE",
-      "systemDefault": "시스템 기본",
-      "custom": "직접 입력…",
-      "customPlaceholder": "앱 이름 또는 경로",
-      "detecting": "감지 중…"
-    },
     "language": {
       "label": "언어",
       "description": "Claude가 선호하는 응답 언어",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "파일 열기 프로그램",
+      "label": "파일 열기 프로그램",
+      "description": "채팅에서 클릭한 파일 참조를 어떤 프로그램으로 열지 선택합니다.",
+      "jetbrainsDescription": "연결된 IDE에서 파일이 열립니다.",
+      "jetbrainsFallback": "연결된 IDE",
+      "systemDefault": "시스템 기본",
+      "configureCustom": "직접 지정…",
+      "pathPlaceholder": "실행 파일 경로",
+      "choose": "선택…",
+      "detecting": "감지 중…"
+    },
     "terminal": {
       "title": "터미널",
       "app": {

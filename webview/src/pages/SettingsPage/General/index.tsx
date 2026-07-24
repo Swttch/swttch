@@ -2,7 +2,6 @@ import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { HostModeRow } from './HostModeRow';
-import { OpenFilesWithRow } from './OpenFilesWithRow';
 import { OpenSettingsRow } from './OpenSettingsRow';
 import { ChatPaginationRow } from './ChatPaginationRow';
 import { UiDirectionRow } from './UiDirectionRow';
@@ -150,8 +149,6 @@ export function GeneralSettings() {
         </SettingRow>
 
         <HostModeRow />
-
-        <OpenFilesWithRow />
 
         <OpenSettingsRow />
 

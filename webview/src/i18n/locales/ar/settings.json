@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "افتح مشروعًا لاستخدام إعدادات المشروع"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "اللغة",
       "description": "اللغة المفضّلة لردود Claude",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "فتح الملفات باستخدام",
+      "label": "فتح الملفات باستخدام",
+      "description": "البرنامج الذي يفتح مرجع ملف يُنقر عليه في المحادثة.",
+      "jetbrainsDescription": "تُفتح الملفات في IDE المتصل.",
+      "jetbrainsFallback": "IDE المتصل",
+      "systemDefault": "افتراضي النظام",
+      "configureCustom": "تكوين محرر مخصص…",
+      "pathPlaceholder": "مسار الملف التنفيذي",
+      "choose": "اختيار…",
+      "detecting": "جارٍ الاكتشاف…"
+    },
     "terminal": {
       "title": "الطرفية",
       "app": {

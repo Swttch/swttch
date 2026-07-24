@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "Open a project to use project settings"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "Language",
       "description": "Claude's preferred response language",
@@ -252,6 +242,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "Open files with",
+      "label": "Open files with",
+      "description": "Which program opens a file reference clicked in chat.",
+      "jetbrainsDescription": "Files open in your connected IDE.",
+      "jetbrainsFallback": "Connected IDE",
+      "systemDefault": "System default",
+      "configureCustom": "Configure Custom Editor…",
+      "pathPlaceholder": "Path to executable",
+      "choose": "Choose…",
+      "detecting": "Detecting…"
+    },
     "terminal": {
       "title": "Terminal",
       "app": {

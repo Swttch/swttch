@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "打开一个项目以使用项目设置"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "语言",
       "description": "Claude 回复时使用的首选语言",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "打开文件的程序",
+      "label": "打开文件的程序",
+      "description": "在聊天中点击文件引用时使用哪个程序打开。",
+      "jetbrainsDescription": "文件会在已连接的 IDE 中打开。",
+      "jetbrainsFallback": "已连接的 IDE",
+      "systemDefault": "系统默认",
+      "configureCustom": "配置自定义编辑器…",
+      "pathPlaceholder": "可执行文件路径",
+      "choose": "选择…",
+      "detecting": "检测中…"
+    },
     "terminal": {
       "title": "终端",
       "app": {

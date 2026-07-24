@@ -2,6 +2,15 @@ import { execFile, spawn } from 'child_process';
 import type { Bridge } from './bridge-interface';
 import { readSettingsFile } from '../core/features/settings';
 import { Claude } from '../core/claude';
+import { detectInstalledEditors } from '../core/features/detectEditors';
+import {
+  parseCustomIntegrationArguments,
+  expandTargetPathArgument,
+  TargetPathArgument,
+} from '../core/features/appDetection/customIntegration';
+
+/** Sentinel `openFilesWith` value meaning "use the configured custom editor". */
+export const OPEN_FILES_WITH_CUSTOM = '$custom';
 
 /**
  * Browser-mode bridge for dev environment.
@@ -14,39 +23,74 @@ export class BrowserBridge implements Bridge {
   async openFile(path: string, _line?: number, _column?: number): Promise<void> {
     const settings = await readSettingsFile();
     const openFilesWith = settings['openFilesWith'] as string | null;
+    const custom = settings['openFilesWithCustom'] as
+      | { path?: string; arguments?: string }
+      | null
+      | undefined;
 
+    // 1) Custom editor: a user-provided executable/app + argument template.
+    if (openFilesWith === OPEN_FILES_WITH_CUSTOM && custom?.path) {
+      const argv = parseCustomIntegrationArguments(custom.arguments || TargetPathArgument);
+      const args = expandTargetPathArgument(argv, path);
+      return this.launchApp(custom.path, args);
+    }
+
+    // 2) A named, detected editor — resolve its launch path, then launch.
+    if (openFilesWith && openFilesWith !== OPEN_FILES_WITH_CUSTOM) {
+      const editors = await detectInstalledEditors();
+      const match = editors.find((e) => e.name === openFilesWith);
+      if (match) {
+        return this.launchApp(match.path, [path]);
+      }
+      // Uninstalled/renamed → fall through to the OS default opener.
+    }
+
+    // 3) OS default opener.
+    return this.launchOsDefault(path);
+  }
+
+  /**
+   * Launch an app with args. On macOS a `.app` bundle is opened via `open -a`
+   * (the OS resolves the real executable); elsewhere the path is spawned
+   * directly, detached so it outlives the backend.
+   */
+  private launchApp(appPath: string, args: string[]): Promise<void> {
     return new Promise<void>((resolve) => {
-      const cb = (err: Error | null) => {
+      const done = (err: Error | null) => {
         if (err) {
           console.error('[node-backend]', 'Failed to open file:', err.message);
         }
         resolve();
       };
-
-      if (openFilesWith) {
-        // A user-configured editor is set — launch it directly with the file path,
-        // mirroring how openTerminal() launches a user-configured terminal app.
-        if (process.platform === 'darwin') {
-          execFile('open', ['-a', openFilesWith, path], cb);
-        } else if (process.platform === 'win32') {
-          spawn(openFilesWith, [path], {
-            stdio: 'ignore',
-            detached: true,
-          }).unref();
-          resolve();
-        } else {
-          execFile(openFilesWith, [path], cb);
-        }
-        return;
-      }
-
-      if (process.platform === 'darwin') {
-        execFile('open', [path], cb);
-      } else if (process.platform === 'win32') {
-        // Use 'explorer' instead of 'cmd /c start' to avoid & and special char issues
-        execFile('explorer', [path], cb);
+      if (process.platform === 'darwin' && appPath.endsWith('.app')) {
+        execFile('open', ['-a', appPath, ...args], done);
       } else {
-        execFile('xdg-open', [path], cb);
+        try {
+          spawn(appPath, args, { stdio: 'ignore', detached: true }).unref();
+          resolve();
+        } catch (e) {
+          done(e as Error);
+        }
+      }
+    });
+  }
+
+  /** Open a path with the OS default handler. */
+  private launchOsDefault(path: string): Promise<void> {
+    return new Promise<void>((resolve) => {
+      const done = (err: Error | null) => {
+        if (err) {
+          console.error('[node-backend]', 'Failed to open file:', err.message);
+        }
+        resolve();
+      };
+      if (process.platform === 'darwin') {
+        execFile('open', [path], done);
+      } else if (process.platform === 'win32') {
+        // 'explorer' avoids cmd's & / special-char parsing issues.
+        execFile('explorer', [path], done);
+      } else {
+        execFile('xdg-open', [path], done);
       }
     });
   }

@@ -27,16 +27,6 @@
     "projectDisabledTooltip": "プロジェクト設定を使用するにはプロジェクトを開いてください"
   },
   "general": {
-    "openFilesWith": {
-      "label": "Open files with",
-      "description": "Which program opens a file reference clicked in chat.",
-      "jetbrainsDescription": "Files open in your connected IDE.",
-      "jetbrainsFallback": "Connected IDE",
-      "systemDefault": "System default",
-      "custom": "Custom…",
-      "customPlaceholder": "App name or path",
-      "detecting": "Detecting…"
-    },
     "language": {
       "label": "言語",
       "description": "Claudeが応答に使用する言語",
@@ -250,6 +240,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "ファイルを開くプログラム",
+      "label": "ファイルを開くプログラム",
+      "description": "チャットでクリックしたファイル参照をどのプログラムで開くか。",
+      "jetbrainsDescription": "接続中の IDE でファイルが開きます。",
+      "jetbrainsFallback": "接続中の IDE",
+      "systemDefault": "システムのデフォルト",
+      "configureCustom": "カスタムエディタを設定…",
+      "pathPlaceholder": "実行ファイルへのパス",
+      "choose": "選択…",
+      "detecting": "検出中…"
+    },
     "terminal": {
       "title": "ターミナル",
       "app": {

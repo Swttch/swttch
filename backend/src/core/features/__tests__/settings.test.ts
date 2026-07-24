@@ -5,6 +5,7 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
   mkdir: vi.fn(),
+  rename: vi.fn(),
 }));
 
 vi.mock('fs', () => ({
@@ -13,7 +14,7 @@ vi.mock('fs', () => ({
 
 // We must access internal functions. Since validateSetting and generateSettingsContent
 // are not exported, we test them indirectly through saveSettingToFile and readSettingsFile.
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 import {
   readSettingsFile,
@@ -26,6 +27,7 @@ import {
 const mockReadFile = vi.mocked(readFile);
 const mockWriteFile = vi.mocked(writeFile);
 const mockMkdir = vi.mocked(mkdir);
+const mockRename = vi.mocked(rename);
 const mockExistsSync = vi.mocked(existsSync);
 
 describe('settings', () => {
@@ -39,6 +41,7 @@ describe('settings', () => {
       mockExistsSync.mockReturnValue(false);
       mockMkdir.mockResolvedValue(undefined);
       mockWriteFile.mockResolvedValue(undefined);
+      mockRename.mockResolvedValue(undefined);
     });
 
     it('should reject unknown settings key', async () => {
@@ -146,6 +149,43 @@ describe('settings', () => {
       expect(result.error).toContain('openFilesWith must be a string or null');
     });
 
+    it('should accept null openFilesWithCustom', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', null);
+      expect(result.status).toBe('ok');
+    });
+
+    it('should accept a valid openFilesWithCustom object', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', {
+        path: '/usr/bin/subl',
+        arguments: '%TARGET_PATH%',
+      });
+      expect(result.status).toBe('ok');
+    });
+
+    it('should reject openFilesWithCustom that is not an object', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', 'not-an-object');
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('openFilesWithCustom must be an object or null');
+    });
+
+    it('should reject openFilesWithCustom that is an array', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', ['x']);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('openFilesWithCustom must be an object or null');
+    });
+
+    it('should reject openFilesWithCustom missing path/arguments', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', { path: '/usr/bin/subl' });
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('openFilesWithCustom must have string "path" and "arguments"');
+    });
+
+    it('should reject openFilesWithCustom with non-string fields', async () => {
+      const result = await saveSettingToFile('openFilesWithCustom', { path: 123, arguments: '%TARGET_PATH%' });
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('openFilesWithCustom must have string "path" and "arguments"');
+    });
+
     it('should accept null nodePath', async () => {
       const result = await saveSettingToFile('nodePath', null);
       expect(result.status).toBe('ok');
@@ -217,6 +257,91 @@ describe('settings', () => {
     });
   });
 
+  describe('saveSettingToFile() - atomic write via temp file + rename', () => {
+    beforeEach(() => {
+      // existsSync=true + a parseable file so readSettingsFile() (called first
+      // by doSaveSettingToFile) doesn't itself perform a "create defaults"
+      // writeFile — keeping the writeFile/rename call counts below scoped to
+      // the atomic write path alone.
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`export default { theme: "system" };`);
+      mockMkdir.mockResolvedValue(undefined);
+      mockWriteFile.mockResolvedValue(undefined);
+      mockRename.mockResolvedValue(undefined);
+    });
+
+    it('writes to a temp file and renames it onto the real settings path', async () => {
+      const result = await saveSettingToFile('theme', 'dark');
+      expect(result.status).toBe('ok');
+
+      expect(mockWriteFile).toHaveBeenCalledTimes(1);
+      const [tmpPath, content] = mockWriteFile.mock.calls[0];
+      expect(String(tmpPath)).toContain('.tmp-');
+      expect(String(tmpPath).endsWith('settings.js')).toBe(false);
+      expect(String(content)).toContain('theme: "dark"');
+
+      expect(mockRename).toHaveBeenCalledTimes(1);
+      const [renameFrom, renameTo] = mockRename.mock.calls[0];
+      expect(renameFrom).toBe(tmpPath);
+      expect(String(renameTo).endsWith('settings.js')).toBe(true);
+    });
+
+    it('never leaves the settings file content half-written when rename fails', async () => {
+      mockRename.mockRejectedValueOnce(new Error('rename failed'));
+
+      const result = await saveSettingToFile('theme', 'dark');
+
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('rename failed');
+    });
+  });
+
+  describe('saveSettingToFile() - write serialization', () => {
+    beforeEach(() => {
+      // existsSync=true + a parseable file so readSettingsFile() never takes
+      // the "create defaults" writeFile branch — isolates the order tracking
+      // below to exactly one writeFile call per saveSettingToFile.
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`export default { theme: "system" };`);
+      mockMkdir.mockResolvedValue(undefined);
+      mockRename.mockResolvedValue(undefined);
+    });
+
+    it('serializes concurrent writes so each write finishes before the next starts', async () => {
+      const order: string[] = [];
+      let callIndex = 0;
+      mockWriteFile.mockImplementation((async (_p: string, content: string) => {
+        const myIndex = callIndex++;
+        order.push(`start-${myIndex}`);
+        // Yield a microtask so an interleaved implementation would show up.
+        await Promise.resolve();
+        order.push(`end-${myIndex}`);
+        void content;
+      }) as unknown as typeof writeFile);
+
+      const [r1, r2, r3] = await Promise.all([
+        saveSettingToFile('fontSize', 14),
+        saveSettingToFile('fontSize', 15),
+        saveSettingToFile('fontSize', 16),
+      ]);
+
+      expect(r1.status).toBe('ok');
+      expect(r2.status).toBe('ok');
+      expect(r3.status).toBe('ok');
+      // Each write must fully complete (start-N, end-N) before the next write starts.
+      expect(order).toEqual(['start-0', 'end-0', 'start-1', 'end-1', 'start-2', 'end-2']);
+    });
+
+    it('keeps the write chain alive after a failing write so later writes still run', async () => {
+      const first = await saveSettingToFile('theme', 'not-a-real-theme');
+      expect(first.status).toBe('error');
+
+      mockWriteFile.mockResolvedValue(undefined);
+      const second = await saveSettingToFile('theme', 'dark');
+      expect(second.status).toBe('ok');
+    });
+  });
+
   describe('readSettingsFile()', () => {
     it('should return defaults and create file when settings file does not exist', async () => {
       mockExistsSync.mockReturnValue(false);
@@ -235,6 +360,7 @@ describe('settings', () => {
         logLevel: 'info',
         terminalApp: null,
         openFilesWith: null,
+        openFilesWithCustom: null,
         hostMode: 'editor-tab',
         openSettingsAs: 'overlay',
         chatPagination: true,
@@ -309,6 +435,7 @@ export default {
         logLevel: 'info',
         terminalApp: null,
         openFilesWith: null,
+        openFilesWithCustom: null,
         hostMode: 'editor-tab',
         openSettingsAs: 'overlay',
         chatPagination: true,
@@ -396,6 +523,7 @@ export default {
   describe('saveEnvVarToScope', () => {
     beforeEach(() => {
       mockMkdir.mockResolvedValue(undefined);
+      mockRename.mockResolvedValue(undefined);
     });
 
     it('writes an env var into global settings', async () => {

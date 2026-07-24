@@ -24,8 +24,8 @@ describe('getAvailableEditorsHandler', () => {
 
   it('acks with the editors array detected on the host', async () => {
     const editors = [
-      { id: 'vscode', label: 'Visual Studio Code', isDefault: false },
-      { id: 'cursor', label: 'Cursor', isDefault: false },
+      { id: 'vscode', name: 'Visual Studio Code', path: '/Applications/Visual Studio Code.app' },
+      { id: 'cursor', name: 'Cursor', path: '/Applications/Cursor.app' },
     ];
     vi.mocked(detectInstalledEditors).mockResolvedValue(editors);
 

@@ -33,7 +33,6 @@ vi.mock('@/contexts/SettingsContext', () => ({
 // detection, …) that are irrelevant to the language↔RTL auto-sync logic
 // under test here, so they are stubbed out entirely.
 vi.mock('../HostModeRow', () => ({ HostModeRow: () => null }));
-vi.mock('../OpenFilesWithRow', () => ({ OpenFilesWithRow: () => null }));
 vi.mock('../OpenSettingsRow', () => ({ OpenSettingsRow: () => null }));
 vi.mock('../ChatPaginationRow', () => ({ ChatPaginationRow: () => null }));
 vi.mock('../UiDirectionRow', () => ({ UiDirectionRow: () => null }));

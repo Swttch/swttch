@@ -10,6 +10,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { DEFAULT_MODEL_ALIAS, toModelAlias } from '@/types/models';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { OpenFilesWithRow } from './OpenFilesWithRow';
 
 interface TerminalInfo {
   id: string;
@@ -105,6 +106,12 @@ export function CliSettings() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.cli')}</h2>
+
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <SettingSection title={t('cli.openFilesWith.title')}>
+          <OpenFilesWithRow />
+        </SettingSection>
+      </ScopeGuard>
 
       <ScopeGuard supportedScope="global" currentScope={scope}>
         <SettingSection title={t('cli.terminal.title')}>
