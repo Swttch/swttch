@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "باز کردن فایل‌ها با",
+      "label": "باز کردن فایل‌ها با",
+      "description": "اینکه چه برنامه‌ای ارجاع فایلِ کلیک‌شده در گفتگو را باز می‌کند.",
+      "jetbrainsDescription": "فایل‌ها در IDE متصل باز می‌شوند.",
+      "jetbrainsFallback": "IDE متصل",
+      "systemDefault": "پیش‌فرض سیستم",
+      "configureCustom": "پیکربندی ویرایشگر سفارشی…",
+      "pathPlaceholder": "مسیر فایل اجرایی",
+      "choose": "انتخاب…",
+      "detecting": "در حال شناسایی…"
+    },
     "terminal": {
       "title": "ترمینال",
       "app": {

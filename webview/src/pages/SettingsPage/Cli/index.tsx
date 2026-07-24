@@ -10,10 +10,12 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { DEFAULT_MODEL_ALIAS, toModelAlias } from '@/types/models';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { OpenFilesWithRow } from './OpenFilesWithRow';
 
 interface TerminalInfo {
   id: string;
-  label: string;
+  name: string;
+  path: string;
   isDefault: boolean;
 }
 
@@ -21,7 +23,7 @@ const CUSTOM_MARKER = '__custom__';
 
 function toSelectValue(app: string | null, terminals: TerminalInfo[]): string {
   if (app === null) return '';
-  if (terminals.some((t) => t.label === app)) return app;
+  if (terminals.some((t) => t.name === app)) return app;
   return CUSTOM_MARKER;
 }
 
@@ -86,10 +88,10 @@ export function CliSettings() {
   const terminalOptions: SelectOption[] = [
     { value: '', label: t('cli.terminal.app.systemDefault') },
     ...terminals.map((terminal) => ({
-      value: terminal.label,
+      value: terminal.name,
       label: terminal.isDefault
-        ? t('cli.terminal.app.defaultSuffix', { label: terminal.label })
-        : terminal.label,
+        ? t('cli.terminal.app.defaultSuffix', { label: terminal.name })
+        : terminal.name,
     })),
     { value: CUSTOM_MARKER, label: t('cli.terminal.app.custom') },
   ];
@@ -105,6 +107,12 @@ export function CliSettings() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.cli')}</h2>
+
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <SettingSection title={t('cli.openFilesWith.title')}>
+          <OpenFilesWithRow />
+        </SettingSection>
+      </ScopeGuard>
 
       <ScopeGuard supportedScope="global" currentScope={scope}>
         <SettingSection title={t('cli.terminal.title')}>

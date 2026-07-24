@@ -175,6 +175,8 @@ export enum MessageType {
   // -- Terminal / CLI & node path detection --
   /** List terminal emulators available on the host. */
   GET_AVAILABLE_TERMINALS = 'GET_AVAILABLE_TERMINALS',
+  /** inbound webview→backend: list code editors available on the host (for the "open files with" setting). */
+  GET_AVAILABLE_EDITORS = 'GET_AVAILABLE_EDITORS',
   /** Detect the path to the `claude` CLI binary. */
   GET_DETECTED_CLI_PATH = 'GET_DETECTED_CLI_PATH',
   /** Detect the path to the `node` binary. */

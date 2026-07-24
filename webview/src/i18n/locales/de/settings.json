@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "Dateien öffnen mit",
+      "label": "Dateien öffnen mit",
+      "description": "Welches Programm eine im Chat angeklickte Dateireferenz öffnet.",
+      "jetbrainsDescription": "Dateien werden in deiner verbundenen IDE geöffnet.",
+      "jetbrainsFallback": "Verbundene IDE",
+      "systemDefault": "Systemstandard",
+      "configureCustom": "Benutzerdefinierten Editor konfigurieren…",
+      "pathPlaceholder": "Pfad zur ausführbaren Datei",
+      "choose": "Auswählen…",
+      "detecting": "Wird erkannt…"
+    },
     "terminal": {
       "title": "Terminal",
       "app": {

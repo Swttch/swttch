@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   debugMode: false,
   logLevel: 'info',
   terminalApp: null,
+  openFilesWith: null,
+  openFilesWithCustom: null,
   hostMode: 'editor-tab',
   openSettingsAs: 'overlay',
   chatPagination: true,
@@ -34,6 +36,8 @@ const COMMENT_MAP: Record<string, string> = {
   debugMode: '디버그 모드 활성화',
   logLevel: '로그 레벨: "debug" | "info" | "warn" | "error"',
   terminalApp: '터미널 프로그램 (null이면 OS 기본 터미널)',
+  openFilesWith: '파일을 열 프로그램 (null이면 OS 기본, "$custom"이면 openFilesWithCustom 사용)',
+  openFilesWithCustom: '사용자 지정 파일 열기 프로그램: { path, arguments } (arguments의 %TARGET_PATH%가 파일 경로로 치환)',
   hostMode: '채팅을 띄우는 자리: "editor-tab" | "tool-window"',
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
@@ -154,6 +158,23 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'terminalApp must be a string or null';
       }
       break;
+    case 'openFilesWith':
+      if (value !== null && typeof value !== 'string') {
+        return 'openFilesWith must be a string or null';
+      }
+      break;
+    case 'openFilesWithCustom': {
+      if (value !== null) {
+        if (typeof value !== 'object' || Array.isArray(value)) {
+          return 'openFilesWithCustom must be an object or null';
+        }
+        const custom = value as Record<string, unknown>;
+        if (typeof custom.path !== 'string' || typeof custom.arguments !== 'string') {
+          return 'openFilesWithCustom must have string "path" and "arguments"';
+        }
+      }
+      break;
+    }
     case 'hostMode':
       if (!['editor-tab', 'tool-window'].includes(value as string)) {
         return 'hostMode must be one of "editor-tab", "tool-window"';
@@ -306,7 +327,32 @@ export async function saveSettingToScope(
   return saveSettingToFile(key, value);
 }
 
-export async function saveSettingToFile(key: string, value: unknown): Promise<SaveResult> {
+/**
+ * Serializes global settings writes. Concurrent updateSetting calls used to
+ * interleave their read-modify-write of settings.js — a shorter new write left
+ * a tail of the previous content, corrupting the file. Chaining guarantees one
+ * read-modify-write completes before the next begins.
+ */
+let settingsWriteChain: Promise<unknown> = Promise.resolve();
+
+/** Write via a temp file + atomic rename so a partial write can never be observed. */
+async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+  const tmp = `${filePath}.tmp-${process.pid}`;
+  await writeFile(tmp, content, 'utf-8');
+  await rename(tmp, filePath);
+}
+
+export function saveSettingToFile(key: string, value: unknown): Promise<SaveResult> {
+  const run = settingsWriteChain.then(() => doSaveSettingToFile(key, value));
+  // Keep the chain alive even if a write fails.
+  settingsWriteChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveResult> {
   const validationError = validateSetting(key, value);
   if (validationError) {
     return { status: 'error', error: validationError };
@@ -316,7 +362,7 @@ export async function saveSettingToFile(key: string, value: unknown): Promise<Sa
     const current = await readSettingsFile();
     current[key] = value;
     await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-    await writeFile(SETTINGS_FILE, generateSettingsContent(current), 'utf-8');
+    await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(current));
     return { status: 'ok' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

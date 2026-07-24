@@ -29,6 +29,12 @@ Two kinds of references become clickable:
 - **`@`-mention chips** (`@src/file.ts#L42`) now also carry the line: clicking
   one jumps to line 42 instead of the top of the file.
 
+There's also a **"Open files with"** setting (Settings → General). When your
+chat is connected to a JetBrains IDE, it's fixed to that IDE and shows its
+product badge — files always open in the editor. In a standalone browser with no
+IDE attached, you can pick a detected editor (or a custom program); the default
+is the operating system's default opener.
+
 Relative paths are resolved against the project's working directory, so
 `./src/x.ts` and `src/x.ts` both open the right file.
 

@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "Открывать файлы в",
+      "label": "Открывать файлы в",
+      "description": "Какая программа открывает ссылку на файл при клике в чате.",
+      "jetbrainsDescription": "Файлы открываются в подключённой IDE.",
+      "jetbrainsFallback": "Подключённая IDE",
+      "systemDefault": "Системная по умолчанию",
+      "configureCustom": "Настроить пользовательский редактор…",
+      "pathPlaceholder": "Путь к исполняемому файлу",
+      "choose": "Выбрать…",
+      "detecting": "Определение…"
+    },
     "terminal": {
       "title": "Терминал",
       "app": {

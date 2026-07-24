@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "ファイルを開くプログラム",
+      "label": "ファイルを開くプログラム",
+      "description": "チャットでクリックしたファイル参照をどのプログラムで開くか。",
+      "jetbrainsDescription": "接続中の IDE でファイルが開きます。",
+      "jetbrainsFallback": "接続中の IDE",
+      "systemDefault": "システムのデフォルト",
+      "configureCustom": "カスタムエディタを設定…",
+      "pathPlaceholder": "実行ファイルへのパス",
+      "choose": "選択…",
+      "detecting": "検出中…"
+    },
     "terminal": {
       "title": "ターミナル",
       "app": {

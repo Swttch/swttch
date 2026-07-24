@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "파일 열기 프로그램",
+      "label": "파일 열기 프로그램",
+      "description": "채팅에서 클릭한 파일 참조를 어떤 프로그램으로 열지 선택합니다.",
+      "jetbrainsDescription": "연결된 IDE에서 파일이 열립니다.",
+      "jetbrainsFallback": "연결된 IDE",
+      "systemDefault": "시스템 기본",
+      "configureCustom": "직접 지정…",
+      "pathPlaceholder": "실행 파일 경로",
+      "choose": "선택…",
+      "detecting": "감지 중…"
+    },
     "terminal": {
       "title": "터미널",
       "app": {

@@ -17,6 +17,12 @@ interface SettingsContextValue {
   updateSettingWithScope: <K extends keyof SettingsState>(key: K, value: SettingsState[K], targetScope: 'global' | 'project') => Promise<void>;
   resetToGlobal: <K extends keyof SettingsState>(key: K) => Promise<void>;
   refreshSettings: () => Promise<void>;
+  /** Whether an IDE (Kotlin RPC) host is attached to this backend — true even for a
+   *  browser tab opened from an IDE session. Settings that defer to the IDE (e.g.
+   *  which program opens files) present as fixed/disabled when this is true. */
+  ideAttached: boolean;
+  /** The attached IDE's product name (e.g. "WebStorm"), or '' when none. */
+  ideProduct: string;
 }
 
 interface SettingsResponse {
@@ -24,6 +30,8 @@ interface SettingsResponse {
   settings?: SettingsState;
   overrides?: string[];
   error?: string;
+  ideAttached?: boolean;
+  ideProduct?: string;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -79,6 +87,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const settings = mergedQuery.data?.settings ?? DEFAULT_SETTINGS;
   const overrides = mergedQuery.data?.overrides ?? [];
+  const ideAttached = mergedQuery.data?.ideAttached ?? false;
+  const ideProduct = mergedQuery.data?.ideProduct ?? '';
   const scopeSettings = scopeQuery.data?.settings ?? {};
   const isLoading = mergedQuery.isLoading && !mergedQuery.data;
 
@@ -264,6 +274,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       updateSettingWithScope,
       resetToGlobal,
       refreshSettings,
+      ideAttached,
+      ideProduct,
     }}>
       {children}
     </SettingsContext.Provider>

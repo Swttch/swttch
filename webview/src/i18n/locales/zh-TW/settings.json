@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "開啟檔案的程式",
+      "label": "開啟檔案的程式",
+      "description": "在聊天中點擊檔案參照時使用哪個程式開啟。",
+      "jetbrainsDescription": "檔案會在已連線的 IDE 中開啟。",
+      "jetbrainsFallback": "已連線的 IDE",
+      "systemDefault": "系統預設",
+      "configureCustom": "設定自訂編輯器…",
+      "pathPlaceholder": "執行檔路徑",
+      "choose": "選擇…",
+      "detecting": "偵測中…"
+    },
     "terminal": {
       "title": "終端機",
       "app": {

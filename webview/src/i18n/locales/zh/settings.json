@@ -251,6 +251,18 @@
     }
   },
   "cli": {
+    "openFilesWith": {
+      "title": "打开文件的程序",
+      "label": "打开文件的程序",
+      "description": "在聊天中点击文件引用时使用哪个程序打开。",
+      "jetbrainsDescription": "文件会在已连接的 IDE 中打开。",
+      "jetbrainsFallback": "已连接的 IDE",
+      "systemDefault": "系统默认",
+      "configureCustom": "配置自定义编辑器…",
+      "pathPlaceholder": "可执行文件路径",
+      "choose": "选择…",
+      "detecting": "检测中…"
+    },
     "terminal": {
       "title": "终端",
       "app": {
