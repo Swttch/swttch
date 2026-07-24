@@ -66,6 +66,9 @@ jobs:
         uses: actions/ai-inference@v1
         with:
           model: openai/gpt-4o
+          # The action's `max-tokens` defaults to 200, which truncates the
+          # response. Set both the deprecated and current knobs generously.
+          max-tokens: 16000
           max-completion-tokens: 16000
           system-prompt: |
             You are a translation assistant for GitHub issues. You receive an
