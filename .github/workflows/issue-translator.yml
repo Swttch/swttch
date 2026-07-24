@@ -100,12 +100,16 @@ jobs:
       - name: Apply translation
         uses: actions/github-script@v7
         env:
-          AI_RESPONSE: ${{ steps.ai.outputs.response }}
+          # Read from the response FILE, not the `response` output: a large
+          # translation can exceed the step-output size limit and arrive
+          # truncated (which breaks JSON parsing).
+          AI_RESPONSE_FILE: ${{ steps.ai.outputs.response-file }}
           ORIG_TITLE: ${{ steps.issue.outputs.title }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
         with:
           script: |
-            const raw = process.env.AI_RESPONSE || '';
+            const fs = require('fs');
+            const raw = fs.readFileSync(process.env.AI_RESPONSE_FILE, 'utf8');
             const origTitle = process.env.ORIG_TITLE || '';
             const number = Number(process.env.ISSUE_NUMBER);
 
