@@ -1,32 +1,167 @@
 name: Issue Translator
 
-# Automatically translates non-English issues and comments (e.g. Chinese) into
-# English and posts the translation as a reply comment. The original content is
-# left untouched. Runs entirely on GitHub Actions with the built-in GITHUB_TOKEN
-# (no API key, no external server required).
+# Translates non-English issues into English using GitHub Models (the built-in
+# `actions/ai-inference` action — no API key, only the repo's GITHUB_TOKEN).
 #
-# Powered by dromara/issues-translate-action.
+# For a non-English issue it does two things:
+#   1. Rewrites the TITLE in place to "<original> (<English translation>)", so the
+#      original text is preserved and the English rendering sits beside it.
+#   2. Posts a NEW comment containing a full English translation of the BODY, with
+#      every image, attachment link, code block and template header kept verbatim.
+#
+# Triggers:
+#   - issues.opened      -> automatic on every new issue
+#   - workflow_dispatch  -> manual, pass an issue number to (re)translate an
+#                           existing issue (used for back-filling old issues)
+#
+# The step is idempotent: an already-appended title is not touched again, and a
+# second run will not post a duplicate translation comment (detected via a hidden
+# marker in the comment body).
 
 on:
   issues:
     types: [opened]
-  issue_comment:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Issue number to (re)translate"
+        required: true
+        type: number
 
 permissions:
-  # Needed so the action can post the translation as a comment.
+  # Update the issue title and post the translation comment.
   issues: write
-  pull-requests: write
+  # Call GitHub Models for inference.
+  models: read
 
 jobs:
   translate:
     runs-on: ubuntu-latest
     steps:
-      - name: Translate to English
-        uses: dromara/issues-translate-action@v2.7
+      - name: Resolve issue content
+        id: issue
+        uses: actions/github-script@v7
         with:
-          # Keep the original issue title as-is; only add a translated comment.
-          # Set to true only if a bot account with edit permission is configured.
-          IS_MODIFY_TITLE: false
-          # Prefix line shown above the auto-generated translation.
-          CUSTOM_BOT_NOTE: "Bot detected the issue body's language is not English, translating it automatically."
+          script: |
+            let number, title, body;
+            if (context.eventName === 'workflow_dispatch') {
+              number = Number(context.payload.inputs.issue_number);
+              const { data } = await github.rest.issues.get({
+                ...context.repo,
+                issue_number: number,
+              });
+              title = data.title;
+              body = data.body || '';
+            } else {
+              number = context.payload.issue.number;
+              title = context.payload.issue.title;
+              body = context.payload.issue.body || '';
+            }
+            core.setOutput('number', String(number));
+            core.setOutput('title', title);
+            core.setOutput('body', body);
+
+      - name: Translate via GitHub Models
+        id: ai
+        uses: actions/ai-inference@v1
+        with:
+          model: openai/gpt-4o
+          max-completion-tokens: 16000
+          system-prompt: |
+            You are a translation assistant for GitHub issues. You receive an
+            issue's TITLE and BODY. Detect the primary natural language.
+
+            Respond with ONLY a single valid JSON object (no markdown code
+            fences, no prose before or after) with exactly these keys:
+              "is_english": boolean  -- true if the content is already primarily English
+              "title_en":   string   -- English translation of the title ("" if is_english)
+              "body_en":    string   -- English translation of the body ("" if is_english)
+
+            Translation rules for body_en:
+              - Translate ONLY natural-language prose.
+              - Keep the following EXACTLY as in the original, byte for byte,
+                translating nothing inside them:
+                  * <img ...> and any other HTML tags
+                  * markdown image syntax ![alt](url) and links [text](url)
+                  * URLs and attachment links (e.g. github.com/user-attachments/...)
+                  * fenced code blocks ``` ... ``` and inline `code`
+                  * issue-template section headers that start with "###"
+              - Do NOT drop, summarize, or reorder ANY part of the body. Every
+                line, image, and section present in the original must be present
+                in body_en, in the same order.
+              - Preserve blank lines and markdown structure.
+          prompt: |
+            TITLE:
+            ${{ steps.issue.outputs.title }}
+
+            BODY:
+            ${{ steps.issue.outputs.body }}
+
+      - name: Apply translation
+        uses: actions/github-script@v7
+        env:
+          AI_RESPONSE: ${{ steps.ai.outputs.response }}
+          ORIG_TITLE: ${{ steps.issue.outputs.title }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+        with:
+          script: |
+            const raw = process.env.AI_RESPONSE || '';
+            const origTitle = process.env.ORIG_TITLE || '';
+            const number = Number(process.env.ISSUE_NUMBER);
+
+            // The model is asked for raw JSON, but strip accidental ```json fences.
+            const jsonText = raw
+              .trim()
+              .replace(/^```(?:json)?\s*/i, '')
+              .replace(/\s*```$/, '')
+              .trim();
+
+            let parsed;
+            try {
+              parsed = JSON.parse(jsonText);
+            } catch (e) {
+              core.setFailed('Could not parse model response as JSON: ' + e.message + '\n---\n' + raw);
+              return;
+            }
+
+            if (parsed.is_english) {
+              core.info('Issue is already in English; nothing to do.');
+              return;
+            }
+
+            // 1) Title: append the English translation, keeping the original.
+            //    Idempotent -- skip if the translation is already present.
+            if (parsed.title_en && !origTitle.includes(parsed.title_en)) {
+              await github.rest.issues.update({
+                ...context.repo,
+                issue_number: number,
+                title: `${origTitle} (${parsed.title_en})`,
+              });
+              core.info('Title updated.');
+            } else {
+              core.info('Title already translated; leaving it as-is.');
+            }
+
+            // 2) Body: post a translation comment (once).
+            const marker = '<!-- ccg-ai-translation -->';
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: number,
+              per_page: 100,
+            });
+            if (comments.some((c) => c.body && c.body.includes(marker))) {
+              core.info('Translation comment already exists; skipping.');
+              return;
+            }
+
+            const note =
+              '> [!NOTE]\n' +
+              '> This issue was written in another language. Below is an automatic ' +
+              'English translation (the original text is preserved above).';
+            const commentBody = `${marker}\n${note}\n\n---\n\n${parsed.body_en}`;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: commentBody,
+            });
+            core.info('Translation comment posted.');
