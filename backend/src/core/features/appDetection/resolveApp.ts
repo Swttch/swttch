@@ -63,7 +63,14 @@ async function readBundleId(appPath: string): Promise<string | null> {
 
 async function buildMacInventory(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
-  const dirs = ['/Applications', join(homedir(), 'Applications')];
+  // Includes the system app folders so first-party tools like Terminal.app
+  // (in /System/Applications/Utilities) are found for the terminal catalog.
+  const dirs = [
+    '/Applications',
+    join(homedir(), 'Applications'),
+    '/System/Applications',
+    '/System/Applications/Utilities',
+  ];
   for (const dir of dirs) {
     let entries: string[];
     try {
@@ -177,4 +184,41 @@ export interface WindowsDetection {
   executableShims?: string[][];
   /** Derive the executable from the DisplayIcon value instead of InstallLocation. */
   useDisplayIcon?: boolean;
+}
+
+/**
+ * Simpler Windows detection by known executable paths + a `where` lookup.
+ * Terminals ship as plain executables (wt.exe, powershell.exe, …) rather than
+ * registered installers, so this suits them better than the registry approach.
+ */
+export interface WindowsPathDetection {
+  /** Absolute executable paths to probe, most-preferred first. */
+  paths?: string[];
+  /** Command name to resolve via `where`. */
+  whereCmd?: string;
+}
+
+export async function resolveWindowsPath(
+  win: WindowsPathDetection,
+): Promise<string | null> {
+  for (const p of win.paths ?? []) {
+    if (p && (await pathExists(p))) {
+      return p;
+    }
+  }
+  if (win.whereCmd) {
+    try {
+      const { stdout } = await execFileAsync('where', [win.whereCmd]);
+      const first = stdout
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .find((s) => s.length > 0);
+      if (first) {
+        return first;
+      }
+    } catch {
+      // Not on PATH.
+    }
+  }
+  return null;
 }

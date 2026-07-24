@@ -14,7 +14,8 @@ import { OpenFilesWithRow } from './OpenFilesWithRow';
 
 interface TerminalInfo {
   id: string;
-  label: string;
+  name: string;
+  path: string;
   isDefault: boolean;
 }
 
@@ -22,7 +23,7 @@ const CUSTOM_MARKER = '__custom__';
 
 function toSelectValue(app: string | null, terminals: TerminalInfo[]): string {
   if (app === null) return '';
-  if (terminals.some((t) => t.label === app)) return app;
+  if (terminals.some((t) => t.name === app)) return app;
   return CUSTOM_MARKER;
 }
 
@@ -87,10 +88,10 @@ export function CliSettings() {
   const terminalOptions: SelectOption[] = [
     { value: '', label: t('cli.terminal.app.systemDefault') },
     ...terminals.map((terminal) => ({
-      value: terminal.label,
+      value: terminal.name,
       label: terminal.isDefault
-        ? t('cli.terminal.app.defaultSuffix', { label: terminal.label })
-        : terminal.label,
+        ? t('cli.terminal.app.defaultSuffix', { label: terminal.name })
+        : terminal.name,
     })),
     { value: CUSTOM_MARKER, label: t('cli.terminal.app.custom') },
   ];

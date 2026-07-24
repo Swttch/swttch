@@ -169,8 +169,10 @@ describe('resolveApp', () => {
       await resolveMacApp({ bundleIds: ['com.todesktop.230313mzl4w4u92'] });
       await resolveMacApp({ bundleIds: ['com.todesktop.230313mzl4w4u92'] });
 
-      // One readdir per Applications directory (2 total), not once per resolveMacApp call.
-      expect(fsReaddir).toHaveBeenCalledTimes(2);
+      // One readdir per scanned Applications directory (4 total: /Applications,
+      // ~/Applications, /System/Applications, /System/Applications/Utilities),
+      // not once per resolveMacApp call.
+      expect(fsReaddir).toHaveBeenCalledTimes(4);
     });
   });
 
