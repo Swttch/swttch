@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#201](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/201)
+> 관련: [#201](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/201), [#223](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/223)
 
 ## 새로워진 점
 
