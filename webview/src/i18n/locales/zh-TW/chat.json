@@ -13,14 +13,6 @@
     "update": "更新",
     "skip": "略過"
   },
-  "fableNotice": {
-    "availableTitle": "Fable 現已推出",
-    "updateRequiredTitle": "更新以使用 Fable 5",
-    "promoBadge": "7 月 19 日前包含",
-    "availableBody": "在 Fable 5 上，您最多可使用每週額度的 50%，之後將切換為用量額度。Fable 5 消耗用量的速度遠快於 Opus 4.8。",
-    "updateRequiredBody": "Fable 5 需要 Claude Code CLI v2.1.170 或更新版本。請在「設定 → 關於」中更新您的 CLI 後即可選用。",
-    "learnMore": "深入了解"
-  },
   "telemetry": {
     "title": "是否允許收集使用統計資料以改善產品？",
     "subtitle": "絕不會傳送原始碼或個人資料。您可以隨時在設定中關閉此選項。",

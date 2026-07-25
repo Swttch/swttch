@@ -51,7 +51,7 @@ export function ModelTag() {
   // Memoized on the CLI response so the fallback-augmented array keeps a stable
   // reference across renders (the rotate effect below depends on `models`).
   const models: ModelInfo[] = useMemo(
-    () => withFableFallback(controlResponse?.response?.response?.models ?? [], new Date(), cliVersion, probedAvailable),
+    () => withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable),
     [controlResponse, cliVersion, probedAvailable],
   );
 

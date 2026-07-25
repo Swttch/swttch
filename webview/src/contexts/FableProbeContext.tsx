@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
-import { isFablePromoActive, isFableSupportedCli, toModelAlias } from '@/types/models';
+import { isFableSupportedCli, toModelAlias } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
 
 /** ACK payload shape for a PROBE_FABLE_AVAILABILITY request (see the backend
@@ -85,19 +85,16 @@ export function useFableProbe(): FableProbeContextValue {
  * shape so the trigger and the fallback never disagree:
  *  - empty catalog → still loading, don't probe (we can't yet tell if the CLI
  *    will serve Fable natively);
- *  - inside the promo window → Fable is offered without proof, no probe needed;
  *  - old CLI → can't select Fable at all, so nothing to confirm;
  *  - catalog already serves Fable → the dynamic entry wins, no fallback needed.
- * Otherwise (post-promo, supported CLI, Fable absent) a probe decides whether to
- * keep offering the fallback for this account.
+ * Otherwise (supported CLI, Fable absent) a probe decides whether to offer the
+ * fallback for this account.
  */
 export function shouldProbeFable(
   rawModels: ModelInfo[],
-  now: Date,
   cliVersion: string | null | undefined,
 ): boolean {
   if (rawModels.length === 0) return false;
-  if (isFablePromoActive(now)) return false;
   if (!isFableSupportedCli(cliVersion)) return false;
   if (rawModels.some((m) => toModelAlias(m.value) === 'fable')) return false;
   return true;

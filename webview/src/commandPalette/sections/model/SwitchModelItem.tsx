@@ -13,7 +13,7 @@ const SwitchModelValue = () => {
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
   const { probedAvailable } = useFableProbe();
-  const models = withFableFallback(controlResponse?.response?.response?.models ?? [], new Date(), cliVersion, probedAvailable);
+  const models = withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable);
   const info = resolveModelInfo(models, currentModel);
   const text = info?.displayName ?? currentModel;
   return (

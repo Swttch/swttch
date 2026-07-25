@@ -13,14 +13,6 @@
     "update": "Update",
     "skip": "Skip"
   },
-  "fableNotice": {
-    "availableTitle": "Fable is now available",
-    "updateRequiredTitle": "Update to use Fable 5",
-    "promoBadge": "Included until July 19",
-    "availableBody": "You can use up to 50% of your weekly limits on Fable 5, after which it switches to usage credits. Fable 5 uses up your usage much faster than Opus 4.8.",
-    "updateRequiredBody": "Fable 5 requires Claude Code CLI v2.1.170 or newer. Update your CLI in Settings → About to select it.",
-    "learnMore": "Learn more"
-  },
   "telemetry": {
     "title": "Allow collecting usage statistics to improve the product?",
     "subtitle": "Source code and personal data are never sent. You can turn this off anytime in settings.",

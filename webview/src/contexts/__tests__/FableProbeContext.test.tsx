@@ -91,8 +91,6 @@ describe('FableProbeContext (store)', () => {
 // The trigger predicate the model picker consults on open. Kept pure so the
 // probe-vs-skip decision is testable without mounting the whole overlay.
 describe('shouldProbeFable (trigger condition)', () => {
-  const DURING_PROMO = new Date('2026-07-03T00:00:00Z');
-  const AFTER_PROMO = new Date('2026-07-20T00:00:00Z'); // past FABLE_PROMO_END (2026-07-19)
   const SUPPORTED_CLI = '2.1.170'; // FABLE_MIN_CLI_VERSION
   const OLD_CLI = '2.1.169';
 
@@ -100,27 +98,23 @@ describe('shouldProbeFable (trigger condition)', () => {
   const CATALOG = [model('default'), model('sonnet'), model('opus')];
   const CATALOG_WITH_FABLE = [...CATALOG, model('fable')];
 
-  it('does NOT probe inside the promo window (Fable offered without proof)', () => {
-    expect(shouldProbeFable(CATALOG, DURING_PROMO, SUPPORTED_CLI)).toBe(false);
-  });
-
   it('does NOT probe when the catalog already serves Fable', () => {
-    expect(shouldProbeFable(CATALOG_WITH_FABLE, AFTER_PROMO, SUPPORTED_CLI)).toBe(false);
+    expect(shouldProbeFable(CATALOG_WITH_FABLE, SUPPORTED_CLI)).toBe(false);
   });
 
   it('does NOT probe on an old CLI that cannot select Fable', () => {
-    expect(shouldProbeFable(CATALOG, AFTER_PROMO, OLD_CLI)).toBe(false);
+    expect(shouldProbeFable(CATALOG, OLD_CLI)).toBe(false);
   });
 
   it('does NOT probe while the catalog is still loading (empty list)', () => {
-    expect(shouldProbeFable([], AFTER_PROMO, SUPPORTED_CLI)).toBe(false);
+    expect(shouldProbeFable([], SUPPORTED_CLI)).toBe(false);
   });
 
   it('does NOT probe when the CLI version is unknown (null)', () => {
-    expect(shouldProbeFable(CATALOG, AFTER_PROMO, null)).toBe(false);
+    expect(shouldProbeFable(CATALOG, null)).toBe(false);
   });
 
-  it('DOES probe past the window when Fable is absent and the CLI supports it', () => {
-    expect(shouldProbeFable(CATALOG, AFTER_PROMO, SUPPORTED_CLI)).toBe(true);
+  it('DOES probe when Fable is absent and the CLI supports it', () => {
+    expect(shouldProbeFable(CATALOG, SUPPORTED_CLI)).toBe(true);
   });
 });

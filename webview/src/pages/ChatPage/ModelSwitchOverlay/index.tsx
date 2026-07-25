@@ -11,10 +11,8 @@ import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { LoadedMessageType } from '@/types';
 import {
   findModelForSelection,
-  isFablePromoActive,
   resolveModelInfo,
   resolveModelLabel,
-  toModelAlias,
   withFableFallback,
 } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
@@ -42,19 +40,17 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   const { workingDirectory } = useWorkingDir();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const now = new Date();
   const rawModels: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
-  const models: ModelInfo[] = withFableFallback(rawModels, now, cliVersion, probedAvailable);
+  const models: ModelInfo[] = withFableFallback(rawModels, cliVersion, probedAvailable);
   const currentInfo = resolveModelInfo(models, currentModel);
   const isMac = navigator.platform.toUpperCase().includes('MAC');
-  const promoActive = isFablePromoActive(now);
 
   // Past the promo window the catalog omits Fable for many accounts that can
   // still run `--model fable`, so probe (once, non-blocking) whether THIS account
   // keeps access and, if so, re-offer it. The probe is cached backend-side, so an
   // open per session is cheap. Inside the window, or when the catalog already
   // serves Fable, `shouldProbeFable` returns false and we skip it.
-  const shouldProbe = shouldProbeFable(rawModels, now, cliVersion);
+  const shouldProbe = shouldProbeFable(rawModels, cliVersion);
   const probeFiredRef = useRef(false);
   useEffect(() => {
     if (!shouldProbe || probeFiredRef.current) return;
@@ -161,11 +157,6 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
                   <span className="leading-tight text-[1rem] truncate text-text-primary">
                     {m.displayName}
                   </span>
-                  {toModelAlias(m.value) === 'fable' && promoActive && (
-                    <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[0.7692rem] bg-surface-tooltip text-text-secondary whitespace-nowrap">
-                      {t('fableNotice.promoBadge')}
-                    </span>
-                  )}
                 </span>
                 <span className="leading-normal text-[0.8461rem] truncate text-text-secondary/80">
                   {m.description}
