@@ -10,10 +10,19 @@ export enum MentionItemType {
 export class MentionResult {
   readonly relativePath: string;
   readonly type: MentionItemType;
+  /**
+   * 0-based indices (ascending) into {@link relativePath} of the characters the
+   * backend's fuzzy search matched against the query. Forwarded verbatim from
+   * the backend response — never edited or recomputed here (raw data
+   * preservation principle). Undefined when the backend omits it (e.g. empty
+   * query).
+   */
+  readonly matchIndices?: number[];
 
-  constructor(params: { relativePath: string; type: MentionItemType }) {
+  constructor(params: { relativePath: string; type: MentionItemType; matchIndices?: number[] }) {
     this.relativePath = params.relativePath;
     this.type = params.type;
+    this.matchIndices = params.matchIndices;
   }
 
   get displayName(): string {
@@ -25,7 +34,7 @@ export class MentionResult {
 
 interface ListProjectFilesPayload {
   requestId: string;
-  files: Array<{ relativePath: string; type: string }>;
+  files: Array<{ relativePath: string; type: string; matchIndices?: number[] }>;
 }
 
 interface MentionState {
@@ -127,6 +136,7 @@ export function useMention(params: UseMentionParams): UseMentionReturn {
               new MentionResult({
                 relativePath: f.relativePath,
                 type: f.type === 'directory' ? MentionItemType.Directory : MentionItemType.File,
+                matchIndices: f.matchIndices,
               }),
           );
           setState(prev => ({

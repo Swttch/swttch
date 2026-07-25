@@ -10,6 +10,7 @@ import { MessageType } from '@/shared';
 interface ProjectFile {
   relativePath: string;
   type: string;
+  matchIndices?: number[];
 }
 
 let projectFiles: ProjectFile[] = [];
@@ -176,5 +177,45 @@ describe('useMention — selectResult', () => {
     });
 
     expect(result.current.isActive).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// search — matchIndices passthrough (raw data preservation: forward backend value unchanged)
+// ---------------------------------------------------------------------------
+
+describe('useMention — matchIndices passthrough', () => {
+  it('carries matchIndices from the backend response onto MentionResult unchanged', async () => {
+    projectFiles = [
+      { relativePath: 'webview/src/adapters/BrowserAdapter.ts', type: 'file', matchIndices: [21, 22, 28, 29] },
+    ];
+    const onChange = vi.fn();
+    const onInsertMention = vi.fn();
+
+    const { result } = renderMention({ value: '@bad', onChange, onInsertMention });
+
+    act(() => {
+      result.current.detectMention('@bad', 4);
+    });
+
+    await waitFor(() => expect(result.current.results.length).toBe(1));
+
+    expect(result.current.results[0].matchIndices).toEqual([21, 22, 28, 29]);
+  });
+
+  it('leaves matchIndices undefined when the backend response omits it', async () => {
+    projectFiles = [{ relativePath: 'src/App.tsx', type: 'file' }];
+    const onChange = vi.fn();
+    const onInsertMention = vi.fn();
+
+    const { result } = renderMention({ value: '@App', onChange, onInsertMention });
+
+    act(() => {
+      result.current.detectMention('@App', 4);
+    });
+
+    await waitFor(() => expect(result.current.results.length).toBe(1));
+
+    expect(result.current.results[0].matchIndices).toBeUndefined();
   });
 });

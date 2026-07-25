@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execFileSync } from 'child_process';
-import { fetchFilesAndDirs, listProjectFilesHandler } from '../listProjectFiles';
+import { fetchFilesAndDirs, listProjectFilesHandler, rankFiles } from '../listProjectFiles';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
@@ -446,5 +446,144 @@ describeFsCmd('listProjectFilesHandler (fileSuggestion command)', () => {
     const [, , payload] = last(c);
     const files = payload.files as Array<{ relativePath: string }>;
     expect(files.map((f) => f.relativePath)).toContain('real-file.ts');
+  });
+});
+
+describe('rankFiles (fuzzy subsequence + word-boundary scoring)', () => {
+  const files = [
+    'webview/src/adapters/BrowserAdapter.ts',
+    'build.gradle.kts',
+    'webview/src/adapters/JetBrainsAdapter.ts',
+    'gradle/wrapper/gradle-wrapper.jar',
+  ];
+  const dirs = ['webview/src/adapters', 'gradle/wrapper', 'gradle'];
+
+  it('ranks BrowserAdapter.ts first for query "brad"', () => {
+    const result = rankFiles(files, dirs, 'brad', 20);
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(result[0].relativePath).toBe('webview/src/adapters/BrowserAdapter.ts');
+    expect(result[0].type).toBe('file');
+  });
+
+  it('matches BrowserAdapter.ts, build.gradle.kts and JetBrainsAdapter.ts for query "brad"', () => {
+    const result = rankFiles(files, dirs, 'brad', 20);
+    const paths = result.map((r) => r.relativePath);
+
+    expect(paths).toContain('webview/src/adapters/BrowserAdapter.ts');
+    expect(paths).toContain('build.gradle.kts');
+    expect(paths).toContain('webview/src/adapters/JetBrainsAdapter.ts');
+  });
+
+  it('excludes "gradle" directory (basename has no "b") from query "brad" — noise removal regression', () => {
+    const result = rankFiles(files, dirs, 'brad', 20);
+    const paths = result.map((r) => r.relativePath);
+
+    expect(paths).not.toContain('gradle');
+  });
+
+  it('matches JetBrainsAdapter.ts for query "jbadapter"', () => {
+    const result = rankFiles(files, dirs, 'jbadapter', 20);
+    const paths = result.map((r) => r.relativePath);
+
+    expect(paths).toContain('webview/src/adapters/JetBrainsAdapter.ts');
+  });
+
+  it('ranks word-boundary (camelCase) matches above scattered matches', () => {
+    // 'AB' as query: 'AdapterBase.ts' has A at start (boundary) and B at boundary too (camelCase),
+    // while 'zazbz.ts' has a and b scattered with no boundary.
+    const boundaryFiles = ['src/AdapterBase.ts', 'src/zazbz.ts'];
+    const result = rankFiles(boundaryFiles, [], 'ab', 20);
+
+    expect(result[0].relativePath).toBe('src/AdapterBase.ts');
+  });
+
+  it('ranks basename matches above path-only matches', () => {
+    // 'x/foobar.ts' has basename 'foobar.ts' that matches 'foobar' directly (basename bonus).
+    // 'foobar/y.ts' has basename 'y.ts' that does NOT match 'foobar' as a subsequence;
+    // only the full path matches (no basename bonus). The former must rank first.
+    const basenameMatchFiles = ['x/foobar.ts', 'foobar/y.ts'];
+    const basenameResult = rankFiles(basenameMatchFiles, [], 'foobar', 20);
+    expect(basenameResult[0].relativePath).toBe('x/foobar.ts');
+  });
+
+  it('returns directories only when query is empty', () => {
+    const result = rankFiles(files, dirs, '', 20);
+
+    expect(result.every((r) => r.type === 'directory')).toBe(true);
+    expect(result.length).toBe(dirs.length);
+  });
+
+  it('respects the limit parameter', () => {
+    const manyFiles = Array.from({ length: 50 }, (_, i) => `file-brad-${i}.ts`);
+    const result = rankFiles(manyFiles, [], 'brad', 5);
+
+    expect(result.length).toBe(5);
+  });
+
+  it('returns an empty array for a query with no matches', () => {
+    const result = rankFiles(files, dirs, 'zzzznomatch', 20);
+
+    expect(result).toEqual([]);
+  });
+
+  it('breaks ties by shorter relative path first', () => {
+    const tieFiles = ['a/verylongdirectoryname/test.ts', 'test.ts'];
+    const result = rankFiles(tieFiles, [], 'test', 20);
+
+    expect(result[0].relativePath).toBe('test.ts');
+  });
+});
+
+describe('rankFiles matchIndices (highlighted character positions)', () => {
+  const files = [
+    'webview/src/adapters/BrowserAdapter.ts',
+    'build.gradle.kts',
+    'webview/src/adapters/JetBrainsAdapter.ts',
+    'gradle/wrapper/gradle-wrapper.jar',
+  ];
+  const dirs = ['webview/src/adapters', 'gradle/wrapper', 'gradle'];
+
+  it('returns matchIndices pointing to the matched characters (relativePath-based, ascending) for "brad"', () => {
+    const result = rankFiles(files, dirs, 'brad', 20);
+    const match = result.find((r) => r.relativePath === 'webview/src/adapters/BrowserAdapter.ts');
+
+    expect(match).toBeDefined();
+    expect(match!.matchIndices).toBeDefined();
+    const indices = match!.matchIndices!;
+    const query = 'brad';
+
+    // ascending order
+    for (let i = 1; i < indices.length; i++) {
+      expect(indices[i]).toBeGreaterThan(indices[i - 1]);
+    }
+
+    // each index must actually correspond to the query character (case-insensitive)
+    expect(indices.length).toBe(query.length);
+    for (let i = 0; i < query.length; i++) {
+      expect(match!.relativePath[indices[i]].toLowerCase()).toBe(query[i]);
+    }
+  });
+
+  it('returns contiguous matchIndices for an exact substring query ("Adapter")', () => {
+    const result = rankFiles(files, dirs, 'Adapter', 20);
+    const match = result.find((r) => r.relativePath === 'webview/src/adapters/BrowserAdapter.ts');
+
+    expect(match).toBeDefined();
+    const indices = match!.matchIndices!;
+    expect(indices.length).toBe('Adapter'.length);
+    for (let i = 1; i < indices.length; i++) {
+      expect(indices[i]).toBe(indices[i - 1] + 1);
+    }
+    const matchedSubstring = indices.map((idx) => match!.relativePath[idx]).join('');
+    expect(matchedSubstring.toLowerCase()).toBe('adapter');
+  });
+
+  it('omits matchIndices (or returns empty array) for empty query', () => {
+    const result = rankFiles(files, dirs, '', 20);
+
+    for (const entry of result) {
+      expect(entry.matchIndices ?? []).toEqual([]);
+    }
   });
 });

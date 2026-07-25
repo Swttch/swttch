@@ -19,6 +19,7 @@ const execFileAsync = promisify(execFile);
 interface FileEntry {
   relativePath: string;
   type: 'file' | 'directory';
+  matchIndices?: number[];
 }
 
 interface CacheEntry {
@@ -145,8 +146,122 @@ export async function fetchFilesAndDirs(workingDir: string): Promise<{ files: st
   return { files, dirs };
 }
 
-function matchesQuery(name: string, query: string): boolean {
-  return name.toLowerCase().includes(query.toLowerCase());
+// Subsequence + word-boundary (camelCase) fuzzy scorer, fzf/IntelliJ CamelHump style.
+const BOUNDARY = /[/_\-. ]/;
+
+/**
+ * Scores `target` against `query` as a subsequence match. Returns null when
+ * `query` cannot be matched as a subsequence of `target` (i.e. no match).
+ * Also returns the target-relative indices of each matched character, in the
+ * order the query characters were matched (ascending).
+ */
+function subsequenceScore(target: string, query: string): { score: number; indices: number[] } | null {
+  const t = target;
+  const q = query.toLowerCase();
+  let ti = 0;
+  let s = 0;
+  let prev = -1;
+  let started = false;
+  const indices: number[] = [];
+  for (let qi = 0; qi < q.length; qi++) {
+    const ch = q[qi];
+    let found = -1;
+    for (let k = ti; k < t.length; k++) {
+      if (t[k].toLowerCase() === ch) {
+        found = k;
+        break;
+      }
+    }
+    if (found === -1) {
+      return null; // subsequence not satisfied -> reject
+    }
+    indices.push(found);
+    if (!started) {
+      s += 16; // bonus for match start
+      started = true;
+    }
+    const isUpper = t[found] >= 'A' && t[found] <= 'Z';
+    const prevCh = found > 0 ? t[found - 1] : '/';
+    const atBoundary = isUpper || BOUNDARY.test(prevCh);
+    if (atBoundary) {
+      s += 8; // word-boundary (camelCase) bonus -- the key differentiator
+    }
+    if (found === prev + 1) {
+      s += 8; // consecutive match bonus
+    }
+    if (prev !== -1) {
+      s -= found - prev - 1; // gap penalty
+    }
+    prev = found;
+    ti = found + 1;
+  }
+  return { score: s, indices };
+}
+
+/**
+ * Scores an item by basename first, falling back to the full relative path.
+ * Basename matches get a +20 bonus so files whose own name matches rank
+ * above files that merely happen to have a matching directory prefix.
+ * Also returns the relativePath-based indices of the winning match (basename
+ * indices are offset to account for the directory prefix).
+ */
+function scoreItem(
+  relativePath: string,
+  basename: string,
+  query: string,
+): { score: number; matchIndices: number[] } | null {
+  const sb = subsequenceScore(basename, query);
+  const sf = subsequenceScore(relativePath, query);
+
+  const basenameScore = sb === null ? null : sb.score + 20;
+  const pathScore = sf === null ? null : sf.score;
+
+  if (basenameScore === null && pathScore === null) {
+    return null;
+  }
+
+  if (pathScore === null || (basenameScore !== null && basenameScore >= pathScore)) {
+    // basename match wins (or is the only match) -- offset indices into relativePath
+    const offset = relativePath.length - basename.length;
+    return { score: basenameScore as number, matchIndices: sb!.indices.map((i) => i + offset) };
+  }
+
+  return { score: pathScore, matchIndices: sf!.indices };
+}
+
+/**
+ * Ranks files and directories against `query` using fuzzy subsequence +
+ * word-boundary scoring (fzf/IntelliJ CamelHump style). Empty query returns
+ * directories only, matching prior behaviour.
+ */
+export function rankFiles(files: string[], dirs: string[], query: string, limit: number): FileEntry[] {
+  if (query.trim() === '') {
+    return dirs.slice(0, limit).map((d) => ({ relativePath: d, type: 'directory' as const }));
+  }
+
+  const candidates = [
+    ...dirs.map((d) => ({ relativePath: d, type: 'directory' as const })),
+    ...files.map((f) => ({ relativePath: f, type: 'file' as const })),
+  ];
+
+  const scored = candidates
+    .map((item) => {
+      const basename = item.relativePath.split('/').pop() ?? item.relativePath;
+      const result = scoreItem(item.relativePath, basename, query);
+      return result === null ? null : { ...item, score: result.score, matchIndices: result.matchIndices };
+    })
+    .filter((item): item is FileEntry & { score: number; matchIndices: number[] } => item !== null);
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) {
+      return b.score - a.score;
+    }
+    return a.relativePath.length - b.relativePath.length;
+  });
+
+  return scored
+    .slice(0, limit)
+    .map(({ relativePath, type, matchIndices }) => ({ relativePath, type, matchIndices }));
 }
 
 export async function listProjectFilesHandler(
@@ -203,31 +318,7 @@ export async function listProjectFilesHandler(
 
   try {
     const { files, dirs } = await fetchFilesAndDirs(workingDir);
-
-    let result: FileEntry[];
-
-    if (query.trim() === '') {
-      // No query: return directories only (cap at limit)
-      result = dirs.slice(0, limit).map((d) => ({ relativePath: d, type: 'directory' as const }));
-    } else {
-      // Query present: match files and dirs by basename
-      const matchedFiles: FileEntry[] = files
-        .filter((f) => {
-          const basename = f.split('/').pop() ?? f;
-          return matchesQuery(basename, query) || matchesQuery(f, query);
-        })
-        .map((f) => ({ relativePath: f, type: 'file' as const }));
-
-      const matchedDirs: FileEntry[] = dirs
-        .filter((d) => {
-          const basename = d.split('/').pop() ?? d;
-          return matchesQuery(basename, query) || matchesQuery(d, query);
-        })
-        .map((d) => ({ relativePath: d, type: 'directory' as const }));
-
-      // Dirs first, then files, capped at limit
-      result = [...matchedDirs, ...matchedFiles].slice(0, limit);
-    }
+    const result = rankFiles(files, dirs, query, limit);
 
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
