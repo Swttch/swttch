@@ -56,7 +56,7 @@ export function expandTargetPathArgument(
   return argv.map((arg) =>
     arg === TargetPathArgument
       ? targetPath
-      : arg.replaceAll(TargetPathArgument, targetPath),
+      : arg.split(TargetPathArgument).join(targetPath),
   );
 }
 
