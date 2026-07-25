@@ -39,6 +39,18 @@ function registryDir(): string {
   return join(homedir(), '.claude-code-gui', 'cli-registry');
 }
 
+/**
+ * A sessionId is safe to interpolate into the win32 CIM `-like` match only when
+ * it is non-empty and contains no PowerShell wildcard/quote/whitespace metacharacters.
+ * An empty or wildcard-bearing id would broaden `-like '*<id>*'` into a mass match
+ * (worst case `-like '*'` → every process), turning the orphan kill into a machine-wide taskkill.
+ * Claude session ids are simple tokens (uuid-like, and the test fixtures use `sess-*`),
+ * so restrict to [A-Za-z0-9._-]. Reject everything else — a malformed id means "match nothing".
+ */
+export function isValidSessionId(sessionId: string): boolean {
+  return /^[A-Za-z0-9._-]+$/.test(sessionId);
+}
+
 /** Live argv of [pid] as one string, or null when unknown (dead pid / unreadable). */
 function processArgs(pid: number): string | null {
   if (!Number.isInteger(pid) || pid <= 1) return null;
@@ -122,6 +134,10 @@ function killPidTree(pid: number, signal: NodeJS.Signals): void {
  */
 function liveSessionProcs(sessionId: string): number[] {
   if (process.platform !== 'win32') return [];
+  // A malformed id (empty or metacharacter-bearing) must match NOTHING: an empty
+  // id makes `-like '*<id>*'` collapse to `-like '*'` (every process → machine-wide
+  // taskkill) and quotes/wildcards let a crafted id inject or over-broaden the match.
+  if (!isValidSessionId(sessionId)) return [];
   try {
     const out = execFileSync(
       'powershell.exe',
@@ -208,6 +224,10 @@ function readEntries(): CliRegistryEntry[] {
  * failure resolves to 'dead' (GC the record) rather than risk killing a reused pid.
  */
 function cliState(entry: CliRegistryEntry): 'live' | 'dead' {
+  // A malformed sessionId can never identify a live CLI: on POSIX an empty id makes
+  // `args.includes('')` always true, mis-declaring an unrelated pid 'live'. Treat any
+  // invalid entry as dead so it gets garbage-collected instead of falsely resurrected.
+  if (!isValidSessionId(entry.sessionId)) return 'dead';
   if (process.platform === 'win32') {
     return liveSessionProcs(entry.sessionId).length > 0 ? 'live' : 'dead';
   }

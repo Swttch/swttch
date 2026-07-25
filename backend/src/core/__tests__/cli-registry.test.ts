@@ -17,6 +17,7 @@ import {
   findLiveCliForSession,
   killRegisteredCli,
   sweepOrphanCliProcesses,
+  isValidSessionId,
   type CliRegistryEntry,
 } from '../cli-registry';
 
@@ -70,6 +71,44 @@ function tamperOwner(pid: number, owner: { pid: number; argv1: string }): void {
   entry.owner = owner;
   writeFileSync(entryPath(pid), JSON.stringify(entry));
 }
+
+// ── isValidSessionId (platform-agnostic) ─────────────────────────────────────
+// The win32 orphan kill interpolates the sessionId into a CIM `-like '*<id>*'`
+// match. An empty or wildcard/quote-bearing id widens that match (worst case
+// `-like '*'` → every process) and turns the orphan kill into a machine-wide
+// taskkill, or lets a crafted id inject PowerShell. The guard rejects anything
+// outside a simple token so a malformed id matches nothing. Pure and runs
+// everywhere — no processes, no platform skip.
+describe('isValidSessionId', () => {
+  it('rejects an empty string (would widen the CIM match to every process)', () => {
+    expect(isValidSessionId('')).toBe(false);
+  });
+
+  it('rejects whitespace-only ids', () => {
+    expect(isValidSessionId('   ')).toBe(false);
+  });
+
+  it('rejects ids carrying a quote and whitespace (PowerShell injection shape)', () => {
+    expect(isValidSessionId("abc'; Stop-Process")).toBe(false);
+  });
+
+  it('rejects a bare wildcard and wildcard-bearing ids', () => {
+    expect(isValidSessionId('*')).toBe(false);
+    expect(isValidSessionId('abc*')).toBe(false);
+  });
+
+  it('rejects an id with a wildcard character class bracket', () => {
+    expect(isValidSessionId('a[bc')).toBe(false);
+  });
+
+  it('accepts the sess-* fixture form used across the suite', () => {
+    expect(isValidSessionId('sess-lifecycle')).toBe(true);
+  });
+
+  it('accepts a real uuid session id', () => {
+    expect(isValidSessionId('9f8b1c2d-4e5a-6789-abcd-0123456789ef')).toBe(true);
+  });
+});
 
 describe.skipIf(!isPosix)('cli-registry (POSIX, real processes)', () => {
   const spawned: ChildProcess[] = [];
