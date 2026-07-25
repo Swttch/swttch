@@ -283,6 +283,7 @@ const ACTIVITY_EXCLUDED_TYPES = new Set<string>([
   MessageType.CLIENT_ERROR,          // 에러 보고(reportBackendError 경로)
   MessageType.GET_ACCOUNT,           // 창 포커스마다 자동 refetch
   MessageType.GET_USAGE,             // 사용량 조회 폴링성
+  MessageType.PANEL_FOCUSED,         // 패널 포커스마다 자동 발생하는 라우팅 신호(노이즈)
   // 인프라 / 환경 / 버전 자동 조회 (마운트 시 버스트)
   MessageType.GET_TELEMETRY_CONSENT, // 동의 상태 자동 조회
   MessageType.GET_CLI_CONFIG,        // CLI 설정 자동 로드
