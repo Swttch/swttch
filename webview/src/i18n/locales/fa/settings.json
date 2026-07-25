@@ -73,6 +73,10 @@
       "placeholder": "پیش‌فرض (~/.claude)",
       "active": "فعال: {{value}}",
       "projectUnavailable": "برای تنظیم مقدار پروژه، یک پروژه را باز کنید."
+    },
+    "fileSuggestion": {
+      "description": "فرمان سفارشی که فهرست فایل @ را می‌سازد. مانند تنظیم fileSuggestion در settings.json.",
+      "placeholder": "مثال: git ls-files --recurse-submodules"
     }
   },
   "appearance": {

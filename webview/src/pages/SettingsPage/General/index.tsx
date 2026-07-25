@@ -6,6 +6,7 @@ import { OpenSettingsRow } from './OpenSettingsRow';
 import { ChatPaginationRow } from './ChatPaginationRow';
 import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
+import { FileSuggestionRow } from './FileSuggestionRow';
 import { APP_NAME } from '@/config/app';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -151,6 +152,8 @@ export function GeneralSettings() {
             ariaLabel={t('general.respectGitignoreForContext.label')}
           />
         </SettingRow>
+
+        <FileSuggestionRow />
 
         <HostModeRow />
 

@@ -1,7 +1,8 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execFileSync } from 'child_process';
 import { fetchFilesAndDirs, listProjectFilesHandler } from '../listProjectFiles';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
@@ -183,6 +184,98 @@ describe('fetchFilesAndDirs (non-git directory)', () => {
   });
 });
 
+// `git ls-files` in its default form only reports the gitlink entry for a
+// submodule (a single directory), never the files tracked *inside* it — so the
+// `@` mention picker cannot find e.g. `Assets/GameFramework/Editor/Foo.asmdef`
+// in a repo that vendors code through submodules. `--recurse-submodules` fixes
+// this but is mutually exclusive with `--others` ("unsupported mode"), so the
+// handler must issue two calls and merge. Issue #201.
+//
+// These tests shell out to real `git`, so skip where git is unavailable.
+function hasGit(): boolean {
+  try {
+    execFileSync('git', ['--version'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+const describeGit = hasGit() ? describe : describe.skip;
+
+function git(cwd: string, args: string[]): void {
+  execFileSync('git', args, { cwd, stdio: 'pipe' });
+}
+
+// Build a parent repo that vendors a submodule at Assets/GameFramework, plus an
+// untracked and a gitignored file at the top level, mirroring the reporter's setup.
+function makeGitRepoWithSubmodule(): { root: string } {
+  const subRoot = makeTmpDir();
+  git(subRoot, ['init', '-q']);
+  git(subRoot, ['config', 'user.email', 'test@example.com']);
+  git(subRoot, ['config', 'user.name', 'test']);
+  fs.mkdirSync(path.join(subRoot, 'Editor'), { recursive: true });
+  fs.writeFileSync(path.join(subRoot, 'Editor', 'Framework.Editor.asmdef'), '');
+  fs.writeFileSync(path.join(subRoot, 'tracked-in-sub.txt'), '');
+  git(subRoot, ['add', '-A']);
+  git(subRoot, ['commit', '-q', '-m', 'init']);
+
+  const root = makeTmpDir();
+  git(root, ['init', '-q']);
+  git(root, ['config', 'user.email', 'test@example.com']);
+  git(root, ['config', 'user.name', 'test']);
+  fs.writeFileSync(path.join(root, 'root.txt'), '');
+  fs.mkdirSync(path.join(root, 'Assets'), { recursive: true });
+  // Local-path submodules require protocol.file.allow=always on git >= 2.38.
+  git(root, [
+    '-c',
+    'protocol.file.allow=always',
+    'submodule',
+    'add',
+    '-q',
+    subRoot,
+    'Assets/GameFramework',
+  ]);
+  fs.writeFileSync(path.join(root, 'Assets', 'top.txt'), '');
+  git(root, ['add', 'root.txt', 'Assets/top.txt']);
+  git(root, ['commit', '-q', '-m', 'add submodule']);
+  // Untracked (but not ignored) file — must still be listed.
+  fs.writeFileSync(path.join(root, 'untracked-root.txt'), '');
+  // Gitignored file — must NOT be listed.
+  fs.writeFileSync(path.join(root, '.gitignore'), 'ignored-*.txt\n');
+  fs.writeFileSync(path.join(root, 'ignored-secret.txt'), '');
+  return { root };
+}
+
+describeGit('fetchFilesAndDirs (git repo with submodule)', () => {
+  it('includes files tracked inside a git submodule', async () => {
+    const { root } = makeGitRepoWithSubmodule();
+    const { files } = await fetchFilesAndDirs(root);
+    expect(files).toContain('Assets/GameFramework/Editor/Framework.Editor.asmdef');
+    expect(files).toContain('Assets/GameFramework/tracked-in-sub.txt');
+  });
+
+  it('still lists untracked and tracked top-level files (exclude-standard preserved)', async () => {
+    const { root } = makeGitRepoWithSubmodule();
+    const { files } = await fetchFilesAndDirs(root);
+    expect(files).toContain('untracked-root.txt');
+    expect(files).toContain('root.txt');
+    expect(files).toContain('Assets/top.txt');
+  });
+
+  it('respects .gitignore (does not list ignored files)', async () => {
+    const { root } = makeGitRepoWithSubmodule();
+    const { files } = await fetchFilesAndDirs(root);
+    expect(files).not.toContain('ignored-secret.txt');
+  });
+
+  it('derives directories located inside the submodule', async () => {
+    const { root } = makeGitRepoWithSubmodule();
+    const { dirs } = await fetchFilesAndDirs(root);
+    expect(dirs).toContain('Assets/GameFramework');
+    expect(dirs).toContain('Assets/GameFramework/Editor');
+  });
+});
+
 // A WSL project opened in JetBrains runs the backend inside the distro
 // (process.platform === 'linux'), yet the IDE hands the project root over the
 // wire as a Windows UNC path (`//wsl.localhost/<distro>/...`) that does not exist
@@ -255,5 +348,103 @@ describeWsl('listProjectFilesHandler (WSL UNC workingDir)', () => {
     expect(type).toBe(MessageType.ACK);
     const files = payload.files as Array<{ relativePath: string; type: string }>;
     expect(files.map((f) => f.relativePath)).toContain('plain-file.ts');
+  });
+});
+
+// A user-configured `fileSuggestion` command must drive the `@` index exactly
+// as it does in the CLI, and any failure must fall back to the built-in index
+// so the picker never silently empties. The command runs under a real shell, so
+// skip on win32 (needs git bash). Issue #201.
+const describeFsCmd = process.platform === 'win32' ? describe.skip : describe;
+
+describeFsCmd('listProjectFilesHandler (fileSuggestion command)', () => {
+  const prevConfigDir = process.env.CLAUDE_CONFIG_DIR;
+
+  beforeEach(() => {
+    // Isolate global Claude settings so the host machine's ~/.claude cannot leak
+    // a real fileSuggestion into these tests. Project-scope settings still win,
+    // but this keeps the "malformed/absent" cases honest.
+    process.env.CLAUDE_CONFIG_DIR = makeTmpDir();
+  });
+  afterEach(() => {
+    if (prevConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prevConfigDir;
+  });
+
+  function conns(): ConnectionManager {
+    return { sendTo: vi.fn() } as unknown as ConnectionManager;
+  }
+  function last(c: ConnectionManager): [string, string, Record<string, unknown>] {
+    const calls = (c.sendTo as ReturnType<typeof vi.fn>).mock.calls;
+    return calls[calls.length - 1] as [string, string, Record<string, unknown>];
+  }
+  function message(workingDir: string, query: string): IPCMessage {
+    return {
+      type: MessageType.LIST_PROJECT_FILES,
+      payload: { workingDir, query, limit: 20 },
+      timestamp: 0,
+      requestId: 'r1',
+    };
+  }
+  function writeProjectSetting(root: string, fileSuggestion: unknown): void {
+    fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.claude', 'settings.json'),
+      JSON.stringify({ fileSuggestion }),
+    );
+  }
+
+  it('uses the configured fileSuggestion command instead of the built-in index', async () => {
+    const root = makeTmpDir();
+    writeProjectSetting(root, {
+      type: 'command',
+      command: "printf 'custom/one.ts\\ncustom/two.ts\\n'",
+    });
+    const c = conns();
+    await listProjectFilesHandler('c1', message(root, 'one'), c, {} as Bridge);
+
+    const [, type, payload] = last(c);
+    expect(type).toBe(MessageType.ACK);
+    const files = payload.files as Array<{ relativePath: string; type: string }>;
+    expect(files.map((f) => f.relativePath)).toEqual(['custom/one.ts', 'custom/two.ts']);
+    expect(files.every((f) => f.type === 'file')).toBe(true);
+  });
+
+  it('passes the mention query to the command on stdin', async () => {
+    const root = makeTmpDir();
+    // `cat` echoes stdin, so the single parsed line is the JSON payload the
+    // command received — proving the query was delivered as {"query":...}.
+    writeProjectSetting(root, { type: 'command', command: 'cat' });
+    const c = conns();
+    await listProjectFilesHandler('c1', message(root, 'Frame'), c, {} as Bridge);
+
+    const [, , payload] = last(c);
+    const files = payload.files as Array<{ relativePath: string }>;
+    expect(files.map((f) => f.relativePath)).toEqual(['{"query":"Frame"}']);
+  });
+
+  it('falls back to the built-in index when the command exits non-zero', async () => {
+    const root = makeTmpDir();
+    fs.writeFileSync(path.join(root, 'real-file.ts'), '');
+    writeProjectSetting(root, { type: 'command', command: 'exit 1' });
+    const c = conns();
+    await listProjectFilesHandler('c1', message(root, 'real-file'), c, {} as Bridge);
+
+    const [, type, payload] = last(c);
+    expect(type).toBe(MessageType.ACK);
+    const files = payload.files as Array<{ relativePath: string }>;
+    expect(files.map((f) => f.relativePath)).toContain('real-file.ts');
+  });
+
+  it('ignores a malformed fileSuggestion and uses the built-in index', async () => {
+    const root = makeTmpDir();
+    fs.writeFileSync(path.join(root, 'real-file.ts'), '');
+    writeProjectSetting(root, { type: 'notcommand' });
+    const c = conns();
+    await listProjectFilesHandler('c1', message(root, 'real-file'), c, {} as Bridge);
+
+    const [, , payload] = last(c);
+    const files = payload.files as Array<{ relativePath: string }>;
+    expect(files.map((f) => f.relativePath)).toContain('real-file.ts');
   });
 });

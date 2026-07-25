@@ -73,6 +73,10 @@
       "placeholder": "Standard (~/.claude)",
       "active": "Aktiv: {{value}}",
       "projectUnavailable": "Öffne ein Projekt, um einen Projektwert festzulegen."
+    },
+    "fileSuggestion": {
+      "description": "Benutzerdefinierter Befehl, der den @-Dateiindex erstellt. Entspricht der Einstellung fileSuggestion in settings.json.",
+      "placeholder": "z. B. git ls-files --recurse-submodules"
     }
   },
   "appearance": {

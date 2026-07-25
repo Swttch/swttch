@@ -20,6 +20,16 @@ export interface PermissionsConfig {
   additionalDirectories?: string[];
 }
 
+/**
+ * `fileSuggestion` overrides how the `@` file-mention index is built: the given
+ * command receives `{"query":...}` on stdin and prints file paths. Mirrors the
+ * Claude CLI settings.json contract so a setting works identically in both.
+ */
+export interface FileSuggestionConfig {
+  type: 'command';
+  command: string;
+}
+
 export interface ClaudeSettingsState {
   model: string | null; // full model ID like 'claude-opus-4-6' or null for default
   language: string | null; // Claude's preferred response language (e.g., "korean", "japanese")
@@ -32,6 +42,7 @@ export interface ClaudeSettingsState {
   useCtrlEnterToSend: boolean; // when true, Ctrl/Cmd+Enter sends; plain Enter inserts a newline
   focusInputOnEditorContext: boolean; // when true, move focus to chat input after inserting file path via Alt+K
   respectGitignoreForContext: boolean; // when true, exclude body of .gitignore'd files from editor context (path only)
+  fileSuggestion?: FileSuggestionConfig | null; // custom command that builds the @ file-mention index (null/absent = built-in)
   permissions?: PermissionsConfig;
   [key: string]: unknown; // extensible for future settings
 }

@@ -73,6 +73,10 @@
       "placeholder": "デフォルト(~/.claude)",
       "active": "有効: {{value}}",
       "projectUnavailable": "プロジェクト値を設定するにはプロジェクトを開いてください。"
+    },
+    "fileSuggestion": {
+      "description": "@ ファイル一覧を生成するカスタムコマンド。settings.json の fileSuggestion 設定と同じです。",
+      "placeholder": "例: git ls-files --recurse-submodules"
     }
   },
   "appearance": {
