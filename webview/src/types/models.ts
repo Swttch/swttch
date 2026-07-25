@@ -24,36 +24,15 @@ export function toModelAlias(value: string | null | undefined): string {
 /**
  * Fable 5 support (issue #153).
  *
- * Fable 5 is a limited-window promotional model. Whether the CLI lists it in
- * the `initialize` model catalog is decided per-account by the server
+ * Fable 5 is now a permanent GA model, but whether the CLI lists it in the
+ * `initialize` model catalog is decided per-account by the server
  * (`additionalModelOptionsCache` entitlement), NOT by CLI version — so many
  * accounts never see it in the picker even though `--model fable` activates it
  * fine. To honour CLI equivalence ("what works in the CLI works in the GUI")
- * we surface Fable as a fallback item when the account's catalog omits it.
- *
- * `FABLE_PROMO_END` is the promotion window end used to gate the "included
- * until" badge (rendered from the `fableNotice.promoBadge` i18n string) and,
- * past that date, to stop offering the fallback.
- *
- * The window has already been extended once: Anthropic pushed the subscription
- * inclusion cutoff from 2026-07-07 to 2026-07-12 (after which Fable moves to
- * prepaid usage credits rather than being retired). The badge/date text is
- * server-supplied per account, not baked into the CLI binary, so we mirror the
- * publicly announced date here. When the window shifts again, update this date
- * AND the `fableNotice.promoBadge` string in every locale so the two agree.
- * TODO(after 2026-07-12): the promotion window ends; revisit the fallback,
- * badge, and announcement once Fable's post-promo availability is known.
+ * we surface Fable as a fallback item when the account's catalog omits it,
+ * gated on a real per-account availability probe (see `withFableFallback` /
+ * `FableProbeContext`) rather than any promotional date window.
  */
-export const FABLE_PROMO_END = '2026-07-12';
-
-/**
- * Whether the Fable promotion window is still open on `now` (inclusive of the
- * end day). ISO date strings compare lexicographically in calendar order, so a
- * simple prefix compare against `FABLE_PROMO_END` suffices.
- */
-export function isFablePromoActive(now: Date): boolean {
-  return now.toISOString().slice(0, 10) <= FABLE_PROMO_END;
-}
 
 /**
  * Minimum Claude Code CLI version that knows the Fable model (`--model fable`).
@@ -87,12 +66,21 @@ export const FABLE_FALLBACK_MODEL: ModelInfo = {
  * omits it — a merge, not a static override. If the CLI already lists Fable
  * (entitled account), that dynamic entry wins and the hardcoded item is skipped
  * via alias-based dedup, so this quietly no-ops once Fable is served natively.
- * A CLI-served Fable is respected regardless of the promo window — the server,
- * not us, decides post-promo availability; only our hardcoded fallback is
- * gated on the promo still being active (`now`).
+ * A CLI-served Fable is always respected — the server, not us, decides
+ * availability.
  *
- * The hardcoded fallback is additionally gated on the CLI version: Fable landed
- * in CLI 2.1.170 (`FABLE_MIN_CLI_VERSION`), and older CLIs don't recognise
+ * Fable is now a permanent GA model, but the server still decides per-account
+ * whether it appears in the `initialize` catalog: many accounts that can run
+ * `--model fable` (on prepaid usage credits) never see it listed. There is no
+ * date window to lean on anymore, so the only reliable signal for offering the
+ * hardcoded fallback is a real per-account availability probe
+ * (`probedAvailable === true`; see `fable-probe` / `FableProbeContext`).
+ * `false` means the probe rejected this account and `null`/`undefined` means it
+ * hasn't resolved yet — in both cases we do not offer the fallback, so a model
+ * the account can't select never surfaces.
+ *
+ * The fallback is additionally gated on the CLI version: Fable landed in CLI
+ * 2.1.170 (`FABLE_MIN_CLI_VERSION`), and older CLIs don't recognise
  * `--model fable`, so offering the fallback to them would surface a model the
  * user can't actually select. The "CLI already serves it" dedup check runs
  * BEFORE the version gate on purpose: an entitled account whose catalog carries
@@ -105,14 +93,19 @@ export const FABLE_FALLBACK_MODEL: ModelInfo = {
  */
 export function withFableFallback(
   models: ModelInfo[],
-  now: Date,
   cliVersion: string | null | undefined,
+  probedAvailable?: boolean | null,
 ): ModelInfo[] {
   if (models.length === 0) return models;
   if (models.some((m) => toModelAlias(m.value) === 'fable')) return models; // CLI already serves it — always trust, regardless of version
-  if (!isFablePromoActive(now)) return models;
   if (!isFableSupportedCli(cliVersion)) return models; // an old CLI can't select Fable, so don't offer the fallback
-  return [...models, FABLE_FALLBACK_MODEL];
+  if (probedAvailable !== true) return models; // only when a real probe confirmed this account
+  // Fable 5 is the most capable model, so rank it at the top of the concrete
+  // choices — just below the "default" item and above Opus/Sonnet/Haiku,
+  // mirroring how the CLI orders a natively-served Fable ahead of them.
+  const defaultIdx = models.findIndex((m) => toModelAlias(m.value) === DEFAULT_MODEL_ALIAS);
+  const at = defaultIdx >= 0 ? defaultIdx + 1 : 0;
+  return [...models.slice(0, at), FABLE_FALLBACK_MODEL, ...models.slice(at)];
 }
 
 /**

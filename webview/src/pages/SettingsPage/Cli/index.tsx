@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SettingSection, SettingRow, ScopeGuard } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -7,7 +7,10 @@ import { useBridge } from '@/hooks/useBridge';
 import { SettingKey } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
 import { useCliConfig } from '@/contexts/CliConfigContext';
-import { DEFAULT_MODEL_ALIAS, toModelAlias } from '@/types/models';
+import { useVersionInfo } from '@/hooks/useVersionInfo';
+import { useWorkingDir } from '@/contexts/WorkingDirContext';
+import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
+import { DEFAULT_MODEL_ALIAS, toModelAlias, withFableFallback } from '@/types/models';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { OpenFilesWithRow } from './OpenFilesWithRow';
@@ -34,7 +37,22 @@ export function CliSettings() {
   const isJetBrainsEnv = isJetBrains();
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
   const { controlResponse } = useCliConfig();
-  const availableModels = controlResponse?.response?.response?.models ?? [];
+  const { cliVersion } = useVersionInfo();
+  const { probedAvailable, probeFableAvailability } = useFableProbe();
+  const { workingDirectory } = useWorkingDir();
+  const rawModels = controlResponse?.response?.response?.models ?? [];
+  // Same Fable fallback the model picker uses, gated on the per-account probe —
+  // so an account that cannot actually select Fable never sees it here either.
+  const availableModels = withFableFallback(rawModels, cliVersion, probedAvailable);
+
+  // Settings may be the first place the user looks for the default model, so run
+  // the same availability probe the picker does (once per mount; cached backend-side).
+  const probeFiredRef = useRef(false);
+  useEffect(() => {
+    if (!shouldProbeFable(rawModels, cliVersion) || probeFiredRef.current) return;
+    probeFiredRef.current = true;
+    void probeFableAvailability(workingDirectory ?? undefined);
+  }, [rawModels, cliVersion, workingDirectory, probeFableAvailability]);
 
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
   const [loading, setLoading] = useState(true);

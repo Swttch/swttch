@@ -67,6 +67,7 @@ import { updatePluginHandler } from './updatePlugin';
 import { getClaudeSettingsHandler } from './getClaudeSettings';
 import { saveClaudeSettingsHandler } from './saveClaudeSettings';
 import { setModelHandler } from './setModel';
+import { probeFableAvailabilityHandler } from './probeFableAvailability';
 import { getWorkingDirHandler } from './getWorkingDir';
 import { getIdeRootHandler } from './getIdeRoot';
 import { tunnelStartHandler } from './tunnelStart';
@@ -310,6 +311,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_MODEL:
       setModelHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.PROBE_FABLE_AVAILABILITY:
+      void probeFableAvailabilityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_WORKING_DIR:
       getWorkingDirHandler(connectionId, message, connections, bridge);

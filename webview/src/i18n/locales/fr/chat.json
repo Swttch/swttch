@@ -13,14 +13,6 @@
     "update": "Mettre à jour",
     "skip": "Ignorer"
   },
-  "fableNotice": {
-    "availableTitle": "Fable est maintenant disponible",
-    "updateRequiredTitle": "Mettez à jour pour utiliser Fable 5",
-    "promoBadge": "Inclus jusqu'au 12 juillet",
-    "availableBody": "Vous pouvez utiliser jusqu'à 50 % de vos limites hebdomadaires sur Fable 5, après quoi il bascule sur des crédits d'utilisation. Fable 5 consomme votre quota bien plus vite qu'Opus 4.8.",
-    "updateRequiredBody": "Fable 5 nécessite Claude Code CLI v2.1.170 ou plus récent. Mettez à jour votre CLI dans Paramètres → À propos pour le sélectionner.",
-    "learnMore": "En savoir plus"
-  },
   "telemetry": {
     "title": "Autoriser la collecte de statistiques d'utilisation pour améliorer le produit ?",
     "subtitle": "Le code source et les données personnelles ne sont jamais envoyés. Vous pouvez désactiver cette option à tout moment dans les paramètres.",

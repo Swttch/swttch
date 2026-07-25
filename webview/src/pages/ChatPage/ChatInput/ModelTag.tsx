@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Tag } from '@/pages/ChatPage/ChatInput/Tag';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
+import { useFableProbe } from '@/contexts/FableProbeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useBridge } from '@/hooks/useBridge';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
@@ -45,12 +46,13 @@ export function ModelTag() {
   const { send } = useBridge();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
+  const { probedAvailable } = useFableProbe();
 
   // Memoized on the CLI response so the fallback-augmented array keeps a stable
   // reference across renders (the rotate effect below depends on `models`).
   const models: ModelInfo[] = useMemo(
-    () => withFableFallback(controlResponse?.response?.response?.models ?? [], new Date(), cliVersion),
-    [controlResponse, cliVersion],
+    () => withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable),
+    [controlResponse, cliVersion, probedAvailable],
   );
 
   useEffect(() => {
