@@ -7,6 +7,12 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { resolveWslCwd } from '../wsl-path';
+import { readMergedClaudeSettings } from '../features/claude-settings';
+import {
+  parseFileSuggestion,
+  runFileSuggestionCommand,
+  FILE_SUGGESTION_RESULT_CAP,
+} from '../features/fileSuggestion';
 
 const execFileAsync = promisify(execFile);
 
@@ -93,12 +99,28 @@ export async function fetchFilesAndDirs(workingDir: string): Promise<{ files: st
 
   try {
     if (await isGitRepo(workingDir)) {
-      const { stdout } = await execFileAsync(
-        'git',
-        ['ls-files', '--cached', '--others', '--exclude-standard'],
-        { cwd: workingDir, maxBuffer: 10 * 1024 * 1024 },
-      );
-      files = stdout.split('\n').filter((f) => f.length > 0);
+      // `git ls-files` reports only the gitlink entry (one directory) for a
+      // submodule, hiding every file tracked *inside* it — so the `@` picker
+      // cannot find files that a repo vendors through submodules.
+      // `--recurse-submodules` surfaces them, but git rejects combining it with
+      // `--others` ("ls-files --recurse-submodules unsupported mode"), so we run
+      // two calls and merge:
+      //   1. tracked files, recursing into submodules
+      //   2. untracked-but-not-ignored files (top level; --exclude-standard
+      //      keeps .gitignore honoured)
+      // Issue #201.
+      const gitOpts = { cwd: workingDir, maxBuffer: 10 * 1024 * 1024 };
+      const [tracked, untracked] = await Promise.all([
+        execFileAsync('git', ['ls-files', '--cached', '--recurse-submodules'], gitOpts),
+        execFileAsync('git', ['ls-files', '--others', '--exclude-standard'], gitOpts),
+      ]);
+      const fileSet = new Set<string>();
+      for (const stdout of [tracked.stdout, untracked.stdout]) {
+        for (const f of stdout.split('\n')) {
+          if (f.length > 0) fileSet.add(f);
+        }
+      }
+      files = Array.from(fileSet);
 
       // Extract unique directories from file paths
       const dirSet = new Set<string>();
@@ -144,6 +166,40 @@ export async function listProjectFilesHandler(
   // off-linux or for non-UNC paths. Issue #195.
   const workingDir = (resolveWslCwd(rawWorkingDir) as string) ?? rawWorkingDir;
   const limit = (message.payload?.limit as number) ?? 20;
+
+  // If the user configured a `fileSuggestion` command in their Claude settings,
+  // defer the `@` index to it exactly as the CLI does (CLI parity): the command
+  // gets the query as `{"query":...}` JSON on stdin and prints file paths. On
+  // any failure fall through to the built-in index so the picker never silently
+  // breaks. Issue #201.
+  try {
+    const { settings } = await readMergedClaudeSettings(workingDir);
+    const suggestion = parseFileSuggestion(settings);
+    if (suggestion) {
+      try {
+        const paths = await runFileSuggestionCommand(
+          suggestion.command,
+          query,
+          workingDir,
+          Math.min(limit, FILE_SUGGESTION_RESULT_CAP),
+        );
+        const files: FileEntry[] = paths.map((p) => ({ relativePath: p, type: 'file' as const }));
+        connections.sendTo(connectionId, MessageType.ACK, {
+          requestId: message.requestId,
+          files,
+        });
+        return;
+      } catch (err) {
+        console.error(
+          '[node-backend]',
+          'fileSuggestion command failed, falling back to built-in index:',
+          err,
+        );
+      }
+    }
+  } catch {
+    // Settings read failed — fall through to the built-in index.
+  }
 
   try {
     const { files, dirs } = await fetchFilesAndDirs(workingDir);

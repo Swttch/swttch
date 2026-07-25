@@ -73,6 +73,10 @@
       "placeholder": "Default (~/.claude)",
       "active": "Active: {{value}}",
       "projectUnavailable": "Open a project to set a project value."
+    },
+    "fileSuggestion": {
+      "description": "Custom command that builds the @ file index. Same as the fileSuggestion setting in settings.json.",
+      "placeholder": "e.g. git ls-files --recurse-submodules"
     }
   },
   "appearance": {

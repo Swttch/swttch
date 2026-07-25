@@ -73,6 +73,10 @@
       "placeholder": "默认(~/.claude)",
       "active": "当前使用:{{value}}",
       "projectUnavailable": "打开一个项目以设置项目级值。"
+    },
+    "fileSuggestion": {
+      "description": "用于构建 @ 文件索引的自定义命令。与 settings.json 中的 fileSuggestion 设置相同。",
+      "placeholder": "例如：git ls-files --recurse-submodules"
     }
   },
   "appearance": {

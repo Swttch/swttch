@@ -73,6 +73,10 @@
       "placeholder": "Predeterminado (~/.claude)",
       "active": "Activo: {{value}}",
       "projectUnavailable": "Abre un proyecto para definir un valor de proyecto."
+    },
+    "fileSuggestion": {
+      "description": "Comando personalizado que crea el índice de archivos @. Igual que el ajuste fileSuggestion en settings.json.",
+      "placeholder": "p. ej., git ls-files --recurse-submodules"
     }
   },
   "appearance": {

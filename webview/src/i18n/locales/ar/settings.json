@@ -73,6 +73,10 @@
       "placeholder": "الافتراضي (~/.claude)",
       "active": "نشط: {{value}}",
       "projectUnavailable": "افتح مشروعًا لتعيين قيمة خاصة بالمشروع."
+    },
+    "fileSuggestion": {
+      "description": "أمر مخصّص يبني فهرس ملفات @. مطابق لإعداد fileSuggestion في settings.json.",
+      "placeholder": "مثال: git ls-files --recurse-submodules"
     }
   },
   "appearance": {

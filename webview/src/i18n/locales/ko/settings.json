@@ -73,6 +73,10 @@
       "placeholder": "기본값 (~/.claude)",
       "active": "적용됨: {{value}}",
       "projectUnavailable": "프로젝트 값을 설정하려면 프로젝트를 여세요."
+    },
+    "fileSuggestion": {
+      "description": "@ 파일 목록을 만드는 사용자 지정 명령. settings.json의 fileSuggestion 설정과 동일합니다.",
+      "placeholder": "예: git ls-files --recurse-submodules"
     }
   },
   "appearance": {

@@ -73,6 +73,10 @@
       "placeholder": "Par défaut (~/.claude)",
       "active": "Actif : {{value}}",
       "projectUnavailable": "Ouvrez un projet pour définir une valeur de projet."
+    },
+    "fileSuggestion": {
+      "description": "Commande personnalisée qui construit l'index de fichiers @. Identique au paramètre fileSuggestion dans settings.json.",
+      "placeholder": "ex. : git ls-files --recurse-submodules"
     }
   },
   "appearance": {
