@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Nachricht planen",
+    "editTitle": "Geplante Nachricht bearbeiten",
     "sponsorTooltip": "Eine Funktion für Sponsoren",
     "close": "Schließen",
     "messageLabel": "Nachricht",
@@ -24,7 +25,9 @@
     "whenLabel": "Wann",
     "customLabel": "Datum und Uhrzeit anpassen",
     "submit": "Planen",
+    "updateSubmit": "Speichern",
     "scheduledToast": "Nachricht geplant",
+    "updatedToast": "Planung aktualisiert",
     "presets": {
       "in5min": "In 5 Min.",
       "in30min": "In 30 Min.",

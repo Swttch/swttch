@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "メッセージを予約",
+    "editTitle": "予約メッセージを編集",
     "sponsorTooltip": "サポーターのための機能",
     "close": "閉じる",
     "messageLabel": "メッセージ",
@@ -24,7 +25,9 @@
     "whenLabel": "いつ",
     "customLabel": "日時を指定",
     "submit": "予約",
+    "updateSubmit": "保存",
     "scheduledToast": "メッセージを予約しました",
+    "updatedToast": "予約を更新しました",
     "presets": {
       "in5min": "5分後",
       "in30min": "30分後",

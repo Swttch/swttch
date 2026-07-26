@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Schedule a message",
+    "editTitle": "Edit scheduled message",
     "sponsorTooltip": "A feature for sponsors",
     "close": "Close",
     "messageLabel": "Message",
@@ -24,7 +25,9 @@
     "whenLabel": "When",
     "customLabel": "Custom date and time",
     "submit": "Schedule",
+    "updateSubmit": "Save",
     "scheduledToast": "Message scheduled",
+    "updatedToast": "Reservation updated",
     "presets": {
       "in5min": "In 5 min",
       "in30min": "In 30 min",

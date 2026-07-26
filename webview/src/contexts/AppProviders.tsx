@@ -19,6 +19,7 @@ import { IdeSelectionProvider } from './IdeSelectionContext';
 import type { IdeSelectionPayload } from '@/hooks/useIdeSelection';
 import { WorkingDirProvider } from './WorkingDirContext';
 import { WorkflowStateProvider } from './WorkflowStateContext';
+import { ScheduledMessagesProvider } from './ScheduledMessagesContext';
 import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
 import { CommandPaletteProvider } from '../commandPalette/CommandPaletteProvider';
 import { useApi } from './ApiContext';
@@ -270,9 +271,11 @@ export function AppProviders({ children }: AppProvidersProps) {
                   <AuthProvider>
                     <SessionProvider>
                       <WorkflowStateProvider>
-                        <AutoResumeOverrideProvider>
-                          <ChatProviderBridge>{children}</ChatProviderBridge>
-                        </AutoResumeOverrideProvider>
+                        <ScheduledMessagesProvider>
+                          <AutoResumeOverrideProvider>
+                            <ChatProviderBridge>{children}</ChatProviderBridge>
+                          </AutoResumeOverrideProvider>
+                        </ScheduledMessagesProvider>
                       </WorkflowStateProvider>
                     </SessionProvider>
                   </AuthProvider>

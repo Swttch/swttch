@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Programar un mensaje",
+    "editTitle": "Editar mensaje programado",
     "sponsorTooltip": "Una función para patrocinadores",
     "close": "Cerrar",
     "messageLabel": "Mensaje",
@@ -24,7 +25,9 @@
     "whenLabel": "Cuándo",
     "customLabel": "Fecha y hora personalizadas",
     "submit": "Programar",
+    "updateSubmit": "Guardar",
     "scheduledToast": "Mensaje programado",
+    "updatedToast": "Programación actualizada",
     "presets": {
       "in5min": "En 5 min",
       "in30min": "En 30 min",

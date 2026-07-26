@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Запланировать сообщение",
+    "editTitle": "Изменить запланированное сообщение",
     "sponsorTooltip": "Функция для спонсоров",
     "close": "Закрыть",
     "messageLabel": "Сообщение",
@@ -24,7 +25,9 @@
     "whenLabel": "Когда",
     "customLabel": "Своя дата и время",
     "submit": "Запланировать",
+    "updateSubmit": "Сохранить",
     "scheduledToast": "Сообщение запланировано",
+    "updatedToast": "Запланированное обновлено",
     "presets": {
       "in5min": "Через 5 мин",
       "in30min": "Через 30 мин",

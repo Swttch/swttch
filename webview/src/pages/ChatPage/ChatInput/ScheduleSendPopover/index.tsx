@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ClockIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { MessageType, ScheduledMessageKind } from '@/shared';
+import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '@/shared';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
@@ -25,6 +25,13 @@ import {
 interface Props {
   /** Close the popover (Esc, backdrop, X, or a successful schedule). */
   onClose: () => void;
+  /**
+   * When present, the popover edits this existing reservation instead of
+   * creating a new one: the message and time are seeded from it and submit sends
+   * UPDATE_SCHEDULED_MESSAGE. Absent → create mode (seed from the composer draft,
+   * submit SCHEDULE_MESSAGE).
+   */
+  editReservation?: ScheduledMessage;
 }
 
 /** The four day/hour/minute/second fields of the "after duration" picker. */
@@ -49,7 +56,8 @@ const DURATION_FIELDS: { key: keyof Duration; labelKey: string; max: number }[] 
  * to the right of the title so non-sponsors see up front what unlocking buys.
  */
 export function ScheduleSendPopover(props: Props) {
-  const { onClose } = props;
+  const { onClose, editReservation } = props;
+  const isEdit = editReservation !== undefined;
   const { t } = useTranslation('commandPalette');
   const { send } = useBridgeContext();
   const { currentSessionId } = useSessionContext();
@@ -127,13 +135,23 @@ export function ScheduleSendPopover(props: Props) {
     };
   }, [onClose, getFocusable]);
 
-  // Message seeds from the composer draft; editable independently afterwards.
-  const [message, setMessage] = useState(composerDraft);
-  const [preset, setPreset] = useState<SchedulePresetId>(SchedulePresetId.In1Hour);
+  // Create: seed the message from the composer draft. Edit: seed from the
+  // reservation being edited.
+  const [message, setMessage] = useState(editReservation?.message ?? composerDraft);
+  // Edit opens on the "custom" datetime (the reservation has an absolute sendAt,
+  // which no relative preset can represent); create defaults to In1Hour.
+  const [preset, setPreset] = useState<SchedulePresetId>(
+    isEdit ? SchedulePresetId.Custom : SchedulePresetId.In1Hour,
+  );
   const [duration, setDuration] = useState<Duration>(ZERO_DURATION);
-  // The custom datetime-local value, seeded to now + 1h so the field is never empty.
+  // The custom datetime-local value: the reservation's sendAt in edit mode, else
+  // now + 1h so the field is never empty.
   const [customValue, setCustomValue] = useState(() =>
-    toDatetimeLocalValue(resolvePresetSendAt(SchedulePresetId.In1Hour, Date.now())),
+    toDatetimeLocalValue(
+      editReservation
+        ? new Date(Date.parse(editReservation.sendAt))
+        : resolvePresetSendAt(SchedulePresetId.In1Hour, Date.now()),
+    ),
   );
   const [submitting, setSubmitting] = useState(false);
 
@@ -175,17 +193,27 @@ export function ScheduleSendPopover(props: Props) {
 
     setSubmitting(true);
     try {
-      // Pattern B: a schedule created here is a frontend action, so verify
-      // sponsorship first; ensureSponsor shows the invite toast on failure.
+      // Pattern B: scheduling/editing is a frontend action, so verify sponsorship
+      // first; ensureSponsor shows the invite toast on failure.
       if (!(await ensureSponsor())) return;
 
-      await send(MessageType.SCHEDULE_MESSAGE, {
-        sessionId: currentSessionId,
-        sendAt: sendAtDate.toISOString(),
-        message: message.trim(),
-        kind: ScheduledMessageKind.USER_SCHEDULED,
-      });
-      toast.success(t('scheduleSend.scheduledToast'));
+      if (editReservation) {
+        await send(MessageType.UPDATE_SCHEDULED_MESSAGE, {
+          sessionId: currentSessionId,
+          id: editReservation.id,
+          sendAt: sendAtDate.toISOString(),
+          message: message.trim(),
+        });
+        toast.success(t('scheduleSend.updatedToast'));
+      } else {
+        await send(MessageType.SCHEDULE_MESSAGE, {
+          sessionId: currentSessionId,
+          sendAt: sendAtDate.toISOString(),
+          message: message.trim(),
+          kind: ScheduledMessageKind.USER_SCHEDULED,
+        });
+        toast.success(t('scheduleSend.scheduledToast'));
+      }
       onClose();
     } catch {
       // The global IPC interceptor surfaces SPONSOR_REQUIRED; any other failure
@@ -208,7 +236,7 @@ export function ScheduleSendPopover(props: Props) {
       <div className="flex items-center gap-2">
         <ClockIcon className="h-4 w-4 flex-shrink-0 text-text-secondary" />
         <span className="text-[0.9rem] font-medium text-text-primary">
-          {t('scheduleSend.title')}
+          {t(isEdit ? 'scheduleSend.editTitle' : 'scheduleSend.title')}
         </span>
         <SettingBadge
           variant={SettingBadgeVariant.Sponsor}
@@ -295,7 +323,7 @@ export function ScheduleSendPopover(props: Props) {
         disabled={!canSubmit || submitting}
         className="rounded-md bg-accent-claude px-3 py-1.5 text-[0.85rem] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {t('scheduleSend.submit')}
+        {t(isEdit ? 'scheduleSend.updateSubmit' : 'scheduleSend.submit')}
       </button>
     </div>
   );

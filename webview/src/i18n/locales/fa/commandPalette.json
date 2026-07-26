@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "زمان‌بندی پیام",
+    "editTitle": "ویرایش پیام زمان‌بندی‌شده",
     "sponsorTooltip": "قابلیتی برای حامیان",
     "close": "بستن",
     "messageLabel": "پیام",
@@ -24,7 +25,9 @@
     "whenLabel": "چه زمانی",
     "customLabel": "تاریخ و زمان دلخواه",
     "submit": "زمان‌بندی",
+    "updateSubmit": "ذخیره",
     "scheduledToast": "پیام زمان‌بندی شد",
+    "updatedToast": "زمان‌بندی به‌روزرسانی شد",
     "presets": {
       "in5min": "۵ دقیقه دیگر",
       "in30min": "۳۰ دقیقه دیگر",

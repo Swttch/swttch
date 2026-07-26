@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "定时发送消息",
+    "editTitle": "编辑定时消息",
     "sponsorTooltip": "为赞助者提供的功能",
     "close": "关闭",
     "messageLabel": "消息",
@@ -24,7 +25,9 @@
     "whenLabel": "时间",
     "customLabel": "自定义日期和时间",
     "submit": "预定",
+    "updateSubmit": "保存",
     "scheduledToast": "消息已预定",
+    "updatedToast": "预定已更新",
     "presets": {
       "in5min": "5 分钟后",
       "in30min": "30 分钟后",

@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "جدولة رسالة",
+    "editTitle": "تعديل الرسالة المجدولة",
     "sponsorTooltip": "ميزة للداعمين",
     "close": "إغلاق",
     "messageLabel": "الرسالة",
@@ -24,7 +25,9 @@
     "whenLabel": "متى",
     "customLabel": "تاريخ ووقت مخصّصان",
     "submit": "جدولة",
+    "updateSubmit": "حفظ",
     "scheduledToast": "تمت جدولة الرسالة",
+    "updatedToast": "تم تحديث الجدولة",
     "presets": {
       "in5min": "بعد 5 دقائق",
       "in30min": "بعد 30 دقيقة",

@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "排程傳送訊息",
+    "editTitle": "編輯排程訊息",
     "sponsorTooltip": "為贊助者提供的功能",
     "close": "關閉",
     "messageLabel": "訊息",
@@ -24,7 +25,9 @@
     "whenLabel": "時間",
     "customLabel": "自訂日期和時間",
     "submit": "排程",
+    "updateSubmit": "儲存",
     "scheduledToast": "訊息已排程",
+    "updatedToast": "排程已更新",
     "presets": {
       "in5min": "5 分鐘後",
       "in30min": "30 分鐘後",

@@ -1,6 +1,7 @@
+import type React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import { MessageType, ScheduledMessageKind } from '@/shared';
+import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '@/shared';
 
 // ---------------------------------------------------------------------------
 // Mutable context read by the mocked hooks.
@@ -44,8 +45,8 @@ vi.mock('react-hot-toast', () => ({
 
 import { ScheduleSendPopover } from '../index';
 
-function renderPopover() {
-  return render(<ScheduleSendPopover onClose={onCloseMock} />);
+function renderPopover(props: Partial<React.ComponentProps<typeof ScheduleSendPopover>> = {}) {
+  return render(<ScheduleSendPopover onClose={onCloseMock} {...props} />);
 }
 
 beforeEach(() => {
@@ -208,5 +209,55 @@ describe('ScheduleSendPopover', () => {
   it('keeps the close (X) button out of the Tab order', () => {
     renderPopover();
     expect(screen.getByLabelText('scheduleSend.close')).toHaveAttribute('tabindex', '-1');
+  });
+});
+
+describe('ScheduleSendPopover (edit mode)', () => {
+  const reservation: ScheduledMessage = {
+    id: 'res-1',
+    sessionId: 'sess-a',
+    sendAt: '2031-06-15T09:30:00.000Z',
+    message: 'follow up on the migration',
+    kind: ScheduledMessageKind.USER_SCHEDULED,
+    createdAt: '2031-06-14T00:00:00.000Z',
+  };
+
+  it('seeds the message box from the reservation (not the composer draft)', () => {
+    ctx.draft = 'a different composer draft';
+    renderPopover({ editReservation: reservation });
+    expect(screen.getByRole('textbox').textContent).toBe('follow up on the migration');
+  });
+
+  it('shows the edit title and the custom datetime field pre-filled', () => {
+    renderPopover({ editReservation: reservation });
+    expect(screen.getByText('scheduleSend.editTitle')).toBeInTheDocument();
+    // Edit opens on the custom datetime (an absolute sendAt), so the input is present.
+    expect(screen.getByLabelText('scheduleSend.customLabel')).toBeInTheDocument();
+  });
+
+  it('submit sends UPDATE_SCHEDULED_MESSAGE with the reservation id', async () => {
+    renderPopover({ editReservation: reservation });
+    await act(async () => {
+      fireEvent.click(screen.getByText('scheduleSend.updateSubmit'));
+    });
+    await waitFor(() => expect(sendMock).toHaveBeenCalled());
+    const [type, payload] = sendMock.mock.calls[0];
+    const p = payload!;
+    expect(type).toBe(MessageType.UPDATE_SCHEDULED_MESSAGE);
+    expect(p.id).toBe('res-1');
+    expect(p.sessionId).toBe('sess-a');
+    expect(p.message).toBe('follow up on the migration');
+    expect(typeof p.sendAt).toBe('string');
+    expect(onCloseMock).toHaveBeenCalled();
+  });
+
+  it('non-sponsor edit is gated (no UPDATE sent)', async () => {
+    ensureSponsorMock.mockResolvedValue(false);
+    renderPopover({ editReservation: reservation });
+    await act(async () => {
+      fireEvent.click(screen.getByText('scheduleSend.updateSubmit'));
+    });
+    await waitFor(() => expect(ensureSponsorMock).toHaveBeenCalled());
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

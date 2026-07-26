@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "메시지 예약",
+    "editTitle": "예약 메시지 수정",
     "sponsorTooltip": "후원자를 위한 기능",
     "close": "닫기",
     "messageLabel": "메시지",
@@ -24,7 +25,9 @@
     "whenLabel": "언제",
     "customLabel": "날짜와 시간 직접 지정",
     "submit": "예약",
+    "updateSubmit": "저장",
     "scheduledToast": "메시지가 예약되었습니다",
+    "updatedToast": "예약이 수정되었습니다",
     "presets": {
       "in5min": "5분 후",
       "in30min": "30분 후",
