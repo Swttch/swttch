@@ -19,7 +19,6 @@ interface Ctx {
   inputMode: string;
   messages: Msg[];
   autoResumeOnLimit: boolean;
-  isSponsor: boolean;
   initialSchedules: unknown[];
 }
 const ctx: Ctx = {
@@ -27,7 +26,6 @@ const ctx: Ctx = {
   inputMode: 'ask_before_edit',
   messages: [],
   autoResumeOnLimit: false,
-  isSponsor: true,
   initialSchedules: [],
 };
 
@@ -45,7 +43,7 @@ const sendMock = vi.fn((type: string, _payload?: Record<string, unknown>) => {
   return Promise.resolve({});
 });
 const sendMessageMock = vi.fn();
-const { notifyMock, sponsorToastMock } = vi.hoisted(() => ({ notifyMock: vi.fn(), sponsorToastMock: vi.fn() }));
+const { notifyMock, ensureSponsorMock } = vi.hoisted(() => ({ notifyMock: vi.fn(), ensureSponsorMock: vi.fn() }));
 
 function emit(type: string, payload: Record<string, unknown>) {
   const h = handlers.get(type);
@@ -65,14 +63,11 @@ vi.mock('@/contexts/ChatStreamContext', () => ({
 vi.mock('@/contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { autoResumeOnLimit: ctx.autoResumeOnLimit }, updateSetting: vi.fn() }),
 }));
-vi.mock('@/hooks/queries/useSponsorStatus', () => ({
-  useSponsorStatus: () => ({ isSponsor: ctx.isSponsor }),
-}));
 vi.mock('@/notifications', () => ({ notify: notifyMock }));
 vi.mock('@/contexts/AutoResumeOverrideContext', () => ({
   useAutoResumeOverride: () => ({ getOverride: () => undefined, setOverride: vi.fn() }),
 }));
-vi.mock('@/utils/showSponsorGatedToast', () => ({ showSponsorGatedToast: sponsorToastMock }));
+vi.mock('@/utils/ensureSponsor', () => ({ ensureSponsor: ensureSponsorMock }));
 
 // Imported AFTER the mocks.
 import { useAutoResume } from '../useAutoResume';
@@ -103,8 +98,8 @@ beforeEach(() => {
   ctx.inputMode = 'ask_before_edit';
   ctx.messages = [];
   ctx.autoResumeOnLimit = false;
-  ctx.isSponsor = true;
   ctx.initialSchedules = [];
+  ensureSponsorMock.mockResolvedValue(true);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -162,22 +157,40 @@ describe('useAutoResume', () => {
     expect(call![1]).toEqual({ sessionId: 'sess-a', id: 'r1' });
   });
 
-  it('offers "resumeNow" for an already-passed reset and resumeNow() sends "continue" via chat', () => {
+  it('offers "resumeNow" for an already-passed reset and resumeNow() sends "continue" via chat', async () => {
     ctx.messages = [limitMsg('lim1', PAST)];
     const { result } = renderHook(() => useAutoResume());
     expect(result.current.action).toBe('resumeNow');
-    act(() => result.current.resumeNow());
+    await act(async () => {
+      await result.current.resumeNow();
+    });
+    expect(ensureSponsorMock).toHaveBeenCalled();
     expect(sendMessageMock).toHaveBeenCalledWith('continue', 'ask_before_edit');
   });
 
-  it('non-sponsors still see the button, but the action shows an invite toast instead of scheduling', () => {
-    ctx.isSponsor = false;
+  it('non-sponsors still see the button; schedule() delegates gating to the backend (always sends)', () => {
+    // Pattern A: schedule() unconditionally sends SCHEDULE_MESSAGE; the backend
+    // rejects non-sponsors with SPONSOR_REQUIRED and the global IPC interceptor
+    // surfaces the invite toast — so the frontend does not pre-check here.
     ctx.messages = [limitMsg('lim1', FUTURE)];
     const { result } = renderHook(() => useAutoResume());
     expect(result.current.action).toBe('schedule'); // button is visible for everyone
     act(() => result.current.schedule());
-    expect(sponsorToastMock).toHaveBeenCalled();
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(true);
+  });
+
+  it('non-sponsors: resumeNow() pre-checks sponsorship and aborts (no chat message) on failure', async () => {
+    // Pattern B: resumeNow's side-effect is a plain chat message (frontend-side),
+    // so it queries ensureSponsor first and bails when the user is not a sponsor.
+    ensureSponsorMock.mockResolvedValue(false);
+    ctx.messages = [limitMsg('lim1', PAST)];
+    const { result } = renderHook(() => useAutoResume());
+    expect(result.current.action).toBe('resumeNow');
+    await act(async () => {
+      await result.current.resumeNow();
+    });
+    expect(ensureSponsorMock).toHaveBeenCalled();
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it('maps AUTO_RESUME_STATUS RETRYING and a network failure to their status keys', () => {

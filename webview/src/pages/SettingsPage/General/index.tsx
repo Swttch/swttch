@@ -9,9 +9,8 @@ import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
 import { APP_NAME } from '@/config/app';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
-import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
+import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
@@ -62,7 +61,6 @@ export function GeneralSettings() {
   const respectGitignoreForContext = (scopeSettings.respectGitignoreForContext as boolean | undefined) ?? false;
   // Auto-resume default (sponsor-only): the global default a session inherits.
   const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
-  const { isSponsor } = useSponsorStatus();
 
   const languageOptions: SelectOption[] = [
     ...(scope === 'project'
@@ -167,11 +165,11 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={autoResumeOnLimit}
-            onChange={(checked) =>
-              isSponsor
-                ? updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked)
-                : showSponsorGatedToast()
-            }
+            onChange={async (checked) => {
+              if (await ensureSponsor()) {
+                updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked);
+              }
+            }}
             ariaLabel={t('general.autoResumeOnLimit.label')}
           />
         </SettingRow>

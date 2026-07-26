@@ -6,9 +6,8 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
-import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
-import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
+import { ensureSponsor } from '@/utils/ensureSponsor';
 
 export const AUTO_RESUME_TOGGLE_EVENT = 'auto-resume-toggle';
 
@@ -33,7 +32,6 @@ export const createToggleAutoResumeItem = (): StaticItem =>
 
 const AutoResumeToggle = () => {
   const { settings } = useSettings();
-  const { isSponsor } = useSponsorStatus();
   const { currentSessionId } = useSessionContext();
   const { getOverride, setOverride } = useAutoResumeOverride();
 
@@ -42,29 +40,26 @@ const AutoResumeToggle = () => {
   const globalDefault = settings[SettingKey.AUTO_RESUME_ON_LIMIT] ?? false;
   const enabled = getOverride(currentSessionId) ?? globalDefault;
 
-  const apply = (value: boolean): void => {
-    // Non-sponsors see the toggle enabled; clicking shows an invite toast
-    // instead of changing anything.
-    if (!isSponsor) {
-      showSponsorGatedToast();
-      return;
-    }
+  // Non-sponsors see the toggle enabled; changing it queries sponsorship first
+  // (ensureSponsor shows the invite toast on failure).
+  const apply = async (value: boolean): Promise<void> => {
     if (!currentSessionId) return;
+    if (!(await ensureSponsor())) return;
     setOverride(currentSessionId, value);
   };
 
-  // Row (Enter/click) toggles the session override — only for sponsors.
+  // Row (Enter/click) toggles the session override.
   useEffect(() => {
-    const handler = () => apply(!enabled);
+    const handler = () => void apply(!enabled);
     window.addEventListener(AUTO_RESUME_TOGGLE_EVENT, handler);
     return () => window.removeEventListener(AUTO_RESUME_TOGGLE_EVENT, handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, isSponsor, currentSessionId, setOverride]);
+  }, [enabled, currentSessionId, setOverride]);
 
   return (
     <ToggleSwitch
       checked={enabled}
-      onChange={(value) => apply(value)}
+      onChange={(value) => void apply(value)}
       disabled={!currentSessionId}
       size="small"
     />

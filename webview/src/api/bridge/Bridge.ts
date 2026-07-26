@@ -2,7 +2,8 @@
 
 import type { Connector, ConnectionChangeHandler } from './Connector';
 import { WebSocketConnector } from './WebSocketConnector';
-import { MessageType } from '@/shared';
+import { MessageType, ErrorCode } from '@/shared';
+import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 export const LOGIN_REQUEST_TIMEOUT_MS = 300_000;
@@ -218,6 +219,12 @@ export class Bridge {
 
     // ERROR 처리 (기존 useBridge.ts 46-53행)
     if (message.type === MessageType.ERROR && message.requestId) {
+      // Global sponsor gate: any request the backend rejects because the user
+      // isn't a sponsor shows the invite toast here, so individual callers never
+      // have to check sponsorship before sending.
+      if ((message.payload as { errorCode?: string } | undefined)?.errorCode === ErrorCode.SPONSOR_REQUIRED) {
+        showSponsorGatedToast();
+      }
       const pending = this.pending.get(message.requestId);
       if (pending) {
         clearTimeout(pending.timeoutId);

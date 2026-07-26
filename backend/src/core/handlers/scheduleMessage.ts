@@ -2,7 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { randomUUID } from 'crypto';
-import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '../../shared';
+import { MessageType, ScheduledMessageKind, ErrorCode, type ScheduledMessage } from '../../shared';
 import {
   scheduleMessage,
   cancelSchedule,
@@ -49,7 +49,8 @@ export async function scheduleMessageHandler(
   if (!sponsor.isSponsor) {
     connections.sendTo(connectionId, MessageType.ERROR, {
       requestId: message.requestId,
-      error: 'Auto-resume is a sponsor-only feature',
+      error: 'Sponsor-only feature',
+      errorCode: ErrorCode.SPONSOR_REQUIRED,
     });
     return;
   }

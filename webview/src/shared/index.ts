@@ -7,3 +7,4 @@ export * from './message-type';
 export * from './scheduled-message';
 export * from './workflow';
 export * from './tool-decision';
+export * from './error-code';

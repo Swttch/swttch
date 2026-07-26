@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
-import { MessageType, ScheduledMessageKind } from '../../../shared';
+import { MessageType, ScheduledMessageKind, ErrorCode } from '../../../shared';
 
 // Mock the engine so the handler test never touches real fs/timers.
 const scheduleMessage = vi.fn(async (..._args: unknown[]) => {});
@@ -57,7 +57,8 @@ describe('scheduleMessageHandler sponsor gate', () => {
     expect(scheduleMessage).not.toHaveBeenCalled();
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ERROR, {
       requestId: 'req-1',
-      error: 'Auto-resume is a sponsor-only feature',
+      error: 'Sponsor-only feature',
+      errorCode: ErrorCode.SPONSOR_REQUIRED,
     });
   });
 

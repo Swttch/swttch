@@ -11,13 +11,12 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
-import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { notify } from '@/notifications';
 import { NotificationKind, SOUND_OFF } from '@/notifications/types';
 import toast from 'react-hot-toast';
 import { i18n } from '@/i18n';
-import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
+import { ensureSponsor } from '@/utils/ensureSponsor';
 import {
   AUTO_RESUME_MESSAGE,
   computeSendAt,
@@ -42,8 +41,6 @@ export interface LimitState {
 export type AutoResumeAction = 'schedule' | 'cancel' | 'resumeNow';
 
 export interface UseAutoResumeResult {
-  /** True when this install holds a sponsor entitlement (gates the whole feature). */
-  isSponsor: boolean;
   /** The persisted `autoResumeOnLimit` preference (seeds auto-scheduling). */
   autoResumeEnabled: boolean;
   /** The active limit notice, or null when none is showing. */
@@ -94,20 +91,19 @@ function deriveLimit(messages: LoadedMessageDto[]): LimitState | null {
 /**
  * Session-scoped state + actions for "auto-resume on usage-limit reset" (layer 2
  * webview). The limit notice is derived from the session's MESSAGES (not a live
- * event) so it persists across re-entry. Reservation state comes from the
- * backend engine:
- *   - SCHEDULED_MESSAGE_UPDATED (+ initial GET_SCHEDULED_MESSAGES) → the session's
- *     AUTO_RESUME reservation
- *   - AUTO_RESUME_STATUS → live progress/failure of the pre-send gate
- * Sponsor-only: non-sponsors get `action: null`; the backend also rejects
- * SCHEDULE_MESSAGE defensively.
+ * event) so it persists across re-entry.
+ *
+ * Sponsor gating is NOT done here: the buttons show for everyone. `schedule`
+ * just sends SCHEDULE_MESSAGE — the backend rejects non-sponsors with
+ * SPONSOR_REQUIRED and the global IPC interceptor shows the invite toast
+ * (pattern A). `resumeNow` sends a plain chat message, which can't be gated by
+ * the request itself, so it queries `ensureSponsor()` first (pattern B).
  */
 export function useAutoResume(): UseAutoResumeResult {
   const { send, subscribe, isConnected } = useBridgeContext();
   const { currentSessionId, inputMode } = useSessionContext();
   const { sendMessage, messages } = useChatStreamContext();
   const { settings } = useSettings();
-  const { isSponsor } = useSponsorStatus();
   const { getOverride } = useAutoResumeOverride();
 
   // Effective preference = session override ?? global default (app setting).
@@ -192,11 +188,9 @@ export function useAutoResume(): UseAutoResumeResult {
   }, [currentSessionId, subscribe]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
+  // Pattern A: just send. The backend gates sponsorship and the global IPC
+  // interceptor shows the invite toast on SPONSOR_REQUIRED.
   const schedule = useCallback(() => {
-    if (!isSponsor) {
-      showSponsorGatedToast();
-      return;
-    }
     if (!currentSessionId) return;
     const sendAt = computeSendAt(limit?.resetsAt);
     if (!sendAt) return;
@@ -210,9 +204,9 @@ export function useAutoResume(): UseAutoResumeResult {
         toast.success(i18n.t('chat:autoResume.scheduledToast'));
       })
       .catch(() => {
-        /* backend also enforces sponsor gate; ignore failures here */
+        /* sponsor gate (and any other failure) handled by the IPC interceptor */
       });
-  }, [currentSessionId, isSponsor, limit?.resetsAt, send]);
+  }, [currentSessionId, limit?.resetsAt, send]);
 
   const cancelReservation = useCallback(
     (notify: boolean) => {
@@ -234,14 +228,13 @@ export function useAutoResume(): UseAutoResumeResult {
   );
   const cancel = useCallback(() => cancelReservation(true), [cancelReservation]);
 
-  const resumeNow = useCallback(() => {
-    if (!isSponsor) {
-      showSponsorGatedToast();
-      return;
-    }
+  // Pattern B: a plain chat message can't be gated by the request, so query
+  // sponsorship first; ensureSponsor shows the invite toast on failure.
+  const resumeNow = useCallback(async () => {
+    if (!(await ensureSponsor())) return;
     setStatus(null);
     sendMessage(AUTO_RESUME_MESSAGE, inputMode);
-  }, [isSponsor, sendMessage, inputMode]);
+  }, [sendMessage, inputMode]);
 
   // ── Auto-cancel a reservation when the limit is no longer active ─────────────
   // deriveLimit already drops `limit` once the user types again; when that
@@ -251,9 +244,12 @@ export function useAutoResume(): UseAutoResumeResult {
   }, [limit, scheduled, cancelReservation]);
 
   // ── Auto-schedule when the preference is on ─────────────────────────────────
+  // Non-sponsors can't turn the preference on (its toggles are sponsor-gated), so
+  // this normally only runs for sponsors; if it somehow runs for a non-sponsor,
+  // the backend rejects it and the interceptor handles it.
   const autoScheduledForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!limit || !isSponsor || !autoResumeEnabled) return;
+    if (!limit || !autoResumeEnabled) return;
     const resetsAt = limit.resetsAt;
     if (!resetsAt) return;
     if (scheduled) return;
@@ -262,7 +258,7 @@ export function useAutoResume(): UseAutoResumeResult {
     if (autoScheduledForRef.current === guardKey) return;
     autoScheduledForRef.current = guardKey;
     schedule();
-  }, [limit, isSponsor, autoResumeEnabled, scheduled, schedule]);
+  }, [limit, autoResumeEnabled, scheduled, schedule]);
 
   // ── Countdown tick + one-shot browser notification at reset ─────────────────
   const resetsAtMs = useMemo(
@@ -294,11 +290,9 @@ export function useAutoResume(): UseAutoResumeResult {
   }, [scheduled, countdownSeconds]);
 
   const action: AutoResumeAction | null = useMemo(() => {
-    // The button shows for everyone (non-sponsors included) — clicking it just
-    // shows the invite toast (see schedule/resumeNow). It is hidden only when
-    // there is no limit, or once the gate is delivering the resume (PROCEEDING),
-    // so it never lingers as "재개하기" even if the delivered `continue` message
-    // never lands (e.g. a dead session process).
+    // The button shows for everyone; sponsor gating happens on click (see
+    // schedule/resumeNow). Hidden only when there is no limit, or once the gate
+    // is delivering the resume (PROCEEDING) so it never lingers as "재개하기".
     if (!limit) return null;
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
     if (scheduled) return 'cancel';
@@ -309,7 +303,6 @@ export function useAutoResume(): UseAutoResumeResult {
   const statusKey = resolveAutoResumeStatusKey(status);
 
   return {
-    isSponsor,
     autoResumeEnabled,
     limit,
     scheduled,
