@@ -18,15 +18,19 @@ const ORDER: SponsorTab[] = [SponsorTab.BENEFITS, SponsorTab.DEVICES, SponsorTab
  * Tabs for the sponsor account screen.
  *
  * Stacking every section vertically made the page a long scroll of low-density
- * cards; only one of them is ever relevant at a time. Styling follows
- * {@link ScopeTabs} so the two tab strips in Settings look like the same control.
+ * cards; only one of them is ever relevant at a time.
+ *
+ * Styled as pills sitting above the rule rather than tabs attached to it (the
+ * shape ScopeTabs uses). Looking different is the point: this strip switches
+ * panels within one settings page, while ScopeTabs switches the scope the whole
+ * page edits — they are not the same kind of control.
  */
 export function SponsorTabs(props: Props) {
   const { active, onChange } = props;
   const { t } = useTranslation('settings');
 
   return (
-    <div className="mt-6 flex items-center border-b border-border-default" role="tablist">
+    <div className="mt-6 pb-1.5 flex items-center border-b-2 border-border-default" role="tablist">
       {ORDER.map((tab) => (
         <button
           key={tab}
@@ -34,7 +38,7 @@ export function SponsorTabs(props: Props) {
           role="tab"
           aria-selected={active === tab}
           onClick={() => onChange(tab)}
-          className={`px-3 py-2 text-[0.8461rem] rounded-t-md font-medium transition-colors ${
+          className={`px-3 py-1.5 text-[0.8461rem] rounded-md font-medium transition-colors ${
             active === tab
               ? 'text-text-primary bg-surface-tooltip/50'
               : 'text-text-disabled hover:text-text-secondary'
