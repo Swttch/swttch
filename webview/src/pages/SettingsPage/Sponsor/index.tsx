@@ -148,18 +148,21 @@ export function SponsorSettings() {
           reads as if they had not already paid. */}
       {!isSponsor && (
       <div className="rounded-xl border border-border-default bg-surface-raised p-6">
-        {/* The "why sponsorship?" letter sits first but stays collapsed, so the
-            screen opens on the offer rather than on an appeal. */}
-        <SponsorLetter />
-
         {/* Authored line breaks, same as the letter — one clause per line. */}
-        <p className="mt-5 text-sm text-text-secondary leading-relaxed break-keep">
+        <p className="text-sm text-text-secondary leading-relaxed break-keep">
           {(t('sponsor.description', { returnObjects: true }) as string[]).map((line) => (
             <span key={line} className="block">
               {line}
             </span>
           ))}
         </p>
+
+        {/* The "why sponsorship?" letter follows the ask and stays collapsed:
+            it answers the question the ask raises, for whoever wants it, without
+            the screen opening on an appeal. */}
+        <div className="mt-3">
+          <SponsorLetter />
+        </div>
 
         <ul className="mt-5 space-y-3">
           {promises.map((item) => (
@@ -182,6 +185,12 @@ export function SponsorSettings() {
 
         <p className="mt-4 text-xs text-text-tertiary leading-relaxed">
           {t('sponsor.trust')}
+        </p>
+        {/* What sponsorship does NOT change. Same fine-print voice as "Cancel
+            anytime" and placed below the CTA: it reassures rather than sells, so
+            it should not compete with the ask above it. */}
+        <p className="mt-2 text-xs text-text-tertiary leading-relaxed break-keep">
+          {t('sponsor.openSourceNote')}
         </p>
       </div>
       )}
