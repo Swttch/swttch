@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "جدولة رسالة",
+    "sponsorTooltip": "ميزة للداعمين",
     "close": "إغلاق",
     "messageLabel": "الرسالة",
     "messagePlaceholder": "رسالة لإرسالها لاحقًا",

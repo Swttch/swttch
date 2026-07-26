@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Planifier un message",
+    "sponsorTooltip": "Une fonctionnalité pour les sponsors",
     "close": "Fermer",
     "messageLabel": "Message",
     "messagePlaceholder": "Message à envoyer plus tard",

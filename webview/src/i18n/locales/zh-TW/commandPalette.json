@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "排程傳送訊息",
+    "sponsorTooltip": "為贊助者提供的功能",
     "close": "關閉",
     "messageLabel": "訊息",
     "messagePlaceholder": "稍後傳送的訊息",

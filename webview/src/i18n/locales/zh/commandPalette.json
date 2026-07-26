@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "定时发送消息",
+    "sponsorTooltip": "为赞助者提供的功能",
     "close": "关闭",
     "messageLabel": "消息",
     "messagePlaceholder": "稍后发送的消息",

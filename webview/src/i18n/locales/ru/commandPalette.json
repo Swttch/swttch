@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "Запланировать сообщение",
+    "sponsorTooltip": "Функция для спонсоров",
     "close": "Закрыть",
     "messageLabel": "Сообщение",
     "messagePlaceholder": "Сообщение для отправки позже",

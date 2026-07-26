@@ -31,7 +31,11 @@ vi.mock('@/i18n', () => ({ useTranslation: () => ({ t: (key: string) => key }) }
 // The Sponsor badge is exercised in its own tests; stub it here so this suite
 // doesn't pull in the Tippy tooltip runtime.
 vi.mock('@/components', () => ({
-  SettingBadge: () => <span data-testid="sponsor-badge" />,
+  // Render the tooltip override so the test can assert the softer wording is
+  // passed through (the real badge shows it inside a Tippy tooltip).
+  SettingBadge: ({ tooltipOverride }: { tooltipOverride?: string }) => (
+    <span data-testid="sponsor-badge" data-tooltip={tooltipOverride} />
+  ),
   SettingBadgeVariant: { Sponsor: 'sponsor', ClaudeNative: 'claudeNative' },
 }));
 vi.mock('react-hot-toast', () => ({
@@ -66,9 +70,24 @@ describe('ScheduleSendPopover', () => {
     );
   });
 
-  it('shows the Sponsor badge next to the title', () => {
+  it('shows the Sponsor badge with the softer "for sponsors" tooltip override', () => {
     renderPopover();
-    expect(screen.getByTestId('sponsor-badge')).toBeInTheDocument();
+    const badge = screen.getByTestId('sponsor-badge');
+    expect(badge).toBeInTheDocument();
+    // The popover overrides the shared "sponsor-only feature" wording.
+    expect(badge).toHaveAttribute('data-tooltip', 'scheduleSend.sponsorTooltip');
+  });
+
+  it('focuses the message box on open', () => {
+    ctx.draft = 'continue';
+    renderPopover();
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  });
+
+  it('closes on Escape', () => {
+    renderPopover();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onCloseMock).toHaveBeenCalled();
   });
 
   it('sponsor submit sends SCHEDULE_MESSAGE with kind USER_SCHEDULED and closes', async () => {

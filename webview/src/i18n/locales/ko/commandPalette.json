@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "메시지 예약",
+    "sponsorTooltip": "후원자를 위한 기능",
     "close": "닫기",
     "messageLabel": "메시지",
     "messagePlaceholder": "나중에 보낼 메시지",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ClockIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { MessageType, ScheduledMessageKind } from '@/shared';
@@ -29,10 +29,10 @@ interface Props {
  * user pick a send time (one-tap presets + a free-form datetime), and creates a
  * USER_SCHEDULED reservation bound to the current session.
  *
- * Sponsor-only, but the popover stays OPEN and interactive for everyone: the
- * gate lives on submit (pattern B — ensureSponsor queries the backend fresh and
- * shows the invite toast on failure). The Sponsor badge sits to the right of the
- * title so non-sponsors see up front what unlocking buys.
+ * A feature for sponsors, but the popover stays OPEN and interactive for
+ * everyone: the gate lives on submit (pattern B — ensureSponsor queries the
+ * backend fresh and shows the invite toast on failure). The Sponsor badge sits
+ * to the right of the title so non-sponsors see up front what unlocking buys.
  */
 export function ScheduleSendPopover(props: Props) {
   const { onClose } = props;
@@ -40,6 +40,33 @@ export function ScheduleSendPopover(props: Props) {
   const { send } = useBridgeContext();
   const { currentSessionId } = useSessionContext();
   const { input: composerDraft } = useChatInputState();
+
+  const panelRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Move focus into the message box on open (the composer keeps focus otherwise),
+  // and close on Escape or an outside click — matching ModelSwitchOverlay. The
+  // caller (ChatInput) restores focus to the composer when the popover unmounts.
+  useEffect(() => {
+    textareaRef.current?.focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   // Message seeds from the composer draft; editable independently afterwards.
   const [message, setMessage] = useState(composerDraft);
@@ -94,6 +121,7 @@ export function ScheduleSendPopover(props: Props) {
 
   return (
     <div
+      ref={panelRef}
       className={`flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface-raised p-3 shadow-lg ${
         isMobile() ? 'w-full min-w-0' : 'min-w-[340px]'
       }`}
@@ -104,7 +132,10 @@ export function ScheduleSendPopover(props: Props) {
         <span className="text-[0.9rem] font-medium text-text-primary">
           {t('scheduleSend.title')}
         </span>
-        <SettingBadge variant={SettingBadgeVariant.Sponsor} />
+        <SettingBadge
+          variant={SettingBadgeVariant.Sponsor}
+          tooltipOverride={t('scheduleSend.sponsorTooltip')}
+        />
         <button
           type="button"
           onClick={onClose}
@@ -119,6 +150,7 @@ export function ScheduleSendPopover(props: Props) {
       <label className="flex flex-col gap-1">
         <span className="text-[0.8rem] text-text-tertiary">{t('scheduleSend.messageLabel')}</span>
         <textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={t('scheduleSend.messagePlaceholder')}
@@ -160,6 +192,9 @@ export function ScheduleSendPopover(props: Props) {
         {preset === SchedulePresetId.Custom && (
           <input
             type="datetime-local"
+            // step=1 (second) makes the native picker expose a seconds field, so
+            // the user can schedule to the second, not just the minute.
+            step={1}
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
             aria-label={t('scheduleSend.customLabel')}

@@ -45,17 +45,25 @@ interface Props {
   variant: SettingBadgeVariant;
   /** ClaudeNative only: official docs URL for this setting key (opens in _blank). */
   docHref?: string;
+  /**
+   * Replace the default tooltip text. The variant's tooltip key stays the single
+   * source for the common case (e.g. the settings rows); a caller passes this
+   * only when one placement needs different wording — e.g. the schedule-send
+   * popover says "a feature for sponsors" rather than "sponsor-only feature".
+   */
+  tooltipOverride?: string;
 }
 
 export function SettingBadge(props: Props) {
-  const { variant, docHref } = props;
+  const { variant, docHref, tooltipOverride } = props;
   const { t } = useTranslation('settings');
   const config = BADGE_CONFIG[variant];
+  const tooltipText = tooltipOverride ?? t(config.tooltipKey);
 
   const hasLink = variant === SettingBadgeVariant.ClaudeNative && !!docHref;
   const content = hasLink ? (
     <span className="inline-flex items-center gap-1.5">
-      {t(config.tooltipKey)}
+      {tooltipText}
       <a
         href={docHref}
         target="_blank"
@@ -67,7 +75,7 @@ export function SettingBadge(props: Props) {
       </a>
     </span>
   ) : (
-    t(config.tooltipKey)
+    tooltipText
   );
 
   return (

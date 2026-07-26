@@ -45,15 +45,16 @@ describe('resolvePresetSendAt', () => {
 });
 
 describe('toDatetimeLocalValue', () => {
-  it('formats a Date as YYYY-MM-DDTHH:mm in local time, zero-padded', () => {
-    const d = new Date(2026, 0, 5, 9, 7, 0, 0); // 2026-01-05 09:07 local
-    expect(toDatetimeLocalValue(d)).toBe('2026-01-05T09:07');
+  it('formats a Date as YYYY-MM-DDTHH:mm:ss in local time, zero-padded', () => {
+    const d = new Date(2026, 0, 5, 9, 7, 3, 0); // 2026-01-05 09:07:03 local
+    expect(toDatetimeLocalValue(d)).toBe('2026-01-05T09:07:03');
   });
 
   it('round-trips through Date.parse back to the same local instant', () => {
-    const d = new Date(2026, 6, 26, 14, 30, 0, 0);
+    const d = new Date(2026, 6, 26, 14, 30, 45, 0);
     const value = toDatetimeLocalValue(d);
-    // datetime-local values parse as local time; the minute-truncated instant matches.
+    // datetime-local values parse as local time; with seconds included the
+    // second-truncated instant matches exactly.
     expect(new Date(Date.parse(value)).getTime()).toBe(d.getTime());
   });
 });

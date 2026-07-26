@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "メッセージを予約",
+    "sponsorTooltip": "サポーターのための機能",
     "close": "閉じる",
     "messageLabel": "メッセージ",
     "messagePlaceholder": "後で送信するメッセージ",

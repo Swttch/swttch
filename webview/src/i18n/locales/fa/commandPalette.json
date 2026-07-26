@@ -17,6 +17,7 @@
   },
   "scheduleSend": {
     "title": "زمان‌بندی پیام",
+    "sponsorTooltip": "قابلیتی برای حامیان",
     "close": "بستن",
     "messageLabel": "پیام",
     "messagePlaceholder": "پیامی برای ارسال بعداً",

@@ -370,10 +370,12 @@ export function ChatInput() {
 
   const isInterruptible = isActive;
 
-  // ESC key: interrupt streaming or active state
+  // ESC key: interrupt streaming or active state. Suppressed while the
+  // schedule-send popover is open — there Escape closes the popover instead of
+  // interrupting the stream (the popover owns its own Escape handler).
   useEffect(() => {
     const handleEscKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape' && isInterruptible) {
+      if (e.key === 'Escape' && isInterruptible && !showSchedulePopover) {
         e.preventDefault();
         onStop();
         // Re-focus textarea after interrupt
@@ -383,7 +385,7 @@ export function ChatInput() {
 
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [isInterruptible, onStop, textareaRef]);
+  }, [isInterruptible, onStop, textareaRef, showSchedulePopover]);
 
   // [KeyDebug] window 캡처 단계 Arrow 키 로깅
   useEffect(() => {
@@ -635,10 +637,18 @@ export function ChatInput() {
         )}
 
         {/* Schedule-send popover (from the Context section). Floats above the
-            composer; pre-filled from the current draft. */}
+            composer; pre-filled from the current draft. Closing it returns focus
+            to the composer (the popover took focus for its message box). */}
         {showSchedulePopover && (
           <div className="absolute bottom-full end-0 z-30 mb-2">
-            <ScheduleSendPopover onClose={() => setShowSchedulePopover(false)} />
+            <ScheduleSendPopover
+              onClose={() => {
+                setShowSchedulePopover(false);
+                // Defer past unmount so focus lands on the composer, not a
+                // node being torn down (matches the mode-panel restore pattern).
+                setTimeout(() => textareaRef.current?.focus(), 0);
+              }}
+            />
           </div>
         )}
 

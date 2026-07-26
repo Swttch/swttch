@@ -64,9 +64,10 @@ export function resolvePresetSendAt(preset: SchedulePresetId, now: number): Date
 }
 
 /**
- * Format a Date as the `value` a native <input type="datetime-local"> expects:
- * `YYYY-MM-DDTHH:mm` in LOCAL time (no timezone suffix, no seconds). Used to
- * seed the custom input from a preset and as the default (now + 1h).
+ * Format a Date as the `value` a native <input type="datetime-local" step=1>
+ * expects: `YYYY-MM-DDTHH:mm:ss` in LOCAL time (no timezone suffix). Seconds are
+ * included because the input uses step=1, so the picker shows a seconds field.
+ * Used to seed the custom input from a preset and as the default (now + 1h).
  */
 export function toDatetimeLocalValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -75,5 +76,6 @@ export function toDatetimeLocalValue(date: Date): string {
   const dd = pad(date.getDate());
   const hh = pad(date.getHours());
   const mi = pad(date.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  const ss = pad(date.getSeconds());
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`;
 }
