@@ -50,11 +50,23 @@ function mockCommonDeps() {
   }));
 }
 
+/** 직전 테스트가 로드한 telemetry 모듈. resetModules 전에 비워내기 위해 붙잡아 둔다. */
+let loadedTelemetry: typeof import('./telemetry') | null = null;
+
 async function loadTelemetry(
   profile: TestProfile,
   apiKey: string,
   fetchImpl?: (input: string, init: { body: string }) => Promise<unknown>,
 ) {
+  // inFlight는 모듈 스코프 상태라 resetModules()가 새 인스턴스에 빈 Set을 만든다. 직전
+  // 테스트의 전송이 아직 떠 있는 채로 리셋하면, 그 전송을 기다려 줄 주체가 사라진다 —
+  // 새 인스턴스의 flushTelemetry()는 자기 빈 Set만 보고 즉시 반환하고, 뒤늦게 끝난 옛
+  // 전송이 새 테스트의 fetchMock에 얹혀 "보내지 않아야 할 때 1번 호출됨"으로 터진다.
+  // 리셋 전에 옛 인스턴스를 직접 비워, 전송이 자기 인스턴스보다 오래 살지 못하게 한다.
+  if (loadedTelemetry) {
+    await loadedTelemetry.flushTelemetry();
+    loadedTelemetry = null;
+  }
   vi.resetModules();
   // hoisted environment mock의 CCG_RYBBIT_API_KEY getter가 반환할 값을 이 파일에 주입한다
   // (process.env 전역을 건드리지 않음 — 상단 mock 주석 참고).
@@ -67,6 +79,7 @@ async function loadTelemetry(
   const fetchMock = vi.fn(fetchImpl ?? (async () => ({ ok: true })));
   vi.stubGlobal('fetch', fetchMock);
   const mod = await import('./telemetry');
+  loadedTelemetry = mod;
   return {
     trackEvent: mod.trackEvent,
     trackError: mod.trackError,
@@ -75,6 +88,13 @@ async function loadTelemetry(
     fetchMock,
   };
 }
+
+// 각 테스트가 끝나면 그 테스트가 띄운 전송을 그 자리에서 비운다. 테스트 본문이
+// flushTelemetry()를 부르지 않고 끝나는 경우(전송을 기대하지 않는 케이스)에도 전송이
+// 다음 테스트로 새지 않도록 하는 안전망 — loadTelemetry의 리셋 전 드레인과 짝을 이룬다.
+afterEach(async () => {
+  if (loadedTelemetry) await loadedTelemetry.flushTelemetry();
+});
 
 describe('telemetry consent gating', () => {
   afterEach(async () => {

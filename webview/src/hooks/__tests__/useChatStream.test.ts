@@ -1123,4 +1123,177 @@ describe('useChatStream', () => {
       expect(getTextContent(after[after.length - 1])).toContain('part two');
     });
   });
+
+  describe('CLI가 턴 도중 보낸 메시지 위치 (Stop hook 피드백, issue #211)', () => {
+    // 실제 CLI가 Stop hook 실행 후 내보내는 엔트리 모양.
+    // isCompactSummary도 isVisibleInTranscriptOnly도 없고, isSynthetic만 붙는다.
+    const STOP_HOOK_TEXT =
+      'Stop hook feedback:\n[resume]: the goal remains in-progress, not complete.';
+
+    const emitStopHookFeedback = (
+      emit: (type: string, payload: Record<string, unknown>) => void,
+      opts: { uuid: string; timestamp: string; text?: string },
+    ) => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'user',
+        uuid: opts.uuid,
+        timestamp: opts.timestamp,
+        isSynthetic: true,
+        message: { role: 'user', content: opts.text ?? STOP_HOOK_TEXT },
+      });
+    };
+
+    it('늦게 도착해도 CLI timestamp 자리에 삽입된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 훅 피드백보다 나중 시각의 메시지가 이미 화면에 있다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'later',
+          timestamp: '2026-07-26T20:50:30.000Z',
+          message: { role: 'user', content: 'next iteration' },
+        });
+      });
+
+      // 훅 피드백은 그보다 이른 시각인데 뒤늦게 도착한다.
+      act(() => {
+        emitStopHookFeedback(emit, {
+          uuid: 'stop-1',
+          timestamp: '2026-07-26T20:50:03.297Z',
+        });
+      });
+
+      // 맨 끝이 아니라 시간순 제자리(앞)에 놓여야 한다.
+      const contents = result.current.messages.map(m => m.message?.content);
+      expect(contents).toEqual([STOP_HOOK_TEXT, 'next iteration']);
+    });
+
+    it('사이클을 반복해도 화면 하단에 쌓이지 않는다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 이터레이션 3회: 각 훅 피드백 뒤에 다음 턴의 결과가 이어진다.
+      const cycles = [
+        { hookTs: '2026-07-26T20:50:03.000Z', turnTs: '2026-07-26T20:50:10.000Z' },
+        { hookTs: '2026-07-26T20:51:03.000Z', turnTs: '2026-07-26T20:51:10.000Z' },
+        { hookTs: '2026-07-26T20:52:03.000Z', turnTs: '2026-07-26T20:52:10.000Z' },
+      ];
+
+      cycles.forEach((c, i) => {
+        act(() => {
+          emitStopHookFeedback(emit, {
+            uuid: `stop-${i}`,
+            timestamp: c.hookTs,
+            text: `HOOK-${i}`,
+          });
+        });
+        act(() => {
+          emit(MessageType.CLI_EVENT, {
+            type: 'user',
+            uuid: `turn-${i}`,
+            timestamp: c.turnTs,
+            message: { role: 'user', content: `TURN-${i}` },
+          });
+        });
+      });
+
+      // 훅 피드백이 끝에 몰리지 않고 각 사이클 사이에 번갈아 놓인다.
+      expect(result.current.messages.map(m => m.message?.content)).toEqual([
+        'HOOK-0', 'TURN-0', 'HOOK-1', 'TURN-1', 'HOOK-2', 'TURN-2',
+      ]);
+    });
+
+    it('이후 델타가 훅 피드백을 아래로 밀지 않는다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addUserMessage('go');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part one ' } },
+        });
+      });
+      act(() => flushRAF());
+
+      const assistantIndex = 1;
+      const beforeText = getTextContent(result.current.messages[assistantIndex]);
+
+      // 턴이 아직 스트리밍 중인데 훅 피드백이 도착한다.
+      act(() => {
+        emitStopHookFeedback(emit, {
+          uuid: 'stop-mid',
+          timestamp: new Date(Date.now() + 1000).toISOString(),
+        });
+      });
+      const hookIndex = result.current.messages.length - 1;
+      expect(getTextContent(result.current.messages[hookIndex])).toBe(STOP_HOOK_TEXT);
+
+      // 응답이 계속 스트리밍된다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part two' } },
+        });
+      });
+      act(() => flushRAF());
+
+      // 훅 피드백 위 버블은 더 이상 자라지 않고, 새 텍스트는 그 아래에 쌓인다.
+      expect(getTextContent(result.current.messages[assistantIndex])).toBe(beforeText);
+      expect(getTextContent(result.current.messages[hookIndex])).toBe(STOP_HOOK_TEXT);
+      const after = result.current.messages.slice(hookIndex + 1);
+      expect(after.length).toBeGreaterThan(0);
+      expect(getTextContent(after[after.length - 1])).toContain('part two');
+    });
+
+    it('tool_result는 자기 버블이 없으므로 assistant 버블을 쪼개지 않는다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addUserMessage('go');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part one ' } },
+        });
+      });
+      act(() => flushRAF());
+
+      const assistantIndex = 1;
+      expect(result.current.isStreaming).toBe(true);
+
+      // 도구 결과가 도착해도 스트리밍은 계속되어야 한다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'tr-1',
+          timestamp: new Date(Date.now() + 1000).toISOString(),
+          message: {
+            role: 'user',
+            content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }],
+          },
+        });
+      });
+
+      expect(result.current.isStreaming).toBe(true);
+
+      // 이후 델타는 원래 버블에 계속 누적된다 (새 버블로 갈라지지 않는다).
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part two' } },
+        });
+      });
+      act(() => flushRAF());
+
+      expect(getTextContent(result.current.messages[assistantIndex])).toContain('part one');
+      expect(getTextContent(result.current.messages[assistantIndex])).toContain('part two');
+    });
+  });
 });
