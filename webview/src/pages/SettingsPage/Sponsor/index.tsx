@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { SponsorSummary } from './SponsorSummary';
+import { SponsorLetter } from './SponsorLetter';
 import { SponsorManageMenu } from './SponsorManageMenu';
 import { SponsorTabs, SponsorTab } from './SponsorTabs';
 import { SponsorBenefitsSection } from './SponsorBenefitsSection';
@@ -147,7 +148,11 @@ export function SponsorSettings() {
           reads as if they had not already paid. */}
       {!isSponsor && (
       <div className="rounded-xl border border-border-default bg-surface-raised p-6">
-        <p className="text-sm text-text-secondary leading-relaxed break-keep">
+        {/* The "why sponsorship?" letter sits first but stays collapsed, so the
+            screen opens on the offer rather than on an appeal. */}
+        <SponsorLetter />
+
+        <p className="mt-5 text-sm text-text-secondary leading-relaxed break-keep">
           {t('sponsor.description')}
         </p>
 

@@ -375,8 +375,8 @@
     }
   },
   "sponsor": {
-    "title": "贊助 Claude Code with GUI",
-    "description": "Claude Code with GUI 始終免費使用。贊助讓這個以 JetBrains 為先的獨立專案得以持續。",
+    "title": "贊助這個專案",
+    "description": "這個專案的核心是開源的，所有社群功能也會一直免費——這一點不會改變。贊助讓這個以 JetBrains 為先的獨立專案得以延續。用一杯啤酒的價錢，與我們同行。",
     "promises": [
       "無限使用所有贊助者專屬功能",
       "自動包含未來所有新功能",
@@ -455,7 +455,13 @@
       "devices": "裝置",
       "billing": "付款"
     },
-    "project": "這個專案"
+    "project": "這個專案",
+    "letterToggle": "為什麼要請大家贊助？",
+    "letter": [
+      "我自己也是一名開發者，多年來一直是 JetBrains 的使用者。在 VS Code 上可以透過 GUI 使用 Claude Code，但 JetBrains 上卻一直沒有類似的東西——這個空白讓我一直掛在心上，於是我決定自己動手把它做出來。",
+      "隨著使用的人越來越多，需求也不斷累積，這個外掛佔據了我越來越多的時間，我開始希望能夠全職投入、獨立開發它。",
+      "我提出贊助方案，是希望能夠更快地回應世界各地同樣身為開發者的你們。"
+    ]
   },
   "badges": {
     "sponsor": "贊助者專屬功能",

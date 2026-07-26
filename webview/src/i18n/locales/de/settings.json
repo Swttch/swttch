@@ -375,8 +375,8 @@
     }
   },
   "sponsor": {
-    "title": "Unterstütze Claude Code with GUI",
-    "description": "Claude Code with GUI bleibt kostenlos nutzbar. Sponsoring hält dieses unabhängige, JetBrains-orientierte Projekt am Leben.",
+    "title": "Dieses Projekt unterstützen",
+    "description": "Der Kern dieses Projekts ist Open Source, und alle Community-Funktionen bleiben kostenlos — daran ändert sich nichts. Die Förderung hält dieses unabhängige, JetBrains-zuerst gedachte Projekt am Laufen. Für den Preis eines Biers kannst du die Reise mitgehen.",
     "promises": [
       "Unbegrenzter Zugriff auf alle Sponsor-Funktionen",
       "Alle künftigen Funktionen automatisch enthalten",
@@ -455,7 +455,13 @@
       "devices": "Geräte",
       "billing": "Zahlungen"
     },
-    "project": "das Projekt"
+    "project": "das Projekt",
+    "letterToggle": "Warum bittest du um Sponsoring?",
+    "letter": [
+      "Ich bin Entwickler und seit Langem JetBrains-Nutzer. Unter VS Code kann man Claude Code über eine GUI nutzen, aber bei JetBrains gab es nichts Vergleichbares — und diese Lücke hat mich so gestört, dass ich angefangen habe, es selbst zu bauen.",
+      "Als es dann Nutzer fand, häuften sich die Wünsche und das Plugin nahm immer mehr von meiner Zeit in Anspruch, und ich begann mir zu wünschen, mich davon unabhängig ganz darauf konzentrieren zu können.",
+      "Ich schlage Sponsoring vor, weil ich schneller auf Entwicklerkolleginnen und -kollegen in aller Welt reagieren möchte."
+    ]
   },
   "badges": {
     "sponsor": "Nur für Sponsoren",
