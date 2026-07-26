@@ -968,10 +968,13 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
             isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
-          // Arrival order: these arrive interleaved with the user's own sends
-          // during a turn, and the sequence they arrive in is the sequence they
-          // belong in. Keep them adjacent to the messages they respond to.
-          appendMessage(userMessage, true);
+          // The compact summary is the one `user` event that genuinely arrives out
+          // of order — the CLI emits it after the assistant messages that follow
+          // it — so it needs the timestamp sort to land back in place. Everything
+          // else (tool_results, skill prompts) arrives in the order it belongs in
+          // and is appended as it comes, which keeps it next to the message it
+          // answers even when the user sends mid-turn.
+          appendMessage(userMessage, !userMessage.isCompactSummary);
         }
         return;
       }

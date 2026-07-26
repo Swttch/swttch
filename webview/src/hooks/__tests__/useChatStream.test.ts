@@ -1045,9 +1045,9 @@ describe('useChatStream', () => {
       const ts = new Date(result.current.messages[0].timestamp!).getTime();
       expect(ts).toBeGreaterThanOrEqual(before);
       expect(ts).toBeLessThanOrEqual(after);
-  // 스트리밍 중 사용자가 입력한 메시지는 화면 맨 아래에 붙어야 한다. 진행 중인 assistant
-  // 버블은 그보다 이른 timestamp를 갖고 있어, timestamp 정렬로 삽입하면 사용자의 새 메시지가
-  // 이미 표시된 응답 아래로 파고든다 (issue #220).
+    });
+  });
+
   // 스트리밍 중 사용자가 입력한 메시지는 입력한 자리에 고정돼야 한다. assistant 한 턴은
   // 단일 요소로 렌더링되므로, 진행 중인 응답을 그대로 두면 델타가 쌓일 때마다 그 요소가
   // 커지면서 방금 붙인 사용자 버블을 화면 아래로 계속 밀어낸다 (issue #220).
