@@ -130,7 +130,7 @@ export function ScheduleSendPopover(props: Props) {
   // Message seeds from the composer draft; editable independently afterwards.
   const [message, setMessage] = useState(composerDraft);
   const [preset, setPreset] = useState<SchedulePresetId>(SchedulePresetId.In1Hour);
-  const [duration, setDuration] = useState<Duration>({ ...ZERO_DURATION, hours: 1 });
+  const [duration, setDuration] = useState<Duration>(ZERO_DURATION);
   // The custom datetime-local value, seeded to now + 1h so the field is never empty.
   const [customValue, setCustomValue] = useState(() =>
     toDatetimeLocalValue(resolvePresetSendAt(SchedulePresetId.In1Hour, Date.now())),
