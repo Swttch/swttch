@@ -1236,11 +1236,14 @@ class ClaudeCodePanel(
                 }
             }
 
-            override suspend fun openSettings(workingDir: String) {
+            override suspend fun openSettings(workingDir: String, path: String?) {
                 ApplicationManager.getApplication().invokeLater {
                     val targetProject = findProjectByBasePath(workingDir) ?: project
-                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), "/settings/general")
-                    logger.info("Opened Claude Code settings in editor tab (workingDir=$workingDir)")
+                    // The caller picks the destination (e.g. "/settings/sponsor" for a
+                    // sponsor invite); fall back to General when it says nothing.
+                    val target = path?.takeIf { it.isNotBlank() } ?: "/settings/general"
+                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), target)
+                    logger.info("Opened Claude Code settings in editor tab (workingDir=$workingDir, path=$target)")
                 }
             }
 

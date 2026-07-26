@@ -7,6 +7,8 @@ import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { getModelEffortConfig } from '@/types/effort';
 import { resolveModelInfo } from '@/types/models';
 import { getAdapter } from '@/adapters';
+import { Route } from '@/router';
+import { openSettingsAt } from '@/utils/openSettingsAt';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
@@ -99,7 +101,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
-      openSettings: () => getAdapter().openSettings(),
+      openSettings: () => openSettingsAt(Route.SETTINGS_GENERAL),
       openTerminal: (workingDir) => getAdapter().openTerminal(workingDir),
     },
     ui: {
@@ -135,7 +137,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
     },
     adapter: {
       openNewTab: () => getAdapter().openNewTab(),
-      openSettings: () => getAdapter().openSettings(),
+      openSettings: () => openSettingsAt(Route.SETTINGS_GENERAL),
       openTerminal: (workingDir) => getAdapter().openTerminal(workingDir),
     },
     ui: {
@@ -185,7 +187,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       id: 'open-settings',
       match: (e: KeyboardEvent) => (e.metaKey || e.ctrlKey) && e.key === ',',
       execute: async () => {
-        await getAdapter().openSettings();
+        await openSettingsAt(Route.SETTINGS_GENERAL);
       },
     });
 

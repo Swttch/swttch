@@ -123,8 +123,8 @@ export class BrowserBridge implements Bridge {
     // no-op: browser mode navigates to the session via URL
   }
 
-  async openSettings(_workingDir?: string): Promise<void> {
-    // no-op
+  async openSettings(_workingDir?: string, _path?: string): Promise<void> {
+    // no-op: browser mode opens the settings tab client-side via window.open
   }
 
   async openUrl(url: string): Promise<void> {

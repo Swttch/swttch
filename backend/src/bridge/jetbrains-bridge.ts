@@ -251,8 +251,11 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.OPEN_SESSION, params);
   }
 
-  async openSettings(workingDir?: string): Promise<void> {
-    await this.request(MessageType.OPEN_SETTINGS, workingDir ? { workingDir } : {});
+  async openSettings(workingDir?: string, path?: string): Promise<void> {
+    const params: Record<string, unknown> = {};
+    if (workingDir) params.workingDir = workingDir;
+    if (path) params.path = path;
+    await this.request(MessageType.OPEN_SETTINGS, params);
   }
 
   async openTerminal(workingDir: string): Promise<void> {

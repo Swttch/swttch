@@ -2,6 +2,7 @@ import { MessageType, ClientEnv } from '../shared';
 import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
+import { type Route, routeToPath } from '../router';
 
 /**
  * JetBrains IDE Adapter
@@ -26,9 +27,12 @@ export class JetBrainsAdapter implements IdeAdapter {
     console.log('[JetBrainsAdapter] Sent OPEN_SESSION via WebSocket bridge:', sessionId);
   }
 
-  async openSettings(): Promise<void> {
-    await getBridge().request(MessageType.OPEN_SETTINGS);
-    console.log('[JetBrainsAdapter] Sent OPEN_SETTINGS via WebSocket bridge');
+  async openSettings(route?: Route): Promise<void> {
+    // `path` tells Kotlin which settings page the new editor tab should land on.
+    // Omitted → Kotlin falls back to the settings landing page.
+    const path = route ? routeToPath(route) : undefined;
+    await getBridge().request(MessageType.OPEN_SETTINGS, path ? { path } : {});
+    console.log('[JetBrainsAdapter] Sent OPEN_SETTINGS via WebSocket bridge:', path ?? '(default)');
   }
 
   async openFile(filePath: string, line?: number, column?: number): Promise<void> {

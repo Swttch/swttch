@@ -181,8 +181,8 @@ class NodeBackendService : Disposable {
                 any()?.openSession(sessionId, workingDir) ?: warn("openSession")
             }
 
-            override suspend fun openSettings(workingDir: String) {
-                any()?.openSettings(workingDir) ?: warn("openSettings")
+            override suspend fun openSettings(workingDir: String, path: String?) {
+                any()?.openSettings(workingDir, path) ?: warn("openSettings")
             }
 
             override suspend fun openTerminal(workingDir: String) {

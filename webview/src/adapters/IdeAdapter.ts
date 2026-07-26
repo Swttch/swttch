@@ -1,4 +1,5 @@
 import { ClientEnv } from '../shared';
+import type { Route } from '../router';
 
 /**
  * @deprecated Use ClientEnv from shared instead
@@ -36,8 +37,13 @@ export interface IdeAdapter {
    * Open settings in a new tab/window
    * - In JetBrains: Opens a new editor tab navigated to settings
    * - In Browser: Opens a new browser tab with settings hash
+   *
+   * @param route which settings page to land on (e.g. `Route.SETTINGS_SPONSOR`).
+   *   Omit to land on the settings landing page. Callers that need to respect
+   *   the user's overlay/new-tab preference should go through `openSettingsAt()`
+   *   rather than calling this directly.
    */
-  openSettings(): Promise<void>;
+  openSettings(route?: Route): Promise<void>;
 
   /**
    * Open a file in the IDE editor, optionally focusing a 1-based line/column.

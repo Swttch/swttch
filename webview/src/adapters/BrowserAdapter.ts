@@ -2,6 +2,7 @@ import { MessageType, ClientEnv } from '../shared';
 import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
+import { Route, routeToPath } from '../router';
 
 /**
  * Browser Adapter
@@ -43,17 +44,19 @@ export class BrowserAdapter implements IdeAdapter {
     console.log('[BrowserAdapter] Opened session in new browser tab:', sessionId);
   }
 
-  async openSettings(): Promise<void> {
+  async openSettings(route?: Route): Promise<void> {
     const url = new URL(window.location.href);
     url.hash = '';
-    url.pathname = '/settings/general';
+    // The query (workingDir etc.) rides along on window.location.href — without
+    // it the new tab has no working directory and bounces to the project picker.
+    url.pathname = routeToPath(route ?? Route.SETTINGS_GENERAL);
     const newWindow = window.open(url.toString(), '_blank');
 
     if (!newWindow) {
       throw new Error('Failed to open settings tab. Pop-up might be blocked.');
     }
 
-    console.log('[BrowserAdapter] Opened settings in new browser tab');
+    console.log('[BrowserAdapter] Opened settings in new browser tab:', url.pathname);
   }
 
   async openFile(filePath: string, line?: number, column?: number): Promise<void> {

@@ -169,7 +169,8 @@ class NodeProcessManager(
         suspend fun createSession(workingDir: String)
         suspend fun openNewTab(workingDir: String)
         suspend fun openSession(sessionId: String, workingDir: String?)
-        suspend fun openSettings(workingDir: String)
+        /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
+        suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)
         suspend fun openUrl(url: String)
         suspend fun pickFiles(mode: String, multiple: Boolean): List<String>

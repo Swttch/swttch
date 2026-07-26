@@ -8,6 +8,7 @@ import { createTestQueryClient } from '@/hooks/queries/__tests__/testQueryClient
 import { SessionHeader } from '../SessionHeader/index';
 import { SessionMetaDto } from '../../../dto';
 import type { SessionState } from '../../../types';
+import { Route } from '@/router';
 
 // 테스트 시점 기준 상대 날짜 생성 헬퍼.
 // 기준 시각을 "오늘 정오"로 고정한다. 자정 직후(예: 00:00~02:00)에 실행하면
@@ -39,9 +40,16 @@ vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => mockSessionCtxValue,
 }));
 
-// Mock SettingsContext (SettingsButton reads openSettingsAs to pick overlay vs new tab)
+// Mock SettingsContext (other header widgets read it)
 vi.mock('../../../contexts/SettingsContext', () => ({
   useSettings: () => mockSettingsValue,
+}));
+
+// SettingsButton goes through openSettingsAt(), which asks the adapter for a
+// dedicated tab when the stored preference says new-tab.
+const mockOpenSettingsAdapter = vi.fn();
+vi.mock('@/adapters', () => ({
+  getAdapter: () => ({ openSettings: mockOpenSettingsAdapter }),
 }));
 
 // Mock BridgeContext
@@ -152,6 +160,11 @@ beforeEach(() => {
     settings: { openSettingsAs: 'overlay' },
     updateSettingWithScope: vi.fn(),
   };
+
+  // openSettingsAt reads the open-mode preference from this cache; clear it so
+  // one test's stored preference cannot leak into the next.
+  mockOpenSettingsAdapter.mockReset();
+  localStorage.clear();
 });
 
 describe('SessionHeader', () => {
@@ -359,24 +372,29 @@ describe('SessionHeader', () => {
     expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
   });
 
-  it('설정 버튼: openSettingsAs=overlay(기본)이면 새 탭(openSettings)을 열지 않음', async () => {
+  // The button delegates to openSettingsAt(), which reads the stored preference
+  // and either requests an overlay or asks the adapter for a dedicated tab.
+  it('설정 버튼: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await user.click(screen.getByTitle('Settings'));
 
     // Overlay mode navigates in-tab; it must NOT open a dedicated tab.
-    expect(mockSessionCtxValue.openSettings).not.toHaveBeenCalled();
+    expect(mockOpenSettingsAdapter).not.toHaveBeenCalled();
   });
 
-  it('설정 버튼: openSettingsAs=new-tab이면 openSettings 호출', async () => {
+  it('설정 버튼: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
     const user = userEvent.setup();
-    mockSettingsValue.settings.openSettingsAs = 'new-tab';
+    localStorage.setItem(
+      'claude-code-settings',
+      JSON.stringify({ openSettingsAs: 'new-tab' }),
+    );
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await user.click(screen.getByTitle('Settings'));
 
-    expect(mockSessionCtxValue.openSettings).toHaveBeenCalledTimes(1);
+    expect(mockOpenSettingsAdapter).toHaveBeenCalledWith(Route.SETTINGS_GENERAL);
   });
 
   it('새 탭 버튼이 항상 활성화되어 있음', () => {
