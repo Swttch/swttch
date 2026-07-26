@@ -146,33 +146,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.25.3 - [URGENT] Critical security patch. Update now if under v0.25.2 (CVE public Aug 6)</h3>
+            <h3>0.26.0 - [URGENT] Critical security patch. Update now if under v0.25.2 (CVE public Aug 6)</h3>
             <ul>
-                <li>Security: a critical vulnerability (CVE assigned) will be publicly disclosed on Aug 6. On any version below v0.25.2, update to the latest immediately.</li>
-                <li>In-app announcements so important notices can surface right in the plugin (#219)</li>
-                <li>More reliable Enter-to-newline across keyboard layouts and IME input (#215, #216)</li>
-            </ul>
-            <h3>0.25.2 - Clickable file references in chat</h3>
-            <ul>
-                <li>File references in chat messages — like src/app.ts:42 — are now clickable and jump straight to that line in your IDE (#210 by @wast-bast, requested in #183 by @kingfen-wu)</li>
-            </ul>
-            <h3>0.25.1 - Editor context follows the panel you're focused on</h3>
-            <ul>
-                <li>Editor context — the Alt+K mention and the file badge — now goes to the Claude Code panel you last focused, even with multiple tabs or panels open (reported in #199 by @volador123 and #205 by @BigPineappleDe)</li>
-                <li>Alt+K in tool-window mode no longer opens a new tab every time; it focuses the panel that's already open (reported in #180 by @JaydenPeng)</li>
-                <li>Opening a session in a new editor tab or the system browser now reuses your paired session instead of failing to connect</li>
-                <li>Remote Control security hardening (#204, #208)</li>
-                <li>Scrollbars now follow the dark theme (#203)</li>
-            </ul>
-            <h3>0.25.0 - IDE selector and chat UX polish</h3>
-            <ul>
-                <li>Tool window mode now shows an IDE selection chip and keeps it in sync when reopened</li>
-                <li>/context now renders as a native-TUI context-usage card and works in an empty window (#196, reported by @deniskrizanovic)</li>
-                <li>No longer bounces back to the login screen on transient auth-status failures (#178, reported by @noss-creator)</li>
-                <li>Slash commands now show their descriptions, plus fixes for model-change and panel UX (#177)</li>
-                <li>"Open Claude Code" now reuses the already-open chat tab instead of spawning a new one</li>
-                <li>Stop button now follows the mode color like the send button</li>
-                <li>Windows/WSL stability improvements (#197)</li>
+                <li>Scheduled messages &amp; auto-resume: when a session hits its usage limit, schedule a follow-up that fires the moment your quota resets (sponsor)</li>
+                <li>"Open files with": clicked file references now open in the editor you choose (#214)</li>
+                <li>@ file mentions now rank IntelliJ-style (#224, reported by @deniskrizanovic)</li>
+                <li>@ file mentions now find files inside git submodules and respect the CLI's fileSuggestion setting (#223, reported by @sunisok1)</li>
+                <li>Adjustable chat message line spacing under Settings → Appearance (#221, reported by @fourm1)</li>
+                <li>Fable 5 stays in the model picker whenever your account still has access, past the promo window (#225)</li>
+                <li>Messages you send mid-turn now reach Claude right away instead of waiting for the turn to finish (#228)</li>
+                <li>The compact summary and CLI-sent messages now stay where they belong in the transcript instead of piling up at the bottom (#228, reported by @StarCode000; #229, reported by @hollandjake)</li>
             </ul>
         """.trimIndent()
     }
