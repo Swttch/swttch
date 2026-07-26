@@ -12,7 +12,25 @@
     "mentionFile": "Datei aus diesem Projekt erwähnen...",
     "clearConversation": "Unterhaltung löschen",
     "resumeConversation": "Unterhaltung fortsetzen",
-    "showBackgroundTasks": "Workflow: Hintergrundaufgaben anzeigen"
+    "showBackgroundTasks": "Workflow: Hintergrundaufgaben anzeigen",
+    "scheduleSend": "Nachricht planen..."
+  },
+  "scheduleSend": {
+    "title": "Nachricht planen",
+    "close": "Schließen",
+    "messageLabel": "Nachricht",
+    "messagePlaceholder": "Später zu sendende Nachricht",
+    "whenLabel": "Wann",
+    "customLabel": "Datum und Uhrzeit anpassen",
+    "submit": "Planen",
+    "scheduledToast": "Nachricht geplant",
+    "presets": {
+      "in5min": "In 5 Min.",
+      "in30min": "In 30 Min.",
+      "in1hour": "In 1 Std.",
+      "tomorrowMorning": "Morgen 9 Uhr",
+      "custom": "Benutzerdefiniert"
+    }
   },
   "model": {
     "switchModel": "Modell wechseln...",

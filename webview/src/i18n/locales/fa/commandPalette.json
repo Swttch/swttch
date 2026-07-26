@@ -12,7 +12,25 @@
     "mentionFile": "اشاره به فایلی از این پروژه...",
     "clearConversation": "پاک کردن گفتگو",
     "resumeConversation": "ازسرگیری گفتگو",
-    "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه"
+    "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه",
+    "scheduleSend": "زمان‌بندی پیام..."
+  },
+  "scheduleSend": {
+    "title": "زمان‌بندی پیام",
+    "close": "بستن",
+    "messageLabel": "پیام",
+    "messagePlaceholder": "پیامی برای ارسال بعداً",
+    "whenLabel": "چه زمانی",
+    "customLabel": "تاریخ و زمان دلخواه",
+    "submit": "زمان‌بندی",
+    "scheduledToast": "پیام زمان‌بندی شد",
+    "presets": {
+      "in5min": "۵ دقیقه دیگر",
+      "in30min": "۳۰ دقیقه دیگر",
+      "in1hour": "۱ ساعت دیگر",
+      "tomorrowMorning": "فردا ۹ صبح",
+      "custom": "دلخواه"
+    }
   },
   "model": {
     "switchModel": "تغییر مدل...",

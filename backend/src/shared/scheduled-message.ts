@@ -26,6 +26,13 @@
 export enum ScheduledMessageKind {
   /** Reservation created by the "auto-resume on limit reset" feature (layer 2). */
   AUTO_RESUME = 'AUTO_RESUME',
+  /**
+   * A plain "schedule send" the user created directly (from the command palette):
+   * an arbitrary message to deliver at an arbitrary time. No pre-send hook is
+   * registered for this kind, so the engine falls back to always-proceed and just
+   * delivers `message` at `sendAt` — the Slack-style scheduled send.
+   */
+  USER_SCHEDULED = 'USER_SCHEDULED',
 }
 
 /**

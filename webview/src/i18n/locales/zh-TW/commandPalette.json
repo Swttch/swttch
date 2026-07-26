@@ -12,7 +12,25 @@
     "mentionFile": "提及此專案中的檔案...",
     "clearConversation": "清除對話",
     "resumeConversation": "繼續對話",
-    "showBackgroundTasks": "工作流程:顯示背景工作"
+    "showBackgroundTasks": "工作流程:顯示背景工作",
+    "scheduleSend": "排程傳送訊息..."
+  },
+  "scheduleSend": {
+    "title": "排程傳送訊息",
+    "close": "關閉",
+    "messageLabel": "訊息",
+    "messagePlaceholder": "稍後傳送的訊息",
+    "whenLabel": "時間",
+    "customLabel": "自訂日期和時間",
+    "submit": "排程",
+    "scheduledToast": "訊息已排程",
+    "presets": {
+      "in5min": "5 分鐘後",
+      "in30min": "30 分鐘後",
+      "in1hour": "1 小時後",
+      "tomorrowMorning": "明天上午 9 點",
+      "custom": "自訂"
+    }
   },
   "model": {
     "switchModel": "切換模型...",

@@ -11,6 +11,7 @@ export enum IconType {
   Settings = 'settings',
   Link = 'link',
   Command = 'command',
+  Clock = 'clock',
 }
 
 // Panel Section Types

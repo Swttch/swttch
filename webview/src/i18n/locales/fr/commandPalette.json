@@ -12,7 +12,25 @@
     "mentionFile": "Mentionner un fichier de ce projet...",
     "clearConversation": "Effacer la conversation",
     "resumeConversation": "Reprendre la conversation",
-    "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan"
+    "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan",
+    "scheduleSend": "Planifier un message..."
+  },
+  "scheduleSend": {
+    "title": "Planifier un message",
+    "close": "Fermer",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Message à envoyer plus tard",
+    "whenLabel": "Quand",
+    "customLabel": "Date et heure personnalisées",
+    "submit": "Planifier",
+    "scheduledToast": "Message planifié",
+    "presets": {
+      "in5min": "Dans 5 min",
+      "in30min": "Dans 30 min",
+      "in1hour": "Dans 1 h",
+      "tomorrowMorning": "Demain 9 h",
+      "custom": "Personnalisé"
+    }
   },
   "model": {
     "switchModel": "Changer de modèle...",

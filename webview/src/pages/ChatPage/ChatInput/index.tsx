@@ -5,6 +5,7 @@ import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalet
 import { INPUT_MODES, CLI_FLAG_TO_INPUT_MODE } from '../../../types/chatInput';
 import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
+import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
@@ -24,7 +25,7 @@ import { AttachMenu } from './AttachMenu';
 import { ModelSwitchOverlay, SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
 import { EFFORT_CYCLE_EVENT } from '@/commandPalette/sections/model/EffortItem';
 import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingItem';
-import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/items';
+import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useEffort } from '@/hooks/useEffort';
@@ -95,6 +96,7 @@ export function ChatInput() {
   const [modelSwitchQuery, setModelSwitchQuery] = useState<string | null>(null);
   const [showModePanel, setShowModePanel] = useState(false);
   const modePanelRef = useRef<HTMLDivElement>(null);
+  const [showSchedulePopover, setShowSchedulePopover] = useState(false);
 
   // 모드 선택 패널: 바깥 클릭 / Esc 로 닫는다.
   useEffect(() => {
@@ -185,6 +187,14 @@ export function ChatInput() {
     };
     window.addEventListener('command-palette:attach-files', handleAttachFromPalette);
     return () => window.removeEventListener('command-palette:attach-files', handleAttachFromPalette);
+  }, []);
+
+  // 커맨드 팔레트 "Schedule a message" 항목 연동: 예약 전송 팝오버를 연다.
+  // 열기는 누구나 가능하고, 후원자 게이트는 팝오버 제출 시점에 걸린다.
+  useEffect(() => {
+    const handleOpenSchedule = () => setShowSchedulePopover(true);
+    window.addEventListener(OPEN_SCHEDULE_SEND_EVENT, handleOpenSchedule);
+    return () => window.removeEventListener(OPEN_SCHEDULE_SEND_EVENT, handleOpenSchedule);
   }, []);
 
   // 커맨드 팔레트 "Resume conversation" 항목 연동: 입력창의 `/resume` 텍스트를 비운다.
@@ -622,6 +632,14 @@ export function ChatInput() {
             autoSelectQuery={modelSwitchQuery}
             onClose={() => { setShowModelSwitch(false); setModelSwitchQuery(null); }}
           />
+        )}
+
+        {/* Schedule-send popover (from the Context section). Floats above the
+            composer; pre-filled from the current draft. */}
+        {showSchedulePopover && (
+          <div className="absolute bottom-full end-0 z-30 mb-2">
+            <ScheduleSendPopover onClose={() => setShowSchedulePopover(false)} />
+          </div>
         )}
 
         {/* 드래그 오버 오버레이 */}

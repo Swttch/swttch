@@ -12,7 +12,25 @@
     "mentionFile": "الإشارة إلى ملف من هذا المشروع...",
     "clearConversation": "مسح المحادثة",
     "resumeConversation": "استئناف المحادثة",
-    "showBackgroundTasks": "مهمة سير العمل: عرض المهام الخلفية"
+    "showBackgroundTasks": "مهمة سير العمل: عرض المهام الخلفية",
+    "scheduleSend": "جدولة رسالة..."
+  },
+  "scheduleSend": {
+    "title": "جدولة رسالة",
+    "close": "إغلاق",
+    "messageLabel": "الرسالة",
+    "messagePlaceholder": "رسالة لإرسالها لاحقًا",
+    "whenLabel": "متى",
+    "customLabel": "تاريخ ووقت مخصّصان",
+    "submit": "جدولة",
+    "scheduledToast": "تمت جدولة الرسالة",
+    "presets": {
+      "in5min": "بعد 5 دقائق",
+      "in30min": "بعد 30 دقيقة",
+      "in1hour": "بعد ساعة",
+      "tomorrowMorning": "غدًا 9 صباحًا",
+      "custom": "مخصّص"
+    }
   },
   "model": {
     "switchModel": "تبديل النموذج...",

@@ -12,7 +12,25 @@
     "mentionFile": "Упомянуть файл из этого проекта...",
     "clearConversation": "Очистить разговор",
     "resumeConversation": "Возобновить разговор",
-    "showBackgroundTasks": "Рабочий процесс: показать фоновые задачи"
+    "showBackgroundTasks": "Рабочий процесс: показать фоновые задачи",
+    "scheduleSend": "Запланировать сообщение..."
+  },
+  "scheduleSend": {
+    "title": "Запланировать сообщение",
+    "close": "Закрыть",
+    "messageLabel": "Сообщение",
+    "messagePlaceholder": "Сообщение для отправки позже",
+    "whenLabel": "Когда",
+    "customLabel": "Своя дата и время",
+    "submit": "Запланировать",
+    "scheduledToast": "Сообщение запланировано",
+    "presets": {
+      "in5min": "Через 5 мин",
+      "in30min": "Через 30 мин",
+      "in1hour": "Через 1 ч",
+      "tomorrowMorning": "Завтра в 9:00",
+      "custom": "Вручную"
+    }
   },
   "model": {
     "switchModel": "Сменить модель...",

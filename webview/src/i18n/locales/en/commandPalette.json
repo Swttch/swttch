@@ -12,7 +12,25 @@
     "mentionFile": "Mention file from this project...",
     "clearConversation": "Clear conversation",
     "resumeConversation": "Resume conversation",
-    "showBackgroundTasks": "Workflow: Show background tasks"
+    "showBackgroundTasks": "Workflow: Show background tasks",
+    "scheduleSend": "Schedule a message..."
+  },
+  "scheduleSend": {
+    "title": "Schedule a message",
+    "close": "Close",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Message to send later",
+    "whenLabel": "When",
+    "customLabel": "Custom date and time",
+    "submit": "Schedule",
+    "scheduledToast": "Message scheduled",
+    "presets": {
+      "in5min": "In 5 min",
+      "in30min": "In 30 min",
+      "in1hour": "In 1 hour",
+      "tomorrowMorning": "Tomorrow 9 AM",
+      "custom": "Custom"
+    }
   },
   "model": {
     "switchModel": "Switch model...",

@@ -12,7 +12,25 @@
     "mentionFile": "이 프로젝트의 파일 멘션...",
     "clearConversation": "대화 지우기",
     "resumeConversation": "대화 재개",
-    "showBackgroundTasks": "워크플로: 백그라운드 작업 보기"
+    "showBackgroundTasks": "워크플로: 백그라운드 작업 보기",
+    "scheduleSend": "메시지 예약 보내기..."
+  },
+  "scheduleSend": {
+    "title": "메시지 예약",
+    "close": "닫기",
+    "messageLabel": "메시지",
+    "messagePlaceholder": "나중에 보낼 메시지",
+    "whenLabel": "언제",
+    "customLabel": "날짜와 시간 직접 지정",
+    "submit": "예약",
+    "scheduledToast": "메시지가 예약되었습니다",
+    "presets": {
+      "in5min": "5분 후",
+      "in30min": "30분 후",
+      "in1hour": "1시간 후",
+      "tomorrowMorning": "내일 오전 9시",
+      "custom": "직접 입력"
+    }
   },
   "model": {
     "switchModel": "모델 전환...",

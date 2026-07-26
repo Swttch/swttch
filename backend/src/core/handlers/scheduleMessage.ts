@@ -42,8 +42,9 @@ export async function scheduleMessageHandler(
     return;
   }
 
-  // Server-side sponsor gate: auto-resume is a sponsor-only feature. The webview
-  // hides the UI for non-sponsors, but reject here too so a non-sponsor cannot
+  // Server-side sponsor gate: scheduling a message is a sponsor-only feature
+  // (both auto-resume and user-created "schedule send" go through here). The
+  // webview gates its controls too, but reject here so a non-sponsor cannot
   // create a reservation by sending SCHEDULE_MESSAGE directly over IPC.
   const sponsor = await getSponsorStatus();
   if (!sponsor.isSponsor) {

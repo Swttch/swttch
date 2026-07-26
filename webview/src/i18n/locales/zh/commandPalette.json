@@ -12,7 +12,25 @@
     "mentionFile": "提及此项目中的文件...",
     "clearConversation": "清除对话",
     "resumeConversation": "恢复对话",
-    "showBackgroundTasks": "工作流:显示后台任务"
+    "showBackgroundTasks": "工作流:显示后台任务",
+    "scheduleSend": "定时发送消息..."
+  },
+  "scheduleSend": {
+    "title": "定时发送消息",
+    "close": "关闭",
+    "messageLabel": "消息",
+    "messagePlaceholder": "稍后发送的消息",
+    "whenLabel": "时间",
+    "customLabel": "自定义日期和时间",
+    "submit": "预定",
+    "scheduledToast": "消息已预定",
+    "presets": {
+      "in5min": "5 分钟后",
+      "in30min": "30 分钟后",
+      "in1hour": "1 小时后",
+      "tomorrowMorning": "明天上午 9 点",
+      "custom": "自定义"
+    }
   },
   "model": {
     "switchModel": "切换模型...",
