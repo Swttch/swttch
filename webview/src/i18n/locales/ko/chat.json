@@ -187,7 +187,14 @@
     "close": "닫기",
     "empty": "예약된 메시지가 없습니다.",
     "edit": "수정",
-    "cancel": "취소"
+    "cancel": "취소",
+    "relative": {
+      "soon": "곧",
+      "day": "{{count}}일 뒤",
+      "hour": "{{count}}시간 뒤",
+      "minute": "{{count}}분 뒤",
+      "second": "{{count}}초 뒤"
+    }
   },
   "modelSwitch": {
     "selectModel": "모델 선택",

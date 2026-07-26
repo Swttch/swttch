@@ -187,7 +187,14 @@
     "close": "بستن",
     "empty": "پیام زمان‌بندی‌شده‌ای وجود ندارد.",
     "edit": "ویرایش",
-    "cancel": "لغو"
+    "cancel": "لغو",
+    "relative": {
+      "soon": "به‌زودی",
+      "day": "{{count}} روز دیگر",
+      "hour": "{{count}} ساعت دیگر",
+      "minute": "{{count}} دقیقه دیگر",
+      "second": "{{count}} ثانیه دیگر"
+    }
   },
   "modelSwitch": {
     "selectModel": "یک مدل انتخاب کنید",

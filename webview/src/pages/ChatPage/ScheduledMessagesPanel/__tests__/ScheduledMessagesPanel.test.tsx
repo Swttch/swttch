@@ -110,4 +110,29 @@ describe('ScheduledMessagesPanel', () => {
     // Cancel is still available.
     expect(screen.getByTitle('scheduledMessages.cancel')).toBeInTheDocument();
   });
+
+  it('sorts reservations by soonest send time first', () => {
+    const at = (id: string, iso: string): ScheduledMessage => ({ ...res(id), sendAt: iso });
+    // Provided out of order; the panel should render them ascending by sendAt.
+    state.reservations = [
+      at('late', '2031-03-01T00:00:00.000Z'),
+      at('soon', '2031-01-01T00:00:00.000Z'),
+      at('mid', '2031-02-01T00:00:00.000Z'),
+    ];
+    render(<ScheduledMessagesPanel />);
+    const order = screen.getAllByText(/^message (soon|mid|late)$/).map((el) => el.textContent);
+    expect(order).toEqual(['message soon', 'message mid', 'message late']);
+  });
+
+  it('toggles the full message when the message text is clicked', () => {
+    state.reservations = [res('r1')];
+    render(<ScheduledMessagesPanel />);
+    const msg = screen.getByText('message r1');
+    // Collapsed by default (3-line clamp class present).
+    expect(msg.className).toContain('line-clamp-3');
+    fireEvent.click(msg);
+    expect(msg.className).not.toContain('line-clamp-3');
+    fireEvent.click(msg);
+    expect(msg.className).toContain('line-clamp-3');
+  });
 });

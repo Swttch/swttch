@@ -191,7 +191,14 @@
     "close": "إغلاق",
     "empty": "لا توجد رسائل مجدولة.",
     "edit": "تعديل",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "relative": {
+      "soon": "قريبًا",
+      "day": "بعد {{count}} يوم",
+      "hour": "بعد {{count}} ساعة",
+      "minute": "بعد {{count}} دقيقة",
+      "second": "بعد {{count}} ثانية"
+    }
   },
   "modelSwitch": {
     "selectModel": "اختر نموذجًا",

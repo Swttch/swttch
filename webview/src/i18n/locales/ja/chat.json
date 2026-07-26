@@ -187,7 +187,14 @@
     "close": "閉じる",
     "empty": "予約されたメッセージはありません。",
     "edit": "編集",
-    "cancel": "取消"
+    "cancel": "取消",
+    "relative": {
+      "soon": "まもなく",
+      "day": "{{count}}日後",
+      "hour": "{{count}}時間後",
+      "minute": "{{count}}分後",
+      "second": "{{count}}秒後"
+    }
   },
   "modelSwitch": {
     "selectModel": "モデルを選択",

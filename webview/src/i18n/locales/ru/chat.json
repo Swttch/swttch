@@ -189,7 +189,14 @@
     "close": "Закрыть",
     "empty": "Нет запланированных сообщений.",
     "edit": "Изменить",
-    "cancel": "Отменить"
+    "cancel": "Отменить",
+    "relative": {
+      "soon": "скоро",
+      "day": "через {{count}} дн.",
+      "hour": "через {{count}} ч",
+      "minute": "через {{count}} мин",
+      "second": "через {{count}} с"
+    }
   },
   "modelSwitch": {
     "selectModel": "Выберите модель",

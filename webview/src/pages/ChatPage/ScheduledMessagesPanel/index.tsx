@@ -1,38 +1,61 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { ScheduledMessageKind, type ScheduledMessage } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { ScheduleSendPopover } from '../ChatInput/ScheduleSendPopover';
+import { formatAbsolute, relativeParts } from './formatSchedule';
 
-/** Format an ISO sendAt for display in the panel (locale-aware, no seconds). */
-function formatSendAt(iso: string): string {
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return iso;
-  return new Date(ms).toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/** Re-render every second while `active` so relative "in N …" labels tick. */
+function useNow(active: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now;
 }
 
-function ReservationRow({ reservation }: { reservation: ScheduledMessage }) {
+function ReservationRow({ reservation, now }: { reservation: ScheduledMessage; now: number }) {
   const { t } = useTranslation('chat');
   const { cancel, startEdit } = useScheduledMessages();
   // Auto-resume reservations are managed by the limit banner, not hand-editable;
   // still listed (read-only) so the user sees everything pending on the session.
   const isAutoResume = reservation.kind === ScheduledMessageKind.AUTO_RESUME;
+  // Toggle between the 3-line clamp and the full message.
+  const [expanded, setExpanded] = useState(false);
+
+  // Live "in N …" label (top-right), recomputed each second via `now`.
+  const rel = relativeParts(Date.parse(reservation.sendAt), now);
+  const relativeLabel =
+    rel.unit === 'now'
+      ? t('scheduledMessages.relative.soon')
+      : t(`scheduledMessages.relative.${rel.unit}`, { count: rel.count });
 
   return (
     <div className="rounded-lg border border-border-subtle bg-surface-base px-3 py-2.5">
-      <div className="text-text-primary text-[0.9230rem] break-words line-clamp-3 whitespace-pre-wrap">
-        {reservation.message}
+      <div className="flex items-start gap-2">
+        {/* Message — click to toggle full text / 3-line clamp. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className={`min-w-0 flex-1 text-start text-text-primary text-[0.9230rem] break-words whitespace-pre-wrap ${
+            expanded ? '' : 'line-clamp-3'
+          }`}
+        >
+          {reservation.message}
+        </button>
+        {/* Live relative time, top-right. */}
+        <span className="shrink-0 text-[0.7692rem] text-text-tertiary tabular-nums mt-0.5">
+          {relativeLabel}
+        </span>
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-2">
-        <span className="text-[0.8461rem] text-text-tertiary">{formatSendAt(reservation.sendAt)}</span>
+        <span className="text-[0.8461rem] text-text-tertiary tabular-nums">
+          {formatAbsolute(reservation.sendAt)}
+        </span>
         <div className="flex items-center gap-1 shrink-0">
           {!isAutoResume && (
             <button
@@ -65,6 +88,8 @@ export function ScheduledMessagesPanel() {
   const { t } = useTranslation('chat');
   const { reservations, panelOpen, closePanel } = useScheduledMessages();
   const panelRef = useRef<HTMLDivElement>(null);
+  // Tick once a second while the panel is open so the relative labels stay live.
+  const now = useNow(panelOpen);
 
   // Move focus into the panel on open so Escape acts on it; restore on close.
   useEffect(() => {
@@ -73,6 +98,11 @@ export function ScheduledMessagesPanel() {
     panelRef.current?.focus();
     return () => prevFocus?.focus?.();
   }, [panelOpen]);
+
+  // Soonest send time first (a display-only sort — the original list is untouched).
+  const sorted = [...reservations].sort(
+    (a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt),
+  );
 
   if (!panelOpen) return null;
 
@@ -108,7 +138,7 @@ export function ScheduledMessagesPanel() {
               {t('scheduledMessages.empty')}
             </div>
           ) : (
-            reservations.map((r) => <ReservationRow key={r.id} reservation={r} />)
+            sorted.map((r) => <ReservationRow key={r.id} reservation={r} now={now} />)
           )}
         </div>
       </div>

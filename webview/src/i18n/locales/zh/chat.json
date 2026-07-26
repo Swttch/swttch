@@ -187,7 +187,14 @@
     "close": "关闭",
     "empty": "暂无定时消息。",
     "edit": "编辑",
-    "cancel": "取消"
+    "cancel": "取消",
+    "relative": {
+      "soon": "即将",
+      "day": "{{count}}天后",
+      "hour": "{{count}}小时后",
+      "minute": "{{count}}分钟后",
+      "second": "{{count}}秒后"
+    }
   },
   "modelSwitch": {
     "selectModel": "选择模型",

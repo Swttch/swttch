@@ -187,7 +187,18 @@
     "close": "Close",
     "empty": "No scheduled messages.",
     "edit": "Edit",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "relative": {
+      "soon": "due now",
+      "day_one": "in {{count}} day",
+      "day_other": "in {{count}} days",
+      "hour_one": "in {{count}} hour",
+      "hour_other": "in {{count}} hours",
+      "minute_one": "in {{count}} min",
+      "minute_other": "in {{count}} min",
+      "second_one": "in {{count}} sec",
+      "second_other": "in {{count}} sec"
+    }
   },
   "modelSwitch": {
     "selectModel": "Select a model",

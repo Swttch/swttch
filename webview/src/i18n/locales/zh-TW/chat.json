@@ -187,7 +187,14 @@
     "close": "關閉",
     "empty": "尚無排程訊息。",
     "edit": "編輯",
-    "cancel": "取消"
+    "cancel": "取消",
+    "relative": {
+      "soon": "即將",
+      "day": "{{count}}天後",
+      "hour": "{{count}}小時後",
+      "minute": "{{count}}分鐘後",
+      "second": "{{count}}秒後"
+    }
   },
   "modelSwitch": {
     "selectModel": "選擇模型",

@@ -187,7 +187,14 @@
     "close": "Cerrar",
     "empty": "No hay mensajes programados.",
     "edit": "Editar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "relative": {
+      "soon": "ahora",
+      "day": "en {{count}} d",
+      "hour": "en {{count}} h",
+      "minute": "en {{count}} min",
+      "second": "en {{count}} s"
+    }
   },
   "modelSwitch": {
     "selectModel": "Selecciona un modelo",
