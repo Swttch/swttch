@@ -145,10 +145,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   // During streaming, CLI-internal messages (compact summaries, skill prompts, etc.)
   // may arrive after later messages. Timestamp-based insertion keeps correct order.
   //
-  // `atEnd` opts out of that ordering for messages the user just composed here.
-  // Those belong after everything on screen, but the assistant bubble already
-  // streaming above them carries an earlier timestamp — so ordering by timestamp
-  // would tuck a mid-turn message underneath the reply it precedes.
+  // `atEnd` opts out of that ordering for entries that belong wherever they
+  // arrive: messages the user just composed here, and locally created assistant
+  // placeholders. Their position is "after everything currently on screen",
+  // which is a statement about arrival, not about the clock.
   const appendMessage = useCallback((message: LoadedMessageDto, atEnd = false) => {
     setMessages(prev => {
       if (atEnd) return [...prev, message];
@@ -968,9 +968,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
             isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
-          // Arrival order. A tool_result echo lands mid-turn carrying a timestamp
-          // from before the message the user just typed, so ordering it by
-          // timestamp would hoist it above that message.
+          // Arrival order: these arrive interleaved with the user's own sends
+          // during a turn, and the sequence they arrive in is the sequence they
+          // belong in. Keep them adjacent to the messages they respond to.
           appendMessage(userMessage, true);
         }
         return;
