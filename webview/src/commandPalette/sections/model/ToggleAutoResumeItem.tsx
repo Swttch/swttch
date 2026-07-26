@@ -8,16 +8,9 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
+import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 
 export const AUTO_RESUME_TOGGLE_EVENT = 'auto-resume-toggle';
-
-/**
- * Reason shown as a hover tooltip when the row is disabled (auto-resume is a
- * sponsor-only feature). A function so the lookup runs on the current locale at
- * call time, not at module load.
- */
-export const getAutoResumeSponsorOnlyReason = (): string =>
-  i18n.t('commandPalette:model.autoResumeSponsorOnlyReason');
 
 /**
  * Model-section toggle for auto-resume, placed right below "Toggle fast mode".
@@ -50,7 +43,13 @@ const AutoResumeToggle = () => {
   const enabled = getOverride(currentSessionId) ?? globalDefault;
 
   const apply = (value: boolean): void => {
-    if (!isSponsor || !currentSessionId) return;
+    // Non-sponsors see the toggle enabled; clicking shows an invite toast
+    // instead of changing anything.
+    if (!isSponsor) {
+      showSponsorGatedToast();
+      return;
+    }
+    if (!currentSessionId) return;
     setOverride(currentSessionId, value);
   };
 
@@ -66,7 +65,7 @@ const AutoResumeToggle = () => {
     <ToggleSwitch
       checked={enabled}
       onChange={(value) => apply(value)}
-      disabled={!isSponsor || !currentSessionId}
+      disabled={!currentSessionId}
       size="small"
     />
   );

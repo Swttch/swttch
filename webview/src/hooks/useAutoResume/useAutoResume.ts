@@ -17,6 +17,7 @@ import { notify } from '@/notifications';
 import { NotificationKind, SOUND_OFF } from '@/notifications/types';
 import toast from 'react-hot-toast';
 import { i18n } from '@/i18n';
+import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 import {
   AUTO_RESUME_MESSAGE,
   computeSendAt,
@@ -192,7 +193,11 @@ export function useAutoResume(): UseAutoResumeResult {
 
   // ── Actions ─────────────────────────────────────────────────────────────────
   const schedule = useCallback(() => {
-    if (!currentSessionId || !isSponsor) return;
+    if (!isSponsor) {
+      showSponsorGatedToast();
+      return;
+    }
+    if (!currentSessionId) return;
     const sendAt = computeSendAt(limit?.resetsAt);
     if (!sendAt) return;
     void send(MessageType.SCHEDULE_MESSAGE, {
@@ -230,7 +235,10 @@ export function useAutoResume(): UseAutoResumeResult {
   const cancel = useCallback(() => cancelReservation(true), [cancelReservation]);
 
   const resumeNow = useCallback(() => {
-    if (!isSponsor) return;
+    if (!isSponsor) {
+      showSponsorGatedToast();
+      return;
+    }
     setStatus(null);
     sendMessage(AUTO_RESUME_MESSAGE, inputMode);
   }, [isSponsor, sendMessage, inputMode]);
@@ -264,11 +272,14 @@ export function useAutoResume(): UseAutoResumeResult {
   const countdownSeconds =
     scheduled && !Number.isNaN(resetsAtMs) ? computeCountdownSeconds(resetsAtMs, nowMs) : null;
 
+  // Tick every second while a limit banner is shown, so BOTH the countdown and
+  // the schedule→resumeNow transition (once the reset time passes) stay live —
+  // action is memoized, so without a re-render it would never re-check the time.
   useEffect(() => {
-    if (!scheduled || Number.isNaN(resetsAtMs)) return;
+    if (!limit) return;
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [scheduled, resetsAtMs]);
+  }, [limit]);
 
   const notifiedRef = useRef(false);
   useEffect(() => {
@@ -283,16 +294,17 @@ export function useAutoResume(): UseAutoResumeResult {
   }, [scheduled, countdownSeconds]);
 
   const action: AutoResumeAction | null = useMemo(() => {
-    if (!limit || !isSponsor) return null;
-    // Once the gate is delivering the resume (PROCEEDING), drop the button so it
-    // never lingers as "재개하기": normally the delivered `continue` message
-    // clears `limit` on its own, but if that message never lands (e.g. the
-    // session process is gone) we still don't want a stale action.
+    // The button shows for everyone (non-sponsors included) — clicking it just
+    // shows the invite toast (see schedule/resumeNow). It is hidden only when
+    // there is no limit, or once the gate is delivering the resume (PROCEEDING),
+    // so it never lingers as "재개하기" even if the delivered `continue` message
+    // never lands (e.g. a dead session process).
+    if (!limit) return null;
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
     if (scheduled) return 'cancel';
-    if (limit.resetsAt && Date.parse(limit.resetsAt) > Date.now()) return 'schedule';
+    if (limit.resetsAt && Date.parse(limit.resetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
-  }, [limit, isSponsor, scheduled, status]);
+  }, [limit, scheduled, status, nowMs]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 

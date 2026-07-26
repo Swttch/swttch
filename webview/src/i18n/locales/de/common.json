@@ -186,5 +186,9 @@
       "hours": "{{n}}Std",
       "minutes": "{{n}}Min"
     }
+  },
+  "sponsorGated": {
+    "message": "Eine Funktion für unsere Sponsoren",
+    "learnMore": "Mehr erfahren"
   }
 }

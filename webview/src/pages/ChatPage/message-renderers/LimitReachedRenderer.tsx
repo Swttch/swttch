@@ -93,7 +93,8 @@ export function LimitReachedRenderer(props: Props) {
   const text = getTextContent(message);
 
   const isActive = ar.limit?.messageUuid === message.uuid;
-  const showAction = isActive && ar.action !== null && ar.isSponsor;
+  // Shown for everyone; non-sponsors get the invite toast on click.
+  const showAction = isActive && ar.action !== null;
   const onClick =
     ar.action === 'schedule' ? ar.schedule : ar.action === 'cancel' ? ar.cancel : ar.resumeNow;
 

@@ -4,7 +4,6 @@ import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
-import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { getModelEffortConfig } from '@/types/effort';
 import { resolveModelInfo } from '@/types/models';
 import { getAdapter } from '@/adapters';
@@ -74,9 +73,6 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
   const supportsEffort = getModelEffortConfig(controlResponse, currentModel).supportsEffort;
   const models = controlResponse?.response?.response?.models ?? [];
   const supportsFastMode = resolveModelInfo(models, currentModel)?.supportsFastMode ?? false;
-  // Auto-resume is sponsor-only; the row stays visible but disabled (with a
-  // tooltip) for non-sponsors, mirroring the fast-mode capability gate.
-  const { isSponsor } = useSponsorStatus();
 
   // Services ref - always points to current React state
   const servicesRef = useRef<CommandPaletteServices>({
@@ -245,8 +241,8 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       registry.registerSection(new SlashCommandsSection(), sortedCommands);
     }
     const built = registry.buildSections();
-    return built.map((s) => applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode, isSponsor }));
-  }, [registry, commands, supportsEffort, supportsFastMode, isSponsor]);
+    return built.map((s) => applyModelCapabilityFlags(s, { supportsEffort, supportsFastMode }));
+  }, [registry, commands, supportsEffort, supportsFastMode]);
 
   const contextValue = useMemo<CommandPaletteRegistryContextValue>(
     () => ({ registry, keyboardRegistry, sections }),

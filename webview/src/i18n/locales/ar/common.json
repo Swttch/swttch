@@ -190,5 +190,9 @@
       "hours": "{{n}}سا",
       "minutes": "{{n}}د"
     }
+  },
+  "sponsorGated": {
+    "message": "ميزة لرعاتنا الكرام",
+    "learnMore": "معرفة المزيد"
   }
 }

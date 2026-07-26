@@ -2,11 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { applyModelCapabilityFlags } from '../applyModelCapabilityFlags';
 import { getEffortUnsupportedReason } from '../sections/model/EffortItem';
 import { getFastModeUnsupportedReason } from '../sections/model/ToggleFastModeItem';
-import { getAutoResumeSponsorOnlyReason } from '../sections/model/ToggleAutoResumeItem';
 import { PanelSection, PanelSectionId, PanelItem, PanelItemType } from '@/types/commandPalette';
 
 /** Base flags with everything supported; individual tests override one field. */
-const ALL_ON = { supportsEffort: true, supportsFastMode: true, isSponsor: true } as const;
+const ALL_ON = { supportsEffort: true, supportsFastMode: true } as const;
 
 function makeItem(id: string, overrides: Partial<PanelItem> = {}): PanelItem {
   return {
@@ -76,19 +75,10 @@ describe('applyModelCapabilityFlags', () => {
     expect(thinking.disabledReason).toBeUndefined();
   });
 
-  it('disables the toggle-auto-resume item with the sponsor-only reason when isSponsor is false', () => {
-    const section = makeSection(PanelSectionId.Model, [makeItem('toggle-auto-resume')]);
-    const result = applyModelCapabilityFlags(section, { ...ALL_ON, isSponsor: false });
-    const item = result.items.find((it) => it.id === 'toggle-auto-resume')!;
-    expect(item.disabled).toBe(true);
-    expect(item.disabledReason).toBe(getAutoResumeSponsorOnlyReason());
-  });
-
-  it('enables the toggle-auto-resume item with no disabledReason when isSponsor is true', () => {
+  it('leaves the toggle-auto-resume item untouched (sponsor gating happens on click, not here)', () => {
     const section = makeSection(PanelSectionId.Model, [makeItem('toggle-auto-resume')]);
     const result = applyModelCapabilityFlags(section, { ...ALL_ON });
     const item = result.items.find((it) => it.id === 'toggle-auto-resume')!;
-    expect(item.disabled).toBe(false);
     expect(item.disabledReason).toBeUndefined();
   });
 

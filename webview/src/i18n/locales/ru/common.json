@@ -188,5 +188,9 @@
       "hours": "{{n}} ч",
       "minutes": "{{n}} мин"
     }
+  },
+  "sponsorGated": {
+    "message": "Функция для наших спонсоров",
+    "learnMore": "Подробнее"
   }
 }

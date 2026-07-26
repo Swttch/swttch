@@ -11,6 +11,7 @@ import { APP_NAME } from '@/config/app';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
+import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
@@ -166,8 +167,11 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={autoResumeOnLimit}
-            onChange={(checked) => updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked)}
-            disabled={!isSponsor}
+            onChange={(checked) =>
+              isSponsor
+                ? updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked)
+                : showSponsorGatedToast()
+            }
             ariaLabel={t('general.autoResumeOnLimit.label')}
           />
         </SettingRow>

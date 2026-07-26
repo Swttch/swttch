@@ -45,7 +45,7 @@ const sendMock = vi.fn((type: string, _payload?: Record<string, unknown>) => {
   return Promise.resolve({});
 });
 const sendMessageMock = vi.fn();
-const { notifyMock } = vi.hoisted(() => ({ notifyMock: vi.fn() }));
+const { notifyMock, sponsorToastMock } = vi.hoisted(() => ({ notifyMock: vi.fn(), sponsorToastMock: vi.fn() }));
 
 function emit(type: string, payload: Record<string, unknown>) {
   const h = handlers.get(type);
@@ -72,6 +72,7 @@ vi.mock('@/notifications', () => ({ notify: notifyMock }));
 vi.mock('@/contexts/AutoResumeOverrideContext', () => ({
   useAutoResumeOverride: () => ({ getOverride: () => undefined, setOverride: vi.fn() }),
 }));
+vi.mock('@/utils/showSponsorGatedToast', () => ({ showSponsorGatedToast: sponsorToastMock }));
 
 // Imported AFTER the mocks.
 import { useAutoResume } from '../useAutoResume';
@@ -169,11 +170,14 @@ describe('useAutoResume', () => {
     expect(sendMessageMock).toHaveBeenCalledWith('continue', 'ask_before_edit');
   });
 
-  it('hides the action (null) for non-sponsors even with a limit', () => {
+  it('non-sponsors still see the button, but the action shows an invite toast instead of scheduling', () => {
     ctx.isSponsor = false;
     ctx.messages = [limitMsg('lim1', FUTURE)];
     const { result } = renderHook(() => useAutoResume());
-    expect(result.current.action).toBeNull();
+    expect(result.current.action).toBe('schedule'); // button is visible for everyone
+    act(() => result.current.schedule());
+    expect(sponsorToastMock).toHaveBeenCalled();
+    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
   });
 
   it('maps AUTO_RESUME_STATUS RETRYING and a network failure to their status keys', () => {

@@ -186,5 +186,9 @@
       "hours": "{{n}}時",
       "minutes": "{{n}}分"
     }
+  },
+  "sponsorGated": {
+    "message": "這是為贊助者提供的功能",
+    "learnMore": "了解更多"
   }
 }

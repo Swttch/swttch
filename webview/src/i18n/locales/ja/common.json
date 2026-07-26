@@ -186,5 +186,9 @@
       "hours": "{{n}}時間前",
       "minutes": "{{n}}分前"
     }
+  },
+  "sponsorGated": {
+    "message": "スポンサーの皆さまのための機能です",
+    "learnMore": "詳しく見る"
   }
 }
