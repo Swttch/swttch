@@ -15,6 +15,37 @@ interface ModelUsageEntry {
 }
 
 /**
+ * Whether a CLI `user` entry will occupy a row of its own in the transcript.
+ *
+ * Most `user` entries the CLI streams mid-turn are plumbing: a `tool_result`
+ * belongs to the tool call that requested it, and a skill-expanded prompt
+ * belongs to the Skill invocation — `mergeToolResults` folds both into the
+ * tool_use above and drops the standalone bubble. What is left is a plain text
+ * entry the CLI authored on its own behalf, such as a Stop hook's feedback,
+ * which does get its own bubble.
+ *
+ * Used to decide whether inserting the entry should close off the streaming
+ * assistant message above it; splitting that bubble for an entry that renders
+ * nothing would leave a visible seam for no reason.
+ */
+function rendersAsOwnBubble(message: LoadedMessageDto): boolean {
+  // Folded into its Skill tool_use by mergeToolResults.
+  if (message.sourceToolUseID) return false;
+
+  const content = message.message?.content;
+  if (typeof content === 'string') return content.trim().length > 0;
+  if (!Array.isArray(content)) return false;
+
+  // A tool_result block is folded into the tool call that requested it.
+  if (content.some(b => b.type === ContentBlockType.ToolResult)) return false;
+
+  return content.some(
+    b => (b.type === ContentBlockType.Text && (b as TextBlockDto).text?.trim())
+      || b.type === ContentBlockType.Image,
+  );
+}
+
+/**
  * Resolve modelUsage entry for the currently running model.
  * The CLI's modelUsage dict may be keyed by a form that differs slightly
  * from the `model` string in the same result event (e.g. `claude-opus-4-7`
@@ -302,6 +333,34 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     return assistantMessageId;
   }, [generateMessageId, appendMessage, startStreaming]);
 
+  // Close off the assistant message that is currently streaming, so whatever we
+  // insert next lands *below* it and stays put.
+  //
+  // An assistant turn renders as a single element. While it is still open every
+  // delta makes it taller, which pushes anything already sitting beneath it
+  // further down the screen — the message appears to slide away from where it
+  // belongs (#220 for a message the user typed, #211 for a Stop hook's feedback
+  // arriving mid-turn). Sealing here means later deltas open a fresh assistant
+  // bubble underneath, leaving the inserted message anchored where it landed.
+  //
+  // No-op when nothing is streaming, so callers can seal unconditionally.
+  const sealStreamingAssistant = useCallback(() => {
+    const streamingId = streamingMessageIdRef.current;
+    if (!streamingId) return;
+    if (pendingTextRef.current || pendingThinkingRef.current || pendingInputJsonRef.current) {
+      flushPendingDeltas();
+    }
+    updateMessage(streamingId, { isStreaming: false });
+    streamingMessageIdRef.current = null;
+    setStreamingMessageId(null);
+    activeBlockIndexRef.current = -1;
+    activeTextBlockIndexRef.current = -1;
+    activeThinkingBlockIndexRef.current = -1;
+    activeToolUseBlockIndexRef.current = -1;
+    turnStartBlockCountRef.current = 0;
+    accumulatedInputJsonRef.current = '';
+  }, [flushPendingDeltas, updateMessage, setStreamingMessageId]);
+
   // End streaming helper
   const endStreaming = useCallback(() => {
     // Flush any remaining delta (including input JSON)
@@ -385,27 +444,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
     // 백엔드 전송은 ChatStreamContext가 담당한다.
     if (isStreaming) {
-      // Seal the assistant message that is still streaming above this one. An
-      // assistant turn renders as a single element, so if we let it keep
-      // growing it pushes this bubble further down the screen with every delta
-      // — the message the user just typed appears to slide away from where they
-      // typed it (#220). Cutting the message here means subsequent deltas open
-      // a fresh assistant bubble *below* this one, so it stays put.
-      const streamingId = streamingMessageIdRef.current;
-      if (streamingId) {
-        if (pendingTextRef.current || pendingThinkingRef.current || pendingInputJsonRef.current) {
-          flushPendingDeltas();
-        }
-        updateMessage(streamingId, { isStreaming: false });
-        streamingMessageIdRef.current = null;
-        setStreamingMessageId(null);
-        activeBlockIndexRef.current = -1;
-        activeTextBlockIndexRef.current = -1;
-        activeThinkingBlockIndexRef.current = -1;
-        activeToolUseBlockIndexRef.current = -1;
-        turnStartBlockCountRef.current = 0;
-        accumulatedInputJsonRef.current = '';
-      }
+      sealStreamingAssistant();
       return;
     }
 
@@ -958,23 +997,38 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           // stamping the arrival time here would strand late-arriving CLI-internal
           // entries — notably the compact summary, which the CLI emits after the
           // assistant messages that follow it — at the end of the list (#220).
+          const cliTimestamp = (cliEvent as any).timestamp as string | undefined;
           const userMessage: LoadedMessageDto = {
             type: LoadedMessageType.User,
             uuid: (cliEvent as any).uuid || generateMessageId(),
-            timestamp: (cliEvent as any).timestamp ?? new Date().toISOString(),
+            timestamp: cliTimestamp ?? new Date().toISOString(),
             message: userMsg as unknown as LoadedMessageDto['message'],
             sourceToolUseID,
             isSynthetic: (cliEvent as any).isSynthetic === true ? true : undefined,
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
             isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
-          // The compact summary is the one `user` event that genuinely arrives out
-          // of order — the CLI emits it after the assistant messages that follow
-          // it — so it needs the timestamp sort to land back in place. Everything
-          // else (tool_results, skill prompts) arrives in the order it belongs in
-          // and is appended as it comes, which keeps it next to the message it
-          // answers even when the user sends mid-turn.
-          appendMessage(userMessage, !userMessage.isCompactSummary);
+          // Anything the CLI stamped belongs where its clock says, not where it
+          // happened to arrive. The compact summary was the first case we hit
+          // (#220), but it is not the only one: a Stop hook's feedback is emitted
+          // as a synthetic `user` entry when the hook fires, yet reaches us after
+          // the next turn has already started, so arrival order pins it to the
+          // bottom and it accumulates there over repeated cycles (#211). Sorting
+          // on the CLI timestamp covers both, and every future CLI-internal entry
+          // that arrives late, without needing a flag per kind.
+          //
+          // Entries with no CLI timestamp are ours, not the CLI's — they have no
+          // clock to sort by, so they keep arrival order (see appendMessage).
+          appendMessage(userMessage, !cliTimestamp);
+
+          // A CLI entry that renders as its own bubble mid-turn needs the open
+          // assistant message closed off, or every following delta pushes it
+          // down the screen (#211). Tool results and skill prompts are folded
+          // into the tool call above by mergeToolResults, so they never occupy
+          // a row of their own and must not split the bubble.
+          if (rendersAsOwnBubble(userMessage)) {
+            sealStreamingAssistant();
+          }
         }
         return;
       }
