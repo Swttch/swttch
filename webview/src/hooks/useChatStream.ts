@@ -924,13 +924,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             lastSkillToolUseIdRef.current = null;
           }
 
+          // Keep the CLI's own timestamp. appendMessage inserts by timestamp, so
+          // stamping the arrival time here would strand late-arriving CLI-internal
+          // entries — notably the compact summary, which the CLI emits after the
+          // assistant messages that follow it — at the end of the list (#220).
           const userMessage: LoadedMessageDto = {
             type: LoadedMessageType.User,
             uuid: (cliEvent as any).uuid || generateMessageId(),
-            timestamp: new Date().toISOString(),
+            timestamp: (cliEvent as any).timestamp ?? new Date().toISOString(),
             message: userMsg as unknown as LoadedMessageDto['message'],
             sourceToolUseID,
             isSynthetic: (cliEvent as any).isSynthetic === true ? true : undefined,
+            isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
+            isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
           appendMessage(userMessage);
         }

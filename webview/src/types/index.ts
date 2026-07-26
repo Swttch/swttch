@@ -88,6 +88,13 @@ export class LoadedMessageDto {
   summary?: string;
   leafUuid?: string;
 
+  // Compact-boundary flags. When a conversation is compacted (auto-compact or
+  // `/compact`), the CLI emits the carried-over summary as an ordinary `user`
+  // entry carrying these flags — not as a `summary` entry. Preserved verbatim
+  // from the CLI so the boundary stays identifiable downstream.
+  isCompactSummary?: boolean;
+  isVisibleInTranscriptOnly?: boolean;
+
   // metadata
   slug?: string;
   sessionId?: string;
