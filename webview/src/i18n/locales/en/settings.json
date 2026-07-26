@@ -379,16 +379,14 @@
   "sponsor": {
     "title": "Support this project",
     "description": [
-      "The core of this project is open source,",
-      "and every community feature stays free.",
-      "Sponsorship is what keeps this independent, JetBrains-first project going.",
-      "For about the price of a beer, come along for the ride."
+      "For the sustainable development of this independent project,",
+      "if you feel like it, please buy me a beer."
     ],
     "promises": [
       "Unlimited access to every sponsor-only feature",
       "All future features included, automatically",
       "The top tier — no higher paid tier, ever",
-      "Your price stays locked, even if it rises for new sponsors"
+      "Even if the sponsorship amount rises for new sponsors, your amount stays the same"
     ],
     "cta": "Learn more",
     "opening": "Opening…",
@@ -482,7 +480,8 @@
         "I'm asking for your sponsorship."
       ]
     ],
-    "letterSignature": "— @yonghyun"
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "The core of this project remains open source, and every community feature stays available to everyone, sponsor or not."
   },
   "badges": {
     "sponsor": "Sponsor-only feature",

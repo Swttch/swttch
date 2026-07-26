@@ -377,16 +377,14 @@
   "sponsor": {
     "title": "Apoiar este projeto",
     "description": [
-      "O núcleo deste projeto é open source,",
-      "e todas as funcionalidades da comunidade continuarão gratuitas.",
-      "O apoio mantém vivo este projeto independente, feito pensando primeiro no JetBrains.",
-      "Pelo preço de uma cerveja, venha junto nessa jornada."
+      "Para o desenvolvimento sustentável deste projeto independente,",
+      "se quiser, me paga uma cerveja, por favor."
     ],
     "promises": [
       "Acesso ilimitado a todos os recursos exclusivos para patrocinadores",
       "Todos os recursos futuros incluídos automaticamente",
       "O nível mais alto — nunca haverá um nível pago superior",
-      "Seu preço permanece fixo, mesmo que aumente para novos patrocinadores"
+      "Mesmo que o valor aumente para novos patrocinadores, o seu permanece o mesmo"
     ],
     "cta": "Saiba mais",
     "opening": "Abrindo…",
@@ -480,7 +478,8 @@
         "proponho o seu patrocínio."
       ]
     ],
-    "letterSignature": "— @yonghyun"
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "O núcleo deste projeto continua open source, e todas as funcionalidades da comunidade seguirão disponíveis para todos, com apoio ou sem."
   },
   "badges": {
     "sponsor": "Recurso apenas para patrocinadores",

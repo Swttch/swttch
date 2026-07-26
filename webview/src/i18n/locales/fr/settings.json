@@ -377,16 +377,14 @@
   "sponsor": {
     "title": "Soutenir ce projet",
     "description": [
-      "Le cœur de ce projet est open source,",
-      "et toutes les fonctionnalités communautaires resteront gratuites.",
-      "Le soutien permet à ce projet indépendant, pensé d'abord pour JetBrains, de continuer.",
-      "Pour le prix d'une bière, faites le voyage avec nous."
+      "Pour le développement durable de ce projet indépendant,",
+      "si le cœur vous en dit, offrez-moi une bière, s'il vous plaît."
     ],
     "promises": [
       "Accès illimité à toutes les fonctionnalités réservées aux sponsors",
       "Toutes les fonctionnalités futures incluses automatiquement",
       "Le niveau le plus élevé — jamais de palier payant supérieur",
-      "Votre tarif reste bloqué, même s'il augmente pour les nouveaux sponsors"
+      "Même si le montant augmente pour les nouveaux sponsors, le vôtre reste inchangé"
     ],
     "cta": "En savoir plus",
     "opening": "Ouverture…",
@@ -480,7 +478,8 @@
         "je vous propose de le soutenir."
       ]
     ],
-    "letterSignature": "— @yonghyun"
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "Le cœur de ce projet reste open source, et toutes les fonctionnalités communautaires resteront accessibles à tous, avec ou sans parrainage."
   },
   "badges": {
     "sponsor": "Fonctionnalité réservée aux sponsors",
