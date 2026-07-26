@@ -183,4 +183,30 @@ describe('ScheduleSendPopover', () => {
     fireEvent.mouseDown(document.body);
     expect(onCloseMock).toHaveBeenCalled();
   });
+
+  it('submits on Cmd/Ctrl+Enter from anywhere', async () => {
+    ctx.draft = 'continue';
+    renderPopover();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+    });
+    await waitFor(() => expect(sendMock).toHaveBeenCalled());
+    expect(sendMock.mock.calls[0][0]).toBe(MessageType.SCHEDULE_MESSAGE);
+  });
+
+  it('does NOT submit on a plain Enter (stays a newline in the message box)', async () => {
+    ctx.draft = 'continue';
+    renderPopover();
+    await act(async () => {
+      fireEvent.keyDown(window, { key: 'Enter' });
+    });
+    // Give any async path a tick; nothing should have been sent.
+    await Promise.resolve();
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the close (X) button out of the Tab order', () => {
+    renderPopover();
+    expect(screen.getByLabelText('scheduleSend.close')).toHaveAttribute('tabindex', '-1');
+  });
 });
