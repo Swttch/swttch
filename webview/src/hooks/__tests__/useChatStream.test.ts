@@ -948,4 +948,103 @@ describe('useChatStream', () => {
       expect(result.current.contextWindowUsage?.contextWindow).toBe(0);
     });
   });
+
+  // 컴팩트(auto-compact / `/compact`) 경계 엔트리는 CLI가 `isCompactSummary: true`를 단
+  // 평범한 `user` 이벤트로 흘려보낸다. 이 이벤트는 뒤이은 assistant 응답보다 늦게 도착할 수
+  // 있어, appendMessage는 timestamp 기준으로 삽입 위치를 정한다. 따라서 `user` 핸들러가
+  // CLI 원본 timestamp를 보존하지 않으면 정렬 근거가 사라져 요약 버블이 항상 목록 끝에
+  // 눌러앉는다 (issue #220).
+  describe('user 이벤트 순서 (컴팩트 요약, issue #220)', () => {
+    const COMPACT_TEXT =
+      'This session is being continued from a previous conversation that ran out of context.';
+
+    it('CLI 원본 timestamp를 보존한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      expect(result.current.messages[0].timestamp).toBe('2026-07-24T11:41:57.478Z');
+    });
+
+    it('먼저 도착한 뒤늦은 assistant 메시지보다 앞에 삽입된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 컴팩트 이후의 assistant 응답이 먼저 도착한다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          timestamp: '2026-07-24T11:42:30.000Z',
+          message: {
+            id: 'm-after',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'after compact' }],
+          },
+        });
+      });
+
+      // 컴팩트 요약 user 이벤트가 뒤늦게 도착한다 (더 이른 timestamp).
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      // 요약이 목록 끝이 아니라 assistant 응답 앞에 놓여야 한다.
+      const types = result.current.messages.map(m => m.type);
+      expect(types).toEqual([LoadedMessageType.User, LoadedMessageType.Assistant]);
+      expect(result.current.messages[0].message?.content).toBe(COMPACT_TEXT);
+    });
+
+    it('컴팩트 마커 필드(isCompactSummary/isVisibleInTranscriptOnly)를 보존한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          isVisibleInTranscriptOnly: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      expect(result.current.messages[0].isCompactSummary).toBe(true);
+      expect(result.current.messages[0].isVisibleInTranscriptOnly).toBe(true);
+    });
+
+    it('timestamp 없는 user 이벤트는 수신 시각으로 폴백한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      const before = Date.now();
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'no-ts',
+          message: { role: 'user', content: 'no timestamp' },
+        });
+      });
+      const after = Date.now();
+
+      const ts = new Date(result.current.messages[0].timestamp!).getTime();
+      expect(ts).toBeGreaterThanOrEqual(before);
+      expect(ts).toBeLessThanOrEqual(after);
+    });
+  });
 });
