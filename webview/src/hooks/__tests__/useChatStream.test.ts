@@ -1045,6 +1045,37 @@ describe('useChatStream', () => {
       const ts = new Date(result.current.messages[0].timestamp!).getTime();
       expect(ts).toBeGreaterThanOrEqual(before);
       expect(ts).toBeLessThanOrEqual(after);
+  // 스트리밍 중 사용자가 입력한 메시지는 화면 맨 아래에 붙어야 한다. 진행 중인 assistant
+  // 버블은 그보다 이른 timestamp를 갖고 있어, timestamp 정렬로 삽입하면 사용자의 새 메시지가
+  // 이미 표시된 응답 아래로 파고든다 (issue #220).
+  describe('스트리밍 중 사용자 메시지 순서 (issue #220)', () => {
+    it('진행 중인 assistant 버블보다 뒤에 표시된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 첫 턴 시작 — assistant 버블이 스트리밍 중이다.
+      act(() => {
+        result.current.addUserMessage('first');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'working...' } },
+        });
+      });
+      act(() => flushRAF());
+
+      expect(result.current.isStreaming).toBe(true);
+
+      // 턴이 끝나기 전에 사용자가 두 번째 메시지를 보낸다.
+      act(() => {
+        result.current.addUserMessage('mid-stream probe');
+      });
+
+      // 새 사용자 메시지가 목록 맨 끝에 있어야 한다.
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.type).toBe(LoadedMessageType.User);
+      expect(last.message?.content).toBe('mid-stream probe');
     });
   });
 });

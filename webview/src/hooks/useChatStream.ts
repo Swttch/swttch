@@ -144,8 +144,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   // Append a new message, inserting by timestamp order.
   // During streaming, CLI-internal messages (compact summaries, skill prompts, etc.)
   // may arrive after later messages. Timestamp-based insertion keeps correct order.
-  const appendMessage = useCallback((message: LoadedMessageDto) => {
+  //
+  // `atEnd` opts out of that ordering for messages the user just composed here.
+  // Those belong after everything on screen, but the assistant bubble already
+  // streaming above them carries an earlier timestamp — so ordering by timestamp
+  // would tuck a mid-turn message underneath the reply it precedes.
+  const appendMessage = useCallback((message: LoadedMessageDto, atEnd = false) => {
     setMessages(prev => {
+      if (atEnd) return [...prev, message];
       const ts = message.timestamp ? new Date(message.timestamp).getTime() : Infinity;
       // Fast path: most messages arrive in order (timestamp >= last message)
       const lastTs = prev.length > 0 && prev[prev.length - 1].timestamp
@@ -290,7 +296,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.Assistant, content: [] } as LoadedMessageDto['message'],
       isStreaming: true,
     };
-    appendMessage(assistantMessage);
+    // Locally created placeholder for the reply starting now — always last.
+    appendMessage(assistantMessage, true);
     startStreaming(assistantMessageId);
     return assistantMessageId;
   }, [generateMessageId, appendMessage, startStreaming]);
@@ -373,7 +380,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.User, content: messageContent } as any,
       context: allContexts,
     };
-    appendMessage(userMessage);
+    appendMessage(userMessage, true);
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
     // 백엔드 전송과 큐잉은 ChatStreamContext가 담당한다.
@@ -388,7 +395,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.Assistant, content: [] } as any,
       isStreaming: true,
     };
-    appendMessage(assistantMessage);
+    appendMessage(assistantMessage, true);
     startStreaming(assistantMessageId);
 
     // Dev mode fallback

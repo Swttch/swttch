@@ -15,8 +15,8 @@ import { injectIdeContext, InjectedSelectionKey } from '../hooks/ideContextTag';
 import { matchesUsageCommand } from '@/commandPalette/sections/slashCommands/UsageCommand';
 import { OPEN_ACCOUNT_USAGE_EVENT } from '@/commandPalette/sections/model/AccountUsageItem';
 
-/** 스트리밍 중 큐잉된 메시지의 bridge payload */
-interface QueuedMessage {
+/** SEND_MESSAGE bridge payload */
+interface SendMessagePayload {
   [key: string]: unknown;
   sessionId: string;
   isNewSession: boolean;
@@ -137,10 +137,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // 마지막으로 전송한 inputMode. CLI가 통보한 실제 적용 모드와 비교해 auto 강등을 감지한다.
   const lastSentModeRef = useRef<InputMode | null>(null);
 
-  // 스트리밍 중 새 메시지가 들어오면 여기에 큐잉.
-  // 현재 턴이 자연스럽게 완료(result)된 후 자동으로 flush된다.
-  const queuedMessageRef = useRef<QueuedMessage | null>(null);
-
   // The IDE selection injected on the previous send, so an unchanged context is
   // not re-prepended to every consecutive message (duplicate gate).
   const lastInjectedSelectionRef = useRef<InjectedSelectionKey | null>(null);
@@ -248,7 +244,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     setSessionModel(null);
     tools.clearToolUses();
     diffs.clearDiffs();
-    queuedMessageRef.current = null;
     prePlanModeRef.current = null;
     setHasMoreOlder(false);
     setOldestLoadedUuid(null);
@@ -322,7 +317,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       // 강등 감지를 위해 이번에 요청한 모드를 기록한다(systemInit 수신 시 비교).
       lastSentModeRef.current = inputMode;
 
-      const payload: QueuedMessage = {
+      const payload: SendMessagePayload = {
         sessionId,
         isNewSession,
         content,
@@ -333,15 +328,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         model: sessionModel ?? undefined,
       };
 
-      // 스트리밍 중이면 큐잉. stdin에 즉시 write하지 않는다.
-      // 현재 턴이 자연스럽게 완료(result)된 후 useEffect에서 자동 flush.
-      if (chatStream.isStreaming) {
-        console.log('[ChatStreamContext] Queuing message — waiting for current turn to complete');
-        queuedMessageRef.current = payload;
-        return;
-      }
-
-      // 스트리밍 중이 아니면 즉시 전송
+      // Send straight through, even mid-turn. The CLI buffers its stdin and picks
+      // the message up at the next point it accepts user input, which is how the
+      // terminal CLI and the VS Code extension behave. Holding it in a frontend
+      // queue until `result` instead made the user wait out the whole turn (or
+      // interrupt manually) before their message reached Claude (#220).
+      // The backend reuses the running process, so this never respawns the CLI.
       bridge.send(MessageType.SEND_MESSAGE, payload).then((response) => {
         if (response?.status === 'error') {
           console.error('[ChatStreamContext] Backend error:', response.error);
@@ -350,25 +342,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         console.error('[ChatStreamContext] Failed to send message to bridge:', error);
       });
     },
-    [addUserMessage, chatStream.isStreaming, bridge, session, sessionModel]
+    [addUserMessage, bridge, session, sessionModel]
   );
-
-  // 스트리밍 종료(result 수신) 시 큐잉된 메시지 자동 전송.
-  // useEffect를 사용하여 endStreaming()의 상태 리셋이 완료된 후 flush한다.
-  useEffect(() => {
-    if (!chatStream.isStreaming && queuedMessageRef.current) {
-      const queued = queuedMessageRef.current;
-      queuedMessageRef.current = null;
-      console.log('[ChatStreamContext] Flushing queued message after turn complete');
-      bridge.send(MessageType.SEND_MESSAGE, queued).then((response) => {
-        if (response?.status === 'error') {
-          console.error('[ChatStreamContext] Queued message error:', response.error);
-        }
-      }).catch((error) => {
-        console.error('[ChatStreamContext] Failed to send queued message:', error);
-      });
-    }
-  }, [chatStream.isStreaming, bridge]);
 
   // handleSubmit: convenience wrapper for form submission.
   // Reads input via inputRef so this callback stays stable across keystrokes
