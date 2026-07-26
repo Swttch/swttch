@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChatStream, type LoadedMessage } from '../useChatStream';
 import type { LoadedMessageDto } from '../../types';
-import { ContextType } from '../../types';
+import { ContextType, getTextContent } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { MessageType } from '@/shared';
 
@@ -946,6 +946,181 @@ describe('useChatStream', () => {
       // 아직 modelUsage를 못 받았으므로 게이지는 그려지지 않아야 한다(contextWindow 0).
       expect(result.current.contextWindowUsage?.totalTokens).toBe(500_000);
       expect(result.current.contextWindowUsage?.contextWindow).toBe(0);
+    });
+  });
+
+  // 컴팩트(auto-compact / `/compact`) 경계 엔트리는 CLI가 `isCompactSummary: true`를 단
+  // 평범한 `user` 이벤트로 흘려보낸다. 이 이벤트는 뒤이은 assistant 응답보다 늦게 도착할 수
+  // 있어, appendMessage는 timestamp 기준으로 삽입 위치를 정한다. 따라서 `user` 핸들러가
+  // CLI 원본 timestamp를 보존하지 않으면 정렬 근거가 사라져 요약 버블이 항상 목록 끝에
+  // 눌러앉는다 (issue #220).
+  describe('user 이벤트 순서 (컴팩트 요약, issue #220)', () => {
+    const COMPACT_TEXT =
+      'This session is being continued from a previous conversation that ran out of context.';
+
+    it('CLI 원본 timestamp를 보존한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      expect(result.current.messages[0].timestamp).toBe('2026-07-24T11:41:57.478Z');
+    });
+
+    it('먼저 도착한 뒤늦은 assistant 메시지보다 앞에 삽입된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 컴팩트 이후의 assistant 응답이 먼저 도착한다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          timestamp: '2026-07-24T11:42:30.000Z',
+          message: {
+            id: 'm-after',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'after compact' }],
+          },
+        });
+      });
+
+      // 컴팩트 요약 user 이벤트가 뒤늦게 도착한다 (더 이른 timestamp).
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      // 요약이 목록 끝이 아니라 assistant 응답 앞에 놓여야 한다.
+      const types = result.current.messages.map(m => m.type);
+      expect(types).toEqual([LoadedMessageType.User, LoadedMessageType.Assistant]);
+      expect(result.current.messages[0].message?.content).toBe(COMPACT_TEXT);
+    });
+
+    it('컴팩트 마커 필드(isCompactSummary/isVisibleInTranscriptOnly)를 보존한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'compact-1',
+          timestamp: '2026-07-24T11:41:57.478Z',
+          isCompactSummary: true,
+          isVisibleInTranscriptOnly: true,
+          message: { role: 'user', content: COMPACT_TEXT },
+        });
+      });
+
+      expect(result.current.messages[0].isCompactSummary).toBe(true);
+      expect(result.current.messages[0].isVisibleInTranscriptOnly).toBe(true);
+    });
+
+    it('timestamp 없는 user 이벤트는 수신 시각으로 폴백한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      const before = Date.now();
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'no-ts',
+          message: { role: 'user', content: 'no timestamp' },
+        });
+      });
+      const after = Date.now();
+
+      const ts = new Date(result.current.messages[0].timestamp!).getTime();
+      expect(ts).toBeGreaterThanOrEqual(before);
+      expect(ts).toBeLessThanOrEqual(after);
+    });
+  });
+
+  // 스트리밍 중 사용자가 입력한 메시지는 입력한 자리에 고정돼야 한다. assistant 한 턴은
+  // 단일 요소로 렌더링되므로, 진행 중인 응답을 그대로 두면 델타가 쌓일 때마다 그 요소가
+  // 커지면서 방금 붙인 사용자 버블을 화면 아래로 계속 밀어낸다 (issue #220).
+  describe('스트리밍 중 사용자 메시지 순서 (issue #220)', () => {
+    it('진행 중인 assistant 버블보다 뒤에 표시된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // 첫 턴 시작 — assistant 버블이 스트리밍 중이다.
+      act(() => {
+        result.current.addUserMessage('first');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'working...' } },
+        });
+      });
+      act(() => flushRAF());
+
+      expect(result.current.isStreaming).toBe(true);
+
+      // 턴이 끝나기 전에 사용자가 두 번째 메시지를 보낸다.
+      act(() => {
+        result.current.addUserMessage('mid-stream probe');
+      });
+
+      // 새 사용자 메시지가 목록 맨 끝에 있어야 한다.
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.type).toBe(LoadedMessageType.User);
+      expect(last.message?.content).toBe('mid-stream probe');
+    });
+
+    it('이후 델타는 사용자 메시지를 밀지 않고 새 버블에 쌓인다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addUserMessage('first');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part one ' } },
+        });
+      });
+      act(() => flushRAF());
+
+      const beforeText = getTextContent(result.current.messages[1]);
+
+      // 턴 도중 사용자가 메시지를 보낸다.
+      act(() => {
+        result.current.addUserMessage('벌써?');
+      });
+      const userIndex = result.current.messages.length - 1;
+
+      // 응답이 계속 스트리밍된다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part two' } },
+        });
+      });
+      act(() => flushRAF());
+
+      // 사용자 메시지 위의 assistant 버블은 더 이상 자라지 않는다.
+      expect(getTextContent(result.current.messages[1])).toBe(beforeText);
+
+      // 사용자 메시지는 자기 자리를 지키고, 이후 텍스트는 그 아래 새 버블에 담긴다.
+      expect(result.current.messages[userIndex].message?.content).toBe('벌써?');
+      const after = result.current.messages.slice(userIndex + 1);
+      expect(after.length).toBeGreaterThan(0);
+      expect(getTextContent(after[after.length - 1])).toContain('part two');
     });
   });
 });

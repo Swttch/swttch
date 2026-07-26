@@ -144,8 +144,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   // Append a new message, inserting by timestamp order.
   // During streaming, CLI-internal messages (compact summaries, skill prompts, etc.)
   // may arrive after later messages. Timestamp-based insertion keeps correct order.
-  const appendMessage = useCallback((message: LoadedMessageDto) => {
+  //
+  // `atEnd` opts out of that ordering for entries that belong wherever they
+  // arrive: messages the user just composed here, and locally created assistant
+  // placeholders. Their position is "after everything currently on screen",
+  // which is a statement about arrival, not about the clock.
+  const appendMessage = useCallback((message: LoadedMessageDto, atEnd = false) => {
     setMessages(prev => {
+      if (atEnd) return [...prev, message];
       const ts = message.timestamp ? new Date(message.timestamp).getTime() : Infinity;
       // Fast path: most messages arrive in order (timestamp >= last message)
       const lastTs = prev.length > 0 && prev[prev.length - 1].timestamp
@@ -290,7 +296,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.Assistant, content: [] } as LoadedMessageDto['message'],
       isStreaming: true,
     };
-    appendMessage(assistantMessage);
+    // Locally created placeholder for the reply starting now — always last.
+    appendMessage(assistantMessage, true);
     startStreaming(assistantMessageId);
     return assistantMessageId;
   }, [generateMessageId, appendMessage, startStreaming]);
@@ -373,11 +380,34 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.User, content: messageContent } as any,
       context: allContexts,
     };
-    appendMessage(userMessage);
+    appendMessage(userMessage, true);
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
-    // 백엔드 전송과 큐잉은 ChatStreamContext가 담당한다.
-    if (isStreaming) return;
+    // 백엔드 전송은 ChatStreamContext가 담당한다.
+    if (isStreaming) {
+      // Seal the assistant message that is still streaming above this one. An
+      // assistant turn renders as a single element, so if we let it keep
+      // growing it pushes this bubble further down the screen with every delta
+      // — the message the user just typed appears to slide away from where they
+      // typed it (#220). Cutting the message here means subsequent deltas open
+      // a fresh assistant bubble *below* this one, so it stays put.
+      const streamingId = streamingMessageIdRef.current;
+      if (streamingId) {
+        if (pendingTextRef.current || pendingThinkingRef.current || pendingInputJsonRef.current) {
+          flushPendingDeltas();
+        }
+        updateMessage(streamingId, { isStreaming: false });
+        streamingMessageIdRef.current = null;
+        setStreamingMessageId(null);
+        activeBlockIndexRef.current = -1;
+        activeTextBlockIndexRef.current = -1;
+        activeThinkingBlockIndexRef.current = -1;
+        activeToolUseBlockIndexRef.current = -1;
+        turnStartBlockCountRef.current = 0;
+        accumulatedInputJsonRef.current = '';
+      }
+      return;
+    }
 
     // Create assistant placeholder
     const assistantMessageId = generateMessageId();
@@ -388,7 +418,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       message: { role: MessageRole.Assistant, content: [] } as any,
       isStreaming: true,
     };
-    appendMessage(assistantMessage);
+    appendMessage(assistantMessage, true);
     startStreaming(assistantMessageId);
 
     // Dev mode fallback
@@ -413,7 +443,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         }, 30);
       }, 2000);
     }
-  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming]);
+  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming, flushPendingDeltas, updateMessage]);
 
   // Clear messages
   const clearMessages = useCallback(() => {
@@ -924,15 +954,27 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             lastSkillToolUseIdRef.current = null;
           }
 
+          // Keep the CLI's own timestamp. appendMessage inserts by timestamp, so
+          // stamping the arrival time here would strand late-arriving CLI-internal
+          // entries — notably the compact summary, which the CLI emits after the
+          // assistant messages that follow it — at the end of the list (#220).
           const userMessage: LoadedMessageDto = {
             type: LoadedMessageType.User,
             uuid: (cliEvent as any).uuid || generateMessageId(),
-            timestamp: new Date().toISOString(),
+            timestamp: (cliEvent as any).timestamp ?? new Date().toISOString(),
             message: userMsg as unknown as LoadedMessageDto['message'],
             sourceToolUseID,
             isSynthetic: (cliEvent as any).isSynthetic === true ? true : undefined,
+            isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
+            isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
-          appendMessage(userMessage);
+          // The compact summary is the one `user` event that genuinely arrives out
+          // of order — the CLI emits it after the assistant messages that follow
+          // it — so it needs the timestamp sort to land back in place. Everything
+          // else (tool_results, skill prompts) arrives in the order it belongs in
+          // and is appended as it comes, which keeps it next to the message it
+          // answers even when the user sends mid-turn.
+          appendMessage(userMessage, !userMessage.isCompactSummary);
         }
         return;
       }
