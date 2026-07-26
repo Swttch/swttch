@@ -152,8 +152,13 @@ export function SponsorSettings() {
             screen opens on the offer rather than on an appeal. */}
         <SponsorLetter />
 
+        {/* Authored line breaks, same as the letter — one clause per line. */}
         <p className="mt-5 text-sm text-text-secondary leading-relaxed break-keep">
-          {t('sponsor.description')}
+          {(t('sponsor.description', { returnObjects: true }) as string[]).map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
         </p>
 
         <ul className="mt-5 space-y-3">

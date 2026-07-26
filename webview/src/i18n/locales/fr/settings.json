@@ -376,7 +376,12 @@
   },
   "sponsor": {
     "title": "Soutenir ce projet",
-    "description": "Le cœur de ce projet est open source, et toutes les fonctionnalités communautaires resteront gratuites — cela ne changera pas. Le soutien est ce qui permet à ce projet indépendant, pensé d'abord pour JetBrains, de continuer. Pour le prix d'une bière, faites le voyage avec nous.",
+    "description": [
+      "Le cœur de ce projet est open source,",
+      "et toutes les fonctionnalités communautaires resteront gratuites.",
+      "Le soutien permet à ce projet indépendant, pensé d'abord pour JetBrains, de continuer.",
+      "Pour le prix d'une bière, faites le voyage avec nous."
+    ],
     "promises": [
       "Accès illimité à toutes les fonctionnalités réservées aux sponsors",
       "Toutes les fonctionnalités futures incluses automatiquement",
@@ -458,10 +463,24 @@
     "project": "le projet",
     "letterToggle": "Pourquoi demandez-vous un parrainage ?",
     "letter": [
-      "Je suis développeur et utilisateur de JetBrains de longue date. Sur VS Code, on peut utiliser Claude Code via une interface graphique, mais chez JetBrains, rien de tel n'existait — et ce manque m'a suffisamment agacé pour que je me mette moi-même à le construire.",
-      "Comme le projet a trouvé son public, les demandes se sont accumulées et le plugin a pris de plus en plus de mon temps ; j'ai commencé à souhaiter pouvoir me mettre à mon compte et m'y consacrer pleinement.",
-      "Je propose le parrainage parce que je veux répondre plus vite à mes collègues développeurs du monde entier."
-    ]
+      [
+        "Je suis un développeur indépendant, et utilisateur de JetBrains de longue date.",
+        "Sur VS Code, on peut utiliser Claude Code via une interface graphique,",
+        "mais chez JetBrains, rien de tel n'existait —",
+        "alors j'ai commencé à le construire moi-même, comme projet indépendant."
+      ],
+      [
+        "Le projet a trouvé son public, les demandes se sont accumulées",
+        "et le plugin a pris de plus en plus de mon temps,",
+        "au point de souhaiter m'y consacrer pleinement, à mon compte."
+      ],
+      [
+        "Pour répondre plus vite à mes collègues développeurs du monde entier,",
+        "et pour que ce projet puisse tenir dans la durée,",
+        "je vous propose de le soutenir."
+      ]
+    ],
+    "letterSignature": "— @yonghyun"
   },
   "badges": {
     "sponsor": "Fonctionnalité réservée aux sponsors",

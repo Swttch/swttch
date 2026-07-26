@@ -376,7 +376,12 @@
   },
   "sponsor": {
     "title": "Apoiar este projeto",
-    "description": "O núcleo deste projeto é open source, e todas as funcionalidades da comunidade continuarão gratuitas — isso não vai mudar. O apoio é o que mantém vivo este projeto independente, feito pensando primeiro no JetBrains. Pelo preço de uma cerveja, venha junto nessa jornada.",
+    "description": [
+      "O núcleo deste projeto é open source,",
+      "e todas as funcionalidades da comunidade continuarão gratuitas.",
+      "O apoio mantém vivo este projeto independente, feito pensando primeiro no JetBrains.",
+      "Pelo preço de uma cerveja, venha junto nessa jornada."
+    ],
     "promises": [
       "Acesso ilimitado a todos os recursos exclusivos para patrocinadores",
       "Todos os recursos futuros incluídos automaticamente",
@@ -458,10 +463,24 @@
     "project": "o projeto",
     "letterToggle": "Por que você está pedindo patrocínio?",
     "letter": [
-      "Sou desenvolvedor e uso JetBrains há muito tempo. No VS Code dá para usar o Claude Code por uma GUI, mas no JetBrains não havia nada parecido — e essa lacuna me incomodou tanto que comecei a construir por conta própria.",
-      "Conforme encontrou seu público, os pedidos se acumularam e o plugin foi tomando cada vez mais do meu tempo, e passei a desejar poder me dedicar a ele em tempo integral, de forma independente.",
-      "Proponho o patrocínio porque quero responder mais rápido aos colegas desenvolvedores do mundo todo."
-    ]
+      [
+        "Sou um desenvolvedor independente e uso JetBrains há muitos anos.",
+        "No VS Code dá para usar o Claude Code por uma interface gráfica,",
+        "mas no JetBrains não havia nada parecido —",
+        "então comecei a construir por conta própria, como projeto indie."
+      ],
+      [
+        "Conforme encontrou seu público, os pedidos se acumularam",
+        "e o plugin foi tomando cada vez mais do meu tempo,",
+        "até eu passar a desejar me dedicar a ele em tempo integral."
+      ],
+      [
+        "Para responder mais rápido aos colegas desenvolvedores do mundo todo,",
+        "e para que este seja um projeto capaz de se sustentar,",
+        "proponho o seu patrocínio."
+      ]
+    ],
+    "letterSignature": "— @yonghyun"
   },
   "badges": {
     "sponsor": "Recurso apenas para patrocinadores",
