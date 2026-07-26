@@ -48,7 +48,7 @@
       "label": "ファイルパス添付後にチャット入力欄へフォーカス",
       "description": "エディタで Alt+K を押すと、ファイルパスの挿入後にフォーカスをチャット入力欄へ移動します。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "エディタコンテキストで.gitignoreを尊重",
       "description": "有効にすると、.gitignoreの対象ファイルの内容はエディタコンテキストから除外され、ファイルパスのみが送信されます。"
     },

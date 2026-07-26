@@ -48,7 +48,7 @@
       "label": "Focar o campo de chat após anexar o caminho do arquivo",
       "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respeitar o .gitignore no contexto do editor",
       "description": "Quando ativado, o conteúdo de arquivos ignorados pelo .gitignore é excluído do contexto do editor — apenas o caminho do arquivo é enviado."
     },

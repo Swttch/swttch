@@ -9,7 +9,7 @@ import { ChatStreamProvider, useChatStreamContext } from './ChatStreamContext';
 import { ThemeProvider } from './ThemeContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 import { SettingKey, NO_PAGINATION_LIMIT } from '@/types/settings';
-import { ClaudeSettingsProvider } from './ClaudeSettingsContext';
+import { ClaudeSettingsProvider, useClaudeSettings } from './ClaudeSettingsContext';
 import { AuthProvider } from './AuthContext';
 import { CliConfigProvider } from './CliConfigContext';
 import { FableProbeProvider } from './FableProbeContext';
@@ -216,13 +216,13 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
   const currentSelectionRef = useRef<IdeSelectionPayload | null>(null);
   const includeSelectionRef = useRef(true);
 
-  // Mirror of settings.respectGitignoreForContext kept as a ref so sendMessage
+  // Mirror of the native `respectGitignore` setting kept as a ref so sendMessage
   // stays stable (no ChatStreamProvider re-render on settings changes).
   const respectGitignoreRef = useRef(false);
-  const { settings: appSettings } = useSettings();
+  const { settings: claudeSettings } = useClaudeSettings();
   useEffect(() => {
-    respectGitignoreRef.current = appSettings.respectGitignoreForContext ?? false;
-  }, [appSettings.respectGitignoreForContext]);
+    respectGitignoreRef.current = claudeSettings.respectGitignore ?? false;
+  }, [claudeSettings.respectGitignore]);
 
   const setInput = useCallback((value: string) => {
     setInputCallbackRef.current(value);

@@ -48,7 +48,7 @@
       "label": "Focus chat input after attaching file path",
       "description": "When you press Alt+K in the editor, move focus to the chat input after inserting the file path."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respect .gitignore for editor context",
       "description": "When on, contents of .gitignore'd files are excluded from the editor context — only the file path is sent."
     },

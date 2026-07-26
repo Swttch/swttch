@@ -26,12 +26,20 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
   // Claude Code's official settings schema). See settings-migration.ts.
   uiLanguage: null,
-  language: null,
   useCtrlEnterToSend: false,
   focusInputOnEditorContext: true,
-  respectGitignoreForContext: false,
   autoResumeOnLimit: false,
+  ultracode: null,
+  // Only CLAUDE_CONFIG_DIR lives here: it decides where the native settings file
+  // is, so it cannot be stored inside that file. Every other variable belongs to
+  // the native `env` key. See settings-migration.ts.
   env: {},
+  // ── Legacy keys kept ONLY so the migration can clear them ───────────────────
+  // They moved to the native file (language, respectGitignore). Removing them
+  // from this map would make validateSetting reject the write that empties them,
+  // stranding the old value here forever. Drop them once the migration retires.
+  language: null,
+  respectGitignoreForContext: false,
 };
 
 const COMMENT_MAP: Record<string, string> = {
@@ -51,12 +59,13 @@ const COMMENT_MAP: Record<string, string> = {
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
-  language: 'Claude 응답 언어(예: "korean"). null이면 미설정. GUI 전용 저장값(CLI 전달 경로 없음)',
   useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
-  respectGitignoreForContext: 'true면 에디터 컨텍스트에서 .gitignore된 파일의 본문을 제외(경로만 전달)',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
-  env: '자식 프로세스(claude, ccb)에 주입할 환경 변수. 예: { CLAUDE_CONFIG_DIR: "..." }',
+  ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
+  env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
+  language: '[레거시] 네이티브 settings.json으로 이관됨. 마이그레이션이 비우는 용도로만 남김',
+  respectGitignoreForContext: '[레거시] 네이티브 respectGitignore로 이관됨. 마이그레이션이 비우는 용도로만 남김',
 };
 
 function generateSettingsContent(settings: Record<string, unknown>): string {
@@ -214,6 +223,8 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'uiLanguage must be a string or null';
       }
       break;
+    // Legacy: kept so the migration can clear it (null) after moving the value
+    // to the native file.
     case 'language':
       if (value !== null && typeof value !== 'string') {
         return 'language must be a string or null';
@@ -221,10 +232,21 @@ function validateSetting(key: string, value: unknown): string | null {
       break;
     case 'useCtrlEnterToSend':
     case 'focusInputOnEditorContext':
-    case 'respectGitignoreForContext':
     case 'autoResumeOnLimit':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
+      }
+      break;
+    // null = off/cleared, mirroring how the effort slider clears the top step.
+    case 'ultracode':
+      if (value !== null && typeof value !== 'boolean') {
+        return 'ultracode must be a boolean or null';
+      }
+      break;
+    // Legacy: null clears it once the value has moved to native respectGitignore.
+    case 'respectGitignoreForContext':
+      if (value !== null && typeof value !== 'boolean') {
+        return 'respectGitignoreForContext must be a boolean or null';
       }
       break;
     case 'env': {

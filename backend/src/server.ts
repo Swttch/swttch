@@ -5,7 +5,7 @@ import { BrowserBridge } from './bridge/browser-bridge';
 import { JetBrainsBridge } from './bridge/jetbrains-bridge';
 import { handleMessage } from './core/handlers/index';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
-import { migrateGuiKeysFromClaudeSettings } from './core/features/settings-migration';
+import { migrateSettingsToCorrectStore } from './core/features/settings-migration';
 import { ensureProfile } from './core/features/profile';
 import { trackEvent, reportBackendError } from './core/features/telemetry';
 import { restoreTunnelState } from './core/features/tunnel-manager';
@@ -144,10 +144,10 @@ async function main() {
   // 설치 단위 가명 식별자(uuid)를 동의 여부와 무관하게 보장한다.
   await ensureProfile();
 
-  // GUI 전용 키를 네이티브 ~/.claude/settings.json에서 앱 설정으로 1회 이관한다.
+  // 각 설정 키를 공식 스키마 기준의 올바른 저장소로 1회 이관한다(양방향).
   // 멱등(이미 이관됐으면 no-op)하고, 실패해도 시작을 막지 않도록 내부에서 방어한다.
   // 첫 GET_SETTINGS/GET_CLAUDE_SETTINGS가 이관된 값을 보도록 서버 시작 전에 await.
-  await migrateGuiKeysFromClaudeSettings();
+  await migrateSettingsToCorrectStore();
 
   // 백엔드 error boundary의 최상위(process-global) 절반. 핸들러 흐름 밖에서 터진 에러
   // (예: 비동기 콜백의 미처리 throw)도 reportBackendError 단일 진입점으로 수렴시킨다.

@@ -48,7 +48,7 @@
       "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
       "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respecter .gitignore pour le contexte de l'éditeur",
       "description": "Lorsque activé, le contenu des fichiers ignorés par .gitignore est exclu du contexte de l'éditeur — seul le chemin du fichier est envoyé."
     },

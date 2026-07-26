@@ -296,14 +296,31 @@ describe('settings', () => {
       expect(result.error).toContain('language must be a string or null');
     });
 
-    it('should accept boolean migrated toggles and reject non-boolean', async () => {
-      for (const key of ['useCtrlEnterToSend', 'focusInputOnEditorContext', 'respectGitignoreForContext', 'autoResumeOnLimit']) {
+    it('should accept boolean GUI-only toggles and reject non-boolean', async () => {
+      for (const key of ['useCtrlEnterToSend', 'focusInputOnEditorContext', 'autoResumeOnLimit']) {
         expect((await saveSettingToFile(key, true)).status).toBe('ok');
         expect((await saveSettingToFile(key, false)).status).toBe('ok');
         const bad = await saveSettingToFile(key, 'yes');
         expect(bad.status).toBe('error');
         expect(bad.error).toContain('must be a boolean');
       }
+    });
+
+    // Legacy keys stay writable with null so the migration can clear them after
+    // copying the value into the native file. Rejecting null would strand the
+    // old value here forever.
+    it('should accept null for legacy keys the migration clears', async () => {
+      for (const key of ['language', 'respectGitignoreForContext']) {
+        expect((await saveSettingToFile(key, null)).status).toBe('ok');
+      }
+    });
+
+    it('should accept boolean or null ultracode and reject other types', async () => {
+      expect((await saveSettingToFile('ultracode', true)).status).toBe('ok');
+      expect((await saveSettingToFile('ultracode', null)).status).toBe('ok');
+      const bad = await saveSettingToFile('ultracode', 'on');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('ultracode must be a boolean or null');
     });
   });
 
@@ -417,12 +434,13 @@ describe('settings', () => {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
-        language: null,
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
-        respectGitignoreForContext: false,
         autoResumeOnLimit: false,
+        ultracode: null,
         env: {},
+        language: null,
+        respectGitignoreForContext: false,
       });
       expect(mockWriteFile).toHaveBeenCalled();
     });
@@ -499,12 +517,13 @@ export default {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
-        language: null,
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
-        respectGitignoreForContext: false,
         autoResumeOnLimit: false,
+        ultracode: null,
         env: {},
+        language: null,
+        respectGitignoreForContext: false,
       });
     });
 

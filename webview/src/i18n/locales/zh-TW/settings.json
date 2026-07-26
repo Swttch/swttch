@@ -48,7 +48,7 @@
       "label": "附加檔案路徑後將焦點移至聊天輸入框",
       "description": "在編輯器中按下 Alt+K 插入檔案路徑後,自動將焦點移至聊天輸入框。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "編輯器上下文遵循 .gitignore",
       "description": "啟用時,被 .gitignore 忽略的檔案內容不會包含在編輯器上下文中 — 只會傳送檔案路徑。"
     },

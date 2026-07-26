@@ -48,7 +48,7 @@
       "label": "파일 경로 첨부 후 채팅 입력창에 포커스",
       "description": "에디터에서 Alt+K를 누르면 파일 경로를 삽입한 뒤 채팅 입력창으로 포커스를 옮깁니다."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": ".gitignore를 에디터 컨텍스트에 반영",
       "description": "켜면 .gitignore에 포함된 파일의 내용은 에디터 컨텍스트에서 제외되고 파일 경로만 전송됩니다."
     },

@@ -48,7 +48,7 @@
       "label": "插入文件路径后聚焦聊天输入框",
       "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "编辑器上下文遵循 .gitignore",
       "description": "启用后,被 .gitignore 忽略的文件内容将不包含在编辑器上下文中——仅发送文件路径。"
     },

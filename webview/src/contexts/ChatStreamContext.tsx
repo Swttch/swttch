@@ -100,7 +100,7 @@ interface ChatStreamProviderProps {
   currentSelectionRef?: React.MutableRefObject<IdeSelectionPayload | null>;
   includeSelectionRef?: React.MutableRefObject<boolean>;
   /**
-   * Mirror of settings.respectGitignoreForContext. Kept as a ref so sendMessage
+   * Mirror of the native `respectGitignore` setting. Kept as a ref so sendMessage
    * stays stable across settings changes (no re-render of ChatStream consumers).
    */
   respectGitignoreRef?: React.MutableRefObject<boolean>;

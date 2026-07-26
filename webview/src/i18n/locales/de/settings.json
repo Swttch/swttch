@@ -48,7 +48,7 @@
       "label": "Fokus nach Anhängen des Dateipfads auf das Chat-Eingabefeld setzen",
       "description": "Wenn du im Editor Alt+K drückst, wird der Fokus nach dem Einfügen des Dateipfads auf das Chat-Eingabefeld verschoben."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": ".gitignore für Editor-Kontext beachten",
       "description": "Wenn aktiviert, wird der Inhalt von durch .gitignore ausgeschlossenen Dateien nicht in den Editor-Kontext aufgenommen — es wird nur der Dateipfad gesendet."
     },

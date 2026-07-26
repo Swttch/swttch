@@ -33,8 +33,10 @@ export interface FileSuggestionConfig {
 export interface ClaudeSettingsState {
   model: string | null; // full model ID like 'claude-opus-4-6' or null for default
   effortLevel: string | null; // CLI effort level — values sourced from ModelInfo.supportedEffortLevels; null = auto
-  ultracode?: boolean | null; // xhigh effort + standing workflow orchestration; the slider's top step (null = off/cleared)
   disableWorkflows?: boolean; // CLI-owned: when true, the Workflows feature (and ultracode) is unavailable
+  language?: string | null; // official key: Claude's preferred response language (e.g. 'korean')
+  respectGitignore?: boolean; // official key: honour .gitignore when resolving file context
+  env?: Record<string, string>; // official key: environment variables for Claude sessions
   alwaysThinkingEnabled: boolean; // extended thinking always on
   fastMode: boolean; // official Claude settings key: fast output mode (Opus models only). CLI reads it from settings.json directly
   fileSuggestion?: FileSuggestionConfig | null; // custom command that builds the @ file-mention index (null/absent = built-in)

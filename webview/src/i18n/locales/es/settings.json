@@ -48,7 +48,7 @@
       "label": "Enfocar el chat tras adjuntar una ruta de archivo",
       "description": "Al presionar Alt+K en el editor, mueve el foco al campo de chat después de insertar la ruta del archivo."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respetar .gitignore en el contexto del editor",
       "description": "Cuando está activado, el contenido de los archivos excluidos por .gitignore no se incluye en el contexto del editor — solo se envía la ruta del archivo."
     },
