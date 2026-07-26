@@ -56,6 +56,12 @@ export async function scheduleMessageHandler(
     return;
   }
 
+  // Record which tab set the reservation (read from the server-side client
+  // record, not the payload, so it always reflects the actual requesting tab).
+  // Delivery prefers this tab; undefined for standalone/browser tabs with no
+  // panelId, in which case delivery falls back by session/focus.
+  const panelId = connections.getClient(connectionId)?.panelId ?? undefined;
+
   const reservation: ScheduledMessage = {
     id: randomUUID(),
     sessionId,
@@ -63,6 +69,7 @@ export async function scheduleMessageHandler(
     message: messageText,
     kind,
     createdAt: new Date().toISOString(),
+    panelId,
   };
 
   await scheduleMessage(reservation, connections);
@@ -95,6 +102,27 @@ export async function cancelScheduledMessageHandler(
   await cancelSchedule(sessionId, id, connections);
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * SCHEDULED_MESSAGE_DELIVERED: a webview finished delivering a due reservation
+ * (it ran the normal send path). Now — and only now — drop the reservation and
+ * broadcast the updated list. Fire-and-forget from the webview's side (no ACK
+ * back): if this notification is lost the reservation simply redelivers, which
+ * is the intended at-least-once behavior.
+ */
+export async function scheduledMessageDeliveredHandler(
+  _connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const payload = message.payload as { sessionId?: string; id?: string } | undefined;
+  const sessionId = payload?.sessionId;
+  const id = payload?.id;
+  if (!sessionId || !id) return;
+
+  await cancelSchedule(sessionId, id, connections);
 }
 
 /** GET_SCHEDULED_MESSAGES: return a session's current reservation list (ACK). */

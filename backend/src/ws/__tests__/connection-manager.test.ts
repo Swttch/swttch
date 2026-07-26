@@ -429,4 +429,58 @@ describe('ConnectionManager', () => {
       expect(ws2.send).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('pickScheduledDeliveryTarget', () => {
+    it('1: delivers through a live tab already subscribed to the session (no switch)', () => {
+      const conn = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1');
+      cm.subscribe(conn, 'sess-a');
+
+      const target = cm.pickScheduledDeliveryTarget('sess-a');
+      expect(target).toEqual({ connectionId: conn, needsSessionSwitch: false });
+    });
+
+    it('1: prefers the RESERVATION tab among several subscribers of the session', () => {
+      const other = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-other');
+      cm.subscribe(other, 'sess-a');
+      const own = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-own');
+      cm.subscribe(own, 'sess-a');
+
+      const target = cm.pickScheduledDeliveryTarget('sess-a', 'panel-own');
+      expect(target).toEqual({ connectionId: own, needsSessionSwitch: false });
+    });
+
+    it('2: the reservation tab is alive but on another session → switch it', () => {
+      const own = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-own');
+      cm.subscribe(own, 'sess-other'); // showing a different conversation
+
+      const target = cm.pickScheduledDeliveryTarget('sess-a', 'panel-own');
+      expect(target).toEqual({ connectionId: own, needsSessionSwitch: true });
+    });
+
+    it('3: reservation tab is gone → fall back to the most-recently-focused live tab (switch it)', () => {
+      const focused = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-focused');
+      cm.subscribe(focused, 'sess-other');
+      cm.setLastFocusedPanelId('panel-focused');
+
+      // Reservation's original tab 'panel-dead' never connected / already closed.
+      const target = cm.pickScheduledDeliveryTarget('sess-a', 'panel-dead');
+      expect(target).toEqual({ connectionId: focused, needsSessionSwitch: true });
+    });
+
+    it('4: no live tab at all → null (reservation kept for next attach)', () => {
+      expect(cm.pickScheduledDeliveryTarget('sess-a', 'panel-dead')).toBeNull();
+    });
+
+    it('a subscribed tab wins over the focused-but-unsubscribed fallback', () => {
+      const subscribed = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-sub');
+      cm.subscribe(subscribed, 'sess-a');
+      const focusedElsewhere = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-foc');
+      cm.subscribe(focusedElsewhere, 'sess-other');
+      cm.setLastFocusedPanelId('panel-foc');
+
+      // No reservation panelId → still picks the subscribed tab with no switch.
+      const target = cm.pickScheduledDeliveryTarget('sess-a');
+      expect(target).toEqual({ connectionId: subscribed, needsSessionSwitch: false });
+    });
+  });
 });

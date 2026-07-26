@@ -266,6 +266,60 @@ export class ConnectionManager {
     return this.panelIdIndex.get(panelId) ?? null;
   }
 
+  /**
+   * Choose the ONE tab that should deliver a due scheduled message, so the
+   * message is sent exactly like a person sending it from that window (and only
+   * once). Priority — closest to "the user is already there" first:
+   *   1. A live tab already SUBSCRIBED to the session (the reservation's own tab
+   *      first, else any subscriber) → deliver in place, no session switch.
+   *   2. The reservation's own tab, if still alive but on another session →
+   *      switch it to the session, then deliver.
+   *   3. The most-recently-focused live tab → switch it, then deliver.
+   *   4. No live tab at all → null (caller keeps the reservation for next attach).
+   *
+   * `needsSessionSwitch` tells the target tab whether it must load `sessionId`
+   * before sending (false when it's already the tab's current session).
+   */
+  pickScheduledDeliveryTarget(
+    sessionId: string,
+    reservationPanelId?: string,
+  ): { connectionId: string; needsSessionSwitch: boolean } | null {
+    const session = this.sessionRegistry.get(sessionId);
+    const reservationConn = reservationPanelId
+      ? (this.panelIdIndex.get(reservationPanelId) ?? null)
+      : null;
+
+    // 1. Already subscribed to this session (no switch needed).
+    if (session && session.subscribers.size > 0) {
+      // Prefer the reservation's own tab when it's among the subscribers.
+      if (reservationConn && session.subscribers.has(reservationConn)) {
+        return { connectionId: reservationConn, needsSessionSwitch: false };
+      }
+      for (const connId of session.subscribers) {
+        if (this.connectionMap.has(connId)) {
+          return { connectionId: connId, needsSessionSwitch: false };
+        }
+      }
+    }
+
+    // 2. The reservation's own tab is alive but on another session → switch it.
+    if (reservationConn && this.connectionMap.has(reservationConn)) {
+      return { connectionId: reservationConn, needsSessionSwitch: true };
+    }
+
+    // 3. Fall back to the most-recently-focused live tab → switch it.
+    const focusedPanelId = this.getLastFocusedPanelId();
+    if (focusedPanelId) {
+      const connId = this.panelIdIndex.get(focusedPanelId);
+      if (connId && this.connectionMap.has(connId)) {
+        return { connectionId: connId, needsSessionSwitch: true };
+      }
+    }
+
+    // 4. No live tab — the reservation stays put and redelivers on next attach.
+    return null;
+  }
+
   removeConnection(connectionId: string): void {
     this.unsubscribe(connectionId);
     const record = this.clientMap.get(connectionId);

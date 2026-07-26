@@ -57,6 +57,7 @@ import {
   scheduleMessageHandler,
   cancelScheduledMessageHandler,
   getScheduledMessagesHandler,
+  scheduledMessageDeliveredHandler,
 } from './scheduleMessage';
 import { loginHandler } from './login';
 import { submitLoginCodeHandler } from './submitLoginCode';
@@ -283,6 +284,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_SCHEDULED_MESSAGES:
       await getScheduledMessagesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SCHEDULED_MESSAGE_DELIVERED:
+      await scheduledMessageDeliveredHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.LOGIN:
       await loginHandler(connectionId, message, connections, bridge);

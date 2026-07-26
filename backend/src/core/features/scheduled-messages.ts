@@ -1,6 +1,5 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '../../shared';
-import { sendMessageToProcess } from '../claude-process';
 import {
   addSchedule,
   removeSchedule,
@@ -11,14 +10,20 @@ import {
  * The generic scheduled-message engine (the "send later" timer core).
  *
  * At `sendAt` the engine runs a per-kind PRE-SEND HOOK and, if the hook says so,
- * delivers the reservation's message to the session's Claude CLI process, then
- * removes the reservation and broadcasts the change. The engine is deliberately
- * domain-agnostic: it never knows *why* a send should proceed (quota reset,
- * etc.). That decision lives entirely in the hook a higher layer registers via
- * `registerHook`.
+ * DELIVERS the message the same way a person does: it does NOT write to the CLI's
+ * stdin directly. Instead it picks the one tab that should send (see
+ * ConnectionManager.pickScheduledDeliveryTarget) and pushes
+ * DELIVER_SCHEDULED_MESSAGE to it; that tab runs its normal submit path. The
+ * reservation is kept until the tab ACKs with SCHEDULED_MESSAGE_DELIVERED
+ * (at-least-once) — this is why `proceed:true` does NOT remove it here. If no tab
+ * is available, delivery is skipped and the reservation stays for the next
+ * attach. The engine is deliberately domain-agnostic: it never knows *why* a
+ * send should proceed (quota reset, etc.). That decision lives entirely in the
+ * hook a higher layer registers via `registerHook`.
  *
  * Hook contract (`ScheduleHook`):
- *   - `{ proceed: true }`            → send now, remove the reservation, broadcast.
+ *   - `{ proceed: true }`            → deliver now via the chosen tab; KEEP the
+ *                                      reservation until its delivered-ACK arrives.
  *   - `{ proceed: false, done: true }`  → give up: remove the reservation, broadcast (no send).
  *   - `{ proceed: false, done: false }` → wait: the hook OWNS the retry; the engine
  *                                         leaves the reservation in place and does nothing
@@ -80,9 +85,20 @@ async function fire(
   }
 
   if (result.proceed) {
-    sendMessageToProcess(connections, msg.sessionId, msg.message);
-    await removeSchedule(msg.sessionId, msg.id);
-    await broadcastUpdate(msg.sessionId, connections);
+    // Deliver like a person would: hand the message to ONE chosen tab, which
+    // runs its normal send path. Keep the reservation until that tab ACKs
+    // (SCHEDULED_MESSAGE_DELIVERED → cancelSchedule) so a tab dying mid-delivery
+    // redelivers. If no tab is available right now, do nothing — the reservation
+    // stays and re-fires when a tab reattaches (restoreSchedulesForSession).
+    const target = connections.pickScheduledDeliveryTarget(msg.sessionId, msg.panelId);
+    if (target) {
+      connections.sendTo(target.connectionId, MessageType.DELIVER_SCHEDULED_MESSAGE, {
+        id: msg.id,
+        sessionId: msg.sessionId,
+        message: msg.message,
+        needsSessionSwitch: target.needsSessionSwitch,
+      });
+    }
     return;
   }
 

@@ -1,12 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the process bridge: the scheduler must call sendMessageToProcess on fire,
-// but we never spawn a real CLI here.
-const sendMessageToProcess = vi.fn((..._args: unknown[]) => true);
-vi.mock('../../claude-process', () => ({
-  sendMessageToProcess: (...args: unknown[]) => sendMessageToProcess(...args),
-}));
-
 // Mock the persistence layer with an in-memory store. This keeps the scheduler a
 // pure unit test (no real fs) so fake-timer advances deterministically flush the
 // engine's async work — the on-disk store has its own dedicated test.
@@ -37,11 +30,22 @@ import {
   type ScheduleHook,
 } from '../scheduled-messages';
 import { addSchedule, readSchedulesForSession } from '../scheduled-messages-store';
-import { ScheduledMessageKind, type ScheduledMessage } from '../../../shared';
+import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '../../../shared';
 
-// Minimal ConnectionManager stand-in: only broadcastToSession is exercised.
-function makeConnections() {
-  return { broadcastToSession: vi.fn() };
+// Minimal ConnectionManager stand-in. Delivery no longer touches the CLI stdin;
+// on proceed the engine picks a tab (pickScheduledDeliveryTarget) and pushes to
+// it (sendTo). By default a live tab is available and needs no session switch.
+function makeConnections(
+  target: { connectionId: string; needsSessionSwitch: boolean } | null = {
+    connectionId: 'conn-1',
+    needsSessionSwitch: false,
+  },
+) {
+  return {
+    broadcastToSession: vi.fn(),
+    sendTo: vi.fn(),
+    pickScheduledDeliveryTarget: vi.fn(() => target),
+  };
 }
 
 function makeMsg(id: string, sendAtOffsetMs: number): ScheduledMessage {
@@ -58,7 +62,6 @@ function makeMsg(id: string, sendAtOffsetMs: number): ScheduledMessage {
 describe('scheduled-messages scheduler', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    sendMessageToProcess.mockClear();
     memStore.clear();
     resetSchedulerForTest();
   });
@@ -68,29 +71,68 @@ describe('scheduled-messages scheduler', () => {
     memStore.clear();
   });
 
-  it('fires at sendAt: runs the pre-send hook, sends, removes, and broadcasts on proceed', async () => {
+  it('fires at sendAt: pushes DELIVER_SCHEDULED_MESSAGE to the chosen tab and KEEPS the reservation (until its ACK)', async () => {
     const connections = makeConnections();
     const msg = makeMsg('r1', 60_000);
 
     await scheduleMessage(msg, connections as unknown as never);
-    // The create itself broadcasts once.
-    expect(connections.broadcastToSession).toHaveBeenCalledTimes(1);
     connections.broadcastToSession.mockClear();
 
     // Not yet due.
     await vi.advanceTimersByTimeAsync(59_000);
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
 
     // Cross the deadline.
     await vi.advanceTimersByTimeAsync(1_000);
 
-    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
-    expect(sendMessageToProcess).toHaveBeenCalledWith(connections, 'sess-a', 'continue');
-    expect(await readSchedulesForSession('sess-a')).toEqual([]);
-    expect(connections.broadcastToSession).toHaveBeenCalled();
+    expect(connections.pickScheduledDeliveryTarget).toHaveBeenCalledWith('sess-a', undefined);
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.DELIVER_SCHEDULED_MESSAGE, {
+      id: 'r1',
+      sessionId: 'sess-a',
+      message: 'continue',
+      needsSessionSwitch: false,
+    });
+    // Reservation is NOT removed here — it lives until the tab ACKs delivery.
+    expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
   });
 
-  it('does not send and keeps the reservation when the hook returns proceed:false, done:false', async () => {
+  it('prefers the reservation panelId as the delivery-target key', async () => {
+    const connections = makeConnections();
+    const msg = { ...makeMsg('r1', 1_000), panelId: 'panel-xyz' };
+    await scheduleMessage(msg, connections as unknown as never);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(connections.pickScheduledDeliveryTarget).toHaveBeenCalledWith('sess-a', 'panel-xyz');
+  });
+
+  it('passes needsSessionSwitch through to the push when the target requires it', async () => {
+    const connections = makeConnections({ connectionId: 'conn-9', needsSessionSwitch: true });
+    const msg = makeMsg('r1', 1_000);
+    await scheduleMessage(msg, connections as unknown as never);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-9', MessageType.DELIVER_SCHEDULED_MESSAGE, {
+      id: 'r1',
+      sessionId: 'sess-a',
+      message: 'continue',
+      needsSessionSwitch: true,
+    });
+  });
+
+  it('no live tab: does not push and keeps the reservation for the next attach', async () => {
+    const connections = makeConnections(null); // no eligible tab
+    const msg = makeMsg('r1', 1_000);
+    await scheduleMessage(msg, connections as unknown as never);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(connections.sendTo).not.toHaveBeenCalled();
+    expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
+  });
+
+  it('does not push and keeps the reservation when the hook returns proceed:false, done:false', async () => {
     const connections = makeConnections();
     const waitingHook: ScheduleHook = vi.fn(async () => ({ proceed: false, done: false }));
     registerHook(ScheduledMessageKind.AUTO_RESUME, waitingHook);
@@ -101,12 +143,12 @@ describe('scheduled-messages scheduler', () => {
     await vi.advanceTimersByTimeAsync(1_000);
 
     expect(waitingHook).toHaveBeenCalledWith(msg);
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
     // Still persisted — the hook owns the retry.
     expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
   });
 
-  it('removes and broadcasts without sending when the hook gives up (proceed:false, done:true)', async () => {
+  it('removes and broadcasts without pushing when the hook gives up (proceed:false, done:true)', async () => {
     const connections = makeConnections();
     registerHook(ScheduledMessageKind.AUTO_RESUME, async () => ({ proceed: false, done: true }));
 
@@ -116,12 +158,12 @@ describe('scheduled-messages scheduler', () => {
 
     await vi.advanceTimersByTimeAsync(1_000);
 
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
     expect(await readSchedulesForSession('sess-a')).toEqual([]);
     expect(connections.broadcastToSession).toHaveBeenCalled();
   });
 
-  it('treats a throwing hook as give-up: no send, reservation removed', async () => {
+  it('treats a throwing hook as give-up: no push, reservation removed', async () => {
     const connections = makeConnections();
     registerHook(ScheduledMessageKind.AUTO_RESUME, async () => {
       throw new Error('hook boom');
@@ -132,7 +174,7 @@ describe('scheduled-messages scheduler', () => {
 
     await vi.advanceTimersByTimeAsync(1_000);
 
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
     expect(await readSchedulesForSession('sess-a')).toEqual([]);
   });
 
@@ -143,7 +185,7 @@ describe('scheduled-messages scheduler', () => {
 
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
+    expect(connections.sendTo).toHaveBeenCalledTimes(1);
   });
 
   it('cancelSchedule clears the timer so it never fires, and removes from the store', async () => {
@@ -154,7 +196,7 @@ describe('scheduled-messages scheduler', () => {
     await cancelSchedule('sess-a', 'r1', connections as unknown as never);
 
     await vi.advanceTimersByTimeAsync(20_000);
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
     expect(await readSchedulesForSession('sess-a')).toEqual([]);
   });
 
@@ -166,8 +208,9 @@ describe('scheduled-messages scheduler', () => {
     await restoreSchedulesForSession('sess-a', connections as unknown as never);
 
     await vi.advanceTimersByTimeAsync(5_000);
-    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
-    expect(await readSchedulesForSession('sess-a')).toEqual([]);
+    expect(connections.sendTo).toHaveBeenCalledTimes(1);
+    // Kept until ACK (delivery is at-least-once).
+    expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
   });
 
   it('restore does not double-register an already-registered timer', async () => {
@@ -179,7 +222,7 @@ describe('scheduled-messages scheduler', () => {
     await restoreSchedulesForSession('sess-a', connections as unknown as never);
 
     await vi.advanceTimersByTimeAsync(5_000);
-    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
+    expect(connections.sendTo).toHaveBeenCalledTimes(1);
   });
 
   it('registerTimer honors an explicitly passed hook over the registry default', async () => {
@@ -192,6 +235,6 @@ describe('scheduled-messages scheduler', () => {
     await vi.advanceTimersByTimeAsync(1_000);
 
     expect(explicit).toHaveBeenCalledWith(msg);
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(connections.sendTo).not.toHaveBeenCalled();
   });
 });

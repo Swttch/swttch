@@ -24,8 +24,13 @@ vi.mock('../../features/license', () => ({
 
 import { scheduleMessageHandler } from '../scheduleMessage';
 
-function makeConnections() {
-  return { sendTo: vi.fn() } as unknown as ConnectionManager;
+function makeConnections(panelId: string | null = 'panel-a') {
+  return {
+    sendTo: vi.fn(),
+    // The handler reads the requesting tab's panelId off its client record to
+    // stamp the reservation.
+    getClient: vi.fn(() => ({ panelId })),
+  } as unknown as ConnectionManager;
 }
 const bridge = {} as Bridge;
 
@@ -62,17 +67,33 @@ describe('scheduleMessageHandler sponsor gate', () => {
     });
   });
 
-  it('creates a reservation and ACKs for a sponsor', async () => {
+  it('creates a reservation (stamped with the requesting tab panelId) and ACKs for a sponsor', async () => {
     getSponsorStatus.mockResolvedValue({ isSponsor: true });
-    const connections = makeConnections();
+    const connections = makeConnections('panel-a');
 
     await scheduleMessageHandler('conn-1', makeMessage(), connections, bridge);
 
     expect(scheduleMessage).toHaveBeenCalledTimes(1);
+    // The reservation carries the tab's panelId (read from the client record).
+    expect(scheduleMessage.mock.calls[0][0]).toMatchObject({
+      sessionId: 'sess-a',
+      message: 'continue',
+      panelId: 'panel-a',
+    });
     expect(connections.sendTo).toHaveBeenCalledWith(
       'conn-1',
       MessageType.ACK,
       expect.objectContaining({ requestId: 'req-1' }),
     );
+  });
+
+  it('leaves panelId undefined when the tab has none (standalone/browser)', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: true });
+    const connections = makeConnections(null);
+
+    await scheduleMessageHandler('conn-1', makeMessage(), connections, bridge);
+
+    expect(scheduleMessage.mock.calls[0][0]).toMatchObject({ sessionId: 'sess-a' });
+    expect((scheduleMessage.mock.calls[0][0] as { panelId?: string }).panelId).toBeUndefined();
   });
 });

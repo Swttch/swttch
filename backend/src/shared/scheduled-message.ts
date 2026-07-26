@@ -65,4 +65,13 @@ export interface ScheduledMessage {
   kind: ScheduledMessageKind;
   /** ISO 8601 timestamp at which the reservation was created. */
   createdAt: string;
+  /**
+   * The webview tab (panelId) that created this reservation, when known. At send
+   * time the engine prefers delivering through this exact tab (it's the tab the
+   * user set the reservation from, so it best matches "a person sending from that
+   * window"); if that tab is gone, delivery falls back to another tab on the
+   * session, then the most-recently-focused tab. Optional: standalone/browser
+   * tabs may not carry a panelId, and older reservations predate this field.
+   */
+  panelId?: string;
 }
