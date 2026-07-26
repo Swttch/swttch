@@ -5,6 +5,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { removeSessionTitleOverride } from '../features/sessionTitleOverrides';
+import { cancelSchedulesForSession } from '../features/scheduled-messages';
 import { MessageType } from '../../shared';
 
 export async function deleteSessionHandler(
@@ -66,6 +67,10 @@ export async function deleteSessionHandler(
     // Drop any stored title override so a future session reusing this id does not
     // inherit a stale custom title.
     await removeSessionTitleOverride(sessionsDir, sessionId);
+
+    // Reservations are bound to the session, so they die with it — otherwise a
+    // pending "send later" would fire into a conversation that no longer exists.
+    await cancelSchedulesForSession(sessionId, connections);
 
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'delete',

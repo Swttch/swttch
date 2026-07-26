@@ -32,6 +32,9 @@ vi.mock('../scheduled-messages-store', () => ({
       return updated;
     },
   ),
+  removeSchedulesForSession: vi.fn(async (sessionId: string) => {
+    memStore.delete(sessionId);
+  }),
   readSchedulesForSession: vi.fn(async (sessionId: string) => memStore.get(sessionId) ?? []),
 }));
 
@@ -39,6 +42,7 @@ import {
   registerTimer,
   scheduleMessage,
   cancelSchedule,
+  cancelSchedulesForSession,
   editScheduledMessage,
   restoreSchedulesForSession,
   registerHook,
@@ -214,6 +218,45 @@ describe('scheduled-messages scheduler', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     expect(connections.sendTo).not.toHaveBeenCalled();
     expect(await readSchedulesForSession('sess-a')).toEqual([]);
+  });
+
+  it('cancelSchedulesForSession drops every reservation of a deleted session', async () => {
+    const connections = makeConnections();
+    await scheduleMessage(makeMsg('r1', 10_000), connections as unknown as never);
+    await scheduleMessage(makeMsg('r2', 20_000), connections as unknown as never);
+    // A reservation on a DIFFERENT session must survive. It is due last so the
+    // assertions below can tell "deleted session stayed silent" apart from
+    // "nothing fired yet".
+    await scheduleMessage(
+      { ...makeMsg('r3', 30_000), sessionId: 'sess-b' },
+      connections as unknown as never,
+    );
+
+    await cancelSchedulesForSession('sess-a', connections as unknown as never);
+
+    // Past both of the deleted session's deadlines: neither may fire — without
+    // clearing the timers the engine would try to deliver into a session that no
+    // longer exists.
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(connections.sendTo).not.toHaveBeenCalled();
+    expect(await readSchedulesForSession('sess-a')).toEqual([]);
+
+    // The other session is untouched and still fires at its own deadline.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(connections.sendTo).toHaveBeenCalledTimes(1);
+    expect(connections.sendTo).toHaveBeenCalledWith(
+      'conn-1',
+      MessageType.DELIVER_SCHEDULED_MESSAGE,
+      expect.objectContaining({ id: 'r3', sessionId: 'sess-b' }),
+    );
+  });
+
+  it('cancelSchedulesForSession is a no-op for a session with no reservations', async () => {
+    const connections = makeConnections();
+
+    await expect(
+      cancelSchedulesForSession('sess-none', connections as unknown as never),
+    ).resolves.toBeUndefined();
   });
 
   it('editScheduledMessage updates the message and re-arms to the new sendAt', async () => {

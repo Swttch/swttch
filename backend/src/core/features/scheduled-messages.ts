@@ -3,6 +3,7 @@ import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '../../
 import {
   addSchedule,
   removeSchedule,
+  removeSchedulesForSession,
   updateSchedule as updateScheduleInStore,
   readSchedulesForSession,
 } from './scheduled-messages-store';
@@ -179,6 +180,29 @@ export async function cancelSchedule(
     timers.delete(id);
   }
   await removeSchedule(sessionId, id);
+  await broadcastUpdate(sessionId, connections);
+}
+
+/**
+ * Drop every reservation belonging to a session, clearing their timers first.
+ * Called when the session itself goes away (deleteSession) so a reservation can
+ * never fire into a conversation that no longer exists — the delivery would
+ * either resurrect a deleted session or fail with no one to report to.
+ */
+export async function cancelSchedulesForSession(
+  sessionId: string,
+  connections: ConnectionManager,
+): Promise<void> {
+  const schedules = await readSchedulesForSession(sessionId);
+  if (schedules.length === 0) return;
+  for (const msg of schedules) {
+    const timer = timers.get(msg.id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.delete(msg.id);
+    }
+  }
+  await removeSchedulesForSession(sessionId);
   await broadcastUpdate(sessionId, connections);
 }
 
