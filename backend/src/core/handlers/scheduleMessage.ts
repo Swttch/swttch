@@ -6,6 +6,7 @@ import { MessageType, ScheduledMessageKind, ErrorCode, type ScheduledMessage } f
 import {
   scheduleMessage,
   cancelSchedule,
+  editScheduledMessage,
 } from '../features/scheduled-messages';
 import { readSchedulesForSession } from '../features/scheduled-messages-store';
 import { getSponsorStatus } from '../features/license';
@@ -100,6 +101,52 @@ export async function cancelScheduledMessageHandler(
   }
 
   await cancelSchedule(sessionId, id, connections);
+
+  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * UPDATE_SCHEDULED_MESSAGE: edit a reservation in place (message and/or sendAt)
+ * by id, then ACK. Sponsor-gated like create — editing is part of the same
+ * sponsor-only feature. A missing id/session errors; an unknown id is a no-op
+ * (still ACKed) since the list may have changed under the editor.
+ */
+export async function updateScheduledMessageHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const payload = message.payload as
+    | { sessionId?: string; id?: string; message?: string; sendAt?: string }
+    | undefined;
+  const sessionId = payload?.sessionId;
+  const id = payload?.id;
+
+  if (!sessionId || !id) {
+    connections.sendTo(connectionId, MessageType.ERROR, {
+      requestId: message.requestId,
+      error: 'sessionId and id are required',
+    });
+    return;
+  }
+
+  const sponsor = await getSponsorStatus();
+  if (!sponsor.isSponsor) {
+    connections.sendTo(connectionId, MessageType.ERROR, {
+      requestId: message.requestId,
+      error: 'Sponsor-only feature',
+      errorCode: ErrorCode.SPONSOR_REQUIRED,
+    });
+    return;
+  }
+
+  await editScheduledMessage(
+    sessionId,
+    id,
+    { message: payload?.message, sendAt: payload?.sendAt },
+    connections,
+  );
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
 }

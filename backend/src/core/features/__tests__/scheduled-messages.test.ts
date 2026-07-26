@@ -17,6 +17,21 @@ vi.mock('../scheduled-messages-store', () => ({
     if (next.length === 0) memStore.delete(sessionId);
     else memStore.set(sessionId, next);
   }),
+  updateSchedule: vi.fn(
+    async (sessionId: string, id: string, patch: { message?: string; sendAt?: string }) => {
+      const list = memStore.get(sessionId);
+      if (!list) return null;
+      const idx = list.findIndex((m) => m.id === id);
+      if (idx < 0) return null;
+      const updated = {
+        ...list[idx],
+        ...(patch.message !== undefined ? { message: patch.message } : {}),
+        ...(patch.sendAt !== undefined ? { sendAt: patch.sendAt } : {}),
+      };
+      list[idx] = updated;
+      return updated;
+    },
+  ),
   readSchedulesForSession: vi.fn(async (sessionId: string) => memStore.get(sessionId) ?? []),
 }));
 
@@ -24,6 +39,7 @@ import {
   registerTimer,
   scheduleMessage,
   cancelSchedule,
+  editScheduledMessage,
   restoreSchedulesForSession,
   registerHook,
   resetSchedulerForTest,
@@ -198,6 +214,45 @@ describe('scheduled-messages scheduler', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     expect(connections.sendTo).not.toHaveBeenCalled();
     expect(await readSchedulesForSession('sess-a')).toEqual([]);
+  });
+
+  it('editScheduledMessage updates the message and re-arms to the new sendAt', async () => {
+    const connections = makeConnections();
+    const msg = makeMsg('r1', 10_000); // fires in 10s originally
+    await scheduleMessage(msg, connections as unknown as never);
+
+    // Push the send out to 60s and change the message.
+    const newSendAt = new Date(Date.now() + 60_000).toISOString();
+    const ok = await editScheduledMessage(
+      'sess-a',
+      'r1',
+      { message: 'edited', sendAt: newSendAt },
+      connections as unknown as never,
+    );
+    expect(ok).toBe(true);
+
+    // The old 10s deadline must NOT fire anymore.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(connections.sendTo).not.toHaveBeenCalled();
+
+    // It fires at the new 60s deadline, with the edited message.
+    await vi.advanceTimersByTimeAsync(50_000);
+    expect(connections.sendTo).toHaveBeenCalledWith(
+      'conn-1',
+      MessageType.DELIVER_SCHEDULED_MESSAGE,
+      expect.objectContaining({ id: 'r1', message: 'edited' }),
+    );
+  });
+
+  it('editScheduledMessage returns false for an unknown reservation id', async () => {
+    const connections = makeConnections();
+    const ok = await editScheduledMessage(
+      'sess-a',
+      'nope',
+      { message: 'x' },
+      connections as unknown as never,
+    );
+    expect(ok).toBe(false);
   });
 
   it('restoreSchedulesForSession re-registers timers from the store', async () => {

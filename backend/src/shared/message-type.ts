@@ -41,6 +41,8 @@ export enum MessageType {
   SCHEDULE_MESSAGE = 'SCHEDULE_MESSAGE',
   /** Cancel a scheduled message reservation by id. inbound webview→backend */
   CANCEL_SCHEDULED_MESSAGE = 'CANCEL_SCHEDULED_MESSAGE',
+  /** Edit a scheduled message reservation in place (message and/or sendAt) by id. inbound webview→backend */
+  UPDATE_SCHEDULED_MESSAGE = 'UPDATE_SCHEDULED_MESSAGE',
   /** List the scheduled message reservations for a session. inbound webview→backend */
   GET_SCHEDULED_MESSAGES = 'GET_SCHEDULED_MESSAGES',
   /**

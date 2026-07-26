@@ -6,9 +6,11 @@ import { MessageType, ScheduledMessageKind, ErrorCode } from '../../../shared';
 
 // Mock the engine so the handler test never touches real fs/timers.
 const scheduleMessage = vi.fn(async (..._args: unknown[]) => {});
+const editScheduledMessage = vi.fn(async (..._args: unknown[]) => true);
 vi.mock('../../features/scheduled-messages', () => ({
   scheduleMessage: (...args: unknown[]) => scheduleMessage(...args),
   cancelSchedule: vi.fn(),
+  editScheduledMessage: (...args: unknown[]) => editScheduledMessage(...args),
 }));
 
 // Mock the persistence read used by GET_SCHEDULED_MESSAGES.
@@ -22,7 +24,7 @@ vi.mock('../../features/license', () => ({
   getSponsorStatus: () => getSponsorStatus(),
 }));
 
-import { scheduleMessageHandler } from '../scheduleMessage';
+import { scheduleMessageHandler, updateScheduledMessageHandler } from '../scheduleMessage';
 
 function makeConnections(panelId: string | null = 'panel-a') {
   return {
@@ -50,6 +52,7 @@ function makeMessage(): IPCMessage {
 describe('scheduleMessageHandler sponsor gate', () => {
   beforeEach(() => {
     scheduleMessage.mockClear();
+    editScheduledMessage.mockClear();
     getSponsorStatus.mockReset();
   });
 
@@ -95,5 +98,66 @@ describe('scheduleMessageHandler sponsor gate', () => {
 
     expect(scheduleMessage.mock.calls[0][0]).toMatchObject({ sessionId: 'sess-a' });
     expect((scheduleMessage.mock.calls[0][0] as { panelId?: string }).panelId).toBeUndefined();
+  });
+
+  // ── Update (edit) ──────────────────────────────────────────────────────────
+
+  function makeUpdateMessage(): IPCMessage {
+    return {
+      type: MessageType.UPDATE_SCHEDULED_MESSAGE,
+      requestId: 'req-u',
+      payload: { sessionId: 'sess-a', id: 'r1', message: 'edited', sendAt: '2031-01-01T00:00:00Z' },
+    } as unknown as IPCMessage;
+  }
+
+  it('rejects a non-sponsor update without editing', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: false });
+    const connections = makeConnections();
+
+    await updateScheduledMessageHandler('conn-1', makeUpdateMessage(), connections, bridge);
+
+    expect(editScheduledMessage).not.toHaveBeenCalled();
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ERROR, {
+      requestId: 'req-u',
+      error: 'Sponsor-only feature',
+      errorCode: ErrorCode.SPONSOR_REQUIRED,
+    });
+  });
+
+  it('edits the reservation (message + sendAt) and ACKs for a sponsor', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: true });
+    const connections = makeConnections();
+
+    await updateScheduledMessageHandler('conn-1', makeUpdateMessage(), connections, bridge);
+
+    expect(editScheduledMessage).toHaveBeenCalledWith(
+      'sess-a',
+      'r1',
+      { message: 'edited', sendAt: '2031-01-01T00:00:00Z' },
+      connections,
+    );
+    expect(connections.sendTo).toHaveBeenCalledWith(
+      'conn-1',
+      MessageType.ACK,
+      expect.objectContaining({ requestId: 'req-u' }),
+    );
+  });
+
+  it('errors when the update is missing sessionId/id', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: true });
+    const connections = makeConnections();
+    const msg = {
+      type: MessageType.UPDATE_SCHEDULED_MESSAGE,
+      requestId: 'req-u',
+      payload: { message: 'edited' },
+    } as unknown as IPCMessage;
+
+    await updateScheduledMessageHandler('conn-1', msg, connections, bridge);
+
+    expect(editScheduledMessage).not.toHaveBeenCalled();
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ERROR, {
+      requestId: 'req-u',
+      error: 'sessionId and id are required',
+    });
   });
 });

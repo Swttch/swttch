@@ -17,6 +17,7 @@ import {
   addSchedule,
   removeSchedule,
   removeSchedulesForSession,
+  updateSchedule,
 } from '../scheduled-messages-store';
 import { ScheduledMessageKind, type ScheduledMessage } from '../../../shared';
 
@@ -122,5 +123,31 @@ describe('scheduled-messages-store', () => {
     const storeFile = join(tempHome, '.claude-code-gui', 'scheduled-messages.json');
     const raw = JSON.parse(await readFile(storeFile, 'utf-8'));
     expect(raw['sess-a'][0].id).toBe('r1');
+  });
+
+  it('updateSchedule patches message and sendAt in place, preserving other fields', async () => {
+    await addSchedule(makeMsg('sess-a', 'r1', '2030-01-01T00:00:00.000Z'));
+    const updated = await updateSchedule('sess-a', 'r1', {
+      message: 'edited',
+      sendAt: '2031-02-02T02:02:00.000Z',
+    });
+    expect(updated).toMatchObject({
+      id: 'r1',
+      message: 'edited',
+      sendAt: '2031-02-02T02:02:00.000Z',
+      kind: ScheduledMessageKind.AUTO_RESUME,
+    });
+    // Persisted.
+    const [row] = await readSchedulesForSession('sess-a');
+    expect(row.message).toBe('edited');
+    expect(row.sendAt).toBe('2031-02-02T02:02:00.000Z');
+  });
+
+  it('updateSchedule returns null for an unknown id or session', async () => {
+    await addSchedule(makeMsg('sess-a', 'r1'));
+    expect(await updateSchedule('sess-a', 'nope', { message: 'x' })).toBeNull();
+    expect(await updateSchedule('sess-nope', 'r1', { message: 'x' })).toBeNull();
+    // The original is untouched.
+    expect((await readSchedulesForSession('sess-a'))[0].message).not.toBe('x');
   });
 });

@@ -56,6 +56,7 @@ import { reclaimSessionHandler } from './reclaimSession';
 import {
   scheduleMessageHandler,
   cancelScheduledMessageHandler,
+  updateScheduledMessageHandler,
   getScheduledMessagesHandler,
   scheduledMessageDeliveredHandler,
 } from './scheduleMessage';
@@ -281,6 +282,9 @@ export async function handleMessage(
       break;
     case MessageType.CANCEL_SCHEDULED_MESSAGE:
       await cancelScheduledMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_SCHEDULED_MESSAGE:
+      await updateScheduledMessageHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SCHEDULED_MESSAGES:
       await getScheduledMessagesHandler(connectionId, message, connections, bridge);

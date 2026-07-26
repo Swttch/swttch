@@ -3,6 +3,7 @@ import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '../../
 import {
   addSchedule,
   removeSchedule,
+  updateSchedule as updateScheduleInStore,
   readSchedulesForSession,
 } from './scheduled-messages-store';
 
@@ -139,6 +140,31 @@ export async function scheduleMessage(
   await addSchedule(msg);
   registerTimer(msg, resolveHook(msg.kind), connections);
   await broadcastUpdate(msg.sessionId, connections);
+}
+
+/**
+ * Edit a reservation in place (message and/or sendAt): persist the patch, re-arm
+ * its timer against the (possibly new) sendAt, and broadcast. Returns false when
+ * no such reservation exists. Preserves id/kind/panelId/createdAt.
+ */
+export async function editScheduledMessage(
+  sessionId: string,
+  id: string,
+  patch: { message?: string; sendAt?: string },
+  connections: ConnectionManager,
+): Promise<boolean> {
+  const updated = await updateScheduleInStore(sessionId, id, patch);
+  if (!updated) return false;
+  // Re-arm: clear the old timer, then register against the updated reservation
+  // (registerTimer dedups on id, so clear first for a new sendAt to take effect).
+  const timer = timers.get(id);
+  if (timer) {
+    clearTimeout(timer);
+    timers.delete(id);
+  }
+  registerTimer(updated, resolveHook(updated.kind), connections);
+  await broadcastUpdate(sessionId, connections);
+  return true;
 }
 
 /** Cancel a reservation: clear its timer, remove it from the store, and broadcast. */

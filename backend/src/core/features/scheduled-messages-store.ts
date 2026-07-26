@@ -83,6 +83,32 @@ export async function addSchedule(msg: ScheduledMessage): Promise<void> {
   await writeAllSchedules(all);
 }
 
+/**
+ * Patch one reservation in place (message and/or sendAt) and persist. Preserves
+ * id/kind/panelId/createdAt. Returns the updated reservation, or null when no
+ * reservation with that id exists for the session.
+ */
+export async function updateSchedule(
+  sessionId: string,
+  id: string,
+  patch: { message?: string; sendAt?: string },
+): Promise<ScheduledMessage | null> {
+  const all = await readAllSchedules();
+  const list = all[sessionId];
+  if (!list) return null;
+  const idx = list.findIndex((m) => m.id === id);
+  if (idx < 0) return null;
+  const updated: ScheduledMessage = {
+    ...list[idx],
+    ...(patch.message !== undefined ? { message: patch.message } : {}),
+    ...(patch.sendAt !== undefined ? { sendAt: patch.sendAt } : {}),
+  };
+  list[idx] = updated;
+  all[sessionId] = list;
+  await writeAllSchedules(all);
+  return updated;
+}
+
 /** Remove one reservation by id; drops the session key when it becomes empty. */
 export async function removeSchedule(sessionId: string, id: string): Promise<void> {
   const all = await readAllSchedules();
