@@ -30,7 +30,14 @@
       "in30min": "بعد 30 دقيقة",
       "in1hour": "بعد ساعة",
       "tomorrowMorning": "غدًا 9 صباحًا",
+      "afterDuration": "بعد مدة...",
       "custom": "مخصّص"
+    },
+    "duration": {
+      "days": "أيام",
+      "hours": "ساعات",
+      "minutes": "دقائق",
+      "seconds": "ثوانٍ"
     }
   },
   "model": {

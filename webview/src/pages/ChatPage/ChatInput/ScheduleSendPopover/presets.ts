@@ -3,9 +3,12 @@
  * absolute send time relative to a caller-supplied `now` (passed in, never read
  * from Date.now() here, so the calculation is pure and unit-testable).
  *
- * The popover offers these one-tap presets plus a free-form datetime-local
- * input for an exact custom time. Relative presets add a fixed offset; the
- * "tomorrow morning" preset jumps to 09:00 local time on the next day.
+ * The popover surfaces these as a dropdown (a Select — presets can grow long in
+ * some locales, so chips would wrap awkwardly). Beyond the fixed one-tap
+ * presets there are two open-ended options:
+ *   - AfterDuration ("~ later"): user dials in days/hours/minutes/seconds and
+ *     the send time is now + that duration.
+ *   - Custom: a free-form datetime-local input for an exact wall-clock time.
  */
 
 export enum SchedulePresetId {
@@ -17,30 +20,66 @@ export enum SchedulePresetId {
   In1Hour = 'in1hour',
   /** 09:00 local time tomorrow */
   TomorrowMorning = 'tomorrowMorning',
+  /** now + a user-dialed duration (days/hours/minutes/seconds) */
+  AfterDuration = 'afterDuration',
   /** free-form datetime-local input */
   Custom = 'custom',
 }
 
-/** i18n label key (commandPalette namespace) for each preset chip. */
+/** i18n label key (commandPalette namespace) for each preset option. */
 export const PRESET_LABEL_KEY: Record<SchedulePresetId, string> = {
   [SchedulePresetId.In5Min]: 'scheduleSend.presets.in5min',
   [SchedulePresetId.In30Min]: 'scheduleSend.presets.in30min',
   [SchedulePresetId.In1Hour]: 'scheduleSend.presets.in1hour',
   [SchedulePresetId.TomorrowMorning]: 'scheduleSend.presets.tomorrowMorning',
+  [SchedulePresetId.AfterDuration]: 'scheduleSend.presets.afterDuration',
   [SchedulePresetId.Custom]: 'scheduleSend.presets.custom',
 };
 
-/** The one-tap presets, in display order. Custom is handled separately (input). */
-export const RELATIVE_PRESETS: SchedulePresetId[] = [
+/**
+ * All preset options in dropdown display order: the fixed presets first, then
+ * the two open-ended options (AfterDuration, then Custom — "~ later" sits right
+ * before "custom date/time" per the design).
+ */
+export const PRESET_OPTIONS: SchedulePresetId[] = [
   SchedulePresetId.In5Min,
   SchedulePresetId.In30Min,
   SchedulePresetId.In1Hour,
   SchedulePresetId.TomorrowMorning,
+  SchedulePresetId.AfterDuration,
+  SchedulePresetId.Custom,
 ];
 
+/** A user-dialed relative duration for the AfterDuration option. */
+export interface Duration {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+}
+
+export const ZERO_DURATION: Duration = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+/** Total milliseconds a Duration represents. */
+export function durationToMs(d: Duration): number {
+  return (
+    d.days * 86_400_000 +
+    d.hours * 3_600_000 +
+    d.minutes * 60_000 +
+    d.seconds * 1_000
+  );
+}
+
+/** now + duration, as an absolute Date. */
+export function resolveAfterDurationSendAt(duration: Duration, now: number): Date {
+  return new Date(now + durationToMs(duration));
+}
+
 /**
- * Resolve a non-custom preset to an absolute send time. Returns a Date. `now` is
- * supplied by the caller (Date.now() at click time) so this stays pure.
+ * Resolve a fixed preset (In5Min/In30Min/In1Hour/TomorrowMorning) to an absolute
+ * send time. AfterDuration and Custom are resolved by their own helpers/inputs;
+ * called with either, this returns `now` so a mis-call never yields NaN.
+ * `now` is supplied by the caller (Date.now() at click time) so this stays pure.
  */
 export function resolvePresetSendAt(preset: SchedulePresetId, now: number): Date {
   switch (preset) {
@@ -56,9 +95,8 @@ export function resolvePresetSendAt(preset: SchedulePresetId, now: number): Date
       d.setHours(9, 0, 0, 0);
       return d;
     }
+    case SchedulePresetId.AfterDuration:
     case SchedulePresetId.Custom:
-      // Custom has no fixed offset; the caller reads the datetime-local input
-      // instead. Fall back to `now` so a mis-call never yields NaN.
       return new Date(now);
   }
 }

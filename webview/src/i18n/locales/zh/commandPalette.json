@@ -30,7 +30,14 @@
       "in30min": "30 分钟后",
       "in1hour": "1 小时后",
       "tomorrowMorning": "明天上午 9 点",
+      "afterDuration": "一段时间后...",
       "custom": "自定义"
+    },
+    "duration": {
+      "days": "天",
+      "hours": "小时",
+      "minutes": "分",
+      "seconds": "秒"
     }
   },
   "model": {

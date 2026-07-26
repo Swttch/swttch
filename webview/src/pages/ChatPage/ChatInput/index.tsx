@@ -640,7 +640,7 @@ export function ChatInput() {
             composer; pre-filled from the current draft. Closing it returns focus
             to the composer (the popover took focus for its message box). */}
         {showSchedulePopover && (
-          <div className="absolute bottom-full end-0 z-30 mb-2">
+          <div className="absolute bottom-full start-0 w-full z-30 mb-2">
             <ScheduleSendPopover
               onClose={() => {
                 setShowSchedulePopover(false);

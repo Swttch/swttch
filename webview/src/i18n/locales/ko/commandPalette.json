@@ -30,7 +30,14 @@
       "in30min": "30분 후",
       "in1hour": "1시간 후",
       "tomorrowMorning": "내일 오전 9시",
+      "afterDuration": "~ 이후",
       "custom": "직접 입력"
+    },
+    "duration": {
+      "days": "일",
+      "hours": "시간",
+      "minutes": "분",
+      "seconds": "초"
     }
   },
   "model": {

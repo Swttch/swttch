@@ -62,12 +62,9 @@ describe('ScheduleSendPopover', () => {
   it('pre-fills the message box from the composer draft', () => {
     ctx.draft = 'keep refactoring the auth module';
     renderPopover();
-    const textarea = screen.getByLabelText('scheduleSend.messageLabel') as HTMLTextAreaElement;
-    // The label wraps the textarea via <label>, so query by role instead if needed.
-    expect(textarea?.value ?? screen.getByRole('textbox')).toBeTruthy();
-    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
-      'keep refactoring the auth module',
-    );
+    // The message box is a RichInput (contentEditable div, role=textbox), so the
+    // seeded text lives in textContent, not a .value property.
+    expect(screen.getByRole('textbox').textContent).toBe('keep refactoring the auth module');
   });
 
   it('shows the Sponsor badge with the softer "for sponsors" tooltip override', () => {
@@ -138,5 +135,35 @@ describe('ScheduleSendPopover', () => {
     renderPopover();
     fireEvent.click(screen.getByLabelText('scheduleSend.close'));
     expect(onCloseMock).toHaveBeenCalled();
+  });
+
+  it('reveals day/hour/min/sec fields when the "after duration" option is chosen', () => {
+    ctx.draft = 'continue';
+    renderPopover();
+    // Open the preset dropdown and pick "after a duration".
+    fireEvent.click(screen.getByRole('button', { name: 'scheduleSend.whenLabel' }));
+    fireEvent.click(screen.getByRole('option', { name: 'scheduleSend.presets.afterDuration' }));
+    // All four unit inputs are now present.
+    expect(screen.getByLabelText('scheduleSend.duration.days')).toBeInTheDocument();
+    expect(screen.getByLabelText('scheduleSend.duration.hours')).toBeInTheDocument();
+    expect(screen.getByLabelText('scheduleSend.duration.minutes')).toBeInTheDocument();
+    expect(screen.getByLabelText('scheduleSend.duration.seconds')).toBeInTheDocument();
+  });
+
+  it('after-duration submit sends a sendAt in the future (now + duration)', async () => {
+    ctx.draft = 'continue';
+    renderPopover();
+    fireEvent.click(screen.getByRole('button', { name: 'scheduleSend.whenLabel' }));
+    fireEvent.click(screen.getByRole('option', { name: 'scheduleSend.presets.afterDuration' }));
+    // Dial in 2 minutes (defaults seed hours=1, so this is well in the future).
+    fireEvent.change(screen.getByLabelText('scheduleSend.duration.minutes'), { target: { value: '2' } });
+    const before = Date.now();
+    await act(async () => {
+      fireEvent.click(screen.getByText('scheduleSend.submit'));
+    });
+    await waitFor(() => expect(sendMock).toHaveBeenCalled());
+    const p = sendMock.mock.calls[0][1]!;
+    expect(p.kind).toBe(ScheduledMessageKind.USER_SCHEDULED);
+    expect(Date.parse(p.sendAt as string)).toBeGreaterThan(before);
   });
 });

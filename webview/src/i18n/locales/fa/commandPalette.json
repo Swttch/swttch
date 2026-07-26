@@ -30,7 +30,14 @@
       "in30min": "۳۰ دقیقه دیگر",
       "in1hour": "۱ ساعت دیگر",
       "tomorrowMorning": "فردا ۹ صبح",
+      "afterDuration": "پس از مدتی...",
       "custom": "دلخواه"
+    },
+    "duration": {
+      "days": "روز",
+      "hours": "ساعت",
+      "minutes": "دقیقه",
+      "seconds": "ثانیه"
     }
   },
   "model": {

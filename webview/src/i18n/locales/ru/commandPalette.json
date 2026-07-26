@@ -30,7 +30,14 @@
       "in30min": "Через 30 мин",
       "in1hour": "Через 1 ч",
       "tomorrowMorning": "Завтра в 9:00",
+      "afterDuration": "Через промежуток...",
       "custom": "Вручную"
+    },
+    "duration": {
+      "days": "дн.",
+      "hours": "ч",
+      "minutes": "мин",
+      "seconds": "с"
     }
   },
   "model": {

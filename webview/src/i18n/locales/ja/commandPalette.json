@@ -30,7 +30,14 @@
       "in30min": "30分後",
       "in1hour": "1時間後",
       "tomorrowMorning": "明日午前9時",
+      "afterDuration": "指定時間後...",
       "custom": "カスタム"
+    },
+    "duration": {
+      "days": "日",
+      "hours": "時間",
+      "minutes": "分",
+      "seconds": "秒"
     }
   },
   "model": {

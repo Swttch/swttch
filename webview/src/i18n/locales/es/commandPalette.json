@@ -30,7 +30,14 @@
       "in30min": "En 30 min",
       "in1hour": "En 1 hora",
       "tomorrowMorning": "Mañana 9 a. m.",
+      "afterDuration": "Después de un tiempo...",
       "custom": "Personalizado"
+    },
+    "duration": {
+      "days": "días",
+      "hours": "h",
+      "minutes": "min",
+      "seconds": "s"
     }
   },
   "model": {

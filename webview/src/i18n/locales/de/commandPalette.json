@@ -30,7 +30,14 @@
       "in30min": "In 30 Min.",
       "in1hour": "In 1 Std.",
       "tomorrowMorning": "Morgen 9 Uhr",
+      "afterDuration": "Nach einer Dauer...",
       "custom": "Benutzerdefiniert"
+    },
+    "duration": {
+      "days": "Tage",
+      "hours": "Std.",
+      "minutes": "Min.",
+      "seconds": "Sek."
     }
   },
   "model": {
