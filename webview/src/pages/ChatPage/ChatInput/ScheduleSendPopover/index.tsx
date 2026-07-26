@@ -70,9 +70,14 @@ export function ScheduleSendPopover(props: Props) {
       }
     };
     const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+      const target = e.target as Node;
+      if (!panelRef.current || panelRef.current.contains(target)) return;
+      // The preset <Select> renders its option list through a Portal into
+      // document.body — i.e. OUTSIDE panelRef. Clicking an option would count as
+      // an outside click and close the popover mid-selection, so treat clicks
+      // inside any open Select listbox as inside.
+      if ((target as Element)?.closest?.('[role="listbox"]')) return;
+      onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);

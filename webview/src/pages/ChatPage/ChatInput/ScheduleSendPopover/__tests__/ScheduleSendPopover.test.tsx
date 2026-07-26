@@ -166,4 +166,21 @@ describe('ScheduleSendPopover', () => {
     expect(p.kind).toBe(ScheduledMessageKind.USER_SCHEDULED);
     expect(Date.parse(p.sendAt as string)).toBeGreaterThan(before);
   });
+
+  it('does NOT close when a mousedown lands inside the preset Select listbox', () => {
+    // Regression: the Select renders its options through a Portal into
+    // document.body — outside the popover's panelRef. A mousedown on an option
+    // used to register as an outside click and close the popover mid-selection.
+    renderPopover();
+    fireEvent.click(screen.getByRole('button', { name: 'scheduleSend.whenLabel' }));
+    const option = screen.getByRole('option', { name: 'scheduleSend.presets.afterDuration' });
+    fireEvent.mouseDown(option);
+    expect(onCloseMock).not.toHaveBeenCalled();
+  });
+
+  it('DOES close on a mousedown truly outside the popover and the listbox', () => {
+    renderPopover();
+    fireEvent.mouseDown(document.body);
+    expect(onCloseMock).toHaveBeenCalled();
+  });
 });
