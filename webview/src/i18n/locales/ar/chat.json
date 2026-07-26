@@ -186,6 +186,20 @@
       "time": "الوقت"
     }
   },
+  "scheduledMessages": {
+    "title": "الرسائل المجدولة",
+    "close": "إغلاق",
+    "empty": "لا توجد رسائل مجدولة.",
+    "edit": "تعديل",
+    "cancel": "إلغاء",
+    "relative": {
+      "soon": "قريبًا",
+      "day": "بعد {{count}} يوم",
+      "hour": "بعد {{count}} ساعة",
+      "minute": "بعد {{count}} دقيقة",
+      "second": "بعد {{count}} ثانية"
+    }
+  },
   "modelSwitch": {
     "selectModel": "اختر نموذجًا",
     "loadingModels": "جارٍ تحميل النماذج…",
@@ -413,5 +427,24 @@
       "showOriginal": "عرض الرد الأصلي",
       "tooltip": "التبديل بين العرض المُعاد بناؤه ومخرجات CLI الأصلية"
     }
+  },
+  "autoResume": {
+    "schedule": "جدولة الاستئناف",
+    "cancel": "إلغاء الحجز",
+    "resumeNow": "استئناف الآن",
+    "countdown": "({{seconds}} ث)",
+    "status": {
+      "retrying": "في انتظار إعادة تعيين الحد…",
+      "proceeding": "جارٍ الاستئناف…"
+    },
+    "error": {
+      "network": "خطأ في الاتصال بالشبكة",
+      "timeout": "انتهت المهلة",
+      "auth": "خطأ في المصادقة",
+      "generic": "فشل الاستئناف التلقائي"
+    },
+    "scheduledToast": "تمت جدولة الاستئناف التلقائي",
+    "canceledToast": "تم إلغاء الاستئناف التلقائي",
+    "scheduled": "تمت جدولة الاستئناف التلقائي"
   }
 }

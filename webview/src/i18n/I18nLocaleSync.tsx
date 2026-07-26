@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import i18n from './config';
 import { toLocale } from './languageMap';
-import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 
 /**
  * localStorage cache of the last-known `uiLanguage`, written on every sync so
@@ -9,7 +9,7 @@ import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
  * resolveBootstrapLang) can set `<html lang>` correctly before the bridge
  * connects and this component's effect runs — the same fast-path pattern
  * SettingsContext uses for `uiDirection` (STORAGE_KEY 'claude-code-settings').
- * ClaudeSettingsContext (which owns uiLanguage) has no such cache itself, so
+ * SettingsContext (which owns uiLanguage) has no such cache itself, so
  * this is a narrow, dedicated one just for the boot-time `lang` hint.
  */
 export const UI_LANGUAGE_STORAGE_KEY = 'claude-code-ui-language';
@@ -26,8 +26,8 @@ export const UI_LANGUAGE_STORAGE_KEY = 'claude-code-ui-language';
  * response language.
  */
 export function I18nLocaleSync() {
-  const { settings } = useClaudeSettings();
-  const uiLanguage = settings.uiLanguage as string | undefined;
+  const { settings } = useSettings();
+  const uiLanguage = settings.uiLanguage ?? undefined;
 
   useEffect(() => {
     const locale = toLocale(uiLanguage);

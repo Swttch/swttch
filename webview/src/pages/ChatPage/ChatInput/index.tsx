@@ -5,6 +5,7 @@ import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalet
 import { INPUT_MODES, CLI_FLAG_TO_INPUT_MODE } from '../../../types/chatInput';
 import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
+import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
@@ -24,8 +25,9 @@ import { AttachMenu } from './AttachMenu';
 import { ModelSwitchOverlay, SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
 import { EFFORT_CYCLE_EVENT } from '@/commandPalette/sections/model/EffortItem';
 import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingItem';
-import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/items';
+import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -85,6 +87,8 @@ export function ChatInput() {
   } = useAttachments();
 
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
+  // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
+  const { settings: appSettings } = useSettings();
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -92,6 +96,7 @@ export function ChatInput() {
   const [modelSwitchQuery, setModelSwitchQuery] = useState<string | null>(null);
   const [showModePanel, setShowModePanel] = useState(false);
   const modePanelRef = useRef<HTMLDivElement>(null);
+  const [showSchedulePopover, setShowSchedulePopover] = useState(false);
 
   // 모드 선택 패널: 바깥 클릭 / Esc 로 닫는다.
   useEffect(() => {
@@ -184,6 +189,14 @@ export function ChatInput() {
     return () => window.removeEventListener('command-palette:attach-files', handleAttachFromPalette);
   }, []);
 
+  // 커맨드 팔레트 "Schedule a message" 항목 연동: 예약 전송 팝오버를 연다.
+  // 열기는 누구나 가능하고, 후원자 게이트는 팝오버 제출 시점에 걸린다.
+  useEffect(() => {
+    const handleOpenSchedule = () => setShowSchedulePopover(true);
+    window.addEventListener(OPEN_SCHEDULE_SEND_EVENT, handleOpenSchedule);
+    return () => window.removeEventListener(OPEN_SCHEDULE_SEND_EVENT, handleOpenSchedule);
+  }, []);
+
   // 커맨드 팔레트 "Resume conversation" 항목 연동: 입력창의 `/resume` 텍스트를 비운다.
   // (드롭다운 열기·포커스는 SessionDropdown이 같은 이벤트를 수신해 처리한다.)
   useEffect(() => {
@@ -263,7 +276,7 @@ export function ChatInput() {
     onChange,
     textareaRef,
     currentWorkingDir: workingDirectory ?? '',
-    shouldFocus: claudeSettings.focusInputOnEditorContext ?? true,
+    shouldFocus: appSettings.focusInputOnEditorContext ?? true,
     onInsertToken: (token) =>
       setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token])),
   });
@@ -357,10 +370,12 @@ export function ChatInput() {
 
   const isInterruptible = isActive;
 
-  // ESC key: interrupt streaming or active state
+  // ESC key: interrupt streaming or active state. Suppressed while the
+  // schedule-send popover is open — there Escape closes the popover instead of
+  // interrupting the stream (the popover owns its own Escape handler).
   useEffect(() => {
     const handleEscKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape' && isInterruptible) {
+      if (e.key === 'Escape' && isInterruptible && !showSchedulePopover) {
         e.preventDefault();
         onStop();
         // Re-focus textarea after interrupt
@@ -370,7 +385,7 @@ export function ChatInput() {
 
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [isInterruptible, onStop, textareaRef]);
+  }, [isInterruptible, onStop, textareaRef, showSchedulePopover]);
 
   // [KeyDebug] window 캡처 단계 Arrow 키 로깅
   useEffect(() => {
@@ -477,7 +492,7 @@ export function ChatInput() {
           isComposing: isIMEComposing,
           isMobile: isMobile(),
         },
-        claudeSettings.useCtrlEnterToSend ?? false,
+        appSettings.useCtrlEnterToSend ?? false,
       );
       if (willSubmit) {
         e.preventDefault();
@@ -521,7 +536,7 @@ export function ChatInput() {
       e.preventDefault();
       onChange(historyValue);
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, claudeSettings.useCtrlEnterToSend, ime, handleRichChange]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
 
   // Wrap the attachment paste handler so that, when the clipboard carries no
   // image, we insert the plain-text payload ourselves. contentEditable would
@@ -619,6 +634,22 @@ export function ChatInput() {
             autoSelectQuery={modelSwitchQuery}
             onClose={() => { setShowModelSwitch(false); setModelSwitchQuery(null); }}
           />
+        )}
+
+        {/* Schedule-send popover (from the Context section). Floats above the
+            composer; pre-filled from the current draft. Closing it returns focus
+            to the composer (the popover took focus for its message box). */}
+        {showSchedulePopover && (
+          <div className="absolute bottom-full start-0 w-full z-30 mb-2">
+            <ScheduleSendPopover
+              onClose={() => {
+                setShowSchedulePopover(false);
+                // Defer past unmount so focus lands on the composer, not a
+                // node being torn down (matches the mode-panel restore pattern).
+                setTimeout(() => textareaRef.current?.focus(), 0);
+              }}
+            />
+          </div>
         )}
 
         {/* 드래그 오버 오버레이 */}

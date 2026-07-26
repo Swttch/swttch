@@ -12,7 +12,36 @@
     "mentionFile": "このプロジェクトのファイルをメンション...",
     "clearConversation": "会話をクリア",
     "resumeConversation": "会話を再開",
-    "showBackgroundTasks": "ワークフロー: バックグラウンドタスクを表示"
+    "showBackgroundTasks": "ワークフロー: バックグラウンドタスクを表示",
+    "scheduleSend": "メッセージを予約送信..."
+  },
+  "scheduleSend": {
+    "title": "メッセージを予約",
+    "editTitle": "予約メッセージを編集",
+    "sponsorTooltip": "サポーターのための機能",
+    "close": "閉じる",
+    "messageLabel": "メッセージ",
+    "messagePlaceholder": "後で送信するメッセージ",
+    "whenLabel": "いつ",
+    "customLabel": "日時を指定",
+    "submit": "予約",
+    "updateSubmit": "保存",
+    "scheduledToast": "メッセージを予約しました",
+    "updatedToast": "予約を更新しました",
+    "presets": {
+      "in5min": "5分後",
+      "in30min": "30分後",
+      "in1hour": "1時間後",
+      "tomorrowMorning": "明日午前9時",
+      "afterDuration": "指定時間後...",
+      "custom": "カスタム"
+    },
+    "duration": {
+      "days": "日",
+      "hours": "時間",
+      "minutes": "分",
+      "seconds": "秒"
+    }
   },
   "model": {
     "switchModel": "モデルを切り替え...",
@@ -21,7 +50,9 @@
     "accountUsage": "アカウントと使用状況...",
     "toggleFastMode": "高速モードの切り替え",
     "effortUnsupportedReason": "このモデルはエフォートレベルに対応していません",
-    "fastModeUnsupportedReason": "高速モードはOpusモデルでのみ利用できます"
+    "fastModeUnsupportedReason": "高速モードはOpusモデルでのみ利用できます",
+    "toggleAutoResume": "上限到達時の自動再開を切り替え",
+    "autoResumeSponsorOnlyReason": "上限到達時の自動再開はスポンサー限定です"
   },
   "customize": {
     "outputStyles": "出力スタイル",

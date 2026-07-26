@@ -9,7 +9,7 @@ import { ChatStreamProvider, useChatStreamContext } from './ChatStreamContext';
 import { ThemeProvider } from './ThemeContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
 import { SettingKey, NO_PAGINATION_LIMIT } from '@/types/settings';
-import { ClaudeSettingsProvider } from './ClaudeSettingsContext';
+import { ClaudeSettingsProvider, useClaudeSettings } from './ClaudeSettingsContext';
 import { AuthProvider } from './AuthContext';
 import { CliConfigProvider } from './CliConfigContext';
 import { FableProbeProvider } from './FableProbeContext';
@@ -19,12 +19,13 @@ import { IdeSelectionProvider } from './IdeSelectionContext';
 import type { IdeSelectionPayload } from '@/hooks/useIdeSelection';
 import { WorkingDirProvider } from './WorkingDirContext';
 import { WorkflowStateProvider } from './WorkflowStateContext';
+import { ScheduledMessagesProvider } from './ScheduledMessagesContext';
+import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
 import { CommandPaletteProvider } from '../commandPalette/CommandPaletteProvider';
 import { useApi } from './ApiContext';
 import { SessionState } from '../types';
 import type { LoadedMessageDto } from '../types';
 import { MessageType } from '@/shared';
-import { useClaudeSettings } from './ClaudeSettingsContext';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -215,13 +216,13 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
   const currentSelectionRef = useRef<IdeSelectionPayload | null>(null);
   const includeSelectionRef = useRef(true);
 
-  // Mirror of settings.respectGitignoreForContext kept as a ref so sendMessage
+  // Mirror of the native `respectGitignore` setting kept as a ref so sendMessage
   // stays stable (no ChatStreamProvider re-render on settings changes).
   const respectGitignoreRef = useRef(false);
   const { settings: claudeSettings } = useClaudeSettings();
   useEffect(() => {
-    respectGitignoreRef.current = claudeSettings.respectGitignoreForContext ?? false;
-  }, [claudeSettings.respectGitignoreForContext]);
+    respectGitignoreRef.current = claudeSettings.respectGitignore ?? false;
+  }, [claudeSettings.respectGitignore]);
 
   const setInput = useCallback((value: string) => {
     setInputCallbackRef.current(value);
@@ -270,7 +271,11 @@ export function AppProviders({ children }: AppProvidersProps) {
                   <AuthProvider>
                     <SessionProvider>
                       <WorkflowStateProvider>
-                        <ChatProviderBridge>{children}</ChatProviderBridge>
+                        <ScheduledMessagesProvider>
+                          <AutoResumeOverrideProvider>
+                            <ChatProviderBridge>{children}</ChatProviderBridge>
+                          </AutoResumeOverrideProvider>
+                        </ScheduledMessagesProvider>
                       </WorkflowStateProvider>
                     </SessionProvider>
                   </AuthProvider>

@@ -12,7 +12,36 @@
     "mentionFile": "提及此專案中的檔案...",
     "clearConversation": "清除對話",
     "resumeConversation": "繼續對話",
-    "showBackgroundTasks": "工作流程:顯示背景工作"
+    "showBackgroundTasks": "工作流程:顯示背景工作",
+    "scheduleSend": "排程傳送訊息..."
+  },
+  "scheduleSend": {
+    "title": "排程傳送訊息",
+    "editTitle": "編輯排程訊息",
+    "sponsorTooltip": "為贊助者提供的功能",
+    "close": "關閉",
+    "messageLabel": "訊息",
+    "messagePlaceholder": "稍後傳送的訊息",
+    "whenLabel": "時間",
+    "customLabel": "自訂日期和時間",
+    "submit": "排程",
+    "updateSubmit": "儲存",
+    "scheduledToast": "訊息已排程",
+    "updatedToast": "排程已更新",
+    "presets": {
+      "in5min": "5 分鐘後",
+      "in30min": "30 分鐘後",
+      "in1hour": "1 小時後",
+      "tomorrowMorning": "明天上午 9 點",
+      "afterDuration": "一段時間後...",
+      "custom": "自訂"
+    },
+    "duration": {
+      "days": "天",
+      "hours": "小時",
+      "minutes": "分",
+      "seconds": "秒"
+    }
   },
   "model": {
     "switchModel": "切換模型...",
@@ -21,7 +50,9 @@
     "accountUsage": "帳戶與用量...",
     "toggleFastMode": "切換快速模式",
     "effortUnsupportedReason": "此模型不支援強度等級",
-    "fastModeUnsupportedReason": "快速模式僅適用於 Opus 模型"
+    "fastModeUnsupportedReason": "快速模式僅適用於 Opus 模型",
+    "toggleAutoResume": "切換達到上限時自動恢復",
+    "autoResumeSponsorOnlyReason": "達到上限時自動恢復僅供贊助者使用"
   },
   "customize": {
     "outputStyles": "輸出樣式",

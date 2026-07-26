@@ -182,6 +182,20 @@
       "time": "Tiempo"
     }
   },
+  "scheduledMessages": {
+    "title": "Mensajes programados",
+    "close": "Cerrar",
+    "empty": "No hay mensajes programados.",
+    "edit": "Editar",
+    "cancel": "Cancelar",
+    "relative": {
+      "soon": "ahora",
+      "day": "en {{count}} d",
+      "hour": "en {{count}} h",
+      "minute": "en {{count}} min",
+      "second": "en {{count}} s"
+    }
+  },
   "modelSwitch": {
     "selectModel": "Selecciona un modelo",
     "loadingModels": "Cargando modelos…",
@@ -405,5 +419,24 @@
       "showOriginal": "Mostrar respuesta original",
       "tooltip": "Alternar entre la vista reconstruida y la salida original de la CLI"
     }
+  },
+  "autoResume": {
+    "schedule": "Programar reanudación",
+    "cancel": "Cancelar reserva",
+    "resumeNow": "Reanudar ahora",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Esperando el reinicio del límite…",
+      "proceeding": "Reanudando…"
+    },
+    "error": {
+      "network": "Error de conexión de red",
+      "timeout": "Tiempo agotado",
+      "auth": "Error de autenticación",
+      "generic": "Error en la reanudación automática"
+    },
+    "scheduledToast": "Reanudación automática programada",
+    "canceledToast": "Reanudación automática cancelada",
+    "scheduled": "Reanudación automática programada"
   }
 }

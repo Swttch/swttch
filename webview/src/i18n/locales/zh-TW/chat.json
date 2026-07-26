@@ -182,6 +182,20 @@
       "time": "時間"
     }
   },
+  "scheduledMessages": {
+    "title": "排程訊息",
+    "close": "關閉",
+    "empty": "尚無排程訊息。",
+    "edit": "編輯",
+    "cancel": "取消",
+    "relative": {
+      "soon": "即將",
+      "day": "{{count}}天後",
+      "hour": "{{count}}小時後",
+      "minute": "{{count}}分鐘後",
+      "second": "{{count}}秒後"
+    }
+  },
   "modelSwitch": {
     "selectModel": "選擇模型",
     "loadingModels": "正在載入模型…",
@@ -405,5 +419,24 @@
       "showOriginal": "顯示原始回應",
       "tooltip": "在重構檢視與原始 CLI 輸出之間切換"
     }
+  },
+  "autoResume": {
+    "schedule": "預約恢復",
+    "cancel": "取消預約",
+    "resumeNow": "立即恢復",
+    "countdown": "（{{seconds}}秒）",
+    "status": {
+      "retrying": "等待額度重置…",
+      "proceeding": "正在恢復…"
+    },
+    "error": {
+      "network": "網路連線錯誤",
+      "timeout": "逾時",
+      "auth": "驗證錯誤",
+      "generic": "自動恢復失敗"
+    },
+    "scheduledToast": "已預約自動恢復",
+    "canceledToast": "已取消自動恢復",
+    "scheduled": "已預約自動恢復"
   }
 }

@@ -48,7 +48,7 @@
       "label": "파일 경로 첨부 후 채팅 입력창에 포커스",
       "description": "에디터에서 Alt+K를 누르면 파일 경로를 삽입한 뒤 채팅 입력창으로 포커스를 옮깁니다."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": ".gitignore를 에디터 컨텍스트에 반영",
       "description": "켜면 .gitignore에 포함된 파일의 내용은 에디터 컨텍스트에서 제외되고 파일 경로만 전송됩니다."
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "@ 파일 목록을 만드는 사용자 지정 명령. settings.json의 fileSuggestion 설정과 동일합니다.",
       "placeholder": "예: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "사용량 한도 시 자동 재개",
+      "description": "세션 한도에 도달하면 한도가 리셋될 때 자동으로 재개합니다. 새 세션의 기본값이며, 세션마다 켜고 끌 수 있습니다."
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "Claude Code with GUI 후원하기",
-    "description": "Claude Code with GUI는 계속 무료입니다. 후원은 JetBrains를 우선하는 이 독립 프로젝트를 이어가게 합니다.",
+    "title": "이 프로젝트 후원하기",
+    "description": [
+      "이 독립 프로젝트의 지속가능한 개발을 위해,",
+      "괜찮으시다면, 부디 맥주 한 잔만 사주세요."
+    ],
     "promises": [
       "모든 후원자 전용 기능에 무제한 접근",
       "앞으로 추가되는 모든 기능 자동 포함",
       "최상위 등급 — 더 비싼 유료 등급은 없습니다",
-      "신규 후원자 가격이 올라도 당신의 가격은 그대로"
+      "신규 후원 금액이 오르더라도 당신의 금액은 그대로 유지됩니다"
     ],
     "cta": "자세히 알아보기",
     "opening": "여는 중…",
@@ -394,7 +401,91 @@
       "title": "후원 중",
       "description": "Claude Code with GUI를 후원해 주셔서 감사합니다.",
       "keyLabel": "후원자 키",
-      "deactivate": "해제"
-    }
+      "deactivate": "해제",
+      "greeting": "오늘도 반갑습니다, 후원자님",
+      "promise": "보다 안정적이고 빠르고 강력한 업데이트로 보답하겠습니다.",
+      "manage": {
+        "menu": "관리",
+        "clearKey": "후원자 키 비우기",
+        "clearKeyConfirmTitle": "후원자 키를 비울까요?",
+        "clearKeyConfirmMessage": "이 기기에서 후원자 기능이 꺼집니다. 후원과 결제는 그대로이며, 키를 다시 붙여넣으면 언제든 복구됩니다.",
+        "clearKeyDone": "이 기기에서 후원자 키를 비웠습니다.",
+        "cancel": "정기후원 취소",
+        "cancelConfirmTitle": "정기후원을 취소할까요?",
+        "cancelConfirmMessage": "이미 결제한 기간이 끝날 때 결제가 중단되며, 그때까지는 후원자 기능이 그대로 유지됩니다.",
+        "cancelDone": "정기후원을 취소했습니다.",
+        "cancelFailed": "취소하지 못했습니다. 잠시 후 다시 시도해 주세요."
+      },
+      "thanksBefore": "",
+      "thanksAfter": "를 지지해 주셔서 감사합니다."
+    },
+    "plan": {
+      "title": "후원 정보",
+      "tier": "구분",
+      "interval": "결제 주기",
+      "monthly": "월 결제",
+      "yearly": "연 결제",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "기능 베네핏",
+      "description": "후원으로 이어가는 기능들입니다. 눌러서 어떤 기능인지 확인해 보세요."
+    },
+    "devices": {
+      "title": "활성 기기",
+      "description": "후원자 키를 사용 중인 기기입니다.",
+      "note": "후원은 계정이 아니라 키 단위로 적용됩니다. 계정은 키 검증 용도로만 사용되며, 기기에 키를 사용할 수 있는 계정이 추가되어 있기만 하면 됩니다.",
+      "thisDevice": "현재 기기",
+      "remove": "사인아웃",
+      "removing": "사인아웃 중…",
+      "empty": "아직 기록된 기기가 없습니다.",
+      "removeConfirmTitle": "이 기기를 사인아웃할까요?",
+      "removeConfirmMessage": "목록에서 사라집니다. 후원자 키는 그대로 유효하며, 그 기기를 다시 사용하면 자동으로 다시 등록됩니다."
+    },
+    "billing": {
+      "title": "결제 내역",
+      "description": "결제 기록입니다. 영수증은 결제사 페이지에서 열립니다.",
+      "receipt": "영수증",
+      "empty": "아직 표시할 결제 내역이 없습니다.",
+      "loading": "불러오는 중…"
+    },
+    "copyKey": {
+      "copy": "복사",
+      "copied": "복사됨"
+    },
+    "tabs": {
+      "benefits": "베네핏",
+      "devices": "기기",
+      "billing": "결제"
+    },
+    "project": "프로젝트",
+    "letterToggle": "왜 후원금을 받으려고 하나요?",
+    "letter": [
+      [
+        "사실 저는 JetBrains를 애용하던 한 명의 개인 개발자 입니다.",
+        "VS Code에서는 Claude Code를 GUI로 쓸 수 있는데",
+        "JetBrains에는 그것이 없다는 점이 아쉬워서",
+        "직접 만들기 시작한 인디 프로젝트에요."
+      ],
+      [
+        "그런데 많은 사랑을 받으며 다양한 요청이 쌓이고",
+        "플러그인 개발에 점점 더 많은 시간을 쓰게 되면서,",
+        "독립해서 플러그인 개발에만 집중할 수 있으면 좋겠다는 생각이 들었습니다."
+      ],
+      [
+        "전 세계 개발자 동료분들의 문의에 더 빠르게 응답하며,",
+        "지속가능한 프로젝트가 될 수 있도록,",
+        "이렇게 후원을 제안드리게 되었습니다."
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "이 프로젝트의 핵심은 여전히 오픈소스이며, 커뮤니티 기반의 모든 기능은 앞으로도 후원과 관계없이 누릴 수 있음을 명확히 합니다."
+  },
+  "badges": {
+    "sponsor": "후원자 전용 기능",
+    "claudeNative": "클로드 코드 네이티브 설정",
+    "sponsorLabel": "후",
+    "claudeNativeLabel": "클",
+    "openDocs": "문서 열기"
   }
 }

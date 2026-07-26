@@ -48,7 +48,7 @@
       "label": "Fokus nach Anhängen des Dateipfads auf das Chat-Eingabefeld setzen",
       "description": "Wenn du im Editor Alt+K drückst, wird der Fokus nach dem Einfügen des Dateipfads auf das Chat-Eingabefeld verschoben."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": ".gitignore für Editor-Kontext beachten",
       "description": "Wenn aktiviert, wird der Inhalt von durch .gitignore ausgeschlossenen Dateien nicht in den Editor-Kontext aufgenommen — es wird nur der Dateipfad gesendet."
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Benutzerdefinierter Befehl, der den @-Dateiindex erstellt. Entspricht der Einstellung fileSuggestion in settings.json.",
       "placeholder": "z. B. git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Auto-Fortsetzung bei Nutzungslimit",
+      "description": "Wenn Sie Ihr Sitzungslimit erreichen, wird nach dem Zurücksetzen des Kontingents automatisch fortgesetzt. Dies ist die Voreinstellung für neue Sitzungen; jede Sitzung kann es weiterhin umschalten."
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "Unterstütze Claude Code with GUI",
-    "description": "Claude Code with GUI bleibt kostenlos nutzbar. Sponsoring hält dieses unabhängige, JetBrains-orientierte Projekt am Leben.",
+    "title": "Dieses Projekt unterstützen",
+    "description": [
+      "Für die nachhaltige Entwicklung dieses unabhängigen Projekts:",
+      "wenn du magst, spendier mir bitte ein Bier."
+    ],
     "promises": [
       "Unbegrenzter Zugriff auf alle Sponsor-Funktionen",
       "Alle künftigen Funktionen automatisch enthalten",
       "Die höchste Stufe — niemals eine teurere Stufe",
-      "Dein Preis bleibt fest, auch wenn er für neue Sponsoren steigt"
+      "Auch wenn der Betrag für neue Sponsoren steigt, bleibt deiner unverändert"
     ],
     "cta": "Mehr erfahren",
     "opening": "Wird geöffnet…",
@@ -394,7 +401,91 @@
       "title": "Sponsoring aktiv",
       "description": "Danke, dass du Claude Code with GUI unterstützt.",
       "keyLabel": "Sponsor-Schlüssel",
-      "deactivate": "Deaktivieren"
-    }
+      "deactivate": "Deaktivieren",
+      "greeting": "Schön, dich zu sehen, Förderer",
+      "promise": "Wir revanchieren uns mit Updates, die stabiler, schneller und leistungsfähiger sind.",
+      "manage": {
+        "menu": "Verwalten",
+        "clearKey": "Schlüssel entfernen",
+        "clearKeyConfirmTitle": "Förderer-Schlüssel entfernen?",
+        "clearKeyConfirmMessage": "Auf diesem Gerät werden die Förderer-Funktionen abgeschaltet. Deine Förderung und Abrechnung bleiben unberührt — füge den Schlüssel jederzeit wieder ein.",
+        "clearKeyDone": "Schlüssel auf diesem Gerät entfernt.",
+        "cancel": "Regelmäßige Förderung kündigen",
+        "cancelConfirmTitle": "Regelmäßige Förderung kündigen?",
+        "cancelConfirmMessage": "Die Abrechnung endet mit dem bereits bezahlten Zeitraum; bis dahin bleibt alles nutzbar.",
+        "cancelDone": "Regelmäßige Förderung gekündigt.",
+        "cancelFailed": "Kündigung fehlgeschlagen. Bitte gleich noch einmal versuchen."
+      },
+      "thanksBefore": "Danke, dass du ",
+      "thanksAfter": " unterstützt."
+    },
+    "plan": {
+      "title": "Deine Förderung",
+      "tier": "Art",
+      "interval": "Abrechnung",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Funktions-Benefits",
+      "description": "Funktionen, die deine Förderung trägt. Öffne sie, um mehr zu erfahren."
+    },
+    "devices": {
+      "title": "Aktive Geräte",
+      "description": "Rechner, auf denen dein Förderer-Schlüssel genutzt wird.",
+      "note": "Die Förderung gilt pro Schlüssel, nicht pro Konto. Ein Konto dient nur zur Prüfung des Schlüssels — es genügt, dass auf dem Gerät ein Konto hinterlegt ist, das ihn verwenden darf.",
+      "thisDevice": "Dieses Gerät",
+      "remove": "Abmelden",
+      "removing": "Wird abgemeldet…",
+      "empty": "Noch keine Geräte erfasst.",
+      "removeConfirmTitle": "Dieses Gerät abmelden?",
+      "removeConfirmMessage": "Es verschwindet aus dieser Liste. Dein Schlüssel bleibt gültig, und das Gerät meldet sich bei der nächsten Nutzung automatisch wieder an."
+    },
+    "billing": {
+      "title": "Zahlungen",
+      "description": "Deine Zahlungshistorie. Belege öffnen sich beim Zahlungsanbieter.",
+      "receipt": "Beleg",
+      "empty": "Noch keine Zahlungen vorhanden.",
+      "loading": "Wird geladen…"
+    },
+    "copyKey": {
+      "copy": "Kopieren",
+      "copied": "Kopiert"
+    },
+    "tabs": {
+      "benefits": "Vorteile",
+      "devices": "Geräte",
+      "billing": "Zahlungen"
+    },
+    "project": "das Projekt",
+    "letterToggle": "Warum bittest du um Sponsoring?",
+    "letter": [
+      [
+        "Ich bin ein unabhängiger Entwickler und seit Langem JetBrains-Nutzer.",
+        "Unter VS Code kann man Claude Code über eine GUI nutzen,",
+        "bei JetBrains gab es nichts Vergleichbares —",
+        "also habe ich angefangen, es selbst zu bauen, als Indie-Projekt."
+      ],
+      [
+        "Als es Nutzer fand, häuften sich die Wünsche",
+        "und das Plugin nahm immer mehr von meiner Zeit in Anspruch,",
+        "bis ich mir wünschte, unabhängig ganz darauf setzen zu können."
+      ],
+      [
+        "Um Entwicklerkolleginnen und -kollegen weltweit schneller zu antworten,",
+        "und damit dieses Projekt sich selbst tragen kann,",
+        "bitte ich dich um deine Förderung."
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "Der Kern dieses Projekts bleibt Open Source, und alle Community-Funktionen bleiben allen zugänglich — ob mit Förderung oder ohne."
+  },
+  "badges": {
+    "sponsor": "Nur für Sponsoren",
+    "claudeNative": "Claude Code native Einstellung",
+    "sponsorLabel": "S",
+    "claudeNativeLabel": "C",
+    "openDocs": "Doku öffnen"
   }
 }

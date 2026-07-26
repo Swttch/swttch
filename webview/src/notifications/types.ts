@@ -10,6 +10,8 @@ export enum NotificationKind {
   AWAITING_PERMISSION = 'AWAITING_PERMISSION',
   AWAITING_PLAN_APPROVAL = 'AWAITING_PLAN_APPROVAL',
   AWAITING_USER_INPUT = 'AWAITING_USER_INPUT',
+  /** The auto-resume countdown began (quota reset reached); resume fires in ~30s. */
+  AUTO_RESUME_COUNTDOWN = 'AUTO_RESUME_COUNTDOWN',
 }
 
 export interface NotificationContext {

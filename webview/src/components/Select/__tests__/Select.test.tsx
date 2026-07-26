@@ -92,4 +92,61 @@ describe('Select', () => {
     const trigger = screen.getByRole('button', { name: /Test select/i });
     expect(trigger.textContent?.trim()).toBe('');
   });
+
+  // ── Keyboard navigation ────────────────────────────────────────────────────
+
+  it('opens on ArrowDown and highlights the current selection', () => {
+    renderSelect(); // value 'a' (index 0)
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    expect(screen.getByRole('listbox')).toBeDefined();
+    // Active option is the selected one; its id is wired to aria-activedescendant.
+    expect(screen.getByRole('listbox').getAttribute('aria-activedescendant')).toBe('select-option-0');
+  });
+
+  it('ArrowDown/ArrowUp move the active option, Enter commits it', () => {
+    renderSelect(); // starts on index 0
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // open, active 0
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // active 1
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // active 2
+    fireEvent.keyDown(trigger, { key: 'ArrowUp' }); // active 1
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('b');
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('does not move past the last/first option', () => {
+    renderSelect();
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // open, active 0
+    // Push down well past the end, then commit — should land on the last option.
+    for (let i = 0; i < 10; i++) fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('c');
+  });
+
+  it('Home/End jump to the first/last option', () => {
+    renderSelect();
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' }); // open
+    fireEvent.keyDown(trigger, { key: 'End' });
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('c');
+  });
+
+  it('Space on the closed trigger opens the list', () => {
+    renderSelect();
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: ' ' });
+    expect(screen.getByRole('listbox')).toBeDefined();
+  });
+
+  it('Tab closes the list (letting focus move on)', () => {
+    renderSelect();
+    const trigger = screen.getByRole('button', { name: /Test select/i });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    fireEvent.keyDown(trigger, { key: 'Tab' });
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
 });

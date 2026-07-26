@@ -49,6 +49,27 @@ export enum SettingKey {
 
   // UI mirroring (RTL/LTR layout direction)
   UI_DIRECTION = 'uiDirection',
+
+  // ── GUI-only keys migrated out of the native ~/.claude/settings.json ────────
+  // (not part of Claude Code's official settings schema; see backend
+  //  settings-migration.ts). They now live in ~/.claude-code-gui/settings.js.
+
+  // GUI interface display language (e.g. 'korean'); null → English. This is our
+  // own i18n, unrelated to Claude's response language (a native key).
+  UI_LANGUAGE = 'uiLanguage',
+
+  // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
+  USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
+
+  // When true, move focus to the chat input after inserting a file path (Alt+K).
+  FOCUS_INPUT_ON_EDITOR_CONTEXT = 'focusInputOnEditorContext',
+
+  // Auto-resume on usage-limit reset (sponsor-only); seeds the limit banner default.
+  AUTO_RESUME_ON_LIMIT = 'autoResumeOnLimit',
+
+  // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
+  // the native `effortLevel`, but absent from the official schema, so it lives here.
+  ULTRACODE = 'ultracode',
 }
 
 /**
@@ -132,6 +153,11 @@ export interface SettingsState {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
+  [SettingKey.UI_LANGUAGE]: string | null;
+  [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
+  [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
+  [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
+  [SettingKey.ULTRACODE]: boolean | null;
 }
 
 /**
@@ -153,4 +179,9 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
+  [SettingKey.UI_LANGUAGE]: null,
+  [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
+  [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
+  [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
+  [SettingKey.ULTRACODE]: null,
 };

@@ -48,7 +48,7 @@
       "label": "插入文件路径后聚焦聊天输入框",
       "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "编辑器上下文遵循 .gitignore",
       "description": "启用后,被 .gitignore 忽略的文件内容将不包含在编辑器上下文中——仅发送文件路径。"
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "用于构建 @ 文件索引的自定义命令。与 settings.json 中的 fileSuggestion 设置相同。",
       "placeholder": "例如：git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "达到用量上限时自动恢复",
+      "description": "当您达到会话上限时，在额度重置后自动恢复。这是新会话的默认值；每个会话仍可单独切换。"
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "赞助 Claude Code with GUI",
-    "description": "Claude Code with GUI 始终免费使用。赞助让这个以 JetBrains 为先的独立项目得以持续。",
+    "title": "赞助这个项目",
+    "description": [
+      "为了这个独立项目的可持续开发，",
+      "如果你愿意，还请我喝杯啤酒吧。"
+    ],
     "promises": [
       "无限使用所有赞助者专属功能",
       "自动包含未来所有新功能",
       "最高等级 — 永不会有更高的付费等级",
-      "即使新赞助者价格上涨，你的价格也保持不变"
+      "即使新的赞助金额上涨，你的金额也会保持不变"
     ],
     "cta": "了解更多",
     "opening": "正在打开…",
@@ -394,7 +401,91 @@
       "title": "赞助中",
       "description": "感谢你赞助 Claude Code with GUI。",
       "keyLabel": "赞助者密钥",
-      "deactivate": "取消激活"
-    }
+      "deactivate": "取消激活",
+      "greeting": "很高兴见到你，赞助者",
+      "promise": "我们会以更稳定、更快、更强大的更新回报你。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "清除赞助密钥",
+        "clearKeyConfirmTitle": "要清除赞助密钥吗？",
+        "clearKeyConfirmMessage": "本设备将停用赞助功能。你的赞助与付款不受影响，随时重新粘贴密钥即可恢复。",
+        "clearKeyDone": "已清除本设备的赞助密钥。",
+        "cancel": "取消定期赞助",
+        "cancelConfirmTitle": "要取消定期赞助吗？",
+        "cancelConfirmMessage": "将在你已付费的周期结束时停止扣款，在此之前赞助功能照常可用。",
+        "cancelDone": "已取消定期赞助。",
+        "cancelFailed": "取消失败，请稍后再试。"
+      },
+      "thanksBefore": "感谢你支持",
+      "thanksAfter": "。"
+    },
+    "plan": {
+      "title": "赞助信息",
+      "tier": "类别",
+      "interval": "结算周期",
+      "monthly": "按月",
+      "yearly": "按年",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "功能权益",
+      "description": "你的赞助所支持的功能。点击可查看说明。"
+    },
+    "devices": {
+      "title": "活跃设备",
+      "description": "正在使用赞助密钥的设备。",
+      "note": "赞助按密钥生效，而非按账号。账号仅用于验证密钥，只要设备上添加了可使用该密钥的账号即可。",
+      "thisDevice": "当前设备",
+      "remove": "退出",
+      "removing": "正在退出…",
+      "empty": "暂无已记录的设备。",
+      "removeConfirmTitle": "要让此设备退出吗？",
+      "removeConfirmMessage": "它将从列表中消失。你的赞助密钥仍然有效，该设备下次使用时会自动重新登记。"
+    },
+    "billing": {
+      "title": "付款记录",
+      "description": "你的付款历史。收据将在支付服务商页面打开。",
+      "receipt": "收据",
+      "empty": "暂无付款记录。",
+      "loading": "加载中…"
+    },
+    "copyKey": {
+      "copy": "复制",
+      "copied": "已复制"
+    },
+    "tabs": {
+      "benefits": "权益",
+      "devices": "设备",
+      "billing": "付款"
+    },
+    "project": "这个项目",
+    "letterToggle": "为什么要请大家赞助？",
+    "letter": [
+      [
+        "我是一名独立开发者，也是多年的 JetBrains 用户。",
+        "在 VS Code 上可以用 GUI 使用 Claude Code，",
+        "但 JetBrains 上却没有——觉得可惜，",
+        "于是我自己动手做了这个独立项目。"
+      ],
+      [
+        "承蒙大家喜爱，各种需求不断累积，",
+        "花在插件开发上的时间也越来越多，",
+        "我开始希望能够独立出来、专心做这件事。"
+      ],
+      [
+        "为了更快回应世界各地的开发者同行，",
+        "也为了让这个项目能够持续下去，",
+        "我向你提出赞助的邀请。"
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "这个项目的核心依然是开源的，所有社区功能无论是否赞助，今后都可以继续使用。"
+  },
+  "badges": {
+    "sponsor": "赞助者专属功能",
+    "claudeNative": "Claude Code 原生设置",
+    "sponsorLabel": "赞",
+    "claudeNativeLabel": "原",
+    "openDocs": "打开文档"
   }
 }

@@ -36,6 +36,23 @@ export enum MessageType {
   /** Re-attach this connection to an already-running session (e.g. after reconnect). */
   RECLAIM_SESSION = 'RECLAIM_SESSION',
 
+  // -- Scheduled messages ("send later" engine, session-scoped) --
+  /** Create a scheduled message reservation for a session. inbound webview→backend */
+  SCHEDULE_MESSAGE = 'SCHEDULE_MESSAGE',
+  /** Cancel a scheduled message reservation by id. inbound webview→backend */
+  CANCEL_SCHEDULED_MESSAGE = 'CANCEL_SCHEDULED_MESSAGE',
+  /** Edit a scheduled message reservation in place (message and/or sendAt) by id. inbound webview→backend */
+  UPDATE_SCHEDULED_MESSAGE = 'UPDATE_SCHEDULED_MESSAGE',
+  /** List the scheduled message reservations for a session. inbound webview→backend */
+  GET_SCHEDULED_MESSAGES = 'GET_SCHEDULED_MESSAGES',
+  /**
+   * ACK that a webview finished delivering a due reservation (it ran the normal
+   * send path). Only on this ACK does the engine remove the reservation, so a
+   * tab dying mid-delivery leaves the reservation to be redelivered (at-least-
+   * once). inbound webview→backend
+   */
+  SCHEDULED_MESSAGE_DELIVERED = 'SCHEDULED_MESSAGE_DELIVERED',
+
   // -- Sessions CRUD --
   /** Create a new session (optionally in a given working directory). */
   CREATE_SESSION = 'CREATE_SESSION',
@@ -101,6 +118,14 @@ export enum MessageType {
   DEACTIVATE_LICENSE = 'DEACTIVATE_LICENSE',
   /** Poll www for a sponsor key minted for this install id and auto-activate it (copy/paste-free). inbound webview→backend */
   CHECK_SPONSOR = 'CHECK_SPONSOR',
+  /** List the machines this sponsor license is active on. inbound webview→backend */
+  GET_SPONSOR_DEVICES = 'GET_SPONSOR_DEVICES',
+  /** Sign one machine out of this sponsor license (the key itself stays valid). inbound webview→backend */
+  REMOVE_SPONSOR_DEVICE = 'REMOVE_SPONSOR_DEVICE',
+  /** List the payments behind this sponsor license, each with its receipt link. inbound webview→backend */
+  GET_SPONSOR_INVOICES = 'GET_SPONSOR_INVOICES',
+  /** Cancel the recurring payment behind this sponsor license (ends billing, unlike clearing the key). inbound webview→backend */
+  CANCEL_SPONSOR_SUBSCRIPTION = 'CANCEL_SPONSOR_SUBSCRIPTION',
 
   // -- Account / usage / version --
   /** Read the signed-in Claude account info. */
@@ -308,6 +333,19 @@ export enum MessageType {
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
   /** A user message was broadcast to all connections viewing the session. */
   USER_MESSAGE_BROADCAST = 'USER_MESSAGE_BROADCAST',
+  /** A session's scheduled-message reservations changed (created/cancelled/fired/failed); carries the session's current reservation list so clients refresh. outbound backend→webview */
+  SCHEDULED_MESSAGE_UPDATED = 'SCHEDULED_MESSAGE_UPDATED',
+  /** Live progress of an AUTO_RESUME reservation's pre-send quota poll; carries { sessionId, scheduleId, phase, attempt, nextCheckInMs?, error? } (phase = AutoResumeStatusPhase) so the webview can show "waiting for quota reset" / "gave up" status. outbound backend→webview */
+  AUTO_RESUME_STATUS = 'AUTO_RESUME_STATUS',
+  /**
+   * A due reservation should be delivered NOW by this ONE tab (the engine sends
+   * this to a single chosen connection, never a broadcast, so the message isn't
+   * sent multiple times). The tab runs the same send path a person does. Carries
+   * { id, sessionId, message, needsSessionSwitch } — when needsSessionSwitch, the
+   * tab first loads sessionId before sending. The tab ACKs with
+   * SCHEDULED_MESSAGE_DELIVERED once sent. outbound backend→webview (one connection)
+   */
+  DELIVER_SCHEDULED_MESSAGE = 'DELIVER_SCHEDULED_MESSAGE',
 
   // -- Error / diagnosis push --
   /** A backend service-level error occurred. */

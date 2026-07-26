@@ -3,13 +3,14 @@ import { render, waitFor } from '@testing-library/react';
 import { I18nLocaleSync, UI_LANGUAGE_STORAGE_KEY } from '../I18nLocaleSync';
 
 // ---------------------------------------------------------------------------
-// ClaudeSettingsContext mock — I18nLocaleSync only reads settings.uiLanguage.
+// SettingsContext mock — I18nLocaleSync only reads settings.uiLanguage (moved
+// out of the native ClaudeSettings into the app settings store).
 // ---------------------------------------------------------------------------
 
 let mockUiLanguage: string | undefined;
 
-vi.mock('@/contexts/ClaudeSettingsContext', () => ({
-  useClaudeSettings: () => ({
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({
     settings: { uiLanguage: mockUiLanguage },
   }),
 }));

@@ -48,7 +48,7 @@
       "label": "Focar o campo de chat após anexar o caminho do arquivo",
       "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respeitar o .gitignore no contexto do editor",
       "description": "Quando ativado, o conteúdo de arquivos ignorados pelo .gitignore é excluído do contexto do editor — apenas o caminho do arquivo é enviado."
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Comando personalizado que cria o índice de arquivos @. Igual à configuração fileSuggestion em settings.json.",
       "placeholder": "ex.: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Retomada automática no limite de uso",
+      "description": "Quando você atingir o limite da sessão, a retomada ocorrerá automaticamente após a redefinição da cota. Este é o padrão para novas sessões; cada sessão ainda pode alterná-lo."
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "Apoie o Claude Code with GUI",
-    "description": "O Claude Code with GUI continua gratuito. Patrocinar mantém este projeto independente, com foco no JetBrains, em andamento.",
+    "title": "Apoiar este projeto",
+    "description": [
+      "Para o desenvolvimento sustentável deste projeto independente,",
+      "se quiser, me paga uma cerveja, por favor."
+    ],
     "promises": [
       "Acesso ilimitado a todos os recursos exclusivos para patrocinadores",
       "Todos os recursos futuros incluídos automaticamente",
       "O nível mais alto — nunca haverá um nível pago superior",
-      "Seu preço permanece fixo, mesmo que aumente para novos patrocinadores"
+      "Mesmo que o valor aumente para novos patrocinadores, o seu permanece o mesmo"
     ],
     "cta": "Saiba mais",
     "opening": "Abrindo…",
@@ -394,7 +401,91 @@
       "title": "Patrocinando",
       "description": "Obrigado por apoiar o Claude Code with GUI.",
       "keyLabel": "Chave de patrocinador",
-      "deactivate": "Desativar"
-    }
+      "deactivate": "Desativar",
+      "greeting": "Que bom te ver, apoiador",
+      "promise": "Vamos retribuir com atualizações mais estáveis, mais rápidas e mais poderosas.",
+      "manage": {
+        "menu": "Gerenciar",
+        "clearKey": "Limpar a chave",
+        "clearKeyConfirmTitle": "Limpar a chave de apoiador?",
+        "clearKeyConfirmMessage": "Este dispositivo deixa de usar os recursos de apoiador. Seu apoio e sua cobrança continuam iguais — cole a chave de volta quando quiser.",
+        "clearKeyDone": "Chave limpa neste dispositivo.",
+        "cancel": "Cancelar apoio recorrente",
+        "cancelConfirmTitle": "Cancelar seu apoio recorrente?",
+        "cancelConfirmMessage": "A cobrança para no fim do período já pago, e até lá tudo continua funcionando.",
+        "cancelDone": "Apoio recorrente cancelado.",
+        "cancelFailed": "Não foi possível cancelar. Tente novamente em instantes."
+      },
+      "thanksBefore": "Obrigado por apoiar ",
+      "thanksAfter": "."
+    },
+    "plan": {
+      "title": "Seu apoio",
+      "tier": "Tipo",
+      "interval": "Cobrança",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Benefícios de recursos",
+      "description": "Recursos que seu apoio sustenta. Abra para ver o que fazem."
+    },
+    "devices": {
+      "title": "Dispositivos ativos",
+      "description": "Máquinas onde sua chave de apoiador está em uso.",
+      "note": "O apoio vale por chave, não por conta. A conta serve apenas para verificar a chave: basta que o dispositivo tenha uma conta que possa usá-la.",
+      "thisDevice": "Este dispositivo",
+      "remove": "Sair",
+      "removing": "Saindo…",
+      "empty": "Nenhum dispositivo registrado ainda.",
+      "removeConfirmTitle": "Sair neste dispositivo?",
+      "removeConfirmMessage": "Ele deixará de aparecer aqui. Sua chave continua válida e o dispositivo será registrado de novo no próximo uso."
+    },
+    "billing": {
+      "title": "Pagamentos",
+      "description": "Seu histórico de pagamentos. Os recibos abrem no provedor de pagamento.",
+      "receipt": "Recibo",
+      "empty": "Nenhum pagamento para mostrar ainda.",
+      "loading": "Carregando…"
+    },
+    "copyKey": {
+      "copy": "Copiar",
+      "copied": "Copiado"
+    },
+    "tabs": {
+      "benefits": "Benefícios",
+      "devices": "Dispositivos",
+      "billing": "Pagamentos"
+    },
+    "project": "o projeto",
+    "letterToggle": "Por que você está pedindo patrocínio?",
+    "letter": [
+      [
+        "Sou um desenvolvedor independente e uso JetBrains há muitos anos.",
+        "No VS Code dá para usar o Claude Code por uma interface gráfica,",
+        "mas no JetBrains não havia nada parecido —",
+        "então comecei a construir por conta própria, como projeto indie."
+      ],
+      [
+        "Conforme encontrou seu público, os pedidos se acumularam",
+        "e o plugin foi tomando cada vez mais do meu tempo,",
+        "até eu passar a desejar me dedicar a ele em tempo integral."
+      ],
+      [
+        "Para responder mais rápido aos colegas desenvolvedores do mundo todo,",
+        "e para que este seja um projeto capaz de se sustentar,",
+        "proponho o seu patrocínio."
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "O núcleo deste projeto continua open source, e todas as funcionalidades da comunidade seguirão disponíveis para todos, com apoio ou sem."
+  },
+  "badges": {
+    "sponsor": "Recurso apenas para patrocinadores",
+    "claudeNative": "Configuração nativa do Claude Code",
+    "sponsorLabel": "P",
+    "claudeNativeLabel": "C",
+    "openDocs": "Abrir documentação"
   }
 }

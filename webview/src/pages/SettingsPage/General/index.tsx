@@ -8,8 +8,10 @@ import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
 import { APP_NAME } from '@/config/app';
-import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
+import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
@@ -37,13 +39,20 @@ const LANGUAGE_OPTIONS = [
 
 export function GeneralSettings() {
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useClaudeSettings();
-  const { updateSettingWithScope } = useSettings();
+  // uiLanguage / useCtrlEnterToSend / focusInputOnEditorContext live in the app
+  // settings (they are NOT in Claude's official schema). `language` and
+  // `respectGitignore` ARE official keys, so they are read from and written to
+  // the native Claude settings — see backend settings-migration.ts.
+  const { scopeSettings, updateSetting, scope, resetToGlobal, updateSettingWithScope } = useSettings();
+  const {
+    scopeSettings: claudeScopeSettings,
+    updateSetting: updateClaudeSetting,
+  } = useClaudeSettings();
 
-  // Claude's response language is a free-text field in Claude's settings.json.
+  // Claude's response language is a free-text field in Claude's own settings.json.
   // Show the value stored at the current scope (empty → English placeholder);
   // clearing the input removes the key at this scope (never overwrites on upgrade).
-  const responseLanguage = (scopeSettings.language as string | undefined) ?? '';
+  const responseLanguage = (claudeScopeSettings.language as string | undefined) ?? '';
 
   const rawUiLanguage = scopeSettings.uiLanguage as string | undefined;
   const isUiNotSet = rawUiLanguage === undefined && scope === 'project';
@@ -55,7 +64,9 @@ export function GeneralSettings() {
   // The handler accepts both (ctrlKey || metaKey); only the label needs to differ.
   const sendModifier = isMac() ? 'Cmd' : 'Ctrl';
   const focusInputOnEditorContext = (scopeSettings.focusInputOnEditorContext as boolean | undefined) ?? true;
-  const respectGitignoreForContext = (scopeSettings.respectGitignoreForContext as boolean | undefined) ?? false;
+  const respectGitignore = (claudeScopeSettings.respectGitignore as boolean | undefined) ?? false;
+  // Auto-resume default (sponsor-only): the global default a session inherits.
+  const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
 
   const languageOptions: SelectOption[] = [
     ...(scope === 'project'
@@ -72,11 +83,17 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.language.label')}
           description={t('general.language.description')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/settings#available-settings"
+            />
+          }
         >
           <input
             type="text"
             value={responseLanguage}
-            onChange={(e) => updateSetting('language', e.target.value || null)}
+            onChange={(e) => void updateClaudeSetting('language', e.target.value || null)}
             placeholder={t('general.language.placeholder')}
             aria-label={t('general.language.label')}
             className="w-48 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
@@ -96,7 +113,7 @@ export function GeneralSettings() {
             }`}
             onChange={(value) => {
               if (value === NOT_SET_VALUE) {
-                resetToGlobal('uiLanguage');
+                resetToGlobal(SettingKey.UI_LANGUAGE);
                 return;
               }
               // Direction auto-sync fires whenever the effective direction
@@ -113,7 +130,7 @@ export function GeneralSettings() {
               } else if (!willBeRtl && wasRtl) {
                 updateSettingWithScope(SettingKey.UI_DIRECTION, UiDirection.LTR, 'global');
               }
-              updateSetting('uiLanguage', value);
+              updateSetting(SettingKey.UI_LANGUAGE, value);
             }}
           />
         </SettingRow>
@@ -126,7 +143,7 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={useCtrlEnterToSend}
-            onChange={(checked) => updateSetting('useCtrlEnterToSend', checked)}
+            onChange={(checked) => updateSetting(SettingKey.USE_CTRL_ENTER_TO_SEND, checked)}
             ariaLabel={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
           />
         </SettingRow>
@@ -137,19 +154,41 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={focusInputOnEditorContext}
-            onChange={(checked) => updateSetting('focusInputOnEditorContext', checked)}
+            onChange={(checked) => updateSetting(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT, checked)}
             ariaLabel={t('general.focusInputOnEditorContext.label')}
           />
         </SettingRow>
 
         <SettingRow
-          label={t('general.respectGitignoreForContext.label')}
-          description={t('general.respectGitignoreForContext.description')}
+          label={t('general.respectGitignore.label')}
+          description={t('general.respectGitignore.description')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/settings#available-settings"
+            />
+          }
         >
           <ToggleSwitch
-            checked={respectGitignoreForContext}
-            onChange={(checked) => updateSetting('respectGitignoreForContext', checked)}
-            ariaLabel={t('general.respectGitignoreForContext.label')}
+            checked={respectGitignore}
+            onChange={(checked) => void updateClaudeSetting('respectGitignore', checked)}
+            ariaLabel={t('general.respectGitignore.label')}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label={t('general.autoResumeOnLimit.label')}
+          description={t('general.autoResumeOnLimit.description')}
+          badge={<SettingBadge variant={SettingBadgeVariant.Sponsor} />}
+        >
+          <ToggleSwitch
+            checked={autoResumeOnLimit}
+            onChange={async (checked) => {
+              if (await ensureSponsor()) {
+                updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked);
+              }
+            }}
+            ariaLabel={t('general.autoResumeOnLimit.label')}
           />
         </SettingRow>
 

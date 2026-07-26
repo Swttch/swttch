@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "En attente de votre réponse"
+  },
+  "autoResumeCountdown": {
+    "body": "La tâche planifiée reprend dans 30 secondes."
   }
 }

@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "در انتظار پاسخ شما"
+  },
+  "autoResumeCountdown": {
+    "body": "کار زمان‌بندی‌شده تا ۳۰ ثانیه دیگر از سر گرفته می‌شود."
   }
 }

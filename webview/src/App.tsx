@@ -11,6 +11,7 @@ import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
+import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
 import { isDev } from './config/environment';
 import 'katex/dist/katex.min.css';
@@ -19,6 +20,8 @@ function AppContent() {
   useKeyboardShortcuts();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
+  // Lets non-React callers (toasts, palette items) open settings as an overlay.
+  useSettingsOverlayNavigation();
   const [isAccountUsageOpen, setIsAccountUsageOpen] = useState(false);
   const location = useLocation();
   const backgroundLocation = location.state?.backgroundLocation;

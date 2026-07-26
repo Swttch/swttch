@@ -182,6 +182,24 @@
       "time": "Time"
     }
   },
+  "scheduledMessages": {
+    "title": "Scheduled messages",
+    "close": "Close",
+    "empty": "No scheduled messages.",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "relative": {
+      "soon": "due now",
+      "day_one": "in {{count}} day",
+      "day_other": "in {{count}} days",
+      "hour_one": "in {{count}} hour",
+      "hour_other": "in {{count}} hours",
+      "minute_one": "in {{count}} min",
+      "minute_other": "in {{count}} min",
+      "second_one": "in {{count}} sec",
+      "second_other": "in {{count}} sec"
+    }
+  },
   "modelSwitch": {
     "selectModel": "Select a model",
     "loadingModels": "Loading models…",
@@ -405,5 +423,24 @@
       "showOriginal": "Show original response",
       "tooltip": "Toggle between the reconstructed view and the raw CLI output"
     }
+  },
+  "autoResume": {
+    "schedule": "Schedule resume",
+    "cancel": "Cancel reservation",
+    "resumeNow": "Resume now",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Waiting for quota reset…",
+      "proceeding": "Resuming…"
+    },
+    "error": {
+      "network": "Network connection error",
+      "timeout": "Timed out",
+      "auth": "Authentication error",
+      "generic": "Auto-resume failed"
+    },
+    "scheduledToast": "Auto-resume scheduled",
+    "canceledToast": "Auto-resume canceled",
+    "scheduled": "Auto-resume scheduled"
   }
 }

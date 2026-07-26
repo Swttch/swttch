@@ -48,7 +48,7 @@
       "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
       "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respecter .gitignore pour le contexte de l'éditeur",
       "description": "Lorsque activé, le contenu des fichiers ignorés par .gitignore est exclu du contexte de l'éditeur — seul le chemin du fichier est envoyé."
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Commande personnalisée qui construit l'index de fichiers @. Identique au paramètre fileSuggestion dans settings.json.",
       "placeholder": "ex. : git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Reprise automatique à la limite d'utilisation",
+      "description": "Lorsque vous atteignez la limite de session, la reprise s'effectue automatiquement une fois le quota réinitialisé. C'est la valeur par défaut pour les nouvelles sessions ; chaque session peut toujours la modifier."
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "Soutenez Claude Code with GUI",
-    "description": "Claude Code with GUI reste gratuit. Le parrainage permet à ce projet indépendant, pensé pour JetBrains, de continuer.",
+    "title": "Soutenir ce projet",
+    "description": [
+      "Pour le développement durable de ce projet indépendant,",
+      "si le cœur vous en dit, offrez-moi une bière, s'il vous plaît."
+    ],
     "promises": [
       "Accès illimité à toutes les fonctionnalités réservées aux sponsors",
       "Toutes les fonctionnalités futures incluses automatiquement",
       "Le niveau le plus élevé — jamais de palier payant supérieur",
-      "Votre tarif reste bloqué, même s'il augmente pour les nouveaux sponsors"
+      "Même si le montant augmente pour les nouveaux sponsors, le vôtre reste inchangé"
     ],
     "cta": "En savoir plus",
     "opening": "Ouverture…",
@@ -394,7 +401,91 @@
       "title": "Parrainage actif",
       "description": "Merci de soutenir Claude Code with GUI.",
       "keyLabel": "Clé de sponsor",
-      "deactivate": "Désactiver"
-    }
+      "deactivate": "Désactiver",
+      "greeting": "Ravi de vous revoir, mécène",
+      "promise": "Nous vous le rendrons par des mises à jour plus stables, plus rapides et plus puissantes.",
+      "manage": {
+        "menu": "Gérer",
+        "clearKey": "Effacer la clé",
+        "clearKeyConfirmTitle": "Effacer la clé de mécène ?",
+        "clearKeyConfirmMessage": "Cet appareil cessera d’utiliser les fonctionnalités de mécène. Votre soutien et vos paiements restent inchangés : recollez la clé quand vous voulez.",
+        "clearKeyDone": "Clé effacée sur cet appareil.",
+        "cancel": "Annuler le soutien récurrent",
+        "cancelConfirmTitle": "Annuler votre soutien récurrent ?",
+        "cancelConfirmMessage": "Les prélèvements s’arrêtent à la fin de la période déjà payée ; d’ici là, tout continue de fonctionner.",
+        "cancelDone": "Soutien récurrent annulé.",
+        "cancelFailed": "Annulation impossible. Réessayez dans un instant."
+      },
+      "thanksBefore": "Merci de soutenir ",
+      "thanksAfter": "."
+    },
+    "plan": {
+      "title": "Votre soutien",
+      "tier": "Type",
+      "interval": "Facturation",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Avantages fonctionnels",
+      "description": "Les fonctionnalités que votre soutien fait vivre. Ouvrez-les pour en savoir plus."
+    },
+    "devices": {
+      "title": "Appareils actifs",
+      "description": "Machines où votre clé de mécène est utilisée.",
+      "note": "Le soutien s’applique par clé, et non par compte. Le compte sert uniquement à vérifier la clé : il suffit que l’appareil dispose d’un compte autorisé à l’utiliser.",
+      "thisDevice": "Cet appareil",
+      "remove": "Déconnecter",
+      "removing": "Déconnexion…",
+      "empty": "Aucun appareil enregistré pour le moment.",
+      "removeConfirmTitle": "Déconnecter cet appareil ?",
+      "removeConfirmMessage": "Il disparaîtra de cette liste. Votre clé reste valide et l’appareil se réinscrira à sa prochaine utilisation."
+    },
+    "billing": {
+      "title": "Paiements",
+      "description": "Votre historique de paiements. Les reçus s’ouvrent chez le prestataire.",
+      "receipt": "Reçu",
+      "empty": "Aucun paiement à afficher.",
+      "loading": "Chargement…"
+    },
+    "copyKey": {
+      "copy": "Copier",
+      "copied": "Copié"
+    },
+    "tabs": {
+      "benefits": "Avantages",
+      "devices": "Appareils",
+      "billing": "Paiements"
+    },
+    "project": "le projet",
+    "letterToggle": "Pourquoi demandez-vous un parrainage ?",
+    "letter": [
+      [
+        "Je suis un développeur indépendant, et utilisateur de JetBrains de longue date.",
+        "Sur VS Code, on peut utiliser Claude Code via une interface graphique,",
+        "mais chez JetBrains, rien de tel n'existait —",
+        "alors j'ai commencé à le construire moi-même, comme projet indépendant."
+      ],
+      [
+        "Le projet a trouvé son public, les demandes se sont accumulées",
+        "et le plugin a pris de plus en plus de mon temps,",
+        "au point de souhaiter m'y consacrer pleinement, à mon compte."
+      ],
+      [
+        "Pour répondre plus vite à mes collègues développeurs du monde entier,",
+        "et pour que ce projet puisse tenir dans la durée,",
+        "je vous propose de le soutenir."
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "Le cœur de ce projet reste open source, et toutes les fonctionnalités communautaires resteront accessibles à tous, avec ou sans parrainage."
+  },
+  "badges": {
+    "sponsor": "Fonctionnalité réservée aux sponsors",
+    "claudeNative": "Paramètre natif de Claude Code",
+    "sponsorLabel": "S",
+    "claudeNativeLabel": "C",
+    "openDocs": "Ouvrir la doc"
   }
 }

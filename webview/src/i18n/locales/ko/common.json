@@ -186,5 +186,9 @@
       "hours": "{{n}}시간",
       "minutes": "{{n}}분"
     }
+  },
+  "sponsorGated": {
+    "message": "후원해주신 분들을 위한 기능입니다",
+    "learnMore": "알아보기"
   }
 }

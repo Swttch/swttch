@@ -182,6 +182,20 @@
       "time": "Zeit"
     }
   },
+  "scheduledMessages": {
+    "title": "Geplante Nachrichten",
+    "close": "Schließen",
+    "empty": "Keine geplanten Nachrichten.",
+    "edit": "Bearbeiten",
+    "cancel": "Abbrechen",
+    "relative": {
+      "soon": "jetzt",
+      "day": "in {{count}} T",
+      "hour": "in {{count}} Std.",
+      "minute": "in {{count}} Min.",
+      "second": "in {{count}} Sek."
+    }
+  },
   "modelSwitch": {
     "selectModel": "Modell auswählen",
     "loadingModels": "Modelle werden geladen…",
@@ -405,5 +419,24 @@
       "showOriginal": "Originalantwort anzeigen",
       "tooltip": "Zwischen rekonstruierter Ansicht und roher CLI-Ausgabe wechseln"
     }
+  },
+  "autoResume": {
+    "schedule": "Fortsetzung planen",
+    "cancel": "Reservierung abbrechen",
+    "resumeNow": "Jetzt fortsetzen",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Warte auf Kontingent-Reset…",
+      "proceeding": "Wird fortgesetzt…"
+    },
+    "error": {
+      "network": "Netzwerkverbindungsfehler",
+      "timeout": "Zeitüberschreitung",
+      "auth": "Authentifizierungsfehler",
+      "generic": "Automatische Fortsetzung fehlgeschlagen"
+    },
+    "scheduledToast": "Automatische Fortsetzung geplant",
+    "canceledToast": "Automatische Fortsetzung abgebrochen",
+    "scheduled": "Automatische Fortsetzung geplant"
   }
 }

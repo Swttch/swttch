@@ -6,6 +6,7 @@ import { EditedFileTracker } from './features/editedFileTracker';
 import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
+import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { MessageType } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
@@ -212,6 +213,14 @@ export async function ensureClaudeProcess(
   // SessionRecord에 프로세스 저장
   connections.setProcess(targetSessionId, proc);
   connections.setBuffer(targetSessionId, '');
+
+  // The session's process is now alive — this is where we re-arm any scheduled
+  // messages ("send later" reservations) that outlived a backend restart. Timers
+  // live in memory only, so a restart drops them; restoring here (the single
+  // convergence point where a session's process spawns) rebuilds them so a due
+  // reservation can deliver to this fresh process. Idempotent (already-armed
+  // timers are skipped) and fire-and-forget so it never blocks the stream start.
+  void restoreSchedulesForSession(targetSessionId, connections);
 
   // 모든 구독자에게 스트림 시작 알림
   connections.broadcastToSession(targetSessionId, MessageType.STREAM_START);

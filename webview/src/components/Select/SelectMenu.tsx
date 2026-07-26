@@ -1,6 +1,9 @@
-import { useLayoutEffect, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
 import { Portal } from '../Portal';
 import type { SelectOption } from './types';
+
+/** Stable id for the active option, wired to the listbox's aria-activedescendant. */
+const OPTION_ID_PREFIX = 'select-option-';
 
 interface Position {
   left: number;
@@ -11,9 +14,13 @@ interface Position {
 interface Props {
   options: SelectOption[];
   value: string;
+  /** Index of the keyboard-highlighted option (-1 = none). */
+  activeIndex: number;
   anchorRef: RefObject<HTMLElement>;
   menuRef: RefObject<HTMLDivElement>;
   onSelect: (value: string) => void;
+  /** Sync the active index to the option under the pointer (hover). */
+  onActivate: (index: number) => void;
 }
 
 /**
@@ -30,7 +37,7 @@ interface Props {
  * in className.
  */
 export function SelectMenu(props: Props) {
-  const { options, value, anchorRef, menuRef, onSelect } = props;
+  const { options, value, activeIndex, anchorRef, menuRef, onSelect, onActivate } = props;
   const [pos, setPos] = useState<Position | null>(null);
 
   useLayoutEffect(() => {
@@ -66,26 +73,40 @@ export function SelectMenu(props: Props) {
     });
   }, [anchorRef, menuRef, options]);
 
+  // Keep the keyboard-highlighted option in view as Arrow keys move it.
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    const el = menuRef.current?.querySelector(`#${OPTION_ID_PREFIX}${activeIndex}`) as HTMLElement | null;
+    // scrollIntoView is unimplemented in jsdom; guard so tests don't throw.
+    el?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeIndex, menuRef]);
+
   return (
     <Portal>
       <div
         ref={menuRef}
         role="listbox"
+        aria-activedescendant={activeIndex >= 0 ? `${OPTION_ID_PREFIX}${activeIndex}` : undefined}
         className="fixed z-[100] max-h-72 overflow-y-auto rounded-lg border border-border-default bg-surface-raised py-1 shadow-xl"
         style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, minWidth: pos?.minWidth ?? 0 }}
       >
-        {options.map((option) => {
+        {options.map((option, index) => {
           const isSelected = option.value === value;
+          const isActive = index === activeIndex;
           return (
             <button
               key={option.value}
+              id={`${OPTION_ID_PREFIX}${index}`}
               type="button"
               role="option"
               aria-selected={isSelected}
               onClick={() => onSelect(option.value)}
-              className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-sm transition-colors hover:bg-surface-hover ${
-                isSelected ? 'text-text-primary' : 'text-text-secondary'
-              } ${option.italic ? 'italic text-text-tertiary' : ''}`}
+              onMouseEnter={() => onActivate(index)}
+              className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start text-sm transition-colors ${
+                isActive ? 'bg-surface-hover' : ''
+              } ${isSelected ? 'text-text-primary' : 'text-text-secondary'} ${
+                option.italic ? 'italic text-text-tertiary' : ''
+              }`}
             >
               <span className="truncate">{option.label}</span>
               {isSelected && (

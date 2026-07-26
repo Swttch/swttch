@@ -12,7 +12,36 @@
     "mentionFile": "Mentionner un fichier de ce projet...",
     "clearConversation": "Effacer la conversation",
     "resumeConversation": "Reprendre la conversation",
-    "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan"
+    "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan",
+    "scheduleSend": "Planifier un message..."
+  },
+  "scheduleSend": {
+    "title": "Planifier un message",
+    "editTitle": "Modifier le message planifié",
+    "sponsorTooltip": "Une fonctionnalité pour les sponsors",
+    "close": "Fermer",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Message à envoyer plus tard",
+    "whenLabel": "Quand",
+    "customLabel": "Date et heure personnalisées",
+    "submit": "Planifier",
+    "updateSubmit": "Enregistrer",
+    "scheduledToast": "Message planifié",
+    "updatedToast": "Planification mise à jour",
+    "presets": {
+      "in5min": "Dans 5 min",
+      "in30min": "Dans 30 min",
+      "in1hour": "Dans 1 h",
+      "tomorrowMorning": "Demain 9 h",
+      "afterDuration": "Après un délai...",
+      "custom": "Personnalisé"
+    },
+    "duration": {
+      "days": "jours",
+      "hours": "h",
+      "minutes": "min",
+      "seconds": "s"
+    }
   },
   "model": {
     "switchModel": "Changer de modèle...",
@@ -21,7 +50,9 @@
     "accountUsage": "Compte et utilisation...",
     "toggleFastMode": "Basculer le mode rapide",
     "effortUnsupportedReason": "Ce modèle ne prend pas en charge les niveaux d'effort",
-    "fastModeUnsupportedReason": "Le mode rapide est disponible uniquement sur les modèles Opus"
+    "fastModeUnsupportedReason": "Le mode rapide est disponible uniquement sur les modèles Opus",
+    "toggleAutoResume": "Activer la reprise automatique à la limite",
+    "autoResumeSponsorOnlyReason": "La reprise automatique à la limite est réservée aux sponsors"
   },
   "customize": {
     "outputStyles": "Styles de sortie",

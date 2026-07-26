@@ -21,7 +21,8 @@ export interface Bridge {
   createSession(workingDir?: string): Promise<void>;
   openNewTab(workingDir?: string): Promise<void>;
   openSession(sessionId: string, workingDir?: string): Promise<void>;
-  openSettings(workingDir?: string): Promise<void>;
+  /** @param path settings page to land on (e.g. '/settings/sponsor'); omit for the landing page. */
+  openSettings(workingDir?: string, path?: string): Promise<void>;
   openTerminal(workingDir: string): Promise<void>;
   openUrl(url: string): Promise<void>;
   pickFiles(options: {

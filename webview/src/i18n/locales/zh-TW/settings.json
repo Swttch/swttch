@@ -48,7 +48,7 @@
       "label": "附加檔案路徑後將焦點移至聊天輸入框",
       "description": "在編輯器中按下 Alt+K 插入檔案路徑後,自動將焦點移至聊天輸入框。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "編輯器上下文遵循 .gitignore",
       "description": "啟用時,被 .gitignore 忽略的檔案內容不會包含在編輯器上下文中 — 只會傳送檔案路徑。"
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "用於建立 @ 檔案索引的自訂命令。與 settings.json 中的 fileSuggestion 設定相同。",
       "placeholder": "例如：git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "達到用量上限時自動恢復",
+      "description": "當您達到工作階段上限時，在額度重置後自動恢復。這是新工作階段的預設值；每個工作階段仍可個別切換。"
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "贊助 Claude Code with GUI",
-    "description": "Claude Code with GUI 始終免費使用。贊助讓這個以 JetBrains 為先的獨立專案得以持續。",
+    "title": "贊助這個專案",
+    "description": [
+      "為了這個獨立專案的可持續開發，",
+      "如果你願意，還請我喝杯啤酒吧。"
+    ],
     "promises": [
       "無限使用所有贊助者專屬功能",
       "自動包含未來所有新功能",
       "最高等級 — 永遠不會有更高的付費等級",
-      "即使新贊助者價格上漲，你的價格也保持不變"
+      "即使新的贊助金額上漲，你的金額也會保持不變"
     ],
     "cta": "了解更多",
     "opening": "正在開啟…",
@@ -394,7 +401,91 @@
       "title": "贊助中",
       "description": "感謝你贊助 Claude Code with GUI。",
       "keyLabel": "贊助者金鑰",
-      "deactivate": "取消啟用"
-    }
+      "deactivate": "取消啟用",
+      "greeting": "很高興見到你，贊助者",
+      "promise": "我們會以更穩定、更快、更強大的更新回報你。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "清除贊助金鑰",
+        "clearKeyConfirmTitle": "要清除贊助金鑰嗎？",
+        "clearKeyConfirmMessage": "本裝置將停用贊助功能。你的贊助與付款不受影響，隨時重新貼上金鑰即可恢復。",
+        "clearKeyDone": "已清除本裝置的贊助金鑰。",
+        "cancel": "取消定期贊助",
+        "cancelConfirmTitle": "要取消定期贊助嗎？",
+        "cancelConfirmMessage": "將在你已付費的週期結束時停止扣款，在此之前贊助功能照常可用。",
+        "cancelDone": "已取消定期贊助。",
+        "cancelFailed": "取消失敗，請稍後再試。"
+      },
+      "thanksBefore": "感謝你支持",
+      "thanksAfter": "。"
+    },
+    "plan": {
+      "title": "贊助資訊",
+      "tier": "類別",
+      "interval": "結算週期",
+      "monthly": "按月",
+      "yearly": "按年",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "功能權益",
+      "description": "你的贊助所支持的功能。點擊可查看說明。"
+    },
+    "devices": {
+      "title": "作用中的裝置",
+      "description": "正在使用贊助金鑰的裝置。",
+      "note": "贊助以金鑰為單位生效，而非帳號。帳號僅用於驗證金鑰，只要裝置上已加入可使用該金鑰的帳號即可。",
+      "thisDevice": "目前裝置",
+      "remove": "登出",
+      "removing": "登出中…",
+      "empty": "尚未記錄任何裝置。",
+      "removeConfirmTitle": "要讓此裝置登出嗎？",
+      "removeConfirmMessage": "它將從清單中消失。你的贊助金鑰仍然有效，該裝置下次使用時會自動重新登記。"
+    },
+    "billing": {
+      "title": "付款紀錄",
+      "description": "你的付款歷史。收據會在金流服務商頁面開啟。",
+      "receipt": "收據",
+      "empty": "尚無付款紀錄。",
+      "loading": "載入中…"
+    },
+    "copyKey": {
+      "copy": "複製",
+      "copied": "已複製"
+    },
+    "tabs": {
+      "benefits": "權益",
+      "devices": "裝置",
+      "billing": "付款"
+    },
+    "project": "這個專案",
+    "letterToggle": "為什麼要請大家贊助？",
+    "letter": [
+      [
+        "我是一名獨立開發者，也是多年的 JetBrains 使用者。",
+        "在 VS Code 上可以用 GUI 使用 Claude Code，",
+        "但 JetBrains 上卻沒有——覺得可惜，",
+        "於是我自己動手做了這個獨立專案。"
+      ],
+      [
+        "承蒙大家喜愛，各種需求不斷累積，",
+        "花在外掛開發上的時間也越來越多，",
+        "我開始希望能夠獨立出來、專心做這件事。"
+      ],
+      [
+        "為了更快回應世界各地的開發者同行，",
+        "也為了讓這個專案能夠持續下去，",
+        "我向你提出贊助的邀請。"
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "這個專案的核心依然是開源的，所有社群功能無論是否贊助，今後都可以繼續使用。"
+  },
+  "badges": {
+    "sponsor": "贊助者專屬功能",
+    "claudeNative": "Claude Code 原生設定",
+    "sponsorLabel": "贊",
+    "claudeNativeLabel": "原",
+    "openDocs": "開啟文件"
   }
 }

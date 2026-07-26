@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { HeartIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { HeartIcon } from '@heroicons/react/24/solid';
+import { SponsorSummary } from './SponsorSummary';
+import { SponsorLetter } from './SponsorLetter';
+import { SponsorManageMenu } from './SponsorManageMenu';
+import { SponsorTabs, SponsorTab } from './SponsorTabs';
+import { SponsorBenefitsSection } from './SponsorBenefitsSection';
+import { SponsorDevicesSection } from './SponsorDevicesSection';
+import { SponsorBillingSection } from './SponsorBillingSection';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
@@ -13,11 +20,15 @@ interface SponsorUrlResponse {
   url?: string;
 }
 
-/** Mask all but the last 4 characters of a license key for display. */
-function maskKey(key: string): string {
-  if (key.length <= 4) return key;
-  return '••••••••' + key.slice(-4);
-}
+/** How often to ask www whether this install's key has been minted yet. */
+const ACTIVATION_POLL_INTERVAL_MS = 5_000;
+
+/**
+ * How long to keep asking after the checkout page opens. Long enough to cover
+ * paying in the browser and coming back; short enough that the poll cannot
+ * quietly restore a key the user deactivates later in the same session.
+ */
+const ACTIVATION_POLL_WINDOW_MS = 10 * 60_000;
 
 /**
  * Settings > Sponsor. The GUI stays free; this section lets users support the
@@ -33,17 +44,43 @@ export function SponsorSettings() {
   const { t } = useTranslation('settings');
   const { send } = useBridgeContext();
   const { activeEmail } = useAccounts();
-  const { isSponsor, licenseKey, verify, deactivate, checkByInstall } = useSponsorStatus();
+  const {
+    isSponsor,
+    licenseKey,
+    tier,
+    interval,
+    price,
+    cancellable,
+    verify,
+    deactivate,
+    cancelSubscription,
+    checkByInstall,
+  } = useSponsorStatus();
 
-  // Copy/paste-free activation: while not yet a sponsor and this screen is open,
-  // poll www for a key minted for this install (e.g. right after the buyer paid in
-  // the browser). Stops as soon as sponsorship activates or the screen closes.
+  // Copy/paste-free activation: after the user opens the checkout page, poll www
+  // for a key minted for this install so a completed payment flips this screen to
+  // "sponsoring" without them copying the key back.
+  //
+  // Scoped deliberately to the checkout flow. Polling for as long as the screen
+  // is open would also undo an explicit Deactivate: www still has the key linked
+  // to this install id, so the very next tick would fetch and store it again.
+  // Starting only on checkout — and stopping after a bounded window — keeps the
+  // convenience without letting it overrule the user.
+  const [checkoutStartedAt, setCheckoutStartedAt] = useState<number | null>(null);
+
   useEffect(() => {
-    if (isSponsor) return;
-    const id = window.setInterval(() => void checkByInstall(), 5000);
+    if (checkoutStartedAt === null || isSponsor) return;
+    const id = window.setInterval(() => {
+      if (Date.now() - checkoutStartedAt > ACTIVATION_POLL_WINDOW_MS) {
+        setCheckoutStartedAt(null);
+        return;
+      }
+      void checkByInstall();
+    }, ACTIVATION_POLL_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [isSponsor, checkByInstall]);
+  }, [checkoutStartedAt, isSponsor, checkByInstall]);
 
+  const [tab, setTab] = useState<SponsorTab>(SponsorTab.BENEFITS);
   const [opening, setOpening] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -52,6 +89,8 @@ export function SponsorSettings() {
   const handleSponsor = async () => {
     if (opening) return;
     setOpening(true);
+    // Opening checkout is what arms the auto-activation poll — see above.
+    setCheckoutStartedAt(Date.now());
     try {
       const res = (await send(MessageType.GET_SPONSOR_URL, {
         email: activeEmail ?? undefined,
@@ -65,6 +104,14 @@ export function SponsorSettings() {
     } finally {
       setOpening(false);
     }
+  };
+
+  // Deactivating is an explicit "stop treating me as a sponsor here", so it also
+  // disarms any activation poll still in its window — otherwise a user who paid,
+  // then changed their mind minutes later, would watch the key come straight back.
+  const handleDeactivate = async () => {
+    setCheckoutStartedAt(null);
+    await deactivate();
   };
 
   const handleActivate = async () => {
@@ -90,14 +137,32 @@ export function SponsorSettings() {
     <div className="max-w-2xl">
       <div className="flex items-center gap-2.5 mb-5">
         <HeartIcon className="w-5 h-5 text-accent-primary" />
-        <h2 className="text-xl font-semibold text-text-primary">{t('sponsor.title')}</h2>
+        <h2 className="text-xl font-semibold text-text-primary">
+          {/* Someone already sponsoring is greeted, not pitched to. */}
+          {isSponsor ? t('sponsor.active.greeting') : t('sponsor.title')}
+        </h2>
       </div>
 
-      {/* Intro + pricing entry point */}
+      {/* Intro + pricing entry point. Hidden for sponsors: the pitch (what you
+          get, "Learn more", "Cancel anytime") is aimed at people deciding, and
+          reads as if they had not already paid. */}
+      {!isSponsor && (
       <div className="rounded-xl border border-border-default bg-surface-raised p-6">
+        {/* Authored line breaks, same as the letter — one clause per line. */}
         <p className="text-sm text-text-secondary leading-relaxed break-keep">
-          {t('sponsor.description')}
+          {(t('sponsor.description', { returnObjects: true }) as string[]).map((line) => (
+            <span key={line} className="block">
+              {line}
+            </span>
+          ))}
         </p>
+
+        {/* The "why sponsorship?" letter follows the ask and stays collapsed:
+            it answers the question the ask raises, for whoever wants it, without
+            the screen opening on an appeal. */}
+        <div className="mt-3">
+          <SponsorLetter />
+        </div>
 
         <ul className="mt-5 space-y-3">
           {promises.map((item) => (
@@ -121,34 +186,44 @@ export function SponsorSettings() {
         <p className="mt-4 text-xs text-text-tertiary leading-relaxed">
           {t('sponsor.trust')}
         </p>
+        {/* What sponsorship does NOT change. Same fine-print voice as "Cancel
+            anytime" and placed below the CTA: it reassures rather than sells, so
+            it should not compete with the ask above it. */}
+        <p className="mt-2 text-xs text-text-tertiary leading-relaxed break-keep">
+          {t('sponsor.openSourceNote')}
+        </p>
       </div>
+      )}
 
-      {/* Activation — existing sponsors redeem their license key here */}
-      <div className="mt-6 rounded-xl border border-border-default bg-surface-raised p-6">
-        {isSponsor ? (
-          <div>
-            <div className="flex items-center gap-2">
-              <CheckBadgeIcon className="w-5 h-5 text-accent-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.active.title')}</h3>
-            </div>
-            <p className="mt-2 text-sm text-text-secondary leading-relaxed break-keep">
-              {t('sponsor.active.description')}
-            </p>
-            {licenseKey && (
-              <p className="mt-3 text-xs text-text-tertiary">
-                {t('sponsor.active.keyLabel')}:{' '}
-                <span className="font-mono text-text-secondary">{maskKey(licenseKey)}</span>
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => void deactivate()}
-              className="mt-4 inline-flex items-center rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary hover:bg-surface-hover"
-            >
-              {t('sponsor.active.deactivate')}
-            </button>
+      {isSponsor ? (
+        <>
+          <SponsorSummary
+            licenseKey={licenseKey}
+            tier={tier}
+            interval={interval}
+            price={price}
+          />
+
+          {/* One section at a time: stacked, they were a long scroll of cards
+              where only one is ever relevant. */}
+          <SponsorTabs active={tab} onChange={setTab} />
+          {tab === SponsorTab.BENEFITS && <SponsorBenefitsSection />}
+          {tab === SponsorTab.DEVICES && <SponsorDevicesSection />}
+          {tab === SponsorTab.BILLING && <SponsorBillingSection />}
+
+          {/* Stopping sits last and stays quiet on purpose: it is what the
+              sponsor is least likely to want, and leading with it made the
+              screen read as an exit prompt. */}
+          <div className="mt-6 flex justify-end">
+            <SponsorManageMenu
+              cancellable={cancellable}
+              onClearKey={handleDeactivate}
+              onCancelSubscription={cancelSubscription}
+            />
           </div>
-        ) : (
+        </>
+      ) : (
+        <div className="mt-6 rounded-xl border border-border-default bg-surface-raised p-6">
           <div>
             <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.activate.title')}</h3>
             <p className="mt-2 text-sm text-text-secondary leading-relaxed break-keep">
@@ -180,8 +255,8 @@ export function SponsorSettings() {
               </p>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

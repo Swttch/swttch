@@ -8,7 +8,23 @@ interface SponsorStatusResponse {
   isSponsor?: boolean;
   licenseKey?: string;
   licenseStatus?: string;
+  /** Paid tier, cached backend-side from the last verification. */
+  tier?: string;
+  /** Billing cadence ("monthly" | "yearly"), cached alongside the tier. */
+  interval?: string;
+  /** List price of the plan, e.g. { amount: 5, currency: "USD" }. */
+  price?: SponsorPrice;
+  /** Whether a recurring payment exists that could be cancelled. */
+  cancellable?: boolean;
   error?: string;
+}
+
+/** What a sponsor pays. */
+export interface SponsorPrice {
+  /** Whole units of the currency (e.g. 5 for $5). */
+  amount: number;
+  /** ISO 4217 code, e.g. "USD". */
+  currency: string;
 }
 
 interface VerifyResponse {
@@ -21,6 +37,10 @@ interface SponsorState {
   isSponsor: boolean;
   licenseKey: string | null;
   licenseStatus: string | null;
+  tier: string | null;
+  interval: string | null;
+  price: SponsorPrice | null;
+  cancellable: boolean;
 }
 
 export interface VerifyResult {
@@ -32,6 +52,16 @@ export interface UseSponsorStatusResult {
   isSponsor: boolean;
   licenseKey: string | null;
   licenseStatus: string | null;
+  /** Paid tier, when the server knows it. */
+  tier: string | null;
+  /** Billing cadence ("monthly" | "yearly"), when resolved. */
+  interval: string | null;
+  /** List price of the plan, when known. */
+  price: SponsorPrice | null;
+  /** Whether there is a recurring payment that can be cancelled. */
+  cancellable: boolean;
+  /** End the recurring payment (not the same as clearing the local key). */
+  cancelSubscription: () => Promise<boolean>;
   isLoading: boolean;
   verify: (licenseKey: string) => Promise<VerifyResult>;
   deactivate: () => Promise<void>;
@@ -51,6 +81,10 @@ function useSponsorStatusQuery(): UseQueryResult<SponsorState, Error> {
           isSponsor: res.isSponsor === true,
           licenseKey: res.licenseKey ?? null,
           licenseStatus: res.licenseStatus ?? null,
+          tier: res.tier ?? null,
+          interval: res.interval ?? null,
+          price: res.price ?? null,
+          cancellable: res.cancellable === true,
         };
       }
       throw new Error(res?.error ?? 'Failed to load sponsor status');
@@ -90,6 +124,14 @@ export function useSponsorStatus(): UseSponsorStatusResult {
     invalidate();
   }, [send, invalidate]);
 
+  const cancelSubscription = useCallback(async (): Promise<boolean> => {
+    const res = (await send(MessageType.CANCEL_SPONSOR_SUBSCRIPTION)) as { ok?: boolean } | null;
+    // The provider cancels at period end, so entitlement does not change yet;
+    // refetch anyway so any status the webhook already flipped shows up.
+    invalidate();
+    return res?.ok === true;
+  }, [send, invalidate]);
+
   const checkByInstall = useCallback(async () => {
     const res = (await send(MessageType.CHECK_SPONSOR)) as { isSponsor?: boolean } | null;
     if (res?.isSponsor === true) invalidate();
@@ -99,6 +141,11 @@ export function useSponsorStatus(): UseSponsorStatusResult {
     isSponsor: query.data?.isSponsor ?? false,
     licenseKey: query.data?.licenseKey ?? null,
     licenseStatus: query.data?.licenseStatus ?? null,
+    tier: query.data?.tier ?? null,
+    interval: query.data?.interval ?? null,
+    price: query.data?.price ?? null,
+    cancellable: query.data?.cancellable ?? false,
+    cancelSubscription,
     isLoading: query.isLoading,
     verify,
     deactivate,

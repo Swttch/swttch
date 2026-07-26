@@ -12,6 +12,7 @@ import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
+import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
@@ -19,6 +20,7 @@ import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatInputFocus } from '../../contexts/ChatInputFocusContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
+import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useScheduledDelivery';
 import { useSessionContext } from '../../contexts/SessionContext';
 import { useAwaitingNotifications } from '../../hooks';
 import { usePendingAskUserQuestion } from '../../hooks/usePendingAskUserQuestion';
@@ -60,6 +62,9 @@ export function ChatPage() {
   const { textareaRef, focus: focusInput } = useChatInputFocus();
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  // Always on: receive due scheduled-message deliveries pushed to this tab and
+  // send them through the normal composer path (independent of any limit banner).
+  useScheduledDelivery();
   const { pending: pendingUserAnswer, dismiss } = usePendingAskUserQuestion(messages, isStreaming);
   const { pending: pendingPermission, approve: approvePermission, approveForSession, deny: denyPermission } = usePendingPermissions();
   const { pending: pendingPlan, approve: approvePlan, deny: denyPlan } = usePendingPlanApproval();
@@ -368,6 +373,8 @@ export function ChatPage() {
       </div>
 
       <BackgroundTasksPanel />
+      <ScheduledMessagesPanel />
+      <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
       <AnnouncementModalSlot />
     </div>

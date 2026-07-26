@@ -12,7 +12,36 @@
     "mentionFile": "提及此项目中的文件...",
     "clearConversation": "清除对话",
     "resumeConversation": "恢复对话",
-    "showBackgroundTasks": "工作流:显示后台任务"
+    "showBackgroundTasks": "工作流:显示后台任务",
+    "scheduleSend": "定时发送消息..."
+  },
+  "scheduleSend": {
+    "title": "定时发送消息",
+    "editTitle": "编辑定时消息",
+    "sponsorTooltip": "为赞助者提供的功能",
+    "close": "关闭",
+    "messageLabel": "消息",
+    "messagePlaceholder": "稍后发送的消息",
+    "whenLabel": "时间",
+    "customLabel": "自定义日期和时间",
+    "submit": "预定",
+    "updateSubmit": "保存",
+    "scheduledToast": "消息已预定",
+    "updatedToast": "预定已更新",
+    "presets": {
+      "in5min": "5 分钟后",
+      "in30min": "30 分钟后",
+      "in1hour": "1 小时后",
+      "tomorrowMorning": "明天上午 9 点",
+      "afterDuration": "一段时间后...",
+      "custom": "自定义"
+    },
+    "duration": {
+      "days": "天",
+      "hours": "小时",
+      "minutes": "分",
+      "seconds": "秒"
+    }
   },
   "model": {
     "switchModel": "切换模型...",
@@ -21,7 +50,9 @@
     "accountUsage": "账户与用量...",
     "toggleFastMode": "切换快速模式",
     "effortUnsupportedReason": "此模型不支持强度等级",
-    "fastModeUnsupportedReason": "快速模式仅适用于 Opus 模型"
+    "fastModeUnsupportedReason": "快速模式仅适用于 Opus 模型",
+    "toggleAutoResume": "切换达到上限时自动恢复",
+    "autoResumeSponsorOnlyReason": "达到上限时自动恢复仅对赞助者开放"
   },
   "customize": {
     "outputStyles": "输出样式",

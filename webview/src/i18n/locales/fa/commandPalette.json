@@ -12,7 +12,36 @@
     "mentionFile": "اشاره به فایلی از این پروژه...",
     "clearConversation": "پاک کردن گفتگو",
     "resumeConversation": "ازسرگیری گفتگو",
-    "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه"
+    "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه",
+    "scheduleSend": "زمان‌بندی پیام..."
+  },
+  "scheduleSend": {
+    "title": "زمان‌بندی پیام",
+    "editTitle": "ویرایش پیام زمان‌بندی‌شده",
+    "sponsorTooltip": "قابلیتی برای حامیان",
+    "close": "بستن",
+    "messageLabel": "پیام",
+    "messagePlaceholder": "پیامی برای ارسال بعداً",
+    "whenLabel": "چه زمانی",
+    "customLabel": "تاریخ و زمان دلخواه",
+    "submit": "زمان‌بندی",
+    "updateSubmit": "ذخیره",
+    "scheduledToast": "پیام زمان‌بندی شد",
+    "updatedToast": "زمان‌بندی به‌روزرسانی شد",
+    "presets": {
+      "in5min": "۵ دقیقه دیگر",
+      "in30min": "۳۰ دقیقه دیگر",
+      "in1hour": "۱ ساعت دیگر",
+      "tomorrowMorning": "فردا ۹ صبح",
+      "afterDuration": "پس از مدتی...",
+      "custom": "دلخواه"
+    },
+    "duration": {
+      "days": "روز",
+      "hours": "ساعت",
+      "minutes": "دقیقه",
+      "seconds": "ثانیه"
+    }
   },
   "model": {
     "switchModel": "تغییر مدل...",
@@ -21,7 +50,9 @@
     "accountUsage": "حساب کاربری و مصرف...",
     "toggleFastMode": "تغییر حالت سریع",
     "effortUnsupportedReason": "این مدل از سطوح تلاش پشتیبانی نمی‌کند",
-    "fastModeUnsupportedReason": "حالت سریع فقط در مدل‌های Opus در دسترس است"
+    "fastModeUnsupportedReason": "حالت سریع فقط در مدل‌های Opus در دسترس است",
+    "toggleAutoResume": "تغییر از‌سرگیری خودکار هنگام محدودیت",
+    "autoResumeSponsorOnlyReason": "از‌سرگیری خودکار هنگام محدودیت فقط برای حامیان در دسترس است"
   },
   "customize": {
     "outputStyles": "سبک‌های خروجی",

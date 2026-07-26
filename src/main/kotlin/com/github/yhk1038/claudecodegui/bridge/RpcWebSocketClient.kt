@@ -304,8 +304,10 @@ class RpcWebSocketClient(
             }
             "OPEN_SETTINGS" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
-                logger.info("[DEBUG:RpcWS] OPEN_SETTINGS received, params=$params, resolved workingDir='$workingDir'")
-                rpcHandler.openSettings(workingDir)
+                // Which settings page the tab should land on; absent → landing page.
+                val path = params["path"]?.jsonPrimitive?.content
+                logger.info("[DEBUG:RpcWS] OPEN_SETTINGS received, params=$params, resolved workingDir='$workingDir', path='$path'")
+                rpcHandler.openSettings(workingDir, path)
                 buildJsonObject {}
             }
             "OPEN_TERMINAL" -> {

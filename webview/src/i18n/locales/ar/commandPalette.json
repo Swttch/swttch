@@ -12,7 +12,36 @@
     "mentionFile": "الإشارة إلى ملف من هذا المشروع...",
     "clearConversation": "مسح المحادثة",
     "resumeConversation": "استئناف المحادثة",
-    "showBackgroundTasks": "مهمة سير العمل: عرض المهام الخلفية"
+    "showBackgroundTasks": "مهمة سير العمل: عرض المهام الخلفية",
+    "scheduleSend": "جدولة رسالة..."
+  },
+  "scheduleSend": {
+    "title": "جدولة رسالة",
+    "editTitle": "تعديل الرسالة المجدولة",
+    "sponsorTooltip": "ميزة للداعمين",
+    "close": "إغلاق",
+    "messageLabel": "الرسالة",
+    "messagePlaceholder": "رسالة لإرسالها لاحقًا",
+    "whenLabel": "متى",
+    "customLabel": "تاريخ ووقت مخصّصان",
+    "submit": "جدولة",
+    "updateSubmit": "حفظ",
+    "scheduledToast": "تمت جدولة الرسالة",
+    "updatedToast": "تم تحديث الجدولة",
+    "presets": {
+      "in5min": "بعد 5 دقائق",
+      "in30min": "بعد 30 دقيقة",
+      "in1hour": "بعد ساعة",
+      "tomorrowMorning": "غدًا 9 صباحًا",
+      "afterDuration": "بعد مدة...",
+      "custom": "مخصّص"
+    },
+    "duration": {
+      "days": "أيام",
+      "hours": "ساعات",
+      "minutes": "دقائق",
+      "seconds": "ثوانٍ"
+    }
   },
   "model": {
     "switchModel": "تبديل النموذج...",
@@ -21,7 +50,9 @@
     "accountUsage": "الحساب والاستخدام...",
     "toggleFastMode": "تبديل الوضع السريع",
     "effortUnsupportedReason": "هذا النموذج لا يدعم مستويات الجهد",
-    "fastModeUnsupportedReason": "الوضع السريع متاح فقط في نماذج Opus"
+    "fastModeUnsupportedReason": "الوضع السريع متاح فقط في نماذج Opus",
+    "toggleAutoResume": "تبديل الاستئناف التلقائي عند الحد",
+    "autoResumeSponsorOnlyReason": "الاستئناف التلقائي عند الحد متاح للرعاة فقط"
   },
   "customize": {
     "outputStyles": "أنماط الإخراج",

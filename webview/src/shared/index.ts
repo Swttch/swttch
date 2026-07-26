@@ -4,5 +4,7 @@ export * from './cli-update';
 export * from './client-env';
 export * from './mcp';
 export * from './message-type';
+export * from './scheduled-message';
 export * from './workflow';
 export * from './tool-decision';
+export * from './error-code';

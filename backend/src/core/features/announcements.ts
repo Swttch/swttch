@@ -1,5 +1,5 @@
 import { announcementsUrl } from '../../config/environment';
-import { readMergedClaudeSettings } from './claude-settings';
+import { readMergedSettings } from './settings';
 import { getPluginVersion } from '../handlers/getVersion';
 import { getAnnouncementsEnabled } from './profile';
 import {
@@ -223,7 +223,9 @@ export async function fetchAnnouncements(workingDir?: string): Promise<Announcem
     return EMPTY_RESPONSE;
   }
 
-  const { settings } = await readMergedClaudeSettings(workingDir);
+  // `uiLanguage` lives in the app settings (~/.claude-code-gui/settings.js),
+  // not the native Claude settings — see settings-migration.ts.
+  const { settings } = await readMergedSettings(workingDir);
   const locale = resolveLocale(settings.uiLanguage);
   const pluginVersion = getPluginVersion();
 

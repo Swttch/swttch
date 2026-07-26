@@ -28,6 +28,12 @@ import { verifyLicenseHandler } from './verifyLicense';
 import { getSponsorStatusHandler } from './getSponsorStatus';
 import { deactivateLicenseHandler } from './deactivateLicense';
 import { checkSponsorHandler } from './checkSponsor';
+import {
+  getSponsorDevicesHandler,
+  removeSponsorDeviceHandler,
+  getSponsorInvoicesHandler,
+  cancelSponsorSubscriptionHandler,
+} from './sponsorAccount';
 import { getProjectsHandler } from './getProjects';
 import { getUsageHandler } from './getUsage';
 import { getUsageReportHandler } from './getUsageReport';
@@ -53,6 +59,13 @@ import { saveAccountHandler } from './saveAccount';
 import { switchAccountHandler } from './switchAccount';
 import { deleteAccountHandler } from './deleteAccount';
 import { reclaimSessionHandler } from './reclaimSession';
+import {
+  scheduleMessageHandler,
+  cancelScheduledMessageHandler,
+  updateScheduledMessageHandler,
+  getScheduledMessagesHandler,
+  scheduledMessageDeliveredHandler,
+} from './scheduleMessage';
 import { loginHandler } from './login';
 import { submitLoginCodeHandler } from './submitLoginCode';
 import { openUrlHandler } from './openUrl';
@@ -195,6 +208,18 @@ export async function handleMessage(
     case MessageType.CHECK_SPONSOR:
       await checkSponsorHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.GET_SPONSOR_DEVICES:
+      await getSponsorDevicesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.REMOVE_SPONSOR_DEVICE:
+      await removeSponsorDeviceHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SPONSOR_INVOICES:
+      await getSponsorInvoicesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_SPONSOR_SUBSCRIPTION:
+      await cancelSponsorSubscriptionHandler(connectionId, message, connections, bridge);
+      break;
     case MessageType.GET_PROJECTS:
       await getProjectsHandler(connectionId, message, connections, bridge);
       break;
@@ -269,6 +294,21 @@ export async function handleMessage(
       break;
     case MessageType.RECLAIM_SESSION:
       await reclaimSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SCHEDULE_MESSAGE:
+      await scheduleMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_SCHEDULED_MESSAGE:
+      await cancelScheduledMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_SCHEDULED_MESSAGE:
+      await updateScheduledMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SCHEDULED_MESSAGES:
+      await getScheduledMessagesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SCHEDULED_MESSAGE_DELIVERED:
+      await scheduledMessageDeliveredHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.LOGIN:
       await loginHandler(connectionId, message, connections, bridge);

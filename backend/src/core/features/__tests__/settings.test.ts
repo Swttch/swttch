@@ -272,6 +272,56 @@ describe('settings', () => {
       expect(result.status).toBe('error');
       expect(result.error).toContain('must be a string');
     });
+
+    // GUI-only keys migrated out of native Claude settings (settings-migration.ts).
+    it('should accept string or null uiLanguage', async () => {
+      expect((await saveSettingToFile('uiLanguage', 'korean')).status).toBe('ok');
+      expect((await saveSettingToFile('uiLanguage', null)).status).toBe('ok');
+    });
+
+    it('should reject non-string non-null uiLanguage', async () => {
+      const result = await saveSettingToFile('uiLanguage', 5);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('uiLanguage must be a string or null');
+    });
+
+    it('should accept string or null language (Claude response language)', async () => {
+      expect((await saveSettingToFile('language', 'japanese')).status).toBe('ok');
+      expect((await saveSettingToFile('language', null)).status).toBe('ok');
+    });
+
+    it('should reject non-string non-null language', async () => {
+      const result = await saveSettingToFile('language', true);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('language must be a string or null');
+    });
+
+    it('should accept boolean GUI-only toggles and reject non-boolean', async () => {
+      for (const key of ['useCtrlEnterToSend', 'focusInputOnEditorContext', 'autoResumeOnLimit']) {
+        expect((await saveSettingToFile(key, true)).status).toBe('ok');
+        expect((await saveSettingToFile(key, false)).status).toBe('ok');
+        const bad = await saveSettingToFile(key, 'yes');
+        expect(bad.status).toBe('error');
+        expect(bad.error).toContain('must be a boolean');
+      }
+    });
+
+    // Legacy keys stay writable with null so the migration can clear them after
+    // copying the value into the native file. Rejecting null would strand the
+    // old value here forever.
+    it('should accept null for legacy keys the migration clears', async () => {
+      for (const key of ['language', 'respectGitignoreForContext']) {
+        expect((await saveSettingToFile(key, null)).status).toBe('ok');
+      }
+    });
+
+    it('should accept boolean or null ultracode and reject other types', async () => {
+      expect((await saveSettingToFile('ultracode', true)).status).toBe('ok');
+      expect((await saveSettingToFile('ultracode', null)).status).toBe('ok');
+      const bad = await saveSettingToFile('ultracode', 'on');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('ultracode must be a boolean or null');
+    });
   });
 
   describe('saveSettingToFile() - atomic write via temp file + rename', () => {
@@ -383,7 +433,14 @@ describe('settings', () => {
         openSettingsAs: 'overlay',
         chatPagination: true,
         uiDirection: 'ltr',
+        uiLanguage: null,
+        useCtrlEnterToSend: false,
+        focusInputOnEditorContext: true,
+        autoResumeOnLimit: false,
+        ultracode: null,
         env: {},
+        language: null,
+        respectGitignoreForContext: false,
       });
       expect(mockWriteFile).toHaveBeenCalled();
     });
@@ -459,7 +516,14 @@ export default {
         openSettingsAs: 'overlay',
         chatPagination: true,
         uiDirection: 'ltr',
+        uiLanguage: null,
+        useCtrlEnterToSend: false,
+        focusInputOnEditorContext: true,
+        autoResumeOnLimit: false,
+        ultracode: null,
         env: {},
+        language: null,
+        respectGitignoreForContext: false,
       });
     });
 

@@ -12,7 +12,36 @@
     "mentionFile": "Mencionar archivo de este proyecto...",
     "clearConversation": "Borrar conversación",
     "resumeConversation": "Reanudar conversación",
-    "showBackgroundTasks": "Flujo de trabajo: Mostrar tareas en segundo plano"
+    "showBackgroundTasks": "Flujo de trabajo: Mostrar tareas en segundo plano",
+    "scheduleSend": "Programar un mensaje..."
+  },
+  "scheduleSend": {
+    "title": "Programar un mensaje",
+    "editTitle": "Editar mensaje programado",
+    "sponsorTooltip": "Una función para patrocinadores",
+    "close": "Cerrar",
+    "messageLabel": "Mensaje",
+    "messagePlaceholder": "Mensaje para enviar más tarde",
+    "whenLabel": "Cuándo",
+    "customLabel": "Fecha y hora personalizadas",
+    "submit": "Programar",
+    "updateSubmit": "Guardar",
+    "scheduledToast": "Mensaje programado",
+    "updatedToast": "Programación actualizada",
+    "presets": {
+      "in5min": "En 5 min",
+      "in30min": "En 30 min",
+      "in1hour": "En 1 hora",
+      "tomorrowMorning": "Mañana 9 a. m.",
+      "afterDuration": "Después de un tiempo...",
+      "custom": "Personalizado"
+    },
+    "duration": {
+      "days": "días",
+      "hours": "h",
+      "minutes": "min",
+      "seconds": "s"
+    }
   },
   "model": {
     "switchModel": "Cambiar modelo...",
@@ -21,7 +50,9 @@
     "accountUsage": "Cuenta y uso...",
     "toggleFastMode": "Alternar modo rápido",
     "effortUnsupportedReason": "Este modelo no admite niveles de esfuerzo",
-    "fastModeUnsupportedReason": "El modo rápido solo está disponible en los modelos Opus"
+    "fastModeUnsupportedReason": "El modo rápido solo está disponible en los modelos Opus",
+    "toggleAutoResume": "Alternar reanudación automática al alcanzar el límite",
+    "autoResumeSponsorOnlyReason": "La reanudación automática al alcanzar el límite es solo para patrocinadores"
   },
   "customize": {
     "outputStyles": "Estilos de salida",

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SettingRow } from '../common';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useBridge } from '@/hooks/useBridge';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
@@ -65,6 +66,12 @@ export function ClaudeConfigDirRow() {
     <SettingRow
       label="CLAUDE_CONFIG_DIR"
       description={t('general.configDir.description')}
+      badge={
+        <SettingBadge
+          variant={SettingBadgeVariant.ClaudeNative}
+          docHref="https://code.claude.com/docs/en/settings#environment-variables"
+        />
+      }
     >
       <div className="flex flex-col items-end gap-1">
         <input

@@ -40,6 +40,13 @@ export const SettingsIcon: React.FC<IconProps> = ({ className, style }) => (
   </svg>
 );
 
+export const ClockIcon: React.FC<IconProps> = ({ className, style }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className={className} style={style}>
+    <path fillRule="evenodd" clipRule="evenodd" d="M8 14.5C11.5899 14.5 14.5 11.5899 14.5 8C14.5 4.41015 11.5899 1.5 8 1.5C4.41015 1.5 1.5 4.41015 1.5 8C1.5 11.5899 4.41015 14.5 8 14.5ZM8 13C10.7614 13 13 10.7614 13 8C13 5.23858 10.7614 3 8 3C5.23858 3 3 5.23858 3 8C3 10.7614 5.23858 13 8 13Z"/>
+    <path d="M7.25 4.5H8.75V7.69L10.78 9.72L9.72 10.78L7.25 8.31V4.5Z"/>
+  </svg>
+);
+
 export const getIcon = (iconType: IconType | undefined): React.FC<IconProps> | null => {
   switch (iconType) {
     case IconType.Terminal: return TerminalIcon;
@@ -47,6 +54,7 @@ export const getIcon = (iconType: IconType | undefined): React.FC<IconProps> | n
     case IconType.Link: return LinkIcon;
     case IconType.Command: return CommandIcon;
     case IconType.Settings: return SettingsIcon;
+    case IconType.Clock: return ClockIcon;
     default: return null;
   }
 };

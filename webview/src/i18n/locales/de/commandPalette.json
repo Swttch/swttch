@@ -12,7 +12,36 @@
     "mentionFile": "Datei aus diesem Projekt erwähnen...",
     "clearConversation": "Unterhaltung löschen",
     "resumeConversation": "Unterhaltung fortsetzen",
-    "showBackgroundTasks": "Workflow: Hintergrundaufgaben anzeigen"
+    "showBackgroundTasks": "Workflow: Hintergrundaufgaben anzeigen",
+    "scheduleSend": "Nachricht planen..."
+  },
+  "scheduleSend": {
+    "title": "Nachricht planen",
+    "editTitle": "Geplante Nachricht bearbeiten",
+    "sponsorTooltip": "Eine Funktion für Sponsoren",
+    "close": "Schließen",
+    "messageLabel": "Nachricht",
+    "messagePlaceholder": "Später zu sendende Nachricht",
+    "whenLabel": "Wann",
+    "customLabel": "Datum und Uhrzeit anpassen",
+    "submit": "Planen",
+    "updateSubmit": "Speichern",
+    "scheduledToast": "Nachricht geplant",
+    "updatedToast": "Planung aktualisiert",
+    "presets": {
+      "in5min": "In 5 Min.",
+      "in30min": "In 30 Min.",
+      "in1hour": "In 1 Std.",
+      "tomorrowMorning": "Morgen 9 Uhr",
+      "afterDuration": "Nach einer Dauer...",
+      "custom": "Benutzerdefiniert"
+    },
+    "duration": {
+      "days": "Tage",
+      "hours": "Std.",
+      "minutes": "Min.",
+      "seconds": "Sek."
+    }
   },
   "model": {
     "switchModel": "Modell wechseln...",
@@ -21,7 +50,9 @@
     "accountUsage": "Konto & Nutzung...",
     "toggleFastMode": "Schnellmodus umschalten",
     "effortUnsupportedReason": "Dieses Modell unterstützt keine Aufwandsstufen",
-    "fastModeUnsupportedReason": "Der Schnellmodus ist nur bei Opus-Modellen verfügbar"
+    "fastModeUnsupportedReason": "Der Schnellmodus ist nur bei Opus-Modellen verfügbar",
+    "toggleAutoResume": "Auto-Fortsetzung bei Limit umschalten",
+    "autoResumeSponsorOnlyReason": "Auto-Fortsetzung bei Limit ist nur für Sponsoren verfügbar"
   },
   "customize": {
     "outputStyles": "Ausgabestile",

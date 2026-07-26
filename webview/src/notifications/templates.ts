@@ -32,4 +32,9 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationKind, NotificationTempla
     body: () => i18n.t('notifications:awaitingUserInput.body'),
     icon: '/favicon.svg',
   },
+  [NotificationKind.AUTO_RESUME_COUNTDOWN]: {
+    title: (ctx: NotificationContext) => ctx.sessionTitle ?? APP_NAME,
+    body: () => i18n.t('notifications:autoResumeCountdown.body'),
+    icon: '/favicon.svg',
+  },
 };

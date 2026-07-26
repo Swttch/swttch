@@ -50,13 +50,13 @@ const FastModeToggle = () => {
   const models: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
   const activeModel = resolveActiveModel(models, sessionModel, settings.model);
   const supportsFastMode = activeModel?.supportsFastMode ?? false;
-  const enabled = settings.preferFastMode ?? false;
+  const enabled = settings.fastMode ?? false;
 
   // 행(row) 클릭 시 발생하는 이벤트 처리 (지원되는 모델일 때만 토글)
   useEffect(() => {
     const handler = () => {
       if (!supportsFastMode) return;
-      void updateSetting('preferFastMode', !enabled);
+      void updateSetting('fastMode', !enabled);
     };
     window.addEventListener(FAST_MODE_TOGGLE_EVENT, handler);
     return () => window.removeEventListener(FAST_MODE_TOGGLE_EVENT, handler);
@@ -65,7 +65,7 @@ const FastModeToggle = () => {
   return (
     <ToggleSwitch
       checked={enabled}
-      onChange={(value) => void updateSetting('preferFastMode', value)}
+      onChange={(value) => void updateSetting('fastMode', value)}
       disabled={!supportsFastMode}
       size="small"
     />

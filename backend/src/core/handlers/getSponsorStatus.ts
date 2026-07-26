@@ -18,5 +18,11 @@ export async function getSponsorStatusHandler(
     isSponsor: sponsor.isSponsor,
     licenseKey: sponsor.licenseKey,
     licenseStatus: sponsor.status,
+    // Plan details, so the sponsor screen can say what they are on ("$5/mo")
+    // and whether there is a recurring payment it can offer to cancel.
+    tier: sponsor.tier,
+    interval: sponsor.interval,
+    price: sponsor.price,
+    cancellable: sponsor.cancellable,
   });
 }

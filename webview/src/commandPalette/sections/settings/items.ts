@@ -1,8 +1,9 @@
-import { getAdapter } from '@/adapters';
 import { i18n } from '@/i18n';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
+import { Route } from '@/router';
 import { loginPathWithFallback } from '@/router/routes';
+import { openSettingsAt } from '@/utils/openSettingsAt';
 
 /** Navigate to the account switch page. Shared by "Switch account" and /login.
  * Remembers the current location as `?fallback=` (via loginPathWithFallback) and
@@ -38,7 +39,7 @@ export const getSettingsItems = (): StaticItem[] => [
     disabled: false,
     keywords: [enKeyword('commandPalette:settings.generalConfig')],
     action: async () => {
-      await getAdapter().openSettings();
+      await openSettingsAt(Route.SETTINGS_GENERAL);
     },
   }),
 ];

@@ -2,6 +2,7 @@ import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { type InputMode, INPUT_MODES, getAvailableModes, CLI_FLAG_TO_INPUT_MODE, INPUT_MODE_TO_CLI_FLAG } from '@/types/chatInput';
 import type { PermissionsConfig } from '@/types/claude-settings';
 import { useTranslation } from '@/i18n';
@@ -57,6 +58,12 @@ export function PermissionsSettings() {
         <SettingRow
           label={t('permissions.bypassMode.label')}
           description={t('permissions.bypassMode.description')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/settings#permissions"
+            />
+          }
         >
           {isBypassNotSet ? (
             <div className="flex items-center gap-2">
@@ -86,6 +93,12 @@ export function PermissionsSettings() {
         <SettingRow
           label={t('permissions.defaultMode.label')}
           description={t('permissions.defaultMode.description')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/settings#permissions"
+            />
+          }
         >
           <Select
             value={isDefaultModeNotSet ? NOT_SET_VALUE : defaultModeValue}

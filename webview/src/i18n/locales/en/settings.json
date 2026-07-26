@@ -48,7 +48,7 @@
       "label": "Focus chat input after attaching file path",
       "description": "When you press Alt+K in the editor, move focus to the chat input after inserting the file path."
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "Respect .gitignore for editor context",
       "description": "When on, contents of .gitignore'd files are excluded from the editor context — only the file path is sent."
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Custom command that builds the @ file index. Same as the fileSuggestion setting in settings.json.",
       "placeholder": "e.g. git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Auto-resume on usage limit",
+      "description": "When you hit your session limit, automatically resume once the quota resets. This is the default for new sessions; each session can still toggle it."
     }
   },
   "appearance": {
@@ -373,13 +377,16 @@
     }
   },
   "sponsor": {
-    "title": "Support Claude Code with GUI",
-    "description": "Claude Code with GUI stays free to use. Sponsoring keeps this independent, JetBrains-first project going.",
+    "title": "Support this project",
+    "description": [
+      "For the sustainable development of this independent project,",
+      "if you feel like it, please buy me a beer."
+    ],
     "promises": [
       "Unlimited access to every sponsor-only feature",
       "All future features included, automatically",
       "The top tier — no higher paid tier, ever",
-      "Your price stays locked, even if it rises for new sponsors"
+      "Even if the sponsorship amount rises for new sponsors, your amount stays the same"
     ],
     "cta": "Learn more",
     "opening": "Opening…",
@@ -396,7 +403,91 @@
       "title": "Sponsoring",
       "description": "Thank you for supporting Claude Code with GUI.",
       "keyLabel": "Sponsor key",
-      "deactivate": "Deactivate"
-    }
+      "deactivate": "Deactivate",
+      "greeting": "Good to see you, sponsor",
+      "promise": "We will repay you with updates that are steadier, faster and more capable.",
+      "manage": {
+        "menu": "Manage",
+        "clearKey": "Clear sponsor key",
+        "clearKeyConfirmTitle": "Clear the sponsor key?",
+        "clearKeyConfirmMessage": "This device stops using sponsor features. Your sponsorship and billing are untouched — paste the key back any time to restore it.",
+        "clearKeyDone": "Sponsor key cleared on this device.",
+        "cancel": "Cancel recurring sponsorship",
+        "cancelConfirmTitle": "Cancel your recurring sponsorship?",
+        "cancelConfirmMessage": "Billing stops at the end of the period you already paid for, and sponsor features keep working until then.",
+        "cancelDone": "Recurring sponsorship cancelled.",
+        "cancelFailed": "Could not cancel. Please try again in a moment."
+      },
+      "thanksBefore": "Thank you for backing ",
+      "thanksAfter": "."
+    },
+    "plan": {
+      "title": "Your sponsorship",
+      "tier": "Type",
+      "interval": "Billing",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Feature benefits",
+      "description": "Features your sponsorship supports. Open one to read what it does."
+    },
+    "devices": {
+      "title": "Active devices",
+      "description": "Machines where your sponsor key is in use.",
+      "note": "Sponsorship applies per key, not per account. An account is only used to verify the key — it is enough that the device has an account that may use it.",
+      "thisDevice": "This device",
+      "remove": "Sign out",
+      "removing": "Signing out…",
+      "empty": "No devices recorded yet.",
+      "removeConfirmTitle": "Sign this device out?",
+      "removeConfirmMessage": "The device stops being listed here. Your sponsor key stays valid, and the device reactivates the next time it is used."
+    },
+    "billing": {
+      "title": "Payments",
+      "description": "Your payment history. Receipts open at the payment provider.",
+      "receipt": "Receipt",
+      "empty": "No payments to show yet.",
+      "loading": "Loading…"
+    },
+    "copyKey": {
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "tabs": {
+      "benefits": "Benefits",
+      "devices": "Devices",
+      "billing": "Payments"
+    },
+    "project": "the project",
+    "letterToggle": "Why are you asking for sponsorship?",
+    "letter": [
+      [
+        "I'm an indie developer, and a longtime JetBrains user.",
+        "On VS Code you can use Claude Code through a GUI,",
+        "but JetBrains had nothing like it —",
+        "so I started building it myself, as an indie project."
+      ],
+      [
+        "As it found an audience, requests piled up",
+        "and the plugin took more and more of my time,",
+        "until I started wishing I could go independent and focus on it fully."
+      ],
+      [
+        "To answer fellow developers around the world faster,",
+        "and to make this a project that can sustain itself,",
+        "I'm asking for your sponsorship."
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "The core of this project remains open source, and every community feature stays available to everyone, sponsor or not."
+  },
+  "badges": {
+    "sponsor": "Sponsor-only feature",
+    "claudeNative": "Claude Code native setting",
+    "sponsorLabel": "S",
+    "claudeNativeLabel": "C",
+    "openDocs": "Open docs"
   }
 }

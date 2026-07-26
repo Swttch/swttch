@@ -48,7 +48,7 @@
       "label": "ファイルパス添付後にチャット入力欄へフォーカス",
       "description": "エディタで Alt+K を押すと、ファイルパスの挿入後にフォーカスをチャット入力欄へ移動します。"
     },
-    "respectGitignoreForContext": {
+    "respectGitignore": {
       "label": "エディタコンテキストで.gitignoreを尊重",
       "description": "有効にすると、.gitignoreの対象ファイルの内容はエディタコンテキストから除外され、ファイルパスのみが送信されます。"
     },
@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "@ ファイル一覧を生成するカスタムコマンド。settings.json の fileSuggestion 設定と同じです。",
       "placeholder": "例: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "使用上限到達時に自動再開",
+      "description": "セッションの上限に達した際、上限リセット後に自動的に再開します。新しいセッションの既定値で、各セッションで切り替え可能です。"
     }
   },
   "appearance": {
@@ -371,13 +375,16 @@
     }
   },
   "sponsor": {
-    "title": "Claude Code with GUI を支援する",
-    "description": "Claude Code with GUI は無料のままご利用いただけます。スポンサーは、この独立した JetBrains 優先プロジェクトの継続を支えます。",
+    "title": "このプロジェクトを支援する",
+    "description": [
+      "この独立プロジェクトを持続的に開発していくために、",
+      "もしよかったら、ビール一杯おごってもらえると嬉しいです。"
+    ],
     "promises": [
       "すべてのスポンサー限定機能に無制限アクセス",
       "今後追加されるすべての機能を自動的に含む",
       "最上位ティア — これ以上の有料ティアはありません",
-      "新規スポンサーの価格が上がっても、あなたの価格は据え置き"
+      "新規の支援金額が上がっても、あなたの金額はそのまま維持されます"
     ],
     "cta": "詳しく見る",
     "opening": "開いています…",
@@ -394,7 +401,91 @@
       "title": "スポンサー中",
       "description": "Claude Code with GUI をご支援いただきありがとうございます。",
       "keyLabel": "スポンサーキー",
-      "deactivate": "解除"
-    }
+      "deactivate": "解除",
+      "greeting": "ようこそ、スポンサーさん",
+      "promise": "より安定して、より速く、より強力なアップデートでお応えします。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "スポンサーキーを消去",
+        "clearKeyConfirmTitle": "スポンサーキーを消去しますか？",
+        "clearKeyConfirmMessage": "このデバイスでスポンサー機能が無効になります。スポンサーシップと支払いはそのままで、キーを貼り直せばいつでも戻せます。",
+        "clearKeyDone": "このデバイスのスポンサーキーを消去しました。",
+        "cancel": "定期支援を解約",
+        "cancelConfirmTitle": "定期支援を解約しますか？",
+        "cancelConfirmMessage": "すでに支払った期間の終わりで請求が止まり、それまではスポンサー機能を利用できます。",
+        "cancelDone": "定期支援を解約しました。",
+        "cancelFailed": "解約できませんでした。しばらくしてからお試しください。"
+      },
+      "thanksBefore": "",
+      "thanksAfter": "を支持してくださりありがとうございます。"
+    },
+    "plan": {
+      "title": "スポンサー情報",
+      "tier": "区分",
+      "interval": "支払い",
+      "monthly": "月払い",
+      "yearly": "年払い",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "機能ベネフィット",
+      "description": "あなたの支援が支える機能です。開くと内容を確認できます。"
+    },
+    "devices": {
+      "title": "アクティブなデバイス",
+      "description": "スポンサーキーを使用中のデバイスです。",
+      "note": "スポンサーシップはアカウントではなくキー単位で適用されます。アカウントはキーの検証にのみ使われ、デバイスにそのキーを使えるアカウントが追加されていれば十分です。",
+      "thisDevice": "このデバイス",
+      "remove": "サインアウト",
+      "removing": "サインアウト中…",
+      "empty": "まだ記録されたデバイスはありません。",
+      "removeConfirmTitle": "このデバイスをサインアウトしますか？",
+      "removeConfirmMessage": "一覧から消えます。スポンサーキーは引き続き有効で、次に使用すると自動的に再登録されます。"
+    },
+    "billing": {
+      "title": "支払い履歴",
+      "description": "支払いの記録です。領収書は決済サービスのページで開きます。",
+      "receipt": "領収書",
+      "empty": "表示する支払いはまだありません。",
+      "loading": "読み込み中…"
+    },
+    "copyKey": {
+      "copy": "コピー",
+      "copied": "コピーしました"
+    },
+    "tabs": {
+      "benefits": "ベネフィット",
+      "devices": "デバイス",
+      "billing": "支払い"
+    },
+    "project": "このプロジェクト",
+    "letterToggle": "なぜスポンサーをお願いしているのですか?",
+    "letter": [
+      [
+        "私は JetBrains を愛用してきた、一人の個人開発者です。",
+        "VS Code では Claude Code を GUI で使えるのに、",
+        "JetBrains にはそれがないのが惜しくて、",
+        "自分で作り始めたインディープロジェクトです。"
+      ],
+      [
+        "ありがたいことに多くの方に使っていただき、さまざまな要望が積み重なり、",
+        "プラグイン開発に費やす時間もどんどん増えていくなかで、",
+        "独立して開発に専念できたら、と思うようになりました。"
+      ],
+      [
+        "世界中の開発者仲間からの問い合わせにもっと早く応えられるように、",
+        "そして続けられるプロジェクトにするために、",
+        "こうしてスポンサーをお願いすることにしました。"
+      ]
+    ],
+    "letterSignature": "— @yonghyun",
+    "openSourceNote": "このプロジェクトの中核は今もオープンソースであり、コミュニティ由来の機能はスポンサーであるかに関わらず、これからも利用できることを明言します。"
+  },
+  "badges": {
+    "sponsor": "スポンサー限定機能",
+    "claudeNative": "Claude Code ネイティブ設定",
+    "sponsorLabel": "ス",
+    "claudeNativeLabel": "ク",
+    "openDocs": "ドキュメントを開く"
   }
 }

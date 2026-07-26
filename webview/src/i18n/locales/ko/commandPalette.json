@@ -12,7 +12,36 @@
     "mentionFile": "이 프로젝트의 파일 멘션...",
     "clearConversation": "대화 지우기",
     "resumeConversation": "대화 재개",
-    "showBackgroundTasks": "워크플로: 백그라운드 작업 보기"
+    "showBackgroundTasks": "워크플로: 백그라운드 작업 보기",
+    "scheduleSend": "메시지 예약 보내기..."
+  },
+  "scheduleSend": {
+    "title": "메시지 예약",
+    "editTitle": "예약 메시지 수정",
+    "sponsorTooltip": "후원자를 위한 기능",
+    "close": "닫기",
+    "messageLabel": "메시지",
+    "messagePlaceholder": "나중에 보낼 메시지",
+    "whenLabel": "언제",
+    "customLabel": "날짜와 시간 직접 지정",
+    "submit": "예약",
+    "updateSubmit": "저장",
+    "scheduledToast": "메시지가 예약되었습니다",
+    "updatedToast": "예약이 수정되었습니다",
+    "presets": {
+      "in5min": "5분 후",
+      "in30min": "30분 후",
+      "in1hour": "1시간 후",
+      "tomorrowMorning": "내일 오전 9시",
+      "afterDuration": "~ 이후",
+      "custom": "직접 입력"
+    },
+    "duration": {
+      "days": "일",
+      "hours": "시간",
+      "minutes": "분",
+      "seconds": "초"
+    }
   },
   "model": {
     "switchModel": "모델 전환...",
@@ -21,7 +50,9 @@
     "accountUsage": "계정 및 사용량...",
     "toggleFastMode": "고속 모드 전환",
     "effortUnsupportedReason": "이 모델은 Effort 레벨을 지원하지 않습니다",
-    "fastModeUnsupportedReason": "고속 모드는 Opus 모델에서만 사용할 수 있습니다"
+    "fastModeUnsupportedReason": "고속 모드는 Opus 모델에서만 사용할 수 있습니다",
+    "toggleAutoResume": "리밋 시 자동 재개 전환",
+    "autoResumeSponsorOnlyReason": "리밋 시 자동 재개는 후원자 전용입니다"
   },
   "customize": {
     "outputStyles": "출력 스타일",

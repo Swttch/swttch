@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "等待您的回答"
+  },
+  "autoResumeCountdown": {
+    "body": "预约的任务将在30秒后恢复。"
   }
 }
