@@ -4,9 +4,10 @@ description: >-
   Pre-PR review checklist for the claude-code-gui-jetbrains project. Verifies a
   change is ready to open a pull request against main — rebased onto the latest
   main, feature docs written for feature PRs, no marketplace-forbidden Internal/
-  Deprecated JetBrains APIs, all three test layers passing, and the project's core
+  Deprecated JetBrains APIs, all three test layers passing, the project's core
   principles (CLI equivalence, original-data preservation, consistent naming)
-  respected. Use before opening or updating a PR. Trigger on: PR 올리기 전, PR 전 검토,
+  respected, and the lessons learned during the work recorded to memory.
+  Use before opening or updating a PR. Trigger on: PR 올리기 전, PR 전 검토,
   기여 전 체크, 피알 검토, pre-PR, PR 준비 됐어?, open a PR, ready for PR, PR checklist,
   contribution check.
 ---
@@ -97,6 +98,32 @@ OS와 맞닿을 확률이 조금이라도 있는 코드는 **Windows·macOS·Lin
 - **PR 본문은 영어**로 작성한다. (한국어 본문 금지)
 - 커밋 메시지는 영어 + conventional 스타일(`fix:`, `feat:`, `refactor:`, `docs:`, `chore:` …), 첫 줄 72자 이내.
 - PR 본문은 **무엇을**, **왜** 바꿨는지 명확히 설명한다.
+- 이슈를 해결하는 변경이면 **종료 플래그 필수** — `Closes #N` / `Fixes #N`.
+  `(#N)` 참조만으로는 이슈가 자동으로 닫히지 않는다. push 전에 빠졌으면 `git commit --amend`로 보강한다.
+
+### 8. 학습 내용 메모리 기록 (필수, 에이전트 전용)
+
+> 이 항목은 **에이전트의 작업 규율**이다. 외부 기여자에게 요구하는 절차가 아니므로
+> CONTRIBUTING.md(공개 기여 가이드)에는 두지 않는다.
+
+PR을 올리기 전, **이번 작업에서 기억해야 할 점이나 배운 점을 정리해 메모리에 기록한다.**
+이 항목은 매 PR마다 빠짐없이 반복 실행한다.
+
+**왜**: 같은 조사를 반복하지 않기 위해서다. 특히 "한 번 확인해두면 다음에 바로 쓸 수 있는 사실"
+(공식 스키마·API 계약·플랫폼 함정·검증 방법)은 기록하지 않으면 다음 세션에서 처음부터 다시 파야 한다.
+
+**무엇을 기록하나** — 아래에 해당하면 기록한다:
+- **판정 근거와 그 확보 방법**: 무엇을 1차 근거로 삼았고 어떻게 받아왔는지(예: 스키마 원문 URL + 파싱 명령).
+  특히 **틀린 정보원을 만났다면 그 사실 자체를 기록**한다 — 다음에 같은 함정에 빠지지 않게.
+- **아키텍처 결정과 그 이유**: 왜 A가 아니라 B인지. 나중에 "왜 이렇게 했지?"가 나올 지점.
+- **함정·역직관적 제약**: 순환 의존, 화이트리스트 때문에 순서를 바꿔야 하는 것, 플랫폼별 차이 등.
+- **미해결로 남긴 것과 그 한계**: 무엇을 왜 못 했고, 어떤 조건에서 문제가 되는지.
+
+**무엇을 기록하지 않나**: 코드·git 히스토리·CLAUDE.md를 보면 바로 아는 것(파일 구조, 이번에 고친 코드
+자체), 이번 대화에서만 의미 있는 진행 상황.
+
+**기록 방법**: 기존 메모리에 같은 주제가 있으면 **새 파일을 만들지 말고 그 파일을 갱신**한다
+(중복 방지). 새로 만들 때만 `MEMORY.md` 색인에 한 줄 추가한다.
 
 ## 결과 보고
 
