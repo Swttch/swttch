@@ -945,7 +945,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
             isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
           };
-          appendMessage(userMessage);
+          // Arrival order. A tool_result echo lands mid-turn carrying a timestamp
+          // from before the message the user just typed, so ordering it by
+          // timestamp would hoist it above that message.
+          appendMessage(userMessage, true);
         }
         return;
       }
