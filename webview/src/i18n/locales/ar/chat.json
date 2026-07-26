@@ -186,6 +186,13 @@
       "time": "الوقت"
     }
   },
+  "scheduledMessages": {
+    "title": "الرسائل المجدولة",
+    "close": "إغلاق",
+    "empty": "لا توجد رسائل مجدولة.",
+    "edit": "تعديل",
+    "cancel": "إلغاء"
+  },
   "modelSwitch": {
     "selectModel": "اختر نموذجًا",
     "loadingModels": "جارٍ تحميل النماذج…",

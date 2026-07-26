@@ -89,6 +89,20 @@ vi.mock('../../../contexts/WorkflowStateContext', () => ({
   }),
 }));
 
+// Mock ScheduledMessagesContext (ScheduledMessagesButton uses useScheduledMessages)
+vi.mock('../../../contexts/ScheduledMessagesContext', () => ({
+  useScheduledMessages: () => ({
+    reservations: [],
+    cancel: vi.fn(),
+    panelOpen: false,
+    openPanel: vi.fn(),
+    closePanel: vi.fn(),
+    editing: null,
+    startEdit: vi.fn(),
+    stopEdit: vi.fn(),
+  }),
+}));
+
 // Mock ChatStreamContext (TokenBatteryButton → useUsageData → useChatStreamContext)
 vi.mock('../../../contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => ({

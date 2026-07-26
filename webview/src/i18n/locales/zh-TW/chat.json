@@ -182,6 +182,13 @@
       "time": "時間"
     }
   },
+  "scheduledMessages": {
+    "title": "排程訊息",
+    "close": "關閉",
+    "empty": "尚無排程訊息。",
+    "edit": "編輯",
+    "cancel": "取消"
+  },
   "modelSwitch": {
     "selectModel": "選擇模型",
     "loadingModels": "正在載入模型…",

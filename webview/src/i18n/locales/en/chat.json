@@ -182,6 +182,13 @@
       "time": "Time"
     }
   },
+  "scheduledMessages": {
+    "title": "Scheduled messages",
+    "close": "Close",
+    "empty": "No scheduled messages.",
+    "edit": "Edit",
+    "cancel": "Cancel"
+  },
   "modelSwitch": {
     "selectModel": "Select a model",
     "loadingModels": "Loading models…",

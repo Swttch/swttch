@@ -12,6 +12,7 @@ import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
+import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
@@ -365,6 +366,8 @@ export function ChatPage() {
       </div>
 
       <BackgroundTasksPanel />
+      <ScheduledMessagesPanel />
+      <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
       <AnnouncementModalSlot />
     </div>

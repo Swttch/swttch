@@ -182,6 +182,13 @@
       "time": "시간"
     }
   },
+  "scheduledMessages": {
+    "title": "예약된 메시지",
+    "close": "닫기",
+    "empty": "예약된 메시지가 없습니다.",
+    "edit": "수정",
+    "cancel": "취소"
+  },
   "modelSwitch": {
     "selectModel": "모델 선택",
     "loadingModels": "모델 불러오는 중…",

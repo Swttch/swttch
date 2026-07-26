@@ -182,6 +182,13 @@
       "time": "زمان"
     }
   },
+  "scheduledMessages": {
+    "title": "پیام‌های زمان‌بندی‌شده",
+    "close": "بستن",
+    "empty": "پیام زمان‌بندی‌شده‌ای وجود ندارد.",
+    "edit": "ویرایش",
+    "cancel": "لغو"
+  },
   "modelSwitch": {
     "selectModel": "یک مدل انتخاب کنید",
     "loadingModels": "در حال بارگذاری مدل‌ها…",
