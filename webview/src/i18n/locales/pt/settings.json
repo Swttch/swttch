@@ -403,7 +403,7 @@
     },
     "plan": {
       "title": "Seu apoio",
-      "tier": "Nível",
+      "tier": "Tipo",
       "interval": "Cobrança",
       "monthly": "Mensal",
       "yearly": "Anual",
@@ -416,7 +416,7 @@
     "devices": {
       "title": "Dispositivos ativos",
       "description": "Máquinas onde sua chave de apoiador está em uso.",
-      "note": "O apoio vale por dispositivo, não por conta Claude. Se você ativou a chave com a conta A e depois trocar para a conta B na mesma máquina, seu apoio continua ativo.",
+      "note": "O apoio vale por chave, não por conta. A conta serve apenas para verificar a chave: basta que o dispositivo tenha uma conta que possa usá-la.",
       "thisDevice": "Este dispositivo",
       "remove": "Sair",
       "removing": "Saindo…",
@@ -434,6 +434,11 @@
     "copyKey": {
       "copy": "Copiar",
       "copied": "Copiado"
+    },
+    "tabs": {
+      "benefits": "Benefícios",
+      "devices": "Dispositivos",
+      "billing": "Pagamentos"
     }
   },
   "badges": {

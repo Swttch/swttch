@@ -403,7 +403,7 @@
     },
     "plan": {
       "title": "Votre soutien",
-      "tier": "Niveau",
+      "tier": "Type",
       "interval": "Facturation",
       "monthly": "Mensuel",
       "yearly": "Annuel",
@@ -416,7 +416,7 @@
     "devices": {
       "title": "Appareils actifs",
       "description": "Machines où votre clé de mécène est utilisée.",
-      "note": "Le soutien s’applique par appareil, et non par compte Claude. Si vous avez activé la clé avec le compte A puis passez au compte B sur la même machine, votre soutien reste actif.",
+      "note": "Le soutien s’applique par clé, et non par compte. Le compte sert uniquement à vérifier la clé : il suffit que l’appareil dispose d’un compte autorisé à l’utiliser.",
       "thisDevice": "Cet appareil",
       "remove": "Déconnecter",
       "removing": "Déconnexion…",
@@ -434,6 +434,11 @@
     "copyKey": {
       "copy": "Copier",
       "copied": "Copié"
+    },
+    "tabs": {
+      "benefits": "Avantages",
+      "devices": "Appareils",
+      "billing": "Paiements"
     }
   },
   "badges": {

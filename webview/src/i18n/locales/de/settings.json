@@ -403,7 +403,7 @@
     },
     "plan": {
       "title": "Deine Förderung",
-      "tier": "Stufe",
+      "tier": "Art",
       "interval": "Abrechnung",
       "monthly": "Monatlich",
       "yearly": "Jährlich",
@@ -416,7 +416,7 @@
     "devices": {
       "title": "Aktive Geräte",
       "description": "Rechner, auf denen dein Förderer-Schlüssel genutzt wird.",
-      "note": "Die Förderung gilt pro Gerät, nicht pro Claude-Konto. Auch wenn du den Schlüssel mit Konto A aktiviert hast und später auf demselben Rechner zu Konto B wechselst, bleibt deine Förderung aktiv.",
+      "note": "Die Förderung gilt pro Schlüssel, nicht pro Konto. Ein Konto dient nur zur Prüfung des Schlüssels — es genügt, dass auf dem Gerät ein Konto hinterlegt ist, das ihn verwenden darf.",
       "thisDevice": "Dieses Gerät",
       "remove": "Abmelden",
       "removing": "Wird abgemeldet…",
@@ -434,6 +434,11 @@
     "copyKey": {
       "copy": "Kopieren",
       "copied": "Kopiert"
+    },
+    "tabs": {
+      "benefits": "Vorteile",
+      "devices": "Geräte",
+      "billing": "Zahlungen"
     }
   },
   "badges": {

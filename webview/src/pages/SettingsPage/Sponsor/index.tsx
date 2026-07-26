@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HeartIcon } from '@heroicons/react/24/solid';
-import { SponsorPlanSection } from './SponsorPlanSection';
+import { SponsorSummary } from './SponsorSummary';
+import { SponsorTabs, SponsorTab } from './SponsorTabs';
 import { SponsorBenefitsSection } from './SponsorBenefitsSection';
 import { SponsorDevicesSection } from './SponsorDevicesSection';
 import { SponsorBillingSection } from './SponsorBillingSection';
@@ -67,6 +68,7 @@ export function SponsorSettings() {
     return () => window.clearInterval(id);
   }, [checkoutStartedAt, isSponsor, checkByInstall]);
 
+  const [tab, setTab] = useState<SponsorTab>(SponsorTab.BENEFITS);
   const [opening, setOpening] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -165,10 +167,14 @@ export function SponsorSettings() {
 
       {isSponsor ? (
         <>
-          <SponsorPlanSection licenseKey={licenseKey} tier={tier} interval={interval} />
-          <SponsorBenefitsSection />
-          <SponsorDevicesSection />
-          <SponsorBillingSection />
+          <SponsorSummary licenseKey={licenseKey} tier={tier} interval={interval} />
+
+          {/* One section at a time: stacked, they were a long scroll of cards
+              where only one is ever relevant. */}
+          <SponsorTabs active={tab} onChange={setTab} />
+          {tab === SponsorTab.BENEFITS && <SponsorBenefitsSection />}
+          {tab === SponsorTab.DEVICES && <SponsorDevicesSection />}
+          {tab === SponsorTab.BILLING && <SponsorBillingSection />}
 
           {/* Deactivate sits last and stays quiet on purpose: it is the one
               action here the sponsor is least likely to want, and putting it

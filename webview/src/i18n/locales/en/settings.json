@@ -405,7 +405,7 @@
     },
     "plan": {
       "title": "Your sponsorship",
-      "tier": "Tier",
+      "tier": "Type",
       "interval": "Billing",
       "monthly": "Monthly",
       "yearly": "Yearly",
@@ -418,7 +418,7 @@
     "devices": {
       "title": "Active devices",
       "description": "Machines where your sponsor key is in use.",
-      "note": "Sponsorship applies per device, not per Claude account. If you signed in with account A when the key was activated and later switch to account B on the same machine, your sponsorship stays active.",
+      "note": "Sponsorship applies per key, not per account. An account is only used to verify the key — it is enough that the device has an account that may use it.",
       "thisDevice": "This device",
       "remove": "Sign out",
       "removing": "Signing out…",
@@ -436,6 +436,11 @@
     "copyKey": {
       "copy": "Copy",
       "copied": "Copied"
+    },
+    "tabs": {
+      "benefits": "Benefits",
+      "devices": "Devices",
+      "billing": "Payments"
     }
   },
   "badges": {

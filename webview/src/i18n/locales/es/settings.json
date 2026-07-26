@@ -403,7 +403,7 @@
     },
     "plan": {
       "title": "Tu patrocinio",
-      "tier": "Nivel",
+      "tier": "Tipo",
       "interval": "Facturación",
       "monthly": "Mensual",
       "yearly": "Anual",
@@ -416,7 +416,7 @@
     "devices": {
       "title": "Dispositivos activos",
       "description": "Equipos donde se usa tu clave de patrocinador.",
-      "note": "El patrocinio se aplica por dispositivo, no por cuenta de Claude. Si activaste la clave con la cuenta A y luego cambias a la cuenta B en el mismo equipo, tu patrocinio sigue activo.",
+      "note": "El patrocinio se aplica por clave, no por cuenta. La cuenta solo sirve para verificar la clave: basta con que el dispositivo tenga una cuenta que pueda usarla.",
       "thisDevice": "Este dispositivo",
       "remove": "Cerrar sesión",
       "removing": "Cerrando sesión…",
@@ -434,6 +434,11 @@
     "copyKey": {
       "copy": "Copiar",
       "copied": "Copiado"
+    },
+    "tabs": {
+      "benefits": "Ventajas",
+      "devices": "Dispositivos",
+      "billing": "Pagos"
     }
   },
   "badges": {

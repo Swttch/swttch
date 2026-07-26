@@ -22,7 +22,7 @@ export function SponsorBenefitsSection() {
   const { t } = useTranslation('settings');
 
   return (
-    <div className="mt-6 rounded-xl border border-border-default bg-surface-raised p-6">
+    <div className="rounded-b-xl border border-t-0 border-border-default bg-surface-raised p-6">
       <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.benefits.title')}</h3>
       <p className="mt-2 text-sm text-text-secondary leading-relaxed break-keep">
         {t('sponsor.benefits.description')}

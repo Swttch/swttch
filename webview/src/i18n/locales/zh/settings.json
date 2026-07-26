@@ -403,7 +403,7 @@
     },
     "plan": {
       "title": "赞助信息",
-      "tier": "等级",
+      "tier": "类别",
       "interval": "结算周期",
       "monthly": "按月",
       "yearly": "按年",
@@ -416,7 +416,7 @@
     "devices": {
       "title": "活跃设备",
       "description": "正在使用赞助密钥的设备。",
-      "note": "赞助按设备生效，而非按 Claude 账号。即使激活密钥时登录的是账号 A，在同一台设备上切换到账号 B，赞助依然有效。",
+      "note": "赞助按密钥生效，而非按账号。账号仅用于验证密钥，只要设备上添加了可使用该密钥的账号即可。",
       "thisDevice": "当前设备",
       "remove": "退出",
       "removing": "正在退出…",
@@ -434,6 +434,11 @@
     "copyKey": {
       "copy": "复制",
       "copied": "已复制"
+    },
+    "tabs": {
+      "benefits": "权益",
+      "devices": "设备",
+      "billing": "付款"
     }
   },
   "badges": {
