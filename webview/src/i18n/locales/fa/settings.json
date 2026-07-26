@@ -398,7 +398,8 @@
       "title": "حمایت فعال است",
       "description": "از حمایت شما از Claude Code with GUI سپاسگزاریم.",
       "keyLabel": "کلید حامی",
-      "deactivate": "غیرفعال‌سازی"
+      "deactivate": "غیرفعال‌سازی",
+      "greeting": "خوشحالیم که اینجایید، حامی"
     }
   },
   "badges": {

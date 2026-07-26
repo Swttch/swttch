@@ -398,7 +398,8 @@
       "title": "الرعاية مفعّلة",
       "description": "شكرًا لدعمك Claude Code with GUI.",
       "keyLabel": "مفتاح الراعي",
-      "deactivate": "إلغاء التفعيل"
+      "deactivate": "إلغاء التفعيل",
+      "greeting": "سعداء برؤيتك، أيها الداعم"
     }
   },
   "badges": {

@@ -400,7 +400,8 @@
       "title": "Sponsoring",
       "description": "Thank you for supporting Claude Code with GUI.",
       "keyLabel": "Sponsor key",
-      "deactivate": "Deactivate"
+      "deactivate": "Deactivate",
+      "greeting": "Good to see you, sponsor"
     }
   },
   "badges": {

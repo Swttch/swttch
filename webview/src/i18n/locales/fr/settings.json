@@ -398,7 +398,8 @@
       "title": "Parrainage actif",
       "description": "Merci de soutenir Claude Code with GUI.",
       "keyLabel": "Clé de sponsor",
-      "deactivate": "Désactiver"
+      "deactivate": "Désactiver",
+      "greeting": "Ravi de vous revoir, mécène"
     }
   },
   "badges": {

@@ -124,10 +124,16 @@ export function SponsorSettings() {
     <div className="max-w-2xl">
       <div className="flex items-center gap-2.5 mb-5">
         <HeartIcon className="w-5 h-5 text-accent-primary" />
-        <h2 className="text-xl font-semibold text-text-primary">{t('sponsor.title')}</h2>
+        <h2 className="text-xl font-semibold text-text-primary">
+          {/* Someone already sponsoring is greeted, not pitched to. */}
+          {isSponsor ? t('sponsor.active.greeting') : t('sponsor.title')}
+        </h2>
       </div>
 
-      {/* Intro + pricing entry point */}
+      {/* Intro + pricing entry point. Hidden for sponsors: the pitch (what you
+          get, "Learn more", "Cancel anytime") is aimed at people deciding, and
+          reads as if they had not already paid. */}
+      {!isSponsor && (
       <div className="rounded-xl border border-border-default bg-surface-raised p-6">
         <p className="text-sm text-text-secondary leading-relaxed break-keep">
           {t('sponsor.description')}
@@ -156,9 +162,10 @@ export function SponsorSettings() {
           {t('sponsor.trust')}
         </p>
       </div>
+      )}
 
       {/* Activation — existing sponsors redeem their license key here */}
-      <div className="mt-6 rounded-xl border border-border-default bg-surface-raised p-6">
+      <div className={`rounded-xl border border-border-default bg-surface-raised p-6 ${isSponsor ? '' : 'mt-6'}`}>
         {isSponsor ? (
           <div>
             <div className="flex items-center gap-2">

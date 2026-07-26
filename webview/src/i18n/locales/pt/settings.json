@@ -398,7 +398,8 @@
       "title": "Patrocinando",
       "description": "Obrigado por apoiar o Claude Code with GUI.",
       "keyLabel": "Chave de patrocinador",
-      "deactivate": "Desativar"
+      "deactivate": "Desativar",
+      "greeting": "Que bom te ver, apoiador"
     }
   },
   "badges": {

@@ -398,7 +398,8 @@
       "title": "Sponsoring aktiv",
       "description": "Danke, dass du Claude Code with GUI unterstützt.",
       "keyLabel": "Sponsor-Schlüssel",
-      "deactivate": "Deaktivieren"
+      "deactivate": "Deaktivieren",
+      "greeting": "Schön, dich zu sehen, Förderer"
     }
   },
   "badges": {

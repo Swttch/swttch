@@ -398,7 +398,8 @@
       "title": "赞助中",
       "description": "感谢你赞助 Claude Code with GUI。",
       "keyLabel": "赞助者密钥",
-      "deactivate": "取消激活"
+      "deactivate": "取消激活",
+      "greeting": "很高兴见到你，赞助者"
     }
   },
   "badges": {
