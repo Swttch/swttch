@@ -18,5 +18,8 @@ export async function getSponsorStatusHandler(
     isSponsor: sponsor.isSponsor,
     licenseKey: sponsor.licenseKey,
     licenseStatus: sponsor.status,
+    // Plan details, so the sponsor screen can say what they are on.
+    tier: sponsor.tier,
+    interval: sponsor.interval,
   });
 }

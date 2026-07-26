@@ -400,6 +400,40 @@
       "keyLabel": "Clave de patrocinador",
       "deactivate": "Desactivar",
       "greeting": "Qué bueno verte, patrocinador"
+    },
+    "plan": {
+      "title": "Tu patrocinio",
+      "tier": "Nivel",
+      "interval": "Facturación",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Ventajas de funciones",
+      "description": "Funciones que tu patrocinio sostiene. Ábrelas para ver qué hacen."
+    },
+    "devices": {
+      "title": "Dispositivos activos",
+      "description": "Equipos donde se usa tu clave de patrocinador.",
+      "note": "El patrocinio se aplica por dispositivo, no por cuenta de Claude. Si activaste la clave con la cuenta A y luego cambias a la cuenta B en el mismo equipo, tu patrocinio sigue activo.",
+      "thisDevice": "Este dispositivo",
+      "remove": "Cerrar sesión",
+      "removing": "Cerrando sesión…",
+      "empty": "Aún no hay dispositivos registrados.",
+      "removeConfirmTitle": "¿Cerrar la sesión de este dispositivo?",
+      "removeConfirmMessage": "Dejará de aparecer aquí. Tu clave sigue siendo válida y el dispositivo se registrará de nuevo la próxima vez que lo uses."
+    },
+    "billing": {
+      "title": "Pagos",
+      "description": "Tu historial de pagos. Los recibos se abren en la plataforma de pago.",
+      "receipt": "Recibo",
+      "empty": "Aún no hay pagos que mostrar.",
+      "loading": "Cargando…"
+    },
+    "copyKey": {
+      "copy": "Copiar",
+      "copied": "Copiado"
     }
   },
   "badges": {

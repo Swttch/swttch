@@ -28,6 +28,11 @@ import { verifyLicenseHandler } from './verifyLicense';
 import { getSponsorStatusHandler } from './getSponsorStatus';
 import { deactivateLicenseHandler } from './deactivateLicense';
 import { checkSponsorHandler } from './checkSponsor';
+import {
+  getSponsorDevicesHandler,
+  removeSponsorDeviceHandler,
+  getSponsorInvoicesHandler,
+} from './sponsorAccount';
 import { getProjectsHandler } from './getProjects';
 import { getUsageHandler } from './getUsage';
 import { getUsageReportHandler } from './getUsageReport';
@@ -201,6 +206,15 @@ export async function handleMessage(
       break;
     case MessageType.CHECK_SPONSOR:
       await checkSponsorHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SPONSOR_DEVICES:
+      await getSponsorDevicesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.REMOVE_SPONSOR_DEVICE:
+      await removeSponsorDeviceHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SPONSOR_INVOICES:
+      await getSponsorInvoicesHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_PROJECTS:
       await getProjectsHandler(connectionId, message, connections, bridge);

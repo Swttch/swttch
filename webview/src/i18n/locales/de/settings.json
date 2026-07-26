@@ -400,6 +400,40 @@
       "keyLabel": "Sponsor-Schlüssel",
       "deactivate": "Deaktivieren",
       "greeting": "Schön, dich zu sehen, Förderer"
+    },
+    "plan": {
+      "title": "Deine Förderung",
+      "tier": "Stufe",
+      "interval": "Abrechnung",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Funktions-Benefits",
+      "description": "Funktionen, die deine Förderung trägt. Öffne sie, um mehr zu erfahren."
+    },
+    "devices": {
+      "title": "Aktive Geräte",
+      "description": "Rechner, auf denen dein Förderer-Schlüssel genutzt wird.",
+      "note": "Die Förderung gilt pro Gerät, nicht pro Claude-Konto. Auch wenn du den Schlüssel mit Konto A aktiviert hast und später auf demselben Rechner zu Konto B wechselst, bleibt deine Förderung aktiv.",
+      "thisDevice": "Dieses Gerät",
+      "remove": "Abmelden",
+      "removing": "Wird abgemeldet…",
+      "empty": "Noch keine Geräte erfasst.",
+      "removeConfirmTitle": "Dieses Gerät abmelden?",
+      "removeConfirmMessage": "Es verschwindet aus dieser Liste. Dein Schlüssel bleibt gültig, und das Gerät meldet sich bei der nächsten Nutzung automatisch wieder an."
+    },
+    "billing": {
+      "title": "Zahlungen",
+      "description": "Deine Zahlungshistorie. Belege öffnen sich beim Zahlungsanbieter.",
+      "receipt": "Beleg",
+      "empty": "Noch keine Zahlungen vorhanden.",
+      "loading": "Wird geladen…"
+    },
+    "copyKey": {
+      "copy": "Kopieren",
+      "copied": "Kopiert"
     }
   },
   "badges": {

@@ -118,6 +118,12 @@ export enum MessageType {
   DEACTIVATE_LICENSE = 'DEACTIVATE_LICENSE',
   /** Poll www for a sponsor key minted for this install id and auto-activate it (copy/paste-free). inbound webview→backend */
   CHECK_SPONSOR = 'CHECK_SPONSOR',
+  /** List the machines this sponsor license is active on. inbound webview→backend */
+  GET_SPONSOR_DEVICES = 'GET_SPONSOR_DEVICES',
+  /** Sign one machine out of this sponsor license (the key itself stays valid). inbound webview→backend */
+  REMOVE_SPONSOR_DEVICE = 'REMOVE_SPONSOR_DEVICE',
+  /** List the payments behind this sponsor license, each with its receipt link. inbound webview→backend */
+  GET_SPONSOR_INVOICES = 'GET_SPONSOR_INVOICES',
 
   // -- Account / usage / version --
   /** Read the signed-in Claude account info. */

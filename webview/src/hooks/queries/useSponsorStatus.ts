@@ -8,6 +8,10 @@ interface SponsorStatusResponse {
   isSponsor?: boolean;
   licenseKey?: string;
   licenseStatus?: string;
+  /** Paid tier, cached backend-side from the last verification. */
+  tier?: string;
+  /** Billing cadence ("monthly" | "yearly"), cached alongside the tier. */
+  interval?: string;
   error?: string;
 }
 
@@ -21,6 +25,8 @@ interface SponsorState {
   isSponsor: boolean;
   licenseKey: string | null;
   licenseStatus: string | null;
+  tier: string | null;
+  interval: string | null;
 }
 
 export interface VerifyResult {
@@ -32,6 +38,10 @@ export interface UseSponsorStatusResult {
   isSponsor: boolean;
   licenseKey: string | null;
   licenseStatus: string | null;
+  /** Paid tier, when the server knows it. */
+  tier: string | null;
+  /** Billing cadence ("monthly" | "yearly"), when resolved. */
+  interval: string | null;
   isLoading: boolean;
   verify: (licenseKey: string) => Promise<VerifyResult>;
   deactivate: () => Promise<void>;
@@ -51,6 +61,8 @@ function useSponsorStatusQuery(): UseQueryResult<SponsorState, Error> {
           isSponsor: res.isSponsor === true,
           licenseKey: res.licenseKey ?? null,
           licenseStatus: res.licenseStatus ?? null,
+          tier: res.tier ?? null,
+          interval: res.interval ?? null,
         };
       }
       throw new Error(res?.error ?? 'Failed to load sponsor status');
@@ -99,6 +111,8 @@ export function useSponsorStatus(): UseSponsorStatusResult {
     isSponsor: query.data?.isSponsor ?? false,
     licenseKey: query.data?.licenseKey ?? null,
     licenseStatus: query.data?.licenseStatus ?? null,
+    tier: query.data?.tier ?? null,
+    interval: query.data?.interval ?? null,
     isLoading: query.isLoading,
     verify,
     deactivate,

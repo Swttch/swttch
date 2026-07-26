@@ -20,3 +20,14 @@ export const PRIVACY_POLICY_URL = 'https://just-swttch.com/privacy';
  * this bare constant is the fallback target when that context is unavailable.
  */
 export const PRICING_URL = 'https://just-swttch.com/pricing';
+
+/**
+ * Where a feature doc lives, given its folder name under `docs/features/`.
+ *
+ * The docs are per-language files in the repo, so the link targets the folder
+ * and lets the reader pick their language there — cheaper and more honest than
+ * guessing which translations exist for a given feature.
+ */
+export function featureDocUrl(folder: string): string {
+  return `https://github.com/yhk1038/claude-code-gui-jetbrains/tree/main/docs/features/${folder}`;
+}

@@ -400,6 +400,40 @@
       "keyLabel": "후원자 키",
       "deactivate": "해제",
       "greeting": "오늘도 반갑습니다, 후원자님"
+    },
+    "plan": {
+      "title": "후원 정보",
+      "tier": "등급",
+      "interval": "결제 주기",
+      "monthly": "월 결제",
+      "yearly": "연 결제",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "기능 베네핏",
+      "description": "후원으로 이어가는 기능들입니다. 눌러서 어떤 기능인지 확인해 보세요."
+    },
+    "devices": {
+      "title": "활성 기기",
+      "description": "후원자 키를 사용 중인 기기입니다.",
+      "note": "후원은 Claude 계정이 아니라 기기 단위로 적용됩니다. 키를 활성화할 때 A 계정으로 로그인했더라도, 같은 기기에서 B 계정으로 전환하면 후원은 그대로 유지됩니다.",
+      "thisDevice": "현재 기기",
+      "remove": "사인아웃",
+      "removing": "사인아웃 중…",
+      "empty": "아직 기록된 기기가 없습니다.",
+      "removeConfirmTitle": "이 기기를 사인아웃할까요?",
+      "removeConfirmMessage": "목록에서 사라집니다. 후원자 키는 그대로 유효하며, 그 기기를 다시 사용하면 자동으로 다시 등록됩니다."
+    },
+    "billing": {
+      "title": "결제 내역",
+      "description": "결제 기록입니다. 영수증은 결제사 페이지에서 열립니다.",
+      "receipt": "영수증",
+      "empty": "아직 표시할 결제 내역이 없습니다.",
+      "loading": "불러오는 중…"
+    },
+    "copyKey": {
+      "copy": "복사",
+      "copied": "복사됨"
     }
   },
   "badges": {

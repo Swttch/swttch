@@ -1,4 +1,4 @@
-import { readLicense, saveLicense, clearLicense } from './license';
+import { readLicense, saveLicense, clearLicense, reportActivation } from './license';
 import type { LicenseVerifyResult } from './license';
 
 /**
@@ -48,7 +48,13 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
   try {
     const license = await readLicense();
     if (license === null) return;
-    if (!isStale(license.verifiedAt)) return;
+
+    // A license stored before the plan fields existed has a fresh timestamp but
+    // nothing to show, so the sponsor screen would sit blank until the interval
+    // elapsed. Treat "no plan cached yet" as its own reason to ask now.
+    const planMissing =
+      (license.tier ?? null) === null && (license.interval ?? null) === null;
+    if (!planMissing && !isStale(license.verifiedAt)) return;
 
     const result = await verify(license.licenseKey);
 
@@ -61,12 +67,22 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
     }
     if (!result.valid) return;
 
-    // Still valid: stamp the check so the next call waits another interval.
+    // Still valid: stamp the check so the next call waits another interval, and
+    // refresh the cached plan details (an upgrade or a switch to yearly shows up
+    // here rather than waiting for the user to re-enter their key).
     await saveLicense({
       licenseKey: license.licenseKey,
       status: result.status ?? license.status,
       verifiedAt: new Date().toISOString(),
+      tier: result.tier ?? license.tier ?? null,
+      interval: result.interval ?? license.interval ?? null,
     });
+
+    // Re-report this install while we are here. Activation was previously only
+    // reported when a key was entered or auto-picked up, so an install that
+    // activated before device labels existed would never get one — and would sit
+    // nameless in the sponsor's own device list forever.
+    void reportActivation(license.licenseKey);
   } catch {
     // Re-validation is best-effort; a failure must never revoke or throw.
   }

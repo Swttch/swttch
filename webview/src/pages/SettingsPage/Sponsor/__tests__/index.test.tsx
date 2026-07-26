@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createTestQueryClient } from '@/hooks/queries/__tests__/testQueryClient';
 
 // The auto-activation poll asks www for a key minted for this install. It exists
 // for one moment only — right after the user paid in the browser — so these tests
@@ -15,6 +18,8 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
     isSponsor: mockIsSponsor,
     licenseKey: mockIsSponsor ? 'CCG-abcd1234' : null,
     licenseStatus: null,
+    tier: mockIsSponsor ? 'jetbrains' : null,
+    interval: mockIsSponsor ? 'monthly' : null,
     isLoading: false,
     verify: mockVerify,
     deactivate: mockDeactivate,
@@ -38,6 +43,13 @@ vi.mock('@/adapters', () => ({
 
 import { SponsorSettings } from '../index';
 
+// The sponsor sections fetch devices/invoices through react-query.
+function wrapper({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>
+  );
+}
+
 describe('SponsorSettings — auto-activation polling', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -59,7 +71,7 @@ describe('SponsorSettings — auto-activation polling', () => {
   };
 
   it('does NOT poll just because the screen is open', async () => {
-    render(<SponsorSettings />);
+    render(<SponsorSettings />, { wrapper });
 
     await advance(30_000);
 
@@ -69,7 +81,7 @@ describe('SponsorSettings — auto-activation polling', () => {
   });
 
   it('starts polling once the user opens the checkout page', async () => {
-    render(<SponsorSettings />);
+    render(<SponsorSettings />, { wrapper });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /learn more/i }));
@@ -80,7 +92,7 @@ describe('SponsorSettings — auto-activation polling', () => {
   });
 
   it('stops polling after the activation window closes', async () => {
-    render(<SponsorSettings />);
+    render(<SponsorSettings />, { wrapper });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /learn more/i }));
     });
@@ -97,7 +109,7 @@ describe('SponsorSettings — auto-activation polling', () => {
 
   it('does not poll after deactivating, even though the user is now a non-sponsor', async () => {
     mockIsSponsor = true;
-    const { rerender } = render(<SponsorSettings />);
+    const { rerender } = render(<SponsorSettings />, { wrapper });
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /deactivate|해제/i }));

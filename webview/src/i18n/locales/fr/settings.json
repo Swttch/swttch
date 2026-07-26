@@ -400,6 +400,40 @@
       "keyLabel": "Clé de sponsor",
       "deactivate": "Désactiver",
       "greeting": "Ravi de vous revoir, mécène"
+    },
+    "plan": {
+      "title": "Votre soutien",
+      "tier": "Niveau",
+      "interval": "Facturation",
+      "monthly": "Mensuel",
+      "yearly": "Annuel",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Avantages fonctionnels",
+      "description": "Les fonctionnalités que votre soutien fait vivre. Ouvrez-les pour en savoir plus."
+    },
+    "devices": {
+      "title": "Appareils actifs",
+      "description": "Machines où votre clé de mécène est utilisée.",
+      "note": "Le soutien s’applique par appareil, et non par compte Claude. Si vous avez activé la clé avec le compte A puis passez au compte B sur la même machine, votre soutien reste actif.",
+      "thisDevice": "Cet appareil",
+      "remove": "Déconnecter",
+      "removing": "Déconnexion…",
+      "empty": "Aucun appareil enregistré pour le moment.",
+      "removeConfirmTitle": "Déconnecter cet appareil ?",
+      "removeConfirmMessage": "Il disparaîtra de cette liste. Votre clé reste valide et l’appareil se réinscrira à sa prochaine utilisation."
+    },
+    "billing": {
+      "title": "Paiements",
+      "description": "Votre historique de paiements. Les reçus s’ouvrent chez le prestataire.",
+      "receipt": "Reçu",
+      "empty": "Aucun paiement à afficher.",
+      "loading": "Chargement…"
+    },
+    "copyKey": {
+      "copy": "Copier",
+      "copied": "Copié"
     }
   },
   "badges": {

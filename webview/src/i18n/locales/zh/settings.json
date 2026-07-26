@@ -400,6 +400,40 @@
       "keyLabel": "赞助者密钥",
       "deactivate": "取消激活",
       "greeting": "很高兴见到你，赞助者"
+    },
+    "plan": {
+      "title": "赞助信息",
+      "tier": "等级",
+      "interval": "结算周期",
+      "monthly": "按月",
+      "yearly": "按年",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "功能权益",
+      "description": "你的赞助所支持的功能。点击可查看说明。"
+    },
+    "devices": {
+      "title": "活跃设备",
+      "description": "正在使用赞助密钥的设备。",
+      "note": "赞助按设备生效，而非按 Claude 账号。即使激活密钥时登录的是账号 A，在同一台设备上切换到账号 B，赞助依然有效。",
+      "thisDevice": "当前设备",
+      "remove": "退出",
+      "removing": "正在退出…",
+      "empty": "暂无已记录的设备。",
+      "removeConfirmTitle": "要让此设备退出吗？",
+      "removeConfirmMessage": "它将从列表中消失。你的赞助密钥仍然有效，该设备下次使用时会自动重新登记。"
+    },
+    "billing": {
+      "title": "付款记录",
+      "description": "你的付款历史。收据将在支付服务商页面打开。",
+      "receipt": "收据",
+      "empty": "暂无付款记录。",
+      "loading": "加载中…"
+    },
+    "copyKey": {
+      "copy": "复制",
+      "copied": "已复制"
     }
   },
   "badges": {

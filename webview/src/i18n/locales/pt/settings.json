@@ -400,6 +400,40 @@
       "keyLabel": "Chave de patrocinador",
       "deactivate": "Desativar",
       "greeting": "Que bom te ver, apoiador"
+    },
+    "plan": {
+      "title": "Seu apoio",
+      "tier": "Nível",
+      "interval": "Cobrança",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Benefícios de recursos",
+      "description": "Recursos que seu apoio sustenta. Abra para ver o que fazem."
+    },
+    "devices": {
+      "title": "Dispositivos ativos",
+      "description": "Máquinas onde sua chave de apoiador está em uso.",
+      "note": "O apoio vale por dispositivo, não por conta Claude. Se você ativou a chave com a conta A e depois trocar para a conta B na mesma máquina, seu apoio continua ativo.",
+      "thisDevice": "Este dispositivo",
+      "remove": "Sair",
+      "removing": "Saindo…",
+      "empty": "Nenhum dispositivo registrado ainda.",
+      "removeConfirmTitle": "Sair neste dispositivo?",
+      "removeConfirmMessage": "Ele deixará de aparecer aqui. Sua chave continua válida e o dispositivo será registrado de novo no próximo uso."
+    },
+    "billing": {
+      "title": "Pagamentos",
+      "description": "Seu histórico de pagamentos. Os recibos abrem no provedor de pagamento.",
+      "receipt": "Recibo",
+      "empty": "Nenhum pagamento para mostrar ainda.",
+      "loading": "Carregando…"
+    },
+    "copyKey": {
+      "copy": "Copiar",
+      "copied": "Copiado"
     }
   },
   "badges": {

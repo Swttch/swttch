@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { HeartIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { HeartIcon } from '@heroicons/react/24/solid';
+import { SponsorPlanSection } from './SponsorPlanSection';
+import { SponsorBenefitsSection } from './SponsorBenefitsSection';
+import { SponsorDevicesSection } from './SponsorDevicesSection';
+import { SponsorBillingSection } from './SponsorBillingSection';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
@@ -23,12 +27,6 @@ const ACTIVATION_POLL_INTERVAL_MS = 5_000;
  */
 const ACTIVATION_POLL_WINDOW_MS = 10 * 60_000;
 
-/** Mask all but the last 4 characters of a license key for display. */
-function maskKey(key: string): string {
-  if (key.length <= 4) return key;
-  return '••••••••' + key.slice(-4);
-}
-
 /**
  * Settings > Sponsor. The GUI stays free; this section lets users support the
  * project. "Learn more" opens the pricing page in the external browser — the
@@ -43,7 +41,8 @@ export function SponsorSettings() {
   const { t } = useTranslation('settings');
   const { send } = useBridgeContext();
   const { activeEmail } = useAccounts();
-  const { isSponsor, licenseKey, verify, deactivate, checkByInstall } = useSponsorStatus();
+  const { isSponsor, licenseKey, tier, interval, verify, deactivate, checkByInstall } =
+    useSponsorStatus();
 
   // Copy/paste-free activation: after the user opens the checkout page, poll www
   // for a key minted for this install so a completed payment flips this screen to
@@ -164,32 +163,28 @@ export function SponsorSettings() {
       </div>
       )}
 
-      {/* Activation — existing sponsors redeem their license key here */}
-      <div className={`rounded-xl border border-border-default bg-surface-raised p-6 ${isSponsor ? '' : 'mt-6'}`}>
-        {isSponsor ? (
-          <div>
-            <div className="flex items-center gap-2">
-              <CheckBadgeIcon className="w-5 h-5 text-accent-primary" />
-              <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.active.title')}</h3>
-            </div>
-            <p className="mt-2 text-sm text-text-secondary leading-relaxed break-keep">
-              {t('sponsor.active.description')}
-            </p>
-            {licenseKey && (
-              <p className="mt-3 text-xs text-text-tertiary">
-                {t('sponsor.active.keyLabel')}:{' '}
-                <span className="font-mono text-text-secondary">{maskKey(licenseKey)}</span>
-              </p>
-            )}
+      {isSponsor ? (
+        <>
+          <SponsorPlanSection licenseKey={licenseKey} tier={tier} interval={interval} />
+          <SponsorBenefitsSection />
+          <SponsorDevicesSection />
+          <SponsorBillingSection />
+
+          {/* Deactivate sits last and stays quiet on purpose: it is the one
+              action here the sponsor is least likely to want, and putting it
+              up front made the screen read as an exit prompt. */}
+          <div className="mt-6 flex justify-end">
             <button
               type="button"
               onClick={() => void handleDeactivate()}
-              className="mt-4 inline-flex items-center rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary hover:bg-surface-hover"
+              className="text-xs text-text-tertiary underline underline-offset-2 transition-colors hover:text-text-secondary"
             >
               {t('sponsor.active.deactivate')}
             </button>
           </div>
-        ) : (
+        </>
+      ) : (
+        <div className="mt-6 rounded-xl border border-border-default bg-surface-raised p-6">
           <div>
             <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.activate.title')}</h3>
             <p className="mt-2 text-sm text-text-secondary leading-relaxed break-keep">
@@ -221,8 +216,8 @@ export function SponsorSettings() {
               </p>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

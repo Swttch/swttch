@@ -402,6 +402,40 @@
       "keyLabel": "Sponsor key",
       "deactivate": "Deactivate",
       "greeting": "Good to see you, sponsor"
+    },
+    "plan": {
+      "title": "Your sponsorship",
+      "tier": "Tier",
+      "interval": "Billing",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "Feature benefits",
+      "description": "Features your sponsorship supports. Open one to read what it does."
+    },
+    "devices": {
+      "title": "Active devices",
+      "description": "Machines where your sponsor key is in use.",
+      "note": "Sponsorship applies per device, not per Claude account. If you signed in with account A when the key was activated and later switch to account B on the same machine, your sponsorship stays active.",
+      "thisDevice": "This device",
+      "remove": "Sign out",
+      "removing": "Signing out…",
+      "empty": "No devices recorded yet.",
+      "removeConfirmTitle": "Sign this device out?",
+      "removeConfirmMessage": "The device stops being listed here. Your sponsor key stays valid, and the device reactivates the next time it is used."
+    },
+    "billing": {
+      "title": "Payments",
+      "description": "Your payment history. Receipts open at the payment provider.",
+      "receipt": "Receipt",
+      "empty": "No payments to show yet.",
+      "loading": "Loading…"
+    },
+    "copyKey": {
+      "copy": "Copy",
+      "copied": "Copied"
     }
   },
   "badges": {

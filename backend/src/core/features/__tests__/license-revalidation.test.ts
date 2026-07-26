@@ -5,17 +5,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // against www and WHETHER a given answer is allowed to revoke sponsorship.
 // vi.mock is hoisted above these declarations, so the spies must be created by
 // vi.hoisted for the factory to see them.
-const { mockReadLicense, mockSaveLicense, mockClearLicense } = vi.hoisted(() => ({
-  mockReadLicense: vi.fn(),
-  mockSaveLicense: vi.fn(),
-  mockClearLicense: vi.fn(),
-}));
+const { mockReadLicense, mockSaveLicense, mockClearLicense, mockReportActivation } = vi.hoisted(
+  () => ({
+    mockReadLicense: vi.fn(),
+    mockSaveLicense: vi.fn(),
+    mockClearLicense: vi.fn(),
+    mockReportActivation: vi.fn(),
+  }),
+);
 const mockVerifyRemote = vi.fn();
 
 vi.mock('../license', () => ({
   readLicense: mockReadLicense,
   saveLicense: mockSaveLicense,
   clearLicense: mockClearLicense,
+  reportActivation: mockReportActivation,
 }));
 
 import {
@@ -37,6 +41,7 @@ describe('revalidateStoredLicense', () => {
     mockReadLicense.mockReset();
     mockSaveLicense.mockReset().mockResolvedValue(undefined);
     mockClearLicense.mockReset().mockResolvedValue(undefined);
+    mockReportActivation.mockReset().mockResolvedValue(undefined);
     mockVerifyRemote.mockReset();
   });
   afterEach(() => {
@@ -53,7 +58,11 @@ describe('revalidateStoredLicense', () => {
   });
 
   it('skips the network call while the last check is still fresh', async () => {
-    mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(1)));
+    mockReadLicense.mockResolvedValue({
+      ...storedLicense(hoursAgo(1)),
+      tier: 'jetbrains',
+      interval: 'monthly',
+    });
 
     await revalidateStoredLicense(mockVerifyRemote);
 
@@ -81,8 +90,67 @@ describe('revalidateStoredLicense', () => {
       licenseKey: 'CCG-abc',
       status: 'active',
       verifiedAt: NOW.toISOString(),
+      tier: null,
+      interval: null,
     });
     expect(mockClearLicense).not.toHaveBeenCalled();
+  });
+
+  it('picks up a plan change (tier/interval) reported by the re-check', async () => {
+    mockReadLicense.mockResolvedValue({
+      ...storedLicense(hoursAgo(999)),
+      tier: 'jetbrains',
+      interval: 'monthly',
+    });
+    mockVerifyRemote.mockResolvedValue({
+      valid: true,
+      status: 'active',
+      tier: 'allround',
+      interval: 'yearly',
+    });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    // An upgrade or a switch to yearly should surface without the sponsor
+    // having to re-enter their key.
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({ tier: 'allround', interval: 'yearly' }),
+    );
+  });
+
+  it('keeps the cached plan when the re-check does not mention it', async () => {
+    mockReadLicense.mockResolvedValue({
+      ...storedLicense(hoursAgo(999)),
+      tier: 'jetbrains',
+      interval: 'monthly',
+    });
+    mockVerifyRemote.mockResolvedValue({ valid: true, status: 'active' });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({ tier: 'jetbrains', interval: 'monthly' }),
+    );
+  });
+
+  it('re-reports this install on a successful check, so its device label stays current', async () => {
+    mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(999)));
+    mockVerifyRemote.mockResolvedValue({ valid: true, status: 'active' });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    // Installs activated before device labels existed would otherwise sit
+    // nameless in the sponsor's own list forever.
+    expect(mockReportActivation).toHaveBeenCalledWith('CCG-abc');
+  });
+
+  it('does not re-report when the key turned out to be invalid', async () => {
+    mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(999)));
+    mockVerifyRemote.mockResolvedValue({ valid: false, status: 'refunded' });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    expect(mockReportActivation).not.toHaveBeenCalled();
   });
 
   it('clears the license when www authoritatively says the key is no longer valid', async () => {
@@ -112,6 +180,38 @@ describe('revalidateStoredLicense', () => {
 
     await expect(revalidateStoredLicense(mockVerifyRemote)).resolves.toBeUndefined();
     expect(mockClearLicense).not.toHaveBeenCalled();
+  });
+
+  it('re-checks immediately when the plan details have never been cached', async () => {
+    // A license stored before tier/interval existed has a fresh verifiedAt but no
+    // plan to show. Waiting a full interval would leave the sponsor screen blank
+    // for a day, so a missing plan counts as reason enough to ask now.
+    mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(1)));
+    mockVerifyRemote.mockResolvedValue({
+      valid: true,
+      status: 'active',
+      tier: 'jetbrains',
+      interval: 'monthly',
+    });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    expect(mockVerifyRemote).toHaveBeenCalledWith('CCG-abc');
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({ tier: 'jetbrains', interval: 'monthly' }),
+    );
+  });
+
+  it('does not re-check on every read once the plan is cached', async () => {
+    mockReadLicense.mockResolvedValue({
+      ...storedLicense(hoursAgo(1)),
+      tier: 'jetbrains',
+      interval: 'monthly',
+    });
+
+    await revalidateStoredLicense(mockVerifyRemote);
+
+    expect(mockVerifyRemote).not.toHaveBeenCalled();
   });
 
   it('re-checks when verifiedAt is missing or unparseable rather than trusting it forever', async () => {

@@ -400,6 +400,40 @@
       "keyLabel": "贊助者金鑰",
       "deactivate": "取消啟用",
       "greeting": "很高興見到你，贊助者"
+    },
+    "plan": {
+      "title": "贊助資訊",
+      "tier": "等級",
+      "interval": "結算週期",
+      "monthly": "按月",
+      "yearly": "按年",
+      "unknown": "—"
+    },
+    "benefits": {
+      "title": "功能權益",
+      "description": "你的贊助所支持的功能。點擊可查看說明。"
+    },
+    "devices": {
+      "title": "作用中的裝置",
+      "description": "正在使用贊助金鑰的裝置。",
+      "note": "贊助以裝置為單位生效，而非 Claude 帳號。即使啟用金鑰時登入的是帳號 A，在同一台裝置上切換到帳號 B，贊助仍然有效。",
+      "thisDevice": "目前裝置",
+      "remove": "登出",
+      "removing": "登出中…",
+      "empty": "尚未記錄任何裝置。",
+      "removeConfirmTitle": "要讓此裝置登出嗎？",
+      "removeConfirmMessage": "它將從清單中消失。你的贊助金鑰仍然有效，該裝置下次使用時會自動重新登記。"
+    },
+    "billing": {
+      "title": "付款紀錄",
+      "description": "你的付款歷史。收據會在金流服務商頁面開啟。",
+      "receipt": "收據",
+      "empty": "尚無付款紀錄。",
+      "loading": "載入中…"
+    },
+    "copyKey": {
+      "copy": "複製",
+      "copied": "已複製"
     }
   },
   "badges": {
