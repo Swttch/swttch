@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChatStream, type LoadedMessage } from '../useChatStream';
 import type { LoadedMessageDto } from '../../types';
-import { ContextType } from '../../types';
+import { ContextType, getTextContent } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { MessageType } from '@/shared';
 
@@ -1048,6 +1048,9 @@ describe('useChatStream', () => {
   // 스트리밍 중 사용자가 입력한 메시지는 화면 맨 아래에 붙어야 한다. 진행 중인 assistant
   // 버블은 그보다 이른 timestamp를 갖고 있어, timestamp 정렬로 삽입하면 사용자의 새 메시지가
   // 이미 표시된 응답 아래로 파고든다 (issue #220).
+  // 스트리밍 중 사용자가 입력한 메시지는 입력한 자리에 고정돼야 한다. assistant 한 턴은
+  // 단일 요소로 렌더링되므로, 진행 중인 응답을 그대로 두면 델타가 쌓일 때마다 그 요소가
+  // 커지면서 방금 붙인 사용자 버블을 화면 아래로 계속 밀어낸다 (issue #220).
   describe('스트리밍 중 사용자 메시지 순서 (issue #220)', () => {
     it('진행 중인 assistant 버블보다 뒤에 표시된다', () => {
       const { bridge, emit } = createMockBridge();
@@ -1076,6 +1079,48 @@ describe('useChatStream', () => {
       const last = result.current.messages[result.current.messages.length - 1];
       expect(last.type).toBe(LoadedMessageType.User);
       expect(last.message?.content).toBe('mid-stream probe');
+    });
+
+    it('이후 델타는 사용자 메시지를 밀지 않고 새 버블에 쌓인다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addUserMessage('first');
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part one ' } },
+        });
+      });
+      act(() => flushRAF());
+
+      const beforeText = getTextContent(result.current.messages[1]);
+
+      // 턴 도중 사용자가 메시지를 보낸다.
+      act(() => {
+        result.current.addUserMessage('벌써?');
+      });
+      const userIndex = result.current.messages.length - 1;
+
+      // 응답이 계속 스트리밍된다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { delta: { type: 'text_delta', text: 'part two' } },
+        });
+      });
+      act(() => flushRAF());
+
+      // 사용자 메시지 위의 assistant 버블은 더 이상 자라지 않는다.
+      expect(getTextContent(result.current.messages[1])).toBe(beforeText);
+
+      // 사용자 메시지는 자기 자리를 지키고, 이후 텍스트는 그 아래 새 버블에 담긴다.
+      expect(result.current.messages[userIndex].message?.content).toBe('벌써?');
+      const after = result.current.messages.slice(userIndex + 1);
+      expect(after.length).toBeGreaterThan(0);
+      expect(getTextContent(after[after.length - 1])).toContain('part two');
     });
   });
 });

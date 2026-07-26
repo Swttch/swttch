@@ -383,8 +383,31 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     appendMessage(userMessage, true);
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
-    // 백엔드 전송과 큐잉은 ChatStreamContext가 담당한다.
-    if (isStreaming) return;
+    // 백엔드 전송은 ChatStreamContext가 담당한다.
+    if (isStreaming) {
+      // Seal the assistant message that is still streaming above this one. An
+      // assistant turn renders as a single element, so if we let it keep
+      // growing it pushes this bubble further down the screen with every delta
+      // — the message the user just typed appears to slide away from where they
+      // typed it (#220). Cutting the message here means subsequent deltas open
+      // a fresh assistant bubble *below* this one, so it stays put.
+      const streamingId = streamingMessageIdRef.current;
+      if (streamingId) {
+        if (pendingTextRef.current || pendingThinkingRef.current || pendingInputJsonRef.current) {
+          flushPendingDeltas();
+        }
+        updateMessage(streamingId, { isStreaming: false });
+        streamingMessageIdRef.current = null;
+        setStreamingMessageId(null);
+        activeBlockIndexRef.current = -1;
+        activeTextBlockIndexRef.current = -1;
+        activeThinkingBlockIndexRef.current = -1;
+        activeToolUseBlockIndexRef.current = -1;
+        turnStartBlockCountRef.current = 0;
+        accumulatedInputJsonRef.current = '';
+      }
+      return;
+    }
 
     // Create assistant placeholder
     const assistantMessageId = generateMessageId();
@@ -420,7 +443,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         }, 30);
       }, 2000);
     }
-  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming]);
+  }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming, flushPendingDeltas, updateMessage]);
 
   // Clear messages
   const clearMessages = useCallback(() => {
