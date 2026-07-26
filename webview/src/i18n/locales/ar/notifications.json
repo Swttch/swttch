@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "في انتظار إجابتك"
+  },
+  "autoResumeCountdown": {
+    "body": "ستُستأنف المهمة المجدولة خلال 30 ثانية."
   }
 }

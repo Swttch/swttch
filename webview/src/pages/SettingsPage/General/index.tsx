@@ -8,8 +8,9 @@ import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
 import { APP_NAME } from '@/config/app';
-import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
@@ -37,10 +38,12 @@ const LANGUAGE_OPTIONS = [
 
 export function GeneralSettings() {
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useClaudeSettings();
-  const { updateSettingWithScope } = useSettings();
+  // uiLanguage / language / useCtrlEnterToSend / focusInputOnEditorContext /
+  // respectGitignoreForContext all live in the app settings now (migrated out of
+  // the native Claude settings — see backend settings-migration.ts).
+  const { scopeSettings, updateSetting, scope, resetToGlobal, updateSettingWithScope } = useSettings();
 
-  // Claude's response language is a free-text field in Claude's settings.json.
+  // Claude's response language is a free-text field stored in the app settings.
   // Show the value stored at the current scope (empty → English placeholder);
   // clearing the input removes the key at this scope (never overwrites on upgrade).
   const responseLanguage = (scopeSettings.language as string | undefined) ?? '';
@@ -56,6 +59,9 @@ export function GeneralSettings() {
   const sendModifier = isMac() ? 'Cmd' : 'Ctrl';
   const focusInputOnEditorContext = (scopeSettings.focusInputOnEditorContext as boolean | undefined) ?? true;
   const respectGitignoreForContext = (scopeSettings.respectGitignoreForContext as boolean | undefined) ?? false;
+  // Auto-resume default (sponsor-only): the global default a session inherits.
+  const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
+  const { isSponsor } = useSponsorStatus();
 
   const languageOptions: SelectOption[] = [
     ...(scope === 'project'
@@ -76,7 +82,7 @@ export function GeneralSettings() {
           <input
             type="text"
             value={responseLanguage}
-            onChange={(e) => updateSetting('language', e.target.value || null)}
+            onChange={(e) => updateSetting(SettingKey.RESPONSE_LANGUAGE, e.target.value || null)}
             placeholder={t('general.language.placeholder')}
             aria-label={t('general.language.label')}
             className="w-48 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
@@ -96,7 +102,7 @@ export function GeneralSettings() {
             }`}
             onChange={(value) => {
               if (value === NOT_SET_VALUE) {
-                resetToGlobal('uiLanguage');
+                resetToGlobal(SettingKey.UI_LANGUAGE);
                 return;
               }
               // Direction auto-sync fires whenever the effective direction
@@ -113,7 +119,7 @@ export function GeneralSettings() {
               } else if (!willBeRtl && wasRtl) {
                 updateSettingWithScope(SettingKey.UI_DIRECTION, UiDirection.LTR, 'global');
               }
-              updateSetting('uiLanguage', value);
+              updateSetting(SettingKey.UI_LANGUAGE, value);
             }}
           />
         </SettingRow>
@@ -126,7 +132,7 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={useCtrlEnterToSend}
-            onChange={(checked) => updateSetting('useCtrlEnterToSend', checked)}
+            onChange={(checked) => updateSetting(SettingKey.USE_CTRL_ENTER_TO_SEND, checked)}
             ariaLabel={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
           />
         </SettingRow>
@@ -137,7 +143,7 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={focusInputOnEditorContext}
-            onChange={(checked) => updateSetting('focusInputOnEditorContext', checked)}
+            onChange={(checked) => updateSetting(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT, checked)}
             ariaLabel={t('general.focusInputOnEditorContext.label')}
           />
         </SettingRow>
@@ -148,8 +154,21 @@ export function GeneralSettings() {
         >
           <ToggleSwitch
             checked={respectGitignoreForContext}
-            onChange={(checked) => updateSetting('respectGitignoreForContext', checked)}
+            onChange={(checked) => updateSetting(SettingKey.RESPECT_GITIGNORE_FOR_CONTEXT, checked)}
             ariaLabel={t('general.respectGitignoreForContext.label')}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label={t('general.autoResumeOnLimit.label')}
+          description={t('general.autoResumeOnLimit.description')}
+          badge={<SettingBadge variant={SettingBadgeVariant.Sponsor} />}
+        >
+          <ToggleSwitch
+            checked={autoResumeOnLimit}
+            onChange={(checked) => updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked)}
+            disabled={!isSponsor}
+            ariaLabel={t('general.autoResumeOnLimit.label')}
           />
         </SettingRow>
 

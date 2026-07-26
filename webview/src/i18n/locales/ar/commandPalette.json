@@ -21,7 +21,9 @@
     "accountUsage": "الحساب والاستخدام...",
     "toggleFastMode": "تبديل الوضع السريع",
     "effortUnsupportedReason": "هذا النموذج لا يدعم مستويات الجهد",
-    "fastModeUnsupportedReason": "الوضع السريع متاح فقط في نماذج Opus"
+    "fastModeUnsupportedReason": "الوضع السريع متاح فقط في نماذج Opus",
+    "toggleAutoResume": "تبديل الاستئناف التلقائي عند الحد",
+    "autoResumeSponsorOnlyReason": "الاستئناف التلقائي عند الحد متاح للرعاة فقط"
   },
   "customize": {
     "outputStyles": "أنماط الإخراج",

@@ -26,6 +26,7 @@ import { EFFORT_CYCLE_EVENT } from '@/commandPalette/sections/model/EffortItem';
 import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingItem';
 import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -85,6 +86,8 @@ export function ChatInput() {
   } = useAttachments();
 
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
+  // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
+  const { settings: appSettings } = useSettings();
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -263,7 +266,7 @@ export function ChatInput() {
     onChange,
     textareaRef,
     currentWorkingDir: workingDirectory ?? '',
-    shouldFocus: claudeSettings.focusInputOnEditorContext ?? true,
+    shouldFocus: appSettings.focusInputOnEditorContext ?? true,
     onInsertToken: (token) =>
       setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token])),
   });
@@ -477,7 +480,7 @@ export function ChatInput() {
           isComposing: isIMEComposing,
           isMobile: isMobile(),
         },
-        claudeSettings.useCtrlEnterToSend ?? false,
+        appSettings.useCtrlEnterToSend ?? false,
       );
       if (willSubmit) {
         e.preventDefault();
@@ -521,7 +524,7 @@ export function ChatInput() {
       e.preventDefault();
       onChange(historyValue);
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, claudeSettings.useCtrlEnterToSend, ime, handleRichChange]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
 
   // Wrap the attachment paste handler so that, when the clipboard carries no
   // image, we insert the plain-text payload ourselves. contentEditable would

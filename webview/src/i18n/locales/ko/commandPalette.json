@@ -21,7 +21,9 @@
     "accountUsage": "계정 및 사용량...",
     "toggleFastMode": "고속 모드 전환",
     "effortUnsupportedReason": "이 모델은 Effort 레벨을 지원하지 않습니다",
-    "fastModeUnsupportedReason": "고속 모드는 Opus 모델에서만 사용할 수 있습니다"
+    "fastModeUnsupportedReason": "고속 모드는 Opus 모델에서만 사용할 수 있습니다",
+    "toggleAutoResume": "리밋 시 자동 재개 전환",
+    "autoResumeSponsorOnlyReason": "리밋 시 자동 재개는 후원자 전용입니다"
   },
   "customize": {
     "outputStyles": "출력 스타일",

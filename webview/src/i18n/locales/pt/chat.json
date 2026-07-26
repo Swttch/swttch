@@ -405,5 +405,24 @@
       "showOriginal": "Mostrar resposta original",
       "tooltip": "Alternar entre a visualização reconstruída e a saída original da CLI"
     }
+  },
+  "autoResume": {
+    "schedule": "Agendar retomada",
+    "cancel": "Cancelar reserva",
+    "resumeNow": "Retomar agora",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Aguardando a redefinição da cota…",
+      "proceeding": "Retomando…"
+    },
+    "error": {
+      "network": "Erro de conexão de rede",
+      "timeout": "Tempo esgotado",
+      "auth": "Erro de autenticação",
+      "generic": "Falha na retomada automática"
+    },
+    "scheduledToast": "Retomada automática agendada",
+    "canceledToast": "Retomada automática cancelada",
+    "scheduled": "Retomada automática agendada"
   }
 }

@@ -36,6 +36,14 @@ export enum MessageType {
   /** Re-attach this connection to an already-running session (e.g. after reconnect). */
   RECLAIM_SESSION = 'RECLAIM_SESSION',
 
+  // -- Scheduled messages ("send later" engine, session-scoped) --
+  /** Create a scheduled message reservation for a session. inbound webview→backend */
+  SCHEDULE_MESSAGE = 'SCHEDULE_MESSAGE',
+  /** Cancel a scheduled message reservation by id. inbound webview→backend */
+  CANCEL_SCHEDULED_MESSAGE = 'CANCEL_SCHEDULED_MESSAGE',
+  /** List the scheduled message reservations for a session. inbound webview→backend */
+  GET_SCHEDULED_MESSAGES = 'GET_SCHEDULED_MESSAGES',
+
   // -- Sessions CRUD --
   /** Create a new session (optionally in a given working directory). */
   CREATE_SESSION = 'CREATE_SESSION',
@@ -308,6 +316,10 @@ export enum MessageType {
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
   /** A user message was broadcast to all connections viewing the session. */
   USER_MESSAGE_BROADCAST = 'USER_MESSAGE_BROADCAST',
+  /** A session's scheduled-message reservations changed (created/cancelled/fired/failed); carries the session's current reservation list so clients refresh. outbound backend→webview */
+  SCHEDULED_MESSAGE_UPDATED = 'SCHEDULED_MESSAGE_UPDATED',
+  /** Live progress of an AUTO_RESUME reservation's pre-send quota poll; carries { sessionId, scheduleId, phase, attempt, nextCheckInMs?, error? } (phase = AutoResumeStatusPhase) so the webview can show "waiting for quota reset" / "gave up" status. outbound backend→webview */
+  AUTO_RESUME_STATUS = 'AUTO_RESUME_STATUS',
 
   // -- Error / diagnosis push --
   /** A backend service-level error occurred. */

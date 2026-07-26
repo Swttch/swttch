@@ -19,12 +19,12 @@ import { IdeSelectionProvider } from './IdeSelectionContext';
 import type { IdeSelectionPayload } from '@/hooks/useIdeSelection';
 import { WorkingDirProvider } from './WorkingDirContext';
 import { WorkflowStateProvider } from './WorkflowStateContext';
+import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
 import { CommandPaletteProvider } from '../commandPalette/CommandPaletteProvider';
 import { useApi } from './ApiContext';
 import { SessionState } from '../types';
 import type { LoadedMessageDto } from '../types';
 import { MessageType } from '@/shared';
-import { useClaudeSettings } from './ClaudeSettingsContext';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -218,10 +218,10 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
   // Mirror of settings.respectGitignoreForContext kept as a ref so sendMessage
   // stays stable (no ChatStreamProvider re-render on settings changes).
   const respectGitignoreRef = useRef(false);
-  const { settings: claudeSettings } = useClaudeSettings();
+  const { settings: appSettings } = useSettings();
   useEffect(() => {
-    respectGitignoreRef.current = claudeSettings.respectGitignoreForContext ?? false;
-  }, [claudeSettings.respectGitignoreForContext]);
+    respectGitignoreRef.current = appSettings.respectGitignoreForContext ?? false;
+  }, [appSettings.respectGitignoreForContext]);
 
   const setInput = useCallback((value: string) => {
     setInputCallbackRef.current(value);
@@ -270,7 +270,9 @@ export function AppProviders({ children }: AppProvidersProps) {
                   <AuthProvider>
                     <SessionProvider>
                       <WorkflowStateProvider>
-                        <ChatProviderBridge>{children}</ChatProviderBridge>
+                        <AutoResumeOverrideProvider>
+                          <ChatProviderBridge>{children}</ChatProviderBridge>
+                        </AutoResumeOverrideProvider>
                       </WorkflowStateProvider>
                     </SessionProvider>
                   </AuthProvider>

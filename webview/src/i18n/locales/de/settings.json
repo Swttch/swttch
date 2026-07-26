@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Benutzerdefinierter Befehl, der den @-Dateiindex erstellt. Entspricht der Einstellung fileSuggestion in settings.json.",
       "placeholder": "z. B. git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Auto-Fortsetzung bei Nutzungslimit",
+      "description": "Wenn Sie Ihr Sitzungslimit erreichen, wird nach dem Zurücksetzen des Kontingents automatisch fortgesetzt. Dies ist die Voreinstellung für neue Sitzungen; jede Sitzung kann es weiterhin umschalten."
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "Sponsor-Schlüssel",
       "deactivate": "Deaktivieren"
     }
+  },
+  "badges": {
+    "sponsor": "Nur für Sponsoren",
+    "claudeNative": "Claude Code native Einstellung",
+    "sponsorLabel": "S",
+    "claudeNativeLabel": "C",
+    "openDocs": "Doku öffnen"
   }
 }

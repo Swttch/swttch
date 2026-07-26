@@ -405,5 +405,24 @@
       "showOriginal": "Show original response",
       "tooltip": "Toggle between the reconstructed view and the raw CLI output"
     }
+  },
+  "autoResume": {
+    "schedule": "Schedule resume",
+    "cancel": "Cancel reservation",
+    "resumeNow": "Resume now",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Waiting for quota reset…",
+      "proceeding": "Resuming…"
+    },
+    "error": {
+      "network": "Network connection error",
+      "timeout": "Timed out",
+      "auth": "Authentication error",
+      "generic": "Auto-resume failed"
+    },
+    "scheduledToast": "Auto-resume scheduled",
+    "canceledToast": "Auto-resume canceled",
+    "scheduled": "Auto-resume scheduled"
   }
 }

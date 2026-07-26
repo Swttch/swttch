@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "أمر مخصّص يبني فهرس ملفات @. مطابق لإعداد fileSuggestion في settings.json.",
       "placeholder": "مثال: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "الاستئناف التلقائي عند حد الاستخدام",
+      "description": "عند بلوغ حد الجلسة، يُستأنف تلقائيًا بعد إعادة تعيين الحد. هذا هو الإعداد الافتراضي للجلسات الجديدة؛ ويمكن لكل جلسة تبديله."
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "مفتاح الراعي",
       "deactivate": "إلغاء التفعيل"
     }
+  },
+  "badges": {
+    "sponsor": "ميزة للرعاة فقط",
+    "claudeNative": "إعداد Claude Code الأصلي",
+    "sponsorLabel": "ر",
+    "claudeNativeLabel": "ك",
+    "openDocs": "فتح المستندات"
   }
 }

@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "用于构建 @ 文件索引的自定义命令。与 settings.json 中的 fileSuggestion 设置相同。",
       "placeholder": "例如：git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "达到用量上限时自动恢复",
+      "description": "当您达到会话上限时，在额度重置后自动恢复。这是新会话的默认值；每个会话仍可单独切换。"
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "赞助者密钥",
       "deactivate": "取消激活"
     }
+  },
+  "badges": {
+    "sponsor": "赞助者专属功能",
+    "claudeNative": "Claude Code 原生设置",
+    "sponsorLabel": "赞",
+    "claudeNativeLabel": "原",
+    "openDocs": "打开文档"
   }
 }

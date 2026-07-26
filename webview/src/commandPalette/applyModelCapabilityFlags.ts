@@ -1,10 +1,13 @@
 import { PanelSection, PanelSectionId } from '@/types/commandPalette';
 import { getEffortUnsupportedReason } from './sections/model/EffortItem';
 import { getFastModeUnsupportedReason } from './sections/model/ToggleFastModeItem';
+import { getAutoResumeSponsorOnlyReason } from './sections/model/ToggleAutoResumeItem';
 
 export interface ModelCapabilityFlags {
   supportsEffort: boolean;
   supportsFastMode: boolean;
+  /** Whether this install holds a sponsor entitlement (gates auto-resume). */
+  isSponsor: boolean;
 }
 
 /**
@@ -35,6 +38,13 @@ export function applyModelCapabilityFlags(
           ...it,
           disabled: !flags.supportsFastMode,
           disabledReason: flags.supportsFastMode ? undefined : getFastModeUnsupportedReason(),
+        };
+      }
+      if (it.id === 'toggle-auto-resume') {
+        return {
+          ...it,
+          disabled: !flags.isSponsor,
+          disabledReason: flags.isSponsor ? undefined : getAutoResumeSponsorOnlyReason(),
         };
       }
       return it;

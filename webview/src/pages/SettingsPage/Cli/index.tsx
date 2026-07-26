@@ -3,6 +3,7 @@ import { SettingSection, SettingRow, ScopeGuard } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useBridge } from '@/hooks/useBridge';
 import { SettingKey } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
@@ -174,6 +175,12 @@ export function CliSettings() {
         <SettingRow
           label={t('cli.model.label')}
           description={t('cli.model.description')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/model-config#setting-your-model"
+            />
+          }
         >
           <Select
             value={claudeSettings.model ? toModelAlias(claudeSettings.model) : ''}

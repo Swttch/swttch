@@ -21,7 +21,9 @@
     "accountUsage": "アカウントと使用状況...",
     "toggleFastMode": "高速モードの切り替え",
     "effortUnsupportedReason": "このモデルはエフォートレベルに対応していません",
-    "fastModeUnsupportedReason": "高速モードはOpusモデルでのみ利用できます"
+    "fastModeUnsupportedReason": "高速モードはOpusモデルでのみ利用できます",
+    "toggleAutoResume": "上限到達時の自動再開を切り替え",
+    "autoResumeSponsorOnlyReason": "上限到達時の自動再開はスポンサー限定です"
   },
   "customize": {
     "outputStyles": "出力スタイル",

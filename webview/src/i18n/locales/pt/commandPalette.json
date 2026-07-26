@@ -21,7 +21,9 @@
     "accountUsage": "Conta e uso...",
     "toggleFastMode": "Alternar modo rápido",
     "effortUnsupportedReason": "Este modelo não suporta níveis de esforço",
-    "fastModeUnsupportedReason": "O modo rápido só está disponível em modelos Opus"
+    "fastModeUnsupportedReason": "O modo rápido só está disponível em modelos Opus",
+    "toggleAutoResume": "Alternar retomada automática no limite",
+    "autoResumeSponsorOnlyReason": "A retomada automática no limite está disponível apenas para patrocinadores"
   },
   "customize": {
     "outputStyles": "Estilos de saída",

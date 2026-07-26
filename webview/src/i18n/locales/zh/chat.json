@@ -405,5 +405,24 @@
       "showOriginal": "显示原始响应",
       "tooltip": "在重构视图与原始 CLI 输出之间切换"
     }
+  },
+  "autoResume": {
+    "schedule": "预约恢复",
+    "cancel": "取消预约",
+    "resumeNow": "立即恢复",
+    "countdown": "（{{seconds}}秒）",
+    "status": {
+      "retrying": "等待额度重置…",
+      "proceeding": "正在恢复…"
+    },
+    "error": {
+      "network": "网络连接错误",
+      "timeout": "超时",
+      "auth": "身份验证错误",
+      "generic": "自动恢复失败"
+    },
+    "scheduledToast": "已预约自动恢复",
+    "canceledToast": "已取消自动恢复",
+    "scheduled": "已预约自动恢复"
   }
 }

@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "فرمان سفارشی که فهرست فایل @ را می‌سازد. مانند تنظیم fileSuggestion در settings.json.",
       "placeholder": "مثال: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "از‌سرگیری خودکار هنگام محدودیت مصرف",
+      "description": "هنگامی که به محدودیت جلسه می‌رسید، پس از بازنشانی سهمیه به‌طور خودکار از سر گرفته می‌شود. این مقدار پیش‌فرض برای جلسه‌های جدید است؛ هر جلسه می‌تواند آن را تغییر دهد."
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "کلید حامی",
       "deactivate": "غیرفعال‌سازی"
     }
+  },
+  "badges": {
+    "sponsor": "قابلیت ویژه حامیان",
+    "claudeNative": "تنظیم بومی Claude Code",
+    "sponsorLabel": "ح",
+    "claudeNativeLabel": "ک",
+    "openDocs": "باز کردن مستندات"
   }
 }

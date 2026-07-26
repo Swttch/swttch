@@ -21,7 +21,9 @@
     "accountUsage": "Аккаунт и использование...",
     "toggleFastMode": "Переключить быстрый режим",
     "effortUnsupportedReason": "Эта модель не поддерживает уровни усилий",
-    "fastModeUnsupportedReason": "Быстрый режим доступен только для моделей Opus"
+    "fastModeUnsupportedReason": "Быстрый режим доступен только для моделей Opus",
+    "toggleAutoResume": "Переключить автовозобновление при лимите",
+    "autoResumeSponsorOnlyReason": "Автовозобновление при лимите доступно только спонсорам"
   },
   "customize": {
     "outputStyles": "Стили вывода",

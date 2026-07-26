@@ -21,7 +21,9 @@
     "accountUsage": "Compte et utilisation...",
     "toggleFastMode": "Basculer le mode rapide",
     "effortUnsupportedReason": "Ce modèle ne prend pas en charge les niveaux d'effort",
-    "fastModeUnsupportedReason": "Le mode rapide est disponible uniquement sur les modèles Opus"
+    "fastModeUnsupportedReason": "Le mode rapide est disponible uniquement sur les modèles Opus",
+    "toggleAutoResume": "Activer la reprise automatique à la limite",
+    "autoResumeSponsorOnlyReason": "La reprise automatique à la limite est réservée aux sponsors"
   },
   "customize": {
     "outputStyles": "Styles de sortie",

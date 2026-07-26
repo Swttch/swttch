@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SettingRow } from '../common';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
 import type { FileSuggestionConfig } from '@/types/claude-settings';
@@ -31,7 +32,16 @@ export function FileSuggestionRow() {
   };
 
   return (
-    <SettingRow label="fileSuggestion" description={t('general.fileSuggestion.description')}>
+    <SettingRow
+      label="fileSuggestion"
+      description={t('general.fileSuggestion.description')}
+      badge={
+        <SettingBadge
+          variant={SettingBadgeVariant.ClaudeNative}
+          docHref="https://code.claude.com/docs/en/settings#file-suggestion-settings"
+        />
+      }
+    >
       <input
         type="text"
         value={draft}

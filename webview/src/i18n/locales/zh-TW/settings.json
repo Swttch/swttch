@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "用於建立 @ 檔案索引的自訂命令。與 settings.json 中的 fileSuggestion 設定相同。",
       "placeholder": "例如：git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "達到用量上限時自動恢復",
+      "description": "當您達到工作階段上限時，在額度重置後自動恢復。這是新工作階段的預設值；每個工作階段仍可個別切換。"
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "贊助者金鑰",
       "deactivate": "取消啟用"
     }
+  },
+  "badges": {
+    "sponsor": "贊助者專屬功能",
+    "claudeNative": "Claude Code 原生設定",
+    "sponsorLabel": "贊",
+    "claudeNativeLabel": "原",
+    "openDocs": "開啟文件"
   }
 }

@@ -53,6 +53,11 @@ import { saveAccountHandler } from './saveAccount';
 import { switchAccountHandler } from './switchAccount';
 import { deleteAccountHandler } from './deleteAccount';
 import { reclaimSessionHandler } from './reclaimSession';
+import {
+  scheduleMessageHandler,
+  cancelScheduledMessageHandler,
+  getScheduledMessagesHandler,
+} from './scheduleMessage';
 import { loginHandler } from './login';
 import { submitLoginCodeHandler } from './submitLoginCode';
 import { openUrlHandler } from './openUrl';
@@ -269,6 +274,15 @@ export async function handleMessage(
       break;
     case MessageType.RECLAIM_SESSION:
       await reclaimSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SCHEDULE_MESSAGE:
+      await scheduleMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_SCHEDULED_MESSAGE:
+      await cancelScheduledMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SCHEDULED_MESSAGES:
+      await getScheduledMessagesHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.LOGIN:
       await loginHandler(connectionId, message, connections, bridge);

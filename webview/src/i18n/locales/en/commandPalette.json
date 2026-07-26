@@ -21,7 +21,9 @@
     "accountUsage": "Account & usage...",
     "toggleFastMode": "Toggle fast mode",
     "effortUnsupportedReason": "This model doesn't support effort levels",
-    "fastModeUnsupportedReason": "Fast mode is only available on Opus models"
+    "fastModeUnsupportedReason": "Fast mode is only available on Opus models",
+    "toggleAutoResume": "Toggle auto-resume on limit",
+    "autoResumeSponsorOnlyReason": "Auto-resume on limit is available to sponsors only"
   },
   "customize": {
     "outputStyles": "Output styles",

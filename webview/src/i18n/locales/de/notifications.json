@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "Wartet auf deine Antwort"
+  },
+  "autoResumeCountdown": {
+    "body": "Geplante Aufgabe wird in 30 Sekunden fortgesetzt."
   }
 }

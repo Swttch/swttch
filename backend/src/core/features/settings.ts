@@ -23,6 +23,14 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   openSettingsAs: 'overlay',
   chatPagination: true,
   uiDirection: 'ltr',
+  // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
+  // Claude Code's official settings schema). See settings-migration.ts.
+  uiLanguage: null,
+  language: null,
+  useCtrlEnterToSend: false,
+  focusInputOnEditorContext: true,
+  respectGitignoreForContext: false,
+  autoResumeOnLimit: false,
   env: {},
 };
 
@@ -42,6 +50,12 @@ const COMMENT_MAP: Record<string, string> = {
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
+  uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
+  language: 'Claude 응답 언어(예: "korean"). null이면 미설정. GUI 전용 저장값(CLI 전달 경로 없음)',
+  useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
+  focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
+  respectGitignoreForContext: 'true면 에디터 컨텍스트에서 .gitignore된 파일의 본문을 제외(경로만 전달)',
+  autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   env: '자식 프로세스(claude, ccb)에 주입할 환경 변수. 예: { CLAUDE_CONFIG_DIR: "..." }',
 };
 
@@ -193,6 +207,24 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'uiDirection':
       if (!['ltr', 'rtl'].includes(value as string)) {
         return 'uiDirection must be one of "ltr", "rtl"';
+      }
+      break;
+    case 'uiLanguage':
+      if (value !== null && typeof value !== 'string') {
+        return 'uiLanguage must be a string or null';
+      }
+      break;
+    case 'language':
+      if (value !== null && typeof value !== 'string') {
+        return 'language must be a string or null';
+      }
+      break;
+    case 'useCtrlEnterToSend':
+    case 'focusInputOnEditorContext':
+    case 'respectGitignoreForContext':
+    case 'autoResumeOnLimit':
+      if (typeof value !== 'boolean') {
+        return `${key} must be a boolean`;
       }
       break;
     case 'env': {

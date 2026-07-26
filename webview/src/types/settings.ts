@@ -49,6 +49,28 @@ export enum SettingKey {
 
   // UI mirroring (RTL/LTR layout direction)
   UI_DIRECTION = 'uiDirection',
+
+  // ── GUI-only keys migrated out of the native ~/.claude/settings.json ────────
+  // (not part of Claude Code's official settings schema; see backend
+  //  settings-migration.ts). They now live in ~/.claude-code-gui/settings.js.
+
+  // GUI interface display language (e.g. 'korean'); null → English.
+  UI_LANGUAGE = 'uiLanguage',
+
+  // Claude's response language (free text, e.g. 'korean'); null → unset.
+  RESPONSE_LANGUAGE = 'language',
+
+  // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
+  USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
+
+  // When true, move focus to the chat input after inserting a file path (Alt+K).
+  FOCUS_INPUT_ON_EDITOR_CONTEXT = 'focusInputOnEditorContext',
+
+  // When true, exclude the body of .gitignore'd files from editor context (path only).
+  RESPECT_GITIGNORE_FOR_CONTEXT = 'respectGitignoreForContext',
+
+  // Auto-resume on usage-limit reset (sponsor-only); seeds the limit banner default.
+  AUTO_RESUME_ON_LIMIT = 'autoResumeOnLimit',
 }
 
 /**
@@ -132,6 +154,12 @@ export interface SettingsState {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
+  [SettingKey.UI_LANGUAGE]: string | null;
+  [SettingKey.RESPONSE_LANGUAGE]: string | null;
+  [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
+  [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
+  [SettingKey.RESPECT_GITIGNORE_FOR_CONTEXT]: boolean;
+  [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
 }
 
 /**
@@ -153,4 +181,10 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
+  [SettingKey.UI_LANGUAGE]: null,
+  [SettingKey.RESPONSE_LANGUAGE]: null,
+  [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
+  [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
+  [SettingKey.RESPECT_GITIGNORE_FOR_CONTEXT]: false,
+  [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
 };

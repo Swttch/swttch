@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Пользовательская команда, формирующая индекс файлов @. То же, что параметр fileSuggestion в settings.json.",
       "placeholder": "напр.: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Автовозобновление при лимите использования",
+      "description": "При достижении лимита сессии возобновление произойдёт автоматически после сброса лимита. Это значение по умолчанию для новых сессий; каждую сессию можно переключать отдельно."
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "Ключ спонсора",
       "deactivate": "Отключить"
     }
+  },
+  "badges": {
+    "sponsor": "Функция только для спонсоров",
+    "claudeNative": "Нативная настройка Claude Code",
+    "sponsorLabel": "С",
+    "claudeNativeLabel": "К",
+    "openDocs": "Открыть документацию"
   }
 }

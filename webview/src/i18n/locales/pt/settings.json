@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "Comando personalizado que cria o índice de arquivos @. Igual à configuração fileSuggestion em settings.json.",
       "placeholder": "ex.: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "Retomada automática no limite de uso",
+      "description": "Quando você atingir o limite da sessão, a retomada ocorrerá automaticamente após a redefinição da cota. Este é o padrão para novas sessões; cada sessão ainda pode alterná-lo."
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "Chave de patrocinador",
       "deactivate": "Desativar"
     }
+  },
+  "badges": {
+    "sponsor": "Recurso apenas para patrocinadores",
+    "claudeNative": "Configuração nativa do Claude Code",
+    "sponsorLabel": "P",
+    "claudeNativeLabel": "C",
+    "openDocs": "Abrir documentação"
   }
 }

@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "回答をお待ちしています"
+  },
+  "autoResumeCountdown": {
+    "body": "予約したタスクは30秒後に再開されます。"
   }
 }

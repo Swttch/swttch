@@ -5,11 +5,13 @@ import { BrowserBridge } from './bridge/browser-bridge';
 import { JetBrainsBridge } from './bridge/jetbrains-bridge';
 import { handleMessage } from './core/handlers/index';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
+import { migrateGuiKeysFromClaudeSettings } from './core/features/settings-migration';
 import { ensureProfile } from './core/features/profile';
 import { trackEvent, reportBackendError } from './core/features/telemetry';
 import { restoreTunnelState } from './core/features/tunnel-manager';
 import { tunnelPairing } from './core/features/tunnel-pairing';
 import { restoreSleepGuardState } from './core/features/sleep-guard';
+import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
@@ -142,6 +144,11 @@ async function main() {
   // 설치 단위 가명 식별자(uuid)를 동의 여부와 무관하게 보장한다.
   await ensureProfile();
 
+  // GUI 전용 키를 네이티브 ~/.claude/settings.json에서 앱 설정으로 1회 이관한다.
+  // 멱등(이미 이관됐으면 no-op)하고, 실패해도 시작을 막지 않도록 내부에서 방어한다.
+  // 첫 GET_SETTINGS/GET_CLAUDE_SETTINGS가 이관된 값을 보도록 서버 시작 전에 await.
+  await migrateGuiKeysFromClaudeSettings();
+
   // 백엔드 error boundary의 최상위(process-global) 절반. 핸들러 흐름 밖에서 터진 에러
   // (예: 비동기 콜백의 미처리 throw)도 reportBackendError 단일 진입점으로 수렴시킨다.
   // 보고·로깅만 하고 프로세스 동작은 기존 생존 스타일 유지 — 강제 종료/재throw하지 않는다.
@@ -174,6 +181,12 @@ async function main() {
 
   // 3. 서버 시작 (logWs 전달)
   const { port, close, connections } = await startServerWithRetry(bridges, logWs);
+
+  // Register the AUTO_RESUME pre-send gate on the scheduled-message engine once,
+  // now that the ConnectionManager (needed to broadcast poll progress) exists.
+  // The engine's per-session timers are restored on session connect; this only
+  // installs the quota-check hook the engine calls before delivering a reservation.
+  registerAutoResumeHook(connections);
 
   // Stash native drop paths on drag-enter; the webview will flush them on its drop event.
   // The page's HTML5 `dataTransfer` doesn't expose absolute paths (browser security), so

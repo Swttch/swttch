@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "Esperando tu respuesta"
+  },
+  "autoResumeCountdown": {
+    "body": "La tarea programada se reanudará en 30 segundos."
   }
 }

@@ -405,5 +405,24 @@
       "showOriginal": "원본 응답 보기",
       "tooltip": "재구성 뷰와 원본 CLI 출력 전환"
     }
+  },
+  "autoResume": {
+    "schedule": "예약하기",
+    "cancel": "예약취소",
+    "resumeNow": "재개하기",
+    "countdown": "({{seconds}}초)",
+    "status": {
+      "retrying": "재개 대기 중…",
+      "proceeding": "재개하는 중…"
+    },
+    "error": {
+      "network": "네트워크 연결 에러",
+      "timeout": "시간 초과",
+      "auth": "인증 에러",
+      "generic": "자동 재개 실패"
+    },
+    "scheduledToast": "자동 재개가 예약되었습니다",
+    "canceledToast": "자동 재개 예약을 취소했습니다",
+    "scheduled": "자동 재개 예정됨"
   }
 }

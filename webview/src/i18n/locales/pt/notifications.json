@@ -13,5 +13,8 @@
   },
   "awaitingUserInput": {
     "body": "Aguardando sua resposta"
+  },
+  "autoResumeCountdown": {
+    "body": "A tarefa agendada será retomada em 30 segundos."
   }
 }

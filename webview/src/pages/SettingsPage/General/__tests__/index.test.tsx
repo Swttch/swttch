@@ -3,8 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { SettingKey, UiDirection } from '@/types/settings';
 
 // ---------------------------------------------------------------------------
-// Mocks: ClaudeSettingsContext (uiLanguage) + SettingsContext (uiDirection)
-// + child rows unrelated to the language↔RTL auto-sync behaviour under test.
+// Mocks: SettingsContext now owns uiLanguage AND uiDirection (uiLanguage moved
+// out of the native ClaudeSettings). GeneralSettings reads everything from
+// useSettings. Child rows unrelated to the language↔RTL auto-sync are stubbed.
 // ---------------------------------------------------------------------------
 
 const updateSettingMock = vi.fn();
@@ -14,17 +15,12 @@ const updateSettingWithScopeMock = vi.fn();
 let mockScope: 'global' | 'project' = 'global';
 let mockScopeSettings: Record<string, unknown> = {};
 
-vi.mock('@/contexts/ClaudeSettingsContext', () => ({
-  useClaudeSettings: () => ({
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({
     scopeSettings: mockScopeSettings,
     updateSetting: updateSettingMock,
     scope: mockScope,
     resetToGlobal: resetToGlobalMock,
-  }),
-}));
-
-vi.mock('@/contexts/SettingsContext', () => ({
-  useSettings: () => ({
     updateSettingWithScope: updateSettingWithScopeMock,
   }),
 }));
@@ -37,6 +33,11 @@ vi.mock('../OpenSettingsRow', () => ({ OpenSettingsRow: () => null }));
 vi.mock('../ChatPaginationRow', () => ({ ChatPaginationRow: () => null }));
 vi.mock('../UiDirectionRow', () => ({ UiDirectionRow: () => null }));
 vi.mock('../ClaudeConfigDirRow', () => ({ ClaudeConfigDirRow: () => null }));
+// FileSuggestionRow reads useClaudeSettings (fileSuggestion is a native key);
+// it is unrelated to the language↔RTL sync under test, so stub it out.
+vi.mock('../FileSuggestionRow', () => ({ FileSuggestionRow: () => null }));
+// The auto-resume default row gates on sponsor status (react-query); mock it.
+vi.mock('@/hooks/queries/useSponsorStatus', () => ({ useSponsorStatus: () => ({ isSponsor: false }) }));
 
 import { GeneralSettings } from '../index';
 

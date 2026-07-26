@@ -272,6 +272,39 @@ describe('settings', () => {
       expect(result.status).toBe('error');
       expect(result.error).toContain('must be a string');
     });
+
+    // GUI-only keys migrated out of native Claude settings (settings-migration.ts).
+    it('should accept string or null uiLanguage', async () => {
+      expect((await saveSettingToFile('uiLanguage', 'korean')).status).toBe('ok');
+      expect((await saveSettingToFile('uiLanguage', null)).status).toBe('ok');
+    });
+
+    it('should reject non-string non-null uiLanguage', async () => {
+      const result = await saveSettingToFile('uiLanguage', 5);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('uiLanguage must be a string or null');
+    });
+
+    it('should accept string or null language (Claude response language)', async () => {
+      expect((await saveSettingToFile('language', 'japanese')).status).toBe('ok');
+      expect((await saveSettingToFile('language', null)).status).toBe('ok');
+    });
+
+    it('should reject non-string non-null language', async () => {
+      const result = await saveSettingToFile('language', true);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('language must be a string or null');
+    });
+
+    it('should accept boolean migrated toggles and reject non-boolean', async () => {
+      for (const key of ['useCtrlEnterToSend', 'focusInputOnEditorContext', 'respectGitignoreForContext', 'autoResumeOnLimit']) {
+        expect((await saveSettingToFile(key, true)).status).toBe('ok');
+        expect((await saveSettingToFile(key, false)).status).toBe('ok');
+        const bad = await saveSettingToFile(key, 'yes');
+        expect(bad.status).toBe('error');
+        expect(bad.error).toContain('must be a boolean');
+      }
+    });
   });
 
   describe('saveSettingToFile() - atomic write via temp file + rename', () => {
@@ -383,6 +416,12 @@ describe('settings', () => {
         openSettingsAs: 'overlay',
         chatPagination: true,
         uiDirection: 'ltr',
+        uiLanguage: null,
+        language: null,
+        useCtrlEnterToSend: false,
+        focusInputOnEditorContext: true,
+        respectGitignoreForContext: false,
+        autoResumeOnLimit: false,
         env: {},
       });
       expect(mockWriteFile).toHaveBeenCalled();
@@ -459,6 +498,12 @@ export default {
         openSettingsAs: 'overlay',
         chatPagination: true,
         uiDirection: 'ltr',
+        uiLanguage: null,
+        language: null,
+        useCtrlEnterToSend: false,
+        focusInputOnEditorContext: true,
+        respectGitignoreForContext: false,
+        autoResumeOnLimit: false,
         env: {},
       });
     });

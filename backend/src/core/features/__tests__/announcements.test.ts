@@ -9,12 +9,12 @@ import {
 // the plugin version are all mocked so fetchAnnouncements can be exercised without
 // real IO. Each mock is controllable per-test via vi.mocked(...).
 vi.mock('../../../config/environment', () => ({ announcementsUrl: 'https://ann.example/api' }));
-vi.mock('../claude-settings', () => ({ readMergedClaudeSettings: vi.fn() }));
+vi.mock('../settings', () => ({ readMergedSettings: vi.fn() }));
 vi.mock('../../handlers/getVersion', () => ({ getPluginVersion: vi.fn(() => '9.9.9') }));
 vi.mock('../profile', () => ({ getAnnouncementsEnabled: vi.fn(() => Promise.resolve(true)) }));
 
 import { validateResponse, fetchAnnouncements } from '../announcements';
-import { readMergedClaudeSettings } from '../claude-settings';
+import { readMergedSettings } from '../settings';
 
 /** A fully-valid raw announcement; override individual fields to test rejection. */
 function rawAnnouncement(over: Record<string, unknown> = {}): Record<string, unknown> {
@@ -116,7 +116,7 @@ describe('validateResponse', () => {
 
 describe('fetchAnnouncements', () => {
   beforeEach(() => {
-    vi.mocked(readMergedClaudeSettings).mockReset();
+    vi.mocked(readMergedSettings).mockReset();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -124,7 +124,7 @@ describe('fetchAnnouncements', () => {
 
   it('sends ONLY locale + pluginVersion in the query — no install id / uuid / PII', async () => {
     // Unique locale (ko) keeps this call out of any other test's cache entry.
-    vi.mocked(readMergedClaudeSettings).mockResolvedValue({
+    vi.mocked(readMergedSettings).mockResolvedValue({
       settings: { uiLanguage: 'korean' },
       overrides: [],
     });
@@ -149,7 +149,7 @@ describe('fetchAnnouncements', () => {
 
   it('degrades to an empty list (never throws) on a non-ok HTTP response', async () => {
     // Unique locale (en) → distinct cache key from the test above.
-    vi.mocked(readMergedClaudeSettings).mockResolvedValue({
+    vi.mocked(readMergedSettings).mockResolvedValue({
       settings: { uiLanguage: 'english' },
       overrides: [],
     });
@@ -164,7 +164,7 @@ describe('fetchAnnouncements', () => {
 
   it('serves a cached response within TTL — repeated calls fetch only once', async () => {
     // Unique locale (ja) → its own cache key, isolated from the tests above.
-    vi.mocked(readMergedClaudeSettings).mockResolvedValue({
+    vi.mocked(readMergedSettings).mockResolvedValue({
       settings: { uiLanguage: 'japanese' },
       overrides: [],
     });

@@ -21,7 +21,9 @@
     "accountUsage": "账户与用量...",
     "toggleFastMode": "切换快速模式",
     "effortUnsupportedReason": "此模型不支持强度等级",
-    "fastModeUnsupportedReason": "快速模式仅适用于 Opus 模型"
+    "fastModeUnsupportedReason": "快速模式仅适用于 Opus 模型",
+    "toggleAutoResume": "切换达到上限时自动恢复",
+    "autoResumeSponsorOnlyReason": "达到上限时自动恢复仅对赞助者开放"
   },
   "customize": {
     "outputStyles": "输出样式",

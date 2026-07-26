@@ -5,8 +5,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 vi.mock('../../../config/environment', () => ({
   announcementsUrl: 'http://localhost:8080/api/announcements',
 }));
-vi.mock('../claude-settings', () => ({
-  readMergedClaudeSettings: vi.fn(async () => ({ settings: { uiLanguage: 'english' }, overrides: [] })),
+vi.mock('../settings', () => ({
+  readMergedSettings: vi.fn(async () => ({ settings: { uiLanguage: 'english' }, overrides: [] })),
 }));
 vi.mock('../../handlers/getVersion', () => ({ getPluginVersion: vi.fn(() => '9.9.9') }));
 

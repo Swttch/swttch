@@ -405,5 +405,24 @@
       "showOriginal": "Originalantwort anzeigen",
       "tooltip": "Zwischen rekonstruierter Ansicht und roher CLI-Ausgabe wechseln"
     }
+  },
+  "autoResume": {
+    "schedule": "Fortsetzung planen",
+    "cancel": "Reservierung abbrechen",
+    "resumeNow": "Jetzt fortsetzen",
+    "countdown": "({{seconds}}s)",
+    "status": {
+      "retrying": "Warte auf Kontingent-Reset…",
+      "proceeding": "Wird fortgesetzt…"
+    },
+    "error": {
+      "network": "Netzwerkverbindungsfehler",
+      "timeout": "Zeitüberschreitung",
+      "auth": "Authentifizierungsfehler",
+      "generic": "Automatische Fortsetzung fehlgeschlagen"
+    },
+    "scheduledToast": "Automatische Fortsetzung geplant",
+    "canceledToast": "Automatische Fortsetzung abgebrochen",
+    "scheduled": "Automatische Fortsetzung geplant"
   }
 }

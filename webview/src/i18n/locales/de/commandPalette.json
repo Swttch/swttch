@@ -21,7 +21,9 @@
     "accountUsage": "Konto & Nutzung...",
     "toggleFastMode": "Schnellmodus umschalten",
     "effortUnsupportedReason": "Dieses Modell unterstützt keine Aufwandsstufen",
-    "fastModeUnsupportedReason": "Der Schnellmodus ist nur bei Opus-Modellen verfügbar"
+    "fastModeUnsupportedReason": "Der Schnellmodus ist nur bei Opus-Modellen verfügbar",
+    "toggleAutoResume": "Auto-Fortsetzung bei Limit umschalten",
+    "autoResumeSponsorOnlyReason": "Auto-Fortsetzung bei Limit ist nur für Sponsoren verfügbar"
   },
   "customize": {
     "outputStyles": "Ausgabestile",

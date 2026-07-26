@@ -77,6 +77,10 @@
     "fileSuggestion": {
       "description": "@ ファイル一覧を生成するカスタムコマンド。settings.json の fileSuggestion 設定と同じです。",
       "placeholder": "例: git ls-files --recurse-submodules"
+    },
+    "autoResumeOnLimit": {
+      "label": "使用上限到達時に自動再開",
+      "description": "セッションの上限に達した際、上限リセット後に自動的に再開します。新しいセッションの既定値で、各セッションで切り替え可能です。"
     }
   },
   "appearance": {
@@ -396,5 +400,12 @@
       "keyLabel": "スポンサーキー",
       "deactivate": "解除"
     }
+  },
+  "badges": {
+    "sponsor": "スポンサー限定機能",
+    "claudeNative": "Claude Code ネイティブ設定",
+    "sponsorLabel": "ス",
+    "claudeNativeLabel": "ク",
+    "openDocs": "ドキュメントを開く"
   }
 }

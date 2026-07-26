@@ -405,5 +405,24 @@
       "showOriginal": "元の応答を表示",
       "tooltip": "再構成ビューと元の CLI 出力を切り替える"
     }
+  },
+  "autoResume": {
+    "schedule": "再開を予約",
+    "cancel": "予約をキャンセル",
+    "resumeNow": "今すぐ再開",
+    "countdown": "（{{seconds}}秒）",
+    "status": {
+      "retrying": "上限リセットを待機中…",
+      "proceeding": "再開中…"
+    },
+    "error": {
+      "network": "ネットワーク接続エラー",
+      "timeout": "タイムアウト",
+      "auth": "認証エラー",
+      "generic": "自動再開に失敗しました"
+    },
+    "scheduledToast": "自動再開を予約しました",
+    "canceledToast": "自動再開の予約をキャンセルしました",
+    "scheduled": "自動再開を予約済み"
   }
 }
