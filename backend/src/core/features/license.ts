@@ -149,11 +149,21 @@ export async function clearLicense(): Promise<void> {
 
 /**
  * The sponsor entitlement the UI consumes. Derived from the locally stored key:
- * having a verified key on file means "sponsor" here. (Re-validating against www
- * on every read — to catch a later refund/expiry — is a follow-up once there are
- * actual sponsor-only features to gate.)
+ * having a verified key on file means "sponsor" here, which is what lets the
+ * state survive restarts and work offline.
+ *
+ * To keep that local trust from going stale, a throttled re-check against www
+ * runs first (see license-revalidation): if the key has since been refunded or
+ * expired it is cleared here, so the caller sees the corrected state. The check
+ * is skipped while the last verification is still fresh, and it never revokes on
+ * a network failure — see revalidateStoredLicense for the fail-open rules.
  */
 export async function getSponsorStatus(): Promise<SponsorStatus> {
+  // Imported lazily: license-revalidation reads/writes the license through this
+  // module, so a top-level import would make the two files circular.
+  const { revalidateStoredLicense } = await import('./license-revalidation');
+  await revalidateStoredLicense(verifyLicenseRemote);
+
   const license = await readLicense();
   if (license === null) return { isSponsor: false };
   return {
