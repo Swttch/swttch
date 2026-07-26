@@ -31,6 +31,16 @@ function storedLicense(verifiedAt: string) {
   return { licenseKey: 'CCG-abc', status: 'active', verifiedAt };
 }
 
+/** A licence with every plan detail already cached — nothing left to fetch. */
+function fullyCached(verifiedAt: string) {
+  return {
+    ...storedLicense(verifiedAt),
+    tier: 'jetbrains',
+    interval: 'monthly',
+    price: { amount: 5, currency: 'USD' },
+  };
+}
+
 const NOW = new Date('2026-07-27T12:00:00.000Z');
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600_000).toISOString();
 
@@ -58,11 +68,7 @@ describe('revalidateStoredLicense', () => {
   });
 
   it('skips the network call while the last check is still fresh', async () => {
-    mockReadLicense.mockResolvedValue({
-      ...storedLicense(hoursAgo(1)),
-      tier: 'jetbrains',
-      interval: 'monthly',
-    });
+    mockReadLicense.mockResolvedValue(fullyCached(hoursAgo(1)));
 
     await revalidateStoredLicense(mockVerifyRemote);
 
@@ -92,6 +98,8 @@ describe('revalidateStoredLicense', () => {
       verifiedAt: NOW.toISOString(),
       tier: null,
       interval: null,
+      price: null,
+      cancellable: null,
     });
     expect(mockClearLicense).not.toHaveBeenCalled();
   });
@@ -203,11 +211,7 @@ describe('revalidateStoredLicense', () => {
   });
 
   it('does not re-check on every read once the plan is cached', async () => {
-    mockReadLicense.mockResolvedValue({
-      ...storedLicense(hoursAgo(1)),
-      tier: 'jetbrains',
-      interval: 'monthly',
-    });
+    mockReadLicense.mockResolvedValue(fullyCached(hoursAgo(1)));
 
     await revalidateStoredLicense(mockVerifyRemote);
 

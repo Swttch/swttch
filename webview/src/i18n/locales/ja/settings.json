@@ -399,7 +399,22 @@
       "description": "Claude Code with GUI をご支援いただきありがとうございます。",
       "keyLabel": "スポンサーキー",
       "deactivate": "解除",
-      "greeting": "ようこそ、スポンサーさん"
+      "greeting": "ようこそ、スポンサーさん",
+      "promise": "より安定して、より速く、より強力なアップデートでお応えします。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "スポンサーキーを消去",
+        "clearKeyConfirmTitle": "スポンサーキーを消去しますか？",
+        "clearKeyConfirmMessage": "このデバイスでスポンサー機能が無効になります。スポンサーシップと支払いはそのままで、キーを貼り直せばいつでも戻せます。",
+        "clearKeyDone": "このデバイスのスポンサーキーを消去しました。",
+        "cancel": "定期支援を解約",
+        "cancelConfirmTitle": "定期支援を解約しますか？",
+        "cancelConfirmMessage": "すでに支払った期間の終わりで請求が止まり、それまではスポンサー機能を利用できます。",
+        "cancelDone": "定期支援を解約しました。",
+        "cancelFailed": "解約できませんでした。しばらくしてからお試しください。"
+      },
+      "thanksBefore": "",
+      "thanksAfter": "を支持してくださりありがとうございます。"
     },
     "plan": {
       "title": "スポンサー情報",
@@ -439,7 +454,8 @@
       "benefits": "ベネフィット",
       "devices": "デバイス",
       "billing": "支払い"
-    }
+    },
+    "project": "このプロジェクト"
   },
   "badges": {
     "sponsor": "スポンサー限定機能",

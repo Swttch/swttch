@@ -399,7 +399,22 @@
       "description": "Danke, dass du Claude Code with GUI unterstützt.",
       "keyLabel": "Sponsor-Schlüssel",
       "deactivate": "Deaktivieren",
-      "greeting": "Schön, dich zu sehen, Förderer"
+      "greeting": "Schön, dich zu sehen, Förderer",
+      "promise": "Wir revanchieren uns mit Updates, die stabiler, schneller und leistungsfähiger sind.",
+      "manage": {
+        "menu": "Verwalten",
+        "clearKey": "Schlüssel entfernen",
+        "clearKeyConfirmTitle": "Förderer-Schlüssel entfernen?",
+        "clearKeyConfirmMessage": "Auf diesem Gerät werden die Förderer-Funktionen abgeschaltet. Deine Förderung und Abrechnung bleiben unberührt — füge den Schlüssel jederzeit wieder ein.",
+        "clearKeyDone": "Schlüssel auf diesem Gerät entfernt.",
+        "cancel": "Regelmäßige Förderung kündigen",
+        "cancelConfirmTitle": "Regelmäßige Förderung kündigen?",
+        "cancelConfirmMessage": "Die Abrechnung endet mit dem bereits bezahlten Zeitraum; bis dahin bleibt alles nutzbar.",
+        "cancelDone": "Regelmäßige Förderung gekündigt.",
+        "cancelFailed": "Kündigung fehlgeschlagen. Bitte gleich noch einmal versuchen."
+      },
+      "thanksBefore": "Danke, dass du ",
+      "thanksAfter": " unterstützt."
     },
     "plan": {
       "title": "Deine Förderung",
@@ -439,7 +454,8 @@
       "benefits": "Vorteile",
       "devices": "Geräte",
       "billing": "Zahlungen"
-    }
+    },
+    "project": "das Projekt"
   },
   "badges": {
     "sponsor": "Nur für Sponsoren",

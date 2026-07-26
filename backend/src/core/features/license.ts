@@ -33,7 +33,19 @@ export interface LicenseVerifyResult {
   tier?: string;
   /** Billing cadence ("monthly" | "yearly"); absent until a subscription resolves it. */
   interval?: string;
+  /** List price of the plan, so the UI can say "$5/mo" without another call. */
+  price?: SponsorPrice;
+  /** Whether a recurring payment exists that could be cancelled. */
+  cancellable?: boolean;
   error?: string;
+}
+
+/** What a sponsor pays, as reported by www. */
+export interface SponsorPrice {
+  /** Whole units of the currency (e.g. 5 for $5). */
+  amount: number;
+  /** ISO 4217 code, e.g. "USD". */
+  currency: string;
 }
 
 /** One machine this license is active on, as shown in the sponsor's device list. */
@@ -76,6 +88,10 @@ export interface StoredLicense {
   tier?: string | null;
   /** Billing cadence ("monthly" | "yearly"), cached alongside the tier. */
   interval?: string | null;
+  /** Plan price, cached so the screen renders offline. */
+  price?: SponsorPrice | null;
+  /** Whether a recurring payment exists that could be cancelled. */
+  cancellable?: boolean | null;
 }
 
 /** Sponsor entitlement derived from local storage — what the UI toggles on. */
@@ -85,6 +101,8 @@ export interface SponsorStatus {
   status?: string;
   tier?: string;
   interval?: string;
+  price?: SponsorPrice;
+  cancellable?: boolean;
 }
 
 // Ask www for a sponsor key's status. The key here is OUR bearer key (minted on
@@ -107,13 +125,21 @@ export async function verifyLicenseRemote(sponsorKey: string): Promise<LicenseVe
       status?: string;
       tier?: string;
       interval?: string;
+      price?: { amount?: number; currency?: string };
+      cancellable?: boolean;
       error?: string;
     };
+    const price =
+      typeof json.price?.amount === 'number' && typeof json.price?.currency === 'string'
+        ? { amount: json.price.amount, currency: json.price.currency }
+        : undefined;
     return {
       valid: json.valid === true,
       status: typeof json.status === 'string' ? json.status : undefined,
       tier: typeof json.tier === 'string' ? json.tier : undefined,
       interval: typeof json.interval === 'string' ? json.interval : undefined,
+      price,
+      cancellable: json.cancellable === true,
       error: typeof json.error === 'string' ? json.error : undefined,
     };
   } catch (e) {
@@ -186,6 +212,8 @@ export async function readLicense(): Promise<StoredLicense | null> {
       verifiedAt: typeof parsed.verifiedAt === 'string' ? parsed.verifiedAt : '',
       tier: typeof parsed.tier === 'string' ? parsed.tier : null,
       interval: typeof parsed.interval === 'string' ? parsed.interval : null,
+      price: parsed.price ?? null,
+      cancellable: typeof parsed.cancellable === 'boolean' ? parsed.cancellable : null,
     };
   } catch {
     return null;
@@ -228,6 +256,8 @@ export async function getSponsorStatus(): Promise<SponsorStatus> {
     status: license.status ?? undefined,
     tier: license.tier ?? undefined,
     interval: license.interval ?? undefined,
+    price: license.price ?? undefined,
+    cancellable: license.cancellable ?? undefined,
   };
 }
 
@@ -306,5 +336,33 @@ export async function listSponsorInvoices(): Promise<SponsorInvoice[]> {
     return Array.isArray(json.invoices) ? json.invoices : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Cancel the recurring payment behind this license.
+ *
+ * Distinct from clearing the key locally: that only stops THIS install treating
+ * the user as a sponsor and is reversible by re-entering the key. This ends the
+ * billing relationship. The provider cancels at period end, so the sponsor keeps
+ * what they already paid for, and www learns the new status from the provider's
+ * webhook rather than from us.
+ *
+ * Returns whether www accepted the cancellation.
+ */
+export async function cancelSponsorSubscription(): Promise<boolean> {
+  const license = await readLicense();
+  if (license === null) return false;
+  try {
+    const res = await fetch(`${wwwApiBase()}/sponsor/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sponsorKey: license.licenseKey }),
+    });
+    if (!res.ok) return false;
+    const json = (await res.json()) as { ok?: boolean };
+    return json.ok === true;
+  } catch {
+    return false;
   }
 }

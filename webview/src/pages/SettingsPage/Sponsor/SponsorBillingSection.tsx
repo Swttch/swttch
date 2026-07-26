@@ -40,7 +40,7 @@ export function SponsorBillingSection() {
   const { data: invoices = [], isLoading } = useSponsorInvoices(true);
 
   return (
-    <div className="rounded-b-xl border border-t-0 border-border-default bg-surface-raised p-6">
+    <div className="pt-5">
       <div className="flex items-center gap-2">
         <ReceiptPercentIcon className="w-5 h-5 text-text-secondary" />
         <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.billing.title')}</h3>

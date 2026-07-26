@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from '@/i18n';
+import { PRICING_URL } from '@/config/app';
+import { getAdapter } from '@/adapters';
+import type { SponsorPrice } from '@/hooks/queries/useSponsorStatus';
 
 interface Props {
   licenseKey: string | null;
@@ -8,6 +11,8 @@ interface Props {
   tier: string | null;
   /** "monthly" | "yearly"; absent until a subscription resolves it. */
   interval: string | null;
+  /** List price of the plan, when known. */
+  price: SponsorPrice | null;
 }
 
 /** Mask all but the last 4 characters of a license key for display. */
@@ -17,17 +22,38 @@ function maskKey(key: string): string {
 }
 
 /**
- * The "you're sponsoring" banner: status, plan and key on one line.
+ * Render the plan as an amount rather than a cadence: "$5/mo" tells a sponsor
+ * what they actually pay, where "Monthly" only tells them how often. Returns
+ * null when the server has no price for this key (comp keys, or a subscription
+ * whose interval has not resolved yet) so the chip is simply omitted.
+ */
+function formatPlan(price: SponsorPrice | null, interval: string | null): string | null {
+  const period = interval === 'monthly' ? 'mo' : interval === 'yearly' ? 'yr' : null;
+  if (price === null || period === null) return null;
+  try {
+    const amount = new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: price.currency,
+      maximumFractionDigits: 0,
+    }).format(price.amount);
+    return `${amount}/${period}`;
+  } catch {
+    // Unrecognised currency code — better a bare number than nothing.
+    return `${price.amount} ${price.currency}/${period}`;
+  }
+}
+
+/**
+ * The "you're sponsoring" header: thanks, plan and key.
  *
- * Kept deliberately compact — these are facts a sponsor glances at, not things
- * they act on, so they should not cost a full card each. What they DO act on
- * lives in the tabs below.
+ * Deliberately not a card. On a screen that is already a panel inside Settings,
+ * boxing every group drew more borders than content.
  *
- * The key is masked but copyable in full: activating another machine needs the
+ * The key is masked but copyable in full — activating another machine needs the
  * whole key, and digging it out of an old email is a poor substitute.
  */
 export function SponsorSummary(props: Props) {
-  const { licenseKey, tier, interval } = props;
+  const { licenseKey, tier, interval, price } = props;
   const { t } = useTranslation('settings');
   const [copied, setCopied] = useState(false);
 
@@ -43,15 +69,10 @@ export function SponsorSummary(props: Props) {
     }
   };
 
-  const intervalLabel =
-    interval === 'monthly'
-      ? t('sponsor.plan.monthly')
-      : interval === 'yearly'
-        ? t('sponsor.plan.yearly')
-        : null;
+  const plan = formatPlan(price, interval);
 
   return (
-    <div className="rounded-xl border border-border-default bg-surface-raised px-5 py-4">
+    <div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className="inline-flex items-center gap-1.5">
           <CheckBadgeIcon className="w-4 h-4 text-accent-primary" />
@@ -65,9 +86,9 @@ export function SponsorSummary(props: Props) {
             {tier}
           </span>
         )}
-        {intervalLabel !== null && (
+        {plan !== null && (
           <span className="rounded bg-surface-overlay px-2 py-0.5 text-xs text-text-secondary">
-            {intervalLabel}
+            {plan}
           </span>
         )}
 
@@ -85,8 +106,21 @@ export function SponsorSummary(props: Props) {
         )}
       </div>
 
-      <p className="mt-2 text-xs text-text-tertiary leading-relaxed break-keep">
-        {t('sponsor.active.description')}
+      <p className="mt-3 text-sm text-text-secondary leading-relaxed break-keep">
+        {/* The linked word is spliced in rather than embedded in one string, so
+            no locale has to carry markup. */}
+        {t('sponsor.active.thanksBefore')}
+        <button
+          type="button"
+          onClick={() => void getAdapter().openUrl(PRICING_URL)}
+          className="text-text-link underline underline-offset-2 transition-opacity hover:opacity-80"
+        >
+          {t('sponsor.project')}
+        </button>
+        {t('sponsor.active.thanksAfter')}
+      </p>
+      <p className="mt-1 text-sm text-text-secondary leading-relaxed break-keep">
+        {t('sponsor.active.promise')}
       </p>
     </div>
   );

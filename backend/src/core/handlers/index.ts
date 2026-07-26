@@ -32,6 +32,7 @@ import {
   getSponsorDevicesHandler,
   removeSponsorDeviceHandler,
   getSponsorInvoicesHandler,
+  cancelSponsorSubscriptionHandler,
 } from './sponsorAccount';
 import { getProjectsHandler } from './getProjects';
 import { getUsageHandler } from './getUsage';
@@ -215,6 +216,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_SPONSOR_INVOICES:
       await getSponsorInvoicesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_SPONSOR_SUBSCRIPTION:
+      await cancelSponsorSubscriptionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_PROJECTS:
       await getProjectsHandler(connectionId, message, connections, bridge);

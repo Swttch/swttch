@@ -1,7 +1,12 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { listSponsorDevices, removeSponsorDevice, listSponsorInvoices } from '../features/license';
+import {
+  listSponsorDevices,
+  removeSponsorDevice,
+  listSponsorInvoices,
+  cancelSponsorSubscription,
+} from '../features/license';
 import { MessageType } from '../../shared';
 
 /**
@@ -64,5 +69,24 @@ export async function getSponsorInvoicesHandler(
     requestId: message.requestId,
     status: 'ok',
     invoices,
+  });
+}
+
+/**
+ * End the recurring payment. Unlike DEACTIVATE_LICENSE — which only clears the
+ * key on this install and is undone by pasting it back — this stops the billing
+ * relationship itself.
+ */
+export async function cancelSponsorSubscriptionHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const ok = await cancelSponsorSubscription();
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    status: 'ok',
+    ok,
   });
 }

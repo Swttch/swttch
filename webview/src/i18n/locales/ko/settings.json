@@ -399,7 +399,22 @@
       "description": "Claude Code with GUI를 후원해 주셔서 감사합니다.",
       "keyLabel": "후원자 키",
       "deactivate": "해제",
-      "greeting": "오늘도 반갑습니다, 후원자님"
+      "greeting": "오늘도 반갑습니다, 후원자님",
+      "promise": "보다 안정적이고 빠르고 강력한 업데이트로 보답하겠습니다.",
+      "manage": {
+        "menu": "관리",
+        "clearKey": "후원자 키 비우기",
+        "clearKeyConfirmTitle": "후원자 키를 비울까요?",
+        "clearKeyConfirmMessage": "이 기기에서 후원자 기능이 꺼집니다. 후원과 결제는 그대로이며, 키를 다시 붙여넣으면 언제든 복구됩니다.",
+        "clearKeyDone": "이 기기에서 후원자 키를 비웠습니다.",
+        "cancel": "정기후원 취소",
+        "cancelConfirmTitle": "정기후원을 취소할까요?",
+        "cancelConfirmMessage": "이미 결제한 기간이 끝날 때 결제가 중단되며, 그때까지는 후원자 기능이 그대로 유지됩니다.",
+        "cancelDone": "정기후원을 취소했습니다.",
+        "cancelFailed": "취소하지 못했습니다. 잠시 후 다시 시도해 주세요."
+      },
+      "thanksBefore": "",
+      "thanksAfter": "를 지지해 주셔서 감사합니다."
     },
     "plan": {
       "title": "후원 정보",
@@ -439,7 +454,8 @@
       "benefits": "베네핏",
       "devices": "기기",
       "billing": "결제"
-    }
+    },
+    "project": "프로젝트"
   },
   "badges": {
     "sponsor": "후원자 전용 기능",

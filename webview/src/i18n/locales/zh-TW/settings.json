@@ -399,7 +399,22 @@
       "description": "感謝你贊助 Claude Code with GUI。",
       "keyLabel": "贊助者金鑰",
       "deactivate": "取消啟用",
-      "greeting": "很高興見到你，贊助者"
+      "greeting": "很高興見到你，贊助者",
+      "promise": "我們會以更穩定、更快、更強大的更新回報你。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "清除贊助金鑰",
+        "clearKeyConfirmTitle": "要清除贊助金鑰嗎？",
+        "clearKeyConfirmMessage": "本裝置將停用贊助功能。你的贊助與付款不受影響，隨時重新貼上金鑰即可恢復。",
+        "clearKeyDone": "已清除本裝置的贊助金鑰。",
+        "cancel": "取消定期贊助",
+        "cancelConfirmTitle": "要取消定期贊助嗎？",
+        "cancelConfirmMessage": "將在你已付費的週期結束時停止扣款，在此之前贊助功能照常可用。",
+        "cancelDone": "已取消定期贊助。",
+        "cancelFailed": "取消失敗，請稍後再試。"
+      },
+      "thanksBefore": "感謝你支持",
+      "thanksAfter": "。"
     },
     "plan": {
       "title": "贊助資訊",
@@ -439,7 +454,8 @@
       "benefits": "權益",
       "devices": "裝置",
       "billing": "付款"
-    }
+    },
+    "project": "這個專案"
   },
   "badges": {
     "sponsor": "贊助者專屬功能",

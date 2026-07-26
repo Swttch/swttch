@@ -401,7 +401,22 @@
       "description": "Thank you for supporting Claude Code with GUI.",
       "keyLabel": "Sponsor key",
       "deactivate": "Deactivate",
-      "greeting": "Good to see you, sponsor"
+      "greeting": "Good to see you, sponsor",
+      "promise": "We will repay you with updates that are steadier, faster and more capable.",
+      "manage": {
+        "menu": "Manage",
+        "clearKey": "Clear sponsor key",
+        "clearKeyConfirmTitle": "Clear the sponsor key?",
+        "clearKeyConfirmMessage": "This device stops using sponsor features. Your sponsorship and billing are untouched — paste the key back any time to restore it.",
+        "clearKeyDone": "Sponsor key cleared on this device.",
+        "cancel": "Cancel recurring sponsorship",
+        "cancelConfirmTitle": "Cancel your recurring sponsorship?",
+        "cancelConfirmMessage": "Billing stops at the end of the period you already paid for, and sponsor features keep working until then.",
+        "cancelDone": "Recurring sponsorship cancelled.",
+        "cancelFailed": "Could not cancel. Please try again in a moment."
+      },
+      "thanksBefore": "Thank you for backing ",
+      "thanksAfter": "."
     },
     "plan": {
       "title": "Your sponsorship",
@@ -441,7 +456,8 @@
       "benefits": "Benefits",
       "devices": "Devices",
       "billing": "Payments"
-    }
+    },
+    "project": "the project"
   },
   "badges": {
     "sponsor": "Sponsor-only feature",

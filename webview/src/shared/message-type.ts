@@ -124,6 +124,8 @@ export enum MessageType {
   REMOVE_SPONSOR_DEVICE = 'REMOVE_SPONSOR_DEVICE',
   /** List the payments behind this sponsor license, each with its receipt link. inbound webview→backend */
   GET_SPONSOR_INVOICES = 'GET_SPONSOR_INVOICES',
+  /** Cancel the recurring payment behind this sponsor license (ends billing, unlike clearing the key). inbound webview→backend */
+  CANCEL_SPONSOR_SUBSCRIPTION = 'CANCEL_SPONSOR_SUBSCRIPTION',
 
   // -- Account / usage / version --
   /** Read the signed-in Claude account info. */

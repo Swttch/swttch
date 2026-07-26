@@ -16,9 +16,9 @@ function formatDate(iso: string | null): string {
  * Where this sponsorship is in use, with a way to sign a machine out.
  *
  * The note under the heading is the part that actually prevents support
- * questions: sponsorship follows the DEVICE, not the Claude account, so
- * switching accounts on the same machine does not cost anyone their
- * sponsorship — which is not obvious from a list that shows account emails.
+ * questions: sponsorship follows the KEY, not the account. An account only
+ * verifies the key, so switching accounts costs nobody their sponsorship —
+ * which is not obvious from a list that shows account emails.
  */
 export function SponsorDevicesSection() {
   const { t } = useTranslation('settings');
@@ -42,7 +42,7 @@ export function SponsorDevicesSection() {
   };
 
   return (
-    <div className="rounded-b-xl border border-t-0 border-border-default bg-surface-raised p-6">
+    <div className="pt-5">
       <div className="flex items-center gap-2">
         <ComputerDesktopIcon className="w-5 h-5 text-text-secondary" />
         <h3 className="text-sm font-semibold text-text-primary">{t('sponsor.devices.title')}</h3>

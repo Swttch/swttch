@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { SponsorSummary } from './SponsorSummary';
+import { SponsorManageMenu } from './SponsorManageMenu';
 import { SponsorTabs, SponsorTab } from './SponsorTabs';
 import { SponsorBenefitsSection } from './SponsorBenefitsSection';
 import { SponsorDevicesSection } from './SponsorDevicesSection';
@@ -42,8 +43,18 @@ export function SponsorSettings() {
   const { t } = useTranslation('settings');
   const { send } = useBridgeContext();
   const { activeEmail } = useAccounts();
-  const { isSponsor, licenseKey, tier, interval, verify, deactivate, checkByInstall } =
-    useSponsorStatus();
+  const {
+    isSponsor,
+    licenseKey,
+    tier,
+    interval,
+    price,
+    cancellable,
+    verify,
+    deactivate,
+    cancelSubscription,
+    checkByInstall,
+  } = useSponsorStatus();
 
   // Copy/paste-free activation: after the user opens the checkout page, poll www
   // for a key minted for this install so a completed payment flips this screen to
@@ -167,7 +178,12 @@ export function SponsorSettings() {
 
       {isSponsor ? (
         <>
-          <SponsorSummary licenseKey={licenseKey} tier={tier} interval={interval} />
+          <SponsorSummary
+            licenseKey={licenseKey}
+            tier={tier}
+            interval={interval}
+            price={price}
+          />
 
           {/* One section at a time: stacked, they were a long scroll of cards
               where only one is ever relevant. */}
@@ -176,17 +192,15 @@ export function SponsorSettings() {
           {tab === SponsorTab.DEVICES && <SponsorDevicesSection />}
           {tab === SponsorTab.BILLING && <SponsorBillingSection />}
 
-          {/* Deactivate sits last and stays quiet on purpose: it is the one
-              action here the sponsor is least likely to want, and putting it
-              up front made the screen read as an exit prompt. */}
+          {/* Stopping sits last and stays quiet on purpose: it is what the
+              sponsor is least likely to want, and leading with it made the
+              screen read as an exit prompt. */}
           <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={() => void handleDeactivate()}
-              className="text-xs text-text-tertiary underline underline-offset-2 transition-colors hover:text-text-secondary"
-            >
-              {t('sponsor.active.deactivate')}
-            </button>
+            <SponsorManageMenu
+              cancellable={cancellable}
+              onClearKey={handleDeactivate}
+              onCancelSubscription={cancelSubscription}
+            />
           </div>
         </>
       ) : (

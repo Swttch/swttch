@@ -399,7 +399,22 @@
       "description": "感谢你赞助 Claude Code with GUI。",
       "keyLabel": "赞助者密钥",
       "deactivate": "取消激活",
-      "greeting": "很高兴见到你，赞助者"
+      "greeting": "很高兴见到你，赞助者",
+      "promise": "我们会以更稳定、更快、更强大的更新回报你。",
+      "manage": {
+        "menu": "管理",
+        "clearKey": "清除赞助密钥",
+        "clearKeyConfirmTitle": "要清除赞助密钥吗？",
+        "clearKeyConfirmMessage": "本设备将停用赞助功能。你的赞助与付款不受影响，随时重新粘贴密钥即可恢复。",
+        "clearKeyDone": "已清除本设备的赞助密钥。",
+        "cancel": "取消定期赞助",
+        "cancelConfirmTitle": "要取消定期赞助吗？",
+        "cancelConfirmMessage": "将在你已付费的周期结束时停止扣款，在此之前赞助功能照常可用。",
+        "cancelDone": "已取消定期赞助。",
+        "cancelFailed": "取消失败，请稍后再试。"
+      },
+      "thanksBefore": "感谢你支持",
+      "thanksAfter": "。"
     },
     "plan": {
       "title": "赞助信息",
@@ -439,7 +454,8 @@
       "benefits": "权益",
       "devices": "设备",
       "billing": "付款"
-    }
+    },
+    "project": "这个项目"
   },
   "badges": {
     "sponsor": "赞助者专属功能",

@@ -11,6 +11,7 @@ import { createTestQueryClient } from '@/hooks/queries/__tests__/testQueryClient
 const mockCheckByInstall = vi.fn();
 const mockDeactivate = vi.fn();
 const mockVerify = vi.fn();
+const mockCancelSubscription = vi.fn();
 let mockIsSponsor = false;
 
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({
@@ -20,6 +21,9 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
     licenseStatus: null,
     tier: mockIsSponsor ? 'jetbrains' : null,
     interval: mockIsSponsor ? 'monthly' : null,
+    price: mockIsSponsor ? { amount: 5, currency: 'USD' } : null,
+    cancellable: mockIsSponsor,
+    cancelSubscription: mockCancelSubscription,
     isLoading: false,
     verify: mockVerify,
     deactivate: mockDeactivate,
@@ -107,12 +111,20 @@ describe('SponsorSettings — auto-activation polling', () => {
     expect(mockCheckByInstall.mock.calls.length).toBe(callsAfterWindow);
   });
 
-  it('does not poll after deactivating, even though the user is now a non-sponsor', async () => {
+  it('does not poll after clearing the key, even though the user is now a non-sponsor', async () => {
     mockIsSponsor = true;
     const { rerender } = render(<SponsorSettings />, { wrapper });
 
+    // Clearing the key now lives behind Manage → Clear sponsor key → Confirm,
+    // so that it cannot be mistaken for "cancel my recurring payment".
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /deactivate|해제/i }));
+      fireEvent.click(screen.getByRole('button', { name: /manage/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: /clear sponsor key/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^confirm$/i }));
     });
     // The query flips to non-sponsor after deactivation.
     mockIsSponsor = false;

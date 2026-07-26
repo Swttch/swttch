@@ -399,7 +399,22 @@
       "description": "Merci de soutenir Claude Code with GUI.",
       "keyLabel": "Clé de sponsor",
       "deactivate": "Désactiver",
-      "greeting": "Ravi de vous revoir, mécène"
+      "greeting": "Ravi de vous revoir, mécène",
+      "promise": "Nous vous le rendrons par des mises à jour plus stables, plus rapides et plus puissantes.",
+      "manage": {
+        "menu": "Gérer",
+        "clearKey": "Effacer la clé",
+        "clearKeyConfirmTitle": "Effacer la clé de mécène ?",
+        "clearKeyConfirmMessage": "Cet appareil cessera d’utiliser les fonctionnalités de mécène. Votre soutien et vos paiements restent inchangés : recollez la clé quand vous voulez.",
+        "clearKeyDone": "Clé effacée sur cet appareil.",
+        "cancel": "Annuler le soutien récurrent",
+        "cancelConfirmTitle": "Annuler votre soutien récurrent ?",
+        "cancelConfirmMessage": "Les prélèvements s’arrêtent à la fin de la période déjà payée ; d’ici là, tout continue de fonctionner.",
+        "cancelDone": "Soutien récurrent annulé.",
+        "cancelFailed": "Annulation impossible. Réessayez dans un instant."
+      },
+      "thanksBefore": "Merci de soutenir ",
+      "thanksAfter": "."
     },
     "plan": {
       "title": "Votre soutien",
@@ -439,7 +454,8 @@
       "benefits": "Avantages",
       "devices": "Appareils",
       "billing": "Paiements"
-    }
+    },
+    "project": "le projet"
   },
   "badges": {
     "sponsor": "Fonctionnalité réservée aux sponsors",

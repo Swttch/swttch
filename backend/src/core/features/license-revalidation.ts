@@ -49,11 +49,13 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
     const license = await readLicense();
     if (license === null) return;
 
-    // A license stored before the plan fields existed has a fresh timestamp but
+    // A license stored before a plan field existed has a fresh timestamp but
     // nothing to show, so the sponsor screen would sit blank until the interval
-    // elapsed. Treat "no plan cached yet" as its own reason to ask now.
+    // elapsed. Treat "some plan detail never cached" as its own reason to ask now.
     const planMissing =
-      (license.tier ?? null) === null && (license.interval ?? null) === null;
+      (license.tier ?? null) === null ||
+      (license.interval ?? null) === null ||
+      (license.price ?? null) === null;
     if (!planMissing && !isStale(license.verifiedAt)) return;
 
     const result = await verify(license.licenseKey);
@@ -76,6 +78,8 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
       verifiedAt: new Date().toISOString(),
       tier: result.tier ?? license.tier ?? null,
       interval: result.interval ?? license.interval ?? null,
+      price: result.price ?? license.price ?? null,
+      cancellable: result.cancellable ?? license.cancellable ?? null,
     });
 
     // Re-report this install while we are here. Activation was previously only

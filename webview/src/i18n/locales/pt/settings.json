@@ -399,7 +399,22 @@
       "description": "Obrigado por apoiar o Claude Code with GUI.",
       "keyLabel": "Chave de patrocinador",
       "deactivate": "Desativar",
-      "greeting": "Que bom te ver, apoiador"
+      "greeting": "Que bom te ver, apoiador",
+      "promise": "Vamos retribuir com atualizações mais estáveis, mais rápidas e mais poderosas.",
+      "manage": {
+        "menu": "Gerenciar",
+        "clearKey": "Limpar a chave",
+        "clearKeyConfirmTitle": "Limpar a chave de apoiador?",
+        "clearKeyConfirmMessage": "Este dispositivo deixa de usar os recursos de apoiador. Seu apoio e sua cobrança continuam iguais — cole a chave de volta quando quiser.",
+        "clearKeyDone": "Chave limpa neste dispositivo.",
+        "cancel": "Cancelar apoio recorrente",
+        "cancelConfirmTitle": "Cancelar seu apoio recorrente?",
+        "cancelConfirmMessage": "A cobrança para no fim do período já pago, e até lá tudo continua funcionando.",
+        "cancelDone": "Apoio recorrente cancelado.",
+        "cancelFailed": "Não foi possível cancelar. Tente novamente em instantes."
+      },
+      "thanksBefore": "Obrigado por apoiar ",
+      "thanksAfter": "."
     },
     "plan": {
       "title": "Seu apoio",
@@ -439,7 +454,8 @@
       "benefits": "Benefícios",
       "devices": "Dispositivos",
       "billing": "Pagamentos"
-    }
+    },
+    "project": "o projeto"
   },
   "badges": {
     "sponsor": "Recurso apenas para patrocinadores",
