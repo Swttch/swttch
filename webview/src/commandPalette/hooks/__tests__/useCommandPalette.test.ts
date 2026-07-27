@@ -46,12 +46,12 @@ function setupMockRegistry(sections: PanelSection[] = mockSections) {
 }
 
 describe('useCommandPalette', () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: ReturnType<typeof vi.fn<(value: string) => void>>;
   let textareaRef: { current: HTMLDivElement | null };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    onChange = vi.fn();
+    onChange = vi.fn<(value: string) => void>();
     textareaRef = { current: null };
     setupMockRegistry();
     vi.mocked(useCliConfig).mockReturnValue({

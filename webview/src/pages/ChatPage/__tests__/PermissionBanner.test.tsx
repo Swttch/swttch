@@ -13,14 +13,14 @@ const mockPermission: PendingPermission = {
 };
 
 describe('PermissionBanner', () => {
-  let onApprove: ReturnType<typeof vi.fn>;
-  let onApproveForSession: ReturnType<typeof vi.fn>;
-  let onDeny: ReturnType<typeof vi.fn>;
+  let onApprove: ReturnType<typeof vi.fn<() => void>>;
+  let onApproveForSession: ReturnType<typeof vi.fn<() => void>>;
+  let onDeny: ReturnType<typeof vi.fn<(reason?: string) => void>>;
 
   beforeEach(() => {
-    onApprove = vi.fn();
-    onApproveForSession = vi.fn();
-    onDeny = vi.fn();
+    onApprove = vi.fn<() => void>();
+    onApproveForSession = vi.fn<() => void>();
+    onDeny = vi.fn<(reason?: string) => void>();
   });
 
   it('renders the permission title', () => {

@@ -10,10 +10,10 @@ const OPTIONS: SelectOption[] = [
 ];
 
 describe('Select', () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: ReturnType<typeof vi.fn<(value: string) => void>>;
 
   beforeEach(() => {
-    onChange = vi.fn();
+    onChange = vi.fn<(value: string) => void>();
   });
 
   const renderSelect = (override: Partial<Parameters<typeof Select>[0]> = {}) =>

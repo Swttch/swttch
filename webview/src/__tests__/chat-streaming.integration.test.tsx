@@ -7,11 +7,11 @@ import { ChatInputStateProvider, useChatInputState } from '../contexts/ChatInput
 import { MessageType } from '@/shared';
 
 // Mock requestAnimationFrame/cancelAnimationFrame
-global.requestAnimationFrame = vi.fn((cb) => {
+globalThis.requestAnimationFrame = vi.fn((cb) => {
   cb(0);
   return 0;
 });
-global.cancelAnimationFrame = vi.fn();
+globalThis.cancelAnimationFrame = vi.fn();
 
 // Mock scrollIntoView
 Element.prototype.scrollIntoView = vi.fn();

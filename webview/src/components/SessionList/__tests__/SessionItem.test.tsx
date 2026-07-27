@@ -16,14 +16,14 @@ const createMockSession = (overrides: Partial<SessionMetaDto> = {}): SessionMeta
 };
 
 describe('SessionItem', () => {
-  let onSelect: ReturnType<typeof vi.fn>;
-  let onDelete: ReturnType<typeof vi.fn>;
-  let onRename: ReturnType<typeof vi.fn>;
+  let onSelect: ReturnType<typeof vi.fn<() => void>>;
+  let onDelete: ReturnType<typeof vi.fn<() => void>>;
+  let onRename: ReturnType<typeof vi.fn<(title: string) => void>>;
 
   beforeEach(() => {
-    onSelect = vi.fn();
-    onDelete = vi.fn();
-    onRename = vi.fn();
+    onSelect = vi.fn<() => void>();
+    onDelete = vi.fn<() => void>();
+    onRename = vi.fn<(title: string) => void>();
   });
 
   const renderItem = (session: SessionMetaDto, isSelected = false) =>

@@ -28,21 +28,21 @@ interface NotificationLike {
   options: NotificationOptions | undefined;
   onclick: (() => void) | null;
   onclose: (() => void) | null;
-  close: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn<() => void>>;
 }
 
-let constructorSpy: ReturnType<typeof vi.fn>;
+let constructorSpy: ReturnType<typeof vi.fn<(title: string, options?: NotificationOptions) => void>>;
 let createdInstances: NotificationLike[];
-let requestPermissionSpy: ReturnType<typeof vi.fn>;
+let requestPermissionSpy: ReturnType<typeof vi.fn<() => Promise<NotificationPermission>>>;
 let beforeUnloadListeners: Array<() => void>;
 let originalAddEventListener: typeof window.addEventListener;
 let originalFocus: typeof window.focus;
-let focusSpy: ReturnType<typeof vi.fn>;
+let focusSpy: ReturnType<typeof vi.fn<() => void>>;
 
 function installNotificationMock(permission: NotificationPermission) {
   createdInstances = [];
-  constructorSpy = vi.fn();
-  requestPermissionSpy = vi.fn().mockResolvedValue(permission);
+  constructorSpy = vi.fn<(title: string, options?: NotificationOptions) => void>();
+  requestPermissionSpy = vi.fn<() => Promise<NotificationPermission>>().mockResolvedValue(permission);
 
   // jsdom does not provide Notification; assign a mock class.
   class MockNotification implements NotificationLike {
@@ -52,7 +52,7 @@ function installNotificationMock(permission: NotificationPermission) {
     options: NotificationOptions | undefined;
     onclick: (() => void) | null = null;
     onclose: (() => void) | null = null;
-    close = vi.fn();
+    close = vi.fn<() => void>();
 
     constructor(title: string, options?: NotificationOptions) {
       this.title = title;
@@ -88,7 +88,7 @@ beforeEach(() => {
   }) as typeof window.addEventListener);
 
   originalFocus = window.focus.bind(window);
-  focusSpy = vi.fn();
+  focusSpy = vi.fn<() => void>();
   window.focus = focusSpy as unknown as typeof window.focus;
 });
 
