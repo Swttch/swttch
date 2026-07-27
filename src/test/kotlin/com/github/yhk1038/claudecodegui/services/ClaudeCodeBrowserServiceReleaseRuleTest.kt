@@ -75,4 +75,46 @@ class ClaudeCodeBrowserServiceReleaseRuleTest {
     fun `all holders occupied means none to reuse (every split pane is live)`() {
         assertNull(indexOfReusableHolder(listOf(1, 1)))
     }
+
+    // ── isTeardown: skip the deferred release during teardown (issue #231) ──
+    //
+    // Closing a project disposes ClaudeCodeBrowserService — and the release alarm
+    // parented to it — before the panels it owns. Each panel's farewell releaseRef
+    // then scheduled onto a dead alarm, and the platform logged "Already disposed"
+    // as an IDE internal error, once per open tab.
+    //
+    // Verified with run-ide on IntelliJ IDEA 2024.2 (one open tab, File > Close
+    // Project): the service's dispose released the holder at 16:29:48.060 and the
+    // panel's releaseRef arrived at 16:29:48.078 — so releasing inline instead of
+    // skipping would dispose the same holder twice. The platform had already
+    // written claudeCodeEditorTabs.xml at 16:29:47.841, before either.
+
+    @Test
+    fun `a live project with a live service schedules the deferred release as usual`() {
+        assertFalse(
+            isTeardown(projectDisposed = false, serviceDisposed = false),
+            "Normal tab close must still take the grace-period path",
+        )
+    }
+
+    @Test
+    fun `a disposed service means teardown (its release alarm is already dead)`() {
+        assertTrue(
+            isTeardown(projectDisposed = false, serviceDisposed = true),
+            "Scheduling onto the disposed service's alarm is what logs 'Already disposed'",
+        )
+    }
+
+    @Test
+    fun `a disposed project means teardown even before the service is disposed`() {
+        assertTrue(
+            isTeardown(projectDisposed = true, serviceDisposed = false),
+            "Project teardown must skip the release regardless of service state",
+        )
+    }
+
+    @Test
+    fun `both disposed is teardown`() {
+        assertTrue(isTeardown(projectDisposed = true, serviceDisposed = true))
+    }
 }

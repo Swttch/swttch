@@ -22,6 +22,29 @@ internal fun shouldReleasePooledBrowser(remainingPanelRefs: Int): Boolean =
     remainingPanelRefs <= 0
 
 /**
+ * Whether a [ClaudeCodeBrowserService.releaseRef] call arrives while the project
+ * is being torn down, in which case the deferred release must be skipped.
+ *
+ * Closing a project disposes this service — and [ClaudeCodeBrowserService]'s
+ * release alarm, which is parented to it — before the panels it owns. Each
+ * panel's farewell releaseRef then scheduled onto a dead alarm and the platform
+ * logged "Already disposed" as an IDE internal error, once per open tab
+ * (issue #231).
+ *
+ * Skipping loses nothing. Verified with run-ide on IntelliJ IDEA 2024.2: the
+ * service's own dispose releases every holder ~18ms BEFORE the panel's
+ * releaseRef arrives, and the platform writes the persisted tab state
+ * (claudeCodeEditorTabs.xml) BEFORE disposing the panels — so the tabs restore
+ * on the next open either way.
+ *
+ * Either signal is sufficient: the project is torn down as a whole, and the
+ * service can be disposed while the project itself is still mid-teardown. Pure
+ * for unit testing.
+ */
+internal fun isTeardown(projectDisposed: Boolean, serviceDisposed: Boolean): Boolean =
+    projectDisposed || serviceDisposed
+
+/**
  * Pick a reusable (unoccupied) browser holder for a tab from the per-tab list,
  * given each holder's current panel-reference count. Returns the index of the
  * first free holder, or null if all are occupied (→ a new browser is needed).
@@ -255,6 +278,14 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
     fun releaseRef(tabId: String, holder: BrowserHolder, onTabClosed: () -> Unit) {
         holder.panelRefCount -= 1
         if (!shouldReleasePooledBrowser(holder.panelRefCount)) return
+
+        // Project teardown disposes this service — and with it [releaseAlarm] — before
+        // the panels it owns, so a panel's farewell releaseRef would schedule onto a
+        // dead alarm and log "Already disposed" (issue #231). Nothing is left to do:
+        // [dispose] has already released every holder, and deferring is pointless when
+        // no re-acquire can follow. Skipping (rather than releasing inline) also leaves
+        // the persisted tab state untouched. (issue #231)
+        if (isTeardown(project.isDisposed, Disposer.isDisposed(this))) return
 
         val tokenAtSchedule = holder.releaseToken
         releaseAlarm.addRequest({
