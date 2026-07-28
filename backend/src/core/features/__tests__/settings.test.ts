@@ -485,6 +485,42 @@ export default {
       expect(result.fontSize).toBe(14);
     });
 
+    // Regression #7: a string value containing `//` (e.g. a WSL UNC path like
+    // //wsl.localhost/...) must NOT be treated as a line comment. Previously the
+    // comment stripper ate the rest of the line, JSON.parse threw, and the whole
+    // settings object silently fell back to defaults — dropping the user's saved
+    // hostMode ("tool-window") down to "editor-tab".
+    it('should preserve settings when a string value contains // (WSL UNC path)', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`export default {
+  // Claude CLI 실행 파일 경로
+  cliPath: "//wsl.localhost/Ubuntu/home/yhk/.local/bin/claude",
+  // 채팅을 띄우는 자리
+  hostMode: "tool-window",
+  theme: "dark",
+};
+`);
+
+      const result = await readSettingsFile();
+      expect(result.cliPath).toBe('//wsl.localhost/Ubuntu/home/yhk/.local/bin/claude');
+      expect(result.hostMode).toBe('tool-window');
+      expect(result.theme).toBe('dark');
+    });
+
+    // Same hazard inside a value that also contains block-comment markers.
+    it('should preserve a string value containing /* */ markers', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFile.mockResolvedValue(`export default {
+  terminalApp: "wt /* not a comment */ --profile",
+  hostMode: "tool-window",
+};
+`);
+
+      const result = await readSettingsFile();
+      expect(result.terminalApp).toBe('wt /* not a comment */ --profile');
+      expect(result.hostMode).toBe('tool-window');
+    });
+
     it('should merge parsed values with defaults for missing keys', async () => {
       mockExistsSync.mockReturnValue(true);
       mockReadFile.mockResolvedValue(`export default { theme: "dark" };`);
