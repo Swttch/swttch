@@ -4,6 +4,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useApi } from '@/contexts/ApiContext';
 import { Route, routeToPath, withWorkingDir } from '@/router/routes';
 import { MessageType } from '@/shared';
+import { WORKING_DIR_PARAM_KEY } from './workingDirParam';
 
 interface WorkingDirContextValue {
   workingDirectory: string | null;
@@ -23,7 +24,7 @@ interface Props {
   children: ReactNode;
 }
 
-export const WORKING_DIR_PARAM_KEY = 'workingDir';
+export { WORKING_DIR_PARAM_KEY, readWorkingDirFromUrl } from './workingDirParam';
 
 export function WorkingDirProvider(props: Props) {
   const { children } = props;

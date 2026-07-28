@@ -18,17 +18,24 @@ export async function saveSettingsHandler(
 
   const result = await saveSettingToScope(key, value, scope, workingDir);
 
+  // Re-resolve against the scope that was just written, so a project-scoped CLI
+  // path takes effect for that project instead of re-reading only the global one.
   if (result.status === 'ok' && key === 'cliPath') {
-    await Claude.refresh();
+    await Claude.refresh(workingDir);
   }
 
   // Push the new hostMode to the IDE so Kotlin's cache stays in sync and chat windows
   // route to the chosen host immediately. The backend owns settings; Kotlin no longer
   // reads the file for hostMode (it diverges from the JVM home on WSL2 — issue #7).
-  // Only the JetBrains bridge exposes pushHostMode; browser mode has no IDE to notify.
+  // Only the JetBrains bridge exposes the push; browser mode has no IDE to notify.
+  //
+  // Scope matters: a project-scoped save is addressed to the windows serving that
+  // project only. Broadcasting it would flip the chat host in unrelated projects.
   if (result.status === 'ok' && key === 'hostMode' && typeof value === 'string') {
-    const pushable = bridge as Bridge & { pushHostMode?: (hostMode: string) => void };
-    pushable.pushHostMode?.(value);
+    const pushable = bridge as Bridge & {
+      pushHostModeForProject?: (hostMode: string, projectPath?: string) => void;
+    };
+    pushable.pushHostModeForProject?.(value, scope === 'project' ? workingDir : undefined);
   }
 
   // Broadcast merged settings after save

@@ -7,6 +7,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 // Mock readSettingsFile to avoid file system access
 vi.mock('../features/settings', () => ({
   readSettingsFile: vi.fn().mockResolvedValue({ cliPath: null }),
+  readMergedSettings: vi.fn().mockResolvedValue({ settings: { cliPath: null }, overrides: [] }),
   resolveClaudeConfigDirOverride: vi.fn().mockResolvedValue(null),
 }));
 
@@ -254,5 +255,74 @@ describe('Claude', () => {
       await expect(Claude.exec(['mcp', 'add-json', 'srv', withPercent], { shell: false }))
         .resolves.not.toThrow();
     });
+  });
+});
+
+// CLI equivalence (CLAUDE.md): a terminal user can point a project at a specific
+// claude binary, so the GUI must allow it too. `cliPath` therefore resolves through
+// the merged (global + project) settings for the active working directory.
+//
+// process.env and the resolved launcher are single shared slots on the backend, so
+// — exactly like CLAUDE_CONFIG_DIR before it (#123) — the value is projected when a
+// context LOADS rather than being cached per call site. applyConfigDir is that
+// load-time hook and already runs on every entry point, so the CLI path rides along.
+describe('Claude.applyConfigDir — per-project cliPath', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('projects the project-scoped cliPath onto Claude.command', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '/home/u/proj/.bin/claude' },
+      overrides: ['cliPath'],
+    });
+
+    await Claude.applyConfigDir('/home/u/proj');
+
+    expect(Claude.command).toBe('/home/u/proj/.bin/claude');
+    expect(readMergedSettings).toHaveBeenCalledWith('/home/u/proj');
+  });
+
+  it('falls back to the global cliPath when the project sets none', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '/usr/local/bin/claude' },
+      overrides: [],
+    });
+
+    await Claude.applyConfigDir('/home/u/other');
+
+    expect(Claude.command).toBe('/usr/local/bin/claude');
+  });
+
+  it('falls back to a bare "claude" when nothing is configured', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: null },
+      overrides: [],
+    });
+
+    await Claude.applyConfigDir('/home/u/plain');
+
+    expect(Claude.command).toBe('claude');
+  });
+
+  it('drops a stale win32 launcher cache when the project changes the CLI', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '/a/claude' },
+      overrides: ['cliPath'],
+    });
+    await Claude.applyConfigDir('/proj-a');
+    await Claude.which(); // populates the win32 resolved-path cache
+
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '/b/claude' },
+      overrides: ['cliPath'],
+    });
+    await Claude.applyConfigDir('/proj-b');
+
+    expect(Claude.command).toBe('/b/claude');
   });
 });

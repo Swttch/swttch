@@ -240,6 +240,9 @@ class NodeBackendService : Disposable {
                 requestedPort = lastPort,
                 wslDistro = wsl?.distro,
                 wslCwd = wsl?.linuxPath,
+                // So a project-scoped `nodePath` is honoured when picking the node
+                // that launches this backend (issue #7).
+                projectRoot = basePath,
                 onProgress = ::emitProgress,
                 // Unified restart signal: when the backend self-exits with RESTART_EXIT_CODE
                 // (and not via dispose), respawn it on the same port. restart() is

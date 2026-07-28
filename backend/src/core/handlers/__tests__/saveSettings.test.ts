@@ -22,9 +22,11 @@ function createMockConnections() {
   } as unknown as ConnectionManager;
 }
 
-/** A bridge stub that exposes pushHostMode, like JetBrainsBridge does. */
+/** A bridge stub that exposes the hostMode push, like JetBrainsBridge does. */
 function createJetBrainsBridge() {
-  return { pushHostMode: vi.fn() } as unknown as Bridge & { pushHostMode: (m: string) => void };
+  return { pushHostModeForProject: vi.fn() } as unknown as Bridge & {
+    pushHostModeForProject: (m: string, p?: string) => void;
+  };
 }
 
 describe('saveSettingsHandler hostMode push', () => {
@@ -46,7 +48,30 @@ describe('saveSettingsHandler hostMode push', () => {
     };
     await saveSettingsHandler('conn-1', message, connections, bridge);
 
-    expect(bridge.pushHostMode).toHaveBeenCalledWith('tool-window');
+    expect(bridge.pushHostModeForProject).toHaveBeenCalledWith('tool-window', undefined);
+  });
+
+  // A project-scoped save must be addressed to that project's IDE windows only,
+  // so the working directory is carried through to the push (issue #7).
+  it('carries the project path when hostMode is saved at project scope', async () => {
+    const connections = createMockConnections();
+    const bridge = createJetBrainsBridge();
+    vi.mocked(saveSettingToScope).mockResolvedValue({ status: 'ok' });
+
+    const message: IPCMessage = {
+      type: MessageType.SAVE_SETTINGS,
+      payload: {
+        key: 'hostMode',
+        value: 'tool-window',
+        scope: 'project',
+        workingDir: '/home/u/proj',
+      },
+      timestamp: 0,
+      requestId: 'req-5',
+    };
+    await saveSettingsHandler('conn-1', message, connections, bridge);
+
+    expect(bridge.pushHostModeForProject).toHaveBeenCalledWith('tool-window', '/home/u/proj');
   });
 
   it('does not push when a non-hostMode setting is saved', async () => {
@@ -62,7 +87,7 @@ describe('saveSettingsHandler hostMode push', () => {
     };
     await saveSettingsHandler('conn-1', message, connections, bridge);
 
-    expect(bridge.pushHostMode).not.toHaveBeenCalled();
+    expect(bridge.pushHostModeForProject).not.toHaveBeenCalled();
   });
 
   it('does not push when the hostMode save fails', async () => {
@@ -78,12 +103,12 @@ describe('saveSettingsHandler hostMode push', () => {
     };
     await saveSettingsHandler('conn-1', message, connections, bridge);
 
-    expect(bridge.pushHostMode).not.toHaveBeenCalled();
+    expect(bridge.pushHostModeForProject).not.toHaveBeenCalled();
   });
 
-  it('is a no-op for a bridge without pushHostMode (browser mode)', async () => {
+  it('is a no-op for a bridge without the hostMode push (browser mode)', async () => {
     const connections = createMockConnections();
-    const browserBridge = {} as Bridge; // no pushHostMode
+    const browserBridge = {} as Bridge; // no pushHostModeForProject
     vi.mocked(saveSettingToScope).mockResolvedValue({ status: 'ok' });
 
     const message: IPCMessage = {
@@ -92,7 +117,7 @@ describe('saveSettingsHandler hostMode push', () => {
       timestamp: 0,
       requestId: 'req-4',
     };
-    // Must not throw even though the bridge lacks pushHostMode.
+    // Must not throw even though the bridge lacks pushHostModeForProject.
     await expect(
       saveSettingsHandler('conn-1', message, connections, browserBridge),
     ).resolves.toBeUndefined();

@@ -198,6 +198,101 @@ describe('JetBrainsBridge connect-time hostMode push', () => {
     expect(msg?.method).toBe(MessageType.HOST_MODE_CHANGED);
     expect(msg?.params).toEqual({ hostMode: 'tool-window' });
   });
+
+  // An IDE announces the projects it serves only AFTER the socket is up, so the
+  // connect-time push above can only carry the global value. Once the roots
+  // arrive we know which project's settings apply, so the merged value must be
+  // pushed again — otherwise a project that overrides hostMode never takes
+  // effect on the IDE side (issue #7).
+  it('re-pushes the merged hostMode once the client announces its project roots', async () => {
+    vi.spyOn(settings, 'readSettingsFile').mockResolvedValue({ hostMode: 'editor-tab' });
+    vi.spyOn(settings, 'readMergedSettings').mockResolvedValue({
+      settings: { hostMode: 'tool-window' },
+      overrides: ['hostMode'],
+    });
+
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+    await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
+    ws.send.mockClear();
+
+    registerRoots(ws, ['/home/u/proj']);
+
+    await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
+    const msg = sentMessage(ws);
+    expect(msg?.method).toBe(MessageType.HOST_MODE_CHANGED);
+    expect(msg?.params).toEqual({ hostMode: 'tool-window' });
+    expect(settings.readMergedSettings).toHaveBeenCalledWith('/home/u/proj');
+  });
+
+  it('does not re-push when the client announces no roots', async () => {
+    vi.spyOn(settings, 'readSettingsFile').mockResolvedValue({ hostMode: 'editor-tab' });
+    const merged = vi.spyOn(settings, 'readMergedSettings');
+
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+    await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
+    ws.send.mockClear();
+
+    registerRoots(ws, []);
+
+    expect(merged).not.toHaveBeenCalled();
+    expect(ws.send).not.toHaveBeenCalled();
+  });
+});
+
+// A project-scoped hostMode must reach only the IDE windows serving that
+// project. Pushing it to every client would flip the chat host in unrelated
+// projects — the same "my setting changed by itself" symptom issue #7 reports.
+describe('JetBrainsBridge.pushHostMode project targeting', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(settings, 'readSettingsFile').mockResolvedValue({ hostMode: 'editor-tab' });
+  });
+
+  it('pushes to only the clients serving the given project root', async () => {
+    const bridge = new JetBrainsBridge();
+    const a = createMockWs();
+    const b = createMockWs();
+    bridge.addRpcClient(a as never);
+    bridge.addRpcClient(b as never);
+    await vi.waitFor(() => {
+      expect(a.send).toHaveBeenCalled();
+      expect(b.send).toHaveBeenCalled();
+    });
+    registerRoots(a, ['/home/u/alpha']);
+    registerRoots(b, ['/home/u/beta']);
+    a.send.mockClear();
+    b.send.mockClear();
+
+    bridge.pushHostModeForProject('tool-window', '/home/u/alpha');
+
+    expect(sentMessage(a)?.params).toEqual({ hostMode: 'tool-window' });
+    expect(b.send).not.toHaveBeenCalled();
+  });
+
+  it('falls back to every client when no project path is given', async () => {
+    const bridge = new JetBrainsBridge();
+    const a = createMockWs();
+    const b = createMockWs();
+    bridge.addRpcClient(a as never);
+    bridge.addRpcClient(b as never);
+    await vi.waitFor(() => {
+      expect(a.send).toHaveBeenCalled();
+      expect(b.send).toHaveBeenCalled();
+    });
+    registerRoots(a, ['/home/u/alpha']);
+    registerRoots(b, ['/home/u/beta']);
+    a.send.mockClear();
+    b.send.mockClear();
+
+    bridge.pushHostModeForProject('tool-window', undefined);
+
+    expect(sentMessage(a)?.params).toEqual({ hostMode: 'tool-window' });
+    expect(sentMessage(b)?.params).toEqual({ hostMode: 'tool-window' });
+  });
 });
 
 describe('redactRpcLog', () => {

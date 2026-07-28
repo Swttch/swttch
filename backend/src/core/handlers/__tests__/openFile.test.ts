@@ -45,7 +45,7 @@ describe('openFileHandler — browser client routes to the IDE when one is attac
 
     await openFileHandler(connId, openFileMessage(), connections, browser, bridges);
 
-    expect(jetbrains.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5);
+    expect(jetbrains.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5, undefined);
     expect(browser.openFile).not.toHaveBeenCalled();
   });
 
@@ -57,7 +57,7 @@ describe('openFileHandler — browser client routes to the IDE when one is attac
 
     await openFileHandler(connId, openFileMessage(), connections, browser, bridges);
 
-    expect(browser.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5);
+    expect(browser.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5, undefined);
     expect(jetbrains.openFile).not.toHaveBeenCalled();
   });
 
@@ -70,7 +70,7 @@ describe('openFileHandler — browser client routes to the IDE when one is attac
     // For a JCEF connection the caller passes the JetBrains bridge as `bridge`.
     await openFileHandler(connId, openFileMessage(), connections, jetbrains, bridges);
 
-    expect(jetbrains.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5);
+    expect(jetbrains.openFile).toHaveBeenCalledWith('/abs/src/x.ts', 42, 5, undefined);
     expect(browser.openFile).not.toHaveBeenCalled();
   });
 

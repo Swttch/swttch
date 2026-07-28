@@ -47,17 +47,7 @@ class SettingsManager {
     )
 
     /** 기본값 맵 (순서 보존) */
-    private val defaults: LinkedHashMap<String, JsonElement> = linkedMapOf(
-        "cliPath" to JsonNull,
-        "nodePath" to JsonNull,
-        "theme" to JsonPrimitive("system"),
-        "fontSize" to JsonPrimitive(13),
-        "lineHeight" to JsonPrimitive(1.6),
-        "debugMode" to JsonPrimitive(false),
-        "logLevel" to JsonPrimitive("info"),
-        "terminalApp" to JsonNull,
-        "hostMode" to JsonPrimitive("editor-tab")
-    )
+    private val defaults: LinkedHashMap<String, JsonElement> get() = LinkedHashMap(DEFAULTS)
 
     /**
      * 설정 파일이 없으면 기본값으로 생성하고, 설정을 로드한다.
@@ -102,7 +92,7 @@ class SettingsManager {
      * @return 저장 성공 여부
      */
     fun save(): Boolean = synchronized(lock) {
-        saveInternal()
+        saveInternal(emptyMap())
     }
 
     /**
@@ -122,8 +112,7 @@ class SettingsManager {
      * @return 저장 성공 여부
      */
     fun set(key: String, value: JsonElement): Boolean = synchronized(lock) {
-        cachedSettings[key] = value
-        saveInternal()
+        saveInternal(mapOf(key to value))
     }
 
     /**
@@ -133,8 +122,7 @@ class SettingsManager {
      * @return 저장 성공 여부
      */
     fun setAll(entries: Map<String, JsonElement>): Boolean = synchronized(lock) {
-        entries.forEach { (k, v) -> cachedSettings[k] = v }
-        saveInternal()
+        saveInternal(entries)
     }
 
     /**
@@ -198,15 +186,43 @@ class SettingsManager {
     }
 
     /**
-     * 현재 캐시를 파일에 저장하는 내부 구현.
+     * [edits]를 디스크의 현재 내용 위에 얹어 저장하는 내부 구현.
      * lock 내부에서만 호출되므로 자체 동기화 없음.
+     *
+     * 백엔드가 설정의 유일 진실원이므로(CLAUDE.md), **인메모리 캐시를 그대로 직렬화하지
+     * 않고 디스크를 먼저 읽어 그 위에 변경분만 얹는다.** 캐시만 믿고 파일을 통째로 새로
+     * 쓰면 이 클래스가 선언하지 않은 백엔드 전용 키 14개(`hostMode`, `openSettingsAs`,
+     * `uiLanguage` 등)가 전부 사라진다. 사용자가 IDE 설정 화면(Settings → Tools →
+     * Claude Code)에서 CLI Path 하나만 저장해도 "Sidebar" 선택이 조용히 "editor-tab"으로
+     * 되돌아가던 원인이다(이슈 #7).
+     *
+     * 파일이 존재하는데 파싱에 실패하면 **저장을 거부한다.** 안에 무엇이 들어 있는지
+     * 모르는 채로 기본값을 덮어쓰면 사용자 설정이 영구 소실되기 때문이다. 저장 실패는
+     * 호출자에게 false로 전달되어 표면화된다.
      */
-    private fun saveInternal(): Boolean {
+    private fun saveInternal(edits: Map<String, JsonElement>): Boolean {
         return try {
             settingsDir.toFile().mkdirs()  // 안전장치
-            val content = JsSettingsParser.generate(cachedSettings, commentMap)
-            settingsFile.writeText(content)
+
+            val onDisk: Map<String, JsonElement> = if (settingsFile.exists()) {
+                try {
+                    JsSettingsParser.parse(settingsFile.readText())
+                } catch (e: Exception) {
+                    logger.error(
+                        "Refusing to overwrite unparseable settings file: ${settingsFile.absolutePath}",
+                        e
+                    )
+                    return false
+                }
+            } else {
+                emptyMap()
+            }
+
+            val merged = mergeForWrite(onDisk, edits)
+            settingsFile.writeText(JsSettingsParser.generate(merged, commentMap))
+            cachedSettings = LinkedHashMap(merged)
             lastModified = settingsFile.lastModified()
+            isLoaded = true
             true
         } catch (e: Exception) {
             logger.error("Failed to save settings", e)
@@ -228,5 +244,40 @@ class SettingsManager {
 
     companion object {
         fun getInstance(): SettingsManager = service()
+
+        /**
+         * IDE 쪽이 아는 설정 키의 기본값. 백엔드의 `DEFAULT_SETTINGS`(23개)와 달리
+         * 여기에는 이 플러그인의 설정 화면이 편집하는 키만 있다. **이 목록이 파일에
+         * 쓸 키의 전체 집합이 아니라는 점이 핵심이다** — 나머지는 디스크에서 읽어
+         * 보존한다. [mergeForWrite] 참조.
+         */
+        private val DEFAULTS: LinkedHashMap<String, JsonElement> = linkedMapOf(
+            "cliPath" to JsonNull,
+            "nodePath" to JsonNull,
+            "theme" to JsonPrimitive("system"),
+            "fontSize" to JsonPrimitive(13),
+            "lineHeight" to JsonPrimitive(1.6),
+            "debugMode" to JsonPrimitive(false),
+            "logLevel" to JsonPrimitive("info"),
+            "terminalApp" to JsonNull,
+            "hostMode" to JsonPrimitive("editor-tab")
+        )
+
+        /**
+         * 파일에 쓸 최종 맵을 만든다: `IDE 기본값 < 디스크의 현재 값 < 이번 변경분`.
+         *
+         * 디스크 값이 기본값을 이기므로 이 클래스가 모르는 백엔드 전용 키가 그대로
+         * 살아남고, 변경분이 마지막이므로 사용자가 방금 고친 값이 반영된다. 순수 함수라
+         * IntelliJ 서비스 컨테이너 없이 단위 테스트할 수 있다(SettingsFileMergeTest).
+         */
+        fun mergeForWrite(
+            onDisk: Map<String, JsonElement>,
+            edits: Map<String, JsonElement>,
+        ): LinkedHashMap<String, JsonElement> {
+            val merged = LinkedHashMap(DEFAULTS)
+            merged.putAll(onDisk)
+            merged.putAll(edits)
+            return merged
+        }
     }
 }

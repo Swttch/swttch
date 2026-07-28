@@ -18,6 +18,9 @@ export async function openFileHandler(
   const rawColumn = message.payload?.column;
   const line = typeof rawLine === 'number' ? rawLine : undefined;
   const column = typeof rawColumn === 'number' ? rawColumn : undefined;
+  // The project this open came from, so "open files with" resolves per project.
+  const rawWorkingDir = message.payload?.workingDir;
+  const workingDir = typeof rawWorkingDir === 'string' ? rawWorkingDir : undefined;
 
   if (filePath) {
     // Fail fast with feedback when the target does not exist: a clicked reference
@@ -34,6 +37,7 @@ export async function openFileHandler(
         filePath,
         line,
         column,
+        workingDir,
       );
     } catch (err) {
       console.error('[node-backend]', 'Failed to open file:', err);

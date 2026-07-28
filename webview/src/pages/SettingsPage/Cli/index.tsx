@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { SettingSection, SettingRow, ScopeGuard } from '../common';
+import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
@@ -33,7 +33,7 @@ function toSelectValue(app: string | null, terminals: TerminalInfo[]): string {
 
 export function CliSettings() {
   const { t } = useTranslation('settings');
-  const { settings, updateSetting, scope } = useSettings();
+  const { settings, updateSetting } = useSettings();
   const { send } = useBridge();
   const isJetBrainsEnv = isJetBrains();
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
@@ -127,49 +127,45 @@ export function CliSettings() {
     <div>
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.cli')}</h2>
 
-      <ScopeGuard supportedScope="global" currentScope={scope}>
-        <SettingSection title={t('cli.openFilesWith.title')}>
-          <OpenFilesWithRow />
-        </SettingSection>
-      </ScopeGuard>
+      <SettingSection title={t('cli.openFilesWith.title')}>
+        <OpenFilesWithRow />
+      </SettingSection>
 
-      <ScopeGuard supportedScope="global" currentScope={scope}>
-        <SettingSection title={t('cli.terminal.title')}>
-          <SettingRow
-            label={t('cli.terminal.app.label')}
-            description={
-              isJetBrainsEnv
-                ? t('cli.terminal.app.jetbrainsDescription')
-                : t('cli.terminal.app.description')
-            }
-          >
-            {isJetBrainsEnv ? (
-              <span className="text-sm text-text-tertiary">{t('cli.terminal.app.jetbrainsValue')}</span>
-            ) : loading ? (
-              <span className="text-sm text-text-tertiary">{t('cli.terminal.app.detecting')}</span>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Select
-                  value={selectValue}
-                  options={terminalOptions}
-                  ariaLabel={t('cli.terminal.app.label')}
-                  onChange={handleSelectChange}
-                  className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+      <SettingSection title={t('cli.terminal.title')}>
+        <SettingRow
+          label={t('cli.terminal.app.label')}
+          description={
+            isJetBrainsEnv
+              ? t('cli.terminal.app.jetbrainsDescription')
+              : t('cli.terminal.app.description')
+          }
+        >
+          {isJetBrainsEnv ? (
+            <span className="text-sm text-text-tertiary">{t('cli.terminal.app.jetbrainsValue')}</span>
+          ) : loading ? (
+            <span className="text-sm text-text-tertiary">{t('cli.terminal.app.detecting')}</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectValue}
+                options={terminalOptions}
+                ariaLabel={t('cli.terminal.app.label')}
+                onChange={handleSelectChange}
+                className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+              />
+              {selectValue === CUSTOM_MARKER && (
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={(e) => handleCustomInput(e.target.value)}
+                  placeholder={t('cli.terminal.app.customPlaceholder')}
+                  className="w-40 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
                 />
-                {selectValue === CUSTOM_MARKER && (
-                  <input
-                    type="text"
-                    value={customInput}
-                    onChange={(e) => handleCustomInput(e.target.value)}
-                    placeholder={t('cli.terminal.app.customPlaceholder')}
-                    className="w-40 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
-                  />
-                )}
-              </div>
-            )}
-          </SettingRow>
-        </SettingSection>
-      </ScopeGuard>
+              )}
+            </div>
+          )}
+        </SettingRow>
+      </SettingSection>
 
       <SettingSection title={t('cli.model.title')}>
         <SettingRow
@@ -192,51 +188,49 @@ export function CliSettings() {
         </SettingRow>
       </SettingSection>
 
-      <ScopeGuard supportedScope="global" currentScope={scope}>
-        <SettingSection title={t('cli.path.title')}>
-          <SettingRow
-            label={t('cli.path.label')}
-            description={t('cli.path.description')}
-          >
-            <div className="flex flex-col items-end gap-1">
-              <input
-                type="text"
-                value={settings[SettingKey.CLI_PATH] || ''}
-                onChange={(e) => updateSetting(SettingKey.CLI_PATH, e.target.value || null)}
-                placeholder={t('cli.path.placeholder')}
-                className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
-              />
-              {detectedCliPath && !settings[SettingKey.CLI_PATH] && (
-                <span className="text-xs text-text-tertiary truncate max-w-64" title={detectedCliPath}>
-                  {detectedCliPath}
-                </span>
-              )}
-            </div>
-          </SettingRow>
-        </SettingSection>
+      <SettingSection title={t('cli.path.title')}>
+        <SettingRow
+          label={t('cli.path.label')}
+          description={t('cli.path.description')}
+        >
+          <div className="flex flex-col items-end gap-1">
+            <input
+              type="text"
+              value={settings[SettingKey.CLI_PATH] || ''}
+              onChange={(e) => updateSetting(SettingKey.CLI_PATH, e.target.value || null)}
+              placeholder={t('cli.path.placeholder')}
+              className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
+            />
+            {detectedCliPath && !settings[SettingKey.CLI_PATH] && (
+              <span className="text-xs text-text-tertiary truncate max-w-64" title={detectedCliPath}>
+                {detectedCliPath}
+              </span>
+            )}
+          </div>
+        </SettingRow>
+      </SettingSection>
 
-        <SettingSection title={t('cli.nodePath.title')}>
-          <SettingRow
-            label={t('cli.nodePath.label')}
-            description={t('cli.nodePath.description')}
-          >
-            <div className="flex flex-col items-end gap-1">
-              <input
-                type="text"
-                value={settings[SettingKey.NODE_PATH] || ''}
-                onChange={(e) => updateSetting(SettingKey.NODE_PATH, e.target.value || null)}
-                placeholder={t('cli.nodePath.placeholder')}
-                className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
-              />
-              {detectedNodePath && !settings[SettingKey.NODE_PATH] && (
-                <span className="text-xs text-text-tertiary truncate max-w-64" title={detectedNodePath}>
-                  {detectedNodePath}
-                </span>
-              )}
-            </div>
-          </SettingRow>
-        </SettingSection>
-      </ScopeGuard>
+      <SettingSection title={t('cli.nodePath.title')}>
+        <SettingRow
+          label={t('cli.nodePath.label')}
+          description={t('cli.nodePath.description')}
+        >
+          <div className="flex flex-col items-end gap-1">
+            <input
+              type="text"
+              value={settings[SettingKey.NODE_PATH] || ''}
+              onChange={(e) => updateSetting(SettingKey.NODE_PATH, e.target.value || null)}
+              placeholder={t('cli.nodePath.placeholder')}
+              className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
+            />
+            {detectedNodePath && !settings[SettingKey.NODE_PATH] && (
+              <span className="text-xs text-text-tertiary truncate max-w-64" title={detectedNodePath}>
+                {detectedNodePath}
+              </span>
+            )}
+          </div>
+        </SettingRow>
+      </SettingSection>
     </div>
   );
 }
