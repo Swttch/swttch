@@ -49,12 +49,14 @@ interface MentionState {
 interface UseMentionParams {
   workingDirectory: string | null | undefined;
   /**
-   * Called with the inserted path token (no trailing space) and the caret
-   * offset immediately after the inserted `token + ' '`, so the composer can
-   * highlight the token as a chip and restore the caret. Fired once per
+   * Called with the inserted path token (no trailing space), the caret offset
+   * immediately after the inserted `token + ' '`, and the full composer value
+   * that offset applies to, so the composer can highlight the token as a chip,
+   * restore the caret, and re-run caret-dependent checks (e.g. reopening the
+   * slash command panel) without waiting for a rerender. Fired once per
    * successful {@link UseMentionReturn.selectResult}.
    */
-  onInsertMention: (token: string, caretOffset: number) => void;
+  onInsertMention: (token: string, caretOffset: number, nextValue: string) => void;
   value: string;
   onChange: (value: string) => void;
 }
@@ -227,7 +229,7 @@ export function useMention(params: UseMentionParams): UseMentionReturn {
       const caretOffset = triggerIndex + token.length + 1;
 
       onChange(newValue);
-      onInsertMention(token, caretOffset);
+      onInsertMention(token, caretOffset, newValue);
 
       close();
     },

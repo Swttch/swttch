@@ -112,7 +112,13 @@ describe('useMention — selectResult', () => {
     });
 
     expect(onChange).toHaveBeenCalledWith('@src/App.tsx ');
-    expect(onInsertMention).toHaveBeenCalledWith('@src/App.tsx', '@src/App.tsx '.length);
+    // The inserted value rides along so the caller can re-run caret-dependent
+    // checks (e.g. reopening the slash panel) without waiting for a rerender.
+    expect(onInsertMention).toHaveBeenCalledWith(
+      '@src/App.tsx',
+      '@src/App.tsx '.length,
+      '@src/App.tsx ',
+    );
   });
 
   it('uses a trailing-slash token for a directory', async () => {
@@ -133,7 +139,11 @@ describe('useMention — selectResult', () => {
     });
 
     expect(onChange).toHaveBeenCalledWith('@src/utils/ ');
-    expect(onInsertMention).toHaveBeenCalledWith('@src/utils/', '@src/utils/ '.length);
+    expect(onInsertMention).toHaveBeenCalledWith(
+      '@src/utils/',
+      '@src/utils/ '.length,
+      '@src/utils/ ',
+    );
   });
 
   it('preserves surrounding text when the @mention is mid-string', async () => {
@@ -156,7 +166,7 @@ describe('useMention — selectResult', () => {
 
     expect(onChange).toHaveBeenCalledWith('see @src/App.tsx  now');
     // caret sits just past "@src/App.tsx " — triggerIndex(4) + token(12) + space(1) = 17
-    expect(onInsertMention).toHaveBeenCalledWith('@src/App.tsx', 17);
+    expect(onInsertMention).toHaveBeenCalledWith('@src/App.tsx', 17, 'see @src/App.tsx  now');
   });
 
   it('closes the dropdown after selecting', async () => {

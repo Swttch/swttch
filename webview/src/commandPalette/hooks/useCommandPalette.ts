@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, KeyboardEvent, RefObject } f
 import { PanelSection, PanelItemType, ActionItem, CommandItem, PanelItem } from '@/types/commandPalette';
 import { useCommandPaletteRegistry } from '../CommandPaletteProvider';
 import { useCliConfig } from '@/contexts/CliConfigContext';
+import { isCaretInMentionToken } from '@/utils/isCaretInMentionToken';
 
 interface UseCommandPaletteOptions {
   onChange: (value: string) => void;
@@ -230,7 +231,19 @@ export function useCommandPalette({ onChange, textareaRef }: UseCommandPaletteOp
     return false;
   }, [showSlashCommands, filteredSections, selectedSectionIndex, selectedItemIndex, executeSelectedItem, executeAndClear, closePanel, moveSelection, onChange]);
 
-  const detectSlashCommand = useCallback((newValue: string) => {
+  const detectSlashCommand = useCallback((newValue: string, caretPosition?: number) => {
+    // The panel shares one slot above the composer with the file mention
+    // dropdown, so it steps aside while the caret sits inside an `@token` —
+    // there the user is picking a file, not a command. Without this the panel
+    // stayed pinned open for the whole line (it only checked for a leading
+    // "/") and hid the mention dropdown on every "/command @file" (issue #236).
+    // Callers that track no caret keep the pre-#236 behaviour.
+    if (caretPosition !== undefined && isCaretInMentionToken(newValue, caretPosition)) {
+      setShowSlashCommands(false);
+      resetSelection();
+      return;
+    }
+
     // Keep the panel open while typing a slash command AND its arguments, so
     // "/model sonnet" still shows "/model" selected instead of the panel
     // vanishing the moment a space is typed. Filter by the command name (the

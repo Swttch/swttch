@@ -763,4 +763,139 @@ describe('useCommandPalette', () => {
       });
     });
   });
+
+  // ──────────────────────────────────────────────────────
+  // Issue #236 — the panel yields to the file mention dropdown.
+  //
+  // Both share one slot above the composer, and the panel used to win purely
+  // because the line started with "/". That hid the mention dropdown for every
+  // "/command @file" input. The caret decides instead: inside an `@token` the
+  // user is picking a file, so the panel steps aside.
+  // ──────────────────────────────────────────────────────
+
+  describe('yields to an active @ mention', () => {
+    it('closes the panel while the caret sits in an @ token', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review');
+      });
+      expect(result.current.showSlashCommands).toBe(true);
+
+      act(() => {
+        result.current.detectSlashCommand('/review @s', 10);
+      });
+
+      expect(result.current.showSlashCommands).toBe(false);
+    });
+
+    it('stays closed as the mention query grows (no reopen on each keystroke)', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review @s', 10);
+      });
+      act(() => {
+        result.current.detectSlashCommand('/review @sr', 11);
+      });
+      act(() => {
+        result.current.detectSlashCommand('/review @src', 12);
+      });
+
+      expect(result.current.showSlashCommands).toBe(false);
+    });
+
+    it('reopens once a space settles the mention', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review @src', 12);
+      });
+      expect(result.current.showSlashCommands).toBe(false);
+
+      act(() => {
+        result.current.detectSlashCommand('/review @src ', 13);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('review');
+    });
+
+    it('keeps the panel open for arguments that are not mentions', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/model sonnet', 13);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('model');
+    });
+
+    it('keeps the panel open when the caret is back in the command token', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      // Text holds an @ token but the caret sits inside "/review".
+      act(() => {
+        result.current.detectSlashCommand('/review @src', 5);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+    });
+
+    it('ignores an email-like @ and keeps the panel open', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review fred@01republic.io', 26);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+    });
+
+    it('reopens after a mention is inserted, with the caret past the token', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review @s', 10);
+      });
+      expect(result.current.showSlashCommands).toBe(false);
+
+      // selectResult replaces "@s" with "@src/ " and parks the caret after it,
+      // which settles the mention — the command panel owns the slot again.
+      act(() => {
+        result.current.detectSlashCommand('/review @src/ ', 14);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('review');
+    });
+
+    it('opens the panel when the caret argument is omitted (back-compat)', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      // Callers that do not track a caret keep the pre-#236 behaviour.
+      act(() => {
+        result.current.detectSlashCommand('/review');
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+    });
+  });
 });
