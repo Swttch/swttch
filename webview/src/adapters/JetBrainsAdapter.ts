@@ -3,6 +3,7 @@ import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
 import { type Route, routeToPath } from '../router';
+import { readWorkingDirFromUrl } from '@/contexts/workingDirParam';
 
 /**
  * JetBrains IDE Adapter
@@ -36,7 +37,16 @@ export class JetBrainsAdapter implements IdeAdapter {
   }
 
   async openFile(filePath: string, line?: number, column?: number): Promise<void> {
-    const res = await getBridge().request(MessageType.OPEN_FILE, { filePath, line, column });
+    // Carry the project so the backend can resolve "open files with" per project
+    // (issue #7). Read from the URL: openFile is called from many renderers that
+    // do not thread the working directory down.
+    const workingDir = readWorkingDirFromUrl();
+    const res = await getBridge().request(MessageType.OPEN_FILE, {
+      filePath,
+      line,
+      column,
+      workingDir,
+    });
     assertFileOpened(res, filePath);
     console.log('[JetBrainsAdapter] Sent OPEN_FILE via WebSocket bridge:', filePath, line ?? '');
   }

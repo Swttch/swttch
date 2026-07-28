@@ -6,6 +6,7 @@ import com.intellij.openapi.application.ApplicationNamesInfo
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.EnvironmentUtil
+import com.github.yhk1038.claudecodegui.settings.ProjectSettingsReader
 import com.github.yhk1038.claudecodegui.settings.SettingsManager
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import kotlinx.coroutines.*
@@ -46,6 +47,13 @@ class NodeProcessManager(
     private val wslDistro: String? = null,
     /** Linux working directory inside [wslDistro] (the project root's `/home/...` path). */
     private val wslCwd: String? = null,
+    /**
+     * The IDE project root this backend serves. Used to resolve a project-scoped
+     * `nodePath` before the backend (the usual source of truth) exists to be asked —
+     * see [findNodeExecutable] and ProjectSettingsReader. Null = no project context,
+     * in which case only the global setting applies.
+     */
+    private val projectRoot: String? = null,
     /**
      * Invoked as [start] advances through its blocking sub-steps (node discovery,
      * shell-PATH capture, resource extraction, waiting for the PORT line) so the panel
@@ -490,14 +498,18 @@ class NodeProcessManager(
      */
     private fun findNodeExecutable(): String? {
         // 0. User-configured override from settings (highest priority — #22).
-        //    Read straight from ~/.claude-code-gui/settings.js: this runs BEFORE the
-        //    backend is spawned, so we can't ask the backend. SettingsManager reads
-        //    the file synchronously and findNodeExecutable already runs off the EDT.
+        //    Read straight from the settings files: this runs BEFORE the backend is
+        //    spawned, so we can't ask the backend. Both reads are synchronous and
+        //    findNodeExecutable already runs off the EDT.
         //    Lets users on `n`/`nvm` pin an exact node when PATH holds an incompatible
         //    one, and provides a recovery path that survives a non-bootable backend.
-        NodeExecutableResolver.normalizeConfiguredNodePath(
-            SettingsManager.getInstance().get("nodePath")?.jsonPrimitive?.contentOrNull
-        )?.let { configured ->
+        //
+        //    Project scope wins over global, matching the backend's merge order: a
+        //    terminal user can pin a project to one node (`.nvmrc` and friends), so
+        //    the GUI must allow the same (CLI equivalence, CLAUDE.md — issue #7).
+        val configuredNodePath = ProjectSettingsReader.read(projectRoot, "nodePath")
+            ?: SettingsManager.getInstance().get("nodePath")?.jsonPrimitive?.contentOrNull
+        NodeExecutableResolver.normalizeConfiguredNodePath(configuredNodePath)?.let { configured ->
             val file = File(configured)
             if (file.exists() && file.canExecute()) {
                 logger.info("Found node via settings nodePath: $configured")

@@ -6,7 +6,7 @@ import {
   type SpawnOptions,
   type ExecFileOptions,
 } from 'child_process';
-import { readSettingsFile, resolveClaudeConfigDirOverride } from './features/settings';
+import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
 import { getStrippableAuthEnvKeys } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
 import { resolveWslCwd } from './wsl-path';
@@ -27,10 +27,7 @@ export class Claude {
 
   /** Load cliPath from settings. Call at server start or on settings change. */
   static async refresh(workingDir?: string): Promise<void> {
-    const settings = await readSettingsFile();
-    Claude.cliPath = (settings.cliPath as string) || null;
     Claude.initialized = true;
-    Claude.resolvedWin32Path = null;
     await Claude.applyConfigDir(workingDir);
   }
 
@@ -49,6 +46,20 @@ export class Claude {
    * Priority: settings env (project > global) > inherited startup env > ~/.claude.
    */
   static async applyConfigDir(workingDir?: string): Promise<void> {
+    // `cliPath` rides along on the same load-time projection. A terminal user can
+    // point a project at a specific claude binary, so the GUI must allow it too
+    // (CLI equivalence, CLAUDE.md) — hence the merged read rather than the global
+    // file. Like process.env below, the resolved command is a single shared slot,
+    // so it is re-projected whenever a context loads instead of being cached per
+    // call site; that is what keeps a project-scoped value from leaking backend-wide.
+    const { settings } = await readMergedSettings(workingDir);
+    const nextCliPath = (settings.cliPath as string) || null;
+    if (nextCliPath !== Claude.cliPath) {
+      Claude.cliPath = nextCliPath;
+      // The win32 launcher cache was resolved from the previous binary.
+      Claude.resolvedWin32Path = null;
+    }
+
     const override = await resolveClaudeConfigDirOverride(workingDir);
     if (override) {
       process.env.CLAUDE_CONFIG_DIR = override;

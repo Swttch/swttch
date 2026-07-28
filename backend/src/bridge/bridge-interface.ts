@@ -1,5 +1,10 @@
 export interface Bridge {
-  openFile(path: string, line?: number, column?: number): Promise<void>;
+  /**
+   * [workingDir] is the project the request came from, so the "open files with"
+   * setting can be resolved per project (global value when the project sets none).
+   * Optional: callers with no project context still get the global behaviour.
+   */
+  openFile(path: string, line?: number, column?: number, workingDir?: string): Promise<void>;
   openDiff(params: {
     filePath: string;
     oldContent: string;

@@ -1,7 +1,7 @@
 import type { Bridge } from './bridge-interface';
 import type { WebSocket } from 'ws';
 import { extractRoutingPath, selectRpcClientIndex } from './rpc-routing';
-import { readSettingsFile } from '../core/features/settings';
+import { readSettingsFile, readMergedSettings } from '../core/features/settings';
 import { MessageType } from '../shared';
 
 interface JsonRpcRequest {
@@ -93,7 +93,13 @@ export class JetBrainsBridge implements Bridge {
         // Built-in: an IDE advertising the project roots it serves. Handled here
         // (not via notificationHandlers) because it is bound to *this* socket.
         if (notification.method === MessageType.REGISTER_PROJECT_ROOTS) {
-          this.clientRoots.set(ws, parseProjectRoots(notification.params));
+          const roots = parseProjectRoots(notification.params);
+          this.clientRoots.set(ws, roots);
+          // Now that we know which project this IDE serves, re-push hostMode using
+          // the *merged* value. The connect-time push above could only read the
+          // global file — the roots had not been announced yet — so a project that
+          // overrides hostMode would otherwise never reach the IDE (issue #7).
+          this.pushMergedHostMode(ws, roots[0]);
           return;
         }
         const handler = this.notificationHandlers.get(notification.method);
@@ -205,6 +211,42 @@ export class JetBrainsBridge implements Bridge {
    */
   pushHostMode(hostMode: string, target?: WebSocket): void {
     this.notify(MessageType.HOST_MODE_CHANGED, { hostMode }, target);
+  }
+
+  /**
+   * Push a saved `hostMode` to the IDE windows that serve [projectPath].
+   *
+   * A project-scoped save must not reach unrelated projects: flipping the chat
+   * host in a window the user never touched is exactly the "my setting changed
+   * by itself" symptom of issue #7. With no [projectPath] (a global save) every
+   * client is addressed, as before.
+   */
+  pushHostModeForProject(hostMode: string, projectPath?: string): void {
+    if (!projectPath) {
+      this.pushHostMode(hostMode);
+      return;
+    }
+    for (const ws of this.rpcClients) {
+      if ((this.clientRoots.get(ws) ?? []).includes(projectPath)) {
+        this.pushHostMode(hostMode, ws);
+      }
+    }
+  }
+
+  /**
+   * Read the effective (global + project) hostMode and push it to one socket.
+   * Fire-and-forget: a settings read failure must never break RPC handling.
+   */
+  private pushMergedHostMode(ws: WebSocket, projectPath?: string): void {
+    if (!projectPath) return;
+    readMergedSettings(projectPath)
+      .then(({ settings }) => {
+        const hostMode = typeof settings.hostMode === 'string' ? settings.hostMode : 'editor-tab';
+        this.pushHostMode(hostMode, ws);
+      })
+      .catch((err) => {
+        console.error('[node-backend]', 'Failed to push merged hostMode:', err);
+      });
   }
 
   async openFile(path: string, line?: number, column?: number): Promise<void> {

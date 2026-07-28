@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'child_process';
 import type { Bridge } from './bridge-interface';
-import { readSettingsFile } from '../core/features/settings';
+import { readMergedSettings } from '../core/features/settings';
 import { Claude } from '../core/claude';
 import { detectInstalledEditors } from '../core/features/detectEditors';
 import {
@@ -20,8 +20,10 @@ export const OPEN_FILES_WITH_CUSTOM = '$custom';
 export class BrowserBridge implements Bridge {
   // line/column are accepted for interface parity but can't be honored by the OS
   // opener (xdg-open/open/explorer) — line focus is a JetBrains-mode feature.
-  async openFile(path: string, _line?: number, _column?: number): Promise<void> {
-    const settings = await readSettingsFile();
+  async openFile(path: string, _line?: number, _column?: number, workingDir?: string): Promise<void> {
+    // Per-project first, global as the fallback: which editor opens a file is an
+    // ordinary per-project choice, the same one a terminal user makes (issue #7).
+    const { settings } = await readMergedSettings(workingDir);
     const openFilesWith = settings['openFilesWith'] as string | null;
     const custom = settings['openFilesWithCustom'] as
       | { path?: string; arguments?: string }
@@ -311,7 +313,9 @@ if ($dialog.ShowDialog() -eq 'OK') {
   }
 
   async openTerminal(workingDir: string): Promise<void> {
-    const settings = await readSettingsFile();
+    // The terminal is opened *in* this project, so its choice is resolved per
+    // project too — global still applies when the project sets none (issue #7).
+    const { settings } = await readMergedSettings(workingDir);
     const terminalApp = settings['terminalApp'] as string | null;
 
     // Resolve via Claude.which() (augmented PATH + PATHEXT-correct launcher on

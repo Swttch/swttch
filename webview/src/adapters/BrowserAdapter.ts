@@ -3,6 +3,7 @@ import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
 import { Route, routeToPath } from '../router';
+import { readWorkingDirFromUrl } from '@/contexts/workingDirParam';
 
 /**
  * Browser Adapter
@@ -60,7 +61,16 @@ export class BrowserAdapter implements IdeAdapter {
   }
 
   async openFile(filePath: string, line?: number, column?: number): Promise<void> {
-    const res = await getBridge().request(MessageType.OPEN_FILE, { filePath, line, column });
+    // Carry the project so the backend can resolve "open files with" per project
+    // (issue #7). Read from the URL: openFile is called from many renderers that
+    // do not thread the working directory down.
+    const workingDir = readWorkingDirFromUrl();
+    const res = await getBridge().request(MessageType.OPEN_FILE, {
+      filePath,
+      line,
+      column,
+      workingDir,
+    });
     assertFileOpened(res, filePath);
     console.log('[BrowserAdapter] Sent OPEN_FILE request:', filePath, line ?? '');
   }
