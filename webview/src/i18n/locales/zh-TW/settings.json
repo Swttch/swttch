@@ -44,6 +44,10 @@
       "label": "使用 {{modifier}}+Enter 傳送",
       "description": "啟用後,將以 Ctrl/Cmd+Enter 傳送提示,而不只是按 Enter。這樣 Enter 鍵就能用來換行。"
     },
+    "attachEditorContext": {
+      "label": "預設附加編輯器中的檔案",
+      "description": "每次開始工作階段時，自動附加目前開啟的檔案或選取的程式碼。關閉後標籤仍會顯示，只是預設為關閉狀態，點擊即可為該次工作階段附加。"
+    },
     "focusInputOnEditorContext": {
       "label": "附加檔案路徑後將焦點移至聊天輸入框",
       "description": "在編輯器中按下 Alt+K 插入檔案路徑後,自動將焦點移至聊天輸入框。"

@@ -7,6 +7,30 @@ import { homedir } from 'os';
 
 const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
 
+// ─── Scope policy: project-local by default ──────────────────────────────────
+//
+// Every setting MUST be overridable per project. A setting that can be set
+// locally is the better decision, so treat project scope as the default and do
+// not ask whether a new key "should" support it — it should.
+//
+// Global-only is the rare exception, allowed solely when project scope is
+// genuinely impossible. Two real cases so far, both structural rather than a
+// matter of taste:
+//   - CLAUDE_CONFIG_DIR (#123): it decides WHERE the settings file lives, so
+//     resolving it from that file would be circular.
+//   - nodePath: it decides which node LAUNCHES this backend, so the backend
+//     cannot be the one to resolve it (ProjectSettingsReader is the narrow
+//     read-only escape hatch the IDE uses instead).
+//
+// Note what is NOT a reason: "the Settings UI greys it out on the Project tab"
+// is a symptom, not a justification. #239 removed exactly that greying for five
+// keys after finding nothing about them required global scope. When a key looks
+// global-only, state the structural reason it cannot be resolved per project;
+// if no such reason exists, make it project-scoped.
+//
+// If a new key does look like an exception, the agent decides and proposes it
+// with that reasoning — it is not a question to hand back to the user.
+
 const DEFAULT_SETTINGS: Record<string, unknown> = {
   cliPath: null,
   nodePath: null,
@@ -29,6 +53,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   useCtrlEnterToSend: false,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
+  attachEditorContext: true,
   ultracode: null,
   // Only CLAUDE_CONFIG_DIR lives here: it decides where the native settings file
   // is, so it cannot be stored inside that file. Every other variable belongs to
@@ -62,6 +87,7 @@ const COMMENT_MAP: Record<string, string> = {
   useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
+  attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
   language: '[레거시] 네이티브 settings.json으로 이관됨. 마이그레이션이 비우는 용도로만 남김',
@@ -281,6 +307,7 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'useCtrlEnterToSend':
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
+    case 'attachEditorContext':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
       }

@@ -214,7 +214,10 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
   // it can prepend the context tag without re-rendering its consumers on every
   // IDE selection change. Mirrors the inputRef bridge above.
   const currentSelectionRef = useRef<IdeSelectionPayload | null>(null);
-  const includeSelectionRef = useRef(true);
+  // Starts excluded to match the chip: until IdeSelectionProvider seeds this
+  // from the `attachEditorContext` setting, a send must not attach a file the
+  // user may have meant to keep back (#237).
+  const includeSelectionRef = useRef(false);
 
   // Mirror of the native `respectGitignore` setting kept as a ref so sendMessage
   // stays stable (no ChatStreamProvider re-render on settings changes).

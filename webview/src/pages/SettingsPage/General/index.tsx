@@ -64,6 +64,10 @@ export function GeneralSettings() {
   // The handler accepts both (ctrlKey || metaKey); only the label needs to differ.
   const sendModifier = isMac() ? 'Cmd' : 'Ctrl';
   const focusInputOnEditorContext = (scopeSettings.focusInputOnEditorContext as boolean | undefined) ?? true;
+  // Seeds the editor-context chip at the start of a session (#237). Only an
+  // explicit false disables it, so `!== false` rather than the `?? true` the
+  // other toggles use — anything unreadable must leave the feature on.
+  const attachEditorContext = scopeSettings.attachEditorContext !== false;
   const respectGitignore = (claudeScopeSettings.respectGitignore as boolean | undefined) ?? false;
   // Auto-resume default (sponsor-only): the global default a session inherits.
   const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
@@ -145,6 +149,17 @@ export function GeneralSettings() {
             checked={useCtrlEnterToSend}
             onChange={(checked) => updateSetting(SettingKey.USE_CTRL_ENTER_TO_SEND, checked)}
             ariaLabel={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label={t('general.attachEditorContext.label')}
+          description={t('general.attachEditorContext.description')}
+        >
+          <ToggleSwitch
+            checked={attachEditorContext}
+            onChange={(checked) => updateSetting(SettingKey.ATTACH_EDITOR_CONTEXT, checked)}
+            ariaLabel={t('general.attachEditorContext.label')}
           />
         </SettingRow>
 

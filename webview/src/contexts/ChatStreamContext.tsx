@@ -293,7 +293,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       const { content: injectedContent, injected } = injectIdeContext({
         content,
         selection: currentSelectionRef?.current ?? null,
-        includeSelection: includeSelectionRef?.current ?? true,
+        // Absent ref → treat as excluded, mirroring the pre-settings chip state.
+        includeSelection: includeSelectionRef?.current ?? false,
         lastInjected: lastInjectedSelectionRef.current,
         respectGitignore: respectGitignoreRef?.current ?? false,
       });

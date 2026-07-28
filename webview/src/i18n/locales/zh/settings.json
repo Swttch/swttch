@@ -44,6 +44,10 @@
       "label": "使用 {{modifier}}+Enter 发送",
       "description": "启用后,使用 Ctrl/Cmd+Enter 发送提示,而不是单独按 Enter。这样 Enter 键可用于换行。"
     },
+    "attachEditorContext": {
+      "label": "默认附加编辑器中的文件",
+      "description": "每次开始会话时，自动附加当前打开的文件或选中的代码。关闭后标签仍会显示，只是默认处于关闭状态，点击即可为该会话附加。"
+    },
     "focusInputOnEditorContext": {
       "label": "插入文件路径后聚焦聊天输入框",
       "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"

@@ -44,6 +44,10 @@
       "label": "Usar {{modifier}}+Enter para enviar",
       "description": "Quando ativado, use Ctrl/Cmd+Enter para enviar mensagens em vez de apenas Enter. Isso permite que Enter crie novas linhas."
     },
+    "attachEditorContext": {
+      "label": "Anexar o arquivo do editor por padrão",
+      "description": "Cada sessão começa com o arquivo aberto ou a seleção anexados. Se você desativar, a etiqueta continua aparecendo, mas começa desligada — clique nela para anexar naquela sessão."
+    },
     "focusInputOnEditorContext": {
       "label": "Focar o campo de chat após anexar o caminho do arquivo",
       "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
