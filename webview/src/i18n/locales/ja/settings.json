@@ -44,6 +44,10 @@
       "label": "送信に{{modifier}}+Enterを使用",
       "description": "有効にすると、Enterだけでなく Ctrl/Cmd+Enter でプロンプトを送信します。Enterキーは改行に使用できるようになります。"
     },
+    "attachEditorContext": {
+      "label": "エディタのファイルを既定で添付",
+      "description": "セッション開始時に、開いているファイルや選択範囲を添付した状態にします。オフにしてもチップは表示され、オフの状態で始まります。クリックすればそのセッションだけ添付できます。"
+    },
     "focusInputOnEditorContext": {
       "label": "ファイルパス添付後にチャット入力欄へフォーカス",
       "description": "エディタで Alt+K を押すと、ファイルパスの挿入後にフォーカスをチャット入力欄へ移動します。"

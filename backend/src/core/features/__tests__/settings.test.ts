@@ -297,7 +297,12 @@ describe('settings', () => {
     });
 
     it('should accept boolean GUI-only toggles and reject non-boolean', async () => {
-      for (const key of ['useCtrlEnterToSend', 'focusInputOnEditorContext', 'autoResumeOnLimit']) {
+      for (const key of [
+        'useCtrlEnterToSend',
+        'focusInputOnEditorContext',
+        'autoResumeOnLimit',
+        'attachEditorContext',
+      ]) {
         expect((await saveSettingToFile(key, true)).status).toBe('ok');
         expect((await saveSettingToFile(key, false)).status).toBe('ok');
         const bad = await saveSettingToFile(key, 'yes');
@@ -437,6 +442,7 @@ describe('settings', () => {
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        attachEditorContext: true,
         ultracode: null,
         env: {},
         language: null,
@@ -556,6 +562,7 @@ export default {
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        attachEditorContext: true,
         ultracode: null,
         env: {},
         language: null,

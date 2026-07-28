@@ -67,6 +67,13 @@ export enum SettingKey {
   // Auto-resume on usage-limit reset (sponsor-only); seeds the limit banner default.
   AUTO_RESUME_ON_LIMIT = 'autoResumeOnLimit',
 
+  // Seeds the editor-context chip's state at the START of a session (/clear, reset,
+  // new session). Like the model or permission mode, it is a starting value only:
+  // clicking the chip mid-session changes that session alone and is never written
+  // back here. Anything other than an explicit `false` counts as enabled, so a
+  // missing or unreadable value leaves the feature on rather than silently off.
+  ATTACH_EDITOR_CONTEXT = 'attachEditorContext',
+
   // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
   // the native `effortLevel`, but absent from the official schema, so it lives here.
   ULTRACODE = 'ultracode',
@@ -157,6 +164,7 @@ export interface SettingsState {
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
+  [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
   [SettingKey.ULTRACODE]: boolean | null;
 }
 
@@ -183,5 +191,6 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
+  [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.ULTRACODE]: null,
 };

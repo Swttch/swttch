@@ -44,6 +44,10 @@
       "label": "Utiliser {{modifier}}+Entrée pour envoyer",
       "description": "Lorsque cette option est activée, utilisez Ctrl/Cmd+Entrée pour envoyer les invites au lieu de simplement Entrée. Cela permet à Entrée de créer de nouvelles lignes."
     },
+    "attachEditorContext": {
+      "label": "Joindre le fichier de l'éditeur par défaut",
+      "description": "Chaque session démarre avec le fichier ouvert ou la sélection en pièce jointe. Si vous désactivez cette option, la puce reste affichée mais démarre désactivée : cliquez dessus pour joindre le fichier le temps de la session."
+    },
     "focusInputOnEditorContext": {
       "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
       "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
