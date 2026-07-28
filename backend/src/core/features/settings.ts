@@ -84,6 +84,56 @@ function generateSettingsContent(settings: Record<string, unknown>): string {
   return lines.join('\n') + '\n';
 }
 
+/**
+ * Strip `//` line comments and block comments from the settings JS source, but
+ * NEVER when the marker sits inside a string literal. A value such as
+ * "//wsl.localhost/..." (a WSL UNC path a user may enter for cliPath/nodePath)
+ * must survive intact — otherwise JSON.parse throws and the whole settings
+ * object silently falls back to defaults, dropping the user's saved hostMode
+ * down to "editor-tab" (regression #7).
+ */
+function stripJsComments(src: string): string {
+  let out = '';
+  let inString = false;
+  let quote = '';
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (inString) {
+      out += ch;
+      if (ch === '\\') {
+        // preserve the escaped character verbatim
+        i++;
+        if (i < src.length) out += src[i];
+        continue;
+      }
+      if (ch === quote) inString = false;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inString = true;
+      quote = ch;
+      out += ch;
+      continue;
+    }
+    const next = src[i + 1];
+    if (ch === '/' && next === '/') {
+      // line comment → drop to end of line, keep the newline
+      while (i < src.length && src[i] !== '\n') i++;
+      if (i < src.length) out += '\n';
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      // block comment → drop through the closing marker
+      i += 2;
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
+      i++; // skip '*'; the loop's i++ skips '/'
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
 export async function readSettingsFile(): Promise<Record<string, unknown>> {
   try {
     if (!existsSync(SETTINGS_FILE)) {
@@ -95,11 +145,9 @@ export async function readSettingsFile(): Promise<Record<string, unknown>> {
 
     const raw = await readFile(SETTINGS_FILE, 'utf-8');
 
-    // Strip block comments
-    let stripped = raw.replace(/\/\*[\s\S]*?\*\//g, '');
-
-    // Strip line comments (preserving strings)
-    stripped = stripped.replace(/\/\/[^\n]*/g, '');
+    // Strip comments in a string-literal-aware way so a value like
+    // "//wsl.localhost/..." (WSL UNC path) is never mistaken for a comment (#7).
+    let stripped = stripJsComments(raw);
 
     // Remove `export default` prefix and trailing semicolon
     stripped = stripped.replace(/^\s*export\s+default\s*/, '').replace(/;\s*$/, '').trim();
