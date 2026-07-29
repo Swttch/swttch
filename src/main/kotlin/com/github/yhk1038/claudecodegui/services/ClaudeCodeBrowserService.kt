@@ -45,6 +45,27 @@ internal fun isTeardown(projectDisposed: Boolean, serviceDisposed: Boolean): Boo
     projectDisposed || serviceDisposed
 
 /**
+ * A disposable's own record of having been disposed.
+ *
+ * The platform deprecates [com.intellij.openapi.util.Disposer.isDisposed] because
+ * it answers from short-lived diagnostic bookkeeping that is cleared on events
+ * such as a major GC or a dynamic plugin unload — so a teardown check built on it
+ * can silently start reporting "not disposed" and let the "Already disposed"
+ * error (issue #231) return. Owning the flag is the replacement the platform
+ * itself recommends. Volatile: dispose runs on the EDT while a farewell
+ * releaseRef may observe it from another thread.
+ */
+internal class DisposalTracker {
+    @Volatile
+    var isDisposed: Boolean = false
+        private set
+
+    fun markDisposed() {
+        isDisposed = true
+    }
+}
+
+/**
  * Pick a reusable (unoccupied) browser holder for a tab from the per-tab list,
  * given each holder's current panel-reference count. Returns the index of the
  * first free holder, or null if all are occupied (→ a new browser is needed).
@@ -89,6 +110,9 @@ internal fun resolveRemoteJcef(cefRemoteEnabled: Boolean?, legacySystemProperty:
 class ClaudeCodeBrowserService(private val project: Project) : Disposable {
 
     private val logger = Logger.getInstance(ClaudeCodeBrowserService::class.java)
+
+    /** Set in [dispose]; read by [releaseRef] to detect teardown. */
+    private val disposal = DisposalTracker()
 
     class BrowserHolder(
         val browser: JBCefBrowser,
@@ -285,7 +309,7 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
         // [dispose] has already released every holder, and deferring is pointless when
         // no re-acquire can follow. Skipping (rather than releasing inline) also leaves
         // the persisted tab state untouched. (issue #231)
-        if (isTeardown(project.isDisposed, Disposer.isDisposed(this))) return
+        if (isTeardown(project.isDisposed, disposal.isDisposed)) return
 
         val tokenAtSchedule = holder.releaseToken
         releaseAlarm.addRequest({
@@ -317,6 +341,10 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
     }
 
     override fun dispose() {
+        // Mark first: a panel's farewell releaseRef arriving mid-dispose must see
+        // teardown and skip, rather than schedule onto the alarm we are about to
+        // tear down (issue #231).
+        disposal.markDisposed()
         holders.values.flatten().forEach { disposeHolder(it) }
         holders.clear()
     }

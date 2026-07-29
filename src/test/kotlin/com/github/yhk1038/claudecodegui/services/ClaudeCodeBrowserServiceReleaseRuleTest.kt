@@ -117,4 +117,33 @@ class ClaudeCodeBrowserServiceReleaseRuleTest {
     fun `both disposed is teardown`() {
         assertTrue(isTeardown(projectDisposed = true, serviceDisposed = true))
     }
+
+    // ── the service tracks its own disposal ──
+    //
+    // The service's disposed state used to be read back from `Disposer.isDisposed`,
+    // which the platform deprecates precisely because it answers from short-lived
+    // diagnostic bookkeeping that is cleared on events like a major GC or a dynamic
+    // plugin unload. A teardown check that silently starts returning `false` would
+    // bring "Already disposed" back, so the service owns the flag itself — the
+    // platform's own recommended replacement.
+
+    @Test
+    fun `a fresh disposal tracker reads as not disposed`() {
+        assertFalse(DisposalTracker().isDisposed, "Nothing has disposed it yet")
+    }
+
+    @Test
+    fun `the tracker latches once disposal is recorded`() {
+        val tracker = DisposalTracker()
+        tracker.markDisposed()
+        assertTrue(tracker.isDisposed, "Disposal must stay observable for later callers")
+    }
+
+    @Test
+    fun `recording disposal twice keeps it disposed`() {
+        val tracker = DisposalTracker()
+        tracker.markDisposed()
+        tracker.markDisposed()
+        assertTrue(tracker.isDisposed, "A repeated dispose must not flip the flag back")
+    }
 }
