@@ -69,6 +69,9 @@
     "generalConfig": "일반 설정..."
   },
   "support": {
+    "copyFrontLog": "플러그인 프론트 로그 복사",
+    "copyFrontLogDone": "프론트 로그를 복사했습니다 ({{count}}줄)",
+    "copyFrontLogFailed": "복사할 프론트 로그가 없습니다",
     "viewHelpDocs": "도움말 문서 보기",
     "restartPlugin": "플러그인 재시작",
     "restartConfirm": {

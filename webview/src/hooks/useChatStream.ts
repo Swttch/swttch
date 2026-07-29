@@ -143,6 +143,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const pendingThinkingRef = useRef<string>('');
   const pendingInputJsonRef = useRef<string>('');              // RAF 프레임 간 input_json_delta 축적용
   const accumulatedInputJsonRef = useRef<string>('');          // 현재 tool_use 블록의 전체 누적 input JSON 문자열
+  // id of the tool_use block the buffered input JSON belongs to. Deltas are
+  // applied a frame later, by which time the `assistant` event for the same turn
+  // may already have reset the active-block index — so the flush resolves its
+  // target by id instead of by index (issue #232).
+  const pendingInputJsonToolIdRef = useRef<string | null>(null);
   const pendingThinkingTokensRef = useRef<number | null>(null); // system/thinking_tokens의 누적 추정치 (RAF flush에서 반영)
   const thinkingStartAtRef = useRef<number | null>(null);      // 활성 thinking 블록의 시작 시각 (duration 측정용)
   const rafIdRef = useRef<number | null>(null);
@@ -272,8 +277,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       }
 
       // Append input JSON delta to the active tool_use block
+      // Resolve the target by the id captured when the delta was buffered, and
+      // only fall back to the active index when no id is known. Resolving by
+      // index alone dropped the delta whenever the `assistant` event reset the
+      // index before this frame ran (issue #232).
       if (inputJsonDelta) {
-        const idx = activeToolUseBlockIndexRef.current;
+        const pendingToolId = pendingInputJsonToolIdRef.current;
+        let idx = pendingToolId
+          ? currentBlocks.findIndex(
+              b => b.type === ContentBlockType.ToolUse && (b as ToolUseBlockDto).id === pendingToolId,
+            )
+          : -1;
+        if (idx < 0) idx = activeToolUseBlockIndexRef.current;
+
         if (idx >= 0 && idx < currentBlocks.length && currentBlocks[idx].type === ContentBlockType.ToolUse) {
           const block = currentBlocks[idx] as ToolUseBlockDto;
           // accumulatedInputJsonRef holds the full JSON string across all RAF frames
@@ -281,6 +297,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           const parsedInput = parsePartialJson(accumulatedInputJsonRef.current) ?? block.input;
           currentBlocks[idx] = { ...block, input: parsedInput };
         }
+        // The buffered JSON has been applied (or had nowhere to go); either way it
+        // must not leak into the next tool_use.
+        pendingInputJsonToolIdRef.current = null;
       }
 
       return { ...msg, message: { ...msg.message!, content: currentBlocks } };
@@ -656,6 +675,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           const blockIndex = innerEvent.index as number | undefined;
           if (!contentBlock) return;
 
+          // Remember which tool_use the following input_json deltas belong to, so
+          // a delayed flush can still find it after the index has been reset.
+          if (contentBlock.type === ContentBlockType.ToolUse) {
+            pendingInputJsonToolIdRef.current = contentBlock.id ?? null;
+          }
+
           if (blockIndex !== undefined) {
             activeBlockIndexRef.current = blockIndex;
           }
@@ -856,7 +881,21 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
             // Preserve blocks from previous turns, replace current turn's blocks
             const preservedBlocks = existingBlocks.slice(0, turnStart);
-            const mergedBlocks = [...preservedBlocks, ...finalTurnBlocks];
+            // A tool_use in the final payload can carry an empty `input` while the
+            // streamed input_json deltas already assembled the real arguments —
+            // the CLI emits this event mid-turn, before the tool call is complete.
+            // Replacing blindly would blank the tool card (issue #232), so keep
+            // whichever side actually has arguments.
+            const mergedBlocks = [...preservedBlocks, ...finalTurnBlocks.map(block => {
+              if (block.type !== ContentBlockType.ToolUse) return block;
+              const incoming = block as ToolUseBlockDto;
+              if (incoming.input && Object.keys(incoming.input).length > 0) return block;
+              const streamed = existingBlocks.find(
+                b => b.type === ContentBlockType.ToolUse && (b as ToolUseBlockDto).id === incoming.id,
+              ) as ToolUseBlockDto | undefined;
+              if (!streamed?.input || Object.keys(streamed.input).length === 0) return block;
+              return { ...incoming, input: streamed.input };
+            })];
 
             // Update turnStartBlockCount for the next turn
             turnStartBlockCountRef.current = mergedBlocks.length;

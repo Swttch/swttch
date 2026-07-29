@@ -19,12 +19,16 @@ interface LogEntry {
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'] as const;
 const MAX_QUEUE_SIZE = 500;
+/** Investigation-only ring buffer (see `window.ccgLogs`). Not sent anywhere. */
+const MAX_HISTORY_SIZE = 5000;
 const FLUSH_INTERVAL_MS = 500;
 const RECONNECT_DELAY_MS = 2000;
 
 class LogForwarder {
   private ws: WebSocket | null = null;
   private buffer: LogEntry[] = [];
+  /** Full session history for investigation; drained only via window.ccgLogs. */
+  private history: LogEntry[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed: boolean = false;
@@ -33,8 +37,61 @@ class LogForwarder {
 
   start(): void {
     this.interceptConsole();
+    this.exposeInvestigationApi();
     this.connect();
     this.flushTimer = setInterval(() => this.flush(), FLUSH_INTERVAL_MS);
+  }
+
+  /**
+   * The console history as one plain-text block, newest last. Used to hand over a
+   * whole session's logs at once — from the command palette, or from the console
+   * via `window.ccgLogs`.
+   */
+  getHistoryText(filter?: string): string {
+    const entries = filter
+      ? this.history.filter((e) => e.message.includes(filter))
+      : this.history;
+    return entries
+      .map((e) => `${new Date(e.timestamp).toISOString()} [${e.level}] ${e.message}`)
+      .join('\n');
+  }
+
+  getHistoryCount(): number {
+    return this.history.length;
+  }
+
+  clearHistory(): void {
+    this.history = [];
+  }
+
+  /**
+   * Mirror the history helpers onto `window.ccgLogs` for use straight from the
+   * browser console:
+   *
+   *   ccgLogs.copy()            all logs → clipboard
+   *   ccgLogs.copy('[Bridge]')  only lines containing the filter
+   *   ccgLogs.text()            same, returned as a string
+   *   ccgLogs.clear()           reset the buffer
+   */
+  private exposeInvestigationApi(): void {
+    (window as unknown as { ccgLogs: unknown }).ccgLogs = {
+      text: (filter?: string) => this.getHistoryText(filter),
+      count: () => this.getHistoryCount(),
+      clear: () => {
+        this.clearHistory();
+        return 'cleared';
+      },
+      copy: async (filter?: string) => {
+        const text = this.getHistoryText(filter);
+        try {
+          await navigator.clipboard.writeText(text);
+          return `copied ${text.split('\n').length} lines`;
+        } catch {
+          // Clipboard needs a focused document; fall back to a manual selection.
+          return text;
+        }
+      },
+    };
   }
 
   dispose(): void {
@@ -122,6 +179,17 @@ class LogForwarder {
 
         if (this.buffer.length > MAX_QUEUE_SIZE) {
           this.buffer = this.buffer.slice(-MAX_QUEUE_SIZE);
+        }
+
+        this.history.push({
+          level: method as unknown as LogLevel,
+          source: 'webview',
+          sessionId: this.sessionId,
+          message,
+          timestamp: Date.now(),
+        });
+        if (this.history.length > MAX_HISTORY_SIZE) {
+          this.history = this.history.slice(-MAX_HISTORY_SIZE);
         }
       };
     }

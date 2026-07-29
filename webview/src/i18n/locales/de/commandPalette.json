@@ -69,6 +69,9 @@
     "generalConfig": "Allgemeine Konfiguration..."
   },
   "support": {
+    "copyFrontLog": "Frontend-Log des Plugins kopieren",
+    "copyFrontLogDone": "Frontend-Log kopiert ({{count}} Zeilen)",
+    "copyFrontLogFailed": "Kein Frontend-Log zum Kopieren vorhanden",
     "viewHelpDocs": "Hilfedokumente ansehen",
     "restartPlugin": "Plugin neu starten",
     "restartConfirm": {
