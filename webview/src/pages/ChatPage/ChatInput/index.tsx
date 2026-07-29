@@ -251,7 +251,19 @@ export function ChatInput() {
   // RichInput editor. Under JCEF the native `isComposing` flag is unreliable.
   const ime = useIMEComposition();
 
-  const palette = useCommandPalette({ onChange, textareaRef });
+  const palette = useCommandPalette({
+    onChange,
+    textareaRef,
+    // A command picked mid-input is completed into the text rather than run
+    // (issue #244), so put the caret back after the inserted name — the user is
+    // still writing the sentence it belongs to.
+    onCompleteInline: (_value, caretOffset) => {
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) setCaretOffset(el, caretOffset);
+      });
+    },
+  });
   // Read through a ref inside onInsertMention: that callback outlives any single
   // render, and palette is recreated each one.
   const paletteRef = useRef(palette);

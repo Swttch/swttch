@@ -898,4 +898,383 @@ describe('useCommandPalette', () => {
       expect(result.current.showSlashCommands).toBe(true);
     });
   });
+
+  // ──────────────────────────────────────────────────────
+  // Issue #244 — a "/" typed after existing text must open the panel too.
+  //
+  // The panel only ever checked `value.startsWith('/')`, so once a prompt had
+  // been started there was no way to reach a skill or a CLI command. The
+  // trigger now mirrors the mention one: a "/" starting a line or following a
+  // space, with the caret still inside the token.
+  // ──────────────────────────────────────────────────────
+
+  describe('slash typed mid-input (issue #244)', () => {
+    it('opens the panel for a "/" typed after existing text', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /', 14);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('');
+    });
+
+    it('filters by the command name typed mid-input', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('rev');
+    });
+
+    it('does not enter argument mode for a mid-input command', () => {
+      // argMode narrows to an exact name match. The leading prose contains a
+      // space, so keying off "input has whitespace" would wrongly lock the
+      // filter and hide every fuzzy match.
+      setupMockRegistry([
+        {
+          id: PanelSectionId.SlashCommands,
+          title: 'Slash Commands',
+          showDividerAbove: false,
+          items: [
+            {
+              id: 'cli-model',
+              label: '/model',
+              type: PanelItemType.Command,
+              name: '/model',
+              description: 'Set the AI model',
+              action: vi.fn(),
+            } as CommandItem,
+          ],
+        },
+      ]);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /mod', 17);
+      });
+
+      const items = result.current.filteredSections.flatMap(s => s.items);
+      expect(items.map(i => i.id)).toEqual(['cli-model']);
+    });
+
+    it('closes the panel once a space settles the mid-input command', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      expect(result.current.showSlashCommands).toBe(true);
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev ', 18);
+      });
+
+      expect(result.current.showSlashCommands).toBe(false);
+    });
+
+    it('leaves a path-like "/" alone', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('see src/utils', 13);
+      });
+
+      expect(result.current.showSlashCommands).toBe(false);
+    });
+
+    it('still opens for a leading command with the caret inside it', () => {
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/review', 7);
+      });
+
+      expect(result.current.showSlashCommands).toBe(true);
+      expect(result.current.filterQuery).toBe('review');
+    });
+  });
+
+  // ──────────────────────────────────────────────────────
+  // Issue #244 — picking an item mid-input inserts text instead of running.
+  //
+  // A command chosen from an otherwise empty composer runs immediately (it is
+  // the whole message). One chosen after existing prose is part of a sentence
+  // the user is still writing, so it is only completed into the input — running
+  // it there would both discard the prose and send a half-written message.
+  // ──────────────────────────────────────────────────────
+
+  describe('executing an item picked mid-input (issue #244)', () => {
+    const commandSections: PanelSection[] = [
+      {
+        id: PanelSectionId.SlashCommands,
+        title: 'Slash Commands',
+        showDividerAbove: false,
+        items: [
+          {
+            id: 'cli-review',
+            label: '/review',
+            type: PanelItemType.Command,
+            name: '/review',
+            description: 'Review a pull request',
+            action: vi.fn(),
+          } as CommandItem,
+        ],
+      },
+    ];
+
+    function firstItem(sections: PanelSection[]) {
+      return sections[0].items[0];
+    }
+
+    it('completes the command into the input without running it', () => {
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      // The prose survives and the token is completed to the full name.
+      expect(onChange).toHaveBeenCalledWith('explain this /review ');
+      expect(item.action).not.toHaveBeenCalled();
+      expect(result.current.showSlashCommands).toBe(false);
+    });
+
+    it('still runs and clears for a command that is the whole input', () => {
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('/rev', 4);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      expect(item.action).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith('');
+    });
+
+    it('completes on Enter as well as on click', () => {
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      act(() => {
+        result.current.handleSlashKeyDown(
+          {
+            key: 'Enter',
+            shiftKey: false,
+            preventDefault: vi.fn(),
+            nativeEvent: { isComposing: false },
+          } as any,
+          'explain this /rev',
+        );
+      });
+
+      expect(onChange).toHaveBeenCalledWith('explain this /review ');
+      expect(item.action).not.toHaveBeenCalled();
+    });
+
+    it('keeps text that follows the token', () => {
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      // Caret sits at the end of "/rev"; " please" trails behind it.
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev please', 17);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      expect(onChange).toHaveBeenCalledWith('explain this /review please');
+    });
+
+    it('completes the mid-input token on Tab without mangling the prose', () => {
+      // Tab completes against the first space in the whole input, which is the
+      // command's own separator only when the command leads the line.
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      act(() => {
+        result.current.handleSlashKeyDown(
+          {
+            key: 'Tab',
+            shiftKey: false,
+            preventDefault: vi.fn(),
+            nativeEvent: { isComposing: false },
+          } as any,
+          'explain this /rev',
+        );
+      });
+
+      expect(onChange).toHaveBeenCalledWith('explain this /review ');
+    });
+
+    it('still completes a leading command on Tab', () => {
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+
+      act(() => {
+        result.current.detectSlashCommand('/rev');
+      });
+      act(() => {
+        result.current.handleSlashKeyDown(
+          {
+            key: 'Tab',
+            shiftKey: false,
+            preventDefault: vi.fn(),
+            nativeEvent: { isComposing: false },
+          } as any,
+          '/rev',
+        );
+      });
+
+      expect(onChange).toHaveBeenCalledWith('/review ');
+    });
+
+    it('runs (not completes) after the panel is reopened from the toolbar button', () => {
+      // The toolbar "/" button opens the panel without going through the caret
+      // check, so a token left over from earlier typing must not be reused —
+      // the same blind spot the mention guard hit in #236.
+      setupMockRegistry(commandSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      act(() => {
+        result.current.closePanel();
+      });
+      act(() => {
+        result.current.handleSlashButtonClick();
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      expect(item.action).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith('');
+    });
+
+    it('reports where the caret belongs after completing', () => {
+      // The composer must park the caret past the inserted name (and its
+      // separator) so the user can type arguments straight away.
+      setupMockRegistry(commandSections);
+      const onCompleteInline = vi.fn<(value: string, caretOffset: number) => void>();
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef, onCompleteInline }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev', 17);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      // "explain this /review " → caret sits at the end, past the space.
+      expect(onCompleteInline).toHaveBeenCalledWith('explain this /review ', 21);
+    });
+
+    it('parks the caret past the existing space when one already follows', () => {
+      setupMockRegistry(commandSections);
+      const onCompleteInline = vi.fn<(value: string, caretOffset: number) => void>();
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef, onCompleteInline }),
+      );
+      const item = firstItem(commandSections) as CommandItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /rev please', 17);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      // No second space is inserted, and the caret still lands after the one
+      // that is there — ready to type, not stranded before it.
+      expect(onCompleteInline).toHaveBeenCalledWith('explain this /review please', 21);
+    });
+
+    it('runs a non-command action item even mid-input', () => {
+      // Action items (e.g. "Switch model…") are settings, not message text —
+      // completing them into the prompt would be meaningless.
+      const actionSections: PanelSection[] = [
+        {
+          id: PanelSectionId.Model,
+          title: 'Model',
+          showDividerAbove: false,
+          items: [
+            {
+              id: 'model-action',
+              label: 'Switch model…',
+              type: PanelItemType.Action,
+              action: vi.fn(),
+            } as ActionItem,
+          ],
+        },
+      ];
+      setupMockRegistry(actionSections);
+      const { result } = renderHook(() =>
+        useCommandPalette({ onChange, textareaRef }),
+      );
+      const item = firstItem(actionSections) as ActionItem;
+
+      act(() => {
+        result.current.detectSlashCommand('explain this /switch', 20);
+      });
+      act(() => {
+        result.current.handlePanelItemExecute(item);
+      });
+
+      expect(item.action).toHaveBeenCalledTimes(1);
+    });
+  });
 });
