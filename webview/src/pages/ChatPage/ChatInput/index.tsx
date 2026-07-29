@@ -707,8 +707,10 @@ export function ChatInput() {
 
         {/* 하단 바: 모드 태그 + 파일 태그 + 액션 버튼 */}
         <div className="flex items-center justify-between px-[5px] py-[3px] h-[35px]">
-          {/* 좌측: 모드 태그 + 파일 태그들 */}
-          <div className="flex items-center gap-0.5 xs:gap-1">
+          {/* 좌측: 모드 태그 + 파일 태그들.
+              min-w-0으로 축소를 허용해야 폭이 좁을 때 태그가 줄바꿈되지 않고
+              말줄임 처리된다 (issue #217). */}
+          <div className="flex items-center gap-0.5 xs:gap-1 min-w-0">
             {/* On mobile the wrapper drops `relative` so the panel anchors to the
                 input box (like the model panel) and can span its full width;
                 on desktop it stays a compact panel above the mode tag. */}
@@ -729,10 +731,12 @@ export function ChatInput() {
             <IdeSelectionTag />
           </div>
 
-          {/* 우측: 모델 태그 + 액션 버튼들 + 첨부 드롭다운 메뉴 */}
-          <div className="flex items-center gap-0.5 xs:gap-1">
+          {/* 우측: 모델 태그 + 액션 버튼들 + 첨부 드롭다운 메뉴.
+              모델 태그는 좁아지면 말줄임되고(min-w-0), 액션 버튼은 항상 온전히
+              남아야 하므로 shrink-0으로 보호한다 (issue #217). */}
+          <div className="flex items-center gap-0.5 xs:gap-1 min-w-0">
             <ModelTag />
-            <div className="relative">
+            <div className="relative shrink-0">
             <AttachMenu
               addImageAttachment={addImageAttachment}
               addFileAttachment={addFileAttachment}

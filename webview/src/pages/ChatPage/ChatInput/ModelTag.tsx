@@ -99,9 +99,17 @@ export function ModelTag() {
   const rotateHint = isMac ? '⌘⇧.' : 'Ctrl+Shift+.';
 
   return (
-    <Tag title={t('chatInput.modelTag.switchModel', { hint: rotateHint })} onClick={handleClick}>
-      <span className="hidden xs:inline">{label}</span>
-      <span className="inline xs:hidden">{label.split(' ')[0]}</span>
+    <Tag
+      // The label may be ellipsized, so carry the full model name in the
+      // tooltip — that is where a truncated custom name stays readable.
+      title={`${label} — ${t('chatInput.modelTag.switchModel', { hint: rotateHint })}`}
+      onClick={handleClick}
+    >
+      {/* Custom catalogs carry long model names, so cap the width and ellipsize
+          rather than letting the bottom row grow or wrap (issue #217). The full
+          name stays available in the tag's tooltip. */}
+      <span className="hidden xs:inline truncate max-w-[12rem]">{label}</span>
+      <span className="inline xs:hidden truncate max-w-[6rem]">{label.split(' ')[0]}</span>
     </Tag>
   );
 }

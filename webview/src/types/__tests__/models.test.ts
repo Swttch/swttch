@@ -113,6 +113,70 @@ describe('toModelAlias', () => {
   });
 });
 
+describe('custom model catalogs (issue #217)', () => {
+  // A third-party proxy (GLM here) maps the CLI's model slots to its own ids via
+  // ANTHROPIC_DEFAULT_*_MODEL. The values carry no "opus"/"sonnet"/"haiku"
+  // token, so value-only alias matching collapses every entry onto "default" —
+  // the indicator then shows the default row's blurb no matter what is running.
+  // The CLI still tells us the family in the description ("Custom Haiku model"),
+  // so that is what we key on.
+  const CUSTOM_MODELS: ModelInfo[] = [
+    {
+      value: 'default',
+      displayName: 'Default (recommended)',
+      description: 'Use the default model (currently glm-5.2-mayi[1m])',
+    },
+    { value: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
+    { value: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
+    { value: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
+    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+  ];
+
+  it('derives the family from the description when the value carries no family token', () => {
+    expect(toModelAlias('glm-4.5-air-mayi', 'Custom Haiku model')).toBe('haiku');
+    expect(toModelAlias('glm-4.7-mayi', 'Custom Sonnet model')).toBe('sonnet');
+    expect(toModelAlias('glm-5.2-mayi', 'Custom Opus model')).toBe('opus');
+    expect(toModelAlias('glm-5.1-mayi', 'Custom Fable model')).toBe('fable');
+  });
+
+  it('still prefers the value over the description when the value is conclusive', () => {
+    // The value is the stronger signal; a mismatched description must not win.
+    expect(toModelAlias('claude-opus-4-8', 'Custom Haiku model')).toBe('opus');
+  });
+
+  it('leaves the default row on the default alias', () => {
+    expect(toModelAlias('default', 'Use the default model (currently glm-5.2-mayi[1m])')).toBe(
+      DEFAULT_MODEL_ALIAS,
+    );
+  });
+
+  it('keeps a user-picked custom model displayed after the session starts', () => {
+    // Regression for #217: the user picks the Haiku slot and sends a message;
+    // system/init echoes the coarse alias, which must resolve back to the very
+    // model the user picked — not to the "default" row.
+    expect(resolveModelInfo(CUSTOM_MODELS, 'haiku')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'sonnet')?.value).toBe('glm-4.7-mayi');
+  });
+
+  it('resolves the raw custom id the CLI may echo back, suffix and case included', () => {
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.5-air-mayi')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.5-air-mayi[1m]')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'GLM-4.5-Air-MAYI')?.value).toBe('glm-4.5-air-mayi');
+  });
+
+  it('labels a custom model by its own name rather than the default blurb', () => {
+    const haiku = CUSTOM_MODELS[4];
+    // Never the long "Use the default model (currently …)" sentence that broke
+    // the composer's bottom row.
+    expect(resolveModelLabel(haiku)).toBe('glm-4.5-air-mayi');
+  });
+
+  it('does not fabricate a family for a genuinely unknown custom model', () => {
+    // No family token anywhere → stay on default rather than guessing.
+    expect(toModelAlias('glm-4.5-air-mayi', 'Some unrelated blurb')).toBe(DEFAULT_MODEL_ALIAS);
+  });
+});
+
 describe('resolveModelLabel', () => {
   it('extracts the model name + version from the description (e.g. "Opus 5")', () => {
     // Opus 5 arrives purely via the CLI catalog; the label must resolve to

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
-import { isFableSupportedCli, toModelAlias } from '@/types/models';
+import { isFableSupportedCli, modelInfoAlias } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
 
 /** ACK payload shape for a PROBE_FABLE_AVAILABILITY request (see the backend
@@ -96,6 +96,6 @@ export function shouldProbeFable(
 ): boolean {
   if (rawModels.length === 0) return false;
   if (!isFableSupportedCli(cliVersion)) return false;
-  if (rawModels.some((m) => toModelAlias(m.value) === 'fable')) return false;
+  if (rawModels.some((m) => modelInfoAlias(m) === 'fable')) return false;
   return true;
 }
