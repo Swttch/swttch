@@ -252,6 +252,10 @@ export function ChatInput() {
   const ime = useIMEComposition();
 
   const palette = useCommandPalette({ onChange, textareaRef });
+  // Read through a ref inside onInsertMention: that callback outlives any single
+  // render, and palette is recreated each one.
+  const paletteRef = useRef(palette);
+  paletteRef.current = palette;
 
   const mention = useMention({
     workingDirectory,
@@ -259,8 +263,12 @@ export function ChatInput() {
     onChange,
     // @-mention selection inserts an inline path token (same chip set as Alt+K
     // editor-context inserts), then restores the caret just past the token.
-    onInsertMention: (token, caretOffset) => {
+    onInsertMention: (token, caretOffset, nextValue) => {
       setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token]));
+      // Picking a file settles the mention, so hand the shared slot back: a
+      // "/command @file " line is a command again once the token is in
+      // (issue #236). Without this the panel stays gone until the next keypress.
+      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
       requestAnimationFrame(() => {
         const el = textareaRef.current;
         if (el) setCaretOffset(el, caretOffset);
@@ -415,8 +423,10 @@ export function ChatInput() {
 
   const handleRichChange = useCallback((newValue: string) => {
     onChange(newValue);
-    palette.detectSlashCommand(newValue);
+    // The caret decides which of the two dropdowns owns the slot above the
+    // composer, so resolve it before either detector runs (issue #236).
     const caret = textareaRef.current ? getCaretOffset(textareaRef.current) : newValue.length;
+    palette.detectSlashCommand(newValue, caret);
     mention.detectMention(newValue, caret);
   }, [onChange, palette, mention, textareaRef]);
 
@@ -562,8 +572,8 @@ export function ChatInput() {
     const { start, end } = el ? getSelectionRange(el) : { start: value.length, end: value.length };
     const newValue = value.slice(0, start) + text + value.slice(end);
     onChange(newValue);
-    palette.detectSlashCommand(newValue);
     const caret = start + text.length;
+    palette.detectSlashCommand(newValue, caret);
     mention.detectMention(newValue, caret);
     requestAnimationFrame(() => {
       const target = textareaRef.current;
@@ -600,8 +610,10 @@ export function ChatInput() {
           ${isDragOver ? 'border-border-focus bg-accent-primary/5' : isFocused ? `${modeConfig.borderColorFocused} outline outline-4 ${modeConfig.outline}` : modeConfig.borderColor}
         `}
       >
-        {/* Mention dropdown */}
-        {mention.isActive && !palette.showSlashCommands && (
+        {/* Mention dropdown. Shares this slot with the slash command panel;
+            the panel yields whenever the caret is in an @token (issue #236),
+            so the two never render at once. */}
+        {mention.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <MentionDropdown
               results={mention.results}
@@ -613,8 +625,12 @@ export function ChatInput() {
           </div>
         )}
 
-        {/* Slash command panel */}
-        {palette.showSlashCommands && (
+        {/* Slash command panel. Yields the shared slot to an active mention so
+            the two can never stack — matching the keydown order above, where
+            mention handling also runs first. detectSlashCommand already closes
+            the panel on caret-in-@token; this also covers the paths that open
+            it without a caret (e.g. the "/" toolbar button). */}
+        {palette.showSlashCommands && !mention.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <CommandPalettePanel
               sections={palette.filteredSections}
