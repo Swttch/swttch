@@ -10,6 +10,7 @@ import { isRemoteBlocked } from './api/bridge/authToken';
 import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useZoomControls } from './hooks/useZoomControls';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
@@ -18,6 +19,8 @@ import 'katex/dist/katex.min.css';
 
 function AppContent() {
   useKeyboardShortcuts();
+  // CmdOrCtrl +/-/0 and CmdOrCtrl + wheel scale the whole UI (issue #169).
+  useZoomControls();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.
