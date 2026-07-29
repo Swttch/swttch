@@ -3,6 +3,12 @@
     "confirm": "Confirm",
     "cancel": "Cancel"
   },
+  "zoomIndicator": {
+    "label": "Zoom level",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "reset": "Reset"
+  },
   "pairing": {
     "title": "Pairing expired",
     "expiredDetail": "This one-time link has expired or was already used. Rescan the QR code from the host to link this device again.",

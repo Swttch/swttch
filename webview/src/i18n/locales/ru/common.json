@@ -3,6 +3,12 @@
     "confirm": "Подтвердить",
     "cancel": "Отмена"
   },
+  "zoomIndicator": {
+    "label": "Масштаб",
+    "zoomOut": "Уменьшить",
+    "zoomIn": "Увеличить",
+    "reset": "Сбросить"
+  },
   "contextChip": {
     "removeContext": "Удалить контекст"
   },

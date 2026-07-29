@@ -3,6 +3,12 @@
     "confirm": "確認",
     "cancel": "キャンセル"
   },
+  "zoomIndicator": {
+    "label": "ズームレベル",
+    "zoomOut": "縮小",
+    "zoomIn": "拡大",
+    "reset": "リセット"
+  },
   "contextChip": {
     "removeContext": "コンテキストを削除"
   },

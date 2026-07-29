@@ -11,6 +11,7 @@ import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useZoomControls } from './hooks/useZoomControls';
+import { ZoomIndicator } from './components/ZoomIndicator';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
@@ -38,6 +39,7 @@ function AppContent() {
   return (
     <>
       <I18nLocaleSync />
+      <ZoomIndicator />
       {isDev() && <div className="fixed w-full top-0 border-t-2 border-t-fuchsia-500 z-50" />}
       <Routes location={backgroundLocation ?? location}>
         <Route path="/" element={<ProjectSelectorPage />} />

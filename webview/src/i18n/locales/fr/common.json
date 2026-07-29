@@ -3,6 +3,12 @@
     "confirm": "Confirmer",
     "cancel": "Annuler"
   },
+  "zoomIndicator": {
+    "label": "Niveau de zoom",
+    "zoomOut": "Zoom arrière",
+    "zoomIn": "Zoom avant",
+    "reset": "Réinitialiser"
+  },
   "contextChip": {
     "removeContext": "Supprimer le contexte"
   },

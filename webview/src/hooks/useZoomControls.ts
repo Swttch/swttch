@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useSettings } from '@/contexts/SettingsContext';
-import { SettingKey } from '@/types/settings';
+import { useEffect } from 'react';
+import { useZoom } from '@/contexts/ZoomContext';
 import { isMac } from '@/config/environment';
-import { clampZoom, zoomIn, zoomOut, ZOOM_DEFAULT } from '@/utils/zoom';
 
 /**
  * True when the event carries the platform's primary shortcut modifier —
@@ -12,7 +10,7 @@ import { clampZoom, zoomIn, zoomOut, ZOOM_DEFAULT } from '@/utils/zoom';
  * on Windows/Linux it reports the Super (logo) key, which belongs to the
  * desktop environment and must not trigger app shortcuts. Hence the split.
  */
-export function hasCmdOrCtrl(e: KeyboardEvent | WheelEvent): boolean {
+export function hasCmdOrCtrl(e: KeyboardEvent): boolean {
   return isMac() ? e.metaKey : e.ctrlKey;
 }
 
@@ -36,68 +34,68 @@ export function isZoomResetKey(e: KeyboardEvent): boolean {
 }
 
 /**
- * Wire CmdOrCtrl +/-/0 and CmdOrCtrl + wheel to the persisted zoom level.
+ * Whether a wheel event is a real wheel/trackpad-scroll with the modifier held,
+ * as opposed to a pinch gesture.
  *
- * The level is written through `updateSetting`, so it survives reloads and new
- * tabs like any other setting. Writes are debounced because a single wheel
- * gesture emits a burst of events and each save is a bridge round-trip; the
- * visible zoom still updates immediately via the optimistic settings cache.
+ * Browsers synthesise pinch-zoom as a wheel event with `ctrlKey` forced true,
+ * so a naive `ctrlKey` check would swallow pinch and stop the browser's own
+ * zoom from running. Two signals separate them:
+ *   - a pinch never has a real Ctrl key down, so on macOS (where our modifier
+ *     is Command) any ctrl-only wheel is a pinch;
+ *   - a pinch reports fractional, small deltas, while a notched wheel reports
+ *     whole numbers — usually a multiple of 3 (Chrome) or 40/120 (others).
+ *
+ * We deliberately let pinch through: zoom-by-pinch is left to the browser's
+ * native handling (a product decision), and intercepting it here would break
+ * that without replacing it.
+ */
+export function isModifiedWheel(e: WheelEvent): boolean {
+  if (isMac()) {
+    // On macOS our modifier is Command. A ctrl-only wheel is the synthesised
+    // pinch, which must fall through to the browser.
+    if (!e.metaKey) return false;
+  } else if (!e.ctrlKey) {
+    return false;
+  }
+  // A fractional delta means a continuous (pinch/precise-trackpad) stream
+  // rather than a wheel notch.
+  return Number.isInteger(e.deltaY);
+}
+
+/**
+ * Wire CmdOrCtrl +/-/0 and CmdOrCtrl + wheel to the zoom level owned by
+ * ZoomContext, which also drives the on-screen zoom indicator.
  */
 export function useZoomControls(): void {
-  const { settings, updateSetting } = useSettings();
-
-  // Read the level through a ref so the listeners can stay mounted for the
-  // lifetime of the app instead of being torn down on every zoom change.
-  const levelRef = useRef<number>(ZOOM_DEFAULT);
-  const current = settings[SettingKey.ZOOM_LEVEL];
-  levelRef.current = typeof current === 'number' && Number.isFinite(current) ? current : ZOOM_DEFAULT;
-
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<number | null>(null);
-
-  const commit = useCallback(
-    (next: number) => {
-      const clamped = clampZoom(next);
-      if (clamped === levelRef.current) return;
-      // Reflect immediately so the gesture feels instant, then persist once the
-      // burst settles.
-      levelRef.current = clamped;
-      pendingRef.current = clamped;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        const value = pendingRef.current;
-        pendingRef.current = null;
-        if (value !== null) updateSetting(SettingKey.ZOOM_LEVEL, value);
-      }, 200);
-    },
-    [updateSetting],
-  );
+  const { zoomIn, zoomOut, reset, dismissIndicator } = useZoom();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isZoomInKey(e)) {
         e.preventDefault();
-        commit(zoomIn(levelRef.current));
+        zoomIn();
         return;
       }
       if (isZoomOutKey(e)) {
         e.preventDefault();
-        commit(zoomOut(levelRef.current));
+        zoomOut();
         return;
       }
       if (isZoomResetKey(e)) {
         e.preventDefault();
-        commit(ZOOM_DEFAULT);
+        reset();
+        return;
       }
+      if (e.key === 'Escape') dismissIndicator();
     };
 
     const handleWheel = (e: WheelEvent) => {
-      if (!hasCmdOrCtrl(e)) return;
-      // Without preventDefault the browser/JCEF runs its own page zoom on top of
+      if (!isModifiedWheel(e)) return;
+      // Without preventDefault the browser runs its own page zoom on top of
       // ours, compounding the scale. Requires passive: false to take effect.
       e.preventDefault();
       if (e.deltaY === 0) return;
-      commit(e.deltaY < 0 ? zoomIn(levelRef.current) : zoomOut(levelRef.current));
+      if (e.deltaY < 0) zoomIn(); else zoomOut();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -105,7 +103,6 @@ export function useZoomControls(): void {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('wheel', handleWheel);
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [commit]);
+  }, [zoomIn, zoomOut, reset, dismissIndicator]);
 }

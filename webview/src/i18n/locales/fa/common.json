@@ -3,6 +3,12 @@
     "confirm": "تأیید",
     "cancel": "لغو"
   },
+  "zoomIndicator": {
+    "label": "سطح بزرگ‌نمایی",
+    "zoomOut": "کوچک‌نمایی",
+    "zoomIn": "بزرگ‌نمایی",
+    "reset": "بازنشانی"
+  },
   "contextChip": {
     "removeContext": "حذف زمینه"
   },
