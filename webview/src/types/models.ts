@@ -149,6 +149,38 @@ export function withFableFallback(
 }
 
 /**
+ * Decide what the session model becomes when the CLI reports the model it is
+ * running (`system/init`).
+ *
+ * One rule: **an unidentifiable value must never overwrite one we already
+ * know.** Model ids are not ours to predict — a proxy can map the CLI's slots
+ * onto arbitrary names via `ANTHROPIC_DEFAULT_*_MODEL`, and a future catalog
+ * may use shapes we've never seen. Previously an unmatched report was resolved
+ * as "the default" downstream, which silently discarded the user's pick and
+ * showed the wrong model even though the CLI was running the right one
+ * (issue #217).
+ *
+ * So: adopt a report we can place in the catalog, adopt it when there is no
+ * prior pick to protect (it is all we know), and otherwise keep what the user
+ * chose — which also keeps subsequent requests going out with that model.
+ *
+ * An empty `models` list means the catalog hasn't loaded yet, not that nothing
+ * matched; treat it as "can't judge" and keep the current pick.
+ */
+export function reconcileSessionModel(
+  reported: string | null | undefined,
+  current: string | null | undefined,
+  models: ModelInfo[],
+): string | null {
+  if (!reported) return null; // the CLI reports no model — nothing to run with
+  if (!current) return reported; // nothing to protect; keep the report verbatim
+  if (models.length === 0) return current; // catalog not loaded — can't judge yet
+  return resolveModelInfo(models, reported, { allowDefaultFallback: false })
+    ? reported
+    : current;
+}
+
+/**
  * The model to treat as "current" for display and selection. The running
  * session model (`systemInit` truth) wins once known; before the CLI is
  * spawned (new session, `sessionModel` null) we predict with the user's saved
@@ -229,6 +261,7 @@ export function findModelForSelection(
 export function resolveModelInfo(
   models: ModelInfo[],
   current: string | null | undefined,
+  options?: { allowDefaultFallback?: boolean },
 ): ModelInfo | null {
   if (models.length === 0) return null;
   const target = current ?? DEFAULT_MODEL_ALIAS;
@@ -248,6 +281,11 @@ export function resolveModelInfo(
     const aliasMatch = models.find((m) => modelInfoAlias(m) === targetAlias);
     if (aliasMatch) return aliasMatch;
   }
+
+  // Callers that need to know whether the model was genuinely identified (see
+  // `reconcileSessionModel`) opt out of this fallback: for them "unmatched"
+  // must stay distinguishable from "matched the default row".
+  if (options?.allowDefaultFallback === false) return null;
 
   const defaultItem = models.find((m) => m.value === DEFAULT_MODEL_ALIAS);
   if (defaultItem) return defaultItem;

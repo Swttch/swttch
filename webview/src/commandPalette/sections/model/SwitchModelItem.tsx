@@ -14,7 +14,8 @@ const SwitchModelValue = () => {
   const { cliVersion } = useVersionInfo();
   const { probedAvailable } = useFableProbe();
   const models = withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable);
-  const info = resolveModelInfo(models, currentModel);
+  // Unidentified models show their raw value rather than "Default" (issue #217).
+  const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
   const text = info?.displayName ?? currentModel;
   return (
     <span className="text-[0.8461rem] text-text-secondary whitespace-nowrap">

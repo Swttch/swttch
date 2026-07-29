@@ -52,17 +52,30 @@ Two symptoms, one root.
 
 ## What changed
 
-**Recognizing a model now looks further.** Where it previously judged by name
+**The core of it: when we don't know, we do nothing.** The real flaw was not
+that a name went unrecognized — it was that "unrecognized" was **read as "this
+must be the default"**. At that moment the user's choice is silently discarded.
+
+Now, if the model Claude Code reports can't be found in the list, we **leave
+your pick alone instead of reverting to the default**. The display stays put,
+and subsequent requests keep going out with that model.
+
+This matters because GLM is not the only model you can connect. We can't know
+what names will show up next. So the rule is deliberately **independent of what
+a name looks like**: an unfamiliar name can no longer cost you your selection.
+
+**Recognition itself also got better.** Where it previously judged by name
 alone, it now also reads **the description Claude Code already gave us** when
 the name isn't conclusive. If it says `Custom Haiku model`, that is the Haiku
 slot. We aren't guessing — we're finishing reading information we already had.
-When the name is clear, the name still wins.
+When the name is clear, the name still wins. Values whose shape differs slightly
+from the list (a suffix like `glm-4.5-air-mayi[1m]`, or different
+capitalization) now resolve to the same model too.
 
-**Your pick stays on screen once the conversation starts.** When a conversation
-begins, Claude Code reports back which model is running, and its shape differs
-slightly from the list (a suffix like `glm-4.5-air-mayi[1m]`, or different
-capitalization). Those differences are now accounted for, so the model you
-picked stays displayed.
+**An unknown model shows as itself.** A model we ultimately can't identify is
+displayed by the name we received rather than dressed up as "Default", and the
+model picker ticks no row at all when it isn't sure — rather than claiming a
+selection the user never made.
 
 **Labels stay short, like labels.** A model you connected yourself is shown by
 its real name (`glm-4.5-air-mayi`) rather than its description. No more full

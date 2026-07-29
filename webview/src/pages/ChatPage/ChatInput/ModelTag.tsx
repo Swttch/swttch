@@ -22,6 +22,10 @@ export const ROTATE_MODEL_EVENT = 'rotate-model';
  * the CLI reported a model family the selectable list doesn't carry. Humanize
  * the coarse alias ("opus" → "Opus") so the indicator stays meaningful instead
  * of vanishing; fall back to the raw value if even the family is unknown.
+ *
+ * Showing the raw value is deliberate: a model we can't identify must not be
+ * dressed up as "Default", which would claim something we don't know to be
+ * true (issue #217).
  */
 function fallbackModelLabel(current: string): string {
   const alias = toModelAlias(current);
@@ -86,9 +90,10 @@ export function ModelTag() {
   // shortly and fills this in; this is the ONLY case where the tag is hidden.
   if (models.length === 0) return null;
 
-  const info = resolveModelInfo(models, currentModel);
-  // Once models are loaded the tag always renders: a matched label when we can
-  // resolve the model, otherwise a humanized fallback so it never disappears.
+  // No default fallback here: an unidentified model must show as itself, not
+  // masquerade as "Default" (issue #217). The tag still always renders —
+  // fallbackModelLabel covers the unmatched case.
+  const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
   const label = info ? resolveModelLabel(info) : fallbackModelLabel(currentModel);
 
   const handleClick = () => {

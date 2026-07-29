@@ -42,7 +42,10 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
 
   const rawModels: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
   const models: ModelInfo[] = withFableFallback(rawModels, cliVersion, probedAvailable);
-  const currentInfo = resolveModelInfo(models, currentModel);
+  // No default fallback: if we can't identify the running model, no row is
+  // ticked — better than ticking "Default" and claiming a selection the user
+  // never made (issue #217).
+  const currentInfo = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
   const isMac = navigator.platform.toUpperCase().includes('MAC');
 
   // Past the promo window the catalog omits Fable for many accounts that can

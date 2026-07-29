@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   toModelAlias,
+  reconcileSessionModel,
   resolveModelInfo,
   resolveModelLabel,
   findModelForSelection,
@@ -110,6 +111,52 @@ describe('toModelAlias', () => {
     expect(toModelAlias(undefined)).toBe('default');
     expect(toModelAlias('')).toBe('default');
     expect(toModelAlias('mystery-model')).toBe('default');
+  });
+});
+
+describe('reconcileSessionModel — never overwrite a known pick with an unknown value', () => {
+  const CUSTOM: ModelInfo[] = [
+    { value: 'default', displayName: 'Default (recommended)', description: 'Use the default model (currently glm-5.2-mayi[1m])' },
+    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+  ];
+
+  it('adopts a reported model the catalog recognizes', () => {
+    expect(reconcileSessionModel('glm-4.5-air-mayi', 'default', CUSTOM)).toBe('glm-4.5-air-mayi');
+  });
+
+  it('keeps the current pick when the reported model is unrecognizable', () => {
+    // The core rule: "we could not identify it" must never be read as
+    // "it is the default". Whatever the user picked stays selected, so the next
+    // request still goes out with that model (issue #217).
+    expect(reconcileSessionModel('some-unknown-model-x', 'glm-4.5-air-mayi', CUSTOM)).toBe(
+      'glm-4.5-air-mayi',
+    );
+  });
+
+  it('adopts the reported model when there is no current pick to protect', () => {
+    // Nothing to preserve — the reported value is all we know, so keep it
+    // verbatim rather than inventing a fallback.
+    expect(reconcileSessionModel('some-unknown-model-x', null, CUSTOM)).toBe('some-unknown-model-x');
+  });
+
+  it('keeps the current pick while the catalog is still loading', () => {
+    // An empty catalog means "not loaded yet", not "nothing matches" — so it
+    // must not be treated as a failed match that discards the pick.
+    expect(reconcileSessionModel('glm-4.5-air-mayi', 'glm-4.5-air-mayi', [])).toBe('glm-4.5-air-mayi');
+  });
+
+  it('clears the model when the CLI reports none', () => {
+    expect(reconcileSessionModel(null, 'glm-4.5-air-mayi', CUSTOM)).toBeNull();
+  });
+
+  it('is unaffected on an Anthropic catalog (no regression)', () => {
+    const anthropic: ModelInfo[] = [
+      { value: 'default', displayName: 'Default (recommended)', description: 'Opus 4.8 · recommended' },
+      { value: 'haiku', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+    ];
+    expect(reconcileSessionModel('claude-haiku-4-5-20251001', 'default', anthropic)).toBe(
+      'claude-haiku-4-5-20251001',
+    );
   });
 });
 
