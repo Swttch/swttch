@@ -10,15 +10,55 @@ import { isAtLeastVersion } from '@/utils/compareVersions';
  */
 export const DEFAULT_MODEL_ALIAS = 'default';
 
-export function toModelAlias(value: string | null | undefined): string {
+/** The concrete model families the CLI exposes as short aliases. */
+const MODEL_FAMILIES = ['opus', 'sonnet', 'haiku', 'fable'] as const;
+
+/** First family token appearing in `text` (case-insensitive), if any. */
+function familyIn(text: string): string | null {
+  const haystack = text.toLowerCase();
+  return MODEL_FAMILIES.find((family) => haystack.includes(family)) ?? null;
+}
+
+/**
+ * Reduce a model value to its coarse family alias.
+ *
+ * `description` is the model's catalog blurb and is consulted only when the
+ * value itself carries no family token. Third-party proxies map the CLI's model
+ * slots onto their own ids via `ANTHROPIC_DEFAULT_*_MODEL`, so the value can be
+ * something like `glm-4.5-air-mayi` with no "haiku" in it — but the CLI still
+ * names the slot in the description ("Custom Haiku model"). Without that second
+ * look every custom entry collapses onto `default`, and the model indicator
+ * shows the default row's blurb no matter which model is actually running
+ * (issue #217).
+ *
+ * The value stays the stronger signal: a description is only a tie-breaker for
+ * values we can't classify, never an override.
+ */
+export function toModelAlias(
+  value: string | null | undefined,
+  description?: string | null,
+): string {
   if (!value) return DEFAULT_MODEL_ALIAS;
   if (value === DEFAULT_MODEL_ALIAS) return DEFAULT_MODEL_ALIAS;
-  if (value === 'opus' || value === 'sonnet' || value === 'haiku' || value === 'fable') return value;
-  if (value.includes('opus')) return 'opus';
-  if (value.includes('sonnet')) return 'sonnet';
-  if (value.includes('haiku')) return 'haiku';
-  if (value.includes('fable')) return 'fable';
-  return DEFAULT_MODEL_ALIAS;
+  const fromValue = familyIn(value);
+  if (fromValue) return fromValue;
+  return (description && familyIn(description)) || DEFAULT_MODEL_ALIAS;
+}
+
+/** `toModelAlias` for a catalog entry, so the description is always considered. */
+export function modelInfoAlias(info: ModelInfo): string {
+  return toModelAlias(info.value, info.description);
+}
+
+/**
+ * Normalize a model id for comparison: lowercase and strip a context-window
+ * suffix (`[1m]`). The CLI echoes the running model back through `system/init`
+ * in a slightly different shape than the catalog lists it, and for custom
+ * models there is no family token to fall back on — so this comparison is what
+ * keeps the user's exact pick on screen.
+ */
+function normalizeModelId(value: string): string {
+  return value.toLowerCase().replace(/\[[^\]]*\]$/, '');
 }
 
 /**
@@ -97,15 +137,47 @@ export function withFableFallback(
   probedAvailable?: boolean | null,
 ): ModelInfo[] {
   if (models.length === 0) return models;
-  if (models.some((m) => toModelAlias(m.value) === 'fable')) return models; // CLI already serves it — always trust, regardless of version
+  if (models.some((m) => modelInfoAlias(m) === 'fable')) return models; // CLI already serves it — always trust, regardless of version (a custom catalog names it in the description)
   if (!isFableSupportedCli(cliVersion)) return models; // an old CLI can't select Fable, so don't offer the fallback
   if (probedAvailable !== true) return models; // only when a real probe confirmed this account
   // Fable 5 is the most capable model, so rank it at the top of the concrete
   // choices — just below the "default" item and above Opus/Sonnet/Haiku,
   // mirroring how the CLI orders a natively-served Fable ahead of them.
-  const defaultIdx = models.findIndex((m) => toModelAlias(m.value) === DEFAULT_MODEL_ALIAS);
+  const defaultIdx = models.findIndex((m) => m.value === DEFAULT_MODEL_ALIAS);
   const at = defaultIdx >= 0 ? defaultIdx + 1 : 0;
   return [...models.slice(0, at), FABLE_FALLBACK_MODEL, ...models.slice(at)];
+}
+
+/**
+ * Decide what the session model becomes when the CLI reports the model it is
+ * running (`system/init`).
+ *
+ * One rule: **an unidentifiable value must never overwrite one we already
+ * know.** Model ids are not ours to predict — a proxy can map the CLI's slots
+ * onto arbitrary names via `ANTHROPIC_DEFAULT_*_MODEL`, and a future catalog
+ * may use shapes we've never seen. Previously an unmatched report was resolved
+ * as "the default" downstream, which silently discarded the user's pick and
+ * showed the wrong model even though the CLI was running the right one
+ * (issue #217).
+ *
+ * So: adopt a report we can place in the catalog, adopt it when there is no
+ * prior pick to protect (it is all we know), and otherwise keep what the user
+ * chose — which also keeps subsequent requests going out with that model.
+ *
+ * An empty `models` list means the catalog hasn't loaded yet, not that nothing
+ * matched; treat it as "can't judge" and keep the current pick.
+ */
+export function reconcileSessionModel(
+  reported: string | null | undefined,
+  current: string | null | undefined,
+  models: ModelInfo[],
+): string | null {
+  if (!reported) return null; // the CLI reports no model — nothing to run with
+  if (!current) return reported; // nothing to protect; keep the report verbatim
+  if (models.length === 0) return current; // catalog not loaded — can't judge yet
+  return resolveModelInfo(models, reported, { allowDefaultFallback: false })
+    ? reported
+    : current;
 }
 
 /**
@@ -129,13 +201,20 @@ export function resolveCurrentModel(
  * but the description's first "·"-separated segment carries the actual
  * model, e.g. "Opus 4.8 with 1M context · Best for everyday tasks".
  * Keep only the model name + version ("Opus 4.8"), dropping trailing
- * qualifiers; fall back to the full segment, then to displayName.
+ * qualifiers.
+ *
+ * That shape is specific to the Anthropic catalog. A custom catalog describes
+ * its rows differently ("Custom Haiku model") and puts the real id in the
+ * displayName instead, so a description with no "<name> <version>" prefix is
+ * not a label — we use the displayName rather than pasting a whole sentence
+ * into the composer's bottom row (issue #217).
  */
 export function resolveModelLabel(info: ModelInfo): string {
   const firstSegment = info.description?.split('·')[0]?.trim();
   if (!firstSegment) return info.displayName;
   const nameVersion = firstSegment.match(/^.+?\s[\d.]+/);
-  return nameVersion ? nameVersion[0].trim() : firstSegment;
+  if (nameVersion) return nameVersion[0].trim();
+  return info.displayName || firstSegment;
 }
 
 /**
@@ -176,12 +255,13 @@ export function findModelForSelection(
   if (alias === DEFAULT_MODEL_ALIAS && query.toLowerCase() !== DEFAULT_MODEL_ALIAS) {
     return null;
   }
-  return models.find((m) => toModelAlias(m.value) === alias) ?? null;
+  return models.find((m) => modelInfoAlias(m) === alias) ?? null;
 }
 
 export function resolveModelInfo(
   models: ModelInfo[],
   current: string | null | undefined,
+  options?: { allowDefaultFallback?: boolean },
 ): ModelInfo | null {
   if (models.length === 0) return null;
   const target = current ?? DEFAULT_MODEL_ALIAS;
@@ -189,9 +269,23 @@ export function resolveModelInfo(
   const exact = models.find((m) => m.value === target);
   if (exact) return exact;
 
+  // A CLI-echoed value may carry a suffix or differ in case from the catalog
+  // entry (`glm-4.5-air-mayi[1m]`, `GLM-4.5-Air-MAYI`), so try a normalized
+  // match before widening to the family — it keeps the user's precise pick.
+  const normalized = normalizeModelId(target);
+  const idMatch = models.find((m) => normalizeModelId(m.value) === normalized);
+  if (idMatch) return idMatch;
+
   const targetAlias = toModelAlias(target);
-  const aliasMatch = models.find((m) => toModelAlias(m.value) === targetAlias);
-  if (aliasMatch) return aliasMatch;
+  if (targetAlias !== DEFAULT_MODEL_ALIAS) {
+    const aliasMatch = models.find((m) => modelInfoAlias(m) === targetAlias);
+    if (aliasMatch) return aliasMatch;
+  }
+
+  // Callers that need to know whether the model was genuinely identified (see
+  // `reconcileSessionModel`) opt out of this fallback: for them "unmatched"
+  // must stay distinguishable from "matched the default row".
+  if (options?.allowDefaultFallback === false) return null;
 
   const defaultItem = models.find((m) => m.value === DEFAULT_MODEL_ALIAS);
   if (defaultItem) return defaultItem;

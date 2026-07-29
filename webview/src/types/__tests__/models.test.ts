@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   toModelAlias,
+  reconcileSessionModel,
   resolveModelInfo,
   resolveModelLabel,
   findModelForSelection,
@@ -110,6 +111,116 @@ describe('toModelAlias', () => {
     expect(toModelAlias(undefined)).toBe('default');
     expect(toModelAlias('')).toBe('default');
     expect(toModelAlias('mystery-model')).toBe('default');
+  });
+});
+
+describe('reconcileSessionModel — never overwrite a known pick with an unknown value', () => {
+  const CUSTOM: ModelInfo[] = [
+    { value: 'default', displayName: 'Default (recommended)', description: 'Use the default model (currently glm-5.2-mayi[1m])' },
+    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+  ];
+
+  it('adopts a reported model the catalog recognizes', () => {
+    expect(reconcileSessionModel('glm-4.5-air-mayi', 'default', CUSTOM)).toBe('glm-4.5-air-mayi');
+  });
+
+  it('keeps the current pick when the reported model is unrecognizable', () => {
+    // The core rule: "we could not identify it" must never be read as
+    // "it is the default". Whatever the user picked stays selected, so the next
+    // request still goes out with that model (issue #217).
+    expect(reconcileSessionModel('some-unknown-model-x', 'glm-4.5-air-mayi', CUSTOM)).toBe(
+      'glm-4.5-air-mayi',
+    );
+  });
+
+  it('adopts the reported model when there is no current pick to protect', () => {
+    // Nothing to preserve — the reported value is all we know, so keep it
+    // verbatim rather than inventing a fallback.
+    expect(reconcileSessionModel('some-unknown-model-x', null, CUSTOM)).toBe('some-unknown-model-x');
+  });
+
+  it('keeps the current pick while the catalog is still loading', () => {
+    // An empty catalog means "not loaded yet", not "nothing matches" — so it
+    // must not be treated as a failed match that discards the pick.
+    expect(reconcileSessionModel('glm-4.5-air-mayi', 'glm-4.5-air-mayi', [])).toBe('glm-4.5-air-mayi');
+  });
+
+  it('clears the model when the CLI reports none', () => {
+    expect(reconcileSessionModel(null, 'glm-4.5-air-mayi', CUSTOM)).toBeNull();
+  });
+
+  it('is unaffected on an Anthropic catalog (no regression)', () => {
+    const anthropic: ModelInfo[] = [
+      { value: 'default', displayName: 'Default (recommended)', description: 'Opus 4.8 · recommended' },
+      { value: 'haiku', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+    ];
+    expect(reconcileSessionModel('claude-haiku-4-5-20251001', 'default', anthropic)).toBe(
+      'claude-haiku-4-5-20251001',
+    );
+  });
+});
+
+describe('custom model catalogs (issue #217)', () => {
+  // A third-party proxy (GLM here) maps the CLI's model slots to its own ids via
+  // ANTHROPIC_DEFAULT_*_MODEL. The values carry no "opus"/"sonnet"/"haiku"
+  // token, so value-only alias matching collapses every entry onto "default" —
+  // the indicator then shows the default row's blurb no matter what is running.
+  // The CLI still tells us the family in the description ("Custom Haiku model"),
+  // so that is what we key on.
+  const CUSTOM_MODELS: ModelInfo[] = [
+    {
+      value: 'default',
+      displayName: 'Default (recommended)',
+      description: 'Use the default model (currently glm-5.2-mayi[1m])',
+    },
+    { value: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
+    { value: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
+    { value: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
+    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+  ];
+
+  it('derives the family from the description when the value carries no family token', () => {
+    expect(toModelAlias('glm-4.5-air-mayi', 'Custom Haiku model')).toBe('haiku');
+    expect(toModelAlias('glm-4.7-mayi', 'Custom Sonnet model')).toBe('sonnet');
+    expect(toModelAlias('glm-5.2-mayi', 'Custom Opus model')).toBe('opus');
+    expect(toModelAlias('glm-5.1-mayi', 'Custom Fable model')).toBe('fable');
+  });
+
+  it('still prefers the value over the description when the value is conclusive', () => {
+    // The value is the stronger signal; a mismatched description must not win.
+    expect(toModelAlias('claude-opus-4-8', 'Custom Haiku model')).toBe('opus');
+  });
+
+  it('leaves the default row on the default alias', () => {
+    expect(toModelAlias('default', 'Use the default model (currently glm-5.2-mayi[1m])')).toBe(
+      DEFAULT_MODEL_ALIAS,
+    );
+  });
+
+  it('keeps a user-picked custom model displayed after the session starts', () => {
+    // Regression for #217: the user picks the Haiku slot and sends a message;
+    // system/init echoes the coarse alias, which must resolve back to the very
+    // model the user picked — not to the "default" row.
+    expect(resolveModelInfo(CUSTOM_MODELS, 'haiku')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'sonnet')?.value).toBe('glm-4.7-mayi');
+  });
+
+  it('resolves the raw custom id the CLI may echo back, suffix and case included', () => {
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.5-air-mayi')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.5-air-mayi[1m]')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'GLM-4.5-Air-MAYI')?.value).toBe('glm-4.5-air-mayi');
+  });
+
+  it('labels a custom model by its own name rather than the default blurb', () => {
+    const haiku = CUSTOM_MODELS[4];
+    // Never the long "Use the default model (currently …)" sentence that broke
+    // the composer's bottom row.
+    expect(resolveModelLabel(haiku)).toBe('glm-4.5-air-mayi');
+  });
+
+  it('does not fabricate a family for a genuinely unknown custom model', () => {
+    // No family token anywhere → stay on default rather than guessing.
+    expect(toModelAlias('glm-4.5-air-mayi', 'Some unrelated blurb')).toBe(DEFAULT_MODEL_ALIAS);
   });
 });
 
