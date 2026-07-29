@@ -1,5 +1,7 @@
+import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
 import { i18n } from '@/i18n';
+import { copyFrontendLogs } from '@/utils/copyFrontendLogs';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
 
@@ -9,6 +11,22 @@ import { enKeyword } from '../../enKeyword';
  * registry registers the Support section.
  */
 export const getSupportItems = (): StaticItem[] => [
+  // Bug-report aid: hands over this tab's whole front-end console log in one go.
+  // `LogForwarder` captures it from startup, so this works for a user who never
+  // opened devtools. Search-only — it is a diagnostics tool, not a daily action.
+  new StaticItem('copy-front-log', i18n.t('commandPalette:support.copyFrontLog'), {
+    disabled: false,
+    searchOnly: true,
+    keywords: [enKeyword('commandPalette:support.copyFrontLog')],
+    action: async () => {
+      const { ok, lineCount } = await copyFrontendLogs();
+      if (ok) {
+        toast.success(i18n.t('commandPalette:support.copyFrontLogDone', { count: lineCount }));
+      } else {
+        toast.error(i18n.t('commandPalette:support.copyFrontLogFailed'));
+      }
+    },
+  }),
   new StaticItem('help-docs', i18n.t('commandPalette:support.viewHelpDocs'), {
     disabled: false,
     keywords: [enKeyword('commandPalette:support.viewHelpDocs')],

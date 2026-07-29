@@ -69,6 +69,9 @@
     "generalConfig": "Общая конфигурация..."
   },
   "support": {
+    "copyFrontLog": "Скопировать журнал фронтенда плагина",
+    "copyFrontLogDone": "Журнал фронтенда скопирован ({{count}} строк)",
+    "copyFrontLogFailed": "Нет журнала фронтенда для копирования",
     "viewHelpDocs": "Открыть справочную документацию",
     "restartPlugin": "Перезапустить плагин",
     "restartConfirm": {

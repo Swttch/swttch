@@ -69,6 +69,9 @@
     "generalConfig": "Configuración general..."
   },
   "support": {
+    "copyFrontLog": "Copiar el registro del frontend del plugin",
+    "copyFrontLogDone": "Registro del frontend copiado ({{count}} líneas)",
+    "copyFrontLogFailed": "No hay registro del frontend que copiar",
     "viewHelpDocs": "Ver documentación de ayuda",
     "restartPlugin": "Reiniciar plugin",
     "restartConfirm": {

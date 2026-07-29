@@ -69,6 +69,9 @@
     "generalConfig": "常规配置..."
   },
   "support": {
+    "copyFrontLog": "复制插件前端日志",
+    "copyFrontLogDone": "已复制前端日志（{{count}} 行）",
+    "copyFrontLogFailed": "没有可复制的前端日志",
     "viewHelpDocs": "查看帮助文档",
     "restartPlugin": "重启插件",
     "restartConfirm": {
