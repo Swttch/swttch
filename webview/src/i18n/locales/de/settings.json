@@ -115,7 +115,7 @@
       "sectionTitle": "Scrollen",
       "autoScrollThreshold": {
         "label": "Wiederaufnahme-Abstand für automatisches Scrollen",
-        "description": "Nach oben scrollen pausiert das automatische Scrollen immer, damit du ungestört lesen kannst. Es wird fortgesetzt, sobald du wieder innerhalb dieser Pixelanzahl zum unteren Rand zurückscrollst. Ein kleinerer Wert bedeutet, dass du näher zurückkehren musst, um es erneut zu aktivieren. Standard {{value}}.",
+        "description": "Wenn du weiter als diese Pixelanzahl vom unteren Rand nach oben scrollst, pausiert das automatische Scrollen, damit du ungestört lesen kannst. Es wird fortgesetzt, sobald du wieder in diesen Bereich zurückscrollst. Ein kleinerer Wert bedeutet, dass du näher zurückkehren musst, um es erneut zu aktivieren. Standard {{value}}.",
         "notSetPlaceholder": "Nicht festgelegt"
       }
     }

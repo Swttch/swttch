@@ -115,7 +115,7 @@
       "sectionTitle": "Rolagem",
       "autoScrollThreshold": {
         "label": "Distância para retomar a rolagem automática",
-        "description": "Rolar para cima sempre pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você rolar de volta a esta quantidade de pixels do final. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}.",
+        "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}.",
         "notSetPlaceholder": "Não definido"
       }
     }

@@ -12,13 +12,6 @@ export const AUTO_SCROLL_THRESHOLD_MIN = 1;
 export const AUTO_SCROLL_THRESHOLD_MAX = 1000;
 
 /**
- * Minimum upward scroll (in px) that counts as a deliberate user scroll and
- * releases auto-follow. Absorbs sub-pixel rendering jitter so the view does not
- * stop following on its own.
- */
-export const AUTO_SCROLL_RELEASE_EPS = 2;
-
-/**
  * Distance from the bottom (in px) below which the view is considered already
  * pinned, so no further programmatic scroll is issued.
  */
@@ -34,30 +27,37 @@ export function clampAutoScrollThreshold(value: number): number {
 /**
  * Decide the next auto-follow state from a single scroll measurement.
  *
- * Auto-follow tracks user *intent*, not viewport position. The key insight
- * (issue #100): a large block inserted at once grows `scrollHeight` while
- * `scrollTop` stays put, pushing the bottom far away — but the user did not
- * move, so following must continue. Only a negative `scrollDelta` (the user
- * scrolling up) releases it.
+ * The user-configured distance (`resumeThreshold`, the "Auto-scroll resume
+ * distance" setting) is the single decision boundary:
+ *  - within it, the view keeps following and is pulled back to the bottom
+ *  - beyond it, following stops so the user can read undisturbed
  *
- * Rules, in priority order:
- *  - release: `scrollDelta < -releaseEps` (user scrolled up) -> false.
- *    Wins over resume, so scrolling up always stops following even near bottom.
- *  - resume: the user actively scrolls *down* (`scrollDelta > releaseEps`) to
- *    within `resumeThreshold` of the bottom -> true. Merely *being* near the
- *    bottom must NOT re-grab the view: otherwise a small upward nudge inside the
- *    resume distance releases and then snaps straight back on the next idle tick.
- *  - otherwise: keep `prev` (content growth with delta ~= 0, or idle).
+ * Using one boundary for both directions is what keeps this in step with
+ * `shouldShowScrollToBottom`, which reads the same distance: auto-scroll being
+ * off and the "Scroll to bottom" button being visible are the same condition,
+ * so the view can never go quietly unfollowed while the button stays hidden.
+ *
+ * `scrollDelta` is deliberately not consulted. Distance alone decides, so
+ * sub-pixel jitter cannot stop the view from following, and no separate
+ * "deliberate scroll" epsilon is needed.
+ *
+ * Content growth is therefore harmless (issue #100): a large block inserted at
+ * once grows `scrollHeight` while `scrollTop` stays put, pushing the bottom
+ * beyond the distance. `prev` carries following through that, since only the
+ * user moving out past the distance clears it.
  */
 export function nextAutoFollow(
   prev: boolean,
   scrollDelta: number,
   distanceFromBottom: number,
   resumeThreshold: number,
-  releaseEps: number = AUTO_SCROLL_RELEASE_EPS,
 ): boolean {
-  if (scrollDelta < -releaseEps) return false;
-  if (scrollDelta > releaseEps && distanceFromBottom <= resumeThreshold) return true;
+  // Within the configured distance the resting state is "following": the view
+  // resumes on its own, so a small nudge up near the bottom cannot strand it.
+  if (distanceFromBottom <= resumeThreshold) return true;
+  // Beyond it, only a deliberate move by the user releases following; growth
+  // that pushes the bottom away on its own must not (issue #100).
+  if (scrollDelta < 0) return false;
   return prev;
 }
 

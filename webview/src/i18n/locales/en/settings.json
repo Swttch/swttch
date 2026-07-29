@@ -115,7 +115,7 @@
       "sectionTitle": "Scrolling",
       "autoScrollThreshold": {
         "label": "Auto-scroll resume distance",
-        "description": "Scrolling up always pauses auto-scroll so you can read freely. It resumes once you scroll back within this many pixels of the bottom. Smaller means you must return closer to re-engage. Default {{value}}.",
+        "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}.",
         "notSetPlaceholder": "Not set"
       }
     }
