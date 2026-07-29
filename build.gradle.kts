@@ -146,6 +146,17 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.1 - Settings that respect your project, and a steadier chat view</h3>
+            <ul>
+                <li>Per-project settings: CLI path, terminal and file-opener now apply to the project you set them in, instead of leaking into your other projects (#239, reported by @chyzman)</li>
+                <li>Choose whether the file open in your editor is attached to each message by default (#240, reported by @VijitCoder)</li>
+                <li>A <code>//</code> inside a settings value no longer breaks settings from loading (#238)</li>
+                <li>Your model pick sticks: starting a session no longer flips the picker back to default (#242, reported by @volador123)</li>
+                <li>@ file mentions now work while a slash command panel is open (#241, reported by @deniskrizanovic)</li>
+                <li>Tool cards no longer render blank while a reply is streaming (#243, reported by @StarCode000)</li>
+                <li>Copy the whole front-end log from the command palette — search "copy" — so a bug report can include it without opening devtools</li>
+                <li>Closing a project no longer raises an "Already disposed" error (#233, reported by @amitsidhpura)</li>
+            </ul>
             <h3>0.26.0 - [URGENT] Critical security patch. Update now if under v0.25.2 (CVE public Aug 6)</h3>
             <ul>
                 <li>Scheduled messages &amp; auto-resume: when a session hits its usage limit, schedule a follow-up that fires the moment your quota resets (sponsor)</li>
