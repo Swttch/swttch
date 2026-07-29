@@ -314,6 +314,69 @@ describe('useChatStream', () => {
     });
   });
 
+  // A tool_use block's input arrives as `input_json_delta`, which is buffered and
+  // applied on the next RAF frame. Measured against a live CLI, the `assistant`
+  // event for the same turn can arrive *before* that frame runs — and it resets
+  // the active-block index. The buffered delta then had no block to write to and
+  // was dropped, leaving the tool card with an empty input (issue #232).
+  describe('tool_use input_json_delta와 assistant 이벤트 경합 (issue #232)', () => {
+    const TOOL_ID = 'toolu_probe232';
+
+    it('assistant 이벤트가 flush보다 먼저 와도 누적된 input이 유실되지 않는다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: {
+            type: 'content_block_start',
+            index: 0,
+            content_block: { type: 'tool_use', id: TOOL_ID, name: 'Write', input: {} },
+          },
+        });
+      });
+
+      // The input streams in as partial JSON; it is buffered, not yet applied.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: {
+            type: 'content_block_delta',
+            index: 0,
+            delta: { type: 'input_json_delta', partial_json: '{"file_path":"/tmp/a.txt"}' },
+          },
+        });
+      });
+
+      // Measured ordering: the `assistant` event lands *before* the RAF frame and
+      // resets the active-block index, then content_block_stop forces the flush.
+      // The assistant payload here carries only the id/name — no `input` — so the
+      // buffered delta is the only source of the tool's arguments.
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          message: {
+            id: 'msg_probe232',
+            content: [{ type: 'tool_use', id: TOOL_ID, name: 'Write', input: {} }],
+          },
+        });
+        emit(MessageType.CLI_EVENT, {
+          type: 'stream_event',
+          event: { type: 'content_block_stop', index: 0 },
+        });
+        flushRAF();
+      });
+
+      const blocks = result.current.messages[0].message?.content as Array<{
+        type: string;
+        input?: Record<string, unknown>;
+      }>;
+      const toolUse = blocks.find(b => b.type === 'tool_use');
+      expect(toolUse?.input).toEqual({ file_path: '/tmp/a.txt' });
+    });
+  });
+
   describe('assistant 처리', () => {
     it('완성된 content가 처리된다', () => {
       const { bridge, emit } = createMockBridge();
