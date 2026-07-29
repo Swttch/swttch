@@ -115,7 +115,7 @@
       "sectionTitle": "Desplazamiento",
       "autoScrollThreshold": {
         "label": "Distancia de reanudación del autodesplazamiento",
-        "description": "Desplazarse hacia arriba siempre pausa el autodesplazamiento para que puedas leer con libertad. Se reanuda al volver a estar dentro de esta cantidad de píxeles del final. Un valor menor significa que debes acercarte más para reactivarlo. Predeterminado {{value}}.",
+        "description": "Si te desplazas más allá de esta cantidad de píxeles desde el final, el autodesplazamiento se pausa para que puedas leer con libertad. Se reanuda en cuanto vuelves a esa distancia. Un valor menor significa que debes acercarte más para reactivarlo. Predeterminado {{value}}.",
         "notSetPlaceholder": "Sin definir"
       }
     }

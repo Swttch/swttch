@@ -115,7 +115,7 @@
       "sectionTitle": "Défilement",
       "autoScrollThreshold": {
         "label": "Distance de reprise du défilement automatique",
-        "description": "Le défilement vers le haut met toujours en pause le défilement automatique afin que vous puissiez lire librement. Il reprend une fois que vous revenez à ce nombre de pixels du bas. Plus la valeur est petite, plus vous devez revenir près du bas pour réactiver. Par défaut {{value}}.",
+        "description": "Si vous faites défiler au-delà de ce nombre de pixels depuis le bas, le défilement automatique se met en pause afin que vous puissiez lire librement. Il reprend dès que vous revenez dans cette distance. Plus la valeur est petite, plus vous devez revenir près du bas pour réactiver. Par défaut {{value}}.",
         "notSetPlaceholder": "Non défini"
       }
     }

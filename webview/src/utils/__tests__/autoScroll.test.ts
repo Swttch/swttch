@@ -6,7 +6,6 @@ import {
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   AUTO_SCROLL_THRESHOLD_MAX,
   AUTO_SCROLL_THRESHOLD_MIN,
-  AUTO_SCROLL_RELEASE_EPS,
 } from '../autoScroll';
 
 describe('clampAutoScrollThreshold', () => {
@@ -35,55 +34,57 @@ describe('clampAutoScrollThreshold', () => {
 });
 
 describe('nextAutoFollow', () => {
-  const RESUME = 80;
+  const THRESHOLD = 80;
 
-  // release: the user scrolled up (scrollTop decreased past the EPS).
-  it('releases (false) when the user scrolls up beyond the release EPS', () => {
-    // far from bottom so resume cannot fire
-    expect(nextAutoFollow(true, -(AUTO_SCROLL_RELEASE_EPS + 1), 500, RESUME)).toBe(false);
+  // The configured distance is the single decision boundary: inside it the view
+  // keeps following, outside it the view stops and waits for the user. That is
+  // the same boundary `shouldShowScrollToBottom` uses, so "auto-scroll is off"
+  // and "the button is showing" always agree.
+  describe('inside the configured distance', () => {
+    it('keeps following while the user scrolls up but stays within it', () => {
+      expect(nextAutoFollow(true, -20, 30, THRESHOLD)).toBe(true);
+      expect(nextAutoFollow(true, -60, THRESHOLD, THRESHOLD)).toBe(true);
+    });
+
+    it('resumes once the user scrolls back within it', () => {
+      expect(nextAutoFollow(false, 50, 10, THRESHOLD)).toBe(true);
+      expect(nextAutoFollow(false, 5, THRESHOLD, THRESHOLD)).toBe(true);
+    });
+
+    it('follows again on an idle tick within it', () => {
+      // Nothing pins the user outside the distance, so following is the correct
+      // resting state — the view should be dragged back down to the bottom.
+      expect(nextAutoFollow(false, 0, 10, THRESHOLD)).toBe(true);
+    });
   });
 
-  it('ignores tiny upward jitter within the release EPS', () => {
-    // jitter smaller than EPS, still far from bottom -> keep previous state
-    expect(nextAutoFollow(true, -(AUTO_SCROLL_RELEASE_EPS - 0.5), 500, RESUME)).toBe(true);
-    expect(nextAutoFollow(false, -(AUTO_SCROLL_RELEASE_EPS - 0.5), 500, RESUME)).toBe(false);
+  describe('outside the configured distance', () => {
+    it('releases when the user scrolls up past it', () => {
+      expect(nextAutoFollow(true, -20, THRESHOLD + 1, THRESHOLD)).toBe(false);
+      expect(nextAutoFollow(true, -200, 500, THRESHOLD)).toBe(false);
+    });
+
+    it('stays released while the user scrolls down but is still outside it', () => {
+      expect(nextAutoFollow(false, 50, THRESHOLD + 1, THRESHOLD)).toBe(false);
+    });
+
+    it('stays released on an idle tick outside it', () => {
+      expect(nextAutoFollow(false, 0, 500, THRESHOLD)).toBe(false);
+    });
   });
 
-  // resume: the user must actively scroll DOWN to within the resume distance.
-  it('resumes (true) when actively scrolling down within the resume distance', () => {
-    expect(nextAutoFollow(false, 5, 10, RESUME)).toBe(true);
-    expect(nextAutoFollow(false, AUTO_SCROLL_RELEASE_EPS + 1, RESUME, RESUME)).toBe(true);
+  // Issue #100: a large block inserted at once grows `scrollHeight` while
+  // `scrollTop` stays put, which pushes the bottom far away without the user
+  // having moved. Growth alone must not stop following.
+  it('keeps following when content growth alone pushes the bottom away', () => {
+    expect(nextAutoFollow(true, 0, 4000, THRESHOLD)).toBe(true);
   });
 
-  it('does NOT resume just by sitting near the bottom (no downward scroll)', () => {
-    // The bug the user hit: nudge up to read, release fires, then on the idle
-    // tick (delta ~= 0) the view must stay put, not snap back to bottom.
-    expect(nextAutoFollow(false, 0, 10, RESUME)).toBe(false);
-    expect(nextAutoFollow(false, 0, RESUME, RESUME)).toBe(false);
-  });
-
-  it('does not resume while scrolling down but still beyond the resume distance', () => {
-    expect(nextAutoFollow(false, 50, RESUME + 1, RESUME)).toBe(false);
-  });
-
-  // release takes priority over resume in the same tick (Lundis: scrolling up
-  // must always stop following, even near the bottom).
-  it('prioritizes release over resume when both could fire in one tick', () => {
-    expect(nextAutoFollow(true, -(AUTO_SCROLL_RELEASE_EPS + 1), 10, RESUME)).toBe(false);
-  });
-
-  it('keeps the previous state when neither release nor resume applies', () => {
-    // idle / content growth: delta ~= 0 -> unchanged
-    expect(nextAutoFollow(true, 0, 500, RESUME)).toBe(true);
-    expect(nextAutoFollow(false, 0, 500, RESUME)).toBe(false);
-    // big block inserted at once: scrollTop unchanged (delta 0), dist jumps ->
-    // must stay following (the issue #100 bug case)
-    expect(nextAutoFollow(true, 0, 4000, RESUME)).toBe(true);
-  });
-
-  it('respects a custom release EPS argument', () => {
-    expect(nextAutoFollow(true, -10, 500, RESUME, 20)).toBe(true);
-    expect(nextAutoFollow(true, -25, 500, RESUME, 20)).toBe(false);
+  it('honours a custom threshold', () => {
+    // The user raised the distance, so a position that would release at the
+    // default still counts as "near the bottom" here.
+    expect(nextAutoFollow(true, -50, 150, 200)).toBe(true);
+    expect(nextAutoFollow(true, -50, 250, 200)).toBe(false);
   });
 });
 
@@ -121,5 +122,30 @@ describe('shouldShowScrollToBottom', () => {
 
   it('shows just past the threshold boundary', () => {
     expect(shouldShowScrollToBottom(false, true, THRESHOLD + 1, THRESHOLD)).toBe(true);
+  });
+});
+
+// The button's visibility is what tells the user whether auto-scroll is off, so
+// the two must never disagree: there must be no distance at which auto-scroll
+// has stopped while the button is still hidden.
+describe('auto-follow and the button agree at every distance', () => {
+  const THRESHOLD = 80;
+
+  it('never stops following while the button is hidden', () => {
+    for (let dist = 0; dist <= 400; dist++) {
+      // The user is scrolling up at this distance from the bottom.
+      const following = nextAutoFollow(true, -20, dist, THRESHOLD);
+      const buttonShown = shouldShowScrollToBottom(following, true, dist, THRESHOLD);
+      expect({ dist, stoppedButHidden: !following && !buttonShown })
+        .toEqual({ dist, stoppedButHidden: false });
+    }
+  });
+
+  it('shows the button exactly when following has stopped', () => {
+    for (let dist = 0; dist <= 400; dist++) {
+      const following = nextAutoFollow(true, -20, dist, THRESHOLD);
+      const buttonShown = shouldShowScrollToBottom(following, true, dist, THRESHOLD);
+      expect({ dist, buttonShown }).toEqual({ dist, buttonShown: !following });
+    }
   });
 });
