@@ -149,6 +149,10 @@
       "keepPlanning": "Нет, продолжить планирование"
     }
   },
+  "promptPanel": {
+    "collapse": "Свернуть",
+    "expand": "Развернуть"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "Скажите Claude, что делать вместо этого",
     "escToCancel": "Esc для отмены"

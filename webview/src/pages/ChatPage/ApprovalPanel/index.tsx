@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { OptionButton, OptionItem } from './OptionButton';
 import { useApprovalKeyboard } from './useApprovalKeyboard';
+import {
+  CollapseToggle,
+  CollapsedSummaryBar,
+  EscToCancelHint,
+  useCollapsiblePanel,
+} from '../PromptPanelChrome';
 import { useTranslation } from '@/i18n';
 
 interface Props {
@@ -22,6 +28,7 @@ export function ApprovalPanel(props: Props) {
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { collapsed, toggle: toggleCollapsed, expand } = useCollapsiblePanel();
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -54,26 +61,39 @@ export function ApprovalPanel(props: Props) {
     handleOptionClick,
     handleTextSubmit,
     onCancel,
+    selectionDisabled: collapsed,
   });
 
   useEffect(() => {
+    if (collapsed) return;
     if (focusedIndex === options.length) textareaRef.current?.focus();
-  }, [focusedIndex, options.length]);
+  }, [collapsed, focusedIndex, options.length]);
+
+  if (collapsed) {
+    return (
+      <div className="w-full max-w-[44rem] mx-auto px-4 pb-[20px] pt-2">
+        <CollapsedSummaryBar title={title} onExpand={expand} />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[20px] pt-2">
       <div className="rounded-lg border border-border-default bg-surface-raised overflow-hidden">
         {/* 헤더 */}
-        <div className="px-2 py-2.5 mb-0.5">
-          <p className="text-[1.0769rem] font-semibold text-text-primary leading-snug">{title}</p>
-          {subtitle && (
-            <p className="text-[1rem] text-text-secondary mt-1">{subtitle}</p>
-          )}
-          {notice && (
-            <p className="text-[0.9230rem] text-text-secondary mt-2 px-2.5 py-2 rounded-[4px] bg-surface-hover border border-border-subtle">
-              {notice}
-            </p>
-          )}
+        <div className="px-2 py-2.5 mb-0.5 flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.0769rem] font-semibold text-text-primary leading-snug">{title}</p>
+            {subtitle && (
+              <p className="text-[1rem] text-text-secondary mt-1">{subtitle}</p>
+            )}
+            {notice && (
+              <p className="text-[0.9230rem] text-text-secondary mt-2 px-2.5 py-2 rounded-[4px] bg-surface-hover border border-border-subtle">
+                {notice}
+              </p>
+            )}
+          </div>
+          <CollapseToggle collapsed={false} onToggle={toggleCollapsed} />
         </div>
 
         {/* 옵션 목록 */}
@@ -106,7 +126,11 @@ export function ApprovalPanel(props: Props) {
 
         {/* 푸터 */}
         <div className="px-2 pb-2 pt-0.5">
-          <span className="text-[0.8461rem] text-text-secondary">{t('approvalPanel.escToCancel')}</span>
+          <EscToCancelHint
+            label={t('approvalPanel.escToCancel')}
+            onCancel={onCancel}
+            className="text-[0.8461rem] text-text-secondary"
+          />
         </div>
       </div>
     </div>

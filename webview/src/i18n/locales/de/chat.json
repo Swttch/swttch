@@ -149,6 +149,10 @@
       "keepPlanning": "Nein, weiter planen"
     }
   },
+  "promptPanel": {
+    "collapse": "Einklappen",
+    "expand": "Ausklappen"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "Sag Claude, was stattdessen getan werden soll",
     "escToCancel": "Esc zum Abbrechen"

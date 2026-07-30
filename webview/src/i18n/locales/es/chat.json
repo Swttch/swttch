@@ -149,6 +149,10 @@
       "keepPlanning": "No, seguir planificando"
     }
   },
+  "promptPanel": {
+    "collapse": "Contraer",
+    "expand": "Expandir"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "Dile a Claude qué hacer en su lugar",
     "escToCancel": "Esc para cancelar"

@@ -8,10 +8,15 @@ interface UseApprovalKeyboardParams {
   handleOptionClick: (index: number) => void;
   handleTextSubmit: () => void;
   onCancel: () => void;
+  /**
+   * Collapsed panels keep Escape but drop option keys: the user is reading the
+   * conversation behind the panel, and a stray digit must not approve anything.
+   */
+  selectionDisabled?: boolean;
 }
 
 export function useApprovalKeyboard(params: UseApprovalKeyboardParams) {
-  const { optionCount, focusedIndex, setFocusedIndex, handleOptionClick, handleTextSubmit, onCancel } = params;
+  const { optionCount, focusedIndex, setFocusedIndex, handleOptionClick, handleTextSubmit, onCancel, selectionDisabled = false } = params;
 
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
@@ -40,6 +45,8 @@ export function useApprovalKeyboard(params: UseApprovalKeyboardParams) {
         return;
       }
 
+      if (selectionDisabled) return;
+
       if (isInputFocused) return;
 
       // 숫자 키로 옵션 직접 선택 (1-based)
@@ -60,7 +67,7 @@ export function useApprovalKeyboard(params: UseApprovalKeyboardParams) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [optionCount, focusedIndex, handleOptionClick, onCancel, setFocusedIndex]);
+  }, [optionCount, focusedIndex, handleOptionClick, onCancel, setFocusedIndex, selectionDisabled]);
 
   return { handleInputKeyDown };
 }

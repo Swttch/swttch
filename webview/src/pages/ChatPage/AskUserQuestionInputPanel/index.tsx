@@ -1,4 +1,4 @@
-import { useEffect, useRef, KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, KeyboardEvent } from 'react';
 import { PendingAskUserQuestion } from '@/hooks/usePendingAskUserQuestion';
 import { useApi } from '@/contexts/ApiContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
@@ -7,6 +7,11 @@ import { useFormState } from './useFormState';
 import { TabBar } from './TabBar';
 import { OptionList } from './OptionList';
 import { Footer } from './Footer';
+import {
+  CollapseToggle,
+  CollapsedSummaryBar,
+  useCollapsiblePanel,
+} from '../PromptPanelChrome';
 
 interface Props {
   toolUse: PendingAskUserQuestion['toolUse'];
@@ -23,10 +28,19 @@ export const AskUserQuestionInputPanel = (props: Props) => {
   const questions = toolUse.input.questions;
 
   const form = useFormState(questions);
+  const { collapsed, toggle: toggleCollapsed, expand } = useCollapsiblePanel();
 
   const questionText = form.currentQuestion.header
     ? form.currentQuestion.question
     : undefined;
+
+  const handleCancel = useCallback(() => {
+    if (controlRequestId) {
+      api.tools.deny(toolUse.id, controlRequestId);
+    }
+    stop();
+    onDismiss();
+  }, [toolUse.id, controlRequestId, api, onDismiss, stop]);
 
   // Esc: deny (capture phase)
   useEffect(() => {
@@ -34,16 +48,12 @@ export const AskUserQuestionInputPanel = (props: Props) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        if (controlRequestId) {
-          api.tools.deny(toolUse.id, controlRequestId);
-        }
-        stop();
-        onDismiss();
+        handleCancel();
       }
     };
     window.addEventListener('keydown', handler, true);
     return () => window.removeEventListener('keydown', handler, true);
-  }, [toolUse.id, controlRequestId, api, onDismiss, stop]);
+  }, [handleCancel]);
 
   // Auto-focus panel on mount
   useEffect(() => {
@@ -77,6 +87,16 @@ export const AskUserQuestionInputPanel = (props: Props) => {
     }
   };
 
+  const summaryTitle = form.currentQuestion.header || form.currentQuestion.question;
+
+  if (collapsed) {
+    return (
+      <div className="w-full max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
+        <CollapsedSummaryBar title={summaryTitle} onExpand={expand} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
       <div
@@ -86,11 +106,16 @@ export const AskUserQuestionInputPanel = (props: Props) => {
       >
         {/* Tab bar */}
         <div className="px-3 pt-2">
-          <TabBar
-            questions={questions}
-            currentIndex={form.currentIndex}
-            onTabClick={form.setCurrentIndex}
-          />
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <TabBar
+                questions={questions}
+                currentIndex={form.currentIndex}
+                onTabClick={form.setCurrentIndex}
+              />
+            </div>
+            <CollapseToggle collapsed={false} onToggle={toggleCollapsed} />
+          </div>
           {questionText && (
             <div className="mt-4">
               <p className="text-text-primary text-[1rem]">{questionText}</p>
@@ -116,6 +141,7 @@ export const AskUserQuestionInputPanel = (props: Props) => {
           canSubmit={form.canSubmitCurrent}
           isLastTab={form.isLastTab}
           onSubmit={handleSubmit}
+          onCancel={handleCancel}
         />
       </div>
     </div>
