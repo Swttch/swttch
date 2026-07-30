@@ -344,6 +344,85 @@ describe('settings', () => {
       expect(bad.status).toBe('error');
       expect(bad.error).toContain('ultracode must be a boolean or null');
     });
+
+    // dockLayout holds the header dock arrangement: which of the overflow-menu
+    // items sit outside as icons, and in what order. The backend validates the
+    // SHAPE only and deliberately does not know the item ids — those belong to
+    // the webview registry, and duplicating the list here would mean editing two
+    // places to add one icon. An id the webview no longer knows is dropped when
+    // it normalizes the layout, so an unknown string is harmless to store.
+    describe('dockLayout', () => {
+      it('accepts a well-formed layout', async () => {
+        const result = await saveSettingToFile('dockLayout', {
+          docked: ['newTab', 'settings'],
+          hidden: ['tunnel'],
+        });
+        expect(result.status).toBe('ok');
+      });
+
+      it('accepts empty arrays (nothing docked yet)', async () => {
+        expect((await saveSettingToFile('dockLayout', { docked: [], hidden: [] })).status).toBe('ok');
+      });
+
+      it('rejects a non-object', async () => {
+        for (const bad of ['nope', 42, null, true]) {
+          const result = await saveSettingToFile('dockLayout', bad);
+          expect(result.status).toBe('error');
+          expect(result.error).toContain('dockLayout must be an object');
+        }
+      });
+
+      it('rejects an array', async () => {
+        const result = await saveSettingToFile('dockLayout', ['newTab']);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout must be an object');
+      });
+
+      it('rejects when docked or hidden is not an array', async () => {
+        const missingHidden = await saveSettingToFile('dockLayout', { docked: [] });
+        expect(missingHidden.status).toBe('error');
+        expect(missingHidden.error).toContain('dockLayout.hidden must be an array');
+
+        const badDocked = await saveSettingToFile('dockLayout', { docked: 'newTab', hidden: [] });
+        expect(badDocked.status).toBe('error');
+        expect(badDocked.error).toContain('dockLayout.docked must be an array');
+      });
+
+      it('rejects non-string entries', async () => {
+        const result = await saveSettingToFile('dockLayout', { docked: [1], hidden: [] });
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout entries must be strings');
+      });
+
+      // An id in both sections (or twice in one) would render the same icon twice
+      // and make the drag reorder ambiguous, so it never reaches the file.
+      it('rejects an id that appears more than once', async () => {
+        const acrossSections = await saveSettingToFile('dockLayout', {
+          docked: ['newTab'],
+          hidden: ['newTab'],
+        });
+        expect(acrossSections.status).toBe('error');
+        expect(acrossSections.error).toContain('dockLayout entries must be unique');
+
+        const withinSection = await saveSettingToFile('dockLayout', {
+          docked: ['newTab', 'newTab'],
+          hidden: [],
+        });
+        expect(withinSection.status).toBe('error');
+        expect(withinSection.error).toContain('dockLayout entries must be unique');
+      });
+
+      it('serializes the layout into the settings file', async () => {
+        mockExistsSync.mockReturnValue(true);
+        mockReadFile.mockResolvedValue('export default { theme: "system" };');
+
+        const result = await saveSettingToFile('dockLayout', { docked: ['newTab'], hidden: [] });
+        expect(result.status).toBe('ok');
+
+        const [, content] = mockWriteFile.mock.calls[mockWriteFile.mock.calls.length - 1];
+        expect(String(content)).toContain('dockLayout: {"docked":["newTab"],"hidden":[]}');
+      });
+    });
   });
 
   describe('saveSettingToFile() - atomic write via temp file + rename', () => {
@@ -462,6 +541,7 @@ describe('settings', () => {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
+        dockLayout: { docked: [], hidden: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,
@@ -583,6 +663,7 @@ export default {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
+        dockLayout: { docked: [], hidden: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,

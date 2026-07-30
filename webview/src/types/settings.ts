@@ -81,6 +81,44 @@ export enum SettingKey {
   // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
   // the native `effortLevel`, but absent from the official schema, so it lives here.
   ULTRACODE = 'ultracode',
+
+  // Header dock arrangement: which overflow-menu items show as icons next to the
+  // ⋮ button, and in what order. Global-only by product decision (the dock is
+  // navigated by muscle memory, so it must not shift between projects).
+  DOCK_LAYOUT = 'dockLayout',
+}
+
+/**
+ * Items that can live in the header dock. The value is what gets persisted in
+ * {@link SettingKey.DOCK_LAYOUT}, so renaming one strands the user's arrangement
+ * for that item (normalizeDockLayout drops ids it does not recognize and appends
+ * the new one to `hidden`).
+ *
+ * Declaration order is the fallback order: an item missing from a saved layout —
+ * a newly shipped one, most often — is appended to `hidden` in this order, so it
+ * is reachable from the ⋮ menu rather than invisible forever.
+ */
+export enum DockItemId {
+  TOKEN_BATTERY = 'tokenBattery',
+  SCHEDULED_MESSAGES = 'scheduledMessages',
+  BACKGROUND_TASKS = 'backgroundTasks',
+  TUNNEL = 'tunnel',
+  SETTINGS = 'settings',
+  NEW_TAB = 'newTab',
+  ACCOUNT_SWITCHER = 'accountSwitcher',
+}
+
+/**
+ * Header dock arrangement. `docked` renders as icons left of the ⋮ button in the
+ * given order; `hidden` keeps its own order so the edit UI can restore where an
+ * item sat after the user drags it back out of the dock.
+ *
+ * Both arrays empty means "not configured yet" — a fresh install, which
+ * normalizes to everything hidden (only ⋮ shows).
+ */
+export interface DockLayout {
+  docked: DockItemId[];
+  hidden: DockItemId[];
 }
 
 /**
@@ -171,6 +209,7 @@ export interface SettingsState {
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
   [SettingKey.ULTRACODE]: boolean | null;
+  [SettingKey.DOCK_LAYOUT]: DockLayout;
 }
 
 /**
@@ -199,4 +238,5 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.ULTRACODE]: null,
+  [SettingKey.DOCK_LAYOUT]: { docked: [], hidden: [] },
 };

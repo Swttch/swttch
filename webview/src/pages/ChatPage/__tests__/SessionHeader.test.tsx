@@ -360,31 +360,37 @@ describe('SessionHeader', () => {
     expect(screen.queryByPlaceholderText('Search sessions...')).not.toBeInTheDocument();
   });
 
-  it('새 탭 버튼 클릭 시 openNewTab 호출', async () => {
+  // The header's right side is now a user-arranged dock plus a ⋮ menu that holds
+  // every feature. The dock starts empty, so these features are reached through
+  // the menu — and reaching them there must do exactly what the old icons did.
+  const openOverflowMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByTitle('More'));
+  };
+
+  it('더보기 메뉴의 새 탭 항목 클릭 시 openNewTab 호출', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    // 새 탭 버튼 클릭
-    const newTabButton = screen.getByTitle('Open New Tab');
-    await user.click(newTabButton);
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Open New Tab'));
 
-    // openNewTab 호출 확인
     expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
   });
 
-  // The button delegates to openSettingsAt(), which reads the stored preference
+  // The item delegates to openSettingsAt(), which reads the stored preference
   // and either requests an overlay or asks the adapter for a dedicated tab.
-  it('설정 버튼: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
+  it('설정 항목: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    await user.click(screen.getByTitle('Settings'));
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Settings'));
 
     // Overlay mode navigates in-tab; it must NOT open a dedicated tab.
     expect(mockOpenSettingsAdapter).not.toHaveBeenCalled();
   });
 
-  it('설정 버튼: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
+  it('설정 항목: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
     const user = userEvent.setup();
     localStorage.setItem(
       'claude-code-settings',
@@ -392,19 +398,44 @@ describe('SessionHeader', () => {
     );
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    await user.click(screen.getByTitle('Settings'));
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Settings'));
 
     expect(mockOpenSettingsAdapter).toHaveBeenCalledWith(Route.SETTINGS_GENERAL);
   });
 
-  it('새 탭 버튼이 항상 활성화되어 있음', () => {
+  it('세션이 없어도 더보기 메뉴의 새 탭 항목은 활성화되어 있음', async () => {
+    const user = userEvent.setup();
     mockSessionCtxValue.currentSessionId = null;
     mockSessionCtxValue.currentSession = null;
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    // 버튼이 활성화되어 있음 확인
-    const newTabButton = screen.getByTitle('Open New Tab');
-    expect(newTabButton).not.toBeDisabled();
+    await openOverflowMenu(user);
+    expect(screen.getByText('Open New Tab').closest('button')).not.toBeDisabled();
+  });
+
+  // A fresh install must show ONLY ⋮ on the right — that is the whole point of
+  // the change (the old header grew one icon per feature and squeezed the title).
+  it('기본 상태에서 우측에는 더보기 버튼만 있고 도크는 비어 있다', () => {
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    expect(screen.getByTitle('More')).toBeInTheDocument();
+    // None of the dock icons are rendered until the user places them.
+    expect(screen.queryByTitle('Remote Tunnel (Unofficial)')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Open New Tab')).not.toBeInTheDocument();
+  });
+
+  it('더보기 메뉴는 도크 편집 진입점을 제공한다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Edit dock'));
+
+    // Edit mode splits the items into the two drag sections.
+    expect(screen.getByText('In the dock')).toBeInTheDocument();
+    expect(screen.getByText('Hidden from the dock')).toBeInTheDocument();
+    expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
   it('현재 세션이 하이라이트 스타일로 표시', async () => {

@@ -92,6 +92,21 @@
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "More",
+      "edit": "Edit dock",
+      "done": "Done",
+      "dragHint": "Drag to rearrange",
+      "inDockBadge": "Shown in the dock",
+      "sections": {
+        "docked": "In the dock",
+        "hidden": "Hidden from the dock"
+      },
+      "items": {
+        "tokenBattery": "Usage",
+        "settings": "Settings"
+      }
+    },
     "newTab": {
       "title": "Open New Tab"
     },

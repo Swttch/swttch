@@ -92,6 +92,21 @@
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。"
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "更多",
+      "edit": "编辑工具栏",
+      "done": "完成",
+      "dragHint": "拖动以调整顺序",
+      "inDockBadge": "已显示在工具栏",
+      "sections": {
+        "docked": "显示在工具栏",
+        "hidden": "从工具栏隐藏"
+      },
+      "items": {
+        "tokenBattery": "用量",
+        "settings": "设置"
+      }
+    },
     "newTab": {
       "title": "打开新标签页"
     },

@@ -92,6 +92,21 @@
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "Mehr",
+      "edit": "Leiste bearbeiten",
+      "done": "Fertig",
+      "dragHint": "Zum Umsortieren ziehen",
+      "inDockBadge": "In der Leiste sichtbar",
+      "sections": {
+        "docked": "In der Leiste",
+        "hidden": "Aus der Leiste ausgeblendet"
+      },
+      "items": {
+        "tokenBattery": "Nutzung",
+        "settings": "Einstellungen"
+      }
+    },
     "newTab": {
       "title": "Neuen Tab öffnen"
     },

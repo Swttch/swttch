@@ -110,7 +110,7 @@ WebView (webview/):
   wv-lint        pnpm lint
   wv-tsc         tsc
   wv-dev         pnpm dev
-  wv-test        pnpm test
+  wv-test        pnpm test (extra args go to vitest, e.g. a path filter)
   wv-test-watch  pnpm test:watch
   wv-test-cov    pnpm test:coverage (coverage report)
   wv-test-ui     pnpm test:ui (browser dashboard)
@@ -179,7 +179,7 @@ case "${1:-}" in
   wv-lint)        pnpm -C "$ROOT/webview" lint ;;
   wv-tsc)         pnpm -C "$ROOT/webview" exec node ./node_modules/typescript/lib/tsc.js ;;
   wv-dev)         pnpm -C "$ROOT/webview" dev ;;
-  wv-test)        pnpm -C "$ROOT/webview" test ;;
+  wv-test)        pnpm -C "$ROOT/webview" test "${@:2}" ;;
   wv-test-watch)  pnpm -C "$ROOT/webview" test:watch ;;
   wv-test-cov)    pnpm -C "$ROOT/webview" test:coverage ;;
   wv-test-ui)     pnpm -C "$ROOT/webview" test:ui ;;

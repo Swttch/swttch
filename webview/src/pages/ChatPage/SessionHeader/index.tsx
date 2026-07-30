@@ -1,12 +1,7 @@
 import { SessionDropdown } from './SessionDropdown';
 import { WorkingDirDropdown } from './WorkingDirDropdown';
-import { TokenBatteryButton } from './TokenBatteryButton';
-import { BackgroundTasksButton } from './BackgroundTasksButton';
-import { ScheduledMessagesButton } from './ScheduledMessagesButton';
-import { TunnelButton } from './TunnelButton';
-import { AccountSwitcher } from './AccountSwitcher';
-import { SettingsButton } from './SettingsButton';
-import { NewTabButton } from './NewTabButton';
+import { Dock } from './dock/Dock';
+import { OverflowMenu } from './dock/OverflowMenu';
 import { useDocumentTitle } from '@/hooks';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
@@ -26,15 +21,13 @@ export function SessionHeader() {
         <SessionDropdown />
       </div>
 
-      {/* Right: buttons */}
+      {/* Right: the icons the user chose to keep out, then the ⋮ menu holding
+          every feature. Empty by default, so a fresh install shows only ⋮ —
+          which is the point: this side used to accumulate an icon per feature
+          and squeeze the session title on the left. */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        <TokenBatteryButton />
-        <ScheduledMessagesButton />
-        <BackgroundTasksButton />
-        <TunnelButton />
-        <SettingsButton />
-        <NewTabButton />
-        <AccountSwitcher />
+        <Dock />
+        <OverflowMenu />
       </div>
     </div>
   );

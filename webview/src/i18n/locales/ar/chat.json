@@ -92,6 +92,21 @@
     "autoModeFallback": "الوضع التلقائي غير متاح هنا — سيُستخدم وضع الأذونات الافتراضي بدلًا منه."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "المزيد",
+      "edit": "تعديل الشريط",
+      "done": "تم",
+      "dragHint": "اسحب لإعادة الترتيب",
+      "inDockBadge": "ظاهر في الشريط",
+      "sections": {
+        "docked": "في الشريط",
+        "hidden": "مخفي من الشريط"
+      },
+      "items": {
+        "tokenBattery": "الاستخدام",
+        "settings": "الإعدادات"
+      }
+    },
     "newTab": {
       "title": "فتح تبويب جديد"
     },

@@ -92,6 +92,21 @@
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "더보기",
+      "edit": "도크 편집",
+      "done": "완료",
+      "dragHint": "끌어서 순서 변경",
+      "inDockBadge": "도크에 표시됨",
+      "sections": {
+        "docked": "도크에 포함",
+        "hidden": "도크에서 제외"
+      },
+      "items": {
+        "tokenBattery": "사용량",
+        "settings": "설정"
+      }
+    },
     "newTab": {
       "title": "새 탭 열기"
     },

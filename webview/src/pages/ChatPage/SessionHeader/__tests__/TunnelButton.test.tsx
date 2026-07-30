@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TunnelButton } from '../TunnelButton';
+import { OPEN_TUNNEL_EVENT } from '../dock/actions';
 import { MessageType } from '@/shared';
 
 const send = vi.fn();
@@ -13,20 +14,23 @@ vi.mock('@/hooks', () => ({
 vi.mock('@/adapters', () => ({
   getAdapter: () => ({ openUrl }),
 }));
-vi.mock('@/components/TunnelModal', () => ({
-  TunnelModal: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="tunnel-modal" onClick={onClose}>modal</div>
-  ),
-}));
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
 describe('TunnelButton', () => {
+  const openTunnel = vi.fn();
+
   beforeEach(() => {
     send.mockReset();
     openUrl.mockReset();
+    openTunnel.mockReset();
+    window.addEventListener(OPEN_TUNNEL_EVENT, openTunnel);
     window.history.replaceState({}, '', '/sessions/new?workingDir=%2Ffoo&panelId=jcef-1');
+  });
+
+  afterEach(() => {
+    window.removeEventListener(OPEN_TUNNEL_EVENT, openTunnel);
   });
 
   it('Cmd+click requests a local pairing code and opens the browser with ?pair= appended', async () => {
@@ -46,13 +50,15 @@ describe('TunnelButton', () => {
     // panelId is NOT touched here — resolvePanelId gives each browser tab its own
     // in-memory id, an independent concern from the pairing flow.
     // The modal must NOT open on a Cmd+click.
-    expect(screen.queryByTestId('tunnel-modal')).toBeNull();
+    expect(openTunnel).not.toHaveBeenCalled();
   });
 
-  it('plain click opens the tunnel modal (no browser open, no pairing request)', () => {
+  // The modal is owned by the app shell, not by this button: the same item can be
+  // triggered from the ⋮ menu, whose row unmounts the moment the menu closes.
+  it('plain click asks the app shell to open the modal (no browser open, no pairing request)', () => {
     render(<TunnelButton />);
     fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByTestId('tunnel-modal')).toBeTruthy();
+    expect(openTunnel).toHaveBeenCalledTimes(1);
     expect(send).not.toHaveBeenCalled();
     expect(openUrl).not.toHaveBeenCalled();
   });
