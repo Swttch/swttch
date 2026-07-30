@@ -81,10 +81,10 @@ describe('ZoomProvider', () => {
   it('restarts the hide timer on each adjustment instead of hiding on the first timer', () => {
     render(<ZoomProvider><Probe /></ZoomProvider>);
     act(() => screen.getByText('in').click());
-    act(() => vi.advanceTimersByTime(1000));
-    act(() => screen.getByText('in').click()); // resets the 1.5s clock
+    act(() => vi.advanceTimersByTime(ZOOM_INDICATOR_HOLD_MS - 500));
+    act(() => screen.getByText('in').click()); // resets the hold clock
 
-    act(() => vi.advanceTimersByTime(1000));
+    act(() => vi.advanceTimersByTime(ZOOM_INDICATOR_HOLD_MS - 500));
     expect(screen.getByTestId('visible').textContent).toBe('true'); // would have hidden without the reset
 
     act(() => vi.advanceTimersByTime(600));

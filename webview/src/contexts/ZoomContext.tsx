@@ -4,7 +4,7 @@ import { SettingKey } from '@/types/settings';
 import { clampZoom, zoomIn, zoomOut, ZOOM_DEFAULT } from '@/utils/zoom';
 
 /** How long the zoom indicator stays up after the last adjustment. */
-export const ZOOM_INDICATOR_HOLD_MS = 1500;
+export const ZOOM_INDICATOR_HOLD_MS = 3000;
 
 interface ZoomContextValue {
   /** The current level; 1 = 100%. */
