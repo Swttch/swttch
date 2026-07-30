@@ -1,19 +1,25 @@
 import { useTranslation } from '@/i18n';
+import { EscToCancelHint } from '../PromptPanelChrome';
 
 interface Props {
   showSubmitButton: boolean;
   canSubmit: boolean;
   isLastTab: boolean;
   onSubmit: () => void;
+  onCancel: () => void;
 }
 
 export const Footer = (props: Props) => {
-  const { showSubmitButton, canSubmit, isLastTab, onSubmit } = props;
+  const { showSubmitButton, canSubmit, isLastTab, onSubmit, onCancel } = props;
   const { t } = useTranslation('chat');
 
   return (
     <div className="border-t border-border-default/50 px-3 py-2 flex items-center justify-between">
-      <span className="text-text-disabled text-xs">{t('askUserQuestion.escToCancel')}</span>
+      <EscToCancelHint
+        label={t('askUserQuestion.escToCancel')}
+        onCancel={onCancel}
+        className="text-text-disabled text-xs"
+      />
 
       {showSubmitButton && (
         <button

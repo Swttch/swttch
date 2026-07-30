@@ -149,6 +149,10 @@
       "keepPlanning": "아니요, 계속 계획하기"
     }
   },
+  "promptPanel": {
+    "collapse": "접어두기",
+    "expand": "펼치기"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "대신 Claude가 무엇을 할지 알려주세요",
     "escToCancel": "취소하려면 Esc"

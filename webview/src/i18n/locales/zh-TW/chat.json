@@ -149,6 +149,10 @@
       "keepPlanning": "否，繼續規劃"
     }
   },
+  "promptPanel": {
+    "collapse": "收合",
+    "expand": "展開"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "告訴 Claude 該做些什麼",
     "escToCancel": "按 Esc 取消"

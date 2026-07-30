@@ -149,6 +149,10 @@
       "keepPlanning": "خیر، همچنان در حال برنامه‌ریزی بمان"
     }
   },
+  "promptPanel": {
+    "collapse": "جمع کردن",
+    "expand": "باز کردن"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "به Claude بگویید به‌جای آن چه کاری انجام دهد",
     "escToCancel": "Esc برای لغو"

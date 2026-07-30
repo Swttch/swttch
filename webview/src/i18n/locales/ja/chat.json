@@ -149,6 +149,10 @@
       "keepPlanning": "いいえ、プランを続ける"
     }
   },
+  "promptPanel": {
+    "collapse": "折りたたむ",
+    "expand": "展開"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "代わりにClaudeにしてほしいことを伝える",
     "escToCancel": "Escでキャンセル"

@@ -149,6 +149,10 @@
       "keepPlanning": "لا، تابع التخطيط"
     }
   },
+  "promptPanel": {
+    "collapse": "طي",
+    "expand": "توسيع"
+  },
   "approvalPanel": {
     "defaultTextareaPlaceholder": "أخبر Claude بما يجب فعله بدلًا من ذلك",
     "escToCancel": "Esc للإلغاء"
