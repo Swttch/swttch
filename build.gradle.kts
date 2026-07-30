@@ -146,6 +146,15 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.2 - Zoom the whole UI, and a chat that stays put</h3>
+            <ul>
+                <li>Add Chrome-style zoom control for the whole UI (#169, requested by @penguinhing)</li>
+                <li>Add collapse/expand to permission, plan and question panels (#248)</li>
+                <li>Make "Esc to cancel" clickable (#248)</li>
+                <li>Fix the chat jumping to the bottom while you read (#206, reported by @BigPineappleDe)</li>
+                <li>Fix the "Scroll to bottom" button not appearing when auto-scroll stops</li>
+                <li>Fix "/" not opening the slash command panel mid-sentence (#244, reported by @RabbitHareLu)</li>
+            </ul>
             <h3>0.26.1 - Settings that respect your project, and a steadier chat view</h3>
             <ul>
                 <li>Per-project settings: CLI path, terminal and file-opener now apply to the project you set them in, instead of leaking into your other projects (#239, reported by @chyzman)</li>
