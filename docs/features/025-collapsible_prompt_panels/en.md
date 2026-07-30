@@ -1,6 +1,8 @@
 # Tuck away the panel that's asking you something — and click "Esc to cancel" to actually cancel
 
 > Language: **English** · [한국어](./ko.md)
+>
+> Related: [#248](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/248)
 
 While Claude works, there are moments when it turns around and asks you something. "Run this command?" "Go ahead with this plan?" "Which of these two do you want?" When that happens, a panel of choices slides up above the chat input.
 
