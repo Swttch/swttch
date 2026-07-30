@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "Mais",
       "dragHint": "Arraste para reordenar",
-      "sections": {
-        "docked": "Na barra",
-        "hidden": "Ocultos da barra"
-      },
       "items": {
         "tokenBattery": "Uso",
         "settings": "Configurações"
-      }
+      },
+      "active": "Ativo",
+      "hideFromDock": "Remover da barra",
+      "showInDock": "Adicionar à barra"
     },
     "newTab": {
       "title": "Abrir Nova Aba"

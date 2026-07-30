@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "更多",
       "dragHint": "拖动以调整顺序",
-      "sections": {
-        "docked": "显示在工具栏",
-        "hidden": "从工具栏隐藏"
-      },
       "items": {
         "tokenBattery": "用量",
         "settings": "设置"
-      }
+      },
+      "active": "已启用",
+      "hideFromDock": "从工具栏移除",
+      "showInDock": "添加到工具栏"
     },
     "newTab": {
       "title": "打开新标签页"

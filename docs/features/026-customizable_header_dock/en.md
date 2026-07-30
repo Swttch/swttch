@@ -1,6 +1,6 @@
 # Pick which header icons stay out, and in what order
 
-The icons on the right of the chat header are now collected into a single **more (⋮)** menu, and you can pull the ones you actually use back out into a "dock" beside it. You arrange them by **dragging**, the way Notion lets you show and hide table properties.
+The icons on the right of the chat header are now collected into a single **more (⋮)** menu, and you can pull the ones you actually use back out into a "dock" beside it. You choose which ones with an **eye icon**, the way Notion lets you show and hide table properties.
 
 ## The problem
 
@@ -14,35 +14,32 @@ Most of those six also matter to different people in different amounts. Someone 
 
 **By default the right side holds just ⋮.** All six features live inside it, and running one from the menu does exactly what it did before.
 
-Open ⋮ and the list is already split into **In the dock** and **Hidden from the dock** — there is no separate "edit mode" to step into first.
+Open ⋮ and all six items are already there in one list. There is no separate "edit mode" to step into first.
 
-1. Grab the **drag handle** on the left of a row (the two-line icon) and drag it into the top section; its icon appears to the left of ⋮
-2. Drag within a section to change the **order**
-3. Click anywhere on the row OTHER than the handle and the feature runs immediately
+1. Click the **eye icon** on the right of a row to add or remove it from the dock
+2. Grab the **drag handle** on the left (the two-line icon) and move it up or down to change the **order** — icons already in the dock follow this same order
+3. Click anywhere else on the row — neither the handle nor the eye — and the feature runs immediately
 
 Your arrangement is saved and comes back the next time you open the chat. It also stays the same across projects — the dock is a toolbar you reach for by muscle memory, so icons moving when you switch projects would defeat the purpose.
 
-## The handle and the row are two different gestures
+## The handle, the eye, and the row are three different gestures
 
-Having both "drag to rearrange" and "click to run" on the same row could easily mean accidentally running something while trying to move it, or accidentally moving something while trying to run it.
+Having a drag handle, a run-on-click row, and an eye toggle all on the same row could easily mean touching the wrong one by accident.
 
-So the two are kept apart on purpose. A drag only starts from the **handle**; clicking anywhere else on the row **runs it**. Which one you touched is always unambiguous.
+So the three occupy entirely separate spots. A drag only starts from the **handle** on the left; only the **eye icon** on the right changes what's docked; clicking anywhere in between **runs the item**. Which one you touched is always unambiguous.
 
 ## Docking something does not remove it from the menu
 
 An item you place in the dock **stays listed** in the ⋮ menu. Once someone has learned to find a feature in this menu, rearranging the dock should not make it disappear from there. Wherever you click it — dock or menu — it does the same thing.
 
-## Icons that carry state are more useful outside
+## The menu shows the real state, not just a label
 
-A few of these are meant to be **watched rather than clicked**:
+Each row shows, on the right, the exact same information its dock icon would show — so you can see the current state before you ever pull it out into the dock.
 
-- Usage battery — how much is left, its colour, and a pulse below 20%
-- Scheduled messages — how many are queued
-- Background tasks — how many are running
-
-Dock those and the value stays in view. Conversely, when there is nothing to report — no reservations, no usage data yet — the icon **hides itself** from the dock instead of sitting there empty.
-
-In the menu list those items are always shown, even when their feature currently has nothing to report. You should be able to decide "put this where I'll see it once it happens" before it happens.
+- **Usage** — the same battery icon and remaining percentage the dock icon shows. If usage tracking isn't set up yet, "Setup" appears instead
+- **Scheduled messages / Background tasks** — the icon still changes colour while active, and a count badge appears on the right. **The badge is hidden entirely at zero** — an empty badge wouldn't say anything the bare icon doesn't already
+- **Remote tunnel** — the icon still turns green while the tunnel is up, and "Active" appears in green text on the right only while it is
+- **Settings / New tab** — one-shot actions with nothing ongoing to report, so nothing extra appears
 
 ## Accounts are not part of the dock
 
@@ -52,4 +49,4 @@ Account switching was left out of this cleanup on purpose. It is not a single ac
 
 - Dragging only starts **from the handle**. The rest of the row runs the feature on click, as it always did.
 - Pressing `Esc` mid-drag cancels it and leaves the item where it was.
-- When a new feature ships later, it is added to the bottom of **Hidden from the dock** automatically. An arrangement you saved earlier will never hide a feature you have not seen yet.
+- When a new feature ships later, it is added to the bottom of the list, starting out NOT docked. An arrangement you saved earlier will never hide a feature you have not seen yet.

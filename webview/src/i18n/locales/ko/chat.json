@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "더보기",
       "dragHint": "끌어서 순서 변경",
-      "sections": {
-        "docked": "도크에 포함",
-        "hidden": "도크에서 제외"
-      },
       "items": {
         "tokenBattery": "사용량",
         "settings": "설정"
-      }
+      },
+      "active": "활성",
+      "hideFromDock": "도크에서 빼기",
+      "showInDock": "도크에 추가"
     },
     "newTab": {
       "title": "새 탭 열기"

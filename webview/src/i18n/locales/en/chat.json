@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "More",
       "dragHint": "Drag to rearrange",
-      "sections": {
-        "docked": "In the dock",
-        "hidden": "Hidden from the dock"
-      },
       "items": {
         "tokenBattery": "Usage",
         "settings": "Settings"
-      }
+      },
+      "active": "Active",
+      "hideFromDock": "Remove from dock",
+      "showInDock": "Add to dock"
     },
     "newTab": {
       "title": "Open New Tab"

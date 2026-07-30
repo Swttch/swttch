@@ -345,23 +345,24 @@ describe('settings', () => {
       expect(bad.error).toContain('ultracode must be a boolean or null');
     });
 
-    // dockLayout holds the header dock arrangement: which of the overflow-menu
-    // items sit outside as icons, and in what order. The backend validates the
-    // SHAPE only and deliberately does not know the item ids — those belong to
-    // the webview registry, and duplicating the list here would mean editing two
-    // places to add one icon. An id the webview no longer knows is dropped when
-    // it normalizes the layout, so an unknown string is harmless to store.
+    // dockLayout holds the header dock arrangement: `order` is the row order of
+    // every overflow-menu item, `visible` names which of them also sit outside
+    // as icons. The backend validates the SHAPE only and deliberately does not
+    // know the item ids — those belong to the webview registry, and duplicating
+    // the list here would mean editing two places to add one icon. An id the
+    // webview no longer knows (or a `visible` id `order` does not contain) is
+    // dropped when it normalizes the layout, so an unknown string is harmless.
     describe('dockLayout', () => {
       it('accepts a well-formed layout', async () => {
         const result = await saveSettingToFile('dockLayout', {
-          docked: ['newTab', 'settings'],
-          hidden: ['tunnel'],
+          order: ['newTab', 'settings', 'tunnel'],
+          visible: ['settings'],
         });
         expect(result.status).toBe('ok');
       });
 
-      it('accepts empty arrays (nothing docked yet)', async () => {
-        expect((await saveSettingToFile('dockLayout', { docked: [], hidden: [] })).status).toBe('ok');
+      it('accepts empty arrays (not configured yet)', async () => {
+        expect((await saveSettingToFile('dockLayout', { order: [], visible: [] })).status).toBe('ok');
       });
 
       it('rejects a non-object', async () => {
@@ -378,49 +379,42 @@ describe('settings', () => {
         expect(result.error).toContain('dockLayout must be an object');
       });
 
-      it('rejects when docked or hidden is not an array', async () => {
-        const missingHidden = await saveSettingToFile('dockLayout', { docked: [] });
-        expect(missingHidden.status).toBe('error');
-        expect(missingHidden.error).toContain('dockLayout.hidden must be an array');
+      it('rejects when order or visible is not an array', async () => {
+        const missingVisible = await saveSettingToFile('dockLayout', { order: [] });
+        expect(missingVisible.status).toBe('error');
+        expect(missingVisible.error).toContain('dockLayout.order and dockLayout.visible must both be arrays');
 
-        const badDocked = await saveSettingToFile('dockLayout', { docked: 'newTab', hidden: [] });
-        expect(badDocked.status).toBe('error');
-        expect(badDocked.error).toContain('dockLayout.docked must be an array');
+        const badOrder = await saveSettingToFile('dockLayout', { order: 'newTab', visible: [] });
+        expect(badOrder.status).toBe('error');
+        expect(badOrder.error).toContain('dockLayout.order and dockLayout.visible must both be arrays');
       });
 
       it('rejects non-string entries', async () => {
-        const result = await saveSettingToFile('dockLayout', { docked: [1], hidden: [] });
+        const result = await saveSettingToFile('dockLayout', { order: [1], visible: [] });
         expect(result.status).toBe('error');
         expect(result.error).toContain('dockLayout entries must be strings');
       });
 
-      // An id in both sections (or twice in one) would render the same icon twice
-      // and make the drag reorder ambiguous, so it never reaches the file.
-      it('rejects an id that appears more than once', async () => {
-        const acrossSections = await saveSettingToFile('dockLayout', {
-          docked: ['newTab'],
-          hidden: ['newTab'],
+      // A duplicate in `order` would leave two rows claiming the same position
+      // and make the drag reorder ambiguous about which copy moved.
+      it('rejects a duplicated id in order', async () => {
+        const result = await saveSettingToFile('dockLayout', {
+          order: ['newTab', 'newTab'],
+          visible: [],
         });
-        expect(acrossSections.status).toBe('error');
-        expect(acrossSections.error).toContain('dockLayout entries must be unique');
-
-        const withinSection = await saveSettingToFile('dockLayout', {
-          docked: ['newTab', 'newTab'],
-          hidden: [],
-        });
-        expect(withinSection.status).toBe('error');
-        expect(withinSection.error).toContain('dockLayout entries must be unique');
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout.order entries must be unique');
       });
 
       it('serializes the layout into the settings file', async () => {
         mockExistsSync.mockReturnValue(true);
         mockReadFile.mockResolvedValue('export default { theme: "system" };');
 
-        const result = await saveSettingToFile('dockLayout', { docked: ['newTab'], hidden: [] });
+        const result = await saveSettingToFile('dockLayout', { order: ['newTab'], visible: ['newTab'] });
         expect(result.status).toBe('ok');
 
         const [, content] = mockWriteFile.mock.calls[mockWriteFile.mock.calls.length - 1];
-        expect(String(content)).toContain('dockLayout: {"docked":["newTab"],"hidden":[]}');
+        expect(String(content)).toContain('dockLayout: {"order":["newTab"],"visible":["newTab"]}');
       });
     });
   });
@@ -541,7 +535,7 @@ describe('settings', () => {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
-        dockLayout: { docked: [], hidden: [] },
+        dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,
@@ -663,7 +657,7 @@ export default {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
-        dockLayout: { docked: [], hidden: [] },
+        dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,

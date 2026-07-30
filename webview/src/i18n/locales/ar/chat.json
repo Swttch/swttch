@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "المزيد",
       "dragHint": "اسحب لإعادة الترتيب",
-      "sections": {
-        "docked": "في الشريط",
-        "hidden": "مخفي من الشريط"
-      },
       "items": {
         "tokenBattery": "الاستخدام",
         "settings": "الإعدادات"
-      }
+      },
+      "active": "مفعّل",
+      "hideFromDock": "إزالة من الشريط",
+      "showInDock": "إضافة إلى الشريط"
     },
     "newTab": {
       "title": "فتح تبويب جديد"

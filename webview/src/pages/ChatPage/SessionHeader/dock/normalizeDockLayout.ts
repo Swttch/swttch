@@ -6,49 +6,47 @@ const KNOWN_IDS = new Set<string>(ALL_IDS);
 
 /**
  * Turn a persisted (or absent, or hand-edited) dock layout into one the UI can
- * render without further guarding: every known item appears exactly once, across
- * `docked` and `hidden` combined.
+ * render without further guarding: `order` contains every known item exactly
+ * once, and `visible` names a subset of `order`.
  *
- * Three repairs, each guarding a real failure:
- * - **Unplaced items are appended to `hidden`.** A newly shipped item is absent
- *   from every layout saved before it existed; without this it would be
- *   unreachable from the ⋮ menu until the user reset their settings.
- * - **Unknown ids are dropped.** They come from a newer build or a hand-edited
- *   settings file and have no component to render.
- * - **Duplicates keep their first occurrence.** Two copies of one icon would make
- *   a drag ambiguous about which one moved. The backend already rejects these on
- *   write, so this only catches files edited by hand.
+ * Repairs, each guarding a real failure:
+ * - **Items missing from `order` are appended**, in declaration order, and start
+ *   NOT visible. A newly shipped item is absent from every layout saved before
+ *   it existed; without this it would be unreachable from the ⋮ menu.
+ * - **Unknown ids are dropped** from both lists. They come from a newer/older
+ *   build or a hand-edited settings file and have no component to render.
+ * - **Duplicates in `order` keep their first occurrence** — a repeated id would
+ *   leave two rows claiming the same position.
+ * - **A `visible` id absent from `order` is dropped.** `visible` only makes sense
+ *   as a subset of `order`; an id with no position to render at is discarded
+ *   rather than trusted.
  *
- * A layout with both sections empty means "not configured yet" and normalizes to
- * everything hidden — a fresh install shows only the ⋮ button.
+ * A layout with both arrays empty means "not configured yet" and normalizes to
+ * every item in declaration order, none visible — a fresh install shows only ⋮.
  */
 export function normalizeDockLayout(layout: DockLayout | null | undefined): DockLayout {
-  const docked = takeKnownIds(layout?.docked);
-  // `docked` wins a tie: an id in both sections stays visible rather than
-  // silently vanishing from the dock the user arranged.
-  const hidden = takeKnownIds(layout?.hidden, docked.seen);
+  const order = takeKnownIds(layout?.order).ids;
+  const placed = new Set(order);
+  for (const id of ALL_IDS) {
+    if (!placed.has(id)) order.push(id);
+  }
 
-  const placed = hidden.seen;
-  const unplaced = ALL_IDS.filter((id) => !placed.has(id));
+  const orderSet = new Set(order);
+  const visible = takeKnownIds(layout?.visible).ids.filter((id) => orderSet.has(id));
 
-  return { docked: docked.ids, hidden: [...hidden.ids, ...unplaced] };
+  return { order, visible };
 }
 
-/**
- * Collect the recognized, not-yet-seen ids from one section, preserving order.
- * `seen` accumulates across calls so the second section cannot repeat the first.
- */
-function takeKnownIds(
-  section: unknown,
-  seen: Set<string> = new Set(),
-): { ids: DockItemId[]; seen: Set<string> } {
+/** Collect the recognized, not-yet-seen ids from a list, preserving order. */
+function takeKnownIds(list: unknown): { ids: DockItemId[] } {
+  const seen = new Set<string>();
   const ids: DockItemId[] = [];
-  if (Array.isArray(section)) {
-    for (const entry of section) {
+  if (Array.isArray(list)) {
+    for (const entry of list) {
       if (typeof entry !== 'string' || !KNOWN_IDS.has(entry) || seen.has(entry)) continue;
       seen.add(entry);
       ids.push(entry as DockItemId);
     }
   }
-  return { ids, seen };
+  return { ids };
 }

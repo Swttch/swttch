@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "بیشتر",
       "dragHint": "برای جابه‌جایی بکشید",
-      "sections": {
-        "docked": "در نوار",
-        "hidden": "پنهان از نوار"
-      },
       "items": {
         "tokenBattery": "مصرف",
         "settings": "تنظیمات"
-      }
+      },
+      "active": "فعال",
+      "hideFromDock": "حذف از نوار",
+      "showInDock": "افزودن به نوار"
     },
     "newTab": {
       "title": "باز کردن تب جدید"

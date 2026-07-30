@@ -112,16 +112,26 @@ export enum DockItemId {
 }
 
 /**
- * Header dock arrangement. `docked` renders as icons left of the ⋮ button in the
- * given order; `hidden` keeps its own order so the edit UI can restore where an
- * item sat after the user drags it back out of the dock.
+ * Header dock arrangement, as a single ordered list plus which of those items
+ * are currently pulled out into the dock.
+ *
+ * `order` is the ONE sequence of every dock item — both the row order in the ⋮
+ * menu and, filtered down to `visible`, the icon order in the dock itself. There
+ * is no separate "dock order": an item's position among other docked items is
+ * simply its position in `order` with the hidden ones skipped. Two lists to
+ * reorder would mean deciding which one a drag updates; one list removes the
+ * question.
+ *
+ * `visible` is a boolean set of "docked or not" over the SAME ids, independent of
+ * where they sit in `order`. Toggling it therefore never touches order.
  *
  * Both arrays empty means "not configured yet" — a fresh install, which
- * normalizes to everything hidden (only ⋮ shows).
+ * normalizes to every known item in declaration order, none of them visible
+ * (only ⋮ shows).
  */
 export interface DockLayout {
-  docked: DockItemId[];
-  hidden: DockItemId[];
+  order: DockItemId[];
+  visible: DockItemId[];
 }
 
 /**
@@ -241,5 +251,5 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.ULTRACODE]: null,
-  [SettingKey.DOCK_LAYOUT]: { docked: [], hidden: [] },
+  [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
 };

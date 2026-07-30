@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "Mehr",
       "dragHint": "Zum Umsortieren ziehen",
-      "sections": {
-        "docked": "In der Leiste",
-        "hidden": "Aus der Leiste ausgeblendet"
-      },
       "items": {
         "tokenBattery": "Nutzung",
         "settings": "Einstellungen"
-      }
+      },
+      "active": "Aktiv",
+      "hideFromDock": "Aus der Leiste entfernen",
+      "showInDock": "Zur Leiste hinzufügen"
     },
     "newTab": {
       "title": "Neuen Tab öffnen"

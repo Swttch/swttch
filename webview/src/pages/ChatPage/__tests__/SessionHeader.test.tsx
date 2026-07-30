@@ -425,19 +425,40 @@ describe('SessionHeader', () => {
     expect(screen.queryByTitle('Open New Tab')).not.toBeInTheDocument();
   });
 
-  // There is no separate "edit mode" to switch into: the menu is always split
-  // into the two drag sections, and clicking a row (not its drag handle) runs
-  // the feature directly — the same click that always ran it.
-  it('더보기 메뉴는 항상 도크에 포함/제외 두 섹션으로 표시된다', async () => {
+  // There is no separate "edit mode" to switch into, and no two-section split:
+  // the menu is always one ordered list, and clicking a row (not its drag handle
+  // or its eye toggle) runs the feature directly — the same click that always ran it.
+  it('더보기 메뉴는 항상 하나의 목록으로 표시된다', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
 
-    expect(screen.getByText('In the dock')).toBeInTheDocument();
-    expect(screen.getByText('Hidden from the dock')).toBeInTheDocument();
-    // A fresh install has nothing docked, so every item starts under "hidden".
+    // A fresh install has nothing docked, but every item is still listed.
     expect(screen.getByText('Open New Tab')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
+  });
+
+  // Clicking the eye toggle pulls an item into the dock — it must not run the
+  // item (unlike clicking the row), and the icon must then appear in the dock.
+  it('눈 아이콘을 누르면 실행되지 않고, 해당 항목이 도크에 나타난다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const row = screen.getByText('Open New Tab').closest('button');
+    const eyeToggle = row?.parentElement?.querySelector('button:last-of-type') as HTMLElement;
+    expect(eyeToggle).toBeTruthy();
+
+    await user.click(eyeToggle);
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+
+    // The dock icon renders once the setting round-trips through updateSettingWithScope.
+    expect(mockSettingsValue.updateSettingWithScope).toHaveBeenCalledWith(
+      'dockLayout',
+      expect.objectContaining({ visible: expect.arrayContaining(['newTab']) }),
+      'global',
+    );
   });
 
   // The row and its drag handle must never compete for the same gesture: a

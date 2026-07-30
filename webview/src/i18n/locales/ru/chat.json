@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "Ещё",
       "dragHint": "Перетащите, чтобы изменить порядок",
-      "sections": {
-        "docked": "На панели",
-        "hidden": "Скрыто с панели"
-      },
       "items": {
         "tokenBattery": "Использование",
         "settings": "Настройки"
-      }
+      },
+      "active": "Активно",
+      "hideFromDock": "Убрать с панели",
+      "showInDock": "Добавить на панель"
     },
     "newTab": {
       "title": "Открыть новую вкладку"

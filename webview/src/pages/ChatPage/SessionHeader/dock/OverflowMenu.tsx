@@ -8,10 +8,10 @@ import { DockEditor } from './DockEditor';
  * reachable from, no matter how the user arranged their dock.
  *
  * The menu body is {@link DockEditor}: there is no separate "browse" listing
- * that switches into an "edit" mode. Every item is always shown split into its
- * two sections and is always draggable by its handle, while clicking the row
- * itself (not the handle) runs the item and closes the menu — the same way a
- * click always worked before this menu existed.
+ * that switches into an "edit" mode. Every item is always shown in one ordered
+ * list, always draggable by its handle and toggleable into the dock via its eye
+ * icon, while clicking the row itself (neither of those) runs the item and
+ * closes the menu — the same way a click always worked before this menu existed.
  *
  * Account switching is deliberately NOT here: it is a picker (a list of saved
  * accounts), not a single action, and keeps its own always-visible icon to the

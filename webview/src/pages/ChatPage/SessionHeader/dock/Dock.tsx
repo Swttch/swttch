@@ -11,14 +11,17 @@ import { useDockLayout } from './useDockLayout';
  */
 export function Dock() {
   const { layout } = useDockLayout();
+  const visible = new Set(layout.visible);
 
   return (
     <>
-      {layout.docked.map((id) => {
-        const item = getDockItem(id);
-        if (!item) return null;
-        return <item.DockView key={id} />;
-      })}
+      {layout.order
+        .filter((id) => visible.has(id))
+        .map((id) => {
+          const item = getDockItem(id);
+          if (!item) return null;
+          return <item.DockView key={id} />;
+        })}
     </>
   );
 }

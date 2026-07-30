@@ -95,14 +95,13 @@
     "dock": {
       "overflowTitle": "Plus",
       "dragHint": "Faites glisser pour réorganiser",
-      "sections": {
-        "docked": "Dans la barre",
-        "hidden": "Masqués de la barre"
-      },
       "items": {
         "tokenBattery": "Utilisation",
         "settings": "Paramètres"
-      }
+      },
+      "active": "Actif",
+      "hideFromDock": "Retirer de la barre",
+      "showInDock": "Ajouter à la barre"
     },
     "newTab": {
       "title": "Ouvrir un nouvel onglet"

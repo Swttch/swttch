@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DockItemId } from '@/types/settings';
-import { DockSection } from './moveDockItem';
-import { resolveDropTarget, type DropTarget, type MeasuredRow, type MeasuredSection } from './resolveDropTarget';
+import { resolveDropTarget, type MeasuredRow } from './resolveDropTarget';
 
 /** How far the pointer must travel before a press becomes a drag. */
 const DRAG_THRESHOLD_PX = 4;
 
 interface Params {
-  /** Commit a finished drag. Called once, on release, with the final position. */
-  onDrop: (id: DockItemId, section: DockSection, index: number) => void;
+  /** Commit a finished drag. Called once, on release, with the final index. */
+  onDrop: (id: DockItemId, index: number) => void;
 }
 
 export interface DragState {
   id: DockItemId;
-  section: DockSection;
-  index: number;
   /** Where the row would land if released now — drives the insertion indicator. */
-  target: DropTarget | null;
+  target: number | null;
   /**
    * False while the press has not yet travelled past the threshold. Part of state
    * rather than a ref because the UI reacts to it (the row only looks "lifted"
@@ -26,7 +23,7 @@ export interface DragState {
 }
 
 /**
- * Pointer-driven row reordering for the dock editor.
+ * Pointer-driven row reordering for the dock editor's single ordered list.
  *
  * Deliberately NOT HTML5 drag-and-drop. This webview also runs inside JCEF, where
  * `dataTransfer` proved unreliable enough that native file drops had to be routed
@@ -44,7 +41,6 @@ export function useReorderDrag(params: Params) {
   const [drag, setDrag] = useState<DragState | null>(null);
 
   const rowRefs = useRef(new Map<DockItemId, HTMLElement>());
-  const sectionRefs = useRef(new Map<DockSection, HTMLElement>());
   const origin = useRef<{ x: number; y: number } | null>(null);
   const started = useRef(false);
   // Mirrors `drag` for the window listeners, which close over the state they were
@@ -61,41 +57,25 @@ export function useReorderDrag(params: Params) {
     else rowRefs.current.delete(id);
   }, []);
 
-  /** Register a section container — the drop target when a section has no rows. */
-  const registerSection = useCallback((section: DockSection, el: HTMLElement | null) => {
-    if (el) sectionRefs.current.set(section, el);
-    else sectionRefs.current.delete(section);
+  const measure = useCallback((order: DockItemId[]) => {
+    const rows: MeasuredRow[] = [];
+    order.forEach((id, index) => {
+      const el = rowRefs.current.get(id);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      rows.push({ index, middle: rect.top + rect.height / 2 });
+    });
+    return rows;
   }, []);
 
-  const measure = useCallback(
-    (layout: { docked: DockItemId[]; hidden: DockItemId[] }) => {
-      const rows: MeasuredRow[] = [];
-      for (const section of [DockSection.DOCKED, DockSection.HIDDEN]) {
-        layout[section].forEach((id, index) => {
-          const el = rowRefs.current.get(id);
-          if (!el) return;
-          const rect = el.getBoundingClientRect();
-          rows.push({ section, index, middle: rect.top + rect.height / 2 });
-        });
-      }
-      const sections: MeasuredSection[] = [];
-      for (const [section, el] of sectionRefs.current) {
-        const rect = el.getBoundingClientRect();
-        sections.push({ section, top: rect.top, bottom: rect.bottom });
-      }
-      return { rows, sections };
-    },
-    [],
-  );
-
-  const layoutRef = useRef<{ docked: DockItemId[]; hidden: DockItemId[] }>({ docked: [], hidden: [] });
-  /** Keep the current layout available to the move handler for measuring. */
-  const setLayout = useCallback((layout: { docked: DockItemId[]; hidden: DockItemId[] }) => {
-    layoutRef.current = layout;
+  const orderRef = useRef<DockItemId[]>([]);
+  /** Keep the current row order available to the move handler for measuring. */
+  const setOrder = useCallback((order: DockItemId[]) => {
+    orderRef.current = order;
   }, []);
 
   const handlePointerDown = useCallback(
-    (e: React.PointerEvent, id: DockItemId, section: DockSection, index: number) => {
+    (e: React.PointerEvent, id: DockItemId) => {
       // Reject only a button we can positively identify as non-primary, so a
       // right-click never starts a drag. Written this way rather than
       // `button !== 0` because the property is not guaranteed to be present on
@@ -104,7 +84,7 @@ export function useReorderDrag(params: Params) {
       if (typeof e.button === 'number' && e.button !== 0) return;
       origin.current = { x: e.clientX, y: e.clientY };
       started.current = false;
-      setDragState({ id, section, index, target: null, active: false });
+      setDragState({ id, target: null, active: false });
     },
     [setDragState],
   );
@@ -118,20 +98,16 @@ export function useReorderDrag(params: Params) {
       if (!from || !current) return;
 
       // A press that never travels is a click, not a drag — this threshold is what
-      // keeps "tap the row to toggle it" usable alongside dragging.
+      // keeps a plain click on the row usable alongside dragging its handle.
       if (!started.current) {
         const moved = Math.hypot(e.clientX - from.x, e.clientY - from.y);
         if (moved < DRAG_THRESHOLD_PX) return;
         started.current = true;
       }
 
-      const { rows, sections } = measure(layoutRef.current);
-      const target = resolveDropTarget(e.clientY, rows, sections);
-      if (
-        current.active &&
-        target?.section === current.target?.section &&
-        target?.index === current.target?.index
-      ) {
+      const rows = measure(orderRef.current);
+      const target = resolveDropTarget(e.clientY, rows);
+      if (current.active && target === current.target) {
         return; // nothing changed; skip the re-render
       }
       setDragState({ ...current, target, active: true });
@@ -147,8 +123,8 @@ export function useReorderDrag(params: Params) {
       const current = dragRef.current;
       // Only commit an actual drag. A plain click leaves `started` false, so the
       // row's own onClick handles it instead.
-      if (started.current && current?.target) {
-        onDrop(current.id, current.target.section, current.target.index);
+      if (started.current && current?.target !== null && current?.target !== undefined) {
+        onDrop(current.id, current.target);
       }
       reset();
     };
@@ -185,8 +161,7 @@ export function useReorderDrag(params: Params) {
     /** Non-null only once the press has become a real drag (`active`). */
     drag: drag?.active ? drag : null,
     registerRow,
-    registerSection,
-    setLayout,
+    setOrder,
     handlePointerDown,
   };
 }
