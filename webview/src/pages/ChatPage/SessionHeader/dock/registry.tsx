@@ -5,7 +5,6 @@ import {
   ComputerDesktopIcon,
   PlusIcon,
   QueueListIcon,
-  UserCircleIcon,
   Battery50Icon,
 } from '@heroicons/react/24/outline';
 import { DockItemId } from '@/types/settings';
@@ -15,7 +14,6 @@ import { BackgroundTasksButton } from '../BackgroundTasksButton';
 import { TunnelButton } from '../TunnelButton';
 import { SettingsButton } from '../SettingsButton';
 import { NewTabButton } from '../NewTabButton';
-import { AccountSwitcher } from '../AccountSwitcher';
 
 /**
  * One entry per item that can live in the header dock or the ⋮ overflow menu.
@@ -82,12 +80,6 @@ export const DOCK_ITEMS: readonly DockItemDef[] = [
     labelKey: 'sessionHeader.newTab.title',
     icon: PlusIcon,
     DockView: NewTabButton,
-  },
-  {
-    id: DockItemId.ACCOUNT_SWITCHER,
-    labelKey: 'sessionHeader.accountSwitcher.title',
-    icon: UserCircleIcon,
-    DockView: AccountSwitcher,
   },
 ];
 

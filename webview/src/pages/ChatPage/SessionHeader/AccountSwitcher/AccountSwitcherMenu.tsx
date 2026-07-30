@@ -21,13 +21,6 @@ function relativeTime(ms: number, t: TFunction): string {
 
 interface Props {
   onClose: () => void;
-  /**
-   * `dropdown` (default) draws its own floating panel, as the header avatar needs.
-   * `inline` drops the panel chrome so the same rows can be embedded — the ⋮
-   * overflow menu lists accounts directly rather than nesting a submenu, which
-   * would revive the open/close arbitration bugs of #236/#244.
-   */
-  variant?: 'dropdown' | 'inline';
 }
 
 /**
@@ -39,7 +32,7 @@ interface Props {
  * query key), so this opens with the already-loaded list.
  */
 export function AccountSwitcherMenu(props: Props) {
-  const { onClose, variant = 'dropdown' } = props;
+  const { onClose } = props;
   const { t } = useTranslation('chat');
   const { navigate } = useRouter();
   const { accounts, switchTo } = useAccounts();
@@ -69,13 +62,8 @@ export function AccountSwitcherMenu(props: Props) {
     navigate(route);
   };
 
-  const containerClass =
-    variant === 'dropdown'
-      ? 'absolute end-0 top-full mt-1 w-[20rem] bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50'
-      : 'w-full';
-
   return (
-    <div className={containerClass}>
+    <div className="absolute end-0 top-full mt-1 w-[20rem] bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50">
       {error && (
         <p className="text-[0.7692rem] text-state-error-fg px-3 py-2 border-b border-border-default">{error}</p>
       )}

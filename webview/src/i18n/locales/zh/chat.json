@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "更多",
-      "edit": "编辑工具栏",
-      "done": "完成",
       "dragHint": "拖动以调整顺序",
-      "inDockBadge": "已显示在工具栏",
       "sections": {
         "docked": "显示在工具栏",
         "hidden": "从工具栏隐藏"

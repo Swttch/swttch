@@ -4,31 +4,33 @@ The icons on the right of the chat header are now collected into a single **more
 
 ## The problem
 
-Every new feature added one more icon to the right of the header. Usage battery, scheduled messages, background tasks, remote tunnel, settings, new tab, account — seven of them.
+Every new feature added one more icon to the right of the header. Usage battery, scheduled messages, background tasks, remote tunnel, settings, new tab — six of them.
 
 And the cost was not only on the right. The header splits its width between the session title on the left and those icons on the right, so each new icon **ate into the session title first.** Open the chat in a narrow spot, like an IDE tool window, and only a few characters of the title survived.
 
-Most of those seven also matter to different people in different amounts. Someone uses the remote tunnel daily; someone else never touches it. The icon took up the same room either way.
+Most of those six also matter to different people in different amounts. Someone uses the remote tunnel daily; someone else never touches it. The icon took up the same room either way.
 
 ## What changed
 
-**By default the right side holds just ⋮.** All seven features live inside it, and running one from the menu does exactly what it did before.
+**By default the right side holds just ⋮.** All six features live inside it, and running one from the menu does exactly what it did before.
 
-The ones you reach for often can be pulled out:
+Open ⋮ and the list is already split into **In the dock** and **Hidden from the dock** — there is no separate "edit mode" to step into first.
 
-1. Open ⋮ and choose **Edit dock** at the bottom
-2. The list splits into **In the dock** and **Hidden from the dock**
-3. Drag an item into the top section and its icon appears to the left of ⋮
-4. Drag within a section to change the **order**
-5. Press **Done** to finish
+1. Grab the **drag handle** on the left of a row (the two-line icon) and drag it into the top section; its icon appears to the left of ⋮
+2. Drag within a section to change the **order**
+3. Click anywhere on the row OTHER than the handle and the feature runs immediately
 
 Your arrangement is saved and comes back the next time you open the chat. It also stays the same across projects — the dock is a toolbar you reach for by muscle memory, so icons moving when you switch projects would defeat the purpose.
 
+## The handle and the row are two different gestures
+
+Having both "drag to rearrange" and "click to run" on the same row could easily mean accidentally running something while trying to move it, or accidentally moving something while trying to run it.
+
+So the two are kept apart on purpose. A drag only starts from the **handle**; clicking anywhere else on the row **runs it**. Which one you touched is always unambiguous.
+
 ## Docking something does not remove it from the menu
 
-An item you place in the dock **stays listed** in the ⋮ menu. It just gains a small dot on the right, meaning "this one is also out in the dock right now".
-
-Once someone has learned to find a feature in this menu, rearranging the dock should not make it disappear from there. Wherever you click it — dock or menu — it does the same thing.
+An item you place in the dock **stays listed** in the ⋮ menu. Once someone has learned to find a feature in this menu, rearranging the dock should not make it disappear from there. Wherever you click it — dock or menu — it does the same thing.
 
 ## Icons that carry state are more useful outside
 
@@ -38,20 +40,16 @@ A few of these are meant to be **watched rather than clicked**:
 - Scheduled messages — how many are queued
 - Background tasks — how many are running
 
-Dock those and the value stays in view. Conversely, when there is nothing to report — no reservations, not signed in, no usage data yet — the icon **hides itself** from the dock instead of sitting there empty.
+Dock those and the value stays in view. Conversely, when there is nothing to report — no reservations, no usage data yet — the icon **hides itself** from the dock instead of sitting there empty.
 
-In the editor those items are always listed, even when their feature currently shows nothing. You should be able to decide "put this where I'll see it once it happens" before it happens.
+In the menu list those items are always shown, even when their feature currently has nothing to report. You should be able to decide "put this where I'll see it once it happens" before it happens.
 
-## Accounts open inline
+## Accounts are not part of the dock
 
-The account item behaves differently from the rest. It is not an action you trigger; it is a list you pick from.
-
-So inside the ⋮ menu the **account list is laid out directly**. No extra submenu to open: names and email addresses are right there, with a check on the one you are signed in as, and Add account / Manage accounts in the same place.
+Account switching was left out of this cleanup on purpose. It is not a single action but a list you pick a saved account from, which sets it apart from the other six. It keeps its own icon to the right of ⋮, exactly as before, and clicking it still opens the same dropdown.
 
 ## Notes
 
-- Dragging only works **while editing the dock**. In the normal menu a click runs the feature — that keeps you from rearranging things by accident while trying to use them.
+- Dragging only starts **from the handle**. The rest of the row runs the feature on click, as it always did.
 - Pressing `Esc` mid-drag cancels it and leaves the item where it was.
 - When a new feature ships later, it is added to the bottom of **Hidden from the dock** automatically. An arrangement you saved earlier will never hide a feature you have not seen yet.
-
-([#249](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/249))

@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "Ещё",
-      "edit": "Настроить панель",
-      "done": "Готово",
       "dragHint": "Перетащите, чтобы изменить порядок",
-      "inDockBadge": "Показан на панели",
       "sections": {
         "docked": "На панели",
         "hidden": "Скрыто с панели"

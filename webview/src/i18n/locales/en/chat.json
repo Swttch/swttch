@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "More",
-      "edit": "Edit dock",
-      "done": "Done",
       "dragHint": "Drag to rearrange",
-      "inDockBadge": "Shown in the dock",
       "sections": {
         "docked": "In the dock",
         "hidden": "Hidden from the dock"

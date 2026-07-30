@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "Plus",
-      "edit": "Modifier la barre",
-      "done": "Terminé",
       "dragHint": "Faites glisser pour réorganiser",
-      "inDockBadge": "Affiché dans la barre",
       "sections": {
         "docked": "Dans la barre",
         "hidden": "Masqués de la barre"

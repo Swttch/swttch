@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "Mehr",
-      "edit": "Leiste bearbeiten",
-      "done": "Fertig",
       "dragHint": "Zum Umsortieren ziehen",
-      "inDockBadge": "In der Leiste sichtbar",
       "sections": {
         "docked": "In der Leiste",
         "hidden": "Aus der Leiste ausgeblendet"

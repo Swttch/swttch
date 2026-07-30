@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "بیشتر",
-      "edit": "ویرایش نوار",
-      "done": "انجام شد",
       "dragHint": "برای جابه‌جایی بکشید",
-      "inDockBadge": "در نوار نمایش داده می‌شود",
       "sections": {
         "docked": "در نوار",
         "hidden": "پنهان از نوار"

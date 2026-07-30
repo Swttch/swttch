@@ -425,17 +425,48 @@ describe('SessionHeader', () => {
     expect(screen.queryByTitle('Open New Tab')).not.toBeInTheDocument();
   });
 
-  it('더보기 메뉴는 도크 편집 진입점을 제공한다', async () => {
+  // There is no separate "edit mode" to switch into: the menu is always split
+  // into the two drag sections, and clicking a row (not its drag handle) runs
+  // the feature directly — the same click that always ran it.
+  it('더보기 메뉴는 항상 도크에 포함/제외 두 섹션으로 표시된다', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
-    await user.click(screen.getByText('Edit dock'));
 
-    // Edit mode splits the items into the two drag sections.
     expect(screen.getByText('In the dock')).toBeInTheDocument();
     expect(screen.getByText('Hidden from the dock')).toBeInTheDocument();
-    expect(screen.getByText('Done')).toBeInTheDocument();
+    // A fresh install has nothing docked, so every item starts under "hidden".
+    expect(screen.getByText('Open New Tab')).toBeInTheDocument();
+  });
+
+  // The row and its drag handle must never compete for the same gesture: a
+  // press-and-move on the HANDLE must not run the item, and a plain click on the
+  // ROW must still run it — exactly like every icon behaved before this menu.
+  it('행의 드래그 핸들을 누르고 움직여도 항목이 실행되지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const row = screen.getByText('Open New Tab').closest('button');
+    const handle = row?.previousElementSibling as HTMLElement;
+    expect(handle).toBeTruthy();
+
+    act(() => {
+      handle.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 0, clientY: 0 }));
+    });
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
+    });
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
+    });
+
+    // A plain click on the row itself still runs it, same as before this menu existed.
+    await user.click(screen.getByText('Open New Tab'));
+    expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
   });
 
   it('현재 세션이 하이라이트 스타일로 표시', async () => {

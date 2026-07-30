@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "المزيد",
-      "edit": "تعديل الشريط",
-      "done": "تم",
       "dragHint": "اسحب لإعادة الترتيب",
-      "inDockBadge": "ظاهر في الشريط",
       "sections": {
         "docked": "في الشريط",
         "hidden": "مخفي من الشريط"

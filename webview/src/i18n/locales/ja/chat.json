@@ -94,10 +94,7 @@
   "sessionHeader": {
     "dock": {
       "overflowTitle": "その他",
-      "edit": "ドックを編集",
-      "done": "完了",
       "dragHint": "ドラッグして並べ替え",
-      "inDockBadge": "ドックに表示中",
       "sections": {
         "docked": "ドックに表示",
         "hidden": "ドックから隠す"
