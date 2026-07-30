@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SettingsState, DEFAULT_SETTINGS, SettingKey, ThemeMode, UiDirection } from '@/types/settings';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
-import { isJetBrains, getIdeTheme, subscribeIdeTheme } from '@/config/environment';
+import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/environment';
+import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
 import { MessageType } from '@/shared';
 
 interface SettingsContextValue {
@@ -97,6 +98,18 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     const fontSize = settings[SettingKey.FONT_SIZE];
     if (typeof fontSize === 'number' && Number.isFinite(fontSize)) {
       document.documentElement.style.fontSize = `${fontSize}px`;
+    }
+  }, [settings]);
+
+  // Apply the UI zoom level (CmdOrCtrl +/- and CmdOrCtrl + wheel). This scales
+  // the whole interface, unlike FONT_SIZE above which only scales rem-based
+  // text — the two compose, so effective text size is fontSize × zoomLevel.
+  // On phones the mobile base zoom is folded in so a user gesture adjusts
+  // relative to the phone scale instead of collapsing back to the desktop one.
+  useEffect(() => {
+    const zoomLevel = settings[SettingKey.ZOOM_LEVEL];
+    if (typeof zoomLevel === 'number' && Number.isFinite(zoomLevel)) {
+      applyZoom(zoomLevel, isMobile() ? MOBILE_BASE_ZOOM : ZOOM_DEFAULT);
     }
   }, [settings]);
 

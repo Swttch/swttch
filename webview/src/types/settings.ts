@@ -1,4 +1,5 @@
 import { AUTO_SCROLL_THRESHOLD_DEFAULT } from '@/utils/autoScroll';
+import { ZOOM_DEFAULT } from '@/utils/zoom';
 
 /**
  * Chat message line-height (unitless multiplier). Matches the CSS default in
@@ -21,6 +22,9 @@ export enum SettingKey {
   // Appearance
   THEME = 'theme',
   FONT_SIZE = 'fontSize',
+  // Whole-interface scale driven by CmdOrCtrl +/- and CmdOrCtrl + wheel.
+  // Independent of FONT_SIZE: effective text size is fontSize × zoomLevel.
+  ZOOM_LEVEL = 'zoomLevel',
   LINE_HEIGHT = 'lineHeight',
   AUTO_SCROLL_THRESHOLD = 'autoScrollThreshold',
 
@@ -149,6 +153,7 @@ export interface SettingsState {
   [SettingKey.NODE_PATH]: string | null;
   [SettingKey.THEME]: ThemeMode;
   [SettingKey.FONT_SIZE]: number;
+  [SettingKey.ZOOM_LEVEL]: number;
   [SettingKey.LINE_HEIGHT]: number;
   [SettingKey.AUTO_SCROLL_THRESHOLD]: number;
   [SettingKey.DEBUG_MODE]: boolean;
@@ -176,6 +181,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.NODE_PATH]: null,
   [SettingKey.THEME]: ThemeMode.SYSTEM,
   [SettingKey.FONT_SIZE]: 13,
+  [SettingKey.ZOOM_LEVEL]: ZOOM_DEFAULT,
   [SettingKey.LINE_HEIGHT]: LINE_HEIGHT_DEFAULT,
   [SettingKey.AUTO_SCROLL_THRESHOLD]: AUTO_SCROLL_THRESHOLD_DEFAULT,
   [SettingKey.DEBUG_MODE]: false,

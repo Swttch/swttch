@@ -3,6 +3,12 @@
     "confirm": "تأكيد",
     "cancel": "إلغاء"
   },
+  "zoomIndicator": {
+    "label": "مستوى التكبير",
+    "zoomOut": "تصغير",
+    "zoomIn": "تكبير",
+    "reset": "إعادة تعيين"
+  },
   "contextChip": {
     "removeContext": "إزالة السياق"
   },

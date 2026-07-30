@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   nodePath: null,
   theme: 'system',
   fontSize: 13,
+  zoomLevel: 1,
   lineHeight: 1.6,
   autoScrollThreshold: 80,
   debugMode: false,
@@ -72,6 +73,7 @@ const COMMENT_MAP: Record<string, string> = {
   nodePath: 'Node.js 실행 파일 경로 (null이면 자동 감지, 변경 시 재시작 필요)',
   theme: '테마: "system" | "light" | "dark"',
   fontSize: '글꼴 크기 (8~32)',
+  zoomLevel: 'UI 배율(0.5~3). Ctrl/Cmd +,- 와 Ctrl/Cmd + 휠로 조절. 글꼴 크기와 별개로 아이콘·여백까지 함께 확대',
   lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10)',
   autoScrollThreshold: '자동 스크롤 임계점(px). 메시지 끝에서 이 거리 안에 있을 때만 스트림을 따라 내려간다',
   debugMode: '디버그 모드 활성화',
@@ -213,6 +215,13 @@ function validateSetting(key: string, value: unknown): string | null {
       const n = Number(value);
       if (!Number.isInteger(n) || n < 8 || n > 32) {
         return 'fontSize must be an integer between 8 and 32';
+      }
+      break;
+    }
+    case 'zoomLevel': {
+      const n = Number(value);
+      if (!Number.isFinite(n) || n < 0.5 || n > 3) {
+        return 'zoomLevel must be a number between 0.5 and 3';
       }
       break;
     }

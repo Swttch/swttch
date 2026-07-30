@@ -8,6 +8,7 @@ import { SessionProvider, useSessionContext } from './SessionContext';
 import { ChatStreamProvider, useChatStreamContext } from './ChatStreamContext';
 import { ThemeProvider } from './ThemeContext';
 import { SettingsProvider, useSettings } from './SettingsContext';
+import { ZoomProvider } from './ZoomContext';
 import { SettingKey, NO_PAGINATION_LIMIT } from '@/types/settings';
 import { ClaudeSettingsProvider, useClaudeSettings } from './ClaudeSettingsContext';
 import { AuthProvider } from './AuthContext';
@@ -180,6 +181,7 @@ function SessionLoader({ children }: { children: ReactNode }) {
  * 4. WorkingDirProvider - Working directory management (depends on Bridge + Api)
  * 5. CliConfigProvider - CLI config (control_response) cache (depends on Bridge + WorkingDir)
  * 6. SettingsProvider - IDE settings (terminal, theme, etc.) (depends on Bridge)
+ * 6a. ZoomProvider - UI zoom level + on-screen indicator (depends on Settings)
  * 7. ClaudeSettingsProvider - Claude Code settings (~/.claude/settings.json) (depends on Bridge)
  * 8. SessionProvider - Session management (depends on Bridge + WorkingDir + Settings)
  * 9. ChatStreamProvider - Chat state + Streaming + Diffs + Tools (depends on Bridge + Session)
@@ -270,6 +272,7 @@ export function AppProviders({ children }: AppProvidersProps) {
               <CliConfigProvider>
               <FableProbeProvider>
               <SettingsProvider>
+                <ZoomProvider>
                 <ClaudeSettingsProvider>
                   <AuthProvider>
                     <SessionProvider>
@@ -283,6 +286,7 @@ export function AppProviders({ children }: AppProvidersProps) {
                     </SessionProvider>
                   </AuthProvider>
                 </ClaudeSettingsProvider>
+                </ZoomProvider>
               </SettingsProvider>
               </FableProbeProvider>
             </CliConfigProvider>

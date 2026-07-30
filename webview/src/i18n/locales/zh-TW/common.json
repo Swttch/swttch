@@ -3,6 +3,12 @@
     "confirm": "確認",
     "cancel": "取消"
   },
+  "zoomIndicator": {
+    "label": "縮放等級",
+    "zoomOut": "縮小",
+    "zoomIn": "放大",
+    "reset": "重設"
+  },
   "contextChip": {
     "removeContext": "移除上下文"
   },

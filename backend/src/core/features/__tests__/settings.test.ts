@@ -82,6 +82,23 @@ describe('settings', () => {
       expect(result.status).toBe('ok');
     });
 
+    it('should reject zoomLevel out of range', async () => {
+      const tooSmall = await saveSettingToFile('zoomLevel', 0.4);
+      expect(tooSmall.status).toBe('error');
+      expect(tooSmall.error).toContain('zoomLevel must be a number between 0.5 and 3');
+
+      const tooLarge = await saveSettingToFile('zoomLevel', 3.1);
+      expect(tooLarge.status).toBe('error');
+    });
+
+    it('should accept fractional zoomLevel', async () => {
+      const result = await saveSettingToFile('zoomLevel', 1.25);
+      expect(result.status).toBe('ok');
+
+      const reset = await saveSettingToFile('zoomLevel', 1);
+      expect(reset.status).toBe('ok');
+    });
+
     it('should reject lineHeight out of range', async () => {
       const tooSmall = await saveSettingToFile('lineHeight', 0.4);
       expect(tooSmall.status).toBe('error');
@@ -427,6 +444,7 @@ describe('settings', () => {
         nodePath: null,
         theme: 'system',
         fontSize: 13,
+        zoomLevel: 1,
         lineHeight: 1.6,
         autoScrollThreshold: 80,
         debugMode: false,
@@ -547,6 +565,7 @@ export default {
         nodePath: null,
         theme: 'system',
         fontSize: 13,
+        zoomLevel: 1,
         lineHeight: 1.6,
         autoScrollThreshold: 80,
         debugMode: false,
