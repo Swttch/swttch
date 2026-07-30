@@ -3,9 +3,50 @@ import { AutoResumeStatusPhase } from '@/shared';
 import {
   computeSendAt,
   computeCountdownSeconds,
+  isLimitReachedText,
   resolveAutoResumeStatusKey,
   SEND_AT_DELAY_MS,
 } from '../autoResumeMath';
+
+describe('isLimitReachedText', () => {
+  it('detects real limit notice phrasings', () => {
+    expect(isLimitReachedText("You've hit your session limit · resets 3pm")).toBe(true);
+    expect(isLimitReachedText('Usage limit reached · resets 2:40am')).toBe(true);
+    expect(isLimitReachedText("You've reached your weekly limit · resets Friday")).toBe(true);
+    expect(isLimitReachedText("You've been rate limited. Try again later.")).toBe(true);
+    expect(isLimitReachedText('Rate limit exceeded · resets 6pm')).toBe(true);
+  });
+
+  it('returns false for empty input', () => {
+    expect(isLimitReachedText('')).toBe(false);
+  });
+
+  it('rejects a markdown answer that discusses rate limits (issue #249)', () => {
+    const answer = [
+      '## API Rate Limit Policy',
+      '',
+      '| Tier | Limit | Window |',
+      '|---|---|---|',
+      '| Free | 60 | 1m |',
+      '',
+      'Use the `Retry-After` header.',
+    ].join('\n');
+    expect(isLimitReachedText(answer)).toBe(false);
+  });
+
+  it('rejects prose that mentions rate limiting as a topic', () => {
+    expect(isLimitReachedText('Add a rate limit to this endpoint.')).toBe(false);
+    expect(isLimitReachedText('This endpoint is rate-limited by nginx.')).toBe(false);
+  });
+
+  it('rejects a long answer that quotes a notice phrase', () => {
+    const answer =
+      'When the CLI prints "You\'ve hit your session limit · resets 3pm", the session pauses ' +
+      'until the shown reset time. Until then every send is refused, so schedule the retry for ' +
+      'right after the reset instead of polling the endpoint in a loop from the client side.';
+    expect(isLimitReachedText(answer)).toBe(false);
+  });
+});
 
 describe('computeSendAt', () => {
   it('adds the 30s delay to resetsAt and returns ISO 8601', () => {
