@@ -1,12 +1,12 @@
-import { Bars2Icon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { useTranslation } from '@/i18n';
+import { useState } from 'react';
+import { DragDropProvider } from '@dnd-kit/react';
+import { move } from '@dnd-kit/helpers';
+import type { DockItemId } from '@/types/settings';
 import { getDockItem } from './registry';
-import { moveDockItem } from './moveDockItem';
 import { toggleDockVisible } from './toggleDockVisible';
 import { useDockLayout } from './useDockLayout';
 import { useDockItemActions } from './useDockItemActions';
-import { useReorderDrag } from './useReorderDrag';
-import { DockItemStatus } from './DockItemStatus';
+import { DockEditorRow } from './DockEditorRow';
 
 interface Props {
   onRun: () => void;
@@ -28,74 +28,62 @@ interface Props {
  * Items are listed even when their feature currently has nothing to show (no
  * reservations). Deciding where something belongs, or whether to dock it, has
  * to be possible before it has anything to show.
+ *
+ * Reordering is dnd-kit's rather than hand-rolled, for what a bespoke pointer
+ * handler would have to earn one at a time: neighbours that slide out of the way
+ * as you drag, keyboard reordering, and screen-reader announcements. It is
+ * pointer-event based, which matters here — this webview also runs inside JCEF,
+ * where HTML5 drag-and-drop's `dataTransfer` proved unreliable enough that
+ * native file drops had to be routed around it entirely.
  */
 export function DockEditor(props: Props) {
   const { onRun } = props;
-  const { t } = useTranslation('chat');
   const { layout, save } = useDockLayout();
   const actions = useDockItemActions();
   const visible = new Set(layout.visible);
 
-  const { drag, registerRow, setOrder, handlePointerDown } = useReorderDrag({
-    onDrop: (id, index) => save(moveDockItem(layout, id, index)),
-  });
-  // The drag hook measures against the order as currently rendered.
-  setOrder(layout.order);
+  // The order being previewed mid-drag. Null when no drag is in progress, which
+  // is what makes cancelling work: the saved layout is never touched until the
+  // drop lands, so dropping the preview restores the original order for free.
+  // Writing each intermediate order straight to settings instead would leave a
+  // cancelled drag permanently applied — there would be nothing left to restore.
+  const [preview, setPreview] = useState<DockItemId[] | null>(null);
+  const order = preview ?? layout.order;
+
+  const runItem = (id: DockItemId) => {
+    onRun();
+    actions[id]?.();
+  };
 
   return (
-    <div className="py-1">
-      {layout.order.map((id, index) => {
-        const item = getDockItem(id);
-        if (!item) return null;
-        const isDragging = drag?.id === id;
-        const isVisible = visible.has(id);
-        const run = actions[id];
+    // onDragOver previews the reorder so neighbours animate; onDragEnd persists
+    // it. A cancelled drag (Esc, lost pointer) reports `canceled` and only clears
+    // the preview.
+    <DragDropProvider
+      onDragOver={(event) => setPreview((current) => move(current ?? layout.order, event))}
+      onDragEnd={(event) => {
+        setPreview(null);
+        if (event.canceled) return;
+        save({ ...layout, order: move(order, event) });
+      }}
+    >
+      <div className="py-1">
+        {order.map((id, index) => {
+          const item = getDockItem(id);
+          if (!item) return null;
 
-        return (
-          <div key={id}>
-            {drag?.target === index && <InsertionLine />}
-            <div
-              className={`flex items-center gap-1 transition-colors ${
-                isDragging ? 'opacity-40' : 'hover:bg-surface-hover'
-              }`}
-            >
-              {/* Only the handle starts a drag — the row underneath stays a
-                  plain click target, so running an item and reordering it
-                  never compete for the same gesture. */}
-              <span
-                onPointerDown={(e) => handlePointerDown(e, id)}
-                className="pl-3 py-1.5 cursor-grab select-none text-text-tertiary"
-                title={t('sessionHeader.dock.dragHint')}
-              >
-                <Bars2Icon className="w-4 h-4 shrink-0" />
-              </span>
-              <button
-                ref={(el) => registerRow(id, el)}
-                onClick={() => {
-                  onRun();
-                  run?.();
-                }}
-                className="flex-1 min-w-0 flex items-center gap-2 py-1.5 text-start"
-              >
-                <DockItemStatus id={id} icon={item.icon} labelKey={item.labelKey} />
-              </button>
-              <button
-                onClick={() => save(toggleDockVisible(layout, id))}
-                title={t(isVisible ? 'sessionHeader.dock.hideFromDock' : 'sessionHeader.dock.showInDock')}
-                className="pr-3 py-1.5 text-text-tertiary hover:text-text-primary transition-colors"
-              >
-                {isVisible ? <EyeIcon className="w-4 h-4" /> : <EyeSlashIcon className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-      {drag?.target === layout.order.length && <InsertionLine />}
-    </div>
+          return (
+            <DockEditorRow
+              key={id}
+              item={item}
+              index={index}
+              isVisible={visible.has(id)}
+              onRun={() => runItem(id)}
+              onToggleVisible={(target) => save(toggleDockVisible(layout, target))}
+            />
+          );
+        })}
+      </div>
+    </DragDropProvider>
   );
-}
-
-/** Where the dragged row would land on release. */
-function InsertionLine() {
-  return <div className="mx-3 my-0.5 h-0.5 rounded bg-text-link" />;
 }

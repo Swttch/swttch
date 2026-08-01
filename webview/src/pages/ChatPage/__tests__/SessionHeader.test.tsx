@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react';
 import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/items';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
@@ -473,21 +473,88 @@ describe('SessionHeader', () => {
     const handle = row?.previousElementSibling as HTMLElement;
     expect(handle).toBeTruthy();
 
+    // Real PointerEvents, not MouseEvent stand-ins: the drag layer narrows with
+    // `instanceof PointerEvent`, so a MouseEvent would be ignored and this test
+    // would pass without ever exercising the gesture it claims to.
     act(() => {
-      handle.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 0, clientY: 0 }));
+      handle.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, button: 0, buttons: 1, clientX: 0, clientY: 0 }),
+      );
     });
     act(() => {
-      window.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true, button: 0, buttons: 1, clientX: 0, clientY: 90 }),
+      );
     });
     expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
 
     act(() => {
-      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
     });
 
     // A plain click on the row itself still runs it, same as before this menu existed.
     await user.click(screen.getByText('Open New Tab'));
     expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
+  });
+
+  // Reordering must not require a mouse, and the keyboard path rests on two
+  // things that are easy to undo by accident: the handle has to be focusable (a
+  // <button>, not a <span>), and the drag layer keys off `event.code` ("Space"),
+  // not `event.key` (" "). Both are asserted here.
+  //
+  // Where the row LANDS is not: the drag layer measures rows through its own
+  // cache, and jsdom reports a zero rect for everything, so no amount of stubbing
+  // makes an arrow key resolve to a real position. That half is covered by
+  // driving a real browser instead.
+  it('드래그 핸들은 키보드로 집을 수 있다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const rowCount = screen.getAllByTitle('Drag to rearrange').length;
+    const first = screen.getAllByTitle('Drag to rearrange')[0] as HTMLButtonElement;
+
+    first.focus();
+    expect(document.activeElement).toBe(first);
+
+    act(() => {
+      first.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
+    });
+
+    // Picking a row up lifts it out of the flow and leaves a placeholder behind,
+    // so the list renders exactly one row more than it has items.
+    await waitFor(() => {
+      expect(screen.getAllByTitle('Drag to rearrange')).toHaveLength(rowCount + 1);
+    });
+    // Space picked the row up rather than activating the row's own button.
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+  });
+
+  // A drag the user backs out of must leave nothing behind. This regressed once:
+  // previewing the reorder by writing each intermediate order straight to
+  // settings meant a cancel had nothing left to restore, and the abandoned order
+  // stuck permanently.
+  it('드래그를 Esc로 취소하면 순서가 저장되지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    mockSettingsValue.updateSettingWithScope.mockClear();
+
+    const handles = screen.getAllByTitle('Drag to rearrange');
+    const first = handles[0] as HTMLButtonElement;
+    first.focus();
+
+    const press = (code: string, key: string) =>
+      act(() => {
+        first.dispatchEvent(new KeyboardEvent('keydown', { code, key, bubbles: true, cancelable: true }));
+      });
+
+    press('Space', ' ');
+    press('ArrowDown', 'ArrowDown');
+    press('Escape', 'Escape');
+
+    expect(mockSettingsValue.updateSettingWithScope).not.toHaveBeenCalled();
   });
 
   it('현재 세션이 하이라이트 스타일로 표시', async () => {

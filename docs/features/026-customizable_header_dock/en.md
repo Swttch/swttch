@@ -17,7 +17,7 @@ Most of those six also matter to different people in different amounts. Someone 
 Open ⋮ and all six items are already there in one list. There is no separate "edit mode" to step into first.
 
 1. Click the **eye icon** on the right of a row to add or remove it from the dock
-2. Grab the **drag handle** on the left (the two-line icon) and move it up or down to change the **order** — icons already in the dock follow this same order
+2. Grab the **drag handle** on the left (the six-dot icon) and move it up or down to change the **order** — the other rows slide out of the way as you go, and icons already in the dock follow this same order
 3. Click anywhere else on the row — neither the handle nor the eye — and the feature runs immediately
 
 Your arrangement is saved and comes back the next time you open the chat. It also stays the same across projects — the dock is a toolbar you reach for by muscle memory, so icons moving when you switch projects would defeat the purpose.
@@ -52,5 +52,6 @@ Notifications do not exist yet, but their place is settled: the bell sits **to t
 ## Notes
 
 - Dragging only starts **from the handle**. The rest of the row runs the feature on click, as it always did.
-- Pressing `Esc` mid-drag cancels it and leaves the item where it was.
+- You can reorder without a mouse: focus a handle, press `Space` to pick the row up, `↑` `↓` to move it, and `Space` again to drop it.
+- Pressing `Esc` mid-drag cancels it and leaves the item where it was. A cancelled reorder is never saved.
 - When a new feature ships later, it is added to the bottom of the list, starting out NOT docked. An arrangement you saved earlier will never hide a feature you have not seen yet.
