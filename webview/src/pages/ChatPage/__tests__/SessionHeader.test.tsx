@@ -367,6 +367,18 @@ describe('SessionHeader', () => {
     await user.click(screen.getByTitle('More'));
   };
 
+  /**
+   * A dock menu row, found by the item it represents rather than by walking the
+   * DOM. How a row is laid out inside is styling and changes freely — wrapping
+   * the handle in a div once broke every test that reached the eye toggle by
+   * position — while the id it renders is contract.
+   */
+  const dockRow = (id: string): HTMLElement => {
+    const row = document.querySelector(`[data-dock-item="${id}"]`);
+    if (!row) throw new Error(`No dock row for "${id}". Is the ⋮ menu open?`);
+    return row as HTMLElement;
+  };
+
   it('더보기 메뉴의 새 탭 항목 클릭 시 openNewTab 호출', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
@@ -446,9 +458,7 @@ describe('SessionHeader', () => {
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
-    const row = screen.getByText('Open New Tab').closest('button');
-    const eyeToggle = row?.parentElement?.querySelector('button:last-of-type') as HTMLElement;
-    expect(eyeToggle).toBeTruthy();
+    const eyeToggle = within(dockRow('newTab')).getByTitle('Add to dock');
 
     await user.click(eyeToggle);
     expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
@@ -539,14 +549,21 @@ describe('SessionHeader', () => {
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
-    const handle = screen.getAllByTitle('Drag to rearrange')[0];
-    const eye = handle.parentElement?.querySelector('button:last-of-type') as HTMLElement;
+    const row = dockRow('newTab');
 
-    for (const el of [handle, eye]) {
-      expect(el.className).toMatch(/\bps-/);
-      expect(el.className).toMatch(/\bpe-/);
-      expect(el.className).not.toMatch(/\bp[lr]-/);
-    }
+    // Asserted over the whole row rather than named elements: which element
+    // carries the padding is a styling decision, but NO element in the row may
+    // use a physical side. `px-`/`mx-` are fine — they apply to both sides, so
+    // they mirror trivially.
+    const offenders = [row, ...row.querySelectorAll('*')]
+      .map((el) => el.getAttribute('class') ?? '')
+      .filter((cls) => /\b[pm][lr]-/.test(cls));
+
+    expect(offenders).toEqual([]);
+    // And at least one element positions itself logically, proving the row does
+    // not simply avoid padding altogether.
+    const classes = [row, ...row.querySelectorAll('*')].map((el) => el.getAttribute('class') ?? '');
+    expect(classes.some((cls) => /\b[pm][se]-/.test(cls))).toBe(true);
   });
 
   // A drag the user backs out of must leave nothing behind. This regressed once:

@@ -40,6 +40,9 @@ export function DockEditorRow(props: Props) {
   return (
     <div
       ref={ref}
+      // Identifies the row independently of its markup, so a test can reach a
+      // specific item's controls without encoding how the row is laid out.
+      data-dock-item={item.id}
       // `relative` + a z-index while dragging keeps the lifted row above its
       // neighbours as they slide past it, instead of being painted underneath.
       className={`relative flex items-center gap-1 ${
@@ -54,16 +57,19 @@ export function DockEditorRow(props: Props) {
           Padding is logical (ps-/pe-), never physical (pl-/pr-): the app mirrors
           its whole layout for Arabic and Persian, and physical padding would
           leave the handle hugging the wrong edge there. */}
-      <button
-        type="button"
-        ref={handle}
-        className="ps-1 pe-0.5 py-1.5 cursor-grab select-none text-text-tertiary/60"
-        title={t('sessionHeader.dock.dragHint')}
-      >
-        {/* Height only — the 10×16 viewBox sets the width, so forcing a square
+      <div className="ps-0.5 pe-0">
+        <button
+            type="button"
+            ref={handle}
+            className="px-0.5 py-1.5 rounded cursor-grab select-none text-text-tertiary/60 hover:text-text-primary hover:bg-surface-pressed"
+            title={t('sessionHeader.dock.dragHint')}
+        >
+          {/* Height only — the 10×16 viewBox sets the width, so forcing a square
             (w-4 h-4) would stretch the dots apart. */}
-        <DragHandleIcon className="h-4 shrink-0" />
-      </button>
+          <DragHandleIcon className="h-3.5 shrink-0" />
+        </button>
+      </div>
+
       <button
         onClick={onRun}
         className="flex-1 min-w-0 flex items-center gap-2 py-1.5 text-start"
