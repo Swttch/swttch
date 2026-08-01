@@ -530,6 +530,25 @@ describe('SessionHeader', () => {
     expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
   });
 
+  // The app mirrors its entire layout for Arabic and Persian (SettingsContext
+  // sets dir="rtl" on <html>). Physical padding would pin the handle and the eye
+  // to the wrong edges there, so both must use logical properties. Asserted on
+  // the class list because jsdom computes no styles worth measuring.
+  it('행의 좌우 여백은 RTL에서 뒤집히도록 논리 속성을 쓴다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const handle = screen.getAllByTitle('Drag to rearrange')[0];
+    const eye = handle.parentElement?.querySelector('button:last-of-type') as HTMLElement;
+
+    for (const el of [handle, eye]) {
+      expect(el.className).toMatch(/\bps-/);
+      expect(el.className).toMatch(/\bpe-/);
+      expect(el.className).not.toMatch(/\bp[lr]-/);
+    }
+  });
+
   // A drag the user backs out of must leave nothing behind. This regressed once:
   // previewing the reorder by writing each intermediate order straight to
   // settings meant a cancel had nothing left to restore, and the abandoned order

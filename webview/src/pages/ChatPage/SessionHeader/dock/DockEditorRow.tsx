@@ -49,11 +49,15 @@ export function DockEditorRow(props: Props) {
       {/* A real <button>, not a <span>: the drag layer's keyboard sensor only
           reaches a handle that can take focus, so this is what makes Space to
           pick up, arrows to move, Space to drop work at all. `type="button"`
-          keeps it from submitting anything. */}
+          keeps it from submitting anything.
+
+          Padding is logical (ps-/pe-), never physical (pl-/pr-): the app mirrors
+          its whole layout for Arabic and Persian, and physical padding would
+          leave the handle hugging the wrong edge there. */}
       <button
         type="button"
         ref={handle}
-        className="pl-1 pr-0.5 py-1.5 cursor-grab select-none text-text-tertiary"
+        className="ps-1 pe-0.5 py-1.5 cursor-grab select-none text-text-tertiary/60"
         title={t('sessionHeader.dock.dragHint')}
       >
         {/* Height only — the 10×16 viewBox sets the width, so forcing a square
@@ -69,7 +73,7 @@ export function DockEditorRow(props: Props) {
       <button
         onClick={() => onToggleVisible(item.id)}
         title={t(isVisible ? 'sessionHeader.dock.hideFromDock' : 'sessionHeader.dock.showInDock')}
-        className={`pl-1 pr-2 py-1.5 ${
+        className={`ps-1 pe-2 py-1.5 ${
           isVisible ? 'text-text-primary' : 'text-text-tertiary/60 hover:text-text-primary'
         } transition-colors`}
       >
