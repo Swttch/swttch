@@ -5,7 +5,7 @@ import {
   AutoResumeStatusPhase,
   type ScheduledMessage,
 } from '@/shared';
-import { LoadedMessageType, getTextContent, type LoadedMessageDto } from '@/types';
+import { LoadedMessageType, getTextContent, isLimitErrorMessage, type LoadedMessageDto } from '@/types';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
@@ -22,7 +22,6 @@ import {
   computeSendAt,
   computeCountdownSeconds,
   resolveAutoResumeStatusKey,
-  isLimitReachedText,
   parseResetsAtFromText,
   type AutoResumeStatusView,
 } from './autoResumeMath';
@@ -74,7 +73,7 @@ function deriveLimit(messages: LoadedMessageDto[]): LimitState | null {
     if (m.type === LoadedMessageType.User) return null;
     if (m.type === LoadedMessageType.Assistant && !m.isStreaming && m.uuid) {
       const text = getTextContent(m);
-      if (isLimitReachedText(text)) {
+      if (isLimitErrorMessage(m)) {
         // Anchor the wall-clock reset ("resets 2:40am") to WHEN the limit message
         // arrived, not "now". Otherwise the parser keeps rolling a past time
         // forward to the next day, so a reset that already happened still reads

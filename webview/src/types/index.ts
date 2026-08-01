@@ -134,6 +134,30 @@ export function isAuthErrorMessage(
   return m.apiErrorStatus === 401 || m.error === 'authentication_failed';
 }
 
+/**
+ * True when a message is the CLI's synthetic usage-limit notice
+ * (429 / rate_limit) — "You've hit your session limit · resets 7:20pm".
+ *
+ * Detected from the CLI's own markers, NOT from the notice wording. The wording
+ * varies by plan, organization type and CLI version ("Session limit reached ∙
+ * resets 3pm", "Weekly limit reached, now using extra usage", "Limit reached –
+ * contact an admin to keep working", …), so text matching both missed real
+ * notices and misfired on ordinary answers that merely discussed rate limiting
+ * (issue #249). The markers carry no such ambiguity: measured over 66,398
+ * assistant entries, every `error: 'rate_limit'` entry was a genuine notice
+ * (66/66) and no ordinary answer carried the marker.
+ *
+ * A free function for the same reason as {@link isAuthErrorMessage}: it must
+ * work on plain object literals from the live streaming path, which carry no
+ * class getters.
+ */
+export function isLimitErrorMessage(
+  m: Pick<LoadedMessageDto, 'isApiErrorMessage' | 'apiErrorStatus' | 'error'>,
+): boolean {
+  if (!m.isApiErrorMessage) return false;
+  return m.apiErrorStatus === 429 || m.error === 'rate_limit';
+}
+
 
 // ============================================
 // Supporting types

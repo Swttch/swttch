@@ -12,7 +12,11 @@ interface Msg {
   type: string;
   uuid: string;
   isStreaming?: boolean;
-  message?: { role: string; content: unknown };
+  message?: { role: string; model?: string; content: unknown };
+  // CLI markers that identify a synthetic usage-limit notice (429 / rate_limit).
+  isApiErrorMessage?: boolean;
+  apiErrorStatus?: number;
+  error?: string;
 }
 interface Ctx {
   sessionId: string | null;
@@ -75,7 +79,11 @@ import { useAutoResume } from '../useAutoResume';
 const FUTURE = new Date(Date.now() + 5 * 60_000).toISOString();
 const PAST = new Date(Date.now() - 60_000).toISOString();
 
-/** An assistant limit notice whose text carries an ISO reset time. */
+/**
+ * A CLI usage-limit notice, shaped like the real synthetic entry: the markers
+ * (`<synthetic>` + isApiErrorMessage + 429/rate_limit) identify it as a notice,
+ * and the text carries the reset time that parseResetsAtFromText reads.
+ */
 function limitMsg(uuid: string, resetsIso: string): Msg {
   return {
     type: 'assistant',
@@ -83,8 +91,12 @@ function limitMsg(uuid: string, resetsIso: string): Msg {
     isStreaming: false,
     message: {
       role: 'assistant',
+      model: '<synthetic>',
       content: [{ type: 'text', text: `You've hit your session limit · resets ${resetsIso}` }],
     },
+    isApiErrorMessage: true,
+    apiErrorStatus: 429,
+    error: 'rate_limit',
   };
 }
 function userMsg(uuid: string): Msg {

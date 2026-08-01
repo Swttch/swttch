@@ -87,35 +87,11 @@ export function resolveAutoResumeStatusKey(
   }
 }
 
-// ── Limit detection (front-end, message-based) ──────────────────────────────
-// The limit notice (`You've hit your session limit · resets ...`) arrives as a
-// plain assistant text block (verified against session JSONL), not an API-error
-// message. We detect it from the message text so the banner survives session
-// re-entry (the message persists; a live LIMIT_REACHED event would not).
-// ⚠️ 실측 조정 대상: real CLI phrasing may vary.
-
-const LIMIT_PATTERNS: RegExp[] = [
-  /hit(?:ting)?\s+your\s+[^.\n]*\blimit\b/i,
-  /you'?ve\s+reached\s+your\s+[^.\n]*\blimit\b/i,
-  /usage\s+limit\s+reached/i,
-  /\blimit\s+reached\b/i,
-  /exceeded\s+your\s+[^.\n]*\blimit\b/i,
-  /\byou(?:'ve|'re| have| are)?(?:\s+been)?\s+rate[-\s]?limited\b/i,
-  /\brate[-\s]?limit\s+(?:reached|exceeded|hit)\b/i,
-];
-
-// A real notice is one short plain-text line; ordinary answers that merely
-// discuss limits are longer or carry markdown structure (issue #249).
-const NOTICE_MAX_LENGTH = 200;
-const MARKDOWN_STRUCTURE = /^#{1,6}\s|^\s*\||```|\n\n/m;
-
-/** True when text looks like a usage-limit notice. */
-export function isLimitReachedText(text: string): boolean {
-  if (!text) return false;
-  const trimmed = text.trim();
-  if (trimmed.length > NOTICE_MAX_LENGTH || MARKDOWN_STRUCTURE.test(trimmed)) return false;
-  return LIMIT_PATTERNS.some((p) => p.test(trimmed));
-}
+// ── Limit detection ─────────────────────────────────────────────────────────
+// Whether a message IS a usage-limit notice is decided by `isLimitErrorMessage`
+// (webview/src/types) from the CLI's own markers, not from the notice wording.
+// Only the reset-time parsing below reads the text, and it does so on messages
+// already identified as notices.
 
 /** Convert a 12-hour clock reading to a 0–23 hour. `ampm` is 'a'|'p'|undefined. */
 function to24Hour(hour: number, ampm: string | undefined): number {
