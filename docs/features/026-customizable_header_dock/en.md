@@ -45,6 +45,10 @@ Each row shows, on the right, the exact same information its dock icon would sho
 
 Account switching was left out of this cleanup on purpose. It is not a single action but a list you pick a saved account from, which sets it apart from the other six. It keeps its own icon to the right of ⋮, exactly as before, and clicking it still opens the same dropdown.
 
+## Where notifications will go
+
+Notifications do not exist yet, but their place is settled: the bell sits **to the left of ⋮ and is always shown**, not as a dock item. The dock exists to let you hide things, and an alert you never asked for must not be hideable — the same reason the account icon stays outside it.
+
 ## Notes
 
 - Dragging only starts **from the handle**. The rest of the row runs the feature on click, as it always did.
