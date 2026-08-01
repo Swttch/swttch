@@ -6,6 +6,58 @@ import {
   resolveAutoResumeStatusKey,
   SEND_AT_DELAY_MS,
 } from '../autoResumeMath';
+import { isLimitErrorMessage } from '@/types';
+
+/**
+ * Notice identification moved from text matching to the CLI's own markers
+ * (see `isLimitErrorMessage`). These cases keep issue #249's guarantee: an
+ * ordinary answer is never taken for a notice, no matter how it is worded.
+ */
+describe('usage-limit notice identification (issue #249)', () => {
+  /** A CLI notice: markers set, wording varies by plan / org / CLI version. */
+  const notice = (text: string) => ({
+    message: { role: 'assistant', content: [{ type: 'text', text }] },
+    isApiErrorMessage: true,
+    apiErrorStatus: 429,
+    error: 'rate_limit',
+  });
+  /** An ordinary model answer: no markers, whatever it happens to say. */
+  const answer = (text: string) => ({
+    message: { role: 'assistant', content: [{ type: 'text', text }] },
+    isApiErrorMessage: undefined,
+    apiErrorStatus: undefined,
+    error: undefined,
+  });
+
+  it('detects a real notice regardless of its wording', () => {
+    for (const text of [
+      "You've hit your session limit · resets 3pm",
+      'Usage limit reached ∙ resets 2:40am',
+      'Weekly limit reached ∙ resets Friday',
+      'Opus weekly limit reached, now using extra usage',
+      'Limit reached – contact an admin to keep working',
+      'Session limit resets 3pm ∙ contact an admin to keep working',
+    ]) {
+      expect(isLimitErrorMessage(notice(text)), text).toBe(true);
+    }
+  });
+
+  it('never mistakes an ordinary answer for a notice, however it is worded', () => {
+    for (const text of [
+      // the issue's repro: a markdown answer about rate limiting
+      '## API Rate Limit Policy\n\n| Tier | Limit |\n|---|---|\n| Free | 60 |',
+      // topical prose
+      'Add a rate limit to this endpoint.',
+      'This endpoint is rate-limited by nginx.',
+      // a short sentence that happens to read like a notice
+      'The size limit reached 1024.',
+      // an answer quoting the notice text verbatim — wording cannot fake markers
+      'When the CLI prints "You\'ve hit your session limit · resets 3pm", the session pauses.',
+    ]) {
+      expect(isLimitErrorMessage(answer(text)), text).toBe(false);
+    }
+  });
+});
 
 describe('computeSendAt', () => {
   it('adds the 30s delay to resetsAt and returns ISO 8601', () => {

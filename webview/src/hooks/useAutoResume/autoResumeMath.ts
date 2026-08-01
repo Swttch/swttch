@@ -87,28 +87,11 @@ export function resolveAutoResumeStatusKey(
   }
 }
 
-// ── Limit detection (front-end, message-based) ──────────────────────────────
-// The limit notice (`You've hit your session limit · resets ...`) arrives as a
-// plain assistant text block (verified against session JSONL), not an API-error
-// message. We detect it from the message text so the banner survives session
-// re-entry (the message persists; a live LIMIT_REACHED event would not). Kept in
-// sync with the backend `limit-detection.ts` LIMIT_PATTERNS / parseResetTime.
-// ⚠️ 실측 조정 대상: real CLI phrasing may vary.
-
-const LIMIT_PATTERNS: RegExp[] = [
-  /hit(?:ting)?\s+your\s+[^.\n]*\blimit\b/i,
-  /you'?ve\s+reached\s+your\s+[^.\n]*\blimit\b/i,
-  /usage\s+limit\s+reached/i,
-  /\blimit\s+reached\b/i,
-  /exceeded\s+your\s+[^.\n]*\blimit\b/i,
-  /\brate[-\s]?limit(?:ed)?\b/i,
-];
-
-/** True when text looks like a usage-limit notice. */
-export function isLimitReachedText(text: string): boolean {
-  if (!text) return false;
-  return LIMIT_PATTERNS.some((p) => p.test(text));
-}
+// ── Limit detection ─────────────────────────────────────────────────────────
+// Whether a message IS a usage-limit notice is decided by `isLimitErrorMessage`
+// (webview/src/types) from the CLI's own markers, not from the notice wording.
+// Only the reset-time parsing below reads the text, and it does so on messages
+// already identified as notices.
 
 /** Convert a 12-hour clock reading to a 0–23 hour. `ampm` is 'a'|'p'|undefined. */
 function to24Hour(hour: number, ampm: string | undefined): number {

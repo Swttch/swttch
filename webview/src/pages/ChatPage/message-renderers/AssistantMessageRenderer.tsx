@@ -1,11 +1,10 @@
 import React from 'react';
-import { LoadedMessageDto, isContentBlockArray, isAuthErrorMessage, getTextContent } from '../../../types';
+import { LoadedMessageDto, isContentBlockArray, isAuthErrorMessage, isLimitErrorMessage } from '../../../types';
 import { ToolUseBlockDto, ThinkingBlockDto, ContentBlockType } from '../../../dto/message/ContentBlockDto';
 import { StreamingMessage } from '../StreamingMessage';
 import { ToolRenderer } from './ToolRenderer';
 import { AuthErrorRenderer } from './AuthErrorRenderer';
 import { LimitReachedRenderer } from './LimitReachedRenderer';
-import { isLimitReachedText } from '@/hooks/useAutoResume';
 import { mergeAdjacentTextBlocks } from './mergeAdjacentTextBlocks';
 import {ThinkingStreamingMessage} from "@/pages/ChatPage/ThinkingStreamingMessage.tsx";
 import { parseContextUsage } from '@/utils/parseContextUsage';
@@ -45,7 +44,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
   // Usage-limit notice gets its own renderer with the auto-resume action inline
   // to the right of the text (spec: button next to the message, not a banner).
-  if (!message.isStreaming && isLimitReachedText(getTextContent(message))) {
+  if (!message.isStreaming && isLimitErrorMessage(message)) {
     return <LimitReachedRenderer message={message} />;
   }
 
