@@ -2,7 +2,7 @@
 
 > Language: [한국어](./ko.md) · **English**
 >
-> Related: [#249](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/249)
+> Related: [#251](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/251)
 
 Icons had been piling up to the right of the session title: the usage battery, scheduled messages, background tasks, the remote tunnel, settings, and open-new-tab. Six of them.
 

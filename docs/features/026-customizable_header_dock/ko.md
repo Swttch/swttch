@@ -2,7 +2,7 @@
 
 > 언어: **한국어** · [English](./en.md)
 >
-> 관련: [#249](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/249)
+> 관련: [#251](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/251)
 
 채팅 화면 위쪽, 세션 제목 오른편에는 그동안 아이콘이 하나둘 늘어났습니다. 사용량 배터리, 예약된 메시지, 백그라운드 작업, 원격 터널, 설정, 새 탭 열기 — 여섯 개입니다.
 
