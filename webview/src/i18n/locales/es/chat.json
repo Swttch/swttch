@@ -92,6 +92,17 @@
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "Más",
+      "dragHint": "Arrastra para reordenar",
+      "items": {
+        "tokenBattery": "Uso",
+        "settings": "Ajustes"
+      },
+      "active": "Activo",
+      "hideFromDock": "Quitar de la barra",
+      "showInDock": "Añadir a la barra"
+    },
     "newTab": {
       "title": "Abrir nueva pestaña"
     },

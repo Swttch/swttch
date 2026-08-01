@@ -344,6 +344,79 @@ describe('settings', () => {
       expect(bad.status).toBe('error');
       expect(bad.error).toContain('ultracode must be a boolean or null');
     });
+
+    // dockLayout holds the header dock arrangement: `order` is the row order of
+    // every overflow-menu item, `visible` names which of them also sit outside
+    // as icons. The backend validates the SHAPE only and deliberately does not
+    // know the item ids — those belong to the webview registry, and duplicating
+    // the list here would mean editing two places to add one icon. An id the
+    // webview no longer knows (or a `visible` id `order` does not contain) is
+    // dropped when it normalizes the layout, so an unknown string is harmless.
+    describe('dockLayout', () => {
+      it('accepts a well-formed layout', async () => {
+        const result = await saveSettingToFile('dockLayout', {
+          order: ['newTab', 'settings', 'tunnel'],
+          visible: ['settings'],
+        });
+        expect(result.status).toBe('ok');
+      });
+
+      it('accepts empty arrays (not configured yet)', async () => {
+        expect((await saveSettingToFile('dockLayout', { order: [], visible: [] })).status).toBe('ok');
+      });
+
+      it('rejects a non-object', async () => {
+        for (const bad of ['nope', 42, null, true]) {
+          const result = await saveSettingToFile('dockLayout', bad);
+          expect(result.status).toBe('error');
+          expect(result.error).toContain('dockLayout must be an object');
+        }
+      });
+
+      it('rejects an array', async () => {
+        const result = await saveSettingToFile('dockLayout', ['newTab']);
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout must be an object');
+      });
+
+      it('rejects when order or visible is not an array', async () => {
+        const missingVisible = await saveSettingToFile('dockLayout', { order: [] });
+        expect(missingVisible.status).toBe('error');
+        expect(missingVisible.error).toContain('dockLayout.order and dockLayout.visible must both be arrays');
+
+        const badOrder = await saveSettingToFile('dockLayout', { order: 'newTab', visible: [] });
+        expect(badOrder.status).toBe('error');
+        expect(badOrder.error).toContain('dockLayout.order and dockLayout.visible must both be arrays');
+      });
+
+      it('rejects non-string entries', async () => {
+        const result = await saveSettingToFile('dockLayout', { order: [1], visible: [] });
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout entries must be strings');
+      });
+
+      // A duplicate in `order` would leave two rows claiming the same position
+      // and make the drag reorder ambiguous about which copy moved.
+      it('rejects a duplicated id in order', async () => {
+        const result = await saveSettingToFile('dockLayout', {
+          order: ['newTab', 'newTab'],
+          visible: [],
+        });
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('dockLayout.order entries must be unique');
+      });
+
+      it('serializes the layout into the settings file', async () => {
+        mockExistsSync.mockReturnValue(true);
+        mockReadFile.mockResolvedValue('export default { theme: "system" };');
+
+        const result = await saveSettingToFile('dockLayout', { order: ['newTab'], visible: ['newTab'] });
+        expect(result.status).toBe('ok');
+
+        const [, content] = mockWriteFile.mock.calls[mockWriteFile.mock.calls.length - 1];
+        expect(String(content)).toContain('dockLayout: {"order":["newTab"],"visible":["newTab"]}');
+      });
+    });
   });
 
   describe('saveSettingToFile() - atomic write via temp file + rename', () => {
@@ -462,6 +535,7 @@ describe('settings', () => {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
+        dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,
@@ -583,6 +657,7 @@ export default {
         autoResumeOnLimit: false,
         attachEditorContext: true,
         ultracode: null,
+        dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,

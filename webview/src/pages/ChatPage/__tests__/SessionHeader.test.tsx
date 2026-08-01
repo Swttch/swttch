@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, within, act, waitFor } from '@testing-library/react';
 import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/items';
 import userEvent from '@testing-library/user-event';
 import { useState, type ReactNode } from 'react';
@@ -360,31 +360,49 @@ describe('SessionHeader', () => {
     expect(screen.queryByPlaceholderText('Search sessions...')).not.toBeInTheDocument();
   });
 
-  it('새 탭 버튼 클릭 시 openNewTab 호출', async () => {
+  // The header's right side is now a user-arranged dock plus a ⋮ menu that holds
+  // every feature. The dock starts empty, so these features are reached through
+  // the menu — and reaching them there must do exactly what the old icons did.
+  const openOverflowMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByTitle('More'));
+  };
+
+  /**
+   * A dock menu row, found by the item it represents rather than by walking the
+   * DOM. How a row is laid out inside is styling and changes freely — wrapping
+   * the handle in a div once broke every test that reached the eye toggle by
+   * position — while the id it renders is contract.
+   */
+  const dockRow = (id: string): HTMLElement => {
+    const row = document.querySelector(`[data-dock-item="${id}"]`);
+    if (!row) throw new Error(`No dock row for "${id}". Is the ⋮ menu open?`);
+    return row as HTMLElement;
+  };
+
+  it('더보기 메뉴의 새 탭 항목 클릭 시 openNewTab 호출', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    // 새 탭 버튼 클릭
-    const newTabButton = screen.getByTitle('Open New Tab');
-    await user.click(newTabButton);
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Open New Tab'));
 
-    // openNewTab 호출 확인
     expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
   });
 
-  // The button delegates to openSettingsAt(), which reads the stored preference
+  // The item delegates to openSettingsAt(), which reads the stored preference
   // and either requests an overlay or asks the adapter for a dedicated tab.
-  it('설정 버튼: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
+  it('설정 항목: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
     const user = userEvent.setup();
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    await user.click(screen.getByTitle('Settings'));
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Settings'));
 
     // Overlay mode navigates in-tab; it must NOT open a dedicated tab.
     expect(mockOpenSettingsAdapter).not.toHaveBeenCalled();
   });
 
-  it('설정 버튼: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
+  it('설정 항목: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
     const user = userEvent.setup();
     localStorage.setItem(
       'claude-code-settings',
@@ -392,19 +410,187 @@ describe('SessionHeader', () => {
     );
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    await user.click(screen.getByTitle('Settings'));
+    await openOverflowMenu(user);
+    await user.click(screen.getByText('Settings'));
 
     expect(mockOpenSettingsAdapter).toHaveBeenCalledWith(Route.SETTINGS_GENERAL);
   });
 
-  it('새 탭 버튼이 항상 활성화되어 있음', () => {
+  it('세션이 없어도 더보기 메뉴의 새 탭 항목은 활성화되어 있음', async () => {
+    const user = userEvent.setup();
     mockSessionCtxValue.currentSessionId = null;
     mockSessionCtxValue.currentSession = null;
     render(<SessionHeader />, { wrapper: queryWrapper });
 
-    // 버튼이 활성화되어 있음 확인
-    const newTabButton = screen.getByTitle('Open New Tab');
-    expect(newTabButton).not.toBeDisabled();
+    await openOverflowMenu(user);
+    expect(screen.getByText('Open New Tab').closest('button')).not.toBeDisabled();
+  });
+
+  // A fresh install must show ONLY ⋮ on the right — that is the whole point of
+  // the change (the old header grew one icon per feature and squeezed the title).
+  it('기본 상태에서 우측에는 더보기 버튼만 있고 도크는 비어 있다', () => {
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    expect(screen.getByTitle('More')).toBeInTheDocument();
+    // None of the dock icons are rendered until the user places them.
+    expect(screen.queryByTitle('Remote Tunnel (Unofficial)')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Open New Tab')).not.toBeInTheDocument();
+  });
+
+  // There is no separate "edit mode" to switch into, and no two-section split:
+  // the menu is always one ordered list, and clicking a row (not its drag handle
+  // or its eye toggle) runs the feature directly — the same click that always ran it.
+  it('더보기 메뉴는 항상 하나의 목록으로 표시된다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+
+    // A fresh install has nothing docked, but every item is still listed.
+    expect(screen.getByText('Open New Tab')).toBeInTheDocument();
+    expect(screen.getByText('Settings')).toBeInTheDocument();
+  });
+
+  // Clicking the eye toggle pulls an item into the dock — it must not run the
+  // item (unlike clicking the row), and the icon must then appear in the dock.
+  it('눈 아이콘을 누르면 실행되지 않고, 해당 항목이 도크에 나타난다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const eyeToggle = within(dockRow('newTab')).getByTitle('Add to dock');
+
+    await user.click(eyeToggle);
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+
+    // The dock icon renders once the setting round-trips through updateSettingWithScope.
+    expect(mockSettingsValue.updateSettingWithScope).toHaveBeenCalledWith(
+      'dockLayout',
+      expect.objectContaining({ visible: expect.arrayContaining(['newTab']) }),
+      'global',
+    );
+  });
+
+  // The row and its drag handle must never compete for the same gesture: a
+  // press-and-move on the HANDLE must not run the item, and a plain click on the
+  // ROW must still run it — exactly like every icon behaved before this menu.
+  it('행의 드래그 핸들을 누르고 움직여도 항목이 실행되지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const row = screen.getByText('Open New Tab').closest('button');
+    const handle = row?.previousElementSibling as HTMLElement;
+    expect(handle).toBeTruthy();
+
+    // Real PointerEvents, not MouseEvent stand-ins: the drag layer narrows with
+    // `instanceof PointerEvent`, so a MouseEvent would be ignored and this test
+    // would pass without ever exercising the gesture it claims to.
+    act(() => {
+      handle.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, button: 0, buttons: 1, clientX: 0, clientY: 0 }),
+      );
+    });
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true, button: 0, buttons: 1, clientX: 0, clientY: 90 }),
+      );
+    });
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, clientX: 0, clientY: 90 }));
+    });
+
+    // A plain click on the row itself still runs it, same as before this menu existed.
+    await user.click(screen.getByText('Open New Tab'));
+    expect(mockSessionCtxValue.openNewTab).toHaveBeenCalled();
+  });
+
+  // Reordering must not require a mouse, and the keyboard path rests on two
+  // things that are easy to undo by accident: the handle has to be focusable (a
+  // <button>, not a <span>), and the drag layer keys off `event.code` ("Space"),
+  // not `event.key` (" "). Both are asserted here.
+  //
+  // Where the row LANDS is not: the drag layer measures rows through its own
+  // cache, and jsdom reports a zero rect for everything, so no amount of stubbing
+  // makes an arrow key resolve to a real position. That half is covered by
+  // driving a real browser instead.
+  it('드래그 핸들은 키보드로 집을 수 있다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const rowCount = screen.getAllByTitle('Drag to rearrange').length;
+    const first = screen.getAllByTitle('Drag to rearrange')[0] as HTMLButtonElement;
+
+    first.focus();
+    expect(document.activeElement).toBe(first);
+
+    act(() => {
+      first.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', key: ' ', bubbles: true, cancelable: true }));
+    });
+
+    // Picking a row up lifts it out of the flow and leaves a placeholder behind,
+    // so the list renders exactly one row more than it has items.
+    await waitFor(() => {
+      expect(screen.getAllByTitle('Drag to rearrange')).toHaveLength(rowCount + 1);
+    });
+    // Space picked the row up rather than activating the row's own button.
+    expect(mockSessionCtxValue.openNewTab).not.toHaveBeenCalled();
+  });
+
+  // The app mirrors its entire layout for Arabic and Persian (SettingsContext
+  // sets dir="rtl" on <html>). Physical padding would pin the handle and the eye
+  // to the wrong edges there, so both must use logical properties. Asserted on
+  // the class list because jsdom computes no styles worth measuring.
+  it('행의 좌우 여백은 RTL에서 뒤집히도록 논리 속성을 쓴다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    const row = dockRow('newTab');
+
+    // Asserted over the whole row rather than named elements: which element
+    // carries the padding is a styling decision, but NO element in the row may
+    // use a physical side. `px-`/`mx-` are fine — they apply to both sides, so
+    // they mirror trivially.
+    const offenders = [row, ...row.querySelectorAll('*')]
+      .map((el) => el.getAttribute('class') ?? '')
+      .filter((cls) => /\b[pm][lr]-/.test(cls));
+
+    expect(offenders).toEqual([]);
+    // And at least one element positions itself logically, proving the row does
+    // not simply avoid padding altogether.
+    const classes = [row, ...row.querySelectorAll('*')].map((el) => el.getAttribute('class') ?? '');
+    expect(classes.some((cls) => /\b[pm][se]-/.test(cls))).toBe(true);
+  });
+
+  // A drag the user backs out of must leave nothing behind. This regressed once:
+  // previewing the reorder by writing each intermediate order straight to
+  // settings meant a cancel had nothing left to restore, and the abandoned order
+  // stuck permanently.
+  it('드래그를 Esc로 취소하면 순서가 저장되지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<SessionHeader />, { wrapper: queryWrapper });
+
+    await openOverflowMenu(user);
+    mockSettingsValue.updateSettingWithScope.mockClear();
+
+    const handles = screen.getAllByTitle('Drag to rearrange');
+    const first = handles[0] as HTMLButtonElement;
+    first.focus();
+
+    const press = (code: string, key: string) =>
+      act(() => {
+        first.dispatchEvent(new KeyboardEvent('keydown', { code, key, bubbles: true, cancelable: true }));
+      });
+
+    press('Space', ' ');
+    press('ArrowDown', 'ArrowDown');
+    press('Escape', 'Escape');
+
+    expect(mockSettingsValue.updateSettingWithScope).not.toHaveBeenCalled();
   });
 
   it('현재 세션이 하이라이트 스타일로 표시', async () => {

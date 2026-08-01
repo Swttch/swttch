@@ -92,6 +92,17 @@
     "autoModeFallback": "حالت خودکار اینجا در دسترس نیست — به‌جای آن از حالت مجوز پیش‌فرض استفاده می‌شود."
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "بیشتر",
+      "dragHint": "برای جابه‌جایی بکشید",
+      "items": {
+        "tokenBattery": "مصرف",
+        "settings": "تنظیمات"
+      },
+      "active": "فعال",
+      "hideFromDock": "حذف از نوار",
+      "showInDock": "افزودن به نوار"
+    },
     "newTab": {
       "title": "باز کردن تب جدید"
     },

@@ -22,6 +22,13 @@ const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
 //     cannot be the one to resolve it (ProjectSettingsReader is the narrow
 //     read-only escape hatch the IDE uses instead).
 //
+// One further exception exists on product grounds rather than structural ones:
+//   - dockLayout: the header dock is a toolbar the user navigates by muscle
+//     memory, so the icons must not move when they switch projects. Nothing
+//     prevents resolving it per project — the editor simply always writes to
+//     global scope. A value placed in a project file by hand still wins, exactly
+//     as it does for the two keys above.
+//
 // Note what is NOT a reason: "the Settings UI greys it out on the Project tab"
 // is a symptom, not a justification. #239 removed exactly that greying for five
 // keys after finding nothing about them required global scope. When a key looks
@@ -56,6 +63,12 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   autoResumeOnLimit: false,
   attachEditorContext: true,
   ultracode: null,
+  // Header dock arrangement: `order` is the row order in the ⋮ menu (and, once
+  // filtered to `visible`, the dock's icon order too); `visible` names which of
+  // those items are pulled out into the dock. Both empty means "not configured
+  // yet", which the webview normalizes into "declaration order, none visible" —
+  // so a fresh install shows only the overflow (⋮) button.
+  dockLayout: { order: [], visible: [] },
   // Only CLAUDE_CONFIG_DIR lives here: it decides where the native settings file
   // is, so it cannot be stored inside that file. Every other variable belongs to
   // the native `env` key. See settings-migration.ts.
@@ -91,6 +104,7 @@ const COMMENT_MAP: Record<string, string> = {
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
+  dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
   language: '[레거시] 네이티브 settings.json으로 이관됨. 마이그레이션이 비우는 용도로만 남김',
   respectGitignoreForContext: '[레거시] 네이티브 respectGitignore로 이관됨. 마이그레이션이 비우는 용도로만 남김',
@@ -333,6 +347,29 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'respectGitignoreForContext must be a boolean or null';
       }
       break;
+    // Shape-only validation, on purpose. The item ids live in the webview's dock
+    // registry; mirroring the list here would mean editing two files to add one
+    // icon, and the webview already drops ids it no longer knows (and any id in
+    // `visible` that `order` does not also contain) when it normalizes the
+    // layout. So an unrecognized or inconsistent id is stored but harmless.
+    case 'dockLayout': {
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return 'dockLayout must be an object with "order" and "visible" arrays';
+      }
+      const layout = value as Record<string, unknown>;
+      if (!Array.isArray(layout.order) || !Array.isArray(layout.visible)) {
+        return 'dockLayout.order and dockLayout.visible must both be arrays';
+      }
+      if (layout.order.some((entry) => typeof entry !== 'string') || layout.visible.some((entry) => typeof entry !== 'string')) {
+        return 'dockLayout entries must be strings';
+      }
+      // A duplicate would leave two rows claiming the same position in `order`
+      // and make the drag reorder ambiguous about which copy moved.
+      if (new Set(layout.order as string[]).size !== layout.order.length) {
+        return 'dockLayout.order entries must be unique';
+      }
+      break;
+    }
     case 'env': {
       if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return 'env must be an object of string values';

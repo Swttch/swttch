@@ -81,6 +81,57 @@ export enum SettingKey {
   // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
   // the native `effortLevel`, but absent from the official schema, so it lives here.
   ULTRACODE = 'ultracode',
+
+  // Header dock arrangement: which overflow-menu items show as icons next to the
+  // ⋮ button, and in what order. Global-only by product decision (the dock is
+  // navigated by muscle memory, so it must not shift between projects).
+  DOCK_LAYOUT = 'dockLayout',
+}
+
+/**
+ * Items that can live in the header dock. The value is what gets persisted in
+ * {@link SettingKey.DOCK_LAYOUT}, so renaming one strands the user's arrangement
+ * for that item (normalizeDockLayout drops ids it does not recognize and appends
+ * the new one to `hidden`).
+ *
+ * Declaration order is the fallback order: an item missing from a saved layout —
+ * a newly shipped one, most often — is appended to `hidden` in this order, so it
+ * is reachable from the ⋮ menu rather than invisible forever.
+ */
+export enum DockItemId {
+  TOKEN_BATTERY = 'tokenBattery',
+  SCHEDULED_MESSAGES = 'scheduledMessages',
+  BACKGROUND_TASKS = 'backgroundTasks',
+  TUNNEL = 'tunnel',
+  SETTINGS = 'settings',
+  NEW_TAB = 'newTab',
+  // Accounts are NOT a dock item: the switcher is a picker (a list of saved
+  // accounts), not a single action, and always sits as its own icon to the
+  // right of ⋮ instead. A layout saved with the old 'accountSwitcher' id simply
+  // drops it — normalizeDockLayout discards ids it does not recognize.
+}
+
+/**
+ * Header dock arrangement, as a single ordered list plus which of those items
+ * are currently pulled out into the dock.
+ *
+ * `order` is the ONE sequence of every dock item — both the row order in the ⋮
+ * menu and, filtered down to `visible`, the icon order in the dock itself. There
+ * is no separate "dock order": an item's position among other docked items is
+ * simply its position in `order` with the hidden ones skipped. Two lists to
+ * reorder would mean deciding which one a drag updates; one list removes the
+ * question.
+ *
+ * `visible` is a boolean set of "docked or not" over the SAME ids, independent of
+ * where they sit in `order`. Toggling it therefore never touches order.
+ *
+ * Both arrays empty means "not configured yet" — a fresh install, which
+ * normalizes to every known item in declaration order, none of them visible
+ * (only ⋮ shows).
+ */
+export interface DockLayout {
+  order: DockItemId[];
+  visible: DockItemId[];
 }
 
 /**
@@ -171,6 +222,7 @@ export interface SettingsState {
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
   [SettingKey.ULTRACODE]: boolean | null;
+  [SettingKey.DOCK_LAYOUT]: DockLayout;
 }
 
 /**
@@ -199,4 +251,5 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.ULTRACODE]: null,
+  [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
 };

@@ -15,6 +15,8 @@
     "test:ui": "vitest --ui --coverage"
   },
   "dependencies": {
+    "@dnd-kit/helpers": "^0.5.0",
+    "@dnd-kit/react": "^0.5.0",
     "@heroicons/react": "^2.2.0",
     "@tanstack/react-query": "^5.101.1",
     "@tippyjs/react": "^4.2.6",

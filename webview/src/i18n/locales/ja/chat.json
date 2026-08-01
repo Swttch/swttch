@@ -92,6 +92,17 @@
     "autoModeFallback": "ここでは自動モードは使用できません — 代わりにデフォルトの権限モードを使用します。"
   },
   "sessionHeader": {
+    "dock": {
+      "overflowTitle": "その他",
+      "dragHint": "ドラッグして並べ替え",
+      "items": {
+        "tokenBattery": "使用量",
+        "settings": "設定"
+      },
+      "active": "有効",
+      "hideFromDock": "ドックから外す",
+      "showInDock": "ドックに追加"
+    },
     "newTab": {
       "title": "新しいタブを開く"
     },
