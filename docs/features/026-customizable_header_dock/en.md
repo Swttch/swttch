@@ -1,45 +1,69 @@
 # Pick which header icons stay out, and in what order
 
-The icons on the right of the chat header are now collected into a single **more (⋮)** menu, and you can pull the ones you actually use back out into a "dock" beside it. You choose which ones with an **eye icon**, the way Notion lets you show and hide table properties.
+> Language: [한국어](./ko.md) · **English**
+>
+> Related: [#249](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/249)
 
-## The problem
+Icons had been piling up to the right of the session title: the usage battery, scheduled messages, background tasks, the remote tunnel, settings, and open-new-tab. Six of them.
 
-Every new feature added one more icon to the right of the header. Usage battery, scheduled messages, background tasks, remote tunnel, settings, new tab — six of them.
+This update collects all six into a single **overflow (⋮) menu**, and lets you pull back out only the ones you actually reach for.
 
-And the cost was not only on the right. The header splits its width between the session title on the left and those icons on the right, so each new icon **ate into the session title first.** Open the chat in a narrow spot, like an IDE tool window, and only a few characters of the title survived.
+## What was wrong
 
-Most of those six also matter to different people in different amounts. Someone uses the remote tunnel daily; someone else never touches it. The icon took up the same room either way.
+Every new feature added another icon. That alone was cluttered, but the real problem was somewhere else.
 
-## What changed
+**The header splits one row between the session title on the left and the icons on the right.** So every icon added took width from the title. Open the plugin in a narrow tool window and the title is down to a few characters.
 
-**By default the right side holds just ⋮.** All six features live inside it, and running one from the menu does exactly what it did before.
+![A header crowded with six icons, the session title truncated mid-sentence](./assets/header-before.png)
 
-Open ⋮ and all six items are already there in one list. There is no separate "edit mode" to step into first.
+*Every icon turned on, in a narrow window. Six of them line up on the right while the title on the left cuts off at "Explain in 8 numbered sentences why …".*
 
-1. Click the **eye icon** on the right of a row to add or remove it from the dock
-2. Grab the **drag handle** on the left (the six-dot icon) and move it up or down to change the **order** — the other rows slide out of the way as you go, and icons already in the dock follow this same order
-3. Click anywhere else on the row — neither the handle nor the eye — and the feature runs immediately
+The six also **matter to different people in different amounts.** Someone uses the remote tunnel daily; someone else never touches it. The icon took the same space either way.
 
-Your arrangement is saved and comes back the next time you open the chat. It also stays the same across projects — the dock is a toolbar you reach for by muscle memory, so icons moving when you switch projects would defeat the purpose.
+## One ⋮ by default
 
-## The handle, the eye, and the row are three different gestures
+Configure nothing and the right side now holds **just the ⋮**. All six features live inside it, and clicking one there does exactly what its icon always did.
 
-Having a drag handle, a run-on-click row, and an eye toggle all on the same row could easily mean touching the wrong one by accident.
+![A header with only the ⋮ left, showing more of the session title](./assets/header-after.png)
 
-So the three occupy entirely separate spots. A drag only starts from the **handle** on the left; only the **eye icon** on the right changes what's docked; clicking anywhere in between **runs the item**. Which one you touched is always unambiguous.
+*Same width, same session. The space the icons gave up goes to the title.*
 
-## Docking something does not remove it from the menu
+## Pull out what you watch
 
-An item you place in the dock **stays listed** in the ⋮ menu. Once someone has learned to find a feature in this menu, rearranging the dock should not make it disappear from there. Wherever you click it — dock or menu — it does the same thing.
+Some of these you do want in view. How much usage is left, how many background tasks are running — none of that helps if you have to open a menu to see it.
 
-## The menu shows the real state, not just a label
+So the space left of ⋮ is a **dock**, and you choose what sits there.
 
-Each row shows, on the right, the exact same information its dock icon would show — so you can see the current state before you ever pull it out into the dock.
+![The ⋮ menu open, each row showing a handle, an icon, a name, its live state, and an eye toggle](./assets/overflow-menu.png)
 
-- **Usage** — the same battery icon and remaining percentage the dock icon shows. If usage tracking isn't set up yet, "Setup" appears instead
-- **Scheduled messages / Background tasks** — the icon still changes colour while active, and a count badge appears on the right. **The badge is hidden entirely at zero** — an empty badge wouldn't say anything the bare icon doesn't already
-- **Remote tunnel** — the icon still turns green while the tunnel is up, and "Active" appears in green text on the right only while it is
-- **Settings / New tab** — one-shot actions with nothing ongoing to report, so nothing extra appears
+*Opening ⋮ shows all six as one list right away — there is no separate "edit mode" to enter first. Here only Usage has its eye on, which is why the battery also appears up in the header.*
+
+Each row handles three things.
+
+1. The **eye icon** at the far right puts that item in the dock, or takes it back out
+2. The **drag handle** at the left (six dots) reorders the list when you move it up or down — the other rows slide out of the way as you go, and docked icons follow this same order
+3. Clicking **anywhere else on the row** runs the feature immediately
+
+Your arrangement is saved and comes back next time. It also stays put across projects — the dock is a toolbar you navigate by muscle memory, and icons that move between projects work against that.
+
+## Three gestures in one row, without collisions
+
+When a single row can be dragged, clicked to run, and toggled, it is easy to trigger the wrong one.
+
+So the three occupy **entirely separate spots**. Dragging only starts from the handle on the left, only the eye on the right changes what's docked, and clicking between them runs the item. Hovering the handle lifts its background slightly, so where to grab is visible too.
+
+## Docking something doesn't remove it from the menu
+
+An item you pull into the dock **stays in the ⋮ menu.** Once you have learned where to find a feature, changing your layout should not make it disappear from there. Docked or not, clicking it in either place does the same thing.
+
+## The menu shows live state too
+
+Each row carries the **same information** its docked icon would show, so you can see the current state before deciding to pull it out.
+
+- **Usage** — the battery icon and the percentage left. If usage tracking isn't set up yet, a "Set up" hint appears instead
+- **Scheduled messages / Background tasks** — the icon changes colour while active, with a count badge on the right. **At zero, no badge appears** — an empty badge says nothing the icon alone doesn't
+- **Remote tunnel** — turns green only while it's up, with a green "Active" label on the right
+- **Settings / Open new tab** — one-shot actions with nothing ongoing to report
 
 ## Accounts are not part of the dock
 
