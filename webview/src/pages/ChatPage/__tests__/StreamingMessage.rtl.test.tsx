@@ -22,7 +22,9 @@ describe('StreamingMessage RTL 예외 처리 (코드/수식은 항상 LTR)', () 
     '',
     '인라인 `code سلام` 텍스트',
     '',
-    '$x^2$',
+    // `\(…\)`, not `$…$`: a single dollar is deliberately not math (issue #232),
+    // so writing the fixture that way would render no `.katex` element at all.
+    '\\(x^2\\)',
   ].join('\n');
 
   function renderInRtlContainer() {

@@ -19,16 +19,29 @@ interface LogEntry {
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'] as const;
 const MAX_QUEUE_SIZE = 500;
-/** Investigation-only ring buffer (see `window.ccgLogs`). Not sent anywhere. */
-const MAX_HISTORY_SIZE = 5000;
+/**
+ * Investigation-only ring buffer (see `window.ccgLogs`). Not sent anywhere.
+ *
+ * Bounded by total size rather than by a line count. A line count is the wrong
+ * unit for this: a busy turn writes a line per streamed token, so the 5000-line
+ * cap this replaces held only ~84 seconds of one session — issue #232 came with
+ * a log the reporter copied exactly as asked, and the entries that caused the
+ * bug had already been pushed out of it before they could be read.
+ *
+ * 32 MB holds hours of an ordinary session at the ~200 bytes/line measured from
+ * that report, while still capping what a long-lived tab can retain.
+ */
+const MAX_HISTORY_BYTES = 32 * 1024 * 1024;
 const FLUSH_INTERVAL_MS = 500;
 const RECONNECT_DELAY_MS = 2000;
 
-class LogForwarder {
+export class LogForwarder {
   private ws: WebSocket | null = null;
   private buffer: LogEntry[] = [];
   /** Full session history for investigation; drained only via window.ccgLogs. */
   private history: LogEntry[] = [];
+  /** Running total of `history` message lengths, to trim without re-measuring. */
+  private historyBytes: number = 0;
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed: boolean = false;
@@ -62,6 +75,7 @@ class LogForwarder {
 
   clearHistory(): void {
     this.history = [];
+    this.historyBytes = 0;
   }
 
   /**
@@ -188,8 +202,13 @@ class LogForwarder {
           message,
           timestamp: Date.now(),
         });
-        if (this.history.length > MAX_HISTORY_SIZE) {
-          this.history = this.history.slice(-MAX_HISTORY_SIZE);
+        this.historyBytes += message.length;
+        // Drop from the front until back under budget. Shifting one entry at a
+        // time keeps this O(1) amortised — the alternative, re-measuring the
+        // whole history on every console call, is O(n) per line.
+        while (this.historyBytes > MAX_HISTORY_BYTES && this.history.length > 1) {
+          const dropped = this.history.shift();
+          if (dropped) this.historyBytes -= dropped.message.length;
         }
       };
     }
