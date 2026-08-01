@@ -146,6 +146,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.3 - Answers about rate limits render properly again</h3>
+            <ul>
+                <li>Fix answers mentioning "rate limit" rendering as raw text (#250 by @Wo-ogie)</li>
+                <li>Add an overflow menu for the header icons (#251)</li>
+            </ul>
             <h3>0.26.2 - Zoom the whole UI, and a chat that stays put</h3>
             <ul>
                 <li>Add Chrome-style zoom control for the whole UI (#169, requested by @penguinhing)</li>
