@@ -106,6 +106,29 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
     );
   }
 
+  // Nothing to show — render nothing rather than an empty bordered box.
+  //
+  // `MessageBox` always draws its border and background, so an entry whose
+  // displayable text is empty came out as a bare 18x9px pill (issue #232). The
+  // CLI streams such entries routinely: a `<system-reminder>` that
+  // `parseUserContent` strips down to nothing, an `<ide_opened_file>` lifted out
+  // into a context pill, or an empty content array. Several in a row read as a
+  // column of blank chips.
+  //
+  // A `tool_result` entry is deliberately NOT covered here. It renders empty for
+  // a different reason — `mergeToolResults` folds it into the tool card above —
+  // and when that merge cannot happen (the tool_use sits on a not-yet-loaded
+  // page) the entry is what keeps the tool's output reachable. Hiding it here
+  // would drop that output silently, which `mergeToolResults` takes care to
+  // avoid. The mirror of the guard in `AssistantMessageRenderer`.
+  const hasToolResult = isContentBlockArray(message.message?.content)
+    && message.message.content.some(b => b.type === ContentBlockType.ToolResult);
+  const hasAnythingToShow = parsedContent.text.trim() !== ''
+    || imageBlocks.length > 0
+    || allContexts.length > 0
+    || hasToolResult;
+  if (!hasAnythingToShow) return null;
+
   return (
     <div className="group pt-2 pb-4 px-4 space-y-2.5">
       <div className="flex items-start gap-2">
