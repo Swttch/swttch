@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectionManager } from '../connection-manager';
 import { ClientEnv } from '../../shared';
 import { MessageType } from '../../shared';
+import { Claude } from '../../core/claude';
+
+// connection-manager delegates process kills to Claude.killTree (process-group
+// kill). Mock it here: unit tests use fake PIDs, and a real group
+// signal aimed at a fake PID could hit an unrelated live process group on the
+// test machine. Real-process coverage lives in kill-tree.integration.test.ts.
+vi.mock('../../core/claude', () => ({
+  Claude: { killTree: vi.fn() },
+}));
 
 function createMockWs(readyState = 1) {
   return {
@@ -121,12 +130,12 @@ describe('ConnectionManager', () => {
     it('should kill all session processes and close all connections', () => {
       const ws = createMockWs();
       cm.addConnection(ws);
-      const mockProcess = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const mockProcess = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
       cm.setProcess('sess-1', mockProcess);
 
       cm.shutdownAll();
 
-      expect(mockProcess.kill).toHaveBeenCalledWith('SIGTERM');
+      expect(Claude.killTree).toHaveBeenCalledWith(mockProcess, 'SIGTERM');
       expect(ws.close).toHaveBeenCalled();
     });
   });

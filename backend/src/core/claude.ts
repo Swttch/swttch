@@ -153,11 +153,21 @@ export class Claude {
    * Terminate a process spawned via {@link spawn} AND its children. On win32
    * spawn() runs through a shell, so the real `claude` is a grandchild of
    * cmd.exe — a plain SIGTERM to `proc` leaves it orphaned. `taskkill /T` tears
-   * down the whole tree; macOS/Linux run the launcher directly, so SIGTERM
-   * suffices there. Used by every place that time-limits a spawned CLI child.
+   * down the whole tree. On macOS/Linux, chat CLIs are spawned detached (see
+   * claude-process.ts) so they lead their own process group and signalling
+   * `-pid` reaches the CLI plus every descendant (subagent shells, background
+   * tasks); for non-detached children the group signal fails with ESRCH and we
+   * fall back to a plain signal, which is the pre-existing behavior. Used by
+   * every kill path for a spawned CLI child.
    */
-  static killTree(proc: ChildProcess): void {
+  static killTree(proc: ChildProcess, signal: NodeJS.Signals = 'SIGTERM'): void {
     if (!proc.pid) return;
+    // Once the child has been reaped, proc.pid is a stale number the OS may have
+    // reused. Signalling -proc.pid (or taskkill /T) then hits an unrelated process
+    // group/tree. proc.kill() would be a no-op here, but the raw group signal is
+    // not liveness-aware — bail before issuing it. (Guards e.g. an uncleared
+    // safety-timeout killTree firing after the process already closed.)
+    if (proc.exitCode !== null || proc.signalCode !== null) return;
     if (process.platform === 'win32') {
       try {
         execFileSync('taskkill', ['/F', '/T', '/PID', String(proc.pid)]);
@@ -165,7 +175,12 @@ export class Claude {
         proc.kill();
       }
     } else {
-      proc.kill('SIGTERM');
+      try {
+        process.kill(-proc.pid, signal);
+      } catch {
+        // Not a process-group leader (or already gone) — plain signal as before.
+        proc.kill(signal);
+      }
     }
   }
 

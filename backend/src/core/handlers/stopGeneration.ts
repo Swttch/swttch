@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendInterruptToProcess, stopWorkflowsForSession } from '../claude-process';
+import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
 export function stopGenerationHandler(
@@ -19,7 +20,7 @@ export function stopGenerationHandler(
       const sent = sendInterruptToProcess(connections, sessionId);
       if (!sent) {
         console.error('[node-backend]', `Interrupt failed, falling back to SIGTERM for ${sessionId}`);
-        session.process.kill('SIGTERM');
+        Claude.killTree(session.process);
       }
       // Settle any background workflows the interrupt just cancelled so the panel
       // doesn't leave them hanging on "running".

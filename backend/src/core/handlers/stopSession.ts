@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendInterruptToProcess, stopWorkflowsForSession } from '../claude-process';
+import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
 export function stopSessionHandler(
@@ -22,7 +23,7 @@ export function stopSessionHandler(
       if (!sent) {
         // stdin이 이미 닫혀있으면 fallback으로 SIGTERM
         console.error('[node-backend]', `Interrupt failed, falling back to SIGTERM for ${sessionId}`);
-        session.process.kill('SIGTERM');
+        Claude.killTree(session.process);
       }
       // Settle any background workflows the stop just cancelled so the panel
       // doesn't leave them hanging on "running".
