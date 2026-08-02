@@ -5,7 +5,18 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug! Please fill out the sections below to help us reproduce and fix the issue.
+        Thank you for taking the time to report this — it genuinely helps us.
+
+        A small request before you start, if you don't mind:
+
+        - Most bugs we can reproduce, we ship a fix for within a day.
+        - Reproducing it on our machines is the slow part.
+        - So every detail you can share gets your fix out sooner.
+
+        The three that help us most: **Steps to Reproduce**, **Logs**, and your **model / endpoint**.
+
+        None of it is required. If you're short on time, please send what you have —
+        we'd much rather hear about the bug than not. We'll follow up with questions.
 
   - type: dropdown
     id: environment
@@ -56,21 +67,81 @@ body:
     id: description
     attributes:
       label: Description
-      description: A clear description of the bug.
+      description: What went wrong, in a line or two.
     validations:
       required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: |
+        Which model were you on? Each one streams a little differently, so knowing this helps us
+        reproduce it on the first try.
+      placeholder: "Sonnet / Opus / Haiku / Default"
+
+  - type: textarea
+    id: model-backend
+    attributes:
+      label: Are you using a non-Anthropic model or endpoint?
+      description: |
+        On a regular Anthropic account? A simple "no" is perfect.
+
+        If you're pointing Claude Code somewhere else, we'd really appreciate knowing:
+
+        - DeepSeek, Qwen, GLM, local models, OpenAI-compatible proxies, Bedrock, Vertex, company gateways.
+        - Each returns a slightly different stream, and some bugs only appear on one of them.
+        - We test against Anthropic by default, so without this we may look in the wrong place.
+
+        The provider and model name is plenty. If you've set any of these, mentioning them helps:
+        `ANTHROPIC_BASE_URL` · `ANTHROPIC_MODEL` · `ANTHROPIC_SMALL_FAST_MODEL` ·
+        `CLAUDE_CODE_USE_BEDROCK` · `CLAUDE_CODE_USE_VERTEX`
+
+        Please don't include API keys or tokens — we never need those.
+      placeholder: |
+        no — regular Anthropic account
+
+        or: DeepSeek v3 via ANTHROPIC_BASE_URL (OpenAI-compatible proxy)
+        or: Bedrock, Claude Sonnet, us-east-1
+
+  - type: dropdown
+    id: cli-check
+    attributes:
+      label: Does it happen in the Claude Code CLI too?
+      description: |
+        If you have a moment to check, this narrows things down a lot: if the CLI does it too it's
+        upstream, and if only the plugin does, it's ours to fix. "Haven't checked" is completely fine.
+      options:
+        - "Haven't checked"
+        - "Only in the plugin (GUI)"
+        - "In the CLI too"
+        - "Not applicable"
 
   - type: textarea
     id: screenshots
     attributes:
       label: Screenshots
-      description: If applicable, add screenshots or screen recordings.
+      description: |
+        For anything visual — layout, rendering, scrolling — a screenshot tells us more than a
+        paragraph could. A short recording is ideal if the timing matters.
 
   - type: textarea
     id: steps
     attributes:
       label: Steps to Reproduce
-      description: Step-by-step instructions to reproduce the issue.
+      description: |
+        If you can spare the time for one field, please make it this one.
+
+        - What you clicked or typed, in order.
+        - Where it went wrong.
+        - If it only happens sometimes, that's useful too — "about 1 in 5 times, after the session
+          has been open a while" tells us more than you'd think.
+
+        Feel free to assume we know nothing about your setup.
+      placeholder: |
+        1. Open a new chat tab
+        2. Type "/" and pick a skill
+        3. The message sends right away instead of letting me keep typing
       value: |
         1.
         2.
@@ -80,23 +151,39 @@ body:
     id: expected
     attributes:
       label: Expected Behavior
-      description: What you expected to happen.
+      description: |
+        Worth a line even when it seems obvious — it tells us whether to change the behavior or
+        rethink the design.
 
   - type: textarea
     id: actual
     attributes:
       label: Actual Behavior
-      description: What actually happened.
+      description: |
+        What happened instead. If there was an error message, the exact wording lets us search the
+        source and find the responsible code right away.
 
   - type: textarea
     id: additional
     attributes:
       label: Additional Context
-      description: Any other context about the problem.
+      description: Anything else you think might be relevant.
 
   - type: textarea
     id: logs
     attributes:
       label: Logs
-      description: "Paste any relevant logs (backend console, browser DevTools, IDE log)."
+      description: |
+        Logs often turn a hard-to-reproduce bug into a same-day fix. **No DevTools needed** —
+        any one of these is a great help:
+
+        1. **Plugin front log** — open the command palette, run **"Copy plugin front log"**, and
+           paste it here. It's recorded from startup, so it's there even if you weren't watching.
+        2. **Backend log** — `~/.claude-code-gui/logs/server.log`.
+           Best for anything involving the CLI, sessions, or an unresponsive plugin.
+        3. **IDE log** — `Help > Show Log in Explorer/Finder`.
+           Best for crashes, freezes, and Java stack traces.
+
+        Don't worry about sending too much — we'd rather read extra than guess. A quick skim for
+        anything private before posting is always wise.
       render: text

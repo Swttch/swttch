@@ -5,21 +5,30 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting a feature! Please describe what you'd like to see.
+        Thank you for taking the time to suggest this — ideas from users shape most of what we build.
 
-  - type: textarea
-    id: problem
-    attributes:
-      label: Problem
-      description: What problem does this feature solve? What's the motivation?
-    validations:
-      required: true
+        Tell us what you'd like to see. If you can also mention where it would fit into your day,
+        that helps us build something that actually works for you rather than just something that
+        matches the description.
+
+        Rough ideas are very welcome. You don't need to have it all worked out.
 
   - type: textarea
     id: solution
     attributes:
-      label: Proposed Solution
-      description: Describe the solution you'd like.
+      label: What would you like to see?
+      description: |
+        The feature or improvement you have in mind. As much or as little detail as you like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would it help you do?
+      description: |
+        How would you use it, and what does that look like for you today? Knowing the situation
+        helps us get the details right — and it's a big part of how we decide what to build next.
     validations:
       required: true
 
@@ -27,13 +36,15 @@ body:
     id: alternatives
     attributes:
       label: Alternatives Considered
-      description: Any alternative solutions or workarounds you've considered.
+      description: |
+        Anything you've tried in the meantime, or other approaches you weighed. Workarounds are
+        useful to know about — sometimes they point at an easier way in.
 
   - type: dropdown
     id: scope
     attributes:
       label: Affected Area
-      description: Which part of the plugin does this relate to?
+      description: Which part of the plugin does this relate to? Feel free to skip if you're unsure.
       multiple: true
       options:
         - Chat UI
@@ -51,10 +62,13 @@ body:
     id: screenshots
     attributes:
       label: Screenshots / References
-      description: "If applicable, add mockups, screenshots, or links to similar features in other tools (e.g. Cursor)."
+      description: |
+        Mockups or sketches are great, and so is a screenshot of another tool doing it well
+        (Cursor, the CLI, another plugin). Seeing a working example is often the fastest way for us
+        to get it right.
 
   - type: textarea
     id: additional
     attributes:
       label: Additional Context
-      description: Any other context about the feature request.
+      description: Anything else you'd like to add.
