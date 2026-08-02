@@ -146,6 +146,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.4 - Empty bubbles and mangled ${'$'}-text, fixed</h3>
+            <ul>
+                <li>Fix empty message bubbles appearing in the transcript (#232, reported by @StarCode000)</li>
+                <li>Fix text around <code>${'$'}</code> signs being mangled and duplicated (#232, reported by @StarCode000)</li>
+            </ul>
             <h3>0.26.3 - Answers about rate limits render properly again</h3>
             <ul>
                 <li>Fix answers mentioning "rate limit" rendering as raw text (#250 by @Wo-ogie)</li>
