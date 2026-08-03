@@ -36,18 +36,18 @@ object BackendDotState {
         null -> DotState.GRAY
     }
 
-    /** Widget tooltip: state + regime, e.g. `CCG Backend (Running, keep-alive)`. */
+    /** Widget tooltip: product name + state, e.g. `Claude Code — Running`. */
     fun tooltip(lifecycle: Lifecycle?, keptAlive: Boolean): String {
         val state = when (compute(lifecycle, keptAlive)) {
             DotState.GREEN -> if (keptAlive) "Running, keep-alive" else "Running"
             DotState.YELLOW -> "Starting…"
             DotState.GRAY -> if (keptAlive) "Not running — keep-alive on" else "Stopped — starts on demand"
-            DotState.RED -> "Dead — keep-alive on, backend exited"
+            DotState.RED -> "Not running — expected to be running"
         }
-        return "CCG Backend ($state)"
+        return "Claude Code — $state"
     }
 
-    /** The card's "Backend:" line, e.g. `running (port 63412)`. */
+    /** The card's state line, e.g. `running (port 63412)`. */
     fun cardStateLine(lifecycle: Lifecycle?, keptAlive: Boolean, port: Int?): String = when (lifecycle) {
         Lifecycle.RUNNING -> if (port != null) "running (port $port)" else "running"
         Lifecycle.STARTING -> "starting…"

@@ -29,13 +29,13 @@ class BackendDotStateTest {
 
     @Test
     fun `tooltip carries state and mode`() {
-        assertEquals("CCG Backend (Running, keep-alive)", BackendDotState.tooltip(Lifecycle.RUNNING, true))
-        assertEquals("CCG Backend (Running)", BackendDotState.tooltip(Lifecycle.RUNNING, false))
-        assertEquals("CCG Backend (Starting…)", BackendDotState.tooltip(Lifecycle.STARTING, false))
-        assertEquals("CCG Backend (Stopped — starts on demand)", BackendDotState.tooltip(Lifecycle.DEAD, false))
-        assertEquals("CCG Backend (Stopped — starts on demand)", BackendDotState.tooltip(null, false))
-        assertEquals("CCG Backend (Not running — keep-alive on)", BackendDotState.tooltip(null, true))
-        assertEquals("CCG Backend (Dead — keep-alive on, backend exited)", BackendDotState.tooltip(Lifecycle.DEAD, true))
+        assertEquals("Claude Code — Running, keep-alive", BackendDotState.tooltip(Lifecycle.RUNNING, true))
+        assertEquals("Claude Code — Running", BackendDotState.tooltip(Lifecycle.RUNNING, false))
+        assertEquals("Claude Code — Starting…", BackendDotState.tooltip(Lifecycle.STARTING, false))
+        assertEquals("Claude Code — Stopped — starts on demand", BackendDotState.tooltip(Lifecycle.DEAD, false))
+        assertEquals("Claude Code — Stopped — starts on demand", BackendDotState.tooltip(null, false))
+        assertEquals("Claude Code — Not running — keep-alive on", BackendDotState.tooltip(null, true))
+        assertEquals("Claude Code — Not running — expected to be running", BackendDotState.tooltip(Lifecycle.DEAD, true))
     }
 
     @Test

@@ -28,11 +28,11 @@ import javax.swing.Timer
  * The status-bar widget's popup card:
  *
  * ```
- * Claude Code GUI Backend                      ⚙
- * Backend: running (port 63412)
+ * Claude Code                                  ⚙
+ * Running (port 63412)
  * 3 connections: 2 × IDE panel, 1 × browser
  * 2 sessions, 1 actively streaming
- * http://127.0.0.1:63412 ↗                [copy]
+ * [Open]  [Copy address]
  * ```
  *
  * Kotlin-side state (lifecycle, port) renders immediately; the counter lines come
@@ -48,8 +48,11 @@ class BackendStatusPopup(private val project: Project) {
     private val stateLabel = JBLabel()
     private val connectionsLabel = JBLabel()
     private val sessionsLabel = JBLabel()
-    private val urlLink = ActionLink("") { BrowserUtil.browse(currentUrl ?: return@ActionLink) }
-    private val copyLink: ActionLink = ActionLink("Copy") {
+    // "Open" launches the URL in a browser; "Copy" puts it on the clipboard. The raw
+    // URL is intentionally NOT shown as text — it is an implementation detail (a
+    // loopback address + dynamic port), and the two actions are all a user needs.
+    private val openLink = ActionLink("Open") { BrowserUtil.browse(currentUrl ?: return@ActionLink) }
+    private val copyLink: ActionLink = ActionLink("Copy address") {
         currentUrl?.let {
             CopyPasteManager.copyTextToClipboard(it)
             showCopyFeedback()
@@ -61,7 +64,7 @@ class BackendStatusPopup(private val project: Project) {
         // vanished) until the next 2 s tick resized the whole card around it.
         text = "Copied!"
         preferredSize = preferredSize
-        text = "Copy"
+        text = "Copy address"
     }
 
     @Volatile
@@ -69,6 +72,20 @@ class BackendStatusPopup(private val project: Project) {
 
     private var popup: JBPopup? = null
     private var anchor: Component? = null
+
+    /**
+     * The browser URL for this project's backend. Carries `?workingDir=` so the
+     * webview opens straight into THIS project instead of the project selector —
+     * the same param (and encoding) the JCEF panel uses. Loopback host is fine:
+     * the backend binds 127.0.0.1 by default and the address is never shown, only
+     * opened or copied. Null while no port is known (backend not running).
+     */
+    private fun backendUrl(port: Int?): String? {
+        if (port == null) return null
+        val base = "http://127.0.0.1:$port"
+        val dir = basePath ?: return base
+        return "$base?workingDir=${java.net.URLEncoder.encode(dir, "UTF-8")}"
+    }
 
     /** Create the popup and show it just above [component] (the status-bar dot). */
     fun showAbove(component: Component) {
@@ -90,7 +107,7 @@ class BackendStatusPopup(private val project: Project) {
     /** The clipboard write has no visible effect of its own — flash the link text. */
     private fun showCopyFeedback() {
         copyLink.text = "Copied!"
-        Timer(COPY_FEEDBACK_MS) { copyLink.text = "Copy" }.apply {
+        Timer(COPY_FEEDBACK_MS) { copyLink.text = "Copy address" }.apply {
             isRepeats = false
             start()
         }
@@ -102,28 +119,27 @@ class BackendStatusPopup(private val project: Project) {
         // would produce a clipped card (the counter lines then grow it via pack()).
         val initialLifecycle = basePath?.let { service.lifecycleOf(it) }
         val initialPort = basePath?.let { service.portOf(it) }
-        currentUrl = initialPort?.let { "http://127.0.0.1:$it" }
-        stateLabel.text = "Backend: " + BackendDotState.cardStateLine(initialLifecycle, project.isOpen, initialPort)
+        currentUrl = backendUrl(initialPort)
+        stateLabel.text = BackendDotState.cardStateLine(initialLifecycle, project.isOpen, initialPort)
         connectionsLabel.isVisible = false
         sessionsLabel.isVisible = false
-        urlLink.text = currentUrl ?: ""
 
         val gear = ActionLink("") {
             ShowSettingsUtil.getInstance()
                 .showSettingsDialog(project, ClaudeCodeSettingsConfigurable::class.java)
         }
         gear.icon = AllIcons.General.Settings
-        gear.toolTipText = "Open Claude Code settings"
+        gear.toolTipText = "Open settings"
 
         val titleRow = JPanel(BorderLayout()).apply {
             isOpaque = false
-            add(JBLabel("Claude Code GUI Backend").apply { font = JBUI.Fonts.label().asBold() }, BorderLayout.WEST)
+            add(JBLabel("Claude Code").apply { font = JBUI.Fonts.label().asBold() }, BorderLayout.WEST)
             add(gear, BorderLayout.EAST)
         }
 
         val urlRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
             isOpaque = false
-            add(urlLink)
+            add(openLink)
             add(copyLink)
         }
 
@@ -137,7 +153,7 @@ class BackendStatusPopup(private val project: Project) {
         }
 
         val popup = JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(content, urlLink)
+            .createComponentPopupBuilder(content, openLink)
             .setRequestFocus(true)
             .setCancelOnClickOutside(true)
             .createPopup()
@@ -166,10 +182,10 @@ class BackendStatusPopup(private val project: Project) {
         val port = basePath?.let { service.portOf(it) }
         val status = port?.let { BackendStatusClient.fetch(it) }
 
-        val stateText = "Backend: " + BackendDotState.cardStateLine(lifecycle, keptAlive, port)
+        val stateText = BackendDotState.cardStateLine(lifecycle, keptAlive, port)
         val connectionsText = status?.let { formatConnections(it.connections) } ?: ""
         val sessionsText = status?.let { formatSessions(it.sessions) } ?: ""
-        val url = port?.let { "http://127.0.0.1:$it" }
+        val url = backendUrl(port)
 
         SwingUtilities.invokeLater {
             currentUrl = url
@@ -178,8 +194,8 @@ class BackendStatusPopup(private val project: Project) {
             connectionsLabel.isVisible = connectionsText.isNotEmpty()
             sessionsLabel.text = sessionsText
             sessionsLabel.isVisible = sessionsText.isNotEmpty()
-            urlLink.text = url ?: ""
-            urlLink.parent?.isVisible = url != null
+            // Open/Copy row is meaningful only while there's a URL to act on.
+            openLink.parent?.isVisible = url != null
             // Counter lines appear asynchronously and can be wider than the initial
             // content — grow the popup to fit instead of clipping the text. pack()
             // keeps the top-left corner, so a height change would detach the card

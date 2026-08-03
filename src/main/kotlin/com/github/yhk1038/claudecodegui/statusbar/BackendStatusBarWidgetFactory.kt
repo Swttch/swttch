@@ -12,7 +12,7 @@ class BackendStatusBarWidgetFactory : StatusBarWidgetFactory {
 
     override fun getId(): String = BackendStatusBarWidget.WIDGET_ID
 
-    override fun getDisplayName(): String = "Claude Code GUI Backend"
+    override fun getDisplayName(): String = "Claude Code"
 
     override fun isAvailable(project: Project): Boolean = true
 
