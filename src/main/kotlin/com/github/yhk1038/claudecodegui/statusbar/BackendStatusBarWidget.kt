@@ -1,7 +1,6 @@
 package com.github.yhk1038.claudecodegui.statusbar
 
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
-import com.github.yhk1038.claudecodegui.settings.KeepAliveSetting
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.StatusBar
@@ -50,7 +49,7 @@ class BackendStatusBarWidget(private val project: Project) : StatusBarWidget, St
     }
 
     override fun getIcon(): Icon {
-        val dot = BackendDotState.compute(lifecycle(), KeepAliveSetting.get())
+        val dot = BackendDotState.compute(lifecycle(), keptAlive())
         val color = when (dot) {
             BackendDotState.DotState.GREEN -> JBColor(0x59A869, 0x499C54)
             BackendDotState.DotState.YELLOW -> JBColor(0xEDA200, 0xF0A732)
@@ -61,13 +60,19 @@ class BackendStatusBarWidget(private val project: Project) : StatusBarWidget, St
     }
 
     override fun getTooltipText(): String =
-        BackendDotState.tooltip(lifecycle(), KeepAliveSetting.get())
+        BackendDotState.tooltip(lifecycle(), keptAlive())
 
     override fun getClickConsumer(): Consumer<MouseEvent> = Consumer { event ->
         BackendStatusPopup(project).showAbove(event.component)
     }
 
     private fun lifecycle() = project.basePath?.let { service.lifecycleOf(it) }
+
+    // Whether this backend is under the keep-alive regime: the gate is up exactly
+    // while the IDE owns it — i.e. while this widget's project is open. A DEAD
+    // backend while the project is still open is the error (RED) state; once the
+    // project is gone the backend is expected to retire (GRAY, not an error).
+    private fun keptAlive(): Boolean = project.isOpen
 
     companion object {
         const val WIDGET_ID = "ClaudeCodeGui.BackendStatus"

@@ -75,10 +75,11 @@
         <postStartupActivity
             implementation="com.github.yhk1038.claudecodegui.startup.IdeSelectionActivity"/>
 
-        <!-- Keep-alive eager start: spawn the project's backend on project open (no JCEF)
-             when the global "Keep backend running" toggle is ON -->
+        <!-- Re-assert the keep-alive gate on project (re)open: a backend that outlived
+             an earlier close of this project (live browser clients) had its gate
+             clamped down; reopening the project means the IDE owns it again -->
         <postStartupActivity
-            implementation="com.github.yhk1038.claudecodegui.startup.BackendKeepAliveActivity"/>
+            implementation="com.github.yhk1038.claudecodegui.startup.BackendProjectOpenListener"/>
 
         <!-- WebView resource server -->
         <httpRequestHandler

@@ -8,10 +8,11 @@ import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager.Lifecycle
  *
  *  - GREEN  — backend process running,
  *  - YELLOW — starting/restarting,
- *  - GRAY   — not running and that is normal (keep-alive off: starts on
- *             demand, stops when idle; also: never started yet),
- *  - RED    — error ONLY: keep-alive is ON yet the backend process died
- *             (crash/crash-loop). Never shown in the on-demand regime.
+ *  - GRAY   — not running and that is normal (not kept alive: starts on
+ *             demand, retires when idle; also: never started yet),
+ *  - RED    — error ONLY: the backend is kept alive (the IDE owns it — its
+ *             project is open) yet the process died (crash/crash-loop). Never
+ *             shown once the project is gone and the backend is expected to retire.
  *
  * Free of any IDE API so it is unit-testable (see BackendDotStateTest).
  */
@@ -22,34 +23,35 @@ object BackendDotState {
     /**
      * @param lifecycle current process lifecycle, or null when no backend was
      *   ever started for the project root.
-     * @param keepAlive the global "Keep backend running" toggle.
+     * @param keptAlive whether this backend is under the keep-alive regime — the
+     *   gate is up exactly while the IDE owns it, i.e. while its project is open.
      */
-    fun compute(lifecycle: Lifecycle?, keepAlive: Boolean): DotState = when (lifecycle) {
+    fun compute(lifecycle: Lifecycle?, keptAlive: Boolean): DotState = when (lifecycle) {
         Lifecycle.RUNNING -> DotState.GREEN
         Lifecycle.STARTING -> DotState.YELLOW
-        Lifecycle.DEAD -> if (keepAlive) DotState.RED else DotState.GRAY
-        // Never started: normal before the first panel (keep-alive off) and a
-        // momentary state before the eager-start activity runs (keep-alive on) —
-        // not an error either way.
+        // Dead while the IDE still owns it (project open) is the error; dead after
+        // the project closed is the expected on-demand retirement, not an error.
+        Lifecycle.DEAD -> if (keptAlive) DotState.RED else DotState.GRAY
+        // Never started: normal before the first panel opens — not an error.
         null -> DotState.GRAY
     }
 
-    /** Widget tooltip: state + mode, e.g. `CCG Backend (Running, keep-alive)`. */
-    fun tooltip(lifecycle: Lifecycle?, keepAlive: Boolean): String {
-        val state = when (compute(lifecycle, keepAlive)) {
-            DotState.GREEN -> if (keepAlive) "Running, keep-alive" else "Running"
+    /** Widget tooltip: state + regime, e.g. `CCG Backend (Running, keep-alive)`. */
+    fun tooltip(lifecycle: Lifecycle?, keptAlive: Boolean): String {
+        val state = when (compute(lifecycle, keptAlive)) {
+            DotState.GREEN -> if (keptAlive) "Running, keep-alive" else "Running"
             DotState.YELLOW -> "Starting…"
-            DotState.GRAY -> if (keepAlive) "Not running — keep-alive on" else "Stopped — starts on demand"
+            DotState.GRAY -> if (keptAlive) "Not running — keep-alive on" else "Stopped — starts on demand"
             DotState.RED -> "Dead — keep-alive on, backend exited"
         }
         return "CCG Backend ($state)"
     }
 
     /** The card's "Backend:" line, e.g. `running (port 63412)`. */
-    fun cardStateLine(lifecycle: Lifecycle?, keepAlive: Boolean, port: Int?): String = when (lifecycle) {
+    fun cardStateLine(lifecycle: Lifecycle?, keptAlive: Boolean, port: Int?): String = when (lifecycle) {
         Lifecycle.RUNNING -> if (port != null) "running (port $port)" else "running"
         Lifecycle.STARTING -> "starting…"
         Lifecycle.DEAD, null ->
-            if (keepAlive) "not running (keep-alive on)" else "stopped (starts on demand)"
+            if (keptAlive) "not running (keep-alive on)" else "stopped (starts on demand)"
     }
 }

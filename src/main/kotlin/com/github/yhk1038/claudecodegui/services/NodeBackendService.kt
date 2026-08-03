@@ -7,7 +7,6 @@ import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
 import com.github.yhk1038.claudecodegui.bridge.WslPathResolver
 import com.github.yhk1038.claudecodegui.bridge.parseHostModeParam
 import com.github.yhk1038.claudecodegui.hosting.HostModeCache
-import com.github.yhk1038.claudecodegui.settings.KeepAliveSetting
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -372,15 +371,18 @@ class NodeBackendService : Disposable {
         }
 
         /**
-         * Push the EFFECTIVE keep-alive state to this backend's idle-shutdown gate:
-         * the global toggle holds the gate up only while this backend's project is
-         * open in the IDE. Closing the project window re-pushes (via
-         * [BackendProjectCloseListener]) and the recomputed `false` restores the
-         * idle regime — the same keep-alive clamp the ppid watchdog applies on IDE death,
-         * just per project. Without this, every closed project window would leave
-         * an immortal backend behind (one per project opened during the session).
-         * A live browser session still keeps the backend alive (open /ws clients
-         * block the idle timer); only a client-less backend retires after 60 s.
+         * Push this backend's keep-alive gate: the gate is up exactly while the IDE
+         * owns this backend — i.e. while its project window is still open. This is
+         * the default lifecycle, not an opt-in: as long as the owning IDE lives,
+         * closing the chat panel (all /ws sockets gone) must NOT retire the backend,
+         * so a re-opened panel reconnects instantly instead of paying a cold restart.
+         *
+         * Closing the project window re-pushes (via [BackendProjectCloseListener])
+         * and the recomputed `false` hands the backend back to the idle regime — the
+         * same clamp the ppid watchdog applies on IDE death, just per project. A live
+         * browser/tunnel client still keeps a now-ownerless backend alive (open /ws
+         * clients block the idle timer); only a backend with no owner AND no client
+         * retires after the idle grace.
          *
          * Always sent, `false` included — idempotent on the backend side, and the
          * `false` push is what arms the idle timer on a backend that never received
@@ -389,7 +391,7 @@ class NodeBackendService : Disposable {
          */
         fun pushKeepAlive() {
             val projectOpen = ProjectManager.getInstance().openProjects.any { it.basePath == basePath }
-            val params = buildJsonObject { put("enabled", KeepAliveSetting.get() && projectOpen) }
+            val params = buildJsonObject { put("enabled", projectOpen) }
             rpcClient?.sendNotification("SET_KEEP_ALIVE", params)
         }
 
@@ -465,28 +467,6 @@ class NodeBackendService : Disposable {
     }
 
     /**
-     * Start the backend for [projectBasePath] WITHOUT registering any panel handler
-     * (eager start — keep-alive ON, project opened, no JCEF yet). No-op when
-     * the backend is already running.
-     *
-     * Deliberately not the `ensureStarted(…, NoopRpcHandler)` prewarm pattern: that
-     * registers a permanent handler, and Router.any() picks an arbitrary one — a
-     * lingering no-op handler could shadow a real panel's handler and silently
-     * swallow openFile/applyDiff.
-     */
-    @Synchronized
-    fun startEager(projectBasePath: String) {
-        if (projectBasePath.isBlank()) return
-        val inst = backends.getOrPut(projectBasePath) { BackendInstance(projectBasePath) }
-        inst.start()
-        // Reopen path: when the backend survived a project close (live browser
-        // clients) and its RPC socket never dropped, onConnected won't fire again —
-        // re-push so the gate reflects "project open" once more. No-op before the
-        // RPC connect (the fresh-spawn case is covered by onConnected).
-        inst.pushKeepAlive()
-    }
-
-    /**
      * Current backend lifecycle for [projectBasePath]; null = no backend was ever
      * started for that root (the widget renders this as "stopped").
      */
@@ -497,22 +477,20 @@ class NodeBackendService : Disposable {
     fun portOf(projectBasePath: String): Int? = backends[projectBasePath]?.portOrNull()
 
     /**
-     * The single entry point for flipping the "Keep backend running" toggle (both
-     * the Settings page and the status-bar card call this): persists the value,
-     * eagerly starts a backend for every open project when turning ON, pushes the
-     * new gate state to every RPC-connected backend, and refreshes the widgets.
-     * Turning OFF restores the idle-shutdown regime backend-side (the push arms
-     * the timer on client-less backends).
+     * Re-assert the keep-alive gate when a project window (re)opens, invoked by
+     * [BackendProjectOpenListener]. The open counterpart of [clampAfterProjectClose]:
+     * a backend that outlived an earlier close of this project (live browser/tunnel
+     * clients kept it alive) still has `enabled = false` from the clamp and its RPC
+     * socket never dropped, so `onConnected` won't fire to correct it. Re-push so the
+     * gate reflects "project open" once more — the IDE owns this backend again.
+     * No-op when no backend is registered or its RPC is not ready; the fresh-spawn
+     * and reconnect cases are already covered by `onConnected`.
      */
-    fun applyKeepAlive(enabled: Boolean) {
-        KeepAliveSetting.set(enabled)
-        val openRoots = ProjectManager.getInstance().openProjects.mapNotNull { it.basePath }
-        if (enabled) {
-            openRoots.forEach { startEager(it) }
-        }
-        backends.values.forEach { it.pushKeepAlive() }
-        (openRoots + backends.keys).distinct().forEach { fireBackendStateChanged(it) }
-        logger.info("Keep-alive toggle applied: $enabled (open roots: ${openRoots.size}, backends: ${backends.size})")
+    fun reassertKeepAliveOnProjectOpen(projectBasePath: String) {
+        val inst = backends[projectBasePath]?.takeIf { it.isRpcReady() } ?: return
+        inst.pushKeepAlive()
+        fireBackendStateChanged(projectBasePath)
+        logger.info("Project '$projectBasePath' opened — keep-alive gate re-asserted")
     }
 
     /**

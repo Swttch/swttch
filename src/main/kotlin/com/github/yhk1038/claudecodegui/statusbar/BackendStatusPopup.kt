@@ -2,17 +2,14 @@ package com.github.yhk1038.claudecodegui.statusbar
 
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.settings.ClaudeCodeSettingsConfigurable
-import com.github.yhk1038.claudecodegui.settings.KeepAliveSetting
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.components.ActionLink
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.panels.VerticalLayout
@@ -32,15 +29,14 @@ import javax.swing.Timer
  *
  * ```
  * Claude Code GUI Backend                      ⚙
- * [x] Keep backend running
  * Backend: running (port 63412)
  * 3 connections: 2 × IDE panel, 1 × browser
  * 2 sessions, 1 actively streaming
  * http://127.0.0.1:63412 ↗                [copy]
  * ```
  *
- * Kotlin-side state (lifecycle, port, toggle) renders immediately; the counter
- * lines come from `GET /internal/status`, fetched on open and refreshed every
+ * Kotlin-side state (lifecycle, port) renders immediately; the counter lines come
+ * from `GET /internal/status`, fetched on open and refreshed every
  * [REFRESH_INTERVAL_MS] while the popup is visible (pooled thread, EDT update).
  * All UI text is English only.
  */
@@ -49,7 +45,6 @@ class BackendStatusPopup(private val project: Project) {
     private val service = NodeBackendService.getInstance()
     private val basePath: String? = project.basePath
 
-    private val keepAliveBox = JBCheckBox("Keep backend running")
     private val stateLabel = JBLabel()
     private val connectionsLabel = JBLabel()
     private val sessionsLabel = JBLabel()
@@ -108,20 +103,10 @@ class BackendStatusPopup(private val project: Project) {
         val initialLifecycle = basePath?.let { service.lifecycleOf(it) }
         val initialPort = basePath?.let { service.portOf(it) }
         currentUrl = initialPort?.let { "http://127.0.0.1:$it" }
-        stateLabel.text = "Backend: " + BackendDotState.cardStateLine(initialLifecycle, KeepAliveSetting.get(), initialPort)
+        stateLabel.text = "Backend: " + BackendDotState.cardStateLine(initialLifecycle, project.isOpen, initialPort)
         connectionsLabel.isVisible = false
         sessionsLabel.isVisible = false
         urlLink.text = currentUrl ?: ""
-
-        keepAliveBox.isSelected = KeepAliveSetting.get()
-        keepAliveBox.addActionListener {
-            val enabled = keepAliveBox.isSelected
-            // applyKeepAlive spawns backends / touches sockets — keep it off the EDT.
-            ApplicationManager.getApplication().executeOnPooledThread {
-                service.applyKeepAlive(enabled)
-                refresh()
-            }
-        }
 
         val gear = ActionLink("") {
             ShowSettingsUtil.getInstance()
@@ -145,7 +130,6 @@ class BackendStatusPopup(private val project: Project) {
         val content = JPanel(VerticalLayout(JBUI.scale(6))).apply {
             border = JBUI.Borders.empty(10, 12)
             add(titleRow)
-            add(keepAliveBox)
             add(stateLabel)
             add(connectionsLabel)
             add(sessionsLabel)
@@ -153,7 +137,7 @@ class BackendStatusPopup(private val project: Project) {
         }
 
         val popup = JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(content, keepAliveBox)
+            .createComponentPopupBuilder(content, urlLink)
             .setRequestFocus(true)
             .setCancelOnClickOutside(true)
             .createPopup()
@@ -178,18 +162,17 @@ class BackendStatusPopup(private val project: Project) {
      */
     private fun refresh() {
         val lifecycle = basePath?.let { service.lifecycleOf(it) }
-        val keepAlive = KeepAliveSetting.get()
+        val keptAlive = project.isOpen
         val port = basePath?.let { service.portOf(it) }
         val status = port?.let { BackendStatusClient.fetch(it) }
 
-        val stateText = "Backend: " + BackendDotState.cardStateLine(lifecycle, keepAlive, port)
+        val stateText = "Backend: " + BackendDotState.cardStateLine(lifecycle, keptAlive, port)
         val connectionsText = status?.let { formatConnections(it.connections) } ?: ""
         val sessionsText = status?.let { formatSessions(it.sessions) } ?: ""
         val url = port?.let { "http://127.0.0.1:$it" }
 
         SwingUtilities.invokeLater {
             currentUrl = url
-            keepAliveBox.isSelected = keepAlive
             stateLabel.text = stateText
             connectionsLabel.text = connectionsText
             connectionsLabel.isVisible = connectionsText.isNotEmpty()
