@@ -18,19 +18,28 @@ interface Msg {
   apiErrorStatus?: number;
   error?: string;
 }
+interface Reservation {
+  id: string;
+  sessionId: string;
+  sendAt: string;
+  message: string;
+  kind: string;
+  createdAt: string;
+}
 interface Ctx {
   sessionId: string | null;
   inputMode: string;
   messages: Msg[];
   autoResumeOnLimit: boolean;
-  initialSchedules: unknown[];
+  /** Reservations served by the mocked ScheduledMessagesContext. */
+  reservations: Reservation[];
 }
 const ctx: Ctx = {
   sessionId: 'sess-a',
   inputMode: 'ask_before_edit',
   messages: [],
   autoResumeOnLimit: false,
-  initialSchedules: [],
+  reservations: [],
 };
 
 type Handler = (message: { type: string; payload: Record<string, unknown>; timestamp: number }) => void;
@@ -40,12 +49,9 @@ const subscribeMock = vi.fn((type: string, handler: Handler) => {
   handlers.set(type, handler);
   return unsubscribe;
 });
-const sendMock = vi.fn((type: string, _payload?: Record<string, unknown>) => {
-  if (type === MessageType.GET_SCHEDULED_MESSAGES) {
-    return Promise.resolve({ schedules: ctx.initialSchedules });
-  }
-  return Promise.resolve({});
-});
+const sendMock = vi.fn((_type: string, _payload?: Record<string, unknown>) =>
+  Promise.resolve({}),
+);
 const sendMessageMock = vi.fn();
 const { notifyMock, ensureSponsorMock } = vi.hoisted(() => ({ notifyMock: vi.fn(), ensureSponsorMock: vi.fn() }));
 
@@ -70,6 +76,22 @@ vi.mock('@/contexts/SettingsContext', () => ({
 vi.mock('@/notifications', () => ({ notify: notifyMock }));
 vi.mock('@/contexts/AutoResumeOverrideContext', () => ({
   useAutoResumeOverride: () => ({ getOverride: () => undefined, setOverride: vi.fn() }),
+}));
+// The hook now reads reservations from ScheduledMessagesContext (the SAME list
+// the "예약된 메시지" panel renders) instead of keeping a private copy, so tests
+// drive that context. `emitSchedules` stands in for the backend's
+// SCHEDULED_MESSAGE_UPDATED broadcast reaching the provider.
+vi.mock('@/contexts/ScheduledMessagesContext', () => ({
+  useScheduledMessages: () => ({
+    reservations: ctx.reservations,
+    cancel: vi.fn(),
+    panelOpen: false,
+    openPanel: vi.fn(),
+    closePanel: vi.fn(),
+    editing: null,
+    startEdit: vi.fn(),
+    stopEdit: vi.fn(),
+  }),
 }));
 vi.mock('@/utils/ensureSponsor', () => ({ ensureSponsor: ensureSponsorMock }));
 
@@ -110,7 +132,7 @@ beforeEach(() => {
   ctx.inputMode = 'ask_before_edit';
   ctx.messages = [];
   ctx.autoResumeOnLimit = false;
-  ctx.initialSchedules = [];
+  ctx.reservations = [];
   ensureSponsorMock.mockResolvedValue(true);
 });
 afterEach(() => vi.useRealTimers());
@@ -158,11 +180,8 @@ describe('useAutoResume', () => {
 
   it('offers "cancel" once a reservation exists and cancel() sends CANCEL_SCHEDULED_MESSAGE by id', () => {
     ctx.messages = [limitMsg('lim1', FUTURE)];
+    ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
     const { result } = renderHook(() => useAutoResume());
-    emit(MessageType.SCHEDULED_MESSAGE_UPDATED, {
-      sessionId: 'sess-a',
-      schedules: [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())],
-    });
     expect(result.current.action).toBe('cancel');
     act(() => result.current.cancel());
     const call = sendMock.mock.calls.find((c) => c[0] === MessageType.CANCEL_SCHEDULED_MESSAGE);
@@ -216,11 +235,8 @@ describe('useAutoResume', () => {
 
   it('auto-cancels: a new user message after the limit clears it and cancels any reservation', () => {
     ctx.messages = [limitMsg('lim1', FUTURE)];
+    ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
     const { result, rerender } = renderHook(() => useAutoResume());
-    emit(MessageType.SCHEDULED_MESSAGE_UPDATED, {
-      sessionId: 'sess-a',
-      schedules: [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())],
-    });
     expect(result.current.action).toBe('cancel');
 
     // User types again → a user message now sits after the limit notice.
@@ -243,13 +259,76 @@ describe('useAutoResume', () => {
     vi.useFakeTimers();
     const now = Date.now();
     ctx.messages = [limitMsg('lim1', FUTURE)];
-    const { result } = renderHook(() => useAutoResume());
-    emit(MessageType.SCHEDULED_MESSAGE_UPDATED, {
-      sessionId: 'sess-a',
-      schedules: [makeReservation(new Date(now + 30_000).toISOString())],
-    });
     // scheduled sendAt = now+30s → resetsAt = now → countdown ~30
+    ctx.reservations = [makeReservation(new Date(now + 30_000).toISOString())];
+    const { result } = renderHook(() => useAutoResume());
     expect(result.current.countdownSeconds).not.toBeNull();
     expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Auto-resume is "the click", not a second feature ───────────────────────
+  // These pin the property the whole change exists for: with the preference on,
+  // the hook must press exactly the button the manual UI is currently offering.
+  describe('auto-resume presses whatever action the manual UI offers', () => {
+    it('resumes immediately when the reset has ALREADY passed (regression: used to do nothing)', async () => {
+      // The real-world case: the limit hit at 03:26, reset at 04:10, and the user
+      // reopened the session at 04:12. The manual UI offers "resume now" here, so
+      // auto-resume must resume — the old guard bailed out on a past reset and
+      // left the session dead with no reservation and no message.
+      ctx.autoResumeOnLimit = true;
+      ctx.messages = [limitMsg('lim1', PAST)];
+      const { result } = renderHook(() => useAutoResume());
+      expect(result.current.action).toBe('resumeNow');
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(sendMessageMock).toHaveBeenCalledWith('continue', 'ask_before_edit');
+      expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+    });
+
+    it('schedules (not resumes) while the reset is still ahead', () => {
+      ctx.autoResumeOnLimit = true;
+      ctx.messages = [limitMsg('lim1', FUTURE)];
+      const { result } = renderHook(() => useAutoResume());
+      expect(result.current.action).toBe('schedule');
+      expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(true);
+      expect(sendMessageMock).not.toHaveBeenCalled();
+    });
+
+    it('does nothing while a reservation is pending (the offered action is "cancel")', () => {
+      ctx.autoResumeOnLimit = true;
+      ctx.messages = [limitMsg('lim1', FUTURE)];
+      ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
+      const { result } = renderHook(() => useAutoResume());
+      expect(result.current.action).toBe('cancel');
+      expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+      expect(sendMessageMock).not.toHaveBeenCalled();
+    });
+
+    it('presses only once per offered action (no repeat sends on re-render)', async () => {
+      ctx.autoResumeOnLimit = true;
+      ctx.messages = [limitMsg('lim1', PAST)];
+      const { rerender } = renderHook(() => useAutoResume());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      act(() => rerender());
+      act(() => rerender());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays put when the preference is off (manual UI still offers the button)', async () => {
+      ctx.autoResumeOnLimit = false;
+      ctx.messages = [limitMsg('lim1', PAST)];
+      const { result } = renderHook(() => useAutoResume());
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(result.current.action).toBe('resumeNow'); // the button is there…
+      expect(sendMessageMock).not.toHaveBeenCalled(); // …but nobody pressed it
+    });
   });
 });

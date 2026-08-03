@@ -12,6 +12,7 @@ import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
+import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { notify } from '@/notifications';
 import { NotificationKind, SOUND_OFF } from '@/notifications/types';
 import toast from 'react-hot-toast';
@@ -40,7 +41,10 @@ export interface LimitState {
 export type AutoResumeAction = 'schedule' | 'cancel' | 'resumeNow';
 
 export interface UseAutoResumeResult {
-  /** The persisted `autoResumeOnLimit` preference (seeds auto-scheduling). */
+  /**
+   * The effective `autoResumeOnLimit` preference. When on, the hook presses
+   * `action` for the user; it never unlocks behavior the manual buttons lack.
+   */
   autoResumeEnabled: boolean;
   /** The active limit notice, or null when none is showing. */
   limit: LimitState | null;
@@ -92,6 +96,15 @@ function deriveLimit(messages: LoadedMessageDto[]): LimitState | null {
  * webview). The limit notice is derived from the session's MESSAGES (not a live
  * event) so it persists across re-entry.
  *
+ * ONE feature, one state machine. `action` is the single source of truth for
+ * what may happen next on a limit notice — schedule (reset still ahead) → cancel
+ * (reservation pending) → resumeNow (reset already passed). The banner renders
+ * that action as a button; the `autoResumeOnLimit` preference presses the very
+ * same action on the user's behalf. Auto-resume is therefore the FIRST STEP of
+ * the manual flow being automated, never a parallel code path with its own
+ * conditions — which is what makes the post-schedule UI and behavior identical
+ * whether the reservation was booked by hand or automatically.
+ *
  * Sponsor gating is NOT done here: the buttons show for everyone. `schedule`
  * just sends SCHEDULE_MESSAGE — the backend rejects non-sponsors with
  * SPONSOR_REQUIRED and the global IPC interceptor shows the invite toast
@@ -99,7 +112,7 @@ function deriveLimit(messages: LoadedMessageDto[]): LimitState | null {
  * the request itself, so it queries `ensureSponsor()` first (pattern B).
  */
 export function useAutoResume(): UseAutoResumeResult {
-  const { send, subscribe, isConnected } = useBridgeContext();
+  const { send, subscribe } = useBridgeContext();
   const { currentSessionId, inputMode } = useSessionContext();
   const { sendMessage, messages } = useChatStreamContext();
   const { settings } = useSettings();
@@ -111,7 +124,12 @@ export function useAutoResume(): UseAutoResumeResult {
   const globalDefault = settings[SettingKey.AUTO_RESUME_ON_LIMIT] ?? false;
   const autoResumeEnabled = getOverride(currentSessionId) ?? globalDefault;
 
-  const [schedules, setSchedules] = useState<ScheduledMessage[]>([]);
+  // Reservations come from ScheduledMessagesContext — the SAME list the
+  // "예약된 메시지" panel renders. Keeping a second private copy here (its own
+  // GET_SCHEDULED_MESSAGES + SCHEDULED_MESSAGE_UPDATED subscription) let the
+  // banner and the panel drift apart; one list means the reservation an
+  // auto-resume creates is, by construction, the reservation the panel lists.
+  const { reservations } = useScheduledMessages();
   const [status, setStatus] = useState<AutoResumeStatusView | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
@@ -128,46 +146,20 @@ export function useAutoResume(): UseAutoResumeResult {
 
   // The AUTO_RESUME reservation for this session (at most one is expected).
   const scheduled = useMemo(
-    () => schedules.find((s) => s.kind === ScheduledMessageKind.AUTO_RESUME) ?? null,
-    [schedules],
+    () => reservations.find((s) => s.kind === ScheduledMessageKind.AUTO_RESUME) ?? null,
+    [reservations],
   );
 
-  // ── Reset reservation/status state when the active session changes ───────────
+  // ── Reset status state when the active session changes ──────────────────────
+  // The reservation list resets itself in ScheduledMessagesContext.
   useEffect(() => {
-    setSchedules([]);
     setStatus(null);
     setResolvedUuid(null);
   }, [currentSessionId]);
 
-  // ── Initial reservation fetch for the current session ───────────────────────
-  useEffect(() => {
-    if (!isConnected || !currentSessionId) return;
-    let cancelled = false;
-    void send<{ schedules?: ScheduledMessage[] }>(MessageType.GET_SCHEDULED_MESSAGES, {
-      sessionId: currentSessionId,
-    })
-      .then((res) => {
-        if (!cancelled && Array.isArray(res?.schedules)) setSchedules(res.schedules);
-      })
-      .catch(() => {
-        /* best-effort; a missing list just means "no reservations yet" */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isConnected, currentSessionId, send]);
-
   // ── Subscriptions (filtered to the current session) ─────────────────────────
   useEffect(() => {
     if (!currentSessionId) return;
-
-    const unsubSchedules = subscribe(MessageType.SCHEDULED_MESSAGE_UPDATED, (message) => {
-      const p = message.payload as
-        | { sessionId?: string; schedules?: ScheduledMessage[] }
-        | undefined;
-      if (!p || p.sessionId !== currentSessionId) return;
-      setSchedules(Array.isArray(p.schedules) ? p.schedules : []);
-    });
 
     const unsubStatus = subscribe(MessageType.AUTO_RESUME_STATUS, (message) => {
       const p = message.payload as
@@ -180,10 +172,7 @@ export function useAutoResume(): UseAutoResumeResult {
       }
     });
 
-    return () => {
-      unsubSchedules();
-      unsubStatus();
-    };
+    return unsubStatus;
   }, [currentSessionId, subscribe]);
 
   // ── Actions ─────────────────────────────────────────────────────────────────
@@ -242,23 +231,6 @@ export function useAutoResume(): UseAutoResumeResult {
     if (!limit && scheduled) cancelReservation(false);
   }, [limit, scheduled, cancelReservation]);
 
-  // ── Auto-schedule when the preference is on ─────────────────────────────────
-  // Non-sponsors can't turn the preference on (its toggles are sponsor-gated), so
-  // this normally only runs for sponsors; if it somehow runs for a non-sponsor,
-  // the backend rejects it and the interceptor handles it.
-  const autoScheduledForRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!limit || !autoResumeEnabled) return;
-    const resetsAt = limit.resetsAt;
-    if (!resetsAt) return;
-    if (scheduled) return;
-    if (Date.parse(resetsAt) <= Date.now()) return; // already past → resumeNow, not schedule
-    const guardKey = `${limit.messageUuid}:${resetsAt}`;
-    if (autoScheduledForRef.current === guardKey) return;
-    autoScheduledForRef.current = guardKey;
-    schedule();
-  }, [limit, autoResumeEnabled, scheduled, schedule]);
-
   // ── Countdown tick + one-shot browser notification at reset ─────────────────
   const resetsAtMs = useMemo(
     () => (scheduled ? Date.parse(scheduled.sendAt) - 30_000 : NaN),
@@ -298,6 +270,38 @@ export function useAutoResume(): UseAutoResumeResult {
     if (limit.resetsAt && Date.parse(limit.resetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
   }, [limit, scheduled, status, nowMs]);
+
+  // ── Auto-resume = "press the button for the user" ────────────────────────────
+  // Turning the preference on does NOT switch to a second, parallel feature: the
+  // manual flow (schedule → scheduled → resume) IS the feature, and auto-resume
+  // only automates its FIRST step — the click. So this effect deliberately drives
+  // whatever `action` currently offers instead of re-deriving its own conditions:
+  //   'schedule'  → the reset is still ahead → book the reservation
+  //   'resumeNow' → the reset already passed (e.g. the user reopened the session
+  //                 after the reset) → resume immediately
+  // Re-deriving the conditions here is what previously made the two paths differ:
+  // the old guard bailed out when the reset had already passed, so auto-resume
+  // did nothing at all in exactly the case where the manual button offered
+  // "resume now". Everything after the click (countdown, cancel, gate, status)
+  // is shared by construction, because both paths call the same actions.
+  //
+  // Non-sponsors can't turn the preference on (its toggles are sponsor-gated), so
+  // this normally only runs for sponsors; if it somehow runs for a non-sponsor,
+  // schedule() is rejected by the backend (the interceptor shows the invite) and
+  // resumeNow() pre-checks via ensureSponsor.
+  const autoActedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!limit || !autoResumeEnabled) return;
+    if (action !== 'schedule' && action !== 'resumeNow') return;
+    // One automatic press per (limit notice, action). Keyed by action too, so a
+    // banner that ticks past its reset from 'schedule' to 'resumeNow' still gets
+    // its one press — without this the guard would swallow the transition.
+    const guardKey = `${limit.messageUuid}:${limit.resetsAt ?? 'none'}:${action}`;
+    if (autoActedForRef.current === guardKey) return;
+    autoActedForRef.current = guardKey;
+    if (action === 'schedule') schedule();
+    else void resumeNow();
+  }, [limit, autoResumeEnabled, action, schedule, resumeNow]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 
