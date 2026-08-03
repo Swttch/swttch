@@ -411,13 +411,101 @@ describe('SessionContext', () => {
         capturedCtx?.switchSession('session-1');
       });
 
-      // 세션 전환 후에는 hasUserChangedMode가 리셋되어 syncInitialInputMode가 적용 가능해야 함
-      // (실제 리셋은 ChatInput의 useEffect에서 syncInitialInputMode를 통해 이루어지지만,
-      //  여기서는 hasUserChangedMode가 false로 리셋되었는지를 간접 확인)
+      // 세션 전환 후에는 모드가 "정해지지 않은" 상태로 리셋되어 syncInitialInputMode가
+      // 다시 적용 가능해야 함 (실제 적용은 ChatInput의 useEffect에서 이루어지므로
+      // 여기서는 재동기화 트리거가 올랐는지로 간접 확인)
       await waitFor(() => {
         // modeResetTrigger가 증가했는지 확인 (간접 검증)
         expect(capturedCtx?.modeResetTrigger).toBeGreaterThan(0);
       });
+    });
+
+    // ChatInput은 AskUserQuestion 패널·플랜 승인 패널이 뜨는 동안 언마운트됐다가 다시
+    // 붙고, 마운트될 때마다 syncInitialInputMode를 호출한다. 진행 중인 세션의 모드가
+    // 그 재호출로 설정 기본값에 덮이면, 화면은 느슨한 모드를 보여주는데 CLI는 원래
+    // 모드로 도는 표시/실제 불일치가 된다.
+    it('세션 모드가 정해진 뒤에는 초기값 재동기화가 이를 덮지 않는다', async () => {
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      // 세션이 plan으로 진행 중 — 사용자가 모드 버튼을 누르지 않아도 이 상태일 수 있다
+      act(() => {
+        capturedCtx?.syncInitialInputMode('plan');
+      });
+      expect(capturedCtx!.inputMode).toBe('plan');
+
+      // AskUserQuestion 답변 → ChatInput 재마운트 → 기본값으로 재동기화 시도
+      act(() => {
+        capturedCtx?.syncInitialInputMode('bypass');
+      });
+
+      expect(capturedCtx!.inputMode).toBe('plan');
+    });
+
+    // CLI가 통보한 실제 적용 모드도 "정해진" 모드다. 그 뒤 인풋이 재마운트되어
+    // 기본값 재동기화가 호출돼도 CLI의 진실이 유지되어야 한다.
+    it('CLI가 통보한 모드도 초기값 재동기화에 덮이지 않는다', async () => {
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      act(() => {
+        capturedCtx?.syncEffectiveMode('plan');
+      });
+      expect(capturedCtx!.inputMode).toBe('plan');
+
+      act(() => {
+        capturedCtx?.syncInitialInputMode('bypass');
+      });
+
+      expect(capturedCtx!.inputMode).toBe('plan');
+    });
+
+    it('세션 전환 후에는 초기값 재동기화가 다시 적용된다', async () => {
+      mockPathname = '/sessions/session-1';
+      mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });
+
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      const { rerender } = render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      act(() => {
+        capturedCtx?.setInputMode('plan');
+      });
+      expect(capturedCtx!.inputMode).toBe('plan');
+
+      // 다른 세션으로 이동 — currentSessionId는 URL에서 파생되므로 경로를 바꾸고
+      // 리렌더해야 세션 전환이 실제로 관측된다.
+      mockPathname = '/sessions/session-2';
+      rerender(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      // 이전 세션에서 정해진 모드는 더 이상 유효하지 않으므로 기본값이 다시 적용된다
+      act(() => {
+        capturedCtx?.syncInitialInputMode('bypass');
+      });
+
+      expect(capturedCtx!.inputMode).toBe('bypass');
     });
   });
 
