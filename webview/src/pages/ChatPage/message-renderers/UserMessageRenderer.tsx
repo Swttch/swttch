@@ -12,6 +12,7 @@ import { MessagePathChip } from './components/MessagePathChip';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
+import { toolResultText } from './ToolRenderers/common/toolStatus';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { modelChangeTarget } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
@@ -115,19 +116,45 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // into a context pill, or an empty content array. Several in a row read as a
   // column of blank chips.
   //
-  // A `tool_result` entry is deliberately NOT covered here. It renders empty for
-  // a different reason — `mergeToolResults` folds it into the tool card above —
-  // and when that merge cannot happen (the tool_use sits on a not-yet-loaded
-  // page) the entry is what keeps the tool's output reachable. Hiding it here
-  // would drop that output silently, which `mergeToolResults` takes care to
-  // avoid. The mirror of the guard in `AssistantMessageRenderer`.
-  const hasToolResult = isContentBlockArray(message.message?.content)
-    && message.message.content.some(b => b.type === ContentBlockType.ToolResult);
+  // A `tool_result` entry is kept for a different reason — `mergeToolResults`
+  // folds it into the tool card above, and when that merge cannot happen (the
+  // tool_use sits on a not-yet-loaded page) this entry is what keeps the tool's
+  // output reachable. Hiding it would drop that output silently, which
+  // `mergeToolResults` takes care to avoid. The mirror of the guard in
+  // `AssistantMessageRenderer`.
+  //
+  // What matters is the OUTPUT, not the mere presence of a tool_result block.
+  // `getTextContent` only collects text blocks, so it returns '' here; keeping
+  // the entry on `hasToolResult` alone drew a bordered box around that empty
+  // string — a bare 18x9px pill that showed nothing (issue #232, still present
+  // in v0.26.4). So read the result's own text and render THAT; an entry with no
+  // output protects nothing and is dropped like any other empty message.
+  const unmergedToolResultText = toolResultText(message).trim();
   const hasAnythingToShow = parsedContent.text.trim() !== ''
     || imageBlocks.length > 0
     || allContexts.length > 0
-    || hasToolResult;
+    || unmergedToolResultText !== '';
   if (!hasAnythingToShow) return null;
+
+  // Show the tool's output as plain preformatted text. This is the fallback path
+  // for a result whose tool card is not on screen, so it deliberately stays
+  // simple — the rich per-tool renderers need the tool_use that is missing here.
+  if (!parsedContent.text.trim() && unmergedToolResultText) {
+    return (
+      <div className="group pt-2 pb-4 px-4 space-y-2.5">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0">
+            <MessageBox>
+              <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+                {unmergedToolResultText}
+              </div>
+            </MessageBox>
+          </div>
+        </div>
+        {allContexts.length > 0 && <ContextPills context={allContexts} />}
+      </div>
+    );
+  }
 
   return (
     <div className="group pt-2 pb-4 px-4 space-y-2.5">

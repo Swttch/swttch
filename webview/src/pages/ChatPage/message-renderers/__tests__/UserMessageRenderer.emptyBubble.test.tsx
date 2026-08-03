@@ -77,4 +77,47 @@ describe('UserMessageRenderer — empty bubble guard (issue #232)', () => {
     );
     expect(container.innerHTML).not.toBe('');
   });
+
+  // The guard above kept the entry visible but rendered `parsedContent.text`,
+  // which is empty for a tool_result — so the "kept" entry was a bare bordered
+  // pill and the output it was meant to protect never reached the screen. The
+  // reporter hit this on a 110-minute / 258-turn session, where an unpaired
+  // tool_result is far more likely.
+  it('shows the actual output of an unmerged tool_result, not an empty pill', () => {
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([
+          { type: 'tool_result', tool_use_id: 'call_1', content: 'REAL OUTPUT' },
+        ])}
+      />,
+    );
+    expect(container.textContent).toContain('REAL OUTPUT');
+  });
+
+  it('shows output when the tool_result content is a text-block array', () => {
+    // Task-style results arrive as blocks rather than a bare string.
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([
+          {
+            type: 'tool_result',
+            tool_use_id: 'call_1',
+            content: [{ type: 'text', text: 'BLOCK OUTPUT' }],
+          },
+        ])}
+      />,
+    );
+    expect(container.textContent).toContain('BLOCK OUTPUT');
+  });
+
+  it('renders nothing for a tool_result that carries no output at all', () => {
+    // With no text to show, the entry protects nothing — an empty pill is the
+    // very symptom of issue #232.
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([{ type: 'tool_result', tool_use_id: 'call_1', content: '' }])}
+      />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
 });
