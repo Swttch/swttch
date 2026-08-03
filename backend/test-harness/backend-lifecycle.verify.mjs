@@ -26,6 +26,9 @@
  *      backend exits after the grace instead of lingering forever.
  *   S6 status endpoint — GET /internal/status reflects the gate, the
  *      panel/browser connection breakdown and the streaming-session count.
+ *   S7 standalone shell death — no JETBRAINS_MODE: the backend survives the idle
+ *      grace while its shell lives (gate up), but the standalone watchdog shuts
+ *      it down when the owning shell (fake parent) is SIGKILLed (rule G4).
  *
  * Usage: node backend/test-harness/backend-lifecycle.verify.mjs
  * Artifacts land in $TMPDIR/backend-lifecycle-verify/.
@@ -43,6 +46,15 @@ const WebSocket = require('ws');
 const BASE_PORT = Number(process.env.LIFECYCLE_PORT ?? 19840);
 const ROOT = join(process.env.TMPDIR || os.tmpdir(), 'backend-lifecycle-verify');
 const BACKEND = fileURLToPath(new URL('../dist/backend.mjs', import.meta.url));
+
+// The production bundle (dist/backend.mjs, NODE_ENV=production) generates a random
+// auth token when CCG_AUTH_TOKEN is absent, so every /ws, /rpc and /internal
+// request must carry the launcher's token. We inject a fixed one and attach it as
+// the launcher (Kotlin/ccg) would: the `ccg-auth` WS subprotocol and the
+// `x-ccg-token` header. See config/environment.ts and ws-server.ts.
+const AUTH_TOKEN = 'harness-auth-token';
+const AUTH_SUBPROTOCOL = 'ccg-auth';
+const AUTH_HTTP_HEADER = 'x-ccg-token';
 
 const IDLE_GRACE_MS = 60_000;
 const WATCHDOG_POLL_MS = 10_000;
@@ -90,7 +102,7 @@ const contexts = [];
  * PORT line and logs arrive on the parent's pipes and stay readable after the
  * parent dies (the backend keeps the fd open).
  */
-async function startContext(name, port) {
+async function startContext(name, port, { jetbrains = true } = {}) {
   const root = join(ROOT, name);
   const home = join(root, 'home');
   rmSync(root, { recursive: true, force: true });
@@ -119,14 +131,20 @@ console.log('BACKEND_PID:' + child.pid);
 setInterval(() => {}, 1000); // stay alive until killed
 `);
 
+  const env = {
+    ...process.env,
+    HOME: home,
+    PORT: String(port),
+    CCG_AUTH_TOKEN: AUTH_TOKEN,
+    FAKE_CLI_LOG: join(root, 'fake-cli.log'),
+  };
+  // JetBrains mode is opt-in per scenario; a standalone backend (no
+  // JETBRAINS_MODE) boots with the gate up and its own parent-death watchdog.
+  if (jetbrains) env.JETBRAINS_MODE = 'true';
+  else delete env.JETBRAINS_MODE;
+
   const parent = spawn(process.execPath, [fakeParent, BACKEND], {
-    env: {
-      ...process.env,
-      HOME: home,
-      PORT: String(port),
-      JETBRAINS_MODE: 'true',
-      FAKE_CLI_LOG: join(root, 'fake-cli.log'),
-    },
+    env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -143,7 +161,7 @@ setInterval(() => {}, 1000); // stay alive until killed
 
 function openWs(port, query = '') {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`);
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws${query}`, [AUTH_SUBPROTOCOL, AUTH_TOKEN]);
     ws.on('open', () => resolve(ws));
     ws.on('error', reject);
   });
@@ -152,7 +170,7 @@ function openWs(port, query = '') {
 /** Send a Kotlin-style SET_KEEP_ALIVE JSON-RPC notification over /rpc. */
 function pushKeepAlive(port, enabled) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/rpc`);
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/rpc`, [AUTH_SUBPROTOCOL, AUTH_TOKEN]);
     ws.on('open', () => {
       ws.send(JSON.stringify({ jsonrpc: '2.0', method: 'SET_KEEP_ALIVE', params: { enabled } }));
       // Give the frame a beat to flush, then drop the socket — the gate is
@@ -169,7 +187,7 @@ function pushKeepAlive(port, enabled) {
 /** Connect /ws, SEND_MESSAGE for a fake-CLI session, resolve on ACK. */
 function drive(port, sessionId, workingDir) {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, [AUTH_SUBPROTOCOL, AUTH_TOKEN]);
     const timer = setTimeout(() => reject(new Error(`ws drive timeout (${sessionId})`)), 15_000);
     ws.on('open', () => {
       ws.send(
@@ -202,7 +220,9 @@ function drive(port, sessionId, workingDir) {
 }
 
 async function fetchStatus(port) {
-  const res = await fetch(`http://127.0.0.1:${port}/internal/status`);
+  const res = await fetch(`http://127.0.0.1:${port}/internal/status`, {
+    headers: { [AUTH_HTTP_HEADER]: AUTH_TOKEN },
+  });
   return { httpStatus: res.status, body: await res.json() };
 }
 
@@ -313,13 +333,35 @@ async function s6_statusEndpoint(port) {
   driveWs.close();
 }
 
+async function s7_standaloneParentDeath(port) {
+  // Standalone (no JETBRAINS_MODE): the gate boots UP, so the idle self-shutdown
+  // never arms — a standalone backend with a live owner survives past the grace
+  // even with zero /ws clients (the operator owns its lifetime). But when the
+  // owning shell (our fake parent) dies, the standalone watchdog must shut the
+  // backend down outright — no browser/tunnel client keeps a shell-orphaned
+  // backend alive. This is rule G4: the shell owns the lifetime.
+  const ctx = await startContext('s7', port, { jetbrains: false });
+
+  // Alive well past the grace while the parent lives (gate up, no clients).
+  await delay(SURVIVE_PROBE_MS);
+  report('S7 standalone backend survives the idle grace while its shell lives', pidAlive(ctx.backendPid));
+
+  // Kill the owning shell → watchdog fires → backend exits (regardless of clients).
+  process.kill(ctx.parent.pid, 'SIGKILL');
+  const start = Date.now();
+  await waitUntil(() => !pidAlive(ctx.backendPid), WATCHDOG_POLL_MS + 15_000, 'S7 standalone exit on shell death');
+  const elapsed = Date.now() - start;
+  report('S7 standalone backend exits when its owning shell dies', true, `${Math.round(elapsed / 1000)}s`);
+  report('S7 parent-death shutdown log present', ctx.err.includes('parent-death') || ctx.err.includes('Parent process'));
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   rmSync(ROOT, { recursive: true, force: true });
   mkdirSync(ROOT, { recursive: true });
 
-  const scenarios = [s1_baseline, s2_gate, s3_clampWithClient, s4_clampWithoutClients, s5_prewarmLeakFix, s6_statusEndpoint];
+  const scenarios = [s1_baseline, s2_gate, s3_clampWithClient, s4_clampWithoutClients, s5_prewarmLeakFix, s6_statusEndpoint, s7_standaloneParentDeath];
   const outcomes = await Promise.allSettled(scenarios.map((fn, i) => fn(BASE_PORT + i)));
   for (const [i, outcome] of outcomes.entries()) {
     if (outcome.status === 'rejected') {

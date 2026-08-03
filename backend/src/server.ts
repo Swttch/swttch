@@ -322,19 +322,30 @@ async function main() {
     }
   });
 
-  // Keep-alive clamp: when the IDE (our parent) dies — clean close and
-  // crash alike — the backend does NOT exit; it only flips the keep-alive gate
-  // off, restoring the idle-shutdown regime. A live browser/tunnel client then
-  // keeps it alive; with zero /ws connections setKeepAlive(false) arms the
-  // idle timer immediately, so a truly orphaned client-less backend exits
-  // ~60s after IDE death (including the prewarm-leak case).
+  // Parent-death watchdog. The parent (the process that spawned and owns this
+  // backend) dying is the signal that the backend must give up — but what
+  // "giving up" means differs by who the owner is:
+  //
+  //  - JetBrains: the owner is the IDE, and it is NOT the only surface that can
+  //    keep the backend useful — a browser/tunnel client may still be working.
+  //    So on IDE death the backend does NOT exit; it only flips the keep-alive
+  //    gate off, restoring the idle-shutdown regime. A live /ws client keeps it
+  //    alive; with none, setKeepAlive(false) arms the idle timer immediately, so
+  //    a truly orphaned client-less backend exits after the grace (this also
+  //    closes the prewarm-leak case).
+  //
+  //  - Standalone: the owner is the terminal shell that launched `ccg`, and it
+  //    OWNS the lifetime outright. When the shell is gone the backend must die
+  //    regardless of any browser/tunnel client — otherwise it is a literal
+  //    orphan nobody launched and nobody can stop. The clean path is SIGHUP
+  //    (handled below); this watchdog is the backup for the cases SIGHUP does
+  //    not cover (shell SIGKILLed, or the backend reparented away from the
+  //    terminal), detected within one poll interval.
+  //
+  // The standalone arm is installed after `shutdown` is defined (below), since
+  // its callback calls it.
   if (isJetBrainsMode) {
     startParentWatchdog(() => connections.setKeepAlive(false));
-  } else {
-    // Standalone: the keep-alive gate boots up (see ws-server.ts), so
-    // the idle self-shutdown never arms — the operator owns the backend
-    // lifetime (Ctrl+C → graceful shutdown). SESSION_CLEANUP stays active.
-    console.error('[node-backend]', 'Standalone mode: idle self-shutdown disabled (operator owns the backend lifetime)');
   }
 
   // Idle-shutdown gate ("keep backend running"). Kotlin pushes the
@@ -404,6 +415,14 @@ async function main() {
   // backend (pre-fix they died with us for free). Without
   // this handler the process-group isolation itself would mint a new orphan class.
   process.on('SIGHUP', () => shutdown('SIGHUP'));
+
+  // Standalone parent-death watchdog (see the JetBrains/standalone split above):
+  // the owning shell dying means the backend must exit outright — browser/tunnel
+  // clients do NOT keep a shell-orphaned backend alive. SIGHUP is the clean path;
+  // this is the backup for a shell SIGKILL or a reparent that delivers no SIGHUP.
+  if (!isJetBrainsMode) {
+    startParentWatchdog(() => shutdown('parent-death'));
+  }
 }
 
 main().catch((err) => {
