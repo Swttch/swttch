@@ -53,6 +53,29 @@ const INPUT_MODE_TO_CLI_FLAG: Record<string, string> = {
   auto: 'auto',
 };
 
+// Reverse of the above: the CLI reports its permission mode using its own flag
+// names, and we store modes in the webview's vocabulary. Derived from the forward
+// map so the two can never drift apart.
+const CLI_FLAG_TO_INPUT_MODE: Record<string, string> = Object.fromEntries(
+  Object.entries(INPUT_MODE_TO_CLI_FLAG).map(([inputMode, flag]) => [flag, inputMode]),
+);
+
+/**
+ * The permission mode a CLI stream event reports, translated into our InputMode
+ * vocabulary — or null if this event does not report one.
+ *
+ * The CLI announces its mode on `system/init` (at spawn) and again on
+ * `system/status` when it changes the mode itself, which is how an approved
+ * ExitPlanMode plan leaving plan mode becomes observable without inspecting the
+ * tool call. Exported for tests.
+ */
+export function readReportedMode(event: Record<string, unknown>): string | null {
+  if (event.type !== 'system') return null;
+  const flag = event.permissionMode;
+  if (typeof flag !== 'string') return null;
+  return CLI_FLAG_TO_INPUT_MODE[flag] ?? null;
+}
+
 /**
  * Build the argv for spawning the Claude CLI in interactive print mode.
  * Extracted as a pure function so the flag composition (session flag,
@@ -129,10 +152,17 @@ export function markSessionAsSpawned(sessionId: string): void {
  * in place, so honoring a mid-chat mode change means respawning (#172). Extracted
  * as a pure function so this decision is unit-testable without spawning anything.
  *
- * A null `liveMode` means we have a process but never recorded what mode it runs
- * under (e.g. a session reclaimed after a backend restart). Restarting is the safe
- * reading: it makes the CLI provably match what the user picked, whereas reusing
- * would gamble on an unknown mode and risk running edits under looser permissions
+ * Every message carries the mode the UI is currently showing, so this compares it
+ * against what the CLI is actually running under. `liveMode` tracks the CLI, not
+ * merely the flag we spawned it with: the CLI reports its own mode on `system/init`
+ * and again on `system/status` whenever it changes it itself (approving an
+ * ExitPlanMode plan leaves plan mode with no respawn), and the stream handler keeps
+ * the record in step. Comparing against a spawn-time-only record would read that
+ * self-initiated exit as "no change" and reuse a CLI that is no longer in plan.
+ *
+ * A null `liveMode` means we have a process but never recorded a mode for it (e.g. a
+ * session reclaimed after a backend restart). Restarting is the safe reading: reusing
+ * would gamble on an unknown mode and risk edits running under looser permissions
  * than the user chose.
  */
 export function needsRestartForMode(liveMode: string | null, requestedMode: string): boolean {
@@ -695,6 +725,22 @@ function handleStreamEvent(
   // Detect background dynamic workflows and stream their live progress. Pure
   // side-effect — the raw CLI event is still forwarded unchanged below.
   getWorkflowTracker(connections).handleEvent(targetSessionId, event);
+
+  // Keep the recorded permission mode in step with what the CLI says it is running
+  // under. The CLI reports this on `system/init` (spawn) and again on `system/status`
+  // when it changes mode by itself — approving an ExitPlanMode plan leaves plan mode
+  // with no respawn. Without adopting that, the record would still read `plan`, the
+  // user re-picking Plan Mode would compare equal, and the CLI would be reused while
+  // actually out of plan — the "Plan Mode turns itself off" report (#172).
+  const reportedMode = readReportedMode(event);
+  if (reportedMode && reportedMode !== connections.getInputMode(targetSessionId)) {
+    console.error(
+      '[node-backend]',
+      `CLI reports permission mode "${reportedMode}" for session ${targetSessionId} ` +
+        `(was "${connections.getInputMode(targetSessionId)}")`,
+    );
+    connections.setInputMode(targetSessionId, reportedMode);
+  }
 
   // 백엔드 고유 사이드이펙트 (WebView 전달과 무관한 서버 내부 로직)
   if (eventType === 'result') {
