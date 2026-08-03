@@ -497,6 +497,20 @@ export function startWebSocketServer(
     httpServer.on('upgrade', (request, socket, head) => {
       const url = request.url;
 
+      // Non-WebSocket upgrade guard (issue #191). Node routes EVERY request
+      // carrying an `Upgrade` header to this handler, not just WebSocket
+      // upgrades — e.g. h2c (HTTP/2 cleartext), which `java.net.http.HttpClient`
+      // sends by default. Such requests have no Sec-WebSocket-Protocol token, so
+      // they used to die on the token check below with a bare socket.destroy()
+      // and no response. Reply 426 so the client sees an explicit status and can
+      // fall back to HTTP/1.1 instead of the connection dying mid-read.
+      const upgradeHeader = (request.headers.upgrade ?? '').toLowerCase();
+      if (upgradeHeader !== 'websocket') {
+        socket.write('HTTP/1.1 426 Upgrade Required\r\nConnection: close\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
       // Origin 검증 — /ws, /rpc, /logs 공통. Origin은 인증이 아니라 CSWSH 방어
       // 하드닝 레이어로 그대로 유지한다(약화 금지). 실제 인증은 아래 토큰이 담당.
       const origin = request.headers.origin;
