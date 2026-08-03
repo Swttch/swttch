@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildClaudeArgs } from '../claude-process';
+import { buildClaudeArgs, needsRestartForMode } from '../claude-process';
 
 describe('buildClaudeArgs', () => {
   it('includes the core stream-json print-mode flags and the session flag', () => {
@@ -54,5 +54,25 @@ describe('buildClaudeArgs', () => {
 
   it('omits --model for the "default" alias (redundant with the CLI default)', () => {
     expect(buildClaudeArgs('--resume', 's', 'ask_before_edit', 'default')).not.toContain('--model');
+  });
+});
+
+describe('needsRestartForMode', () => {
+  it('reuses the live process when the requested mode is what it already runs', () => {
+    expect(needsRestartForMode('plan', 'plan')).toBe(false);
+    expect(needsRestartForMode('ask_before_edit', 'ask_before_edit')).toBe(false);
+  });
+
+  // #172: `--permission-mode` only applies at spawn, so a live CLI keeps its original
+  // mode. Reusing it would drop the user's choice AND let the CLI's next system/init
+  // push the stale mode back onto the webview — the "mode turns itself off" report.
+  it('restarts when the user picked a different mode mid-chat', () => {
+    expect(needsRestartForMode('plan', 'ask_before_edit')).toBe(true);
+    expect(needsRestartForMode('ask_before_edit', 'plan')).toBe(true);
+    expect(needsRestartForMode('bypass', 'auto_edit')).toBe(true);
+  });
+
+  it('restarts when the live process mode is unknown (safer than assuming a match)', () => {
+    expect(needsRestartForMode(null, 'plan')).toBe(true);
   });
 });
