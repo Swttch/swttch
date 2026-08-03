@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { WebSocket } from 'ws';
+import net from 'net';
 import { startWebSocketServer, AUTH_SUBPROTOCOL } from '../ws-server';
 import { LogWebSocketServer } from '../../logging/log-ws';
 import { authToken } from '../../config/environment';
@@ -169,6 +170,47 @@ describe('ws-server auth (Sec-WebSocket-Protocol token)', () => {
         body,
       });
       expect(res.status).toBe(200);
+    });
+  });
+
+  // Non-WebSocket `Upgrade` requests (issue #191) — e.g. h2c (HTTP/2 cleartext),
+  // which `java.net.http.HttpClient` sends by default. Node routes every
+  // `Upgrade`-bearing request to the 'upgrade' handler, bypassing the normal
+  // request handler entirely, so this must be answered explicitly (426) rather
+  // than silently destroyed. `ws`/`fetch` can't send arbitrary Upgrade headers,
+  // so we drive this with a raw net.Socket.
+  describe('non-WebSocket upgrade (h2c)', () => {
+    function sendRawUpgrade(rawUpgradeValue: string): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const socket = net.connect(port, '127.0.0.1', () => {
+          socket.write(
+            `GET / HTTP/1.1\r\n` +
+              `Host: 127.0.0.1:${port}\r\n` +
+              `Origin: ${ALLOWED_ORIGIN}\r\n` +
+              `Connection: Upgrade, HTTP2-Settings\r\n` +
+              `Upgrade: ${rawUpgradeValue}\r\n` +
+              `HTTP2-Settings: AAMAAABkAAQCAAAAAAIAAAAA\r\n` +
+              `\r\n`,
+          );
+        });
+        let data = '';
+        socket.on('data', (chunk) => {
+          data += chunk.toString();
+          socket.end();
+        });
+        socket.on('close', () => resolve(data));
+        socket.on('error', reject);
+      });
+    }
+
+    it('receives an explicit 426, not a silent connection destroy', async () => {
+      const response = await sendRawUpgrade('h2c');
+      expect(response).toMatch(/^HTTP\/1\.1 426 Upgrade Required/);
+    });
+
+    it('is case-insensitive when checking the Upgrade header value', async () => {
+      const response = await sendRawUpgrade('H2C');
+      expect(response).toMatch(/^HTTP\/1\.1 426 Upgrade Required/);
     });
   });
 
