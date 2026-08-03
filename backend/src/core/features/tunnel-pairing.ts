@@ -198,3 +198,17 @@ export function buildPairingUrl(baseUrl: string, code: string): string {
 
 /** Process-wide singleton bound to the real per-launch token + wall clock. */
 export const tunnelPairing = new TunnelPairingStore();
+
+/**
+ * Mint a fresh single-use pairing code for opening the current backend in the
+ * SYSTEM BROWSER (a separate storage partition from JCEF, so it cannot reuse
+ * the JCEF localStorage token — it must redeem its own code at POST /pair).
+ *
+ * Shared by the WS handler (ISSUE_LOCAL_PAIRING, webview-initiated) and the
+ * HTTP route (GET /internal/local-pair, Kotlin status-card-initiated) so both
+ * paths mint codes identically. Callers MUST NOT log the returned value —
+ * this is the single place the "never log the code" contract is documented.
+ */
+export function issueLocalPairCode(): string {
+  return tunnelPairing.issueCode();
+}

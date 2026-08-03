@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { tunnelPairing } from '../features/tunnel-pairing';
+import { issueLocalPairCode } from '../features/tunnel-pairing';
 import { MessageType } from '../../shared';
 
 /**
@@ -21,7 +21,7 @@ export async function issueLocalPairingHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
-  const code = tunnelPairing.issueCode();
+  const code = issueLocalPairCode();
   // Never log the code. Return it only to the requesting (already-authenticated) webview.
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,

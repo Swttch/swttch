@@ -38,6 +38,15 @@ interface SessionRecord {
   subscribers: Set<string>;
   buffer: string;
   workingDir: string;
+  /**
+   * True while a turn is in flight: set when a prompt is written to the CLI
+   * stdin, cleared on the CLI `result` event (turn end) and on STREAM_END
+   * (process death safety net). NOT the STREAM_START..STREAM_END window —
+   * the CLI process is long-lived across turns, so that window only means
+   * "process alive". Feeds the streaming-sessions counter (status endpoint,
+   * future IDE exit-confirm modal).
+   */
+  streaming: boolean;
 }
 
 interface ClientRecord {
@@ -58,6 +67,24 @@ interface ClientRecord {
    * own `drop` handler). Cleared on flush and on disconnect.
    */
   nativeDropStash: NativeDropEntry[] | null;
+  /**
+   * `Origin` header of the WebSocket upgrade request, when present. Used only
+   * to classify the connection type for status reporting: Remote Tunnel
+   * clients arrive with a *.trycloudflare.com origin (already allowlisted by
+   * ws-server's validateOrigin), local browsers with a localhost one.
+   */
+  origin: string | null;
+}
+
+/** Connection-count breakdown for the status endpoint / status-bar card. */
+export interface ConnectionStats {
+  total: number;
+  /** JCEF IDE panels — connections carrying a `panelId` query param. */
+  panels: number;
+  /** Remote Tunnel clients — recognized by their *.trycloudflare.com origin. */
+  tunnels: number;
+  /** Everything else: plain (local) browsers. */
+  browsers: number;
 }
 
 export class ConnectionManager {
@@ -66,6 +93,20 @@ export class ConnectionManager {
   private sessionRegistry = new Map<string, SessionRecord>();
   private cleanupTimers = new Map<string, NodeJS.Timeout>();
   private idleShutdownTimer: NodeJS.Timeout | null = null;
+  /**
+   * Idle-shutdown gate ("keep backend running"). While true the backend never
+   * schedules its zero-connection self-shutdown.
+   *
+   * The boot value comes from the constructor: a standalone backend
+   * boots with the gate up and nothing ever lowers it — the operator owns the
+   * process lifetime (visible terminal, Ctrl+C → graceful shutdown), so the
+   * idle timer is never armed at all. In JetBrains mode the gate boots down
+   * and is driven exclusively over the /rpc channel (SET_KEEP_ALIVE): Kotlin
+   * pushes the desired state on every RPC (re)connect and on user toggle; the
+   * parent watchdog flips it back to false when the IDE dies (keep-alive
+   * clamp).
+   */
+  private keepAlive: boolean;
   // Secondary index for O(1) panelId → connectionId resolution. Panel ↔ connection
   // is 1:1 (one JCEF browser per IDE panel, one /ws socket per browser), so this
   // map is always in sync with the panelId stored on each ClientRecord.
@@ -92,14 +133,23 @@ export class ConnectionManager {
   private lastFocusedPanelIdStack: string[] = [];
   private nextId = 0;
 
+  constructor(initialKeepAlive = false) {
+    this.keepAlive = initialKeepAlive;
+  }
+
   // ─── Connection lifecycle ───────────────────────────────────────────────────
 
-  addConnection(ws: WebSocket, env: ClientEnv = ClientEnv.BROWSER, panelId: string | null = null): string {
+  addConnection(
+    ws: WebSocket,
+    env: ClientEnv = ClientEnv.BROWSER,
+    panelId: string | null = null,
+    origin: string | null = null,
+  ): string {
     const connectionId = `conn-${++this.nextId}-${Date.now()}`;
     this.connectionMap.set(connectionId, ws);
-    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null });
+    this.clientMap.set(connectionId, { subscribedSessionId: null, env, panelId, nativeDropStash: null, origin });
     if (panelId) this.panelIdIndex.set(panelId, connectionId);
-    this.cancelIdleShutdown();
+    this.cancelIdleShutdown('new connection received');
     console.error(
       '[node-backend]',
       `Connection added: ${connectionId} (env: ${env}, panelId: ${panelId ?? 'none'})`,
@@ -370,6 +420,13 @@ export class ConnectionManager {
     const session = this.sessionRegistry.get(sessionId);
     if (!session) return;
 
+    // Safety net for the turn-in-flight flag: STREAM_END fires on every CLI
+    // process death path (close, spawn error, WSL mismatch), where no `result`
+    // event will ever arrive to clear the flag.
+    if (type === MessageType.STREAM_END) {
+      session.streaming = false;
+    }
+
     const message: IPCMessage = {
       type,
       payload,
@@ -486,6 +543,45 @@ export class ConnectionManager {
     return this.connectionMap.size;
   }
 
+  /** Connection-count breakdown by client type (status endpoint / status-bar card). */
+  getConnectionStats(): ConnectionStats {
+    const stats: ConnectionStats = { total: 0, panels: 0, tunnels: 0, browsers: 0 };
+    for (const record of this.clientMap.values()) {
+      stats.total++;
+      if (record.panelId !== null) {
+        stats.panels++;
+      } else if (record.origin?.endsWith('.trycloudflare.com')) {
+        stats.tunnels++;
+      } else {
+        stats.browsers++;
+      }
+    }
+    return stats;
+  }
+
+  getSessionCount(): number {
+    return this.sessionRegistry.size;
+  }
+
+  /** Number of sessions with a turn in flight (see SessionRecord.streaming). */
+  getStreamingSessionCount(): number {
+    let count = 0;
+    for (const session of this.sessionRegistry.values()) {
+      if (session.streaming) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Flip the per-session turn-in-flight flag. claude-process sets it true
+   * after writing a prompt to the CLI stdin and false on the `result` event;
+   * broadcastToSession clears it on STREAM_END as the process-death safety net.
+   */
+  setStreaming(sessionId: string, streaming: boolean): void {
+    const session = this.sessionRegistry.get(sessionId);
+    if (session) session.streaming = streaming;
+  }
+
   getClient(connectionId: string): ClientRecord | undefined {
     return this.clientMap.get(connectionId);
   }
@@ -507,6 +603,7 @@ export class ConnectionManager {
         subscribers: new Set(),
         buffer: '',
         workingDir: workingDir ?? '',
+        streaming: false,
       };
       this.sessionRegistry.set(sessionId, session);
     }
@@ -561,7 +658,7 @@ export class ConnectionManager {
     }
     this.cleanupTimers.clear();
 
-    this.cancelIdleShutdown();
+    this.cancelIdleShutdown('shutting down');
 
     const killedSessions = this.killAllSessionProcesses('SIGTERM');
     let closedConnections = 0;
@@ -583,7 +680,35 @@ export class ConnectionManager {
     );
   }
 
+  /**
+   * Toggle the idle-shutdown gate. Enabling cancels any armed timer. Disabling
+   * restores the normal regime — and, when there are no /ws connections at that
+   * moment, arms the timer immediately: removeConnection() only fires on a
+   * connection that existed, so a backend that never received one (eager start,
+   * prewarm) would otherwise linger forever.
+   */
+  setKeepAlive(enabled: boolean): void {
+    // No early return on an unchanged value: the initial state is false, yet the
+    // very first SET_KEEP_ALIVE(false) push must still arm the timer below when
+    // the backend has no /ws connections (the eager-start/prewarm case).
+    if (this.keepAlive !== enabled) {
+      console.error('[node-backend]', `Keep-alive ${enabled ? 'enabled' : 'disabled'}`);
+    }
+    this.keepAlive = enabled;
+
+    if (enabled) {
+      this.cancelIdleShutdown('keep-alive enabled');
+    } else if (this.connectionMap.size === 0) {
+      this.scheduleIdleShutdown();
+    }
+  }
+
+  isKeepAlive(): boolean {
+    return this.keepAlive;
+  }
+
   private scheduleIdleShutdown(): void {
+    if (this.keepAlive) return;
     if (this.idleShutdownTimer !== null) return;
     // Dev/testing escape hatch: a standalone `pnpm dev` backend has no respawner,
     // so idle shutdown would kill it whenever the browser disconnects briefly.
@@ -595,17 +720,20 @@ export class ConnectionManager {
     );
     this.idleShutdownTimer = setTimeout(() => {
       console.error('[node-backend]', 'Idle shutdown grace period elapsed. Shutting down.');
+      // The timer has fired — null it out so shutdownAll()'s cancelIdleShutdown()
+      // no-ops instead of logging a misleading "timer cancelled" line.
+      this.idleShutdownTimer = null;
       this.shutdownAll();
       process.exit(0);
     }, IDLE_SHUTDOWN_GRACE_MS);
   }
 
-  private cancelIdleShutdown(): void {
+  private cancelIdleShutdown(reason: string): void {
     if (this.idleShutdownTimer === null) return;
 
     clearTimeout(this.idleShutdownTimer);
     this.idleShutdownTimer = null;
-    console.error('[node-backend]', 'Idle shutdown timer cancelled (new connection received)');
+    console.error('[node-backend]', `Idle shutdown timer cancelled (${reason})`);
   }
 
   private cleanupSession(sessionId: string): void {

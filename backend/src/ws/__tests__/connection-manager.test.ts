@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConnectionManager } from '../connection-manager';
 import { ClientEnv } from '../../shared';
 import { MessageType } from '../../shared';
@@ -181,6 +181,170 @@ describe('ConnectionManager', () => {
       cm.addConnection(createMockWs());
       cm.removeConnection(connId);
       expect(cm.getConnectionCount()).toBe(1);
+    });
+  });
+
+  describe('getConnectionStats', () => {
+    it('classifies panelId connections as panels regardless of origin', () => {
+      cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1', 'http://localhost:63412');
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 1, tunnels: 0, browsers: 0 });
+    });
+
+    it('classifies *.trycloudflare.com origins without panelId as tunnels', () => {
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://demo-tunnel.trycloudflare.com');
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 0, tunnels: 1, browsers: 0 });
+    });
+
+    it('classifies everything else as browsers (incl. missing origin)', () => {
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://127.0.0.1:63412');
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, null);
+      expect(cm.getConnectionStats()).toEqual({ total: 2, panels: 0, tunnels: 0, browsers: 2 });
+    });
+
+    it('counts a mixed set and tracks removals', () => {
+      const panel = cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1', null);
+      cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-2', null);
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://x.trycloudflare.com');
+      cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://localhost:63412');
+      expect(cm.getConnectionStats()).toEqual({ total: 4, panels: 2, tunnels: 1, browsers: 1 });
+
+      cm.removeConnection(panel);
+      expect(cm.getConnectionStats()).toEqual({ total: 3, panels: 1, tunnels: 1, browsers: 1 });
+    });
+  });
+
+  describe('streaming flag / session counters', () => {
+    it('counts sessions and streaming sessions', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.getOrCreateSession('sess-2');
+      expect(cm.getSessionCount()).toBe(2);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+
+      cm.setStreaming('sess-1', true);
+      expect(cm.getStreamingSessionCount()).toBe(1);
+
+      cm.setStreaming('sess-1', false);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('ignores setStreaming for an unknown session', () => {
+      cm.setStreaming('nonexistent', true);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('clears the flag on STREAM_END broadcast (process death safety net)', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setStreaming('sess-1', true);
+      expect(cm.getStreamingSessionCount()).toBe(1);
+
+      cm.broadcastToSession('sess-1', MessageType.STREAM_END);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('does not clear the flag on other broadcasts', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setStreaming('sess-1', true);
+
+      cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, { type: 'assistant' });
+      expect(cm.getStreamingSessionCount()).toBe(1);
+    });
+  });
+
+  describe('keep-alive gate (idle shutdown)', () => {
+    const IDLE_GRACE = 60_000;
+    let exitSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+      exitSpy.mockClear();
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+    });
+
+    it('should idle-shutdown 60s after the last connection leaves (baseline)', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should not schedule idle shutdown while keep-alive is enabled', () => {
+      cm.setKeepAlive(true);
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should cancel an already-armed timer when keep-alive is enabled', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId); // arms the timer
+      cm.setKeepAlive(true);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should arm the timer on a false push with zero connections (prewarm-leak fix)', () => {
+      // Fresh manager, no /ws connection was ever added: removeConnection never
+      // fires, so without this push the backend would linger forever.
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should arm the timer when keep-alive is disabled at zero connections (keep-alive clamp)', () => {
+      cm.setKeepAlive(true);
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
+    });
+
+    it('should not arm the timer when keep-alive is disabled with live connections', () => {
+      cm.addConnection(createMockWs());
+      cm.setKeepAlive(false);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should cancel the setKeepAlive(false)-armed timer when a connection arrives', () => {
+      cm.setKeepAlive(false); // arms (zero connections)
+      cm.addConnection(createMockWs());
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should report the gate state via isKeepAlive', () => {
+      expect(cm.isKeepAlive()).toBe(false);
+      cm.setKeepAlive(true);
+      expect(cm.isKeepAlive()).toBe(true);
+      cm.setKeepAlive(false);
+      expect(cm.isKeepAlive()).toBe(false);
+    });
+
+    it('should boot with the gate up when constructed for standalone mode', () => {
+      // ws-server passes !isJetBrainsMode: a standalone backend never arms the
+      // idle timer — the operator owns its lifetime (Ctrl+C graceful shutdown).
+      const standalone = new ConnectionManager(true);
+      expect(standalone.isKeepAlive()).toBe(true);
+
+      const connId = standalone.addConnection(createMockWs());
+      standalone.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    it('should keep the JetBrains boot default (gate down) with the no-arg constructor', () => {
+      const jetbrains = new ConnectionManager();
+      expect(jetbrains.isKeepAlive()).toBe(false);
+
+      const connId = jetbrains.addConnection(createMockWs());
+      jetbrains.removeConnection(connId);
+      vi.advanceTimersByTime(IDLE_GRACE + 1);
+      expect(exitSpy).toHaveBeenCalledWith(0);
     });
   });
 

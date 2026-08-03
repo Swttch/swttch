@@ -423,6 +423,13 @@ export enum MessageType {
    * routing. params: { hostMode: string }.
    */
   HOST_MODE_CHANGED = 'HOST_MODE_CHANGED',
+  /**
+   * Kotlin → Node notification toggling the idle-shutdown gate ("keep backend
+   * running"). Kotlin pushes the desired state on every RPC (re)connect
+   * and on user toggle; the backend's parent watchdog flips the gate back off
+   * when the IDE process dies. params: { enabled: boolean }.
+   */
+  SET_KEEP_ALIVE = 'SET_KEEP_ALIVE',
 
   // ───────────────────────────────────────────────────────────────────────
   // Logging channel (webview LogForwarder → backend log-ws)

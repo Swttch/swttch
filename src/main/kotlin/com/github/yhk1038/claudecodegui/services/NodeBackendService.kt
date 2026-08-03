@@ -7,11 +7,13 @@ import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
 import com.github.yhk1038.claudecodegui.bridge.WslPathResolver
 import com.github.yhk1038.claudecodegui.bridge.parseHostModeParam
 import com.github.yhk1038.claudecodegui.hosting.HostModeCache
+import com.github.yhk1038.claudecodegui.statusbar.BackendStatusClient
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.ProjectManager
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -19,6 +21,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Application-level service that manages **one Node.js backend per IDE project
@@ -49,6 +52,31 @@ class NodeBackendService : Disposable {
 
     // key = IDE 프로젝트 루트 (project.basePath)
     private val backends = ConcurrentHashMap<String, BackendInstance>()
+
+    /**
+     * Listeners notified (with the affected project root) whenever a backend's
+     * lifecycle changes or the keep-alive toggle flips — the status-bar widget's
+     * update signal. Called from arbitrary threads; listeners marshal to the EDT.
+     */
+    private val stateListeners = CopyOnWriteArrayList<(String) -> Unit>()
+
+    fun addBackendStateListener(listener: (String) -> Unit) {
+        stateListeners.add(listener)
+    }
+
+    fun removeBackendStateListener(listener: (String) -> Unit) {
+        stateListeners.remove(listener)
+    }
+
+    private fun fireBackendStateChanged(basePath: String) {
+        for (listener in stateListeners) {
+            try {
+                listener(basePath)
+            } catch (e: Exception) {
+                logger.warn("Backend state listener threw", e)
+            }
+        }
+    }
 
     /**
      * Application-scoped resource-extraction gate (issue #149). The plugin's webview
@@ -249,6 +277,14 @@ class NodeBackendService : Disposable {
                 // @Synchronized and runs stop()+start(), so it can't re-enter the start()
                 // that is still in progress, and lastPort is reused for a seamless reconnect.
                 onRestartRequested = { restart() },
+                // Clean self-exit (idle shutdown): stand the RPC reconnect/restart
+                // watchdog down — otherwise it treats the silence as a crash and
+                // respawns the backend ~15 s after EVERY idle shutdown, forever.
+                // The next panel open / eager start respawns on demand as usual.
+                onIntentionalExit = { releaseRpcClientAfterIntentionalExit() },
+                // Status-bar widget signal: every lifecycle transition of this root's
+                // backend re-renders the widgets watching this root.
+                onLifecycleChanged = { fireBackendStateChanged(basePath) },
                 // Shared extraction gate: the manager awaits this instead of extracting its
                 // own temp dir, so all backend generations share one live dir (#149).
                 resourcesReady = resourcesReady,
@@ -287,7 +323,11 @@ class NodeBackendService : Disposable {
                 scope,
                 Router(),
                 onPersistentFailure = { restart() },
-                onConnected = { registerRoot() },
+                // Re-assert the desired keep-alive state on EVERY (re)connect — this
+                // covers fresh spawns, exit-75 respawns and RPC reconnects, and a
+                // `false` push arms the backend's idle timer when it has no /ws
+                // clients yet (closing the pre-existing prewarm leak).
+                onConnected = { registerRoot(); pushKeepAlive() },
                 // Route RPC-handling failures to the single Kotlin reporting point. This
                 // backend is connected (the error came over its socket), so prefer it.
                 onError = { throwable, where -> reportError(throwable, where, basePath) },
@@ -331,10 +371,62 @@ class NodeBackendService : Disposable {
             rpcClient?.sendNotification("REGISTER_PROJECT_ROOTS", params)
         }
 
+        /**
+         * Push this backend's keep-alive gate: the gate is up exactly while the IDE
+         * owns this backend — i.e. while its project window is still open. This is
+         * the default lifecycle, not an opt-in: as long as the owning IDE lives,
+         * closing the chat panel (all /ws sockets gone) must NOT retire the backend,
+         * so a re-opened panel reconnects instantly instead of paying a cold restart.
+         *
+         * Closing the project window re-pushes (via [BackendProjectCloseListener])
+         * and the recomputed `false` hands the backend back to the idle regime — the
+         * same clamp the ppid watchdog applies on IDE death, just per project. A live
+         * browser/tunnel client still keeps a now-ownerless backend alive (open /ws
+         * clients block the idle timer); only a backend with no owner AND no client
+         * retires after the idle grace.
+         *
+         * Always sent, `false` included — idempotent on the backend side, and the
+         * `false` push is what arms the idle timer on a backend that never received
+         * a /ws client (the prewarm-leak fix). The method literal mirrors the shared
+         * MessageType enum on the TS side (SET_KEEP_ALIVE).
+         */
+        fun pushKeepAlive() {
+            val projectOpen = ProjectManager.getInstance().openProjects.any { it.basePath == basePath }
+            val params = buildJsonObject { put("enabled", projectOpen) }
+            rpcClient?.sendNotification("SET_KEEP_ALIVE", params)
+        }
+
+        /** Current process lifecycle, or null when no manager exists (never started). */
+        fun lifecycleOrNull(): NodeProcessManager.Lifecycle? = nodeProcessManager?.currentLifecycle
+
+        /** The bound port, or null while not RUNNING / not yet known. */
+        fun portOrNull(): Int? {
+            if (nodeProcessManager?.currentLifecycle != NodeProcessManager.Lifecycle.RUNNING) return null
+            // lastPort is written the moment the PORT line arrives; 0 = not yet known.
+            return lastPort.takeIf { it != 0 }
+        }
+
         @Synchronized
         fun restart() {
             stop()
             start()
+        }
+
+        /**
+         * The backend exited cleanly by its own decision (idle self-shutdown, exit 0).
+         * Dispose the RPC client so its reconnect loop cannot escalate into a full
+         * backend restart — that loop is crash RECOVERY, and this exit is not a crash.
+         * Guard: skip when a newer backend generation is already alive (a racing
+         * restart owns the current rpcClient; its connect() manages it).
+         */
+        @Synchronized
+        fun releaseRpcClientAfterIntentionalExit() {
+            if (nodeProcessManager?.isAlive == true) return
+            rpcClient?.dispose(); rpcClient = null
+            logger.info(
+                "Backend for '$basePath' retired (idle shutdown) — RPC watchdog stood down; " +
+                    "the next panel open / eager start respawns it",
+            )
         }
 
         fun sendNotification(method: String, params: JsonObject) {
@@ -376,6 +468,33 @@ class NodeBackendService : Disposable {
     }
 
     /**
+     * Current backend lifecycle for [projectBasePath]; null = no backend was ever
+     * started for that root (the widget renders this as "stopped").
+     */
+    fun lifecycleOf(projectBasePath: String): NodeProcessManager.Lifecycle? =
+        backends[projectBasePath]?.lifecycleOrNull()
+
+    /** Bound port for [projectBasePath]'s backend, or null while not running. */
+    fun portOf(projectBasePath: String): Int? = backends[projectBasePath]?.portOrNull()
+
+    /**
+     * Re-assert the keep-alive gate when a project window (re)opens, invoked by
+     * [BackendProjectOpenListener]. The open counterpart of [clampAfterProjectClose]:
+     * a backend that outlived an earlier close of this project (live browser/tunnel
+     * clients kept it alive) still has `enabled = false` from the clamp and its RPC
+     * socket never dropped, so `onConnected` won't fire to correct it. Re-push so the
+     * gate reflects "project open" once more — the IDE owns this backend again.
+     * No-op when no backend is registered or its RPC is not ready; the fresh-spawn
+     * and reconnect cases are already covered by `onConnected`.
+     */
+    fun reassertKeepAliveOnProjectOpen(projectBasePath: String) {
+        val inst = backends[projectBasePath]?.takeIf { it.isRpcReady() } ?: return
+        inst.pushKeepAlive()
+        fireBackendStateChanged(projectBasePath)
+        logger.info("Project '$projectBasePath' opened — keep-alive gate re-asserted")
+    }
+
+    /**
      * Register a loading-progress [listener] for [panelId] so the panel can mirror the
      * backend's start sub-phases in its placeholder. Register BEFORE [ensureStarted] so
      * the first phase emitted by start() is not missed. See issue #97.
@@ -411,11 +530,41 @@ class NodeBackendService : Disposable {
     fun initialPairCode(projectBasePath: String): String? = backends[projectBasePath]?.initialPairCode
 
     /**
+     * Mint a fresh single-use LOCAL pairing code from the backend serving
+     * [projectBasePath], or null when no backend is running or the request fails.
+     * Blocks on a short loopback HTTP round-trip — callers MUST invoke this OFF the
+     * EDT.
+     *
+     * Used by the status-bar card's "Open in browser" action: the system browser
+     * (a separate storage partition from JCEF) has no auth token, so the card
+     * embeds this code as `?pair=<code>` in the loopback URL and the browser
+     * redeems it once at POST /pair for the real token. The code is NEVER logged.
+     */
+    fun issueLocalPairCode(projectBasePath: String): String? {
+        val port = portOf(projectBasePath) ?: return null
+        return BackendStatusClient.fetchLocalPairCode(port, authToken(projectBasePath))
+    }
+
+    /**
      * Most recent backend stderr for [projectBasePath], or null when none. Used to
      * attach a concrete cause to a start failure/timeout error panel. See issue #97.
      */
     fun recentBackendDiagnostics(projectBasePath: String): String? =
         backends[projectBasePath]?.recentDiagnostics()
+
+    /**
+     * Per-project keep-alive clamp, invoked by [BackendProjectCloseListener] after a
+     * project window closes. Re-pushes the effective keep-alive state — which
+     * [BackendInstance.pushKeepAlive] now computes as `false` (project no longer
+     * open) — so a client-less backend retires after the usual 60 s instead of
+     * outliving its window until IDE exit. A backend with live browser clients
+     * keeps running until they disconnect (keep-alive promise kept).
+     */
+    fun clampAfterProjectClose(projectBasePath: String) {
+        val inst = backends[projectBasePath]?.takeIf { it.isRpcReady() } ?: return
+        inst.pushKeepAlive()
+        logger.info("Project '$projectBasePath' closed — keep-alive gate released (idle regime restored)")
+    }
 
     /** Restart the backend for [projectBasePath] (retry path). */
     @Synchronized

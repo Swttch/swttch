@@ -17,7 +17,8 @@ import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
-import { ClientEnv } from './shared';
+import { startParentWatchdog } from './core/parent-watchdog';
+import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
 
 /**
@@ -321,6 +322,41 @@ async function main() {
     }
   });
 
+  // Parent-death watchdog. The parent (the process that spawned and owns this
+  // backend) dying is the signal that the backend must give up — but what
+  // "giving up" means differs by who the owner is:
+  //
+  //  - JetBrains: the owner is the IDE, and it is NOT the only surface that can
+  //    keep the backend useful — a browser/tunnel client may still be working.
+  //    So on IDE death the backend does NOT exit; it only flips the keep-alive
+  //    gate off, restoring the idle-shutdown regime. A live /ws client keeps it
+  //    alive; with none, setKeepAlive(false) arms the idle timer immediately, so
+  //    a truly orphaned client-less backend exits after the grace (this also
+  //    closes the prewarm-leak case).
+  //
+  //  - Standalone: the owner is the terminal shell that launched `ccg`, and it
+  //    OWNS the lifetime outright. When the shell is gone the backend must die
+  //    regardless of any browser/tunnel client — otherwise it is a literal
+  //    orphan nobody launched and nobody can stop. The clean path is SIGHUP
+  //    (handled below); this watchdog is the backup for the cases SIGHUP does
+  //    not cover (shell SIGKILLed, or the backend reparented away from the
+  //    terminal), detected within one poll interval.
+  //
+  // The standalone arm is installed after `shutdown` is defined (below), since
+  // its callback calls it.
+  if (isJetBrainsMode) {
+    startParentWatchdog(() => connections.setKeepAlive(false));
+  }
+
+  // Idle-shutdown gate ("keep backend running"). Kotlin pushes the
+  // desired state on every /rpc (re)connect and on user toggle; a `false` push
+  // with zero /ws connections arms the idle timer immediately (see
+  // ConnectionManager.setKeepAlive), which also closes the pre-existing
+  // prewarm leak where a backend that never received a /ws client lived forever.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.SET_KEEP_ALIVE, (_method, params) => {
+    connections.setKeepAlive(params.enabled === true);
+  });
+
   // 4. Logger에 LogWS 참조 설정
   logger.setLogWs(logWs);
 
@@ -379,6 +415,14 @@ async function main() {
   // backend (pre-fix they died with us for free). Without
   // this handler the process-group isolation itself would mint a new orphan class.
   process.on('SIGHUP', () => shutdown('SIGHUP'));
+
+  // Standalone parent-death watchdog (see the JetBrains/standalone split above):
+  // the owning shell dying means the backend must exit outright — browser/tunnel
+  // clients do NOT keep a shell-orphaned backend alive. SIGHUP is the clean path;
+  // this is the backup for a shell SIGKILL or a reparent that delivers no SIGHUP.
+  if (!isJetBrainsMode) {
+    startParentWatchdog(() => shutdown('parent-death'));
+  }
 }
 
 main().catch((err) => {

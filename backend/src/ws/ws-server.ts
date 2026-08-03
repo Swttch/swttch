@@ -7,13 +7,15 @@ import { authToken } from '../config/environment';
 import { ConnectionManager } from './connection-manager';
 import { handleEditorContextRequest } from './editor-context-route';
 import { handleIdeSelectionRequest } from './ide-selection-route';
+import { handleStatusRequest } from './status-route';
 import type { Bridge } from '../bridge/bridge-interface';
 import type { IPCMessage } from '../core/types';
 import { ClientEnv, MessageType } from '../shared';
+import { isJetBrainsMode } from '../config/environment';
 import { getPluginVersion } from '../core/handlers/getVersion';
 import { cancelLogin } from '../core/handlers/login';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
-import { tunnelPairing } from '../core/features/tunnel-pairing';
+import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
 import { LogWebSocketServer } from '../logging/log-ws';
 
 const ALLOWED_WS_ORIGINS = new Set([
@@ -273,7 +275,12 @@ export function startWebSocketServer(
   logWs?: LogWebSocketServer,
 ): Promise<WebSocketServerHandle> {
   return new Promise<WebSocketServerHandle>((resolve, reject) => {
-    const connections = new ConnectionManager();
+    // Standalone backends boot with the keep-alive gate up, so the
+    // idle-shutdown timer is never armed: the operator owns the process
+    // lifetime (visible terminal, Ctrl+C → graceful shutdown). Nothing lowers
+    // the gate in that mode — SET_KEEP_ALIVE only ever arrives from Kotlin,
+    // and the parent watchdog is JetBrains-only. SESSION_CLEANUP is untouched.
+    const connections = new ConnectionManager(!isJetBrainsMode);
     // Only relax Origin validation to strict same-origin when the operator
     // explicitly bound to a non-loopback address. Default loopback bind keeps
     // the historical allowlist-only behavior (DNS-rebinding stays closed).
@@ -293,7 +300,15 @@ export function startWebSocketServer(
       const clientEnv = envParam === ClientEnv.JETBRAINS ? ClientEnv.JETBRAINS : ClientEnv.BROWSER;
       const panelId = params.get('panelId');
 
-      const connectionId = connections.addConnection(ws, clientEnv, panelId);
+      // Origin was already validated during the upgrade; keep it on the record
+      // so connection types (panel / tunnel / browser) can be told apart in
+      // status reporting.
+      const connectionId = connections.addConnection(
+        ws,
+        clientEnv,
+        panelId,
+        request.headers.origin ?? null,
+      );
       console.error('[node-backend]', `Client connected: ${connectionId}`);
 
       // 연결 준비 신호 전송
@@ -406,6 +421,30 @@ export function startWebSocketServer(
             res.end(JSON.stringify({ error: 'Unauthorized' }));
             return;
           }
+        }
+
+        // Runtime status snapshot for the IDE status-bar card (and the future
+        // exit-confirm modal): keep-alive gate, connection counts by type,
+        // session/streaming counts. Read-only, no secrets. Sits after the
+        // /internal/* auth guard above, so it too requires the per-launch token.
+        if (req.method === 'GET' && urlPath === '/internal/status') {
+          const result = handleStatusRequest(connections);
+          res.writeHead(result.status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result.body));
+          return;
+        }
+
+        // IDE status-bar card "Open in browser" → mint a fresh single-use local
+        // pairing code. The system browser (separate storage partition from JCEF)
+        // has no auth token, so the card embeds this code as `?pair=<code>` in the
+        // loopback URL; the browser redeems it at POST /pair for the real token.
+        // Same code source as the ISSUE_LOCAL_PAIRING WS handler (webview path).
+        // Sits behind the /internal/* token gate above. The code is NEVER logged.
+        if (req.method === 'GET' && urlPath === '/internal/local-pair') {
+          const code = issueLocalPairCode();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code }));
+          return;
         }
 
         // IDE → backend editor selection push. Kotlin POSTs the active editor
