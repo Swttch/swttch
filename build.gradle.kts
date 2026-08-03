@@ -146,6 +146,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.5 - Fix the backend and its Claude sessions so they shut down properly</h3>
+            <ul>
+                <li>Fix the backend to shut down when you close the IDE (#254, based on work by @lukaszszczesniak)</li>
+                <li>Fix Claude sessions to stop when the backend stops (#187 by @lukaszszczesniak, #257, reported by @lukaszszczesniak)</li>
+                <li>Fix stray Claude sessions on Windows (#259, reported by @lukaszszczesniak)</li>
+            </ul>
             <h3>0.26.4 - Empty bubbles and mangled ${'$'}-text, fixed</h3>
             <ul>
                 <li>Fix empty message bubbles appearing in the transcript (#232, reported by @StarCode000)</li>
