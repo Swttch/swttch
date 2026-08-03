@@ -209,9 +209,10 @@ case "${1:-}" in
     mkdir -p "$stage/webview"
     cp "$ROOT/backend/dist/backend.mjs" "$stage/"
     cp "$ROOT/backend/dist/account-cli.mjs" "$stage/"
+    cp "$ROOT/backend/dist/win-job-wrapper.ps1" "$stage/"
     cp -R "$ROOT/webview/dist/." "$stage/webview/"
     out="$ROOT/dist/claude-code-gui-standalone-v$version.tgz"
-    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs webview
+    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 webview
     rm -rf "$stage"
     echo "Created: $out"
     ;;

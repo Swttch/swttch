@@ -12,6 +12,7 @@ import { augmentedPath } from './augmented-path';
 import { resolveWslCwd } from './wsl-path';
 import { execViaCmdArgv } from './win-exec';
 import { pickWin32Launcher } from './which-launcher';
+import { spawnWin32JobCli } from './win-job';
 
 export class Claude {
   private static cliPath: string | null = null;
@@ -91,15 +92,25 @@ export class Claude {
     };
   }
 
-  static spawn(args: string[], options?: SpawnOptions): ChildProcess {
+  /**
+   * Spawn `claude`. Pass `win32JobSessionId` ONLY for the long-lived chat CLI: on
+   * win32 it routes the spawn through a Job Object wrapper so the whole CLI tree —
+   * including MSYS/git-bash workers that reparent out of the taskkill /F /T tree —
+   * is torn down when the wrapper (or the backend) dies. The sessionId rides along
+   * so the on-disk registry's orphan sweep can find and kill that wrapper. Short-
+   * lived spawns (auth, /usage, config) omit it and keep the plain shell path.
+   */
+  static spawn(args: string[], options?: SpawnOptions, win32JobSessionId?: string): ChildProcess {
+    const cwd = resolveWslCwd(options?.cwd);
+    const env = { ...Claude.env, ...options?.env };
+    if (process.platform === 'win32' && win32JobSessionId) {
+      return spawnWin32JobCli(Claude.command, args, win32JobSessionId, { ...options, cwd, env });
+    }
     return cpSpawn(Claude.command, args, {
       ...options,
-      cwd: resolveWslCwd(options?.cwd),
+      cwd,
       shell: options?.shell ?? (process.platform === 'win32'),
-      env: {
-        ...Claude.env,
-        ...options?.env,
-      },
+      env,
     });
   }
 
@@ -130,9 +141,10 @@ export class Claude {
     args: string[],
     workingDir?: string,
     options?: SpawnOptions,
+    win32JobSessionId?: string,
   ): Promise<ChildProcess> {
     const stripEnv = await Claude.authStripEnv(workingDir);
-    return Claude.spawn(args, { ...options, env: { ...options?.env, ...stripEnv } });
+    return Claude.spawn(args, { ...options, env: { ...options?.env, ...stripEnv } }, win32JobSessionId);
   }
 
   /**
