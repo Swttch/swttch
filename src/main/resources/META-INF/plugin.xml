@@ -77,9 +77,19 @@
 
         <!-- Re-assert the keep-alive gate on project (re)open: a backend that outlived
              an earlier close of this project (live browser clients) had its gate
-             clamped down; reopening the project means the IDE owns it again -->
+             clamped down; reopening the project means the IDE owns it again.
+             Also force-instantiates BackendProjectCloseService so its dispose()
+             clamp fires on project close. -->
         <postStartupActivity
             implementation="com.github.yhk1038.claudecodegui.startup.BackendProjectOpenListener"/>
+
+        <!-- Per-project keep-alive clamp: a project-level Disposable service whose
+             dispose() (fired by the platform on project close/plugin unload) releases
+             the backend's keep-alive gate so its backend cannot outlive the window
+             forever. Stable replacement for the former experimental
+             project-close listener. -->
+        <projectService
+            serviceImplementation="com.github.yhk1038.claudecodegui.startup.BackendProjectCloseService"/>
 
         <!-- WebView resource server -->
         <httpRequestHandler
@@ -106,11 +116,6 @@
         <listener
             class="com.github.yhk1038.claudecodegui.startup.ResourceExtractionPrewarmActivity"
             topic="com.intellij.ide.AppLifecycleListener"/>
-        <!-- Per-project keep-alive clamp: release the keep-alive gate when a project
-             window closes so its backend cannot outlive the window forever -->
-        <listener
-            class="com.github.yhk1038.claudecodegui.startup.BackendProjectCloseListener"
-            topic="com.intellij.openapi.project.ProjectCloseListener"/>
     </applicationListeners>
 
     <!-- Clean up session state only on real tab close (not on tab move/split) -->

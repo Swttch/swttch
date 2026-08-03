@@ -378,7 +378,7 @@ class NodeBackendService : Disposable {
          * closing the chat panel (all /ws sockets gone) must NOT retire the backend,
          * so a re-opened panel reconnects instantly instead of paying a cold restart.
          *
-         * Closing the project window re-pushes (via [BackendProjectCloseListener])
+         * Closing the project window re-pushes (via [com.github.yhk1038.claudecodegui.startup.BackendProjectCloseService])
          * and the recomputed `false` hands the backend back to the idle regime — the
          * same clamp the ppid watchdog applies on IDE death, just per project. A live
          * browser/tunnel client still keeps a now-ownerless backend alive (open /ws
@@ -553,7 +553,7 @@ class NodeBackendService : Disposable {
         backends[projectBasePath]?.recentDiagnostics()
 
     /**
-     * Per-project keep-alive clamp, invoked by [BackendProjectCloseListener] after a
+     * Per-project keep-alive clamp, invoked by [com.github.yhk1038.claudecodegui.startup.BackendProjectCloseService] after a
      * project window closes. Re-pushes the effective keep-alive state — which
      * [BackendInstance.pushKeepAlive] now computes as `false` (project no longer
      * open) — so a client-less backend retires after the usual 60 s instead of
