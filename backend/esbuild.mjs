@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFileSync } from 'fs';
+import { readFileSync, copyFileSync } from 'fs';
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
 
@@ -74,5 +74,11 @@ await build({ ...common, entryPoints: ['src/server.ts'], outfile: 'dist/backend.
 // Terminal account-switch helper, shipped beside backend.mjs in the standalone
 // runtime and invoked by `ccg account …`.
 await build({ ...common, entryPoints: ['src/cli/account.ts'], outfile: 'dist/account-cli.mjs' });
+
+// Ship the win32 Job Object wrapper next to the bundle. It's a runtime asset (not
+// JS to bundle): win-job.ts resolves it via `new URL('./win-job-wrapper.ps1',
+// import.meta.url)`, i.e. beside backend.mjs. Both distributables (plugin
+// syncResources, standalone tgz) copy it from dist/ alongside backend.mjs.
+copyFileSync('src/core/win-job-wrapper.ps1', 'dist/win-job-wrapper.ps1');
 
 console.log('Backend bundled successfully');

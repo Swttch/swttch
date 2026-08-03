@@ -290,6 +290,12 @@ class PluginResourceExtractor(
         val target = File(backendDirTarget, BACKEND_ENTRY)
         target.parentFile?.mkdirs()
         stream.use { input -> target.outputStream().use { input.copyTo(it) } }
+        // win32 Job Object wrapper, shipped beside backend.mjs (win-job.ts resolves it
+        // there). Best-effort: if the asset is missing, win-job.ts falls back to a plain
+        // spawn (degraded orphan guard), so its absence must not abort extraction.
+        resourceAnchor.getResourceAsStream("/backend/$WIN_JOB_WRAPPER")?.use { input ->
+            File(backendDirTarget, WIN_JOB_WRAPPER).outputStream().use { input.copyTo(it) }
+        }
     }
 
     private fun extractWebview(webviewTarget: File) {
@@ -438,6 +444,7 @@ class PluginResourceExtractor(
         private const val WEBVIEW_SUBDIR = "webview"
         private const val BACKEND_SUBDIR = "backend"
         private const val BACKEND_ENTRY = "backend.mjs"
+        private const val WIN_JOB_WRAPPER = "win-job-wrapper.ps1"
         private const val LOCK_NAME = ".lock"
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"

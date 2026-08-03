@@ -215,7 +215,10 @@ export async function ensureClaudeProcess(
       CI: 'true',
       CLAUDECODE: undefined,
     },
-  });
+    // win32: route this long-lived chat CLI through a Job Object wrapper so its
+    // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with
+    // the backend. POSIX uses the detached process-group above instead.
+  }, targetSessionId);
 
   let stderrBuffer = '';
 

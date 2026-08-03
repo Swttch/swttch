@@ -377,8 +377,10 @@ tasks {
         dependsOn("buildWebviewFrontend", "buildNodeBackend")
         inputs.dir(file("webview/dist"))
         inputs.file(file("backend/dist/backend.mjs"))
+        inputs.file(file("backend/dist/win-job-wrapper.ps1"))
         outputs.dir(file("src/main/resources/webview"))
         outputs.file(file("src/main/resources/backend/backend.mjs"))
+        outputs.file(file("src/main/resources/backend/win-job-wrapper.ps1"))
         doLast {
             // WebView 정적 파일 동기화 (stale 파일 방지를 위해 기존 디렉토리 삭제 후 복사)
             file("src/main/resources/webview").deleteRecursively()
@@ -386,10 +388,11 @@ tasks {
                 from(file("webview/dist"))
                 into(file("src/main/resources/webview"))
             }
-            // Node.js 백엔드 번들 복사
+            // Node.js 백엔드 번들 복사 (+ win32 Job Object 래퍼 자산)
             file("src/main/resources/backend").mkdirs()
             copy {
                 from(file("backend/dist/backend.mjs"))
+                from(file("backend/dist/win-job-wrapper.ps1"))
                 into(file("src/main/resources/backend"))
             }
         }
