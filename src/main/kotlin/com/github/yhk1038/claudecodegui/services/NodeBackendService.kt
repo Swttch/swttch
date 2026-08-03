@@ -7,6 +7,7 @@ import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
 import com.github.yhk1038.claudecodegui.bridge.WslPathResolver
 import com.github.yhk1038.claudecodegui.bridge.parseHostModeParam
 import com.github.yhk1038.claudecodegui.hosting.HostModeCache
+import com.github.yhk1038.claudecodegui.statusbar.BackendStatusClient
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -527,6 +528,22 @@ class NodeBackendService : Disposable {
      * spawn. Never logged by callers.
      */
     fun initialPairCode(projectBasePath: String): String? = backends[projectBasePath]?.initialPairCode
+
+    /**
+     * Mint a fresh single-use LOCAL pairing code from the backend serving
+     * [projectBasePath], or null when no backend is running or the request fails.
+     * Blocks on a short loopback HTTP round-trip — callers MUST invoke this OFF the
+     * EDT.
+     *
+     * Used by the status-bar card's "Open in browser" action: the system browser
+     * (a separate storage partition from JCEF) has no auth token, so the card
+     * embeds this code as `?pair=<code>` in the loopback URL and the browser
+     * redeems it once at POST /pair for the real token. The code is NEVER logged.
+     */
+    fun issueLocalPairCode(projectBasePath: String): String? {
+        val port = portOf(projectBasePath) ?: return null
+        return BackendStatusClient.fetchLocalPairCode(port, authToken(projectBasePath))
+    }
 
     /**
      * Most recent backend stderr for [projectBasePath], or null when none. Used to

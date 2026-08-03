@@ -15,7 +15,7 @@ import { isJetBrainsMode } from '../config/environment';
 import { getPluginVersion } from '../core/handlers/getVersion';
 import { cancelLogin } from '../core/handlers/login';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
-import { tunnelPairing } from '../core/features/tunnel-pairing';
+import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
 import { LogWebSocketServer } from '../logging/log-ws';
 
 const ALLOWED_WS_ORIGINS = new Set([
@@ -431,6 +431,19 @@ export function startWebSocketServer(
           const result = handleStatusRequest(connections);
           res.writeHead(result.status, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result.body));
+          return;
+        }
+
+        // IDE status-bar card "Open in browser" → mint a fresh single-use local
+        // pairing code. The system browser (separate storage partition from JCEF)
+        // has no auth token, so the card embeds this code as `?pair=<code>` in the
+        // loopback URL; the browser redeems it at POST /pair for the real token.
+        // Same code source as the ISSUE_LOCAL_PAIRING WS handler (webview path).
+        // Sits behind the /internal/* token gate above. The code is NEVER logged.
+        if (req.method === 'GET' && urlPath === '/internal/local-pair') {
+          const code = issueLocalPairCode();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code }));
           return;
         }
 

@@ -4,6 +4,7 @@ import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.settings.ClaudeCodeSettingsConfigurable
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
@@ -51,7 +52,7 @@ class BackendStatusPopup(private val project: Project) {
     // "Open" launches the URL in a browser; "Copy" puts it on the clipboard. The raw
     // URL is intentionally NOT shown as text — it is an implementation detail (a
     // loopback address + dynamic port), and the two actions are all a user needs.
-    private val openLink = ActionLink("Open") { BrowserUtil.browse(currentUrl ?: return@ActionLink) }
+    private val openLink = ActionLink("Open") { openInBrowser() }
     private val copyLink: ActionLink = ActionLink("Copy address") {
         currentUrl?.let {
             CopyPasteManager.copyTextToClipboard(it)
@@ -85,6 +86,39 @@ class BackendStatusPopup(private val project: Project) {
         val base = "http://127.0.0.1:$port"
         val dir = basePath ?: return base
         return "$base?workingDir=${java.net.URLEncoder.encode(dir, "UTF-8")}"
+    }
+
+    /**
+     * "Open" handler. The system browser is a separate storage partition from JCEF,
+     * so it has no auth token and a bare loopback URL fails auth (WebSocket 401 →
+     * stuck on "Loading projects..."). We mint a fresh single-use LOCAL pairing code
+     * and carry it as `?pair=`/`&pair=`; the browser redeems it once at POST /pair
+     * for the real token — the only browser auth path.
+     *
+     * The code mint is a blocking loopback HTTP round-trip, so it runs on a pooled
+     * thread (never the EDT); [BrowserUtil.browse] is then marshalled back to the
+     * EDT. If the mint fails we still open the bare URL (best-effort, degrades to the
+     * old behaviour). The pair-bearing URL is NEVER logged.
+     */
+    private fun openInBrowser() {
+        val bareUrl = currentUrl ?: return
+        val base = basePath ?: return
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val code = service.issueLocalPairCode(base)
+            val url = if (code != null) appendPairCode(bareUrl, code) else bareUrl
+            SwingUtilities.invokeLater { BrowserUtil.browse(url) }
+        }
+    }
+
+    /**
+     * Append `pair=<encoded code>` to [url], choosing `?` or `&` by whether the URL
+     * already carries a query string. In practice [backendUrl] always adds
+     * `?workingDir=`, so this is `&`; the `?` branch is a safety net for a null
+     * basePath (bare `http://host:port`). The code is URL-encoded. Never logged.
+     */
+    private fun appendPairCode(url: String, code: String): String {
+        val separator = if (url.contains('?')) "&" else "?"
+        return "$url${separator}pair=${java.net.URLEncoder.encode(code, "UTF-8")}"
     }
 
     /** Create the popup and show it just above [component] (the status-bar dot). */
@@ -180,7 +214,9 @@ class BackendStatusPopup(private val project: Project) {
         val lifecycle = basePath?.let { service.lifecycleOf(it) }
         val keptAlive = project.isOpen
         val port = basePath?.let { service.portOf(it) }
-        val status = port?.let { BackendStatusClient.fetch(it) }
+        val status = if (basePath != null && port != null)
+            BackendStatusClient.fetch(port, service.authToken(basePath))
+        else null
 
         val stateText = BackendDotState.cardStateLine(lifecycle, keptAlive, port)
         val connectionsText = status?.let { formatConnections(it.connections) } ?: ""
