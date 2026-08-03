@@ -66,23 +66,11 @@ describe('UserMessageRenderer — empty bubble guard (issue #232)', () => {
     expect(container.textContent).toContain('hello');
   });
 
-  it('keeps a tool_result entry visible so unmerged tool output is not lost', () => {
-    // mergeToolResults normally folds this into the tool card above. When it
-    // cannot (the tool_use is on a not-yet-loaded page) the entry must survive,
-    // or the tool's output disappears silently.
-    const { container } = render(
-      <UserMessageRenderer
-        message={userMessage([{ type: 'tool_result', tool_use_id: 'call_1', content: 'output' }])}
-      />,
-    );
-    expect(container.innerHTML).not.toBe('');
-  });
-
-  // The guard above kept the entry visible but rendered `parsedContent.text`,
-  // which is empty for a tool_result — so the "kept" entry was a bare bordered
-  // pill and the output it was meant to protect never reached the screen. The
-  // reporter hit this on a 110-minute / 258-turn session, where an unpaired
-  // tool_result is far more likely.
+  // The v0.26.4 guard kept a tool_result visible but rendered
+  // `parsedContent.text`, which is empty for one — so the "kept" entry was a bare
+  // bordered pill and the output it was meant to protect never reached the
+  // screen. The reporter hit this on a 110-minute / 258-turn session, where an
+  // unpaired tool_result is far more likely.
   it('shows the actual output of an unmerged tool_result, not an empty pill', () => {
     const { container } = render(
       <UserMessageRenderer
@@ -119,5 +107,87 @@ describe('UserMessageRenderer — empty bubble guard (issue #232)', () => {
       />,
     );
     expect(container.innerHTML).toBe('');
+  });
+});
+
+/**
+ * The rule is about what a human sees, not about what a string contains.
+ *
+ * Guarding case by case did not hold: `''` was covered, then `<system-reminder>`,
+ * then `tool_result` — and a zero-width space still drew a box, because
+ * `String.trim()` does not consider one to be whitespace. Worse, the
+ * `commandName` branch returned *above* the guard, so it was never checked at
+ * all. Every new invisible character and every new branch was another leak.
+ *
+ * So the check moved to the single exit and asks about the rendered output. The
+ * cases below are examples of that rule, not the rule itself.
+ *
+ * Escapes, not literals: these characters are invisible in an editor, so a
+ * pasted one would be unreviewable — and a stray one breaks the parse outright.
+ */
+const INVISIBLE: Array<[string, string]> = [
+  ['zero-width space', '​'],
+  ['zero-width non-joiner', '‌'],
+  ['zero-width joiner', '‍'],
+  ['left-to-right mark', '‎'],
+  ['right-to-left mark', '‏'],
+  ['word joiner', '⁠'],
+  ['soft hyphen', '­'],
+  ['BOM / zero-width no-break', '﻿'],
+  ['non-breaking space', ' '],
+  ['ideographic space', '　'],
+  ['hangul filler', 'ㅤ'],
+  ['variation selector', '️'],
+  ['bidi override', '‮'],
+  ['ordinary whitespace', '   \n\t  '],
+  ['a mix of several', '​ ­⁠﻿\n'],
+];
+
+describe('UserMessageRenderer — nothing visible means nothing rendered', () => {
+  it.each(INVISIBLE)('renders nothing for plain text that is only a %s', (_name, ch) => {
+    const { container } = render(<UserMessageRenderer message={userMessage(ch)} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it.each(INVISIBLE)('renders nothing for a tool_result that is only a %s', (_name, ch) => {
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([{ type: 'tool_result', tool_use_id: 'c1', content: ch }])}
+      />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it.each(INVISIBLE)('renders nothing for a command name that is only a %s', (_name, ch) => {
+    // This branch used to return above the guard, so it was never checked.
+    const { container } = render(
+      <UserMessageRenderer message={userMessage(`<command-name>${ch}</command-name>`)} />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('still renders text that merely contains an invisible character', () => {
+    // The rule drops what is invisible, not what is merely unusual.
+    const { container } = render(<UserMessageRenderer message={userMessage('a​b')} />);
+    expect(container.textContent).toContain('a');
+    expect(container.textContent).toContain('b');
+  });
+
+  it('still renders a real command name', () => {
+    const { container } = render(
+      <UserMessageRenderer message={userMessage('<command-name>/clear</command-name>')} />,
+    );
+    expect(container.textContent).toContain('clear');
+  });
+
+  it('keeps an image-only message, which has no glyphs by nature', () => {
+    const { container } = render(
+      <UserMessageRenderer
+        message={userMessage([
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBOR' } },
+        ])}
+      />,
+    );
+    expect(container.innerHTML).not.toBe('');
   });
 });

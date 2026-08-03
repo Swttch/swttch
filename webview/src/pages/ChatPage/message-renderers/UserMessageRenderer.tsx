@@ -12,6 +12,7 @@ import { MessagePathChip } from './components/MessagePathChip';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
+import { IfVisible, hasVisibleGlyph } from './components/IfVisible';
 import { toolResultText } from './ToolRenderers/common/toolStatus';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { modelChangeTarget } from '@/types/models';
@@ -85,25 +86,32 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
     }
   }
 
-  // Render command-name style messages
-  if (parsedContent.commandName) {
+  // Render command-name style messages.
+  //
+  // The leading `/` is decoration, so it cannot vouch for the entry: a name made
+  // only of invisible characters would render as a lone slash in a box, which
+  // `IfVisible` rightly counts as visible. Require the name itself to have a
+  // glyph, and let a nameless entry fall through to the paths below.
+  if (hasVisibleGlyph(parsedContent.commandName)) {
     return (
-      <div className="group py-2 px-4">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0">
-            <MessageBox>
-              <div className="text-text-primary/80 text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
-                <span className="text-text-primary/50">{'/'}</span>{parsedContent.commandName}
-                {parsedContent.text && (
-                  <span className="text-text-primary/50">{' '}{parsedContent.text}</span>
-                )}
-              </div>
-            </MessageBox>
-            {allContexts.length > 0 && <ContextPills context={allContexts} />}
+      <IfVisible extra={allContexts.length > 0 || imageBlocks.length > 0}>
+        <div className="group py-2 px-4">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0">
+              <MessageBox>
+                <div className="text-text-primary/80 text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
+                  <span className="text-text-primary/50">{'/'}</span>{parsedContent.commandName}
+                  {parsedContent.text && (
+                    <span className="text-text-primary/50">{' '}{parsedContent.text}</span>
+                  )}
+                </div>
+              </MessageBox>
+              {allContexts.length > 0 && <ContextPills context={allContexts} />}
+            </div>
+            <MessageActions copied={copied} onCopy={handleCopy} />
           </div>
-          <MessageActions copied={copied} onCopy={handleCopy} />
         </div>
-      </div>
+      </IfVisible>
     );
   }
 
@@ -130,57 +138,56 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // in v0.26.4). So read the result's own text and render THAT; an entry with no
   // output protects nothing and is dropped like any other empty message.
   const unmergedToolResultText = toolResultText(message).trim();
-  const hasAnythingToShow = parsedContent.text.trim() !== ''
-    || imageBlocks.length > 0
-    || allContexts.length > 0
-    || unmergedToolResultText !== '';
-  if (!hasAnythingToShow) return null;
 
   // Show the tool's output as plain preformatted text. This is the fallback path
   // for a result whose tool card is not on screen, so it deliberately stays
   // simple — the rich per-tool renderers need the tool_use that is missing here.
   if (!parsedContent.text.trim() && unmergedToolResultText) {
     return (
+      <IfVisible extra={allContexts.length > 0}>
+        <div className="group pt-2 pb-4 px-4 space-y-2.5">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0">
+              <MessageBox>
+                <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
+                  {unmergedToolResultText}
+                </div>
+              </MessageBox>
+            </div>
+          </div>
+          {allContexts.length > 0 && <ContextPills context={allContexts} />}
+        </div>
+      </IfVisible>
+    );
+  }
+
+  return (
+    <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0}>
       <div className="group pt-2 pb-4 px-4 space-y-2.5">
         <div className="flex items-start gap-2">
           <div className="min-w-0">
             <MessageBox>
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
-                {unmergedToolResultText}
+                {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
+                  seg.isPath ? (
+                    <MessagePathChip key={idx} token={seg.text} />
+                  ) : (
+                    <React.Fragment key={idx}>{seg.text}</React.Fragment>
+                  ),
+                )}
               </div>
             </MessageBox>
           </div>
+
+          {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
         </div>
+
+        {imageBlocks.length > 0 && (
+            <ImageAttachments images={imageBlocks} />
+        )}
+
         {allContexts.length > 0 && <ContextPills context={allContexts} />}
       </div>
-    );
-  }
-
-  return (
-    <div className="group pt-2 pb-4 px-4 space-y-2.5">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0">
-          <MessageBox>
-            <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
-              {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
-                seg.isPath ? (
-                  <MessagePathChip key={idx} token={seg.text} />
-                ) : (
-                  <React.Fragment key={idx}>{seg.text}</React.Fragment>
-                ),
-              )}
-            </div>
-          </MessageBox>
-        </div>
-
-        {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
-      </div>
-
-      {imageBlocks.length > 0 && (
-          <ImageAttachments images={imageBlocks} />
-      )}
-
-      {allContexts.length > 0 && <ContextPills context={allContexts} />}
-    </div>
+    </IfVisible>
   );
 };
