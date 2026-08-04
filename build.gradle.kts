@@ -146,6 +146,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.6 - Modes that match what you see</h3>
+            <ul>
+                <li>Fix Plan Mode turning itself off when re-enabled in the same chat (#172)</li>
+                <li>Fix the permission mode resetting to default after answering a question or reloading a session (#172)</li>
+            </ul>
             <h3>0.26.5 - Fix the backend and its Claude sessions so they shut down properly</h3>
             <ul>
                 <li>Fix the backend to shut down when you close the IDE (#254, based on work by @lukaszszczesniak)</li>
