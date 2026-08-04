@@ -7,6 +7,7 @@ import {
   INPUT_MODE_TO_CLI_FLAG,
   CLI_FLAG_TO_INPUT_MODE,
   isValidInputMode,
+  resolveInitialInputMode,
 } from '../chatInput';
 
 describe('auto mode wiring', () => {
@@ -79,5 +80,20 @@ describe('isValidInputMode', () => {
     // reached the webview unmapped instead of the InputMode vocabulary ("bypass").
     expect(isValidInputMode('bypassPermissions')).toBe(false);
     expect(isValidInputMode('acceptEdits')).toBe(false);
+  });
+});
+
+describe('resolveInitialInputMode', () => {
+  it('translates the configured default flag to an InputMode', () => {
+    expect(resolveInitialInputMode('bypassPermissions')).toBe(InputModeValues.BYPASS);
+    expect(resolveInitialInputMode('plan')).toBe(InputModeValues.PLAN);
+  });
+
+  it('falls back to ask_before_edit when no default is configured', () => {
+    expect(resolveInitialInputMode(undefined)).toBe(InputModeValues.ASK_BEFORE_EDIT);
+  });
+
+  it('falls back to ask_before_edit for an unrecognized flag, never guessing looser', () => {
+    expect(resolveInitialInputMode('somethingNew')).toBe(InputModeValues.ASK_BEFORE_EDIT);
   });
 });

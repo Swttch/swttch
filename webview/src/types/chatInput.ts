@@ -147,6 +147,18 @@ export const CLI_FLAG_TO_INPUT_MODE: Record<string, InputMode> = {
   auto: InputModeValues.AUTO,
 } as const;
 
+/**
+ * The InputMode a session should start in, given the CLI flag configured as
+ * `permissions.defaultMode` (undefined when settings have not resolved a value —
+ * distinct from "no default configured", which the CLI itself never reports; the
+ * absence here is purely "we don't know yet"). Falls back to ask_before_edit for
+ * both an absent setting and an unrecognized flag, so a stale/renamed flag never
+ * silently grants a looser mode than intended.
+ */
+export function resolveInitialInputMode(defaultModeFlag: string | undefined): InputMode {
+  return defaultModeFlag ? (CLI_FLAG_TO_INPUT_MODE[defaultModeFlag] ?? InputModeValues.ASK_BEFORE_EDIT) : InputModeValues.ASK_BEFORE_EDIT;
+}
+
 // ============================================
 // Active File Types (IDE에서 전달받을 타입)
 // ============================================
