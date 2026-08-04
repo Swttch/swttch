@@ -6,6 +6,8 @@ import {
   getAvailableModes,
   INPUT_MODE_TO_CLI_FLAG,
   CLI_FLAG_TO_INPUT_MODE,
+  isValidInputMode,
+  resolveInitialInputMode,
 } from '../chatInput';
 
 describe('auto mode wiring', () => {
@@ -54,5 +56,44 @@ describe('getAvailableModes', () => {
         InputModeValues.AUTO_EDIT,
       ]),
     );
+  });
+});
+
+// Guards a value crossing the backend boundary (SESSION_LOADED.lastReportedMode)
+// before it is cast and applied to the composer.
+describe('isValidInputMode', () => {
+  it('accepts every known InputMode value', () => {
+    Object.values(InputModeValues).forEach((mode) => {
+      expect(isValidInputMode(mode)).toBe(true);
+    });
+  });
+
+  it('rejects null, undefined, and unrecognized strings', () => {
+    expect(isValidInputMode(null)).toBe(false);
+    expect(isValidInputMode(undefined)).toBe(false);
+    expect(isValidInputMode('somethingNew')).toBe(false);
+    expect(isValidInputMode('')).toBe(false);
+  });
+
+  it('rejects CLI flag names — these must already be translated by the backend', () => {
+    // A regression here would mean the raw CLI vocabulary (e.g. "bypassPermissions")
+    // reached the webview unmapped instead of the InputMode vocabulary ("bypass").
+    expect(isValidInputMode('bypassPermissions')).toBe(false);
+    expect(isValidInputMode('acceptEdits')).toBe(false);
+  });
+});
+
+describe('resolveInitialInputMode', () => {
+  it('translates the configured default flag to an InputMode', () => {
+    expect(resolveInitialInputMode('bypassPermissions')).toBe(InputModeValues.BYPASS);
+    expect(resolveInitialInputMode('plan')).toBe(InputModeValues.PLAN);
+  });
+
+  it('falls back to ask_before_edit when no default is configured', () => {
+    expect(resolveInitialInputMode(undefined)).toBe(InputModeValues.ASK_BEFORE_EDIT);
+  });
+
+  it('falls back to ask_before_edit for an unrecognized flag, never guessing looser', () => {
+    expect(resolveInitialInputMode('somethingNew')).toBe(InputModeValues.ASK_BEFORE_EDIT);
   });
 });

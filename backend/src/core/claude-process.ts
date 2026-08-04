@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'child_process';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
@@ -52,6 +53,33 @@ const INPUT_MODE_TO_CLI_FLAG: Record<string, string> = {
   auto: 'auto',
 };
 
+// Reverse of the above: the CLI reports its permission mode using its own flag
+// names, and we store modes in the webview's vocabulary. Derived from the forward
+// map so the two can never drift apart. Exported: both the live stream (system
+// events) and the on-disk JSONL (user entries) carry the mode as this same flag
+// vocabulary in a `permissionMode` field, so the translation is shared while each
+// caller decides which entry's field to read (see readReportedMode and
+// findLastReportedModeInPage in loadSessionMessages.ts).
+export const CLI_FLAG_TO_INPUT_MODE: Record<string, string> = Object.fromEntries(
+  Object.entries(INPUT_MODE_TO_CLI_FLAG).map(([inputMode, flag]) => [flag, inputMode]),
+);
+
+/**
+ * The permission mode a CLI stream event reports, translated into our InputMode
+ * vocabulary — or null if this event does not report one.
+ *
+ * The CLI announces its mode on `system/init` (at spawn) and again on
+ * `system/status` when it changes the mode itself, which is how an approved
+ * ExitPlanMode plan leaving plan mode becomes observable without inspecting the
+ * tool call. Exported for tests.
+ */
+export function readReportedMode(event: Record<string, unknown>): string | null {
+  if (event.type !== 'system') return null;
+  const flag = event.permissionMode;
+  if (typeof flag !== 'string') return null;
+  return CLI_FLAG_TO_INPUT_MODE[flag] ?? null;
+}
+
 /**
  * Build the argv for spawning the Claude CLI in interactive print mode.
  * Extracted as a pure function so the flag composition (session flag,
@@ -97,6 +125,16 @@ export function buildClaudeArgs(
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
+// Sessions whose CLI we are killing on purpose to respawn it under a different
+// permission mode. The exit is ours, not a failure, so the close handler must not
+// surface it as an error or as STREAM_END — the user only asked to switch modes and
+// a new process is already on its way. Cleared as soon as that close is observed.
+const sessionsRestartingForMode = new Set<string>();
+
+// How long to wait for a CLI to exit on SIGTERM during a mode-change restart before
+// escalating to SIGKILL. The user is waiting on their message, so this stays short.
+const MODE_RESTART_KILL_TIMEOUT_MS = 3000;
+
 // 한 번이라도 spawn된 세션 추적 (재시작 시 --resume 사용 판단용)
 // --session-id: 새 세션 전용 (JSONL 이미 존재하면 "already in use" 에러)
 // --resume: 기존 세션 이어받기 (JSONL이 있어야 동작)
@@ -111,8 +149,94 @@ export function markSessionAsSpawned(sessionId: string): void {
 }
 
 /**
+ * Whether a live CLI running under `liveMode` can serve a message requesting
+ * `requestedMode`, or has to be restarted first.
+ *
+ * `--permission-mode` is a spawn-time flag and no official CLI command changes it
+ * in place, so honoring a mid-chat mode change means respawning (#172). Extracted
+ * as a pure function so this decision is unit-testable without spawning anything.
+ *
+ * Every message carries the mode the UI is currently showing, so this compares it
+ * against what the CLI is actually running under. `liveMode` tracks the CLI, not
+ * merely the flag we spawned it with: the CLI reports its own mode on `system/init`
+ * and again on `system/status` whenever it changes it itself (approving an
+ * ExitPlanMode plan leaves plan mode with no respawn), and the stream handler keeps
+ * the record in step. Comparing against a spawn-time-only record would read that
+ * self-initiated exit as "no change" and reuse a CLI that is no longer in plan.
+ *
+ * A null `liveMode` means we have a process but never recorded a mode for it (e.g. a
+ * session reclaimed after a backend restart). Restarting is the safe reading: reusing
+ * would gamble on an unknown mode and risk edits running under looser permissions
+ * than the user chose.
+ */
+export function needsRestartForMode(liveMode: string | null, requestedMode: string): boolean {
+  return liveMode !== requestedMode;
+}
+
+/**
+ * Terminate a session's live CLI so it can be respawned under a different
+ * permission mode, and wait until it is really gone.
+ *
+ * Waiting matters: the respawn uses `--resume` on the same session, and two CLIs
+ * writing one JSONL branches the history. The CLI's own 'close' handler does the
+ * teardown (process reference, registry entry), so this only has to kill and wait
+ * for that to run. The timeout is a liveness guard — a CLI ignoring SIGTERM gets
+ * SIGKILL rather than hanging the user's message forever.
+ */
+async function restartForModeChange(
+  connections: ConnectionManager,
+  sessionId: string,
+  proc: ChildProcess,
+): Promise<void> {
+  sessionsRestartingForMode.add(sessionId);
+
+  const exited = new Promise<void>((resolve) => {
+    if (proc.exitCode !== null || proc.signalCode !== null) {
+      resolve();
+      return;
+    }
+    proc.once('close', () => resolve());
+  });
+
+  Claude.killTree(proc);
+
+  let escalation: NodeJS.Timeout | undefined;
+  const escalated = new Promise<void>((resolve) => {
+    escalation = setTimeout(() => {
+      console.error(
+        '[node-backend]',
+        `CLI for session ${sessionId} did not exit on SIGTERM; escalating to SIGKILL`,
+      );
+      Claude.killTree(proc, 'SIGKILL');
+      resolve();
+    }, MODE_RESTART_KILL_TIMEOUT_MS);
+  });
+
+  await Promise.race([exited, escalated]);
+  if (escalation) clearTimeout(escalation);
+  // After a SIGKILL escalation the close handler may still be pending; give it the
+  // same bounded wait so the respawn never races the teardown it depends on.
+  await Promise.race([exited, new Promise<void>((r) => setTimeout(r, MODE_RESTART_KILL_TIMEOUT_MS))]);
+
+  sessionsRestartingForMode.delete(sessionId);
+
+  // The close handler clears these, but a hard-killed process that never ran it
+  // would otherwise leave the respawn reusing a dead reference and a stale buffer.
+  connections.setProcess(sessionId, null);
+  connections.setBuffer(sessionId, '');
+  // The turn-in-flight flag is normally cleared by the CLI `result` event, with
+  // STREAM_END as the process-death safety net — and this restart deliberately
+  // suppresses that STREAM_END. A previous turn that died without a `result`
+  // would leave the flag stuck on forever, so clear it here explicitly. The
+  // replacement process sets it again when the pending message reaches stdin.
+  connections.setStreaming(sessionId, false);
+}
+
+/**
  * 세션에 대한 claude -p 프로세스가 없으면 새로 spawn한다.
  * 이미 살아있는 프로세스가 있으면 아무 것도 하지 않는다.
+ * 단, 요청된 권한 모드가 살아있는 프로세스의 모드와 다르면
+ * 그 모드로 재시작한다(--permission-mode는 spawn 시점 플래그이므로).
  */
 export async function ensureClaudeProcess(
   connections: ConnectionManager,
@@ -144,11 +268,27 @@ export async function ensureClaudeProcess(
 
   const existingSession = connections.getSession(targetSessionId);
   if (existingSession?.process) {
+    // `--permission-mode` is a spawn-time flag: a live CLI keeps whatever mode it
+    // started with, and no official CLI command changes it in place. So when the user
+    // picks a different mode mid-chat, honoring it means restarting the process under
+    // the new flag — otherwise the choice is silently dropped and the CLI's next
+    // `system/init` pushes the old mode back onto the webview, which looks like the
+    // mode flipping itself off (#172). Same mode → reuse as before.
+    const liveMode = connections.getInputMode(targetSessionId);
+    if (!needsRestartForMode(liveMode, inputMode)) {
+      console.error(
+        '[node-backend]',
+        `Reusing existing process for session ${targetSessionId} (PID: ${existingSession.process.pid})`,
+      );
+      return;
+    }
+
     console.error(
       '[node-backend]',
-      `Reusing existing process for session ${targetSessionId} (PID: ${existingSession.process.pid})`,
+      `Permission mode changed (${liveMode} -> ${inputMode}) for session ${targetSessionId}; ` +
+        `restarting CLI (PID: ${existingSession.process.pid})`,
     );
-    return;
+    await restartForModeChange(connections, targetSessionId, existingSession.process);
   }
 
   // Liveness guard before spawning: a live, identity-checked CLI may
@@ -254,6 +394,10 @@ export async function ensureClaudeProcess(
 
   // SessionRecord에 프로세스 저장
   connections.setProcess(targetSessionId, proc);
+  // Remember the mode this process actually runs under, so a later mode change is
+  // detected and honored by restarting instead of being silently dropped (#172).
+  // Must follow setProcess — clearing the process also clears the recorded mode.
+  connections.setInputMode(targetSessionId, inputMode);
   connections.setBuffer(targetSessionId, '');
 
   // The session's process is now alive — this is where we re-arm any scheduled
@@ -318,6 +462,12 @@ export async function ensureClaudeProcess(
     try {
       console.error('[node-backend]', `Claude CLI process exited with code: ${code}`);
 
+      // We killed this process ourselves to respawn it under a new permission mode.
+      // The user asked to switch modes, not to end anything, and a replacement CLI is
+      // already being spawned — so skip the failure reporting and the STREAM_END that
+      // would otherwise flash an error and a dead stream in the middle of a mode change.
+      const restartingForMode = sessionsRestartingForMode.has(targetSessionId);
+
       // 남은 버퍼 처리
       const remainingBuffer = connections.getBuffer(targetSessionId);
       if (remainingBuffer.trim()) {
@@ -337,7 +487,7 @@ export async function ensureClaudeProcess(
       }
 
       // 비정상 종료 + result 미수신 → 에러 전파
-      if (code !== 0 && !sessionsWithResult.has(targetSessionId)) {
+      if (code !== 0 && !sessionsWithResult.has(targetSessionId) && !restartingForMode) {
         const errorMessage = stderrBuffer.trim() || `Claude CLI exited with code ${code}`;
         connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
           type: MessageType.CLI_EXIT_ERROR,
@@ -351,9 +501,15 @@ export async function ensureClaudeProcess(
 
       // 추적 정리
       sessionsWithResult.delete(targetSessionId);
-      workflowTracker?.stopSession(targetSessionId);
 
-      connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
+      // On a mode-change restart the session continues in the replacement process, so
+      // neither of these applies: tearing down the workflow tracker would drop progress
+      // the new CLI still reports on, and STREAM_END would end a stream the user never
+      // stopped. The respawn emits its own STREAM_START.
+      if (!restartingForMode) {
+        workflowTracker?.stopSession(targetSessionId);
+        connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
+      }
 
       // 프로세스 참조만 해제 (세션 레코드는 유지 — 구독자가 아직 있을 수 있음)
       connections.setProcess(targetSessionId, null);
@@ -573,6 +729,22 @@ function handleStreamEvent(
   // Detect background dynamic workflows and stream their live progress. Pure
   // side-effect — the raw CLI event is still forwarded unchanged below.
   getWorkflowTracker(connections).handleEvent(targetSessionId, event);
+
+  // Keep the recorded permission mode in step with what the CLI says it is running
+  // under. The CLI reports this on `system/init` (spawn) and again on `system/status`
+  // when it changes mode by itself — approving an ExitPlanMode plan leaves plan mode
+  // with no respawn. Without adopting that, the record would still read `plan`, the
+  // user re-picking Plan Mode would compare equal, and the CLI would be reused while
+  // actually out of plan — the "Plan Mode turns itself off" report (#172).
+  const reportedMode = readReportedMode(event);
+  if (reportedMode && reportedMode !== connections.getInputMode(targetSessionId)) {
+    console.error(
+      '[node-backend]',
+      `CLI reports permission mode "${reportedMode}" for session ${targetSessionId} ` +
+        `(was "${connections.getInputMode(targetSessionId)}")`,
+    );
+    connections.setInputMode(targetSessionId, reportedMode);
+  }
 
   // 백엔드 고유 사이드이펙트 (WebView 전달과 무관한 서버 내부 로직)
   if (eventType === 'result') {

@@ -153,6 +153,33 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // `--permission-mode` only applies when the CLI is spawned, so the mode a live
+  // process actually runs under has to be remembered to notice a later change (#172).
+  describe('session permission mode', () => {
+    it('should set and get the mode the live process was spawned with', () => {
+      const proc = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      cm.setProcess('sess-1', proc);
+      cm.setInputMode('sess-1', 'plan');
+      expect(cm.getInputMode('sess-1')).toBe('plan');
+    });
+
+    it('should return null for a session that never spawned a process', () => {
+      expect(cm.getInputMode('nonexistent')).toBeNull();
+    });
+
+    it('should clear the recorded mode when the process reference is cleared', () => {
+      const proc = { kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      cm.setProcess('sess-1', proc);
+      cm.setInputMode('sess-1', 'plan');
+
+      // The CLI exited — the mode described THAT process, so it must not linger and
+      // make the next spawn's mode look unchanged.
+      cm.setProcess('sess-1', null);
+
+      expect(cm.getInputMode('sess-1')).toBeNull();
+    });
+  });
+
   describe('buffer management', () => {
     it('should set and get buffer', () => {
       cm.getOrCreateSession('sess-1');

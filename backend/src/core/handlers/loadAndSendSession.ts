@@ -37,6 +37,11 @@ export async function loadAndSendSession(
     hasMore: result.hasMore,
     oldestUuid: result.oldestUuid,
     prepend: isOlderPage,
+    // Permission mode found within the newest page (null on an older page, or when
+    // the newest page carries none — see findLastReportedModeInPage). The webview
+    // restores the composer to this on reload instead of the configured default,
+    // and treats null as "not confidently known" rather than "unset".
+    lastReportedMode: result.lastReportedMode,
   });
 
   // Rebuild background-workflow state from the transcript so the inline cards

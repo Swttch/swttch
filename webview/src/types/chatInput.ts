@@ -12,6 +12,18 @@ export const InputModeValues = {
 
 export type InputMode = typeof InputModeValues[keyof typeof InputModeValues];
 
+const KNOWN_INPUT_MODES: readonly string[] = Object.values(InputModeValues);
+
+/**
+ * Whether `value` is a recognized InputMode. Used when a mode arrives from an
+ * external source (backend `lastReportedMode` on session reload) that this
+ * codebase does not fully control the vocabulary of — a value it does not
+ * recognize must not be cast and applied to the composer.
+ */
+export function isValidInputMode(value: unknown): value is InputMode {
+  return typeof value === 'string' && KNOWN_INPUT_MODES.includes(value);
+}
+
 export interface InputModeConfig {
   id: InputMode;
   icon: string;               // codicon 아이콘 이름 (예: 'tasklist', 'zap')
@@ -134,6 +146,18 @@ export const CLI_FLAG_TO_INPUT_MODE: Record<string, InputMode> = {
   acceptEdits: InputModeValues.AUTO_EDIT,
   auto: InputModeValues.AUTO,
 } as const;
+
+/**
+ * The InputMode a session should start in, given the CLI flag configured as
+ * `permissions.defaultMode` (undefined when settings have not resolved a value —
+ * distinct from "no default configured", which the CLI itself never reports; the
+ * absence here is purely "we don't know yet"). Falls back to ask_before_edit for
+ * both an absent setting and an unrecognized flag, so a stale/renamed flag never
+ * silently grants a looser mode than intended.
+ */
+export function resolveInitialInputMode(defaultModeFlag: string | undefined): InputMode {
+  return defaultModeFlag ? (CLI_FLAG_TO_INPUT_MODE[defaultModeFlag] ?? InputModeValues.ASK_BEFORE_EDIT) : InputModeValues.ASK_BEFORE_EDIT;
+}
 
 // ============================================
 // Active File Types (IDE에서 전달받을 타입)

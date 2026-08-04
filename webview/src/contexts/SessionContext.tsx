@@ -92,7 +92,12 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
   // Input mode 상태
   const [inputMode, setInputModeState] = useState<InputMode>('ask_before_edit');
-  const hasUserChangedMode = useRef(false);
+  // 이 세션의 모드가 이미 정해졌는가. 켜지면 설정 기본값(permissions.defaultMode)은
+  // 더 이상 끼어들지 않는다. "사용자가 직접 골랐는가"가 아니라 "정해졌는가"인 이유:
+  // 세션은 사용자가 모드 버튼을 누르지 않아도 특정 모드로 진행 중일 수 있고
+  // (새 탭이 plan으로 열린 경우 등), 그 상태에서 인풋 영역이 교체됐다는 이유로
+  // 기본값이 되살아나면 진행 중인 세션의 모드가 조용히 뒤집힌다.
+  const isModeSettled = useRef(false);
   // 세션 전환 시 초기 모드 재동기화를 트리거하기 위한 카운터
   const [modeResetTrigger, setModeResetTrigger] = useState(0);
   // addNewSession 시 URL 변경으로 인한 모드 리셋을 건너뛰기 위한 플래그
@@ -103,7 +108,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [autoFallbackNotice, setAutoFallbackNotice] = useState(false);
 
   const setInputMode = useCallback((newMode: InputMode) => {
-    hasUserChangedMode.current = true;
+    isModeSettled.current = true;
     setInputModeState(newMode);
   }, []);
 
@@ -114,7 +119,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
   );
 
   const cycleInputMode = useCallback(() => {
-    hasUserChangedMode.current = true;
+    isModeSettled.current = true;
     setInputModeState((current) => {
       const currentIndex = availableModes.indexOf(current);
       const nextIndex = (currentIndex + 1) % availableModes.length;
@@ -122,15 +127,24 @@ export function SessionProvider({ children }: SessionProviderProps) {
     });
   }, [availableModes]);
 
+  // 설정 기본값(permissions.defaultMode)을 세션 시작 시 한 번만 적용한다.
+  // 적용하는 순간 모드는 정해진 것으로 본다 — 이 함수는 ChatInput이 마운트될 때마다
+  // 호출되는데, AskUserQuestion·플랜 승인 패널이 뜨면 ChatInput이 언마운트됐다가
+  // 다시 붙는다. "아직 사용자가 모드를 고르지 않았다"는 이유로 그때마다 기본값을
+  // 다시 적용하면, plan으로 진행 중이던 세션이 답변 한 번에 기본값(예: bypass)으로
+  // 뒤집힌다 — 화면은 느슨한 모드를 보여주는데 CLI는 여전히 plan인, 표시와 실제가
+  // 어긋나는 상태가 된다.
   const syncInitialInputMode = useCallback((initialMode: InputMode) => {
-    if (!hasUserChangedMode.current) {
-      setInputModeState(initialMode);
-    }
+    if (isModeSettled.current) return;
+    isModeSettled.current = true;
+    setInputModeState(initialMode);
   }, []);
 
-  // CLI가 통보한 실제 적용 모드를 반영한다(진실원). 사용자가 무엇을 골랐는지(hasUserChangedMode)는
-  // 보존하되, 화면에 보이는 모드는 CLI가 실제 적용한 것과 일치시킨다.
+  // CLI가 통보한 실제 적용 모드를 반영한다(진실원). 화면에 보이는 모드를 CLI가 실제
+  // 적용한 것과 일치시키고, 그 모드로 정해진 것으로 본다 — CLI가 실제로 그 모드로
+  // 돌고 있는 이상 설정 기본값이 나중에 이를 덮어써선 안 된다.
   const syncEffectiveMode = useCallback((mode: InputMode) => {
+    isModeSettled.current = true;
     setInputModeState(mode);
   }, []);
 
@@ -145,7 +159,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
       skipNextModeReset.current = false;
       return;
     }
-    hasUserChangedMode.current = false;
+    // 다른 세션으로 넘어갔으니 이전 세션에서 정해진 모드는 더 이상 유효하지 않다.
+    // 새 세션은 다시 설정 기본값에서 출발한다.
+    isModeSettled.current = false;
     setModeResetTrigger(c => c + 1);
   }, [currentSessionId]);
 

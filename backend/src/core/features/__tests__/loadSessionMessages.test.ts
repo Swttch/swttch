@@ -202,4 +202,88 @@ describe('loadSessionMessages', () => {
     // hasMore stays honest: there is older history before this fallback page.
     expect(result.hasMore).toBe(true);
   });
+
+  // On reload, the composer should restore the session's actual mode rather than
+  // falling back to the configured default — that fallback is what looked like the
+  // mode "resetting itself" on refresh.
+  describe('lastReportedMode', () => {
+    it('finds the most recent permissionMode within the newest page', async () => {
+      await writeSession('sess-mode', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'plan' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1', permissionMode: 'default' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a2', parentUuid: 'u2' }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-mode');
+      expect(result.lastReportedMode).toBe('ask_before_edit');
+    });
+
+    it('translates every CLI flag into the webview vocabulary', async () => {
+      await writeSession('sess-flags', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'bypassPermissions' }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-flags');
+      expect(result.lastReportedMode).toBe('bypass');
+    });
+
+    it('is null when the newest page carries no permissionMode at all', async () => {
+      await writeSession('sess-none', [
+        JSON.stringify({ type: 'user', uuid: 'u1' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-none');
+      expect(result.lastReportedMode).toBeNull();
+    });
+
+    // The whole point of bounding the search to one page: an older page must not
+    // pay for (or claim to know) the session's current mode.
+    it('is null on an older ("load older") page even if that page has a mode', async () => {
+      await writeSession('sess-old-page', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'plan' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a2', parentUuid: 'u2' }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-old-page', 'u2', 10);
+      expect(result.lastReportedMode).toBeNull();
+    });
+
+    // A tool_result is JSONL type "user" but carries no permissionMode — it is not a
+    // prompt the CLI processed under any mode. A real session's last entries are
+    // usually exactly this (assistant calls a tool, the result comes back as
+    // "user"), so treating it as "unknown" would blank out the mode on nearly
+    // every reload.
+    it('skips user entries that are tool results, not prompts', async () => {
+      await writeSession('sess-tool-result', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'plan' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1' }),
+        JSON.stringify({
+          type: 'user',
+          uuid: 'u2',
+          parentUuid: 'a1',
+          message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'x' }] },
+        }),
+      ]);
+
+      const result = await loadSessionMessages('/work', 'sess-tool-result');
+      expect(result.lastReportedMode).toBe('plan');
+    });
+
+    it('does not fall through to an unrecognized flag as a guess', async () => {
+      await writeSession('sess-unknown-flag', [
+        JSON.stringify({ type: 'user', uuid: 'u1', permissionMode: 'plan' }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'u1', permissionMode: 'somethingNew' }),
+      ]);
+
+      // The newest entry's flag is unrecognized — this must not silently report
+      // the older recognized one either (issue #6 taught the same lesson about
+      // guessing instead of being explicit about what is actually known).
+      const result = await loadSessionMessages('/work', 'sess-unknown-flag');
+      expect(result.lastReportedMode).toBeNull();
+    });
+  });
 });

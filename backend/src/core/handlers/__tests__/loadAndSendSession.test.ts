@@ -51,6 +51,7 @@ describe('loadAndSendSession', () => {
       oldestUuid: 'u99',
       total: 100,
       activeChain: fullChain,
+      lastReportedMode: null,
     });
     mockReconstruct.mockResolvedValue([]);
   });

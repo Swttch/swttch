@@ -47,6 +47,14 @@ interface SessionRecord {
    * future IDE exit-confirm modal).
    */
   streaming: boolean;
+  /**
+   * Permission mode the LIVE process was actually spawned with. `--permission-mode`
+   * only applies at spawn, so a mode the user picks afterwards cannot reach a running
+   * CLI — without remembering what the process is really running as, a later mode
+   * change would be silently dropped and the CLI's `system/init` would push the stale
+   * mode back onto the webview (#172). Null when no process has been spawned yet.
+   */
+  inputMode: string | null;
 }
 
 interface ClientRecord {
@@ -604,6 +612,7 @@ export class ConnectionManager {
         buffer: '',
         workingDir: workingDir ?? '',
         streaming: false,
+        inputMode: null,
       };
       this.sessionRegistry.set(sessionId, session);
     }
@@ -615,10 +624,24 @@ export class ConnectionManager {
   setProcess(sessionId: string, proc: ChildProcess | null): void {
     const session = this.getOrCreateSession(sessionId);
     session.process = proc;
+    // The recorded permission mode describes the LIVE process, so it dies with it.
+    // Leaving a stale mode behind would make the next spawn look like a no-op change.
+    if (!proc) session.inputMode = null;
   }
 
   getProcess(sessionId: string): ChildProcess | null {
     return this.sessionRegistry.get(sessionId)?.process ?? null;
+  }
+
+  /** Record the permission mode the session's live CLI process was spawned with. */
+  setInputMode(sessionId: string, inputMode: string | null): void {
+    const session = this.getOrCreateSession(sessionId);
+    session.inputMode = inputMode;
+  }
+
+  /** Permission mode the session's live CLI is actually running under, if any. */
+  getInputMode(sessionId: string): string | null {
+    return this.sessionRegistry.get(sessionId)?.inputMode ?? null;
   }
 
   setBuffer(sessionId: string, buffer: string): void {
