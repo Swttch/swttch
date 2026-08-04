@@ -474,6 +474,33 @@ describe('SessionContext', () => {
       expect(capturedCtx!.inputMode).toBe('plan');
     });
 
+    // Reload ordering: ChatInput mounts and applies the settings default the
+    // instant the page renders, but SESSION_LOADED (carrying the session's actual
+    // last mode) only arrives after a backend round trip — strictly later. The
+    // restored mode must still win even though it settles the mode SECOND.
+    it('세션 로드로 복원된 모드는 이미 정해진 기본값보다 늦게 도착해도 이긴다', async () => {
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      // ChatInput mounts first and applies the configured default (settles the mode).
+      act(() => {
+        capturedCtx?.syncInitialInputMode('bypass');
+      });
+      expect(capturedCtx!.inputMode).toBe('bypass');
+
+      // SESSION_LOADED arrives afterward with the session's actual last mode.
+      act(() => {
+        capturedCtx?.syncEffectiveMode('plan');
+      });
+
+      expect(capturedCtx!.inputMode).toBe('plan');
+    });
+
     it('세션 전환 후에는 초기값 재동기화가 다시 적용된다', async () => {
       mockPathname = '/sessions/session-1';
       mockSessionsIndex.mockResolvedValue({ sessions: mockSessionDtos });

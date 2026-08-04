@@ -27,6 +27,7 @@ import { useApi } from './ApiContext';
 import { SessionState } from '../types';
 import type { LoadedMessageDto } from '../types';
 import { MessageType } from '@/shared';
+import { isValidInputMode } from '@/types/chatInput';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -52,7 +53,7 @@ function SessionLoader({ children }: { children: ReactNode }) {
   const api = useApi();
   const {
     loadSessions, sessions, currentSessionId, navigateToNewSession,
-    isNewlyCreatedSession, setSessionState,
+    isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
   const { loadMessages, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
   const { settings } = useSettings();
@@ -132,6 +133,7 @@ function SessionLoader({ children }: { children: ReactNode }) {
         const prepend = message.payload?.prepend as boolean | undefined;
         const hasMore = message.payload?.hasMore as boolean | undefined;
         const oldestUuid = message.payload?.oldestUuid as string | undefined;
+        const lastReportedMode = message.payload?.lastReportedMode as string | null | undefined;
 
         // Guard: ignore stale responses from previously requested sessions
         if (sid && sid !== currentSessionIdRef.current) {
@@ -153,9 +155,19 @@ function SessionLoader({ children }: { children: ReactNode }) {
           loadMessages(rawMessages);
         }
         setPaginationState(!!hasMore, oldestUuid ?? null);
+
+        // Restore the permission mode this session was last running under, found
+        // within the newest page (backend never returns this on an older/prepend
+        // page). Null means the newest page carried no mode within its bounds —
+        // "too far back to look" per the backend's page-only search — so the
+        // composer falls back to the configured default via syncInitialInputMode,
+        // same as a session with no prior mode at all.
+        if (!prepend && isValidInputMode(lastReportedMode)) {
+          syncEffectiveMode(lastReportedMode);
+        }
       }
     });
-  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession]);
+  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode]);
 
   // 4. Validate session exists in list — redirect bad URLs
   useEffect(() => {

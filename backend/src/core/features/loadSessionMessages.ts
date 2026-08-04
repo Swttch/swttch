@@ -3,6 +3,7 @@ import { join } from 'path';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readJsonlEntries } from './readJsonlEntries';
 import { filterActiveChain } from './activeChain';
+import { CLI_FLAG_TO_INPUT_MODE } from '../claude-process';
 
 // Raw JSONL entry - passed through as-is to match Kotlin backend
 export type SessionMessage = Record<string, unknown>;
@@ -16,6 +17,12 @@ export interface PaginatedSessionMessages {
   // whole-transcript work like workflow reconstruction, which must see tool_use /
   // tool_result entries older than the page. Never forwarded to the webview.
   activeChain: SessionMessage[];
+  // The permission mode the CLI was last known to be running under, found within
+  // the returned (newest) page only — or null if the page carries none. Only set
+  // when this is the newest page (no beforeUuid): an older page says nothing about
+  // the session's CURRENT mode. See findLastReportedModeInPage for why the search
+  // is bounded to one page rather than the whole session.
+  lastReportedMode: string | null;
 }
 
 // Extract Task tool_use id -> agentId mappings from main session messages
@@ -293,6 +300,43 @@ async function getActiveChain(
   return activeChain;
 }
 
+/**
+ * The permission mode the CLI was last running under, read from the newest page
+ * of messages only — never by scanning further back into the session.
+ *
+ * Every `user` entry the CLI actually processed as a prompt carries the mode it
+ * was applied under (`permissionMode`, in the CLI's own flag vocabulary — see
+ * CLI_FLAG_TO_INPUT_MODE). A `user`-typed entry WITHOUT that field is a tool
+ * result being fed back to the CLI, not a prompt — it never had a mode and is
+ * skipped, not treated as "unknown" (see cli-tool-results-are-user-type-entries).
+ * The most recent entry that does carry the field is the session's current mode
+ * as of reload.
+ *
+ * Bounded to one page on purpose: walking further back to find a mode would mean
+ * reading and parsing session history the reload does not otherwise need, and
+ * that cost grows with session age with no upper bound. If nothing in the newest
+ * page carries the field at all, that is treated as "too far back to look" and
+ * the caller falls back to the configured default rather than paying for a
+ * deeper scan.
+ *
+ * The most recent entry that DOES carry the field decides the answer outright —
+ * if its flag is unrecognized, this returns null rather than falling through to
+ * an OLDER, recognized flag. Skipping past it would risk reporting a mode the
+ * session has since moved away from as if it were current; "unknown" must not
+ * silently resolve to a stale guess.
+ */
+export function findLastReportedModeInPage(page: SessionMessage[]): string | null {
+  for (let i = page.length - 1; i >= 0; i--) {
+    const entry = page[i];
+    if (entry.type !== 'user') continue;
+    const flag = entry.permissionMode;
+    if (flag === undefined) continue; // tool-result entry, not a prompt — no mode to read
+    if (typeof flag !== 'string') return null;
+    return CLI_FLAG_TO_INPUT_MODE[flag] ?? null;
+  }
+  return null;
+}
+
 export async function loadSessionMessages(
   workingDir: string,
   targetSessionId: string,
@@ -311,6 +355,7 @@ export async function loadSessionMessages(
       hasMore: false,
       total: 0,
       activeChain: [],
+      lastReportedMode: null,
     };
   }
 
@@ -362,11 +407,16 @@ export async function loadSessionMessages(
     (m) => typeof m.uuid === 'string',
   )?.uuid as string | undefined;
 
+  // Only the newest page (no cursor) describes the session's CURRENT mode — an
+  // older "load older" page is history, not "what mode is this session in now".
+  const lastReportedMode = beforeUuid ? null : findLastReportedModeInPage(slicedMessages);
+
   return {
     messages: slicedMessages,
     hasMore,
     oldestUuid,
     total,
     activeChain: activeChainMessages,
+    lastReportedMode,
   };
 }

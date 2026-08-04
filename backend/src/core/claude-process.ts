@@ -55,8 +55,12 @@ const INPUT_MODE_TO_CLI_FLAG: Record<string, string> = {
 
 // Reverse of the above: the CLI reports its permission mode using its own flag
 // names, and we store modes in the webview's vocabulary. Derived from the forward
-// map so the two can never drift apart.
-const CLI_FLAG_TO_INPUT_MODE: Record<string, string> = Object.fromEntries(
+// map so the two can never drift apart. Exported: both the live stream (system
+// events) and the on-disk JSONL (user entries) carry the mode as this same flag
+// vocabulary in a `permissionMode` field, so the translation is shared while each
+// caller decides which entry's field to read (see readReportedMode and
+// findLastReportedModeInPage in loadSessionMessages.ts).
+export const CLI_FLAG_TO_INPUT_MODE: Record<string, string> = Object.fromEntries(
   Object.entries(INPUT_MODE_TO_CLI_FLAG).map(([inputMode, flag]) => [flag, inputMode]),
 );
 
