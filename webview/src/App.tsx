@@ -66,7 +66,7 @@ function AppContent() {
       {backgroundLocation && (
         <SettingsOverlay>
           <Routes>
-            <Route path="/settings/*" element={<SettingsPage />} />
+            <Route path="/settings/*" element={<SettingsPage asOverlay />} />
           </Routes>
         </SettingsOverlay>
       )}
