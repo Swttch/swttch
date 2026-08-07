@@ -120,6 +120,29 @@ function renderWithTheme(theme: ThemeMode) {
   );
 }
 
+function seedSyncIdeTheme(enabled: boolean) {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ [SettingKey.SYNC_IDE_THEME]: enabled }),
+    );
+  } catch {
+    // ignore
+  }
+}
+
+function renderWithSyncIdeTheme(enabled: boolean) {
+  seedSyncIdeTheme(enabled);
+  const client = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={client}>
+      <SettingsProvider>
+        <div data-testid="child">child</div>
+      </SettingsProvider>
+    </QueryClientProvider>,
+  );
+}
+
 function seedUiDirection(uiDirection: UiDirection) {
   try {
     localStorage.setItem(
@@ -155,6 +178,7 @@ beforeEach(() => {
     // ignore
   }
   document.documentElement.classList.remove('dark');
+  document.documentElement.classList.remove('ide-theme-sync');
   document.documentElement.setAttribute('dir', 'ltr');
   setJcefEnv(false);
   setIdeTheme(null);
@@ -163,6 +187,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.documentElement.classList.remove('dark');
+  document.documentElement.classList.remove('ide-theme-sync');
   document.documentElement.setAttribute('dir', 'ltr');
   setJcefEnv(false);
   setIdeTheme(null);
@@ -299,6 +324,83 @@ describe('SettingsContext theme — explicit modes', () => {
 
     await waitFor(() => {
       expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+  });
+});
+
+describe('SettingsContext syncIdeTheme — <html class="ide-theme-sync"> (issue #267)', () => {
+  it('adds the class when the setting is on inside JetBrains', async () => {
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    renderWithSyncIdeTheme(true);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
+    });
+  });
+
+  it('does not add the class when the setting is off', async () => {
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    renderWithSyncIdeTheme(false);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('does not add the class in Standalone even when the setting is on', async () => {
+    // Browser mode has no IDE colors to sync with, so the opt-in must not take
+    // effect there — otherwise the CSS layer would fire with no variables set.
+    setJcefEnv(false);
+
+    renderWithSyncIdeTheme(true);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('is off by default (users keep our own palette until they opt in)', async () => {
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    // No seeded value — falls through to DEFAULT_SETTINGS.
+    const client = createTestQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <SettingsProvider>
+          <div data-testid="child">child</div>
+        </SettingsProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('keeps the class across an ide-theme-changed event (IDE theme switch)', async () => {
+    setJcefEnv(true);
+    setIdeTheme('light');
+
+    renderWithSyncIdeTheme(true);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
+    });
+
+    // Kotlin re-injects colors and fires this on every LAF change; the opt-in
+    // must survive so the newly injected colors keep applying.
+    act(() => {
+      setIdeTheme('dark');
+      window.dispatchEvent(new Event('ide-theme-changed'));
+    });
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
     });
   });
 });

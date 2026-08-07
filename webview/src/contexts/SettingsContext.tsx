@@ -176,6 +176,26 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     return () => mq.removeEventListener('change', handler);
   }, [settings]);
 
+  // Apply IDE theme sync to <html> element (issue #267). Toggles the
+  // `ide-theme-sync` class, which is what makes the `--ccg-ide-*` variables
+  // Kotlin injects actually take effect (see index.css).
+  //
+  // JetBrains only: in browser mode no colors are injected, so the class would
+  // do nothing — we skip it entirely rather than leave a dead marker in the DOM.
+  // The `.dark` toggle above still runs independently, so `--ccg-ide-*` misses
+  // fall back to the light or dark value that matches the resolved theme.
+  useEffect(() => {
+    const apply = () => {
+      const enabled = settings[SettingKey.SYNC_IDE_THEME] === true && isJetBrains();
+      document.documentElement.classList.toggle('ide-theme-sync', enabled);
+    };
+    apply();
+    // Kotlin re-injects colors on every LAF change; re-running keeps the class
+    // correct if the attribute only appears once colors are first injected.
+    const unsubscribe = subscribeIdeTheme(apply);
+    return unsubscribe;
+  }, [settings]);
+
   // Apply UI mirroring to <html> element. Toggles the `dir` attribute based on
   // the uiDirection setting: 'ltr' (default) or 'rtl'.
   useEffect(() => {

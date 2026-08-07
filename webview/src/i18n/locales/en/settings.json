@@ -98,7 +98,11 @@
         "systemIde": "System (IDE)",
         "systemOs": "System (OS)",
         "light": "Light",
-        "dark": "Dark"
+        "dark": "Dark",
+        "managedByIde": "Managed by IDE"
+      },
+      "syncIdeTheme": {
+        "label": "Sync with IDE"
       },
       "fontSize": {
         "label": "Font Size",

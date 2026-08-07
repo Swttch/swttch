@@ -159,7 +159,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
               key={i}
               onClick={() => void handleSelect(m.value)}
               className={`w-full relative flex items-center justify-between px-2 py-1 rounded-md text-start transition-colors ${
-                selected ? 'bg-surface-hover' : 'hover:bg-surface-hover'
+                selected ? 'bg-surface-pressed' : 'hover:bg-surface-hover'
               }`}
             >
               <span className="flex flex-col min-w-0">

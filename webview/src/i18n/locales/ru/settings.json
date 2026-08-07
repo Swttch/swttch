@@ -98,7 +98,11 @@
         "systemIde": "Системная (IDE)",
         "systemOs": "Системная (ОС)",
         "light": "Светлая",
-        "dark": "Тёмная"
+        "dark": "Тёмная",
+        "managedByIde": "Управляется IDE"
+      },
+      "syncIdeTheme": {
+        "label": "Синхронизировать с IDE"
       },
       "fontSize": {
         "label": "Размер шрифта",

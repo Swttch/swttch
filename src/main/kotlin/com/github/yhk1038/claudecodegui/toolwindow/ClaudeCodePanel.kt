@@ -24,6 +24,7 @@ import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.DumbService
@@ -36,6 +37,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
+import javax.swing.UIManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -352,11 +354,17 @@ class ClaudeCodePanel(
                     // SYSTEM mode against the IDE rather than the OS prefers-color-scheme.
                     val ideTheme = if (com.intellij.ui.JBColor.isBright()) "light" else "dark"
                     frame.executeJavaScript("window.__IDE_THEME__ = '$ideTheme';", frame.url, 0)
-                    // Mirror IDE List selection colors as CSS variables so lists and menus
-                    // match the IDE's native selection accent (e.g. Darcula navy blue).
+                    // Mirror the IDE's current theme colors as CSS variables so the
+                    // WebView can render flush against the IDE surface (issue #267).
+                    // The variables are always injected; index.css only consumes them
+                    // when the user enables "sync with IDE theme".
                     val colorsJs = ideColorsScript()
                     if (colorsJs.isNotEmpty()) {
-                        frame.executeJavaScript(colorsJs, frame.url, 0)
+                        frame.executeJavaScript(
+                            colorsJs + markIdeColorsAvailableJs() + logIdeColorsJs(),
+                            frame.url,
+                            0,
+                        )
                     }
                     injectCursorTracking(frame)
                     injectStreamingStateBridge(frame)
@@ -636,22 +644,193 @@ class ClaudeCodePanel(
     }
 
     /**
-     * Reads the IDE's current List selection colors and returns a JS snippet that
-     * mirrors them as CSS variables on document.documentElement. Returns "" if the
-     * IDE colors cannot be read.
+     * Reads the IDE's current theme colors and returns a JS snippet that mirrors
+     * them as CSS variables on document.documentElement. Returns "" if the IDE
+     * colors cannot be read.
+     *
+     * ## Why colors and not a theme name
+     *
+     * JetBrains lets users install marketplace themes and hand-write their own
+     * `.theme.json`, so the set of themes is open-ended and cannot be enumerated.
+     * Instead of mapping known theme names to palettes, we read whatever colors
+     * the currently applied LAF resolves to at runtime — that covers bundled
+     * presets, marketplace themes and custom themes identically, with no code
+     * change per theme.
+     *
+     * Reading the theme's *name* would need [com.intellij.ide.ui.laf.UIThemeLookAndFeelInfo],
+     * which is `@ApiStatus.Experimental` (verified against 2024.2 bytecode), and
+     * every other accessor on LafManager is `@Internal` or `@Deprecated`. The
+     * marketplace zero-warnings gate forbids those, so the WebView labels the
+     * synced state generically instead of naming the theme.
+     *
+     * ## API stability
+     *
+     * Every API used here is stable — no `@ApiStatus.Internal` / `@Experimental`
+     * / `@Deprecated` annotation on either the member or its declaring class
+     * (verified against the 2024.2 SDK): [UIUtil], [com.intellij.ui.JBColor],
+     * [EditorColorsManager], [EditorColorsScheme] and `javax.swing.UIManager`.
+     *
+     * ## Naming
+     *
+     * Variables are emitted under the `--ccg-ide-*` prefix and consumed in
+     * webview/src/index.css as the first choice of a `var(--ccg-ide-x, <own default>)`
+     * fallback chain. When nothing is injected (browser/standalone mode, or a
+     * read failure here) the WebView's own palette applies unchanged.
+     *
+     * The two legacy `--ide-selection-*` variables keep their original names —
+     * index.css still reads them — so existing behavior is preserved.
      */
     private fun ideColorsScript(): String {
         return try {
-            val bg = UIUtil.getListSelectionBackground(true)
-            val fg = UIUtil.getListSelectionForeground(true)
-            val bgHex = String.format("#%02x%02x%02x", bg.red, bg.green, bg.blue)
-            val fgHex = String.format("#%02x%02x%02x", fg.red, fg.green, fg.blue)
-            "document.documentElement.style.setProperty('--ide-selection-bg', '$bgHex');" +
-                "document.documentElement.style.setProperty('--ide-selection-fg', '$fgHex');"
+            val vars = LinkedHashMap<String, java.awt.Color>()
+
+            // Selection (legacy names, already consumed by --surface-selected /
+            // --text-on-selected in index.css).
+            val selBg = UIUtil.getListSelectionBackground(true)
+            val selFg = UIUtil.getListSelectionForeground(true)
+
+            // Editor surface — the Claude Code GUI is hosted in an editor tab, so
+            // the editor background is what it sits flush against. This is the
+            // color issue #267 asks us to match.
+            val scheme = EditorColorsManager.getInstance().globalScheme
+            vars["editor-bg"] = scheme.defaultBackground
+            vars["editor-fg"] = scheme.defaultForeground
+
+            // Panel/tool-window surface — used for raised chrome (headers, bars).
+            vars["panel-bg"] = UIUtil.getPanelBackground()
+            vars["panel-fg"] = UIUtil.getLabelForeground()
+
+            // Input controls.
+            vars["input-bg"] = UIUtil.getTextFieldBackground()
+
+            // Borders and accents come from the LAF's named keys when present;
+            // UIManager.getColor returns null for keys a theme does not define,
+            // and putIfPresent simply skips those (the CSS fallback then wins).
+            putIfPresent(vars, "border", UIManager.getColor("Component.borderColor"))
+            putIfPresent(vars, "border-focus", UIManager.getColor("Component.focusedBorderColor"))
+            putIfPresent(vars, "accent", UIManager.getColor("Component.focusColor"))
+            putIfPresent(vars, "link", UIManager.getColor("Link.activeForeground"))
+            putIfPresent(vars, "separator", UIManager.getColor("Separator.separatorColor"))
+
+            // Hover/pressed are DERIVED here rather than read from the LAF.
+            //
+            // `List.hoverBackground` is the obvious candidate but is unusable as a
+            // flat fill: IntelliJ Dark defines it as #edf3ff (near-white) and
+            // composites it, so painting it directly turned hovered rows white on
+            // a dark theme. Keeping our own fixed value fails differently — our
+            // dark hover (42 42 45) lands within ~3 per channel of the IDE panel
+            // surface (43 45 48), making rows in the model overlay indistinguishable
+            // while the same token still read fine against the darker editor surface.
+            //
+            // Shifting the IDE's own panel color by a fixed amount (away from its
+            // brightness, so dark themes lighten and light themes darken) keeps the
+            // step visible whatever theme is applied. These have to be real colors,
+            // not translucent overlays: Tailwind compiles `bg-surface-hover` to
+            // `rgb(var(--surface-hover-rgb) / <alpha>)`, so only the `-rgb` channel
+            // form reaches the utility classes.
+            val panelBg = UIUtil.getPanelBackground()
+            vars["hover-bg"] = shiftAwayFromBrightness(panelBg, 0.09f)
+            vars["pressed-bg"] = shiftAwayFromBrightness(panelBg, 0.17f)
+
+            putIfPresent(vars, "tooltip-bg", UIManager.getColor("ToolTip.background"))
+            putIfPresent(vars, "tooltip-fg", UIManager.getColor("ToolTip.foreground"))
+
+            val sb = StringBuilder()
+            sb.append(setPropertyJs("--ide-selection-bg", hex(selBg)))
+            sb.append(setPropertyJs("--ide-selection-fg", hex(selFg)))
+            for ((name, color) in vars) {
+                // Emit both the hex form and an `R G B` channel triple. Tailwind
+                // utilities in this project apply opacity modifiers (`/NN`) to the
+                // `-rgb` channel variables, so IDE-driven tokens must offer the
+                // same shape as the built-in ones.
+                sb.append(setPropertyJs("--ccg-ide-$name", hex(color)))
+                sb.append(setPropertyJs("--ccg-ide-$name-rgb", channels(color)))
+            }
+            sb.toString()
         } catch (e: Exception) {
-            logger.warn("Failed to read IDE selection colors", e)
+            logger.warn("Failed to read IDE theme colors", e)
             ""
         }
+    }
+
+    /** Adds [color] under [name] only when the LAF actually defines it. */
+    private fun putIfPresent(
+        target: MutableMap<String, java.awt.Color>,
+        name: String,
+        color: java.awt.Color?,
+    ) {
+        if (color != null) target[name] = color
+    }
+
+    /**
+     * Returns [base] moved [amount] (0..1) toward white on dark surfaces and
+     * toward black on light ones — i.e. always *away* from its own brightness,
+     * so the result stays visible against [base] on any theme.
+     *
+     * Used to derive hover/pressed fills from the IDE's panel color; see
+     * [ideColorsScript] for why they are not read from the LAF directly.
+     */
+    private fun shiftAwayFromBrightness(base: java.awt.Color, amount: Float): java.awt.Color {
+        // Perceived brightness (ITU-R BT.601) — matches how dark/light a surface
+        // actually looks better than a plain channel average.
+        val brightness = (base.red * 0.299f + base.green * 0.587f + base.blue * 0.114f) / 255f
+        val target = if (brightness < 0.5f) 255 else 0
+        fun blend(channel: Int) = (channel + (target - channel) * amount).toInt().coerceIn(0, 255)
+        return java.awt.Color(blend(base.red), blend(base.green), blend(base.blue))
+    }
+
+    private fun hex(c: java.awt.Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
+
+    private fun channels(c: java.awt.Color): String = "${c.red} ${c.green} ${c.blue}"
+
+    /**
+     * Builds a `style.setProperty` call. Values are generated locally from color
+     * channels ([hex]/[channels]), so they contain no quotes or newlines to escape.
+     */
+    private fun setPropertyJs(name: String, value: String): String =
+        "document.documentElement.style.setProperty('$name', '$value');"
+
+    /**
+     * Marks the document as carrying IDE-injected colors, so the WebView can opt
+     * into them with a CSS selector.
+     *
+     * Kotlin always injects the `--ccg-ide-*` variables; whether they are actually
+     * *used* is decided entirely in CSS by the WebView, gated on the user's
+     * "sync with IDE theme" setting (see `html.ide-theme-sync` in index.css).
+     * Keeping the decision on the WebView side means Kotlin never has to observe
+     * or mirror a WebView-owned setting — there is no state to keep in sync and
+     * no extra IPC round-trip when the user toggles the checkbox.
+     *
+     * Reach: this only lands in a JCEF webview, since it travels over
+     * `frame.executeJavaScript`. A plain browser attached to an IDE-started
+     * backend gets nothing and falls back to the WebView's own palette, which is
+     * why the settings toggle is hidden there (see Appearance/index.tsx). To
+     * support that combination later, push the colors to the backend instead and
+     * let it forward them over the WebSocket connection.
+     */
+    private fun markIdeColorsAvailableJs(): String =
+        "document.documentElement.setAttribute('data-ide-colors', 'available');"
+
+    /**
+     * Dev-only: echo the injected `--ccg-ide-*` values to the WebView console so
+     * they land in idea.log via [CefDisplayHandlerAdapter.onConsoleMessage].
+     *
+     * JCEF's context menu has no "Inspect", and even with the remote debugging
+     * port open the DevTools window does not accept clipboard paste, so there is
+     * no practical way to read these values from inside the running IDE. Echoing
+     * them to the log is the only way to verify the injection actually carried
+     * real colors rather than silently writing nothing.
+     *
+     * Gated on `claude.dev.mode` so released builds stay quiet.
+     */
+    private fun logIdeColorsJs(): String {
+        if (!System.getProperty("claude.dev.mode", "false").toBoolean()) return ""
+        return "(function(){var s=document.documentElement.style;" +
+            "var out=Array.prototype.slice.call(s).filter(function(p){" +
+            "return p.indexOf('--ccg-ide-')===0 && p.indexOf('-rgb')<0;})" +
+            ".map(function(p){return p+'='+s.getPropertyValue(p);}).join(' ');" +
+            "console.log('IDE_COLORS marker=' + " +
+            "document.documentElement.getAttribute('data-ide-colors') + ' ' + out);})();"
     }
 
     /**
@@ -682,8 +861,13 @@ class ClaudeCodePanel(
                     val b = browser ?: return@LafManagerListener
                     ApplicationManager.getApplication().invokeLater {
                         val newTheme = if (com.intellij.ui.JBColor.isBright()) "light" else "dark"
+                        // Re-read the colors on every LAF change: this is what makes
+                        // bundled presets, marketplace themes and hand-written custom
+                        // themes all work without enumerating them (issue #267).
+                        val colorsJs = ideColorsScript()
                         val js = "window.__IDE_THEME__ = '$newTheme'; " +
-                            ideColorsScript() +
+                            colorsJs +
+                            (if (colorsJs.isNotEmpty()) markIdeColorsAvailableJs() + logIdeColorsJs() else "") +
                             "window.dispatchEvent(new Event('ide-theme-changed'));"
                         try {
                             val cef = b.cefBrowser

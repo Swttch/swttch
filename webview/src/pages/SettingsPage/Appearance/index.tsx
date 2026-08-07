@@ -28,6 +28,21 @@ export function AppearanceSettings() {
   const isThemeNotSet = rawTheme === undefined && scope === 'project';
   const themeValue = isThemeNotSet ? NOT_SET_VALUE : (rawTheme ?? ThemeMode.SYSTEM);
 
+  // IDE theme sync (issue #267). Offered only when the webview itself is JCEF,
+  // because that is the only surface Kotlin can push colors to: it injects them
+  // with `frame.executeJavaScript` straight into the JCEF frame
+  // (ClaudeCodePanel.ideColorsScript). The control is not rendered at all
+  // elsewhere rather than shown disabled, since there would be nothing to sync.
+  //
+  // Note this keys off the WEBVIEW, not off who started the backend. Attaching a
+  // plain browser to an IDE-started backend therefore hides the control too —
+  // correct today, because Kotlin has no route to a non-JCEF webview. If that
+  // combination ever needs to sync, the fix is a new path (Kotlin → backend →
+  // WebSocket → browser webview) plus a capability flag from the backend to
+  // replace this check; `isJetBrains()` alone cannot express it.
+  const canSyncIdeTheme = isJetBrains();
+  const syncIdeTheme = canSyncIdeTheme && scopeSettings[SettingKey.SYNC_IDE_THEME] === true;
+
   const rawFontSize = scopeSettings[SettingKey.FONT_SIZE] as number | undefined;
   const isFontSizeNotSet = rawFontSize === undefined && scope === 'project';
 
@@ -62,21 +77,55 @@ export function AppearanceSettings() {
           label={t('appearance.theme.colorTheme.label')}
           description={t('appearance.theme.colorTheme.description')}
         >
-          <Select
-            value={themeValue}
-            options={themeOptions}
-            ariaLabel={t('appearance.theme.colorTheme.label')}
-            onChange={(value) => {
-              if (value === NOT_SET_VALUE) {
-                resetToGlobal(SettingKey.THEME);
-                return;
-              }
-              updateSetting(SettingKey.THEME, value as ThemeMode);
-            }}
-            className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-              isThemeNotSet ? 'text-text-tertiary' : 'text-text-primary'
-            }`}
-          />
+          <div className="flex items-center gap-3">
+            {syncIdeTheme ? (
+              // While syncing, the dropdown would be a lie — the IDE decides the
+              // colors — so it is replaced by a read-only marker. The theme name
+              // is deliberately NOT shown: reading it requires
+              // UIThemeLookAndFeelInfo, which is @ApiStatus.Experimental and would
+              // break the marketplace zero-warnings gate (see ideColorsScript()
+              // in ClaudeCodePanel.kt).
+              <span className="text-sm text-text-tertiary italic px-3 py-1.5">
+                {t('appearance.theme.colorTheme.managedByIde')}
+              </span>
+            ) : (
+              <Select
+                value={themeValue}
+                options={themeOptions}
+                ariaLabel={t('appearance.theme.colorTheme.label')}
+                onChange={(value) => {
+                  if (value === NOT_SET_VALUE) {
+                    resetToGlobal(SettingKey.THEME);
+                    return;
+                  }
+                  updateSetting(SettingKey.THEME, value as ThemeMode);
+                }}
+                className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
+                  isThemeNotSet ? 'text-text-tertiary' : 'text-text-primary'
+                }`}
+              />
+            )}
+
+            {/* Sits beside the dropdown rather than in its own row: it modifies
+                where that dropdown's value comes from, so separating the two
+                would read as an unrelated setting. */}
+            {canSyncIdeTheme && (
+              // The label states the effect outright ("Use IDE's theme"), so it
+              // needs no separate hint line — an extra line here would also grow
+              // the row taller than the dropdown and break its alignment.
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={syncIdeTheme}
+                  onChange={(e) => updateSetting(SettingKey.SYNC_IDE_THEME, e.target.checked)}
+                  className="cursor-pointer accent-accent-primary"
+                />
+                <span className="text-xs text-text-secondary whitespace-nowrap">
+                  {t('appearance.theme.syncIdeTheme.label')}
+                </span>
+              </label>
+            )}
+          </div>
         </SettingRow>
 
         <SettingRow

@@ -98,7 +98,11 @@
         "systemIde": "시스템 (IDE)",
         "systemOs": "시스템 (OS)",
         "light": "라이트",
-        "dark": "다크"
+        "dark": "다크",
+        "managedByIde": "IDE에서 설정됨"
+      },
+      "syncIdeTheme": {
+        "label": "IDE와 동기화"
       },
       "fontSize": {
         "label": "글꼴 크기",

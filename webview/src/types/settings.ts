@@ -21,6 +21,12 @@ export enum SettingKey {
 
   // Appearance
   THEME = 'theme',
+  // Opt-in (JetBrains mode only): re-point the color tokens at the colors the
+  // IDE's currently applied theme resolves to, so the chat renders flush with
+  // the IDE surface (issue #267). Off by default — the user keeps our own
+  // palette until they ask for the IDE's. Has no effect in browser mode, where
+  // no IDE colors are injected.
+  SYNC_IDE_THEME = 'syncIdeTheme',
   FONT_SIZE = 'fontSize',
   // Whole-interface scale driven by CmdOrCtrl +/- and CmdOrCtrl + wheel.
   // Independent of FONT_SIZE: effective text size is fontSize × zoomLevel.
@@ -203,6 +209,7 @@ export interface SettingsState {
   [SettingKey.CLI_PATH]: string | null;
   [SettingKey.NODE_PATH]: string | null;
   [SettingKey.THEME]: ThemeMode;
+  [SettingKey.SYNC_IDE_THEME]: boolean;
   [SettingKey.FONT_SIZE]: number;
   [SettingKey.ZOOM_LEVEL]: number;
   [SettingKey.LINE_HEIGHT]: number;
@@ -232,6 +239,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CLI_PATH]: null,
   [SettingKey.NODE_PATH]: null,
   [SettingKey.THEME]: ThemeMode.SYSTEM,
+  [SettingKey.SYNC_IDE_THEME]: false,
   [SettingKey.FONT_SIZE]: 13,
   [SettingKey.ZOOM_LEVEL]: ZOOM_DEFAULT,
   [SettingKey.LINE_HEIGHT]: LINE_HEIGHT_DEFAULT,

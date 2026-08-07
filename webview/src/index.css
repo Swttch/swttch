@@ -242,6 +242,32 @@
 
   /* Tool call rows (IN/OUT labels) */
   --tool-label-fg: rgba(30, 30, 30, 0.45);
+
+  /* Own-palette snapshot for IDE theme sync (issue #267).
+     The `html.ide-theme-sync` block below falls back to these when the IDE
+     theme does not define a given color. They must be declared per palette
+     (here and in `.dark`) so the fallback matches the active palette — a
+     literal in that block would leak light values into dark mode.
+
+     These are literals, NOT `var(--surface-base-rgb)` etc. The sync block
+     redefines those same tokens using this alias as its fallback, so pointing
+     back at them would be a cycle — CSS then treats the whole chain as invalid
+     and the token resolves to nothing. Keep these in sync with the values
+     above. */
+  --own-surface-base-rgb:    255 255 255;
+  --own-surface-raised-rgb:  250 250 250;
+  --own-surface-overlay-rgb: 255 255 255;
+  --own-surface-sunken-rgb:  242 242 242;
+  --own-surface-hover-rgb:   245 245 245;
+  --own-surface-pressed-rgb: 235 235 235;
+  --own-surface-tooltip-rgb: 58 58 58;
+  --own-text-primary-rgb:    30 30 30;
+  --own-text-on-tooltip-rgb: 255 255 255;
+  --own-text-link-rgb:       53 116 240;
+  --own-border-default-rgb:  224 224 224;
+  --own-border-divider-rgb:  229 229 229;
+  --own-border-focus-rgb:    53 116 240;
+  --own-accent-primary-rgb:  53 116 240;
 }
 
 /* ============================================
@@ -354,6 +380,129 @@
 
   /* Tool call rows (IN/OUT labels) */
   --tool-label-fg: rgba(228, 228, 231, 0.45);
+
+  /* Own-palette snapshot for IDE theme sync — dark counterpart. Literals for
+     the same reason as in `:root` (a `var()` back-reference would cycle).
+     Keep in sync with the dark values above. */
+  --own-surface-base-rgb:    26 26 26;
+  --own-surface-raised-rgb:  30 30 33;
+  --own-surface-overlay-rgb: 37 37 38;
+  --own-surface-sunken-rgb:  20 20 20;
+  --own-surface-hover-rgb:   42 42 45;
+  --own-surface-pressed-rgb: 50 50 54;
+  --own-surface-tooltip-rgb: 58 58 58;
+  --own-text-primary-rgb:    255 255 255;
+  --own-text-on-tooltip-rgb: 255 255 255;
+  --own-text-link-rgb:       90 141 238;
+  --own-border-default-rgb:  63 63 70;
+  --own-border-divider-rgb:  42 42 45;
+  --own-border-focus-rgb:    90 141 238;
+  --own-accent-primary-rgb:  53 116 240;
+}
+
+/* ============================================
+   IDE Theme Sync (issue #267)
+   ============================================
+
+   When the user enables "sync with IDE theme" (JetBrains mode only), the
+   semantic tokens above are re-pointed at colors the IDE resolved at runtime.
+
+   How this stays theme-agnostic
+   -----------------------------
+   JetBrains themes are open-ended — bundled presets, marketplace themes and
+   hand-written `.theme.json` files all exist, so they cannot be enumerated.
+   Nothing here knows a theme name. ClaudeCodePanel.kt reads whatever colors
+   the *currently applied* LAF resolves to and injects them as `--ccg-ide-*`
+   on <html>, re-injecting on every LAF change. Any theme therefore works with
+   no per-theme code.
+
+   Why an override layer instead of editing the tokens in place
+   ------------------------------------------------------------
+   This block only applies under `html.ide-theme-sync`, which SettingsContext
+   adds when the setting is on AND Kotlin actually injected colors
+   (`data-ide-colors="available"`). In browser/standalone mode, or if the color
+   read failed, the selector never matches and the palette above is untouched.
+
+   Fallbacks must not be hard-coded
+   --------------------------------
+   A theme may define only some of these colors, so every declaration needs a
+   fallback for the rest. That fallback CANNOT be a literal: `:root` and `.dark`
+   hold different values, and writing the light literal here made dark mode
+   render dark-on-dark text when a theme supplied only a background (caught in
+   browser testing, not by the unit tests). Instead each token is captured into
+   a `--own-*` alias in the `:root`/`.dark` blocks above, and the fallback
+   points at that alias — so it resolves to whichever palette is active.
+
+   Component code needs no changes: every component already consumes these
+   semantic tokens, so re-pointing them here propagates everywhere. Keep new
+   components on the semantic tokens and they inherit IDE sync for free —
+   never read `--ccg-ide-*` directly from a component. */
+html.ide-theme-sync[data-ide-colors='available'] {
+  /* Surface — the editor background is what the WebView sits flush against,
+     since the chat is hosted in an editor tab. */
+  --surface-base-rgb:    var(--ccg-ide-editor-bg-rgb, var(--own-surface-base-rgb));
+  --surface-base:        rgb(var(--surface-base-rgb));
+  --surface-raised-rgb:  var(--ccg-ide-panel-bg-rgb, var(--own-surface-raised-rgb));
+  --surface-raised:      rgb(var(--surface-raised-rgb));
+  --surface-overlay-rgb: var(--ccg-ide-panel-bg-rgb, var(--own-surface-overlay-rgb));
+  --surface-overlay:     rgb(var(--surface-overlay-rgb));
+  --surface-sunken-rgb:  var(--ccg-ide-input-bg-rgb, var(--own-surface-sunken-rgb));
+  --surface-sunken:      rgb(var(--surface-sunken-rgb));
+  /* Hover is a translucent wash, not a fixed color.
+     The IDE exposes no usable flat hover background (`List.hoverBackground` is
+     near-white even on dark themes — see ideColorsScript() in
+     ClaudeCodePanel.kt), and a fixed value cannot work here either: our own
+     dark hover (42 42 45) is within ~3 per channel of the IDE panel surface
+     (43 45 48), so hovered rows in the model overlay were invisible while the
+     same token read fine on the darker editor surface behind the settings
+     sidebar. Compositing over whatever surface is underneath keeps the contrast
+     constant on every IDE theme, light or dark. `-rgb` stays on our own channel
+     values so Tailwind opacity utilities still resolve. */
+  /* Hover/pressed are DERIVED from the IDE panel surface, not taken from the
+     IDE and not left on our own fixed values.
+     - Taken from the IDE: `List.hoverBackground` is near-white even on dark
+       themes (#edf3ff), so it painted hovered rows white.
+     - Left on our own: our dark hover (42 42 45) sits within ~3 per channel of
+       the IDE panel surface (43 45 48), so rows in the model overlay were
+       indistinguishable while the same token read fine on the darker editor
+       surface behind the settings sidebar.
+     `color-mix` against white/black shifts the actual IDE surface by a fixed
+     amount, so the step stays visible on any theme. These must set the `-rgb`
+     channel vars too: Tailwind compiles `bg-surface-hover` to
+     `rgb(var(--surface-hover-rgb) / <alpha>)` and never reads the plain name. */
+  --surface-hover-rgb:   var(--ccg-ide-hover-bg-rgb, var(--own-surface-hover-rgb));
+  --surface-hover:       rgb(var(--surface-hover-rgb));
+  --surface-pressed-rgb: var(--ccg-ide-pressed-bg-rgb, var(--own-surface-pressed-rgb));
+  --surface-pressed:     rgb(var(--surface-pressed-rgb));
+
+  --surface-tooltip-rgb: var(--ccg-ide-tooltip-bg-rgb, var(--own-surface-tooltip-rgb));
+  --surface-tooltip:     rgb(var(--surface-tooltip-rgb));
+
+  /* Text */
+  --text-primary-rgb:   var(--ccg-ide-editor-fg-rgb, var(--own-text-primary-rgb));
+  --text-primary:       rgb(var(--text-primary-rgb));
+  --text-on-tooltip-rgb: var(--ccg-ide-tooltip-fg-rgb, var(--own-text-on-tooltip-rgb));
+  --text-on-tooltip:    rgb(var(--text-on-tooltip-rgb));
+  --text-link-rgb:      var(--ccg-ide-link-rgb, var(--own-text-link-rgb));
+  --text-link:          rgb(var(--text-link-rgb));
+
+  /* Border */
+  --border-default-rgb: var(--ccg-ide-border-rgb, var(--own-border-default-rgb));
+  --border-default:     rgb(var(--border-default-rgb));
+  --border-divider-rgb: var(--ccg-ide-separator-rgb, var(--ccg-ide-border-rgb, var(--own-border-divider-rgb)));
+  --border-divider:     rgb(var(--border-divider-rgb));
+  --border-focus-rgb:   var(--ccg-ide-border-focus-rgb, var(--own-border-focus-rgb));
+  --border-focus:       rgb(var(--border-focus-rgb));
+
+  /* Accent — the IDE's focus color drives our primary accent. `-hover` and
+     `-pressed` are intentionally left on our own values: the IDE exposes no
+     stable per-state accent variants, and deriving them here would guess. */
+  --accent-primary-rgb: var(--ccg-ide-accent-rgb, var(--own-accent-primary-rgb));
+  --accent-primary:     rgb(var(--accent-primary-rgb));
+
+  /* Panel chrome (defined further down) follows the same IDE surfaces. */
+  --panel-bg: var(--surface-overlay);
+  --hover-bg: var(--surface-hover);
 }
 
 html, body, #root {

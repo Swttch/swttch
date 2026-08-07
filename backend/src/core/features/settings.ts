@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   cliPath: null,
   nodePath: null,
   theme: 'system',
+  syncIdeTheme: false,
   fontSize: 13,
   zoomLevel: 1,
   lineHeight: 1.6,
@@ -85,6 +86,7 @@ const COMMENT_MAP: Record<string, string> = {
   cliPath: 'Claude CLI 실행 파일 경로 (null이면 자동 감지)',
   nodePath: 'Node.js 실행 파일 경로 (null이면 자동 감지, 변경 시 재시작 필요)',
   theme: '테마: "system" | "light" | "dark"',
+  syncIdeTheme: '위 테마 대신 IDE 현재 테마의 색상을 사용 (JetBrains 모드에서만 동작)',
   fontSize: '글꼴 크기 (8~32)',
   zoomLevel: 'UI 배율(0.5~3). Ctrl/Cmd +,- 와 Ctrl/Cmd + 휠로 조절. 글꼴 크기와 별개로 아이콘·여백까지 함께 확대',
   lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10)',
@@ -253,6 +255,7 @@ function validateSetting(key: string, value: unknown): string | null {
       }
       break;
     }
+    case 'syncIdeTheme':
     case 'debugMode':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
