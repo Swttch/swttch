@@ -15,22 +15,45 @@ export function hasCmdOrCtrl(e: KeyboardEvent): boolean {
 }
 
 /**
- * Whether a keydown means "zoom in". Browsers report the `+` key as '=' on an
- * unshifted US layout and as '+' when shifted, and numpad plus as 'Add' on
- * older engines; all spellings count so the gesture works regardless of layout.
+ * Numpad keys are matched on `e.code`, never `e.key` (issue #268).
+ *
+ * `e.key` carries a key's *meaning*, which on the numpad flips with NumLock:
+ * numpad 0 reads '0' while NumLock is on but 'Insert' while it is off. Matching
+ * that spelling therefore misses the numpad half the time and — worse — claims
+ * the standalone Insert key, whose Ctrl+Insert / Shift+Insert are Chromium's
+ * built-in copy/paste (`ui/views/controls/textfield/textfield.cc`, VKEY_INSERT
+ * → COPY/PASTE). Swallowing those broke copying out of the chat.
+ *
+ * `e.code` names the physical key ('Numpad0' vs 'Insert') whatever NumLock says,
+ * mirroring the VKEY_NUMPAD0 / VKEY_INSERT split Chromium itself keys off. Its
+ * accelerator table (`chrome/browser/ui/accelerator_table.cc`) binds zoom to
+ * VKEY_0 / VKEY_NUMPAD0 and never mentions VKEY_INSERT — we match it exactly.
+ */
+
+/**
+ * Whether a keydown means "zoom in" — the number-row plus, reported as '=' on an
+ * unshifted US layout and '+' when shifted, or numpad plus by its physical code.
+ * Mirrors Chromium's VKEY_OEM_PLUS / VKEY_ADD pair.
  */
 export function isZoomInKey(e: KeyboardEvent): boolean {
-  return hasCmdOrCtrl(e) && (e.key === '+' || e.key === '=' || e.key === 'Add');
+  return hasCmdOrCtrl(e) && (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd');
 }
 
-/** Whether a keydown means "zoom out" ('-' or numpad minus). */
+/**
+ * Whether a keydown means "zoom out" — number-row minus or numpad minus,
+ * mirroring Chromium's VKEY_OEM_MINUS / VKEY_SUBTRACT pair.
+ */
 export function isZoomOutKey(e: KeyboardEvent): boolean {
-  return hasCmdOrCtrl(e) && (e.key === '-' || e.key === '_' || e.key === 'Subtract');
+  return hasCmdOrCtrl(e) && (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract');
 }
 
-/** Whether a keydown means "reset zoom to 100%" — CmdOrCtrl+0, as in browsers. */
+/**
+ * Whether a keydown means "reset zoom to 100%" — CmdOrCtrl+0 on the number row
+ * or on the numpad, mirroring Chromium's VKEY_0 / VKEY_NUMPAD0 pair. The
+ * standalone Insert key is deliberately excluded so Ctrl+Insert stays a copy.
+ */
 export function isZoomResetKey(e: KeyboardEvent): boolean {
-  return hasCmdOrCtrl(e) && (e.key === '0' || e.key === 'Insert');
+  return hasCmdOrCtrl(e) && (e.key === '0' || e.code === 'Numpad0');
 }
 
 /**
