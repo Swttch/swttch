@@ -38,24 +38,27 @@ that entry falls back to the plugin's own color.
 
 ## How to use it
 
-A **"Sync with IDE"** checkbox now sits to the right of **Settings → Appearance → Color Theme**.
+Pick **"System (IDE)"** under **Settings → Appearance → Color Theme**. There is no new setting to
+find.
 
-The checkbox is **off by default.** Until you turn it on, everything looks exactly as before with
-the plugin's own theme. Turn it on only when you want the colors to follow your IDE.
+That option has been there all along, but until now it only followed whether your IDE was light or
+dark and painted the plugin's own colors. It now takes **the actual colors of your IDE theme** —
+which is what the option always looked like it should do.
 
-With it on, the Color Theme dropdown is replaced by a **"Managed by IDE"** marker — the IDE decides
-the colors at that point, so picking from the dropdown would mean nothing. Turn the checkbox back
-off and the dropdown returns along with the original colors.
+**"System (IDE)" is the default.** If you never changed the setting, it applies as soon as you
+update. To keep the plugin's own palette instead, pick **Light** or **Dark** — those do not pull any
+colors from the IDE.
 
 Changing your IDE theme updates the chat **immediately.** No IDE restart is needed.
 
 ## A few things worth knowing
 
-**The checkbox only appears inside the IDE.** When you connect from a browser there is no IDE theme
-to match, so the checkbox is not shown. The same applies when a browser connects to a backend the
-IDE started — there is no route yet to deliver the colors to a browser.
+**Matching the colors only works inside the IDE.** When you connect from a browser the same option
+reads **"System (OS)"** and follows only your operating system's light/dark preference, as before —
+there is no IDE theme to match. The same applies when a browser connects to a backend the IDE
+started: there is no route yet to deliver the colors to a browser.
 
-**The theme name is not displayed.** The marker reads "Managed by IDE" rather than naming the actual
+**The theme name is not displayed.** The dropdown reads "System (IDE)" rather than naming the actual
 theme (say, Dracula) for a reason: reading the theme name in JetBrains requires an API still marked
 experimental, and using it raises a warning in the marketplace release check. Showing one label is
 not worth putting a release at risk.

@@ -98,11 +98,7 @@
         "systemIde": "System (IDE)",
         "systemOs": "System (Betriebssystem)",
         "light": "Hell",
-        "dark": "Dunkel",
-        "managedByIde": "Von der IDE verwaltet"
-      },
-      "syncIdeTheme": {
-        "label": "Mit IDE synchronisieren"
+        "dark": "Dunkel"
       },
       "fontSize": {
         "label": "Schriftgröße",

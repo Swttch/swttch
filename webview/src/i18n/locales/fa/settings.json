@@ -98,11 +98,7 @@
         "systemIde": "سیستم (IDE)",
         "systemOs": "سیستم (OS)",
         "light": "روشن",
-        "dark": "تیره",
-        "managedByIde": "مدیریت‌شده توسط IDE"
-      },
-      "syncIdeTheme": {
-        "label": "همگام‌سازی با IDE"
+        "dark": "تیره"
       },
       "fontSize": {
         "label": "اندازه فونت",

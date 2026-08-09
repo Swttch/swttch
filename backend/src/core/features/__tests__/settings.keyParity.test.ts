@@ -5,9 +5,11 @@
  * `validateSetting` rejects anything missing from `DEFAULT_SETTINGS` with
  * "Unknown settings key", and the WebView silently falls back to localStorage
  * on that error. The result is a control that appears to work — the UI reacts —
- * but never persists, and reverts on the next read. Issue #267 shipped exactly
- * that: `syncIdeTheme` was added to the WebView's SettingKey enum and left out
- * of the backend, so the checkbox never stayed checked.
+ * but never persists, and reverts on the next read. Issue #267 hit exactly that
+ * during development: a `syncIdeTheme` key was added to the WebView's
+ * SettingKey enum and left out of the backend, so the control never stayed set.
+ * (That key is gone — IDE color sync now rides on `theme: 'system'` — but the
+ * failure mode it exposed is generic, so this guard stays.)
  *
  * Nothing else catches this: the two enums live in separate packages with no
  * shared type, so TypeScript sees no mismatch, and unit tests on either side

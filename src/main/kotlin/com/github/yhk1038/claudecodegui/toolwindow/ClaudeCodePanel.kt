@@ -795,18 +795,18 @@ class ClaudeCodePanel(
      * into them with a CSS selector.
      *
      * Kotlin always injects the `--ccg-ide-*` variables; whether they are actually
-     * *used* is decided entirely in CSS by the WebView, gated on the user's
-     * "sync with IDE theme" setting (see `html.ide-theme-sync` in index.css).
+     * *used* is decided entirely in CSS by the WebView, gated on the user having
+     * picked the "System (IDE)" theme (see `html.ide-theme-sync` in index.css).
      * Keeping the decision on the WebView side means Kotlin never has to observe
      * or mirror a WebView-owned setting — there is no state to keep in sync and
-     * no extra IPC round-trip when the user toggles the checkbox.
+     * no extra IPC round-trip when the user changes theme.
      *
      * Reach: this only lands in a JCEF webview, since it travels over
      * `frame.executeJavaScript`. A plain browser attached to an IDE-started
-     * backend gets nothing and falls back to the WebView's own palette, which is
-     * why the settings toggle is hidden there (see Appearance/index.tsx). To
-     * support that combination later, push the colors to the backend instead and
-     * let it forward them over the WebSocket connection.
+     * backend gets nothing, so "System" stays OS-driven there and the WebView's
+     * own palette applies (see Appearance/index.tsx). To support that
+     * combination later, push the colors to the backend instead and let it
+     * forward them over the WebSocket connection.
      */
     private fun markIdeColorsAvailableJs(): String =
         "document.documentElement.setAttribute('data-ide-colors', 'available');"
@@ -939,6 +939,14 @@ class ClaudeCodePanel(
         }
         var loggedNudgePath = false
 
+        // Diagnostic counters for issue #267. They record how often the nudge runs and
+        // how long the CEF call itself blocks the EDT, so the choppy-scroll cause can be
+        // named from numbers instead of guessed at.
+        var nudgeCount = 0L
+        var nudgeTotalNanos = 0L
+        var nudgeMaxNanos = 0L
+        var statsWindowStartNanos = System.nanoTime()
+
         fun nudge() {
             val b = browser ?: return
             if (!b.component.isShowing) return
@@ -946,6 +954,7 @@ class ClaudeCodePanel(
             val h = b.component.height
             if (w < 2 || h < 2) return
             val cef = b.cefBrowser
+            val nudgeStartNanos = System.nanoTime()
             // Prefer invalidate(): the resize toggle below did NOT clear ghosts in
             // practice because remote (out-of-process) JCEF ignores a same-size
             // wasResized round trip. invalidate() forces the whole view to repaint.
@@ -972,6 +981,27 @@ class ClaudeCodePanel(
                         " (tab: $tabId)",
                 )
             }
+
+            // Diagnostic accounting for issue #267 — summarised, not logged per call,
+            // so the logging itself does not become the cost being measured.
+            val elapsedNanos = System.nanoTime() - nudgeStartNanos
+            nudgeCount += 1
+            nudgeTotalNanos += elapsedNanos
+            if (elapsedNanos > nudgeMaxNanos) nudgeMaxNanos = elapsedNanos
+            val windowNanos = System.nanoTime() - statsWindowStartNanos
+            if (windowNanos >= REPAINT_NUDGE_STATS_INTERVAL_MS * 1_000_000L) {
+                logger.info(
+                    "OSR nudge stats (tab: $tabId): count=$nudgeCount " +
+                        "over ${windowNanos / 1_000_000}ms, " +
+                        "avg=${if (nudgeCount > 0) nudgeTotalNanos / nudgeCount / 1_000 else 0}us, " +
+                        "max=${nudgeMaxNanos / 1_000}us, " +
+                        "motionNudge=${isMotionNudgeEnabled()}",
+                )
+                nudgeCount = 0
+                nudgeTotalNanos = 0
+                nudgeMaxNanos = 0
+                statsWindowStartNanos = System.nanoTime()
+            }
         }
 
         // (a) Low-frequency backup timer. javax.swing.Timer fires on the EDT.
@@ -983,20 +1013,30 @@ class ClaudeCodePanel(
         // (b) Throttled mouse-motion nudge: clear ghosts promptly during interaction,
         // but no more than once per REPAINT_NUDGE_MIN_GAP_NANOS so we don't re-frame
         // CEF on every pixel of movement.
+        //
+        // Skippable via -Dclaude.osr.nudge.motion=false while investigating issue #267,
+        // because trackpad scrolling emits mouse-motion events and therefore drives this
+        // full-view invalidation. Disabling it isolates that cost from the rest of the
+        // scroll path. The backup timer above still runs, so ghosts are still cleared,
+        // just less promptly.
         val b = browser!!
-        var lastNudgeNanos = 0L
-        val motionListener = object : java.awt.event.MouseMotionAdapter() {
-            override fun mouseMoved(e: java.awt.event.MouseEvent?) {
-                val now = System.nanoTime()
-                if (now - lastNudgeNanos < REPAINT_NUDGE_MIN_GAP_NANOS) return
-                lastNudgeNanos = now
-                nudge()
+        if (isMotionNudgeEnabled()) {
+            var lastNudgeNanos = 0L
+            val motionListener = object : java.awt.event.MouseMotionAdapter() {
+                override fun mouseMoved(e: java.awt.event.MouseEvent?) {
+                    val now = System.nanoTime()
+                    if (now - lastNudgeNanos < REPAINT_NUDGE_MIN_GAP_NANOS) return
+                    lastNudgeNanos = now
+                    nudge()
+                }
             }
+            b.component.addMouseMotionListener(motionListener)
+            Disposer.register(parent, Disposable { b.component.removeMouseMotionListener(motionListener) })
         }
-        b.component.addMouseMotionListener(motionListener)
-        Disposer.register(parent, Disposable { b.component.removeMouseMotionListener(motionListener) })
 
-        logger.info("OSR repaint nudge installed for tab: $tabId")
+        logger.info(
+            "OSR repaint nudge installed for tab: $tabId (motionNudge=${isMotionNudgeEnabled()})",
+        )
     }
 
     /**
@@ -1619,6 +1659,26 @@ class ClaudeCodePanel(
         /** Minimum gap (ns) between mouse-motion repaint nudges so we don't invalidate
          * the whole view on every pixel of movement (250ms). */
         private const val REPAINT_NUDGE_MIN_GAP_NANOS = 250_000_000L
+
+        /**
+         * Diagnostic escape hatch for the choppy-scroll investigation (issue #267,
+         * marketplace review "10-15 FPS" 2026-08-03).
+         *
+         * The mouse-motion nudge calls CefBrowser.invalidate(), which marks the WHOLE
+         * OSR view dirty so CEF re-delivers a full frame. Trackpad scrolling emits
+         * mouse-motion events, so scrolling repeatedly triggers full-view re-frames.
+         * Whether that is what users feel as choppiness is NOT yet established — this
+         * property exists to measure it without a rebuild.
+         *
+         * Default is true, i.e. current shipping behaviour is unchanged. Set
+         * `-Dclaude.osr.nudge.motion=false` in Help > Edit Custom VM Options to disable
+         * only the mouse-motion nudge; the backup timer keeps running either way.
+         */
+        private fun isMotionNudgeEnabled(): Boolean =
+            System.getProperty("claude.osr.nudge.motion")?.toBooleanStrictOrNull() ?: true
+
+        /** How often (ms) the nudge cost summary is written to idea.log while nudging. */
+        private const val REPAINT_NUDGE_STATS_INTERVAL_MS = 5_000L
 
         /** Escape the minimal set of HTML metacharacters so backend stderr can be safely
          * embedded in the Swing HTML error label without breaking its markup. */

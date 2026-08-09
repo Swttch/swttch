@@ -98,11 +98,7 @@
         "systemIde": "跟随系统(IDE)",
         "systemOs": "跟随系统(操作系统)",
         "light": "浅色",
-        "dark": "深色",
-        "managedByIde": "由 IDE 管理"
-      },
-      "syncIdeTheme": {
-        "label": "与 IDE 同步"
+        "dark": "深色"
       },
       "fontSize": {
         "label": "字体大小",

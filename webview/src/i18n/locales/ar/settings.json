@@ -98,11 +98,7 @@
         "systemIde": "النظام (IDE)",
         "systemOs": "النظام (نظام التشغيل)",
         "light": "فاتحة",
-        "dark": "داكنة",
-        "managedByIde": "تتم إدارته بواسطة IDE"
-      },
-      "syncIdeTheme": {
-        "label": "المزامنة مع IDE"
+        "dark": "داكنة"
       },
       "fontSize": {
         "label": "حجم الخط",

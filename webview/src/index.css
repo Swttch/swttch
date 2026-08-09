@@ -404,8 +404,11 @@
    IDE Theme Sync (issue #267)
    ============================================
 
-   When the user enables "sync with IDE theme" (JetBrains mode only), the
+   When the user picks the "System (IDE)" theme (JetBrains mode only), the
    semantic tokens above are re-pointed at colors the IDE resolved at runtime.
+   That dropdown option is the whole opt-in — deferring to the IDE's theme means
+   taking its colors, not just its light/dark bit — so there is no separate
+   toggle. Picking Light or Dark keeps our own palette.
 
    How this stays theme-agnostic
    -----------------------------
@@ -419,9 +422,10 @@
    Why an override layer instead of editing the tokens in place
    ------------------------------------------------------------
    This block only applies under `html.ide-theme-sync`, which SettingsContext
-   adds when the setting is on AND Kotlin actually injected colors
-   (`data-ide-colors="available"`). In browser/standalone mode, or if the color
-   read failed, the selector never matches and the palette above is untouched.
+   adds when the theme is SYSTEM in JetBrains mode AND Kotlin actually injected
+   colors (`data-ide-colors="available"`). In browser/standalone mode, or if the
+   color read failed, the selector never matches and the palette above is
+   untouched.
 
    Fallbacks must not be hard-coded
    --------------------------------

@@ -28,7 +28,7 @@ const SYNC_SELECTOR = "html.ide-theme-sync[data-ide-colors='available']";
 describe('IDE theme sync — stylesheet structure (issue #267)', () => {
   it('gates the override on both the opt-in class and injected colors', () => {
     // Dropping the attribute check would apply the layer with no variables set
-    // when the toggle is on but Kotlin failed to read the IDE colors.
+    // when the theme is "System (IDE)" but Kotlin failed to read the IDE colors.
     expect(css).toContain(SYNC_SELECTOR);
   });
 
