@@ -38,7 +38,9 @@ const mockSession = {
   isLoading: false,
   workingDirectory: '/test',
   inputMode: 'ask_before_edit' as const,
-  modeResetTrigger: 0,
+  // 컴포저가 CLI에 요구할 모드. 이 테스트들은 모드가 이미 정해진 세션에서 출발하므로
+  // inputMode와 같은 값으로 둔다.
+  requestedInputMode: 'ask_before_edit' as string | null,
   autoModeAvailable: false,
   autoFallbackNotice: false,
   loadSessions: vi.fn(),
@@ -55,7 +57,6 @@ const mockSession = {
   addNewSession: vi.fn(),
   setInputMode: vi.fn(),
   cycleInputMode: vi.fn(),
-  syncInitialInputMode: vi.fn(),
   syncEffectiveMode: vi.fn(),
   setAutoModeAvailable: vi.fn(),
   notifyAutoFallback: vi.fn(),
@@ -152,6 +153,7 @@ describe('채팅 스트리밍 통합 테스트', () => {
     // Reset mocks
     vi.clearAllMocks();
     bridgeHandlers.clear();
+    mockSession.requestedInputMode = 'ask_before_edit';
 
     // Setup bridge.subscribe to capture handlers
     mockBridge.subscribe.mockImplementation(
@@ -227,6 +229,8 @@ describe('채팅 스트리밍 통합 테스트', () => {
 
   it('sendMessage: inputMode가 bridge.send payload에 포함된다', async () => {
     mockSession.currentSessionId = 'existing-session';
+    // 사용자가 plan을 고른 상태 — 페이로드에는 이 모드가 실려야 한다
+    mockSession.requestedInputMode = 'plan';
 
     render(
       <TestWrapper>

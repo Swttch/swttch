@@ -20,7 +20,9 @@ export async function startSessionHandler(
     });
     return;
   }
-  const inputMode = (message.payload?.inputMode as string) || 'ask_before_edit';
+  // Absent means the webview has no mode to ask for yet — the CLI then reads its
+  // own `permissions.defaultMode` instead of being handed a substitute here.
+  const inputMode = message.payload?.inputMode as string | undefined;
 
   try {
     if (sessionId) {

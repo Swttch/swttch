@@ -24,7 +24,13 @@ interface SendMessagePayload {
   attachments?: Array<Record<string, unknown>>;
   context: Context[];
   workingDir: string;
-  inputMode: InputMode;
+  // The mode to ask a spawning CLI for, via `--permission-mode`. Omitted when
+  // nothing has established a mode for this session yet: the backend then passes
+  // no flag at all, so the CLI reads its own `permissions.defaultMode`. Handing it
+  // the composer's placeholder instead would override that setting, since
+  // `--permission-mode default` names the ask-before-edits mode rather than
+  // meaning "follow the configured default".
+  inputMode?: InputMode;
   // The user-selected model, sent so the backend can spawn the CLI with
   // `--model`. This makes a model change take effect even when the previous
   // process has exited (set_model can't reach a dead process). Omitted when no
@@ -328,7 +334,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         attachments: attachments?.map(a => ({ ...a.toPayload() })),
         context: context || [],
         workingDir: session.workingDirectory ?? '',
-        inputMode,
+        // The mode to ask the CLI for — omitted while nothing has established one,
+        // so the CLI reads its own settings instead of being handed the composer's
+        // placeholder. `--permission-mode default` means "ask before edits", not
+        // "follow settings", so passing it would override the user's configured
+        // default with the strictest mode.
+        inputMode: session.requestedInputMode ?? undefined,
         model: sessionModel ?? undefined,
       };
 

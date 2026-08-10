@@ -3,7 +3,7 @@ import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
-import { type InputMode, INPUT_MODES, getAvailableModes, CLI_FLAG_TO_INPUT_MODE, INPUT_MODE_TO_CLI_FLAG } from '@/types/chatInput';
+import { type InputMode, INPUT_MODES, getAvailableModes, resolveInitialInputMode, INPUT_MODE_TO_CLI_FLAG } from '@/types/chatInput';
 import type { PermissionsConfig } from '@/types/claude-settings';
 import { useTranslation } from '@/i18n';
 
@@ -23,7 +23,7 @@ export function PermissionsSettings() {
   const isDefaultModeNotSet = rawDefaultMode === undefined && scope === 'project';
   const defaultModeValue = isDefaultModeNotSet
     ? NOT_SET_VALUE
-    : (rawDefaultMode ? (CLI_FLAG_TO_INPUT_MODE[rawDefaultMode] ?? 'ask_before_edit') : 'ask_before_edit');
+    : resolveInitialInputMode(rawDefaultMode);
 
   const mergedBypassDisabled = mergedPermissions.disableBypassPermissionsMode === 'disable';
 

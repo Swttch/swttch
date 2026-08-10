@@ -104,6 +104,7 @@ describe('model display helpers', () => {
     const models: ModelInfo[] = [
       {
         value: 'opus[1m]',
+        resolvedModel: 'claude-opus-4-8[1m]',
         displayName: 'Opus',
         description: 'Opus 4.8 with 1M context · Best for everyday tasks',
       },

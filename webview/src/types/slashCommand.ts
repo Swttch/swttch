@@ -31,6 +31,14 @@ export interface AgentInfo {
 
 export interface ModelInfo {
   value: string;
+  /**
+   * The concrete model this row resolves to, as the CLI reports it
+   * (`claude-haiku-4-5-20251001`). `value` is what we hand back to the CLI to
+   * select the row; this is what the CLI echoes as the running model on
+   * `system/init`, so placing a reported model on its row keys on this field.
+   * Absent on rows the CLI did not resolve (our Fable fallback row).
+   */
+  resolvedModel?: string;
   displayName: string;
   description: string;
   supportsEffort?: boolean;

@@ -11,7 +11,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
-import { DEFAULT_MODEL_ALIAS, toModelAlias, withFableFallback } from '@/types/models';
+import { DEFAULT_MODEL_ALIAS, withFableFallback } from '@/types/models';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { OpenFilesWithRow } from './OpenFilesWithRow';
@@ -179,7 +179,7 @@ export function CliSettings() {
           }
         >
           <Select
-            value={claudeSettings.model ? toModelAlias(claudeSettings.model) : ''}
+            value={claudeSettings.model || ''}
             options={modelOptions}
             ariaLabel={t('cli.model.label')}
             onChange={(value) => void updateClaudeSetting('model', value || null)}

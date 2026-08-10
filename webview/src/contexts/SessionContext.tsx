@@ -11,7 +11,7 @@ import { getAdapter, onBridgeReady } from '../adapters';
 import { getLogForwarder } from '../api/logging';
 import { toTitle } from '../mappers/sessionTransformer';
 import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingDir } from '../router/routes';
-import { InputMode, getAvailableModes } from '../types/chatInput';
+import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
 
@@ -29,16 +29,19 @@ interface SessionContextValue {
 
   // Input mode
   inputMode: InputMode;
+  /**
+   * The mode to ask a spawning CLI for, or null to let the CLI read its own
+   * settings. Differs from `inputMode` only while nothing has established a mode
+   * yet: the composer must still show something (the app fallback), but asking the
+   * CLI for that fallback would override the user's configured default.
+   */
+  requestedInputMode: InputMode | null;
   setInputMode: (mode: InputMode) => void;
   cycleInputMode: () => void;
   /** 현재 가용한 모드 목록 (모드 선택 패널이 표시할 항목) */
   availableModes: InputMode[];
-  /** 설정값에서 로드된 초기 모드를 동기화 (사용자가 직접 변경하지 않은 경우에만 적용) */
-  syncInitialInputMode: (initialMode: InputMode) => void;
-  /** CLI가 통보한 실제 적용 모드(system/init.permissionMode)를 반영. 사용자 변경 플래그는 건드리지 않는다. */
+  /** CLI가 통보한 실제 적용 모드(system/init.permissionMode)를 이 세션의 모드로 반영한다. */
   syncEffectiveMode: (mode: InputMode) => void;
-  /** 세션 전환 시 초기 모드 재동기화를 트리거하기 위한 카운터 */
-  modeResetTrigger: number;
 
   // Auto mode availability (CLI가 결정 — ChatStream에서 푸시)
   autoModeAvailable: boolean;
@@ -90,16 +93,12 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const newlyCreatedSessionIds = useRef(new Set<string>());
 
-  // Input mode 상태
-  const [inputMode, setInputModeState] = useState<InputMode>('ask_before_edit');
-  // 이 세션의 모드가 이미 정해졌는가. 켜지면 설정 기본값(permissions.defaultMode)은
-  // 더 이상 끼어들지 않는다. "사용자가 직접 골랐는가"가 아니라 "정해졌는가"인 이유:
-  // 세션은 사용자가 모드 버튼을 누르지 않아도 특정 모드로 진행 중일 수 있고
-  // (새 탭이 plan으로 열린 경우 등), 그 상태에서 인풋 영역이 교체됐다는 이유로
-  // 기본값이 되살아나면 진행 중인 세션의 모드가 조용히 뒤집힌다.
-  const isModeSettled = useRef(false);
-  // 세션 전환 시 초기 모드 재동기화를 트리거하기 위한 카운터
-  const [modeResetTrigger, setModeResetTrigger] = useState(0);
+  // 이 세션이 스스로 만들어낸 모드만 담는다 — 사용자가 직접 고른 모드, 또는 CLI가
+  // 통보한 실제 적용 모드. 아직 둘 다 없으면 null이고, 그동안은 설정 기본값이 보인다.
+  // 설정 기본값을 이 상태에 복사해 넣지 않는 이유: 복사하는 순간 설정 컨텍스트와의
+  // 연결이 끊겨, 뒤늦게 도착한 설정을 언제 다시 반영할지 판정하는 플래그가 필요해진다.
+  // 그 판정이 설정 로딩 전에 켜져 설정 기본값이 영영 반영되지 않았다(#264).
+  const [sessionInputMode, setSessionInputMode] = useState<InputMode | null>(null);
   // addNewSession 시 URL 변경으로 인한 모드 리셋을 건너뛰기 위한 플래그
   const skipNextModeReset = useRef(false);
 
@@ -107,9 +106,25 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const [autoModeAvailable, setAutoModeAvailable] = useState(false);
   const [autoFallbackNotice, setAutoFallbackNotice] = useState(false);
 
+  // 설정 기본값(permissions.defaultMode)은 상태가 아니라 파생값이다. 설정 컨텍스트가
+  // 갱신되면 — 그것이 첫 로드든 사용자의 설정 변경이든, 언제 도착하든 — 그대로 따라온다.
+  // 설정이 기본 모드를 정하지 않았거나 아직 도착하지 않았으면 null이다.
+  const configuredInputMode = resolveConfiguredInputMode(claudeSettings.permissions?.defaultMode);
+
+  // 화면에 보이는 모드. 세션이 만들어낸 값이 있으면 그것이, 없으면 설정 기본값이,
+  // 그것도 없으면 앱 최후 기본값이 보인다.
+  const inputMode = sessionInputMode ?? configuredInputMode ?? FALLBACK_INPUT_MODE;
+
+  // CLI를 띄울 때 `--permission-mode`로 요구할 모드. 화면에 보이는 모드와 달리 null이
+  // 될 수 있다 — 세션이 만들어낸 모드도 없고 설정에서 읽은 기본값도 없는 상태다.
+  // 그때 화면은 앱 최후 기본값(ask_before_edit)을 보여주지만, 그 값을 CLI에 요구하면
+  // 안 된다: `--permission-mode default`는 "설정을 따르라"가 아니라 "승인을 요구하라"는
+  // 뜻이어서 설정의 defaultMode를 덮어쓴다(실측 확인). 플래그를 아예 생략해야 CLI가
+  // 자기 설정 파일을 직접 읽어 GUI와 같은 값으로 돈다.
+  const requestedInputMode = sessionInputMode ?? configuredInputMode;
+
   const setInputMode = useCallback((newMode: InputMode) => {
-    isModeSettled.current = true;
-    setInputModeState(newMode);
+    setSessionInputMode(newMode);
   }, []);
 
   // 현재 가용한 모드 목록(순환·선택 패널이 공유한다).
@@ -119,33 +134,16 @@ export function SessionProvider({ children }: SessionProviderProps) {
   );
 
   const cycleInputMode = useCallback(() => {
-    isModeSettled.current = true;
-    setInputModeState((current) => {
-      const currentIndex = availableModes.indexOf(current);
-      const nextIndex = (currentIndex + 1) % availableModes.length;
-      return availableModes[nextIndex];
-    });
-  }, [availableModes]);
+    const currentIndex = availableModes.indexOf(inputMode);
+    const nextIndex = (currentIndex + 1) % availableModes.length;
+    setSessionInputMode(availableModes[nextIndex]);
+  }, [availableModes, inputMode]);
 
-  // 설정 기본값(permissions.defaultMode)을 세션 시작 시 한 번만 적용한다.
-  // 적용하는 순간 모드는 정해진 것으로 본다 — 이 함수는 ChatInput이 마운트될 때마다
-  // 호출되는데, AskUserQuestion·플랜 승인 패널이 뜨면 ChatInput이 언마운트됐다가
-  // 다시 붙는다. "아직 사용자가 모드를 고르지 않았다"는 이유로 그때마다 기본값을
-  // 다시 적용하면, plan으로 진행 중이던 세션이 답변 한 번에 기본값(예: bypass)으로
-  // 뒤집힌다 — 화면은 느슨한 모드를 보여주는데 CLI는 여전히 plan인, 표시와 실제가
-  // 어긋나는 상태가 된다.
-  const syncInitialInputMode = useCallback((initialMode: InputMode) => {
-    if (isModeSettled.current) return;
-    isModeSettled.current = true;
-    setInputModeState(initialMode);
-  }, []);
-
-  // CLI가 통보한 실제 적용 모드를 반영한다(진실원). 화면에 보이는 모드를 CLI가 실제
-  // 적용한 것과 일치시키고, 그 모드로 정해진 것으로 본다 — CLI가 실제로 그 모드로
-  // 돌고 있는 이상 설정 기본값이 나중에 이를 덮어써선 안 된다.
+  // CLI가 통보한 실제 적용 모드를 반영한다(진실원). 사용자가 플랜 모드를 요청하지
+  // 않았는데 CLI가 스스로 플랜 모드로 실행했거나, 스스로 플랜 모드를 벗어난 경우가
+  // 여기로 들어온다. 세션을 다시 열 때 백엔드가 복원해주는 마지막 모드도 같은 성격이다.
   const syncEffectiveMode = useCallback((mode: InputMode) => {
-    isModeSettled.current = true;
-    setInputModeState(mode);
+    setSessionInputMode(mode);
   }, []);
 
   const notifyAutoFallback = useCallback(() => setAutoFallbackNotice(true), []);
@@ -159,10 +157,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
       skipNextModeReset.current = false;
       return;
     }
-    // 다른 세션으로 넘어갔으니 이전 세션에서 정해진 모드는 더 이상 유효하지 않다.
+    // 다른 세션으로 넘어갔으니 이전 세션이 만들어낸 모드는 더 이상 유효하지 않다.
     // 새 세션은 다시 설정 기본값에서 출발한다.
-    isModeSettled.current = false;
-    setModeResetTrigger(c => c + 1);
+    setSessionInputMode(null);
   }, [currentSessionId]);
 
   // JetBrains에서 kotlinBridgeReady 이벤트 후 IDE adapter 재초기화
@@ -364,12 +361,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
     isLoading,
     workingDirectory,
     inputMode,
+    requestedInputMode,
     setInputMode,
     cycleInputMode,
     availableModes,
-    syncInitialInputMode,
     syncEffectiveMode,
-    modeResetTrigger,
     autoModeAvailable,
     setAutoModeAvailable,
     autoFallbackNotice,

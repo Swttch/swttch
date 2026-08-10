@@ -23,7 +23,9 @@ export async function sendMessageHandler(
     });
     return;
   }
-  const inputMode = message.payload?.inputMode as string;
+  // Absent means nothing has established a mode for this session yet — the CLI
+  // then reads its own `permissions.defaultMode` rather than being handed one.
+  const inputMode = message.payload?.inputMode as string | undefined;
   const model = message.payload?.model as string | undefined;
   // 새 세션 여부는 webview가 판정해 payload로 알려준다. webview가 새 세션에도 sessionId를
   // 미리 생성해 보내므로(ChatStreamContext), 백엔드에서 sessionId 유무로는 판정할 수 없다.

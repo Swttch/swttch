@@ -6,6 +6,7 @@ import {
   resolveModelLabel,
   findModelForSelection,
   modelChangeTarget,
+  isModelChangeFor,
   isAutoModeAvailable,
   withFableFallback,
   resolveCurrentModel,
@@ -14,12 +15,18 @@ import {
 } from '../models';
 import type { ModelInfo } from '../slashCommand';
 
-function model(value: string, displayName = value): ModelInfo {
-  return { value, displayName, description: `${displayName} desc` };
+/**
+ * A catalog row as the CLI actually serves it: every row it resolved carries a
+ * `resolvedModel` alongside the `value` we hand back to select it. Tests that
+ * need a row WITHOUT one (our Fable fallback, an unresolved row) build the
+ * object literally instead of using this helper.
+ */
+function model(value: string, displayName = value, resolvedModel = `claude-${value}`): ModelInfo {
+  return { value, resolvedModel, displayName, description: `${displayName} desc` };
 }
 
 function modelWithAuto(value: string, supportsAutoMode: boolean): ModelInfo {
-  return { value, displayName: value, description: `${value} desc`, supportsAutoMode };
+  return { ...model(value), supportsAutoMode };
 }
 
 describe('findModelForSelection', () => {
@@ -170,13 +177,14 @@ describe('custom model catalogs (issue #217)', () => {
   const CUSTOM_MODELS: ModelInfo[] = [
     {
       value: 'default',
+      resolvedModel: 'glm-5.2-mayi[1m]',
       displayName: 'Default (recommended)',
       description: 'Use the default model (currently glm-5.2-mayi[1m])',
     },
-    { value: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
-    { value: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
-    { value: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
-    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+    { value: 'glm-5.2-mayi', resolvedModel: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
+    { value: 'glm-5.1-mayi', resolvedModel: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
+    { value: 'glm-4.7-mayi', resolvedModel: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
+    { value: 'glm-4.5-air-mayi', resolvedModel: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
   ];
 
   it('derives the family from the description when the value carries no family token', () => {
@@ -199,10 +207,18 @@ describe('custom model catalogs (issue #217)', () => {
 
   it('keeps a user-picked custom model displayed after the session starts', () => {
     // Regression for #217: the user picks the Haiku slot and sends a message;
-    // system/init echoes the coarse alias, which must resolve back to the very
-    // model the user picked — not to the "default" row.
-    expect(resolveModelInfo(CUSTOM_MODELS, 'haiku')?.value).toBe('glm-4.5-air-mayi');
-    expect(resolveModelInfo(CUSTOM_MODELS, 'sonnet')?.value).toBe('glm-4.7-mayi');
+    // system/init echoes the id that slot resolved to, which must land back on
+    // the very row the user picked — not on the "default" row.
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.5-air-mayi')?.value).toBe('glm-4.5-air-mayi');
+    expect(resolveModelInfo(CUSTOM_MODELS, 'glm-4.7-mayi')?.value).toBe('glm-4.7-mayi');
+  });
+
+  it('does not put a coarse alias on an arbitrary row of that family', () => {
+    // A proxy catalog can map ONE id onto two slots ("Custom Sonnet model" and
+    // "Custom Haiku model" both serving it), so picking a row by the family
+    // named in its blurb picks whichever comes first — a guess, not a match.
+    // Better to identify nothing than to tick a row we cannot justify.
+    expect(resolveModelInfo(CUSTOM_MODELS, 'haiku', { allowDefaultFallback: false })).toBeNull();
   });
 
   it('resolves the raw custom id the CLI may echo back, suffix and case included', () => {
@@ -293,18 +309,19 @@ describe('resolveModelInfo', () => {
 
 describe('modelChangeTarget', () => {
   const models: ModelInfo[] = [
-    { value: 'default', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' },
-    { value: 'opus[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' },
-    { value: 'sonnet', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
-    { value: 'haiku', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+    { value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' },
+    { value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' },
+    { value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
+    { value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
   ];
 
-  it('resolves "Set model to <full id>" to the model value + friendly label', () => {
-    // CLI echoes the bare id for the opus[1m] selection
-    expect(modelChangeTarget('Set model to claude-opus-4-8[1m]', models)).toEqual({
-      value: 'opus[1m]',
-      label: 'Opus 4.8',
-    });
+  it('resolves "Set model to <full id>" to a friendly label', () => {
+    // The CLI echoes the bare id. Two rows here serve that id — "Default
+    // (recommended)" and "Opus" — exactly as the real catalog does, so only the
+    // label is well-defined; both rows carry the same one. Which row got picked
+    // is the caller's business, and the caller that cares asks
+    // `isModelChangeFor` instead (see below).
+    expect(modelChangeTarget('Set model to claude-opus-4-8[1m]', models)?.label).toBe('Opus 4.8');
   });
 
   it('resolves "Set model to <alias> (<id>)" by the alias before the paren', () => {
@@ -320,8 +337,8 @@ describe('modelChangeTarget', () => {
 
   it('still parses when wrapped in a local-command-stdout tag', () => {
     expect(
-      modelChangeTarget('<local-command-stdout>Set model to claude-opus-4-8[1m]</local-command-stdout>', models),
-    ).toEqual({ value: 'opus[1m]', label: 'Opus 4.8' });
+      modelChangeTarget('<local-command-stdout>Set model to claude-opus-4-8[1m]</local-command-stdout>', models)?.label,
+    ).toBe('Opus 4.8');
   });
 
   it('returns null for text that is not a model-change line', () => {
@@ -331,6 +348,38 @@ describe('modelChangeTarget', () => {
 
   it('falls back to the raw token (value and label) when the model is unknown', () => {
     expect(modelChangeTarget('Set model to mystery', [])).toEqual({ value: 'mystery', label: 'mystery' });
+  });
+});
+
+describe('isModelChangeFor', () => {
+  // Mirrors the real catalog: "default" and "opus[1m]" serve one model id.
+  const models: ModelInfo[] = [
+    { value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' },
+    { value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' },
+    { value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
+  ];
+
+  it('matches every row the echoed id resolves to, not just the first one', () => {
+    // Whichever of the two the user picked, the echo announces their change —
+    // so the local notice for that row must recognize it and step aside.
+    expect(isModelChangeFor('Set model to claude-opus-4-8[1m]', 'opus[1m]', models)).toBe(true);
+    expect(isModelChangeFor('Set model to claude-opus-4-8[1m]', 'default', models)).toBe(true);
+  });
+
+  it('does not match a row serving a different model', () => {
+    expect(isModelChangeFor('Set model to claude-opus-4-8[1m]', 'sonnet', models)).toBe(false);
+  });
+
+  it('matches when the echo names the row value itself', () => {
+    expect(isModelChangeFor('Set model to sonnet (claude-sonnet-4-6)', 'sonnet', models)).toBe(true);
+  });
+
+  it('matches an unknown model against the raw token, so a proxy model still dedupes', () => {
+    expect(isModelChangeFor('Set model to my-proxy-model', 'my-proxy-model', [])).toBe(true);
+  });
+
+  it('is false for text that is not a model-change line', () => {
+    expect(isModelChangeFor('hello world', 'sonnet', models)).toBe(false);
   });
 });
 
