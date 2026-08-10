@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, KeyboardEvent, useState, type Clipboard
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
-import { INPUT_MODES, resolveInitialInputMode } from '../../../types/chatInput';
+import { INPUT_MODES } from '../../../types/chatInput';
 import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
 import { ScheduleSendPopover } from './ScheduleSendPopover';
@@ -54,7 +54,7 @@ interface NativeDropEntry {
 export function ChatInput() {
   const { t } = useTranslation('chat');
   const { textareaRef } = useChatInputFocus();
-  const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, syncInitialInputMode, modeResetTrigger, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
+  const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop } = chatStream;
   const { input: value, setInput: onChange } = useChatInputState();
@@ -86,7 +86,7 @@ export function ChatInput() {
     setIsDragOver,
   } = useAttachments();
 
-  const { settings: claudeSettings, updateSetting: updateClaudeSetting, isLoading: claudeSettingsLoading } = useClaudeSettings();
+  const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
   const { cycle: cycleEffort } = useEffort();
@@ -235,19 +235,6 @@ export function ChatInput() {
   }, [claudeSettings.alwaysThinkingEnabled, updateClaudeSetting]);
 
   const disabled = sessionState === SessionState.Error || !workingDirectory;
-
-  // Claude settings의 permissions.defaultMode에서 초기 모드 결정. claudeSettings는
-  // GET_CLAUDE_SETTINGS로 비동기 로드되므로, 로딩 중(claudeSettingsLoading)의
-  // defaultModeFlag는 "설정값이 없다"가 아니라 "아직 모른다"다. 이 값으로
-  // syncInitialInputMode를 호출해 모드를 확정(settle)해버리면, 실제 설정이 도착해도
-  // 이미 정해졌다는 이유로 반영되지 않는다 — 예: bypass가 기본값인데 로딩 중
-  // ask_before_edit로 먼저 확정되어 그 값이 굳어버림. 로딩이 끝난 뒤에만 호출한다.
-  const defaultModeFlag = claudeSettings.permissions?.defaultMode;
-  const initialInputMode = resolveInitialInputMode(defaultModeFlag);
-  useEffect(() => {
-    if (claudeSettingsLoading) return;
-    syncInitialInputMode(initialInputMode);
-  }, [initialInputMode, syncInitialInputMode, modeResetTrigger, claudeSettingsLoading]);
 
   const modeConfig = INPUT_MODES[mode];
 

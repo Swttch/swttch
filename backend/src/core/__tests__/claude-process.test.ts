@@ -40,6 +40,15 @@ describe('buildClaudeArgs', () => {
     expect(buildClaudeArgs('--session-id', 's', 'nonsense')).not.toContain('--permission-mode');
   });
 
+  // #264: `--permission-mode default` names the ask-before-edits mode; it does not
+  // mean "use whatever settings say". Handing it to a caller that has no mode to ask
+  // for would override the user's configured `permissions.defaultMode` with the
+  // strictest mode. Omitting the flag entirely is what lets the CLI read its own
+  // settings — the same thing the user gets running `claude` in a terminal.
+  it('omits --permission-mode when no mode is requested, so the CLI reads its own settings', () => {
+    expect(buildClaudeArgs('--session-id', 's', undefined)).not.toContain('--permission-mode');
+  });
+
   it('pins an explicitly selected model via --model (adjacent value)', () => {
     const args = buildClaudeArgs('--resume', 's', 'ask_before_edit', 'opus[1m]');
     const i = args.indexOf('--model');
@@ -74,6 +83,13 @@ describe('needsRestartForMode', () => {
 
   it('restarts when the live process mode is unknown (safer than assuming a match)', () => {
     expect(needsRestartForMode(null, 'plan')).toBe(true);
+  });
+
+  // A message that asks for no particular mode is not a mode change — killing a
+  // working CLI to respawn an identical one would interrupt the session for nothing.
+  it('reuses the live process when the message requests no mode at all', () => {
+    expect(needsRestartForMode('plan', undefined)).toBe(false);
+    expect(needsRestartForMode(null, undefined)).toBe(false);
   });
 });
 

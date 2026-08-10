@@ -148,15 +148,32 @@ export const CLI_FLAG_TO_INPUT_MODE: Record<string, InputMode> = {
 } as const;
 
 /**
- * The InputMode a session should start in, given the CLI flag configured as
- * `permissions.defaultMode` (undefined when settings have not resolved a value —
- * distinct from "no default configured", which the CLI itself never reports; the
- * absence here is purely "we don't know yet"). Falls back to ask_before_edit for
- * both an absent setting and an unrecognized flag, so a stale/renamed flag never
- * silently grants a looser mode than intended.
+ * The mode the app shows before it knows anything else — no session mode yet and
+ * no `permissions.defaultMode` read from settings. The strictest of the modes, so
+ * an unknown state never displays looser permissions than the user actually has.
+ */
+export const FALLBACK_INPUT_MODE: InputMode = InputModeValues.ASK_BEFORE_EDIT;
+
+/**
+ * The InputMode the user's `permissions.defaultMode` names, or null when settings
+ * name none — either because they have not arrived yet or because the user never
+ * configured one. Both cases mean the same thing to a spawning CLI: do not pass
+ * `--permission-mode`, let the CLI read its own settings.
+ *
+ * An unrecognized flag also yields null rather than a guess, so a stale or renamed
+ * flag never silently grants a looser mode than intended.
+ */
+export function resolveConfiguredInputMode(defaultModeFlag: string | undefined): InputMode | null {
+  if (!defaultModeFlag) return null;
+  return CLI_FLAG_TO_INPUT_MODE[defaultModeFlag] ?? null;
+}
+
+/**
+ * The InputMode to display for a session that has not established one of its own:
+ * the configured default when settings name one, else the app's fallback.
  */
 export function resolveInitialInputMode(defaultModeFlag: string | undefined): InputMode {
-  return defaultModeFlag ? (CLI_FLAG_TO_INPUT_MODE[defaultModeFlag] ?? InputModeValues.ASK_BEFORE_EDIT) : InputModeValues.ASK_BEFORE_EDIT;
+  return resolveConfiguredInputMode(defaultModeFlag) ?? FALLBACK_INPUT_MODE;
 }
 
 // ============================================

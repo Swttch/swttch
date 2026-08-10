@@ -88,7 +88,7 @@ export function readReportedMode(event: Record<string, unknown>): string | null 
 export function buildClaudeArgs(
   sessionFlag: string,
   targetSessionId: string,
-  inputMode: string,
+  inputMode: string | undefined,
   model?: string,
 ): string[] {
   const args: string[] = [
@@ -105,7 +105,11 @@ export function buildClaudeArgs(
     targetSessionId,
   ];
 
-  const cliFlag = INPUT_MODE_TO_CLI_FLAG[inputMode];
+  // No requested mode means nothing has established one for this session yet, so
+  // the CLI is left to read its own `permissions.defaultMode`. Passing a flag here
+  // would override that setting rather than defer to it — `--permission-mode
+  // default` names the ask-before-edits mode, it does not mean "follow settings".
+  const cliFlag = inputMode ? INPUT_MODE_TO_CLI_FLAG[inputMode] : undefined;
   if (cliFlag) {
     args.push('--permission-mode', cliFlag);
   }
@@ -169,7 +173,14 @@ export function markSessionAsSpawned(sessionId: string): void {
  * would gamble on an unknown mode and risk edits running under looser permissions
  * than the user chose.
  */
-export function needsRestartForMode(liveMode: string | null, requestedMode: string): boolean {
+export function needsRestartForMode(
+  liveMode: string | null,
+  requestedMode: string | undefined,
+): boolean {
+  // No requested mode is not a mode to compare against — it means the sender has
+  // no mode to ask for, so whatever the live CLI is already running under stands.
+  // Restarting here would tear down a working process to spawn an identical one.
+  if (!requestedMode) return false;
   return liveMode !== requestedMode;
 }
 
@@ -243,7 +254,7 @@ export async function ensureClaudeProcess(
   connectionId: string,
   workingDir: string,
   targetSessionId: string,
-  inputMode: string,
+  inputMode: string | undefined,
   bridge: Bridge,
   model?: string,
 ): Promise<void> {
@@ -397,7 +408,10 @@ export async function ensureClaudeProcess(
   // Remember the mode this process actually runs under, so a later mode change is
   // detected and honored by restarting instead of being silently dropped (#172).
   // Must follow setProcess — clearing the process also clears the recorded mode.
-  connections.setInputMode(targetSessionId, inputMode);
+  // Spawning without a requested mode leaves this null: the CLI picked the mode
+  // from its own settings, and it reports that choice on `system/init`, which is
+  // what fills the record in.
+  connections.setInputMode(targetSessionId, inputMode ?? null);
   connections.setBuffer(targetSessionId, '');
 
   // The session's process is now alive — this is where we re-arm any scheduled
