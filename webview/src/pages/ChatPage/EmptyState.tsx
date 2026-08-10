@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import clawdSvg from '../../assets/clawd.svg';
 import claudeCodeLogo from '../../assets/claude-code-logo.svg';
+import { ClawdWalk } from './ClawdWalk';
 import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
 import { AnnouncementEmptyStateSlot } from '@/components/Announcements/placements';
@@ -59,7 +59,7 @@ export const EmptyState = () => {
         <img src={claudeCodeLogo} alt={APP_NAME} width={120} />
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-5 pt-14">
-        <img src={clawdSvg} alt="Clawd" width={46} />
+        <ClawdWalk />
         <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
         <AnnouncementEmptyStateSlot />
       </div>
