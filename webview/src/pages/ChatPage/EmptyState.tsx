@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import claudeCodeLogo from '../../assets/claude-code-logo.svg';
 import { ClawdWalk } from './ClawdWalk';
+import { RunnerGame } from './runner/RunnerGame';
 import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
 import { AnnouncementEmptyStateSlot } from '@/components/Announcements/placements';
@@ -47,6 +48,8 @@ export const EmptyState = () => {
   );
 
   const [hint, setHint] = useState<ReactNode>(t('emptyState.initialHint'));
+  /** Clicking Dorongi hands the empty state over to the runner game. */
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     const index = Math.floor(Math.random() * hints.length);
@@ -59,9 +62,15 @@ export const EmptyState = () => {
         <img src={claudeCodeLogo} alt={APP_NAME} width={120} />
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-5 pt-14">
-        <ClawdWalk />
-        <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
-        <AnnouncementEmptyStateSlot />
+        {playing ? (
+          <RunnerGame onExit={() => setPlaying(false)} />
+        ) : (
+          <>
+            <ClawdWalk onDorongiClick={() => setPlaying(true)} />
+            <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
+            <AnnouncementEmptyStateSlot />
+          </>
+        )}
       </div>
     </div>
   );

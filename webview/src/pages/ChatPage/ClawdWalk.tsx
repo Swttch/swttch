@@ -40,7 +40,12 @@ const DORONGI_OPTICAL_LIFT = 1;
  * line comes from aligning artwork bottoms rather than <image> boxes — see the
  * two offsets above.
  */
-export const ClawdWalk = () => {
+interface ClawdWalkProps {
+  /** Called when Dorongi is clicked; absent when nothing should happen. */
+  onDorongiClick?: () => void;
+}
+
+export const ClawdWalk = ({ onDorongiClick }: ClawdWalkProps) => {
   const width = CLAWD_WIDTH + GAP + DORONGI_SIZE;
   const height = Math.max(CLAWD_HEIGHT, DORONGI_SIZE) + CLAWD_BOTTOM_PADDING;
 
@@ -81,6 +86,19 @@ export const ClawdWalk = () => {
         strokeLinecap="round"
         fill="none"
       />
+
+      {/* Transparent hit area over Dorongi, drawn last so it takes the clicks. */}
+      {onDorongiClick && (
+        <rect
+          x={dorongiX}
+          y={dorongiY}
+          width={DORONGI_SIZE}
+          height={DORONGI_SIZE}
+          fill="transparent"
+          className="cursor-pointer"
+          onClick={onDorongiClick}
+        />
+      )}
     </svg>
   );
 };
