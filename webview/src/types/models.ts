@@ -51,14 +51,13 @@ export function modelInfoAlias(info: ModelInfo): string {
 }
 
 /**
- * Normalize a model id for comparison: lowercase and strip a context-window
- * suffix (`[1m]`). The CLI echoes the running model back through `system/init`
- * in a slightly different shape than the catalog lists it, and for custom
- * models there is no family token to fall back on — so this comparison is what
- * keeps the user's exact pick on screen.
+ * Reduce a model id to letters and digits, lowercased. One model is named in
+ * different shapes across sources (`opus[1m]` vs `claude-opus-5[1m]`,
+ * `GLM-4.5-Air-MAYI` vs `glm-4.5-air-mayi`), so a comparison of last resort keys
+ * on this rather than on the raw strings.
  */
-function normalizeModelId(value: string): string {
-  return value.toLowerCase().replace(/\[[^\]]*\]$/, '');
+function alphanumericKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /**
@@ -229,10 +228,12 @@ export function resolveModelLabel(info: ModelInfo): string {
  * rather than rendering nothing.
  *
  * Resolution order:
- *  1. exact `value` match — preserves fine-grained user picks
- *  2. alias-equivalence — same model family via `toModelAlias`
- *  3. the `default` item — a sane visible fallback
- *  4. `null` — caller renders a raw label of last resort
+ *  1. exact `resolvedModel` — the concrete id the CLI reports as running
+ *  2. exact `displayName` — a custom catalog puts its real id here
+ *  3. exact `value` — preserves fine-grained user picks ("opusplan")
+ *  4. alphanumeric containment — same id written in a different shape
+ *  5. the `default` item — a sane visible fallback
+ *  6. `null` — caller renders a raw label of last resort
  */
 /**
  * Resolve a model the user *explicitly named* (e.g. "/model fable"), matching
@@ -266,20 +267,34 @@ export function resolveModelInfo(
   if (models.length === 0) return null;
   const target = current ?? DEFAULT_MODEL_ALIAS;
 
-  const exact = models.find((m) => m.value === target);
-  if (exact) return exact;
+  // The CLI selects a row by its `value` but reports the running model as the
+  // concrete id that row resolved to, and the catalog carries that id on every
+  // row it resolved. So `resolvedModel` is the precise thing to match on, and it
+  // needs no guessing about id shapes — custom proxy catalogs included, whose ids
+  // carry no family token to fall back on (issue #217).
+  const resolved = models.find((m) => m.resolvedModel !== undefined && m.resolvedModel === target);
+  if (resolved) return resolved;
 
-  // A CLI-echoed value may carry a suffix or differ in case from the catalog
-  // entry (`glm-4.5-air-mayi[1m]`, `GLM-4.5-Air-MAYI`), so try a normalized
-  // match before widening to the family — it keeps the user's precise pick.
-  const normalized = normalizeModelId(target);
-  const idMatch = models.find((m) => normalizeModelId(m.value) === normalized);
-  if (idMatch) return idMatch;
+  const byName = models.find((m) => m.displayName === target);
+  if (byName) return byName;
 
-  const targetAlias = toModelAlias(target);
-  if (targetAlias !== DEFAULT_MODEL_ALIAS) {
-    const aliasMatch = models.find((m) => modelInfoAlias(m) === targetAlias);
-    if (aliasMatch) return aliasMatch;
+  // An exact `value` before any loose comparison: "opusplan" contains "opus", so
+  // a containment pass alone would hand back the coarser row and lose the
+  // fine-grained pick the user actually made.
+  const exactValue = models.find((m) => m.value === target);
+  if (exactValue) return exactValue;
+
+  // Last resort: one model is named in different shapes across sources
+  // (`opus[1m]` vs `claude-opus-5[1m]`, `GLM-4.5-Air-MAYI` vs `glm-4.5-air-mayi`).
+  // Comparing on letters and digits alone drops punctuation, case and suffixes,
+  // and either side may be the longer form — so accept containment both ways.
+  const targetKey = alphanumericKey(target);
+  if (targetKey) {
+    const contained = models.find((m) => {
+      const valueKey = alphanumericKey(m.value);
+      return valueKey !== '' && (targetKey.includes(valueKey) || valueKey.includes(targetKey));
+    });
+    if (contained) return contained;
   }
 
   // Callers that need to know whether the model was genuinely identified (see
@@ -329,9 +344,39 @@ export function modelChangeTarget(
   text: string,
   models: ModelInfo[],
 ): { value: string; label: string } | null {
-  const match = text.match(/Set model to (.+?)(?:\s*[(<]|$)/);
-  if (!match) return null;
-  const raw = match[1].trim();
+  const raw = modelChangeToken(text);
+  if (raw === null) return null;
   const info = resolveModelInfo(models, raw);
   return info ? { value: info.value, label: resolveModelLabel(info) } : { value: raw, label: raw };
+}
+
+/** The model token inside a CLI `/model` echo line, or null if it isn't one. */
+function modelChangeToken(text: string): string | null {
+  const match = text.match(/Set model to (.+?)(?:\s*[(<]|$)/);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Whether a CLI `/model` echo line announces the row selected as `value`.
+ *
+ * Distinct from `modelChangeTarget`, which answers "which row is this?" and so
+ * must pick ONE. The echo names the id the row resolved to, and several rows can
+ * resolve to the same id — "Default (recommended)" and "Opus (1M context)" both
+ * serve `claude-opus-5[1m]`, as do two slots of a proxy catalog pointed at one
+ * model. Asking "is this row the one?" answers exactly what the caller knows it
+ * needs, instead of making the resolver guess between rows it cannot separate.
+ */
+export function isModelChangeFor(
+  text: string,
+  value: string,
+  models: ModelInfo[],
+): boolean {
+  const raw = modelChangeToken(text);
+  if (raw === null) return false;
+  if (raw === value) return true; // the echo named the row's own value
+  const row = models.find((m) => m.value === value);
+  if (row?.resolvedModel !== undefined && row.resolvedModel === raw) return true;
+  // Neither side named the row directly — fall back to the shared resolver, so
+  // an id written in another shape still converges (see `resolveModelInfo`).
+  return resolveModelInfo(models, raw, { allowDefaultFallback: false })?.value === value;
 }

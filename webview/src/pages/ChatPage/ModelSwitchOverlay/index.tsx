@@ -145,11 +145,18 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
       <div className="pb-1.5 px-1">
         {models.length === 0 ? (
           <div className="px-2 py-1 text-[0.9230rem] text-text-tertiary">{t('modelSwitch.loadingModels')}</div>
-        ) : models.map((m) => {
-          const selected = m.value === currentInfo?.value;
+        ) : models.map((m, i) => {
+          // Compare the row itself, not its `value`: a proxy catalog can map two
+          // slots onto one model id — the same `value` listed as both "Custom
+          // Sonnet model" and "Custom Haiku model" — and comparing values ticks
+          // both rows.
+          const selected = m === currentInfo;
           return (
             <button
-              key={m.value}
+              // `value` is the string we hand the CLI, not an identity within
+              // this list — a proxy catalog can list one id in two slots, and a
+              // duplicated key makes React reuse the wrong row.
+              key={i}
               onClick={() => void handleSelect(m.value)}
               className={`w-full relative flex items-center justify-between px-2 py-1 rounded-md text-start transition-colors ${
                 selected ? 'bg-surface-hover' : 'hover:bg-surface-hover'

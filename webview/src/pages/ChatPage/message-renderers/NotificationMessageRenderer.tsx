@@ -2,7 +2,7 @@ import React from 'react';
 import { LoadedMessageDto, LoadedMessageType, getTextContent } from '../../../types';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
-import { modelChangeTarget } from '@/types/models';
+import { isModelChangeFor } from '@/types/models';
 import { parseUserContent } from './utils/parseUserContent';
 import type { ModelInfo } from '@/types/slashCommand';
 
@@ -32,6 +32,10 @@ export const NotificationMessageRenderer: React.FC<NotificationMessageRendererPr
   // Match by model identity (the notice's `modelChangeValue`), not by display
   // text: the notice summary is localized while the echo is English, so string
   // equality would never converge and both lines would linger.
+  //
+  // Ask whether the echo names THIS row rather than resolving the echo to a row
+  // and comparing: several rows can resolve to one model id, so resolving picks
+  // one arbitrarily and the row the user actually chose may lose the comparison.
   const modelValue = message.modelChangeValue;
   if (modelValue) {
     const models: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
@@ -39,7 +43,7 @@ export const NotificationMessageRenderer: React.FC<NotificationMessageRendererPr
       if (m.type !== LoadedMessageType.User) return false;
       const parsed = parseUserContent(getTextContent(m));
       if (!parsed.hasLocalCommandStdout && parsed.commandName !== 'model') return false;
-      return modelChangeTarget(parsed.text, models)?.value === modelValue;
+      return isModelChangeFor(parsed.text, modelValue, models);
     });
     if (echoArrived) return null;
   }
