@@ -17,6 +17,7 @@ function makeServices(overrides: {
       input: overrides.input ?? '',
       setInput: vi.fn(),
       sendMessage,
+      runControlRequestCommand: vi.fn(),
       stop: vi.fn(),
       continue: vi.fn(),
       clearMessages: vi.fn(),

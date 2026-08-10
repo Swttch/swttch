@@ -1359,4 +1359,94 @@ describe('useChatStream', () => {
       expect(getTextContent(result.current.messages[assistantIndex])).toContain('part two');
     });
   });
+
+  // Commands the CLI only accepts as a control_request are not turns: the CLI
+  // answers once with a control_response and never sends the `result` that ends
+  // a turn. Echoing them through addUserMessage left a placeholder spinning
+  // forever (#270).
+  describe('control_request 슬래시 커맨드 (#270)', () => {
+    it('addCommandEcho는 진행 표시를 켜되 result를 기다리는 자리표시자는 만들지 않는다', () => {
+      const { bridge } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addCommandEcho('/reload-plugins');
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0].type).toBe(LoadedMessageType.User);
+      expect(getTextContent(result.current.messages[0])).toBe('/reload-plugins');
+      // Spins while the CLI works — the command is running, and that should show.
+      expect(result.current.isStreaming).toBe(true);
+      // But with no message bound to `result`, which never arrives for a
+      // control_request. The control_response is what ends it.
+      expect(result.current.streamingMessageId).toBeNull();
+    });
+
+    it('control_response가 오면 진행 표시가 꺼진다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addCommandEcho('/reload-plugins');
+      });
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id: 'ccg-cmd-reload_plugins-abc',
+            response: { plugins: [{ name: 'omc' }], error_count: 0 },
+          },
+        });
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('control_response를 어시스턴트 메시지로 렌더한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        result.current.addCommandEcho('/reload-plugins');
+      });
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id: 'ccg-cmd-reload_plugins-abc',
+            response: { plugins: [{ name: 'omc' }], error_count: 0 },
+          },
+        });
+      });
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.type).toBe(LoadedMessageType.Assistant);
+      expect(getTextContent(last)).toContain('omc');
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('우리가 보내지 않은 control_response는 무시한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id: 'can_use_tool_42',
+            response: { behavior: 'allow' },
+          },
+        });
+      });
+
+      expect(result.current.messages).toHaveLength(0);
+    });
+  });
 });

@@ -2,6 +2,7 @@ export * from './account';
 export * from './announcement';
 export * from './cli-update';
 export * from './client-env';
+export * from './control-request-command';
 export * from './mcp';
 export * from './message-type';
 export * from './scheduled-message';

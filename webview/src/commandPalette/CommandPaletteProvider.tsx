@@ -28,6 +28,7 @@ import {
   SupportSection,
   ClearCommand,
   UsageCommand,
+  buildControlRequestCommands,
   CliPassthroughCommand,
   ModelSlashCommand,
   getContextItems,
@@ -84,6 +85,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       input: chatInputState.input,
       setInput: chatInputState.setInput,
       sendMessage: chatStream.sendMessage,
+      runControlRequestCommand: chatStream.runControlRequestCommand,
       stop: chatStream.stop,
       continue: chatStream.continue,
       clearMessages: chatStream.clearMessages,
@@ -120,6 +122,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
       input: chatInputState.input,
       setInput: chatInputState.setInput,
       sendMessage: chatStream.sendMessage,
+      runControlRequestCommand: chatStream.runControlRequestCommand,
       stop: chatStream.stop,
       continue: chatStream.continue,
       clearMessages: chatStream.clearMessages,
@@ -219,7 +222,14 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
 
   const sections = useMemo(() => {
     if (commands.length > 0) {
-      const localCommands = [new ClearCommand(), new UsageCommand()];
+      // The CLI omits `/reload-plugins` and `/btw` from a stream-json session's
+      // command list, so they never reach `commands` — list them ourselves and
+      // run them over the control_request the CLI does accept (#270).
+      const localCommands = [
+        new ClearCommand(),
+        new UsageCommand(),
+        ...buildControlRequestCommands(),
+      ];
       const localLabels: Set<string> = new Set(localCommands.map(c => c.label));
       const seen = new Set<string>();
       const dynamicCommands = commands

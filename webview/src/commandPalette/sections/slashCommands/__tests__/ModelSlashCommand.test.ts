@@ -17,6 +17,7 @@ function makeServices(input: string, inputMode: InputMode = InputModeValues.BYPA
       input,
       setInput: vi.fn(),
       sendMessage,
+      runControlRequestCommand: vi.fn(),
       stop: vi.fn(),
       continue: vi.fn(),
       clearMessages: vi.fn(),

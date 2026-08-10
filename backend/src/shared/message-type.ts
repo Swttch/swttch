@@ -33,6 +33,11 @@ export enum MessageType {
   SESSION_CHANGE = 'SESSION_CHANGE',
   /** Reply to a tool-permission/tool-use request raised by the CLI. */
   TOOL_RESPONSE = 'TOOL_RESPONSE',
+  /** Run a slash command the CLI refuses over stream-json (`/reload-plugins`,
+   *  `/btw`) by issuing the equivalent `control_request` on the session's stdin.
+   *  The CLI's `control_response` comes back through CLI_EVENT, matched on the
+   *  request_id sent here. inbound webview→backend */
+  SEND_CONTROL_REQUEST = 'SEND_CONTROL_REQUEST',
   /** Re-attach this connection to an already-running session (e.g. after reconnect). */
   RECLAIM_SESSION = 'RECLAIM_SESSION',
 

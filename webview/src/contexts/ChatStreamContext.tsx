@@ -9,7 +9,8 @@ import { useClaudeSettings } from './ClaudeSettingsContext';
 import { LoadedMessageDto, Context, Attachment, SessionState } from '../types';
 import { InputMode, InputModeValues, CLI_FLAG_TO_INPUT_MODE } from '../types/chatInput';
 import { isAutoModeAvailable, reconcileSessionModel } from '../types/models';
-import { MessageType } from '@/shared';
+import { MessageType, matchControlRequestCommand } from '@/shared';
+import { useControlRequestCommand } from '../hooks/useControlRequestCommand';
 import type { IdeSelectionPayload } from '../hooks/useIdeSelection';
 import { injectIdeContext, InjectedSelectionKey } from '../hooks/ideContextTag';
 import { matchesUsageCommand } from '@/commandPalette/sections/slashCommands/UsageCommand';
@@ -49,6 +50,8 @@ interface ChatStreamContextType {
   // Actions
   sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[]) => void;
   handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[]) => void;
+  /** Run a slash command the CLI only accepts as a control_request (#270). */
+  runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
   continue: () => void;
   retry: (messageId: string) => void;
@@ -122,7 +125,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const { children, setInput, inputRef, currentSelectionRef, includeSelectionRef, respectGitignoreRef } = props;
   const bridge = useBridgeContext();
   const session = useSessionContext();
-  const { controlResponse } = useCliConfig();
+  const { controlResponse, refresh: refreshCliConfig } = useCliConfig();
   const { settings: claudeSettings } = useClaudeSettings();
   const tools = useTools();
   const diffs = useDiffs();
@@ -169,6 +172,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     onSystemMessage: (data: Record<string, unknown>) => {
       console.log('[ChatStreamContext] System message:', data);
     },
+    onControlRequestResult: (result) => {
+      // Reloading plugins changes which slash commands and agents exist, so pull
+      // the CLI config again — otherwise the palette keeps offering the old set
+      // until the next spawn (#270).
+      if (result.subtype === 'reload_plugins' && !result.isError) {
+        refreshCliConfig().catch((error) => {
+          console.error('[ChatStreamContext] Failed to refresh CLI config:', error);
+        });
+      }
+    },
     onToolUseStart: (toolName: string) => {
       if (toolName === 'EnterPlanMode') {
         // 현재 모드가 이미 plan이 아닌 경우에만 저장
@@ -186,6 +199,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // don't depend on the plain-object chatStream reference (new every render).
   const {
     addUserMessage,
+    addCommandEcho,
     clearMessages: chatStreamClearMessages,
     loadMessages: chatStreamLoadMessages,
     prependOlderMessages: chatStreamPrependOlderMessages,
@@ -194,6 +208,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     resetStreamState: chatStreamResetStreamState,
     retry: chatStreamRetry,
   } = chatStream;
+
+  // Runs the slash commands the CLI won't accept as text over stream-json (#270).
+  const dispatchControlRequestCommand = useControlRequestCommand(bridge);
 
   // Auto mode 가용성: CLI가 모델 메타로 내려주는 supportsAutoMode + 관리자 정책
   // (disableAutoMode)로 결정한다. 모델 이름을 하드코딩하지 않는다 — 서버가 모델·버전·
@@ -360,6 +377,39 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [addUserMessage, bridge, session, sessionModel]
   );
 
+  // Run one of the slash commands the CLI won't take as text over stream-json.
+  // Shared by the composer (typed) and the command palette (picked), so both
+  // routes press the same button rather than drifting apart.
+  const runControlRequestCommand = useCallback(
+    (command: string, inputMode: InputMode) => {
+      // Echo the command, but without opening an assistant turn: the CLI answers
+      // a control_request with a single control_response and never sends the
+      // `result` that ends a turn, so a streaming placeholder would spin forever.
+      addCommandEcho(command);
+
+      // Resolve the session the same way sendMessage does, so running a command
+      // as the first action in an empty chat starts a CLI instead of finding no
+      // stdin and falling back to the text the CLI refuses.
+      let sessionId = session.currentSessionId;
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        session.addNewSession(sessionId, command);
+      }
+
+      // Undeliverable request → send as text after all, so the user gets the
+      // CLI's own answer rather than nothing at all.
+      dispatchControlRequestCommand(command, {
+        sessionId,
+        workingDir: session.workingDirectory ?? '',
+        inputMode,
+        model: sessionModel ?? undefined,
+      }).then((result) => {
+        if (result && !result.sent) sendMessage(command, inputMode);
+      });
+    },
+    [addCommandEcho, dispatchControlRequestCommand, sendMessage, session, sessionModel]
+  );
+
   // handleSubmit: convenience wrapper for form submission.
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
@@ -378,10 +428,21 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         setInput('');
         return;
       }
+      // `/reload-plugins` and `/btw` are missing from the CLI's command list in a
+      // stream-json session and are answered with "isn't available in this
+      // environment" when sent as text, so run them over the control_request the
+      // CLI accepts for the same work instead (#270). Anything else — including
+      // `/context` and `/usage`, which the CLI does list for us — falls through
+      // to normal delivery untouched.
+      if (matchControlRequestCommand(trimmedInput)) {
+        runControlRequestCommand(trimmedInput, inputMode);
+        setInput('');
+        return;
+      }
       sendMessage(trimmedInput, inputMode, undefined, attachments);
       setInput('');
     },
-    [inputRef, sendMessage, setInput]
+    [inputRef, runControlRequestCommand, sendMessage, setInput]
   );
 
   // stop: stdin interrupt를 백엔드에 전송.
@@ -427,6 +488,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // Actions
     sendMessage,
     handleSubmit,
+    runControlRequestCommand,
     stop,
     continue: continueGeneration,
     retry,
@@ -477,6 +539,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStreamUpdateMessage,
     sendMessage,
     handleSubmit,
+    runControlRequestCommand,
     stop,
     continueGeneration,
     retry,

@@ -18,6 +18,8 @@ export interface CommandPaletteServices {
     input: string;
     setInput: (input: string) => void;
     sendMessage: (content: string, inputMode: InputMode, context?: Context[]) => void;
+    /** Run a slash command the CLI only accepts as a control_request (#270). */
+    runControlRequestCommand: (command: string, inputMode: InputMode) => void;
     stop: () => void;
     continue: () => void;
     clearMessages: () => void;
