@@ -5,6 +5,8 @@ import { ContentBlockType } from '../dto/message/ContentBlockDto';
 import { toInstance, LoadedMessageType, MessageRole } from '../dto/common';
 import { parsePartialJson } from '../utils/parsePartialJson';
 import { MessageType } from '@/shared';
+import { parseControlRequestResult } from './controlRequestResult';
+import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
 
 /** Re-export for backwards compatibility */
 export type { LoadedMessageDto as LoadedMessage } from '../types';
@@ -92,6 +94,8 @@ export interface UseChatStreamOptions {
   onSystemMessage?: (data: Record<string, unknown>) => void;
   /** tool_use 블록 시작 시 콜백 (tool name 전달) */
   onToolUseStart?: (toolName: string) => void;
+  /** control_request로 실행한 슬래시 커맨드의 결과 수신 시 콜백 (#270) */
+  onControlRequestResult?: (result: ControlRequestResult) => void;
 }
 
 export interface UseChatStreamReturn {
@@ -103,6 +107,8 @@ export interface UseChatStreamReturn {
 
   // 로컬 메시지 조작 (전송은 하지 않음)
   addUserMessage: (content: string, context?: Context[], attachments?: Attachment[]) => void;
+  /** Echo a command with no assistant turn — for control_request commands (#270). */
+  addCommandEcho: (content: string) => void;
   clearMessages: () => void;
   loadMessages: (msgs: LoadedMessageDto[]) => void;
   prependOlderMessages: (msgs: LoadedMessageDto[]) => void;
@@ -124,7 +130,7 @@ export interface UseChatStreamReturn {
 
 
 export function useChatStream(options: UseChatStreamOptions): UseChatStreamReturn {
-  const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart } = options;
+  const { bridge, onStreamStart, onStreamEnd, onError, onSystemMessage, onToolUseStart, onControlRequestResult } = options;
 
   const [messages, setMessages] = useState<LoadedMessageDto[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -167,10 +173,15 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const onStreamEndRef = useRef(onStreamEnd);
   const onErrorRef = useRef(onError);
   const onSystemMessageRef = useRef(onSystemMessage);
+  const onControlRequestResultRef = useRef(onControlRequestResult);
+  // A control_request command is in flight. It ends on its control_response,
+  // not on `result` — the CLI never sends `result` for one (#270).
+  const controlRequestPendingRef = useRef(false);
   onStreamStartRef.current = onStreamStart;
   onStreamEndRef.current = onStreamEnd;
   onErrorRef.current = onError;
   onSystemMessageRef.current = onSystemMessage;
+  onControlRequestResultRef.current = onControlRequestResult;
 
   // Generate unique message ID
   const generateMessageId = useCallback(() => {
@@ -332,6 +343,32 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     onStreamStartRef.current?.(messageId);
   }, []);
 
+  /**
+   * Echo a command run over `control_request`, and show it working.
+   *
+   * This is `addUserMessage` minus the assistant placeholder. Both show the
+   * command and both spin while the CLI works, but they end differently: a
+   * normal turn ends on the `result` event, which a control_request never
+   * emits — it is answered once by a `control_response` instead. So the
+   * placeholder is created without an id to end on `result`, and the
+   * control_response handler is what stops the spinner (#270). Wiring it to
+   * `result` is what left it spinning forever.
+   */
+  const addCommandEcho = useCallback((content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+    appendMessage({
+      type: LoadedMessageType.User,
+      uuid: generateMessageId(),
+      timestamp: new Date().toISOString(),
+      message: { role: MessageRole.User, content: trimmed } as LoadedMessageDto['message'],
+    }, true);
+    // Spin until the control_response lands. Nothing streams into this message,
+    // so it stays an empty "working" row and is replaced by the answer.
+    setIsStreaming(true);
+    controlRequestPendingRef.current = true;
+  }, [appendMessage, generateMessageId]);
+
   // Ensure a streaming placeholder assistant message exists.
   // Returns the current streamingMessageId (creating one if needed).
   const ensureStreamingPlaceholder = useCallback((): string => {
@@ -462,7 +499,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
     // 스트리밍 중이면 사용자 메시지만 추가 (assistant placeholder 생성 스킵).
     // 백엔드 전송은 ChatStreamContext가 담당한다.
-    if (isStreaming) {
+    // A pending control_request command is the exception: it spins without a
+    // placeholder of its own, so a real turn started underneath it still needs
+    // one — otherwise the reply would have nowhere to stream (#270).
+    if (isStreaming && !controlRequestPendingRef.current) {
       sealStreamingAssistant();
       return;
     }
@@ -604,6 +644,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setIsStreaming(false);
     setStreamingMessageId(null);
     streamingMessageIdRef.current = null;
+    controlRequestPendingRef.current = false;
     pendingTextRef.current = '';
     pendingThinkingRef.current = '';
     pendingInputJsonRef.current = '';
@@ -635,6 +676,34 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       if (!cliEvent) return;
 
       const eventType = cliEvent.type as string | undefined;
+
+      // ── control_response ──
+      // Answers to the slash commands the CLI only accepts as a control_request
+      // (`/reload-plugins`, `/btw` — #270). The CLI replies with structured data
+      // instead of the report a terminal user would see, so render it as an
+      // ordinary assistant turn. Responses to anyone else's control traffic
+      // (permission prompts and the like) are matched out by request id.
+      if (eventType === 'control_response') {
+        const result = parseControlRequestResult(cliEvent as ControlResponseEvent);
+        if (result) {
+          appendMessage({
+            type: LoadedMessageType.Assistant,
+            uuid: generateMessageId(),
+            timestamp: new Date().toISOString(),
+            message: {
+              role: MessageRole.Assistant,
+              content: [{ type: ContentBlockType.Text, text: result.text }],
+            } as LoadedMessageDto['message'],
+            isStreaming: false,
+          }, true);
+          // The answer is in — this is the end of a control_request command, so
+          // stop the spinner here. No `result` event is coming to do it.
+          controlRequestPendingRef.current = false;
+          setIsStreaming(false);
+          onControlRequestResultRef.current?.(result);
+        }
+        return;
+      }
 
       // ── system ──
       if (eventType === 'system') {
@@ -1163,6 +1232,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     error,
     authDiagnosis,
     addUserMessage,
+    addCommandEcho,
     clearMessages,
     loadMessages,
     prependOlderMessages,

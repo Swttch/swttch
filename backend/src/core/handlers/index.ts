@@ -6,6 +6,7 @@ import { Claude } from '../claude';
 import { sendMessageHandler } from './sendMessage';
 import { stopGenerationHandler } from './stopGeneration';
 import { stopSessionHandler } from './stopSession';
+import { sendControlRequestHandler } from './sendControlRequest';
 import { startSessionHandler } from './startSession';
 import { sessionChangeHandler } from './sessionChange';
 import { toolResponseHandler } from './toolResponse';
@@ -149,6 +150,9 @@ export async function handleMessage(
       break;
     case MessageType.TOOL_RESPONSE:
       toolResponseHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SEND_CONTROL_REQUEST:
+      await sendControlRequestHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSIONS:
       await getSessionsHandler(connectionId, message, connections, bridge);

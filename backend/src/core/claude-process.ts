@@ -692,6 +692,45 @@ export function sendSetModelToProcess(
 }
 
 /**
+ * 임의의 control_request를 CLI stdin에 전송한다.
+ *
+ * 비대화형(stream-json) 세션에서 CLI가 거부하는 슬래시 커맨드
+ * (`/reload-plugins`, `/btw`)를 실행하기 위한 통로. 커맨드 텍스트를 보내면
+ * CLI는 `isn't available in this environment`로 거절하지만, 같은 작업을
+ * 수행하는 control_request는 받아준다 (#270).
+ *
+ * request_id는 호출자가 정한다 — 응답(control_response)은 CLI 이벤트로
+ * 그대로 브로드캐스트되므로, WebView가 자기가 보낸 요청의 응답을 이
+ * id로 골라낸다.
+ */
+export function sendControlRequestToProcess(
+  connections: ConnectionManager,
+  sessionId: string,
+  requestId: string,
+  request: Record<string, unknown>,
+): boolean {
+  const session = connections.getSession(sessionId);
+  if (!session?.process?.stdin?.writable) {
+    console.error('[node-backend]', `No writable stdin for session: ${sessionId}`);
+    return false;
+  }
+
+  const stdinMessage =
+    JSON.stringify({
+      type: 'control_request',
+      request_id: requestId,
+      request,
+    }) + '\n';
+
+  console.error(
+    '[node-backend]',
+    `Sending control_request "${String(request.subtype)}" to stdin (request_id: ${requestId})`,
+  );
+  session.process.stdin.write(stdinMessage);
+  return true;
+}
+
+/**
  * control_response를 CLI stdin에 전송한다.
  * AskUserQuestion 등 control_request에 대한 응답용.
  */
