@@ -84,7 +84,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
 const COMMENT_MAP: Record<string, string> = {
   cliPath: 'Claude CLI 실행 파일 경로 (null이면 자동 감지)',
   nodePath: 'Node.js 실행 파일 경로 (null이면 자동 감지, 변경 시 재시작 필요)',
-  theme: '테마: "system" | "light" | "dark"',
+  theme: '테마: "system" | "light" | "dark" ("system"은 JetBrains 모드에서 IDE 테마의 색상까지 따라간다)',
   fontSize: '글꼴 크기 (8~32)',
   zoomLevel: 'UI 배율(0.5~3). Ctrl/Cmd +,- 와 Ctrl/Cmd + 휠로 조절. 글꼴 크기와 별개로 아이콘·여백까지 함께 확대',
   lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10)',

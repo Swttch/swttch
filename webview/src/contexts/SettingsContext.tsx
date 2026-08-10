@@ -176,6 +176,34 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     return () => mq.removeEventListener('change', handler);
   }, [settings]);
 
+  // Apply IDE theme sync to <html> element (issue #267). Toggles the
+  // `ide-theme-sync` class, which is what makes the `--ccg-ide-*` variables
+  // Kotlin injects actually take effect (see index.css).
+  //
+  // This is what THEME=SYSTEM means in JetBrains mode, where the dropdown labels
+  // it "System (IDE)": deferring to the IDE's theme means taking its actual
+  // colors, not just its light/dark bit. There is deliberately no separate
+  // opt-in — a second switch beside a dropdown that already says "follow the
+  // IDE" would be two controls for one intent, and picking LIGHT or DARK is
+  // already how a user says "use our palette, not the IDE's".
+  //
+  // JetBrains only: in browser mode no colors are injected, so SYSTEM keeps
+  // meaning "System (OS)" — follow prefers-color-scheme for light/dark and stay
+  // on our own palette. The `.dark` toggle above runs independently either way,
+  // so `--ccg-ide-*` misses fall back to the light or dark value that matches
+  // the resolved theme.
+  useEffect(() => {
+    const apply = () => {
+      const enabled = settings[SettingKey.THEME] === ThemeMode.SYSTEM && isJetBrains();
+      document.documentElement.classList.toggle('ide-theme-sync', enabled);
+    };
+    apply();
+    // Kotlin re-injects colors on every LAF change; re-running keeps the class
+    // correct if the attribute only appears once colors are first injected.
+    const unsubscribe = subscribeIdeTheme(apply);
+    return unsubscribe;
+  }, [settings]);
+
   // Apply UI mirroring to <html> element. Toggles the `dir` attribute based on
   // the uiDirection setting: 'ltr' (default) or 'rtl'.
   useEffect(() => {

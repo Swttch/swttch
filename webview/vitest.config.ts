@@ -18,8 +18,11 @@ export default defineConfig({
     // streaming.css is opted back in so RTL-exception tests can assert real
     // computed styles (direction/unicode-bidi) on rendered code/katex nodes
     // instead of just checking class/data-attribute presence.
+    // index.css is opted back in so ideThemeSync.css.test.ts can read it via
+    // `?raw` and assert the IDE-theme-sync fallback chains (issue #267);
+    // excluded, the import silently yields '' and the guards pass vacuously.
     css: {
-      include: [/streaming\.css/],
+      include: [/streaming\.css/, /index\.css/],
     },
     reporters: ['default', 'html'],
     outputFile: {

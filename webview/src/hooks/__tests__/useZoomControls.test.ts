@@ -1,18 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { hasCmdOrCtrl, isZoomInKey, isZoomOutKey, isZoomResetKey, isModifiedWheel } from '../useZoomControls';
+import { renderHook } from '@testing-library/react';
+import { hasCmdOrCtrl, isZoomInKey, isZoomOutKey, isZoomResetKey, useZoomControls } from '../useZoomControls';
 
 vi.mock('@/config/environment', () => ({
   isMac: () => mockIsMac,
+}));
+
+// useZoomControls reads the zoom actions from ZoomContext; the registration
+// tests below only care about which listeners get attached, so the actions are
+// stubbed rather than wrapping the hook in a real provider.
+vi.mock('@/contexts/ZoomContext', () => ({
+  useZoom: () => ({
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    reset: vi.fn(),
+    dismissIndicator: vi.fn(),
+  }),
 }));
 
 let mockIsMac = false;
 
 function keyEvent(init: Partial<KeyboardEvent>): KeyboardEvent {
   return { key: '', code: '', metaKey: false, ctrlKey: false, shiftKey: false, ...init } as KeyboardEvent;
-}
-
-function wheelEvent(init: Partial<WheelEvent>): WheelEvent {
-  return { deltaY: 0, metaKey: false, ctrlKey: false, ...init } as WheelEvent;
 }
 
 afterEach(() => {
@@ -128,34 +137,33 @@ describe('isZoomResetKey', () => {
   });
 });
 
-describe('isModifiedWheel', () => {
-  it('accepts an integer-delta Ctrl+wheel off macOS (a real wheel notch)', () => {
-    mockIsMac = false;
-    expect(isModifiedWheel(wheelEvent({ ctrlKey: true, deltaY: -120 }))).toBe(true);
+// Zoom-by-wheel was removed because a non-passive wheel listener puts EVERY
+// scroll on the main thread, app-wide, whether or not a modifier is held —
+// which is what made trackpad scrolling stutter and keep coasting for seconds
+// after the fingers left the trackpad (issue #267).
+//
+// The damage came from HOW the listener was registered, not from what it did, so
+// this asserts the registration itself: no wheel listener at all, and in
+// particular none registered non-passively. A future "just read the wheel to
+// zoom" would reintroduce the stutter the moment it needs preventDefault().
+describe('useZoomControls wheel registration', () => {
+  it('registers no wheel listener on window', () => {
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    renderHook(() => useZoomControls());
+
+    const wheelCalls = addSpy.mock.calls.filter(([type]) => type === 'wheel');
+    expect(wheelCalls).toEqual([]);
+    addSpy.mockRestore();
   });
 
-  it('accepts an integer-delta Cmd+wheel on macOS', () => {
-    mockIsMac = true;
-    expect(isModifiedWheel(wheelEvent({ metaKey: true, deltaY: -3 }))).toBe(true);
-  });
+  it('registers no non-passive listener of any kind', () => {
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    renderHook(() => useZoomControls());
 
-  // Browsers synthesise pinch as a wheel event with ctrlKey forced true. On
-  // macOS our modifier is Command, so a ctrl-only wheel there must be a pinch
-  // and fall through to the browser's native handling — never our zoom.
-  it('rejects a ctrl-only wheel on macOS (synthesised pinch)', () => {
-    mockIsMac = true;
-    expect(isModifiedWheel(wheelEvent({ ctrlKey: true, deltaY: -5.3 }))).toBe(false);
-  });
-
-  // Pinch/precise-trackpad streams report fractional deltas; a notched wheel
-  // reports whole numbers.
-  it('rejects a fractional-delta wheel even with the right modifier', () => {
-    mockIsMac = false;
-    expect(isModifiedWheel(wheelEvent({ ctrlKey: true, deltaY: -5.3 }))).toBe(false);
-  });
-
-  it('rejects a wheel without the modifier', () => {
-    mockIsMac = false;
-    expect(isModifiedWheel(wheelEvent({ deltaY: -120 }))).toBe(false);
+    const nonPassive = addSpy.mock.calls.filter(([, , options]) =>
+      typeof options === 'object' && options !== null && (options as AddEventListenerOptions).passive === false,
+    );
+    expect(nonPassive).toEqual([]);
+    addSpy.mockRestore();
   });
 });

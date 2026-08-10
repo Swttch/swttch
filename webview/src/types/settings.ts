@@ -19,7 +19,11 @@ export enum SettingKey {
   CLI_PATH = 'cliPath',
   NODE_PATH = 'nodePath',
 
-  // Appearance
+  // Appearance. In JetBrains mode, THEME=SYSTEM ("System (IDE)") also re-points
+  // the color tokens at the colors the IDE's applied theme resolves to, so the
+  // chat renders flush with the IDE surface (issue #267); LIGHT/DARK keep our
+  // own palette. In browser mode SYSTEM is "System (OS)" and only follows
+  // prefers-color-scheme, since no IDE colors are injected there.
   THEME = 'theme',
   FONT_SIZE = 'fontSize',
   // Whole-interface scale driven by CmdOrCtrl +/- and CmdOrCtrl + wheel.

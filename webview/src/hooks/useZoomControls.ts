@@ -57,37 +57,25 @@ export function isZoomResetKey(e: KeyboardEvent): boolean {
 }
 
 /**
- * Whether a wheel event is a real wheel/trackpad-scroll with the modifier held,
- * as opposed to a pinch gesture.
+ * Wire CmdOrCtrl +/-/0 to the zoom level owned by ZoomContext, which also drives
+ * the on-screen zoom indicator.
  *
- * Browsers synthesise pinch-zoom as a wheel event with `ctrlKey` forced true,
- * so a naive `ctrlKey` check would swallow pinch and stop the browser's own
- * zoom from running. Two signals separate them:
- *   - a pinch never has a real Ctrl key down, so on macOS (where our modifier
- *     is Command) any ctrl-only wheel is a pinch;
- *   - a pinch reports fractional, small deltas, while a notched wheel reports
- *     whole numbers — usually a multiple of 3 (Chrome) or 40/120 (others).
+ * Zoom-by-wheel (CmdOrCtrl + wheel) used to live here too, and was REMOVED
+ * because it made scrolling stutter across the whole app.
  *
- * We deliberately let pinch through: zoom-by-pinch is left to the browser's
- * native handling (a product decision), and intercepting it here would break
- * that without replacing it.
- */
-export function isModifiedWheel(e: WheelEvent): boolean {
-  if (isMac()) {
-    // On macOS our modifier is Command. A ctrl-only wheel is the synthesised
-    // pinch, which must fall through to the browser.
-    if (!e.metaKey) return false;
-  } else if (!e.ctrlKey) {
-    return false;
-  }
-  // A fractional delta means a continuous (pinch/precise-trackpad) stream
-  // rather than a wheel notch.
-  return Number.isInteger(e.deltaY);
-}
-
-/**
- * Wire CmdOrCtrl +/-/0 and CmdOrCtrl + wheel to the zoom level owned by
- * ZoomContext, which also drives the on-screen zoom indicator.
+ * Reading a wheel event is harmless; being able to CANCEL one is not. Because
+ * the handler called preventDefault() to stop the browser's own zoom from
+ * compounding ours, the listener had to be registered `passive: false`. That
+ * tells the browser "this listener may cancel the scroll", so every wheel event
+ * — on every page, whether or not a modifier was held — had to wait for the
+ * main thread to run the handler before the scroll could be applied, instead of
+ * being handled straight off the compositor. Trackpads emit wheel events far
+ * faster than mice do, so the events queued up and scrolling kept running for
+ * seconds after the user's fingers left the trackpad (issue #267, and the
+ * 2026-08-03 marketplace review reporting "10-15 FPS").
+ *
+ * Pinch-to-zoom on a trackpad still works: browsers handle it natively, which is
+ * what the removed handler already deliberately let through.
  */
 export function useZoomControls(): void {
   const { zoomIn, zoomOut, reset, dismissIndicator } = useZoom();
@@ -112,20 +100,9 @@ export function useZoomControls(): void {
       if (e.key === 'Escape') dismissIndicator();
     };
 
-    const handleWheel = (e: WheelEvent) => {
-      if (!isModifiedWheel(e)) return;
-      // Without preventDefault the browser runs its own page zoom on top of
-      // ours, compounding the scale. Requires passive: false to take effect.
-      e.preventDefault();
-      if (e.deltaY === 0) return;
-      if (e.deltaY < 0) zoomIn(); else zoomOut();
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('wheel', handleWheel);
     };
   }, [zoomIn, zoomOut, reset, dismissIndicator]);
 }

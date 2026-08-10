@@ -42,6 +42,10 @@ export function AppearanceSettings() {
       ? [{ value: NOT_SET_VALUE, label: t('appearance.theme.colorTheme.notSet'), italic: true }]
       : []),
     {
+      // In JetBrains mode this option is "System (IDE)", and picking it takes
+      // the IDE's actual colors, not merely its light/dark bit — see the
+      // `ide-theme-sync` effect in SettingsContext. The label is the only
+      // control for that: there is no separate sync toggle.
       value: ThemeMode.SYSTEM,
       label: isJetBrains()
         ? t('appearance.theme.colorTheme.systemIde')

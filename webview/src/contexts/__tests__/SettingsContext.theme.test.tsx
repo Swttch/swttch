@@ -155,6 +155,7 @@ beforeEach(() => {
     // ignore
   }
   document.documentElement.classList.remove('dark');
+  document.documentElement.classList.remove('ide-theme-sync');
   document.documentElement.setAttribute('dir', 'ltr');
   setJcefEnv(false);
   setIdeTheme(null);
@@ -163,6 +164,7 @@ beforeEach(() => {
 
 afterEach(() => {
   document.documentElement.classList.remove('dark');
+  document.documentElement.classList.remove('ide-theme-sync');
   document.documentElement.setAttribute('dir', 'ltr');
   setJcefEnv(false);
   setIdeTheme(null);
@@ -299,6 +301,98 @@ describe('SettingsContext theme — explicit modes', () => {
 
     await waitFor(() => {
       expect(document.documentElement.classList.contains('dark')).toBe(false);
+    });
+  });
+});
+
+describe('SettingsContext IDE color sync — <html class="ide-theme-sync"> (issue #267)', () => {
+  // "System (IDE)" is the ONLY switch for this: choosing it means deferring to
+  // the IDE's theme, which includes its colors and not just its light/dark bit.
+  it('adds the class when the theme is SYSTEM inside JetBrains', async () => {
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    renderWithTheme(ThemeMode.SYSTEM);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
+    });
+  });
+
+  it('does not add the class when the theme is explicitly DARK', async () => {
+    // Picking a concrete theme is how the user says "use our palette", even
+    // when it happens to match the IDE's light/dark state.
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    renderWithTheme(ThemeMode.DARK);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('does not add the class when the theme is explicitly LIGHT', async () => {
+    setJcefEnv(true);
+    setIdeTheme('light');
+
+    renderWithTheme(ThemeMode.LIGHT);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('does not add the class in Standalone even on SYSTEM', async () => {
+    // Browser mode has no IDE colors to sync with, so SYSTEM stays "System
+    // (OS)" — otherwise the CSS layer would fire with no variables set.
+    setJcefEnv(false);
+
+    renderWithTheme(ThemeMode.SYSTEM);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(false);
+    });
+  });
+
+  it('is on by default in JetBrains, since SYSTEM is the default theme', async () => {
+    setJcefEnv(true);
+    setIdeTheme('dark');
+
+    // No seeded value — falls through to DEFAULT_SETTINGS (theme: SYSTEM).
+    const client = createTestQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <SettingsProvider>
+          <div data-testid="child">child</div>
+        </SettingsProvider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
+    });
+  });
+
+  it('keeps the class across an ide-theme-changed event (IDE theme switch)', async () => {
+    setJcefEnv(true);
+    setIdeTheme('light');
+
+    renderWithTheme(ThemeMode.SYSTEM);
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
+    });
+
+    // Kotlin re-injects colors and fires this on every LAF change; the sync
+    // must survive so the newly injected colors keep applying.
+    act(() => {
+      setIdeTheme('dark');
+      window.dispatchEvent(new Event('ide-theme-changed'));
+    });
+
+    await waitFor(() => {
+      expect(document.documentElement.classList.contains('ide-theme-sync')).toBe(true);
     });
   });
 });
