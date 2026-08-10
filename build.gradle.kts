@@ -146,6 +146,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.7 - Settings errors fixed</h3>
+            <ul>
+                <li>Fix the configured default permission mode being ignored on new sessions (#264, reported by @StarCode000)</li>
+                <li>Fix the model you picked resetting when you open a new tab (#265, reported by @BigPineappleDe)</li>
+                <li>Fix the Default Model dropdown in settings rendering blank (#265, reported by @BigPineappleDe)</li>
+                <li>Fix Ctrl+Insert no longer copying in the chat (#268, reported by @VijitCoder)</li>
+            </ul>
             <h3>0.26.6 - Modes that match what you see</h3>
             <ul>
                 <li>Fix Plan Mode turning itself off when re-enabled in the same chat (#172)</li>
