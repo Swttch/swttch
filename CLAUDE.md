@@ -56,7 +56,9 @@ WebView는 클라이언트 실행환경에 관계없이 항상 Node.js 백엔드
 | **JetBrains 모드** | IDE가 Node.js 백엔드를 spawn하고 JCEF WebView로 접속. `JETBRAINS_MODE=true` 환경변수로 활성화. |
 | **Standalone 모드** | IDE 외부에서 Node.js 백엔드를 실행하고 일반 브라우저로 접속. `JETBRAINS_MODE` 미설정 시 자동 적용. 부트스트랩 경로 2가지: ① 개발용 Vite dev server, ② 사용자 머신의 `ccg` 명령(터미널 런처). |
 
-배포 산출물 이름도 이 용어를 따른다 — `claude-code-gui-standalone-v<ver>.tgz`는 standalone 모드용 backend + webview 런타임. JetBrains 모드 산출물은 마켓플레이스 zip(`claude-code-gui-jetbrains-<ver>.zip`).
+배포 산출물 이름도 이 용어를 따른다 — `claude-code-gui-standalone-v<ver>.tgz`는 standalone 모드용 backend + webview 런타임. JetBrains 모드 산출물은 마켓플레이스 zip(`swttch-<ver>.zip`, `settings.gradle.kts`의 `rootProject.name`에서 파생).
+
+> **standalone tgz 파일명은 바꾸지 말 것.** `claude-code-gui-standalone-v<ver>.tgz`는 `scripts/build.sh`가 만들고 `cli/lib/runtime.sh`가 릴리즈에서 같은 이름으로 내려받는다. 이미 사용자 머신에 설치된 `ccg`가 이 이름을 하드코딩해 들고 있으므로, 이름을 바꾸면 기존 사용자의 런타임 다운로드가 깨진다.
 
 ### 핵심 원칙
 
@@ -120,6 +122,17 @@ webview↔backend(및 Node↔Kotlin) 사이를 오가는 모든 IPC 메시지 `t
 - **금지**: `send('GET_ACCOUNT')` 같은 plain 문자열. 반드시 `send(MessageType.GET_ACCOUNT)`.
 - **새 메시지 타입 추가 시**: enum에 멤버를 추가하고 **각 값의 의미를 영어 주석**으로 남긴다(방향: inbound webview→backend / outbound backend→webview / Node↔Kotlin / 로깅 채널). 양쪽 shared에 동일 반영.
 - **적용 범위**: `bridge.request`/`send`/`subscribe`/`waitFor`, backend 라우팅 `switch...case`, `connections.sendTo`/`broadcast`, JSON-RPC `method`, 로깅 채널(`LOG_BATCH`) 등 메시지 `type`이 쓰이는 모든 곳. 단, 메시지 봉투(`type`)가 아닌 `payload` 내부 하위 분류(예: CLI_EVENT payload의 `CLI_ERROR`)는 대상이 아니다.
+
+## 사용자 데이터 디렉토리 (`~/.claude-code-gui`) — 개명 금지
+
+사용자 데이터는 `~/.claude-code-gui`(환경변수 `CCG_HOME`으로 재정의 가능)에 저장된다. 제품이 **Swttch로 리브랜딩된 뒤에도 이 경로는 그대로 유지한다.**
+
+여기에는 계정 자격증명(`accounts.json`, `accounts/`, 권한 `600`), 전역 설정(`settings.js`), 후원 라이선스, 예약 메시지, CLI 프로세스 레지스트리, cloudflared 설치본(`bin/`)이 들어있다. **우리 파일이 아니라 사용자 자산이다.**
+
+- 리브랜딩을 이유로 `~/.swttch` 등으로 옮기지 않는다. 경로가 바뀌면 전 사용자가 로그인·설정·후원 라이선스를 잃는다.
+- 숨김 디렉토리라 사용자 눈에 띄지 않으므로, 이름을 통일해서 얻는 이득이 없다. "여기가 어디지?" 하는 혼란은 README·마켓플레이스 문서에서 해소한다.
+- 언젠가 옮겨야 한다면 리브랜딩 작업에 섞지 말고 **별도 PR**로 다룬다. 그때도 이동이 아니라 **복사 후 양쪽 병행 읽기**로 시작하고, 구 경로 폴백을 여러 버전에 걸쳐 유지하며, 마이그레이션 실패 시 조용히 구 경로로 계속 동작해야 한다.
+- `CCG_HOME`은 `cli/install.sh`에 공개 문서화된 계약이다. 이미 커스텀 경로를 쓰는 사용자가 있을 수 있다.
 
 ## 상태 머신
 

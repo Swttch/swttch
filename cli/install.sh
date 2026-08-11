@@ -2,7 +2,7 @@
 # install.sh — bootstrap installer for the ccg CLI.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/cli/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 #
 # What it does:
 #   1. Checks for curl + tar.
@@ -14,7 +14,7 @@
 #
 # Env overrides:
 #   CCG_HOME            — installation root (default: ~/.claude-code-gui)
-#   CCG_RELEASE_REPO    — GitHub owner/repo (default: yhk1038/claude-code-gui-jetbrains)
+#   CCG_RELEASE_REPO    — GitHub owner/repo (default: Swttch/swttch)
 #   CCG_VERSION         — pin to a specific version (default: latest)
 #
 # This installer is intentionally English-only. Once ccg is installed,
@@ -23,7 +23,7 @@
 set -euo pipefail
 
 CCG_HOME="${CCG_HOME:-$HOME/.claude-code-gui}"
-CCG_RELEASE_REPO="${CCG_RELEASE_REPO:-yhk1038/claude-code-gui-jetbrains}"
+CCG_RELEASE_REPO="${CCG_RELEASE_REPO:-Swttch/swttch}"
 
 say() { printf '%s\n' "$*"; }
 err() { printf 'Error: %s\n' "$*" >&2; }

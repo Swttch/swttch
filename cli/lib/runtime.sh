@@ -14,7 +14,7 @@
 # CCG_HOME defaults to ~/.claude-code-gui; CCG_RELEASE_REPO defaults to upstream.
 
 : "${CCG_HOME:=$HOME/.claude-code-gui}"
-: "${CCG_RELEASE_REPO:=yhk1038/claude-code-gui-jetbrains}"
+: "${CCG_RELEASE_REPO:=Swttch/swttch}"
 
 # Strip leading 'v' from a version string.
 _strip_v() {

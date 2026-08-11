@@ -2,7 +2,7 @@
 
 > Languages: [English](./en.md) · **한국어**
 >
-> 관련: [#158](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/158)
+> 관련: [#158](https://github.com/Swttch/swttch/issues/158)
 
 ## 새로운 점
 

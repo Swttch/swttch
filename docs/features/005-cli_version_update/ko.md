@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [PR #150](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/150)
+> 관련: [PR #150](https://github.com/Swttch/swttch/pull/150)
 
 ## 새로운 기능
 

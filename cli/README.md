@@ -3,7 +3,7 @@
 `ccg` is a tiny shell launcher that runs the **same backend** as the JetBrains plugin from a regular terminal, then opens the UI in your default browser. No npm. No Docker. Just `curl`.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/cli/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Swttch/swttch/main/cli/install.sh | bash
 ```
 
 After installation, open any project directory and run:

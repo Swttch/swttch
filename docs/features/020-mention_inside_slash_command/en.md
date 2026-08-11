@@ -2,12 +2,12 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+> Related: [#236](https://github.com/Swttch/swttch/issues/236)
 
 ## The report
 
 A user typed `/opsx:apply @skill` into the composer, expecting the file picker to
-appear after the `@` — and nothing happened. They filed [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+appear after the `@` — and nothing happened. They filed [#236](https://github.com/Swttch/swttch/issues/236)
 with a screenshot of the slash command panel sitting there, no file list in
 sight.
 

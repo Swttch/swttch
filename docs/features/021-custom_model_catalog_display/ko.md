@@ -2,13 +2,13 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#217](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/217), [#202](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/202)
+> 관련: [#217](https://github.com/Swttch/swttch/issues/217), [#202](https://github.com/Swttch/swttch/issues/202)
 
 ## 제보
 
 한 사용자가 모델을 Haiku 자리로 바꿨습니다. 바꾼 직후에는 화면에 제대로 표시됐는데,
 메시지를 보내 대화가 시작되자 입력창 아래 표시가 슬그머니 **Default** 로 돌아가
-있었습니다. 그 화면을 캡처해 [#217](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/217)
+있었습니다. 그 화면을 캡처해 [#217](https://github.com/Swttch/swttch/issues/217)
 로 알려주셨고, 2분 뒤 댓글로 한 장을 더 붙였습니다. 입력창 아래 줄이 두 줄로
 쪼개져 무너진 모습이었습니다.
 

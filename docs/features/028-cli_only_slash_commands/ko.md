@@ -48,4 +48,4 @@ environment" 로 거절합니다. 제보에 찍힌 문구가 바로 그것입니
 
 ---
 
-[#270](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/270) 제보로 수정했습니다.
+[#270](https://github.com/Swttch/swttch/issues/270) 제보로 수정했습니다.

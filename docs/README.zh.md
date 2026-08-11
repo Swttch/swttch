@@ -1,6 +1,14 @@
-# Claude Code with GUI
+# Swttch (ex - Claude Code with GUI)
 
 在 Cursor 和 VS Code 中广受欢迎的 Claude Code GUI，现已支持 JetBrains IDE。
+
+> **我们更名了 —— Claude Code with GUI 现已更名为 Swttch。**
+>
+> 本仓库已从 `yhk1038/claude-code-gui-jetbrains` 迁移至 `Swttch/swttch`。
+> 原有链接和 `git clone` 地址仍然有效。
+>
+> 这仍是同一款产品。许多用户希望我们支持 Claude Code 之外的更多提供方，
+> 我们认真对待这一需求，因此更换了名称。
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
@@ -10,7 +18,7 @@
 🌐 [English](../README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | **中文** | [Español](README.es.md) | [Deutsch](README.de.md) | [Français](README.fr.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
+  <img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
 </p>
 
 ## 亮点
@@ -97,11 +105,11 @@
 
 **欢迎界面**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
 
 **设置面板**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
 
 </details>
 
@@ -128,8 +136,8 @@
 欢迎各种形式的贡献 — 错误报告、功能建议、代码、文档、翻译等。
 
 - **如何开始？** 请查阅 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解配置说明和贡献指南。
-- **寻找可参与的任务？** 请查看标有 [`good first issue`](https://github.com/yhk1038/claude-code-gui-jetbrains/labels/good%20first%20issue) 标签的 Issue。
-- **计划较大的变更？** 请先[提交 Issue](https://github.com/yhk1038/claude-code-gui-jetbrains/issues) 进行讨论。
+- **寻找可参与的任务？** 请查看标有 [`good first issue`](https://github.com/Swttch/swttch/labels/good%20first%20issue) 标签的 Issue。
+- **计划较大的变更？** 请先[提交 Issue](https://github.com/Swttch/swttch/issues) 进行讨论。
 
 ## 许可证
 

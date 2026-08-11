@@ -405,7 +405,7 @@
     },
     "active": {
       "title": "Sponsoring",
-      "description": "Thank you for supporting Claude Code with GUI.",
+      "description": "Thank you for supporting this project.",
       "keyLabel": "Sponsor key",
       "deactivate": "Deactivate",
       "greeting": "Good to see you, sponsor",

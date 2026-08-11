@@ -1,6 +1,14 @@
-# Claude Code with GUI
+# Swttch (ex - Claude Code with GUI)
 
 La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora disponible en IDEs de JetBrains.
+
+> **Hemos cambiado de nombre: Claude Code with GUI ahora es Swttch.**
+>
+> Este repositorio se trasladó de `yhk1038/claude-code-gui-jetbrains` a `Swttch/swttch`.
+> Tus enlaces existentes y las URLs de `git clone` siguen funcionando.
+>
+> Es el mismo producto. Lo renombramos porque muchos de ustedes nos pidieron dar soporte a
+> una gama más amplia de proveedores más allá de Claude Code, y nos lo tomamos en serio.
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
@@ -10,7 +18,7 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 🌐 [English](../README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [中文](README.zh.md) | **Español** | [Deutsch](README.de.md) | [Français](README.fr.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
+  <img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
 </p>
 
 ## Destacados
@@ -97,11 +105,11 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 
 **Pantalla de bienvenida**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
 
 **Panel de configuracion**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
 
 </details>
 
@@ -128,8 +136,8 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 Se acepta todo tipo de contribucion — reportes de errores, sugerencias de funciones, codigo, documentacion, traducciones, etc.
 
 - **Para empezar:** Consulta las instrucciones de configuracion y las pautas en [CONTRIBUTING.md](../CONTRIBUTING.md).
-- **Si buscas algo en que trabajar:** Revisa los issues con la etiqueta [`good first issue`](https://github.com/yhk1038/claude-code-gui-jetbrains/labels/good%20first%20issue).
-- **Si planeas un cambio grande:** Por favor [abre un issue](https://github.com/yhk1038/claude-code-gui-jetbrains/issues) primero para discutirlo.
+- **Si buscas algo en que trabajar:** Revisa los issues con la etiqueta [`good first issue`](https://github.com/Swttch/swttch/labels/good%20first%20issue).
+- **Si planeas un cambio grande:** Por favor [abre un issue](https://github.com/Swttch/swttch/issues) primero para discutirlo.
 
 ## Licencia
 

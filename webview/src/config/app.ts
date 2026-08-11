@@ -29,5 +29,5 @@ export const PRICING_URL = 'https://just-swttch.com/pricing';
  * guessing which translations exist for a given feature.
  */
 export function featureDocUrl(folder: string): string {
-  return `https://github.com/yhk1038/claude-code-gui-jetbrains/tree/main/docs/features/${folder}`;
+  return `https://github.com/Swttch/swttch/tree/main/docs/features/${folder}`;
 }

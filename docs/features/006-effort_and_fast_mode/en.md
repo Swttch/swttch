@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [#121](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/121), [#152](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/152)
+> Related: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152)
 
 Two of the controls in the **Model** section let you trade speed for depth on a per-model basis: **Effort** and **Fast mode**. Both mirror what the Claude Code CLI already lets you set, surfaced as inline controls so you never have to leave the chat.
 
@@ -55,7 +55,7 @@ A couple of consequences worth knowing:
 
 ## What happens on models that don't support a control
 
-Rather than hiding a control on models that don't support it, the row stays visible but **disabled (greyed out)**, and hovering it shows a short tooltip explaining why — for example *"This model doesn't support effort levels"* or *"Fast mode is only available on Opus models"*. This keeps the Model section consistent no matter which model you're on, so a missing control never looks like something broke ([#152](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/152)).
+Rather than hiding a control on models that don't support it, the row stays visible but **disabled (greyed out)**, and hovering it shows a short tooltip explaining why — for example *"This model doesn't support effort levels"* or *"Fast mode is only available on Opus models"*. This keeps the Model section consistent no matter which model you're on, so a missing control never looks like something broke ([#152](https://github.com/Swttch/swttch/issues/152)).
 
 ## Notes
 

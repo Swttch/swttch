@@ -2,7 +2,7 @@
 
 > 언어: **한국어** · [English](./en.md)
 >
-> 관련: [#248](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/248)
+> 관련: [#248](https://github.com/Swttch/swttch/pull/248)
 
 Claude가 작업을 하다 보면 사용자에게 되묻는 순간이 있습니다. "이 명령어를 실행할까요?", "이 계획대로 진행할까요?", "둘 중 어느 쪽을 원하세요?" 같은 것들입니다. 이때 채팅 입력창 위로 선택지 패널이 올라옵니다.
 

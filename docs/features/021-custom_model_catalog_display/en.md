@@ -2,14 +2,14 @@
 
 > Language: **English** · [한국어](./ko.md)
 >
-> Related: [#217](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/217), [#202](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/202)
+> Related: [#217](https://github.com/Swttch/swttch/issues/217), [#202](https://github.com/Swttch/swttch/issues/202)
 
 ## The report
 
 A user switched their model to the Haiku slot. Right after switching it showed
 correctly — but the moment they sent a message and the conversation began, the
 indicator under the input box had quietly slipped back to **Default**. They
-captured it in [#217](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/217),
+captured it in [#217](https://github.com/Swttch/swttch/issues/217),
 and two minutes later added a second screenshot: the row under the input box,
 broken across two lines.
 

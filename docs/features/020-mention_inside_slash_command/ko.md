@@ -2,13 +2,13 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+> 관련: [#236](https://github.com/Swttch/swttch/issues/236)
 
 ## 제보
 
 한 사용자가 채팅 입력창에 `/opsx:apply @skill` 을 입력했습니다. `@` 를 치면 파일
 선택 목록이 뜰 거라 기대했는데, 아무것도 나오지 않았습니다. 그래서 슬래시 명령
-패널만 덩그러니 떠 있는 화면을 캡처해 [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+패널만 덩그러니 떠 있는 화면을 캡처해 [#236](https://github.com/Swttch/swttch/issues/236)
 으로 알려주셨습니다.
 
 그리고 2분 뒤 남긴 댓글이, 결과적으로 이 문제를 푸는 열쇠가 됐습니다.

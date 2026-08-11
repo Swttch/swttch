@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [PR #147](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/147) · [#41](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/41)
+> Related: [PR #147](https://github.com/Swttch/swttch/pull/147) · [#41](https://github.com/Swttch/swttch/issues/41)
 
 ## What's new
 
@@ -70,6 +70,6 @@ Newer IDE builds also ship newer names for some of the same operations (e.g. `se
 
 ## Notes
 
-- **Turning it on:** the IDE's built-in MCP server isn't wired into Claude Code out of the box yet — you generally have to ask Claude to use the IDE's tools (e.g. "search the project with the JetBrains tools"). Native `/ide` integration is tracked in [#41](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/41).
+- **Turning it on:** the IDE's built-in MCP server isn't wired into Claude Code out of the box yet — you generally have to ask Claude to use the IDE's tools (e.g. "search the project with the JetBrains tools"). Native `/ide` integration is tracked in [#41](https://github.com/Swttch/swttch/issues/41).
 - **Debugger tools** (the `xdebug_…` family) are available only with **IntelliJ IDEA Ultimate**.
 - Any IDE tool that doesn't have a dedicated card yet falls back to a **branded generic** card, so it still reads as a JetBrains tool.

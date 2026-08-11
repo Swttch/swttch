@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [#169](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/169)
+> Related: [#169](https://github.com/Swttch/swttch/issues/169)
 
 Some displays make the default interface feel a little small — a 4K monitor, an unusually high-DPI panel, or just a preference for larger text. There was previously no quick way to resize the whole GUI on the fly. Now you can zoom the interface in and out with the same gesture your browser and code editor already use.
 

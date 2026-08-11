@@ -1,8 +1,12 @@
-# Claude Code with GUI
+# Swttch (ex - Claude Code with GUI)
 
 **Cursor와 VS Code에서 쓰던 그 Claude Code GUI를, 이제 JetBrains IDE에서.**
 
-🌐 [English](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/en.md) | **한국어** | [日本語](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/ja.md) | [中文](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/zh.md) | [Español](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/es.md) | [Deutsch](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/de.md) | [Français](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/fr.md)
+> **이름이 바뀌었습니다 — Claude Code with GUI는 이제 Swttch입니다.**
+> 같은 개발자가 만드는 같은 제품입니다. Claude Code를 넘어 더 많은 프로바이더를 지원해 달라는
+> 요청이 많았고, 그 요청을 진지하게 받아들여 이름을 바꿨습니다.
+
+🌐 [English](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/en.md) | **한국어** | [日本語](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ja.md) | [中文](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/zh.md) | [Español](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/es.md) | [Deutsch](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/de.md) | [Français](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/fr.md)
 
 > **이 플러그인은, 이 플러그인으로 만들어집니다.**
 > JetBrains IDE에 띄운 바로 이 채팅 화면으로 직접 개발합니다.
