@@ -7,8 +7,7 @@ Cursor와 VS Code에서 사랑받는 Claude Code GUI를 이제 JetBrains IDE에�
 > 이 저장소는 `yhk1038/claude-code-gui-jetbrains`에서 `Swttch/swttch`로 옮겨졌습니다.
 > 기존 링크와 `git clone` 주소는 계속 동작합니다.
 >
-> 같은 제품입니다. Claude Code를 넘어 더 많은 프로바이더를 지원해 달라는 요청이 많았고,
-> 그 요청을 진지하게 받아들여 이름을 바꿨습니다.
+> 같은 제품입니다. Claude Code를 넘어 더 많은 프로바이더를 지원하기 위해 이름을 바꿨습니다.
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)

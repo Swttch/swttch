@@ -7,8 +7,8 @@ La même interface Claude Code GUI que vous aimez dans Cursor et VS Code, mainte
 > Ce dépôt a été déplacé de `yhk1038/claude-code-gui-jetbrains` vers `Swttch/swttch`.
 > Vos liens existants et les URLs `git clone` continuent de fonctionner.
 >
-> C'est le même produit. Nous l'avons renommé parce que beaucoup d'entre vous nous ont demandé
-> de prendre en charge davantage de fournisseurs au-delà de Claude Code, et nous le prenons au sérieux.
+> C'est le même produit. Nous l'avons renommé afin de pouvoir prendre en charge
+> davantage de fournisseurs au-delà de Claude Code.
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
