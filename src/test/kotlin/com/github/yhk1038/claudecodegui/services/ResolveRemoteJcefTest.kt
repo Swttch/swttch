@@ -16,8 +16,12 @@ import org.junit.jupiter.api.Test
  * `setOffScreenRendering(false)`, and remote mode rejected windowed rendering
  * (IJPL-184288) → blank panel.
  *
- * The rule: trust the CefApp signal when available; only fall back to the legacy
- * system property when CefApp can't be queried (older JCEF without the method).
+ * The rule: either signal claiming remote is enough. Treating the CefApp answer
+ * as authoritative was wrong — `isRemoteEnabled()` just reads a static field
+ * JCEF populates during its own startup, so asking before that (i.e. while
+ * building our first browser) returns `false` on a genuinely remote IDE. That is
+ * what regressed the OSR ghost fix from #171 on 2026.2: `remote=false` skipped
+ * installing the repaint nudge while the platform rendered OSR anyway.
  */
 class ResolveRemoteJcefTest {
 
@@ -27,14 +31,18 @@ class ResolveRemoteJcefTest {
     }
 
     @Test
-    fun `trusts CefApp when it reports remote disabled`() {
+    fun `treats a lone negative CefApp answer as not remote`() {
         assertFalse(resolveRemoteJcef(cefRemoteEnabled = false, legacySystemProperty = null))
     }
 
     @Test
-    fun `CefApp signal overrides a stale system property`() {
-        // Property says "true" but CefApp authoritatively says not remote.
-        assertFalse(resolveRemoteJcef(cefRemoteEnabled = false, legacySystemProperty = "true"))
+    fun `believes the property when CefApp has not initialised yet`() {
+        // Measured on IntelliJ 2026.2.1: the platform sets jcef.remote.enabled=true
+        // and logs "Trying to create windowed browser when remote-mode is enabled",
+        // yet CefApp.isRemoteEnabled() still answers false because its static flag
+        // is not set until JCEF starts. Believing CefApp here left the browser
+        // marked non-OSR and dropped the #171 ghost-repaint nudge.
+        assertTrue(resolveRemoteJcef(cefRemoteEnabled = false, legacySystemProperty = "true"))
     }
 
     @Test
