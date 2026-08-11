@@ -17,6 +17,7 @@ export type Palette = Record<string, string>;
  *   c/C  coral, in two tones
  *   s/S  shell, in two tones
  *   h/H  seahorse body and its darker markings
+ *   w    seahorse belly
  *   k    ink
  */
 
@@ -30,57 +31,59 @@ export const REEF_PALETTE: Palette = {
   S: '#B99771',
   h: '#E8B33F',
   H: '#B8862A',
+  w: '#FBF3DE',
   k: '#3A3A48',
 };
 
 /**
- * Dorongi, facing left. Row 9's outer cells are the arms, rows 10-11 the legs;
- * the two cells at column 7 are the eye.
+ * Dorongi, facing right — the direction of travel, so it runs into the reef
+ * rather than away from it. Row 9's outer cells are the arms, rows 10-11 the
+ * legs, and the gap at column 4 is the eye.
  */
 export const DORONGI: PixelGrid = [
-  '....gggggg..',
-  '...gggg.ggg.',
-  '.ggggggeggg.',
+  '..gggggg....',
+  '.ggg.gggg...',
+  '.ggg.gggggg.',
   '.gggggggggg.',
-  '.....gggggg.',
-  '.ggggggggg..',
-  '....GGGGG...',
-  '...ggggggg..',
+  '.gggggg.....',
   '..ggggggggg.',
-  '..g.ggggg.g.',
-  '....G...G...',
-  '....G...G...',
+  '...GGGGG....',
+  '..ggggggg...',
+  '.ggggggggg..',
+  '.g.ggggg.g..',
+  '...G...G....',
+  '...G...G....',
 ];
 
 /** Mid-stride: the legs swap so alternating frames read as running. */
 export const DORONGI_RUNNING: PixelGrid = [
-  '....gggggg..',
-  '...gggg.ggg.',
-  '.ggggggeggg.',
+  '..gggggg....',
+  '.ggg.gggg...',
+  '.ggg.gggggg.',
   '.gggggggggg.',
-  '.....gggggg.',
+  '.gggggg.....',
   '.gggggggggg.',
-  '....GGGGG...',
-  '...ggggggg..',
-  '..ggggggggg.',
-  '..g.ggggg.g.',
-  '...GG...GG..',
-  '..G.......G.',
+  '...GGGGG....',
+  '..ggggggg...',
+  '.ggggggggg..',
+  '.g.ggggg.g..',
+  '..GG...GG...',
+  '.G.......G..',
 ];
 
 /** Legs tucked for the airborne frame. */
 export const DORONGI_JUMPING: PixelGrid = [
-  '....gggggg..',
-  '...gggg.ggg.',
-  '.ggggggeggg.',
+  '..gggggg....',
+  '.ggg.gggg...',
+  '.ggg.gggggg.',
   '.gggggggggg.',
-  '.....gggggg.',
+  '.gggggg.....',
   '.gggggggggg.',
-  '....GGGGG...',
-  '...ggggggg..',
-  '..ggggggggg.',
-  '..g.ggggg.g.',
-  '...GG...GG..',
+  '...GGGGG....',
+  '..ggggggg...',
+  '.ggggggggg..',
+  '.g.ggggg.g..',
+  '..GG...GG...',
   '............',
 ];
 
@@ -90,18 +93,18 @@ export const DORONGI_JUMPING: PixelGrid = [
  * body and ducking would clear nothing.
  */
 export const DORONGI_DUCKING: PixelGrid = [
-  '..gggggg....',
-  '.gggg.gggg..',
-  'ggggggeggggg',
+  '....gggggg..',
+  '..gggg.gggg.',
+  'gggggg.gggg.',
   '.gggggggggg.',
   '..GGGGGGGG..',
   '...G....G...',
 ];
 
 export const DORONGI_DUCKING_RUNNING: PixelGrid = [
-  '..gggggg....',
-  '.gggg.gggg..',
-  'ggggggeggggg',
+  '....gggggg..',
+  '..gggg.gggg.',
+  'gggggg.gggg.',
   '.gggggggggg.',
   '..GGGGGGGG..',
   '..G......G..',
@@ -119,32 +122,35 @@ export const SHELL: PixelGrid = [
   'SSSSSSSSSS',
 ];
 
-/** A single coral stalk. */
+/**
+ * A knobbly coral head. Kept lumpy and asymmetric on purpose — an evenly
+ * branched stalk reads as a cactus, which is exactly what this replaced.
+ */
 export const CORAL_SMALL: PixelGrid = [
-  '....cc....',
-  '..c.cc.c..',
-  '..c.cc.cc.',
-  '.cc.cc.cc.',
-  '.cc.ccCcc.',
-  '.cCcccCc..',
-  '..CcccC...',
+  '..c....c..',
+  '.ccc..cc..',
+  '.ccc.cccc.',
+  '..cc.cccC.',
+  '..ccccCc..',
   '...cccc...',
-  '...CccC...',
-  '...CCCC...',
+  '..cccccc..',
+  '.ccCccccc.',
+  '.cCcccccC.',
+  '..CCCCCC..',
 ];
 
-/** A wide coral cluster: the widest thing on the floor. */
+/** A wide coral cluster: two heads grown together, the widest thing on the floor. */
 export const CORAL_LARGE: PixelGrid = [
-  '..cc....cc..',
-  '..cc.cc.cc..',
-  'c.cc.cc.cc.c',
-  'c.cc.cc.cc.c',
-  'cccc.cc.cccc',
-  '.Ccccccccc..',
-  '..CcccccC...',
-  '...CccccC...',
-  '....CccC....',
-  '....CCCC....',
+  '..c......c..',
+  '.ccc....ccc.',
+  '.cccc.ccccc.',
+  '..cc.ccccCc.',
+  '..cccccCcc..',
+  'c..ccccccc..',
+  'ccc.cccccc..',
+  '.cccccccccc.',
+  '.cCcccccccC.',
+  '..CCCCCCCC..',
 ];
 
 /**
@@ -152,18 +158,18 @@ export const CORAL_LARGE: PixelGrid = [
  * along — it hovers, and later in a run it spits ink.
  */
 export const SEAHORSE: PixelGrid = [
-  '..hhhh..',
-  '.hh..hh.',
-  '.hh.e.h.',
-  '.hhhhhh.',
-  'Hhhhhh..',
-  '.hhhhH..',
-  '..hhhH..',
-  '..hhhH..',
-  '.Hhhh...',
-  '..hhH...',
-  '.Hhh....',
-  '..HHH...',
+  '....hhh.H.',
+  '...hhhhhHH',
+  '...hehhhH.',
+  'hhhhhhhhHH',
+  'hhhhhhhhH.',
+  '....wwhhh.',
+  '....wwhhH.',
+  '....wwhh..',
+  '....hhhH..',
+  '...hhhh...',
+  '...hh.hh..',
+  '...hhhh...',
 ];
 
 /** Ink spat by a seahorse: small, fast, and fatal on contact. */
