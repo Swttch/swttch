@@ -12,7 +12,7 @@ import {
   step,
   type RunnerState,
 } from '../engine';
-import { CACTUS_SMALL, RUNNER_STANDING } from '../sprites';
+import { CORAL_SMALL, RUNNER_STANDING } from '../sprites';
 
 const FRAME = 1 / 60;
 
@@ -88,7 +88,7 @@ describe('runner engine', () => {
   it('ends the run when the runner meets an obstacle', () => {
     const state: RunnerState = {
       ...startRun(createState()),
-      obstacles: [{ x: RUNNER_X, grid: CACTUS_SMALL }],
+      obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
 
     const after = step(state, { dt: FRAME, runnerGrid: RUNNER_STANDING });
@@ -98,7 +98,7 @@ describe('runner engine', () => {
   it('lets a well-timed jump clear an obstacle', () => {
     let state: RunnerState = {
       ...startRun(createState()),
-      obstacles: [{ x: RUNNER_X + 90, grid: CACTUS_SMALL }],
+      obstacles: [{ x: RUNNER_X + 90, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       // Keep the lane clear so only the obstacle under test matters.
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
@@ -114,7 +114,7 @@ describe('runner engine', () => {
   it('lands on an obstacle when the jump is mistimed', () => {
     let state: RunnerState = {
       ...startRun(createState()),
-      obstacles: [{ x: RUNNER_X + 320, grid: CACTUS_SMALL }],
+      obstacles: [{ x: RUNNER_X + 320, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
     // Far too early — the runner is descending again by the time it arrives.
@@ -128,7 +128,7 @@ describe('runner engine', () => {
     const finished: RunnerState = {
       ...startRun(createState()),
       distance: 4000,
-      obstacles: [{ x: RUNNER_X, grid: CACTUS_SMALL }],
+      obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
 
     const after = step(finished, { dt: FRAME, runnerGrid: RUNNER_STANDING });
@@ -158,7 +158,7 @@ describe('runner engine', () => {
     // Once past the left edge the obstacle is dropped rather than accumulating.
     const offscreen: RunnerState = {
       ...startRun(createState()),
-      obstacles: [{ x: -runnerWidth(CACTUS_SMALL) - 1, grid: CACTUS_SMALL }],
+      obstacles: [{ x: -runnerWidth(CORAL_SMALL) - 1, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
     expect(step(offscreen, { dt: FRAME, runnerGrid: RUNNER_STANDING }).obstacles).toEqual([]);

@@ -75,27 +75,100 @@ export const RUNNER_JUMPING: PixelGrid = [
   '............',
 ];
 
-/** Ground obstacles, in the two widths the spawner alternates between. */
-export const CACTUS_SMALL: PixelGrid = [
-  '.#..',
-  '.#..',
-  '###.',
-  '.##.',
-  '.##.',
-  '.##.',
-  '.##.',
-  '.##.',
+/**
+ * Ducking: a genuinely shorter grid, not the standing one with blank rows on
+ * top. Collision uses the grid's full box, so empty rows would still count as
+ * body and ducking would clear nothing.
+ */
+export const RUNNER_DUCKING: PixelGrid = [
+  '..########..',
+  '.##########.',
+  '.##########.',
+  '.##########.',
+  '..#......#..',
+  '..#......#..',
 ];
 
-export const CACTUS_LARGE: PixelGrid = [
+export const RUNNER_DUCKING_RUNNING: PixelGrid = [
+  '..########..',
+  '.##########.',
+  '.##########.',
+  '.##########.',
+  '.##......##.',
+  '#..........#',
+];
+
+/* Seabed obstacles — the things the reef floor is made of. */
+
+/** A small shell, low enough to hop over easily. */
+export const SHELL: PixelGrid = [
+  '.####.',
+  '######',
+  '#.##.#',
+  '######',
+];
+
+/** A single coral stalk. */
+export const CORAL_SMALL: PixelGrid = [
+  '..#..',
+  '#.#..',
+  '#.#.#',
+  '###.#',
+  '.####',
+  '..##.',
+  '..##.',
+  '..##.',
+];
+
+/** A wide coral cluster: the widest ground obstacle. */
+export const CORAL_LARGE: PixelGrid = [
   '..#...#..',
-  '..#...#..',
+  '..#...#.#',
   '#.#.#.#.#',
-  '###.#.###',
-  '.##.#.##.',
-  '.#####.#.',
-  '..###....',
-  '..###....',
+  '#.#.#.###',
+  '#####.##.',
+  '.#..####.',
+  '..#.##...',
+  '..#####..',
+];
+
+/**
+ * Seahorse: drifts in from the right at one of several heights, so it must be
+ * jumped or ducked depending on where it rides.
+ */
+export const SEAHORSE: PixelGrid = [
+  '..####..',
+  '.##..##.',
+  '.##.#.#.',
+  '.#####..',
+  '..###...',
+  '.####...',
+  '.#.###..',
+  '.#..##..',
+  '.....##.',
+  '...####.',
+];
+
+/** Alternate frame; the tail curls so the seahorse reads as swimming. */
+export const SEAHORSE_SWIM: PixelGrid = [
+  '..####..',
+  '.##..##.',
+  '.##.#.#.',
+  '.#####..',
+  '..###...',
+  '..####..',
+  '..#.###.',
+  '..#..##.',
+  '..#.##..',
+  '..###...',
+];
+
+/** Ink blob spat by a seahorse; small, fast, and fatal on contact. */
+export const INK: PixelGrid = [
+  '.##.',
+  '####',
+  '####',
+  '.##.',
 ];
 
 export const gridWidth = (grid: PixelGrid) => grid[0].length;
