@@ -35,6 +35,7 @@
     "reflect-metadata": "^0.2.2",
     "rehype-katex": "^7.0.1",
     "remark-math-extended": "^6.1.0",
+    "shiki": "^4.4.3",
     "streamdown": "^2.1.0",
     "tippy.js": "^6.3.7",
     "unidiff": "^1.0.4"

@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
+import {code} from '../../utils/codePlugin';
 import {isInsideCodeBlock, isMarkdownComplete} from '../../utils/markdownParser';
 import './streaming.css';
 import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/common";
@@ -85,13 +86,12 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                             mode={isStreaming ? 'streaming' : 'static'}
                             parseIncompleteMarkdown={isStreaming}
                             isAnimating={isStreaming}
-                            shikiTheme={['github-dark', 'github-light']}
                             components={MARKDOWN_COMPONENTS}
                             controls={{
                                 code: true,
                                 table: true,
                             }}
-                            plugins={{ math }}
+                            plugins={{ math, code }}
                         >
                             {prepareAssistantMarkdown(thinking, workingDirectory)}
                         </Streamdown>

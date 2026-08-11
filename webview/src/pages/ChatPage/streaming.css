@@ -171,7 +171,6 @@
   line-height: 1 !important;
 }
 
-[data-streamdown="code-block-body"] > code > span > span,
 [data-streamdown="inline-code"] {
   background: var(--md-inline-code-bg) !important;
   color: var(--md-inline-code-fg) !important;
@@ -206,20 +205,44 @@
   display: none;
 }
 
+/* The backdrop stays ours (IDE-themed), not the Shiki theme's. Shiki reports
+   its own page colour and Streamdown writes it inline on this <pre>, so
+   `!important` is what keeps the block visually continuous with the IDE
+   instead of flipping to the theme's white/near-black. Token colours are
+   untouched — only the backdrop is overridden. */
 [data-streamdown="code-block-body"] {
   padding: 0.85em !important;
   font-family: var(--ide-font-code);
   font-size: 13px !important;
   line-height: 1.5;
   overflow-x: auto;
-  background: var(--md-code-block-bg);
+  background: var(--md-code-block-bg) !important;
   border: none !important;
 }
 
+/* Shiki token spans. Colour is deliberately NOT set here: the highlighter
+   (webview/src/utils/codePlugin.ts) writes each token's colour inline, and an
+   `!important` rule at this level would repaint every token in one flat colour
+   — which is exactly what issue #282 reported. Only metrics are set.
+   Tokens stay transparent so the block backdrop above shows through; without
+   this, per-token background chips break the block into the striped look
+   reported in issue #124. */
 [data-streamdown="code-block-body"] > code > span > span {
   font-size: 0.9em !important;
   border-radius: 0 !important;
-  padding: 1.5px 0;
+  background: transparent !important;
+}
+
+/* Dark-theme token colours.
+   Shiki's dual-theme output puts the light colour in `color` and the dark one
+   in a `--shiki-dark` custom property on the same span. Streamdown ships a
+   `dark:text-(--shiki-dark)!` class to swap them, but that is Tailwind v4
+   syntax and this webview is on Tailwind v3 — and the class lives inside
+   node_modules, which the v3 content scanner never reads. So the class emits
+   nothing and dark mode would keep the light-theme colours. Applying the
+   variable ourselves is what makes the swap actually happen. */
+.dark [data-streamdown="code-block-body"] > code > span > span {
+  color: var(--shiki-dark, inherit) !important;
 }
 
 [data-streamdown="code-block-copy-button"] {
