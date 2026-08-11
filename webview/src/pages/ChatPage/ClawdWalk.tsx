@@ -1,5 +1,8 @@
 import clawdSvg from '../../assets/clawd.svg';
 import dorongiSvg from '../../assets/dorongi.svg';
+import { useSecretKnock } from './runner/useSecretKnock';
+
+const noop = () => {};
 
 const CLAWD_WIDTH = 46;
 const CLAWD_HEIGHT = 37;
@@ -41,11 +44,16 @@ const DORONGI_OPTICAL_LIFT = 1;
  * two offsets above.
  */
 interface ClawdWalkProps {
-  /** Called when Dorongi is clicked; absent when nothing should happen. */
-  onDorongiClick?: () => void;
+  /**
+   * Called when Dorongi is clicked four times in quick succession; absent when
+   * nothing should happen.
+   */
+  onDorongiKnock?: () => void;
 }
 
-export const ClawdWalk = ({ onDorongiClick }: ClawdWalkProps) => {
+export const ClawdWalk = ({ onDorongiKnock }: ClawdWalkProps) => {
+  const knock = useSecretKnock(onDorongiKnock ?? noop);
+
   const width = CLAWD_WIDTH + GAP + DORONGI_SIZE;
   const height = Math.max(CLAWD_HEIGHT, DORONGI_SIZE) + CLAWD_BOTTOM_PADDING;
 
@@ -87,16 +95,17 @@ export const ClawdWalk = ({ onDorongiClick }: ClawdWalkProps) => {
         fill="none"
       />
 
-      {/* Transparent hit area over Dorongi, drawn last so it takes the clicks. */}
-      {onDorongiClick && (
+      {/* Transparent hit area over Dorongi, drawn last so it takes the clicks.
+          It keeps the default cursor: a pointer would advertise the secret. */}
+      {onDorongiKnock && (
         <rect
           x={dorongiX}
           y={dorongiY}
           width={DORONGI_SIZE}
           height={DORONGI_SIZE}
           fill="transparent"
-          className="cursor-pointer"
-          onClick={onDorongiClick}
+          className="select-none"
+          onClick={knock}
         />
       )}
     </svg>

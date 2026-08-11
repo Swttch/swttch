@@ -76,8 +76,9 @@ export const EmptyState = () => {
         )}
         {(!playing || stashed) && (
           <>
-            {/* Dorongi starts a game, or brings a stashed one back mid-run. */}
-            <ClawdWalk onDorongiClick={() => (stashed ? revealGame.current?.() : setPlaying(true))} />
+            {/* Four quick clicks on Dorongi start a game, or bring a stashed
+                one back mid-run. */}
+            <ClawdWalk onDorongiKnock={() => (stashed ? revealGame.current?.() : setPlaying(true))} />
             <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
             <AnnouncementEmptyStateSlot />
           </>

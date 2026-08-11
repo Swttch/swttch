@@ -17,7 +17,7 @@ import { CORAL_SMALL, DORONGI_DUCKING, DORONGI, SEAHORSE } from '../sprites';
 const FRAME = 1 / 60;
 
 const running = (overrides: Partial<RunnerState> = {}): RunnerState => ({
-  ...startRun(createState()),
+  ...startRun(),
   nextSpawn: Number.MAX_SAFE_INTEGER,
   ...overrides,
 });

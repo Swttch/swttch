@@ -36,7 +36,6 @@ export interface RunnerState {
   speed: number;
   distance: number;
   score: number;
-  best: number;
   obstacles: Obstacle[];
   /** Distance until the next obstacle spawns. */
   nextSpawn: number;
@@ -103,7 +102,7 @@ export const obstacleHeight = (grid: PixelGrid) => gridHeight(grid) * PIXEL;
 export const runnerWidth = obstacleWidth;
 export const runnerHeight = obstacleHeight;
 
-export const createState = (best = 0): RunnerState => ({
+export const createState = (): RunnerState => ({
   phase: 'ready',
   y: 0,
   velocity: 0,
@@ -111,14 +110,17 @@ export const createState = (best = 0): RunnerState => ({
   speed: START_SPEED,
   distance: 0,
   score: 0,
-  best,
   obstacles: [],
   nextSpawn: START_MIN_GAP,
   legPhase: 0,
 });
 
-export const startRun = (state: RunnerState): RunnerState => ({
-  ...createState(state.best),
+/**
+ * Starts a fresh run. The best score is not part of the world — it is kept in
+ * profile.json — so nothing carries over between runs.
+ */
+export const startRun = (): RunnerState => ({
+  ...createState(),
   phase: 'running',
 });
 
@@ -255,7 +257,6 @@ export const step = (state: RunnerState, { dt, runnerGrid, random = Math.random 
         distance,
         obstacles,
         score,
-        best: Math.max(state.best, score),
       };
     }
   }

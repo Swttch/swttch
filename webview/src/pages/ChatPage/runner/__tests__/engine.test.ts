@@ -35,7 +35,7 @@ describe('runner engine', () => {
   });
 
   it('accelerates as the run goes on', () => {
-    const start = startRun(createState());
+    const start = startRun();
     const later = advance(start, 5);
 
     expect(later.speed).toBeGreaterThan(start.speed);
@@ -43,12 +43,12 @@ describe('runner engine', () => {
   });
 
   it('caps the speed so the run stays playable', () => {
-    const veryLate = advance(startRun(createState()), 400);
+    const veryLate = advance(startRun(), 400);
     expect(veryLate.speed).toBeLessThanOrEqual(640);
   });
 
   it('lifts the runner on a jump and returns it to the ground', () => {
-    const running = startRun(createState());
+    const running = startRun();
     const jumping = jump(running);
     expect(jumping.velocity).toBeGreaterThan(0);
 
@@ -61,7 +61,7 @@ describe('runner engine', () => {
   });
 
   it('ignores a jump while already airborne, so the runner cannot climb', () => {
-    const airborne = advance(jump(startRun(createState())), 0.1);
+    const airborne = advance(jump(startRun()), 0.1);
     expect(airborne.y).toBeGreaterThan(0);
 
     expect(jump(airborne)).toBe(airborne);
@@ -73,7 +73,7 @@ describe('runner engine', () => {
   });
 
   it('trims the ascent when the key is released early', () => {
-    const jumping = jump(startRun(createState()));
+    const jumping = jump(startRun());
     const released = releaseJump(jumping);
 
     expect(released.velocity).toBeLessThan(jumping.velocity);
@@ -81,13 +81,13 @@ describe('runner engine', () => {
   });
 
   it('leaves a slow ascent alone when released', () => {
-    const barelyRising: RunnerState = { ...startRun(createState()), velocity: 100 };
+    const barelyRising: RunnerState = { ...startRun(), velocity: 100 };
     expect(releaseJump(barelyRising)).toBe(barelyRising);
   });
 
   it('ends the run when the runner meets an obstacle', () => {
     const state: RunnerState = {
-      ...startRun(createState()),
+      ...startRun(),
       obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
 
@@ -97,7 +97,7 @@ describe('runner engine', () => {
 
   it('lets a well-timed jump clear an obstacle', () => {
     let state: RunnerState = {
-      ...startRun(createState()),
+      ...startRun(),
       obstacles: [{ x: RUNNER_X + 90, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       // Keep the lane clear so only the obstacle under test matters.
       nextSpawn: Number.MAX_SAFE_INTEGER,
@@ -113,7 +113,7 @@ describe('runner engine', () => {
 
   it('lands on an obstacle when the jump is mistimed', () => {
     let state: RunnerState = {
-      ...startRun(createState()),
+      ...startRun(),
       obstacles: [{ x: RUNNER_X + 320, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
@@ -124,9 +124,9 @@ describe('runner engine', () => {
     expect(state.phase).toBe('over');
   });
 
-  it('scores by distance and remembers the best run', () => {
+  it('scores by distance, and keeps the score on the frame that ends the run', () => {
     const finished: RunnerState = {
-      ...startRun(createState()),
+      ...startRun(),
       distance: 4000,
       obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
@@ -134,14 +134,11 @@ describe('runner engine', () => {
     const after = step(finished, { dt: FRAME, runnerGrid: DORONGI });
     expect(after.phase).toBe('over');
     expect(after.score).toBeGreaterThan(0);
-    expect(after.best).toBe(after.score);
   });
 
-  it('carries the best score into the next run but resets the rest', () => {
-    const over: RunnerState = { ...createState(), phase: 'over', best: 42, score: 42, distance: 9999 };
-    const restarted = startRun(over);
+  it('starts each run from scratch, since the record lives outside the world', () => {
+    const restarted = startRun();
 
-    expect(restarted.best).toBe(42);
     expect(restarted.score).toBe(0);
     expect(restarted.distance).toBe(0);
     expect(restarted.obstacles).toEqual([]);
@@ -149,7 +146,7 @@ describe('runner engine', () => {
   });
 
   it('spawns obstacles at the right edge and retires them past the left', () => {
-    let state: RunnerState = { ...startRun(createState()), nextSpawn: 0 };
+    let state: RunnerState = { ...startRun(), nextSpawn: 0 };
     state = step(state, { dt: FRAME, runnerGrid: DORONGI, random: () => 0.5 });
 
     expect(state.obstacles).toHaveLength(1);
@@ -157,7 +154,7 @@ describe('runner engine', () => {
 
     // Once past the left edge the obstacle is dropped rather than accumulating.
     const offscreen: RunnerState = {
-      ...startRun(createState()),
+      ...startRun(),
       obstacles: [{ x: -runnerWidth(CORAL_SMALL) - 1, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
@@ -165,7 +162,7 @@ describe('runner engine', () => {
   });
 
   it('keeps the runner standing on the ground line', () => {
-    const grounded = advance(startRun(createState()), 1);
+    const grounded = advance(startRun(), 1);
     const top = GROUND_Y - runnerHeight(DORONGI) - grounded.y;
 
     expect(top + runnerHeight(DORONGI)).toBe(GROUND_Y);

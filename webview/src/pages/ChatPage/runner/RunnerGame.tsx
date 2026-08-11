@@ -24,18 +24,12 @@ import {
   drawGrid,
 } from './sprites';
 import { useStash } from './useStash';
-
-const BEST_SCORE_KEY = 'ccg.runner.best';
+import { useBestScore } from './useBestScore';
 
 /** Distance covered per running-frame swap, in world units. */
 const STRIDE = 30;
 /** Clamps the simulation step so a backgrounded tab cannot teleport obstacles. */
 const MAX_FRAME_SECONDS = 1 / 30;
-
-const readBest = () => {
-  const stored = Number(localStorage.getItem(BEST_SCORE_KEY));
-  return Number.isFinite(stored) && stored > 0 ? stored : 0;
-};
 
 export const runnerSprite = (state: RunnerState, striding: boolean) => {
   if (state.phase !== 'running') return state.ducking ? DORONGI_DUCKING : DORONGI;
@@ -63,11 +57,15 @@ interface RunnerGameProps {
  */
 export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const stateRef = useRef<RunnerState>(createState(readBest()));
+  const stateRef = useRef<RunnerState>(createState());
   /** Mirrors phase into React only so the caption can re-render. */
   const [phase, setPhase] = useState(stateRef.current.phase);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(stateRef.current.best);
+
+  const { best, report } = useBestScore();
+  /** Read inside the frame loop, which must not restart when the score changes. */
+  const reportRef = useRef(report);
+  reportRef.current = report;
 
   const stash = useStash();
   /** Read inside the frame loop, which must not restart when this changes. */
@@ -95,7 +93,7 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
       return;
     }
     // 'ready' and 'over' both start a fresh run.
-    stateRef.current = startRun(state);
+    stateRef.current = startRun();
     setPhase('running');
     setScore(0);
   }, [stash]);
@@ -175,10 +173,9 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
 
         if (after.phase !== before.phase) {
           setPhase(after.phase);
-          if (after.phase === 'over') {
-            setBest(after.best);
-            localStorage.setItem(BEST_SCORE_KEY, String(after.best));
-          }
+          // The backend keeps the score only if it beats the stored best, so a
+          // finished run can be reported without comparing here.
+          if (after.phase === 'over') void reportRef.current(after.score);
         }
         if (after.score !== before.score) setScore(after.score);
         render(after);

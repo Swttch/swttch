@@ -24,6 +24,7 @@ import { getAnnouncementsHandler } from './getAnnouncements';
 import { dismissAnnouncementHandler } from './dismissAnnouncement';
 import { getAnnouncementsEnabledHandler } from './getAnnouncementsEnabled';
 import { setAnnouncementsEnabledHandler } from './setAnnouncementsEnabled';
+import { getRunnerBestScoreHandler, setRunnerBestScoreHandler } from './runnerBestScore';
 import { getSponsorUrlHandler } from './getSponsorUrl';
 import { verifyLicenseHandler } from './verifyLicense';
 import { getSponsorStatusHandler } from './getSponsorStatus';
@@ -196,6 +197,12 @@ export async function handleMessage(
       break;
     case MessageType.SET_ANNOUNCEMENTS_ENABLED:
       await setAnnouncementsEnabledHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_RUNNER_BEST_SCORE:
+      await getRunnerBestScoreHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_RUNNER_BEST_SCORE:
+      await setRunnerBestScoreHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SPONSOR_URL:
       await getSponsorUrlHandler(connectionId, message, connections, bridge);

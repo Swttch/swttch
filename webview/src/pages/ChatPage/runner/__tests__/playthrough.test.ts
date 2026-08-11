@@ -3,7 +3,6 @@ import {
   INK_SCORE,
   RUNNER_X,
   SEAHORSE_SCORE,
-  createState,
   difficultyRatio,
   jump,
   obstacleHeight,
@@ -35,7 +34,7 @@ interface RunResult {
  * rides overhead, and stand back up once it has passed.
  */
 const playFor = (frames: number, random = seeded()): RunResult => {
-  let state = startRun(createState());
+  let state = startRun();
   let jumps = 0;
   let ducks = 0;
   let wasDucking = false;
@@ -98,7 +97,7 @@ describe('runner playthrough', () => {
   });
 
   it('ends the run when the player never reacts', () => {
-    let state = startRun(createState());
+    let state = startRun();
     for (let frame = 0; frame < 60 * 60 && state.phase === 'running'; frame++) {
       state = step(state, { dt: FRAME, runnerGrid: DORONGI, random: () => 0.5 });
     }

@@ -112,6 +112,12 @@ export enum MessageType {
   /** Persist the announcements on/off toggle; when turned off, the backend stops fetching announcements entirely (no network request). inbound webview→backend */
   SET_ANNOUNCEMENTS_ENABLED = 'SET_ANNOUNCEMENTS_ENABLED',
 
+  // -- Runner game (easter egg) --
+  /** Read the runner game's best score from profile.json (0 when never played). inbound webview→backend */
+  GET_RUNNER_BEST_SCORE = 'GET_RUNNER_BEST_SCORE',
+  /** Report a finished run's score; the backend keeps it only if it beats the stored best, and returns the current best either way. inbound webview→backend */
+  SET_RUNNER_BEST_SCORE = 'SET_RUNNER_BEST_SCORE',
+
   // -- Sponsor / license --
   /** Build the sponsorship (pricing) URL with the install id + account context prefilled, for the webview to open in the external browser. The install id stays backend-side (never exposed to the webview). inbound webview→backend */
   GET_SPONSOR_URL = 'GET_SPONSOR_URL',
