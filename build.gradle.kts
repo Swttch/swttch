@@ -146,6 +146,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.8 - UX errors fixed</h3>
+            <ul>
+                <li>Add IDE theme colors to the chat, so it matches the theme you use (#267, reported by @iainfeeney)</li>
+                <li>Fix scrolling stuttering and lagging throughout the plugin (#267, reported by @iainfeeney)</li>
+                <li>Fix <code>/reload-plugins</code> and <code>/btw</code> not running (#270, reported by @deniskrizanovic)</li>
+                <li>Fix Auto not being available as a default input mode (#272, reported by @hollandjake)</li>
+                <li>Fix the settings overlay renaming the editor tab behind it (#271)</li>
+            </ul>
             <h3>0.26.7 - Settings errors fixed</h3>
             <ul>
                 <li>Fix the configured default permission mode being ignored on new sessions (#264, reported by @StarCode000)</li>
