@@ -6,6 +6,7 @@ import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/environment';
 import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
 import { MessageType } from '@/shared';
+import { setCurrentSettings } from '@/utils/openSettingsAt';
 
 interface SettingsContextValue {
   settings: SettingsState;
@@ -92,6 +93,15 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const ideProduct = mergedQuery.data?.ideProduct ?? '';
   const scopeSettings = scopeQuery.data?.settings ?? {};
   const isLoading = mergedQuery.isLoading && !mergedQuery.data;
+
+  // Mirror the live settings value into openSettingsAt's module scope so hook-free
+  // callers (toast actions, command-palette items) read the same source of truth
+  // as the UI — covering initial load and backend SETTINGS_CHANGED pushes, not just
+  // local edits. See openSettingsAt.ts's top comment for why this replaced reading
+  // the localStorage cache directly (issue #280: stale per-tab cache in JetBrains).
+  useEffect(() => {
+    setCurrentSettings(settings);
+  }, [settings]);
 
   // Apply font size to root element so rem-based sizes scale globally
   useEffect(() => {

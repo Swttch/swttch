@@ -13,9 +13,20 @@ import { DEFAULT_SETTINGS, OpenSettingsMode, SettingKey, type SettingsState } fr
  *
  * Deliberately hook-free: the most common callers (a toast action, a command
  * palette item, a keyboard shortcut) run OUTSIDE React rendering, where hooks
- * are unavailable. So the open mode is read from the settings cache in
- * localStorage, and the overlay is requested via a window event that
+ * are unavailable. So the open mode is read from {@link setCurrentSettings}, a
+ * module-scope mirror of SettingsContext's live `settings` value (kept in sync
+ * by the provider on every render — load, backend push, or local edit), and
+ * the overlay is requested via a window event that
  * {@link useSettingsOverlayNavigation} turns into a real route transition.
+ *
+ * This deliberately does NOT read SettingsContext's localStorage cache: that
+ * cache is written only on local edits (see SettingsContext's
+ * writeLocalStorageSettings call sites), so it goes stale whenever settings
+ * change through any other path (initial backend load, SETTINGS_CHANGED
+ * push). In JetBrains each editor tab is its own JCEF browser with its own
+ * localStorage, so a tab that never itself changed a setting would keep
+ * reading a stale cached mode forever (issue #280). The module variable below
+ * has no such gap because it mirrors the same `settings` the UI renders from.
  */
 
 /** Window event asking the app shell to open settings as an overlay. */
@@ -27,29 +38,30 @@ export interface OpenSettingsOverlayDetail {
 }
 
 /**
- * Mirrors SettingsContext's localStorage cache key. Reading the cache (rather
- * than the bridge) keeps this synchronous and usable outside React; the value is
- * written on every settings load/change, so it is the same value the UI shows.
+ * Module-scope mirror of SettingsContext's `settings` value, kept in sync by
+ * the provider (see SettingsContext.tsx) so this file can read the real
+ * settings source outside React without becoming a hook. `undefined` before
+ * the provider mounts or before the first settings load resolves.
  */
-const SETTINGS_STORAGE_KEY = 'claude-code-settings';
+let currentSettings: SettingsState | undefined;
 
 /**
- * Resolve the user's open-mode preference without React. Any failure (no cache
- * yet, corrupted JSON, storage disabled) falls back to the default rather than
- * throwing — a preference lookup must never block the navigation itself.
+ * Called by SettingsContext whenever its `settings` value changes (initial
+ * load, backend SETTINGS_CHANGED push, or a local edit). Do not call this
+ * from anywhere else — it exists solely to keep this module's mirror in sync
+ * with the one source of truth SettingsContext already computes.
+ */
+export function setCurrentSettings(settings: SettingsState): void {
+  currentSettings = settings;
+}
+
+/**
+ * Resolve the user's open-mode preference without React. Falls back to the
+ * default when the mirror hasn't been populated yet (boot, before the first
+ * settings load resolves) — a preference lookup must never block navigation.
  */
 function resolveOpenMode(): OpenSettingsMode {
-  try {
-    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<SettingsState>;
-      const mode = parsed[SettingKey.OPEN_SETTINGS_AS];
-      if (mode === OpenSettingsMode.OVERLAY || mode === OpenSettingsMode.NEW_TAB) return mode;
-    }
-  } catch {
-    /* unreadable cache → fall through to the default */
-  }
-  return DEFAULT_SETTINGS[SettingKey.OPEN_SETTINGS_AS];
+  return currentSettings?.[SettingKey.OPEN_SETTINGS_AS] ?? DEFAULT_SETTINGS[SettingKey.OPEN_SETTINGS_AS];
 }
 
 function requestOverlay(route: Route): void {
