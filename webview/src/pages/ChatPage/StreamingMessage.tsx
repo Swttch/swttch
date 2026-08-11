@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
-import {isInsideCodeBlock, isMarkdownComplete} from '../../utils/markdownParser';
 import './streaming.css';
 import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/common";
 import {useWorkingDirOrNull} from '@/contexts/WorkingDirContext';
@@ -41,9 +40,6 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
         }
     }, [isStreaming]);
 
-    // Determine if we should show incomplete indicator
-    const showIncompleteIndicator = isStreaming && !isMarkdownComplete(content) && isInsideCodeBlock(content);
-
     return (
         <ToolWrapper message={message} className="!mt-0">
             <div className={`streaming-message ${className}`}>
@@ -63,12 +59,6 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
                         {prepareAssistantMarkdown(content, workingDirectory)}
                     </Streamdown>
                 </div>
-
-                {showIncompleteIndicator && (
-                    <div className="incomplete-indicator">
-                        <span className="cursor-blink">▋</span>
-                    </div>
-                )}
             </div>
         </ToolWrapper>
     );
