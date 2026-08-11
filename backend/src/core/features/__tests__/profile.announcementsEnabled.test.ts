@@ -79,12 +79,15 @@ describe('profile announcementsEnabled', () => {
 
   it('preserves an explicit false without rewriting', async () => {
     mockExistsSync.mockReturnValue(true);
+    // Every field must be present and valid: a profile missing any of them is
+    // repaired on read, which would itself trigger the write this asserts against.
     mockReadFile.mockResolvedValue(
       JSON.stringify({
         uuid: 'existing-uuid',
         telemetryConsent: { status: 'pending', decidedAt: null },
         dismissedAnnouncementIds: [],
         announcementsEnabled: false,
+        runnerBestScore: 0,
       }),
     );
 

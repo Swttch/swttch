@@ -33,6 +33,8 @@ export interface ProfileData {
   dismissedAnnouncementIds: string[];
   /** 공지(Announcement) 수신 여부. 기본값 true. false면 백엔드는 원격 fetch 자체를 하지 않는다. */
   announcementsEnabled: boolean;
+  /** 러너 게임(이스터에그) 최고 점수. 아직 기록이 없으면 0. */
+  runnerBestScore: number;
 }
 
 function createDefaultProfile(): ProfileData {
@@ -41,6 +43,7 @@ function createDefaultProfile(): ProfileData {
     telemetryConsent: { status: ConsentStatus.PENDING, decidedAt: null },
     dismissedAnnouncementIds: [],
     announcementsEnabled: true,
+    runnerBestScore: 0,
   };
 }
 
@@ -59,6 +62,11 @@ function normalizeStatus(status: ConsentStatus | undefined): ConsentStatus {
 /** 저장된 값이 boolean이 아니면(누락/손상) 기본값 true로 보정한다. */
 function normalizeAnnouncementsEnabled(value: unknown): boolean {
   return typeof value === 'boolean' ? value : true;
+}
+
+/** 점수가 아닌 값(누락/손상/음수/소수)이면 0으로 보정한다. */
+function normalizeRunnerBestScore(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
 async function writeProfile(profile: ProfileData): Promise<void> {
@@ -85,6 +93,7 @@ export async function ensureProfile(): Promise<ProfileData> {
       parsed.dismissedAnnouncementIds,
     );
     const announcementsEnabled = normalizeAnnouncementsEnabled(parsed.announcementsEnabled);
+    const runnerBestScore = normalizeRunnerBestScore(parsed.runnerBestScore);
 
     const profile: ProfileData = {
       uuid:
@@ -95,6 +104,7 @@ export async function ensureProfile(): Promise<ProfileData> {
       },
       dismissedAnnouncementIds,
       announcementsEnabled,
+      runnerBestScore,
     };
 
     // 누락/손상 필드를 보정했으면 파일을 다시 써서 정규화한다.
@@ -104,7 +114,8 @@ export async function ensureProfile(): Promise<ProfileData> {
       parsed.telemetryConsent?.decidedAt !== profile.telemetryConsent.decidedAt ||
       !Array.isArray(parsed.dismissedAnnouncementIds) ||
       parsed.dismissedAnnouncementIds.length !== dismissedAnnouncementIds.length ||
-      typeof parsed.announcementsEnabled !== 'boolean';
+      typeof parsed.announcementsEnabled !== 'boolean' ||
+      parsed.runnerBestScore !== runnerBestScore;
     if (needsRewrite) {
       await writeProfile(profile);
     }
@@ -170,4 +181,25 @@ export async function setAnnouncementsEnabled(enabled: boolean): Promise<Profile
   profile.announcementsEnabled = enabled;
   await writeProfile(profile);
   return profile;
+}
+
+/** 러너 게임 최고 점수를 읽는다(기록이 없으면 0). */
+export async function getRunnerBestScore(): Promise<number> {
+  const profile = await ensureProfile();
+  return profile.runnerBestScore;
+}
+
+/**
+ * 러너 게임 점수를 기록한다. 기존 최고 기록보다 높을 때만 갱신하므로,
+ * 판이 끝날 때마다 그대로 보내도 최고 기록이 낮아지지 않는다.
+ * 갱신 여부와 무관하게 현재 최고 기록을 반환한다.
+ */
+export async function setRunnerBestScore(score: number): Promise<number> {
+  const best = normalizeRunnerBestScore(score);
+  const profile = await ensureProfile();
+  if (best > profile.runnerBestScore) {
+    profile.runnerBestScore = best;
+    await writeProfile(profile);
+  }
+  return profile.runnerBestScore;
 }

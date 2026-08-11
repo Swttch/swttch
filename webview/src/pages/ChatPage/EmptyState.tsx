@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import clawdSvg from '../../assets/clawd.svg';
 import claudeCodeLogo from '../../assets/claude-code-logo.svg';
+import { ClawdWalk } from './ClawdWalk';
+import { RunnerGame } from './runner/RunnerGame';
 import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
 import { AnnouncementEmptyStateSlot } from '@/components/Announcements/placements';
@@ -47,6 +48,11 @@ export const EmptyState = () => {
   );
 
   const [hint, setHint] = useState<ReactNode>(t('emptyState.initialHint'));
+  /** Clicking Dorongi hands the empty state over to the runner game. */
+  const [playing, setPlaying] = useState(false);
+  /** The game is mounted but stashed out of sight (Ctrl double-tap). */
+  const [stashed, setStashed] = useState(false);
+  const revealGame = useRef<() => void>();
 
   useEffect(() => {
     const index = Math.floor(Math.random() * hints.length);
@@ -59,9 +65,24 @@ export const EmptyState = () => {
         <img src={claudeCodeLogo} alt={APP_NAME} width={120} />
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-5 pt-14">
-        <img src={clawdSvg} alt="Clawd" width={46} />
-        <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
-        <AnnouncementEmptyStateSlot />
+        {/* While the game is stashed it stays mounted but renders nothing, so
+            the paused run survives; the chat's own empty state shows instead. */}
+        {playing && (
+          <RunnerGame
+            onExit={() => setPlaying(false)}
+            onStashedChange={setStashed}
+            onRevealRef={(reveal) => { revealGame.current = reveal; }}
+          />
+        )}
+        {(!playing || stashed) && (
+          <>
+            {/* Four quick clicks on Dorongi start a game, or bring a stashed
+                one back mid-run. */}
+            <ClawdWalk onDorongiKnock={() => (stashed ? revealGame.current?.() : setPlaying(true))} />
+            <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
+            <AnnouncementEmptyStateSlot />
+          </>
+        )}
       </div>
     </div>
   );
