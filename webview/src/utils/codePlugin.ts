@@ -1,5 +1,4 @@
-import { createHighlighterCore, type HighlighterCore } from 'shiki/core';
-import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
+import { createHighlighter, bundledLanguages, type Highlighter } from 'shiki';
 import type { BundledLanguage, BundledTheme } from 'shiki';
 import type { CodeHighlighterPlugin, HighlightOptions } from 'streamdown';
 
@@ -12,120 +11,52 @@ type HighlightResult = NonNullable<ReturnType<CodeHighlighterPlugin['highlight']
 // with `color: inherit` unless `plugins.code` supplies an actual highlighter
 // (issue #282). This module is that highlighter.
 //
-// Languages are registered explicitly rather than pulling Shiki's full bundle.
-// `vite.config.ts` sets `inlineDynamicImports: true` (JCEF fails to fetch split
-// chunks), so every grammar imported here lands in the main bundle whether or
-// not it is ever used — the full bundle measured at roughly +320 kB gzip. The
-// list below is therefore scoped to what Claude actually emits, taken from a
-// count of fenced-code languages across local session transcripts. Anything
-// outside it degrades to Streamdown's uncoloured fallback, which is exactly
-// what every block looked like before this plugin existed.
+// It uses Shiki's full bundle. Registering grammars one by one looks cheaper
+// but is not: `vite.config.ts` sets `inlineDynamicImports: true` (JCEF cannot
+// fetch split chunks), so hand-picked grammars ship in full and duplicate the
+// shared parts they embed. Measured against a 788 kB gzip baseline, 36
+// hand-picked languages cost +360 kB while the whole bundle costs +319 kB —
+// less bytes for every language instead of a chosen few. It also removes the
+// language list and its alias table (`ts`, `sh`, …), which Shiki resolves
+// itself, and with them the risk of a fence quietly rendering uncoloured
+// because a spelling was missing from our map.
 const THEMES: [BundledTheme, BundledTheme] = ['github-light', 'github-dark'];
 
-const LANGUAGE_LOADERS = {
-    bash: () => import('shiki/langs/bash.mjs'),
-    css: () => import('shiki/langs/css.mjs'),
-    diff: () => import('shiki/langs/diff.mjs'),
-    html: () => import('shiki/langs/html.mjs'),
-    java: () => import('shiki/langs/java.mjs'),
-    javascript: () => import('shiki/langs/javascript.mjs'),
-    json: () => import('shiki/langs/json.mjs'),
-    jsx: () => import('shiki/langs/jsx.mjs'),
-    kotlin: () => import('shiki/langs/kotlin.mjs'),
-    markdown: () => import('shiki/langs/markdown.mjs'),
-    python: () => import('shiki/langs/python.mjs'),
-    sql: () => import('shiki/langs/sql.mjs'),
-    tsx: () => import('shiki/langs/tsx.mjs'),
-    typescript: () => import('shiki/langs/typescript.mjs'),
-    xml: () => import('shiki/langs/xml.mjs'),
-    yaml: () => import('shiki/langs/yaml.mjs'),
-} as const;
+let highlighter: Highlighter | null = null;
+let highlighterPromise: Promise<Highlighter> | null = null;
 
-type SupportedLanguage = keyof typeof LANGUAGE_LOADERS;
+// Shiki resolves aliases (`ts` → typescript) through this map, so membership
+// here is the same question as "will Shiki accept this fence?".
+const isSupported = (language: string): language is BundledLanguage =>
+    Object.prototype.hasOwnProperty.call(bundledLanguages, language);
 
-// Fences are written by hand far more often than not, and the short forms are
-// the common ones: `ts` and `js` outrank their spelled-out names in transcripts,
-// and `sh` is written more often than `bash`. Without these, the most-used
-// fences in practice would silently fall back to no colour at all.
-const LANGUAGE_ALIASES: Record<string, SupportedLanguage> = {
-    cjs: 'javascript',
-    console: 'bash',
-    htm: 'html',
-    js: 'javascript',
-    jsonc: 'json',
-    kt: 'kotlin',
-    kts: 'kotlin',
-    md: 'markdown',
-    mjs: 'javascript',
-    py: 'python',
-    sh: 'bash',
-    shell: 'bash',
-    ts: 'typescript',
-    yml: 'yaml',
-    zsh: 'bash',
-};
-
-const resolveLanguage = (language: string): SupportedLanguage | null => {
-    if (Object.prototype.hasOwnProperty.call(LANGUAGE_LOADERS, language)) {
-        return language as SupportedLanguage;
-    }
-    return LANGUAGE_ALIASES[language] ?? null;
-};
-
-const SUPPORTED_LANGUAGES = [
-    ...Object.keys(LANGUAGE_LOADERS),
-    ...Object.keys(LANGUAGE_ALIASES),
-] as SupportedLanguage[];
-
-let highlighter: HighlighterCore | null = null;
-let highlighterPromise: Promise<HighlighterCore> | null = null;
-
-// The JavaScript regex engine keeps us off the oniguruma WASM binary, which
-// would need to be fetched at runtime — an extra network/file dependency the
-// JCEF webview does not need.
-const loadHighlighter = (): Promise<HighlighterCore> => {
-    highlighterPromise ??= (async () => {
-        const [light, dark] = await Promise.all([
-            import('shiki/themes/github-light.mjs'),
-            import('shiki/themes/github-dark.mjs'),
-        ]);
-        const created = await createHighlighterCore({
-            themes: [light.default, dark.default],
-            langs: [],
-            engine: createJavaScriptRegexEngine(),
-        });
+const loadHighlighter = (): Promise<Highlighter> => {
+    highlighterPromise ??= createHighlighter({
+        themes: [...THEMES],
+        // Grammars are loaded per language on first use; preloading all of them
+        // would parse every grammar in the bundle at startup.
+        langs: [],
+    }).then((created) => {
         highlighter = created;
         return created;
-    })();
+    });
     return highlighterPromise;
 };
 
-const loadedLanguages = new Set<SupportedLanguage>();
-const languagePromises = new Map<SupportedLanguage, Promise<void>>();
+const languagePromises = new Map<string, Promise<void>>();
 
-const loadLanguage = (language: SupportedLanguage): Promise<void> => {
+const loadLanguage = (language: BundledLanguage): Promise<void> => {
     let pending = languagePromises.get(language);
     if (!pending) {
-        pending = (async () => {
-            const core = await loadHighlighter();
-            const grammar = await LANGUAGE_LOADERS[language]();
-            await core.loadLanguage(grammar.default);
-            loadedLanguages.add(language);
-        })();
+        pending = loadHighlighter().then((core) => core.loadLanguage(language));
         languagePromises.set(language, pending);
     }
     return pending;
 };
 
-// Tokenize under the resolved grammar name, not the fence's own spelling: the
-// highlighter was loaded as `typescript`, so asking it for `ts` would throw.
-const tokenize = (
-    core: HighlighterCore,
-    options: HighlightOptions,
-    language: SupportedLanguage,
-): HighlightResult => {
+const tokenize = (core: Highlighter, options: HighlightOptions): HighlightResult => {
     const result = core.codeToTokens(options.code, {
-        lang: language,
+        lang: options.language,
         themes: { light: THEMES[0], dark: THEMES[1] },
     });
     return { tokens: result.tokens, fg: result.fg, bg: result.bg };
@@ -135,39 +66,40 @@ export const code: CodeHighlighterPlugin = {
     name: 'shiki',
     type: 'code-highlighter',
 
-    // Synchronous when the grammar is already loaded — that is the common case
-    // once a session has rendered one block of a given language, and it keeps
-    // re-renders during streaming from flashing back to uncoloured text.
-    // Otherwise return null and resolve through the callback, which is the
-    // contract Streamdown documents for async highlighters.
+    // Synchronous once the grammar is loaded — the common case after a session
+    // has rendered one block of a language, and what keeps re-renders during
+    // streaming from flashing back to uncoloured text. Otherwise return null
+    // and resolve through the callback, the contract Streamdown documents for
+    // async highlighters.
     highlight: (options, callback) => {
-        const language = resolveLanguage(options.language as string);
-        if (!language) {
+        const language = options.language as string;
+        if (!isSupported(language)) {
             return null;
         }
 
-        if (highlighter && loadedLanguages.has(language)) {
-            return tokenize(highlighter, options, language);
+        if (highlighter?.getLoadedLanguages().includes(language)) {
+            return tokenize(highlighter, options);
         }
 
         if (callback) {
             void loadLanguage(language)
                 .then(() => {
                     if (highlighter) {
-                        callback(tokenize(highlighter, options, language));
+                        callback(tokenize(highlighter, options));
                     }
                 })
-                // A missing grammar must not take the chat down with it: the
-                // block simply stays on Streamdown's uncoloured fallback.
+                // A grammar that fails to load must not take the chat down with
+                // it: the block simply stays on Streamdown's uncoloured
+                // fallback, which is how every block looked before this plugin.
                 .catch(() => undefined);
         }
 
         return null;
     },
 
-    supportsLanguage: (language) => resolveLanguage(language as string) !== null,
+    supportsLanguage: (language) => isSupported(language as string),
 
-    getSupportedLanguages: () => SUPPORTED_LANGUAGES as unknown as BundledLanguage[],
+    getSupportedLanguages: () => Object.keys(bundledLanguages) as BundledLanguage[],
 
     getThemes: () => THEMES,
 };

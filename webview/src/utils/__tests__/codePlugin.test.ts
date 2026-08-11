@@ -63,7 +63,31 @@ describe('code highlighter plugin', () => {
         ).toBe(true);
     });
 
-    it('highlights the languages it advertises', async () => {
+    it('highlights compiled languages, not just the web stack', async () => {
+        // An earlier revision hand-picked a language list built from one
+        // developer's transcripts, which left C/C++/C#/Go/Rust rendering
+        // uncoloured — issue #282 all over again for anyone not writing
+        // TypeScript. Shipping Shiki's full bundle is what fixes that.
+        const samples: Array<[language: string, source: string]> = [
+            ['c', '#include <stdio.h>'],
+            ['cpp', 'int main() { return 0; }'],
+            ['csharp', 'public class Greeter { }'],
+            ['go', 'func main() { println("hi") }'],
+            ['rust', 'fn main() { println!("hi"); }'],
+        ];
+
+        for (const [language, source] of samples) {
+            expect(code.supportsLanguage(language as never)).toBe(true);
+
+            const result = await highlightAsync(source, language);
+            expect(
+                result?.tokens[0].length,
+                `${language} should tokenize`,
+            ).toBeGreaterThan(1);
+        }
+    });
+
+    it('highlights the web stack it already covered', async () => {
         for (const language of ['python', 'kotlin', 'json', 'bash']) {
             expect(code.supportsLanguage(language as never)).toBe(true);
             const result = await highlightAsync('x = 1', language);
@@ -73,9 +97,11 @@ describe('code highlighter plugin', () => {
 
     it('highlights short fence aliases like ts, js and sh', async () => {
         // These outrank their spelled-out forms in real transcripts, so treating
-        // them as unknown would leave the most common blocks uncoloured. Each
-        // sample has to be valid in its own language, otherwise the grammar
-        // legitimately yields a single plain-text token.
+        // them as unknown would leave the most common blocks uncoloured. Shiki
+        // resolves the aliases itself; this pins that we route them to it
+        // rather than filtering them out first. Each sample has to be valid in
+        // its own language, otherwise the grammar legitimately yields a single
+        // plain-text token.
         const samples: Array<[alias: string, source: string]> = [
             ['ts', 'const answer: number = 42;'],
             ['js', 'const answer = 42;'],
