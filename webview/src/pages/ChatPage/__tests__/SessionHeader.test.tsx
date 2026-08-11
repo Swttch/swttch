@@ -9,6 +9,8 @@ import { SessionHeader } from '../SessionHeader/index';
 import { SessionMetaDto } from '../../../dto';
 import type { SessionState } from '../../../types';
 import { Route } from '@/router';
+import { setCurrentSettings } from '@/utils/openSettingsAt';
+import { DEFAULT_SETTINGS, type SettingsState } from '@/types/settings';
 
 // 테스트 시점 기준 상대 날짜 생성 헬퍼.
 // 기준 시각을 "오늘 정오"로 고정한다. 자정 직후(예: 00:00~02:00)에 실행하면
@@ -161,10 +163,12 @@ beforeEach(() => {
     updateSettingWithScope: vi.fn(),
   };
 
-  // openSettingsAt reads the open-mode preference from this cache; clear it so
-  // one test's stored preference cannot leak into the next.
+  // openSettingsAt reads the open-mode preference from this module-scope mirror
+  // (kept in sync by SettingsContext in real usage; mocked away here, so we seed
+  // it directly) — reset it so one test's stored preference cannot leak into
+  // the next.
   mockOpenSettingsAdapter.mockReset();
-  localStorage.clear();
+  setCurrentSettings({ ...DEFAULT_SETTINGS } as SettingsState);
 });
 
 describe('SessionHeader', () => {
@@ -404,10 +408,7 @@ describe('SessionHeader', () => {
 
   it('설정 항목: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
     const user = userEvent.setup();
-    localStorage.setItem(
-      'claude-code-settings',
-      JSON.stringify({ openSettingsAs: 'new-tab' }),
-    );
+    setCurrentSettings({ ...DEFAULT_SETTINGS, openSettingsAs: 'new-tab' } as SettingsState);
     render(<SessionHeader />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
