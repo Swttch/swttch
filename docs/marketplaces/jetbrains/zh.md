@@ -3,8 +3,8 @@
 **在 Cursor 和 VS Code 中熟悉的 Claude Code GUI 界面——现已登陆 JetBrains IDE。**
 
 > **我们更名了 —— Claude Code with GUI 现已更名为 Swttch。**
-> 这仍是同一位开发者打造的同一款产品。许多用户希望我们支持 Claude Code 之外的更多提供方，
-> 我们认真对待这一需求，因此更换了名称。
+> 这仍是同一位开发者打造的同一款产品。为了支持 Claude Code 之外的更多提供方，
+> 我们更换了名称。
 
 🌐 [English](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/en.md) | [한국어](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ko.md) | [日本語](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ja.md) | **中文** | [Español](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/es.md) | [Deutsch](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/de.md) | [Français](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/fr.md)
 

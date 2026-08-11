@@ -3,8 +3,8 @@
 **L'interface graphique Claude Code que vous connaissez dans Cursor et VS Code — désormais disponible dans les IDE JetBrains.**
 
 > **Nous avons changé de nom — Claude Code with GUI devient Swttch.**
-> C'est le même produit, du même développeur. Nous l'avons renommé parce que beaucoup d'entre vous
-> nous ont demandé de prendre en charge davantage de fournisseurs au-delà de Claude Code, et nous le prenons au sérieux.
+> C'est le même produit, du même développeur. Nous l'avons renommé afin de pouvoir prendre
+> en charge davantage de fournisseurs au-delà de Claude Code.
 
 🌐 [English](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/en.md) | [한국어](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ko.md) | [日本語](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ja.md) | [中文](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/zh.md) | [Español](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/es.md) | [Deutsch](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/de.md) | **Français**
 

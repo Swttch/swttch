@@ -7,8 +7,7 @@
 > 本仓库已从 `yhk1038/claude-code-gui-jetbrains` 迁移至 `Swttch/swttch`。
 > 原有链接和 `git clone` 地址仍然有效。
 >
-> 这仍是同一款产品。许多用户希望我们支持 Claude Code 之外的更多提供方，
-> 我们认真对待这一需求，因此更换了名称。
+> 这仍是同一款产品。为了支持 Claude Code 之外的更多提供方，我们更换了名称。
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)

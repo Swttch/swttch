@@ -7,8 +7,8 @@ Die Claude Code GUI, die in Cursor und VS Code beliebt ist, ist jetzt auch in Je
 > Dieses Repository ist von `yhk1038/claude-code-gui-jetbrains` nach `Swttch/swttch` umgezogen.
 > Bestehende Links und `git clone`-URLs funktionieren weiterhin.
 >
-> Es ist dasselbe Produkt. Wir haben es umbenannt, weil viele von euch sich Unterstützung für
-> mehr Anbieter über Claude Code hinaus gewünscht haben — und das nehmen wir ernst.
+> Es ist dasselbe Produkt. Wir haben es umbenannt, um mehr Anbieter über Claude Code
+> hinaus unterstützen zu können.
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
