@@ -46,17 +46,17 @@ const GAP = 20;
 
 const HEART_COLOR = '#E5484D';
 /** Half the heart's width; it is drawn around its own centre. */
-const HEART_RADIUS = 3.4;
+const HEART_RADIUS = 6.8;
 /** Headroom above the taller character for the heart and its arcs. */
-const HEART_HEADROOM = 15;
+const HEART_HEADROOM = 26;
 
 const TRAIL_COLOR = '#E5484D';
-const TRAIL_WIDTH = 1.2;
+const TRAIL_WIDTH = 2.4;
 /** Small dots with wide gaps, so the trail reads as a light dotted arc. */
-const TRAIL_DASH = '0.1 3';
-/** The arcs stop short of both the heads and the heart, never touching either. */
-const TRAIL_HEAD_CLEARANCE = 5;
-const TRAIL_HEART_CLEARANCE = 4;
+const TRAIL_DASH = '0.1 6';
+/** The arcs stop well short of both the heads and the heart, never touching either. */
+const TRAIL_HEAD_CLEARANCE = 9;
+const TRAIL_HEART_CLEARANCE = 9;
 
 /**
  * clawd.svg leaves ~0.92 units of padding below its artwork inside a 38-unit
