@@ -15,13 +15,12 @@ import {
   type RunnerState,
 } from './engine';
 import {
-  RUNNER_DUCKING,
-  RUNNER_DUCKING_RUNNING,
-  RUNNER_JUMPING,
-  RUNNER_RUNNING,
-  RUNNER_STANDING,
-  SEAHORSE,
-  SEAHORSE_SWIM,
+  DORONGI,
+  DORONGI_DUCKING,
+  DORONGI_DUCKING_RUNNING,
+  DORONGI_JUMPING,
+  DORONGI_RUNNING,
+  REEF_PALETTE,
   drawGrid,
 } from './sprites';
 import { useStash } from './useStash';
@@ -38,11 +37,11 @@ const readBest = () => {
   return Number.isFinite(stored) && stored > 0 ? stored : 0;
 };
 
-const runnerSprite = (state: RunnerState, striding: boolean) => {
-  if (state.phase !== 'running') return state.ducking ? RUNNER_DUCKING : RUNNER_STANDING;
-  if (state.y > 0) return state.ducking ? RUNNER_DUCKING : RUNNER_JUMPING;
-  if (state.ducking) return striding ? RUNNER_DUCKING : RUNNER_DUCKING_RUNNING;
-  return striding ? RUNNER_STANDING : RUNNER_RUNNING;
+export const runnerSprite = (state: RunnerState, striding: boolean) => {
+  if (state.phase !== 'running') return state.ducking ? DORONGI_DUCKING : DORONGI;
+  if (state.y > 0) return state.ducking ? DORONGI_DUCKING : DORONGI_JUMPING;
+  if (state.ducking) return striding ? DORONGI_DUCKING : DORONGI_DUCKING_RUNNING;
+  return striding ? DORONGI : DORONGI_RUNNING;
 };
 
 interface RunnerGameProps {
@@ -55,8 +54,7 @@ interface RunnerGameProps {
 
 /**
  * An endless runner along a reef: hop the coral and shells, and duck the
- * seahorses that drift overhead — some of which spit ink once the run gets
- * long. The seabed rises and falls, which nudges the speed either way.
+ * seahorses hanging overhead — some of which spit ink once the run gets long.
  *
  * Everything is painted from the pixel grids in ./sprites — there are no image
  * assets, no audio, and no game library, so the whole feature costs only its
@@ -75,8 +73,6 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
   /** Read inside the frame loop, which must not restart when this changes. */
   const stashRef = useRef(stash.state);
   stashRef.current = stash.state;
-
-  const colorsRef = useRef({ ink: '#525252', muted: '#a3a3a3' });
 
   useEffect(() => {
     onStashedChange?.(stash.state === 'hidden');
@@ -119,12 +115,7 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Resolve theme colors once per mount rather than every frame.
-    const styles = getComputedStyle(canvas);
-    colorsRef.current = {
-      ink: styles.getPropertyValue('--color-text-secondary').trim() || '#525252',
-      muted: styles.getPropertyValue('--color-text-tertiary').trim() || '#a3a3a3',
-    };
+    const seabedColor = getComputedStyle(canvas).getPropertyValue('--color-text-tertiary').trim() || '#a3a3a3';
 
     let frame = 0;
     let previous = performance.now();
@@ -150,37 +141,32 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
-      const { ink, muted } = colorsRef.current;
-      const floor = GROUND_Y - state.groundHeight;
-
-      // Seabed: a line that tilts with the slope the runner is currently on.
-      ctx.strokeStyle = muted;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, floor + state.slope * RUNNER_X);
-      ctx.lineTo(WORLD_WIDTH, floor - state.slope * (WORLD_WIDTH - RUNNER_X));
-      ctx.stroke();
-
-      const striding = Math.floor(state.legPhase / STRIDE) % 2 === 0;
+      ctx.fillStyle = seabedColor;
+      ctx.fillRect(0, GROUND_Y, WORLD_WIDTH, 1);
 
       for (const obstacle of state.obstacles) {
-        // Seahorses animate; coral and ink are static.
-        const grid = obstacle.kind === 'seahorse' && !striding ? SEAHORSE_SWIM
-          : obstacle.kind === 'seahorse' ? SEAHORSE
-          : obstacle.grid;
-        const bottom = floor - obstacle.y - state.slope * (obstacle.x - RUNNER_X);
-        drawGrid(ctx, grid, obstacle.x, bottom - obstacleHeight(grid), PIXEL, ink);
+        drawGrid(
+          ctx,
+          obstacle.grid,
+          obstacle.x,
+          GROUND_Y - obstacle.y - obstacleHeight(obstacle.grid),
+          PIXEL,
+          REEF_PALETTE,
+        );
       }
 
+      const striding = Math.floor(state.legPhase / STRIDE) % 2 === 0;
       const grid = runnerSprite(state, striding);
-      drawGrid(ctx, grid, RUNNER_X, floor - obstacleHeight(grid) - state.y, PIXEL, ink);
+      drawGrid(ctx, grid, RUNNER_X, GROUND_Y - obstacleHeight(grid) - state.y, PIXEL, REEF_PALETTE);
     };
 
     const loop = (now: number) => {
       const dt = Math.min(MAX_FRAME_SECONDS, (now - previous) / 1000);
       previous = now;
 
-      // Stashing freezes the world; only the Ctrl listener stays live.
+      // Stashing freezes the world; only the Ctrl listener stays live. The
+      // canvas keeps its last frame, so bringing the game back shows exactly
+      // where it left off.
       if (stashRef.current === 'playing') {
         const before = stateRef.current;
         const grid = runnerSprite(before, true);
@@ -195,9 +181,9 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
           }
         }
         if (after.score !== before.score) setScore(after.score);
+        render(after);
       }
 
-      render(stateRef.current);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -240,7 +226,7 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
     };
   }, [onExit, press, release, duck]);
 
-  if (stash.state === 'hidden') return null;
+  const hidden = stash.state === 'hidden';
 
   const caption = stash.state === 'paused' ? 'Paused — Space to resume'
     : phase === 'ready' ? 'Space to start, Down to duck'
@@ -248,7 +234,14 @@ export const RunnerGame = ({ onExit, onStashedChange, onRevealRef }: RunnerGameP
     : 'Esc to leave';
 
   return (
-    <div className="flex flex-col items-center gap-2 w-full">
+    // Stashing hides the game without unmounting it: the canvas keeps the frame
+    // it froze on, so revealing shows the run exactly as it was left.
+    <div
+      className={`flex flex-col items-center gap-2 w-full transition-opacity ${
+        hidden ? 'opacity-0 pointer-events-none absolute' : ''
+      }`}
+      aria-hidden={hidden}
+    >
       <div className="flex w-full max-w-[600px] justify-end gap-4 font-mono text-xs text-text-tertiary tabular-nums">
         {best > 0 && <span>best {best}</span>}
         <span>{score}</span>

@@ -1,21 +1,12 @@
-import {
-  CORAL_LARGE,
-  CORAL_SMALL,
-  INK,
-  SEAHORSE,
-  SHELL,
-  gridHeight,
-  gridWidth,
-  type PixelGrid,
-} from './sprites';
+import { CORAL_LARGE, CORAL_SMALL, INK, SEAHORSE, SHELL, gridHeight, gridWidth, type PixelGrid } from './sprites';
 
 /**
  * The runner game's rules, kept free of React and the DOM so it can be stepped
  * by a test with plain numbers. Rendering reads this state but never writes it.
  *
- * Dorongi swims a reef: coral and shells sit on the seabed, seahorses drift in
- * at various heights, and the floor rises and falls. Everything here is
- * measured in world units, independent of canvas pixels.
+ * Dorongi runs a reef: coral and shells sit on the seabed, and seahorses hang
+ * in the water at various heights. Everything here is measured in world units,
+ * independent of canvas pixels.
  */
 
 export type RunnerPhase = 'ready' | 'running' | 'over';
@@ -41,7 +32,7 @@ export interface RunnerState {
   y: number;
   velocity: number;
   ducking: boolean;
-  /** Current scroll speed, before the slope adjustment. */
+  /** How fast the world scrolls past, in world units per second. */
   speed: number;
   distance: number;
   score: number;
@@ -49,19 +40,13 @@ export interface RunnerState {
   obstacles: Obstacle[];
   /** Distance until the next obstacle spawns. */
   nextSpawn: number;
-  /** Advances with distance; drives the two-frame swimming animation. */
+  /** Advances with distance; drives the two-frame running animation. */
   legPhase: number;
-  /** Seabed height under the runner, in world units above the baseline. */
-  groundHeight: number;
-  /** Slope of the seabed ahead, as a rise per world unit travelled. */
-  slope: number;
-  /** Distance left in the current slope section. */
-  slopeRemaining: number;
 }
 
 export const WORLD_WIDTH = 600;
 export const WORLD_HEIGHT = 150;
-/** Baseline the seabed varies around. */
+/** The seabed the runner and the coral stand on. */
 export const GROUND_Y = 128;
 export const RUNNER_X = 40;
 /** Edge of one sprite cell, in world units. */
@@ -111,14 +96,6 @@ const INK_SPEED = 150;
 const INK_TRIGGER_RANGE = 260;
 const INK_CHANCE = 0.5;
 
-/* Seabed relief. Sections of gentle slope alternate with flat stretches. */
-const MAX_GROUND_HEIGHT = 26;
-const MIN_SECTION = 120;
-const SECTION_RANGE = 220;
-const MAX_SLOPE = 0.12;
-/** Climbing costs speed, descending gains it. */
-export const SLOPE_SPEED_FACTOR = 0.9;
-
 export const obstacleWidth = (grid: PixelGrid) => gridWidth(grid) * PIXEL;
 export const obstacleHeight = (grid: PixelGrid) => gridHeight(grid) * PIXEL;
 
@@ -138,9 +115,6 @@ export const createState = (best = 0): RunnerState => ({
   obstacles: [],
   nextSpawn: START_MIN_GAP,
   legPhase: 0,
-  groundHeight: 0,
-  slope: 0,
-  slopeRemaining: MIN_SECTION,
 });
 
 export const startRun = (state: RunnerState): RunnerState => ({
@@ -211,32 +185,10 @@ export interface StepOptions {
 export const step = (state: RunnerState, { dt, runnerGrid, random = Math.random }: StepOptions): RunnerState => {
   if (state.phase !== 'running') return state;
 
-  const baseSpeed = Math.min(MAX_SPEED, state.speed + ACCELERATION * dt);
-  // Climbing costs speed and descending gains it, proportional to the grade.
-  const slopeEffect = 1 - (state.slope / MAX_SLOPE) * (1 - SLOPE_SPEED_FACTOR);
-  const speed = baseSpeed * slopeEffect;
+  const speed = Math.min(MAX_SPEED, state.speed + ACCELERATION * dt);
   const travelled = speed * dt;
   const distance = state.distance + travelled;
   const score = Math.floor(distance * SCORE_RATE);
-
-  // Seabed relief: follow the current slope, then pick a new section.
-  let groundHeight = state.groundHeight + state.slope * travelled;
-  let slope = state.slope;
-  let slopeRemaining = state.slopeRemaining - travelled;
-  if (groundHeight < 0) {
-    groundHeight = 0;
-    if (slope < 0) slope = 0;
-  }
-  if (groundHeight > MAX_GROUND_HEIGHT) {
-    groundHeight = MAX_GROUND_HEIGHT;
-    if (slope > 0) slope = 0;
-  }
-  if (slopeRemaining <= 0) {
-    slopeRemaining = MIN_SECTION + random() * SECTION_RANGE;
-    // Bias back toward the middle so the floor never pins to a limit.
-    const bias = groundHeight / MAX_GROUND_HEIGHT - 0.5;
-    slope = (random() - 0.5 - bias * 0.6) * 2 * MAX_SLOPE;
-  }
 
   const gravity = GRAVITY + (state.ducking && state.y > 0 ? DUCK_GRAVITY_BONUS : 0);
   let y = state.y + state.velocity * dt;
@@ -281,14 +233,13 @@ export const step = (state: RunnerState, { dt, runnerGrid, random = Math.random 
 
   const runnerW = obstacleWidth(runnerGrid);
   const runnerH = obstacleHeight(runnerGrid);
-  const runnerFloor = GROUND_Y - groundHeight;
-  const runnerTop = runnerFloor - runnerH - y;
+  const runnerTop = GROUND_Y - runnerH - y;
 
   for (const obstacle of obstacles) {
     const width = obstacleWidth(obstacle.grid);
     const height = obstacleHeight(obstacle.grid);
-    // Ground obstacles ride the seabed; everything else holds its own height.
-    const bottom = runnerFloor - obstacle.y;
+    // Ground obstacles sit on the seabed; everything else holds its own height.
+    const bottom = GROUND_Y - obstacle.y;
     if (
       overlaps(
         RUNNER_X + HIT_INSET, runnerTop + HIT_INSET, runnerW - HIT_INSET * 2, runnerH - HIT_INSET * 2,
@@ -300,12 +251,9 @@ export const step = (state: RunnerState, { dt, runnerGrid, random = Math.random 
         phase: 'over',
         y,
         velocity,
-        speed: baseSpeed,
+        speed,
         distance,
         obstacles,
-        groundHeight,
-        slope,
-        slopeRemaining,
         score,
         best: Math.max(state.best, score),
       };
@@ -316,14 +264,11 @@ export const step = (state: RunnerState, { dt, runnerGrid, random = Math.random 
     ...state,
     y,
     velocity,
-    speed: baseSpeed,
+    speed,
     distance,
     obstacles,
     nextSpawn,
     score,
     legPhase: state.legPhase + travelled,
-    groundHeight,
-    slope,
-    slopeRemaining,
   };
 };

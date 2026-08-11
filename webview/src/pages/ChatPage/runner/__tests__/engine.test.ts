@@ -12,7 +12,7 @@ import {
   step,
   type RunnerState,
 } from '../engine';
-import { CORAL_SMALL, RUNNER_STANDING } from '../sprites';
+import { CORAL_SMALL, DORONGI } from '../sprites';
 
 const FRAME = 1 / 60;
 
@@ -20,7 +20,7 @@ const FRAME = 1 / 60;
 const advance = (state: RunnerState, seconds: number, random = () => 0.99) => {
   let next = state;
   for (let elapsed = 0; elapsed < seconds; elapsed += FRAME) {
-    next = step(next, { dt: FRAME, runnerGrid: RUNNER_STANDING, random });
+    next = step(next, { dt: FRAME, runnerGrid: DORONGI, random });
   }
   return next;
 };
@@ -30,7 +30,7 @@ describe('runner engine', () => {
     const state = createState();
     expect(state.phase).toBe('ready');
 
-    const after = step(state, { dt: FRAME, runnerGrid: RUNNER_STANDING });
+    const after = step(state, { dt: FRAME, runnerGrid: DORONGI });
     expect(after).toBe(state);
   });
 
@@ -91,7 +91,7 @@ describe('runner engine', () => {
       obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
 
-    const after = step(state, { dt: FRAME, runnerGrid: RUNNER_STANDING });
+    const after = step(state, { dt: FRAME, runnerGrid: DORONGI });
     expect(after.phase).toBe('over');
   });
 
@@ -131,7 +131,7 @@ describe('runner engine', () => {
       obstacles: [{ x: RUNNER_X, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
     };
 
-    const after = step(finished, { dt: FRAME, runnerGrid: RUNNER_STANDING });
+    const after = step(finished, { dt: FRAME, runnerGrid: DORONGI });
     expect(after.phase).toBe('over');
     expect(after.score).toBeGreaterThan(0);
     expect(after.best).toBe(after.score);
@@ -150,7 +150,7 @@ describe('runner engine', () => {
 
   it('spawns obstacles at the right edge and retires them past the left', () => {
     let state: RunnerState = { ...startRun(createState()), nextSpawn: 0 };
-    state = step(state, { dt: FRAME, runnerGrid: RUNNER_STANDING, random: () => 0.5 });
+    state = step(state, { dt: FRAME, runnerGrid: DORONGI, random: () => 0.5 });
 
     expect(state.obstacles).toHaveLength(1);
     expect(state.obstacles[0].x).toBe(WORLD_WIDTH);
@@ -161,18 +161,18 @@ describe('runner engine', () => {
       obstacles: [{ x: -runnerWidth(CORAL_SMALL) - 1, y: 0, grid: CORAL_SMALL, kind: 'ground' }],
       nextSpawn: Number.MAX_SAFE_INTEGER,
     };
-    expect(step(offscreen, { dt: FRAME, runnerGrid: RUNNER_STANDING }).obstacles).toEqual([]);
+    expect(step(offscreen, { dt: FRAME, runnerGrid: DORONGI }).obstacles).toEqual([]);
   });
 
   it('keeps the runner standing on the ground line', () => {
     const grounded = advance(startRun(createState()), 1);
-    const top = GROUND_Y - runnerHeight(RUNNER_STANDING) - grounded.y;
+    const top = GROUND_Y - runnerHeight(DORONGI) - grounded.y;
 
-    expect(top + runnerHeight(RUNNER_STANDING)).toBe(GROUND_Y);
+    expect(top + runnerHeight(DORONGI)).toBe(GROUND_Y);
   });
 
   it('is frozen once the run is over', () => {
     const over: RunnerState = { ...createState(), phase: 'over' };
-    expect(step(over, { dt: FRAME, runnerGrid: RUNNER_STANDING })).toBe(over);
+    expect(step(over, { dt: FRAME, runnerGrid: DORONGI })).toBe(over);
   });
 });

@@ -7,13 +7,14 @@ import {
   difficultyRatio,
   jump,
   obstacleHeight,
+  obstacleWidth,
   runnerHeight,
   setDucking,
   startRun,
   step,
   type RunnerState,
 } from '../engine';
-import { RUNNER_DUCKING, RUNNER_STANDING } from '../sprites';
+import { DORONGI_DUCKING, DORONGI } from '../sprites';
 
 const FRAME = 1 / 60;
 
@@ -40,17 +41,19 @@ const playFor = (frames: number, random = seeded()): RunResult => {
   let wasDucking = false;
 
   for (let frame = 0; frame < frames && state.phase === 'running'; frame++) {
-    const runnerTop = runnerHeight(RUNNER_STANDING);
-    // The nearest thing still ahead of the runner.
+    const runnerTop = runnerHeight(DORONGI);
+    // The nearest thing not yet fully behind the runner. An obstacle still
+    // overlapping counts, so the bot holds its pose until the way is clear
+    // rather than standing up into something it is halfway past.
     const threat = state.obstacles
-      .filter((obstacle) => obstacle.x - RUNNER_X > -10)
+      .filter((obstacle) => obstacle.x + obstacleWidth(obstacle.grid) > RUNNER_X)
       .sort((a, b) => a.x - b.x)[0];
 
     if (threat) {
       const gap = threat.x - RUNNER_X;
       // Anything whose whole body sits above a ducking runner can be slipped
       // under; everything else has to be jumped.
-      const clearsWhenDucked = threat.y > obstacleHeight(RUNNER_DUCKING) - 6;
+      const clearsWhenDucked = threat.y > obstacleHeight(DORONGI_DUCKING) - 6;
 
       if (clearsWhenDucked) {
         const shouldDuck = gap < 140;
@@ -76,7 +79,7 @@ const playFor = (frames: number, random = seeded()): RunResult => {
       wasDucking = false;
     }
 
-    state = step(state, { dt: FRAME, runnerGrid: wasDucking ? RUNNER_DUCKING : RUNNER_STANDING, random });
+    state = step(state, { dt: FRAME, runnerGrid: wasDucking ? DORONGI_DUCKING : DORONGI, random });
   }
 
   return { state, jumps, ducks };
@@ -97,7 +100,7 @@ describe('runner playthrough', () => {
   it('ends the run when the player never reacts', () => {
     let state = startRun(createState());
     for (let frame = 0; frame < 60 * 60 && state.phase === 'running'; frame++) {
-      state = step(state, { dt: FRAME, runnerGrid: RUNNER_STANDING, random: () => 0.5 });
+      state = step(state, { dt: FRAME, runnerGrid: DORONGI, random: () => 0.5 });
     }
     expect(state.phase).toBe('over');
   });
