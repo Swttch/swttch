@@ -1,4 +1,4 @@
-# ccg — Claude Code with GUI, in your terminal
+# ccg — Swttch (ex - Claude Code with GUI), in your terminal
 
 `ccg` is a tiny shell launcher that runs the **same backend** as the JetBrains plugin from a regular terminal, then opens the UI in your default browser. No npm. No Docker. Just `curl`.
 
