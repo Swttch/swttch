@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#121](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/121), [#152](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/152)
+> 관련: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152)
 
 **Model** 섹션의 두 컨트롤 **Effort**와 **Fast mode**는 모델별로 속도와 깊이를 조절하게 해줍니다. 둘 다 Claude Code CLI에서 이미 설정할 수 있는 것을, 채팅을 벗어나지 않고 바로 조작할 수 있도록 인라인 컨트롤로 꺼내온 것입니다.
 
@@ -55,7 +55,7 @@ Effort는 목록이 아니라 **슬라이더**입니다. 각 눈금은 현재 �
 
 ## 지원하지 않는 모델에서의 동작
 
-지원하지 않는 모델에서 컨트롤을 아예 숨기는 대신, 행은 그대로 보이되 **비활성(회색)** 으로 표시되고, 마우스를 올리면 이유를 짧은 툴팁으로 알려줍니다 — 예를 들어 *"This model doesn't support effort levels"* 또는 *"Fast mode is only available on Opus models"*. 이렇게 하면 어떤 모델에서든 Model 섹션이 일관되게 보여서, 컨트롤이 없어졌다고 고장으로 오해하지 않게 됩니다 ([#152](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/152)).
+지원하지 않는 모델에서 컨트롤을 아예 숨기는 대신, 행은 그대로 보이되 **비활성(회색)** 으로 표시되고, 마우스를 올리면 이유를 짧은 툴팁으로 알려줍니다 — 예를 들어 *"This model doesn't support effort levels"* 또는 *"Fast mode is only available on Opus models"*. 이렇게 하면 어떤 모델에서든 Model 섹션이 일관되게 보여서, 컨트롤이 없어졌다고 고장으로 오해하지 않게 됩니다 ([#152](https://github.com/Swttch/swttch/issues/152)).
 
 ## 참고
 

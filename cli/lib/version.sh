@@ -10,7 +10,7 @@
 # Repository can be overridden via CCG_RELEASE_REPO env (for forks).
 
 # Default GitHub repo for releases. Override with CCG_RELEASE_REPO env.
-: "${CCG_RELEASE_REPO:=yhk1038/claude-code-gui-jetbrains}"
+: "${CCG_RELEASE_REPO:=Swttch/swttch}"
 
 # Compare two semver strings. Strips leading 'v' if present.
 # Pads shorter to longer with 0s for component-wise comparison.

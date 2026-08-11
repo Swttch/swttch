@@ -1,6 +1,14 @@
-# Claude Code with GUI
+# Swttch (ex - Claude Code with GUI)
 
 Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE でも利用できるようになりました。
+
+> **名称が変わりました — Claude Code with GUI は Swttch になりました。**
+>
+> このリポジトリは `yhk1038/claude-code-gui-jetbrains` から `Swttch/swttch` へ移行しました。
+> 既存のリンクや `git clone` の URL はそのまま動作します。
+>
+> 製品は同じです。Claude Code にとどまらず、より多くのプロバイダーへの対応を求める声が多く、
+> その要望を真剣に受け止めて名称を変更しました。
 
 [![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/30313?label=Marketplace)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/30313?label=Downloads)](https://plugins.jetbrains.com/plugin/30313-claude-code-with-gui)
@@ -10,7 +18,7 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 🌐 [English](../README.md) | [한국어](README.ko.md) | **日本語** | [中文](README.zh.md) | [Español](README.es.md) | [Deutsch](README.de.md) | [Français](README.fr.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
+  <img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-chat.png" alt="Chat interface" width="800" />
 </p>
 
 ## Highlights
@@ -97,11 +105,11 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 
 **ウェルカム画面**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-welcome.png" alt="Welcome screen" width="400" />
 
 **設定パネル**
 
-<img src="https://raw.githubusercontent.com/yhk1038/claude-code-gui-jetbrains/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
+<img src="https://raw.githubusercontent.com/Swttch/swttch/main/docs/img/screenshot-settings.png" alt="Settings panel" width="400" />
 
 </details>
 
@@ -128,8 +136,8 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 あらゆる種類のコントリビューションを歓迎します — バグ報告、機能提案、コード、ドキュメント、翻訳など。
 
 - **始めるには？** [CONTRIBUTING.md](../CONTRIBUTING.md) でセットアップ手順とガイドラインを確認してください。
-- **取り組む課題を探しているなら？** [`good first issue`](https://github.com/yhk1038/claude-code-gui-jetbrains/labels/good%20first%20issue) ラベルの付いた Issue を確認してください。
-- **大きな変更を計画しているなら？** まず [Issue を開いて](https://github.com/yhk1038/claude-code-gui-jetbrains/issues)議論してください。
+- **取り組む課題を探しているなら？** [`good first issue`](https://github.com/Swttch/swttch/labels/good%20first%20issue) ラベルの付いた Issue を確認してください。
+- **大きな変更を計画しているなら？** まず [Issue を開いて](https://github.com/Swttch/swttch/issues)議論してください。
 
 ## ライセンス
 

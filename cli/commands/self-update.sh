@@ -12,6 +12,6 @@ cmd_self_update() {
     -h|--help) cmd_self_update_help; return 0 ;;
   esac
 
-  local url="https://raw.githubusercontent.com/${CCG_RELEASE_REPO:-yhk1038/claude-code-gui-jetbrains}/main/cli/install.sh"
+  local url="https://raw.githubusercontent.com/${CCG_RELEASE_REPO:-Swttch/swttch}/main/cli/install.sh"
   curl -fsSL "$url" | bash
 }

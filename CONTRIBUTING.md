@@ -1,4 +1,4 @@
-# Contributing to Claude Code with GUI
+# Contributing to Swttch (ex - Claude Code with GUI)
 
 Thank you for your interest in contributing! This guide will help you get started.
 
@@ -27,7 +27,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 The plugin consists of three layers:
 
 ```
-claude-code-gui-jetbrains/
+swttch/
 ├── backend/         # Node.js + TypeScript — WebSocket server, Claude CLI runner
 ├── webview/         # React + Vite + Tailwind — Chat UI (runs in JCEF browser)
 └── src/             # Kotlin — JetBrains plugin shell (spawns Node.js, native IDE APIs)
@@ -51,8 +51,8 @@ JetBrains IDE (Kotlin)
 ### 1. Clone and install dependencies
 
 ```bash
-git clone https://github.com/yhk1038/claude-code-gui-jetbrains.git
-cd claude-code-gui-jetbrains
+git clone https://github.com/Swttch/swttch.git
+cd swttch
 
 # Install backend dependencies
 bash ./scripts/build.sh be-install
@@ -256,7 +256,7 @@ These principles are non-negotiable and take priority over convenience. See
 
 ## Questions?
 
-- Open a [GitHub Issue](https://github.com/yhk1038/claude-code-gui-jetbrains/issues) for bugs or feature requests
+- Open a [GitHub Issue](https://github.com/Swttch/swttch/issues) for bugs or feature requests
 - Check existing issues for known problems or planned features
 
-Thank you for helping make Claude Code with GUI better!
+Thank you for helping make Swttch better!

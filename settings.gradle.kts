@@ -1,1 +1,1 @@
-rootProject.name = "claude-code-gui-jetbrains"
+rootProject.name = "swttch"

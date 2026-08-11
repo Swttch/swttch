@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "후원 중",
-      "description": "Claude Code with GUI를 후원해 주셔서 감사합니다.",
+      "description": "이 프로젝트를 후원해 주셔서 감사합니다.",
       "keyLabel": "후원자 키",
       "deactivate": "해제",
       "greeting": "오늘도 반갑습니다, 후원자님",

@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#169](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/169)
+> 관련: [#169](https://github.com/Swttch/swttch/issues/169)
 
 4K 모니터나 고해상도 화면에서는 기본 인터페이스가 유독 작게 느껴질 때가 있습니다. 지금까지는 전체 화면 크기를 빠르게 조절할 방법이 없었는데, 이제 브라우저나 코드 에디터에서 쓰던 그 조작 그대로 GUI 전체를 확대·축소할 수 있습니다.
 

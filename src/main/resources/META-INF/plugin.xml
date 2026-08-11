@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.github.yhk1038.claude-code-gui</id>
     <name>Claude Code GUI</name>
-    <vendor email="yhk1038@github.com" url="https://github.com/yhk1038">yhk1038</vendor>
+    <vendor email="yhkks1038@gmail.com" url="https://github.com/Swttch">Swttch</vendor>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.terminal</depends>

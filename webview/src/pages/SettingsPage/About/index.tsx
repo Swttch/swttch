@@ -40,7 +40,7 @@ export function AboutSettings() {
       <SettingSection title={t('about.links.title')}>
         <SettingRow label={t('about.links.documentation')}>
           <a
-            href="https://github.com/yhk1038/claude-code-gui-jetbrains"
+            href="https://github.com/Swttch/swttch"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:text-text-link hover:underline"
@@ -51,7 +51,7 @@ export function AboutSettings() {
 
         <SettingRow label={t('about.links.reportIssue')}>
           <a
-            href="https://github.com/yhk1038/claude-code-gui-jetbrains/issues"
+            href="https://github.com/Swttch/swttch/issues"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:text-text-link hover:underline"

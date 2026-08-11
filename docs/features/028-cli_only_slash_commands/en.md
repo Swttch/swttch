@@ -51,4 +51,4 @@ card, `/usage` opens the account modal. They keep working exactly as before.
 
 ---
 
-Reported in [#270](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/270).
+Reported in [#270](https://github.com/Swttch/swttch/issues/270).

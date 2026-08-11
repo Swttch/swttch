@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "贊助中",
-      "description": "感謝你贊助 Claude Code with GUI。",
+      "description": "感謝你贊助本專案。",
       "keyLabel": "贊助者金鑰",
       "deactivate": "取消啟用",
       "greeting": "很高興見到你，贊助者",

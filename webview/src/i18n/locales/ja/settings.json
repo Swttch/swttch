@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "スポンサー中",
-      "description": "Claude Code with GUI をご支援いただきありがとうございます。",
+      "description": "このプロジェクトをご支援いただきありがとうございます。",
       "keyLabel": "スポンサーキー",
       "deactivate": "解除",
       "greeting": "ようこそ、スポンサーさん",

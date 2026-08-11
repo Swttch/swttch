@@ -135,8 +135,9 @@ intellijPlatform {
             renderer.render(document)
         }.get()
         vendor {
-            name = "yhk1038"
-            url = "https://github.com/yhk1038"
+            name = "Swttch"
+            email = "yhkks1038@gmail.com"
+            url = "https://github.com/Swttch"
         }
         ideaVersion {
             sinceBuild = "242"

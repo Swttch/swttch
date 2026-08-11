@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#244](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/244)
+> 관련: [#244](https://github.com/Swttch/swttch/issues/244)
 
 ## 제보
 
@@ -65,7 +65,7 @@
 - **경로를 오해하지 않습니다.** `src/utils` 나 `see src/utils` 에서는 패널이 뜨지
   않습니다.
 - **`@` 파일 멘션과 부딪히지 않습니다.** 커서가 `@토큰` 안에 있으면 파일 목록이
-  자리를 가져가고 명령 패널은 물러납니다. [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+  자리를 가져가고 명령 패널은 물러납니다. [#236](https://github.com/Swttch/swttch/issues/236)
   에서 정리한 동작이 그대로 유지됩니다.
 
 ## 두 제보가 하나였던 이유

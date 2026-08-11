@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "Patrocinando",
-      "description": "Gracias por apoyar Claude Code with GUI.",
+      "description": "Gracias por apoyar este proyecto.",
       "keyLabel": "Clave de patrocinador",
       "deactivate": "Desactivar",
       "greeting": "Qué bueno verte, patrocinador",

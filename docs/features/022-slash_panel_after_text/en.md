@@ -2,7 +2,7 @@
 
 > Language: **English** · [한국어](./ko.md)
 >
-> Related: [#244](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/244)
+> Related: [#244](https://github.com/Swttch/swttch/issues/244)
 
 ## The report
 
@@ -68,7 +68,7 @@ On top of that, what happens when you pick an item now depends on where you are.
   `see src/utils` opens the panel.
 - **No clash with `@` file mentions.** While the caret sits inside an `@token`
   the file list takes the slot and the command panel steps aside — the behaviour
-  settled in [#236](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/236)
+  settled in [#236](https://github.com/Swttch/swttch/issues/236)
   still holds.
 
 ## Why the two reports were one

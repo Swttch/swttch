@@ -232,14 +232,14 @@ The demo provides:
 ## Files Created/Updated
 
 ### Created
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/hooks/usePermissions.ts`
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/components/PermissionDialog.tsx`
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/components/PermissionBanner.tsx`
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/components/PermissionDemo.tsx`
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/PERMISSION_UI.md`
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/hooks/usePermissions.ts`
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/components/PermissionDialog.tsx`
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/components/PermissionBanner.tsx`
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/components/PermissionDemo.tsx`
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/PERMISSION_UI.md`
 
 ### Updated
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/components/ToolCard.tsx` - Added pulse animation for pending state
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/components/index.ts` - Exported new components
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/src/hooks/index.ts` - Exported new hook
-- `/Users/yonghyun/Projects/yhk1038/claude-code-gui-jetbrains/webview/tailwind.config.js` - Added custom animations
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/components/ToolCard.tsx` - Added pulse animation for pending state
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/components/index.ts` - Exported new components
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/src/hooks/index.ts` - Exported new hook
+- `/Users/yonghyun/Projects/Swttch/swttch/webview/tailwind.config.js` - Added custom animations

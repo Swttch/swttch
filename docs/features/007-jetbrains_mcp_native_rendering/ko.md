@@ -2,7 +2,7 @@
 
 > Languages: [English](./en.md) · **한국어**
 >
-> 관련: [PR #147](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/147) · [#41](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/41)
+> 관련: [PR #147](https://github.com/Swttch/swttch/pull/147) · [#41](https://github.com/Swttch/swttch/issues/41)
 
 ## 새로워진 점
 
@@ -70,6 +70,6 @@ JetBrains의 모든 도구 계열 — 파일/에디터, 코드/심볼, 인스펙
 
 ## 참고
 
-- **켜는 법:** IDE 내장 MCP 서버는 아직 Claude Code에 기본으로 연결돼 있지 않아서, 보통 Claude에게 IDE 도구를 쓰라고 요청해야 합니다(예: "JetBrains 도구로 프로젝트를 검색해줘"). 네이티브 `/ide` 통합은 [#41](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/41)에서 추적 중입니다.
+- **켜는 법:** IDE 내장 MCP 서버는 아직 Claude Code에 기본으로 연결돼 있지 않아서, 보통 Claude에게 IDE 도구를 쓰라고 요청해야 합니다(예: "JetBrains 도구로 프로젝트를 검색해줘"). 네이티브 `/ide` 통합은 [#41](https://github.com/Swttch/swttch/issues/41)에서 추적 중입니다.
 - **디버거 도구**(`xdebug_…` 계열)는 **IntelliJ IDEA Ultimate**에서만 사용할 수 있습니다.
 - 아직 전용 카드가 없는 IDE 도구는 **브랜드가 적용된 일반(generic)** 카드로 폴백되어, 그래도 JetBrains 도구임을 알아볼 수 있게 표시됩니다.

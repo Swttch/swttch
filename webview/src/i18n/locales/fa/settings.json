@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "حمایت فعال است",
-      "description": "از حمایت شما از Claude Code with GUI سپاسگزاریم.",
+      "description": "از حمایت شما از این پروژه سپاسگزاریم.",
       "keyLabel": "کلید حامی",
       "deactivate": "غیرفعال‌سازی",
       "greeting": "خوشحالیم که اینجایید، حامی",

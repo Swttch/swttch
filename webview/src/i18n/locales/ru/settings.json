@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "Спонсорство активно",
-      "description": "Спасибо за поддержку Claude Code with GUI.",
+      "description": "Спасибо за поддержку этого проекта.",
       "keyLabel": "Ключ спонсора",
       "deactivate": "Отключить",
       "greeting": "Рады видеть вас, спонсор",

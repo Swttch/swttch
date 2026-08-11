@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [Issue #122](https://github.com/yhk1038/claude-code-gui-jetbrains/issues/122) · [PR #133](https://github.com/yhk1038/claude-code-gui-jetbrains/pull/133)
+> Related: [Issue #122](https://github.com/Swttch/swttch/issues/122) · [PR #133](https://github.com/Swttch/swttch/pull/133)
 
 ## What's new
 

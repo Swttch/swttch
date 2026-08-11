@@ -403,7 +403,7 @@
     },
     "active": {
       "title": "Parrainage actif",
-      "description": "Merci de soutenir Claude Code with GUI.",
+      "description": "Merci de soutenir ce projet.",
       "keyLabel": "Clé de sponsor",
       "deactivate": "Désactiver",
       "greeting": "Ravi de vous revoir, mécène",

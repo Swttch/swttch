@@ -1,8 +1,12 @@
-# Claude Code with GUI
+# Swttch (ex - Claude Code with GUI)
 
 **La interfaz gráfica de Claude Code que conoces de Cursor y VS Code — ahora en JetBrains IDEs.**
 
-🌐 [English](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/en.md) | [한국어](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/ko.md) | [日本語](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/ja.md) | [中文](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/zh.md) | **Español** | [Deutsch](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/de.md) | [Français](https://github.com/yhk1038/claude-code-gui-jetbrains/blob/main/docs/marketplaces/jetbrains/fr.md)
+> **Hemos cambiado de nombre: Claude Code with GUI ahora es Swttch.**
+> Es el mismo producto, del mismo desarrollador. Lo renombramos porque muchos de ustedes nos
+> pidieron dar soporte a una gama más amplia de proveedores más allá de Claude Code, y nos lo tomamos en serio.
+
+🌐 [English](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/en.md) | [한국어](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ko.md) | [日本語](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/ja.md) | [中文](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/zh.md) | **Español** | [Deutsch](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/de.md) | [Français](https://github.com/Swttch/swttch/blob/main/docs/marketplaces/jetbrains/fr.md)
 
 > **Este plugin está construido con este mismo plugin.**
 > Se desarrolla aquí mismo — en este panel de chat, ejecutándose dentro de un JetBrains IDE.
