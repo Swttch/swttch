@@ -371,7 +371,15 @@
   /* Markdown */
   --md-inline-code-bg: rgba(127, 251, 255, 0.17);
   --md-inline-code-fg: rgba(127, 251, 255, 0.8);
-  --md-code-block-bg: rgba(0, 0, 0, 0.15);
+  /* Lightens the surface rather than darkening it. Layering black over a dark
+     background barely moves it: rgba(0,0,0,.15) over #1a1a1a resolved to
+     #161616, a 1.04:1 contrast — the block read as a slightly darker patch of
+     the page, not as a block. It went unnoticed while the code inside was
+     forced to one cyan colour, which marked the region on its own; once real
+     syntax highlighting landed (#282) the text turned the same grey as body
+     copy and the boundary disappeared with it. At 0.05 white the block sits at
+     1.135:1, matching what light mode already had. */
+  --md-code-block-bg: rgba(255, 255, 255, 0.05);
   --md-code-copy-btn-bg: rgba(255, 255, 255, 0.18);
   --md-code-copy-btn-bg-hover: rgba(255, 255, 255, 0.32);
   --md-code-copy-btn-fg: #ffffff;
