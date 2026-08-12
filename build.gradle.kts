@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.26.9 - Code blocks in colour, and a chat that renders on 2026.2</h3>
+            <ul>
+                <li>Add syntax highlighting to code blocks in the chat (#282, reported by @shroomcrumpet)</li>
+                <li>Fix the chat not rendering on IDE 2026.2 (#287)</li>
+                <li>Fix "Open Settings as: Overlay" being ignored in the IDE (#280)</li>
+                <li>Fix a blue block blinking inside streaming code blocks (#287)</li>
+            </ul>
             <h3>0.26.8 - UX errors fixed</h3>
             <ul>
                 <li>Add IDE theme colors to the chat, so it matches the theme you use (#267, reported by @iainfeeney)</li>
