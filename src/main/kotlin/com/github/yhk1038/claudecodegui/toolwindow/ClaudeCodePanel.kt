@@ -108,6 +108,11 @@ class ClaudeCodePanel(
     private val cursorQuery: JBCefJSQuery? get() = holder?.cursorQuery
     private val streamingQuery: JBCefJSQuery? get() = holder?.streamingQuery
 
+    // Set by installOsrRepaintNudge while an OSR browser is alive; null otherwise
+    // (windowed rendering has no ghosts to clear, and there is nothing to nudge
+    // before the browser exists). Invoked from the page-driven bridge.
+    private var requestRepaintNudge: (() -> Unit)? = null
+
     // One-shot guard so re-attach (tab move/split) does NOT re-schedule realization.
     private val realizationGate = RealizationGate()
 
@@ -337,9 +342,18 @@ class ClaudeCodePanel(
             JBCefJSQuery.Response(null)
         }
 
-        // Handle streaming state changes from WebView
+        // Handle streaming state changes from WebView.
+        //
+        // "repaint" rides this same channel rather than getting a JBCefJSQuery of its
+        // own: a second query would mean another field on the pooled BrowserHolder and
+        // another object to keep alive across tab move/split, for a message that is
+        // just "the page changed, push a frame".
         sq.addHandler { state: String ->
-            holder!!.onStreamingStateChanged?.invoke(state == "streaming")
+            if (state == "repaint") {
+                requestRepaintNudge?.invoke()
+            } else {
+                holder!!.onStreamingStateChanged?.invoke(state == "streaming")
+            }
             JBCefJSQuery.Response(null)
         }
 
@@ -368,6 +382,8 @@ class ClaudeCodePanel(
                     }
                     injectCursorTracking(frame)
                     injectStreamingStateBridge(frame)
+                    // After the streaming bridge: the repaint reporter calls through it.
+                    injectRepaintNudgeBridge(frame)
                     installImeWorkaround()
                     logger.info("WebView loaded successfully")
                     // The webview (IDE-selection chip consumer) just reloaded, so
@@ -565,6 +581,65 @@ class ClaudeCodePanel(
                 window.__notifyStreamingState = function(state) {
                     ${streamingQuery!!.inject("state")}
                 };
+            })();
+        """.trimIndent()
+        frame.executeJavaScript(js, frame.url, 0)
+    }
+
+    /**
+     * Ask CEF for a fresh frame whenever the page talks to the backend.
+     *
+     * OSR ghosts appear when CEF's dirty-rect tracking misses part of a repaint,
+     * and they persist until something forces a full frame. The backup timer and
+     * the mouse hook both do that eventually, but only on their own schedule —
+     * clearing a conversation with the pointer held still left the old text on
+     * screen for up to a full timer period, which is what a user sees as "the
+     * ghost takes a second or two to go away".
+     *
+     * Rather than guess which DOM changes are "big enough" to strand a ghost —
+     * a threshold nobody can pick correctly — this hooks the WebSocket the app
+     * already uses. Every message the page sends is by definition a moment when
+     * something happened, and the interesting ones (clear, session switch, send)
+     * all pass through it. `requestAnimationFrame` defers the nudge until after
+     * the browser has painted the result; nudging earlier would just re-deliver
+     * the frame we are trying to replace.
+     *
+     * That deferral is also what bounds the rate: the `pending` flag collapses
+     * every message sent within one frame into a single report, so a streaming
+     * response that sends dozens of times a second still nudges at most once per
+     * painted frame. No extra throttle — a timed gap here would reintroduce the
+     * very delay this exists to remove.
+     */
+    private fun injectRepaintNudgeBridge(frame: CefFrame) {
+        val js = """
+            (function() {
+                if (window.__repaintNudgeInstalled) return;
+                window.__repaintNudgeInstalled = true;
+
+                var pending = false;
+                function report() {
+                    if (pending) return;
+                    pending = true;
+                    requestAnimationFrame(function() {
+                        requestAnimationFrame(function() {
+                            pending = false;
+                            if (window.__notifyStreamingState) {
+                                window.__notifyStreamingState('repaint');
+                            }
+                        });
+                    });
+                }
+
+                var send = WebSocket.prototype.send;
+                WebSocket.prototype.send = function() {
+                    try { report(); } catch (e) {}
+                    return send.apply(this, arguments);
+                };
+
+                // Scrolling repaints the whole viewport without sending anything, and a
+                // fling that ends with the pointer stationary is a common way to strand
+                // ghosts.
+                window.addEventListener('scroll', report, { passive: true, capture: true });
             })();
         """.trimIndent()
         frame.executeJavaScript(js, frame.url, 0)
@@ -973,6 +1048,20 @@ class ClaudeCodePanel(
                 )
             }
         }
+
+        // (c) Repaint-on-demand, driven by the page itself (see injectRepaintNudgeBridge).
+        // The timer and the mouse hook both wait for something *else* to happen — a tick
+        // to elapse, or the user to move the mouse — so ghosts left by clearing a
+        // conversation or switching sessions lingered for up to a full timer period.
+        //
+        // Deliberately NOT throttled. The page only reports after the browser has
+        // painted, so these arrive at most once per frame already, and a throttle here
+        // would be the same "wait for something else" that made the ghosts visible in
+        // the first place — just with a smaller number on it. The mouse hook keeps its
+        // throttle because pointer movement is not frame-bound and would otherwise
+        // nudge on every pixel.
+        requestRepaintNudge = { nudge() }
+        Disposer.register(parent, Disposable { requestRepaintNudge = null })
 
         // (a) Low-frequency backup timer. javax.swing.Timer fires on the EDT.
         val timer = javax.swing.Timer(REPAINT_NUDGE_INTERVAL_MS) { nudge() }

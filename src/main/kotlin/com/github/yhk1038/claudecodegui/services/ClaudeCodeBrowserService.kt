@@ -79,22 +79,32 @@ internal fun indexOfReusableHolder(panelRefCounts: List<Int>): Int? =
     panelRefCounts.indexOfFirst { shouldReleasePooledBrowser(it) }.takeIf { it >= 0 }
 
 /**
- * Decide whether JCEF is in out-of-process ("remote") mode, given the
- * authoritative CefApp signal and the legacy system-property fallback.
+ * Decide whether JCEF is in out-of-process ("remote") mode from the two signals
+ * the platform offers: `CefApp.isRemoteEnabled()` and the `jcef.remote.enabled`
+ * system property. Either one claiming remote is enough.
  *
- * [cefRemoteEnabled] is the result of `CefApp.isRemoteEnabled()` (queried via
- * reflection, exactly as JBCefApp does internally), or null when that method
- * can't be reached (older JCEF without it). When non-null it is authoritative;
- * only when null do we fall back to the `jcef.remote.enabled` system property.
+ * Neither signal is trustworthy alone, and each covers the other's blind spot:
  *
- * Pure so the decision is unit-testable. Regression guard for issue #79: since
- * 2025.1 remote mode is the default but is NOT advertised via the system
- * property, so keying off the property alone mis-detected remote builds as
- * in-process and forced windowed rendering, which remote mode rejects
- * (IJPL-184288) → blank panel.
+ * - The property is unset on 2025.1+, where remote became the silent default.
+ *   Keying off it alone mis-read those builds as in-process and forced windowed
+ *   rendering, which remote mode rejects (IJPL-184288) → blank panel (#79).
+ * - `isRemoteEnabled()` is a bare read of a static field that JCEF only sets
+ *   during its own startup. Asked before that — which is exactly when we build
+ *   our first browser — it answers `false` even though the IDE is running
+ *   remote. On 2026.2 that produced `remote=false` while the platform logged
+ *   both `jcef.remote.enabled=true` and "Trying to create windowed browser when
+ *   remote-mode is enabled", then rendered OSR anyway. The stale-paint ghost
+ *   nudge from #171 keys off this flag, so it silently stopped being installed
+ *   and the OSR ghosts came back.
+ *
+ * Both failures point one way — a real remote build read as in-process — so the
+ * fix is to believe whichever signal says remote. A false positive costs only a
+ * skipped `setOffScreenRendering(false)`, which remote mode ignores regardless.
+ *
+ * Pure so the decision is unit-testable.
  */
 internal fun resolveRemoteJcef(cefRemoteEnabled: Boolean?, legacySystemProperty: String?): Boolean =
-    cefRemoteEnabled ?: ("true" == legacySystemProperty)
+    cefRemoteEnabled == true || "true" == legacySystemProperty
 
 /**
  * Project-level service that pools JCEF browser instances by tabId.
@@ -258,9 +268,21 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
         // system property. That property is NOT set on modern builds (remote is the
         // silent default), so the old property check mis-detected 2025.1+/2026.1 as
         // in-process and forced windowed rendering → blank screen (#79).
+        val cefRemoteEnabled = queryCefRemoteEnabled()
         val isRemoteJcef = resolveRemoteJcef(
-            queryCefRemoteEnabled(),
+            cefRemoteEnabled,
             System.getProperty("jcef.remote.enabled"),
+        )
+        // Logged because every downstream rendering decision keys off this one
+        // boolean — windowed vs OSR, and whether the OSR ghost-repaint nudge is
+        // installed at all. When `CefApp.isRemoteEnabled()` can't be reached the
+        // reflection result is null and we silently fall back to a system
+        // property that modern builds never set, so a wrong answer here looks
+        // like a rendering bug somewhere else entirely.
+        logger.info(
+            "JCEF mode: remote=$isRemoteJcef " +
+                "(CefApp.isRemoteEnabled=${cefRemoteEnabled ?: "unavailable"}, " +
+                "jcef.remote.enabled=${System.getProperty("jcef.remote.enabled") ?: "unset"})"
         )
         val builder = JBCefBrowser.createBuilder()
         if (!isRemoteJcef) {

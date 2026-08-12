@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
-import {isInsideCodeBlock, isMarkdownComplete} from '../../utils/markdownParser';
+import {code} from '../../utils/codePlugin';
 import './streaming.css';
 import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/common";
 import {useChatStreamContext} from '../../contexts/ChatStreamContext';
@@ -62,9 +62,6 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
         }
     }, [isStreaming]);
 
-    // Determine if we should show incomplete indicator
-    const showIncompleteIndicator = isStreaming && !isMarkdownComplete(thinking) && isInsideCodeBlock(thinking);
-
     return (
         <ToolWrapper message={message} className="!mt-0">
             <div className={`text-text-primary/40 streaming-message ${className}`}>
@@ -85,24 +82,17 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                             mode={isStreaming ? 'streaming' : 'static'}
                             parseIncompleteMarkdown={isStreaming}
                             isAnimating={isStreaming}
-                            shikiTheme={['github-dark', 'github-light']}
                             components={MARKDOWN_COMPONENTS}
                             controls={{
                                 code: true,
                                 table: true,
                             }}
-                            plugins={{ math }}
+                            plugins={{ math, code }}
                         >
                             {prepareAssistantMarkdown(thinking, workingDirectory)}
                         </Streamdown>
                     </div>
                 </div>
-
-                {showIncompleteIndicator && (
-                    <div className="incomplete-indicator">
-                        <span className="cursor-blink">▋</span>
-                    </div>
-                )}
 
             </div>
         </ToolWrapper>

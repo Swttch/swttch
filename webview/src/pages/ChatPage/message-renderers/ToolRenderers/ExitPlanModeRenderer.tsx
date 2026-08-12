@@ -1,5 +1,6 @@
 import {Streamdown} from 'streamdown';
 import {math} from '@/utils/mathPlugin';
+import {code} from '@/utils/codePlugin';
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
@@ -33,9 +34,8 @@ export function ExitPlanModeRenderer(props: RendererProps) {
                     <Streamdown
                         className="space-y-0"
                         mode="static"
-                        shikiTheme={['github-dark', 'github-light']}
                         controls={{ code: true, table: true }}
-                        plugins={{ math }}
+                        plugins={{ math, code }}
                     >
                         {plan}
                     </Streamdown>

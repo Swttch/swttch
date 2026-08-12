@@ -83,10 +83,51 @@ dependencies {
             // IU with useInstaller=false resolves EAP/snapshot coordinates
             // (e.g. 262.6653.22-EAP-SNAPSHOT) from the snapshots repo, reusing
             // the artifact the Plugin Verifier already cached — no re-download.
-            "IU" -> create("IU", platformVersion, useInstaller = false)
+            // RUN_IDE_INSTALLER=true fetches the real distribution instead of the
+            // Maven snapshot. The snapshot the Verifier caches ships `app-backend.jar`
+            // without `app-client.jar`, so it has no JCEF/UI classes and cannot
+            // compile or launch a sandbox — fine for binary checks, useless for runIde.
+            "IU" -> create(
+                "IU",
+                platformVersion,
+                useInstaller = providers.environmentVariable("RUN_IDE_INSTALLER")
+                    .map { it == "true" }.getOrElse(false),
+            )
             else -> intellijIdea(platformVersion)
         }
+        // `useInstaller = false` resolves the archive the Plugin Verifier caches,
+        // and that archive ships without a bundled JBR. JCEF (`org.cef.*`) lives
+        // inside the JBR, so without this the Kotlin compile of
+        // WebViewKeyboardHandler fails on an unresolved `CefBrowser` and runIde
+        // never starts on an EAP build. Pulling the runtime separately restores
+        // both. Harmless for installer-based IDEs, which already bundle one.
+        jetbrainsRuntime()
         bundledPlugin("org.jetbrains.plugins.terminal")
+        // 2026.2 moved JCEF out of the platform core into a bundled plugin:
+        // `com.intellij.ui.jcef.*` and `org.cef.*` now live under
+        // plugins/jcef-plugin/lib/modules/ instead of lib/app-client.jar. Without
+        // this the whole webview layer (ClaudeCodeBrowserService, ClaudeCodePanel,
+        // WebViewKeyboardHandler) fails to compile against 262.* with 132
+        // unresolved references.
+        //
+        // Declared only for 262+: on older platforms no such plugin exists and
+        // asking for it fails resolution outright ("Could not find bundled plugin
+        // with ID"), which would break the default 2024.2 build.
+        // platformVersion comes in two shapes: a marketing version ("2024.2",
+        // "2026.2") or a build number ("262.9437.22"). Normalise both to the
+        // branch number the IDE actually uses — 2026.2 → 262 — so the comparison
+        // means the same thing either way.
+        val platformBranch = platformVersion.substringBefore('.').toIntOrNull()?.let { head ->
+            if (head >= 2000) {
+                val minor = platformVersion.substringAfter('.', "").substringBefore('.')
+                minor.toIntOrNull()?.let { (head % 100) * 10 + it }
+            } else {
+                head
+            }
+        }
+        if (platformBranch != null && platformBranch >= 262) {
+            bundledPlugin("com.intellij.modules.jcef")
+        }
     }
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
