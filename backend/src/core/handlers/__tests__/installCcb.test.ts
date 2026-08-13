@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 describe('installCcbHandler', () => {
-  it('runs `npm install -g claude-code-battery`, acks ok, and clears the usage cache', async () => {
+  it('runs `npm install -g @swttch/extend-kit`, acks ok, and clears the usage cache', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
     const conns = mockConns();
 
@@ -55,7 +55,7 @@ describe('installCcbHandler', () => {
     expect(mockResetUsageCache).toHaveBeenCalledTimes(1);
     // Regardless of the win32 cmd.exe wrapping, the argv carries the install spec.
     const argv = (mockExecFile.mock.calls[0][1] as string[]).join(' ');
-    expect(argv).toContain('install -g claude-code-battery');
+    expect(argv).toContain('install -g @swttch/extend-kit');
   });
 
   it.runIf(process.platform !== 'win32')(
@@ -75,7 +75,7 @@ describe('installCcbHandler', () => {
       const userShell = process.env.SHELL || '/bin/sh';
       const expectedShell = /\/fish$/.test(userShell) ? '/bin/sh' : userShell;
       expect(file).toBe(expectedShell);
-      expect(args).toEqual(['-l', '-i', '-c', 'npm install -g claude-code-battery']);
+      expect(args).toEqual(['-l', '-i', '-c', 'npm install -g @swttch/extend-kit']);
     },
   );
 
@@ -90,7 +90,7 @@ describe('installCcbHandler', () => {
 
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
-    expect(String(p.error)).toMatch(/npm install -g claude-code-battery/);
+    expect(String(p.error)).toContain('npm install -g @swttch/extend-kit');
     expect(mockResetUsageCache).not.toHaveBeenCalled();
   });
 

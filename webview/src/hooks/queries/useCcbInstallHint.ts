@@ -14,7 +14,7 @@ interface RawHint {
 }
 
 // Shown if the backend is unreachable, so the notice always has something copyable.
-const FALLBACK: CcbInstallHint = { command: 'npm install -g claude-code-battery', shells: [] };
+const FALLBACK: CcbInstallHint = { command: 'npm install -g @swttch/extend-kit', shells: [] };
 
 /**
  * GET_CCB_INSTALL_HINT query — the platform-correct install command + shells for

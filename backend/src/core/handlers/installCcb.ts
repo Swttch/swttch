@@ -6,15 +6,17 @@ import { MessageType } from '../../shared';
 import { isPermissionFailure, permissionErrorMessage } from './updateCli';
 import { resetUsageCache } from './getUsage';
 
-const CCB_PACKAGE = 'claude-code-battery';
+// Kept in step with ccb-install-hint's constant — see the note there on why the
+// package name and the `ccb` binary name differ.
+const CCB_PACKAGE = '@swttch/extend-kit';
 // A global npm install downloads + links; allow a generous window.
 const INSTALL_TIMEOUT_MS = 180_000;
 const INSTALL_MAX_BUFFER = 10 * 1024 * 1024;
 
 /**
- * INSTALL_CCB — install the claude-code-battery CLI the usage panel depends on,
- * so the user never has to leave the GUI or pick a shell. Runs `npm install -g
- * claude-code-battery` through the Command core: on win32 that resolves via
+ * INSTALL_CCB — install the `ccb` CLI the usage panel depends on, so the user
+ * never has to leave the GUI or pick a shell. Runs `npm install -g
+ * @swttch/extend-kit` through the Command core: on win32 that resolves via
  * cmd.exe (no PowerShell execution-policy wall — the exact problem the copy-paste
  * notice caused); on unix it runs through a login shell (LoginInteractive), the
  * SAME way runCcbUsage resolves ccb. A GUI-launched backend inherits a minimal

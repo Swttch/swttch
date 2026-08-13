@@ -13,7 +13,7 @@ vi.mock('@/hooks/queries/useInstallCcb', () => ({
 }));
 
 vi.mock('@/hooks/queries/useCcbInstallHint', () => ({
-  useCcbInstallHint: () => ({ command: 'npm install -g claude-code-battery', shells: [] }),
+  useCcbInstallHint: () => ({ command: 'npm install -g @swttch/extend-kit', shells: [] }),
 }));
 
 vi.mock('@/router/routes', () => ({
@@ -80,7 +80,7 @@ describe('UsageSettings', () => {
           subscriptionType: 'max',
           active: true,
           usage: null,
-          error: 'claude-code-battery CLI is not installed',
+          error: 'The ccb CLI is not installed',
           errorKind: 'ccb_missing',
         },
       ],
@@ -94,7 +94,7 @@ describe('UsageSettings', () => {
     render(<UsageSettings />);
 
     expect(screen.getByText(/A required dependency/i)).toBeInTheDocument();
-    expect(screen.getByText(/npm install -g claude-code-battery/)).toBeInTheDocument();
+    expect(screen.getByText('npm install -g @swttch/extend-kit')).toBeInTheDocument();
   });
 
   it('renders per-account error box when errorKind is not ccb_missing', () => {

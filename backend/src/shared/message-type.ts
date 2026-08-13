@@ -153,7 +153,7 @@ export enum MessageType {
   GET_USAGE = 'GET_USAGE',
   /** Run `claude -p "/usage"` and return its raw report text for the usage modal. inbound webview→backend */
   GET_USAGE_REPORT = 'GET_USAGE_REPORT',
-  /** Install the claude-code-battery CLI (npm i -g) that backs the usage panel. inbound webview→backend */
+  /** Install the ccb CLI (npm i -g @swttch/extend-kit) that backs the usage panel. inbound webview→backend */
   INSTALL_CCB = 'INSTALL_CCB',
   /** Platform-correct ccb install command + shells for the not-installed notice. inbound webview→backend */
   GET_CCB_INSTALL_HINT = 'GET_CCB_INSTALL_HINT',

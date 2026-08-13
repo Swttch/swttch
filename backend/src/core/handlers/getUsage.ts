@@ -62,7 +62,7 @@ export function classifyError(raw: string, code?: number | string): UsageErrorIn
   const ccbMissingByText = /could not determine executable to run/i.test(raw)
     || /command not found.*ccb|ccb.*not found|ccb.*not recognized/i.test(raw);
   if (ccbMissingByCode || ccbMissingByText) {
-    return { kind: 'ccb_missing', message: 'claude-code-battery CLI is not installed' };
+    return { kind: 'ccb_missing', message: 'The ccb CLI is not installed' };
   }
 
   const jsonMatch = raw.match(/\{[\s\S]*\}/);

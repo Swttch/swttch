@@ -5,7 +5,14 @@ export interface CcbInstallHint {
   shells: string[];
 }
 
-const CCB_PACKAGE = 'claude-code-battery';
+// The npm package that ships the `ccb` binary. Note the two names differ: the
+// package moved into the Swttch kit, the executable did not. That asymmetry is
+// deliberate — `ccb` is a name users type and this backend exec's, so renaming
+// it would make an already-installed command disappear. It also means we never
+// have to uninstall anything: whoever installed the old claude-code-battery
+// still has a working `ccb`, and installing the kit alongside it is harmless
+// because both resolve to the same code.
+const CCB_PACKAGE = '@swttch/extend-kit';
 
 /**
  * The command + shells a user should paste to install ccb themselves.
