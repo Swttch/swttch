@@ -3,6 +3,7 @@ import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { HostModeRow } from './HostModeRow';
 import { OpenSettingsRow } from './OpenSettingsRow';
+import { VoiceModeRow } from './VoiceModeRow';
 import { ChatPaginationRow } from './ChatPaginationRow';
 import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
@@ -212,6 +213,7 @@ export function GeneralSettings() {
         <HostModeRow />
 
         <OpenSettingsRow />
+        <VoiceModeRow />
 
         <ChatPaginationRow />
 

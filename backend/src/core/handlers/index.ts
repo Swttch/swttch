@@ -54,6 +54,12 @@ import { getVersionHandler } from './getVersion';
 import { getCliUpdateInfoHandler } from './getCliUpdateInfo';
 import { updateCliHandler } from './updateCli';
 import { installCcbHandler } from './installCcb';
+import {
+  startDictationHandler,
+  sendDictationAudioHandler,
+  stopDictationHandler,
+  getDictationAvailabilityHandler,
+} from './dictation';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
 import { getAccountsHandler } from './getAccounts';
@@ -287,6 +293,18 @@ export async function handleMessage(
       break;
     case MessageType.GET_CCB_INSTALL_HINT:
       await getCcbInstallHintHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.START_DICTATION:
+      await startDictationHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SEND_DICTATION_AUDIO:
+      await sendDictationAudioHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.STOP_DICTATION:
+      await stopDictationHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_DICTATION_AVAILABILITY:
+      await getDictationAvailabilityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_ACCOUNT:
       await getAccountHandler(connectionId, message, connections, bridge);

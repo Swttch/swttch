@@ -85,6 +85,12 @@
     "autoResumeOnLimit": {
       "label": "Reprise automatique à la limite d'utilisation",
       "description": "Lorsque vous atteignez la limite de session, la reprise s'effectue automatiquement une fois le quota réinitialisé. C'est la valeur par défaut pour les nouvelles sessions ; chaque session peut toujours la modifier."
+    },
+    "voiceMode": {
+      "label": "Saisie vocale",
+      "description": "Comment le bouton micro démarre et arrête la dictée.",
+      "hold": "Maintenir pour parler",
+      "tap": "Appuyer pour démarrer et arrêter"
     }
   },
   "appearance": {

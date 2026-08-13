@@ -85,6 +85,12 @@
     "autoResumeOnLimit": {
       "label": "Auto-Fortsetzung bei Nutzungslimit",
       "description": "Wenn Sie Ihr Sitzungslimit erreichen, wird nach dem Zurücksetzen des Kontingents automatisch fortgesetzt. Dies ist die Voreinstellung für neue Sitzungen; jede Sitzung kann es weiterhin umschalten."
+    },
+    "voiceMode": {
+      "label": "Spracheingabe",
+      "description": "Wie die Mikrofontaste das Diktat startet und beendet.",
+      "hold": "Zum Sprechen gedrückt halten",
+      "tap": "Tippen zum Starten und Beenden"
     }
   },
   "appearance": {

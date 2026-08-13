@@ -89,7 +89,17 @@
       "focusHint": "⌘ Esc, um Claude zu fokussieren oder Fokus zu entfernen"
     },
     "ariaLabel": "Nachricht an Claude",
-    "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet."
+    "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
+    "dictation": {
+      "start": "Diktat starten",
+      "stop": "Diktat beenden",
+      "holdToTalk": "Zum Sprechen gedrückt halten",
+      "listening": "Hört zu…",
+      "micDenied": "Der Mikrofonzugriff ist in den Systemeinstellungen deaktiviert",
+      "noMic": "Kein Mikrofon gefunden",
+      "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
+      "install": "Installieren"
+    }
   },
   "sessionHeader": {
     "dock": {

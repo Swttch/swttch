@@ -85,6 +85,12 @@
     "autoResumeOnLimit": {
       "label": "達到用量上限時自動恢復",
       "description": "當您達到工作階段上限時，在額度重置後自動恢復。這是新工作階段的預設值；每個工作階段仍可個別切換。"
+    },
+    "voiceMode": {
+      "label": "語音輸入",
+      "description": "麥克風按鈕開始與停止語音輸入的方式。",
+      "hold": "按住說話",
+      "tap": "點擊開始，再次點擊停止"
     }
   },
   "appearance": {

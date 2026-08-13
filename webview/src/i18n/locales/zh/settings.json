@@ -85,6 +85,12 @@
     "autoResumeOnLimit": {
       "label": "达到用量上限时自动恢复",
       "description": "当您达到会话上限时，在额度重置后自动恢复。这是新会话的默认值；每个会话仍可单独切换。"
+    },
+    "voiceMode": {
+      "label": "语音输入",
+      "description": "麦克风按钮开始和停止语音输入的方式。",
+      "hold": "按住说话",
+      "tap": "点击开始，再次点击停止"
     }
   },
   "appearance": {

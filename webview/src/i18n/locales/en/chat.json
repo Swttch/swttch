@@ -89,7 +89,17 @@
       "focusHint": "⌘ Esc to focus or unfocus Claude"
     },
     "ariaLabel": "Message Claude",
-    "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead."
+    "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",
+    "dictation": {
+      "start": "Start dictation",
+      "stop": "Stop dictation",
+      "holdToTalk": "Hold to talk",
+      "listening": "Listening…",
+      "micDenied": "Microphone access is denied in system settings",
+      "noMic": "No microphone was found",
+      "kitMissing": "Voice input needs @swttch/extend-kit",
+      "install": "Install"
+    }
   },
   "sessionHeader": {
     "dock": {

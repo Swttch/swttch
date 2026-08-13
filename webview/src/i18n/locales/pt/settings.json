@@ -85,6 +85,12 @@
     "autoResumeOnLimit": {
       "label": "Retomada automática no limite de uso",
       "description": "Quando você atingir o limite da sessão, a retomada ocorrerá automaticamente após a redefinição da cota. Este é o padrão para novas sessões; cada sessão ainda pode alterná-lo."
+    },
+    "voiceMode": {
+      "label": "Entrada de voz",
+      "description": "Como o botão do microfone inicia e para o ditado.",
+      "hold": "Manter pressionado para falar",
+      "tap": "Tocar para iniciar e parar"
     }
   },
   "appearance": {

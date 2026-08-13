@@ -10,6 +10,12 @@ interface Props {
   onSlashCommand?: () => void;
   onSubmit: () => void;
   onStop?: () => void;
+  /**
+   * The microphone button, passed in rather than built here so this component
+   * stays presentational — dictation owns a socket and a media stream, which
+   * is not something a row of buttons should be holding.
+   */
+  micButton?: React.ReactNode;
 }
 
 export function ActionButtons(props: Props) {
@@ -22,6 +28,7 @@ export function ActionButtons(props: Props) {
     onSlashCommand,
     onSubmit,
     onStop,
+    micButton,
   } = props;
   const { t } = useTranslation('chat');
   const config = INPUT_MODES[mode];
@@ -50,6 +57,10 @@ export function ActionButtons(props: Props) {
         >
           /
         </button>
+
+        {/* Dictation sits with the other input affordances rather than next to
+            send, because it fills the box — it does not submit it. */}
+        {micButton}
       </div>
 
       {/* 전송/정지 버튼 */}

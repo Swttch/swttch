@@ -89,7 +89,17 @@
       "focusHint": "⌘ Esc para focar ou desfocar o Claude"
     },
     "ariaLabel": "Mensagem para o Claude",
-    "autoModeFallback": "O modo automático não está disponível aqui — usando o modo de permissão padrão."
+    "autoModeFallback": "O modo automático não está disponível aqui — usando o modo de permissão padrão.",
+    "dictation": {
+      "start": "Iniciar ditado",
+      "stop": "Parar ditado",
+      "holdToTalk": "Mantenha pressionado para falar",
+      "listening": "A ouvir…",
+      "micDenied": "O acesso ao microfone está negado nas definições do sistema",
+      "noMic": "Nenhum microfone encontrado",
+      "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",
+      "install": "Instalar"
+    }
   },
   "sessionHeader": {
     "dock": {

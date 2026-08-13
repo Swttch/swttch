@@ -7,6 +7,9 @@ import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
 import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
+import { MicButton } from './MicButton';
+import { useDictation } from './hooks/useDictation';
+import { SettingKey, VoiceMode } from '@/types/settings';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -60,6 +63,21 @@ export function ChatInput() {
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory();
   const { initHistory, pushToHistory, navigateUp, navigateDown } = inputHistory;
+  // Read the current text without making dictation depend on it — the callback
+  // would otherwise be rebuilt on every keystroke, and re-subscribe the stream.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const dictation = useDictation(
+    useCallback(
+      (text: string) => {
+        // Append rather than replace: the user may have typed before speaking,
+        // and each settled phrase is its own sentence to add.
+        const current = valueRef.current;
+        onChange(current ? `${current.replace(/\s+$/, '')} ${text}` : text);
+      },
+      [onChange],
+    ),
+  );
   // Read messages lazily via ref so ChatInput does not re-render every streaming token.
   const messagesRef = useRef(chatStream.messages);
   messagesRef.current = chatStream.messages;
@@ -603,6 +621,15 @@ export function ChatInput() {
           onClose={dismissAutoFallback}
         />
       )}
+      {/* 음성 입력 실패 안내: 마이크 권한 거부, 미로그인, extend-kit 미설치 등.
+          받아쓰기는 눌러야 시작되는 기능이라, 실패했으면 왜인지 말해줘야 사용자가
+          다음 행동을 정할 수 있다(설정에서 권한 허용 / 로그인 / 설치). */}
+      {dictation.error && (
+        <InputBanner
+          message={dictation.error.message}
+          onClose={dictation.dismissError}
+        />
+      )}
       {/* SDUI 공지(INPUT_BANNER): 서버가 내려주는 공지가 있을 때만 표시 */}
       <AnnouncementInputBannerSlot />
       {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다. */}
@@ -705,6 +732,16 @@ export function ChatInput() {
           </div>
         )}
 
+        {/* 받아쓰기 미확정 텍스트: 말하는 중에 계속 고쳐지는 추정값이라, 입력창
+            본문에 바로 넣지 않고 여기에 흐리게 미리 보여준다. 확정되면 사라지고
+            같은 문장이 본문에 들어간다 — 글자가 눈앞에서 바뀌는 걸 사용자가
+            보지 않게 하려는 분리다. */}
+        {dictation.interimText && (
+          <div className="px-3 pb-1 text-sm text-text-tertiary italic truncate" aria-live="polite">
+            {dictation.interimText}
+          </div>
+        )}
+
         {/* 구분선 */}
         <div className="border-t border-border-subtle" />
 
@@ -760,6 +797,16 @@ export function ChatInput() {
                 setPathTokens([]);
               }}
               onStop={onStop}
+              micButton={
+                <MicButton
+                  state={dictation.state}
+                  level={dictation.level}
+                  mode={appSettings?.[SettingKey.VOICE_MODE] ?? VoiceMode.HOLD}
+                  disabled={disabled}
+                  onStart={() => void dictation.start()}
+                  onStop={() => void dictation.stop()}
+                />
+              }
             />
           </div>
           </div>

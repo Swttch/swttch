@@ -54,6 +54,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   hostMode: 'editor-tab',
   openSettingsAs: 'overlay',
   chatPagination: true,
+  voiceMode: 'hold',
   uiDirection: 'ltr',
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
   // Claude Code's official settings schema). See settings-migration.ts.
@@ -97,6 +98,7 @@ const COMMENT_MAP: Record<string, string> = {
   hostMode: '채팅을 띄우는 자리: "editor-tab" | "tool-window"',
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
+  voiceMode: '마이크 버튼이 받아쓰기를 시작·종료하는 방식: "hold"(누르는 동안) | "tap"(눌러서 토글)',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
   useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
@@ -308,6 +310,11 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'chatPagination':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
+      }
+      break;
+    case 'voiceMode':
+      if (!['hold', 'tap'].includes(value as string)) {
+        return 'voiceMode must be one of "hold", "tap"';
       }
       break;
     case 'uiDirection':

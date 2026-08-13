@@ -89,7 +89,17 @@
       "focusHint": "⌘ Esc 可聚焦或取消聚焦 Claude"
     },
     "ariaLabel": "傳送訊息給 Claude",
-    "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。"
+    "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
+    "dictation": {
+      "start": "開始語音輸入",
+      "stop": "停止語音輸入",
+      "holdToTalk": "按住說話",
+      "listening": "正在聆聽…",
+      "micDenied": "系統設定中已拒絕麥克風存取權限",
+      "noMic": "找不到麥克風",
+      "kitMissing": "語音輸入需要 @swttch/extend-kit",
+      "install": "安裝"
+    }
   },
   "sessionHeader": {
     "dock": {

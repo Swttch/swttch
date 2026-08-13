@@ -157,6 +157,26 @@ export enum MessageType {
   INSTALL_CCB = 'INSTALL_CCB',
   /** Platform-correct ccb install command + shells for the not-installed notice. inbound webview→backend */
   GET_CCB_INSTALL_HINT = 'GET_CCB_INSTALL_HINT',
+
+  // ───────────────────────────────────────────────────────────────────────
+  // Voice input (dictation)
+  //
+  // The webview records; the backend holds the transcription socket, because
+  // reaching that service means sending the account's OAuth token and only the
+  // backend (through @swttch/extend-kit) is allowed to touch credentials.
+  // ───────────────────────────────────────────────────────────────────────
+  /** Open a transcription stream. inbound webview→backend */
+  START_DICTATION = 'START_DICTATION',
+  /** One chunk of recorded audio (base64 16-bit PCM). inbound webview→backend */
+  SEND_DICTATION_AUDIO = 'SEND_DICTATION_AUDIO',
+  /** Close the transcription stream and flush the last words. inbound webview→backend */
+  STOP_DICTATION = 'STOP_DICTATION',
+  /** Transcribed text as it arrives. payload: { text, isFinal }. outbound backend→webview */
+  DICTATION_TRANSCRIPT = 'DICTATION_TRANSCRIPT',
+  /** Dictation failed. payload: { message, fatal }. outbound backend→webview */
+  DICTATION_ERROR = 'DICTATION_ERROR',
+  /** Whether this machine can dictate at all (i.e. Claude Code is logged in). inbound webview→backend */
+  GET_DICTATION_AVAILABILITY = 'GET_DICTATION_AVAILABILITY',
   /** Read usage/quota information for all accounts. */
   GET_ALL_USAGE = 'GET_ALL_USAGE',
   /** Read the plugin/backend version info. */
