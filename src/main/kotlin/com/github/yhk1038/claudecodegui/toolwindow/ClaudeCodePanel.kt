@@ -207,10 +207,17 @@ class ClaudeCodePanel(
     }
 
     private fun realizeBrowser() {
-        // Acquire (or reuse) the pooled browser holder. May return null if JCEF
-        // became unavailable between init and now — defensive check.
+        // Acquire (or reuse) the pooled browser holder. Null means the browser could
+        // not be built: either JCEF went away between init and now, or the runtime's
+        // JCEF disagrees with the platform's and construction threw (issue #295).
+        // Swapping the placeholder for an explanation matters more than the
+        // distinction — leaving the label up is what users saw as a blank window.
         val acquired = browserService.getOrCreate(tabId) ?: run {
-            logger.warn("JCEF became unavailable before realizeBrowser for tab: $tabId")
+            logger.warn("Could not create a JCEF browser for tab: $tabId — showing runtime mismatch panel")
+            remove(loadingLabel)
+            add(JcefRuntimeMismatchPanel(), BorderLayout.CENTER)
+            revalidate()
+            repaint()
             return
         }
         holder = acquired

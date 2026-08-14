@@ -243,7 +243,23 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
             list[reuseIdx]
         } else {
             logger.info("Creating new JCEF browser for tab: $tabId (view #${list.size + 1})")
-            createHolder().also { list.add(it) }
+            // A runtime whose JCEF disagrees with the platform's own copy throws while
+            // the browser is being built, not from isJcefAvailable() — the classes are
+            // all present, only a method is missing. Android Studio ≤2026.1.2 bundles a
+            // JCefAppConfig with isRemoteEnabled() and boots on Java 21; adding a
+            // JCEF-enabled JBR 21 shadows that jar from the boot layer with a copy that
+            // lacks the method, and JBCefApp's constructor calls it (issue #295).
+            // Letting the Error escape leaves the panel with nothing attached at all,
+            // which is the blank window users report — so answer null and let the caller
+            // show the mismatch panel.
+            runCatching { createHolder() }
+                .onFailure { e ->
+                    if (e !is NoSuchMethodError && e !is NoClassDefFoundError) throw e
+                    logger.warn("JCEF runtime is incompatible with this IDE — cannot create browser for tab: $tabId", e)
+                }
+                .getOrNull()
+                ?.also { list.add(it) }
+                ?: return null
         }
         holder.panelRefCount += 1
         // Bump the token so any release scheduled before this acquire aborts.

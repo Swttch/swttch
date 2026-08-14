@@ -151,6 +151,10 @@ Same backend, same UI, opened in your default browser on `http://localhost:19836
 
 Android Studio ships with a JetBrains Runtime (JBR) that does **not** include JCEF (Chromium Embedded Framework). This plugin's WebView UI relies on JCEF, so it will display a guidance panel instead of the chat UI when launched on the default Android Studio runtime.
 
+### Requires Android Studio 2026.1.3 or later
+
+On **2026.1.2 and earlier there is no working combination**, so update the IDE before swapping the runtime. Those versions boot on Java 21 and bundle their own `JCefAppConfig`; a JCEF-enabled JBR 21 shadows it from the boot layer with a copy missing a method the platform calls, so the browser throws while being created and the panel stays blank. JBR 25 has that method, but those builds cannot boot on Java 25 at all. Android Studio 2026.1.3 moved its bundled runtime to Java 25, which resolves it — see [#295](https://github.com/Swttch/swttch/issues/295) for the full test matrix.
+
 ### Switch to a JCEF-enabled runtime
 
 1. Open Find Action: `Cmd+Shift+A` (macOS) or `Ctrl+Shift+A` (Windows/Linux).
