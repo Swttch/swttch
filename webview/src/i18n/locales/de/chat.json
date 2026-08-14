@@ -94,7 +94,7 @@
       "tapOrHold": "Tippen oder halten zum Aufnehmen",
       "stop": "Aufnahme beenden",
       "error": "Diktatfehler: {{message}}",
-      "micDenied": "Mikrofon blockiert – in den Systemeinstellungen erlauben",
+      "micDenied": "Mikrofon blockiert – erlauben Sie der IDE den Zugriff in den Datenschutzeinstellungen des Systems",
       "micDeniedBrowser": "Mikrofon blockiert – über das Schloss in der Adressleiste erlauben und neu laden",
       "noMic": "Kein Mikrofon gefunden",
       "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",

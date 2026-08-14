@@ -94,7 +94,7 @@
       "tapOrHold": "Tap or hold to record",
       "stop": "Stop recording",
       "error": "Dictation error: {{message}}",
-      "micDenied": "Microphone blocked — allow it in System Settings",
+      "micDenied": "Microphone blocked — allow the IDE to use it in your system's privacy settings",
       "micDeniedBrowser": "Microphone blocked — allow it from the lock icon in the address bar, then reload",
       "noMic": "No microphone was found",
       "kitMissing": "Voice input needs @swttch/extend-kit",

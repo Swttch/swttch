@@ -94,7 +94,7 @@
       "tapOrHold": "Toque ou mantenha para gravar",
       "stop": "Parar gravação",
       "error": "Erro de ditado: {{message}}",
-      "micDenied": "Microfone bloqueado — permita nas configurações do sistema",
+      "micDenied": "Microfone bloqueado — permita que o IDE o use nas configurações de privacidade do sistema",
       "micDeniedBrowser": "Microfone bloqueado — permita pelo cadeado na barra de endereço e recarregue",
       "noMic": "Nenhum microfone encontrado",
       "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",

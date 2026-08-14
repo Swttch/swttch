@@ -94,7 +94,7 @@
       "tapOrHold": "點擊或按住錄音",
       "stop": "停止錄音",
       "error": "語音輸入錯誤：{{message}}",
-      "micDenied": "麥克風已被封鎖 — 請在系統設定中允許",
+      "micDenied": "麥克風已被封鎖 — 請在系統隱私設定中允許 IDE 使用麥克風",
       "micDeniedBrowser": "麥克風已被封鎖 — 請從網址列的鎖頭圖示允許，然後重新整理",
       "noMic": "找不到麥克風",
       "kitMissing": "語音輸入需要 @swttch/extend-kit",

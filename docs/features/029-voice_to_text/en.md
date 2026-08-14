@@ -177,6 +177,9 @@ is no way for a site to ask for it a second time. That is the web platform's dec
 Inside the IDE the plugin answers the microphone request itself, so nothing is refused at that step.
 A block there came from the OS, and system settings is where the IDE gets microphone access back.
 
+- **macOS**: System Settings → Privacy & Security → Microphone
+- **Windows**: Settings → Privacy & security → Microphone (desktop apps need microphone access on too)
+
 If Claude Code is not logged in on this machine, dictation is unavailable for the same reason the
 usage panel is — there is no account to authenticate as.
 

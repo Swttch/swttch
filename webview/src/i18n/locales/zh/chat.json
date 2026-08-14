@@ -94,7 +94,7 @@
       "tapOrHold": "点击或按住录音",
       "stop": "停止录音",
       "error": "语音输入错误：{{message}}",
-      "micDenied": "麦克风已被阻止 — 请在系统设置中允许",
+      "micDenied": "麦克风已被阻止 — 请在系统隐私设置中允许 IDE 使用麦克风",
       "micDeniedBrowser": "麦克风已被阻止 — 请从地址栏的锁形图标中允许，然后刷新",
       "noMic": "未找到麦克风",
       "kitMissing": "语音输入需要 @swttch/extend-kit",
