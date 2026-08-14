@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "Spracheingabe",
+      "enabled": {
+        "label": "Spracheingabe",
+        "description": "Aus blendet die Mikrofon-Schaltfläche aus und deaktiviert das Tastenkürzel. Dieselbe Einstellung wie /voice in der CLI."
+      },
       "speechLanguage": {
         "label": "Gesprochene Sprache",
         "description": "Die Sprache, in der Sie bei der Spracheingabe sprechen.",

@@ -74,6 +74,21 @@ While recording, three bars appear beside the microphone and rise with your voic
 deliberate: a muted microphone or the wrong input device looks exactly like a working one until no
 text arrives, and the bars are the difference.
 
+## Turning it off in the terminal turns it off here
+
+`/voice off` in the CLI removes the microphone button and disables the shortcut here too — one
+machine should not hold two answers to the same question. **Settings → General → Voice input** writes
+the same value, so switching it off here switches it off in the CLI as well.
+
+One thing deliberately differs from the CLI. Claude Code treats a missing value as **off**, because
+dictation there has to be switched on with `/voice` first. We treat it as **on**: there is no such
+command in the GUI and the microphone button is visible, so inheriting "absent means off" would hide
+the feature behind a command that does not exist.
+
+The mode (`/voice hold`, `/voice tap`) and auto-submit are left alone. Both describe holding a key in
+a terminal, which means nothing where recording starts by pressing a button. Their values are
+preserved rather than dropped, so the terminal's own configuration survives untouched.
+
 ## The language you speak
 
 The recognizer has to be told which language it is listening for. Left unset it assumes English and

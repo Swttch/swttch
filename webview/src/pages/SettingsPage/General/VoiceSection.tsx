@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
+import { ToggleSwitch } from '@/components/ToggleSwitch';
+import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { ExtendKitControl } from './ExtendKitControl';
 import { ShortcutInput } from './ShortcutInput';
@@ -36,7 +38,15 @@ const FOLLOW_VALUE = '__FOLLOW__';
 export function VoiceSection() {
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting } = useSettings();
-  const { scopeSettings: claudeScopeSettings } = useClaudeSettings();
+  const { scopeSettings: claudeScopeSettings, updateSetting: updateClaudeSetting } =
+    useClaudeSettings();
+
+  // Claude's own voice object. Spread on write so `mode` and `autoSubmit` —
+  // which belong to the CLI's key handling and mean nothing here — survive
+  // untouched rather than being dropped by our update.
+  const claudeVoice = (claudeScopeSettings.voice as Record<string, unknown> | undefined) ?? {};
+  // Absent means on for us, unlike the CLI: see the note in ChatInput.
+  const voiceEnabled = claudeVoice.enabled !== false;
 
   const voice = (scopeSettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
   const speechLanguage = voice.speechLanguage ?? null;
@@ -81,6 +91,35 @@ export function VoiceSection() {
       disabled={kitMissing}
       description={kitMissing ? t('general.voice.kit.required') : undefined}
     >
+      <SettingRow
+        label={t('general.voice.enabled.label')}
+        description={t('general.voice.enabled.description')}
+        badge={
+          <SettingBadge
+            variant={SettingBadgeVariant.ClaudeNative}
+            docHref="https://code.claude.com/docs/en/voice-dictation"
+          />
+        }
+      >
+        <ToggleSwitch
+          checked={voiceEnabled}
+          ariaLabel={t('general.voice.enabled.label')}
+          onChange={(checked) => {
+            // Written to Claude's own settings, not ours: this is the same key
+            // `/voice` toggles, so turning it off here turns it off there.
+            void updateClaudeSetting('voice', { ...claudeVoice, enabled: checked });
+          }}
+        />
+      </SettingRow>
+
+      {/* Everything below only applies while voice input is on. Dimmed rather
+          than hidden so it is clear the settings still exist, and so the rows
+          do not jump around as the toggle is flipped. The toggle itself stays
+          live — it is the way back. */}
+      <div
+        className={voiceEnabled ? '' : 'opacity-50 pointer-events-none select-none'}
+        aria-disabled={!voiceEnabled || undefined}
+      >
       <SettingRow
         label={t('general.voice.speechLanguage.label')}
         description={
@@ -147,6 +186,7 @@ export function VoiceSection() {
           }}
         />
       </SettingRow>
+      </div>
     </SettingSection>
   );
 }

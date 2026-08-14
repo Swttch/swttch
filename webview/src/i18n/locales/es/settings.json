@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "Entrada de voz",
+      "enabled": {
+        "label": "Entrada de voz",
+        "description": "Al desactivarla se oculta el botón del micrófono y el atajo deja de funcionar. Es el mismo ajuste que /voice en la CLI."
+      },
       "speechLanguage": {
         "label": "Idioma hablado",
         "description": "El idioma en el que hablas al usar la entrada de voz.",

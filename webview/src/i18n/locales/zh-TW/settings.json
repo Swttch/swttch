@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "語音輸入",
+      "enabled": {
+        "label": "啟用語音輸入",
+        "description": "關閉後麥克風按鈕和快速鍵都會消失。與 CLI 的 /voice 是同一設定。"
+      },
       "speechLanguage": {
         "label": "說話語言",
         "description": "使用語音輸入時所說的語言。",

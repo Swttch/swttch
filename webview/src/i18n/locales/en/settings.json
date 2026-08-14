@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "Voice input",
+      "enabled": {
+        "label": "Voice input",
+        "description": "Off hides the microphone button and disables the shortcut. Same setting as /voice in the CLI."
+      },
       "speechLanguage": {
         "label": "Spoken language",
         "description": "The language you speak when using voice input.",

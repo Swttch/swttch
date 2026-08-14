@@ -131,11 +131,22 @@ export function ChatInput() {
   // The user can rebind this; the default lives with the other voice defaults.
   const voiceShortcut =
     (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
+  // `/voice off` in the CLI writes voice.enabled=false, and that decision
+  // should hold here too — one machine, one answer.
+  //
+  // Only an explicit false hides it. Claude Code treats a missing key as off
+  // because its dictation has to be switched on with /voice, but we have no
+  // such command: the microphone button is visible, so there is nothing to
+  // discover and nothing to turn on first. Inheriting "absent means off" would
+  // hide the feature from everyone who never opened a terminal.
+  const voiceEnabled =
+    (claudeSettings.voice as { enabled?: boolean } | undefined)?.enabled !== false;
+
   // Bound globally rather than on the composer: the point of the shortcut is to
   // start talking without reaching for the mouse, which is exactly the moment
   // the composer does not have focus. Tap/hold is the same rule the microphone
   // button uses, so the two controls behave alike.
-  useGlobalShortcut(voiceShortcut, {
+  useGlobalShortcut(voiceEnabled ? voiceShortcut : null, {
     isRecording: () => dictation.isRecording,
     onStart: () => void dictation.start(),
     onStop: () => void dictation.stop(),
@@ -786,15 +797,17 @@ export function ChatInput() {
             highlightTokens={pathTokens}
             interimRange={dictation.interimRange}
           />
-          <MicButton
-            state={dictation.state}
-            level={dictation.level}
-            micDenied={dictation.error?.micDenied}
-            disabled={disabled}
-            shortcut={displayShortcut(voiceShortcut)}
-            onStart={() => void dictation.start()}
-            onStop={() => void dictation.stop()}
-          />
+          {voiceEnabled && (
+            <MicButton
+              state={dictation.state}
+              level={dictation.level}
+              micDenied={dictation.error?.micDenied}
+              disabled={disabled}
+              shortcut={displayShortcut(voiceShortcut)}
+              onStart={() => void dictation.start()}
+              onStop={() => void dictation.stop()}
+            />
+          )}
         </div>
 
         {/* 첨부 미리보기 */}

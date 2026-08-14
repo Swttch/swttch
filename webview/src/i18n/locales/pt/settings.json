@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "Entrada de voz",
+      "enabled": {
+        "label": "Entrada de voz",
+        "description": "Desligado oculta o botão do microfone e desativa o atalho. É a mesma configuração de /voice na CLI."
+      },
       "speechLanguage": {
         "label": "Idioma falado",
         "description": "O idioma em que você fala ao usar a entrada de voz.",

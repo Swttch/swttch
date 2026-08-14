@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "음성 입력",
+      "enabled": {
+        "label": "음성 입력 사용",
+        "description": "끄면 마이크 버튼과 단축키가 모두 사라집니다. CLI의 /voice와 같은 설정입니다."
+      },
       "speechLanguage": {
         "label": "말하는 언어",
         "description": "음성 입력으로 말할 때 사용하는 언어입니다.",

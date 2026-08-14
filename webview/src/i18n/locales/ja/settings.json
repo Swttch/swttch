@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "音声入力",
+      "enabled": {
+        "label": "音声入力を使う",
+        "description": "オフにするとマイクボタンとショートカットが無効になります。CLIの /voice と同じ設定です。"
+      },
       "speechLanguage": {
         "label": "話す言語",
         "description": "音声入力で話すときに使用する言語です。",

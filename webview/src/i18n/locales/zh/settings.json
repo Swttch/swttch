@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "语音输入",
+      "enabled": {
+        "label": "启用语音输入",
+        "description": "关闭后麦克风按钮和快捷键都会消失。与 CLI 的 /voice 是同一设置。"
+      },
       "speechLanguage": {
         "label": "说话语言",
         "description": "使用语音输入时所说的语言。",

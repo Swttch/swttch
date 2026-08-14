@@ -39,6 +39,10 @@
     },
     "voice": {
       "title": "Saisie vocale",
+      "enabled": {
+        "label": "Saisie vocale",
+        "description": "Désactivée, le bouton du micro disparaît et le raccourci ne fonctionne plus. Même réglage que /voice dans la CLI."
+      },
       "speechLanguage": {
         "label": "Langue parlée",
         "description": "La langue dans laquelle vous parlez lors de la saisie vocale.",
