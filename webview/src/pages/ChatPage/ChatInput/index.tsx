@@ -133,8 +133,13 @@ export function ChatInput() {
     (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
   // Bound globally rather than on the composer: the point of the shortcut is to
   // start talking without reaching for the mouse, which is exactly the moment
-  // the composer does not have focus.
-  useGlobalShortcut(voiceShortcut, dictation.toggle);
+  // the composer does not have focus. Tap/hold is the same rule the microphone
+  // button uses, so the two controls behave alike.
+  useGlobalShortcut(voiceShortcut, {
+    isRecording: () => dictation.isRecording,
+    onStart: () => void dictation.start(),
+    onStop: () => void dictation.stop(),
+  });
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);

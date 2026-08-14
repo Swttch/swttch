@@ -1,43 +1,90 @@
 import { useEffect, useRef } from 'react';
-import { shouldToggleOnShortcut } from '@/utils/shortcut';
+import { matchesShortcut, parseShortcut } from '@/utils/shortcut';
+import { PressToTalk, PressAction } from './pressToTalk';
+
+interface Handlers {
+  /** Whether recording is on right now, read at the moment of the press. */
+  isRecording: () => boolean;
+  onStart: () => void;
+  onStop: () => void;
+}
 
 /**
- * Fire a rebindable shortcut from anywhere in the app.
+ * Press-to-talk on a rebindable shortcut, from anywhere in the app.
  *
- * Voice input started on the composer's own key handler, which meant it only
- * worked while the composer had focus — press it after clicking anywhere else
- * and nothing happened. A shortcut whose whole point is to start talking
- * without reaching for the mouse should not require reaching for the input
- * first.
+ * Two things the composer's own key handler could not do:
  *
- * Bound on the window in the capture phase so it wins over whatever has focus,
- * and only for the exact combination: every other key is left alone, including
- * inside text fields.
+ * It only fired while the composer had focus, which is backwards — the shortcut
+ * exists to start talking without reaching for the mouse, and that is usually
+ * the moment focus is somewhere else.
+ *
+ * And it only watched keydown, so a held key started recording and then had no
+ * idea when it ended: releasing did nothing, and it took a second press to
+ * stop. Watching the release too makes the key behave like the microphone
+ * button — tap to keep recording, hold to record only while held.
  *
  * @param shortcut Stored form, e.g. 'Alt+D'.
- * @param onTrigger Runs once per press; key repeats are ignored.
  */
-export function useGlobalShortcut(shortcut: string | null | undefined, onTrigger: () => void) {
-  // Kept in a ref so a caller passing an inline function does not detach and
-  // re-attach the listener on every render.
-  const onTriggerRef = useRef(onTrigger);
-  onTriggerRef.current = onTrigger;
+export function useGlobalShortcut(shortcut: string | null | undefined, handlers: Handlers) {
+  // Kept in a ref so inline callbacks do not detach and re-attach the listeners
+  // on every render.
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   useEffect(() => {
-    if (!shortcut) return;
+    const parsed = parseShortcut(shortcut);
+    if (!parsed) return;
 
-    const handler = (e: KeyboardEvent) => {
-      if (!shouldToggleOnShortcut(e, shortcut)) {
-        return;
-      }
-      // Claimed only once we know it is ours, so the default action of every
-      // other key survives.
-      e.preventDefault();
-      e.stopPropagation();
-      onTriggerRef.current();
+    const press = new PressToTalk();
+
+    const run = (action: PressAction) => {
+      if (action === PressAction.Start) handlersRef.current.onStart();
+      else if (action === PressAction.Stop) handlersRef.current.onStop();
     };
 
-    window.addEventListener('keydown', handler, true);
-    return () => window.removeEventListener('keydown', handler, true);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!matchesShortcut(e, shortcut)) return;
+      // Claimed only once we know it is ours, so every other key keeps its
+      // default action. Repeats are claimed too: the browser's own binding must
+      // stay suppressed for as long as the key is held.
+      e.preventDefault();
+      e.stopPropagation();
+      run(press.press(handlersRef.current.isRecording()));
+    };
+
+    // The release is matched on the key alone. Letting go of the modifier first
+    // ("Alt+D" released as D-then-Alt, or Alt-then-D) would otherwise leave the
+    // recording running with nothing left to stop it.
+    const onKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      const released = key === parsed.key || isModifierOf(e.key, parsed);
+      if (!released) return;
+      run(press.release());
+    };
+
+    // A hold interrupted by the window losing focus never delivers its keyup,
+    // which would strand the microphone open.
+    const onBlur = () => {
+      run(press.release());
+      press.cancel();
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('keyup', onKeyUp, true);
+      window.removeEventListener('blur', onBlur);
+    };
   }, [shortcut]);
+}
+
+/** Is this released key one of the modifiers the shortcut needs held down? */
+function isModifierOf(key: string, parts: { ctrl: boolean; alt: boolean; meta: boolean }): boolean {
+  return (
+    (key === 'Control' && parts.ctrl) ||
+    (key === 'Alt' && parts.alt) ||
+    (key === 'Meta' && parts.meta)
+  );
 }

@@ -2,9 +2,7 @@ import { useRef } from 'react';
 import { useTranslation } from '@/i18n';
 import { DictationState } from './hooks/useDictation';
 import { AudioLevelBars } from './AudioLevelBars';
-
-/** Below this, a press counts as a tap (toggle) rather than a hold. */
-const HOLD_THRESHOLD_MS = 300;
+import { PressToTalk, PressAction } from './hooks/pressToTalk';
 
 interface Props {
   state: DictationState;
@@ -34,8 +32,9 @@ export function MicButton(props: Props) {
   const { state, level, micDenied, disabled, shortcut, onStart, onStop } = props;
   const { t } = useTranslation('chat');
 
-  const pressedAt = useRef(0);
-  const startedByThisPress = useRef(false);
+  // The same tap/hold rule the keyboard shortcut uses, so the two controls
+  // cannot drift apart.
+  const press = useRef(new PressToTalk());
 
   const isRecording = state === DictationState.Listening || state === DictationState.Starting;
 
@@ -44,28 +43,12 @@ export function MicButton(props: Props) {
     // Capture so a pointer that slides off the button still delivers its
     // release; without it, a hold that drifts leaves the microphone open.
     event.currentTarget.setPointerCapture(event.pointerId);
-    pressedAt.current = Date.now();
-
-    if (isRecording) {
-      // Already recording (from an earlier tap): this press stops it.
-      startedByThisPress.current = false;
-      return;
-    }
-    startedByThisPress.current = true;
-    onStart();
+    if (press.current.press(isRecording) === PressAction.Start) onStart();
   }
 
   function handlePointerUp() {
     if (disabled || micDenied) return;
-    const heldFor = Date.now() - pressedAt.current;
-
-    if (!startedByThisPress.current) {
-      // The press began while already recording — it is the stop half of a tap.
-      onStop();
-      return;
-    }
-    // Started by this press: a hold ends on release, a tap leaves it running.
-    if (heldFor >= HOLD_THRESHOLD_MS) onStop();
+    if (press.current.release() === PressAction.Stop) onStop();
   }
 
   // Failures are reported by the input banner, not here — a tooltip only shows
