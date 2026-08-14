@@ -56,7 +56,8 @@
         "update": "업데이트",
         "updating": "업데이트 중…",
         "updated": "업데이트했습니다",
-        "failed": "설치하지 못했습니다"
+        "failed": "설치하지 못했습니다",
+        "upToDate": "최신 버전"
       }
     },
     "uiDirection": {

@@ -56,7 +56,8 @@
         "update": "تحديث",
         "updating": "جارٍ التحديث…",
         "updated": "تم التحديث",
-        "failed": "تعذّر التثبيت"
+        "failed": "تعذّر التثبيت",
+        "upToDate": "محدَّث"
       }
     },
     "uiDirection": {

@@ -1,11 +1,13 @@
 import { createRequire } from 'node:module';
-import { sep } from 'node:path';
+import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
 
 /** The npm package this module loads. Also the name shown when it is missing. */
 export const EXTEND_KIT_PACKAGE = '@swttch/extend-kit';
+/** The executable the package provides, which is how volta knows it. */
+const CCB_BINARY = 'ccb';
 
 /**
  * Loads @swttch/extend-kit from the user's global npm install at runtime.
@@ -73,24 +75,111 @@ function lastLine(stdout: string): string | null {
 /**
  * Places the kit might be installed, best candidate first.
  *
- * `npm root -g` alone is not enough. Under a version manager (volta, nvm, fnm)
- * the `npm` a login shell resolves can belong to a different Node than the one
- * that owns the global folder the package actually landed in — on this machine
- * npm answered `/opt/homebrew/lib/node_modules` while the package sat under
- * `~/.volta`. Asking only npm produced a "not installed" error for a package
- * that was installed.
+ * "Where a global npm package lives" has no single answer: volta, pnpm and yarn
+ * each keep their own store, none of which is any Node's global folder.
  *
- * So we also follow `ccb`, the binary this same package provides. Resolving the
- * command the way the usage panel already does, then walking up from the
- * symlink it points at, lands in the real install regardless of which manager
- * put it there.
+ *   volta  ~/.volta/tools/image/packages/<name>/lib/node_modules
+ *   pnpm   ~/Library/pnpm/global/<n>/node_modules
+ *   yarn   ~/.config/yarn/global/node_modules
+ *   npm    <the active Node's prefix>/lib/node_modules
+ *
+ * So each manager is asked where it puts things, rather than guessing from a
+ * path. The guesses were tried first and each failed on a real machine: `npm
+ * root -g` named a different Node's folder than the one running this backend
+ * (`/opt/homebrew` while the package sat under `~/.volta`), and following the
+ * `ccb` binary hit volta's single shared shim, which is inside no package at
+ * all. Both reported an installed, working kit as missing.
+ *
+ * Every manager is asked, not just the one that would install today: the kit may
+ * have been put there by hand, or before this backend had an opinion. A manager
+ * that is not installed simply makes its command fail.
  */
 async function candidateRoots(): Promise<string[]> {
   if (cachedRoots) return cachedRoots;
 
   const roots: string[] = [];
 
-  // 1. Follow the ccb binary — survives version managers.
+  // 1. Ask volta where it put the package.
+  //
+  // volta does not install into any Node's global folder: each package gets its
+  // own directory under ~/.volta/tools/image/packages/<name>/lib/node_modules,
+  // and only the bin is linked out. So a volta install is invisible to every
+  // other lookup here — which is exactly what happened after we started
+  // installing through volta: the install succeeded and the version on screen
+  // never moved.
+  //
+  // `volta which` resolves to the real executable rather than the shared shim
+  // that `which` returns, and the package root is two levels above its bin.
+  try {
+    const { stdout } = await new Command('volta', ['which', CCB_BINARY], {
+      timeout: 15000,
+      shell: ShellKind.LoginInteractive,
+    }).exec();
+    const binPath = lastLine(stdout);
+    if (binPath) {
+      // …/packages/@swttch/extend-kit/bin/ccb → …/packages/@swttch/extend-kit
+      const pkgRoot = dirname(dirname(binPath));
+      const root = join(pkgRoot, 'lib', 'node_modules');
+      if (!roots.includes(root)) roots.push(root);
+    }
+  } catch {
+    // No volta on this machine, or it does not know the command.
+  }
+
+  // 2. Ask pnpm and yarn, which keep their own global stores.
+  //
+  // Neither installs into a Node's global folder either: pnpm answers
+  // ~/Library/pnpm/global/<n>/node_modules and yarn ~/.config/yarn/global. A
+  // machine where the installer chose one of them would otherwise hit exactly
+  // the volta problem — installed, working, and reported missing.
+  //
+  // Both are asked regardless of which one the installer would pick, since the
+  // kit may predate this backend's involvement, and an absent command simply
+  // rejects.
+  const stores: Array<{ command: string; args: string[]; suffix: string | null }> = [
+    { command: 'pnpm', args: ['root', '-g'], suffix: null },
+    // `yarn global dir` names the folder ABOVE node_modules, unlike pnpm.
+    { command: 'yarn', args: ['global', 'dir'], suffix: 'node_modules' },
+  ];
+  for (const { command, args, suffix } of stores) {
+    try {
+      const { stdout } = await new Command(command, args, {
+        timeout: 15000,
+        shell: ShellKind.LoginInteractive,
+      }).exec();
+      const dir = lastLine(stdout);
+      if (dir) {
+        const root = suffix ? join(dir, suffix) : dir;
+        if (!roots.includes(root)) roots.push(root);
+      }
+    } catch {
+      // Not installed on this machine.
+    }
+  }
+
+  // 3. The global folder belonging to the Node running this backend.
+  //
+  // No command to run and nothing to resolve: `npm i -g` installs into the
+  // global folder of whichever Node is active, and that is the Node executing
+  // this code. Under volta both other lookups miss it — `npm root -g` through a
+  // login shell answered /opt/homebrew (a different Node entirely), and the
+  // `ccb` binary resolves to volta's shared shim rather than to a package
+  // directory. So the kit sat here, installed, while both answers said no.
+  //
+  // <prefix>/bin/node → <prefix>/lib/node_modules, which is the layout on
+  // macOS/Linux. On Windows node lives at <prefix>/node.exe with modules in
+  // <prefix>/node_modules, so both shapes are offered and the miss costs a
+  // failed file read.
+  try {
+    const binDir = dirname(process.execPath);
+    roots.push(join(dirname(binDir), 'lib', 'node_modules'));
+    roots.push(join(binDir, 'node_modules'));
+  } catch {
+    // execPath is always set in practice; a failure here just means we rely on
+    // the lookups below.
+  }
+
+  // 4. Follow the ccb binary — survives version managers.
   //
   // `which` gives the shim, not the file it points at, so we resolve the link
   // ourselves rather than passing a quoted `node -e` script through the shell:
@@ -103,13 +192,14 @@ async function candidateRoots(): Promise<string[]> {
       // …/node_modules/@swttch/extend-kit/dist/cli/index.js → …/node_modules
       const marker = `${sep}node_modules${sep}`;
       const at = real.lastIndexOf(marker);
-      if (at > 0) roots.push(real.slice(0, at + marker.length - 1));
+      const root = at > 0 ? real.slice(0, at + marker.length - 1) : null;
+      if (root && !roots.includes(root)) roots.push(root);
     }
   } catch {
     // ccb not installed, or the link could not be read — try npm next.
   }
 
-  // 2. Whatever npm considers global, for installs that did not link a bin.
+  // 5. Whatever npm considers global, for installs that did not link a bin.
   try {
     const { stdout } = await new Command('npm', ['root', '-g'], {
       timeout: 15000,
@@ -164,9 +254,11 @@ export async function loadSpeechToText(): Promise<ExtendKitStt> {
 export async function getExtendKitVersion(): Promise<string | null> {
   for (const root of await candidateRoots()) {
     try {
-      const manifest = createRequire(`${root}${sep}`).resolve(
-        `${EXTEND_KIT_PACKAGE}/package.json`,
-      );
+      // Read the manifest as a plain file rather than resolving it as a subpath:
+      // the package's `exports` map does not list "./package.json" (few do), so
+      // asking node to resolve it throws ERR_PACKAGE_PATH_NOT_EXPORTED and an
+      // installed kit reports as missing.
+      const manifest = `${root}${sep}${EXTEND_KIT_PACKAGE.split('/').join(sep)}${sep}package.json`;
       const { version } = JSON.parse(await readFile(manifest, 'utf8')) as { version?: string };
       if (typeof version === 'string' && version) return version;
     } catch {

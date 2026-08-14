@@ -56,7 +56,8 @@
         "update": "更新",
         "updating": "正在更新…",
         "updated": "已更新",
-        "failed": "无法安装"
+        "failed": "无法安装",
+        "upToDate": "已是最新版本"
       }
     },
     "uiDirection": {

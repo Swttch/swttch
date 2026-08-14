@@ -56,7 +56,8 @@
         "update": "更新",
         "updating": "更新中…",
         "updated": "更新しました",
-        "failed": "インストールできませんでした"
+        "failed": "インストールできませんでした",
+        "upToDate": "最新版です"
       }
     },
     "uiDirection": {

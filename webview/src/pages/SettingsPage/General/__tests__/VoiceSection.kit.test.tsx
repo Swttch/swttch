@@ -81,6 +81,26 @@ describe('Voice settings — the kit it depends on', () => {
 
     expect(screen.getByText('v0.4.0')).toBeDefined();
     expect(screen.getByRole('button', { name: /update/i })).toBeDefined();
+    // No "up to date" claim while an update is waiting.
+    expect(screen.queryByText(/up to date/i)).toBeNull();
+  });
+
+  it('says it is current when there is nothing to update to', () => {
+    // A bare version number reads as "not checked yet"; saying so is what tells
+    // the user the check ran and came back clean.
+    kitInfo = { packageName: '@swttch/extend-kit', installed: '0.4.0', latest: '0.4.0', updatable: false };
+    render(<VoiceSection />);
+
+    expect(screen.getByText(/up to date/i)).toBeDefined();
+    expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
+  });
+
+  it('updates to the newer version when that button is pressed', async () => {
+    kitInfo = { packageName: '@swttch/extend-kit', installed: '0.4.0', latest: '0.5.0', updatable: true };
+    render(<VoiceSection />);
+
+    fireEvent.click(screen.getByRole('button', { name: /update/i }));
+    await waitFor(() => expect(installMock).toHaveBeenCalled());
   });
 
   it('still shows the version when the registry could not be reached', () => {
@@ -92,6 +112,9 @@ describe('Voice settings — the kit it depends on', () => {
     expect(screen.getByText('v0.4.0')).toBeDefined();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
     expect(container.querySelector('[aria-disabled="true"]')).toBeNull();
+    // Nor does it claim to be current: with the registry unreachable we do not
+    // know that, and saying so would be a guess dressed as a fact.
+    expect(screen.queryByText(/up to date/i)).toBeNull();
   });
 
   it('shows nothing about the kit until its state is known', () => {

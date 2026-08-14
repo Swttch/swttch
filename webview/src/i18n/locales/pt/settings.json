@@ -56,7 +56,8 @@
         "update": "Atualizar",
         "updating": "Atualizando…",
         "updated": "Atualizado",
-        "failed": "Não foi possível instalar"
+        "failed": "Não foi possível instalar",
+        "upToDate": "Atualizado"
       }
     },
     "uiDirection": {

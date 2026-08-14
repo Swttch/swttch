@@ -1,5 +1,5 @@
 import toast from 'react-hot-toast';
-import { ArrowPathIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ArrowDownTrayIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { useTranslation } from '@/i18n';
 
@@ -49,13 +49,23 @@ export function ExtendKitControl() {
 
   return (
     <span className="flex items-center gap-2">
-      <span className="text-xs text-text-tertiary tabular-nums">v{info.installed}</span>
-      {info.updatable && (
+      {info.updatable ? (
         <button className={BUTTON_CLASS} disabled={installing} onClick={() => void run('updated')}>
           {installing ? spinner : null}
           {installing ? t('general.voice.kit.updating') : t('general.voice.kit.update')}
         </button>
+      ) : (
+        // Say it is current rather than leaving a bare version number, which
+        // reads as "not checked yet" — the same note the CLI's control shows.
+        // Absent when `latest` is unknown (offline): we cannot claim it then.
+        info.latest && (
+          <span className="flex items-center gap-1 text-xs text-text-tertiary">
+            <CheckCircleIcon className="w-3.5 h-3.5 text-state-success-fg" />
+            {t('general.voice.kit.upToDate')}
+          </span>
+        )
       )}
+      <span className="text-xs text-text-tertiary tabular-nums">v{info.installed}</span>
     </span>
   );
 }
