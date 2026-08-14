@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { SelectMenu } from './SelectMenu';
 import type { SelectOption } from './types';
@@ -13,7 +13,20 @@ interface Props {
   /** Styling for the trigger button (background, border, padding, text color). */
   className?: string;
   ariaLabel?: string;
+  /** Placeholder for the filter box, e.g. "Search languages". */
+  searchPlaceholder?: string;
+  /** Shown in place of the list when the filter matches nothing. */
+  noMatchLabel?: string;
 }
+
+/**
+ * Above this many options, the list gets a filter box.
+ *
+ * Short lists are faster to scan than to type into, so the box would only be in
+ * the way. Long ones (the ~190 spoken languages) cannot be scrolled through
+ * usefully at all.
+ */
+const SEARCHABLE_THRESHOLD = 12;
 
 /**
  * Custom dropdown that replaces the native `<select>`.
@@ -29,19 +42,48 @@ interface Props {
  * return focus to the trigger.
  */
 export function Select(props: Props) {
-  const { value, options, onChange, disabled = false, className = '', ariaLabel } = props;
+  const {
+    value,
+    options,
+    onChange,
+    disabled = false,
+    className = '',
+    ariaLabel,
+    searchPlaceholder,
+    noMatchLabel,
+  } = props;
   const [isOpen, setIsOpen] = useState(false);
   // The option the keyboard is currently on (highlighted); -1 when none.
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [query, setQuery] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const selectedIndex = options.findIndex((option) => option.value === value);
-  const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
+  const searchable = options.length > SEARCHABLE_THRESHOLD;
+
+  // Everything below navigates the FILTERED list: with a query applied, the
+  // indices the keyboard moves through have to be the ones on screen, or the
+  // highlight lands on a row the user cannot see.
+  const visibleOptions = useMemo(() => {
+    if (!searchable) return options;
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
+    );
+  }, [options, query, searchable]);
+
+  // The label on the trigger comes from the full list — a filter that hides the
+  // current selection must not blank out what is selected.
+  const selected = options.find((option) => option.value === value);
+  const selectedIndex = visibleOptions.findIndex((option) => option.value === value);
 
   const close = useCallback((returnFocus = false) => {
     setIsOpen(false);
     setActiveIndex(-1);
+    // Clear the filter too: reopening to a list still narrowed by a forgotten
+    // query looks like most of the options have gone missing.
+    setQuery('');
     if (returnFocus) triggerRef.current?.focus();
   }, []);
 
@@ -54,12 +96,12 @@ export function Select(props: Props) {
 
   const commit = useCallback(
     (index: number) => {
-      const option = options[index];
+      const option = visibleOptions[index];
       if (!option) return;
       onChange(option.value);
       close(true);
     },
-    [options, onChange, close],
+    [visibleOptions, onChange, close],
   );
 
   useEffect(() => {
@@ -85,24 +127,20 @@ export function Select(props: Props) {
     };
   }, [isOpen, close]);
 
-  // Keyboard handling lives on the trigger (which keeps focus while the list is
-  // open), so it composes with the popover's own key handling without a global
-  // document listener fighting other components.
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (disabled) return;
-
-    if (!isOpen) {
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        open();
-      }
-      return;
-    }
-
+  /**
+   * List navigation, shared by the trigger and the filter box.
+   *
+   * Which element holds focus depends on whether the list is searchable, so the
+   * keys are handled in one place and both callers route into it.
+   *
+   * @param typing True when the event came from the filter box, where Space is
+   *   a character rather than "commit the highlighted option".
+   */
+  const navigate = (e: React.KeyboardEvent, typing: boolean) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setActiveIndex((i) => Math.min(options.length - 1, i + 1));
+        setActiveIndex((i) => Math.min(visibleOptions.length - 1, i + 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -114,10 +152,16 @@ export function Select(props: Props) {
         break;
       case 'End':
         e.preventDefault();
-        setActiveIndex(options.length - 1);
+        setActiveIndex(visibleOptions.length - 1);
+        break;
+      case ' ':
+        // In the filter box a space is part of the query ("bosnian sign…"),
+        // so only the trigger treats it as commit.
+        if (typing) return;
+        e.preventDefault();
+        commit(activeIndex);
         break;
       case 'Enter':
-      case ' ':
         e.preventDefault();
         commit(activeIndex);
         break;
@@ -130,6 +174,22 @@ export function Select(props: Props) {
         close();
         break;
     }
+  };
+
+  // Keyboard handling on the trigger, which keeps focus whenever the list has
+  // no filter box to take it.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+      return;
+    }
+
+    navigate(e, false);
   };
 
   return (
@@ -159,7 +219,7 @@ export function Select(props: Props) {
 
       {isOpen && (
         <SelectMenu
-          options={options}
+          options={visibleOptions}
           value={value}
           activeIndex={activeIndex}
           anchorRef={triggerRef}
@@ -169,6 +229,18 @@ export function Select(props: Props) {
             close(true);
           }}
           onActivate={setActiveIndex}
+          {...(searchable && {
+            query,
+            searchPlaceholder,
+            emptyLabel: noMatchLabel,
+            onQueryChange: (next: string) => {
+              setQuery(next);
+              // The old highlight pointed into the previous result set; leaving
+              // it would highlight an unrelated row, or none at all.
+              setActiveIndex(0);
+            },
+            onSearchKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => navigate(e, true),
+          })}
         />
       )}
     </>

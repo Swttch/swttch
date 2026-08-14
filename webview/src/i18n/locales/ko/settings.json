@@ -37,10 +37,17 @@
       "label": "인터페이스 언어",
       "description": "앱 인터페이스 언어입니다. Claude의 응답 언어와 별개로 설정됩니다."
     },
-    "sttLang": {
-      "label": "음성 입력 언어",
-      "description": "음성 입력으로 말하는 언어입니다. 지정하지 않으면 인터페이스 언어를 따릅니다.",
-      "followUi": "인터페이스 언어 따름"
+    "voice": {
+      "title": "음성 입력",
+      "speechLanguage": {
+        "label": "말하는 언어",
+        "description": "음성 입력으로 말할 때 사용하는 언어입니다.",
+        "follow": "Claude 설정 따름 ({{language}})",
+        "unsupported": "{{language}} (아직 인식 안 됨)",
+        "fallbackWarning": "이 언어는 아직 인식되지 않아, 말해도 영어로 받아써집니다.",
+        "search": "언어 검색",
+        "noMatch": "일치하는 언어가 없습니다"
+      }
     },
     "uiDirection": {
       "label": "RTL(Right-to-left) 켜기"

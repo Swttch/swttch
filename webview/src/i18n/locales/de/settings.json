@@ -37,10 +37,17 @@
       "label": "Sprache der Oberfläche",
       "description": "Sprache der App-Oberfläche, unabhängig von der Antwortsprache von Claude."
     },
-    "sttLang": {
-      "label": "Sprache der Spracheingabe",
-      "description": "Die Sprache, in der Sie bei der Spracheingabe sprechen. Folgt der Oberflächensprache, wenn nicht festgelegt.",
-      "followUi": "Oberflächensprache folgen"
+    "voice": {
+      "title": "Spracheingabe",
+      "speechLanguage": {
+        "label": "Gesprochene Sprache",
+        "description": "Die Sprache, in der Sie bei der Spracheingabe sprechen.",
+        "follow": "Claudes Einstellung folgen ({{language}})",
+        "unsupported": "{{language}} (noch nicht erkannt)",
+        "fallbackWarning": "Diese Sprache wird noch nicht erkannt, daher wird Gesprochenes als Englisch transkribiert.",
+        "search": "Sprachen suchen",
+        "noMatch": "Keine passende Sprache"
+      }
     },
     "uiDirection": {
       "label": "RTL(Right-to-left) aktivieren"

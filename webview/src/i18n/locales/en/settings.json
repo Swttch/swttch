@@ -37,10 +37,17 @@
       "label": "Interface Language",
       "description": "Language for the app interface, independent of Claude's response language."
     },
-    "sttLang": {
-      "label": "Voice input language",
-      "description": "The language you speak into voice input. Follows the interface language when unset.",
-      "followUi": "Follow interface language"
+    "voice": {
+      "title": "Voice input",
+      "speechLanguage": {
+        "label": "Spoken language",
+        "description": "The language you speak when using voice input.",
+        "follow": "Follow Claude's setting ({{language}})",
+        "unsupported": "{{language}} (not recognised yet)",
+        "fallbackWarning": "This language is not recognised yet, so speech is transcribed as English.",
+        "search": "Search languages",
+        "noMatch": "No matching language"
+      }
     },
     "uiDirection": {
       "label": "Enable RTL(Right-to-left)"

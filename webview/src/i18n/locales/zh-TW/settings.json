@@ -37,10 +37,17 @@
       "label": "介面語言",
       "description": "應用程式介面所使用的語言,與 Claude 的回覆語言各自獨立。"
     },
-    "sttLang": {
-      "label": "語音輸入語言",
-      "description": "您在語音輸入時使用的語言。未設定時跟隨介面語言。",
-      "followUi": "跟隨介面語言"
+    "voice": {
+      "title": "語音輸入",
+      "speechLanguage": {
+        "label": "說話語言",
+        "description": "使用語音輸入時所說的語言。",
+        "follow": "跟隨 Claude 設定（{{language}}）",
+        "unsupported": "{{language}}（尚未辨識）",
+        "fallbackWarning": "此語言尚未被辨識，說話內容會被轉寫為英文。",
+        "search": "搜尋語言",
+        "noMatch": "沒有相符的語言"
+      }
     },
     "uiDirection": {
       "label": "啟用 RTL(Right-to-left)"

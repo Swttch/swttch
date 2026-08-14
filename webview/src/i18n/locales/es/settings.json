@@ -37,10 +37,17 @@
       "label": "Idioma de la interfaz",
       "description": "Idioma de la interfaz de la aplicación, independiente del idioma de respuesta de Claude."
     },
-    "sttLang": {
-      "label": "Idioma de entrada de voz",
-      "description": "El idioma en el que hablas al usar la entrada de voz. Si no se define, sigue el idioma de la interfaz.",
-      "followUi": "Seguir el idioma de la interfaz"
+    "voice": {
+      "title": "Entrada de voz",
+      "speechLanguage": {
+        "label": "Idioma hablado",
+        "description": "El idioma en el que hablas al usar la entrada de voz.",
+        "follow": "Seguir la configuración de Claude ({{language}})",
+        "unsupported": "{{language}} (aún no se reconoce)",
+        "fallbackWarning": "Este idioma aún no se reconoce, por lo que se transcribe como inglés.",
+        "search": "Buscar idiomas",
+        "noMatch": "Ningún idioma coincide"
+      }
     },
     "uiDirection": {
       "label": "Activar RTL(Right-to-left)"

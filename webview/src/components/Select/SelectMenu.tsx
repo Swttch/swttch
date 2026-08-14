@@ -21,6 +21,18 @@ interface Props {
   onSelect: (value: string) => void;
   /** Sync the active index to the option under the pointer (hover). */
   onActivate: (index: number) => void;
+  /** Current filter text. Absent when this list is not searchable. */
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  searchPlaceholder?: string;
+  /** Shown when the filter matches nothing. */
+  emptyLabel?: string;
+  /**
+   * Keys pressed in the filter box. Focus sits there while searching, so the
+   * list navigation keys have to be routed back to the owner rather than left
+   * on the trigger, which no longer has focus.
+   */
+  onSearchKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 /**
@@ -37,7 +49,20 @@ interface Props {
  * in className.
  */
 export function SelectMenu(props: Props) {
-  const { options, value, activeIndex, anchorRef, menuRef, onSelect, onActivate } = props;
+  const {
+    options,
+    value,
+    activeIndex,
+    anchorRef,
+    menuRef,
+    onSelect,
+    onActivate,
+    query,
+    onQueryChange,
+    searchPlaceholder,
+    emptyLabel,
+    onSearchKeyDown,
+  } = props;
   const [pos, setPos] = useState<Position | null>(null);
 
   useLayoutEffect(() => {
@@ -90,6 +115,27 @@ export function SelectMenu(props: Props) {
         className="fixed z-[100] max-h-72 overflow-y-auto rounded-lg border border-border-default bg-surface-raised py-1 shadow-xl"
         style={{ left: pos?.left ?? 0, top: pos?.top ?? 0, minWidth: pos?.minWidth ?? 0 }}
       >
+        {onQueryChange && (
+          // Sticky so it survives scrolling a long list, and stopPropagation on
+          // keys so typing here never reaches the trigger's Arrow/Enter handling
+          // — otherwise a space in the query would commit an option.
+          <div className="sticky top-0 z-10 bg-surface-raised px-2 pb-1">
+            <input
+              type="text"
+              autoFocus
+              value={query ?? ''}
+              placeholder={searchPlaceholder}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={onSearchKeyDown}
+              className="w-full rounded border border-border-default bg-surface-overlay px-2 py-1 text-sm text-text-primary placeholder-text-tertiary"
+            />
+          </div>
+        )}
+
+        {options.length === 0 && (
+          <p className="px-3 py-2 text-sm text-text-tertiary">{emptyLabel}</p>
+        )}
+
         {options.map((option, index) => {
           const isSelected = option.value === value;
           const isActive = index === activeIndex;

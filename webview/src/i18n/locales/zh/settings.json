@@ -37,10 +37,17 @@
       "label": "界面语言",
       "description": "应用界面的语言，与 Claude 的回复语言相互独立。"
     },
-    "sttLang": {
-      "label": "语音输入语言",
-      "description": "您在语音输入时使用的语言。未设置时跟随界面语言。",
-      "followUi": "跟随界面语言"
+    "voice": {
+      "title": "语音输入",
+      "speechLanguage": {
+        "label": "说话语言",
+        "description": "使用语音输入时所说的语言。",
+        "follow": "跟随 Claude 设置（{{language}}）",
+        "unsupported": "{{language}}（尚未识别）",
+        "fallbackWarning": "该语言尚未被识别，说话内容会被转写为英文。",
+        "search": "搜索语言",
+        "noMatch": "没有匹配的语言"
+      }
     },
     "uiDirection": {
       "label": "启用 RTL(Right-to-left)"

@@ -150,3 +150,92 @@ describe('Select', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
   });
 });
+
+describe('Select — filtering a long list', () => {
+  // Long enough to cross the threshold that turns the filter box on.
+  const MANY: SelectOption[] = Array.from({ length: 30 }, (_, i) => ({
+    value: `v${i}`,
+    label: `Language ${i}`,
+  }));
+  const KOREAN: SelectOption[] = [
+    ...MANY,
+    { value: 'ko', label: 'Korean' },
+    { value: 'ja', label: 'Japanese' },
+  ];
+
+  let onChange: ReturnType<typeof vi.fn<(value: string) => void>>;
+  beforeEach(() => {
+    onChange = vi.fn<(value: string) => void>();
+  });
+
+  const open = (options: SelectOption[]) => {
+    render(
+      <Select
+        value="v0"
+        options={options}
+        onChange={onChange}
+        ariaLabel="Long select"
+        searchPlaceholder="Search"
+        noMatchLabel="No matches"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Long select/i }));
+    return screen.getByPlaceholderText('Search');
+  };
+
+  it('shows no filter box for a short list', () => {
+    // Scanning three options is quicker than typing; the box would be clutter.
+    render(<Select value="a" options={OPTIONS} onChange={onChange} ariaLabel="Short" />);
+    fireEvent.click(screen.getByRole('button', { name: /Short/i }));
+    expect(screen.queryByPlaceholderText('Search')).toBeNull();
+  });
+
+  it('narrows the list as the user types', () => {
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'korean' } });
+    const shown = screen.getAllByRole('option').map((o) => o.textContent);
+    expect(shown).toHaveLength(1);
+    expect(shown[0]).toContain('Korean');
+  });
+
+  it('matches the code as well as the label', () => {
+    // Someone who knows the tag should be able to type it.
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'ja' } });
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toContain('Japanese');
+  });
+
+  it('commits the filtered option, not the one at that index in the full list', () => {
+    // The regression this guards: navigating the unfiltered indices while a
+    // query is applied selects whatever happens to sit at that position.
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'korean' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('ko');
+  });
+
+  it('keeps a space as part of the query rather than committing', () => {
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'lang' } });
+    fireEvent.keyDown(input, { key: ' ' });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('listbox')).toBeDefined();
+  });
+
+  it('says so when nothing matches', () => {
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'zzzzz' } });
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.getByText('No matches')).toBeDefined();
+  });
+
+  it('forgets the query once closed', () => {
+    // Reopening to a list still narrowed by an old query reads as options
+    // having gone missing.
+    const input = open(KOREAN);
+    fireEvent.change(input, { target: { value: 'korean' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: /Long select/i }));
+    expect(screen.getAllByRole('option').length).toBe(KOREAN.length);
+  });
+});

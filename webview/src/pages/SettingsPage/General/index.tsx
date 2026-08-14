@@ -7,6 +7,7 @@ import { ChatPaginationRow } from './ChatPaginationRow';
 import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
+import { VoiceSection } from './VoiceSection';
 import { APP_NAME } from '@/config/app';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
@@ -217,6 +218,8 @@ export function GeneralSettings() {
 
         <ClaudeConfigDirRow />
       </SettingSection>
+
+      <VoiceSection />
     </div>
   );
 }

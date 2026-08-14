@@ -37,10 +37,17 @@
       "label": "Langue de l'interface",
       "description": "Langue de l'interface de l'application, indépendante de la langue de réponse de Claude."
     },
-    "sttLang": {
-      "label": "Langue de la saisie vocale",
-      "description": "La langue dans laquelle vous parlez lors de la saisie vocale. Suit la langue de l'interface si non définie.",
-      "followUi": "Suivre la langue de l'interface"
+    "voice": {
+      "title": "Saisie vocale",
+      "speechLanguage": {
+        "label": "Langue parlée",
+        "description": "La langue dans laquelle vous parlez lors de la saisie vocale.",
+        "follow": "Suivre le réglage de Claude ({{language}})",
+        "unsupported": "{{language}} (pas encore reconnu)",
+        "fallbackWarning": "Cette langue n'est pas encore reconnue : la parole est transcrite en anglais.",
+        "search": "Rechercher une langue",
+        "noMatch": "Aucune langue correspondante"
+      }
     },
     "uiDirection": {
       "label": "Activer RTL(Right-to-left)"
