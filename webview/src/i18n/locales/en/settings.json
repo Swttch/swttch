@@ -48,6 +48,10 @@
         "search": "Search languages",
         "noMatch": "No matching language"
       },
+      "silenceTimeout": {
+        "label": "Wait time",
+        "description": "Seconds of silence before recording stops, up to {{max}}."
+      },
       "kit": {
         "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
         "install": "Install",

@@ -100,7 +100,7 @@ const COMMENT_MAP: Record<string, string> = {
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
-  voice: '음성 입력 설정 중 공식 스키마에 없는 것들. { speechLanguage } — 말하는 언어의 BCP-47 코드(예: "ko"). 공식 language가 비었을 때만 쓰인다(VS Code 확장이 accessibility.voice.speechLanguage를 두는 것과 같은 자리). enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다',
+  voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다',
   useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
@@ -333,6 +333,15 @@ function validateSetting(key: string, value: unknown): string | null {
         typeof voice.speechLanguage !== 'string'
       ) {
         return 'voice.speechLanguage must be a string or null';
+      }
+      if ('silenceTimeout' in voice) {
+        const seconds = voice.silenceTimeout;
+        // 15 is where the service stops listening on its own, so a longer wait
+        // could never elapse — and for the same reason there is no 0 meaning
+        // "never stop", which we would be unable to honour.
+        if (typeof seconds !== 'number' || !Number.isInteger(seconds) || seconds < 1 || seconds > 15) {
+          return 'voice.silenceTimeout must be an integer between 1 and 15';
+        }
       }
       break;
     }

@@ -48,6 +48,10 @@
         "search": "言語を検索",
         "noMatch": "一致する言語がありません"
       },
+      "silenceTimeout": {
+        "label": "待機時間",
+        "description": "音声がないときに録音が待つ秒数です。最大{{max}}秒まで指定できます。"
+      },
       "kit": {
         "required": "音声入力には @swttch/extend-kit が必要です。右上からインストールしてください。",
         "install": "インストール",

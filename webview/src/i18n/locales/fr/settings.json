@@ -48,6 +48,10 @@
         "search": "Rechercher une langue",
         "noMatch": "Aucune langue correspondante"
       },
+      "silenceTimeout": {
+        "label": "Temps d'attente",
+        "description": "Secondes de silence avant l'arrêt de l'enregistrement, jusqu'à {{max}}."
+      },
       "kit": {
         "required": "La saisie vocale nécessite @swttch/extend-kit. Installez-le en haut à droite.",
         "install": "Installer",

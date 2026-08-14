@@ -48,6 +48,10 @@
         "search": "Sprachen suchen",
         "noMatch": "Keine passende Sprache"
       },
+      "silenceTimeout": {
+        "label": "Wartezeit",
+        "description": "Sekunden Stille, bevor die Aufnahme endet – höchstens {{max}}."
+      },
       "kit": {
         "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
         "install": "Installieren",

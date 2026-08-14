@@ -48,6 +48,10 @@
         "search": "搜尋語言",
         "noMatch": "沒有相符的語言"
       },
+      "silenceTimeout": {
+        "label": "等待時間",
+        "description": "沒有說話時錄音等待的秒數，最多 {{max}} 秒。"
+      },
       "kit": {
         "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
         "install": "安裝",

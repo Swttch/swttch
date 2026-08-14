@@ -194,17 +194,20 @@ describe('useDictation — silence auto-stop', () => {
     expect(micStop).toHaveBeenCalled();
   });
 
-  it('never stops on its own when the timeout is 0', async () => {
+  it('still stops when a stored 0 says it should not', async () => {
+    // 0 used to mean "never stop", before we knew the service ends the
+    // recording at 15s of silence regardless. A value saved back then must not
+    // leave a timer that never fires, promising something we cannot deliver.
     silenceTimeout = 0;
     const { hook } = renderDictation();
     await startListening(hook);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS * 10);
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
     });
 
-    expect(micStop).not.toHaveBeenCalled();
-    expect(hook.result.current.state).toBe(DictationState.Listening);
+    expect(micStop).toHaveBeenCalled();
+    expect(hook.result.current.state).toBe(DictationState.Idle);
   });
 
   it('does not fire after the user stopped recording themselves', async () => {

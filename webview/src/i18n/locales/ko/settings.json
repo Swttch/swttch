@@ -48,6 +48,10 @@
         "search": "언어 검색",
         "noMatch": "일치하는 언어가 없습니다"
       },
+      "silenceTimeout": {
+        "label": "대기 시간",
+        "description": "말이 없을 때 녹음이 기다리는 시간(초)입니다. 최대 {{max}}초까지 지정할 수 있습니다."
+      },
       "kit": {
         "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
         "install": "설치",

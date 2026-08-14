@@ -48,6 +48,10 @@
         "search": "搜索语言",
         "noMatch": "没有匹配的语言"
       },
+      "silenceTimeout": {
+        "label": "等待时间",
+        "description": "没有说话时录音等待的秒数，最多 {{max}} 秒。"
+      },
       "kit": {
         "required": "语音输入需要 @swttch/extend-kit。请从右上角安装。",
         "install": "安装",

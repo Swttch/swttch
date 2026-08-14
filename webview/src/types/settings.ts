@@ -214,16 +214,17 @@ export interface OpenFileWithCustom {
 
 /**
  * How long recording waits through silence before stopping itself, in seconds.
- * 0 disables the auto-stop, leaving the microphone open until the user ends it.
  *
  * 15 is both the default and the ceiling because the service stops listening
- * after that much silence anyway — setting a longer wait buys nothing, since
- * the recording is already over by the time it would elapse.
+ * after that much silence regardless — a longer wait could never elapse, and
+ * "never stop" is not on offer for the same reason: recording would end at 15
+ * seconds anyway, so the option would promise something we cannot deliver.
  *
  * This is NOT the length of a recording. A recording may run up to
  * {@link VOICE_TOTAL_DURATION_MAX}; this only bounds the quiet at the end.
  */
 export const VOICE_SILENCE_TIMEOUT_DEFAULT = 15;
+export const VOICE_SILENCE_TIMEOUT_MIN = 1;
 export const VOICE_SILENCE_TIMEOUT_MAX = 15;
 
 /**
@@ -232,6 +233,18 @@ export const VOICE_SILENCE_TIMEOUT_MAX = 15;
  * fine; it is only the silence that is capped above.
  */
 export const VOICE_TOTAL_DURATION_MAX = 120;
+
+/**
+ * Bring a typed silence timeout into the 1..15 second range.
+ *
+ * There is no "never stop" option: the service itself stops listening after 15
+ * seconds of silence, so we could not honour one — recording would end anyway
+ * and the setting would be a promise we cannot keep.
+ */
+export function clampVoiceSilenceTimeout(seconds: number): number {
+  if (!Number.isFinite(seconds)) return VOICE_SILENCE_TIMEOUT_DEFAULT;
+  return Math.min(Math.max(Math.round(seconds), VOICE_SILENCE_TIMEOUT_MIN), VOICE_SILENCE_TIMEOUT_MAX);
+}
 
 /**
  * Voice input settings that are ours rather than Claude Code's.
@@ -243,7 +256,7 @@ export const VOICE_TOTAL_DURATION_MAX = 120;
 export interface VoiceSettings {
   /** BCP-47 code of the language being spoken, e.g. 'ko'. */
   speechLanguage?: string | null;
-  /** Seconds of silence before recording stops; 0 never stops on its own. */
+  /** Seconds of silence before recording stops, 1..15. */
   silenceTimeout?: number;
   /** Keystroke that toggles recording, e.g. 'Alt+D'. */
   shortcut?: string | null;

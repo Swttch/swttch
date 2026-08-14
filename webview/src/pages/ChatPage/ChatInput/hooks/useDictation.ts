@@ -6,7 +6,7 @@ import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import {
   SettingKey,
   VOICE_SILENCE_TIMEOUT_DEFAULT,
-  VOICE_SILENCE_TIMEOUT_MAX,
+  clampVoiceSilenceTimeout,
 } from '@/types/settings';
 import { resolveDictationLanguage } from '@/i18n/dictationLanguage';
 import { MessageType } from '@/shared';
@@ -97,14 +97,10 @@ export function useDictation(getTarget: () => DictationTarget) {
     uiLocale: i18n.language,
   });
 
-  // 0 means "never stop on its own". Anything longer than the service's own
-  // limit is clamped rather than honoured, so the setting cannot promise a
-  // recording that outlives what we are actually given.
-  const silenceTimeoutMs = (() => {
-    const seconds = voice.silenceTimeout ?? VOICE_SILENCE_TIMEOUT_DEFAULT;
-    if (seconds <= 0) return null;
-    return Math.min(seconds, VOICE_SILENCE_TIMEOUT_MAX) * 1000;
-  })();
+  // Clamped rather than trusted: a stored value could predate the current
+  // bounds, or have been edited into the settings file by hand.
+  const silenceTimeoutMs =
+    clampVoiceSilenceTimeout(voice.silenceTimeout ?? VOICE_SILENCE_TIMEOUT_DEFAULT) * 1000;
   const [state, setState] = useState<DictationState>(DictationState.Idle);
   const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
@@ -129,10 +125,9 @@ export function useDictation(getTarget: () => DictationTarget) {
     }
   }, []);
 
-  /** Restart the countdown to the automatic stop, unless it is switched off. */
+  /** Restart the countdown to the automatic stop. */
   const armSilenceTimer = useCallback(() => {
     clearSilenceTimer();
-    if (silenceTimeoutMs === null) return;
     silenceTimerRef.current = setTimeout(() => {
       silenceTimerRef.current = null;
       stopRef.current();

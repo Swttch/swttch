@@ -314,6 +314,28 @@ describe('settings', () => {
       expect(result.error).toContain('voice must be an object');
     });
 
+    it('should accept a voice.silenceTimeout in range', async () => {
+      // 15 is where the service stops listening on its own.
+      for (const seconds of [1, 5, 15]) {
+        expect((await saveSettingToFile('voice', { silenceTimeout: seconds })).status).toBe('ok');
+      }
+    });
+
+    it('should reject a voice.silenceTimeout out of range', async () => {
+      // 0 is rejected too: "never stop" is not something we can honour when
+      // the service ends the recording at 15s of silence regardless.
+      for (const seconds of [0, -1, 16, 600]) {
+        const result = await saveSettingToFile('voice', { silenceTimeout: seconds });
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('voice.silenceTimeout must be an integer between 1 and 15');
+      }
+    });
+
+    it('should reject a non-integer voice.silenceTimeout', async () => {
+      const result = await saveSettingToFile('voice', { silenceTimeout: 1.5 });
+      expect(result.status).toBe('error');
+    });
+
     it('should reject a non-string voice.speechLanguage', async () => {
       const result = await saveSettingToFile('voice', { speechLanguage: 5 });
       expect(result.status).toBe('error');

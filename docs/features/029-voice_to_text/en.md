@@ -80,11 +80,18 @@ UI in English while speaking Korean, say. That is the case this setting is for.
 Claude's response language would not do the job: it is a free-text field that might hold "Korean",
 or "be concise", where the recognizer takes only a standard code like `ko`.
 
-**After 30 seconds of hearing nothing, recording ends by itself.** What it measures is the silence,
-not the total length, so talking for ten or twenty minutes never gets cut off — each pause simply
-starts the clock over. When it does end, it does not just stop: whatever audio has not been sent yet
-goes out, comes back as text, and lands in the input box before recording closes, so the last thing
-you said is not lost.
+**When it stops hearing anything, recording ends by itself.** The default wait is 15 seconds, and
+**Settings → General → Voice input → Wait time** makes it shorter.
+
+What it measures is the silence, not the total length: keep talking and it keeps going, and each
+pause starts the clock over. A single recording runs up to two minutes.
+
+Longer than 15 seconds is not offered, because the transcription service stops listening after that
+much silence on its own — a longer wait would be a deadline that never arrives. For the same reason
+there is no "never stop" option.
+
+When it does end, it does not just stop: whatever audio has not been sent yet goes out, comes back
+as text, and lands in the input box before recording closes, so the last thing you said is not lost.
 
 This exists for the microphone left on after you walk away, or simply forget. Without it the
 recording indicator stays lit and a connection stays open with nothing to transcribe.
