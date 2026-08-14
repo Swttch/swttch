@@ -9,6 +9,7 @@ import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { MicButton } from './MicButton';
 import { useDictation } from './hooks/useDictation';
+import { useGlobalShortcut } from './hooks/useGlobalShortcut';
 import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
@@ -32,7 +33,7 @@ import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/command
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
-import { matchesShortcut, shouldToggleOnShortcut, displayShortcut } from '@/utils/shortcut';
+import { displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -130,6 +131,10 @@ export function ChatInput() {
   // The user can rebind this; the default lives with the other voice defaults.
   const voiceShortcut =
     (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
+  // Bound globally rather than on the composer: the point of the shortcut is to
+  // start talking without reaching for the mouse, which is exactly the moment
+  // the composer does not have focus.
+  useGlobalShortcut(voiceShortcut, dictation.toggle);
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -481,18 +486,8 @@ export function ChatInput() {
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
 
-    // 받아쓰기 토글 — 마이크 버튼을 누르지 않고도 말하기 시작·종료.
-    // 사용자가 바꿀 수 있는 단축키이며, 기본값은 Alt+D.
-    // 브라우저·에디터 기본 동작을 막아야 하므로 preventDefault 필수.
-    if (matchesShortcut(e, voiceShortcut)) {
-      // preventDefault는 반복 이벤트에도 계속 걸어야 한다. 누르고 있는 동안
-      // 브라우저·에디터 기본 동작이 새어나가면 안 되기 때문이다.
-      e.preventDefault();
-      // 토글은 첫 이벤트에서만. 키를 누르고 있으면 OS가 keydown을 초당 수십 번
-      // 보내는데, 그때마다 토글하면 녹음이 켜졌다 꺼졌다 하며 깜빡인다.
-      if (shouldToggleOnShortcut(e, voiceShortcut)) dictation.toggle();
-      return;
-    }
+    // 받아쓰기 토글은 여기서 처리하지 않는다. useGlobalShortcut이 window의
+    // capture 단계에서 먼저 가로채므로, 포커스가 어디에 있든 동작한다.
 
     // JCEF workaround: Cmd+Arrow 처리 후 발생하는 순수 Arrow 유령 이벤트 무시
     const isArrowKey = e.key.startsWith('Arrow');
@@ -603,7 +598,7 @@ export function ChatInput() {
       e.preventDefault();
       onChange(historyValue);
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, voiceShortcut, dictation, ime, handleRichChange]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
 
   // Wrap the attachment paste handler so that, when the clipboard carries no
   // image, we insert the plain-text payload ourselves. contentEditable would
