@@ -66,12 +66,17 @@ export enum SettingKey {
   // own i18n, unrelated to Claude's response language (a native key).
   UI_LANGUAGE = 'uiLanguage',
 
-  // BCP-47 code of the language spoken into voice input (e.g. 'ko'); null →
-  // follow the interface language. Its own key because the language you speak
-  // is not necessarily the one you read the UI in, and neither existing setting
-  // can stand in: the interface language is ours to define, while Claude's
-  // response language is free text ('한국어', 'be concise') where this needs a code.
-  STT_LANG = 'sttLang',
+  // Voice input settings that the official schema does NOT define — currently
+  // just `speechLanguage`, the BCP-47 code of the language being spoken.
+  //
+  // Claude Code treats its own `language` key as the dictation language too, so
+  // that one is authoritative and lives in the native file. This is the fallback
+  // consulted only when it is empty — precisely the role the docs give VS Code's
+  // `accessibility.voice.speechLanguage`, which is why the name matches.
+  //
+  // `voice.enabled` / `mode` / `autoSubmit` ARE official and are read from and
+  // written to the native settings instead; see useClaudeSettings.
+  VOICE = 'voice',
 
   // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
   USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
@@ -208,6 +213,36 @@ export interface OpenFileWithCustom {
 }
 
 /**
+ * Seconds of silence after which recording stops itself. 0 disables the
+ * auto-stop entirely, leaving the microphone open until the user ends it.
+ */
+export const VOICE_SILENCE_TIMEOUT_DEFAULT = 30;
+/**
+ * Upper bounds taken from Claude Code's documented dictation behaviour, which
+ * stops on 15 seconds of silence or 2 minutes in total. Ours may be shorter but
+ * not longer: a setting that outlives what the service itself allows would
+ * promise a recording length we cannot actually deliver.
+ */
+export const VOICE_SILENCE_TIMEOUT_MAX = 15;
+export const VOICE_TOTAL_DURATION_MAX = 120;
+
+/**
+ * Voice input settings that are ours rather than Claude Code's.
+ *
+ * `speechLanguage` is the fallback for the dictation language, consulted only
+ * when the official `language` is empty — the role the docs assign to VS Code's
+ * `accessibility.voice.speechLanguage`.
+ */
+export interface VoiceSettings {
+  /** BCP-47 code of the language being spoken, e.g. 'ko'. */
+  speechLanguage?: string | null;
+  /** Seconds of silence before recording stops; 0 never stops on its own. */
+  silenceTimeout?: number;
+  /** Keystroke that toggles recording, e.g. 'Alt+D'. */
+  shortcut?: string | null;
+}
+
+/**
  * 설정 상태 인터페이스
  */
 export interface SettingsState {
@@ -228,7 +263,7 @@ export interface SettingsState {
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
-  [SettingKey.STT_LANG]: string | null;
+  [SettingKey.VOICE]: VoiceSettings;
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
@@ -258,7 +293,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,
-  [SettingKey.STT_LANG]: null,
+  [SettingKey.VOICE]: {},
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,

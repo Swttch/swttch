@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import i18n from '@/i18n/config';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSettings } from '@/contexts/SettingsContext';
-import { SettingKey } from '@/types/settings';
+import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import {
+  SettingKey,
+  VOICE_SILENCE_TIMEOUT_DEFAULT,
+  VOICE_SILENCE_TIMEOUT_MAX,
+} from '@/types/settings';
+import { resolveDictationLanguage } from '@/i18n/dictationLanguage';
 import { MessageType } from '@/shared';
 import {
   startMicrophone,
@@ -16,15 +22,6 @@ import {
   wasEditedExternally,
   type DictationAnchor,
 } from './composeDictation';
-
-/**
- * How long the room may stay quiet before recording ends itself.
- *
- * Dictation that only stops when asked leaves the microphone live after the
- * user has walked away or simply forgotten — the recording indicator stays lit
- * and the socket stays open with nothing to transcribe.
- */
-const SILENCE_TIMEOUT_MS = 30_000;
 
 /**
  * Loudness below which a block counts as silence.
@@ -90,7 +87,24 @@ interface DictationTarget {
 export function useDictation(getTarget: () => DictationTarget) {
   const { send, sendRaw, subscribe } = useBridgeContext();
   const { settings } = useSettings();
-  const sttLang = settings[SettingKey.STT_LANG];
+  const { settings: claudeSettings } = useClaudeSettings();
+  const voice = settings[SettingKey.VOICE] ?? {};
+  // Claude's own `language` decides this in the CLI, so it decides it here too;
+  // ours only answers when that is empty or is prose we cannot read.
+  const spokenLanguage = resolveDictationLanguage({
+    claudeLanguage: claudeSettings.language as string | undefined,
+    speechLanguage: voice.speechLanguage,
+    uiLocale: i18n.language,
+  });
+
+  // 0 means "never stop on its own". Anything longer than the service's own
+  // limit is clamped rather than honoured, so the setting cannot promise a
+  // recording that outlives what we are actually given.
+  const silenceTimeoutMs = (() => {
+    const seconds = voice.silenceTimeout ?? VOICE_SILENCE_TIMEOUT_DEFAULT;
+    if (seconds <= 0) return null;
+    return Math.min(seconds, VOICE_SILENCE_TIMEOUT_MAX) * 1000;
+  })();
   const [state, setState] = useState<DictationState>(DictationState.Idle);
   const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
@@ -115,14 +129,15 @@ export function useDictation(getTarget: () => DictationTarget) {
     }
   }, []);
 
-  /** Restart the countdown to the automatic stop. */
+  /** Restart the countdown to the automatic stop, unless it is switched off. */
   const armSilenceTimer = useCallback(() => {
     clearSilenceTimer();
+    if (silenceTimeoutMs === null) return;
     silenceTimerRef.current = setTimeout(() => {
       silenceTimerRef.current = null;
       stopRef.current();
-    }, SILENCE_TIMEOUT_MS);
-  }, [clearSilenceTimer]);
+    }, silenceTimeoutMs);
+  }, [clearSilenceTimer, silenceTimeoutMs]);
 
   const releaseMicrophone = useCallback(() => {
     clearSilenceTimer();
@@ -201,10 +216,9 @@ export function useDictation(getTarget: () => DictationTarget) {
     try {
       // Without a language the service assumes English and transcribes other
       // languages phonetically through it — "안녕하세요" came back as
-      // "ah ñomaseu". Unset means "follow the interface language", which is
-      // right for most people and already BCP-47.
+      // "ah ñomaseu".
       const ack = (await send(MessageType.START_DICTATION, {
-        language: sttLang ?? i18n.language,
+        language: spokenLanguage,
       })) as StartAck;
       if (ack?.status !== 'ok') {
         setError({
@@ -262,7 +276,7 @@ export function useDictation(getTarget: () => DictationTarget) {
       });
       finish();
     }
-  }, [send, sendRaw, finish, armSilenceTimer, sttLang]);
+  }, [send, sendRaw, finish, armSilenceTimer, spokenLanguage]);
 
   const stop = useCallback(async () => {
     if (stateRef.current === DictationState.Idle) return;

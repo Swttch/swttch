@@ -28,11 +28,16 @@ vi.mock('@/contexts/BridgeContext', () => ({
   }),
 }));
 
-// The spoken language the hook reads; tests override it in place.
-let sttLang: string | null = null;
+// The two language sources the hook consults; tests override them in place.
+let speechLanguage: string | null = null;
+let claudeLanguage: string | null = null;
 
 vi.mock('@/contexts/SettingsContext', () => ({
-  useSettings: () => ({ settings: { sttLang } }),
+  useSettings: () => ({ settings: { voice: { speechLanguage } } }),
+}));
+
+vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  useClaudeSettings: () => ({ settings: { language: claudeLanguage } }),
 }));
 
 vi.mock('../microphone', async () => {
@@ -144,28 +149,53 @@ describe('useDictation — the spoken language reaches the service', () => {
   beforeEach(() => {
     subscribers.clear();
     sendMock.mockClear();
-    sttLang = null;
+    speechLanguage = null;
+    claudeLanguage = null;
   });
 
-  it('sends the configured spoken language', async () => {
-    sttLang = 'ko';
-    const { hook } = renderDictation();
-    await startListening(hook);
-
-    expect(sendMock).toHaveBeenCalledWith(MessageType.START_DICTATION, { language: 'ko' });
-  });
-
-  it('falls back to the interface language when unset', async () => {
-    // Unset means "follow the interface language", which the test i18n reports
-    // as English. Sending nothing would make the service assume English anyway,
-    // but only by accident — this asserts we say it.
-    sttLang = null;
-    const { hook } = renderDictation();
-    await startListening(hook);
-
+  /** The language on the START_DICTATION the hook just sent. */
+  function sentLanguage(): unknown {
     const call = sendMock.mock.calls.find(([type]) => type === MessageType.START_DICTATION);
-    expect(call?.[1]).toHaveProperty('language');
-    expect((call?.[1] as { language: string }).language).toBeTruthy();
+    return (call?.[1] as { language?: unknown } | undefined)?.language;
+  }
+
+  it("prefers Claude's own language setting", async () => {
+    // The CLI uses `language` as the dictation language, so changing it there
+    // has to move the GUI too rather than being shadowed by our setting.
+    claudeLanguage = 'japanese';
+    speechLanguage = 'ko';
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    expect(sentLanguage()).toBe('ja');
+  });
+
+  it('uses our setting when the official one is empty', async () => {
+    speechLanguage = 'ko';
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    expect(sentLanguage()).toBe('ko');
+  });
+
+  it('uses our setting when the official one holds prose', async () => {
+    // `language` is free text and may hold an instruction, which says nothing
+    // about what the user speaks.
+    claudeLanguage = 'be concise';
+    speechLanguage = 'ko';
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    expect(sentLanguage()).toBe('ko');
+  });
+
+  it('falls back to the interface language when neither is set', async () => {
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    // The test i18n reports English; the point is that something is always
+    // sent, since saying nothing lets the service assume English by accident.
+    expect(sentLanguage()).toBeTruthy();
   });
 });
 

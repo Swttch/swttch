@@ -14,12 +14,10 @@ import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { isRtlLanguage, toLocale } from '@/i18n/languageMap';
+import { isRtlLanguage } from '@/i18n/languageMap';
 import { isMac } from '@/config/environment';
 
 const NOT_SET_VALUE = '__NOT_SET__';
-/** Voice input language sentinel: no explicit choice, follow the interface language. */
-const FOLLOW_UI_VALUE = '__FOLLOW_UI__';
 
 // Interface-language options. Labels use the endonym (the language's own name)
 // only, matching how the Claude Code docs present them. `value` is the stored
@@ -73,16 +71,6 @@ export function GeneralSettings() {
   const respectGitignore = (claudeScopeSettings.respectGitignore as boolean | undefined) ?? false;
   // Auto-resume default (sponsor-only): the global default a session inherits.
   const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
-
-  // Voice input stores a BCP-47 code (what the transcription service takes),
-  // while the interface language stores our own value ('korean'). The options
-  // are the same set of languages either way, so the labels are reused and only
-  // the stored value differs.
-  const sttLang = (scopeSettings.sttLang as string | undefined) ?? null;
-  const sttLangOptions: SelectOption[] = [
-    { value: FOLLOW_UI_VALUE, label: t('general.sttLang.followUi'), italic: true },
-    ...LANGUAGE_OPTIONS.map((opt) => ({ value: toLocale(opt.value), label: opt.label })),
-  ];
 
   const languageOptions: SelectOption[] = [
     ...(scope === 'project'
@@ -147,26 +135,6 @@ export function GeneralSettings() {
                 updateSettingWithScope(SettingKey.UI_DIRECTION, UiDirection.LTR, 'global');
               }
               updateSetting(SettingKey.UI_LANGUAGE, value);
-            }}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label={t('general.sttLang.label')}
-          description={t('general.sttLang.description')}
-        >
-          <Select
-            value={sttLang ?? FOLLOW_UI_VALUE}
-            options={sttLangOptions}
-            ariaLabel={t('general.sttLang.label')}
-            className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-              sttLang === null ? 'text-text-tertiary' : 'text-text-primary'
-            }`}
-            onChange={(value) => {
-              updateSetting(
-                SettingKey.STT_LANG,
-                value === FOLLOW_UI_VALUE ? null : value,
-              );
             }}
           />
         </SettingRow>

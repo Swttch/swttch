@@ -302,15 +302,22 @@ describe('settings', () => {
       expect(result.error).toContain('uiLanguage must be a string or null');
     });
 
-    it('should accept string or null sttLang', async () => {
-      expect((await saveSettingToFile('sttLang', 'ko')).status).toBe('ok');
-      expect((await saveSettingToFile('sttLang', null)).status).toBe('ok');
+    it('should accept a voice object', async () => {
+      expect((await saveSettingToFile('voice', {})).status).toBe('ok');
+      expect((await saveSettingToFile('voice', { speechLanguage: 'ko' })).status).toBe('ok');
+      expect((await saveSettingToFile('voice', { speechLanguage: null })).status).toBe('ok');
     });
 
-    it('should reject non-string non-null sttLang', async () => {
-      const result = await saveSettingToFile('sttLang', 5);
+    it('should reject a non-object voice', async () => {
+      const result = await saveSettingToFile('voice', 'ko');
       expect(result.status).toBe('error');
-      expect(result.error).toContain('sttLang must be a string or null');
+      expect(result.error).toContain('voice must be an object');
+    });
+
+    it('should reject a non-string voice.speechLanguage', async () => {
+      const result = await saveSettingToFile('voice', { speechLanguage: 5 });
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('voice.speechLanguage must be a string or null');
     });
 
     it('should accept string or null language (Claude response language)', async () => {
@@ -541,7 +548,7 @@ describe('settings', () => {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
-        sttLang: null,
+        voice: {},
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
@@ -664,7 +671,7 @@ export default {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
-        sttLang: null,
+        voice: {},
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,

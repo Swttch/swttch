@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { MessageType } from '@/shared';
+import { VOICE_SILENCE_TIMEOUT_MAX } from '@/types/settings';
 
 // ---------------------------------------------------------------------------
 // Bridge mock — START_DICTATION acks ok so the hook proceeds to open the
@@ -22,8 +23,15 @@ vi.mock('@/contexts/BridgeContext', () => ({
   }),
 }));
 
+/** Seconds of silence before auto-stop; undefined uses the shipped default. */
+let silenceTimeout: number | undefined;
+
 vi.mock('@/contexts/SettingsContext', () => ({
-  useSettings: () => ({ settings: { sttLang: null } }),
+  useSettings: () => ({ settings: { voice: { silenceTimeout } } }),
+}));
+
+vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  useClaudeSettings: () => ({ settings: {} }),
 }));
 
 // ---------------------------------------------------------------------------
@@ -47,8 +55,12 @@ vi.mock('../microphone', async () => {
 // Imported AFTER vi.mock so the mocks are wired first.
 import { useDictation, DictationState } from '../useDictation';
 
-/** The hook's own constant; duplicated here so a change to it fails this test. */
-const SILENCE_TIMEOUT_MS = 30_000;
+/**
+ * What the shipped default actually resolves to. The default is 30s but the
+ * service's own limit is 15s, so the effective wait is the clamped value —
+ * asserting 30s here would pass only if the clamp were missing.
+ */
+const EFFECTIVE_TIMEOUT_MS = VOICE_SILENCE_TIMEOUT_MAX * 1000;
 
 function renderDictation() {
   let value = '';
@@ -79,6 +91,7 @@ describe('useDictation — silence auto-stop', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     emitLevel = null;
+    silenceTimeout = undefined;
     sendMock.mockClear();
     sendRawMock.mockClear();
     micStop.mockClear();
@@ -88,12 +101,12 @@ describe('useDictation — silence auto-stop', () => {
     vi.useRealTimers();
   });
 
-  it('stops recording after 30 seconds of silence', async () => {
+  it('stops recording once the silence timeout elapses', async () => {
     const { hook } = renderDictation();
     await startListening(hook);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SILENCE_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
     });
 
     expect(micStop).toHaveBeenCalled();
@@ -105,14 +118,16 @@ describe('useDictation — silence auto-stop', () => {
     const { hook } = renderDictation();
     await startListening(hook);
 
-    // Speak briefly every 20s. Each audible block should push the deadline
-    // back, so well past 30s of wall clock the recording is still live.
+    // Speak just before each deadline. Every audible block pushes it back, so
+    // total time runs well past the timeout while recording stays live.
+    const justUnder = EFFECTIVE_TIMEOUT_MS - 1_000;
     for (let i = 0; i < 3; i++) {
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(20_000);
+        await vi.advanceTimersByTimeAsync(justUnder);
         emitLevel?.(0.08); // normal speech RMS
       });
     }
+    expect(justUnder * 3).toBeGreaterThan(EFFECTIVE_TIMEOUT_MS);
 
     expect(micStop).not.toHaveBeenCalled();
     expect(hook.result.current.state).toBe(DictationState.Listening);
@@ -122,10 +137,11 @@ describe('useDictation — silence auto-stop', () => {
     const { hook } = renderDictation();
     await startListening(hook);
 
-    // A quiet room still emits levels; they must not hold the session open.
+    // A quiet room still emits levels; they must not hold the session open, so
+    // the deadline arrives despite the steady stream of callbacks.
     await act(async () => {
       for (let i = 0; i < 3; i++) {
-        await vi.advanceTimersByTimeAsync(10_000);
+        await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS / 2);
         emitLevel?.(0.001);
       }
     });
@@ -141,11 +157,54 @@ describe('useDictation — silence auto-stop', () => {
     await startListening(hook);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SILENCE_TIMEOUT_MS);
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
     });
 
     expect(micStop).toHaveBeenCalled();
     expect(hook.result.current.state).toBe(DictationState.Idle);
+  });
+
+  it('honours a shorter timeout from settings', async () => {
+    silenceTimeout = 5;
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000);
+    });
+    expect(micStop).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_100);
+    });
+    expect(micStop).toHaveBeenCalled();
+  });
+
+  it('never waits longer than the service allows', async () => {
+    // The setting accepts any number, but the service stops the recording on
+    // its own, so a longer wait here would just be a deadline that never fires.
+    silenceTimeout = 600;
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS + 100);
+    });
+
+    expect(micStop).toHaveBeenCalled();
+  });
+
+  it('never stops on its own when the timeout is 0', async () => {
+    silenceTimeout = 0;
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS * 10);
+    });
+
+    expect(micStop).not.toHaveBeenCalled();
+    expect(hook.result.current.state).toBe(DictationState.Listening);
   });
 
   it('does not fire after the user stopped recording themselves', async () => {
@@ -158,7 +217,7 @@ describe('useDictation — silence auto-stop', () => {
     sendMock.mockClear();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SILENCE_TIMEOUT_MS * 2);
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS * 2);
     });
 
     // A leftover timer would send a second, spurious STOP_DICTATION.

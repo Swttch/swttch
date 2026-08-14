@@ -58,7 +58,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
   // Claude Code's official settings schema). See settings-migration.ts.
   uiLanguage: null,
-  sttLang: null,
+  voice: {},
   useCtrlEnterToSend: false,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
@@ -100,7 +100,7 @@ const COMMENT_MAP: Record<string, string> = {
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
-  sttLang: '음성 입력으로 말하는 언어의 BCP-47 코드(예: "ko"). null이면 인터페이스 언어를 따름',
+  voice: '음성 입력 설정 중 공식 스키마에 없는 것들. { speechLanguage } — 말하는 언어의 BCP-47 코드(예: "ko"). 공식 language가 비었을 때만 쓰인다(VS Code 확장이 accessibility.voice.speechLanguage를 두는 것과 같은 자리). enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다',
   useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
@@ -322,11 +322,20 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'uiLanguage must be a string or null';
       }
       break;
-    case 'sttLang':
-      if (value !== null && typeof value !== 'string') {
-        return 'sttLang must be a string or null';
+    case 'voice': {
+      if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return 'voice must be an object';
+      }
+      const voice = value as Record<string, unknown>;
+      if (
+        'speechLanguage' in voice &&
+        voice.speechLanguage !== null &&
+        typeof voice.speechLanguage !== 'string'
+      ) {
+        return 'voice.speechLanguage must be a string or null';
       }
       break;
+    }
     // Legacy: kept so the migration can clear it (null) after moving the value
     // to the native file.
     case 'language':
