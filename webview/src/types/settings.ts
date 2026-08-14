@@ -235,6 +235,15 @@ export const VOICE_SILENCE_TIMEOUT_MAX = 15;
 export const VOICE_TOTAL_DURATION_MAX = 120;
 
 /**
+ * Default keystroke for starting and stopping voice input.
+ *
+ * Alt (Option) rather than Cmd/Ctrl because those are crowded: Cmd+D bookmarks
+ * the page in every browser, and Ctrl+D is end-of-input in a terminal and
+ * delete-line in several editors. Alt+D collides with far less.
+ */
+export const VOICE_SHORTCUT_DEFAULT = 'Alt+D';
+
+/**
  * Bring a typed silence timeout into the 1..15 second range.
  *
  * There is no "never stop" option: the service itself stops listening after 15

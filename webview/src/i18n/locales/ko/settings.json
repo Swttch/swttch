@@ -52,6 +52,12 @@
         "label": "대기 시간",
         "description": "말이 없을 때 녹음이 기다리는 시간(초)입니다. 최대 {{max}}초까지 지정할 수 있습니다."
       },
+      "shortcut": {
+        "label": "단축키",
+        "description": "녹음을 켜고 끄는 키입니다. 눌러서 새 조합을 지정하세요.",
+        "recording": "키를 누르세요…",
+        "needsModifier": "Ctrl·Alt·Cmd 중 하나를 함께 눌러야 합니다."
+      },
       "kit": {
         "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
         "install": "설치",

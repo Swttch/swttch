@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { useTranslation } from '@/i18n';
-import { isMac } from '@/config/environment';
 import { DictationState } from './hooks/useDictation';
 import { AudioLevelBars } from './AudioLevelBars';
 
@@ -13,6 +12,8 @@ interface Props {
   level: number;
   /** Set when the OS or browser refused the microphone. */
   micDenied?: boolean;
+  /** The keystroke that toggles recording, already formatted for display. */
+  shortcut: string;
   disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
@@ -30,7 +31,7 @@ interface Props {
  * pill, so the microphone's state and what it is hearing read as one control.
  */
 export function MicButton(props: Props) {
-  const { state, level, micDenied, disabled, onStart, onStop } = props;
+  const { state, level, micDenied, disabled, shortcut, onStart, onStop } = props;
   const { t } = useTranslation('chat');
 
   const pressedAt = useRef(0);
@@ -67,7 +68,6 @@ export function MicButton(props: Props) {
     if (heldFor >= HOLD_THRESHOLD_MS) onStop();
   }
 
-  const shortcut = isMac() ? '⌘D' : 'Ctrl+D';
   // Failures are reported by the input banner, not here — a tooltip only shows
   // on hover, and something the user must act on should not need to be
   // discovered. The tooltip stays for what it is good at: naming the control.

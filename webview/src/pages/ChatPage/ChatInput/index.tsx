@@ -31,6 +31,8 @@ import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingI
 import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
+import { matchesShortcut, displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -125,6 +127,9 @@ export function ChatInput() {
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
+  // The user can rebind this; the default lives with the other voice defaults.
+  const voiceShortcut =
+    (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -476,9 +481,10 @@ export function ChatInput() {
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
 
-    // Cmd/Ctrl+D — 받아쓰기 토글. 마이크 버튼을 누르지 않고도 말하기 시작·종료.
-    // 브라우저 기본 동작(북마크 추가)을 막아야 하므로 preventDefault 필수.
-    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'd') {
+    // 받아쓰기 토글 — 마이크 버튼을 누르지 않고도 말하기 시작·종료.
+    // 사용자가 바꿀 수 있는 단축키이며, 기본값은 Alt+D.
+    // 브라우저·에디터 기본 동작을 막아야 하므로 preventDefault 필수.
+    if (matchesShortcut(e, voiceShortcut)) {
       e.preventDefault();
       dictation.toggle();
       return;
@@ -593,7 +599,7 @@ export function ChatInput() {
       e.preventDefault();
       onChange(historyValue);
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, voiceShortcut, dictation, ime, handleRichChange]);
 
   // Wrap the attachment paste handler so that, when the clipboard carries no
   // image, we insert the plain-text payload ourselves. contentEditable would
@@ -774,6 +780,7 @@ export function ChatInput() {
             level={dictation.level}
             micDenied={dictation.error?.micDenied}
             disabled={disabled}
+            shortcut={displayShortcut(voiceShortcut)}
             onStart={() => void dictation.start()}
             onStop={() => void dictation.stop()}
           />

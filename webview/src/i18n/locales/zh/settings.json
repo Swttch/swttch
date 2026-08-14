@@ -52,6 +52,12 @@
         "label": "等待时间",
         "description": "没有说话时录音等待的秒数，最多 {{max}} 秒。"
       },
+      "shortcut": {
+        "label": "快捷键",
+        "description": "开始和停止录音的按键。按下以设置新的组合。",
+        "recording": "请按键…",
+        "needsModifier": "需要同时按住 Ctrl、Alt 或 Cmd。"
+      },
       "kit": {
         "required": "语音输入需要 @swttch/extend-kit。请从右上角安装。",
         "install": "安装",

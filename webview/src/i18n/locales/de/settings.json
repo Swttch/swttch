@@ -52,6 +52,12 @@
         "label": "Wartezeit",
         "description": "Sekunden Stille, bevor die Aufnahme endet – höchstens {{max}}."
       },
+      "shortcut": {
+        "label": "Tastenkürzel",
+        "description": "Die Taste, die die Aufnahme startet und beendet. Drücken, um eine neue Kombination festzulegen.",
+        "recording": "Taste drücken…",
+        "needsModifier": "Zusätzlich Strg, Alt oder Cmd halten."
+      },
       "kit": {
         "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
         "install": "Installieren",

@@ -3,6 +3,7 @@ import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { ExtendKitControl } from './ExtendKitControl';
+import { ShortcutInput } from './ShortcutInput';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import {
@@ -10,6 +11,7 @@ import {
   VOICE_SILENCE_TIMEOUT_DEFAULT,
   VOICE_SILENCE_TIMEOUT_MIN,
   VOICE_SILENCE_TIMEOUT_MAX,
+  VOICE_SHORTCUT_DEFAULT,
   clampVoiceSilenceTimeout,
   type VoiceSettings,
 } from '@/types/settings';
@@ -130,6 +132,19 @@ export function VoiceSection() {
             });
           }}
           className="w-24 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+        />
+      </SettingRow>
+
+      <SettingRow
+        label={t('general.voice.shortcut.label')}
+        description={t('general.voice.shortcut.description')}
+      >
+        <ShortcutInput
+          value={voice.shortcut ?? VOICE_SHORTCUT_DEFAULT}
+          ariaLabel={t('general.voice.shortcut.label')}
+          onChange={(shortcut) => {
+            updateSetting(SettingKey.VOICE, { ...voice, shortcut });
+          }}
         />
       </SettingRow>
     </SettingSection>

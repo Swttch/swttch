@@ -314,6 +314,23 @@ describe('settings', () => {
       expect(result.error).toContain('voice must be an object');
     });
 
+    it('should accept a voice.shortcut with a real modifier', async () => {
+      for (const shortcut of ['Alt+D', 'Ctrl+Shift+K', 'Meta+Enter', 'Ctrl+Alt+Meta+X']) {
+        const result = await saveSettingToFile('voice', { shortcut });
+        expect(result.status, shortcut).toBe('ok');
+      }
+      expect((await saveSettingToFile('voice', { shortcut: null })).status).toBe('ok');
+    });
+
+    it('should reject a voice.shortcut that would swallow typing', async () => {
+      // A bare key, or one with only Shift, is a character the user is trying
+      // to type — binding it makes the composer unusable.
+      for (const shortcut of ['D', 'Shift+D', 'Alt', '', 'Alt+', 5]) {
+        const result = await saveSettingToFile('voice', { shortcut });
+        expect(result.status, String(shortcut)).toBe('error');
+      }
+    });
+
     it('should accept a voice.silenceTimeout in range', async () => {
       // 15 is where the service stops listening on its own.
       for (const seconds of [1, 5, 15]) {

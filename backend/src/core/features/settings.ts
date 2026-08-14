@@ -334,6 +334,18 @@ function validateSetting(key: string, value: unknown): string | null {
       ) {
         return 'voice.speechLanguage must be a string or null';
       }
+      if ('shortcut' in voice && voice.shortcut !== null) {
+        // Stored as "Alt+D" / "Ctrl+Shift+K": modifiers then the key. At least
+        // one of Ctrl/Alt/Meta is required — a bare letter would swallow that
+        // character in the composer.
+        const shortcut = voice.shortcut;
+        const valid =
+          typeof shortcut === 'string' &&
+          /^(?:(?:Ctrl|Alt|Shift|Meta)\+)*(?:Ctrl|Alt|Meta)\+(?:(?:Ctrl|Alt|Shift|Meta)\+)*[^+]+$/.test(shortcut);
+        if (!valid) {
+          return 'voice.shortcut must combine Ctrl, Alt or Meta with a key (e.g. "Alt+D")';
+        }
+      }
       if ('silenceTimeout' in voice) {
         const seconds = voice.silenceTimeout;
         // 15 is where the service stops listening on its own, so a longer wait

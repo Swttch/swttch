@@ -52,6 +52,12 @@
         "label": "Tempo de espera",
         "description": "Segundos de silêncio antes de a gravação parar, até {{max}}."
       },
+      "shortcut": {
+        "label": "Atalho",
+        "description": "A tecla que inicia e para a gravação. Pressione para definir outra combinação.",
+        "recording": "Pressione uma tecla…",
+        "needsModifier": "Segure também Ctrl, Alt ou Cmd."
+      },
       "kit": {
         "required": "A entrada de voz precisa do @swttch/extend-kit. Instale no canto superior direito.",
         "install": "Instalar",

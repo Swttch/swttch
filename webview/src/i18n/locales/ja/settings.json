@@ -52,6 +52,12 @@
         "label": "待機時間",
         "description": "音声がないときに録音が待つ秒数です。最大{{max}}秒まで指定できます。"
       },
+      "shortcut": {
+        "label": "ショートカット",
+        "description": "録音を開始・停止するキーです。押して新しい組み合わせを設定します。",
+        "recording": "キーを押してください…",
+        "needsModifier": "Ctrl・Alt・Cmd のいずれかと一緒に押してください。"
+      },
       "kit": {
         "required": "音声入力には @swttch/extend-kit が必要です。右上からインストールしてください。",
         "install": "インストール",

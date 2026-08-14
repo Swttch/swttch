@@ -42,8 +42,17 @@ The practical consequences of that choice:
 
 ## Using it
 
-A microphone button sits at the top right of the input box. `⌘D` (`Ctrl+D` on Windows and Linux)
-toggles it too.
+A microphone button sits at the top right of the input box. From the keyboard it is `⌥D` (`Alt+D` on
+Windows and Linux).
+
+Alt rather than Cmd or Ctrl because those are already spoken for: `⌘D` bookmarks the page in every
+browser, and `Ctrl+D` is end-of-input in a terminal.
+
+The key is yours to change, under **Settings → General → Voice input → Shortcut**. Press the field,
+then press the combination you want; Escape leaves it as it was.
+
+One of Ctrl, Alt or Cmd has to be part of it. A shortcut that is just a letter would take that letter
+away from the input box.
 
 **Tap it** and recording starts and stays on; tap again to finish. Good for dictating something
 long.

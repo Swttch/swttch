@@ -52,6 +52,12 @@
         "label": "Wait time",
         "description": "Seconds of silence before recording stops, up to {{max}}."
       },
+      "shortcut": {
+        "label": "Shortcut",
+        "description": "The key that starts and stops recording. Press it to set a new combination.",
+        "recording": "Press a key…",
+        "needsModifier": "Hold Ctrl, Alt or Cmd as well."
+      },
       "kit": {
         "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
         "install": "Install",
