@@ -67,7 +67,9 @@ text arrives, and the bars are the difference.
 
 ## When it cannot start
 
-Three different failures, three different messages, because they need three different fixes:
+When something fails, a banner appears just above the input — not a tooltip, because an instruction you have to act on should not need to be hovered over to be found.
+
+Three failures, three messages, because they need three different fixes. The missing kit is the one we can fix for you, so that banner carries an **Install** button; pressing it installs the kit and clears the banner.
 
 | What you see | What happened |
 | --- | --- |
