@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import i18n from '@/i18n/config';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import {
@@ -134,8 +135,11 @@ export function useDictation(getTarget: () => DictationTarget) {
   }, [releaseMicrophone]);
 
   useEffect(() => {
-    const offTranscript = subscribe(MessageType.DICTATION_TRANSCRIPT, (payload) => {
-      const { text, isFinal } = (payload ?? {}) as { text?: string; isFinal?: boolean };
+    const offTranscript = subscribe(MessageType.DICTATION_TRANSCRIPT, (message) => {
+      // subscribe hands over the whole envelope, not the payload — reading
+      // `text` off the envelope silently yielded undefined and dropped every
+      // transcript.
+      const { text, isFinal } = (message.payload ?? {}) as { text?: string; isFinal?: boolean };
       const anchor = anchorRef.current;
       if (!text || !anchor) return;
 
@@ -162,8 +166,11 @@ export function useDictation(getTarget: () => DictationTarget) {
       }
     });
 
-    const offError = subscribe(MessageType.DICTATION_ERROR, (payload) => {
-      const { message, fatal } = (payload ?? {}) as { message?: string; fatal?: boolean };
+    const offError = subscribe(MessageType.DICTATION_ERROR, (envelope) => {
+      const { message, fatal } = (envelope.payload ?? {}) as {
+        message?: string;
+        fatal?: boolean;
+      };
       setError({ message: message ?? 'Dictation failed', fatal: fatal ?? false });
       // A failed stream produces no more text, so stop holding the microphone —
       // a lit recording indicator after an error reads as still listening.
@@ -188,7 +195,13 @@ export function useDictation(getTarget: () => DictationTarget) {
     anchorRef.current = anchorAt(target.value, target.caret);
 
     try {
-      const ack = (await send(MessageType.START_DICTATION, {})) as StartAck;
+      // Without a language the service assumes English and transcribes other
+      // languages phonetically through English — "안녕하세요" came back as
+      // "ah ñomaseu". The interface language is the closest signal we already
+      // have to the language the user speaks, and it is already BCP-47.
+      const ack = (await send(MessageType.START_DICTATION, {
+        language: i18n.language,
+      })) as StartAck;
       if (ack?.status !== 'ok') {
         setError({
           message: ack?.error ?? 'Could not start dictation',
