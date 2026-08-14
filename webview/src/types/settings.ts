@@ -213,17 +213,24 @@ export interface OpenFileWithCustom {
 }
 
 /**
- * Seconds of silence after which recording stops itself. 0 disables the
- * auto-stop entirely, leaving the microphone open until the user ends it.
+ * How long recording waits through silence before stopping itself, in seconds.
+ * 0 disables the auto-stop, leaving the microphone open until the user ends it.
+ *
+ * 15 is both the default and the ceiling because the service stops listening
+ * after that much silence anyway — setting a longer wait buys nothing, since
+ * the recording is already over by the time it would elapse.
+ *
+ * This is NOT the length of a recording. A recording may run up to
+ * {@link VOICE_TOTAL_DURATION_MAX}; this only bounds the quiet at the end.
  */
-export const VOICE_SILENCE_TIMEOUT_DEFAULT = 30;
-/**
- * Upper bounds taken from Claude Code's documented dictation behaviour, which
- * stops on 15 seconds of silence or 2 minutes in total. Ours may be shorter but
- * not longer: a setting that outlives what the service itself allows would
- * promise a recording length we cannot actually deliver.
- */
+export const VOICE_SILENCE_TIMEOUT_DEFAULT = 15;
 export const VOICE_SILENCE_TIMEOUT_MAX = 15;
+
+/**
+ * The longest a single recording runs, in seconds, per Claude Code's
+ * documented dictation behaviour. Speaking continuously for two minutes is
+ * fine; it is only the silence that is capped above.
+ */
 export const VOICE_TOTAL_DURATION_MAX = 120;
 
 /**

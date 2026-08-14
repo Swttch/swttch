@@ -41,6 +41,53 @@ function primarySubtag(code: string): string {
   return code.split('-')[0].toLowerCase();
 }
 
+/** One selectable language: the code we send, and its name in the reader's language. */
+export interface DictationLanguageOption {
+  code: string;
+  label: string;
+  /** False for languages the service transcribes as English regardless. */
+  supported: boolean;
+}
+
+/**
+ * Every language the platform can name, labelled in `displayLocale`.
+ *
+ * Generated rather than hand-listed: the set of languages is not ours to
+ * curate, and a fixed list would leave gaps that are indefensible for what is,
+ * on our side, just a parameter we pass along. Intl also gives each name in the
+ * reader's own language for free, which a hand-written list would owe twelve
+ * translations for.
+ *
+ * The documented-supported ones sort first so the languages that actually
+ * transcribe are not buried among the ones that fall back to English.
+ */
+export function listDictationLanguages(displayLocale: string): DictationLanguageOption[] {
+  const names = new Intl.DisplayNames([displayLocale], { type: 'language', fallback: 'none' });
+  const options: DictationLanguageOption[] = [];
+
+  // ISO 639-1 is two letters, so the space is small enough to walk: anything
+  // Intl can put a name to is a real language, and anything it cannot is not
+  // worth offering since we could only label it with its own code.
+  for (let a = 97; a <= 122; a++) {
+    for (let b = 97; b <= 122; b++) {
+      const code = String.fromCharCode(a) + String.fromCharCode(b);
+      let label: string | undefined;
+      try {
+        label = names.of(code);
+      } catch {
+        continue;
+      }
+      if (!label || label === code) continue;
+      options.push({ code, label, supported: SUPPORTED.has(code) });
+    }
+  }
+
+  return options.sort((x, y) => {
+    if (x.supported !== y.supported) return x.supported ? -1 : 1;
+    return x.label.localeCompare(y.label, displayLocale);
+  });
+}
+
 /**
  * Turn whatever the official `language` key holds into a BCP-47 code.
  *

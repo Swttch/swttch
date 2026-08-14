@@ -177,6 +177,8 @@ export enum MessageType {
   DICTATION_ERROR = 'DICTATION_ERROR',
   /** Whether this machine can dictate at all (i.e. Claude Code is logged in). inbound webview→backend */
   GET_DICTATION_AVAILABILITY = 'GET_DICTATION_AVAILABILITY',
+  /** Installed and latest @swttch/extend-kit versions, for the voice settings section. inbound webview→backend */
+  GET_EXTEND_KIT_INFO = 'GET_EXTEND_KIT_INFO',
   /** Read usage/quota information for all accounts. */
   GET_ALL_USAGE = 'GET_ALL_USAGE',
   /** Read the plugin/backend version info. */

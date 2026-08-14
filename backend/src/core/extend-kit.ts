@@ -1,8 +1,11 @@
 import { createRequire } from 'node:module';
 import { sep } from 'node:path';
-import { realpath } from 'node:fs/promises';
+import { realpath, readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
+
+/** The npm package this module loads. Also the name shown when it is missing. */
+export const EXTEND_KIT_PACKAGE = '@swttch/extend-kit';
 
 /**
  * Loads @swttch/extend-kit from the user's global npm install at runtime.
@@ -48,7 +51,7 @@ interface ExtendKitStt {
 /** Thrown when the kit is not installed, so callers can prompt for install. */
 export class ExtendKitMissingError extends Error {
   constructor() {
-    super('@swttch/extend-kit is not installed');
+    super(`${EXTEND_KIT_PACKAGE} is not installed`);
     this.name = 'ExtendKitMissingError';
   }
 }
@@ -135,7 +138,7 @@ export async function loadSpeechToText(): Promise<ExtendKitStt> {
       // createRequire gives us node's own resolution rooted at that folder, so
       // subpath exports and the package's own dependencies (ws) resolve the way
       // they would for any consumer.
-      const entry = createRequire(`${root}${sep}`).resolve('@swttch/extend-kit/stt');
+      const entry = createRequire(`${root}${sep}`).resolve(`${EXTEND_KIT_PACKAGE}/stt`);
       const mod = (await import(pathToFileURL(entry).href)) as ExtendKitStt;
       if (typeof mod.openSpeechToTextStream === 'function') {
         cachedStt = mod;
@@ -147,6 +150,30 @@ export async function loadSpeechToText(): Promise<ExtendKitStt> {
   }
 
   throw new ExtendKitMissingError();
+}
+
+/**
+ * The version installed on this machine, or null when the kit is not installed.
+ *
+ * Read from the package's own package.json through the same root resolution the
+ * loader uses, rather than by running `ccb --version`: a version manager can put
+ * the binary somewhere npm does not report, and this way both answers come from
+ * the same place — so the version shown can never describe a different install
+ * than the one dictation actually loads.
+ */
+export async function getExtendKitVersion(): Promise<string | null> {
+  for (const root of await candidateRoots()) {
+    try {
+      const manifest = createRequire(`${root}${sep}`).resolve(
+        `${EXTEND_KIT_PACKAGE}/package.json`,
+      );
+      const { version } = JSON.parse(await readFile(manifest, 'utf8')) as { version?: string };
+      if (typeof version === 'string' && version) return version;
+    } catch {
+      // Not under this root, or an unreadable manifest — try the next one.
+    }
+  }
+  return null;
 }
 
 /** Forget the cached resolution so a fresh install is picked up without a restart. */

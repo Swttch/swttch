@@ -3,6 +3,7 @@ import {
   resolveDictationLanguage,
   languageSettingToCode,
   isDictationSupported,
+  listDictationLanguages,
   DICTATION_SUPPORTED_CODES,
 } from '../dictationLanguage';
 
@@ -97,6 +98,48 @@ describe('resolveDictationLanguage', () => {
     expect(
       resolveDictationLanguage({ claudeLanguage: null, speechLanguage: null, uiLocale: null }),
     ).toBeNull();
+  });
+});
+
+describe('listDictationLanguages', () => {
+  it('offers far more than the interface languages', () => {
+    // The interface language is limited by the twelve locales we ship
+    // translations for; this one is only a parameter, so being limited to the
+    // same twelve would be a gap with no reason behind it.
+    const options = listDictationLanguages('en');
+    expect(options.length).toBeGreaterThan(100);
+  });
+
+  it('includes every documented-supported language', () => {
+    const codes = new Set(listDictationLanguages('en').map((o) => o.code));
+    for (const code of DICTATION_SUPPORTED_CODES) {
+      expect(codes.has(code)).toBe(true);
+    }
+  });
+
+  it('puts the supported languages first', () => {
+    // Otherwise the ones that actually transcribe are scattered among ~170
+    // that quietly fall back to English.
+    const options = listDictationLanguages('en');
+    const firstUnsupported = options.findIndex((o) => !o.supported);
+    const lastSupported = options.map((o) => o.supported).lastIndexOf(true);
+    expect(lastSupported).toBeLessThan(firstUnsupported);
+    expect(options.filter((o) => o.supported)).toHaveLength(DICTATION_SUPPORTED_CODES.length);
+  });
+
+  it('labels languages in the reader’s own language', () => {
+    const inKorean = listDictationLanguages('ko').find((o) => o.code === 'ja');
+    const inEnglish = listDictationLanguages('en').find((o) => o.code === 'ja');
+    expect(inKorean?.label).toBe('일본어');
+    expect(inEnglish?.label).toBe('Japanese');
+  });
+
+  it('never labels an option with a bare code', () => {
+    // A row reading "ab" tells the user nothing; those are dropped instead.
+    for (const option of listDictationLanguages('en')) {
+      expect(option.label).not.toBe(option.code);
+      expect(option.label.trim()).not.toBe('');
+    }
   });
 });
 

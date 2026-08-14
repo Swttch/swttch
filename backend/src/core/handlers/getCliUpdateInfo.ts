@@ -27,8 +27,10 @@ import { MessageType, PackageManager, UpdateMode, type CliUpdateInfo } from '../
  * invocation on one non-tokenizing path: if these args ever gain a variable
  * value, no space/metachar can split it. macOS/Linux run npm directly.
  */
-async function fetchDistTags(): Promise<{ stable: string | null; latest: string | null }> {
-  const args = ['view', CLAUDE_NPM_PACKAGE, 'dist-tags', '--json'];
+export async function fetchDistTags(
+  packageName: string = CLAUDE_NPM_PACKAGE,
+): Promise<{ stable: string | null; latest: string | null }> {
+  const args = ['view', packageName, 'dist-tags', '--json'];
   if (process.platform === 'win32') {
     const { err, stdout } = await execViaCmdArgv('npm', args, {
       env: augmentedEnv(),

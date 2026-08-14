@@ -59,6 +59,7 @@ import {
   sendDictationAudioHandler,
   stopDictationHandler,
   getDictationAvailabilityHandler,
+  getExtendKitInfoHandler,
 } from './dictation';
 import { getCcbInstallHintHandler } from './getCcbInstallHint';
 import { getAccountHandler } from './getAccount';
@@ -305,6 +306,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_DICTATION_AVAILABILITY:
       await getDictationAvailabilityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_EXTEND_KIT_INFO:
+      await getExtendKitInfoHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_ACCOUNT:
       await getAccountHandler(connectionId, message, connections, bridge);

@@ -2,7 +2,15 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
-import { loadSpeechToText, ExtendKitMissingError, type SpeechToTextStream } from '../extend-kit';
+import {
+  loadSpeechToText,
+  getExtendKitVersion,
+  ExtendKitMissingError,
+  EXTEND_KIT_PACKAGE,
+  type SpeechToTextStream,
+} from '../extend-kit';
+import { fetchDistTags } from './getCliUpdateInfo';
+import { isNewerVersion } from '../cli-update';
 
 /**
  * Dictation — the backend half of voice input.
@@ -165,6 +173,37 @@ export async function getDictationAvailabilityHandler(
       reason: 'kit_missing',
     });
   }
+}
+
+/**
+ * GET_EXTEND_KIT_INFO — what is installed, and what npm has.
+ *
+ * Feeds the version shown beside the voice settings and the update button next
+ * to it, mirroring how the CLI's own version and update control work.
+ *
+ * `latest` is null when the registry cannot be reached, which is not an error:
+ * an offline machine should still show the installed version rather than an
+ * empty section, so the caller simply omits the update affordance.
+ */
+export async function getExtendKitInfoHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const [installed, tags] = await Promise.all([
+    getExtendKitVersion(),
+    fetchDistTags(EXTEND_KIT_PACKAGE),
+  ]);
+
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    status: 'ok',
+    packageName: EXTEND_KIT_PACKAGE,
+    installed,
+    latest: tags.latest,
+    updatable: Boolean(installed && tags.latest && isNewerVersion(tags.latest, installed)),
+  });
 }
 
 /** Release a connection's stream when its socket goes away. */
