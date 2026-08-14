@@ -128,9 +128,19 @@ Three failures, three messages, because they need three different fixes. The mis
 
 | What you see | What happened |
 | --- | --- |
-| Microphone access is denied in system settings | The OS or the browser is blocking the microphone |
+| Microphone blocked | Something is blocking the microphone (where to unblock it is below) |
 | No microphone was found | No input device is connected |
 | Voice input needs @swttch/extend-kit | The kit is not installed on this machine |
+
+**Where a blocked microphone is unblocked depends on where you are using it**, so the message says
+which one applies.
+
+In a browser it is the **lock icon in the address bar**, then a reload — not system settings. A
+browser remembers a site it was refused for and will not show the permission prompt again, and there
+is no way for a site to ask for it a second time. That is the web platform's decision, not ours.
+
+Inside the IDE the plugin answers the microphone request itself, so nothing is refused at that step.
+A block there came from the OS, and system settings is where the IDE gets microphone access back.
 
 If Claude Code is not logged in on this machine, dictation is unavailable for the same reason the
 usage panel is — there is no account to authenticate as.

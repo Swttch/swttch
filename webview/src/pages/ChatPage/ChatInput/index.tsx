@@ -37,7 +37,7 @@ import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
-import { isMobile } from '@/config/environment';
+import { isMobile, isBrowser } from '@/config/environment';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
@@ -668,7 +668,14 @@ export function ChatInput() {
             dictation.error.kitMissing
               ? t('chatInput.dictation.kitMissing')
               : dictation.error.message === 'micDenied'
-                ? t('chatInput.dictation.micDenied')
+                ? // Where the block lives differs by environment, and pointing at
+                  // the wrong place leaves the user hunting. In a browser the
+                  // refusal is remembered per site and only the address-bar
+                  // control clears it — no API can re-prompt. Inside the IDE we
+                  // grant it ourselves, so a refusal there came from the OS.
+                  isBrowser()
+                  ? t('chatInput.dictation.micDeniedBrowser')
+                  : t('chatInput.dictation.micDenied')
                 : dictation.error.message === 'noMic'
                   ? t('chatInput.dictation.noMic')
                   : t('chatInput.dictation.error', { message: dictation.error.message })
