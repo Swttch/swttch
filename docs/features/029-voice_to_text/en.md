@@ -42,21 +42,28 @@ The practical consequences of that choice:
 
 ## Using it
 
-A microphone button sits in the composer, next to the attach and `/` buttons.
+A microphone button sits at the top right of the input box. `⌘D` (`Ctrl+D` on Windows and Linux)
+toggles it too.
 
-**Hold the button and speak.** Release when you are done. That is the default, and it suits a
-sentence or two — holding makes the end of the recording unambiguous, with no mode to remember.
+**Tap it** and recording starts and stays on; tap again to finish. Good for dictating something
+long.
 
-For dictating something longer, **Settings → General → Voice input** switches to *Tap to start and
-stop*: click once to begin, click again to end.
+**Hold it** and recording lasts only as long as you hold; releasing ends it. Good for a sentence
+or two.
 
-While you speak, the text appears greyed out under the input box. That preview is the recognizer
-still making up its mind — it rewrites itself constantly. Only finished phrases move up into the
-composer, so the text you are about to send never shifts under you. Anything already typed stays;
-dictation appends rather than replaces.
+You do not have to choose between them. The button tells them apart by how long it was held.
 
-The button ring pulses with your voice. That is deliberate: a muted microphone or the wrong input
-device looks exactly like a working one until no text arrives, and the ring is the difference.
+While you speak, the text appears **inside the input box**, italic and dimmed — that is the
+recognizer still making up its mind, and it rewrites itself constantly. When a phrase settles it
+turns into ordinary text in place.
+
+Dictation **splices at the caret.** Put the caret mid-sentence and speak, and the words go there;
+nothing already typed is lost. If you start typing while it is writing, dictation stops rather
+than overwriting what you just typed.
+
+While recording, three bars appear beside the microphone and rise with your voice. That is
+deliberate: a muted microphone or the wrong input device looks exactly like a working one until no
+text arrives, and the bars are the difference.
 
 ## When it cannot start
 

@@ -97,7 +97,8 @@
       "micDenied": "دسترسی به میکروفون رد شد — آن را در تنظیمات سیستم فعال کنید",
       "noMic": "میکروفونی یافت نشد",
       "kitMissing": "ورودی صوتی به @swttch/extend-kit نیاز دارد",
-      "install": "نصب"
+      "install": "نصب",
+      "installing": "در حال نصب…"
     }
   },
   "sessionHeader": {

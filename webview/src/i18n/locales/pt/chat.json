@@ -97,7 +97,8 @@
       "micDenied": "Acesso ao microfone negado — ative nas definições do sistema",
       "noMic": "Nenhum microfone encontrado",
       "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",
-      "install": "Instalar"
+      "install": "Instalar",
+      "installing": "A instalar…"
     }
   },
   "sessionHeader": {

@@ -97,7 +97,8 @@
       "micDenied": "マイクへのアクセスが拒否されています — システム設定で許可してください",
       "noMic": "マイクが見つかりません",
       "kitMissing": "音声入力には @swttch/extend-kit が必要です",
-      "install": "インストール"
+      "install": "インストール",
+      "installing": "インストール中…"
     }
   },
   "sessionHeader": {

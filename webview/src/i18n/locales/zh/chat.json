@@ -97,7 +97,8 @@
       "micDenied": "麦克风访问被拒绝 — 请在系统设置中启用",
       "noMic": "未找到麦克风",
       "kitMissing": "语音输入需要 @swttch/extend-kit",
-      "install": "安装"
+      "install": "安装",
+      "installing": "正在安装…"
     }
   },
   "sessionHeader": {

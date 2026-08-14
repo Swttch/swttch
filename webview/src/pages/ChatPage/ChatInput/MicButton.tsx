@@ -13,8 +13,6 @@ interface Props {
   level: number;
   /** Set when the OS or browser refused the microphone. */
   micDenied?: boolean;
-  /** Set when dictation failed; shown in the tooltip. */
-  error?: string | null;
   disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
@@ -32,7 +30,7 @@ interface Props {
  * pill, so the microphone's state and what it is hearing read as one control.
  */
 export function MicButton(props: Props) {
-  const { state, level, micDenied, error, disabled, onStart, onStop } = props;
+  const { state, level, micDenied, disabled, onStart, onStop } = props;
   const { t } = useTranslation('chat');
 
   const pressedAt = useRef(0);
@@ -70,16 +68,23 @@ export function MicButton(props: Props) {
   }
 
   const shortcut = isMac() ? '⌘D' : 'Ctrl+D';
-  const tooltip = error
-    ? t('chatInput.dictation.error', { message: error })
-    : micDenied
-      ? t('chatInput.dictation.micDenied')
-      : isRecording
-        ? t('chatInput.dictation.stop')
-        : t('chatInput.dictation.tapOrHold');
+  // Failures are reported by the input banner, not here — a tooltip only shows
+  // on hover, and something the user must act on should not need to be
+  // discovered. The tooltip stays for what it is good at: naming the control.
+  const tooltip = micDenied
+    ? t('chatInput.dictation.micDenied')
+    : isRecording
+      ? t('chatInput.dictation.stop')
+      : t('chatInput.dictation.tapOrHold');
 
   return (
-    <div className="absolute top-[5px] end-0 z-[2] group/mic">
+    // z-20 must beat the editable layer's z-10. That layer covers the whole box
+    // to catch clicks for the caret, so anything below it is visible but not
+    // clickable — the button rendered fine and did nothing.
+    //
+    // end-2 rather than end-0: the input's own horizontal padding is 12px, so
+    // pinning to the container edge would sit the button on the border.
+    <div className="absolute top-[5px] end-2 z-20 group/mic">
       <button
         type="button"
         disabled={disabled || micDenied}
@@ -117,18 +122,13 @@ export function MicButton(props: Props) {
       </button>
 
       {/* Tooltip. Delayed on hover so it does not flash while the pointer
-          crosses the button on its way somewhere else; an error shows it
-          immediately, because that is the one case the user needs to read. */}
+          crosses the button on its way somewhere else. */}
       <span
         aria-hidden="true"
-        className={`absolute top-full end-0 mt-1 px-2 py-1 rounded-md whitespace-nowrap text-xs pointer-events-none transition-opacity bg-surface-tooltip border shadow-lg ${
-          error
-            ? 'opacity-100 border-state-error-border text-state-error-fg whitespace-normal max-w-[360px]'
-            : 'opacity-0 group-hover/mic:opacity-100 group-hover/mic:delay-[400ms] border-border-default text-text-primary'
-        }`}
+        className="absolute top-full end-0 mt-1 px-2 py-1 rounded-md whitespace-nowrap text-xs pointer-events-none transition-opacity bg-surface-tooltip border border-border-default text-text-primary shadow-lg opacity-0 group-hover/mic:opacity-100 group-hover/mic:delay-[400ms]"
       >
         {tooltip}
-        {!error && !micDenied && !isRecording && (
+        {!micDenied && !isRecording && (
           <span className="ms-1.5 px-1 py-px rounded bg-surface-overlay font-mono text-[0.9em]">
             {shortcut}
           </span>

@@ -59,7 +59,9 @@ interface Props {
  * caret. Keep this list the single source of truth for both layers.
  */
 const LAYOUT_CLASSES = [
-  'w-full px-3 text-base leading-normal',
+  // pe-11 keeps text clear of the mic button, which floats over the box's top
+  // right. Both layers take it so the mirror's glyphs stay under the caret.
+  'w-full ps-3 pe-11 text-base leading-normal',
   'whitespace-pre-wrap break-words',
 ] as const;
 

@@ -1,4 +1,7 @@
 import { createRequire } from 'node:module';
+import { sep } from 'node:path';
+import { realpath } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
 
 /**
@@ -11,9 +14,9 @@ import { Command, ShellKind } from './command';
  * and the user installs it themselves, the same arrangement the usage panel
  * already uses for `ccb`.
  *
- * Resolution mirrors how `ccb` is found: ask npm where its global root is
- * through a login shell, because a GUI-launched backend inherits a minimal
- * PATH that usually does not include the npm global bin.
+ * Everything runs through a login shell, because a GUI-launched backend
+ * inherits a minimal PATH that usually does not include the npm global bin.
+ * See {@link candidateRoots} for why one lookup is not enough.
  */
 
 /** Shape we use from the kit. Kept minimal so the import stays untyped-safe. */
@@ -50,30 +53,73 @@ export class ExtendKitMissingError extends Error {
   }
 }
 
-let cachedRoot: string | null = null;
+let cachedRoots: string[] | null = null;
 let cachedStt: ExtendKitStt | null = null;
 
+/** Last non-empty line of shell output — rc files print noise before it. */
+function lastLine(stdout: string): string | null {
+  return (
+    stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .pop() ?? null
+  );
+}
+
 /**
- * The npm global root (`npm root -g`), resolved through a login shell so the
- * rc-file PATH is in play. Cached: it does not change while we run, and the
- * login shell spawn is slow enough to be worth doing once.
+ * Places the kit might be installed, best candidate first.
+ *
+ * `npm root -g` alone is not enough. Under a version manager (volta, nvm, fnm)
+ * the `npm` a login shell resolves can belong to a different Node than the one
+ * that owns the global folder the package actually landed in — on this machine
+ * npm answered `/opt/homebrew/lib/node_modules` while the package sat under
+ * `~/.volta`. Asking only npm produced a "not installed" error for a package
+ * that was installed.
+ *
+ * So we also follow `ccb`, the binary this same package provides. Resolving the
+ * command the way the usage panel already does, then walking up from the
+ * symlink it points at, lands in the real install regardless of which manager
+ * put it there.
  */
-async function npmGlobalRoot(): Promise<string> {
-  if (cachedRoot) return cachedRoot;
-  const { stdout } = await new Command('npm', ['root', '-g'], {
-    timeout: 15000,
-    shell: ShellKind.LoginInteractive,
-  }).exec();
-  // A login shell may print rc-file noise before the path; the path is the last
-  // non-empty line rather than the whole of stdout.
-  const root = stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .pop();
-  if (!root) throw new ExtendKitMissingError();
-  cachedRoot = root;
-  return root;
+async function candidateRoots(): Promise<string[]> {
+  if (cachedRoots) return cachedRoots;
+
+  const roots: string[] = [];
+
+  // 1. Follow the ccb binary — survives version managers.
+  //
+  // `which` gives the shim, not the file it points at, so we resolve the link
+  // ourselves rather than passing a quoted `node -e` script through the shell:
+  // this project's rule is to avoid shell tokenisation, and a script full of
+  // quotes is exactly what breaks across cmd / PowerShell / bash.
+  try {
+    const ccbPath = await new Command('ccb').which();
+    if (ccbPath) {
+      const real = await realpath(ccbPath);
+      // …/node_modules/@swttch/extend-kit/dist/cli/index.js → …/node_modules
+      const marker = `${sep}node_modules${sep}`;
+      const at = real.lastIndexOf(marker);
+      if (at > 0) roots.push(real.slice(0, at + marker.length - 1));
+    }
+  } catch {
+    // ccb not installed, or the link could not be read — try npm next.
+  }
+
+  // 2. Whatever npm considers global, for installs that did not link a bin.
+  try {
+    const { stdout } = await new Command('npm', ['root', '-g'], {
+      timeout: 15000,
+      shell: ShellKind.LoginInteractive,
+    }).exec();
+    const root = lastLine(stdout);
+    if (root && !roots.includes(root)) roots.push(root);
+  } catch {
+    // Neither path worked; the caller reports it as missing.
+  }
+
+  cachedRoots = roots;
+  return roots;
 }
 
 /**
@@ -84,37 +130,27 @@ async function npmGlobalRoot(): Promise<string> {
 export async function loadSpeechToText(): Promise<ExtendKitStt> {
   if (cachedStt) return cachedStt;
 
-  let root: string;
-  try {
-    root = await npmGlobalRoot();
-  } catch {
-    throw new ExtendKitMissingError();
+  for (const root of await candidateRoots()) {
+    try {
+      // createRequire gives us node's own resolution rooted at that folder, so
+      // subpath exports and the package's own dependencies (ws) resolve the way
+      // they would for any consumer.
+      const entry = createRequire(`${root}${sep}`).resolve('@swttch/extend-kit/stt');
+      const mod = (await import(pathToFileURL(entry).href)) as ExtendKitStt;
+      if (typeof mod.openSpeechToTextStream === 'function') {
+        cachedStt = mod;
+        return mod;
+      }
+    } catch {
+      // Not here; try the next candidate.
+    }
   }
 
-  // createRequire gives us node's own resolution rooted at the global folder,
-  // so subpath exports and the package's own dependencies (ws) resolve the way
-  // they would for any consumer.
-  const requireFromGlobal = createRequire(`${root}/`);
-  let entry: string;
-  try {
-    entry = requireFromGlobal.resolve('@swttch/extend-kit/stt');
-  } catch {
-    throw new ExtendKitMissingError();
-  }
-
-  try {
-    const mod = (await import(`file://${entry}`)) as ExtendKitStt;
-    if (typeof mod.openSpeechToTextStream !== 'function') throw new ExtendKitMissingError();
-    cachedStt = mod;
-    return mod;
-  } catch (err) {
-    if (err instanceof ExtendKitMissingError) throw err;
-    throw new ExtendKitMissingError();
-  }
+  throw new ExtendKitMissingError();
 }
 
 /** Forget the cached resolution so a fresh install is picked up without a restart. */
 export function resetExtendKitCache(): void {
-  cachedRoot = null;
+  cachedRoots = null;
   cachedStt = null;
 }

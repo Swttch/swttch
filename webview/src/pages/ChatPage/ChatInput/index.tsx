@@ -9,6 +9,7 @@ import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { MicButton } from './MicButton';
 import { useDictation } from './hooks/useDictation';
+import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -80,6 +81,21 @@ export function ChatInput() {
       [onChange, textareaRef],
     ),
   );
+  // Installing the kit for dictation is the same `npm i -g @swttch/extend-kit`
+  // the usage panel already runs, so it reuses that mutation rather than adding
+  // a second path that installs the same package.
+  const { install: installKit, installing: installingKit } = useInstallCcb();
+  const handleInstallKit = useCallback(async () => {
+    try {
+      await installKit();
+      // The backend caches where it found (or failed to find) the kit; clear the
+      // error so the next press retries instead of showing a stale failure.
+      dictation.dismissError();
+    } catch {
+      // The mutation surfaces its own failure through the same banner.
+    }
+  }, [installKit, dictation]);
+
   // Read messages lazily via ref so ChatInput does not re-render every streaming token.
   const messagesRef = useRef(chatStream.messages);
   messagesRef.current = chatStream.messages;
@@ -631,6 +647,39 @@ export function ChatInput() {
           onClose={dismissAutoFallback}
         />
       )}
+      {/* 음성 입력 실패 안내. 툴팁이 아니라 인풋배너인 이유는, 사용자가 무언가
+          해야 하는 안내(권한 허용·설치·로그인)를 호버해야만 보이는 자리에 두면
+          안 되기 때문이다. 앞으로 다른 위치의 기능이 실패할 때도 같은 배너를
+          재사용한다. extend-kit 미설치는 우리가 대신 해결해줄 수 있는 유일한
+          경우라 설치 버튼을 함께 띄운다. */}
+      {dictation.error && (
+        <InputBanner
+          message={
+            dictation.error.kitMissing
+              ? t('chatInput.dictation.kitMissing')
+              : dictation.error.message === 'micDenied'
+                ? t('chatInput.dictation.micDenied')
+                : dictation.error.message === 'noMic'
+                  ? t('chatInput.dictation.noMic')
+                  : t('chatInput.dictation.error', { message: dictation.error.message })
+          }
+          actions={
+            dictation.error.kitMissing ? (
+              <button
+                type="button"
+                onClick={() => void handleInstallKit()}
+                disabled={installingKit}
+                className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors disabled:opacity-50"
+              >
+                {installingKit
+                  ? t('chatInput.dictation.installing')
+                  : t('chatInput.dictation.install')}
+              </button>
+            ) : undefined
+          }
+          onClose={dictation.dismissError}
+        />
+      )}
       {/* SDUI 공지(INPUT_BANNER): 서버가 내려주는 공지가 있을 때만 표시 */}
       <AnnouncementInputBannerSlot />
       {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다. */}
@@ -724,7 +773,6 @@ export function ChatInput() {
             state={dictation.state}
             level={dictation.level}
             micDenied={dictation.error?.micDenied}
-            error={dictation.error ? dictation.error.message : null}
             disabled={disabled}
             onStart={() => void dictation.start()}
             onStop={() => void dictation.stop()}

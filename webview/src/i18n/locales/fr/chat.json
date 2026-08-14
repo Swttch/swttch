@@ -97,7 +97,8 @@
       "micDenied": "Accès au microphone refusé — activez-le dans les réglages système",
       "noMic": "Aucun microphone détecté",
       "kitMissing": "La saisie vocale nécessite @swttch/extend-kit",
-      "install": "Installer"
+      "install": "Installer",
+      "installing": "Installation…"
     }
   },
   "sessionHeader": {

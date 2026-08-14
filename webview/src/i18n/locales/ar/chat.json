@@ -97,7 +97,8 @@
       "micDenied": "تم رفض الوصول إلى الميكروفون — فعّله من إعدادات النظام",
       "noMic": "لم يتم العثور على ميكروفون",
       "kitMissing": "يحتاج الإدخال الصوتي إلى @swttch/extend-kit",
-      "install": "تثبيت"
+      "install": "تثبيت",
+      "installing": "جارٍ التثبيت…"
     }
   },
   "sessionHeader": {

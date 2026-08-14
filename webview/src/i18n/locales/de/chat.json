@@ -97,7 +97,8 @@
       "micDenied": "Mikrofonzugriff verweigert — in den Systemeinstellungen aktivieren",
       "noMic": "Kein Mikrofon gefunden",
       "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
-      "install": "Installieren"
+      "install": "Installieren",
+      "installing": "Wird installiert…"
     }
   },
   "sessionHeader": {

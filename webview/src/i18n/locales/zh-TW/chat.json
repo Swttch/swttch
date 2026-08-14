@@ -97,7 +97,8 @@
       "micDenied": "麥克風存取被拒絕 — 請在系統設定中啟用",
       "noMic": "找不到麥克風",
       "kitMissing": "語音輸入需要 @swttch/extend-kit",
-      "install": "安裝"
+      "install": "安裝",
+      "installing": "正在安裝…"
     }
   },
   "sessionHeader": {
