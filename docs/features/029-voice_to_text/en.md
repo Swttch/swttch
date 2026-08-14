@@ -65,6 +65,15 @@ While recording, three bars appear beside the microphone and rise with your voic
 deliberate: a muted microphone or the wrong input device looks exactly like a working one until no
 text arrives, and the bars are the difference.
 
+**After 30 seconds of hearing nothing, recording ends by itself.** What it measures is the silence,
+not the total length, so talking for ten or twenty minutes never gets cut off — each pause simply
+starts the clock over. When it does end, it does not just stop: whatever audio has not been sent yet
+goes out, comes back as text, and lands in the input box before recording closes, so the last thing
+you said is not lost.
+
+This exists for the microphone left on after you walk away, or simply forget. Without it the
+recording indicator stays lit and a connection stays open with nothing to transcribe.
+
 ## When it cannot start
 
 When something fails, a banner appears just above the input — not a tooltip, because an instruction you have to act on should not need to be hovered over to be found.

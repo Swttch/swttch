@@ -6,6 +6,8 @@ type MessageHandler = (message: IPCMessage) => void;
 interface UseBridgeReturn {
   isConnected: boolean;
   send: <T = any>(type: string, payload?: Record<string, unknown>) => Promise<T>;
+  /** Fire-and-forget. For streams the backend does not ack — see the impl note. */
+  sendRaw: (type: string, payload?: Record<string, unknown>) => void;
   subscribe: (type: string, handler: MessageHandler) => () => void;
   lastError: Error | null;
 }
@@ -55,6 +57,18 @@ export function useBridge(): UseBridgeReturn {
     [bridge]
   );
 
+  // sendRaw: 응답을 기다리지 않는 단방향 전송.
+  //
+  // send()는 requestId를 붙이고 ACK를 30초까지 기다리므로, 받아쓰기 오디오처럼
+  // 초당 여러 번 보내고 답을 받을 필요가 없는 스트림에 쓰면 응답 없는 요청이
+  // 계속 쌓여 브릿지가 막힌다. 그런 흐름은 이쪽을 쓴다.
+  const sendRaw = useCallback(
+    (type: string, payload?: Record<string, unknown>): void => {
+      bridge.sendRaw({ type, payload: payload ?? {}, timestamp: Date.now() });
+    },
+    [bridge]
+  );
+
   // subscribe: Bridge.subscribe() 직접 위임
   const subscribe = useCallback(
     (type: string, handler: MessageHandler): (() => void) => {
@@ -67,7 +81,7 @@ export function useBridge(): UseBridgeReturn {
   // dependency (e.g. ChatInput's native-drop subscription) don't re-attach
   // listeners every render. send/subscribe are already useCallback-stable.
   return useMemo(
-    () => ({ isConnected, send, subscribe, lastError }),
-    [isConnected, send, subscribe, lastError],
+    () => ({ isConnected, send, sendRaw, subscribe, lastError }),
+    [isConnected, send, sendRaw, subscribe, lastError],
   );
 }

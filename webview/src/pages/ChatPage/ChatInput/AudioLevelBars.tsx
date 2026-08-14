@@ -28,7 +28,13 @@ interface Props {
  * when no text ever arrives. The bars make it obvious within a second.
  */
 export function AudioLevelBars({ level }: Props) {
-  const clamped = Math.max(0, Math.min(1, level));
+  // Speech RMS sits around 0.02–0.15, nowhere near the 0..1 the raw value
+  // implies, so feeding it straight in produced bars that barely twitched and
+  // read as "not hearing anything". Scaling to that real range and applying a
+  // square root — quiet speech gains more than loud — makes normal talking use
+  // most of the bar's travel.
+  const scaled = Math.sqrt(Math.min(1, Math.max(0, level) / 0.15));
+  const clamped = Math.max(0, Math.min(1, scaled));
 
   return (
     <svg

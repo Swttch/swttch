@@ -14,6 +14,24 @@ import {
   type DictationAnchor,
 } from './composeDictation';
 
+/**
+ * How long the room may stay quiet before recording ends itself.
+ *
+ * Dictation that only stops when asked leaves the microphone live after the
+ * user has walked away or simply forgotten — the recording indicator stays lit
+ * and the socket stays open with nothing to transcribe.
+ */
+const SILENCE_TIMEOUT_MS = 30_000;
+
+/**
+ * Loudness below which a block counts as silence.
+ *
+ * Speech RMS sits around 0.02–0.15 while a quiet room idles an order of
+ * magnitude below that, so the threshold sits under the bottom of speech and
+ * above room tone. Too high and it would cut off someone speaking softly.
+ */
+const SILENCE_LEVEL = 0.01;
+
 /** What the composer needs to know to draw the button. */
 export enum DictationState {
   /** Not recording. */
@@ -67,7 +85,7 @@ interface DictationTarget {
  * @param getTarget Reads the composer's current text and caret on demand.
  */
 export function useDictation(getTarget: () => DictationTarget) {
-  const { send, subscribe } = useBridgeContext();
+  const { send, sendRaw, subscribe } = useBridgeContext();
   const [state, setState] = useState<DictationState>(DictationState.Idle);
   const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
@@ -80,11 +98,33 @@ export function useDictation(getTarget: () => DictationTarget) {
   const getTargetRef = useRef(getTarget);
   getTargetRef.current = getTarget;
 
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // stop() is defined below but the silence timer is armed from inside the
+  // microphone callback, which is created before it. The ref breaks the cycle.
+  const stopRef = useRef<() => void>(() => {});
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current !== null) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
+  /** Restart the countdown to the automatic stop. */
+  const armSilenceTimer = useCallback(() => {
+    clearSilenceTimer();
+    silenceTimerRef.current = setTimeout(() => {
+      silenceTimerRef.current = null;
+      stopRef.current();
+    }, SILENCE_TIMEOUT_MS);
+  }, [clearSilenceTimer]);
+
   const releaseMicrophone = useCallback(() => {
+    clearSilenceTimer();
     captureRef.current?.stop();
     captureRef.current = null;
     setLevel(0);
-  }, []);
+  }, [clearSilenceTimer]);
 
   const finish = useCallback(() => {
     releaseMicrophone();
@@ -161,14 +201,29 @@ export function useDictation(getTarget: () => DictationTarget) {
 
       captureRef.current = await startMicrophone({
         onAudio: (chunk) => {
-          // Base64 because the IPC envelope is JSON. Chunks are ~85 ms, so the
-          // encoding cost is negligible next to the round trip.
+          // sendRaw, not send: audio goes out ~12 times a second and the
+          // backend deliberately does not ack it. Through the request path each
+          // chunk would sit in the pending map waiting 30s for a reply that
+          // never comes, and the transcript would never arrive.
+          //
+          // Base64 because the IPC envelope is JSON.
           let binary = '';
           for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
-          void send(MessageType.SEND_DICTATION_AUDIO, { audio: btoa(binary) });
+          sendRaw(MessageType.SEND_DICTATION_AUDIO, { audio: btoa(binary) });
         },
-        onLevel: setLevel,
+        onLevel: (value) => {
+          setLevel(value);
+          // Every audible block pushes the deadline back, so the timeout
+          // measures silence rather than total recording length — dictating for
+          // ten minutes straight is fine, pausing for thirty seconds is not.
+          if (value >= SILENCE_LEVEL) armSilenceTimer();
+        },
       });
+
+      // Arm it once up front too: a microphone that never hears anything —
+      // muted, or the wrong device — would otherwise record forever, which is
+      // exactly the case the timeout exists for.
+      armSilenceTimer();
 
       setState(DictationState.Listening);
     } catch (err) {
@@ -190,7 +245,7 @@ export function useDictation(getTarget: () => DictationTarget) {
       });
       finish();
     }
-  }, [send, finish]);
+  }, [send, sendRaw, finish, armSilenceTimer]);
 
   const stop = useCallback(async () => {
     if (stateRef.current === DictationState.Idle) return;
@@ -204,6 +259,9 @@ export function useDictation(getTarget: () => DictationTarget) {
       finish();
     }
   }, [send, releaseMicrophone, finish]);
+
+  // The silence timer fires a stop that was not yet defined when it was armed.
+  stopRef.current = () => void stop();
 
   const toggle = useCallback(() => {
     if (stateRef.current === DictationState.Idle) void start();
