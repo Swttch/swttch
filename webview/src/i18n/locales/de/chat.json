@@ -91,11 +91,10 @@
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
     "dictation": {
-      "start": "Diktat starten",
-      "stop": "Diktat beenden",
-      "holdToTalk": "Zum Sprechen gedrückt halten",
-      "listening": "Hört zu…",
-      "micDenied": "Der Mikrofonzugriff ist in den Systemeinstellungen deaktiviert",
+      "tapOrHold": "Tippen oder halten zum Aufnehmen",
+      "stop": "Aufnahme beenden",
+      "error": "Diktatfehler: {{message}}",
+      "micDenied": "Mikrofonzugriff verweigert — in den Systemeinstellungen aktivieren",
       "noMic": "Kein Mikrofon gefunden",
       "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
       "install": "Installieren"

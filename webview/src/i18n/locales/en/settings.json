@@ -85,12 +85,6 @@
     "autoResumeOnLimit": {
       "label": "Auto-resume on usage limit",
       "description": "When you hit your session limit, automatically resume once the quota resets. This is the default for new sessions; each session can still toggle it."
-    },
-    "voiceMode": {
-      "label": "Voice input",
-      "description": "How the mic button starts and stops dictation.",
-      "hold": "Hold to talk",
-      "tap": "Tap to start and stop"
     }
   },
   "appearance": {

@@ -1,110 +1,139 @@
 import { useRef } from 'react';
 import { useTranslation } from '@/i18n';
-import { VoiceMode } from '@/types/settings';
+import { isMac } from '@/config/environment';
 import { DictationState } from './hooks/useDictation';
+import { AudioLevelBars } from './AudioLevelBars';
+
+/** Below this, a press counts as a tap (toggle) rather than a hold. */
+const HOLD_THRESHOLD_MS = 300;
 
 interface Props {
   state: DictationState;
-  /** Input loudness 0..1, used to make the button breathe while listening. */
+  /** Input loudness 0..1, drives the bars while recording. */
   level: number;
-  mode: VoiceMode;
+  /** Set when the OS or browser refused the microphone. */
+  micDenied?: boolean;
+  /** Set when dictation failed; shown in the tooltip. */
+  error?: string | null;
   disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
 }
 
 /**
- * The microphone button.
+ * The microphone button, sitting inside the input box at its top right.
  *
- * Two interaction modes, matching what the other Claude Code clients offer:
- * hold-to-talk (default) for a quick sentence, and tap-to-toggle for dictating
- * something long without holding a mouse button down. Hold mode listens on
- * pointer down/up rather than click, because a click only fires after release —
- * by which time the user has already finished speaking.
+ * Tap **or** hold — the user does not choose a mode. A quick press toggles
+ * recording on and leaves it on; pressing and holding records only while held.
+ * The two are told apart by how long the button was down, which means a user
+ * who does not know the feature exists gets sensible behaviour either way.
+ *
+ * While recording the button grows a level meter to its left, inside the same
+ * pill, so the microphone's state and what it is hearing read as one control.
  */
 export function MicButton(props: Props) {
-  const { state, level, mode, disabled, onStart, onStop } = props;
+  const { state, level, micDenied, error, disabled, onStart, onStop } = props;
   const { t } = useTranslation('chat');
-  const holdingRef = useRef(false);
 
-  const isListening = state === DictationState.Listening;
-  const isBusy = state === DictationState.Starting || state === DictationState.Finishing;
-  const isActive = isListening || isBusy;
+  const pressedAt = useRef(0);
+  const startedByThisPress = useRef(false);
+
+  const isRecording = state === DictationState.Listening || state === DictationState.Starting;
 
   function handlePointerDown(event: React.PointerEvent<HTMLButtonElement>) {
-    if (disabled || mode !== VoiceMode.HOLD) return;
-    // Keep receiving events if the pointer slides off the button mid-sentence;
-    // without capture, moving off it would drop the release and leave the
-    // microphone open.
+    if (disabled || micDenied) return;
+    // Capture so a pointer that slides off the button still delivers its
+    // release; without it, a hold that drifts leaves the microphone open.
     event.currentTarget.setPointerCapture(event.pointerId);
-    holdingRef.current = true;
+    pressedAt.current = Date.now();
+
+    if (isRecording) {
+      // Already recording (from an earlier tap): this press stops it.
+      startedByThisPress.current = false;
+      return;
+    }
+    startedByThisPress.current = true;
     onStart();
   }
 
   function handlePointerUp() {
-    if (mode !== VoiceMode.HOLD || !holdingRef.current) return;
-    holdingRef.current = false;
-    onStop();
+    if (disabled || micDenied) return;
+    const heldFor = Date.now() - pressedAt.current;
+
+    if (!startedByThisPress.current) {
+      // The press began while already recording — it is the stop half of a tap.
+      onStop();
+      return;
+    }
+    // Started by this press: a hold ends on release, a tap leaves it running.
+    if (heldFor >= HOLD_THRESHOLD_MS) onStop();
   }
 
-  function handleClick() {
-    if (disabled || mode !== VoiceMode.TAP) return;
-    if (isListening) onStop();
-    else if (!isBusy) onStart();
-  }
-
-  const title = isListening
-    ? t('chatInput.dictation.stop')
-    : mode === VoiceMode.HOLD
-      ? t('chatInput.dictation.holdToTalk')
-      : t('chatInput.dictation.start');
+  const shortcut = isMac() ? '⌘D' : 'Ctrl+D';
+  const tooltip = error
+    ? t('chatInput.dictation.error', { message: error })
+    : micDenied
+      ? t('chatInput.dictation.micDenied')
+      : isRecording
+        ? t('chatInput.dictation.stop')
+        : t('chatInput.dictation.tapOrHold');
 
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-label={title}
-      aria-pressed={isListening}
-      title={title}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onClick={handleClick}
-      className={`relative flex items-center justify-center w-6 h-6 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-        isActive
-          ? 'text-state-error-fg bg-state-error-bg'
-          : 'text-text-tertiary hover:text-text-secondary hover:bg-surface-hover'
-      }`}
-    >
-      {/* A ring that tracks input loudness, so "recording" and "recording
-          silence" look different — the usual failure is a muted or wrong
-          input device, which is otherwise invisible until no text appears. */}
-      {isListening && (
-        <span
-          aria-hidden
-          className="absolute inset-0 rounded-full border border-state-error-fg opacity-60"
-          style={{ transform: `scale(${1 + Math.min(level, 1) * 0.6})` }}
-        />
-      )}
-      {isBusy && (
-        <span
-          aria-hidden
-          className="absolute inset-0 rounded-full border border-current opacity-40 animate-ping"
-        />
-      )}
-      <svg
-        className="w-[14px] h-[14px]"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <div className="absolute top-[5px] end-0 z-[2] group/mic">
+      <button
+        type="button"
+        disabled={disabled || micDenied}
+        aria-label={tooltip}
+        aria-pressed={isRecording}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className={`flex items-center justify-center gap-1 h-[26px] rounded-[5px] border-none cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          isRecording
+            ? 'ps-2 bg-surface-overlay text-accent-primary'
+            : 'bg-transparent text-text-tertiary hover:text-text-secondary'
+        }`}
       >
-        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-        <line x1="12" y1="19" x2="12" y2="22" />
-      </svg>
-    </button>
+        {isRecording && <AudioLevelBars level={level} />}
+        <span
+          className={`flex items-center justify-center w-[26px] h-[26px] rounded-[5px] shrink-0 transition-colors ${
+            isRecording ? 'bg-accent-primary text-text-inverse' : ''
+          }`}
+        >
+          <svg
+            className="w-4 h-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
+        </span>
+      </button>
+
+      {/* Tooltip. Delayed on hover so it does not flash while the pointer
+          crosses the button on its way somewhere else; an error shows it
+          immediately, because that is the one case the user needs to read. */}
+      <span
+        aria-hidden="true"
+        className={`absolute top-full end-0 mt-1 px-2 py-1 rounded-md whitespace-nowrap text-xs pointer-events-none transition-opacity bg-surface-tooltip border shadow-lg ${
+          error
+            ? 'opacity-100 border-state-error-border text-state-error-fg whitespace-normal max-w-[360px]'
+            : 'opacity-0 group-hover/mic:opacity-100 group-hover/mic:delay-[400ms] border-border-default text-text-primary'
+        }`}
+      >
+        {tooltip}
+        {!error && !micDenied && !isRecording && (
+          <span className="ms-1.5 px-1 py-px rounded bg-surface-overlay font-mono text-[0.9em]">
+            {shortcut}
+          </span>
+        )}
+      </span>
+    </div>
   );
 }

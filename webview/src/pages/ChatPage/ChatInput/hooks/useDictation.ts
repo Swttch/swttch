@@ -7,8 +7,14 @@ import {
   MicrophoneErrorKind,
   type MicrophoneCapture,
 } from './microphone';
+import {
+  anchorAt,
+  composeDictation,
+  wasEditedExternally,
+  type DictationAnchor,
+} from './composeDictation';
 
-/** What the composer needs to know to draw the button and the text. */
+/** What the composer needs to know to draw the button. */
 export enum DictationState {
   /** Not recording. */
   Idle = 'idle',
@@ -24,7 +30,9 @@ export interface DictationError {
   message: string;
   /** Retrying will not help — a denied microphone, or a rejected account. */
   fatal: boolean;
-  /** Set when the kit itself is missing, so the UI can offer to install it. */
+  /** The microphone specifically was refused; the button goes permanently dim. */
+  micDenied?: boolean;
+  /** The kit itself is missing, so the UI can offer to install it. */
   kitMissing?: boolean;
 }
 
@@ -34,34 +42,43 @@ interface StartAck {
   errorKind?: string;
 }
 
+interface DictationTarget {
+  /** Current composer text. */
+  value: string;
+  /** Caret offset to dictate at. */
+  caret: number;
+  /** Write the composed text back. */
+  setValue: (value: string) => void;
+}
+
 /**
  * Voice input for the composer.
  *
  * The split is forced by where things are allowed to live: only the webview can
  * open a microphone, and only the backend may hold credentials, so audio is
- * recorded here and transcribed there. This hook owns that round trip and hands
- * the composer back plain text.
+ * recorded here and transcribed there.
  *
- * Text arrives in two kinds. Interim text is a live guess that will be replaced,
- * so it is exposed separately for the caller to render as a preview; final text
- * is settled and is appended to the committed transcript. Keeping them apart is
- * what stops the input from flickering as the recognizer changes its mind.
+ * Text goes straight into the composer as it arrives — interim text included,
+ * marked by {@link interimRange} so the input can paint it as provisional. That
+ * is the arrangement the other Claude Code clients use, and it beats a separate
+ * preview line: the user sees the sentence taking shape where it will actually
+ * be sent, and a settled phrase needs no move.
  *
- * @param onFinalText Called with each settled phrase, ready to insert.
+ * @param getTarget Reads the composer's current text and caret on demand.
  */
-export function useDictation(onFinalText: (text: string) => void) {
+export function useDictation(getTarget: () => DictationTarget) {
   const { send, subscribe } = useBridgeContext();
   const [state, setState] = useState<DictationState>(DictationState.Idle);
-  const [interimText, setInterimText] = useState('');
+  const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<DictationError | null>(null);
 
   const captureRef = useRef<MicrophoneCapture | null>(null);
-  // Read inside subscription callbacks, which close over their first render.
+  const anchorRef = useRef<DictationAnchor | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
-  const onFinalTextRef = useRef(onFinalText);
-  onFinalTextRef.current = onFinalText;
+  const getTargetRef = useRef(getTarget);
+  getTargetRef.current = getTarget;
 
   const releaseMicrophone = useCallback(() => {
     captureRef.current?.stop();
@@ -69,34 +86,55 @@ export function useDictation(onFinalText: (text: string) => void) {
     setLevel(0);
   }, []);
 
+  const finish = useCallback(() => {
+    releaseMicrophone();
+    anchorRef.current = null;
+    setInterimRange(null);
+    setState(DictationState.Idle);
+  }, [releaseMicrophone]);
+
   useEffect(() => {
     const offTranscript = subscribe(MessageType.DICTATION_TRANSCRIPT, (payload) => {
       const { text, isFinal } = (payload ?? {}) as { text?: string; isFinal?: boolean };
-      if (!text) return;
+      const anchor = anchorRef.current;
+      if (!text || !anchor) return;
+
+      const target = getTargetRef.current();
+      // The user typed while we were writing. Their edit wins — carrying on
+      // would overwrite it on the next transcript.
+      if (wasEditedExternally(anchor, target.value)) {
+        void send(MessageType.STOP_DICTATION, {});
+        finish();
+        return;
+      }
+
+      const composed = composeDictation(anchor, text, isFinal ?? false);
+      if (!composed) return;
+
+      anchor.lastSetValue = composed.value;
+      target.setValue(composed.value);
+      setInterimRange(composed.interim);
+
+      // A settled phrase moves the anchor forward, so the next phrase is
+      // dictated after it instead of replacing it.
       if (isFinal) {
-        setInterimText('');
-        onFinalTextRef.current(text);
-      } else {
-        setInterimText(text);
+        anchorRef.current = anchorAt(composed.value, composed.caret);
       }
     });
 
     const offError = subscribe(MessageType.DICTATION_ERROR, (payload) => {
       const { message, fatal } = (payload ?? {}) as { message?: string; fatal?: boolean };
       setError({ message: message ?? 'Dictation failed', fatal: fatal ?? false });
-      // A stream that has failed will not produce more text, so hold onto the
-      // microphone no longer — the recording indicator staying lit after an
-      // error reads as if we are still listening.
-      releaseMicrophone();
-      setState(DictationState.Idle);
-      setInterimText('');
+      // A failed stream produces no more text, so stop holding the microphone —
+      // a lit recording indicator after an error reads as still listening.
+      finish();
     });
 
     return () => {
       offTranscript();
       offError();
     };
-  }, [subscribe, releaseMicrophone]);
+  }, [subscribe, send, finish]);
 
   /** Release the microphone if the composer unmounts mid-recording. */
   useEffect(() => releaseMicrophone, [releaseMicrophone]);
@@ -104,8 +142,10 @@ export function useDictation(onFinalText: (text: string) => void) {
   const start = useCallback(async () => {
     if (stateRef.current !== DictationState.Idle) return;
     setError(null);
-    setInterimText('');
     setState(DictationState.Starting);
+
+    const target = getTargetRef.current();
+    anchorRef.current = anchorAt(target.value, target.caret);
 
     try {
       const ack = (await send(MessageType.START_DICTATION, {})) as StartAck;
@@ -115,14 +155,14 @@ export function useDictation(onFinalText: (text: string) => void) {
           fatal: true,
           kitMissing: ack?.errorKind === 'kit_missing',
         });
-        setState(DictationState.Idle);
+        finish();
         return;
       }
 
       captureRef.current = await startMicrophone({
         onAudio: (chunk) => {
           // Base64 because the IPC envelope is JSON. Chunks are ~85 ms, so the
-          // encoding cost is negligible next to the network round trip.
+          // encoding cost is negligible next to the round trip.
           let binary = '';
           for (let i = 0; i < chunk.length; i++) binary += String.fromCharCode(chunk[i]);
           void send(MessageType.SEND_DICTATION_AUDIO, { audio: btoa(binary) });
@@ -135,46 +175,50 @@ export function useDictation(onFinalText: (text: string) => void) {
       // The microphone failed after the stream opened — close it so we do not
       // leave a socket running with nothing to transcribe.
       void send(MessageType.STOP_DICTATION, {});
-      const denied = err instanceof MicrophoneError && err.kind === MicrophoneErrorKind.Denied;
-      const noDevice = err instanceof MicrophoneError && err.kind === MicrophoneErrorKind.NoDevice;
+      const kind = err instanceof MicrophoneError ? err.kind : MicrophoneErrorKind.Unknown;
       setError({
-        message: denied
-          ? 'Microphone access is denied in system settings'
-          : noDevice
-            ? 'No microphone was found'
-            : err instanceof Error
-              ? err.message
-              : 'Could not access the microphone',
+        message:
+          kind === MicrophoneErrorKind.Denied
+            ? 'micDenied'
+            : kind === MicrophoneErrorKind.NoDevice
+              ? 'noMic'
+              : err instanceof Error
+                ? err.message
+                : 'Could not access the microphone',
         fatal: true,
+        micDenied: kind === MicrophoneErrorKind.Denied,
       });
-      setState(DictationState.Idle);
+      finish();
     }
-  }, [send]);
+  }, [send, finish]);
 
   const stop = useCallback(async () => {
     if (stateRef.current === DictationState.Idle) return;
     // Stop capturing first: anything recorded past this point is the user
-    // already having stopped speaking.
+    // having already stopped speaking.
     releaseMicrophone();
     setState(DictationState.Finishing);
     try {
       await send(MessageType.STOP_DICTATION, {});
     } finally {
-      setState(DictationState.Idle);
-      setInterimText('');
+      finish();
     }
-  }, [send, releaseMicrophone]);
+  }, [send, releaseMicrophone, finish]);
 
-  const dismissError = useCallback(() => setError(null), []);
+  const toggle = useCallback(() => {
+    if (stateRef.current === DictationState.Idle) void start();
+    else void stop();
+  }, [start, stop]);
 
   return {
     state,
     isRecording: state === DictationState.Listening || state === DictationState.Starting,
-    interimText,
+    interimRange,
     level,
     error,
     start,
     stop,
-    dismissError,
+    toggle,
+    dismissError: useCallback(() => setError(null), []),
   };
 }

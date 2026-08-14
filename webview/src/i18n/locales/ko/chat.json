@@ -91,11 +91,10 @@
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",
     "dictation": {
-      "start": "음성 입력 시작",
-      "stop": "음성 입력 중지",
-      "holdToTalk": "누르고 말하기",
-      "listening": "듣는 중…",
-      "micDenied": "시스템 설정에서 마이크 접근이 차단되어 있습니다",
+      "tapOrHold": "눌러서 또는 누른 채로 녹음",
+      "stop": "녹음 중지",
+      "error": "받아쓰기 오류: {{message}}",
+      "micDenied": "마이크 접근이 거부되었습니다 — 시스템 설정에서 허용해 주세요",
       "noMic": "마이크를 찾을 수 없습니다",
       "kitMissing": "음성 입력에는 @swttch/extend-kit이 필요합니다",
       "install": "설치"

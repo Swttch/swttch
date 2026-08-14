@@ -91,11 +91,10 @@
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
     "dictation": {
-      "start": "開始語音輸入",
-      "stop": "停止語音輸入",
-      "holdToTalk": "按住說話",
-      "listening": "正在聆聽…",
-      "micDenied": "系統設定中已拒絕麥克風存取權限",
+      "tapOrHold": "點擊或按住錄音",
+      "stop": "停止錄音",
+      "error": "語音輸入錯誤：{{message}}",
+      "micDenied": "麥克風存取被拒絕 — 請在系統設定中啟用",
       "noMic": "找不到麥克風",
       "kitMissing": "語音輸入需要 @swttch/extend-kit",
       "install": "安裝"

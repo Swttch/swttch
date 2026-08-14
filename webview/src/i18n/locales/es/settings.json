@@ -85,12 +85,6 @@
     "autoResumeOnLimit": {
       "label": "Reanudación automática al alcanzar el límite de uso",
       "description": "Cuando alcances el límite de sesión, se reanudará automáticamente una vez que se reinicie el límite. Es el valor predeterminado para las sesiones nuevas; cada sesión puede cambiarlo."
-    },
-    "voiceMode": {
-      "label": "Entrada de voz",
-      "description": "Cómo el botón del micrófono inicia y detiene el dictado.",
-      "hold": "Mantener pulsado para hablar",
-      "tap": "Pulsar para iniciar y detener"
     }
   },
   "appearance": {

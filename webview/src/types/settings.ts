@@ -54,8 +54,6 @@ export enum SettingKey {
 
   // Chat history paging
   CHAT_PAGINATION = 'chatPagination',
-  /** How the mic button starts and stops dictation (hold to talk / tap to toggle). */
-  VOICE_MODE = 'voiceMode',
 
   // UI mirroring (RTL/LTR layout direction)
   UI_DIRECTION = 'uiDirection',
@@ -158,17 +156,6 @@ export enum OpenSettingsMode {
 }
 
 /**
- * 마이크 버튼이 받아쓰기를 시작·종료하는 방식.
- * 다른 Claude Code 클라이언트들과 같은 두 가지를 제공한다.
- */
-export enum VoiceMode {
-  /** 누르고 있는 동안 말하고, 떼면 끝난다(기본값). 짧은 문장에 적합. */
-  HOLD = 'hold',
-  /** 눌러서 시작하고 다시 눌러서 끝낸다. 긴 내용을 부를 때 적합. */
-  TAP = 'tap',
-}
-
-/**
  * 채팅을 띄우는 자리(호스트) - Kotlin HostMode / 백엔드 hostMode 와 동기화.
  */
 export enum HostMode {
@@ -232,7 +219,6 @@ export interface SettingsState {
   [SettingKey.HOST_MODE]: HostMode;
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
-  [SettingKey.VOICE_MODE]: VoiceMode;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
@@ -262,9 +248,6 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.HOST_MODE]: HostMode.EDITOR_TAB,
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
-  // Hold matches what the other Claude Code clients default to: a short phrase
-  // needs no mode switch, and holding makes the recording's end unambiguous.
-  [SettingKey.VOICE_MODE]: VoiceMode.HOLD,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,

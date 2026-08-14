@@ -91,11 +91,10 @@
     "ariaLabel": "给 Claude 发消息",
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",
     "dictation": {
-      "start": "开始语音输入",
-      "stop": "停止语音输入",
-      "holdToTalk": "按住说话",
-      "listening": "正在聆听…",
-      "micDenied": "系统设置中已拒绝麦克风访问权限",
+      "tapOrHold": "点击或按住录音",
+      "stop": "停止录音",
+      "error": "语音输入错误：{{message}}",
+      "micDenied": "麦克风访问被拒绝 — 请在系统设置中启用",
       "noMic": "未找到麦克风",
       "kitMissing": "语音输入需要 @swttch/extend-kit",
       "install": "安装"

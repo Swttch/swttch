@@ -91,11 +91,10 @@
     "ariaLabel": "Mensagem para o Claude",
     "autoModeFallback": "O modo automático não está disponível aqui — usando o modo de permissão padrão.",
     "dictation": {
-      "start": "Iniciar ditado",
-      "stop": "Parar ditado",
-      "holdToTalk": "Mantenha pressionado para falar",
-      "listening": "A ouvir…",
-      "micDenied": "O acesso ao microfone está negado nas definições do sistema",
+      "tapOrHold": "Toque ou mantenha para gravar",
+      "stop": "Parar gravação",
+      "error": "Erro de ditado: {{message}}",
+      "micDenied": "Acesso ao microfone negado — ative nas definições do sistema",
       "noMic": "Nenhum microfone encontrado",
       "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",
       "install": "Instalar"

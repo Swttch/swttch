@@ -91,11 +91,10 @@
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",
     "dictation": {
-      "start": "Iniciar dictado",
-      "stop": "Detener dictado",
-      "holdToTalk": "Mantén pulsado para hablar",
-      "listening": "Escuchando…",
-      "micDenied": "El acceso al micrófono está denegado en los ajustes del sistema",
+      "tapOrHold": "Pulsa o mantén para grabar",
+      "stop": "Detener grabación",
+      "error": "Error de dictado: {{message}}",
+      "micDenied": "Acceso al micrófono denegado — actívalo en los ajustes del sistema",
       "noMic": "No se encontró ningún micrófono",
       "kitMissing": "La entrada de voz necesita @swttch/extend-kit",
       "install": "Instalar"
