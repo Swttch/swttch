@@ -45,11 +45,18 @@ The practical consequences of that choice:
 A microphone button sits at the top right of the input box. From the keyboard it is `⌥D` (`Alt+D` on
 Windows and Linux).
 
+![The microphone button at the right-hand end of the input box](./assets/composer-mic.png)
+
 Alt rather than Cmd or Ctrl because those are already spoken for: `⌘D` bookmarks the page in every
 browser, and `Ctrl+D` is end-of-input in a terminal.
 
 The key is yours to change, under **Settings → General → Voice input → Shortcut**. Press the field,
 then press the combination you want; Escape leaves it as it was.
+
+![The shortcut field, waiting for a key after being pressed](./assets/shortcut-recording.png)
+
+It records the combination rather than asking you to spell it out, because a shortcut you press
+cannot be mistyped.
 
 One of Ctrl, Alt or Cmd has to be part of it. A shortcut that is just a letter would take that letter
 away from the input box.
@@ -76,6 +83,8 @@ text arrives, and the bars are the difference.
 
 ## Turning it off in the terminal turns it off here
 
+![The Voice input section in settings — the on/off toggle, spoken language, wait time and shortcut, with the installed kit version beside the heading](./assets/settings-section.png)
+
 `/voice off` in the CLI removes the microphone button and disables the shortcut here too — one
 machine should not hold two answers to the same question. **Settings → General → Voice input** writes
 the same value, so switching it off here switches it off in the CLI as well.
@@ -94,6 +103,8 @@ preserved rather than dropped, so the terminal's own configuration survives unto
 The recognizer has to be told which language it is listening for. Left unset it assumes English and
 transcribes everything else phonetically through it — "안녕하세요" comes back as "ah ñomaseu".
 
+![The spoken-language dropdown, with a search box above the list and "Follow Claude's setting" first](./assets/language-picker.png)
+
 Hence **Settings → General → Voice input language**. It defaults to **follow interface language**,
 which is right for most people without touching anything: someone reading the UI in Korean is likely
 to speak Korean.
@@ -103,6 +114,15 @@ UI in English while speaking Korean, say. That is the case this setting is for.
 
 Claude's response language would not do the job: it is a free-text field that might hold "Korean",
 or "be concise", where the recognizer takes only a standard code like `ko`.
+
+The list holds **every language that has a code**. Unlike the interface translations this is only a
+value we pass along, so there was no reason to narrow it to the handful we happened to pick. The
+twenty the service actually transcribes sort first; the rest say what they are.
+
+![Searching for Swahili shows it labelled "not recognised yet"](./assets/language-unsupported.png)
+
+They are not hidden, because a language missing from the list gives no way to find out why. Nor are
+they left looking ordinary, which would mean discovering it by speaking and getting English back.
 
 **When it stops hearing anything, recording ends by itself.** The default wait is 15 seconds, and
 **Settings → General → Voice input → Wait time** makes it shorter.
