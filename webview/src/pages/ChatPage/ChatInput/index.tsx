@@ -32,7 +32,7 @@ import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/command
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
-import { matchesShortcut, displayShortcut } from '@/utils/shortcut';
+import { matchesShortcut, shouldToggleOnShortcut, displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -485,8 +485,12 @@ export function ChatInput() {
     // 사용자가 바꿀 수 있는 단축키이며, 기본값은 Alt+D.
     // 브라우저·에디터 기본 동작을 막아야 하므로 preventDefault 필수.
     if (matchesShortcut(e, voiceShortcut)) {
+      // preventDefault는 반복 이벤트에도 계속 걸어야 한다. 누르고 있는 동안
+      // 브라우저·에디터 기본 동작이 새어나가면 안 되기 때문이다.
       e.preventDefault();
-      dictation.toggle();
+      // 토글은 첫 이벤트에서만. 키를 누르고 있으면 OS가 keydown을 초당 수십 번
+      // 보내는데, 그때마다 토글하면 녹음이 켜졌다 꺼졌다 하며 깜빡인다.
+      if (shouldToggleOnShortcut(e, voiceShortcut)) dictation.toggle();
       return;
     }
 

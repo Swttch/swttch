@@ -92,6 +92,31 @@ export function parseShortcut(stored: string | null | undefined): ShortcutParts 
   return parts.key ? parts : null;
 }
 
+/**
+ * Should this event fire a shortcut that toggles something?
+ *
+ * Holding a key makes the OS repeat `keydown` many times a second. For a
+ * toggle that means flipping back and forth — voice input visibly flickered
+ * between recording and stopped while the key was held. Only the first event of
+ * a press counts as the user having pressed it.
+ *
+ * Separate from {@link matchesShortcut} because an action that is not a toggle
+ * (scrolling, say) may legitimately want to run on every repeat.
+ */
+export function shouldToggleOnShortcut(
+  e: {
+    ctrlKey: boolean;
+    altKey: boolean;
+    shiftKey: boolean;
+    metaKey: boolean;
+    key: string;
+    repeat?: boolean;
+  },
+  stored: string | null | undefined,
+): boolean {
+  return !e.repeat && matchesShortcut(e, stored);
+}
+
 /** Does this event match the stored shortcut? */
 export function matchesShortcut(
   e: { ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean; key: string },

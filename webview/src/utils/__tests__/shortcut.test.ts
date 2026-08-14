@@ -3,6 +3,7 @@ import {
   formatShortcut,
   parseShortcut,
   matchesShortcut,
+  shouldToggleOnShortcut,
   isBindableShortcut,
   shortcutPartsFromEvent,
   isModifierOnly,
@@ -70,6 +71,33 @@ describe('matchesShortcut', () => {
 
   it('matches nothing when no shortcut is bound', () => {
     expect(matchesShortcut(press('d', { alt: true }), null)).toBe(false);
+  });
+});
+
+describe('shouldToggleOnShortcut', () => {
+  it('fires on the first press', () => {
+    expect(shouldToggleOnShortcut({ ...press('d', { alt: true }), repeat: false }, 'Alt+D')).toBe(true);
+  });
+
+  it('ignores the repeats a held key produces', () => {
+    // Holding the key makes the OS repeat keydown many times a second. Toggling
+    // on each one flipped voice input between recording and stopped so fast it
+    // visibly flickered.
+    expect(shouldToggleOnShortcut({ ...press('d', { alt: true }), repeat: true }, 'Alt+D')).toBe(false);
+  });
+
+  it('counts one toggle for a press held down', () => {
+    // One press, then a burst of repeats: exactly one toggle.
+    const events = [
+      { ...press('d', { alt: true }), repeat: false },
+      ...Array.from({ length: 20 }, () => ({ ...press('d', { alt: true }), repeat: true })),
+    ];
+    const fired = events.filter((e) => shouldToggleOnShortcut(e, 'Alt+D')).length;
+    expect(fired).toBe(1);
+  });
+
+  it('still ignores a key that is not the shortcut', () => {
+    expect(shouldToggleOnShortcut({ ...press('k', { alt: true }), repeat: false }, 'Alt+D')).toBe(false);
   });
 });
 
