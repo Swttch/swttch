@@ -37,6 +37,11 @@
       "label": "Langue de l'interface",
       "description": "Langue de l'interface de l'application, indépendante de la langue de réponse de Claude."
     },
+    "sttLang": {
+      "label": "Langue de la saisie vocale",
+      "description": "La langue dans laquelle vous parlez lors de la saisie vocale. Suit la langue de l'interface si non définie.",
+      "followUi": "Suivre la langue de l'interface"
+    },
     "uiDirection": {
       "label": "Activer RTL(Right-to-left)"
     },

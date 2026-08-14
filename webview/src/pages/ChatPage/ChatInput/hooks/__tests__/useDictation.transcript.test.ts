@@ -10,7 +10,7 @@ import { MessageType } from '@/shared';
 // ---------------------------------------------------------------------------
 const subscribers = new Map<string, (message: IPCMessage) => void>();
 
-const sendMock = vi.fn((type: string) => {
+const sendMock = vi.fn((type: string, _payload?: Record<string, unknown>) => {
   if (type === MessageType.START_DICTATION) return Promise.resolve({ status: 'ok' });
   return Promise.resolve({});
 });
@@ -26,6 +26,13 @@ vi.mock('@/contexts/BridgeContext', () => ({
     },
     lastError: null,
   }),
+}));
+
+// The spoken language the hook reads; tests override it in place.
+let sttLang: string | null = null;
+
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { sttLang } }),
 }));
 
 vi.mock('../microphone', async () => {
@@ -130,6 +137,35 @@ describe('useDictation — transcripts reach the input', () => {
     });
 
     expect(setValue).not.toHaveBeenCalled();
+  });
+});
+
+describe('useDictation — the spoken language reaches the service', () => {
+  beforeEach(() => {
+    subscribers.clear();
+    sendMock.mockClear();
+    sttLang = null;
+  });
+
+  it('sends the configured spoken language', async () => {
+    sttLang = 'ko';
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    expect(sendMock).toHaveBeenCalledWith(MessageType.START_DICTATION, { language: 'ko' });
+  });
+
+  it('falls back to the interface language when unset', async () => {
+    // Unset means "follow the interface language", which the test i18n reports
+    // as English. Sending nothing would make the service assume English anyway,
+    // but only by accident — this asserts we say it.
+    sttLang = null;
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    const call = sendMock.mock.calls.find(([type]) => type === MessageType.START_DICTATION);
+    expect(call?.[1]).toHaveProperty('language');
+    expect((call?.[1] as { language: string }).language).toBeTruthy();
   });
 });
 

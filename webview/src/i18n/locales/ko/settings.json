@@ -37,6 +37,11 @@
       "label": "인터페이스 언어",
       "description": "앱 인터페이스 언어입니다. Claude의 응답 언어와 별개로 설정됩니다."
     },
+    "sttLang": {
+      "label": "음성 입력 언어",
+      "description": "음성 입력으로 말하는 언어입니다. 지정하지 않으면 인터페이스 언어를 따릅니다.",
+      "followUi": "인터페이스 언어 따름"
+    },
     "uiDirection": {
       "label": "RTL(Right-to-left) 켜기"
     },

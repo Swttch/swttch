@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import i18n from '@/i18n/config';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { SettingKey } from '@/types/settings';
 import { MessageType } from '@/shared';
 import {
   startMicrophone,
@@ -87,6 +89,8 @@ interface DictationTarget {
  */
 export function useDictation(getTarget: () => DictationTarget) {
   const { send, sendRaw, subscribe } = useBridgeContext();
+  const { settings } = useSettings();
+  const sttLang = settings[SettingKey.STT_LANG];
   const [state, setState] = useState<DictationState>(DictationState.Idle);
   const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
@@ -196,11 +200,11 @@ export function useDictation(getTarget: () => DictationTarget) {
 
     try {
       // Without a language the service assumes English and transcribes other
-      // languages phonetically through English — "안녕하세요" came back as
-      // "ah ñomaseu". The interface language is the closest signal we already
-      // have to the language the user speaks, and it is already BCP-47.
+      // languages phonetically through it — "안녕하세요" came back as
+      // "ah ñomaseu". Unset means "follow the interface language", which is
+      // right for most people and already BCP-47.
       const ack = (await send(MessageType.START_DICTATION, {
-        language: i18n.language,
+        language: sttLang ?? i18n.language,
       })) as StartAck;
       if (ack?.status !== 'ok') {
         setError({
@@ -258,7 +262,7 @@ export function useDictation(getTarget: () => DictationTarget) {
       });
       finish();
     }
-  }, [send, sendRaw, finish, armSilenceTimer]);
+  }, [send, sendRaw, finish, armSilenceTimer, sttLang]);
 
   const stop = useCallback(async () => {
     if (stateRef.current === DictationState.Idle) return;

@@ -65,6 +65,21 @@ While recording, three bars appear beside the microphone and rise with your voic
 deliberate: a muted microphone or the wrong input device looks exactly like a working one until no
 text arrives, and the bars are the difference.
 
+## The language you speak
+
+The recognizer has to be told which language it is listening for. Left unset it assumes English and
+transcribes everything else phonetically through it — "안녕하세요" comes back as "ah ñomaseu".
+
+Hence **Settings → General → Voice input language**. It defaults to **follow interface language**,
+which is right for most people without touching anything: someone reading the UI in Korean is likely
+to speak Korean.
+
+It exists separately from the interface language because the two genuinely come apart — reading the
+UI in English while speaking Korean, say. That is the case this setting is for.
+
+Claude's response language would not do the job: it is a free-text field that might hold "Korean",
+or "be concise", where the recognizer takes only a standard code like `ko`.
+
 **After 30 seconds of hearing nothing, recording ends by itself.** What it measures is the silence,
 not the total length, so talking for ten or twenty minutes never gets cut off — each pause simply
 starts the clock over. When it does end, it does not just stop: whatever audio has not been sent yet

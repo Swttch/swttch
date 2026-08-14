@@ -37,6 +37,11 @@
       "label": "Idioma de la interfaz",
       "description": "Idioma de la interfaz de la aplicación, independiente del idioma de respuesta de Claude."
     },
+    "sttLang": {
+      "label": "Idioma de entrada de voz",
+      "description": "El idioma en el que hablas al usar la entrada de voz. Si no se define, sigue el idioma de la interfaz.",
+      "followUi": "Seguir el idioma de la interfaz"
+    },
     "uiDirection": {
       "label": "Activar RTL(Right-to-left)"
     },

@@ -37,6 +37,11 @@
       "label": "インターフェース言語",
       "description": "アプリのインターフェース言語です。Claude の応答言語とは別に設定できます。"
     },
+    "sttLang": {
+      "label": "音声入力の言語",
+      "description": "音声入力で話す言語です。未設定の場合はインターフェース言語に従います。",
+      "followUi": "インターフェース言語に従う"
+    },
     "uiDirection": {
       "label": "RTL(Right-to-left) を有効化"
     },

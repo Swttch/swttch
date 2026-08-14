@@ -37,6 +37,11 @@
       "label": "Interface Language",
       "description": "Language for the app interface, independent of Claude's response language."
     },
+    "sttLang": {
+      "label": "Voice input language",
+      "description": "The language you speak into voice input. Follows the interface language when unset.",
+      "followUi": "Follow interface language"
+    },
     "uiDirection": {
       "label": "Enable RTL(Right-to-left)"
     },

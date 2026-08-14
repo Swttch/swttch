@@ -66,6 +66,13 @@ export enum SettingKey {
   // own i18n, unrelated to Claude's response language (a native key).
   UI_LANGUAGE = 'uiLanguage',
 
+  // BCP-47 code of the language spoken into voice input (e.g. 'ko'); null →
+  // follow the interface language. Its own key because the language you speak
+  // is not necessarily the one you read the UI in, and neither existing setting
+  // can stand in: the interface language is ours to define, while Claude's
+  // response language is free text ('한국어', 'be concise') where this needs a code.
+  STT_LANG = 'sttLang',
+
   // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
   USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
 
@@ -221,6 +228,7 @@ export interface SettingsState {
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
+  [SettingKey.STT_LANG]: string | null;
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
@@ -250,6 +258,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,
+  [SettingKey.STT_LANG]: null,
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,

@@ -37,6 +37,11 @@
       "label": "界面语言",
       "description": "应用界面的语言，与 Claude 的回复语言相互独立。"
     },
+    "sttLang": {
+      "label": "语音输入语言",
+      "description": "您在语音输入时使用的语言。未设置时跟随界面语言。",
+      "followUi": "跟随界面语言"
+    },
     "uiDirection": {
       "label": "启用 RTL(Right-to-left)"
     },

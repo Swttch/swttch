@@ -37,6 +37,11 @@
       "label": "介面語言",
       "description": "應用程式介面所使用的語言,與 Claude 的回覆語言各自獨立。"
     },
+    "sttLang": {
+      "label": "語音輸入語言",
+      "description": "您在語音輸入時使用的語言。未設定時跟隨介面語言。",
+      "followUi": "跟隨介面語言"
+    },
     "uiDirection": {
       "label": "啟用 RTL(Right-to-left)"
     },

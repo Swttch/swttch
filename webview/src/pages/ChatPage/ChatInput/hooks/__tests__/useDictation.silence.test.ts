@@ -22,6 +22,10 @@ vi.mock('@/contexts/BridgeContext', () => ({
   }),
 }));
 
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { sttLang: null } }),
+}));
+
 // ---------------------------------------------------------------------------
 // Microphone mock — captures the level callback so a test can drive loudness
 // directly instead of trying to synthesise an audio graph.

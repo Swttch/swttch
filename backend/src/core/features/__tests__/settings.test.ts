@@ -302,6 +302,17 @@ describe('settings', () => {
       expect(result.error).toContain('uiLanguage must be a string or null');
     });
 
+    it('should accept string or null sttLang', async () => {
+      expect((await saveSettingToFile('sttLang', 'ko')).status).toBe('ok');
+      expect((await saveSettingToFile('sttLang', null)).status).toBe('ok');
+    });
+
+    it('should reject non-string non-null sttLang', async () => {
+      const result = await saveSettingToFile('sttLang', 5);
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('sttLang must be a string or null');
+    });
+
     it('should accept string or null language (Claude response language)', async () => {
       expect((await saveSettingToFile('language', 'japanese')).status).toBe('ok');
       expect((await saveSettingToFile('language', null)).status).toBe('ok');
@@ -530,6 +541,7 @@ describe('settings', () => {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
+        sttLang: null,
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
@@ -652,6 +664,7 @@ export default {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
+        sttLang: null,
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
