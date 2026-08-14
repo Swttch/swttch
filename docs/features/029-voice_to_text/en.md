@@ -89,6 +89,21 @@ you said is not lost.
 This exists for the microphone left on after you walk away, or simply forget. Without it the
 recording indicator stays lit and a connection stays open with nothing to transcribe.
 
+## Opening the microphone inside the IDE
+
+The WebView the IDE uses (JCEF) denies a microphone request outright when nothing answers it, and
+unlike a browser there is no prompt to fall back on. Do nothing and **the microphone quietly never
+opens** — no error, just no text.
+
+So the plugin answers that request itself, and grants **the microphone only**. The request arrives as
+a bitmask that can also ask for the camera and for screen capture; the reply is masked down to the
+audio bit and the rest is dropped. A request for anything else is denied.
+
+There is no confirmation dialog of our own because the page being loaded is not arbitrary web
+content — it is the chat UI we serve ourselves. The real decision belongs to the OS: the first time
+you record, macOS asks whether the IDE may use the microphone, and refusing there keeps the
+microphone shut no matter what the plugin answers.
+
 ## When it cannot start
 
 When something fails, a banner appears just above the input — not a tooltip, because an instruction you have to act on should not need to be hovered over to be found.
