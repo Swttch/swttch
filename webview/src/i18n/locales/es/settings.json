@@ -47,6 +47,16 @@
         "fallbackWarning": "Este idioma aún no se reconoce, por lo que se transcribe como inglés.",
         "search": "Buscar idiomas",
         "noMatch": "Ningún idioma coincide"
+      },
+      "kit": {
+        "required": "La entrada de voz necesita @swttch/extend-kit. Instálalo desde la parte superior derecha.",
+        "install": "Instalar",
+        "installing": "Instalando…",
+        "installed": "Instalado",
+        "update": "Actualizar",
+        "updating": "Actualizando…",
+        "updated": "Actualizado",
+        "failed": "No se pudo instalar"
       }
     },
     "uiDirection": {

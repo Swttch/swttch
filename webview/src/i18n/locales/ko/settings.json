@@ -47,6 +47,16 @@
         "fallbackWarning": "이 언어는 아직 인식되지 않아, 말해도 영어로 받아써집니다.",
         "search": "언어 검색",
         "noMatch": "일치하는 언어가 없습니다"
+      },
+      "kit": {
+        "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
+        "install": "설치",
+        "installing": "설치 중…",
+        "installed": "설치했습니다",
+        "update": "업데이트",
+        "updating": "업데이트 중…",
+        "updated": "업데이트했습니다",
+        "failed": "설치하지 못했습니다"
       }
     },
     "uiDirection": {

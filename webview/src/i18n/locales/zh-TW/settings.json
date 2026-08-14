@@ -47,6 +47,16 @@
         "fallbackWarning": "此語言尚未被辨識，說話內容會被轉寫為英文。",
         "search": "搜尋語言",
         "noMatch": "沒有相符的語言"
+      },
+      "kit": {
+        "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
+        "install": "安裝",
+        "installing": "正在安裝…",
+        "installed": "已安裝",
+        "update": "更新",
+        "updating": "正在更新…",
+        "updated": "已更新",
+        "failed": "無法安裝"
       }
     },
     "uiDirection": {

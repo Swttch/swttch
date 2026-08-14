@@ -47,6 +47,16 @@
         "fallbackWarning": "この言語はまだ認識されないため、話しても英語で文字起こしされます。",
         "search": "言語を検索",
         "noMatch": "一致する言語がありません"
+      },
+      "kit": {
+        "required": "音声入力には @swttch/extend-kit が必要です。右上からインストールしてください。",
+        "install": "インストール",
+        "installing": "インストール中…",
+        "installed": "インストールしました",
+        "update": "更新",
+        "updating": "更新中…",
+        "updated": "更新しました",
+        "failed": "インストールできませんでした"
       }
     },
     "uiDirection": {

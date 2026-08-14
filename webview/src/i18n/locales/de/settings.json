@@ -47,6 +47,16 @@
         "fallbackWarning": "Diese Sprache wird noch nicht erkannt, daher wird Gesprochenes als Englisch transkribiert.",
         "search": "Sprachen suchen",
         "noMatch": "Keine passende Sprache"
+      },
+      "kit": {
+        "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
+        "install": "Installieren",
+        "installing": "Wird installiert…",
+        "installed": "Installiert",
+        "update": "Aktualisieren",
+        "updating": "Wird aktualisiert…",
+        "updated": "Aktualisiert",
+        "failed": "Installation fehlgeschlagen"
       }
     },
     "uiDirection": {

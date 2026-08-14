@@ -47,6 +47,16 @@
         "fallbackWarning": "该语言尚未被识别，说话内容会被转写为英文。",
         "search": "搜索语言",
         "noMatch": "没有匹配的语言"
+      },
+      "kit": {
+        "required": "语音输入需要 @swttch/extend-kit。请从右上角安装。",
+        "install": "安装",
+        "installing": "正在安装…",
+        "installed": "已安装",
+        "update": "更新",
+        "updating": "正在更新…",
+        "updated": "已更新",
+        "failed": "无法安装"
       }
     },
     "uiDirection": {

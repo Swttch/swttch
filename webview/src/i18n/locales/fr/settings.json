@@ -47,6 +47,16 @@
         "fallbackWarning": "Cette langue n'est pas encore reconnue : la parole est transcrite en anglais.",
         "search": "Rechercher une langue",
         "noMatch": "Aucune langue correspondante"
+      },
+      "kit": {
+        "required": "La saisie vocale nécessite @swttch/extend-kit. Installez-le en haut à droite.",
+        "install": "Installer",
+        "installing": "Installation…",
+        "installed": "Installé",
+        "update": "Mettre à jour",
+        "updating": "Mise à jour…",
+        "updated": "Mis à jour",
+        "failed": "Installation impossible"
       }
     },
     "uiDirection": {

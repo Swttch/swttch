@@ -47,6 +47,16 @@
         "fallbackWarning": "This language is not recognised yet, so speech is transcribed as English.",
         "search": "Search languages",
         "noMatch": "No matching language"
+      },
+      "kit": {
+        "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
+        "install": "Install",
+        "installing": "Installing…",
+        "installed": "Installed",
+        "update": "Update",
+        "updating": "Updating…",
+        "updated": "Updated",
+        "failed": "Could not install"
       }
     },
     "uiDirection": {

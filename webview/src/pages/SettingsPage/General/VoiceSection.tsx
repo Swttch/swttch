@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
+import { useExtendKit } from '@/hooks/queries/useExtendKit';
+import { ExtendKitControl } from './ExtendKitControl';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { SettingKey, type VoiceSettings } from '@/types/settings';
@@ -56,8 +58,19 @@ export function VoiceSection() {
 
   const showsFallbackWarning = Boolean(speechLanguage) && !isDictationSupported(speechLanguage);
 
+  // Voice input cannot run without the kit, so its settings are inert until it
+  // is there. Showing them live would let the user configure something that
+  // does nothing and looks broken.
+  const { info } = useExtendKit();
+  const kitMissing = Boolean(info) && !info?.installed;
+
   return (
-    <SettingSection title={t('general.voice.title')}>
+    <SettingSection
+      title={t('general.voice.title')}
+      titleAction={<ExtendKitControl />}
+      disabled={kitMissing}
+      description={kitMissing ? t('general.voice.kit.required') : undefined}
+    >
       <SettingRow
         label={t('general.voice.speechLanguage.label')}
         description={
