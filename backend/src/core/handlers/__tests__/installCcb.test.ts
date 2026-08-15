@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Command runs through child_process; stub it so nothing actually installs.
+// The launcher runs through child_process; stub it so nothing actually installs.
 // execFileSync is stubbed because augmented-path may probe for nvm.
 vi.mock('child_process', () => ({
   execFile: vi.fn(),
@@ -43,6 +43,17 @@ function lastPayload(conns: ConnectionManager): Record<string, unknown> {
   return calls[calls.length - 1][2];
 }
 
+/**
+ * The effective `command args` string for the i-th spawn, platform-independent.
+ * win32 wraps every launcher as `cmd.exe /d /s /c <command> <args...>`; unix runs
+ * the launcher directly. Both are normalised back to `<command> <args...>`.
+ */
+function spawnedArgv(i: number): string {
+  const file = mockExecFile.mock.calls[i][0] as string;
+  const args = mockExecFile.mock.calls[i][1] as string[];
+  return process.platform === 'win32' ? args.slice(3).join(' ') : [file, ...args].join(' ');
+}
+
 let execPathSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
@@ -71,29 +82,28 @@ describe('installCcbHandler', () => {
     // a successful install invisible: every later lookup still answers "not
     // installed", so the settings section stays locked after installing.
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
-    // Regardless of the win32 cmd.exe wrapping, the argv carries the install spec.
-    const argv = (mockExecFile.mock.calls[0][1] as string[]).join(' ');
-    expect(argv).toContain('install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
   });
 
   it.runIf(process.platform !== 'win32')(
-    'runs the install through a login shell (unix) so npm resolves on GUI-launched backends, matching runCcbUsage',
+    'runs the launcher directly (no login shell), the same way the CLI updater does',
     async () => {
       mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
       const conns = mockConns();
 
       await installCcbHandler('c1', msg, conns, bridge);
 
-      // A GUI-launched backend inherits a minimal PATH; runCcbUsage already runs
-      // ccb via `$SHELL -l -i -c` so the rc-file PATH exposes it. The install must
-      // resolve npm the same way instead of exec'ing `npm` directly (Direct mode),
-      // which fails with ENOENT where only the login shell's PATH knows npm.
+      // The old code ran `$SHELL -l -i -c "npm install ..."` to pick up the
+      // rc-file PATH; a login-interactive shell can stall a non-interactive
+      // backend (it hung under WSL). The shared runner instead resolves npm
+      // through the augmented PATH and runs it DIRECTLY with shell:false — no
+      // tokenization, no `-l -i -c`.
       const file = mockExecFile.mock.calls[0][0] as string;
       const args = mockExecFile.mock.calls[0][1] as string[];
-      const userShell = process.env.SHELL || '/bin/sh';
-      const expectedShell = /\/fish$/.test(userShell) ? '/bin/sh' : userShell;
-      expect(file).toBe(expectedShell);
-      expect(args).toEqual(['-l', '-i', '-c', 'npm install -g @swttch/extend-kit']);
+      const opts = mockExecFile.mock.calls[0][2] as { shell?: boolean };
+      expect(file).toBe('npm');
+      expect(args).toEqual(['install', '-g', '@swttch/extend-kit']);
+      expect(opts.shell).toBe(false);
     },
   );
 
@@ -108,9 +118,8 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    const argv = (mockExecFile.mock.calls[0][1] as string[]).join(' ');
-    expect(argv).toContain('volta install @swttch/extend-kit');
-    expect(argv).not.toContain('npm install -g');
+    expect(spawnedArgv(0)).toContain('volta install @swttch/extend-kit');
+    expect(spawnedArgv(0)).not.toContain('npm install -g');
   });
 
   it('falls back to npm when no version manager owns the Node', async () => {
@@ -119,8 +128,7 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    const argv = (mockExecFile.mock.calls[0][1] as string[]).join(' ');
-    expect(argv).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
   });
 
   it('removes the predecessor and retries when volta refuses the name', async () => {
@@ -137,8 +145,36 @@ describe('installCcbHandler', () => {
       cb(
         first ? Object.assign(new Error('Command failed'), { code: 1 }) : null,
         '',
+        first ? "error: Executable 'ccb' is already installed by claude-code-battery" : '',
+      );
+      return { on: vi.fn() };
+    }) as never);
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    expect(spawnedArgv(0)).toContain('volta install @swttch/extend-kit');
+    expect(spawnedArgv(1)).toContain('volta uninstall claude-code-battery');
+    expect(spawnedArgv(2)).toContain('volta install @swttch/extend-kit');
+    expect(lastPayload(conns).status).toBe('ok');
+  });
+
+  it('removes the predecessor with npm and retries when npm refuses the ccb shim (EEXIST)', async () => {
+    // On npm/Windows the predecessor holds `ccb` from before the rename, and npm
+    // refuses to overwrite its shim — `EEXIST: file exists, .../ccb.cmd` — without
+    // ever naming the package. volta's explicit message is not the only way this
+    // collision shows up, so the EEXIST form must trigger the same removal-and-
+    // retry, using npm (not volta) to clear it.
+    const calls: string[] = [];
+    mockExecFile.mockImplementation(((_f: string, a: readonly string[], _o: unknown, cb: Cb) => {
+      const argv = (a as string[]).join(' ');
+      calls.push(argv);
+      const first = calls.length === 1;
+      cb(
+        first ? Object.assign(new Error('Command failed'), { code: 1 }) : null,
+        '',
         first
-          ? "error: Executable 'ccb' is already installed by claude-code-battery"
+          ? 'npm error code EEXIST\nnpm error path /usr/local/bin/ccb.cmd\nnpm error EEXIST: file already exists'
           : '',
       );
       return { on: vi.fn() };
@@ -147,10 +183,11 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(calls[0]).toContain('volta install @swttch/extend-kit');
-    expect(calls[1]).toContain('volta uninstall claude-code-battery');
-    expect(calls[2]).toContain('volta install @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(1)).toContain('npm uninstall -g claude-code-battery');
+    expect(spawnedArgv(2)).toContain('npm install -g @swttch/extend-kit');
     expect(lastPayload(conns).status).toBe('ok');
+    expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
   });
 
   it('does not uninstall anything for an unrelated failure', async () => {
@@ -165,8 +202,8 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    const argvs = mockExecFile.mock.calls.map((c) => (c[1] as string[]).join(' '));
-    expect(argvs.some((a) => a.includes('uninstall'))).toBe(false);
+    const argvs = mockExecFile.mock.calls.map((_c, i) => spawnedArgv(i));
+    expect(argvs.some((a) => a.includes('uninstall') || a.includes('remove'))).toBe(false);
     expect(lastPayload(conns).status).toBe('error');
   });
 
