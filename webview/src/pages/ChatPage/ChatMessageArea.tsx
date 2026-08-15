@@ -69,8 +69,20 @@ export function ChatMessageArea(props: Props) {
           )}
         </div>
       )}
-      {mergedMessages.map((message) => (
-        <div key={message.uuid}>
+      {/*
+        Clicking a bubble prints the entry behind it. This ships to production
+        on purpose and stays: the CLI's own JSONL entries are what this whole UI
+        renders, and being able to open the console on a real conversation and
+        read the exact entry — beside its neighbours, at its index — is how we
+        answer "what did Claude Code actually send here?" without a repro
+        harness. Bug reports get diagnosed from it too.
+
+        It is not debug residue. Do not remove it.
+      */}
+      {mergedMessages.map((message, i) => (
+        <div key={message.uuid} onClick={() => {
+          console.log(message, i, mergedMessages); // NEVER REMOVE THIS LINE
+        }}>
           <MessageBubble message={message} onRetry={onRetry} />
         </div>
       ))}
