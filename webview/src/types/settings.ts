@@ -66,6 +66,18 @@ export enum SettingKey {
   // own i18n, unrelated to Claude's response language (a native key).
   UI_LANGUAGE = 'uiLanguage',
 
+  // Voice input settings that the official schema does NOT define — currently
+  // just `speechLanguage`, the BCP-47 code of the language being spoken.
+  //
+  // Claude Code treats its own `language` key as the dictation language too, so
+  // that one is authoritative and lives in the native file. This is the fallback
+  // consulted only when it is empty — precisely the role the docs give VS Code's
+  // `accessibility.voice.speechLanguage`, which is why the name matches.
+  //
+  // `voice.enabled` / `mode` / `autoSubmit` ARE official and are read from and
+  // written to the native settings instead; see useClaudeSettings.
+  VOICE = 'voice',
+
   // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
   USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
 
@@ -201,6 +213,65 @@ export interface OpenFileWithCustom {
 }
 
 /**
+ * How long recording waits through silence before stopping itself, in seconds.
+ *
+ * 15 is both the default and the ceiling because the service stops listening
+ * after that much silence regardless — a longer wait could never elapse, and
+ * "never stop" is not on offer for the same reason: recording would end at 15
+ * seconds anyway, so the option would promise something we cannot deliver.
+ *
+ * This is NOT the length of a recording. A recording may run up to
+ * {@link VOICE_TOTAL_DURATION_MAX}; this only bounds the quiet at the end.
+ */
+export const VOICE_SILENCE_TIMEOUT_DEFAULT = 15;
+export const VOICE_SILENCE_TIMEOUT_MIN = 1;
+export const VOICE_SILENCE_TIMEOUT_MAX = 15;
+
+/**
+ * The longest a single recording runs, in seconds, per Claude Code's
+ * documented dictation behaviour. Speaking continuously for two minutes is
+ * fine; it is only the silence that is capped above.
+ */
+export const VOICE_TOTAL_DURATION_MAX = 120;
+
+/**
+ * Default keystroke for starting and stopping voice input.
+ *
+ * Alt (Option) rather than Cmd/Ctrl because those are crowded: Cmd+D bookmarks
+ * the page in every browser, and Ctrl+D is end-of-input in a terminal and
+ * delete-line in several editors. Alt+D collides with far less.
+ */
+export const VOICE_SHORTCUT_DEFAULT = 'Alt+D';
+
+/**
+ * Bring a typed silence timeout into the 1..15 second range.
+ *
+ * There is no "never stop" option: the service itself stops listening after 15
+ * seconds of silence, so we could not honour one — recording would end anyway
+ * and the setting would be a promise we cannot keep.
+ */
+export function clampVoiceSilenceTimeout(seconds: number): number {
+  if (!Number.isFinite(seconds)) return VOICE_SILENCE_TIMEOUT_DEFAULT;
+  return Math.min(Math.max(Math.round(seconds), VOICE_SILENCE_TIMEOUT_MIN), VOICE_SILENCE_TIMEOUT_MAX);
+}
+
+/**
+ * Voice input settings that are ours rather than Claude Code's.
+ *
+ * `speechLanguage` is the fallback for the dictation language, consulted only
+ * when the official `language` is empty — the role the docs assign to VS Code's
+ * `accessibility.voice.speechLanguage`.
+ */
+export interface VoiceSettings {
+  /** BCP-47 code of the language being spoken, e.g. 'ko'. */
+  speechLanguage?: string | null;
+  /** Seconds of silence before recording stops, 1..15. */
+  silenceTimeout?: number;
+  /** Keystroke that toggles recording, e.g. 'Alt+D'. */
+  shortcut?: string | null;
+}
+
+/**
  * 설정 상태 인터페이스
  */
 export interface SettingsState {
@@ -221,6 +292,7 @@ export interface SettingsState {
   [SettingKey.CHAT_PAGINATION]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
+  [SettingKey.VOICE]: VoiceSettings;
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
@@ -250,6 +322,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.CHAT_PAGINATION]: true,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,
+  [SettingKey.VOICE]: {},
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,

@@ -37,6 +37,43 @@
       "label": "介面語言",
       "description": "應用程式介面所使用的語言,與 Claude 的回覆語言各自獨立。"
     },
+    "voice": {
+      "title": "語音輸入",
+      "enabled": {
+        "label": "啟用語音輸入",
+        "description": "關閉後麥克風按鈕和快速鍵都會消失。與 CLI 的 /voice 是同一設定。"
+      },
+      "speechLanguage": {
+        "label": "說話語言",
+        "description": "使用語音輸入時所說的語言。",
+        "follow": "跟隨 Claude 設定（{{language}}）",
+        "unsupported": "{{language}}（尚未辨識）",
+        "fallbackWarning": "此語言尚未被辨識，說話內容會被轉寫為英文。",
+        "search": "搜尋語言",
+        "noMatch": "沒有相符的語言"
+      },
+      "silenceTimeout": {
+        "label": "等待時間",
+        "description": "沒有說話時錄音等待的秒數，最多 {{max}} 秒。"
+      },
+      "shortcut": {
+        "label": "快速鍵",
+        "description": "開始和停止錄音的按鍵。按下以設定新的組合。",
+        "recording": "請按鍵…",
+        "needsModifier": "需要同時按住 Ctrl、Alt 或 Cmd。"
+      },
+      "kit": {
+        "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
+        "install": "安裝",
+        "installing": "正在安裝…",
+        "installed": "已安裝",
+        "update": "更新",
+        "updating": "正在更新…",
+        "updated": "已更新",
+        "failed": "無法安裝",
+        "upToDate": "已是最新版本"
+      }
+    },
     "uiDirection": {
       "label": "啟用 RTL(Right-to-left)"
     },

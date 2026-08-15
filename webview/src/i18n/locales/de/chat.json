@@ -89,7 +89,18 @@
       "focusHint": "⌘ Esc, um Claude zu fokussieren oder Fokus zu entfernen"
     },
     "ariaLabel": "Nachricht an Claude",
-    "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet."
+    "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
+    "dictation": {
+      "tapOrHold": "Tippen oder halten zum Aufnehmen",
+      "stop": "Aufnahme beenden",
+      "error": "Diktatfehler: {{message}}",
+      "micDenied": "Mikrofon blockiert – erlauben Sie der IDE den Zugriff in den Datenschutzeinstellungen des Systems",
+      "micDeniedBrowser": "Mikrofon blockiert – über das Schloss in der Adressleiste erlauben und neu laden",
+      "noMic": "Kein Mikrofon gefunden",
+      "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
+      "install": "Installieren",
+      "installing": "Wird installiert…"
+    }
   },
   "sessionHeader": {
     "dock": {

@@ -37,6 +37,43 @@
       "label": "Langue de l'interface",
       "description": "Langue de l'interface de l'application, indépendante de la langue de réponse de Claude."
     },
+    "voice": {
+      "title": "Saisie vocale",
+      "enabled": {
+        "label": "Saisie vocale",
+        "description": "Désactivée, le bouton du micro disparaît et le raccourci ne fonctionne plus. Même réglage que /voice dans la CLI."
+      },
+      "speechLanguage": {
+        "label": "Langue parlée",
+        "description": "La langue dans laquelle vous parlez lors de la saisie vocale.",
+        "follow": "Suivre le réglage de Claude ({{language}})",
+        "unsupported": "{{language}} (pas encore reconnu)",
+        "fallbackWarning": "Cette langue n'est pas encore reconnue : la parole est transcrite en anglais.",
+        "search": "Rechercher une langue",
+        "noMatch": "Aucune langue correspondante"
+      },
+      "silenceTimeout": {
+        "label": "Temps d'attente",
+        "description": "Secondes de silence avant l'arrêt de l'enregistrement, jusqu'à {{max}}."
+      },
+      "shortcut": {
+        "label": "Raccourci",
+        "description": "La touche qui démarre et arrête l'enregistrement. Appuyez pour définir une autre combinaison.",
+        "recording": "Appuyez sur une touche…",
+        "needsModifier": "Maintenez aussi Ctrl, Alt ou Cmd."
+      },
+      "kit": {
+        "required": "La saisie vocale nécessite @swttch/extend-kit. Installez-le en haut à droite.",
+        "install": "Installer",
+        "installing": "Installation…",
+        "installed": "Installé",
+        "update": "Mettre à jour",
+        "updating": "Mise à jour…",
+        "updated": "Mis à jour",
+        "failed": "Installation impossible",
+        "upToDate": "À jour"
+      }
+    },
     "uiDirection": {
       "label": "Activer RTL(Right-to-left)"
     },

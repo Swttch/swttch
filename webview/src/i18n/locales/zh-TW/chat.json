@@ -89,7 +89,18 @@
       "focusHint": "⌘ Esc 可聚焦或取消聚焦 Claude"
     },
     "ariaLabel": "傳送訊息給 Claude",
-    "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。"
+    "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
+    "dictation": {
+      "tapOrHold": "點擊或按住錄音",
+      "stop": "停止錄音",
+      "error": "語音輸入錯誤：{{message}}",
+      "micDenied": "麥克風已被封鎖 — 請在系統隱私設定中允許 IDE 使用麥克風",
+      "micDeniedBrowser": "麥克風已被封鎖 — 請從網址列的鎖頭圖示允許，然後重新整理",
+      "noMic": "找不到麥克風",
+      "kitMissing": "語音輸入需要 @swttch/extend-kit",
+      "install": "安裝",
+      "installing": "正在安裝…"
+    }
   },
   "sessionHeader": {
     "dock": {

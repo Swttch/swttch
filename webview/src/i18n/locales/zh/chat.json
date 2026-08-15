@@ -89,7 +89,18 @@
       "focusHint": "⌘ Esc 聚焦或取消聚焦 Claude"
     },
     "ariaLabel": "给 Claude 发消息",
-    "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。"
+    "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",
+    "dictation": {
+      "tapOrHold": "点击或按住录音",
+      "stop": "停止录音",
+      "error": "语音输入错误：{{message}}",
+      "micDenied": "麦克风已被阻止 — 请在系统隐私设置中允许 IDE 使用麦克风",
+      "micDeniedBrowser": "麦克风已被阻止 — 请从地址栏的锁形图标中允许，然后刷新",
+      "noMic": "未找到麦克风",
+      "kitMissing": "语音输入需要 @swttch/extend-kit",
+      "install": "安装",
+      "installing": "正在安装…"
+    }
   },
   "sessionHeader": {
     "dock": {

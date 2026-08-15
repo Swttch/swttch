@@ -37,6 +37,43 @@
       "label": "Interface Language",
       "description": "Language for the app interface, independent of Claude's response language."
     },
+    "voice": {
+      "title": "Voice input",
+      "enabled": {
+        "label": "Voice input",
+        "description": "Off hides the microphone button and disables the shortcut. Same setting as /voice in the CLI."
+      },
+      "speechLanguage": {
+        "label": "Spoken language",
+        "description": "The language you speak when using voice input.",
+        "follow": "Follow Claude's setting ({{language}})",
+        "unsupported": "{{language}} (not recognised yet)",
+        "fallbackWarning": "This language is not recognised yet, so speech is transcribed as English.",
+        "search": "Search languages",
+        "noMatch": "No matching language"
+      },
+      "silenceTimeout": {
+        "label": "Wait time",
+        "description": "Seconds of silence before recording stops, up to {{max}}."
+      },
+      "shortcut": {
+        "label": "Shortcut",
+        "description": "The key that starts and stops recording. Press it to set a new combination.",
+        "recording": "Press a key…",
+        "needsModifier": "Hold Ctrl, Alt or Cmd as well."
+      },
+      "kit": {
+        "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
+        "install": "Install",
+        "installing": "Installing…",
+        "installed": "Installed",
+        "update": "Update",
+        "updating": "Updating…",
+        "updated": "Updated",
+        "failed": "Could not install",
+        "upToDate": "Up to date"
+      }
+    },
     "uiDirection": {
       "label": "Enable RTL(Right-to-left)"
     },

@@ -34,6 +34,15 @@ interface Props {
    */
   highlightTokens?: readonly string[];
   /**
+   * Bounds of dictated text the recognizer has not settled on yet, painted in
+   * italics so it reads as provisional. Null when nothing is being dictated.
+   *
+   * While this is set it takes over the mirror: path chips are not drawn. The
+   * two never usefully overlap — a phrase being spoken is not a path yet — and
+   * letting them compete would mean splitting the same run twice.
+   */
+  interimRange?: { start: number; end: number } | null;
+  /**
    * IME composition state, optionally owned by the parent (ChatInput) so its
    * keydown handler and this editor agree on a single source of truth. Under
    * JCEF the native `isComposing` flag is unreliable; this ref-only hook is
@@ -50,7 +59,9 @@ interface Props {
  * caret. Keep this list the single source of truth for both layers.
  */
 const LAYOUT_CLASSES = [
-  'w-full px-3 text-base leading-normal',
+  // pe-11 keeps text clear of the mic button, which floats over the box's top
+  // right. Both layers take it so the mirror's glyphs stay under the caret.
+  'w-full ps-3 pe-11 text-base leading-normal',
   'whitespace-pre-wrap break-words',
 ] as const;
 
@@ -90,6 +101,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     className,
     ariaLabel,
     highlightTokens = [],
+    interimRange = null,
     ime: imeProp,
   } = props;
 
@@ -219,6 +231,13 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
   // The mirror paints `displayText` (live, includes in-progress IME glyphs),
   // NOT `value` (which lags during composition).
   const segments = splitIntoSegments(displayText, highlightTokens);
+  // Clamp against displayText rather than trusting the caller: during IME
+  // composition the mirror paints text the dictation layer has not seen, so a
+  // range computed a moment ago can point past the end.
+  const interim =
+    interimRange && interimRange.end > interimRange.start && interimRange.start < displayText.length
+      ? { start: interimRange.start, end: Math.min(interimRange.end, displayText.length) }
+      : null;
   // A trailing newline collapses on the last line of a wrapping box; append a
   // zero-content newline so the mirror's height matches the editable div.
   const trailingNewline = displayText.endsWith('\n');
@@ -239,14 +258,24 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
           .filter(Boolean)
           .join(' ')}
       >
-        {segments.map((seg, i) =>
-          seg.isToken ? (
-            <span key={i} className="richInputChip">
-              {seg.text}
+        {interim ? (
+          <>
+            {displayText.slice(0, interim.start)}
+            <span className="italic text-text-tertiary">
+              {displayText.slice(interim.start, interim.end)}
             </span>
-          ) : (
-            <span key={i}>{seg.text}</span>
-          ),
+            {displayText.slice(interim.end)}
+          </>
+        ) : (
+          segments.map((seg, i) =>
+            seg.isToken ? (
+              <span key={i} className="richInputChip">
+                {seg.text}
+              </span>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            ),
+          )
         )}
         {trailingNewline && '\n'}
       </div>

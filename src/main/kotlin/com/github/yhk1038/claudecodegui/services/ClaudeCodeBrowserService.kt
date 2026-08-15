@@ -9,6 +9,10 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
+import org.cef.browser.CefBrowser
+import org.cef.browser.CefFrame
+import org.cef.callback.CefMediaAccessCallback
+import org.cef.handler.CefPermissionHandler
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.Alarm
 import java.util.concurrent.ConcurrentHashMap
@@ -305,9 +309,60 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
             builder.setOffScreenRendering(false)
         }
         val browser = builder.build()
+        grantMicrophoneAccess(browser)
         val cursorQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
         val streamingQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
         return BrowserHolder(browser, cursorQuery, streamingQuery, isOsr = isRemoteJcef)
+    }
+
+    /**
+     * Let the chat's voice input open the microphone.
+     *
+     * Chromium denies `getUserMedia` unless something answers the permission
+     * request, and there is no prompt to fall back on inside the IDE — with no
+     * handler the microphone simply never opens and dictation looks broken.
+     *
+     * Only microphone capture is granted, and only that: the request carries a
+     * bitmask that can also ask for the camera and for screen capture, so the
+     * reply is masked down to the audio bit rather than passed through. A page
+     * asking for anything else is denied.
+     *
+     * We can answer without a prompt of our own because the page is ours — the
+     * chat UI we serve on localhost, not arbitrary web content. The user already
+     * granted the IDE microphone access at the OS level; the OS prompt is the
+     * one that decides.
+     */
+    private fun grantMicrophoneAccess(browser: JBCefBrowser) {
+        // addPermissionHandler is missing on older JCEF builds. Voice input not
+        // working is a lesser failure than the whole panel failing to load, so a
+        // missing method is logged and stepped over.
+        try {
+            browser.jbCefClient.addPermissionHandler(
+                object : CefPermissionHandler {
+                    override fun onRequestMediaAccessPermission(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        requestingUrl: String?,
+                        requestedPermissions: Int,
+                        callback: CefMediaAccessCallback?,
+                    ): Boolean {
+                        val microphone = CefMediaAccessCallback.MediaPermissionFlags.DEVICE_AUDIO_CAPTURE
+                        val granted = requestedPermissions and microphone
+                        if (granted == 0) {
+                            callback?.Cancel()
+                        } else {
+                            callback?.Continue(granted)
+                        }
+                        // true = handled; returning false would leave Chromium to
+                        // apply its own default, which is to deny.
+                        return true
+                    }
+                },
+                browser.cefBrowser,
+            )
+        } catch (t: Throwable) {
+            logger.warn("Microphone permission handler unavailable; voice input will not work", t)
+        }
     }
 
     /**

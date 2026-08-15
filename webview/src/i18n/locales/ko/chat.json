@@ -89,7 +89,18 @@
       "focusHint": "⌘ Esc로 Claude에 포커스 지정/해제"
     },
     "ariaLabel": "Claude에게 메시지 보내기",
-    "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다."
+    "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",
+    "dictation": {
+      "tapOrHold": "눌러서 또는 누른 채로 녹음",
+      "stop": "녹음 중지",
+      "error": "받아쓰기 오류: {{message}}",
+      "micDenied": "마이크가 차단되어 있습니다 — 시스템 설정에서 IDE에 마이크를 허용해 주세요",
+      "micDeniedBrowser": "마이크가 차단되어 있습니다 — 주소창의 자물쇠를 눌러 허용한 뒤 새로고침해 주세요",
+      "noMic": "마이크를 찾을 수 없습니다",
+      "kitMissing": "음성 입력에는 @swttch/extend-kit이 필요합니다",
+      "install": "설치",
+      "installing": "설치 중…"
+    }
   },
   "sessionHeader": {
     "dock": {

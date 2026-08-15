@@ -7,6 +7,11 @@ import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
 import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
+import { MicButton } from './MicButton';
+import { useDictation } from './hooks/useDictation';
+import { useGlobalShortcut } from './hooks/useGlobalShortcut';
+import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
+import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -28,11 +33,13 @@ import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingI
 import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
+import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
+import { displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
-import { isMobile } from '@/config/environment';
+import { isMobile, isBrowser } from '@/config/environment';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
@@ -60,6 +67,63 @@ export function ChatInput() {
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory();
   const { initHistory, pushToHistory, navigateUp, navigateDown } = inputHistory;
+  // Read the current text without making dictation depend on it — the callback
+  // would otherwise be rebuilt on every keystroke, and re-subscribe the stream.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const dictation = useDictation(
+    useCallback(
+      () => ({
+        value: valueRef.current,
+        // Dictate at the caret, so speaking mid-sentence inserts there rather
+        // than appending to the end of what was already typed.
+        caret: textareaRef.current
+          ? getCaretOffset(textareaRef.current)
+          : valueRef.current.length,
+        // Move the caret to the end of what was just written, the way paste
+        // does. The editable layer resets the caret to the start whenever its
+        // content is replaced wholesale, so without this every recording ended
+        // with the caret back at 0 — and the next one dictated in front of the
+        // last, running consecutive phrases backwards.
+        setValue: (next: string, caret?: number) => {
+          onChange(next);
+          if (caret === undefined) return;
+          requestAnimationFrame(() => {
+            const target = textareaRef.current;
+            if (target) setCaretOffset(target, caret);
+          });
+        },
+      }),
+      [onChange, textareaRef],
+    ),
+  );
+  // Installing the kit for dictation is the same `npm i -g @swttch/extend-kit`
+  // the usage panel already runs, so it reuses that mutation rather than adding
+  // a second path that installs the same package.
+  const { install: installKit, installing: installingKit } = useInstallCcb();
+  const handleInstallKit = useCallback(async () => {
+    try {
+      await installKit();
+      // The backend caches where it found (or failed to find) the kit; clear the
+      // error so the next press retries instead of showing a stale failure.
+      dictation.dismissError();
+    } catch {
+      // The mutation surfaces its own failure through the same banner.
+    }
+  }, [installKit, dictation]);
+
+  // Retire the "install the kit" prompt the moment the kit is actually present —
+  // whether it was just installed here, installed over in Settings, or was
+  // installed all along and a stale mic attempt left the prompt up. Without this
+  // the banner lingers until the user presses the mic again to rediscover it
+  // cleared. Queried only while the prompt is showing, so it stays off the wire
+  // otherwise.
+  const kitMissing = !!dictation.error?.kitMissing;
+  const { info: kitInfo } = useExtendKit({ enabled: kitMissing });
+  useEffect(() => {
+    if (kitMissing && kitInfo?.installed) dictation.dismissError();
+  }, [kitMissing, kitInfo?.installed, dictation.dismissError]);
+
   // Read messages lazily via ref so ChatInput does not re-render every streaming token.
   const messagesRef = useRef(chatStream.messages);
   messagesRef.current = chatStream.messages;
@@ -89,6 +153,29 @@ export function ChatInput() {
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
+  // The user can rebind this; the default lives with the other voice defaults.
+  const voiceShortcut =
+    (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
+  // `/voice off` in the CLI writes voice.enabled=false, and that decision
+  // should hold here too — one machine, one answer.
+  //
+  // Only an explicit false hides it. Claude Code treats a missing key as off
+  // because its dictation has to be switched on with /voice, but we have no
+  // such command: the microphone button is visible, so there is nothing to
+  // discover and nothing to turn on first. Inheriting "absent means off" would
+  // hide the feature from everyone who never opened a terminal.
+  const voiceEnabled =
+    (claudeSettings.voice as { enabled?: boolean } | undefined)?.enabled !== false;
+
+  // Bound globally rather than on the composer: the point of the shortcut is to
+  // start talking without reaching for the mouse, which is exactly the moment
+  // the composer does not have focus. Tap/hold is the same rule the microphone
+  // button uses, so the two controls behave alike.
+  useGlobalShortcut(voiceEnabled ? voiceShortcut : null, {
+    isRecording: () => dictation.isRecording,
+    onStart: () => void dictation.start(),
+    onStop: () => void dictation.stop(),
+  });
   const { cycle: cycleEffort } = useEffort();
   const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -440,6 +527,9 @@ export function ChatInput() {
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
 
+    // 받아쓰기 토글은 여기서 처리하지 않는다. useGlobalShortcut이 window의
+    // capture 단계에서 먼저 가로채므로, 포커스가 어디에 있든 동작한다.
+
     // JCEF workaround: Cmd+Arrow 처리 후 발생하는 순수 Arrow 유령 이벤트 무시
     const isArrowKey = e.key.startsWith('Arrow');
     const hasModifier = e.metaKey || e.altKey || e.ctrlKey;
@@ -603,6 +693,46 @@ export function ChatInput() {
           onClose={dismissAutoFallback}
         />
       )}
+      {/* 음성 입력 실패 안내. 툴팁이 아니라 인풋배너인 이유는, 사용자가 무언가
+          해야 하는 안내(권한 허용·설치·로그인)를 호버해야만 보이는 자리에 두면
+          안 되기 때문이다. 앞으로 다른 위치의 기능이 실패할 때도 같은 배너를
+          재사용한다. extend-kit 미설치는 우리가 대신 해결해줄 수 있는 유일한
+          경우라 설치 버튼을 함께 띄운다. */}
+      {dictation.error && (
+        <InputBanner
+          message={
+            dictation.error.kitMissing
+              ? t('chatInput.dictation.kitMissing')
+              : dictation.error.message === 'micDenied'
+                ? // Where the block lives differs by environment, and pointing at
+                  // the wrong place leaves the user hunting. In a browser the
+                  // refusal is remembered per site and only the address-bar
+                  // control clears it — no API can re-prompt. Inside the IDE we
+                  // grant it ourselves, so a refusal there came from the OS.
+                  isBrowser()
+                  ? t('chatInput.dictation.micDeniedBrowser')
+                  : t('chatInput.dictation.micDenied')
+                : dictation.error.message === 'noMic'
+                  ? t('chatInput.dictation.noMic')
+                  : t('chatInput.dictation.error', { message: dictation.error.message })
+          }
+          actions={
+            dictation.error.kitMissing ? (
+              <button
+                type="button"
+                onClick={() => void handleInstallKit()}
+                disabled={installingKit}
+                className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors disabled:opacity-50"
+              >
+                {installingKit
+                  ? t('chatInput.dictation.installing')
+                  : t('chatInput.dictation.install')}
+              </button>
+            ) : undefined
+          }
+          onClose={dictation.dismissError}
+        />
+      )}
       {/* SDUI 공지(INPUT_BANNER): 서버가 내려주는 공지가 있을 때만 표시 */}
       <AnnouncementInputBannerSlot />
       {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다. */}
@@ -674,8 +804,9 @@ export function ChatInput() {
         {/* 드래그 오버 오버레이 */}
         <DragOverlay visible={isDragOver} />
 
-        {/* Composer 영역 */}
-        <div className="pt-2.5 pb-1.5">
+        {/* Composer 영역. 마이크 버튼이 입력창 우측 상단에 겹쳐 앉으므로
+            relative 기준점이 된다. */}
+        <div className="relative pt-2.5 pb-1.5">
           <RichInput
             ref={textareaRef}
             ime={ime}
@@ -689,7 +820,19 @@ export function ChatInput() {
             disabled={disabled}
             ariaLabel={t('chatInput.ariaLabel')}
             highlightTokens={pathTokens}
+            interimRange={dictation.interimRange}
           />
+          {voiceEnabled && (
+            <MicButton
+              state={dictation.state}
+              level={dictation.level}
+              micDenied={dictation.error?.micDenied}
+              disabled={disabled}
+              shortcut={displayShortcut(voiceShortcut)}
+              onStart={() => void dictation.start()}
+              onStop={() => void dictation.stop()}
+            />
+          )}
         </div>
 
         {/* 첨부 미리보기 */}

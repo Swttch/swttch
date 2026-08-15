@@ -37,6 +37,43 @@
       "label": "Idioma da interface",
       "description": "Idioma da interface do aplicativo, independente do idioma de resposta do Claude."
     },
+    "voice": {
+      "title": "Entrada de voz",
+      "enabled": {
+        "label": "Entrada de voz",
+        "description": "Desligado oculta o botão do microfone e desativa o atalho. É a mesma configuração de /voice na CLI."
+      },
+      "speechLanguage": {
+        "label": "Idioma falado",
+        "description": "O idioma em que você fala ao usar a entrada de voz.",
+        "follow": "Seguir a configuração do Claude ({{language}})",
+        "unsupported": "{{language}} (ainda não reconhecido)",
+        "fallbackWarning": "Este idioma ainda não é reconhecido, então a fala é transcrita como inglês.",
+        "search": "Pesquisar idiomas",
+        "noMatch": "Nenhum idioma correspondente"
+      },
+      "silenceTimeout": {
+        "label": "Tempo de espera",
+        "description": "Segundos de silêncio antes de a gravação parar, até {{max}}."
+      },
+      "shortcut": {
+        "label": "Atalho",
+        "description": "A tecla que inicia e para a gravação. Pressione para definir outra combinação.",
+        "recording": "Pressione uma tecla…",
+        "needsModifier": "Segure também Ctrl, Alt ou Cmd."
+      },
+      "kit": {
+        "required": "A entrada de voz precisa do @swttch/extend-kit. Instale no canto superior direito.",
+        "install": "Instalar",
+        "installing": "Instalando…",
+        "installed": "Instalado",
+        "update": "Atualizar",
+        "updating": "Atualizando…",
+        "updated": "Atualizado",
+        "failed": "Não foi possível instalar",
+        "upToDate": "Atualizado"
+      }
+    },
     "uiDirection": {
       "label": "Ativar RTL(Right-to-left)"
     },

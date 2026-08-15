@@ -37,6 +37,43 @@
       "label": "Sprache der Oberfläche",
       "description": "Sprache der App-Oberfläche, unabhängig von der Antwortsprache von Claude."
     },
+    "voice": {
+      "title": "Spracheingabe",
+      "enabled": {
+        "label": "Spracheingabe",
+        "description": "Aus blendet die Mikrofon-Schaltfläche aus und deaktiviert das Tastenkürzel. Dieselbe Einstellung wie /voice in der CLI."
+      },
+      "speechLanguage": {
+        "label": "Gesprochene Sprache",
+        "description": "Die Sprache, in der Sie bei der Spracheingabe sprechen.",
+        "follow": "Claudes Einstellung folgen ({{language}})",
+        "unsupported": "{{language}} (noch nicht erkannt)",
+        "fallbackWarning": "Diese Sprache wird noch nicht erkannt, daher wird Gesprochenes als Englisch transkribiert.",
+        "search": "Sprachen suchen",
+        "noMatch": "Keine passende Sprache"
+      },
+      "silenceTimeout": {
+        "label": "Wartezeit",
+        "description": "Sekunden Stille, bevor die Aufnahme endet – höchstens {{max}}."
+      },
+      "shortcut": {
+        "label": "Tastenkürzel",
+        "description": "Die Taste, die die Aufnahme startet und beendet. Drücken, um eine neue Kombination festzulegen.",
+        "recording": "Taste drücken…",
+        "needsModifier": "Zusätzlich Strg, Alt oder Cmd halten."
+      },
+      "kit": {
+        "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
+        "install": "Installieren",
+        "installing": "Wird installiert…",
+        "installed": "Installiert",
+        "update": "Aktualisieren",
+        "updating": "Wird aktualisiert…",
+        "updated": "Aktualisiert",
+        "failed": "Installation fehlgeschlagen",
+        "upToDate": "Aktuell"
+      }
+    },
     "uiDirection": {
       "label": "RTL(Right-to-left) aktivieren"
     },

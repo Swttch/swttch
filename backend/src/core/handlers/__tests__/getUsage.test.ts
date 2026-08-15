@@ -123,7 +123,7 @@ describe('getUsageHandler', () => {
         requestId: 'req-1',
         status: 'error',
         error_kind: 'ccb_missing',
-        error: 'claude-code-battery CLI is not installed',
+        error: 'The ccb CLI is not installed',
       }));
     });
 
@@ -146,7 +146,7 @@ describe('getUsageHandler', () => {
         requestId: 'req-1',
         status: 'error',
         error_kind: 'ccb_missing',
-        error: 'claude-code-battery CLI is not installed',
+        error: 'The ccb CLI is not installed',
       }));
     });
 
@@ -178,7 +178,7 @@ describe('getUsageHandler', () => {
         requestId: 'req-1',
         status: 'error',
         error_kind: 'ccb_missing',
-        error: 'claude-code-battery CLI is not installed',
+        error: 'The ccb CLI is not installed',
       }));
     });
 

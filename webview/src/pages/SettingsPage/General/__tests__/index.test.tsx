@@ -47,6 +47,9 @@ vi.mock('../ClaudeConfigDirRow', () => ({ ClaudeConfigDirRow: () => null }));
 // FileSuggestionRow reads useClaudeSettings (fileSuggestion is a native key);
 // it is unrelated to the language↔RTL sync under test, so stub it out.
 vi.mock('../FileSuggestionRow', () => ({ FileSuggestionRow: () => null }));
+// Voice settings are their own section with their own tests; here they would
+// only drag the bridge (kit version lookup) into a test about RTL syncing.
+vi.mock('../VoiceSection', () => ({ VoiceSection: () => null }));
 // The auto-resume default row gates on sponsor status (react-query); mock it.
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({ useSponsorStatus: () => ({ isSponsor: false }) }));
 

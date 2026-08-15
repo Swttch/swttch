@@ -50,8 +50,13 @@ const common = {
     // Prepended verbatim to the top of every bundle, so these run before any
     // bundled module body (including the MCP SDK → eventsource-parser code below).
     js: [
-      `import { createRequire } from 'node:module';`,
-      `const require = createRequire(import.meta.url);`,
+      // Aliased, like the stream globals below: a bundled module that imports
+      // `createRequire` under its own name (backend/src/core/extend-kit.ts does,
+      // to resolve from a root other than this file) would otherwise collide with
+      // this declaration and kill the bundle with "Identifier 'createRequire' has
+      // already been declared" before it prints its PORT line.
+      `import { createRequire as __ccgCreateRequire } from 'node:module';`,
+      `const require = __ccgCreateRequire(import.meta.url);`,
       // Web Streams globals (TransformStream/Readable/Writable) are only guaranteed
       // on the global scope in newer Node runtimes; older or non-standard nodes that
       // the plugin may end up launching expose them only on `node:stream/web`. The

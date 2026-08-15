@@ -7,6 +7,14 @@ import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 export const LOGIN_REQUEST_TIMEOUT_MS = 300_000;
+/**
+ * Installing or updating a global npm package downloads + links, which routinely
+ * runs past the 30s default — and the backend itself allows 180s. Waiting less
+ * than the backend does means a slow-but-successful install, or a failing one
+ * still producing its error, times out on this side first and the user sees a
+ * silent stall instead of the result. Give it a margin over the backend budget.
+ */
+export const INSTALL_REQUEST_TIMEOUT_MS = 300_000;
 
 type MessageHandler = (message: IPCMessage) => void;
 

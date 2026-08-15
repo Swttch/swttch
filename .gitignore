@@ -89,3 +89,8 @@ scripts/*
 !scripts/zombies.sh
 !scripts/all-build-run-ide.sh
 !scripts/sync-announcement-core.sh
+
+# Swttch 관련 패키지 저장소들이 사는 곳. 각각 독립된 git 저장소라 이 저장소는
+# 추적하지 않는다. 훗날 모노레포로 전환한다면 이 한 줄을 지우고 workspace를
+# 설정하면 된다 — 그때를 위해 디렉토리 구조는 packages/<이름> 관례를 따라 둔다.
+packages/

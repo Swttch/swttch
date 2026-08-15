@@ -89,7 +89,18 @@
       "focusHint": "⌘ Échap pour focaliser ou défocaliser Claude"
     },
     "ariaLabel": "Message à Claude",
-    "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place."
+    "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place.",
+    "dictation": {
+      "tapOrHold": "Appuyer ou maintenir pour enregistrer",
+      "stop": "Arrêter l'enregistrement",
+      "error": "Erreur de dictée : {{message}}",
+      "micDenied": "Micro bloqué — autorisez l'IDE à l'utiliser dans les réglages de confidentialité du système",
+      "micDeniedBrowser": "Micro bloqué — autorisez-le via le cadenas dans la barre d'adresse, puis rechargez",
+      "noMic": "Aucun microphone détecté",
+      "kitMissing": "La saisie vocale nécessite @swttch/extend-kit",
+      "install": "Installer",
+      "installing": "Installation…"
+    }
   },
   "sessionHeader": {
     "dock": {

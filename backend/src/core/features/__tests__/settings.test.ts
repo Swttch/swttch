@@ -302,6 +302,63 @@ describe('settings', () => {
       expect(result.error).toContain('uiLanguage must be a string or null');
     });
 
+    it('should accept a voice object', async () => {
+      expect((await saveSettingToFile('voice', {})).status).toBe('ok');
+      expect((await saveSettingToFile('voice', { speechLanguage: 'ko' })).status).toBe('ok');
+      expect((await saveSettingToFile('voice', { speechLanguage: null })).status).toBe('ok');
+    });
+
+    it('should reject a non-object voice', async () => {
+      const result = await saveSettingToFile('voice', 'ko');
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('voice must be an object');
+    });
+
+    it('should accept a voice.shortcut with a real modifier', async () => {
+      for (const shortcut of ['Alt+D', 'Ctrl+Shift+K', 'Meta+Enter', 'Ctrl+Alt+Meta+X']) {
+        const result = await saveSettingToFile('voice', { shortcut });
+        expect(result.status, shortcut).toBe('ok');
+      }
+      expect((await saveSettingToFile('voice', { shortcut: null })).status).toBe('ok');
+    });
+
+    it('should reject a voice.shortcut that would swallow typing', async () => {
+      // A bare key, or one with only Shift, is a character the user is trying
+      // to type — binding it makes the composer unusable.
+      for (const shortcut of ['D', 'Shift+D', 'Alt', '', 'Alt+', 5]) {
+        const result = await saveSettingToFile('voice', { shortcut });
+        expect(result.status, String(shortcut)).toBe('error');
+      }
+    });
+
+    it('should accept a voice.silenceTimeout in range', async () => {
+      // 15 is where the service stops listening on its own.
+      for (const seconds of [1, 5, 15]) {
+        expect((await saveSettingToFile('voice', { silenceTimeout: seconds })).status).toBe('ok');
+      }
+    });
+
+    it('should reject a voice.silenceTimeout out of range', async () => {
+      // 0 is rejected too: "never stop" is not something we can honour when
+      // the service ends the recording at 15s of silence regardless.
+      for (const seconds of [0, -1, 16, 600]) {
+        const result = await saveSettingToFile('voice', { silenceTimeout: seconds });
+        expect(result.status).toBe('error');
+        expect(result.error).toContain('voice.silenceTimeout must be an integer between 1 and 15');
+      }
+    });
+
+    it('should reject a non-integer voice.silenceTimeout', async () => {
+      const result = await saveSettingToFile('voice', { silenceTimeout: 1.5 });
+      expect(result.status).toBe('error');
+    });
+
+    it('should reject a non-string voice.speechLanguage', async () => {
+      const result = await saveSettingToFile('voice', { speechLanguage: 5 });
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('voice.speechLanguage must be a string or null');
+    });
+
     it('should accept string or null language (Claude response language)', async () => {
       expect((await saveSettingToFile('language', 'japanese')).status).toBe('ok');
       expect((await saveSettingToFile('language', null)).status).toBe('ok');
@@ -530,6 +587,7 @@ describe('settings', () => {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
+        voice: {},
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
@@ -652,6 +710,7 @@ export default {
         chatPagination: true,
         uiDirection: 'ltr',
         uiLanguage: null,
+        voice: {},
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,

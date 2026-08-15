@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { INSTALL_REQUEST_TIMEOUT_MS } from '@/api/bridge/Bridge';
 import { MessageType, PackageManager, UpdateMode, type CliUpdateInfo } from '@/shared';
 
 interface RawUpdateInfo extends Partial<CliUpdateInfo> {
@@ -53,7 +54,13 @@ export function useCliUpdate(): UseCliUpdateResult {
 
   const mutation = useMutation<string | null, Error, string | null>({
     mutationFn: async (version) => {
-      const r = (await send(MessageType.UPDATE_CLI, version ? { version } : {})) as RawUpdateResult;
+      // Updating downloads + links; wait as long as the backend does (180s +
+      // margin) so a slow update's result reaches us instead of a silent stall.
+      const r = (await send(
+        MessageType.UPDATE_CLI,
+        version ? { version } : {},
+        { timeout: INSTALL_REQUEST_TIMEOUT_MS },
+      )) as RawUpdateResult;
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Update failed');
       return r.newVersion ?? null;
     },

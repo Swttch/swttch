@@ -1,10 +1,8 @@
-import { execFile as cpExecFile } from 'child_process';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { Claude } from '../claude';
-import { augmentedEnv } from '../augmented-path';
-import { execViaCmdArgv } from '../win-exec';
+import { runLauncher } from '../run-launcher';
 import { getCliVersion } from './getVersion';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 import { detectPackageManager, updateModeFor, buildUpdateCommand, detectHomebrewCask } from '../cli-update';
@@ -14,56 +12,15 @@ const UPDATE_TIMEOUT_MS = 180000;
 const UPDATE_MAX_BUFFER = 10 * 1024 * 1024;
 
 /**
- * Run the install-method-specific update command. Updates can take a while
- * (download + link), so allow a generous timeout. Combine stdout+stderr for a
- * useful error message on failure.
- *
- * On win32 the launcher (`npm.cmd`, `volta.exe`, `brew`, `winget`, ...) resolves
- * through cmd.exe, but via [execViaCmdArgv] — a cmd.exe argv ARRAY, not
- * `shell:true` (which would tokenize a launcher/args path containing spaces such
- * as `C:\Program Files\...`, the v0.22.x defect). macOS/Linux run the launcher
- * directly with no shell. NATIVE's bare `claude` is routed through Claude.exec
- * upstream (it reuses the same launcher-resolving cmd.exe bypass).
- */
-function runUpdate(command: string, args: string[]): Promise<{ ok: boolean; output: string }> {
-  if (process.platform === 'win32') {
-    return execViaCmdArgv(command, args, {
-      env: augmentedEnv(),
-      timeout: UPDATE_TIMEOUT_MS,
-      maxBuffer: UPDATE_MAX_BUFFER,
-    }).then(({ err, stdout, stderr }) => ({
-      ok: !err,
-      output: `${stdout}${stderr}`.trim(),
-    }));
-  }
-  return new Promise((resolve) => {
-    cpExecFile(
-      command,
-      args,
-      {
-        env: augmentedEnv(),
-        timeout: UPDATE_TIMEOUT_MS,
-        maxBuffer: UPDATE_MAX_BUFFER,
-        // macOS/Linux: run the launcher directly, no shell tokenization.
-        shell: false,
-      },
-      (err, stdout, stderr) => {
-        const output = `${stdout?.toString() ?? ''}${stderr?.toString() ?? ''}`.trim();
-        resolve({ ok: !err, output });
-      },
-    );
-  });
-}
-
-/**
  * Dispatch the update to the right runner by install method.
  *
  * NATIVE's bare `claude update` goes through [Claude.exec] with `shell:false`:
  * that reuses the SAME cmd.exe argv-array launcher bypass as MCP calls, so on
  * win32 a CLI installed under `C:\Program Files\...` (a path with a space) is
  * run without shell tokenization. Every other PM (`npm`/`pnpm`/`yarn`/`volta`/
- * `brew`/`winget`) is an external launcher, so it goes through [runUpdate],
- * which applies the same win32 cmd.exe-argv bypass generically.
+ * `brew`/`winget`) is an external launcher, so it goes through [runLauncher] —
+ * the shared runner the extend-kit installer uses too, so update and install
+ * resolve a launcher identically.
  */
 async function runUpdateSpec(command: string, args: string[]): Promise<{ ok: boolean; output: string }> {
   if (command === 'claude') {
@@ -84,7 +41,7 @@ async function runUpdateSpec(command: string, args: string[]): Promise<{ ok: boo
       return { ok: false, output };
     }
   }
-  return runUpdate(command, args);
+  return runLauncher(command, args, { timeout: UPDATE_TIMEOUT_MS, maxBuffer: UPDATE_MAX_BUFFER });
 }
 
 /**

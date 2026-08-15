@@ -37,6 +37,43 @@
       "label": "인터페이스 언어",
       "description": "앱 인터페이스 언어입니다. Claude의 응답 언어와 별개로 설정됩니다."
     },
+    "voice": {
+      "title": "음성 입력",
+      "enabled": {
+        "label": "음성 입력 사용",
+        "description": "끄면 마이크 버튼과 단축키가 모두 사라집니다. CLI의 /voice와 같은 설정입니다."
+      },
+      "speechLanguage": {
+        "label": "말하는 언어",
+        "description": "음성 입력으로 말할 때 사용하는 언어입니다.",
+        "follow": "Claude 설정 따름 ({{language}})",
+        "unsupported": "{{language}} (아직 인식 안 됨)",
+        "fallbackWarning": "이 언어는 아직 인식되지 않아, 말해도 영어로 받아써집니다.",
+        "search": "언어 검색",
+        "noMatch": "일치하는 언어가 없습니다"
+      },
+      "silenceTimeout": {
+        "label": "대기 시간",
+        "description": "말이 없을 때 녹음이 기다리는 시간(초)입니다. 최대 {{max}}초까지 지정할 수 있습니다."
+      },
+      "shortcut": {
+        "label": "단축키",
+        "description": "녹음을 켜고 끄는 키입니다. 눌러서 새 조합을 지정하세요.",
+        "recording": "키를 누르세요…",
+        "needsModifier": "Ctrl·Alt·Cmd 중 하나를 함께 눌러야 합니다."
+      },
+      "kit": {
+        "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
+        "install": "설치",
+        "installing": "설치 중…",
+        "installed": "설치했습니다",
+        "update": "업데이트",
+        "updating": "업데이트 중…",
+        "updated": "업데이트했습니다",
+        "failed": "설치하지 못했습니다",
+        "upToDate": "최신 버전"
+      }
+    },
     "uiDirection": {
       "label": "RTL(Right-to-left) 켜기"
     },

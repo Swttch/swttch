@@ -14,7 +14,7 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 
-const LANGUAGE_TO_LOCALE: Record<string, Locale> = {
+export const LANGUAGE_TO_LOCALE: Record<string, Locale> = {
   english: 'en',
   korean: 'ko',
   japanese: 'ja',

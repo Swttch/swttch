@@ -37,6 +37,43 @@
       "label": "界面语言",
       "description": "应用界面的语言，与 Claude 的回复语言相互独立。"
     },
+    "voice": {
+      "title": "语音输入",
+      "enabled": {
+        "label": "启用语音输入",
+        "description": "关闭后麦克风按钮和快捷键都会消失。与 CLI 的 /voice 是同一设置。"
+      },
+      "speechLanguage": {
+        "label": "说话语言",
+        "description": "使用语音输入时所说的语言。",
+        "follow": "跟随 Claude 设置（{{language}}）",
+        "unsupported": "{{language}}（尚未识别）",
+        "fallbackWarning": "该语言尚未被识别，说话内容会被转写为英文。",
+        "search": "搜索语言",
+        "noMatch": "没有匹配的语言"
+      },
+      "silenceTimeout": {
+        "label": "等待时间",
+        "description": "没有说话时录音等待的秒数，最多 {{max}} 秒。"
+      },
+      "shortcut": {
+        "label": "快捷键",
+        "description": "开始和停止录音的按键。按下以设置新的组合。",
+        "recording": "请按键…",
+        "needsModifier": "需要同时按住 Ctrl、Alt 或 Cmd。"
+      },
+      "kit": {
+        "required": "语音输入需要 @swttch/extend-kit。请从右上角安装。",
+        "install": "安装",
+        "installing": "正在安装…",
+        "installed": "已安装",
+        "update": "更新",
+        "updating": "正在更新…",
+        "updated": "已更新",
+        "failed": "无法安装",
+        "upToDate": "已是最新版本"
+      }
+    },
     "uiDirection": {
       "label": "启用 RTL(Right-to-left)"
     },

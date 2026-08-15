@@ -14,6 +14,7 @@ import { ClientEnv, MessageType } from '../shared';
 import { isJetBrainsMode } from '../config/environment';
 import { getPluginVersion } from '../core/handlers/getVersion';
 import { cancelLogin } from '../core/handlers/login';
+import { releaseDictation } from '../core/handlers/dictation';
 import { reportBackendError, trackActivity } from '../core/features/telemetry';
 import { tunnelPairing, issueLocalPairCode } from '../core/features/tunnel-pairing';
 import { LogWebSocketServer } from '../logging/log-ws';
@@ -345,6 +346,9 @@ export function startWebSocketServer(
         // An interactive `claude auth login` waiting on stdin won't exit on its
         // own once the webview is gone — kill it so it can't linger as a zombie.
         cancelLogin(connectionId);
+        // Same reasoning for dictation: the transcription socket is ours, not
+        // the webview's, so a closed tab would leave it open and billing.
+        releaseDictation(connectionId);
         connections.removeConnection(connectionId);
       });
     });
