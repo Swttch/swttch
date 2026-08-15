@@ -11,6 +11,7 @@ import { MicButton } from './MicButton';
 import { useDictation } from './hooks/useDictation';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut';
 import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
+import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -110,6 +111,18 @@ export function ChatInput() {
       // The mutation surfaces its own failure through the same banner.
     }
   }, [installKit, dictation]);
+
+  // Retire the "install the kit" prompt the moment the kit is actually present —
+  // whether it was just installed here, installed over in Settings, or was
+  // installed all along and a stale mic attempt left the prompt up. Without this
+  // the banner lingers until the user presses the mic again to rediscover it
+  // cleared. Queried only while the prompt is showing, so it stays off the wire
+  // otherwise.
+  const kitMissing = !!dictation.error?.kitMissing;
+  const { info: kitInfo } = useExtendKit({ enabled: kitMissing });
+  useEffect(() => {
+    if (kitMissing && kitInfo?.installed) dictation.dismissError();
+  }, [kitMissing, kitInfo?.installed, dictation.dismissError]);
 
   // Read messages lazily via ref so ChatInput does not re-render every streaming token.
   const messagesRef = useRef(chatStream.messages);

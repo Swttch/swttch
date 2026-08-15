@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { INSTALL_REQUEST_TIMEOUT_MS } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 
 interface RawInstallResult {
@@ -22,7 +23,9 @@ export function useInstallCcb() {
 
   const mutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      const r = (await send(MessageType.INSTALL_CCB, {})) as RawInstallResult;
+      // Installing downloads + links; wait as long as the backend does (180s +
+      // margin) so a slow install's result reaches us instead of a silent stall.
+      const r = (await send(MessageType.INSTALL_CCB, {}, { timeout: INSTALL_REQUEST_TIMEOUT_MS })) as RawInstallResult;
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to install the ccb CLI');
     },
     onSuccess: () => {

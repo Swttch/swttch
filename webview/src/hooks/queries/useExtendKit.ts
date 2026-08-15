@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { INSTALL_REQUEST_TIMEOUT_MS } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 
 export interface ExtendKitInfo {
@@ -29,7 +30,7 @@ interface RawResult extends Partial<ExtendKitInfo> {
  * `install` doubles as update: `npm i -g` fetches the latest either way, so a
  * missing kit and an outdated one take the same path.
  */
-export function useExtendKit() {
+export function useExtendKit(options?: { enabled?: boolean }) {
   const { send, isConnected } = useBridgeContext();
   const queryClient = useQueryClient();
 
@@ -44,7 +45,10 @@ export function useExtendKit() {
         updatable: r.updatable ?? false,
       };
     },
-    enabled: isConnected,
+    // Callers that only need the info conditionally (the composer, which asks
+    // only while its "install the kit" prompt is up) pass enabled:false to keep
+    // this off the wire until it matters.
+    enabled: isConnected && (options?.enabled ?? true),
     // Checking the registry runs `npm view`, which is slow enough to be worth
     // not repeating every time the settings screen is opened.
     staleTime: 5 * 60 * 1000,
@@ -52,7 +56,9 @@ export function useExtendKit() {
 
   const mutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      const r = (await send(MessageType.INSTALL_CCB, {})) as RawResult;
+      // Installing downloads + links; wait as long as the backend does (180s +
+      // margin) so a slow install's result reaches us instead of a silent stall.
+      const r = (await send(MessageType.INSTALL_CCB, {}, { timeout: INSTALL_REQUEST_TIMEOUT_MS })) as RawResult;
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to install the kit');
     },
     onSuccess: () => {
