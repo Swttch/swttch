@@ -92,7 +92,9 @@ describe('useDictation — transcripts reach the input', () => {
 
     await act(async () => deliverTranscript('안녕하세요', false));
 
-    expect(setValue).toHaveBeenCalledWith('안녕하세요');
+    // The caret that follows the text is this file's neighbour's concern
+    // (useDictation.sequence.test.ts); here only the text matters.
+    expect(setValue).toHaveBeenCalledWith('안녕하세요', expect.any(Number));
     expect(box.value).toBe('안녕하세요');
   });
 

@@ -5,22 +5,17 @@ import { MessageType } from '@/shared';
 /**
  * Dictating several times in a row has to append, not prepend.
  *
- * The composer reports its caret from the DOM selection, and
- * `getCaretOffset` answers 0 whenever the selection is not inside the box —
- * which is exactly the state clicking the microphone button leaves it in, since
- * focus moves to the button. Recording three times therefore anchored at 0 every
- * time and stacked the phrases backwards: saying "하이", "안녕하세요",
- * "반갑습니다" produced "반갑습니다. 안녕하세요. Hai."
+ * Saying "하이", then "안녕하세요", then "반갑습니다" produced
+ * "반갑습니다. 안녕하세요. Hai." — each recording landed in front of the last.
  *
- * Two things fix that, and these tests cover the hook's half: it remembers
- * where its own last phrase ended and resumes there when the reported caret is
- * 0 and the text is still untouched. The other half lives in the composer,
- * which now asks `isCaretInside` before believing a caret at all — that is what
- * makes the FIRST recording append rather than prepend, and it is tested with
- * the composer.
+ * The cause is the caret. Each recording anchors at whatever caret the composer
+ * reports, and the composer's editable layer resets the caret to the start
+ * whenever its content is replaced wholesale. Dictation replaced the content
+ * and never moved the caret back, so every recording after the first started
+ * from 0.
  *
- * These tests hold the caret at 0 the way a blurred composer did, so the
- * ordering has to come from the hook alone.
+ * These tests model that composer: the caret is real state that dictation must
+ * update through `setValue`, exactly as paste already does.
  */
 
 const subscribers = new Map<string, (message: IPCMessage) => void>();
@@ -72,25 +67,27 @@ function deliverTranscript(text: string, isFinal: boolean) {
 }
 
 /**
- * A composer whose caret always reads 0 — what the real one reports once focus
- * has left the text box.
+ * A composer that behaves like the real one: replacing its content resets the
+ * caret to 0 unless the writer says where to put it.
  */
-function renderWithBlurredCaret(initial = '') {
-  const box = { value: initial };
-  const setValue = vi.fn((next: string) => {
-    box.value = next;
-  });
+function renderComposer(initial = '', initialCaret = initial.length) {
+  const box = { value: initial, caret: initialCaret };
   const hook = renderHook(() =>
-    useDictation(() => ({ value: box.value, caret: 0, setValue })),
+    useDictation(() => ({
+      value: box.value,
+      caret: box.caret,
+      setValue: (next: string, caret?: number) => {
+        box.value = next;
+        // The editable layer's reset — the behaviour that caused the bug.
+        box.caret = caret ?? 0;
+      },
+    })),
   );
   return { hook, box };
 }
 
 /** One full press-record-speak-stop cycle. */
-async function dictate(
-  hook: ReturnType<typeof renderWithBlurredCaret>['hook'],
-  phrase: string,
-) {
+async function dictate(hook: ReturnType<typeof renderComposer>['hook'], phrase: string) {
   await act(async () => {
     await hook.result.current.start();
   });
@@ -108,7 +105,7 @@ describe('useDictation — consecutive recordings keep their order', () => {
   });
 
   it('appends each recording after the last instead of prepending', async () => {
-    const { hook, box } = renderWithBlurredCaret();
+    const { hook, box } = renderComposer();
 
     await dictate(hook, '하이');
     await dictate(hook, '안녕하세요');
@@ -117,21 +114,42 @@ describe('useDictation — consecutive recordings keep their order', () => {
     expect(box.value).toBe('하이 안녕하세요 반갑습니다');
   });
 
-  it('honours a real caret the user placed, rather than always appending', async () => {
-    // The remembered position must not override a caret the composer genuinely
-    // reports — dictating mid-sentence still has to splice there.
-    const box = { value: 'AB' };
-    const setValue = vi.fn((next: string) => {
-      box.value = next;
-    });
-    const hook = renderHook(() =>
-      useDictation(() => ({ value: box.value, caret: 1, setValue })),
-    );
+  it('appends after text the user typed before speaking', async () => {
+    const { hook, box } = renderComposer('먼저');
 
+    await dictate(hook, '안녕하세요');
+
+    expect(box.value).toBe('먼저 안녕하세요');
+  });
+
+  it('leaves the caret at the end of the dictated run', async () => {
+    // This is the whole fix: the next recording reads this caret, so a stale 0
+    // here is what ran the phrases backwards.
+    const { hook, box } = renderComposer();
+
+    await dictate(hook, '하이');
+
+    expect(box.caret).toBe('하이'.length);
+  });
+
+  it('moves the caret as interim text is revised, not only when it settles', async () => {
+    // Interim transcripts rewrite the box too. Leaving the caret behind during
+    // them would strand it mid-phrase if recording ended on an interim.
+    const { hook, box } = renderComposer();
     await act(async () => {
       await hook.result.current.start();
     });
-    await act(async () => deliverTranscript('중간', true));
+
+    await act(async () => deliverTranscript('안녕', false));
+
+    expect(box.caret).toBe('안녕'.length);
+  });
+
+  it('honours a caret the user placed, rather than always appending', async () => {
+    // Dictating mid-sentence still has to splice there.
+    const { hook, box } = renderComposer('AB', 1);
+
+    await dictate(hook, '중간');
 
     expect(box.value).toBe('A 중간 B');
   });

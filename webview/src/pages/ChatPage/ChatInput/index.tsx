@@ -48,12 +48,7 @@ import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import { useTelemetryConsent, ConsentStatus, ConsentSource } from '@/hooks/useTelemetryConsent';
-import {
-  getCaretOffset,
-  setCaretOffset,
-  getSelectionRange,
-  isCaretInside,
-} from '@/utils/domSelection';
+import { getCaretOffset, setCaretOffset, getSelectionRange } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
@@ -81,19 +76,22 @@ export function ChatInput() {
         value: valueRef.current,
         // Dictate at the caret, so speaking mid-sentence inserts there rather
         // than appending to the end of what was already typed.
-        //
-        // Only when the caret is genuinely in the box, though. `getCaretOffset`
-        // reports 0 both for "the caret is at the start" and for "the selection
-        // is somewhere else entirely" — and clicking the microphone button is
-        // the second, since focus moves to the button. Taking that 0 at face
-        // value dictated every phrase into the front of the box, so speaking
-        // three times ran the phrases backwards. With no caret in the box,
-        // appending is what the user means.
-        caret:
-          textareaRef.current && isCaretInside(textareaRef.current)
-            ? getCaretOffset(textareaRef.current)
-            : valueRef.current.length,
-        setValue: onChange,
+        caret: textareaRef.current
+          ? getCaretOffset(textareaRef.current)
+          : valueRef.current.length,
+        // Move the caret to the end of what was just written, the way paste
+        // does. The editable layer resets the caret to the start whenever its
+        // content is replaced wholesale, so without this every recording ended
+        // with the caret back at 0 — and the next one dictated in front of the
+        // last, running consecutive phrases backwards.
+        setValue: (next: string, caret?: number) => {
+          onChange(next);
+          if (caret === undefined) return;
+          requestAnimationFrame(() => {
+            const target = textareaRef.current;
+            if (target) setCaretOffset(target, caret);
+          });
+        },
       }),
       [onChange, textareaRef],
     ),

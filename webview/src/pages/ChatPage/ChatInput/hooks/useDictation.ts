@@ -65,8 +65,14 @@ interface DictationTarget {
   value: string;
   /** Caret offset to dictate at. */
   caret: number;
-  /** Write the composed text back. */
-  setValue: (value: string) => void;
+  /**
+   * Write the composed text back, and put the caret at `caret`.
+   *
+   * Moving the caret is not cosmetic: the next recording anchors on wherever
+   * the caret ends up, so a composer that ignores it dictates each phrase in
+   * front of the last.
+   */
+  setValue: (value: string, caret?: number) => void;
 }
 
 /**
@@ -108,22 +114,6 @@ export function useDictation(getTarget: () => DictationTarget) {
 
   const captureRef = useRef<MicrophoneCapture | null>(null);
   const anchorRef = useRef<DictationAnchor | null>(null);
-  /**
-   * Where the last dictated phrase ended, and the text it ended in.
-   *
-   * The composer reads its caret from the DOM selection, which answers 0 once
-   * the selection is not inside the box — the state clicking the microphone
-   * button leaves it in, since focus moves to the button. Trusting that 0
-   * anchored every recording at the start of the box and stacked consecutive
-   * phrases backwards ("하이", "안녕하세요", "반갑습니다" came out as
-   * "반갑습니다 안녕하세요 하이").
-   *
-   * So remember where we finished. It is only consulted when the reported caret
-   * is 0 and the text is still exactly what we left behind, which keeps a caret
-   * the user actually placed — including a deliberate one at position 0 in text
-   * they have since edited — authoritative.
-   */
-  const resumeRef = useRef<{ caret: number; value: string } | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const getTargetRef = useRef(getTarget);
@@ -186,15 +176,18 @@ export function useDictation(getTarget: () => DictationTarget) {
       if (!composed) return;
 
       anchor.lastSetValue = composed.value;
-      target.setValue(composed.value);
+      // Hand over where the dictated run ends, not just the text: the composer
+      // has to put the caret there. Its editable layer resets the caret to the
+      // start when the content is replaced, and the NEXT recording anchors on
+      // whatever the caret then reports — so leaving it at 0 made consecutive
+      // phrases stack up backwards.
+      target.setValue(composed.value, composed.caret);
       setInterimRange(composed.interim);
 
       // A settled phrase moves the anchor forward, so the next phrase is
-      // dictated after it instead of replacing it — within this recording, and
-      // (via resumeRef) across the next one too.
+      // dictated after it instead of replacing it.
       if (isFinal) {
         anchorRef.current = anchorAt(composed.value, composed.caret);
-        resumeRef.current = { caret: composed.caret, value: composed.value };
       }
     });
 
@@ -224,10 +217,7 @@ export function useDictation(getTarget: () => DictationTarget) {
     setState(DictationState.Starting);
 
     const target = getTargetRef.current();
-    const resume = resumeRef.current;
-    const caret =
-      target.caret === 0 && resume?.value === target.value ? resume.caret : target.caret;
-    anchorRef.current = anchorAt(target.value, caret);
+    anchorRef.current = anchorAt(target.value, target.caret);
 
     try {
       // Without a language the service assumes English and transcribes other
