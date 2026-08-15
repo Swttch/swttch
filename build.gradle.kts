@@ -188,79 +188,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.26.9 - Code blocks in colour, and a chat that renders on 2026.2</h3>
+            <h3>0.27.0 - Voice-To-Text is now available 🎉</h3>
             <ul>
-                <li>Add syntax highlighting to code blocks in the chat (#282, reported by @shroomcrumpet)</li>
-                <li>Fix the chat not rendering on IDE 2026.2 (#287)</li>
-                <li>Fix "Open Settings as: Overlay" being ignored in the IDE (#280)</li>
-                <li>Fix a blue block blinking inside streaming code blocks (#287)</li>
-            </ul>
-            <h3>0.26.8 - UX errors fixed</h3>
-            <ul>
-                <li>Add IDE theme colors to the chat, so it matches the theme you use (#267, reported by @iainfeeney)</li>
-                <li>Fix scrolling stuttering and lagging throughout the plugin (#267, reported by @iainfeeney)</li>
-                <li>Fix <code>/reload-plugins</code> and <code>/btw</code> not running (#270, reported by @deniskrizanovic)</li>
-                <li>Fix Auto not being available as a default input mode (#272, reported by @hollandjake)</li>
-                <li>Fix the settings overlay renaming the editor tab behind it (#271)</li>
-            </ul>
-            <h3>0.26.7 - Settings errors fixed</h3>
-            <ul>
-                <li>Fix the configured default permission mode being ignored on new sessions (#264, reported by @StarCode000)</li>
-                <li>Fix the model you picked resetting when you open a new tab (#265, reported by @BigPineappleDe)</li>
-                <li>Fix the Default Model dropdown in settings rendering blank (#265, reported by @BigPineappleDe)</li>
-                <li>Fix Ctrl+Insert no longer copying in the chat (#268, reported by @VijitCoder)</li>
-            </ul>
-            <h3>0.26.6 - Modes that match what you see</h3>
-            <ul>
-                <li>Fix Plan Mode turning itself off when re-enabled in the same chat (#172)</li>
-                <li>Fix the permission mode resetting to default after answering a question or reloading a session (#172)</li>
-            </ul>
-            <h3>0.26.5 - Fix the backend and its Claude sessions so they shut down properly</h3>
-            <ul>
-                <li>Fix the backend to shut down when you close the IDE (#254, based on work by @lukaszszczesniak)</li>
-                <li>Fix Claude sessions to stop when the backend stops (#187 by @lukaszszczesniak, #257, reported by @lukaszszczesniak)</li>
-                <li>Fix stray Claude sessions on Windows (#259, reported by @lukaszszczesniak)</li>
-            </ul>
-            <h3>0.26.4 - Empty bubbles and mangled ${'$'}-text, fixed</h3>
-            <ul>
-                <li>Fix empty message bubbles appearing in the transcript (#232, reported by @StarCode000)</li>
-                <li>Fix text around <code>${'$'}</code> signs being mangled and duplicated (#232, reported by @StarCode000)</li>
-            </ul>
-            <h3>0.26.3 - Answers about rate limits render properly again</h3>
-            <ul>
-                <li>Fix answers mentioning "rate limit" rendering as raw text (#250 by @Wo-ogie)</li>
-                <li>Add an overflow menu for the header icons (#251)</li>
-            </ul>
-            <h3>0.26.2 - Zoom the whole UI, and a chat that stays put</h3>
-            <ul>
-                <li>Add Chrome-style zoom control for the whole UI (#169, requested by @penguinhing)</li>
-                <li>Add collapse/expand to permission, plan and question panels (#248)</li>
-                <li>Make "Esc to cancel" clickable (#248)</li>
-                <li>Fix the chat jumping to the bottom while you read (#206, reported by @BigPineappleDe)</li>
-                <li>Fix the "Scroll to bottom" button not appearing when auto-scroll stops</li>
-                <li>Fix "/" not opening the slash command panel mid-sentence (#244, reported by @RabbitHareLu)</li>
-            </ul>
-            <h3>0.26.1 - Settings that respect your project, and a steadier chat view</h3>
-            <ul>
-                <li>Per-project settings: CLI path, terminal and file-opener now apply to the project you set them in, instead of leaking into your other projects (#239, reported by @chyzman)</li>
-                <li>Choose whether the file open in your editor is attached to each message by default (#240, reported by @VijitCoder)</li>
-                <li>A <code>//</code> inside a settings value no longer breaks settings from loading (#238)</li>
-                <li>Your model pick sticks: starting a session no longer flips the picker back to default (#242, reported by @volador123)</li>
-                <li>@ file mentions now work while a slash command panel is open (#241, reported by @deniskrizanovic)</li>
-                <li>Tool cards no longer render blank while a reply is streaming (#243, reported by @StarCode000)</li>
-                <li>Copy the whole front-end log from the command palette — search "copy" — so a bug report can include it without opening devtools</li>
-                <li>Closing a project no longer raises an "Already disposed" error (#233, reported by @amitsidhpura)</li>
-            </ul>
-            <h3>0.26.0 - [URGENT] Critical security patch. Update now if under v0.25.2 (CVE public Aug 6)</h3>
-            <ul>
-                <li>Scheduled messages &amp; auto-resume: when a session hits its usage limit, schedule a follow-up that fires the moment your quota resets (sponsor)</li>
-                <li>"Open files with": clicked file references now open in the editor you choose (#214)</li>
-                <li>@ file mentions now rank IntelliJ-style (#224, reported by @deniskrizanovic)</li>
-                <li>@ file mentions now find files inside git submodules and respect the CLI's fileSuggestion setting (#223, reported by @sunisok1)</li>
-                <li>Adjustable chat message line spacing under Settings → Appearance (#221, reported by @fourm1)</li>
-                <li>Fable 5 stays in the model picker whenever your account still has access, past the promo window (#225)</li>
-                <li>Messages you send mid-turn now reach Claude right away instead of waiting for the turn to finish (#228)</li>
-                <li>The compact summary and CLI-sent messages now stay where they belong in the transcript instead of piling up at the bottom (#228, reported by @StarCode000; #229, reported by @hollandjake)</li>
+                <li>Add Voice-To-Text to the composer (#293, requested by @ideal-chris)</li>
+                <li>Add a Voice-To-Text section in settings (#293)</li>
+                <li>Fix the blank chat window on Android Studio so it explains what to do (#296)</li>
             </ul>
         """.trimIndent()
     }
