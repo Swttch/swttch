@@ -149,6 +149,22 @@ export function pointToTextOffset(
 // ---------------------------------------------------------------------------
 
 /**
+ * Is the caret actually inside `root`?
+ *
+ * {@link getCaretOffset} answers 0 for "the caret is at the start" and for "the
+ * selection is somewhere else entirely", which callers that act on a caret they
+ * did not just receive an event for cannot tell apart. Ask this first when the
+ * difference matters — dictation does, since a click on the microphone button
+ * moves focus out of the box and would otherwise look like a caret at 0.
+ */
+export function isCaretInside(root: HTMLElement): boolean {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+  const focusNode = selection.focusNode;
+  return focusNode !== null && root.contains(focusNode);
+}
+
+/**
  * Return the current caret (focus) position as a plain-text offset relative to
  * `root.textContent`. Returns 0 if there is no selection or the selection is
  * outside `root`.

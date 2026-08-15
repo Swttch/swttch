@@ -48,7 +48,12 @@ import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import { useTelemetryConsent, ConsentStatus, ConsentSource } from '@/hooks/useTelemetryConsent';
-import { getCaretOffset, setCaretOffset, getSelectionRange } from '@/utils/domSelection';
+import {
+  getCaretOffset,
+  setCaretOffset,
+  getSelectionRange,
+  isCaretInside,
+} from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
@@ -76,9 +81,18 @@ export function ChatInput() {
         value: valueRef.current,
         // Dictate at the caret, so speaking mid-sentence inserts there rather
         // than appending to the end of what was already typed.
-        caret: textareaRef.current
-          ? getCaretOffset(textareaRef.current)
-          : valueRef.current.length,
+        //
+        // Only when the caret is genuinely in the box, though. `getCaretOffset`
+        // reports 0 both for "the caret is at the start" and for "the selection
+        // is somewhere else entirely" — and clicking the microphone button is
+        // the second, since focus moves to the button. Taking that 0 at face
+        // value dictated every phrase into the front of the box, so speaking
+        // three times ran the phrases backwards. With no caret in the box,
+        // appending is what the user means.
+        caret:
+          textareaRef.current && isCaretInside(textareaRef.current)
+            ? getCaretOffset(textareaRef.current)
+            : valueRef.current.length,
         setValue: onChange,
       }),
       [onChange, textareaRef],

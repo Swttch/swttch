@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   textOffsetToPoint,
   pointToTextOffset,
@@ -6,6 +6,7 @@ import {
   setCaretOffset,
   getSelectionRange,
   setSelectionRange,
+  isCaretInside,
 } from '../domSelection';
 
 // jsdom is available via vitest's jsdom environment.
@@ -380,5 +381,61 @@ describe('Layer B Selection wrappers (smoke tests)', () => {
     // Don't attach to body — simulates out-of-document element
     // Should not throw
     expect(() => setSelectionRange(root, 0, 3)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isCaretInside — the distinction getCaretOffset cannot make
+// ---------------------------------------------------------------------------
+
+/**
+ * `getCaretOffset` returns 0 both for a caret at the start and for a selection
+ * that is not in the element at all. Dictation has to tell those apart: clicking
+ * the microphone button moves focus off the input, and reading that 0 as a real
+ * caret dictated every phrase into the front of the box — three recordings came
+ * out in reverse order.
+ */
+describe('isCaretInside', () => {
+  let root: HTMLDivElement;
+  let outside: HTMLDivElement;
+
+  beforeEach(() => {
+    root = makeDiv('hello');
+    outside = makeDiv('elsewhere');
+    document.body.append(root, outside);
+    window.getSelection()?.removeAllRanges();
+  });
+
+  afterEach(() => {
+    root.remove();
+    outside.remove();
+  });
+
+  /** Put the caret at the start of `el`'s first text node. */
+  function placeCaretIn(el: HTMLElement) {
+    const range = document.createRange();
+    range.setStart(el.firstChild!, 0);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  it('is false when nothing is selected', () => {
+    expect(isCaretInside(root)).toBe(false);
+  });
+
+  it('is false when the caret sits in another element', () => {
+    placeCaretIn(outside);
+    // getCaretOffset reports 0 here — indistinguishable from a caret at the
+    // start, which is exactly the confusion this function resolves.
+    expect(getCaretOffset(root)).toBe(0);
+    expect(isCaretInside(root)).toBe(false);
+  });
+
+  it('is true for a caret at offset 0 of the element itself', () => {
+    placeCaretIn(root);
+    expect(getCaretOffset(root)).toBe(0);
+    expect(isCaretInside(root)).toBe(true);
   });
 });
