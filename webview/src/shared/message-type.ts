@@ -201,6 +201,12 @@ export enum MessageType {
   APPLY_DIFF = 'APPLY_DIFF',
   /** Reject a proposed diff (discard changes). */
   REJECT_DIFF = 'REJECT_DIFF',
+  /**
+   * Close the review diff opened for a permission request, whichever way the
+   * user answered. Distinct from REJECT_DIFF: that one discards a change, this
+   * one only dismisses the preview of a question already answered.
+   */
+  CLOSE_DIFF = 'CLOSE_DIFF',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */

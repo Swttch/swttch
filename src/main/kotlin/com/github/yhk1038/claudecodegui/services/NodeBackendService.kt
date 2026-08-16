@@ -192,6 +192,10 @@ class NodeBackendService : Disposable {
                 any()?.rejectDiff(toolUseId) ?: warn("rejectDiff")
             }
 
+            override suspend fun closeDiff(toolUseId: String) {
+                any()?.closeDiff(toolUseId) ?: warn("closeDiff")
+            }
+
             override suspend fun refreshFiles(paths: List<String>) {
                 if (paths.isEmpty()) return
                 any()?.refreshFiles(paths) ?: warn("refreshFiles")

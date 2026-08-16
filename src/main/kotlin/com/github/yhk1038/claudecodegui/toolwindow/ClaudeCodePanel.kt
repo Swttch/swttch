@@ -1472,7 +1472,7 @@ class ClaudeCodePanel(
                 newContent: String,
                 toolUseId: String?
             ) {
-                diffService.openDiffViewer(filePath, oldContent, newContent)
+                diffService.openDiffViewer(filePath, oldContent, newContent, toolUseId)
                 logger.info("Opened diff viewer: $filePath (toolUseId=$toolUseId)")
             }
 
@@ -1482,12 +1482,20 @@ class ClaudeCodePanel(
                 toolUseId: String?
             ): Boolean {
                 val result = diffService.applyDiff(filePath, newContent)
+                // The question this diff previewed has been answered, so the
+                // preview goes with it.
+                toolUseId?.let { diffService.closeDiffViewer(it) }
                 logger.info("Applied diff: $filePath, success=${result.isSuccess} (toolUseId=$toolUseId)")
                 return result.isSuccess
             }
 
             override suspend fun rejectDiff(toolUseId: String?) {
+                toolUseId?.let { diffService.closeDiffViewer(it) }
                 logger.info("Diff rejected (toolUseId=$toolUseId)")
+            }
+
+            override suspend fun closeDiff(toolUseId: String) {
+                diffService.closeDiffViewer(toolUseId)
             }
 
             override suspend fun refreshFiles(paths: List<String>) {

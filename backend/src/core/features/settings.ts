@@ -63,6 +63,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
+  showDiffInIde: true,
   ultracode: null,
   // Header dock arrangement: `order` is the row order in the ⋮ menu (and, once
   // filtered to `visible`, the dock's icon order too); `visible` names which of
@@ -105,6 +106,7 @@ const COMMENT_MAP: Record<string, string> = {
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
+  showDiffInIde: 'true면 파일 편집 권한을 물을 때 IDE diff 뷰어에 변경 내용을 띄운다(승인 전 미리보기). IDE 없이 실행 중이면 무시된다',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
   dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
@@ -368,6 +370,7 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
     case 'attachEditorContext':
+    case 'showDiffInIde':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
       }

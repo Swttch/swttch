@@ -275,6 +275,10 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.REJECT_DIFF, params ?? {});
   }
 
+  async closeDiff(params: { toolUseId: string }): Promise<void> {
+    await this.request(MessageType.CLOSE_DIFF, params);
+  }
+
   async refreshFiles(params: { paths: string[] }): Promise<void> {
     await this.request(MessageType.REFRESH_FILES, { paths: params.paths });
   }

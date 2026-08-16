@@ -9,14 +9,26 @@
  * English — neither shows up in a type check.
  */
 import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { resources } from '@/i18n/config';
 
-const LOCALES_DIR = join(__dirname, '..', '..', '..', 'i18n', 'locales');
-const locales = readdirSync(LOCALES_DIR);
+// Read the same bundle the app ships rather than the files on disk: the webview
+// builds for the browser, and a test that reached for node:fs would type-check
+// under vitest but break the production build.
+const locales: string[] = Object.keys(resources);
 
 function settingsOf(locale: string): Record<string, any> {
-  return JSON.parse(readFileSync(join(LOCALES_DIR, locale, 'settings.json'), 'utf8'));
+  return resources[locale].settings as Record<string, any>;
+}
+
+/**
+ * Assert something for every locale, naming the failing one.
+ *
+ * A plain loop inside one test rather than `it.each`: the whole point is that a
+ * locale is missing, and the assertion message carries which — splitting it
+ * into twelve near-identical cases adds noise without adding information.
+ */
+function forEachLocale(assert: (locale: string) => void): void {
+  for (const locale of locales) assert(locale);
 }
 
 describe('IDE settings section i18n', () => {
@@ -25,32 +37,40 @@ describe('IDE settings section i18n', () => {
     expect(locales.length).toBeGreaterThanOrEqual(12);
   });
 
-  it.each(locales)('%s has the sidebar entry', (locale) => {
-    expect(settingsOf(locale).nav?.ide).toBeTruthy();
+  it('gives every locale the sidebar entry', () => {
+    forEachLocale((locale) => {
+      expect(settingsOf(locale).nav?.ide, `${locale}.nav.ide`).toBeTruthy();
+    });
   });
 
-  it.each(locales)('%s kept the carried-over settings translated', (locale) => {
-    const ide = settingsOf(locale).ide;
-    for (const key of ['attachEditorContext', 'focusInputOnEditorContext']) {
-      expect(ide?.[key]?.label, `${locale}.ide.${key}.label`).toBeTruthy();
-      expect(ide?.[key]?.description, `${locale}.ide.${key}.description`).toBeTruthy();
-    }
+  it('keeps the carried-over settings translated in every locale', () => {
+    forEachLocale((locale) => {
+      const ide = settingsOf(locale).ide;
+      for (const key of ['attachEditorContext', 'focusInputOnEditorContext']) {
+        expect(ide?.[key]?.label, `${locale}.ide.${key}.label`).toBeTruthy();
+        expect(ide?.[key]?.description, `${locale}.ide.${key}.description`).toBeTruthy();
+      }
+    });
   });
 
-  it.each(locales)('%s translates the new IDE-diff toggle', (locale) => {
-    const diff = settingsOf(locale).ide?.showDiffInIde;
-    // `unavailable` is the hint shown when no IDE is attached; without it a
-    // standalone user sees a dead toggle and no reason why.
-    for (const key of ['label', 'description', 'unavailable']) {
-      expect(diff?.[key], `${locale}.ide.showDiffInIde.${key}`).toBeTruthy();
-    }
+  it('translates the new IDE-diff toggle in every locale', () => {
+    forEachLocale((locale) => {
+      const diff = settingsOf(locale).ide?.showDiffInIde;
+      // `unavailable` is the hint shown when no IDE is attached; without it a
+      // standalone user sees a dead toggle and no reason why.
+      for (const key of ['label', 'description', 'unavailable']) {
+        expect(diff?.[key], `${locale}.ide.showDiffInIde.${key}`).toBeTruthy();
+      }
+    });
   });
 
-  it.each(locales)('%s no longer keeps the moved keys under general', (locale) => {
+  it('no longer keeps the moved keys under general', () => {
     // Leftovers would drift: one copy edited, the other stale and unused.
-    const general = settingsOf(locale).general;
-    expect(general?.attachEditorContext).toBeUndefined();
-    expect(general?.focusInputOnEditorContext).toBeUndefined();
+    forEachLocale((locale) => {
+      const general = settingsOf(locale).general;
+      expect(general?.attachEditorContext, `${locale}.general.attachEditorContext`).toBeUndefined();
+      expect(general?.focusInputOnEditorContext, `${locale}.general.focusInputOnEditorContext`).toBeUndefined();
+    });
   });
 
   it('translates the new strings rather than leaving English everywhere', () => {

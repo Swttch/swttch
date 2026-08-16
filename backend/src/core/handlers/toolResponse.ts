@@ -18,7 +18,7 @@ export function toolResponseHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
-  _bridge: Bridge,
+  bridge: Bridge,
 ): void {
   const client = connections.getClient(connectionId);
   const sessionId = client?.subscribedSessionId;
@@ -33,6 +33,16 @@ export function toolResponseHandler(
   const toolUseId = payload?.toolUseId ?? '';
   const approved = payload?.approved ?? true;
   const controlRequestId = payload?.controlRequestId;
+
+  // The user has answered, so the IDE diff that previewed this edit has served
+  // its purpose — close it either way. Unknown ids are a no-op on the IDE side,
+  // so there is no need to know whether this request opened one. Fire-and-
+  // forget: the CLI is waiting on the response below, not on a closing tab.
+  if (toolUseId) {
+    bridge.closeDiff({ toolUseId }).catch((err) => {
+      console.error('[node-backend]', 'Failed to close IDE diff after decision:', err);
+    });
+  }
 
   if (controlRequestId) {
     // control_response 프로토콜 (can_use_tool permission, ExitPlanMode, AskUserQuestion).
