@@ -24,13 +24,18 @@ buttons, so nothing you already know how to do has moved.
 
 ## Keep some of it, not all of it
 
-When the change touches more than one place in the file, the diff window grows
-a checkbox per place, with **Apply** and **Reject** underneath.
+When the change touches more than one place in the file, a tick box appears in
+the gutter beside each one — right next to the lines it belongs to — with
+**Apply** and **Reject** in a bar underneath.
 
 Everything starts ticked, so pressing Apply without touching anything does what
 approving always did: the whole edit. Unticking is how you narrow it, and the
 button says what it will actually do — *Apply 1 of 2* — so there is no doubt
 about what you are agreeing to.
+
+The bar also carries a count of what is kept and a **Select all** / **Clear
+all** button, so a change with many parts does not have to be ticked one box at
+a time.
 
 Reject answers the same question the other way. Untick everything and Apply
 turns itself off: keeping nothing is a rejection, and writing the file back

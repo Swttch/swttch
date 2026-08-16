@@ -67,12 +67,14 @@ export function resolveDiffFromIde(
   // decision the user did not make.
   if (!preview) {
     respond({ behavior: 'allow', updatedInput: {} });
+    notifyResolved(connections, params);
     return;
   }
 
   if (isEmptySelection(preview, params.acceptedHunks)) {
     respond({ behavior: 'deny', message: buildUserDeclinedContent() });
     console.error('[node-backend]', `Diff resolved for ${params.toolUseId}: kept nothing (denied)`);
+    notifyResolved(connections, params);
     return;
   }
 
@@ -83,11 +85,20 @@ export function resolveDiffFromIde(
     `Diff resolved for ${params.toolUseId}: kept ${params.acceptedHunks.length}/${preview.hunks.length} hunks`,
   );
 
-  // The prompt in the chat is now answered; clear it so the user is not left
-  // looking at a question the IDE already resolved.
-  connections.broadcastToSession(params.sessionId, MessageType.CLI_EVENT, {
-    type: 'control_response',
-    request_id: params.controlRequestId,
-    response: { subtype: 'success' },
+  notifyResolved(connections, params);
+}
+
+/**
+ * Tell the chat its prompt is settled.
+ *
+ * Without this the approval panel stays up after the IDE answered, and pressing
+ * Yes there sends a second decision for a request the CLI has already moved on
+ * from — the user sees their edit apply, then a dead prompt they still have to
+ * dismiss.
+ */
+function notifyResolved(connections: ConnectionManager, params: ResolveDiffParams): void {
+  connections.broadcastToSession(params.sessionId, MessageType.PERMISSION_RESOLVED, {
+    toolUseId: params.toolUseId,
+    controlRequestId: params.controlRequestId,
   });
 }

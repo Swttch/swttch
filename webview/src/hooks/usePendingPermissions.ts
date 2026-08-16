@@ -119,6 +119,19 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     return unsubscribe;
   }, []);
 
+  // A request answered in the IDE's diff review is settled — drop its prompt
+  // here rather than leaving a question the CLI has already moved on from, which
+  // the user would otherwise have to dismiss after watching their edit apply.
+  useEffect(() => {
+    const bridge = getBridgeClient();
+    return bridge.subscribe(MessageType.PERMISSION_RESOLVED, (message) => {
+      const controlRequestId = message.payload?.controlRequestId as string | undefined;
+      if (!controlRequestId) return;
+      processedIdsRef.current.add(controlRequestId);
+      setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
+    });
+  }, []);
+
   const approve = useCallback((controlRequestId: string) => {
     const req = requests.find(r => r.controlRequestId === controlRequestId);
     if (!req) return;

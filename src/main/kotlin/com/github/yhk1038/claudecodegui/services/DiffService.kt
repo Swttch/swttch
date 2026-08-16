@@ -91,9 +91,13 @@ class DiffService(private val project: Project) {
                 val chain = SimpleDiffRequestChain(request)
 
                 // Put the review controls under the diff itself, so the change
-                // and the decision about it are on one screen.
+                // and the decision about it are on one screen. The per-hunk tick
+                // boxes ride in the gutter (HunkGutterExtension) off the same
+                // selection object this bar reads, so the two cannot disagree.
                 if (onResolve != null) {
-                    val panel = DiffReviewPanel(hunks) { accepted ->
+                    val selection = HunkSelection(hunks.size)
+                    request.putUserData(HunkSelection.KEY, selection)
+                    val panel = DiffReviewPanel(selection) { accepted ->
                         toolUseId?.let { closeDiffViewer(it) }
                         onResolve(accepted)
                     }

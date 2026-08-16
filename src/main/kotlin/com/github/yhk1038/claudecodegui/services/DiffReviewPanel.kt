@@ -1,13 +1,9 @@
 package com.github.yhk1038.claudecodegui.services
 
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
-import java.awt.BorderLayout
 import java.awt.FlowLayout
 import javax.swing.Box
-import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -22,76 +18,68 @@ data class DiffHunk(
 )
 
 /**
- * The review controls shown under a proposed-edit diff: a checkbox per change,
- * and the Apply / Reject that answers the CLI's permission request (#109).
+ * The bar under a proposed-edit diff: how much is currently kept, a way to take
+ * or drop everything at once, and the Apply / Reject that answers the CLI's
+ * permission request (#109).
  *
- * Lives in the diff window rather than the chat because that is where the
- * change is legible — deciding next to what you are deciding about. Everything
- * starts ticked, so Apply without touching anything means the whole edit, which
- * is what the prompt used to mean.
+ * The per-change tick boxes are NOT here — they sit in the diff gutter beside
+ * the lines they belong to (see [HunkGutterExtension]), so a reviewer decides
+ * where they are already reading. This bar only carries what has no natural
+ * home next to a single change.
  */
 class DiffReviewPanel(
-    hunks: List<DiffHunk>,
+    private val selection: HunkSelection,
     private val onResolve: (acceptedHunks: List<Int>) -> Unit,
 ) {
-    private val checkBoxes = LinkedHashMap<Int, JBCheckBox>()
     private val summary = JBLabel()
     private val applyButton = JButton()
+    private val selectAllButton = JButton()
 
-    val component: JComponent = build(hunks)
+    val component: JComponent = build()
 
-    private fun build(hunks: List<DiffHunk>): JComponent {
-        val root = JPanel(BorderLayout())
-        root.border = JBUI.Borders.empty(4, 8)
+    private fun build(): JComponent {
+        val root = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 4))
+        root.border = JBUI.Borders.empty(2, 8)
 
-        // A single-hunk edit has nothing to choose between, so it keeps the
-        // plain accept/reject it always had.
-        if (hunks.size > 1) {
-            val list = JPanel()
-            list.layout = BoxLayout(list, BoxLayout.Y_AXIS)
-            for (hunk in hunks) {
-                val label = "Change ${hunk.index + 1} · line ${hunk.oldStart}" +
-                    if (hunk.oldLines > 1) " (${hunk.oldLines} lines)" else ""
-                val box = JBCheckBox(label, true)
-                box.addActionListener { refreshSummary(hunks.size) }
-                checkBoxes[hunk.index] = box
-                list.add(box)
+        // Nothing to select between when the change is a single hunk (or could
+        // not be split), so the bar is just accept/reject.
+        if (selection.total > 1) {
+            root.add(summary)
+            selectAllButton.addActionListener {
+                selection.setAll(selection.keptCount() != selection.total)
             }
-            root.add(JBScrollPane(list), BorderLayout.CENTER)
+            root.add(selectAllButton)
+            root.add(Box.createHorizontalStrut(8))
         }
 
-        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 4))
-        if (hunks.size > 1) {
-            actions.add(summary)
-            actions.add(Box.createHorizontalStrut(8))
-        }
-        applyButton.addActionListener { onResolve(acceptedHunks()) }
+        applyButton.addActionListener { onResolve(selection.acceptedIndices()) }
         val rejectButton = JButton("Reject")
         rejectButton.addActionListener { onResolve(emptyList()) }
-        actions.add(applyButton)
-        actions.add(rejectButton)
-        root.add(actions, BorderLayout.SOUTH)
+        root.add(applyButton)
+        root.add(rejectButton)
 
-        refreshSummary(hunks.size)
+        // The gutter owns the tick boxes, so the bar has to follow their state
+        // rather than hold its own copy.
+        selection.onChange { refresh() }
+        refresh()
         return root
     }
 
-    private fun acceptedHunks(): List<Int> =
-        checkBoxes.filterValues { it.isSelected }.keys.toList()
-
     /**
-     * Keep the button honest about what pressing it will do — "Apply" when
+     * Keep the bar honest about what pressing Apply will do — plain "Apply" when
      * everything is kept, and the count as soon as it is not.
      */
-    private fun refreshSummary(total: Int) {
+    private fun refresh() {
+        val total = selection.total
         if (total <= 1) {
             applyButton.text = "Apply"
             return
         }
-        val kept = acceptedHunks().size
+        val kept = selection.keptCount()
         summary.text = "$kept of $total selected"
+        selectAllButton.text = if (kept == total) "Clear all" else "Select all"
         applyButton.text = if (kept == total) "Apply" else "Apply $kept of $total"
-        // Keeping nothing is a rejection; Reject already says that.
+        // Keeping nothing is a rejection, and Reject already says that.
         applyButton.isEnabled = kept > 0
     }
 }

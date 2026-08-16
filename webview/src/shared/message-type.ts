@@ -213,6 +213,12 @@ export enum MessageType {
    * from the diff viewer's own controls; an empty selection means a refusal.
    */
   RESOLVE_DIFF = 'RESOLVE_DIFF',
+  /**
+   * outbound backend→webview: a pending permission request was answered
+   * elsewhere (the IDE's diff review), so the chat prompt for it should close
+   * instead of asking a question that is already settled.
+   */
+  PERMISSION_RESOLVED = 'PERMISSION_RESOLVED',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */
