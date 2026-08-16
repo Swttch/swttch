@@ -13,6 +13,7 @@ import { UsageSettings } from './Usage';
 import { ReleasesSettings } from './Releases';
 import { AccountSettings } from './Account';
 import { BrowserSettings } from './Browser';
+import { IdeSettings } from './Ide';
 import { PrivacySettings } from './Privacy';
 import { SponsorSettings } from './Sponsor';
 
@@ -68,6 +69,8 @@ export function SettingsPage({ asOverlay = false }: SettingsPageProps = {}) {
         return <TunnelSettings />;
       case Route.SETTINGS_BROWSER:
         return <BrowserSettings />;
+      case Route.SETTINGS_IDE:
+        return <IdeSettings />;
       case Route.SETTINGS_ACCOUNT:
         return <AccountSettings />;
       case Route.SETTINGS_SPONSOR:

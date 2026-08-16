@@ -12,6 +12,7 @@
     "privacy": "Confidentialité",
     "cli": "CLI",
     "browser": "Navigateur",
+    "ide": "IDE",
     "account": "Compte",
     "usage": "Utilisation",
     "tunnel": "Tunnel",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "Utiliser {{modifier}}+Entrée pour envoyer",
       "description": "Lorsque cette option est activée, utilisez Ctrl/Cmd+Entrée pour envoyer les invites au lieu de simplement Entrée. Cela permet à Entrée de créer de nouvelles lignes."
-    },
-    "attachEditorContext": {
-      "label": "Joindre le fichier de l'éditeur par défaut",
-      "description": "Chaque session démarre avec le fichier ouvert ou la sélection en pièce jointe. Si vous désactivez cette option, la puce reste affichée mais démarre désactivée : cliquez dessus pour joindre le fichier le temps de la session."
-    },
-    "focusInputOnEditorContext": {
-      "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
-      "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
     },
     "respectGitignore": {
       "label": "Respecter .gitignore pour le contexte de l'éditeur",
@@ -528,5 +521,21 @@
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
     "openDocs": "Ouvrir la doc"
+  },
+  "ide": {
+    "sectionTitle": "Intégration à l'IDE",
+    "attachEditorContext": {
+      "label": "Joindre le fichier de l'éditeur par défaut",
+      "description": "Chaque session démarre avec le fichier ouvert ou la sélection en pièce jointe. Si vous désactivez cette option, la puce reste affichée mais démarre désactivée : cliquez dessus pour joindre le fichier le temps de la session."
+    },
+    "focusInputOnEditorContext": {
+      "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
+      "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
+    },
+    "showDiffInIde": {
+      "label": "Afficher les modifications de Claude dans la visionneuse de différences de l'IDE",
+      "description": "Quand Claude demande à modifier un fichier, ouvre la modification dans la visionneuse de différences de l'IDE pour que vous la voyiez au moment de décider.",
+      "unavailable": "Disponible lors de l'exécution dans un IDE. Lancez l'application depuis votre IDE pour l'utiliser."
+    }
   }
 }

@@ -12,6 +12,7 @@
     "privacy": "Datenschutz",
     "cli": "CLI",
     "browser": "Browser",
+    "ide": "IDE",
     "account": "Konto",
     "usage": "Nutzung",
     "tunnel": "Tunnel",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "Mit {{modifier}}+Enter senden",
       "description": "Wenn aktiviert, wird Strg/Cmd+Enter statt nur Enter verwendet, um Prompts zu senden. So kann mit Enter ein Zeilenumbruch eingefügt werden."
-    },
-    "attachEditorContext": {
-      "label": "Editor-Datei standardmäßig anhängen",
-      "description": "Jede Sitzung beginnt mit der geöffneten Datei oder Auswahl im Anhang. Wenn du das ausschaltest, erscheint der Chip weiterhin, ist aber zunächst deaktiviert — ein Klick hängt die Datei für diese Sitzung an."
-    },
-    "focusInputOnEditorContext": {
-      "label": "Fokus nach Anhängen des Dateipfads auf das Chat-Eingabefeld setzen",
-      "description": "Wenn du im Editor Alt+K drückst, wird der Fokus nach dem Einfügen des Dateipfads auf das Chat-Eingabefeld verschoben."
     },
     "respectGitignore": {
       "label": ".gitignore für Editor-Kontext beachten",
@@ -528,5 +521,21 @@
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
     "openDocs": "Doku öffnen"
+  },
+  "ide": {
+    "sectionTitle": "IDE-Integration",
+    "attachEditorContext": {
+      "label": "Editor-Datei standardmäßig anhängen",
+      "description": "Jede Sitzung beginnt mit der geöffneten Datei oder Auswahl im Anhang. Wenn du das ausschaltest, erscheint der Chip weiterhin, ist aber zunächst deaktiviert — ein Klick hängt die Datei für diese Sitzung an."
+    },
+    "focusInputOnEditorContext": {
+      "label": "Fokus nach Anhängen des Dateipfads auf das Chat-Eingabefeld setzen",
+      "description": "Wenn du im Editor Alt+K drückst, wird der Fokus nach dem Einfügen des Dateipfads auf das Chat-Eingabefeld verschoben."
+    },
+    "showDiffInIde": {
+      "label": "Claudes Änderungen im Diff-Viewer der IDE anzeigen",
+      "description": "Wenn Claude eine Datei bearbeiten möchte, wird die Änderung im Diff-Viewer der IDE geöffnet, sodass Sie sie bei der Entscheidung sehen.",
+      "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Starten Sie die Anwendung aus Ihrer IDE."
+    }
   }
 }

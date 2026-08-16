@@ -94,6 +94,12 @@ export enum SettingKey {
   // missing or unreadable value leaves the feature on rather than silently off.
   ATTACH_EDITOR_CONTEXT = 'attachEditorContext',
 
+  // Show Claude's proposed file edits in the IDE's own diff viewer while the
+  // permission prompt is up, so the user can see WHAT they are approving instead
+  // of just the file name. JetBrains mode only — a standalone backend has no IDE
+  // to open, so the toggle renders disabled there and the flow stays as it was.
+  SHOW_DIFF_IN_IDE = 'showDiffInIde',
+
   // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
   // the native `effortLevel`, but absent from the official schema, so it lives here.
   ULTRACODE = 'ultracode',
@@ -297,6 +303,7 @@ export interface SettingsState {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
+  [SettingKey.SHOW_DIFF_IN_IDE]: boolean;
   [SettingKey.ULTRACODE]: boolean | null;
   [SettingKey.DOCK_LAYOUT]: DockLayout;
 }
@@ -327,6 +334,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
+  [SettingKey.SHOW_DIFF_IN_IDE]: true,
   [SettingKey.ULTRACODE]: null,
   [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
 };
