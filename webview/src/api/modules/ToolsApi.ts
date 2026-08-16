@@ -91,6 +91,18 @@ export class ToolsApi {
   }
 
   /**
+   * Reopen the review diff for a permission request still awaiting an answer.
+   *
+   * Only the id travels: the contents are held backend-side for that request,
+   * so what is shown is the text the backend diffed rather than something
+   * reassembled here. A request already answered has no preview left, and the
+   * backend treats that as nothing to do.
+   */
+  async openDiffForRequest(toolUseId: string): Promise<void> {
+    await this.bridge.request(MessageType.OPEN_DIFF, { toolUseId });
+  }
+
+  /**
    * Apply a diff (accept file changes)
    */
   async applyDiff(

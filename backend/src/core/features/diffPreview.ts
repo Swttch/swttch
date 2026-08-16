@@ -21,6 +21,13 @@ export interface StoredPreview {
   /** The tool input as the CLI sent it, so a partial accept can amend a copy. */
   input: Record<string, unknown>;
   toolName: string;
+  /**
+   * Who to answer when the IDE resolves this diff. Stored so a diff reopened
+   * from the approval prompt can answer the same request the first one would
+   * have — without them, its Apply would have nowhere to send the decision.
+   */
+  sessionId?: string;
+  controlRequestId?: string;
 }
 
 /**
@@ -53,6 +60,16 @@ export function takePreview(toolUseId: string): StoredPreview | undefined {
   const preview = previews.get(toolUseId);
   previews.delete(toolUseId);
   return preview;
+}
+
+/**
+ * Read a preview without consuming it, for reopening a diff whose question is
+ * still on screen — the user can close the diff and then click the file name in
+ * the prompt to bring it back. The answer still needs this entry afterwards, so
+ * unlike [takePreview] it stays.
+ */
+export function peekPreview(toolUseId: string): StoredPreview | undefined {
+  return previews.get(toolUseId);
 }
 
 /** Exposed for tests; production code drops entries via takePreview. */
@@ -111,7 +128,7 @@ export async function resolveDiffPreview(
  */
 export async function openDiffForPermission(
   bridge: Bridge,
-  preview: { filePath: string; oldContent: string; newContent: string; hunks?: Hunk[] },
+  preview: { filePath: string; oldContent: string; newContent: string },
   toolUseId: string | undefined,
   ids?: { sessionId: string; controlRequestId: string },
 ): Promise<void> {
@@ -121,11 +138,6 @@ export async function openDiffForPermission(
       oldContent: preview.oldContent,
       newContent: preview.newContent,
       toolUseId,
-      // Only the ranges: the IDE draws a checkbox per hunk, and answers with
-      // the numbers. The lines themselves are already in the diff it shows.
-      hunks: preview.hunks?.map(({ index, oldStart, oldLines, newStart, newLines }) => ({
-        index, oldStart, oldLines, newStart, newLines,
-      })),
       sessionId: ids?.sessionId,
       controlRequestId: ids?.controlRequestId,
     });

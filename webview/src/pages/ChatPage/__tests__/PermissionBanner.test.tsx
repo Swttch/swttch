@@ -8,6 +8,16 @@ vi.mock('../../../contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => ({ stop: mockStop }),
 }));
 
+let diffAvailable = true;
+vi.mock('../../../hooks/useIdeDiffAvailable', () => ({
+  useIdeDiffAvailable: () => diffAvailable,
+}));
+
+const openDiffForRequest = vi.fn();
+vi.mock('../../../contexts/ApiContext', () => ({
+  useApi: () => ({ tools: { openDiffForRequest } }),
+}));
+
 const mockPermission: PendingPermission = {
   controlRequestId: 'ctrl-1',
   toolName: 'Bash',
@@ -16,6 +26,14 @@ const mockPermission: PendingPermission = {
   riskLevel: 'high',
   description: 'Execute: ls',
 };
+
+beforeEach(() => {
+  mockStop.mockClear();
+  openDiffForRequest.mockClear();
+  // The prompt's file name is only a link where a diff can be shown; most tests
+  // here are about the rest of the panel, so keep it available by default.
+  diffAvailable = true;
+});
 
 describe('PermissionBanner', () => {
   let onApprove: ReturnType<typeof vi.fn<() => void>>;
@@ -26,7 +44,6 @@ describe('PermissionBanner', () => {
     onApprove = vi.fn<() => void>();
     onApproveForSession = vi.fn<() => void>();
     onDeny = vi.fn<(reason?: string) => void>();
-    mockStop.mockClear();
   });
 
   it('renders the permission title', () => {
@@ -293,5 +310,69 @@ describe('PermissionBanner — MCP tool humanization', () => {
       ),
     ).not.toThrow();
     expect(screen.getByText('Allow IntelliJ IDEA: Debugger: inspect value?')).toBeInTheDocument();
+  });
+});
+
+const writePermission: PendingPermission = {
+  controlRequestId: 'ctrl-1',
+  toolName: 'Write',
+  toolUseId: 'toolu_1',
+  input: { file_path: '/tmp/ccg-demo/src/cart.js', content: 'x' },
+  riskLevel: 'medium',
+  description: 'Write file: /tmp/ccg-demo/src/cart.js',
+};
+
+function renderBanner(p: PendingPermission = writePermission) {
+  render(
+    <PermissionBanner
+      permission={p}
+      onApprove={vi.fn()}
+      onApproveForSession={vi.fn()}
+      onDeny={vi.fn()}
+    />,
+  );
+}
+
+describe('PermissionBanner — the file name links to the diff', () => {
+  it('renders the file name as a link and keeps the rest of the title as text', () => {
+    renderBanner();
+
+    const link = screen.getByRole('button', { name: 'cart.js' });
+    expect(link).toBeInTheDocument();
+    // The sentence around it is unchanged — only the name became clickable.
+    expect(screen.getByText(/Write to/)).toBeInTheDocument();
+  });
+
+  it('opens the diff for this request when the name is clicked', () => {
+    renderBanner();
+
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+
+    // By id: the contents live backend-side, so the click names the request
+    // rather than shipping the file through the webview.
+    expect(openDiffForRequest).toHaveBeenCalledWith('toolu_1');
+  });
+
+  it('does not answer or interrupt the request', () => {
+    // Looking at the change is not deciding about it.
+    renderBanner();
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+    expect(mockStop).not.toHaveBeenCalled();
+  });
+
+  it('leaves the name as plain text when no diff can be shown', () => {
+    diffAvailable = false;
+    renderBanner();
+
+    expect(screen.queryByRole('button', { name: 'cart.js' })).toBeNull();
+    expect(screen.getByText('Write to cart.js?')).toBeInTheDocument();
+  });
+
+  it('leaves a title with no file name alone', () => {
+    // Bash has no file to link to; its title must render as it always did.
+    diffAvailable = true;
+    renderBanner({ ...writePermission, toolName: 'Bash', input: { command: 'ls' } });
+
+    expect(screen.getByText('Run this command?')).toBeInTheDocument();
   });
 });

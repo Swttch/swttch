@@ -1,6 +1,7 @@
 import { SettingSection, SettingRow } from '../common';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useIdeDiffAvailable } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 
@@ -30,8 +31,10 @@ export const IdeSettings = (props: Props) => {
   // With no IDE attached there is nothing to open a diff in, so the feature is
   // off in practice whatever the stored value says. Show it that way rather than
   // leaving a switched-on toggle the user cannot act on — the stored value is
-  // untouched and comes back as soon as an IDE hosts the backend again.
-  const showDiffInIde = ideAttached && (scopeSettings[SettingKey.SHOW_DIFF_IN_IDE] ?? true);
+  // untouched and comes back as soon as an IDE hosts the backend again. Shared
+  // with the approval prompt's file link, which must offer a diff on exactly
+  // the same terms.
+  const showDiffInIde = useIdeDiffAvailable();
 
   return (
     <div className={className}>

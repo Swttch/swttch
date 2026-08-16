@@ -44,11 +44,9 @@ class DiffService(private val project: Project) {
      * @param toolUseId Permission request this diff belongs to, when it is a
      *   pre-write review. Passing it lets [closeDiffViewer] clean the tab up
      *   once the user answers; omit it for a standalone diff the user closes.
-     * @param hunks The change split into reviewable parts. When more than one,
-     *   the diff grows a checkbox per part so the user can keep some and not
-     *   others (#109); [onResolve] then reports which ones they kept.
-     * @param onResolve Called with the kept hunk indices when the user answers
-     *   in the diff window. An empty list means they rejected the change.
+     * @param onResolve Called with the regions the user kept when they answer
+     *   in the diff window. An empty list means they rejected the change. The
+     *   regions are the IDE's own split, learned once the diff has compared.
      */
     @JvmOverloads
     fun openDiffViewer(
@@ -56,11 +54,21 @@ class DiffService(private val project: Project) {
         oldContent: String,
         newContent: String,
         toolUseId: String? = null,
-        hunks: List<DiffHunk> = emptyList(),
-        onResolve: ((List<Int>) -> Unit)? = null,
+        onResolve: ((List<AcceptedRange>) -> Unit)? = null,
     ) {
         ApplicationManager.getApplication().invokeLater {
             try {
+                // Already on screen for this request: bring it forward and stop.
+                // The approval prompt's file name can be clicked at any time,
+                // including while its diff is open, and rebuilding the tab there
+                // would throw away the hunks the reviewer has already ticked.
+                val existing = pendingDiffFiles[toolUseId]
+                val fem = FileEditorManager.getInstance(project)
+                if (existing != null && fem.isFileOpen(existing)) {
+                    fem.openFile(existing, true)
+                    return@invokeLater
+                }
+
                 val contentFactory = DiffContentFactory.getInstance()
 
                 // Type the contents from the real file name so the diff is
@@ -95,7 +103,7 @@ class DiffService(private val project: Project) {
                 // boxes ride in the gutter (HunkGutterExtension) off the same
                 // selection object this bar reads, so the two cannot disagree.
                 if (onResolve != null) {
-                    val selection = HunkSelection(hunks.size)
+                    val selection = HunkSelection()
                     request.putUserData(HunkSelection.KEY, selection)
                     val panel = DiffReviewPanel(selection) { accepted ->
                         toolUseId?.let { closeDiffViewer(it) }

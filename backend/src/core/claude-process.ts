@@ -802,12 +802,19 @@ function maybeOpenPermissionDiff(
       // Hold the change backend-side so the IDE's answer can name hunks rather
       // than ship file contents back: what gets written is then the text we
       // diffed, not something reassembled from what a viewer rendered.
+      const controlRequestId = String(event.request_id ?? '');
       if (toolUseId) {
-        rememberPreview(toolUseId, { ...preview, input: toolInput, toolName });
+        rememberPreview(toolUseId, {
+          ...preview,
+          input: toolInput,
+          toolName,
+          sessionId: targetSessionId,
+          controlRequestId,
+        });
       }
       await openDiffForPermission(bridge, preview, toolUseId, {
         sessionId: targetSessionId,
-        controlRequestId: String(event.request_id ?? ''),
+        controlRequestId,
       });
     } catch (err) {
       console.error('[node-backend]', 'Permission diff preview failed:', err);
