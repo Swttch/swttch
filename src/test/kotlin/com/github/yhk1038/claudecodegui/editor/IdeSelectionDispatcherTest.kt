@@ -123,6 +123,36 @@ class IdeSelectionDispatcherTest {
         }
     }
 
+    /**
+     * Closing the last tab must be sayable.
+     *
+     * The review diff opened for a proposed edit left "Diff: cart.js" in the
+     * composer's context chip after it closed: the tab-switch listener bailed
+     * out on a null newFile, so no push followed and the chip kept naming a tab
+     * that no longer existed. Empty paths are how the IDE reports that, and the
+     * webview clears the chip on them.
+     */
+    @Nested
+    inner class NothingOpenPayload {
+
+        @Test
+        fun `empty paths survive payload construction`() {
+            val payload = EditorContextPayload.buildSelectionPayload(
+                absolutePath = "",
+                relativePath = "",
+                startLine = null,
+                endLine = null,
+                selectedText = null,
+                workingDir = "/home/dev/project",
+            )
+
+            assertEquals(JsonPrimitive(""), payload["absolutePath"])
+            assertEquals(JsonPrimitive(""), payload["relativePath"])
+            // The working dir still identifies which project's chip to clear.
+            assertEquals(JsonPrimitive("/home/dev/project"), payload["workingDir"])
+        }
+    }
+
     @Nested
     inner class SelectionPayloadGatingLogic {
 

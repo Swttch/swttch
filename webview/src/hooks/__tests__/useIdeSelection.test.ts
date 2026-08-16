@@ -236,4 +236,70 @@ describe('useIdeSelection', () => {
 
     expect(result.current.currentSelection?.relativePath).toBe('src/b.ts');
   });
+
+  /**
+   * Closing the last editor tab has to be able to empty the chip.
+   *
+   * A diff tab opened for a proposed edit left "Diff: cart.js" sitting in the
+   * composer after it closed: nothing was focused afterwards, so no push
+   * followed and the chip kept naming a tab that was gone. An empty
+   * relativePath is how the IDE says "nothing is open now".
+   */
+  it('clears the selection when the IDE reports no open file', () => {
+    const { result } = renderHook(() => useIdeSelection({ currentWorkingDir: '/work' }));
+
+    act(() => {
+      emitIdeSelection({
+        absolutePath: '/work/src/a.ts',
+        relativePath: 'src/a.ts',
+        startLine: null,
+        endLine: null,
+        selectedText: null,
+        workingDir: '/work',
+      });
+    });
+    expect(result.current.currentSelection?.relativePath).toBe('src/a.ts');
+
+    act(() => {
+      emitIdeSelection({
+        absolutePath: '',
+        relativePath: '',
+        startLine: null,
+        endLine: null,
+        selectedText: null,
+        workingDir: '/work',
+      });
+    });
+
+    expect(result.current.currentSelection).toBeNull();
+  });
+
+  it('ignores an empty-path push from a different working directory', () => {
+    // The clear is still scoped: another project's IDE must not blank this
+    // composer's chip.
+    const { result } = renderHook(() => useIdeSelection({ currentWorkingDir: '/work' }));
+
+    act(() => {
+      emitIdeSelection({
+        absolutePath: '/work/src/a.ts',
+        relativePath: 'src/a.ts',
+        startLine: null,
+        endLine: null,
+        selectedText: null,
+        workingDir: '/work',
+      });
+    });
+    act(() => {
+      emitIdeSelection({
+        absolutePath: '',
+        relativePath: '',
+        startLine: null,
+        endLine: null,
+        selectedText: null,
+        workingDir: '/elsewhere',
+      });
+    });
+
+    expect(result.current.currentSelection?.relativePath).toBe('src/a.ts');
+  });
 });

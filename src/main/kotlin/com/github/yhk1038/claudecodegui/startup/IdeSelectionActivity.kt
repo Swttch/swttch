@@ -81,10 +81,14 @@ class IdeSelectionActivity : ProjectActivity {
             FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
                 override fun selectionChanged(event: FileEditorManagerEvent) {
-                    val newFile = event.newFile ?: return
+                    val newFile = event.newFile
                     // Skip the Claude panel itself.
                     if (newFile is ClaudeCodeVirtualFile) return
-                    // Grab the editor for the newly focused file, if available.
+                    // A null newFile means the last tab just closed. Dispatch it
+                    // rather than returning: nothing else will fire afterwards,
+                    // so bailing out here left the composer's context chip
+                    // naming a tab that is gone — which is what happened to the
+                    // review diff opened for a proposed edit.
                     val editor = FileEditorManager.getInstance(project)
                         .selectedTextEditor
                     IdeSelectionDispatcher.scheduleDispatch(project, editor, newFile)

@@ -46,7 +46,10 @@ export function parseIdeSelectionPayload(
 ): IdeSelectionPayload | null {
   if (!raw) return null;
   const { absolutePath, relativePath, startLine, endLine, selectedText, workingDir, isGitignored } = raw;
-  if (typeof relativePath !== 'string' || relativePath.length === 0) return null;
+  // An empty relativePath is meaningful, not malformed: it is how the IDE says
+  // nothing is open, which is what lets the chip empty again after the last tab
+  // closes. Null here still means "could not read this payload".
+  if (typeof relativePath !== 'string') return null;
   if (typeof workingDir !== 'string') return null;
   return {
     absolutePath: typeof absolutePath === 'string' ? absolutePath : '',
@@ -88,7 +91,9 @@ export function useIdeSelection(params: UseIdeSelectionParams): UseIdeSelectionR
         return;
       }
 
-      setCurrentSelection(payload);
+      // No path means the IDE has nothing open — clear the chip rather than
+      // leaving it naming a file the user already closed.
+      setCurrentSelection(payload.relativePath.length === 0 ? null : payload);
     });
   }, [subscribe]);
 
