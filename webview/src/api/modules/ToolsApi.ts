@@ -38,11 +38,18 @@ export class ToolsApi {
    * Deny a tool use request
    */
   async deny(toolUseId: string, controlRequestId?: string, reason?: string): Promise<void> {
+    // A denial is the CLI's answer to a question it is blocked on, so nothing
+    // here may stop the message being sent. A caller that wired this to a click
+    // handler once passed React's MouseEvent as the reason; JSON.stringify threw
+    // on it, the message never left, and the turn hung forever with the diff
+    // still open. Types allow that (an argument to a `() => void` is legal), so
+    // the guard is here, at the last point before the wire.
+    const safeReason = typeof reason === 'string' && reason ? reason : undefined;
     await this.bridge.request(MessageType.TOOL_RESPONSE, {
       toolUseId,
       approved: false,
       ...(controlRequestId && { controlRequestId }),
-      ...(reason && { reason }),
+      ...(safeReason && { reason: safeReason }),
     });
   }
 
