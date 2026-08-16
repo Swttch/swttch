@@ -255,8 +255,7 @@
       "workflow": "是,本次会话中允许所有工作流",
       "mcp": "是,本次会话中允许所有 {{scope}}",
       "default": "是,本次会话中允许所有 {{tool}}"
-    },
-    "yesPartial": "是 — 应用 {{total}} 处中的 {{kept}} 处"
+    }
   },
   "loginCta": {
     "signed": "已登录",
@@ -465,11 +464,5 @@
     "scheduledToast": "已预约自动恢复",
     "canceledToast": "已取消自动恢复",
     "scheduled": "已预约自动恢复"
-  },
-  "hunkPicker": {
-    "selected": "已选 {{total}} 处中的 {{kept}} 处",
-    "selectAll": "全选",
-    "selectNone": "取消全选",
-    "hunkLabel": "更改 {{number}} · 第 {{line}} 行"
   }
 }

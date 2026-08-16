@@ -362,7 +362,7 @@ export function ChatPage() {
           ) : pendingPermission ? (
               <PermissionBanner
                   permission={pendingPermission}
-                  onApprove={(acceptedHunks) => approvePermission(pendingPermission.controlRequestId, acceptedHunks)}
+                  onApprove={() => approvePermission(pendingPermission.controlRequestId)}
                   onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
                   onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
               />

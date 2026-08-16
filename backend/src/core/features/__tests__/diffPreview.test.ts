@@ -122,12 +122,28 @@ describe('openDiffForPermission', () => {
     expect(calls[0]).toMatchObject({ filePath: '/tmp/a.txt', toolUseId: 'toolu_42' });
   });
 
-  it('sends only what the IDE needs, not the hunk split', async () => {
-    // The split is for the approval UI; handing it to the IDE would imply the
-    // diff window offers per-hunk choices, which it does not.
+  it('sends the hunk ranges so the IDE can offer one checkbox each', async () => {
     const { bridge, calls } = fakeBridge();
-    await openDiffForPermission(bridge, somePreview, 'toolu_42');
-    expect(calls[0]).not.toHaveProperty('hunks');
+    const hunks = [
+      { index: 0, oldStart: 1, oldLines: 2, newStart: 1, newLines: 2, lines: ['-a', '+b'] },
+    ];
+
+    await openDiffForPermission(bridge, { ...somePreview, hunks }, 'toolu_42');
+
+    const sent = (calls[0] as { hunks?: unknown[] }).hunks;
+    expect(sent).toHaveLength(1);
+    // Ranges only — the lines themselves are already in the diff the IDE shows,
+    // and sending them twice would let the two disagree.
+    expect(sent?.[0]).toEqual({ index: 0, oldStart: 1, oldLines: 2, newStart: 1, newLines: 2 });
+  });
+
+  it('quotes the session and request so the IDE can answer them', async () => {
+    const { bridge, calls } = fakeBridge();
+    await openDiffForPermission(bridge, somePreview, 'toolu_42', {
+      sessionId: 'sess-1',
+      controlRequestId: 'ctrl-1',
+    });
+    expect(calls[0]).toMatchObject({ sessionId: 'sess-1', controlRequestId: 'ctrl-1' });
   });
 
   it('swallows a bridge failure — the permission prompt must still go through', async () => {

@@ -3,15 +3,13 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { PendingPermission } from '../../hooks/usePendingPermissions';
-import { usePendingDiffPreview } from '../../hooks/usePendingDiffPreview';
-import { HunkPicker } from './HunkPicker';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
 import { useTranslation } from '@/i18n';
 
 interface Props {
   permission: PendingPermission;
-  onApprove: (acceptedHunks?: number[]) => void;
+  onApprove: () => void;
   onApproveForSession: () => void;
   onDeny: (reason?: string) => void;
 }
@@ -77,9 +75,6 @@ function getSessionLabel(t: TFunction, toolName: string): string {
 export function PermissionBanner(props: Props) {
   const { permission, onApprove, onApproveForSession, onDeny } = props;
   const { t } = useTranslation('chat');
-  const { preview, acceptedHunks, toggleHunk, setAllHunks } = usePendingDiffPreview(
-    permission.toolUseId,
-  );
 
   const title = useMemo(
     () => generateTitle(t, permission.toolName, permission.input),
@@ -90,48 +85,23 @@ export function PermissionBanner(props: Props) {
   const subtitle = isWorkflow ? (permission.input.description as string | undefined) : undefined;
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
-  // Only a change split into more than one hunk is worth choosing between; a
-  // single-hunk edit is the plain yes/no it always was.
-  const hunks = preview?.hunks ?? [];
-  const canPickHunks = hunks.length > 1;
-  const partial = canPickHunks && acceptedHunks.length < hunks.length;
-
   const options: OptionItem[] = useMemo(() => [
-    {
-      key: '1',
-      // Say what "yes" will do when it no longer means the whole edit.
-      label: partial
-        ? t('permissionBanner.yesPartial', { kept: acceptedHunks.length, total: hunks.length })
-        : t('permissionBanner.yes'),
-    },
+    { key: '1', label: t('permissionBanner.yes') },
     { key: '2', label: getSessionLabel(t, permission.toolName) },
     { key: '3', label: t('permissionBanner.no') },
-  ], [t, permission.toolName, partial, acceptedHunks.length, hunks.length]);
+  ], [t, permission.toolName]);
 
   const handleOptionSelect = useCallback((index: number) => {
-    // Hunk numbers ride along only when there was a choice to make, so an
-    // ordinary approval stays byte-identical to what it sent before.
-    if (index === 0) onApprove(canPickHunks ? acceptedHunks : undefined);
+    if (index === 0) onApprove();
     else if (index === 1) onApproveForSession();
     else if (index === 2) onDeny();
-  }, [onApprove, onApproveForSession, onDeny, canPickHunks, acceptedHunks]);
+  }, [onApprove, onApproveForSession, onDeny]);
 
   return (
     <ApprovalPanel
       title={title}
       subtitle={subtitle}
       notice={notice}
-      detail={
-        canPickHunks && preview ? (
-          <HunkPicker
-            filePath={preview.filePath}
-            hunks={hunks}
-            acceptedHunks={acceptedHunks}
-            onToggle={toggleHunk}
-            onSetAll={setAllHunks}
-          />
-        ) : undefined
-      }
       options={options}
       onOptionSelect={handleOptionSelect}
       textareaPlaceholder={t('permissionBanner.textareaPlaceholder')}

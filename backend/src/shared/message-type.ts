@@ -208,10 +208,11 @@ export enum MessageType {
    */
   CLOSE_DIFF = 'CLOSE_DIFF',
   /**
-   * outbound backend→webview: the change a pending permission request would
-   * make, split into hunks, so the prompt can offer per-hunk approval.
+   * Node↔Kotlin: the IDE reporting which hunks of a pending edit the user kept,
+   * so the backend can amend the tool call to just that subset (#109). Sent
+   * from the diff viewer's own controls; an empty selection means a refusal.
    */
-  DIFF_PREVIEW = 'DIFF_PREVIEW',
+  RESOLVE_DIFF = 'RESOLVE_DIFF',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */

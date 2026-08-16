@@ -792,26 +792,23 @@ function maybeOpenPermissionDiff(
 
   void (async () => {
     try {
-      const preview = await resolveDiffPreview(toolName, toolInput);
-      if (!preview) return;
-
-      // Hold the change backend-side so an approval can name hunks rather than
-      // ship file contents back and forth, and tell the WebView what it may
-      // offer. Both happen whatever the IDE setting says: partial approval is
-      // about the prompt, not about the IDE window.
-      if (toolUseId) {
-        rememberPreview(toolUseId, { ...preview, input: toolInput, toolName });
-        connections.broadcastToSession(targetSessionId, MessageType.DIFF_PREVIEW, {
-          toolUseId,
-          filePath: preview.filePath,
-          hunks: preview.hunks,
-        });
-      }
-
       const { settings } = await readMergedSettings(workingDir);
       // Default on: the setting only exists to let people turn it back off.
       if (settings.showDiffInIde === false) return;
-      await openDiffForPermission(bridge, preview, toolUseId);
+
+      const preview = await resolveDiffPreview(toolName, toolInput);
+      if (!preview) return;
+
+      // Hold the change backend-side so the IDE's answer can name hunks rather
+      // than ship file contents back: what gets written is then the text we
+      // diffed, not something reassembled from what a viewer rendered.
+      if (toolUseId) {
+        rememberPreview(toolUseId, { ...preview, input: toolInput, toolName });
+      }
+      await openDiffForPermission(bridge, preview, toolUseId, {
+        sessionId: targetSessionId,
+        controlRequestId: String(event.request_id ?? ''),
+      });
     } catch (err) {
       console.error('[node-backend]', 'Permission diff preview failed:', err);
     }

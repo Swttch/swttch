@@ -204,7 +204,15 @@ class NodeProcessManager(
      */
     interface RpcHandler {
         suspend fun openFile(path: String, line: Int? = null, column: Int? = null)
-        suspend fun openDiff(filePath: String, oldContent: String, newContent: String, toolUseId: String?)
+        suspend fun openDiff(
+            filePath: String,
+            oldContent: String,
+            newContent: String,
+            toolUseId: String?,
+            hunks: List<com.github.yhk1038.claudecodegui.services.DiffHunk>,
+            sessionId: String?,
+            controlRequestId: String?,
+        )
         suspend fun applyDiff(filePath: String, newContent: String, toolUseId: String?): Boolean
         suspend fun rejectDiff(toolUseId: String?)
         /** Dismiss the review diff opened for a permission request, however it was answered. */

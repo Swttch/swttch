@@ -111,8 +111,9 @@ export async function resolveDiffPreview(
  */
 export async function openDiffForPermission(
   bridge: Bridge,
-  preview: { filePath: string; oldContent: string; newContent: string },
+  preview: { filePath: string; oldContent: string; newContent: string; hunks?: Hunk[] },
   toolUseId: string | undefined,
+  ids?: { sessionId: string; controlRequestId: string },
 ): Promise<void> {
   try {
     await bridge.openDiff({
@@ -120,6 +121,13 @@ export async function openDiffForPermission(
       oldContent: preview.oldContent,
       newContent: preview.newContent,
       toolUseId,
+      // Only the ranges: the IDE draws a checkbox per hunk, and answers with
+      // the numbers. The lines themselves are already in the diff it shows.
+      hunks: preview.hunks?.map(({ index, oldStart, oldLines, newStart, newLines }) => ({
+        index, oldStart, oldLines, newStart, newLines,
+      })),
+      sessionId: ids?.sessionId,
+      controlRequestId: ids?.controlRequestId,
     });
   } catch (err) {
     console.error('[node-backend]', 'Failed to open IDE diff for permission request:', err);

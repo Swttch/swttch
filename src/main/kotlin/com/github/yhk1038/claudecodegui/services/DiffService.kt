@@ -4,6 +4,7 @@ import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.editor.ChainDiffVirtualFile
 import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.diff.util.DiffUserDataKeysEx
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.components.Service
@@ -43,9 +44,21 @@ class DiffService(private val project: Project) {
      * @param toolUseId Permission request this diff belongs to, when it is a
      *   pre-write review. Passing it lets [closeDiffViewer] clean the tab up
      *   once the user answers; omit it for a standalone diff the user closes.
+     * @param hunks The change split into reviewable parts. When more than one,
+     *   the diff grows a checkbox per part so the user can keep some and not
+     *   others (#109); [onResolve] then reports which ones they kept.
+     * @param onResolve Called with the kept hunk indices when the user answers
+     *   in the diff window. An empty list means they rejected the change.
      */
     @JvmOverloads
-    fun openDiffViewer(filePath: String, oldContent: String, newContent: String, toolUseId: String? = null) {
+    fun openDiffViewer(
+        filePath: String,
+        oldContent: String,
+        newContent: String,
+        toolUseId: String? = null,
+        hunks: List<DiffHunk> = emptyList(),
+        onResolve: ((List<Int>) -> Unit)? = null,
+    ) {
         ApplicationManager.getApplication().invokeLater {
             try {
                 val contentFactory = DiffContentFactory.getInstance()
@@ -76,6 +89,17 @@ class DiffService(private val project: Project) {
                 // chat panel stays reachable: the approval buttons live there,
                 // and a modal would block the very answer this diff is for.
                 val chain = SimpleDiffRequestChain(request)
+
+                // Put the review controls under the diff itself, so the change
+                // and the decision about it are on one screen.
+                if (onResolve != null) {
+                    val panel = DiffReviewPanel(hunks) { accepted ->
+                        toolUseId?.let { closeDiffViewer(it) }
+                        onResolve(accepted)
+                    }
+                    chain.putUserData(DiffUserDataKeysEx.BOTTOM_PANEL, panel.component)
+                }
+
                 val diffFile = ChainDiffVirtualFile(chain, "Diff: $fileName")
                 FileEditorManager.getInstance(project).openFile(diffFile, false)
                 if (toolUseId != null) {

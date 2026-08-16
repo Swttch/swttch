@@ -13,6 +13,7 @@ import { tunnelPairing } from './core/features/tunnel-pairing';
 import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
+import { parseResolveDiffParams, resolveDiffFromIde } from './core/features/resolveDiff';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -355,6 +356,18 @@ async function main() {
   // prewarm leak where a backend that never received a /ws client lived forever.
   (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.SET_KEEP_ALIVE, (_method, params) => {
     connections.setKeepAlive(params.enabled === true);
+  });
+
+  // The IDE's diff viewer reporting which hunks of a pending edit the user kept
+  // (#109). Answering happens there because that is where the change is legible;
+  // the backend turns the selection into the CLI's control_response.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.RESOLVE_DIFF, (_method, params) => {
+    const parsed = parseResolveDiffParams(params);
+    if (!parsed) {
+      console.error('[node-backend]', 'RESOLVE_DIFF ignored: malformed params');
+      return;
+    }
+    resolveDiffFromIde(connections, parsed);
   });
 
   // 4. Logger에 LogWS 참조 설정

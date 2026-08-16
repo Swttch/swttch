@@ -258,6 +258,9 @@ export class JetBrainsBridge implements Bridge {
     oldContent: string;
     newContent: string;
     toolUseId?: string;
+    hunks?: { index: number; oldStart: number; oldLines: number; newStart: number; newLines: number }[];
+    sessionId?: string;
+    controlRequestId?: string;
   }): Promise<void> {
     await this.request(MessageType.OPEN_DIFF, params);
   }

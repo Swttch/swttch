@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.bridge
 
+import com.github.yhk1038.claudecodegui.services.DiffHunk
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.*
@@ -263,7 +264,19 @@ class RpcWebSocketClient(
                 val oldContent = params["oldContent"]?.jsonPrimitive?.content ?: ""
                 val newContent = params["newContent"]?.jsonPrimitive?.content ?: ""
                 val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
-                rpcHandler.openDiff(filePath, oldContent, newContent, toolUseId)
+                val sessionId = params["sessionId"]?.jsonPrimitive?.content
+                val controlRequestId = params["controlRequestId"]?.jsonPrimitive?.content
+                val hunks = params["hunks"]?.jsonArray?.mapNotNull { element ->
+                    val o = element as? JsonObject ?: return@mapNotNull null
+                    DiffHunk(
+                        index = o["index"]?.jsonPrimitive?.intOrNull ?: return@mapNotNull null,
+                        oldStart = o["oldStart"]?.jsonPrimitive?.intOrNull ?: 1,
+                        oldLines = o["oldLines"]?.jsonPrimitive?.intOrNull ?: 0,
+                        newStart = o["newStart"]?.jsonPrimitive?.intOrNull ?: 1,
+                        newLines = o["newLines"]?.jsonPrimitive?.intOrNull ?: 0,
+                    )
+                } ?: emptyList()
+                rpcHandler.openDiff(filePath, oldContent, newContent, toolUseId, hunks, sessionId, controlRequestId)
                 buildJsonObject {}
             }
             "APPLY_DIFF" -> {

@@ -10,6 +10,15 @@ export interface Bridge {
     oldContent: string;
     newContent: string;
     toolUseId?: string;
+    /**
+     * The change split into hunks, so the IDE's diff can offer one checkbox per
+     * hunk (#109). Answering names the hunks kept; the backend holds the change
+     * itself and assembles the amended tool input from that.
+     */
+    hunks?: { index: number; oldStart: number; oldLines: number; newStart: number; newLines: number }[];
+    /** Session and request the IDE must quote when it reports the selection back. */
+    sessionId?: string;
+    controlRequestId?: string;
   }): Promise<void>;
   applyDiff(params: {
     filePath: string;

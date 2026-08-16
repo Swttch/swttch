@@ -59,11 +59,7 @@ function generateDescription(toolName: string, input: Record<string, unknown>): 
 
 interface UsePendingPermissionsReturn {
   pending: PendingPermission | null;
-  /**
-   * @param acceptedHunks when the user narrowed a file edit to some of its
-   *   hunks (#109). Omitted means the whole change, as before.
-   */
-  approve: (controlRequestId: string, acceptedHunks?: number[]) => void;
+  approve: (controlRequestId: string) => void;
   approveForSession: (controlRequestId: string) => void;
   deny: (controlRequestId: string, reason?: string) => void;
 }
@@ -123,12 +119,12 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     return unsubscribe;
   }, []);
 
-  const approve = useCallback((controlRequestId: string, acceptedHunks?: number[]) => {
+  const approve = useCallback((controlRequestId: string) => {
     const req = requests.find(r => r.controlRequestId === controlRequestId);
     if (!req) return;
 
     processedIdsRef.current.add(controlRequestId);
-    api.tools.approve(req.toolUseId, controlRequestId, req.input, acceptedHunks);
+    api.tools.approve(req.toolUseId, controlRequestId, req.input);
     setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
   }, [requests, api.tools]);
 
