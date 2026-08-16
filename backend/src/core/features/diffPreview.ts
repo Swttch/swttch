@@ -11,6 +11,54 @@
 import { readFile } from 'fs/promises';
 import type { Bridge } from '../../bridge/bridge-interface';
 import { computeProposedContent, extractFilePath, isFileEditingTool } from './proposedEdit';
+import { computeHunks, type Hunk } from './hunks';
+
+export interface StoredPreview {
+  filePath: string;
+  oldContent: string;
+  newContent: string;
+  hunks: Hunk[];
+  /** The tool input as the CLI sent it, so a partial accept can amend a copy. */
+  input: Record<string, unknown>;
+  toolName: string;
+}
+
+/**
+ * Previews for permission requests still awaiting an answer, keyed by
+ * tool_use_id.
+ *
+ * Kept backend-side so a partial approval sends back only the hunk numbers the
+ * user kept: the file contents never make a round trip through the WebView,
+ * and the text written is the text we diffed rather than something reassembled
+ * from what the browser happened to render.
+ *
+ * Entries are dropped as soon as the request is answered. A turn that dies
+ * without answering leaks one small entry per pending edit, which the cap
+ * below sweeps rather than tracking process lifetimes.
+ */
+const previews = new Map<string, StoredPreview>();
+const MAX_PENDING_PREVIEWS = 100;
+
+export function rememberPreview(toolUseId: string, preview: StoredPreview): void {
+  if (previews.size >= MAX_PENDING_PREVIEWS) {
+    // Oldest first: Map preserves insertion order, and an unanswered request
+    // this far back is not coming back.
+    const oldest = previews.keys().next().value;
+    if (oldest !== undefined) previews.delete(oldest);
+  }
+  previews.set(toolUseId, preview);
+}
+
+export function takePreview(toolUseId: string): StoredPreview | undefined {
+  const preview = previews.get(toolUseId);
+  previews.delete(toolUseId);
+  return preview;
+}
+
+/** Exposed for tests; production code drops entries via takePreview. */
+export function clearPreviews(): void {
+  previews.clear();
+}
 
 /** Reads the file, or null when it does not exist yet (Write creating one). */
 async function readOriginal(filePath: string): Promise<string | null> {
@@ -31,7 +79,7 @@ async function readOriginal(filePath: string): Promise<string | null> {
 export async function resolveDiffPreview(
   toolName: string,
   input: Record<string, unknown>,
-): Promise<{ filePath: string; oldContent: string; newContent: string } | null> {
+): Promise<{ filePath: string; oldContent: string; newContent: string; hunks: Hunk[] } | null> {
   if (!isFileEditingTool(toolName)) return null;
 
   const filePath = extractFilePath(input);
@@ -46,7 +94,11 @@ export async function resolveDiffPreview(
   const oldContent = originalContent ?? '';
   if (proposed === oldContent) return null;
 
-  return { filePath, oldContent, newContent: proposed };
+  // A diff too large to split is still worth showing whole — the user keeps
+  // the all-or-nothing approval they had, just with the change visible.
+  const hunks = computeHunks(oldContent, proposed) ?? [];
+
+  return { filePath, oldContent, newContent: proposed, hunks };
 }
 
 /**
@@ -59,14 +111,16 @@ export async function resolveDiffPreview(
  */
 export async function openDiffForPermission(
   bridge: Bridge,
-  toolName: string,
+  preview: { filePath: string; oldContent: string; newContent: string },
   toolUseId: string | undefined,
-  input: Record<string, unknown>,
 ): Promise<void> {
   try {
-    const preview = await resolveDiffPreview(toolName, input);
-    if (!preview) return;
-    await bridge.openDiff({ ...preview, toolUseId });
+    await bridge.openDiff({
+      filePath: preview.filePath,
+      oldContent: preview.oldContent,
+      newContent: preview.newContent,
+      toolUseId,
+    });
   } catch (err) {
     console.error('[node-backend]', 'Failed to open IDE diff for permission request:', err);
   }

@@ -8,7 +8,7 @@ import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
-import { openDiffForPermission } from './features/diffPreview';
+import { openDiffForPermission, rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { MessageType } from '../shared';
@@ -787,18 +787,31 @@ function maybeOpenPermissionDiff(
   if (typeof toolName !== 'string' || typeof input !== 'object' || input === null) return;
 
   const workingDir = connections.getSession(targetSessionId)?.workingDir || undefined;
+  const toolUseId = request.tool_use_id as string | undefined;
+  const toolInput = input as Record<string, unknown>;
 
   void (async () => {
     try {
+      const preview = await resolveDiffPreview(toolName, toolInput);
+      if (!preview) return;
+
+      // Hold the change backend-side so an approval can name hunks rather than
+      // ship file contents back and forth, and tell the WebView what it may
+      // offer. Both happen whatever the IDE setting says: partial approval is
+      // about the prompt, not about the IDE window.
+      if (toolUseId) {
+        rememberPreview(toolUseId, { ...preview, input: toolInput, toolName });
+        connections.broadcastToSession(targetSessionId, MessageType.DIFF_PREVIEW, {
+          toolUseId,
+          filePath: preview.filePath,
+          hunks: preview.hunks,
+        });
+      }
+
       const { settings } = await readMergedSettings(workingDir);
       // Default on: the setting only exists to let people turn it back off.
       if (settings.showDiffInIde === false) return;
-      await openDiffForPermission(
-        bridge,
-        toolName,
-        request.tool_use_id as string | undefined,
-        input as Record<string, unknown>,
-      );
+      await openDiffForPermission(bridge, preview, toolUseId);
     } catch (err) {
       console.error('[node-backend]', 'Permission diff preview failed:', err);
     }

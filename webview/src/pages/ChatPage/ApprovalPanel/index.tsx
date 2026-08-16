@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { OptionButton, OptionItem } from './OptionButton';
 import { useApprovalKeyboard } from './useApprovalKeyboard';
 import {
@@ -19,11 +19,18 @@ interface Props {
   textareaPlaceholder?: string;
   onTextSubmit?: (text: string) => void;
   onCancel: () => void;
+  /**
+   * Rendered between the title and the options — for detail the decision rests
+   * on, such as the diff a file edit would make. Kept above the buttons so it
+   * is read before the choice, and inside the collapse so a long change can be
+   * folded away with the rest of the prompt.
+   */
+  detail?: ReactNode;
 }
 
 export function ApprovalPanel(props: Props) {
   const { t } = useTranslation('chat');
-  const { title, subtitle, notice, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
+  const { title, subtitle, notice, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel, detail } = props;
 
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
@@ -95,6 +102,8 @@ export function ApprovalPanel(props: Props) {
           </div>
           <CollapseToggle collapsed={false} onToggle={toggleCollapsed} />
         </div>
+
+        {detail && <div className="px-2 pb-2">{detail}</div>}
 
         {/* 옵션 목록 */}
         <div className="px-2 flex flex-col gap-[7px]">

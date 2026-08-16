@@ -259,7 +259,8 @@
       "workflow": "Yes, allow all workflows this session",
       "mcp": "Yes, allow all {{scope}} this session",
       "default": "Yes, allow all {{tool}} this session"
-    }
+    },
+    "yesPartial": "Yes — apply {{kept}} of {{total}} changes"
   },
   "loginCta": {
     "signed": "Signed",
@@ -468,5 +469,11 @@
     "scheduledToast": "Auto-resume scheduled",
     "canceledToast": "Auto-resume canceled",
     "scheduled": "Auto-resume scheduled"
+  },
+  "hunkPicker": {
+    "selected": "{{kept}} of {{total}} selected",
+    "selectAll": "Select all",
+    "selectNone": "Clear",
+    "hunkLabel": "Change {{number}} · line {{line}}"
   }
 }

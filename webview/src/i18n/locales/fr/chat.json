@@ -255,7 +255,8 @@
       "workflow": "Oui, autoriser tous les workflows pour cette session",
       "mcp": "Oui, autoriser tous les {{scope}} pour cette session",
       "default": "Oui, autoriser tous les {{tool}} pour cette session"
-    }
+    },
+    "yesPartial": "Oui — appliquer {{kept}} des {{total}} modifications"
   },
   "loginCta": {
     "signed": "Connecté",
@@ -464,5 +465,11 @@
     "scheduledToast": "Reprise automatique planifiée",
     "canceledToast": "Reprise automatique annulée",
     "scheduled": "Reprise automatique planifiée"
+  },
+  "hunkPicker": {
+    "selected": "{{kept}} sur {{total}} sélectionnés",
+    "selectAll": "Tout sélectionner",
+    "selectNone": "Tout désélectionner",
+    "hunkLabel": "Modification {{number}} · ligne {{line}}"
   }
 }

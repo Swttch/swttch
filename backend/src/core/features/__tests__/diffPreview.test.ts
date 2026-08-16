@@ -7,7 +7,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { resolveDiffPreview, openDiffForPermission } from '../diffPreview';
+import {
+  resolveDiffPreview,
+  openDiffForPermission,
+  rememberPreview,
+  takePreview,
+  clearPreviews,
+  type StoredPreview,
+} from '../diffPreview';
 
 let dir: string;
 
@@ -30,17 +37,19 @@ describe('resolveDiffPreview', () => {
       new_string: 'there',
     });
 
-    expect(preview).toEqual({
+    expect(preview).toMatchObject({
       filePath: file,
       oldContent: 'hello world\n',
       newContent: 'hello there\n',
     });
+    // The split drives per-hunk approval, so the preview must carry it.
+    expect(preview?.hunks.length).toBeGreaterThan(0);
   });
 
   it('previews a Write that creates a new file as an empty-to-content diff', async () => {
     const file = join(dir, 'new.txt');
     const preview = await resolveDiffPreview('Write', { file_path: file, content: 'fresh' });
-    expect(preview).toEqual({ filePath: file, oldContent: '', newContent: 'fresh' });
+    expect(preview).toMatchObject({ filePath: file, oldContent: '', newContent: 'fresh' });
   });
 
   it('skips a tool that does not write files', async () => {
@@ -102,32 +111,66 @@ describe('openDiffForPermission', () => {
     };
   }
 
+  const somePreview = { filePath: '/tmp/a.txt', oldContent: 'x', newContent: 'y' };
+
   it('passes the tool_use_id through so the IDE can tie the diff to the request', async () => {
-    const file = join(dir, 'a.txt');
-    writeFileSync(file, 'x');
     const { bridge, calls } = fakeBridge();
 
-    await openDiffForPermission(bridge, 'Write', 'toolu_42', { file_path: file, content: 'y' });
+    await openDiffForPermission(bridge, somePreview, 'toolu_42');
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ filePath: file, toolUseId: 'toolu_42' });
+    expect(calls[0]).toMatchObject({ filePath: '/tmp/a.txt', toolUseId: 'toolu_42' });
   });
 
-  it('opens nothing when there is no faithful preview', async () => {
+  it('sends only what the IDE needs, not the hunk split', async () => {
+    // The split is for the approval UI; handing it to the IDE would imply the
+    // diff window offers per-hunk choices, which it does not.
     const { bridge, calls } = fakeBridge();
-    await openDiffForPermission(bridge, 'Bash', 'toolu_1', { command: 'ls' });
-    expect(calls).toHaveLength(0);
+    await openDiffForPermission(bridge, somePreview, 'toolu_42');
+    expect(calls[0]).not.toHaveProperty('hunks');
   });
 
   it('swallows a bridge failure — the permission prompt must still go through', async () => {
-    const file = join(dir, 'a.txt');
-    writeFileSync(file, 'x');
     const bridge = {
       openDiff: async () => { throw new Error('no IDE'); },
     } as never;
 
     await expect(
-      openDiffForPermission(bridge, 'Write', 'toolu_1', { file_path: file, content: 'y' }),
+      openDiffForPermission(bridge, somePreview, 'toolu_1'),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('pending preview store', () => {
+  function stored(id: string): StoredPreview {
+    return {
+      filePath: `/tmp/${id}.ts`,
+      oldContent: 'a',
+      newContent: 'b',
+      hunks: [],
+      input: {},
+      toolName: 'Edit',
+    };
+  }
+
+  beforeEach(() => clearPreviews());
+
+  it('hands a preview back exactly once', () => {
+    // Consumed on read: a second decision for the same request must not find
+    // a stale change to apply.
+    rememberPreview('t1', stored('t1'));
+    expect(takePreview('t1')?.filePath).toBe('/tmp/t1.ts');
+    expect(takePreview('t1')).toBeUndefined();
+  });
+
+  it('knows nothing about a request that never opened a preview', () => {
+    expect(takePreview('never')).toBeUndefined();
+  });
+
+  it('drops the oldest entries rather than growing without bound', () => {
+    // Turns that die without answering would otherwise leak one entry each.
+    for (let i = 0; i < 130; i++) rememberPreview(`t${i}`, stored(`t${i}`));
+    expect(takePreview('t0')).toBeUndefined();
+    expect(takePreview('t129')).toBeDefined();
   });
 });

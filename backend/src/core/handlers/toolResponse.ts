@@ -3,6 +3,8 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
+import { takePreview } from '../features/diffPreview';
+import { buildPartialApproval, isEmptySelection } from '../features/partialApproval';
 
 /** WebView -> Backend TOOL_RESPONSE payload */
 interface ToolResponsePayload {
@@ -12,6 +14,12 @@ interface ToolResponsePayload {
   updatedInput?: Record<string, unknown>;
   reason?: string;
   result?: string;
+  /**
+   * Hunks the user kept, when they approved only part of a proposed edit
+   * (#109). Absent means the whole change, which is the behaviour that
+   * predates partial approval.
+   */
+  acceptedHunks?: number[];
 }
 
 export function toolResponseHandler(
@@ -31,8 +39,35 @@ export function toolResponseHandler(
 
   const payload = message.payload as ToolResponsePayload | undefined;
   const toolUseId = payload?.toolUseId ?? '';
-  const approved = payload?.approved ?? true;
+  let approved = payload?.approved ?? true;
   const controlRequestId = payload?.controlRequestId;
+
+  // Partial approval (#109): the user kept some hunks of a proposed edit but
+  // not all. Rewrite the tool call to describe exactly what they kept and hand
+  // it back as `updatedInput` — the CLI honours an amended input, so the write
+  // still happens the usual way rather than behind its back.
+  //
+  // The preview is consumed here whatever the decision was, so a request that
+  // was denied does not leave one behind.
+  let updatedInput = payload?.updatedInput;
+  const preview = toolUseId ? takePreview(toolUseId) : undefined;
+  if (approved && preview && payload?.acceptedHunks) {
+    if (isEmptySelection(preview, payload.acceptedHunks)) {
+      // Keeping nothing is a refusal. Writing the file back unchanged would
+      // report success for an edit that never happened, and Claude would carry
+      // on believing it landed.
+      approved = false;
+    } else {
+      const amended = buildPartialApproval(preview, payload.acceptedHunks);
+      if (amended) {
+        updatedInput = amended.input;
+        console.error(
+          '[node-backend]',
+          `Partial approval for ${toolUseId}: kept ${payload.acceptedHunks.length}/${preview.hunks.length} hunks`,
+        );
+      }
+    }
+  }
 
   // The user has answered, so the IDE diff that previewed this edit has served
   // its purpose — close it either way. Unknown ids are a no-op on the IDE side,
@@ -56,7 +91,7 @@ export function toolResponseHandler(
       subtype: 'success' as const,
       request_id: controlRequestId,
       response: approved
-        ? { behavior: 'allow', updatedInput: payload?.updatedInput ?? {} }
+        ? { behavior: 'allow', updatedInput: updatedInput ?? {} }
         : { behavior: 'deny', message: buildUserDeclinedContent(payload?.reason) },
     };
     sendControlResponseToProcess(connections, sessionId, response);

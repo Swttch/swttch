@@ -207,6 +207,11 @@ export enum MessageType {
    * one only dismisses the preview of a question already answered.
    */
   CLOSE_DIFF = 'CLOSE_DIFF',
+  /**
+   * outbound backend→webview: the change a pending permission request would
+   * make, split into hunks, so the prompt can offer per-hunk approval.
+   */
+  DIFF_PREVIEW = 'DIFF_PREVIEW',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */

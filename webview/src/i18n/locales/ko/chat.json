@@ -255,7 +255,8 @@
       "workflow": "예, 이번 세션에서 모든 워크플로 허용",
       "mcp": "예, 이번 세션에서 모든 {{scope}} 허용",
       "default": "예, 이번 세션에서 모든 {{tool}} 허용"
-    }
+    },
+    "yesPartial": "예 — {{total}}개 중 {{kept}}개만 적용"
   },
   "loginCta": {
     "signed": "로그인됨",
@@ -464,5 +465,11 @@
     "scheduledToast": "자동 재개가 예약되었습니다",
     "canceledToast": "자동 재개 예약을 취소했습니다",
     "scheduled": "자동 재개 예정됨"
+  },
+  "hunkPicker": {
+    "selected": "{{total}}개 중 {{kept}}개 선택",
+    "selectAll": "전체 선택",
+    "selectNone": "전체 해제",
+    "hunkLabel": "변경 {{number}} · {{line}}번째 줄"
   }
 }

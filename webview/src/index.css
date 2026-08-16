@@ -613,6 +613,19 @@ body {
   font-size: 0.875rem;
 }
 
+/* Per-hunk approval inside the permission prompt (#109). Reuses the diff
+   palette above so a change reads the same whether it is being reviewed or
+   recalled later in the transcript. */
+.hunk-line-add {
+  background: var(--diff-add-bg);
+  color: var(--diff-add-text);
+}
+
+.hunk-line-delete {
+  background: var(--diff-delete-bg);
+  color: var(--diff-delete-text);
+}
+
 /* ============================================
    Slash Command Panel Variables (semantic-token wired)
    ============================================ */

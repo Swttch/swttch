@@ -255,7 +255,8 @@
       "workflow": "はい、このセッション中はすべてのワークフローを許可する",
       "mcp": "はい、このセッション中はすべての{{scope}}を許可する",
       "default": "はい、このセッション中はすべての{{tool}}を許可する"
-    }
+    },
+    "yesPartial": "はい — {{total}} 件中 {{kept}} 件を適用"
   },
   "loginCta": {
     "signed": "サインイン済み",
@@ -464,5 +465,11 @@
     "scheduledToast": "自動再開を予約しました",
     "canceledToast": "自動再開の予約をキャンセルしました",
     "scheduled": "自動再開を予約済み"
+  },
+  "hunkPicker": {
+    "selected": "{{total}} 件中 {{kept}} 件を選択",
+    "selectAll": "すべて選択",
+    "selectNone": "すべて解除",
+    "hunkLabel": "変更 {{number}} · {{line}} 行目"
   }
 }

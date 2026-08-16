@@ -255,7 +255,8 @@
       "workflow": "是，本次工作階段允許所有工作流程",
       "mcp": "是，本次工作階段允許所有 {{scope}}",
       "default": "是，本次工作階段允許所有 {{tool}}"
-    }
+    },
+    "yesPartial": "是 — 套用 {{total}} 處中的 {{kept}} 處"
   },
   "loginCta": {
     "signed": "已登入",
@@ -464,5 +465,11 @@
     "scheduledToast": "已預約自動恢復",
     "canceledToast": "已取消自動恢復",
     "scheduled": "已預約自動恢復"
+  },
+  "hunkPicker": {
+    "selected": "已選 {{total}} 處中的 {{kept}} 處",
+    "selectAll": "全選",
+    "selectNone": "取消全選",
+    "hunkLabel": "變更 {{number}} · 第 {{line}} 行"
   }
 }

@@ -21,16 +21,24 @@ export class ToolsApi {
   /**
    * Approve a tool use request
    */
+  /**
+   * @param acceptedHunks hunks the user kept, when they narrowed a file edit
+   *   to part of what was proposed (#109). Only the indices travel — the
+   *   backend still holds the change and assembles the amended tool input, so
+   *   file contents never make a round trip through the WebView.
+   */
   async approve(
     toolUseId: string,
     controlRequestId?: string,
     updatedInput?: Record<string, unknown>,
+    acceptedHunks?: number[],
   ): Promise<void> {
     await this.bridge.request(MessageType.TOOL_RESPONSE, {
       toolUseId,
       approved: true,
       ...(controlRequestId && { controlRequestId }),
       ...(updatedInput && { updatedInput }),
+      ...(acceptedHunks && { acceptedHunks }),
     });
   }
 
