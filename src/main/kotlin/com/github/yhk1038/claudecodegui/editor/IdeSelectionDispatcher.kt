@@ -3,6 +3,7 @@ package com.github.yhk1038.claudecodegui.editor
 import com.github.yhk1038.claudecodegui.actions.EditorContextPayload
 import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
+import com.intellij.diff.editor.DiffContentVirtualFile
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
@@ -32,8 +33,9 @@ import java.net.URI
  * window is currently visible. If neither is present the HTTP call is suppressed
  * entirely. (See [hasSelectionConsumer].)
  *
- * The active file must not itself be a [ClaudeCodeVirtualFile] (the Claude panel
- * is not a real source file).
+ * The active file must be one the user is editing: the Claude panel's own file
+ * and diff tabs are screens, not source files, and are never reported. (See
+ * [shouldDispatchActiveEditor].)
  *
  * ### Debounce
  * Selection events fire continuously during a drag. A 200 ms [Alarm]-based debounce
@@ -72,16 +74,27 @@ object IdeSelectionDispatcher {
     }
 
     /**
-     * Whether [dispatchActiveEditor] should push the given active file. Returns
-     * false when there is no active file (`null`) or when the active file is the
-     * Claude panel's own JCEF virtual file (a [ClaudeCodeVirtualFile], which is
-     * not a real source file).
+     * Whether the given active file is something the user is editing, and so
+     * worth reporting as their current file. Returns false when there is no
+     * active file (`null`), or when the file is a screen rather than a source
+     * file:
      *
-     * Extracted as a pure predicate so the no-op contract is unit-testable
-     * without a platform harness.
+     *  - a [ClaudeCodeVirtualFile] — the Claude panel's own JCEF surface
+     *  - a [DiffContentVirtualFile] — a diff tab, including the review diff we
+     *    open for a proposed edit
+     *
+     * Both are screens rather than source files, so naming one as "the file you
+     * are looking at" is wrong twice over: the composer's chip offered to attach
+     * a file that has no contents to attach, and closing the tab leaves no new
+     * active file to report, so the chip stayed on screen indefinitely.
+     *
+     * Both gates below use this, so the rule cannot drift between the live
+     * selection listener and the sync-on-open path. Extracted as a pure
+     * predicate so the no-op contract is unit-testable without a platform
+     * harness.
      */
     fun shouldDispatchActiveEditor(vFile: VirtualFile?): Boolean =
-        vFile != null && vFile !is ClaudeCodeVirtualFile
+        vFile != null && vFile !is ClaudeCodeVirtualFile && vFile !is DiffContentVirtualFile
 
     /**
      * Re-query the IDE's current active editor/file and dispatch it immediately,
@@ -99,8 +112,8 @@ object IdeSelectionDispatcher {
      * IDE state".
      *
      * ### Behavior
-     * - No active file, or the active file is a [ClaudeCodeVirtualFile] → no-op
-     *   (see [shouldDispatchActiveEditor]).
+     * - No active file, or the active file is a screen rather than a source
+     *   file → no-op (see [shouldDispatchActiveEditor]).
      * - Otherwise: [clearDedupCache] first (the current file's key may equal the
      *   last key sent before the window closed; without the reset the dedup check
      *   in [doDispatch] would drop it), then [scheduleDispatch].
@@ -176,8 +189,10 @@ object IdeSelectionDispatcher {
      * @param vFile     The virtual file now active in the editor.
      */
     fun scheduleDispatch(project: Project, editor: Editor?, vFile: VirtualFile) {
-        // Gate 1: ignore Claude Code panel files.
-        if (vFile is ClaudeCodeVirtualFile) return
+        // Gate 1: ignore files that are screens rather than something the user
+        // is editing — the Claude panel, and diff tabs. Same predicate as the
+        // sync-on-open path, so the two cannot drift apart.
+        if (!shouldDispatchActiveEditor(vFile)) return
 
         // Gate 2: suppress when there is no consumer for the push — neither a
         // Claude Code editor tab open nor a visible Claude Code tool window.
