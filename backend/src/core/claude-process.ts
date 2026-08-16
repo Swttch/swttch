@@ -8,6 +8,8 @@ import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
+import { openDiffForPermission, rememberPreview, resolveDiffPreview } from './features/diffPreview';
+import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { MessageType } from '../shared';
 
@@ -759,6 +761,67 @@ export function sendControlResponseToProcess(
   return true;
 }
 
+/**
+ * When the CLI asks permission for a file edit, open that edit in the IDE's
+ * diff viewer so the user can see it while deciding.
+ *
+ * Gated on the `showDiffInIde` setting, read per session working directory so a
+ * project can opt out on its own. Off means the flow behaves exactly as it did
+ * before this existed — no tab, no diff, prompt unchanged.
+ *
+ * Deliberately not awaited by the caller: reading the setting and the file both
+ * touch disk, and the permission prompt must reach the WebView immediately.
+ */
+function maybeOpenPermissionDiff(
+  targetSessionId: string,
+  event: Record<string, unknown>,
+  connections: ConnectionManager,
+  bridge: Bridge,
+): void {
+  if (event.type !== 'control_request') return;
+  const request = event.request as Record<string, unknown> | undefined;
+  if (request?.subtype !== 'can_use_tool') return;
+
+  const toolName = request.tool_name;
+  const input = request.input;
+  if (typeof toolName !== 'string' || typeof input !== 'object' || input === null) return;
+
+  const workingDir = connections.getSession(targetSessionId)?.workingDir || undefined;
+  const toolUseId = request.tool_use_id as string | undefined;
+  const toolInput = input as Record<string, unknown>;
+
+  void (async () => {
+    try {
+      const { settings } = await readMergedSettings(workingDir);
+      // Default on: the setting only exists to let people turn it back off.
+      if (settings.showDiffInIde === false) return;
+
+      const preview = await resolveDiffPreview(toolName, toolInput);
+      if (!preview) return;
+
+      // Hold the change backend-side so the IDE's answer can name hunks rather
+      // than ship file contents back: what gets written is then the text we
+      // diffed, not something reassembled from what a viewer rendered.
+      const controlRequestId = String(event.request_id ?? '');
+      if (toolUseId) {
+        rememberPreview(toolUseId, {
+          ...preview,
+          input: toolInput,
+          toolName,
+          sessionId: targetSessionId,
+          controlRequestId,
+        });
+      }
+      await openDiffForPermission(bridge, preview, toolUseId, {
+        sessionId: targetSessionId,
+        controlRequestId,
+      });
+    } catch (err) {
+      console.error('[node-backend]', 'Permission diff preview failed:', err);
+    }
+  })();
+}
+
 function handleStreamEvent(
   targetSessionId: string,
   event: Record<string, unknown>,
@@ -782,6 +845,12 @@ function handleStreamEvent(
   // Detect background dynamic workflows and stream their live progress. Pure
   // side-effect — the raw CLI event is still forwarded unchanged below.
   getWorkflowTracker(connections).handleEvent(targetSessionId, event);
+
+  // Show the pending file edit in the IDE's diff viewer while the permission
+  // prompt is up, so the user sees what they are approving rather than only the
+  // file name (#41, #109). Fire-and-forget: the prompt itself is forwarded
+  // below either way, and a diff we cannot open must not delay it.
+  maybeOpenPermissionDiff(targetSessionId, event, connections, bridge);
 
   // Keep the recorded permission mode in step with what the CLI says it is running
   // under. The CLI reports this on `system/init` (spawn) and again on `system/status`

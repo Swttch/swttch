@@ -12,6 +12,7 @@
     "privacy": "Privacy",
     "cli": "CLI",
     "browser": "Browser",
+    "ide": "IDE",
     "account": "Account",
     "usage": "Usage",
     "tunnel": "Tunnel",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "Use {{modifier}}+Enter To Send",
       "description": "When enabled, use Ctrl/Cmd+Enter to send prompts instead of just Enter. This allows Enter to create new lines."
-    },
-    "attachEditorContext": {
-      "label": "Attach the editor file by default",
-      "description": "Start each session with the open file or selection attached. Turn this off and the chip still appears, but starts switched off — click it to attach for that session."
-    },
-    "focusInputOnEditorContext": {
-      "label": "Focus chat input after attaching file path",
-      "description": "When you press Alt+K in the editor, move focus to the chat input after inserting the file path."
     },
     "respectGitignore": {
       "label": "Respect .gitignore for editor context",
@@ -530,5 +523,21 @@
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
     "openDocs": "Open docs"
+  },
+  "ide": {
+    "sectionTitle": "IDE integration",
+    "attachEditorContext": {
+      "label": "Attach the editor file by default",
+      "description": "Start each session with the open file or selection attached. Turn this off and the chip still appears, but starts switched off — click it to attach for that session."
+    },
+    "focusInputOnEditorContext": {
+      "label": "Focus chat input after attaching file path",
+      "description": "When you press Alt+K in the editor, move focus to the chat input after inserting the file path."
+    },
+    "showDiffInIde": {
+      "label": "Show Claude's edits in the IDE diff viewer",
+      "description": "When Claude asks to edit a file, open the change in the IDE's diff viewer so you can see it while you decide.",
+      "unavailable": "Available when running inside an IDE. Start the app from your IDE to use this."
+    }
   }
 }

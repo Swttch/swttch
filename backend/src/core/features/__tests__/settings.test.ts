@@ -376,6 +376,7 @@ describe('settings', () => {
         'focusInputOnEditorContext',
         'autoResumeOnLimit',
         'attachEditorContext',
+        'showDiffInIde',
       ]) {
         expect((await saveSettingToFile(key, true)).status).toBe('ok');
         expect((await saveSettingToFile(key, false)).status).toBe('ok');
@@ -592,6 +593,7 @@ describe('settings', () => {
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
+        showDiffInIde: true,
         ultracode: null,
         dockLayout: { order: [], visible: [] },
         env: {},
@@ -715,6 +717,7 @@ export default {
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
+        showDiffInIde: true,
         ultracode: null,
         dockLayout: { order: [], visible: [] },
         env: {},

@@ -263,7 +263,9 @@ class RpcWebSocketClient(
                 val oldContent = params["oldContent"]?.jsonPrimitive?.content ?: ""
                 val newContent = params["newContent"]?.jsonPrimitive?.content ?: ""
                 val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
-                rpcHandler.openDiff(filePath, oldContent, newContent, toolUseId)
+                val sessionId = params["sessionId"]?.jsonPrimitive?.content
+                val controlRequestId = params["controlRequestId"]?.jsonPrimitive?.content
+                rpcHandler.openDiff(filePath, oldContent, newContent, toolUseId, sessionId, controlRequestId)
                 buildJsonObject {}
             }
             "APPLY_DIFF" -> {
@@ -278,6 +280,12 @@ class RpcWebSocketClient(
             "REJECT_DIFF" -> {
                 val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
                 rpcHandler.rejectDiff(toolUseId)
+                buildJsonObject {}
+            }
+            "CLOSE_DIFF" -> {
+                val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'toolUseId' param")
+                rpcHandler.closeDiff(toolUseId)
                 buildJsonObject {}
             }
             "REFRESH_FILES" -> {

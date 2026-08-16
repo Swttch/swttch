@@ -12,6 +12,7 @@
     "privacy": "隐私",
     "cli": "CLI",
     "browser": "浏览器",
+    "ide": "IDE",
     "account": "账户",
     "usage": "用量",
     "tunnel": "隧道",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "使用 {{modifier}}+Enter 发送",
       "description": "启用后,使用 Ctrl/Cmd+Enter 发送提示,而不是单独按 Enter。这样 Enter 键可用于换行。"
-    },
-    "attachEditorContext": {
-      "label": "默认附加编辑器中的文件",
-      "description": "每次开始会话时，自动附加当前打开的文件或选中的代码。关闭后标签仍会显示，只是默认处于关闭状态，点击即可为该会话附加。"
-    },
-    "focusInputOnEditorContext": {
-      "label": "插入文件路径后聚焦聊天输入框",
-      "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"
     },
     "respectGitignore": {
       "label": "编辑器上下文遵循 .gitignore",
@@ -528,5 +521,21 @@
     "sponsorLabel": "赞",
     "claudeNativeLabel": "原",
     "openDocs": "打开文档"
+  },
+  "ide": {
+    "sectionTitle": "IDE 集成",
+    "attachEditorContext": {
+      "label": "默认附加编辑器中的文件",
+      "description": "每次开始会话时，自动附加当前打开的文件或选中的代码。关闭后标签仍会显示，只是默认处于关闭状态，点击即可为该会话附加。"
+    },
+    "focusInputOnEditorContext": {
+      "label": "插入文件路径后聚焦聊天输入框",
+      "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"
+    },
+    "showDiffInIde": {
+      "label": "在 IDE 差异查看器中显示 Claude 的修改",
+      "description": "当 Claude 请求修改文件时，在 IDE 的差异查看器中打开该修改，便于你在决定时查看。",
+      "unavailable": "仅在 IDE 内运行时可用。请从 IDE 启动应用。"
+    }
   }
 }

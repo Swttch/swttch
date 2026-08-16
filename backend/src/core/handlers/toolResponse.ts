@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
+import { takePreview } from '../features/diffPreview';
 
 /** WebView -> Backend TOOL_RESPONSE payload */
 interface ToolResponsePayload {
@@ -18,7 +19,7 @@ export function toolResponseHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
-  _bridge: Bridge,
+  bridge: Bridge,
 ): void {
   const client = connections.getClient(connectionId);
   const sessionId = client?.subscribedSessionId;
@@ -33,6 +34,21 @@ export function toolResponseHandler(
   const toolUseId = payload?.toolUseId ?? '';
   const approved = payload?.approved ?? true;
   const controlRequestId = payload?.controlRequestId;
+
+  // The IDE's diff owns hunk selection now, so a plain approval from the chat
+  // means the whole change. Still consume any stored preview: the request is
+  // answered either way, and a leftover entry would outlive its question.
+  if (toolUseId) takePreview(toolUseId);
+
+  // The user has answered, so the IDE diff that previewed this edit has served
+  // its purpose — close it either way. Unknown ids are a no-op on the IDE side,
+  // so there is no need to know whether this request opened one. Fire-and-
+  // forget: the CLI is waiting on the response below, not on a closing tab.
+  if (toolUseId) {
+    bridge.closeDiff({ toolUseId }).catch((err) => {
+      console.error('[node-backend]', 'Failed to close IDE diff after decision:', err);
+    });
+  }
 
   if (controlRequestId) {
     // control_response 프로토콜 (can_use_tool permission, ExitPlanMode, AskUserQuestion).

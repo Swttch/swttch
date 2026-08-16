@@ -12,6 +12,7 @@
     "privacy": "Privacidade",
     "cli": "CLI",
     "browser": "Navegador",
+    "ide": "IDE",
     "account": "Conta",
     "usage": "Uso",
     "tunnel": "Túnel",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "Usar {{modifier}}+Enter para enviar",
       "description": "Quando ativado, use Ctrl/Cmd+Enter para enviar mensagens em vez de apenas Enter. Isso permite que Enter crie novas linhas."
-    },
-    "attachEditorContext": {
-      "label": "Anexar o arquivo do editor por padrão",
-      "description": "Cada sessão começa com o arquivo aberto ou a seleção anexados. Se você desativar, a etiqueta continua aparecendo, mas começa desligada — clique nela para anexar naquela sessão."
-    },
-    "focusInputOnEditorContext": {
-      "label": "Focar o campo de chat após anexar o caminho do arquivo",
-      "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
     },
     "respectGitignore": {
       "label": "Respeitar o .gitignore no contexto do editor",
@@ -528,5 +521,21 @@
     "sponsorLabel": "P",
     "claudeNativeLabel": "C",
     "openDocs": "Abrir documentação"
+  },
+  "ide": {
+    "sectionTitle": "Integração com o IDE",
+    "attachEditorContext": {
+      "label": "Anexar o arquivo do editor por padrão",
+      "description": "Cada sessão começa com o arquivo aberto ou a seleção anexados. Se você desativar, a etiqueta continua aparecendo, mas começa desligada — clique nela para anexar naquela sessão."
+    },
+    "focusInputOnEditorContext": {
+      "label": "Focar o campo de chat após anexar o caminho do arquivo",
+      "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
+    },
+    "showDiffInIde": {
+      "label": "Mostrar as edições do Claude no visualizador de diferenças do IDE",
+      "description": "Quando o Claude pedir para editar um arquivo, abre a alteração no visualizador de diferenças do IDE para você ver enquanto decide.",
+      "unavailable": "Disponível ao executar dentro de um IDE. Inicie o aplicativo a partir do seu IDE para usar."
+    }
   }
 }

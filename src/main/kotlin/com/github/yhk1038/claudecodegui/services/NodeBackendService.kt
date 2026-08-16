@@ -181,8 +181,16 @@ class NodeBackendService : Disposable {
                 any()?.openFile(path, line, column) ?: warn("openFile")
             }
 
-            override suspend fun openDiff(filePath: String, oldContent: String, newContent: String, toolUseId: String?) {
-                any()?.openDiff(filePath, oldContent, newContent, toolUseId) ?: warn("openDiff")
+            override suspend fun openDiff(
+                filePath: String,
+                oldContent: String,
+                newContent: String,
+                toolUseId: String?,
+                sessionId: String?,
+                controlRequestId: String?,
+            ) {
+                any()?.openDiff(filePath, oldContent, newContent, toolUseId, sessionId, controlRequestId)
+                    ?: warn("openDiff")
             }
 
             override suspend fun applyDiff(filePath: String, newContent: String, toolUseId: String?): Boolean =
@@ -190,6 +198,10 @@ class NodeBackendService : Disposable {
 
             override suspend fun rejectDiff(toolUseId: String?) {
                 any()?.rejectDiff(toolUseId) ?: warn("rejectDiff")
+            }
+
+            override suspend fun closeDiff(toolUseId: String) {
+                any()?.closeDiff(toolUseId) ?: warn("closeDiff")
             }
 
             override suspend fun refreshFiles(paths: List<String>) {

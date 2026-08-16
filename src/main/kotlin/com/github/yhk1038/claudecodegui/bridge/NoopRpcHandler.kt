@@ -15,9 +15,17 @@ package com.github.yhk1038.claudecodegui.bridge
  */
 object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun openFile(path: String, line: Int?, column: Int?) {}
-    override suspend fun openDiff(filePath: String, oldContent: String, newContent: String, toolUseId: String?) {}
+    override suspend fun openDiff(
+        filePath: String,
+        oldContent: String,
+        newContent: String,
+        toolUseId: String?,
+        sessionId: String?,
+        controlRequestId: String?,
+    ) {}
     override suspend fun applyDiff(filePath: String, newContent: String, toolUseId: String?): Boolean = false
     override suspend fun rejectDiff(toolUseId: String?) {}
+    override suspend fun closeDiff(toolUseId: String) {}
     override suspend fun refreshFiles(paths: List<String>) {}
     override suspend fun createSession(workingDir: String) {}
     override suspend fun openNewTab(workingDir: String) {}

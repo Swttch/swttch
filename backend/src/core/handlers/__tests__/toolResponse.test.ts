@@ -10,6 +10,8 @@ vi.mock('../../claude-process', () => ({
 }));
 
 import { toolResponseHandler } from '../toolResponse';
+import { rememberPreview, takePreview, clearPreviews } from '../../features/diffPreview';
+import { computeHunks } from '../../features/hunks';
 
 function makeConnections() {
   return {
@@ -18,11 +20,13 @@ function makeConnections() {
   } as any;
 }
 
-const bridge = {} as any;
+const closeDiff = vi.fn().mockResolvedValue(undefined);
+const bridge = { closeDiff } as any;
 
 beforeEach(() => {
   sendControlResponseToProcess.mockClear();
   sendToolResultToProcess.mockClear();
+  closeDiff.mockClear();
 });
 
 describe('toolResponseHandler — permission denial (control_response path)', () => {
@@ -100,5 +104,77 @@ describe('toolResponseHandler — legacy tool_result path (no controlRequestId)'
     const [, , toolResult] = sendToolResultToProcess.mock.calls[0];
     expect(toolResult.is_error).toBe(false);
     expect(toolResult.content).toBe('done');
+  });
+});
+
+describe('toolResponseHandler — IDE review diff cleanup', () => {
+  // The diff was opened to answer a question. Once answered, leaving it behind
+  // means a stale preview per edit for the user to close by hand.
+  it('closes the diff after an approval', () => {
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+    expect(closeDiff).toHaveBeenCalledWith({ toolUseId: 't1' });
+  });
+
+  it('closes the diff after a denial too', () => {
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't1', approved: false, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+    expect(closeDiff).toHaveBeenCalledWith({ toolUseId: 't1' });
+  });
+
+  it('does not ask the IDE to close anything when there is no tool id', () => {
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+    expect(closeDiff).not.toHaveBeenCalled();
+  });
+
+  it('still answers the CLI when closing the diff fails', async () => {
+    // A dead IDE connection must not swallow the user's decision.
+    closeDiff.mockRejectedValueOnce(new Error('no IDE'));
+
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    expect(sendControlResponseToProcess).toHaveBeenCalledTimes(1);
+    // Let the rejected promise settle so the suite does not see it as unhandled.
+    await Promise.resolve();
+  });
+});
+
+describe('toolResponseHandler — pending preview cleanup', () => {
+  beforeEach(() => clearPreviews());
+
+  it('consumes the stored preview so it cannot outlive its question', () => {
+    // Hunk selection happens in the IDE now, but a chat answer still ends the
+    // request — leaving the preview behind would strand it until the cap sweeps.
+    rememberPreview('t-chat', {
+      filePath: '/tmp/a.ts', oldContent: 'a', newContent: 'b',
+      hunks: computeHunks('a', 'b')!, input: {}, toolName: 'Edit',
+    });
+
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't-chat', approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    expect(takePreview('t-chat')).toBeUndefined();
   });
 });

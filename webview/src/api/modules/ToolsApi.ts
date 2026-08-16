@@ -38,11 +38,18 @@ export class ToolsApi {
    * Deny a tool use request
    */
   async deny(toolUseId: string, controlRequestId?: string, reason?: string): Promise<void> {
+    // A denial is the CLI's answer to a question it is blocked on, so nothing
+    // here may stop the message being sent. A caller that wired this to a click
+    // handler once passed React's MouseEvent as the reason; JSON.stringify threw
+    // on it, the message never left, and the turn hung forever with the diff
+    // still open. Types allow that (an argument to a `() => void` is legal), so
+    // the guard is here, at the last point before the wire.
+    const safeReason = typeof reason === 'string' && reason ? reason : undefined;
     await this.bridge.request(MessageType.TOOL_RESPONSE, {
       toolUseId,
       approved: false,
       ...(controlRequestId && { controlRequestId }),
-      ...(reason && { reason }),
+      ...(safeReason && { reason: safeReason }),
     });
   }
 
@@ -81,6 +88,18 @@ export class ToolsApi {
       oldContent,
       newContent,
     });
+  }
+
+  /**
+   * Reopen the review diff for a permission request still awaiting an answer.
+   *
+   * Only the id travels: the contents are held backend-side for that request,
+   * so what is shown is the text the backend diffed rather than something
+   * reassembled here. A request already answered has no preview left, and the
+   * backend treats that as nothing to do.
+   */
+  async openDiffForRequest(toolUseId: string): Promise<void> {
+    await this.bridge.request(MessageType.OPEN_DIFF, { toolUseId });
   }
 
   /**

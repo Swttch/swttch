@@ -13,6 +13,7 @@ import {
   BellIcon,
   LockClosedIcon,
   HeartIcon,
+  CodeBracketSquareIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
 
@@ -35,6 +36,7 @@ export enum IconName {
   BELL = 'BellIcon',
   LOCK_CLOSED = 'LockClosedIcon',
   HEART = 'HeartIcon',
+  CODE_BRACKET_SQUARE = 'CodeBracketSquareIcon',
 }
 
 /**
@@ -58,6 +60,7 @@ export enum Route {
   SETTINGS_USAGE = 'settings/usage',
   SETTINGS_RELEASES = 'settings/releases',
   SETTINGS_BROWSER = 'settings/browser',
+  SETTINGS_IDE = 'settings/ide',
   SETTINGS_ACCOUNT = 'settings/account',
   SETTINGS_SPONSOR = 'settings/sponsor',
   SETTINGS_ABOUT = 'settings/about',
@@ -171,6 +174,13 @@ export const ROUTE_META: Record<Route, RouteMeta> = {
     description: 'Browser-only options',
     scopeSupport: 'none',
   },
+  [Route.SETTINGS_IDE]: {
+    path: '/settings/ide',
+    label: 'IDE',
+    icon: IconName.CODE_BRACKET_SQUARE,
+    description: 'IDE integration options',
+    scopeSupport: 'none',
+  },
   [Route.SETTINGS_ACCOUNT]: {
     path: '/settings/account',
     label: 'Account',
@@ -219,6 +229,7 @@ export const ICON_COMPONENTS: Record<IconName, ComponentType<SVGProps<SVGSVGElem
   [IconName.BELL]: BellIcon,
   [IconName.LOCK_CLOSED]: LockClosedIcon,
   [IconName.HEART]: HeartIcon,
+  [IconName.CODE_BRACKET_SQUARE]: CodeBracketSquareIcon,
 };
 
 /**
@@ -337,6 +348,7 @@ export const SETTINGS_SUB_ROUTES: Route[] = [
   Route.SETTINGS_CLI,
   // Route.SETTINGS_ADVANCED,  // TODO: not yet implemented
   Route.SETTINGS_BROWSER,
+  Route.SETTINGS_IDE,
   Route.SETTINGS_ACCOUNT,
   Route.SETTINGS_USAGE,
   Route.SETTINGS_TUNNEL,

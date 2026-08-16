@@ -54,6 +54,44 @@ describe('StreamingMessage — local file links open in the IDE', () => {
     expect(line).toBe(7);
   });
 
+  it('opens a file:// link instead of rendering it as "[blocked]"', () => {
+    // Streamdown's own rehype-sanitize/harden would strip the href and swap the
+    // link for a greyed-out "[blocked]" span, and a browser refuses to follow a
+    // file: anchor anyway — so it has to travel as a plain path.
+    const { container } = render(
+      <StreamingMessage content="See [shot](file:///Users/me/pic.png)." isStreaming={false} />,
+    );
+    expect(container.textContent).not.toMatch(/\[blocked\]/i);
+    fireEvent.click(screen.getByRole('button', { name: 'shot' }));
+    expect(mockOpenFile).toHaveBeenCalledWith('/Users/me/pic.png', undefined, undefined);
+  });
+
+  it('decodes percent-escapes in a file:// path and honors #L', () => {
+    render(<StreamingMessage content="See [x](file:///abs/my%20file.ts#L9)." isStreaming={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'x' }));
+    expect(mockOpenFile).toHaveBeenCalledWith('/abs/my file.ts', 9, undefined);
+  });
+
+  it('opens a Windows file:///C:/… link', () => {
+    render(<StreamingMessage content="See [w](file:///C:/proj/foo.ts#L3)." isStreaming={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'w' }));
+    const [path, line] = mockOpenFile.mock.calls[0];
+    expect(path.toLowerCase()).toBe('c:/proj/foo.ts');
+    expect(line).toBe(3);
+  });
+
+  it('treats file://localhost/… as this machine', () => {
+    render(<StreamingMessage content="See [l](file://localhost/abs/foo.ts)." isStreaming={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'l' }));
+    expect(mockOpenFile).toHaveBeenCalledWith('/abs/foo.ts', undefined, undefined);
+  });
+
+  it('does NOT treat a remote file://host/share UNC path as local', () => {
+    render(<StreamingMessage content="See [unc](file://server/share/x.txt)." isStreaming={false} />);
+    expect(screen.queryByRole('button', { name: 'unc' })).toBeNull();
+    expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
   it('does not rewrite link URLs inside inline code', () => {
     const { container } = render(
       <StreamingMessage content={'Use `[a](./foo.ts)` here.'} isStreaming={false} />,

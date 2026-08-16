@@ -10,6 +10,9 @@ export interface Bridge {
     oldContent: string;
     newContent: string;
     toolUseId?: string;
+    /** Session and request the IDE must quote when it reports the selection back. */
+    sessionId?: string;
+    controlRequestId?: string;
   }): Promise<void>;
   applyDiff(params: {
     filePath: string;
@@ -17,6 +20,12 @@ export interface Bridge {
     toolUseId?: string;
   }): Promise<{ applied: boolean }>;
   rejectDiff(params: { toolUseId?: string }): Promise<void>;
+  /**
+   * Dismiss the review diff opened for a permission request once the user has
+   * answered it — approve and deny alike. A no-op when that request never
+   * opened one, so callers do not have to track which did.
+   */
+  closeDiff(params: { toolUseId: string }): Promise<void>;
   /**
    * Ask the IDE host to reload the given files from disk. Used after the CLI
    * edits files directly, so open editor tabs reflect the new content even when

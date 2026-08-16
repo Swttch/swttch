@@ -109,6 +109,10 @@ export class BrowserBridge implements Bridge {
     // no-op
   }
 
+  async closeDiff(): Promise<void> {
+    // no-op: nothing was opened, since openDiff is a no-op here too
+  }
+
   async refreshFiles(): Promise<void> {
     // no-op: browser mode has no IDE editor tabs to reload
   }

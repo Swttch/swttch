@@ -3,6 +3,21 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PermissionBanner } from '../PermissionBanner';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
+const mockStop = vi.fn();
+vi.mock('../../../contexts/ChatStreamContext', () => ({
+  useChatStreamContext: () => ({ stop: mockStop }),
+}));
+
+let diffAvailable = true;
+vi.mock('../../../hooks/useIdeDiffAvailable', () => ({
+  useIdeDiffAvailable: () => diffAvailable,
+}));
+
+const openDiffForRequest = vi.fn();
+vi.mock('../../../contexts/ApiContext', () => ({
+  useApi: () => ({ tools: { openDiffForRequest } }),
+}));
+
 const mockPermission: PendingPermission = {
   controlRequestId: 'ctrl-1',
   toolName: 'Bash',
@@ -11,6 +26,14 @@ const mockPermission: PendingPermission = {
   riskLevel: 'high',
   description: 'Execute: ls',
 };
+
+beforeEach(() => {
+  mockStop.mockClear();
+  openDiffForRequest.mockClear();
+  // The prompt's file name is only a link where a diff can be shown; most tests
+  // here are about the rest of the panel, so keep it available by default.
+  diffAvailable = true;
+});
 
 describe('PermissionBanner', () => {
   let onApprove: ReturnType<typeof vi.fn<() => void>>;
@@ -155,6 +178,59 @@ describe('PermissionBanner', () => {
     expect(onDeny).toHaveBeenCalledWith('use echo instead');
   });
 
+  /**
+   * Cancelling is "stop what you are doing", not "no to this one file".
+   *
+   * A denial on its own only answers this request: the turn keeps running, so
+   * Claude moves on to the next tool call and writes up the refusal, and the
+   * user sees their interruption come back as an answer. Measured in the
+   * sandbox IDE. The other two prompt panels already end the turn here.
+   */
+  it.each([
+    ['the hint is clicked', () => fireEvent.click(screen.getByRole('button', { name: 'Esc to cancel' }))],
+    ['Escape is pressed', () => fireEvent.keyDown(window, { key: 'Escape' })],
+  ])('ends the turn as well as the request when %s', (_label, cancel) => {
+    render(
+      <PermissionBanner
+        permission={mockPermission}
+        onApprove={onApprove}
+        onApproveForSession={onApproveForSession}
+        onDeny={onDeny}
+      />,
+    );
+
+    cancel();
+
+    expect(onDeny).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
+    // React hands a click handler its MouseEvent, and this deny takes an
+    // optional reason — the event landed there, JSON.stringify threw on the
+    // circular DOM node, and the message never reached the backend, so the CLI
+    // waited forever with the diff still open. Types cannot catch it.
+    expect(onDeny.mock.calls[0][0]).toBeUndefined();
+  });
+
+  it('answers without ending the turn when an option is chosen or a reason typed', () => {
+    // Not "always stop": answering the question is not an interruption.
+    render(
+      <PermissionBanner
+        permission={mockPermission}
+        onApprove={onApprove}
+        onApproveForSession={onApproveForSession}
+        onDeny={onDeny}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('No'));
+    expect(mockStop).not.toHaveBeenCalled();
+
+    const textarea = screen.getByPlaceholderText('Tell Claude what to do instead');
+    fireEvent.change(textarea, { target: { value: 'use echo instead' } });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
+    expect(onDeny).toHaveBeenCalledWith('use echo instead');
+    expect(mockStop).not.toHaveBeenCalled();
+  });
+
   it('calls onDeny (cancel) at least once when Escape is pressed', () => {
     render(
       <PermissionBanner
@@ -234,5 +310,69 @@ describe('PermissionBanner — MCP tool humanization', () => {
       ),
     ).not.toThrow();
     expect(screen.getByText('Allow IntelliJ IDEA: Debugger: inspect value?')).toBeInTheDocument();
+  });
+});
+
+const writePermission: PendingPermission = {
+  controlRequestId: 'ctrl-1',
+  toolName: 'Write',
+  toolUseId: 'toolu_1',
+  input: { file_path: '/tmp/ccg-demo/src/cart.js', content: 'x' },
+  riskLevel: 'medium',
+  description: 'Write file: /tmp/ccg-demo/src/cart.js',
+};
+
+function renderBanner(p: PendingPermission = writePermission) {
+  render(
+    <PermissionBanner
+      permission={p}
+      onApprove={vi.fn()}
+      onApproveForSession={vi.fn()}
+      onDeny={vi.fn()}
+    />,
+  );
+}
+
+describe('PermissionBanner — the file name links to the diff', () => {
+  it('renders the file name as a link and keeps the rest of the title as text', () => {
+    renderBanner();
+
+    const link = screen.getByRole('button', { name: 'cart.js' });
+    expect(link).toBeInTheDocument();
+    // The sentence around it is unchanged — only the name became clickable.
+    expect(screen.getByText(/Write to/)).toBeInTheDocument();
+  });
+
+  it('opens the diff for this request when the name is clicked', () => {
+    renderBanner();
+
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+
+    // By id: the contents live backend-side, so the click names the request
+    // rather than shipping the file through the webview.
+    expect(openDiffForRequest).toHaveBeenCalledWith('toolu_1');
+  });
+
+  it('does not answer or interrupt the request', () => {
+    // Looking at the change is not deciding about it.
+    renderBanner();
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+    expect(mockStop).not.toHaveBeenCalled();
+  });
+
+  it('leaves the name as plain text when no diff can be shown', () => {
+    diffAvailable = false;
+    renderBanner();
+
+    expect(screen.queryByRole('button', { name: 'cart.js' })).toBeNull();
+    expect(screen.getByText('Write to cart.js?')).toBeInTheDocument();
+  });
+
+  it('leaves a title with no file name alone', () => {
+    // Bash has no file to link to; its title must render as it always did.
+    diffAvailable = true;
+    renderBanner({ ...writePermission, toolName: 'Bash', input: { command: 'ls' } });
+
+    expect(screen.getByText('Run this command?')).toBeInTheDocument();
   });
 });

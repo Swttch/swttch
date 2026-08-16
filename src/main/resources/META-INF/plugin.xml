@@ -10,6 +10,12 @@
     <resource-bundle>messages.ClaudeCodeBundle</resource-bundle>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Tick boxes beside each changed hunk in a review diff, so a proposed
+             edit can be kept in part (#109). Inert for every other diff: it does
+             nothing unless the request carries our HunkSelection. -->
+        <diff.DiffExtension
+            implementation="com.github.yhk1038.claudecodegui.services.HunkGutterExtension"/>
+
         <!-- Sidebar button: opens an editor tab (EDITOR_TAB mode) or hosts chat
              content tabs directly (TOOL_WINDOW mode). canCloseContents enables the
              per-tab close button used in TOOL_WINDOW mode. -->

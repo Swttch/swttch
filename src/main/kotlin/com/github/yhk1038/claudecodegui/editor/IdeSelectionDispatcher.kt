@@ -173,9 +173,13 @@ object IdeSelectionDispatcher {
      * @param editor    The active [Editor] whose selection to read (may be null if
      *                  the file switch came from a tab-only focus event where no
      *                  editor reference is available — e.g. a future extension point).
-     * @param vFile     The virtual file now active in the editor.
+     * @param vFile     The virtual file now active in the editor, or null when
+     *                  nothing is open — the state after the last tab closes,
+     *                  which is dispatched as an empty path so the webview's
+     *                  context chip can empty out rather than keep naming a
+     *                  file that is gone.
      */
-    fun scheduleDispatch(project: Project, editor: Editor?, vFile: VirtualFile) {
+    fun scheduleDispatch(project: Project, editor: Editor?, vFile: VirtualFile?) {
         // Gate 1: ignore Claude Code panel files.
         if (vFile is ClaudeCodeVirtualFile) return
 
@@ -201,10 +205,13 @@ object IdeSelectionDispatcher {
      * Perform the actual payload build and HTTP POST (called from alarm callback,
      * still on the EDT). Launches HTTP I/O on [ioScope] to avoid blocking the EDT.
      */
-    private fun doDispatch(project: Project, editor: Editor?, vFile: VirtualFile) {
-        val absolutePath = vFile.path
+    private fun doDispatch(project: Project, editor: Editor?, vFile: VirtualFile?) {
+        // No file: report empty paths, which the webview reads as "nothing is
+        // open" and uses to clear its context chip.
+        val absolutePath = vFile?.path ?: ""
         val workingDir = project.basePath
-        val relativePath = EditorContextPayload.computeRelativePath(absolutePath, workingDir)
+        val relativePath =
+            if (vFile == null) "" else EditorContextPayload.computeRelativePath(absolutePath, workingDir)
 
         val selectionModel = editor?.selectionModel
         val startLine: Int?
@@ -226,7 +233,7 @@ object IdeSelectionDispatcher {
         if (key == lastDispatched) return
         lastDispatched = key
 
-        val gitignored = isVcsIgnored(project, vFile)
+        val gitignored = vFile != null && isVcsIgnored(project, vFile)
 
         val payload = EditorContextPayload.buildSelectionPayload(
             absolutePath = absolutePath,

@@ -12,6 +12,7 @@
     "privacy": "개인정보",
     "cli": "CLI",
     "browser": "브라우저",
+    "ide": "IDE",
     "account": "계정",
     "usage": "사용량",
     "tunnel": "터널",
@@ -80,14 +81,6 @@
     "useCtrlEnterToSend": {
       "label": "{{modifier}}+Enter로 전송",
       "description": "켜면 Enter 대신 Ctrl/Cmd+Enter로 프롬프트를 전송합니다. 이렇게 하면 Enter로 줄바꿈을 넣을 수 있습니다."
-    },
-    "attachEditorContext": {
-      "label": "에디터 파일을 기본으로 첨부",
-      "description": "세션을 시작할 때 열려 있는 파일이나 선택 영역을 첨부한 상태로 둡니다. 끄더라도 칩은 그대로 표시되며 꺼진 상태로 시작하고, 클릭하면 그 세션에서만 첨부합니다."
-    },
-    "focusInputOnEditorContext": {
-      "label": "파일 경로 첨부 후 채팅 입력창에 포커스",
-      "description": "에디터에서 Alt+K를 누르면 파일 경로를 삽입한 뒤 채팅 입력창으로 포커스를 옮깁니다."
     },
     "respectGitignore": {
       "label": ".gitignore를 에디터 컨텍스트에 반영",
@@ -528,5 +521,21 @@
     "sponsorLabel": "후",
     "claudeNativeLabel": "클",
     "openDocs": "문서 열기"
+  },
+  "ide": {
+    "sectionTitle": "IDE 연동",
+    "attachEditorContext": {
+      "label": "에디터 파일을 기본으로 첨부",
+      "description": "세션을 시작할 때 열려 있는 파일이나 선택 영역을 첨부한 상태로 둡니다. 끄더라도 칩은 그대로 표시되며 꺼진 상태로 시작하고, 클릭하면 그 세션에서만 첨부합니다."
+    },
+    "focusInputOnEditorContext": {
+      "label": "파일 경로 첨부 후 채팅 입력창에 포커스",
+      "description": "에디터에서 Alt+K를 누르면 파일 경로를 삽입한 뒤 채팅 입력창으로 포커스를 옮깁니다."
+    },
+    "showDiffInIde": {
+      "label": "Claude의 편집을 IDE diff 뷰어에 표시",
+      "description": "Claude가 파일 편집을 요청하면 IDE의 diff 뷰어로 변경 내용을 열어, 승인 여부를 정하는 동안 볼 수 있게 합니다.",
+      "unavailable": "IDE 안에서 실행할 때 사용할 수 있습니다. IDE에서 앱을 시작해 주세요."
+    }
   }
 }

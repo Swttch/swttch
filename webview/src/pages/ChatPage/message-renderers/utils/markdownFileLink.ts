@@ -19,6 +19,34 @@ function isWindowsAbsolute(href: string): boolean {
 }
 
 /**
+ * Strip a `file://` URL down to the plain absolute path it names, or `null` if
+ * the href is not a `file:` URL for THIS machine.
+ *
+ * A `file:` href cannot work as a link: rehype-sanitize drops the href as an
+ * unsafe scheme and rehype-harden (both Streamdown's, neither ours to configure)
+ * then swaps the whole `<a>` for a greyed "[blocked]" span — which is why the
+ * tooltip reads "Blocked URL: undefined". Even rendered as a real anchor the
+ * browser refuses to follow it ("Not allowed to load local resource"), so the
+ * only path that actually opens the file is the local-file one below.
+ *
+ * Demoting the URL to a bare path here — BEFORE those plugins run — routes it
+ * through exactly the handling a `/Users/…` link already gets, so it opens via
+ * `openFile`. No new capability: that link could already do this.
+ *
+ * `file://host/share` (a remote UNC path) is deliberately NOT converted — only an
+ * empty host or `localhost` names this machine. Percent-escapes are left for
+ * {@link parseMarkdownFileLink} to decode, and Windows `file:///C:/…` yields
+ * `/C:/…`, already the exact carry form that function expects.
+ */
+export function fileUrlToPath(href: string): string | null {
+  const match = /^file:\/\/([^/]*)(\/.*)$/i.exec(href);
+  if (!match) return null;
+  const [, host, path] = match;
+  if (host !== '' && host.toLowerCase() !== 'localhost') return null;
+  return path;
+}
+
+/**
  * Parse a markdown link href into a local {@link MarkdownFileLink}, or `null`
  * for external hrefs (which keep normal link behavior).
  *
@@ -29,6 +57,10 @@ function isWindowsAbsolute(href: string): boolean {
  */
 export function parseMarkdownFileLink(href: string): MarkdownFileLink | null {
   if (typeof href !== 'string' || href.length === 0) return null;
+
+  // A `file://` href reaching here un-rewritten (e.g. a link built in code rather
+  // than passed through the preprocessor) names the same local file.
+  href = fileUrlToPath(href) ?? href;
 
   const isPosixAbsolute = href.startsWith('/') && !href.startsWith('//'); // exclude protocol-relative //host
   const isRelative = href.startsWith('./') || href.startsWith('../');
@@ -138,6 +170,9 @@ export function normalizeMarkdownLinkUrls(markdown: string, workingDir: string |
   const rewritten = masked.replace(
     /(?<!!)\[([^\]]*)\]\(([^)]+)\)/g,
     (match, text: string, url: string) => {
+      // `file://` names a path on this machine — unwrap it so the local-file
+      // handling below carries it (see fileUrlToPath for why it cannot stay a URL).
+      url = fileUrlToPath(url) ?? url;
       const isWindowsAbsolute = /^[A-Za-z]:[\\/]/.test(url);
       // A single-letter "scheme" followed by / or \ is a Windows drive, not a URL scheme.
       const isExternal = !isWindowsAbsolute

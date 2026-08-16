@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { OptionButton, OptionItem } from './OptionButton';
 import { useApprovalKeyboard } from './useApprovalKeyboard';
 import {
@@ -10,7 +10,14 @@ import {
 import { useTranslation } from '@/i18n';
 
 interface Props {
-  title: string;
+  /**
+   * The heading. A node rather than a string because the permission prompt
+   * makes its file name a link to the review diff; [collapsedTitle] carries the
+   * plain wording for the collapsed bar, which is a single button.
+   */
+  title: ReactNode;
+  /** Plain-text heading for the collapsed bar. Defaults to [title]. */
+  collapsedTitle?: string;
   subtitle?: string;
   /** Optional highlighted note shown under the title (e.g. a usage warning). */
   notice?: string;
@@ -23,7 +30,7 @@ interface Props {
 
 export function ApprovalPanel(props: Props) {
   const { t } = useTranslation('chat');
-  const { title, subtitle, notice, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
+  const { title, collapsedTitle, subtitle, notice, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
 
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
@@ -72,7 +79,7 @@ export function ApprovalPanel(props: Props) {
   if (collapsed) {
     return (
       <div className="w-full max-w-[44rem] mx-auto px-4 pb-[20px] pt-2">
-        <CollapsedSummaryBar title={title} onExpand={expand} />
+        <CollapsedSummaryBar title={collapsedTitle ?? (typeof title === 'string' ? title : '')} onExpand={expand} />
       </div>
     );
   }

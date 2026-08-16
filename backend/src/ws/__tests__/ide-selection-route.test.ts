@@ -359,4 +359,23 @@ describe('handleIdeSelectionRequest', () => {
     const sent = JSON.parse((ws.send as ReturnType<typeof vi.fn>).mock.calls[0][0]);
     expect(sent.payload.selectedText).toBeNull();
   });
+
+  it('accepts empty paths as the IDE saying nothing is open', () => {
+    // Closing the last tab has to be expressible. The webview turns this into
+    // an empty context chip; rejecting it as a bad request would leave the chip
+    // naming a file the user already closed.
+    const cm = new ConnectionManager();
+    const ws = createMockWs();
+    cm.addConnection(ws, ClientEnv.BROWSER, 'panel-1');
+
+    const result = handleIdeSelectionRequest(
+      cm,
+      JSON.stringify({ absolutePath: '', relativePath: '', workingDir: '/abs' }),
+    );
+
+    expect(result.status).toBe(200);
+    const sent = JSON.parse((ws.send as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0]);
+    expect(sent.type).toBe(MessageType.IDE_SELECTION);
+    expect(sent.payload).toMatchObject({ absolutePath: '', relativePath: '', workingDir: '/abs' });
+  });
 });

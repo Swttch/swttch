@@ -201,6 +201,24 @@ export enum MessageType {
   APPLY_DIFF = 'APPLY_DIFF',
   /** Reject a proposed diff (discard changes). */
   REJECT_DIFF = 'REJECT_DIFF',
+  /**
+   * Close the review diff opened for a permission request, whichever way the
+   * user answered. Distinct from REJECT_DIFF: that one discards a change, this
+   * one only dismisses the preview of a question already answered.
+   */
+  CLOSE_DIFF = 'CLOSE_DIFF',
+  /**
+   * Node↔Kotlin: the IDE reporting which hunks of a pending edit the user kept,
+   * so the backend can amend the tool call to just that subset (#109). Sent
+   * from the diff viewer's own controls; an empty selection means a refusal.
+   */
+  RESOLVE_DIFF = 'RESOLVE_DIFF',
+  /**
+   * outbound backend→webview: a pending permission request was answered
+   * elsewhere (the IDE's diff review), so the chat prompt for it should close
+   * instead of asking a question that is already settled.
+   */
+  PERMISSION_RESOLVED = 'PERMISSION_RESOLVED',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */
