@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
+import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { PendingPermission } from '../../hooks/usePendingPermissions';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
@@ -74,6 +75,7 @@ function getSessionLabel(t: TFunction, toolName: string): string {
 
 export function PermissionBanner(props: Props) {
   const { permission, onApprove, onApproveForSession, onDeny } = props;
+  const { stop } = useChatStreamContext();
   const { t } = useTranslation('chat');
 
   const title = useMemo(
@@ -97,6 +99,19 @@ export function PermissionBanner(props: Props) {
     else if (index === 2) onDeny();
   }, [onApprove, onApproveForSession, onDeny]);
 
+  /**
+   * Cancelling is "stop what you are doing", not "no to this one file".
+   *
+   * A denial on its own only answers this request: the turn keeps running, and
+   * Claude moves on to the next tool call and writes up the refusal — so an
+   * interruption comes back as an answer. Ending the turn as well is what the
+   * other two prompt panels already do (AcceptPlanPanel, AskUserQuestion).
+   */
+  const handleCancel = useCallback(() => {
+    onDeny();
+    stop();
+  }, [onDeny, stop]);
+
   return (
     <ApprovalPanel
       title={title}
@@ -106,7 +121,7 @@ export function PermissionBanner(props: Props) {
       onOptionSelect={handleOptionSelect}
       textareaPlaceholder={t('permissionBanner.textareaPlaceholder')}
       onTextSubmit={(text) => onDeny(text)}
-      onCancel={onDeny}
+      onCancel={handleCancel}
     />
   );
 }

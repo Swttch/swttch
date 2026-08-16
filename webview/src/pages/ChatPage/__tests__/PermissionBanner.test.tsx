@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { PermissionBanner } from '../PermissionBanner';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
+const mockStop = vi.fn();
+vi.mock('../../../contexts/ChatStreamContext', () => ({
+  useChatStreamContext: () => ({ stop: mockStop }),
+}));
+
 const mockPermission: PendingPermission = {
   controlRequestId: 'ctrl-1',
   toolName: 'Bash',
@@ -21,6 +26,7 @@ describe('PermissionBanner', () => {
     onApprove = vi.fn<() => void>();
     onApproveForSession = vi.fn<() => void>();
     onDeny = vi.fn<(reason?: string) => void>();
+    mockStop.mockClear();
   });
 
   it('renders the permission title', () => {
@@ -153,6 +159,59 @@ describe('PermissionBanner', () => {
     fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false });
 
     expect(onDeny).toHaveBeenCalledWith('use echo instead');
+  });
+
+  /**
+   * Cancelling is "stop what you are doing", not "no to this one file".
+   *
+   * A denial on its own only answers this request: the turn keeps running, so
+   * Claude moves on to the next tool call and writes up the refusal, and the
+   * user sees their interruption come back as an answer. Measured in the
+   * sandbox IDE. The other two prompt panels already end the turn here.
+   */
+  it.each([
+    ['the hint is clicked', () => fireEvent.click(screen.getByRole('button', { name: 'Esc to cancel' }))],
+    ['Escape is pressed', () => fireEvent.keyDown(window, { key: 'Escape' })],
+  ])('ends the turn as well as the request when %s', (_label, cancel) => {
+    render(
+      <PermissionBanner
+        permission={mockPermission}
+        onApprove={onApprove}
+        onApproveForSession={onApproveForSession}
+        onDeny={onDeny}
+      />,
+    );
+
+    cancel();
+
+    expect(onDeny).toHaveBeenCalledTimes(1);
+    expect(mockStop).toHaveBeenCalledTimes(1);
+    // React hands a click handler its MouseEvent, and this deny takes an
+    // optional reason — the event landed there, JSON.stringify threw on the
+    // circular DOM node, and the message never reached the backend, so the CLI
+    // waited forever with the diff still open. Types cannot catch it.
+    expect(onDeny.mock.calls[0][0]).toBeUndefined();
+  });
+
+  it('answers without ending the turn when an option is chosen or a reason typed', () => {
+    // Not "always stop": answering the question is not an interruption.
+    render(
+      <PermissionBanner
+        permission={mockPermission}
+        onApprove={onApprove}
+        onApproveForSession={onApproveForSession}
+        onDeny={onDeny}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('No'));
+    expect(mockStop).not.toHaveBeenCalled();
+
+    const textarea = screen.getByPlaceholderText('Tell Claude what to do instead');
+    fireEvent.change(textarea, { target: { value: 'use echo instead' } });
+    fireEvent.keyDown(textarea, { key: 'Enter' });
+    expect(onDeny).toHaveBeenCalledWith('use echo instead');
+    expect(mockStop).not.toHaveBeenCalled();
   });
 
   it('calls onDeny (cancel) at least once when Escape is pressed', () => {
