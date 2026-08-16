@@ -6,7 +6,7 @@ import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
 import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
-import com.github.yhk1038.claudecodegui.services.DiffHunk
+import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
@@ -1472,28 +1472,36 @@ class ClaudeCodePanel(
                 oldContent: String,
                 newContent: String,
                 toolUseId: String?,
-                hunks: List<DiffHunk>,
                 sessionId: String?,
                 controlRequestId: String?
             ) {
                 // Answering happens in the diff window itself, so the review and
                 // the decision sit together. Only the kept hunk numbers go back;
                 // the backend holds the change and rewrites the tool call (#109).
-                val onResolve: ((List<Int>) -> Unit)? =
+                val onResolve: ((List<AcceptedRange>) -> Unit)? =
                     if (sessionId != null && controlRequestId != null && toolUseId != null) {
                         { accepted ->
                             val params = buildJsonObject {
                                 put("toolUseId", toolUseId)
                                 put("controlRequestId", controlRequestId)
                                 put("sessionId", sessionId)
-                                putJsonArray("acceptedHunks") { accepted.forEach { add(it) } }
+                                putJsonArray("acceptedRanges") {
+                                    accepted.forEach { range ->
+                                        add(buildJsonObject {
+                                            put("oldStart", range.oldStart)
+                                            put("oldEnd", range.oldEnd)
+                                            put("newStart", range.newStart)
+                                            put("newEnd", range.newEnd)
+                                        })
+                                    }
+                                }
                             }
                             backendService.sendNotification(project.basePath ?: "", "RESOLVE_DIFF", params)
                         }
                     } else null
 
-                diffService.openDiffViewer(filePath, oldContent, newContent, toolUseId, hunks, onResolve)
-                logger.info("Opened diff viewer: $filePath (toolUseId=$toolUseId, hunks=${hunks.size})")
+                diffService.openDiffViewer(filePath, oldContent, newContent, toolUseId, onResolve)
+                logger.info("Opened diff viewer: $filePath (toolUseId=$toolUseId)")
             }
 
             override suspend fun applyDiff(

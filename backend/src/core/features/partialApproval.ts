@@ -15,7 +15,7 @@
  * side as it should end up. That pair is derived from the same content the
  * preview diffed, so `old_string` matches the file by construction.
  */
-import { applySelectedHunks } from './hunks';
+import { applyAcceptedRanges, type AcceptedRange } from './hunks';
 import type { StoredPreview } from './diffPreview';
 
 export interface PartialApproval {
@@ -24,30 +24,26 @@ export interface PartialApproval {
 }
 
 /**
- * The amended tool call for [acceptedHunks], or null when the request should
- * proceed unchanged.
+ * The amended tool call for [accepted], or null when the request should proceed
+ * unchanged.
  *
- * Null covers the two cases where there is nothing to amend: the user kept
- * every hunk (Claude's own proposal already says that), or the preview has no
- * hunks to choose from. Rejecting everything is NOT expressed here — that is a
- * denial, and denying is the caller's job.
+ * Null means "nothing to amend": the regions add up to the whole proposal, so
+ * Claude's own input already says it. Rejecting everything is NOT expressed
+ * here — that is a denial, and denying is the caller's job.
  */
 export function buildPartialApproval(
   preview: StoredPreview,
-  acceptedHunks: readonly number[],
+  accepted: readonly AcceptedRange[],
 ): PartialApproval | null {
-  if (preview.hunks.length === 0) return null;
+  if (accepted.length === 0) return null;
 
-  const accepted = [...new Set(acceptedHunks)].filter(
-    (index) => index >= 0 && index < preview.hunks.length,
-  );
-
-  // Keeping everything is the unmodified proposal; let it through untouched so
-  // an Edit stays an Edit and the CLI's own bookkeeping is undisturbed.
-  if (accepted.length === preview.hunks.length) return null;
-
-  const content = applySelectedHunks(preview.oldContent, preview.newContent, accepted);
+  const content = applyAcceptedRanges(preview.oldContent, preview.newContent, accepted);
   if (content === null) return null;
+
+  // Keeping everything reproduces the proposal, so let the original call
+  // through untouched — an Edit stays an Edit, and the CLI's own bookkeeping
+  // is undisturbed.
+  if (content === preview.newContent) return null;
 
   // Write already states the whole file, so the subset just replaces it.
   if (preview.toolName === 'Write') {
@@ -115,20 +111,3 @@ function narrowToDifference(
   return { oldText, newText };
 }
 
-/**
- * Whether [acceptedHunks] means the user kept nothing at all.
- *
- * A partial accept with an empty selection is a denial dressed as an approval:
- * writing the file back unchanged would report success for an edit that never
- * happened, and Claude would carry on believing its change had landed.
- */
-export function isEmptySelection(
-  preview: StoredPreview,
-  acceptedHunks: readonly number[],
-): boolean {
-  if (preview.hunks.length === 0) return false;
-  const accepted = acceptedHunks.filter(
-    (index) => index >= 0 && index < preview.hunks.length,
-  );
-  return accepted.length === 0;
-}

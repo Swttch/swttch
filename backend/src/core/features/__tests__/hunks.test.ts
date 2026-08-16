@@ -4,7 +4,7 @@
  * must leave the file untouched. Everything in between is judged against those.
  */
 import { describe, it, expect } from 'vitest';
-import { computeHunks, applySelectedHunks } from '../hunks';
+import { computeHunks, applySelectedHunks, applyAcceptedRanges } from '../hunks';
 
 const all = (n: number) => Array.from({ length: n }, (_, i) => i);
 
@@ -119,5 +119,64 @@ describe('applySelectedHunks', () => {
         else expect(out, `mask ${mask}`).not.toContain(marker);
       }
     }
+  });
+});
+
+describe('applyAcceptedRanges', () => {
+  // Ranges rather than hunk numbers, because the IDE splits a change its own
+  // way — on a real file it counted four changes where computeHunks counted
+  // two, and a number is meaningless unless both sides agree on the split.
+  const src = ['a', 'b', 'c', 'd', 'e'].join('\n') + '\n';
+  const dst = ['A', 'b', 'C', 'd', 'E'].join('\n') + '\n';
+
+  // Line 0, 2 and 4 each changed, as three separate one-line ranges.
+  const r0 = { oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 };
+  const r1 = { oldStart: 2, oldEnd: 3, newStart: 2, newEnd: 3 };
+  const r2 = { oldStart: 4, oldEnd: 5, newStart: 4, newEnd: 5 };
+
+  it('accepting every range reproduces the proposal', () => {
+    expect(applyAcceptedRanges(src, dst, [r0, r1, r2])).toBe(dst);
+  });
+
+  it('accepting none leaves the original untouched', () => {
+    expect(applyAcceptedRanges(src, dst, [])).toBe(src);
+  });
+
+  it('accepting one takes that line and no other', () => {
+    expect(applyAcceptedRanges(src, dst, [r1])).toBe('a\nb\nC\nd\ne\n');
+  });
+
+  it('accepting a subset keeps the rest as it is on disk', () => {
+    expect(applyAcceptedRanges(src, dst, [r0, r2])).toBe('A\nb\nc\nd\nE\n');
+  });
+
+  it('handles ranges given out of order', () => {
+    // The IDE lists its changes top-down, but a caller sorting differently
+    // must not silently produce a scrambled file.
+    expect(applyAcceptedRanges(src, dst, [r2, r0])).toBe('A\nb\nc\nd\nE\n');
+  });
+
+  it('refuses overlapping ranges rather than guessing', () => {
+    const overlapping = [
+      { oldStart: 0, oldEnd: 3, newStart: 0, newEnd: 3 },
+      { oldStart: 1, oldEnd: 4, newStart: 1, newEnd: 4 },
+    ];
+    expect(applyAcceptedRanges(src, dst, overlapping)).toBeNull();
+  });
+
+  it('handles a replacement that changes line count', () => {
+    const before = 'keep\nold1\nold2\ntail\n';
+    const after = 'keep\nnew1\nnew2\nnew3\ntail\n';
+    const range = { oldStart: 1, oldEnd: 3, newStart: 1, newEnd: 4 };
+    expect(applyAcceptedRanges(before, after, [range])).toBe(after);
+    expect(applyAcceptedRanges(before, after, [])).toBe(before);
+  });
+
+  it('preserves a file that ends without a newline', () => {
+    const before = 'a\nb';
+    const after = 'a\nB';
+    const range = { oldStart: 1, oldEnd: 2, newStart: 1, newEnd: 2 };
+    expect(applyAcceptedRanges(before, after, [range])).toBe(after);
+    expect(applyAcceptedRanges(before, after, [])).toBe(before);
   });
 });

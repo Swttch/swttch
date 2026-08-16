@@ -122,19 +122,13 @@ describe('openDiffForPermission', () => {
     expect(calls[0]).toMatchObject({ filePath: '/tmp/a.txt', toolUseId: 'toolu_42' });
   });
 
-  it('sends the hunk ranges so the IDE can offer one checkbox each', async () => {
+  it('sends no split of its own — the IDE decides how the change divides', async () => {
+    // Ours and the IDE's differ (it counted four changes where we counted two
+    // on a real file), and a checkbox can only mean something if it matches
+    // what is on screen. So the IDE splits, and reports back line ranges.
     const { bridge, calls } = fakeBridge();
-    const hunks = [
-      { index: 0, oldStart: 1, oldLines: 2, newStart: 1, newLines: 2, lines: ['-a', '+b'] },
-    ];
-
-    await openDiffForPermission(bridge, { ...somePreview, hunks }, 'toolu_42');
-
-    const sent = (calls[0] as { hunks?: unknown[] }).hunks;
-    expect(sent).toHaveLength(1);
-    // Ranges only — the lines themselves are already in the diff the IDE shows,
-    // and sending them twice would let the two disagree.
-    expect(sent?.[0]).toEqual({ index: 0, oldStart: 1, oldLines: 2, newStart: 1, newLines: 2 });
+    await openDiffForPermission(bridge, somePreview, 'toolu_42');
+    expect(calls[0]).not.toHaveProperty('hunks');
   });
 
   it('quotes the session and request so the IDE can answer them', async () => {

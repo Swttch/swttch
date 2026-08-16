@@ -186,11 +186,10 @@ class NodeBackendService : Disposable {
                 oldContent: String,
                 newContent: String,
                 toolUseId: String?,
-                hunks: List<DiffHunk>,
                 sessionId: String?,
                 controlRequestId: String?,
             ) {
-                any()?.openDiff(filePath, oldContent, newContent, toolUseId, hunks, sessionId, controlRequestId)
+                any()?.openDiff(filePath, oldContent, newContent, toolUseId, sessionId, controlRequestId)
                     ?: warn("openDiff")
             }
 

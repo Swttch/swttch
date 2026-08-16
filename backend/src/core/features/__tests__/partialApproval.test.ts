@@ -7,8 +7,8 @@
  * of the tool being answered.
  */
 import { describe, it, expect } from 'vitest';
-import { buildPartialApproval, isEmptySelection } from '../partialApproval';
-import { computeHunks } from '../hunks';
+import { buildPartialApproval } from '../partialApproval';
+import { computeHunks, type AcceptedRange } from '../hunks';
 import type { StoredPreview } from '../diffPreview';
 
 function preview(
@@ -30,17 +30,21 @@ function preview(
 const before = Array.from({ length: 40 }, (_, i) => `line ${i}`).join('\n') + '\n';
 const after = before.replace('line 2', 'CHANGED 2').replace('line 30', 'CHANGED 30');
 
+// The two changed lines, as the IDE would report them (0-based, end-exclusive).
+const FIRST: AcceptedRange = { oldStart: 2, oldEnd: 3, newStart: 2, newEnd: 3 };
+const SECOND: AcceptedRange = { oldStart: 30, oldEnd: 31, newStart: 30, newEnd: 31 };
+
 describe('buildPartialApproval', () => {
   it('leaves a full acceptance untouched', () => {
     // Claude's own proposal already says this; amending it would turn an Edit
     // into a synthesized one for no reason.
     const p = preview('Edit', before, after);
-    expect(buildPartialApproval(p, [0, 1])).toBeNull();
+    expect(buildPartialApproval(p, [FIRST, SECOND])).toBeNull();
   });
 
   it('keeps an Edit in Edit shape', () => {
     const p = preview('Edit', before, after);
-    const amended = buildPartialApproval(p, [0])!;
+    const amended = buildPartialApproval(p, [FIRST])!;
     expect(amended.input).toHaveProperty('old_string');
     expect(amended.input).toHaveProperty('new_string');
     expect(amended.input).not.toHaveProperty('content');
@@ -50,7 +54,7 @@ describe('buildPartialApproval', () => {
     // The CLI fails the edit outright otherwise — this is the invariant the
     // whole approach rests on.
     const p = preview('Edit', before, after);
-    for (const picked of [[0], [1]]) {
+    for (const picked of [[FIRST], [SECOND]]) {
       const amended = buildPartialApproval(p, picked)!;
       expect(before).toContain(amended.input.old_string as string);
     }
@@ -59,7 +63,7 @@ describe('buildPartialApproval', () => {
   it('applying the amended edit yields exactly the accepted subset', () => {
     const p = preview('Edit', before, after);
 
-    const first = buildPartialApproval(p, [0])!;
+    const first = buildPartialApproval(p, [FIRST])!;
     const afterFirst = before.replace(
       first.input.old_string as string,
       first.input.new_string as string,
@@ -68,7 +72,7 @@ describe('buildPartialApproval', () => {
     expect(afterFirst).not.toContain('CHANGED 30');
     expect(afterFirst).toContain('line 30');
 
-    const second = buildPartialApproval(p, [1])!;
+    const second = buildPartialApproval(p, [SECOND])!;
     const afterSecond = before.replace(
       second.input.old_string as string,
       second.input.new_string as string,
@@ -79,7 +83,7 @@ describe('buildPartialApproval', () => {
 
   it('replaces only the content for a Write, preserving its other input', () => {
     const p = preview('Write', before, after, { content: after });
-    const amended = buildPartialApproval(p, [0])!;
+    const amended = buildPartialApproval(p, [FIRST])!;
     expect(amended.input.content).toContain('CHANGED 2');
     expect(amended.input.content).not.toContain('CHANGED 30');
     expect(amended.input.file_path).toBe('/tmp/target.ts');
@@ -90,7 +94,7 @@ describe('buildPartialApproval', () => {
     // as that list would mean re-deriving each pair. One widened Edit says the
     // same thing and matches the file by construction.
     const p = preview('MultiEdit', before, after, { edits: [] });
-    const amended = buildPartialApproval(p, [0])!;
+    const amended = buildPartialApproval(p, [FIRST])!;
     expect(amended.input).toHaveProperty('old_string');
     expect(before).toContain(amended.input.old_string as string);
   });
@@ -99,7 +103,7 @@ describe('buildPartialApproval', () => {
     const src = 'dup\nkeep\ndup\n';
     const dst = 'CHANGED\nkeep\ndup\n';
     const p = preview('Edit', src, dst);
-    const amended = buildPartialApproval(p, [0]);
+    const amended = buildPartialApproval(p, [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }]);
     // Either it declines, or it produces a pair applied exactly once.
     if (amended) expect(amended.input.replace_all).toBe(false);
   });
@@ -109,10 +113,10 @@ describe('buildPartialApproval', () => {
     expect(buildPartialApproval(p, [])).toBeNull();
   });
 
-  it('ignores hunk numbers that do not exist', () => {
+  it('applies only the region it was given', () => {
     const p = preview('Edit', before, after);
     // Out-of-range indices are dropped, so [0, 99] means [0].
-    const amended = buildPartialApproval(p, [0, 99])!;
+    const amended = buildPartialApproval(p, [FIRST])!;
     const applied = before.replace(
       amended.input.old_string as string,
       amended.input.new_string as string,
@@ -122,21 +126,3 @@ describe('buildPartialApproval', () => {
   });
 });
 
-describe('isEmptySelection', () => {
-  it('recognises keeping nothing as a refusal', () => {
-    const p = preview('Edit', before, after);
-    expect(isEmptySelection(p, [])).toBe(true);
-    expect(isEmptySelection(p, [99])).toBe(true);
-  });
-
-  it('is not triggered by a real selection', () => {
-    const p = preview('Edit', before, after);
-    expect(isEmptySelection(p, [0])).toBe(false);
-  });
-
-  it('is not triggered when there were no hunks to choose from', () => {
-    // Nothing to select is not the same as choosing nothing.
-    const p = preview('Edit', 'same\n', 'same\n');
-    expect(isEmptySelection(p, [])).toBe(false);
-  });
-});

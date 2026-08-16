@@ -10,15 +10,19 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
 import { takePreview } from './diffPreview';
-import { buildPartialApproval, isEmptySelection } from './partialApproval';
+import { buildPartialApproval } from './partialApproval';
+import type { AcceptedRange } from './hunks';
 import { sendControlResponseToProcess } from '../claude-process';
 
 export interface ResolveDiffParams {
   toolUseId: string;
   controlRequestId: string;
   sessionId: string;
-  /** Hunks kept. Empty means the user rejected the whole change. */
-  acceptedHunks: number[];
+  /**
+   * Regions of the proposal the user kept, as the IDE split them. Empty means
+   * they rejected the whole change.
+   */
+  acceptedRanges: AcceptedRange[];
 }
 
 /** Parse a JSON-RPC notification payload, or null when it is not usable. */
@@ -32,12 +36,21 @@ export function parseResolveDiffParams(
   if (typeof controlRequestId !== 'string' || !controlRequestId) return null;
   if (typeof sessionId !== 'string' || !sessionId) return null;
 
-  const raw = params.acceptedHunks;
-  const acceptedHunks = Array.isArray(raw)
-    ? raw.filter((n): n is number => typeof n === 'number' && Number.isInteger(n))
+  const raw = params.acceptedRanges;
+  const acceptedRanges = Array.isArray(raw)
+    ? raw.filter(isAcceptedRange)
     : [];
 
-  return { toolUseId, controlRequestId, sessionId, acceptedHunks };
+  return { toolUseId, controlRequestId, sessionId, acceptedRanges };
+}
+
+/** Whether a wire value is a usable line range; anything else is dropped. */
+function isAcceptedRange(value: unknown): value is AcceptedRange {
+  if (typeof value !== 'object' || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return (['oldStart', 'oldEnd', 'newStart', 'newEnd'] as const).every(
+    (k) => typeof r[k] === 'number' && Number.isInteger(r[k]),
+  );
 }
 
 /**
@@ -71,18 +84,18 @@ export function resolveDiffFromIde(
     return;
   }
 
-  if (isEmptySelection(preview, params.acceptedHunks)) {
+  if (params.acceptedRanges.length === 0) {
     respond({ behavior: 'deny', message: buildUserDeclinedContent() });
     console.error('[node-backend]', `Diff resolved for ${params.toolUseId}: kept nothing (denied)`);
     notifyResolved(connections, params);
     return;
   }
 
-  const amended = buildPartialApproval(preview, params.acceptedHunks);
+  const amended = buildPartialApproval(preview, params.acceptedRanges);
   respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });
   console.error(
     '[node-backend]',
-    `Diff resolved for ${params.toolUseId}: kept ${params.acceptedHunks.length}/${preview.hunks.length} hunks`,
+    `Diff resolved for ${params.toolUseId}: kept ${params.acceptedRanges.length} region(s)`,
   );
 
   notifyResolved(connections, params);

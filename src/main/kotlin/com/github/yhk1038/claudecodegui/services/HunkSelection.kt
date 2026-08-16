@@ -10,12 +10,35 @@ import com.intellij.openapi.util.Key
  * live on the editor, the buttons live on a panel beside it, and a copy in
  * either place would let the two disagree about what Apply is about to do.
  */
-class HunkSelection(hunkCount: Int) {
-    private val accepted = (0 until hunkCount).toMutableSet()
+class HunkSelection {
+    private val accepted = mutableSetOf<Int>()
     private val listeners = mutableListOf<() -> Unit>()
 
-    /** Total hunks offered; 0 when the change was too large to split. */
-    val total: Int = hunkCount
+    /**
+     * The changed regions as the IDE itself split them, learned when the diff
+     * finishes comparing. The backend deliberately does not decide this: it
+     * counted two changes where the IDE counted four on a real file, and a
+     * checkbox can only mean something if it matches what is on screen.
+     */
+    private var ranges: List<AcceptedRange> = emptyList()
+
+    /** Regions offered; 0 until the diff has been computed. */
+    val total: Int get() = ranges.size
+
+    /**
+     * Adopt the IDE's split. Everything starts kept, so a reviewer who touches
+     * nothing approves the whole change exactly as before.
+     */
+    fun setRanges(newRanges: List<AcceptedRange>) {
+        ranges = newRanges
+        accepted.clear()
+        accepted.addAll(newRanges.indices)
+        listeners.forEach { it() }
+    }
+
+    /** The regions currently kept, in file order, for the backend to assemble. */
+    fun acceptedRanges(): List<AcceptedRange> =
+        acceptedIndices().mapNotNull { ranges.getOrNull(it) }
 
     fun isAccepted(index: Int): Boolean = index in accepted
 
@@ -26,7 +49,7 @@ class HunkSelection(hunkCount: Int) {
 
     fun setAll(value: Boolean) {
         accepted.clear()
-        if (value) accepted.addAll(0 until total)
+        if (value) accepted.addAll(ranges.indices)
         listeners.forEach { it() }
     }
 

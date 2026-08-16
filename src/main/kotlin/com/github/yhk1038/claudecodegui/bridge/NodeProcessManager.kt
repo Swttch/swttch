@@ -209,7 +209,6 @@ class NodeProcessManager(
             oldContent: String,
             newContent: String,
             toolUseId: String?,
-            hunks: List<com.github.yhk1038.claudecodegui.services.DiffHunk>,
             sessionId: String?,
             controlRequestId: String?,
         )

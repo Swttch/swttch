@@ -11,7 +11,7 @@ vi.mock('../../claude-process', () => ({
 
 import { parseResolveDiffParams, resolveDiffFromIde } from '../resolveDiff';
 import { rememberPreview, clearPreviews, takePreview } from '../diffPreview';
-import { computeHunks } from '../hunks';
+import { computeHunks, type AcceptedRange } from '../hunks';
 import { USER_DECLINED_PREFIX } from '../../../shared';
 
 const original = ['debug: false', ...Array.from({ length: 8 }, (_, i) => `pad-${i}`), 'timeout: 30'].join('\n') + '\n';
@@ -20,6 +20,10 @@ const proposed = original.replace('debug: false', 'debug: true').replace('timeou
 function connections() {
   return { broadcastToSession: vi.fn() } as never;
 }
+
+// The changed lines as the IDE reports them (0-based, end-exclusive).
+const R_DEBUG: AcceptedRange = { oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 };
+const R_TIMEOUT: AcceptedRange = { oldStart: 9, oldEnd: 10, newStart: 9, newEnd: 10 };
 
 function pending(toolUseId: string) {
   const hunks = computeHunks(original, proposed)!;
@@ -44,7 +48,7 @@ describe('parseResolveDiffParams', () => {
     toolUseId: 't1',
     controlRequestId: 'ctrl-1',
     sessionId: 'sess-1',
-    acceptedHunks: [0, 2],
+    acceptedRanges: [R_DEBUG, R_TIMEOUT],
   };
 
   it('accepts a well-formed notification', () => {
@@ -61,21 +65,24 @@ describe('parseResolveDiffParams', () => {
   it('treats a missing selection as keeping nothing', () => {
     // Not as "keep everything": defaulting the other way would write a change
     // the user never confirmed.
-    expect(parseResolveDiffParams({ ...good, acceptedHunks: undefined })?.acceptedHunks).toEqual([]);
+    expect(parseResolveDiffParams({ ...good, acceptedRanges: undefined })?.acceptedRanges).toEqual([]);
   });
 
-  it('drops non-integer entries rather than trusting the wire', () => {
-    const parsed = parseResolveDiffParams({ ...good, acceptedHunks: [0, 'x', 1.5, null, 2] });
-    expect(parsed?.acceptedHunks).toEqual([0, 2]);
+  it('drops malformed ranges rather than trusting the wire', () => {
+    const parsed = parseResolveDiffParams({
+      ...good,
+      acceptedRanges: [R_DEBUG, { oldStart: 'x' }, null, { oldStart: 1 }, R_TIMEOUT],
+    });
+    expect(parsed?.acceptedRanges).toEqual([R_DEBUG, R_TIMEOUT]);
   });
 });
 
 describe('resolveDiffFromIde', () => {
   it('keeping every hunk sends the request through unchanged', () => {
-    const hunks = pending('t-all');
+    pending('t-all');
     resolveDiffFromIde(connections(), {
       toolUseId: 't-all', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
-      acceptedHunks: hunks.map((h) => h.index),
+      acceptedRanges: [R_DEBUG, R_TIMEOUT],
     });
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
@@ -89,7 +96,7 @@ describe('resolveDiffFromIde', () => {
     pending('t-partial');
     resolveDiffFromIde(connections(), {
       toolUseId: 't-partial', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
-      acceptedHunks: [0],
+      acceptedRanges: [R_DEBUG],
     });
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
@@ -105,7 +112,7 @@ describe('resolveDiffFromIde', () => {
     pending('t-none');
     resolveDiffFromIde(connections(), {
       toolUseId: 't-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
-      acceptedHunks: [],
+      acceptedRanges: [],
     });
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
@@ -118,7 +125,7 @@ describe('resolveDiffFromIde', () => {
     // user did not make would be worse than approving what they were shown.
     resolveDiffFromIde(connections(), {
       toolUseId: 't-unknown', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
-      acceptedHunks: [0],
+      acceptedRanges: [R_DEBUG],
     });
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
@@ -130,7 +137,7 @@ describe('resolveDiffFromIde', () => {
     pending('t-once');
     const params = {
       toolUseId: 't-once', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
-      acceptedHunks: [0],
+      acceptedRanges: [R_DEBUG],
     };
     resolveDiffFromIde(connections(), params);
     expect(takePreview('t-once')).toBeUndefined();
@@ -140,7 +147,7 @@ describe('resolveDiffFromIde', () => {
     pending('t-id');
     resolveDiffFromIde(connections(), {
       toolUseId: 't-id', controlRequestId: 'ctrl-42', sessionId: 'sess-9',
-      acceptedHunks: [0],
+      acceptedRanges: [R_DEBUG],
     });
 
     const [, sessionId, response] = sendControlResponseToProcess.mock.calls[0];
@@ -175,7 +182,7 @@ describe('several files under review at once', () => {
 
     // Answer B first, keeping only its first hunk.
     resolveDiffFromIde(connections(), {
-      toolUseId: 't-b', controlRequestId: 'ctrl-b', sessionId: 'sess-1', acceptedHunks: [0],
+      toolUseId: 't-b', controlRequestId: 'ctrl-b', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const bInput = sendControlResponseToProcess.mock.calls[0][2].response.updatedInput;
     expect(bInput.file_path).toBe('/tmp/b.ts');
@@ -184,7 +191,7 @@ describe('several files under review at once', () => {
 
     // A is untouched by that, and still resolvable on its own terms.
     resolveDiffFromIde(connections(), {
-      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedHunks: [0],
+      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const aInput = sendControlResponseToProcess.mock.calls[1][2].response.updatedInput;
     expect(aInput.file_path).toBe('/tmp/a.ts');
@@ -195,7 +202,7 @@ describe('several files under review at once', () => {
     remember('t-b', '/tmp/b.ts', fileB, fileBNew);
 
     resolveDiffFromIde(connections(), {
-      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedHunks: [0],
+      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 
     expect(takePreview('t-a')).toBeUndefined();
@@ -207,7 +214,7 @@ describe('several files under review at once', () => {
     remember('t-b', '/tmp/b.ts', fileB, fileBNew);
 
     resolveDiffFromIde(connections(), {
-      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedHunks: [],
+      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [],
     });
 
     expect(sendControlResponseToProcess.mock.calls[0][2].response.behavior).toBe('deny');
@@ -221,7 +228,7 @@ describe('several files under review at once', () => {
     const conn = connections();
 
     resolveDiffFromIde(conn, {
-      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedHunks: [0],
+      toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 
     const [, , payload] = (conn as any).broadcastToSession.mock.calls[0];

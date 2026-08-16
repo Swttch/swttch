@@ -33,7 +33,6 @@ class HunkGutterExtension : DiffExtension() {
         request: DiffRequest,
     ) {
         val selection = request.getUserData(HunkSelection.KEY) ?: return
-        if (selection.total == 0) return
 
         // Only the side-by-side viewer is handled: it is what our review diffs
         // open with, and a viewer we do not recognise must be left alone rather
@@ -61,15 +60,18 @@ class HunkGutterExtension : DiffExtension() {
         val changes = viewer.diffChanges
         if (changes.isEmpty()) return
 
-        // The backend splits the change into hunks and the IDE computes its own
-        // fragments; when the two disagree we cannot map a tick box to a hunk,
-        // so leave the gutter alone rather than tick the wrong line.
-        if (changes.size != selection.total) {
-            logger.info(
-                "Hunk count differs (ide=${changes.size}, backend=${selection.total}); skipping gutter checkboxes",
-            )
-            return
-        }
+        // The IDE's split is the one the reviewer sees, so it is the one that
+        // counts — the backend is told the regions rather than deciding them.
+        selection.setRanges(
+            changes.map { change ->
+                AcceptedRange(
+                    oldStart = change.getStartLine(Side.LEFT),
+                    oldEnd = change.getEndLine(Side.LEFT),
+                    newStart = change.getStartLine(Side.RIGHT),
+                    newEnd = change.getEndLine(Side.RIGHT),
+                )
+            },
+        )
 
         val editor = viewer.getEditor(Side.RIGHT)
         // A re-diff re-runs this, so drop the previous round's marks first —

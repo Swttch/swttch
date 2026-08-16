@@ -245,3 +245,61 @@ export function applySelectedHunks(
   const trailing = accepted.size === 0 ? oldSide.trailingNewline : newSide.trailingNewline;
   return joinLines(result, trailing);
 }
+
+/** A range of the proposed file the reviewer chose to keep, in 0-based lines. */
+export interface AcceptedRange {
+  /** First proposed line kept, 0-based. */
+  newStart: number;
+  /** One past the last proposed line kept. */
+  newEnd: number;
+  /** First original line this replaces, 0-based. */
+  oldStart: number;
+  /** One past the last original line it replaces. */
+  oldEnd: number;
+}
+
+/**
+ * Rebuild the file keeping only [accepted], with every other region left as it
+ * is in [oldContent].
+ *
+ * Takes ranges rather than hunk numbers because the IDE and this module split a
+ * change differently — the IDE counted four where we counted two on a real file
+ * — and a number only means something if both sides agree on the split. Ranges
+ * carry their own meaning, so whoever draws the checkboxes decides the units.
+ *
+ * Ranges must not overlap and must be in ascending order, which is what the
+ * IDE's own change list gives.
+ */
+export function applyAcceptedRanges(
+  oldContent: string,
+  newContent: string,
+  accepted: readonly AcceptedRange[],
+): string | null {
+  const oldSide = splitLines(oldContent);
+  const newSide = splitLines(newContent);
+
+  const sorted = [...accepted].sort((a, b) => a.oldStart - b.oldStart);
+  const result: string[] = [];
+  let oldCursor = 0;
+
+  for (const range of sorted) {
+    if (range.oldStart < oldCursor) return null; // overlapping — refuse to guess
+    if (range.oldStart > oldSide.lines.length) return null;
+    if (range.newStart > newSide.lines.length) return null;
+
+    // Everything before this accepted region stays as it is on disk.
+    result.push(...oldSide.lines.slice(oldCursor, range.oldStart));
+    // The region itself takes the proposed lines.
+    result.push(...newSide.lines.slice(range.newStart, range.newEnd));
+    oldCursor = range.oldEnd;
+  }
+
+  result.push(...oldSide.lines.slice(oldCursor));
+
+  // The trailing newline follows the proposal only when the last line came
+  // from it; otherwise the original decides.
+  const lastRange = sorted[sorted.length - 1];
+  const endsWithProposal = lastRange !== undefined && lastRange.oldEnd >= oldSide.lines.length;
+  const trailing = endsWithProposal ? newSide.trailingNewline : oldSide.trailingNewline;
+  return joinLines(result, trailing);
+}
