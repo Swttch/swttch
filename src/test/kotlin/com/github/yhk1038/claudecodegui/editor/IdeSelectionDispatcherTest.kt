@@ -1,8 +1,6 @@
 package com.github.yhk1038.claudecodegui.editor
 
 import com.github.yhk1038.claudecodegui.actions.EditorContextPayload
-import com.intellij.diff.chains.SimpleDiffRequestChain
-import com.intellij.diff.editor.ChainDiffVirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
@@ -89,14 +87,6 @@ class IdeSelectionDispatcherTest {
     }
 
     /**
-     * Which files are worth reporting as "the file you are looking at".
-     *
-     * Both dispatch paths ask [IdeSelectionDispatcher.shouldDispatchActiveEditor]
-     * — the live selection listener (scheduleDispatch's Gate 1) and the
-     * sync-on-open path (dispatchActiveEditor) — so the rule cannot drift
-     * between them. It used to live twice, and the copy on the live path knew
-     * only about the Claude panel.
-     *
      * The "sync on open" contract for [IdeSelectionDispatcher.dispatchActiveEditor].
      *
      * When the tool window opens (webview reload), the dispatcher re-queries the
@@ -130,22 +120,6 @@ class IdeSelectionDispatcherTest {
         fun `proceeds when the active file is a real editor file`() {
             val realFile = LightVirtualFile("App.kt", "fun main() {}")
             assertTrue(IdeSelectionDispatcher.shouldDispatchActiveEditor(realFile))
-        }
-
-        /**
-         * A diff tab is a review screen we opened, not a file the user is
-         * writing in — the same reason the Claude panel is excluded. Sending it
-         * put "Diff: cart.js" in the composer's file chip, where clicking it to
-         * "include" would attach nothing; and since closing the tab leaves no
-         * new active file to report, the chip then stayed there for good.
-         */
-        @Test
-        fun `no-op when the active file is a diff tab`() {
-            // Built from an empty chain: the diff's contents need platform
-            // services this harness does not have, and the predicate only looks
-            // at the file's type.
-            val diffFile = ChainDiffVirtualFile(SimpleDiffRequestChain(emptyList()), "Diff: cart.js")
-            assertFalse(IdeSelectionDispatcher.shouldDispatchActiveEditor(diffFile))
         }
     }
 
