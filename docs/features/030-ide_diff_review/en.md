@@ -22,6 +22,11 @@ right, with your editor's syntax highlighting.
 The chat prompt is untouched. It still asks the same question with the same
 buttons, so nothing you already know how to do has moved.
 
+![The IDE's side-by-side diff window: tick boxes in the gutter beside the changed lines, and a bar underneath with the count, Apply and Reject. The chat prompt sits on the right](./assets/diff-review.png)
+
+*The change is read in the diff, and what to keep is chosen there too. The
+prompt on the right is exactly as it was.*
+
 ## Keep some of it, not all of it
 
 When the change touches more than one place in the file, a tick box appears in
@@ -29,13 +34,14 @@ the gutter beside each one — right next to the lines it belongs to — with
 **Apply** and **Reject** in a bar underneath.
 
 Everything starts ticked, so pressing Apply without touching anything does what
-approving always did: the whole edit. Unticking is how you narrow it, and the
-button says what it will actually do — *Apply 1 of 2* — so there is no doubt
-about what you are agreeing to.
+approving always did: the whole edit. Unticking is how you narrow it, and
+**1 of 2 selected** on the left of the bar says how much you are keeping.
 
-The bar also carries a count of what is kept and a **Select all** / **Clear
-all** button, so a change with many parts does not have to be ticked one box at
-a time.
+Beside it, **Select all** / **Clear all** turns every box on or off at once, so
+a change with many parts does not have to be ticked one at a time.
+
+Narrow the diff and the bar drops its words for icons — a bar that pushes Apply
+off the right edge leaves no way to answer at all.
 
 Reject answers the same question the other way. Untick everything and Apply
 turns itself off: keeping nothing is a rejection, and writing the file back
@@ -43,6 +49,30 @@ unchanged would report success for an edit that never happened.
 
 A change confined to one spot has nothing to choose between, so it gets a plain
 Apply and Reject.
+
+## Closed the diff? Open it again
+
+The diff can be closed while its question is still up — pressing Escape with the
+diff focused does exactly that, leaving the prompt with no way to see what you
+are approving.
+
+So the **file name in the prompt is a link**. Click it and that edit's diff opens
+again (or comes forward if it is already open, with your ticks intact). Looking
+is not answering: the question stays, and the turn carries on.
+
+Where an IDE diff cannot be shown — outside an IDE, or with the setting below
+turned off — the name stays plain text, rather than underlining something that
+would do nothing.
+
+## Cancelling means "stop what you are doing"
+
+Pressing Escape at the prompt, or clicking "Esc to cancel", now ends the turn as
+well as refusing this request. Refusing alone left the turn running, so Claude
+moved on to the next tool call and wrote up the refusal — your interruption came
+back as an answer.
+
+Choosing an option, or typing a reason and sending it, is a reply rather than an
+interruption, so the conversation carries on as before.
 
 ### What actually gets written
 
