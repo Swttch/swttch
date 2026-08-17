@@ -249,6 +249,21 @@ survived a successful-looking uninstall, and adding `--prefix` removed it.
 This is **the same shape of defect** as the install bug this feature started with — a command that
 succeeds against the wrong place.
 
+### One copy that would not delete was a source file, not a package
+
+Pressing remove kept showing the same version afterwards. The cause was a **copy of the kit
+committed to the repository**.
+
+While voice input was first being built, something ran `npm i -g --prefix backend`, which installed
+the package into `backend/lib/node_modules/`. `.gitignore` only excluded `backend/node_modules/`, so
+74 files were committed along with the feature.
+
+After that, on any machine where `npm_config_prefix` pointed at that folder, the backend found the
+kit there and reported it as installed. **No remove button could ever clear it** — it was not in any
+package manager's store, it was a tracked source file.
+
+The committed copy is gone, and `.gitignore` now excludes `node_modules/` wherever it appears.
+
 ### Click the version to check again
 
 The kit also changes outside this screen: you can install, update or remove it in a terminal. So

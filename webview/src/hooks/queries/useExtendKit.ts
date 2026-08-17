@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { INSTALL_REQUEST_TIMEOUT_MS } from '@/api/bridge/Bridge';
@@ -21,6 +21,21 @@ interface RawResult extends Partial<ExtendKitInfo> {
 }
 
 /**
+ * Whether the NEXT request should make the backend re-resolve from scratch.
+ *
+ * Module scope, not a ref, because several components call this hook (the voice
+ * section, its version control, the composer's install prompt) while react-query
+ * keeps ONE cache entry for them all — and runs exactly one of their queryFn
+ * closures. A per-instance ref set by the control that was clicked is therefore
+ * routinely read by a different instance's closure, which sees `false`, and the
+ * backend keeps answering from its own cache. Measured exactly that: the kit was
+ * gone from disk and the version line kept showing it.
+ *
+ * One flag for one shared query entry, consumed by whichever closure runs.
+ */
+let forceRefreshNextFetch = false;
+
+/**
  * The kit's installed/latest versions, plus the one action that changes them.
  *
  * Voice input needs the kit, so its settings section is inert until the kit is
@@ -34,16 +49,11 @@ export function useExtendKit(options?: { enabled?: boolean }) {
   const { send, isConnected } = useBridgeContext();
   const queryClient = useQueryClient();
 
-  // Set for the next request only, by `refresh`. A manual re-check has to reach
-  // past the BACKEND's cache too — that one remembers where the kit was found
-  // and is not invalidated by refetching here (see getExtendKitInfoHandler).
-  const forceRefresh = useRef(false);
-
   const query = useQuery<ExtendKitInfo>({
     queryKey: [MessageType.GET_EXTEND_KIT_INFO],
     queryFn: async () => {
-      const refresh = forceRefresh.current;
-      forceRefresh.current = false;
+      const refresh = forceRefreshNextFetch;
+      forceRefreshNextFetch = false;
       const r = (await send(MessageType.GET_EXTEND_KIT_INFO, { refresh })) as RawResult;
       return {
         packageName: r.packageName ?? '',
@@ -69,6 +79,10 @@ export function useExtendKit(options?: { enabled?: boolean }) {
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to install the kit');
     },
     onSuccess: () => {
+      // Same reason as removal below: whatever the backend cached about where
+      // the kit is (including having found none) is stale the moment this
+      // succeeds, so the refetch has to make it look again.
+      forceRefreshNextFetch = true;
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
       // The usage panel reads the same package, so a fresh install fixes it too.
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_USAGE] });
@@ -84,6 +98,9 @@ export function useExtendKit(options?: { enabled?: boolean }) {
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to remove the kit');
     },
     onSuccess: () => {
+      // The refetch this triggers must re-resolve on the backend too: the kit
+      // that was just removed is exactly what its cache still points at.
+      forceRefreshNextFetch = true;
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
       // The usage panel reads the same package, so removing it changes that too.
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_USAGE] });
@@ -103,7 +120,7 @@ export function useExtendKit(options?: { enabled?: boolean }) {
     // right default for opening the screen is the wrong one at the moment
     // someone deliberately asks to re-check.
     refresh: useCallback(() => {
-      forceRefresh.current = true;
+      forceRefreshNextFetch = true;
       return query.refetch();
     }, [query]),
     refreshing: query.isFetching,

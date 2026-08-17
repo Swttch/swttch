@@ -23,6 +23,14 @@ webview/node_modules/
 webview/dist/
 .vite/
 
+# node_modules ANYWHERE, not just at the two paths above. The anchored rules
+# missed `backend/lib/node_modules/`, which is where an `npm i -g --prefix
+# backend` lands — and 74 files of a globally-installed package were committed
+# that way in #293. The backend then found that copy and reported the kit as
+# installed no matter how many times it was uninstalled, because nothing a
+# package manager does can remove a tracked source file.
+node_modules/
+
 # WebView build output
 src/main/resources/webview/
 
@@ -30,6 +38,11 @@ src/main/resources/webview/
 backend/node_modules/
 backend/dist/
 src/main/resources/backend/
+
+# What `npm i -g --prefix backend` leaves behind besides node_modules: the
+# linked bin. Ignored so a stray global install cannot be committed again.
+backend/bin/
+backend/lib/
 
 # Release artifacts (ccg tgz, runtime tgz)
 /dist/
