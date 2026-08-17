@@ -72,7 +72,14 @@
         "updating": "更新中…",
         "updated": "更新しました",
         "failed": "インストールできませんでした",
-        "upToDate": "最新版です"
+        "upToDate": "最新版です",
+        "remove": "削除",
+        "removed": "削除しました",
+        "removeFailed": "削除できませんでした",
+        "removeConfirmTitle": "@swttch/extend-kit を削除しますか？",
+        "removeConfirmMessage": "再インストールするまで、このマシンで音声入力を使えなくなります。使用量パネルも同じパッケージを使用します。",
+        "refresh": "再確認",
+        "refreshing": "確認中…"
       }
     },
     "uiDirection": {

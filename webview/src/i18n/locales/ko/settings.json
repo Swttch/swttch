@@ -72,7 +72,14 @@
         "updating": "업데이트 중…",
         "updated": "업데이트했습니다",
         "failed": "설치하지 못했습니다",
-        "upToDate": "최신 버전"
+        "upToDate": "최신 버전",
+        "remove": "삭제",
+        "removed": "삭제했습니다",
+        "removeFailed": "삭제하지 못했습니다",
+        "removeConfirmTitle": "@swttch/extend-kit을 삭제할까요?",
+        "removeConfirmMessage": "다시 설치하기 전까지 이 기기에서 음성 입력을 쓸 수 없습니다. 사용량 패널도 같은 패키지를 사용합니다.",
+        "refresh": "다시 확인",
+        "refreshing": "확인 중…"
       }
     },
     "uiDirection": {

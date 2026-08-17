@@ -72,7 +72,14 @@
         "updating": "در حال به‌روزرسانی…",
         "updated": "به‌روزرسانی شد",
         "failed": "نصب ممکن نشد",
-        "upToDate": "به‌روز است"
+        "upToDate": "به‌روز است",
+        "remove": "حذف",
+        "removed": "حذف شد",
+        "removeFailed": "حذف نشد",
+        "removeConfirmTitle": "‏@swttch/extend-kit حذف شود؟",
+        "removeConfirmMessage": "تا زمانی که دوباره نصبش نکنید، ورودی صوتی روی این دستگاه کار نمی‌کند. پنل مصرف هم از همین بسته استفاده می‌کند.",
+        "refresh": "بررسی دوباره",
+        "refreshing": "در حال بررسی…"
       }
     },
     "uiDirection": {

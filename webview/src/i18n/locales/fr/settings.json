@@ -72,7 +72,14 @@
         "updating": "Mise à jour…",
         "updated": "Mis à jour",
         "failed": "Installation impossible",
-        "upToDate": "À jour"
+        "upToDate": "À jour",
+        "remove": "Supprimer",
+        "removed": "Supprimé",
+        "removeFailed": "Suppression impossible",
+        "removeConfirmTitle": "Supprimer @swttch/extend-kit ?",
+        "removeConfirmMessage": "La saisie vocale cessera de fonctionner sur cette machine jusqu'à ce que vous la réinstalliez. Le panneau d'utilisation emploie le même paquet.",
+        "refresh": "Vérifier à nouveau",
+        "refreshing": "Vérification…"
       }
     },
     "uiDirection": {

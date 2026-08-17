@@ -184,6 +184,38 @@ If you would rather **install it yourself in a terminal, the command shown to yo
 way** — what the screen tells you to run and what the button would have run must never be two
 different commands.
 
+### A kit you installed can be removed from the same line
+
+Once it is installed, a **trash button** sits to the right of the version. It belongs on the line
+that reports the version, because that is the version it removes.
+
+At rest it is the same size as the version text and very nearly the same colour, so it does not
+compete with Install and Update for your attention; on hover it turns red, because by the time you
+are about to press it the consequence should be obvious.
+
+**It asks first.** Removing turns voice input off on this machine until you install it again, and
+reinstalling is a download rather than an undo. The usage panel reads the same package, so the
+confirmation says that too.
+
+Removal goes through **the same manager as installing**. Removing with the wrong tool does not fail
+loudly — it succeeds against a store the package was never in, so you would be told it was removed
+while it stayed installed.
+
+When it finishes, a toast confirms it and the version line refreshes. If a copy of the kit remains
+somewhere else, that version is what you will see — the line shows what can actually be loaded right
+now rather than pretending everything is gone.
+
+### Click the version to check again
+
+The kit also changes outside this screen: you can install, update or remove it in a terminal. So
+**the version text itself is the re-check button**. The version is the thing that would be wrong,
+which makes it the place to press to ask again.
+
+Working out where the kit is installed means actually running package managers, so the answer is
+cached — checking on every render would be far too slow. **Pressing this is the one case that
+ignores that cache** and resolves from scratch. Honouring it here would mean the button does nothing
+at the exact moment it is pressed, which is the only reason it exists.
+
 | What you see | What happened |
 | --- | --- |
 | Microphone blocked | Something is blocking the microphone (where to unblock it is below) |

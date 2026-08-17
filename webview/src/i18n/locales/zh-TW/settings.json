@@ -72,7 +72,14 @@
         "updating": "正在更新…",
         "updated": "已更新",
         "failed": "無法安裝",
-        "upToDate": "已是最新版本"
+        "upToDate": "已是最新版本",
+        "remove": "刪除",
+        "removed": "已刪除",
+        "removeFailed": "無法刪除",
+        "removeConfirmTitle": "要刪除 @swttch/extend-kit 嗎？",
+        "removeConfirmMessage": "在重新安裝之前，此裝置將無法使用語音輸入。用量面板也使用同一個套件。",
+        "refresh": "重新檢查",
+        "refreshing": "檢查中…"
       }
     },
     "uiDirection": {

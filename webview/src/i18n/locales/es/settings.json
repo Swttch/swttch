@@ -72,7 +72,14 @@
         "updating": "Actualizando…",
         "updated": "Actualizado",
         "failed": "No se pudo instalar",
-        "upToDate": "Actualizado"
+        "upToDate": "Actualizado",
+        "remove": "Eliminar",
+        "removed": "Eliminado",
+        "removeFailed": "No se pudo eliminar",
+        "removeConfirmTitle": "¿Eliminar @swttch/extend-kit?",
+        "removeConfirmMessage": "La entrada de voz dejará de funcionar en este equipo hasta que vuelvas a instalarlo. El panel de uso emplea el mismo paquete.",
+        "refresh": "Comprobar de nuevo",
+        "refreshing": "Comprobando…"
       }
     },
     "uiDirection": {

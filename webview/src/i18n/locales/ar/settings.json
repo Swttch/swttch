@@ -72,7 +72,14 @@
         "updating": "جارٍ التحديث…",
         "updated": "تم التحديث",
         "failed": "تعذّر التثبيت",
-        "upToDate": "محدَّث"
+        "upToDate": "محدَّث",
+        "remove": "إزالة",
+        "removed": "تمت الإزالة",
+        "removeFailed": "تعذّرت الإزالة",
+        "removeConfirmTitle": "هل تريد إزالة @swttch/extend-kit؟",
+        "removeConfirmMessage": "سيتوقف الإدخال الصوتي على هذا الجهاز إلى أن تعيد تثبيته. وتستخدم لوحة الاستهلاك الحزمة نفسها.",
+        "refresh": "إعادة الفحص",
+        "refreshing": "جارٍ الفحص…"
       }
     },
     "uiDirection": {
