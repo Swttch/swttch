@@ -72,7 +72,14 @@
         "updating": "Updating…",
         "updated": "Updated",
         "failed": "Could not install",
-        "upToDate": "Up to date"
+        "upToDate": "Up to date",
+        "remove": "Remove",
+        "removed": "Removed",
+        "removeFailed": "Could not remove",
+        "removeConfirmTitle": "Remove @swttch/extend-kit?",
+        "removeConfirmMessage": "Voice input will stop working on this machine until you install it again. The usage panel uses the same package.",
+        "refresh": "Check again",
+        "refreshing": "Checking…"
       }
     },
     "uiDirection": {

@@ -155,6 +155,8 @@ export enum MessageType {
   GET_USAGE_REPORT = 'GET_USAGE_REPORT',
   /** Install the ccb CLI (npm i -g @swttch/extend-kit) that backs the usage panel. inbound webview→backend */
   INSTALL_CCB = 'INSTALL_CCB',
+  /** Remove @swttch/extend-kit with the manager that installed it. inbound webview→backend */
+  UNINSTALL_CCB = 'UNINSTALL_CCB',
   /** Platform-correct ccb install command + shells for the not-installed notice. inbound webview→backend */
   GET_CCB_INSTALL_HINT = 'GET_CCB_INSTALL_HINT',
 

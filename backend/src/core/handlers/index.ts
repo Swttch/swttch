@@ -54,6 +54,7 @@ import { getVersionHandler } from './getVersion';
 import { getCliUpdateInfoHandler } from './getCliUpdateInfo';
 import { updateCliHandler } from './updateCli';
 import { installCcbHandler } from './installCcb';
+import { uninstallCcbHandler } from './uninstallCcb';
 import {
   startDictationHandler,
   sendDictationAudioHandler,
@@ -289,6 +290,10 @@ export async function handleMessage(
     case MessageType.UPDATE_CLI:
       await updateCliHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.UNINSTALL_CCB:
+      await uninstallCcbHandler(connectionId, message, connections, bridge);
+      break;
+
     case MessageType.INSTALL_CCB:
       await installCcbHandler(connectionId, message, connections, bridge);
       break;

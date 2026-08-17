@@ -21,6 +21,21 @@ interface RawResult extends Partial<ExtendKitInfo> {
 }
 
 /**
+ * Whether the NEXT request should make the backend re-resolve from scratch.
+ *
+ * Module scope, not a ref, because several components call this hook (the voice
+ * section, its version control, the composer's install prompt) while react-query
+ * keeps ONE cache entry for them all — and runs exactly one of their queryFn
+ * closures. A per-instance ref set by the control that was clicked is therefore
+ * routinely read by a different instance's closure, which sees `false`, and the
+ * backend keeps answering from its own cache. Measured exactly that: the kit was
+ * gone from disk and the version line kept showing it.
+ *
+ * One flag for one shared query entry, consumed by whichever closure runs.
+ */
+let forceRefreshNextFetch = false;
+
+/**
  * The kit's installed/latest versions, plus the one action that changes them.
  *
  * Voice input needs the kit, so its settings section is inert until the kit is
@@ -37,7 +52,9 @@ export function useExtendKit(options?: { enabled?: boolean }) {
   const query = useQuery<ExtendKitInfo>({
     queryKey: [MessageType.GET_EXTEND_KIT_INFO],
     queryFn: async () => {
-      const r = (await send(MessageType.GET_EXTEND_KIT_INFO, {})) as RawResult;
+      const refresh = forceRefreshNextFetch;
+      forceRefreshNextFetch = false;
+      const r = (await send(MessageType.GET_EXTEND_KIT_INFO, { refresh })) as RawResult;
       return {
         packageName: r.packageName ?? '',
         installed: r.installed ?? null,
@@ -62,8 +79,30 @@ export function useExtendKit(options?: { enabled?: boolean }) {
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to install the kit');
     },
     onSuccess: () => {
+      // Same reason as removal below: whatever the backend cached about where
+      // the kit is (including having found none) is stale the moment this
+      // succeeds, so the refetch has to make it look again.
+      forceRefreshNextFetch = true;
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
       // The usage panel reads the same package, so a fresh install fixes it too.
+      void queryClient.invalidateQueries({ queryKey: [MessageType.GET_USAGE] });
+    },
+  });
+
+  // Removing goes through the same manager that installed, decided backend-side
+  // — see uninstallCcb.ts. Both caches it invalidates are the ones install
+  // invalidates, so the section returns to its not-installed state on its own.
+  const removal = useMutation<void, Error, void>({
+    mutationFn: async () => {
+      const r = (await send(MessageType.UNINSTALL_CCB, {}, { timeout: INSTALL_REQUEST_TIMEOUT_MS })) as RawResult;
+      if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to remove the kit');
+    },
+    onSuccess: () => {
+      // The refetch this triggers must re-resolve on the backend too: the kit
+      // that was just removed is exactly what its cache still points at.
+      forceRefreshNextFetch = true;
+      void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
+      // The usage panel reads the same package, so removing it changes that too.
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_USAGE] });
     },
   });
@@ -73,5 +112,17 @@ export function useExtendKit(options?: { enabled?: boolean }) {
     loading: query.isLoading,
     install: useCallback(() => mutation.mutateAsync(), [mutation]),
     installing: mutation.isPending,
+    uninstall: useCallback(() => removal.mutateAsync(), [removal]),
+    uninstalling: removal.isPending,
+    // Ask again now, ignoring staleTime AND the backend's own resolution cache.
+    // The answer can change without this app doing anything — the kit may be
+    // installed, updated or removed in a terminal — and a cache that is the
+    // right default for opening the screen is the wrong one at the moment
+    // someone deliberately asks to re-check.
+    refresh: useCallback(() => {
+      forceRefreshNextFetch = true;
+      return query.refetch();
+    }, [query]),
+    refreshing: query.isFetching,
   };
 }

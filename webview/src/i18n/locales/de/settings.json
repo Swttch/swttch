@@ -72,7 +72,14 @@
         "updating": "Wird aktualisiert…",
         "updated": "Aktualisiert",
         "failed": "Installation fehlgeschlagen",
-        "upToDate": "Aktuell"
+        "upToDate": "Aktuell",
+        "remove": "Entfernen",
+        "removed": "Entfernt",
+        "removeFailed": "Entfernen fehlgeschlagen",
+        "removeConfirmTitle": "@swttch/extend-kit entfernen?",
+        "removeConfirmMessage": "Die Spracheingabe funktioniert auf diesem Rechner nicht mehr, bis du sie erneut installierst. Das Nutzungs-Panel verwendet dasselbe Paket.",
+        "refresh": "Erneut prüfen",
+        "refreshing": "Wird geprüft…"
       }
     },
     "uiDirection": {

@@ -5,6 +5,7 @@ import { MessageType } from '../../shared';
 import {
   loadSpeechToText,
   getExtendKitVersion,
+  resetExtendKitCache,
   ExtendKitMissingError,
   EXTEND_KIT_PACKAGE,
   type SpeechToTextStream,
@@ -184,6 +185,14 @@ export async function getDictationAvailabilityHandler(
  * `latest` is null when the registry cannot be reached, which is not an error:
  * an offline machine should still show the installed version rather than an
  * empty section, so the caller simply omits the update affordance.
+ *
+ * `payload.refresh` drops the loader's cached resolution before answering.
+ * That cache exists because resolving where the kit lives spawns package
+ * managers, which is far too slow to repeat on every render — but it also means
+ * the answer is frozen at whatever was true when it was first computed. The
+ * version is clickable precisely to re-check after the kit changed OUTSIDE this
+ * app (installed, updated or removed in a terminal), so honouring the cache
+ * there would make the control do nothing at the one moment it is pressed.
  */
 export async function getExtendKitInfoHandler(
   connectionId: string,
@@ -191,6 +200,10 @@ export async function getExtendKitInfoHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+  if ((message.payload as { refresh?: boolean } | undefined)?.refresh) {
+    resetExtendKitCache();
+  }
+
   const [installed, tags] = await Promise.all([
     getExtendKitVersion(),
     fetchDistTags(EXTEND_KIT_PACKAGE),

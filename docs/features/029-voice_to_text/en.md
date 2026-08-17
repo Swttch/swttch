@@ -161,6 +161,120 @@ When something fails, a banner appears just above the input — not a tooltip, b
 
 Three failures, three messages, because they need three different fixes. The missing kit is the one we can fix for you, so that banner carries an **Install** button; pressing it installs the kit and clears the banner.
 
+### "Which package manager" is really three questions
+
+It sounds like one question and it is three, on independent axes:
+
+| Axis | What it manages | Examples |
+| --- | --- | --- |
+| **Runtime manager** | Node **versions** | volta, nvm, fnm, asdf, mise, nodenv, brew's node |
+| **Library manager** | global npm **packages** | npm, pnpm, yarn, bun, volta's own store |
+| **App channel** | the `claude` **app** itself | the official installer, a Homebrew cask, WinGet |
+
+volta appears in **two** of them, because it genuinely does both jobs: it switches Node versions and
+it keeps its own package store.
+
+Collapsing the three into one value makes ordinary setups inexpressible. "Node from brew, packages
+from npm" is completely normal, and a single word cannot say whether that is brew or npm.
+
+More importantly, **volta's own store and the npm globals of the Node volta manages are different
+places.** Both sit under `~/.volta/`, so they look like one thing — but a package removed from one
+stays in the other.
+
+### The install goes through whichever manager runs this machine
+
+All three install affordances — this banner's button, and the Install and Update buttons in
+settings — take the same path, and **which package manager they use is decided by the `claude` you
+run in a terminal.**
+
+If your terminal's `claude` is managed by volta, the kit is installed with volta. pnpm means pnpm,
+yarn means yarn. The tool you already chose in the terminal is the answer — this is the project's
+"whatever works in the CLI works in the GUI" rule applied to installing.
+
+Only when no `claude` can be found do we fall back to the Node running the backend. That Node is
+the one that will later load the kit, so when there is only one thing to ask, it is the right one.
+
+When `claude` came from something that **cannot install an npm package** — Homebrew, the official
+install script, WinGet — the install falls back to npm. The npm it uses is not whatever PATH
+happens to surface, but **the npm sitting next to the backend's own Node**. Without that
+distinction the install lands in a different Node's global folder, succeeds, reports success, and
+leaves voice input unable to find the kit ([#298](https://github.com/Swttch/swttch/issues/298)).
+
+If you would rather **install it yourself in a terminal, the command shown to you is built the same
+way** — what the screen tells you to run and what the button would have run must never be two
+different commands.
+
+### A kit you installed can be removed from the same line
+
+Once it is installed, a **trash button** sits to the right of the version. It belongs on the line
+that reports the version, because that is the version it removes.
+
+At rest it is the same size as the version text and very nearly the same colour, so it does not
+compete with Install and Update for your attention; on hover it turns red, because by the time you
+are about to press it the consequence should be obvious.
+
+**It asks first.** Removing turns voice input off on this machine until you install it again, and
+reinstalling is a download rather than an undo. The usage panel reads the same package, so the
+confirmation says that too.
+
+**Removing does not look in one place the way installing does**, because a machine can hold the same
+package more than once.
+
+That is not hypothetical: volta's own store held 0.4.0 while the npm globals of the Node volta
+manages held 0.3.0. Removing only with the manager that would install today clears one of them, and
+the version line then honestly reports the survivor — which reads, correctly, as **"I pressed delete
+and it is still there"**.
+
+So removal sweeps **every store it knows about**. Most of them hold nothing and fail; that is
+expected and is not reported.
+
+**Success is judged by the disk, not by exit codes.** Five different tools' exit codes are not
+comparable, and one of them will happily report success while doing nothing (below). After the
+sweep the kit is looked up again; if a copy survived, that is a failure.
+
+When it finishes, a toast confirms it and the version line refreshes.
+
+### npm can say "success" and do nothing
+
+npm reads its global folder from configuration, and the `npm_config_prefix` environment variable
+overrides all of it — regardless of which npm binary you ran.
+
+If an IDE, a shell profile or another project's tooling leaves that variable set, the backend
+inherits it. `npm uninstall -g` then runs against a different folder entirely, prints `up to date`,
+exits 0, and removes nothing.
+
+So every npm command pins the target with `--prefix`. Measured: with that variable set the package
+survived a successful-looking uninstall, and adding `--prefix` removed it.
+
+This is **the same shape of defect** as the install bug this feature started with — a command that
+succeeds against the wrong place.
+
+### One copy that would not delete was a source file, not a package
+
+Pressing remove kept showing the same version afterwards. The cause was a **copy of the kit
+committed to the repository**.
+
+While voice input was first being built, something ran `npm i -g --prefix backend`, which installed
+the package into `backend/lib/node_modules/`. `.gitignore` only excluded `backend/node_modules/`, so
+74 files were committed along with the feature.
+
+After that, on any machine where `npm_config_prefix` pointed at that folder, the backend found the
+kit there and reported it as installed. **No remove button could ever clear it** — it was not in any
+package manager's store, it was a tracked source file.
+
+The committed copy is gone, and `.gitignore` now excludes `node_modules/` wherever it appears.
+
+### Click the version to check again
+
+The kit also changes outside this screen: you can install, update or remove it in a terminal. So
+**the version text itself is the re-check button**. The version is the thing that would be wrong,
+which makes it the place to press to ask again.
+
+Working out where the kit is installed means actually running package managers, so the answer is
+cached — checking on every render would be far too slow. **Pressing this is the one case that
+ignores that cache** and resolves from scratch. Honouring it here would mean the button does nothing
+at the exact moment it is pressed, which is the only reason it exists.
+
 | What you see | What happened |
 | --- | --- |
 | Microphone blocked | Something is blocking the microphone (where to unblock it is below) |

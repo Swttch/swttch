@@ -1,11 +1,15 @@
 import { createRequire } from 'node:module';
 import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
+import { LibraryManager } from '../shared';
+import { EXTEND_KIT_PACKAGE } from './global-install-target';
+import { launcherFor, npmPrefixFor } from './install-coordinate';
 
 /** The npm package this module loads. Also the name shown when it is missing. */
-export const EXTEND_KIT_PACKAGE = '@swttch/extend-kit';
+export { EXTEND_KIT_PACKAGE };
 /** The executable the package provides, which is how volta knows it. */
 const CCB_BINARY = 'ccb';
 
@@ -179,6 +183,27 @@ async function candidateRoots(): Promise<string[]> {
     // the lookups below.
   }
 
+  // 3b. Windows' real npm global prefix.
+  //
+  // Neither shape above is where `npm i -g` actually writes on Windows. With
+  // node at C:\Program Files\nodejs\node.exe they resolve to
+  // `C:\Program Files\lib\node_modules` (a path that does not exist at all) and
+  // `C:\Program Files\nodejs\node_modules` (node's own bundled modules, not the
+  // global folder). npm's default prefix on Windows is %APPDATA%\npm, so the
+  // packages live in %APPDATA%\npm\node_modules — the location `candidateBinDirs`
+  // already knows about for finding the `claude` launcher.
+  //
+  // Without this entry a Windows install can only be found by lookups 4 and 5,
+  // both of which spawn a process and can fail on a GUI-launched backend. That
+  // is the same "installed, working, reported missing" shape as #298.
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA;
+    if (appData) {
+      const root = join(appData, 'npm', 'node_modules');
+      if (!roots.includes(root)) roots.push(root);
+    }
+  }
+
   // 4. Follow the ccb binary — survives version managers.
   //
   // `which` gives the shim, not the file it points at, so we resolve the link
@@ -200,15 +225,49 @@ async function candidateRoots(): Promise<string[]> {
   }
 
   // 5. Whatever npm considers global, for installs that did not link a bin.
-  try {
-    const { stdout } = await new Command('npm', ['root', '-g'], {
-      timeout: 15000,
-      shell: ShellKind.LoginInteractive,
-    }).exec();
-    const root = lastLine(stdout);
-    if (root && !roots.includes(root)) roots.push(root);
-  } catch {
-    // Neither path worked; the caller reports it as missing.
+  //
+  // Asked of the npm sitting NEXT TO the running Node first, and only then of
+  // whichever npm the PATH surfaces. The two are not always the same program,
+  // and the sibling is the one whose global folder this Node actually resolves
+  // from — which is the folder the installer now writes to. Asking only PATH's
+  // npm is how an install could land somewhere real, report success, and still
+  // be invisible here (#298).
+  // The absolute sibling is asked with ShellKind.Direct, NOT LoginInteractive:
+  // the login-shell form builds its command line by joining argv with spaces
+  // (`sh -l -i -c "<bin> <args>"`), so an absolute path containing a space —
+  // fnm's default on macOS is under `~/Library/Application Support/fnm/...` —
+  // would be torn apart at that space. Direct passes argv without a shell, which
+  // is this project's shell-tokenisation rule. The bare name still uses the
+  // login shell, since a bare `npm` needs the rc-file PATH to resolve at all.
+  // `--prefix` pins the sibling lookup to THIS Node's global folder. Without it
+  // an inherited `npm_config_prefix` silently redirects `npm root -g` to some
+  // other prefix — measured: it answered another project's `backend/lib/
+  // node_modules` — so the loader would look for the kit in a folder nothing
+  // installs into.
+  const npmLookups: Array<{ bin: string; args: string[]; shell: ShellKind }> = [];
+  const sibling = launcherFor(LibraryManager.NPM, process.execPath, process.platform, existsSync);
+  const prefix = npmPrefixFor(LibraryManager.NPM, process.execPath);
+  const bareNpm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  if (sibling !== bareNpm) {
+    npmLookups.push({
+      bin: sibling,
+      args: prefix ? ['root', '-g', '--prefix', prefix] : ['root', '-g'],
+      shell: ShellKind.Direct,
+    });
+  }
+  npmLookups.push({ bin: bareNpm, args: ['root', '-g'], shell: ShellKind.LoginInteractive });
+
+  for (const { bin, args, shell } of npmLookups) {
+    try {
+      const { stdout } = await new Command(bin, args, {
+        timeout: 15000,
+        shell,
+      }).exec();
+      const root = lastLine(stdout);
+      if (root && !roots.includes(root)) roots.push(root);
+    } catch {
+      // Neither path worked; the caller reports it as missing.
+    }
   }
 
   cachedRoots = roots;

@@ -10,11 +10,17 @@ vi.mock('child_process', () => ({
 // Spy on the cache reset without pulling the real usage module's other exports.
 vi.mock('../getUsage', () => ({ resetUsageCache: vi.fn() }));
 vi.mock('../../extend-kit', () => ({ resetExtendKitCache: vi.fn() }));
+// The handler now asks where `claude` lives, because the manager that owns this
+// machine's global packages is read off the CLI the user runs in a terminal
+// before falling back to the running Node (#298). Stubbed so these tests assert
+// the install command rather than the developer's own machine.
+vi.mock('../getCliUpdateInfo', () => ({ resolveClaudePaths: vi.fn(async () => [null, null]) }));
 
 import { execFile as cpExecFile } from 'child_process';
 import { installCcbHandler } from '../installCcb';
 import { resetUsageCache } from '../getUsage';
 import { resetExtendKitCache } from '../../extend-kit';
+import { resolveClaudePaths } from '../getCliUpdateInfo';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
@@ -55,14 +61,18 @@ function spawnedArgv(i: number): string {
 }
 
 let execPathSpy: ReturnType<typeof vi.spyOn>;
+const mockResolveClaudePaths = vi.mocked(resolveClaudePaths);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // The install command now depends on which manager owns the running Node, so
-  // these tests would otherwise assert whatever the developer's machine uses.
-  // Pin a plain system Node; the volta case sets its own.
+  // The install command depends on which manager owns this machine's global
+  // packages, so these tests would otherwise assert whatever the developer's
+  // machine uses. Pin a Node under a directory that holds no `npm` sibling, so
+  // the launcher falls back to the bare `npm` these assertions expect; the
+  // sibling-pinning behaviour itself is covered in global-install-target.test.
   execPathSpy = vi.spyOn(process, 'execPath', 'get');
-  execPathSpy.mockReturnValue('/usr/local/bin/node');
+  execPathSpy.mockReturnValue('/nonexistent-for-tests/bin/node');
+  mockResolveClaudePaths.mockResolvedValue([null, null]);
 });
 
 afterEach(() => {
@@ -82,7 +92,7 @@ describe('installCcbHandler', () => {
     // a successful install invisible: every later lookup still answers "not
     // installed", so the settings section stays locked after installing.
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
   });
 
   it.runIf(process.platform !== 'win32')(
@@ -102,7 +112,8 @@ describe('installCcbHandler', () => {
       const args = mockExecFile.mock.calls[0][1] as string[];
       const opts = mockExecFile.mock.calls[0][2] as { shell?: boolean };
       expect(file).toBe('npm');
-      expect(args).toEqual(['install', '-g', '@swttch/extend-kit']);
+      expect(args.slice(0, 2)).toEqual(['install', '-g']);
+      expect(args).toContain('@swttch/extend-kit');
       expect(opts.shell).toBe(false);
     },
   );
@@ -128,7 +139,42 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
+  });
+
+  // #298. The installer used to read the manager off `process.execPath` ALONE,
+  // while the CLI updater read it off the `claude` binary. On a machine where
+  // those disagree — a volta-managed claude with the backend running some other
+  // Node — the install ran `npm i -g`, wrote into a global folder the loader
+  // never reads, and reported success. The user saw "installed" and no voice
+  // input. The `claude` the user runs in a terminal decides.
+  it('installs with the manager that owns `claude`, not the one owning the backend Node', async () => {
+    mockResolveClaudePaths.mockResolvedValue([
+      '/Users/someone/.volta/bin/claude',
+      '/Users/someone/.volta/tools/image/packages/@anthropic-ai/claude-code/bin/claude',
+    ]);
+    // A completely different world for the backend's own Node.
+    execPathSpy.mockReturnValue('/opt/homebrew/bin/node');
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'success' }));
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    expect(spawnedArgv(0)).toContain('volta install @swttch/extend-kit');
+    expect(spawnedArgv(0)).not.toContain('npm install -g');
+  });
+
+  // Homebrew installs Claude Code itself but cannot install an npm package, so
+  // npm is the honest fallback — the point is that it must be an npm tied to the
+  // backend's Node, which the launcher resolution guarantees.
+  it('falls back to npm when `claude` came from a manager that cannot install npm packages', async () => {
+    mockResolveClaudePaths.mockResolvedValue(['/opt/homebrew/bin/claude', '/opt/homebrew/Cellar/claude-code/1.0/bin/claude']);
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'success' }));
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    expect(spawnedArgv(0)).toContain('install -g ');
   });
 
   it('removes the predecessor and retries when volta refuses the name', async () => {
@@ -183,9 +229,9 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
-    expect(spawnedArgv(1)).toContain('npm uninstall -g claude-code-battery');
-    expect(spawnedArgv(2)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
+    expect(spawnedArgv(1)).toContain('npm uninstall -g --prefix ');
+    expect(spawnedArgv(2)).toContain('npm install -g --prefix ');
     expect(lastPayload(conns).status).toBe('ok');
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
   });
@@ -218,7 +264,7 @@ describe('installCcbHandler', () => {
 
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
-    expect(String(p.error)).toContain('npm install -g @swttch/extend-kit');
+    expect(String(p.error)).toContain('npm install -g --prefix ');
     expect(mockResetUsageCache).not.toHaveBeenCalled();
     expect(mockResetExtendKitCache).not.toHaveBeenCalled();
   });
