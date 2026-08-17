@@ -161,6 +161,29 @@ When something fails, a banner appears just above the input — not a tooltip, b
 
 Three failures, three messages, because they need three different fixes. The missing kit is the one we can fix for you, so that banner carries an **Install** button; pressing it installs the kit and clears the banner.
 
+### The install goes through whichever manager runs this machine
+
+All three install affordances — this banner's button, and the Install and Update buttons in
+settings — take the same path, and **which package manager they use is decided by the `claude` you
+run in a terminal.**
+
+If your terminal's `claude` is managed by volta, the kit is installed with volta. pnpm means pnpm,
+yarn means yarn. The tool you already chose in the terminal is the answer — this is the project's
+"whatever works in the CLI works in the GUI" rule applied to installing.
+
+Only when no `claude` can be found do we fall back to the Node running the backend. That Node is
+the one that will later load the kit, so when there is only one thing to ask, it is the right one.
+
+When `claude` came from something that **cannot install an npm package** — Homebrew, the official
+install script, WinGet — the install falls back to npm. The npm it uses is not whatever PATH
+happens to surface, but **the npm sitting next to the backend's own Node**. Without that
+distinction the install lands in a different Node's global folder, succeeds, reports success, and
+leaves voice input unable to find the kit ([#298](https://github.com/Swttch/swttch/issues/298)).
+
+If you would rather **install it yourself in a terminal, the command shown to you is built the same
+way** — what the screen tells you to run and what the button would have run must never be two
+different commands.
+
 | What you see | What happened |
 | --- | --- |
 | Microphone blocked | Something is blocking the microphone (where to unblock it is below) |

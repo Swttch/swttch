@@ -1,3 +1,7 @@
+import { basename } from 'node:path';
+import { PackageManager } from '../shared';
+import { buildInstallSpec, EXTEND_KIT_PACKAGE } from './global-install-target';
+
 export interface CcbInstallHint {
   /** The exact command to paste, correct for this platform's shells. */
   command: string;
@@ -12,29 +16,40 @@ export interface CcbInstallHint {
 // have to uninstall anything: whoever installed the old claude-code-battery
 // still has a working `ccb`, and installing the kit alongside it is harmless
 // because both resolve to the same code.
-const CCB_PACKAGE = '@swttch/extend-kit';
+export { EXTEND_KIT_PACKAGE };
 
 /**
- * The command + shells a user should paste to install ccb themselves.
+ * The command + shells a user should paste to install the kit themselves.
  *
- * On win32 a bare `npm` resolves to npm.ps1 in PowerShell, which the default
- * execution policy blocks — the exact wall a user hits pasting the old notice.
- * `npm.cmd` (a batch launcher) runs the same install in Command Prompt,
- * PowerShell, and Git Bash alike, so we hand back that form. On unix `npm` works
- * in any terminal.
+ * The command comes from [buildInstallSpec], the SAME builder the install
+ * buttons run, so what we tell the user to paste is what the GUI would have
+ * run. It used to be a hardcoded `npm install -g` regardless of the machine,
+ * which handed volta/pnpm/yarn users a command that installs into a place their
+ * tooling does not read — the manual half of #298.
  *
- * Pure and parameterised over platform so it is unit-testable without touching
- * the real environment.
+ * The launcher is reported by BASENAME rather than the absolute path the
+ * installer runs. The installer pins npm to the backend Node's sibling because
+ * its PATH is the IDE's, not the user's; a terminal already has the user's PATH,
+ * so a bare `npm` there resolves to the same tooling and is far easier to read
+ * than `/Users/x/.nvm/versions/node/v22.14.0/bin/npm`.
+ *
+ * On win32 the basename keeps its `.cmd` extension: a bare `npm` resolves to
+ * npm.ps1 in PowerShell, which the default execution policy blocks — the exact
+ * wall a user hits pasting the old notice. `npm.cmd` runs in Command Prompt,
+ * PowerShell and Git Bash alike.
+ *
+ * Pure and parameterised over manager/platform so it is unit-testable without
+ * touching the real environment.
  */
-export function ccbInstallHint(platform: NodeJS.Platform = process.platform): CcbInstallHint {
-  if (platform === 'win32') {
-    return {
-      command: `npm.cmd install -g ${CCB_PACKAGE}`,
-      shells: ['Command Prompt', 'PowerShell', 'Git Bash'],
-    };
-  }
+export function ccbInstallHint(
+  manager: PackageManager = PackageManager.UNKNOWN,
+  nodeExecPath: string = process.execPath,
+  platform: NodeJS.Platform = process.platform,
+): CcbInstallHint {
+  const spec = buildInstallSpec(manager, nodeExecPath, platform);
+  const launcher = basename(spec.command);
   return {
-    command: `npm install -g ${CCB_PACKAGE}`,
-    shells: ['Terminal'],
+    command: [launcher, ...spec.args].join(' '),
+    shells: platform === 'win32' ? ['Command Prompt', 'PowerShell', 'Git Bash'] : ['Terminal'],
   };
 }
