@@ -6,33 +6,39 @@ import { runLauncher } from '../run-launcher';
 import { MessageType } from '../../shared';
 import { isPermissionFailure, permissionErrorMessage } from './updateCli';
 import { resetUsageCache } from './getUsage';
-import { resetExtendKitCache } from '../extend-kit';
+import { resetExtendKitCache, getExtendKitVersion } from '../extend-kit';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 import {
   EXTEND_KIT_PACKAGE,
-  detectGlobalInstallManager,
-  buildUninstallSpec,
+  resolveInstallCoordinate,
+  buildUninstallSpecsForAllStores,
 } from '../global-install-target';
 
-// Removal only unlinks what is already on disk, but a slow registry-backed
-// manager can still take a while; reuse the install window rather than a tight
-// one that would report a false failure.
+// Removal only unlinks what is on disk, but a registry-backed manager can still
+// be slow; reuse the install window rather than a tight one that would report a
+// false failure.
 const UNINSTALL_TIMEOUT_MS = 180_000;
 const UNINSTALL_MAX_BUFFER = 10 * 1024 * 1024;
 
 /**
- * UNINSTALL_CCB — remove the kit with the manager that owns this machine's
- * global packages.
+ * UNINSTALL_CCB — remove the kit from EVERY store that holds a copy.
  *
- * Removal has to resolve the manager the SAME way installing does, through
- * [detectGlobalInstallManager]: uninstalling with the wrong tool is not a no-op
- * that fails loudly, it is a command that succeeds against a store the package
- * was never in. The user would be told it was removed while it stayed installed
- * and voice input kept working — the mirror image of #298.
+ * The obvious implementation removes it with the manager that would install it
+ * today, and that is not enough. A machine can hold the same package twice, and
+ * this one did: volta's own package store held 0.4.0 while `npm i -g` under
+ * volta's Node held 0.3.0. `volta uninstall` cleared the first and never touched
+ * the second, so the version line honestly reported the survivor — which reads,
+ * correctly, as "I pressed delete and it is still there".
  *
- * A permission-blocked global location is reported the way the installer and the
- * CLI updater report it: with the exact command to run in a terminal, rather
- * than a bare failure the user cannot act on.
+ * The two stores are different coordinates under the same runtime (see
+ * install-coordinate.ts), so no single manager name can name them both. Instead
+ * every known store is asked to remove the package. A store that holds nothing
+ * fails or no-ops, which is expected and not reported: the ONLY thing that
+ * decides success is whether the kit can still be resolved afterwards.
+ *
+ * That last check is what makes this honest. Rather than trusting exit codes
+ * from five different tools, we re-resolve the kit and report failure if a copy
+ * survived — and hand back the exact command for the store we could not clear.
  */
 export async function uninstallCcbHandler(
   connectionId: string,
@@ -42,24 +48,38 @@ export async function uninstallCcbHandler(
 ): Promise<void> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
   const claudePaths = await resolveClaudePaths();
-  const manager = detectGlobalInstallManager(claudePaths, process.execPath, home);
-  const { command, args } = buildUninstallSpec(manager, EXTEND_KIT_PACKAGE, process.execPath);
+  const coord = resolveInstallCoordinate(claudePaths, process.execPath, home);
+  const specs = buildUninstallSpecsForAllStores(coord, EXTEND_KIT_PACKAGE, process.execPath);
 
   console.log(
     'extend-kit uninstall\n',
-    JSON.stringify({ manager, command, args, node: process.execPath }),
+    JSON.stringify({ coord, specs, node: process.execPath }),
     '\n',
   );
 
-  const { ok, output } = await runLauncher(command, args, {
-    timeout: UNINSTALL_TIMEOUT_MS,
-    maxBuffer: UNINSTALL_MAX_BUFFER,
-  });
+  // Ordered so the coordinate's own store goes first; the rest are sweeps.
+  const attempts: Array<{ command: string; args: string[]; ok: boolean; output: string }> = [];
+  for (const { command, args } of specs) {
+    const { ok, output } = await runLauncher(command, args, {
+      timeout: UNINSTALL_TIMEOUT_MS,
+      maxBuffer: UNINSTALL_MAX_BUFFER,
+    });
+    attempts.push({ command, args, ok, output });
+  }
 
-  if (!ok) {
-    const error = isPermissionFailure(output)
-      ? permissionErrorMessage(command, args, output)
-      : output || `${EXTEND_KIT_PACKAGE} uninstall failed`;
+  // The caches remember where the kit WAS; the verification below has to look at
+  // the disk as it is now, not at that memory.
+  resetUsageCache();
+  resetExtendKitCache();
+
+  const survivor = await getExtendKitVersion();
+  if (survivor) {
+    // Something still holds a copy. Prefer telling the user about a permission
+    // problem — that is actionable — over a bare "still installed".
+    const blocked = attempts.find((a) => !a.ok && isPermissionFailure(a.output));
+    const error = blocked
+      ? permissionErrorMessage(blocked.command, blocked.args, blocked.output)
+      : `${EXTEND_KIT_PACKAGE} ${survivor} is still installed after removing it from every store this backend knows. It may have been installed by a tool that is not on this machine's PATH.`;
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
@@ -68,11 +88,6 @@ export async function uninstallCcbHandler(
     return;
   }
 
-  // Both caches remember where the kit WAS. Left in place, the settings section
-  // would keep reporting the removed version and dictation would keep trying to
-  // load a module that is gone.
-  resetUsageCache();
-  resetExtendKitCache();
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

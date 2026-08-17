@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { ccbInstallHint } from '../ccb-install-hint';
-import { PackageManager } from '../../shared';
+import { LibraryManager, RuntimeManager, AppChannel } from '../../shared';
+
+/** A coordinate whose only meaningful axis here is the library store. */
+const coord = (library: LibraryManager) => ({
+  runtime: RuntimeManager.UNKNOWN,
+  library,
+  channel: AppChannel.NONE,
+});
 
 // A Node with no npm sibling on disk, so the hint falls back to the bare name —
 // which is what a terminal user should paste anyway.
@@ -8,14 +15,14 @@ const NODE = '/nowhere/bin/node';
 
 describe('ccbInstallHint', () => {
   it('uses npm.cmd on win32 so it survives the PowerShell execution policy', () => {
-    const h = ccbInstallHint(PackageManager.NPM, NODE, 'win32');
+    const h = ccbInstallHint(coord(LibraryManager.NPM), NODE, 'win32');
     expect(h.command).toBe('npm.cmd install -g @swttch/extend-kit');
     expect(h.shells).toEqual(['Command Prompt', 'PowerShell', 'Git Bash']);
   });
 
   it('uses plain npm in a single terminal on unix', () => {
     for (const p of ['darwin', 'linux'] as NodeJS.Platform[]) {
-      const h = ccbInstallHint(PackageManager.NPM, NODE, p);
+      const h = ccbInstallHint(coord(LibraryManager.NPM), NODE, p);
       expect(h.command).toBe('npm install -g @swttch/extend-kit');
       expect(h.shells).toEqual(['Terminal']);
     }
@@ -26,7 +33,7 @@ describe('ccbInstallHint', () => {
     // already has the old package keeps a working `ccb`, so we never need to
     // uninstall anything to make the usage panel work.
     for (const p of ['win32', 'darwin', 'linux'] as NodeJS.Platform[]) {
-      const c = ccbInstallHint(PackageManager.NPM, NODE, p).command;
+      const c = ccbInstallHint(coord(LibraryManager.NPM), NODE, p).command;
       expect(c).toContain('@swttch/extend-kit');
       expect(c).not.toContain('claude-code-battery');
     }
@@ -37,22 +44,25 @@ describe('ccbInstallHint', () => {
   // place their own tooling never reads. The suggestion has to name the manager
   // that actually owns this machine's global packages.
   it('names the manager that owns this machine, not always npm', () => {
-    expect(ccbInstallHint(PackageManager.VOLTA, NODE, 'darwin').command).toBe(
+    expect(ccbInstallHint(coord(LibraryManager.VOLTA), NODE, 'darwin').command).toBe(
       'volta install @swttch/extend-kit',
     );
-    expect(ccbInstallHint(PackageManager.PNPM, NODE, 'darwin').command).toBe(
+    expect(ccbInstallHint(coord(LibraryManager.PNPM), NODE, 'darwin').command).toBe(
       'pnpm add -g @swttch/extend-kit',
     );
-    expect(ccbInstallHint(PackageManager.YARN, NODE, 'darwin').command).toBe(
+    expect(ccbInstallHint(coord(LibraryManager.YARN), NODE, 'darwin').command).toBe(
       'yarn global add @swttch/extend-kit',
     );
   });
 
   // brew/native/winget distribute Claude Code itself and cannot install an npm
-  // package, so the honest suggestion is npm — the same fallback the button takes.
-  it('falls back to npm for managers that cannot install an npm package', () => {
-    for (const pm of [PackageManager.HOMEBREW, PackageManager.NATIVE, PackageManager.WINGET]) {
-      expect(ccbInstallHint(pm, NODE, 'darwin').command).toBe('npm install -g @swttch/extend-kit');
+  // package. They live on the CHANNEL axis, which leaves the library axis with
+  // nothing to name — and the honest suggestion is then npm, the same fallback
+  // the button takes.
+  it('falls back to npm when the claude install cannot carry npm packages', () => {
+    for (const channel of [AppChannel.HOMEBREW_CASK, AppChannel.NATIVE, AppChannel.WINGET]) {
+      const c = { runtime: RuntimeManager.UNKNOWN, library: LibraryManager.UNKNOWN, channel };
+      expect(ccbInstallHint(c, NODE, 'darwin').command, channel).toBe('npm install -g @swttch/extend-kit');
     }
   });
 
@@ -63,13 +73,25 @@ describe('ccbInstallHint', () => {
   // the pasteable basename, keeping the .cmd extension that survives the
   // PowerShell execution policy.
   it('keeps the .cmd basename on win32 even when the sibling is absolute', () => {
-    const { command } = ccbInstallHint(PackageManager.NPM, 'C:\\Program Files\\nodejs\\node.exe', 'win32');
+    const { command } = ccbInstallHint(coord(LibraryManager.NPM), 'C:\\Program Files\\nodejs\\node.exe', 'win32');
     expect(command).toBe('npm.cmd install -g @swttch/extend-kit');
     expect(command).not.toContain('\\');
   });
 
+  // `--prefix` exists so the BACKEND cannot be redirected by an inherited
+  // `npm_config_prefix`. A user's terminal does not have that problem, and the
+  // flag carries an absolute path from this machine — pasting it would be noise
+  // at best and wrong at worst.
+  it('never leaks the internal --prefix into a command meant for a terminal', () => {
+    for (const p of ['darwin', 'win32'] as NodeJS.Platform[]) {
+      const { command } = ccbInstallHint(coord(LibraryManager.NPM), '/opt/homebrew/bin/node', p);
+      expect(command, p).not.toContain('--prefix');
+      expect(command, p).not.toContain('/opt/homebrew');
+    }
+  });
+
   it('reports a bare launcher name, never the absolute sibling path', () => {
-    const { command } = ccbInstallHint(PackageManager.NPM, '/opt/homebrew/bin/node', 'darwin');
+    const { command } = ccbInstallHint(coord(LibraryManager.NPM), '/opt/homebrew/bin/node', 'darwin');
     // Only the launcher is checked for a path: the package name legitimately
     // contains a slash (`@swttch/extend-kit`).
     const launcher = command.split(' ')[0];

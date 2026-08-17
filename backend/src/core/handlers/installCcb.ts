@@ -9,7 +9,7 @@ import { resetExtendKitCache } from '../extend-kit';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 import {
   EXTEND_KIT_PACKAGE,
-  detectGlobalInstallManager,
+  resolveInstallCoordinate,
   buildInstallSpec,
   buildUninstallSpec,
 } from '../global-install-target';
@@ -83,13 +83,13 @@ export async function installCcbHandler(
 ): Promise<void> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
   const claudePaths = await resolveClaudePaths();
-  const manager = detectGlobalInstallManager(claudePaths, process.execPath, home);
+  const coord = resolveInstallCoordinate(claudePaths, process.execPath, home);
 
-  const { command, args } = buildInstallSpec(manager, process.execPath);
+  const { command, args } = buildInstallSpec(coord, process.execPath);
 
   console.log(
     'extend-kit install\n',
-    JSON.stringify({ manager, command, args, claudePaths, node: process.execPath }),
+    JSON.stringify({ coord, command, args, claudePaths, node: process.execPath }),
     '\n',
   );
 
@@ -102,7 +102,7 @@ export async function installCcbHandler(
     //
     // Removal must use the manager that owns the collision: uninstalling with
     // the wrong tool leaves the shim in place and the retry fails identically.
-    const rm = buildUninstallSpec(manager, PREDECESSOR_PACKAGE, process.execPath);
+    const rm = buildUninstallSpec(coord, PREDECESSOR_PACKAGE, process.execPath);
     await run(rm.command, rm.args);
     result = await run(command, args);
   }

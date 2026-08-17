@@ -92,7 +92,7 @@ describe('installCcbHandler', () => {
     // a successful install invisible: every later lookup still answers "not
     // installed", so the settings section stays locked after installing.
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
   });
 
   it.runIf(process.platform !== 'win32')(
@@ -112,7 +112,8 @@ describe('installCcbHandler', () => {
       const args = mockExecFile.mock.calls[0][1] as string[];
       const opts = mockExecFile.mock.calls[0][2] as { shell?: boolean };
       expect(file).toBe('npm');
-      expect(args).toEqual(['install', '-g', '@swttch/extend-kit']);
+      expect(args.slice(0, 2)).toEqual(['install', '-g']);
+      expect(args).toContain('@swttch/extend-kit');
       expect(opts.shell).toBe(false);
     },
   );
@@ -138,7 +139,7 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
   });
 
   // #298. The installer used to read the manager off `process.execPath` ALONE,
@@ -173,7 +174,7 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('install -g ');
   });
 
   it('removes the predecessor and retries when volta refuses the name', async () => {
@@ -228,9 +229,9 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g @swttch/extend-kit');
-    expect(spawnedArgv(1)).toContain('npm uninstall -g claude-code-battery');
-    expect(spawnedArgv(2)).toContain('npm install -g @swttch/extend-kit');
+    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
+    expect(spawnedArgv(1)).toContain('npm uninstall -g --prefix ');
+    expect(spawnedArgv(2)).toContain('npm install -g --prefix ');
     expect(lastPayload(conns).status).toBe('ok');
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
   });
@@ -263,7 +264,7 @@ describe('installCcbHandler', () => {
 
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
-    expect(String(p.error)).toContain('npm install -g @swttch/extend-kit');
+    expect(String(p.error)).toContain('npm install -g --prefix ');
     expect(mockResetUsageCache).not.toHaveBeenCalled();
     expect(mockResetExtendKitCache).not.toHaveBeenCalled();
   });

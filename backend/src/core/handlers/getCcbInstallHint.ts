@@ -4,7 +4,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { ccbInstallHint } from '../ccb-install-hint';
-import { detectGlobalInstallManager } from '../global-install-target';
+import { resolveInstallCoordinate } from '../global-install-target';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 
 /**
@@ -26,8 +26,8 @@ export async function getCcbInstallHintHandler(
 ): Promise<void> {
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
   const claudePaths = await resolveClaudePaths();
-  const manager = detectGlobalInstallManager(claudePaths, process.execPath, home);
-  const hint = ccbInstallHint(manager);
+  const coord = resolveInstallCoordinate(claudePaths, process.execPath, home);
+  const hint = ccbInstallHint(coord);
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

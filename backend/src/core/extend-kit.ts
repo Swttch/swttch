@@ -1,10 +1,12 @@
 import { createRequire } from 'node:module';
 import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
-import { PackageManager } from '../shared';
-import { EXTEND_KIT_PACKAGE, resolveLauncher } from './global-install-target';
+import { LibraryManager } from '../shared';
+import { EXTEND_KIT_PACKAGE } from './global-install-target';
+import { launcherFor, npmPrefixFor } from './install-coordinate';
 
 /** The npm package this module loads. Also the name shown when it is missing. */
 export { EXTEND_KIT_PACKAGE };
@@ -237,15 +239,27 @@ async function candidateRoots(): Promise<string[]> {
   // would be torn apart at that space. Direct passes argv without a shell, which
   // is this project's shell-tokenisation rule. The bare name still uses the
   // login shell, since a bare `npm` needs the rc-file PATH to resolve at all.
-  const npmLookups: Array<{ bin: string; shell: ShellKind }> = [];
-  const sibling = resolveLauncher(PackageManager.NPM, process.execPath);
+  // `--prefix` pins the sibling lookup to THIS Node's global folder. Without it
+  // an inherited `npm_config_prefix` silently redirects `npm root -g` to some
+  // other prefix — measured: it answered another project's `backend/lib/
+  // node_modules` — so the loader would look for the kit in a folder nothing
+  // installs into.
+  const npmLookups: Array<{ bin: string; args: string[]; shell: ShellKind }> = [];
+  const sibling = launcherFor(LibraryManager.NPM, process.execPath, process.platform, existsSync);
+  const prefix = npmPrefixFor(LibraryManager.NPM, process.execPath);
   const bareNpm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  if (sibling !== bareNpm) npmLookups.push({ bin: sibling, shell: ShellKind.Direct });
-  npmLookups.push({ bin: bareNpm, shell: ShellKind.LoginInteractive });
+  if (sibling !== bareNpm) {
+    npmLookups.push({
+      bin: sibling,
+      args: prefix ? ['root', '-g', '--prefix', prefix] : ['root', '-g'],
+      shell: ShellKind.Direct,
+    });
+  }
+  npmLookups.push({ bin: bareNpm, args: ['root', '-g'], shell: ShellKind.LoginInteractive });
 
-  for (const { bin, shell } of npmLookups) {
+  for (const { bin, args, shell } of npmLookups) {
     try {
-      const { stdout } = await new Command(bin, ['root', '-g'], {
+      const { stdout } = await new Command(bin, args, {
         timeout: 15000,
         shell,
       }).exec();

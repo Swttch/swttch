@@ -1,4 +1,5 @@
 import { PackageManager, UpdateMode } from '../shared';
+import { detectInstallCoordinate, toPackageManager } from './install-coordinate';
 
 export const CLAUDE_NPM_PACKAGE = '@anthropic-ai/claude-code';
 
@@ -12,46 +13,27 @@ export const CLAUDE_NPM_PACKAGE = '@anthropic-ai/claude-code';
  * different install method. A `/usr/local/bin/claude` symlink says nothing; its
  * realpath into `node_modules` says "npm".
  *
- * Order matters: pnpm/yarn stores can live under `~/.local`, so their specific
- * markers are checked before the generic native (`~/.local/bin`) location.
+ * ## One value, three questions
+ *
+ * This returns a single name because that is what the update UI and the wire
+ * format speak. It is DERIVED from a three-axis coordinate rather than guessed
+ * by an ordered list of substring tests, because "which package manager" is
+ * really three separate questions — which runtime manages Node, which tool owns
+ * global npm packages, and which channel ships the `claude` app — and the old
+ * flat list could not tell them apart.
+ *
+ * The distinction is not academic. Under volta, `~/.volta/...` matched "volta"
+ * for BOTH volta's own package store and the ordinary npm globals of the Node
+ * volta manages. Those are different stores, so a package removed from one
+ * survived in the other and kept being reported as installed. See
+ * install-coordinate.ts.
  */
 export function detectPackageManager(
   paths: Array<string | null | undefined>,
   home: string,
-  _platform: NodeJS.Platform = process.platform,
+  platform: NodeJS.Platform = process.platform,
 ): PackageManager {
-  const candidates = paths
-    .filter((p): p is string => typeof p === 'string' && p.length > 0)
-    .map((p) => p.replace(/\\/g, '/').toLowerCase());
-  if (candidates.length === 0) return PackageManager.UNKNOWN;
-
-  const h = home.replace(/\\/g, '/').toLowerCase().replace(/\/$/, '');
-  const has = (needle: string) => candidates.some((c) => c.includes(needle));
-
-  // Node package managers — specific markers first.
-  if (has('/.volta/') || has('/volta/') || has('volta-shim')) return PackageManager.VOLTA;
-  if (has('pnpm')) return PackageManager.PNPM;
-  if (has('/.yarn') || has('/yarn/')) return PackageManager.YARN;
-
-  // Windows WinGet (detectable by path; distinct upgrade command).
-  if (has('/winget/') || has('winget\\') || has('/microsoft/winget')) return PackageManager.WINGET;
-
-  // Homebrew cask.
-  if (has('/opt/homebrew/') || has('/cellar/') || has('/homebrew/')) return PackageManager.HOMEBREW;
-
-  // npm global variants. nvm/fnm shell out to npm for global installs.
-  if (has('/node_modules/') || has('/npm/') || has('.npm-global') || has('/.nvm/') || has('/.fnm/')) {
-    return PackageManager.NPM;
-  }
-
-  // Claude's own native installer (curl/irm).
-  if (h && (candidates.some((c) => c.startsWith(`${h}/.local/`)) || candidates.some((c) => c.startsWith(`${h}/.claude/local/`)))) {
-    return PackageManager.NATIVE;
-  }
-  if (has('/.local/share/claude') || has('/.local/bin/claude')) return PackageManager.NATIVE;
-
-  // /usr/bin (apt/dnf/apk) and anything else: no non-interactive update path.
-  return PackageManager.UNKNOWN;
+  return toPackageManager(detectInstallCoordinate(paths, home, platform));
 }
 
 /**

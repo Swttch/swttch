@@ -1,5 +1,5 @@
 import { basename } from 'node:path';
-import { PackageManager } from '../shared';
+import { LibraryManager, RuntimeManager, AppChannel, type InstallCoordinate } from '../shared';
 import { buildInstallSpec, EXTEND_KIT_PACKAGE } from './global-install-target';
 
 export interface CcbInstallHint {
@@ -42,14 +42,29 @@ export { EXTEND_KIT_PACKAGE };
  * touching the real environment.
  */
 export function ccbInstallHint(
-  manager: PackageManager = PackageManager.UNKNOWN,
+  coord: InstallCoordinate = {
+    runtime: RuntimeManager.UNKNOWN,
+    library: LibraryManager.UNKNOWN,
+    channel: AppChannel.NONE,
+  },
   nodeExecPath: string = process.execPath,
   platform: NodeJS.Platform = process.platform,
 ): CcbInstallHint {
-  const spec = buildInstallSpec(manager, nodeExecPath, platform);
+  const spec = buildInstallSpec(coord, nodeExecPath, EXTEND_KIT_PACKAGE, platform);
   const launcher = basename(spec.command);
+  // `--prefix` is stripped, along with the absolute path it carries. It exists
+  // so the BACKEND cannot be redirected by an inherited `npm_config_prefix`; a
+  // user's own terminal does not have that problem, and pasting one of our
+  // internal paths would be both noise and wrong on their machine.
+  const args = stripPrefixFlag(spec.args);
   return {
-    command: [launcher, ...spec.args].join(' '),
+    command: [launcher, ...args].join(' '),
     shells: platform === 'win32' ? ['Command Prompt', 'PowerShell', 'Git Bash'] : ['Terminal'],
   };
+}
+
+/** Drop `--prefix <dir>` from an argv, leaving the rest untouched. */
+function stripPrefixFlag(args: string[]): string[] {
+  const at = args.indexOf('--prefix');
+  return at === -1 ? args : [...args.slice(0, at), ...args.slice(at + 2)];
 }

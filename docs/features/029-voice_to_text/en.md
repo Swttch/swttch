@@ -161,6 +161,26 @@ When something fails, a banner appears just above the input — not a tooltip, b
 
 Three failures, three messages, because they need three different fixes. The missing kit is the one we can fix for you, so that banner carries an **Install** button; pressing it installs the kit and clears the banner.
 
+### "Which package manager" is really three questions
+
+It sounds like one question and it is three, on independent axes:
+
+| Axis | What it manages | Examples |
+| --- | --- | --- |
+| **Runtime manager** | Node **versions** | volta, nvm, fnm, asdf, mise, nodenv, brew's node |
+| **Library manager** | global npm **packages** | npm, pnpm, yarn, bun, volta's own store |
+| **App channel** | the `claude` **app** itself | the official installer, a Homebrew cask, WinGet |
+
+volta appears in **two** of them, because it genuinely does both jobs: it switches Node versions and
+it keeps its own package store.
+
+Collapsing the three into one value makes ordinary setups inexpressible. "Node from brew, packages
+from npm" is completely normal, and a single word cannot say whether that is brew or npm.
+
+More importantly, **volta's own store and the npm globals of the Node volta manages are different
+places.** Both sit under `~/.volta/`, so they look like one thing — but a package removed from one
+stays in the other.
+
 ### The install goes through whichever manager runs this machine
 
 All three install affordances — this banner's button, and the Install and Update buttons in
@@ -197,13 +217,37 @@ are about to press it the consequence should be obvious.
 reinstalling is a download rather than an undo. The usage panel reads the same package, so the
 confirmation says that too.
 
-Removal goes through **the same manager as installing**. Removing with the wrong tool does not fail
-loudly — it succeeds against a store the package was never in, so you would be told it was removed
-while it stayed installed.
+**Removing does not look in one place the way installing does**, because a machine can hold the same
+package more than once.
 
-When it finishes, a toast confirms it and the version line refreshes. If a copy of the kit remains
-somewhere else, that version is what you will see — the line shows what can actually be loaded right
-now rather than pretending everything is gone.
+That is not hypothetical: volta's own store held 0.4.0 while the npm globals of the Node volta
+manages held 0.3.0. Removing only with the manager that would install today clears one of them, and
+the version line then honestly reports the survivor — which reads, correctly, as **"I pressed delete
+and it is still there"**.
+
+So removal sweeps **every store it knows about**. Most of them hold nothing and fail; that is
+expected and is not reported.
+
+**Success is judged by the disk, not by exit codes.** Five different tools' exit codes are not
+comparable, and one of them will happily report success while doing nothing (below). After the
+sweep the kit is looked up again; if a copy survived, that is a failure.
+
+When it finishes, a toast confirms it and the version line refreshes.
+
+### npm can say "success" and do nothing
+
+npm reads its global folder from configuration, and the `npm_config_prefix` environment variable
+overrides all of it — regardless of which npm binary you ran.
+
+If an IDE, a shell profile or another project's tooling leaves that variable set, the backend
+inherits it. `npm uninstall -g` then runs against a different folder entirely, prints `up to date`,
+exits 0, and removes nothing.
+
+So every npm command pins the target with `--prefix`. Measured: with that variable set the package
+survived a successful-looking uninstall, and adding `--prefix` removed it.
+
+This is **the same shape of defect** as the install bug this feature started with — a command that
+succeeds against the wrong place.
 
 ### Click the version to check again
 

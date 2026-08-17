@@ -1,224 +1,200 @@
 import { describe, it, expect } from 'vitest';
 import {
-  detectGlobalInstallManager,
+  resolveInstallCoordinate,
   installManagerFor,
-  resolveLauncher,
   buildInstallSpec,
   buildUninstallSpec,
+  buildUninstallSpecsForAllStores,
+  packageManagerFor,
 } from '../global-install-target';
-import { PackageManager } from '../../shared';
+import { RuntimeManager, LibraryManager, AppChannel, PackageManager } from '../../shared';
 
 const HOME = '/Users/jake';
-/** Pretend every `<bin>/npm` exists, so the sibling-pinning branch is exercised. */
+/** Pretend every `<bin>/npm` exists, exercising the sibling-pinning branch. */
 const npmSiblingExists = (p: string) => p.endsWith('/npm') || p.endsWith('\\npm.cmd');
-/** Pretend nothing exists, so we see the bare-name fallback. */
+/** Pretend nothing exists, so the bare-name fallback shows. */
 const nothingExists = () => false;
 
-describe('detectGlobalInstallManager', () => {
+const VOLTA_CLAUDE = [
+  '/Users/jake/.volta/bin/claude',
+  '/Users/jake/.volta/tools/image/packages/@anthropic-ai/claude-code/bin/claude',
+];
+
+describe('resolveInstallCoordinate', () => {
   // The bug behind #298: the installer asked only `process.execPath` while the
-  // CLI updater asked the `claude` binary. On a machine where those two live in
-  // different worlds the two features disagreed about which manager owns global
-  // packages, and the install went somewhere the loader never reads.
-  it('prefers the manager that owns the `claude` the user runs in a terminal', () => {
-    const pm = detectGlobalInstallManager(
-      ['/Users/jake/.volta/bin/claude', '/Users/jake/.volta/tools/image/packages/x/bin/claude'],
-      '/opt/homebrew/bin/node',
+  // CLI updater asked the `claude` binary, so on a machine where those differ
+  // the two features disagreed and the install went somewhere the loader never
+  // reads.
+  it('takes the library store from the `claude` the user runs in a terminal', () => {
+    const coord = resolveInstallCoordinate(VOLTA_CLAUDE, '/opt/homebrew/bin/node', HOME);
+    expect(coord.library).toBe(LibraryManager.VOLTA);
+  });
+
+  // The runtime is a property of the Node we are running on; a native-installer
+  // claude says nothing about Node, so it must not blank this axis out.
+  it('takes the runtime from the Node running the backend', () => {
+    const coord = resolveInstallCoordinate(
+      ['/Users/jake/.local/share/claude/claude'],
+      '/Users/jake/.volta/tools/image/node/24.7.0/bin/node',
       HOME,
     );
-    expect(pm).toBe(PackageManager.VOLTA);
+    expect(coord.runtime).toBe(RuntimeManager.VOLTA);
+    expect(coord.channel).toBe(AppChannel.NATIVE);
   });
 
   it('falls back to the running Node when `claude` is not on PATH', () => {
-    const pm = detectGlobalInstallManager([null, null], '/Users/jake/.volta/tools/image/node/24.7.0/bin/node', HOME);
-    expect(pm).toBe(PackageManager.VOLTA);
+    const coord = resolveInstallCoordinate(
+      [null, null],
+      '/Users/jake/.volta/tools/image/node/24.7.0/bin/node',
+      HOME,
+    );
+    expect(coord.runtime).toBe(RuntimeManager.VOLTA);
+    expect(coord.library).toBe(LibraryManager.VOLTA);
   });
 
-  it('falls back to the running Node when `claude` reveals nothing usable', () => {
-    // An unrecognised claude path must not pin the answer to UNKNOWN and hide a
-    // perfectly detectable Node.
-    const pm = detectGlobalInstallManager(['/some/vendored/claude'], '/Users/jake/.nvm/versions/node/v22.14.0/bin/node', HOME);
-    expect(pm).toBe(PackageManager.NPM);
-  });
-
-  it('is UNKNOWN only when neither the claude paths nor the Node say anything', () => {
-    expect(detectGlobalInstallManager([null], '/nowhere/bin/node', HOME)).toBe(PackageManager.UNKNOWN);
-  });
-
-  // Windows: npm's default global prefix is %APPDATA%\npm, and volta keeps its
-  // shims under %LOCALAPPDATA%\Volta\bin. Both must be recognised from the
-  // backslash form `where claude` returns.
-  it('recognises the windows npm-global and volta layouts', () => {
-    const winHome = 'C:\\Users\\jake';
-    const winNode = 'C:\\Program Files\\nodejs\\node.exe';
-    expect(
-      detectGlobalInstallManager(
-        [
-          'C:\\Users\\jake\\AppData\\Roaming\\npm\\claude.cmd',
-          'C:\\Users\\jake\\AppData\\Roaming\\npm\\node_modules\\@anthropic-ai\\claude-code\\cli.js',
-        ],
-        winNode,
-        winHome,
-      ),
-    ).toBe(PackageManager.NPM);
-    expect(
-      detectGlobalInstallManager(['C:\\Users\\jake\\AppData\\Local\\Volta\\bin\\claude.exe'], winNode, winHome),
-    ).toBe(PackageManager.VOLTA);
-  });
-
-  // Linux distro packages (apt/dnf/snap) install claude somewhere with no
-  // non-interactive npm story. They must land on UNKNOWN so the npm fallback
-  // takes over rather than a wrong manager being invoked.
-  it('leaves distro-packaged installs to the npm fallback', () => {
-    for (const p of ['/usr/bin/claude', '/snap/bin/claude']) {
-      const pm = detectGlobalInstallManager([p], '/usr/bin/node', '/home/jake');
-      expect(pm).toBe(PackageManager.UNKNOWN);
-      expect(installManagerFor(pm)).toBe(PackageManager.NPM);
-    }
-  });
-
-  // WSL runs an ordinary Linux backend inside the distro, so nothing special is
-  // needed — but the distro's own nvm/npm must still resolve normally.
-  it('treats a WSL distro install like any other linux one', () => {
-    expect(
-      detectGlobalInstallManager(
-        ['/home/jake/.nvm/versions/node/v22.14.0/bin/claude'],
-        '/home/jake/.nvm/versions/node/v22.14.0/bin/node',
-        '/home/jake',
-      ),
-    ).toBe(PackageManager.NPM);
+  it('resolves a version-managed Node to npm globals', () => {
+    const coord = resolveInstallCoordinate(
+      [null],
+      '/Users/jake/.nvm/versions/node/v22.14.0/bin/node',
+      HOME,
+    );
+    expect(coord.runtime).toBe(RuntimeManager.NVM);
+    expect(coord.library).toBe(LibraryManager.NPM);
   });
 });
 
 describe('installManagerFor', () => {
-  // brew/native/winget genuinely describe how Claude Code was installed, but
-  // none of them can install an npm package — they must resolve to npm.
-  it('routes managers that cannot install npm packages to npm', () => {
-    for (const pm of [
-      PackageManager.HOMEBREW,
-      PackageManager.NATIVE,
-      PackageManager.WINGET,
-      PackageManager.UNKNOWN,
-    ]) {
-      expect(installManagerFor(pm)).toBe(PackageManager.NPM);
-    }
-  });
-
-  it('leaves the node package managers alone', () => {
-    for (const pm of [PackageManager.VOLTA, PackageManager.PNPM, PackageManager.YARN, PackageManager.NPM]) {
-      expect(installManagerFor(pm)).toBe(pm);
-    }
-  });
-});
-
-describe('resolveLauncher', () => {
-  // The heart of #298. A GUI-launched backend's PATH is the IDE's, not the
-  // user's, so a bare `npm` can belong to a different Node than the one running
-  // this code — and installing with it writes to a global folder this backend
-  // never reads. The install then succeeds, says so, and changes nothing.
-  it('pins npm to the sibling of the running Node', () => {
+  // App channels ship Claude Code itself and cannot install an npm package, so
+  // the library axis answers this — falling back to npm.
+  it('falls back to npm when no store could be named', () => {
     expect(
-      resolveLauncher(PackageManager.NPM, '/Users/jake/.nvm/versions/node/v22.14.0/bin/node', 'darwin', npmSiblingExists),
-    ).toBe('/Users/jake/.nvm/versions/node/v22.14.0/bin/npm');
+      installManagerFor({
+        runtime: RuntimeManager.SYSTEM,
+        library: LibraryManager.UNKNOWN,
+        channel: AppChannel.NATIVE,
+      }),
+    ).toBe(LibraryManager.NPM);
   });
 
-  it('falls back to the bare name when the Node ships no npm sibling', () => {
-    expect(resolveLauncher(PackageManager.NPM, '/nowhere/bin/node', 'darwin', nothingExists)).toBe('npm');
-    expect(resolveLauncher(PackageManager.NPM, 'C:\\nowhere\\node.exe', 'win32', nothingExists)).toBe('npm.cmd');
-  });
-
-  // volta/pnpm/yarn keep their own store, which is not tied to a Node prefix.
-  // Guessing an absolute path next to node would be wrong for them.
-  it('leaves non-npm managers to a PATH lookup', () => {
-    for (const pm of [PackageManager.VOLTA, PackageManager.PNPM, PackageManager.YARN]) {
-      expect(resolveLauncher(pm, '/Users/jake/.nvm/versions/node/v22.14.0/bin/node', 'darwin', npmSiblingExists)).toBe(pm);
+  it('keeps a named store', () => {
+    for (const library of [LibraryManager.VOLTA, LibraryManager.PNPM, LibraryManager.YARN, LibraryManager.BUN]) {
+      expect(
+        installManagerFor({ runtime: RuntimeManager.UNKNOWN, library, channel: AppChannel.NONE }),
+      ).toBe(library);
     }
-  });
-
-  // Windows keeps node.exe and npm.cmd in the SAME directory (no bin/ subdir),
-  // so the sibling lookup applies there too — but only if the path is built with
-  // backslashes. Using the ambient path.join while targeting win32 would produce
-  // `C:\Program Files\nodejs/npm.cmd` and never match.
-  it('builds the win32 sibling path with backslashes, whatever OS runs this', () => {
-    const winExists = (p: string) => p === 'C:\\Program Files\\nodejs\\npm.cmd';
-    expect(resolveLauncher(PackageManager.NPM, 'C:\\Program Files\\nodejs\\node.exe', 'win32', winExists)).toBe(
-      'C:\\Program Files\\nodejs\\npm.cmd',
-    );
-  });
-
-  it('accepts npm.exe as a win32 sibling too', () => {
-    const winExists = (p: string) => p === 'C:\\tools\\node\\npm.exe';
-    expect(resolveLauncher(PackageManager.NPM, 'C:\\tools\\node\\node.exe', 'win32', winExists)).toBe(
-      'C:\\tools\\node\\npm.exe',
-    );
-  });
-
-  // A Windows install path with a space must survive as ONE argument. The
-  // installer runs through execViaCmdArgv, which passes an argv array to
-  // cmd.exe, so the space is safe there — this asserts we hand it the whole
-  // path rather than something pre-split.
-  it('keeps a space-bearing sibling path intact', () => {
-    const winExists = (p: string) => p === 'C:\\Program Files\\nodejs\\npm.cmd';
-    const launcher = resolveLauncher(PackageManager.NPM, 'C:\\Program Files\\nodejs\\node.exe', 'win32', winExists);
-    expect(launcher).toContain(' ');
-    expect(launcher.split(' ').length).toBeGreaterThan(1);
-  });
-
-  // fnm's default macOS location contains two spaces. The kit loader must not
-  // interpolate this into a shell command line (see the ShellKind.Direct note in
-  // extend-kit.ts); here we only assert the resolution itself is unmangled.
-  it('resolves a unix sibling under a directory with spaces', () => {
-    const fnm = '/Users/jake/Library/Application Support/fnm/node-versions/v22.0.0/installation/bin/node';
-    expect(resolveLauncher(PackageManager.NPM, fnm, 'darwin', npmSiblingExists)).toBe(
-      '/Users/jake/Library/Application Support/fnm/node-versions/v22.0.0/installation/bin/npm',
-    );
   });
 });
 
 describe('buildInstallSpec', () => {
-  it('uses each manager’s own global-install verb', () => {
+  const coordFor = (library: LibraryManager) => ({
+    runtime: RuntimeManager.UNKNOWN,
+    library,
+    channel: AppChannel.NONE,
+  });
+
+  it('uses each store’s own global-install verb', () => {
     const node = '/nowhere/bin/node';
-    expect(buildInstallSpec(PackageManager.VOLTA, node, 'darwin', nothingExists)).toEqual({
+    expect(buildInstallSpec(coordFor(LibraryManager.VOLTA), node, undefined, 'darwin', nothingExists)).toEqual({
       command: 'volta',
       args: ['install', '@swttch/extend-kit'],
     });
-    expect(buildInstallSpec(PackageManager.PNPM, node, 'darwin', nothingExists)).toEqual({
+    expect(buildInstallSpec(coordFor(LibraryManager.PNPM), node, undefined, 'darwin', nothingExists)).toEqual({
       command: 'pnpm',
       args: ['add', '-g', '@swttch/extend-kit'],
     });
-    expect(buildInstallSpec(PackageManager.YARN, node, 'darwin', nothingExists)).toEqual({
+    expect(buildInstallSpec(coordFor(LibraryManager.YARN), node, undefined, 'darwin', nothingExists)).toEqual({
       command: 'yarn',
       args: ['global', 'add', '@swttch/extend-kit'],
     });
-    expect(buildInstallSpec(PackageManager.NPM, node, 'darwin', nothingExists)).toEqual({
+    // npm carries --prefix so an inherited `npm_config_prefix` cannot redirect
+    // it; the other stores have no such flag.
+    expect(buildInstallSpec(coordFor(LibraryManager.NPM), node, undefined, 'darwin', nothingExists)).toEqual({
       command: 'npm',
-      args: ['install', '-g', '@swttch/extend-kit'],
+      args: ['install', '-g', '--prefix', '/nowhere', '@swttch/extend-kit'],
     });
   });
 
+  // A GUI backend's PATH is the IDE's, not the user's, so a bare `npm` can
+  // belong to a different Node — and installing with it writes to a global
+  // folder this backend never reads. That is #298 in one line.
   it('installs with the backend Node’s own npm when it has one', () => {
-    expect(buildInstallSpec(PackageManager.HOMEBREW, '/opt/homebrew/bin/node', 'darwin', npmSiblingExists)).toEqual({
+    expect(
+      buildInstallSpec(coordFor(LibraryManager.NPM), '/opt/homebrew/bin/node', undefined, 'darwin', npmSiblingExists),
+    ).toEqual({
       command: '/opt/homebrew/bin/npm',
-      args: ['install', '-g', '@swttch/extend-kit'],
+      args: ['install', '-g', '--prefix', '/opt/homebrew', '@swttch/extend-kit'],
     });
   });
 });
 
 describe('buildUninstallSpec', () => {
-  // The removal has to use the SAME manager as the install: clearing the `ccb`
-  // shim with the wrong tool leaves it in place and the retry fails identically.
+  // Removing with the wrong tool is not a loud failure — it succeeds against a
+  // store the package was never in, so the user is told it was removed while it
+  // is still installed.
   it('matches the install manager', () => {
     const node = '/nowhere/bin/node';
-    expect(buildUninstallSpec(PackageManager.VOLTA, 'claude-code-battery', node, 'darwin', nothingExists)).toEqual({
-      command: 'volta',
-      args: ['uninstall', 'claude-code-battery'],
-    });
-    expect(buildUninstallSpec(PackageManager.PNPM, 'claude-code-battery', node, 'darwin', nothingExists)).toEqual({
-      command: 'pnpm',
-      args: ['remove', '-g', 'claude-code-battery'],
-    });
-    expect(buildUninstallSpec(PackageManager.HOMEBREW, 'claude-code-battery', node, 'darwin', nothingExists)).toEqual({
-      command: 'npm',
-      args: ['uninstall', '-g', 'claude-code-battery'],
-    });
+    expect(
+      buildUninstallSpec(
+        { runtime: RuntimeManager.VOLTA, library: LibraryManager.VOLTA, channel: AppChannel.NONE },
+        'claude-code-battery',
+        node,
+        'darwin',
+        nothingExists,
+      ),
+    ).toEqual({ command: 'volta', args: ['uninstall', 'claude-code-battery'] });
+  });
+});
+
+describe('buildUninstallSpecsForAllStores', () => {
+  // THE reason this exists. A machine can hold the same package twice: volta's
+  // own store held 0.4.0 while `npm i -g` under volta's Node held 0.3.0, and
+  // `volta uninstall` cleared only the first. Deleting has to sweep every store.
+  it('covers every store, with the coordinate’s own first', () => {
+    const specs = buildUninstallSpecsForAllStores(
+      { runtime: RuntimeManager.VOLTA, library: LibraryManager.VOLTA, channel: AppChannel.NONE },
+      '@swttch/extend-kit',
+      '/nowhere/bin/node',
+      'darwin',
+      nothingExists,
+    );
+    const argv = specs.map((s) => [s.command, ...s.args].join(' '));
+
+    expect(argv[0]).toBe('volta uninstall @swttch/extend-kit');
+    expect(argv).toContain('npm uninstall -g --prefix /nowhere @swttch/extend-kit');
+    expect(argv).toContain('pnpm remove -g @swttch/extend-kit');
+    expect(argv).toContain('yarn global remove @swttch/extend-kit');
+    expect(argv).toContain('bun remove -g @swttch/extend-kit');
+    // No store is asked twice.
+    expect(new Set(argv).size).toBe(argv.length);
+  });
+
+  it('puts npm first when npm is the coordinate’s store', () => {
+    const specs = buildUninstallSpecsForAllStores(
+      { runtime: RuntimeManager.HOMEBREW, library: LibraryManager.NPM, channel: AppChannel.NONE },
+      '@swttch/extend-kit',
+      '/nowhere/bin/node',
+      'darwin',
+      nothingExists,
+    );
+    expect([specs[0].command, ...specs[0].args].join(' ')).toBe('npm uninstall -g --prefix /nowhere @swttch/extend-kit');
+  });
+});
+
+describe('packageManagerFor — the legacy view stays stable', () => {
+  it('maps a coordinate back to the single enum the wire format uses', () => {
+    expect(
+      packageManagerFor({
+        runtime: RuntimeManager.VOLTA,
+        library: LibraryManager.VOLTA,
+        channel: AppChannel.NONE,
+      }),
+    ).toBe(PackageManager.VOLTA);
+    expect(
+      packageManagerFor({
+        runtime: RuntimeManager.SYSTEM,
+        library: LibraryManager.UNKNOWN,
+        channel: AppChannel.NATIVE,
+      }),
+    ).toBe(PackageManager.NATIVE);
   });
 });
