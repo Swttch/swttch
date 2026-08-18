@@ -33,6 +33,15 @@
             icon="/icons/claudeSessions.svg"
             factoryClass="com.github.yhk1038.claudecodegui.toolwindow.ClaudeSessionsToolWindowFactory"/>
 
+        <!-- Virtual file system backing chat tabs. The `key` is the URL protocol:
+             the platform persists an open tab by URL and revives it on restart by
+             looking the file system up under this key. Without it our tabs had the
+             unregistered `mock` protocol of LightVirtualFile and were dropped from
+             the restored layout, losing their editor splitter (issue #302). -->
+        <virtualFileSystem
+            key="claude-code"
+            implementationClass="com.github.yhk1038.claudecodegui.editor.ClaudeCodeFileSystem"/>
+
         <!-- Editor Tab -->
         <fileEditorProvider
             implementation="com.github.yhk1038.claudecodegui.editor.ClaudeCodeEditorProvider"/>

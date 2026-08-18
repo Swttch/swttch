@@ -6,6 +6,7 @@ import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.FileEditorStateLevel
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -19,17 +20,34 @@ class ClaudeCodeFileEditor(
     private val virtualFile: ClaudeCodeVirtualFile
 ) : UserDataHolderBase(), FileEditor {
 
-    private val panel: ClaudeCodePanel = ClaudeCodePanel(
-        project,
-        virtualFile.tabId,
-        virtualFile.currentPath ?: virtualFile.initialPath
-    )
+    /**
+     * The address THIS pane is showing, kept per editor rather than on the shared
+     * [ClaudeCodeVirtualFile] (see [ClaudeCodeEditorState]).
+     *
+     * Seeded from the file so a newly split pane starts on the same conversation
+     * as the pane it was split from, then diverges as this pane navigates.
+     */
+    @Volatile
+    private var panePath: String? = virtualFile.currentPath ?: virtualFile.initialPath
+
+    /**
+     * Built on first access rather than in the constructor, because the platform
+     * calls [setState] with this pane's restored address AFTER creating the
+     * editor. Constructing the panel eagerly would load the seed address and then
+     * ignore the restored one, so a restored split would put both panes on the
+     * same conversation — the very thing this is fixing.
+     */
+    private val panel: ClaudeCodePanel by lazy {
+        ClaudeCodePanel(project, virtualFile.tabId, panePath).also { created ->
+            Disposer.register(this, created)
+            attachPanelCallbacks(created)
+        }
+    }
 
     @Volatile
     private var wasStreaming: Boolean = false
 
-    init {
-        Disposer.register(this, panel)
+    private fun attachPanelCallbacks(panel: ClaudeCodePanel) {
 
         // WebView의 title 변경을 VirtualFile에 전달 + 영속 저장소에도 캐싱.
         // IDE 재시작 후 lazy mount 단계에서 마지막으로 본 제목을 즉시 보여 주기 위함.
@@ -41,9 +59,15 @@ class ClaudeCodeFileEditor(
             EditorTabStateService.getInstance(project).updateTitle(virtualFile.tabId, title)
         }
 
-        // WebView의 URL 변경을 VirtualFile에 전달 (탭 이동/분할 시 복원용)
-        // 그리고 IDE 재시작 후에도 복원되도록 영속 저장소에도 반영.
+        // Navigation belongs to THIS pane: record it here so a split whose panes
+        // have moved apart keeps two addresses instead of overwriting one shared
+        // slot (which also dragged the other pane's tab title along with it).
+        //
+        // The file and the persisted state are still updated, because they are what
+        // seeds a pane that has no state of its own yet — a brand-new tab, or the
+        // tool-window host, which is not split and has no per-editor state.
         panel.onPathChanged = { path ->
+            panePath = path
             virtualFile.currentPath = path
             EditorTabStateService.getInstance(project).updatePath(virtualFile.tabId, path)
         }
@@ -78,7 +102,22 @@ class ClaudeCodeFileEditor(
 
     override fun isModified(): Boolean = false
 
-    override fun setState(state: FileEditorState) {}
+    /**
+     * This pane's address, so the platform persists it per editor and hands it
+     * back to [setState] on restore. Two panes of one split therefore keep two
+     * addresses — like two browser tabs on the same page that have since been
+     * navigated apart.
+     */
+    override fun getState(level: FileEditorStateLevel): FileEditorState =
+        ClaudeCodeEditorState(panePath)
+
+    override fun setState(state: FileEditorState) {
+        val path = (state as? ClaudeCodeEditorState)?.path ?: return
+        panePath = path
+        // Once the panel exists it owns the address — its WebView has its own
+        // history and re-pointing it here would yank the user out of wherever they
+        // navigated. This only seeds the address for the panel yet to be built.
+    }
 
     override fun addPropertyChangeListener(listener: PropertyChangeListener) {}
 

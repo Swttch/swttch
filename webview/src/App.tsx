@@ -7,7 +7,7 @@ import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSele
 import { AccountUsageModal } from './components/AccountUsageModal';
 import { TunnelModal } from './components/TunnelModal';
 import { ForbiddenNotice } from './components/ForbiddenNotice';
-import { isRemoteBlocked } from './api/bridge/authToken';
+import { isLoopbackHostname, isRemoteBlocked } from './api/bridge/authToken';
 import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -110,8 +110,16 @@ function App() {
   // (expired / wrong / rate-limited / unreachable). usePairingStatus makes this
   // reactive so a pairing that fails after mount flips us to the block. A LOCAL
   // transient disconnect is NEVER blocked (isRemoteBlocked stays false).
+  //
+  // A failed pairing only blocks a REMOTE device. Locally the launcher owns the
+  // page and a failure means "this panel could not redeem the code", not "this
+  // device may not connect" — as when the IDE restores a split and both panes
+  // race for the same single-use code (#302). Blocking there stranded a pane on
+  // "403 · Forbidden" telling the user to scan a QR, on localhost. Local panels
+  // keep reconnecting instead, which is the same treatment a transient backend
+  // outage already gets.
   const { state: pairingState } = usePairingStatus();
-  const blocked = isRemoteBlocked() || pairingState === 'failed';
+  const blocked = isRemoteBlocked() || (pairingState === 'failed' && !isLoopbackHostname(window.location.hostname));
 
   // Render ONLY the hard "403" block on an EMPTY template — do NOT mount the app
   // providers, router, or chat UI (nothing to connect, nothing leaking behind).

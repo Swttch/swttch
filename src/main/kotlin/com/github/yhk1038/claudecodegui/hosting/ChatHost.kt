@@ -32,6 +32,12 @@ interface ChatHost {
     /**
      * Restore the sessions persisted in [EditorTabStateService] into this host
      * after an IDE restart.
+     *
+     * A host that the platform already restores on its own must do nothing here.
+     * [EditorTabHost] is that case: chat tabs are URL-addressable files, so the
+     * platform reopens them with the rest of the editor layout, splitter
+     * placement included — and reopening them a second time is what lost that
+     * placement (#302).
      */
     fun restorePersistedSessions(project: Project)
 }

@@ -89,6 +89,81 @@ function storeToken(token: string): void {
   }
 }
 
+/**
+ * How long a panel that lost the race to redeem the single-use `?pair=` code
+ * waits for the winning panel to publish the token it obtained.
+ *
+ * Sized for "the other panel is mid-handshake", not for a human: the winner only
+ * has to finish its POST /pair and open one WebSocket. If nothing lands by then,
+ * the code really was expired/invalid and the normal failure path takes over.
+ */
+const PEER_TOKEN_WAIT_MS = 10_000;
+
+/**
+ * Wait for another same-origin panel to publish a validated token, resolving to
+ * it (or '' on timeout).
+ *
+ * This exists because the `?pair=` code is single-use while JCEF opens each
+ * editor tab as its OWN browser context. When the IDE restores a split, both
+ * panes load at the same instant with the same code, each in a separate JS world
+ * (so the in-flight memoization in redeemPairCode cannot help them). One wins the
+ * redeem; the other gets 401 — and used to fall straight to the "403 Forbidden"
+ * block even though it was perfectly entitled to connect (#302 exposed this once
+ * splits started restoring again).
+ *
+ * The loser does NOT retry the code — a consumed code must stay consumed, and a
+ * retry would burn a failed-attempt slot toward the backend's lockout. It simply
+ * waits for the winner, which calls persistValidatedToken() AFTER its socket has
+ * actually authenticated. So the token handed over here is one the backend has
+ * already accepted; no part of the security model is relaxed.
+ *
+ * `storage` fires in every other same-origin context on write, so the handover is
+ * event-driven. A short poll runs alongside it purely as a safety net for
+ * embeddings that fire the event unreliably.
+ */
+function waitForPeerToken(timeoutMs = PEER_TOKEN_WAIT_MS): Promise<string> {
+  return new Promise((resolve) => {
+    const existing = readStoredToken();
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+
+    let settled = false;
+    const finish = (token: string) => {
+      if (settled) return;
+      settled = true;
+      window.clearInterval(poll);
+      window.clearTimeout(timer);
+      try {
+        window.removeEventListener('storage', onStorage);
+      } catch {
+        // removal is best-effort; `settled` already makes this idempotent
+      }
+      resolve(token);
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== TOKEN_STORAGE_KEY) return;
+      const token = readStoredToken();
+      if (token) finish(token);
+    };
+
+    const poll = window.setInterval(() => {
+      const token = readStoredToken();
+      if (token) finish(token);
+    }, 250);
+
+    const timer = window.setTimeout(() => finish(''), timeoutMs);
+
+    try {
+      window.addEventListener('storage', onStorage);
+    } catch {
+      // no storage events in this embedding — the poll above still covers us
+    }
+  });
+}
+
 // ── Remote-Control tunnel pairing state ─────────────────────────────────────
 // The `?pair=` code captured from the URL (null when absent). A single-use
 // short-lived credential the remote device exchanges for the real token.
@@ -228,6 +303,22 @@ function redeemPairCode(code: string): Promise<string> {
         body: JSON.stringify({ code }),
       });
       if (!res.ok) {
+        // Losing the race for a single-use code is indistinguishable from an
+        // expired one: both come back 401. So on 401 only, give a sibling panel —
+        // the other pane of a restored split, loading in its own JCEF context with
+        // the same code — a moment to publish the token it just validated (#302).
+        //
+        // 429 is NOT retried this way: a lockout is a definitive answer about the
+        // whole backend, not a lost race, and waiting would only stall the user
+        // before showing them why they are locked out.
+        if (res.status !== 429) {
+          const peerToken = await waitForPeerToken();
+          if (peerToken) {
+            cachedToken = peerToken;
+            setPairingState('paired');
+            return peerToken;
+          }
+        }
         // 429 → rate-limited/locked; anything else (401) → expired/invalid.
         setPairingState('failed', res.status === 429 ? 'locked' : 'expired');
         return '';

@@ -224,12 +224,23 @@ describe('authToken', () => {
     });
 
     it('surfaces a "failed/expired" state on 401 and returns no token', async () => {
-      setUrl('/?pair=stale');
-      mockFetchOnce(() => jsonResponse(401, { error: 'Invalid or expired pairing code' }));
+      // A 401 is now given a short grace period first, in case a sibling panel is
+      // mid-redeem of the same single-use code (see "concurrent panels" below).
+      // Nothing publishes a token here, so the wait must elapse before the
+      // failure is declared — fake timers keep the test instant.
+      vi.useFakeTimers();
+      try {
+        setUrl('/?pair=stale');
+        mockFetchOnce(() => jsonResponse(401, { error: 'Invalid or expired pairing code' }));
 
-      const token = await ensureAuthTokenReady();
-      expect(token).toBe('');
-      expect(getPairingStatus()).toEqual({ state: 'failed', reason: 'expired' });
+        const pending = ensureAuthTokenReady();
+        await vi.advanceTimersByTimeAsync(11_000);
+
+        await expect(pending).resolves.toBe('');
+        expect(getPairingStatus()).toEqual({ state: 'failed', reason: 'expired' });
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('surfaces a "failed/locked" state on 429', async () => {
@@ -285,6 +296,77 @@ describe('authToken', () => {
       expect(fetchFn).toHaveBeenCalledTimes(1);
       const [, init] = fetchFn.mock.calls[0];
       expect(JSON.parse((init as RequestInit).body as string)).toEqual({ code: 'realcode' });
+    });
+
+    // ── Losing the race for the single-use code ───────────────────────────────
+    // The IDE restores a split by reopening BOTH panes at once, each in its own
+    // JCEF browser context with the same `?pair=` code in the URL. One redeems
+    // it; the other gets 401 and must NOT be treated as unauthorized — it waits
+    // for the winner to publish the validated token (#302).
+    describe('concurrent panels sharing one single-use code', () => {
+      it('adopts the token a sibling panel publishes after losing the redeem race', async () => {
+        setUrl('/?pair=sharedcode');
+        mockFetchOnce(() => jsonResponse(401, { error: 'invalid' }));
+
+        const pending = ensureAuthTokenReady();
+
+        // The winning panel finishes its handshake and persists what it got.
+        window.localStorage.setItem('ccg-auth-token', 'winner-token');
+        window.dispatchEvent(
+          new StorageEvent('storage', { key: 'ccg-auth-token', newValue: 'winner-token' }),
+        );
+
+        await expect(pending).resolves.toBe('winner-token');
+        // Adopting a peer's token counts as paired — no "403 / rescan the QR".
+        expect(getPairingStatus().state).toBe('paired');
+      });
+
+      it('does not re-POST the consumed code while waiting for the sibling', async () => {
+        setUrl('/?pair=sharedcode');
+        const fetchFn = mockFetchOnce(() => jsonResponse(401, { error: 'invalid' }));
+
+        const pending = ensureAuthTokenReady();
+        window.localStorage.setItem('ccg-auth-token', 'winner-token');
+        window.dispatchEvent(
+          new StorageEvent('storage', { key: 'ccg-auth-token', newValue: 'winner-token' }),
+        );
+        await pending;
+
+        // Retrying would burn a failed-attempt slot toward the backend lockout,
+        // and a consumed code can never succeed anyway.
+        expect(fetchFn).toHaveBeenCalledTimes(1);
+      });
+
+      it('still reports failure when no sibling ever publishes a token', async () => {
+        vi.useFakeTimers();
+        try {
+          setUrl('/?pair=deadcode');
+          mockFetchOnce(() => jsonResponse(401, { error: 'invalid' }));
+
+          const pending = ensureAuthTokenReady();
+          await vi.advanceTimersByTimeAsync(11_000);
+
+          await expect(pending).resolves.toBe('');
+          // A genuinely expired code must still surface as a failure.
+          expect(getPairingStatus().state).toBe('failed');
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('takes an already-published sibling token without waiting at all', async () => {
+        vi.useFakeTimers();
+        try {
+          setUrl('/?pair=sharedcode');
+          mockFetchOnce(() => jsonResponse(401, { error: 'invalid' }));
+          // The sibling won before this panel even POSTed.
+          window.localStorage.setItem('ccg-auth-token', 'already-there');
+
+          await expect(ensureAuthTokenReady()).resolves.toBe('already-there');
+        } finally {
+          vi.useRealTimers();
+        }
+      });
     });
   });
 });
