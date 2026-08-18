@@ -188,6 +188,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.27.2 - Tab layout restore, and turning voice input off 📌</h3>
+            <ul>
+                <li>Fix chat tabs not returning to the split they were in after restarting the IDE (#306, reported by @CraftedFury)</li>
+                <li>Fix the voice input toggle being locked when the kit is not installed (#304, reported by @hollandjake)</li>
+                <li>Ask on the first microphone press whether to install voice input, before any recording starts (#304)</li>
+            </ul>
             <h3>0.27.1 - Line-by-line Diff Review support 🔍</h3>
             <ul>
                 <li>Add diff review so you can accept or reject individual changes before a file is written (#300, requested by @SLIN0322)</li>
