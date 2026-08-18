@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.27.1 - Line-by-line Diff Review support 🔍</h3>
+            <ul>
+                <li>Add diff review so you can accept or reject individual changes before a file is written (#300, requested by @SLIN0322)</li>
+                <li>Open proposed changes in the IDE's own diff viewer before approving (#300, requested by @macro128)</li>
+                <li>Fix the voice input kit installing where the backend could not load it (#303, reported by @hollandjake)</li>
+                <li>Add a button to remove the voice input kit from settings (#303)</li>
+            </ul>
             <h3>0.27.0 - Voice-To-Text is now available 🎉</h3>
             <ul>
                 <li>Add Voice-To-Text to the composer (#293, requested by @ideal-chris)</li>
