@@ -1,5 +1,7 @@
 package com.github.yhk1038.claudecodegui.editor
 
+import com.github.yhk1038.claudecodegui.services.EditorTabStateService
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vfs.NonPhysicalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileListener
@@ -43,11 +45,10 @@ import java.io.IOException
  *
  * ## Lifetime
  *
- * This file system creates nothing on its own: [findFileByPath] only hands back
- * a file for a tab the plugin already knows about (see
- * [ClaudeCodeVirtualFile.findExisting]). A stale URL — a tab the user closed
- * before shutdown, or one belonging to another project — resolves to null and
- * the platform simply skips it, which is the desired outcome.
+ * [findFileByPath] hands back a file only for a tab the plugin already knows
+ * about — either live in memory, or recorded in [EditorTabStateService]. A stale
+ * URL (a tab the user closed before shutdown) resolves to null and the platform
+ * simply skips it, which is the desired outcome.
  */
 class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
 
@@ -56,16 +57,70 @@ class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
     /**
      * Resolve `claude-code://<tabId>` back to its tab.
      *
-     * Deliberately does NOT create a tab that does not already exist. During
-     * startup restore the platform asks for every persisted URL; answering with
-     * a freshly minted file would resurrect tabs the user had closed. The
-     * plugin's own restore path registers the tabs it intends to reopen, and
-     * only those resolve here.
+     * Two sources, in order:
+     *
+     *  1. a tab already live in memory — the normal case once the session is
+     *     running (a tab being moved between splitters, say);
+     *  2. a tab recorded in [EditorTabStateService] — the restore case.
+     *
+     * The second source is what makes restart restore work at all. The platform
+     * resolves persisted URLs *before* the plugin has opened anything, so at that
+     * moment no tab is live and an in-memory-only lookup answers null for every
+     * URL. That is exactly what happened when this returned only (1): the IDE
+     * logged `No file exists: claude-code://…`, dropped the tab from the restored
+     * layout, and the splitter placement was lost — the bug this whole change is
+     * meant to fix (#302).
+     *
+     * It still does not mint tabs out of thin air. An ID absent from the
+     * persisted state resolves to null, so a tab the user closed before shutdown
+     * stays closed: [EditorTabStateService.removeTab] has already dropped it.
+     *
+     * The lookup spans open projects because a URL identifies a file, not a
+     * project, and this call carries no [com.intellij.openapi.project.Project].
+     * Tab IDs are per-tab UUIDs, so cross-project collision is not a practical
+     * concern.
      */
-    override fun findFileByPath(path: String): VirtualFile? =
-        ClaudeCodeVirtualFile.findExisting(path.trim('/'))
+    override fun findFileByPath(path: String): VirtualFile? {
+        val tabId = path.trim('/')
+        if (tabId.isEmpty()) return null
+
+        ClaudeCodeVirtualFile.findExisting(tabId)?.let { return it }
+
+        // getInstanceIfCreated() resolves an application service, so it throws —
+        // rather than answering null — when there is no application at all. That
+        // is the case in plain unit tests, and during teardown. The whole lookup
+        // is therefore guarded, not just its result.
+        val project = runCatching {
+            ProjectManager.getInstanceIfCreated()
+                ?.openProjects
+                ?.firstOrNull {
+                    !it.isDisposed && tabId in EditorTabStateService.getInstance(it).getOpenTabIds()
+                }
+        }.getOrNull() ?: return null
+
+        val state = EditorTabStateService.getInstance(project)
+        return ClaudeCodeVirtualFile.getOrCreate(
+            project,
+            tabId,
+            state.getRestorePath(tabId),
+            state.getTitle(tabId),
+        )
+    }
 
     override fun refreshAndFindFileByPath(path: String): VirtualFile? = findFileByPath(path)
+
+    /**
+     * A chat tab has no meaningful "location" to show the user.
+     *
+     * The default implementation returns the path, which here is the tab's UUID —
+     * and the platform uses this for the editor tab's title in some paths, so a
+     * restored tab came back labelled `91f1a79c-f0fb-…` instead of its
+     * conversation name. Returning the file's display name keeps the label right
+     * wherever the platform reaches for the presentable URL rather than
+     * [VirtualFile.getPresentableName].
+     */
+    override fun extractPresentableUrl(path: String): String =
+        ClaudeCodeVirtualFile.findExisting(path.trim('/'))?.presentableName ?: path
 
     /** Nothing to refresh: these files are in-memory and have no backing store. */
     override fun refresh(asynchronous: Boolean) {}

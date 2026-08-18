@@ -11,10 +11,10 @@ import com.intellij.openapi.project.Project
  * Hosts chat sessions in IDE **editor tabs** — the original behaviour, now
  * expressed through the [ChatHost] contract.
  *
- * The open/restore logic here was lifted verbatim from
- * `OpenClaudeCodeAction.openTab` and `EditorTabRestoreActivity`; the only change
- * is that the restart-restore ordering is now sourced from the pure
- * [ChatHostRouter.planRestoreOrder] so it can be unit-tested.
+ * Opening is this host's job; restoring after a restart is not. Chat tabs are
+ * ordinary URL-addressable files to the platform, so it reopens them — in their
+ * original splitters — as part of its own editor layout restore. See
+ * [restorePersistedSessions].
  */
 object EditorTabHost : ChatHost {
 
@@ -55,31 +55,33 @@ object EditorTabHost : ChatHost {
         EditorTabStateService.getInstance(project).addTab(tabId)
     }
 
+    /**
+     * Restore is the IDE's job here, so this deliberately opens nothing.
+     *
+     * The platform already persists the full editor layout — which splitter each
+     * tab sits in, the split orientation and proportion — and reopens it on the
+     * next start. Since chat tabs are addressable by URL
+     * ([com.github.yhk1038.claudecodegui.editor.ClaudeCodeFileSystem]), they take
+     * part in that restore like any other file, splitter placement included.
+     *
+     * Reopening them ourselves on top of that is what broke it (#302). This ran
+     * ~2s after the platform's own restore and called `requestOpenFile`, which
+     * targets the *active* splitter rather than the tab's remembered one — so a
+     * tab the user had split to the right came back in the default pane. The log
+     * showed the whole sequence: the platform restoring, then us reopening, which
+     * is the "tab flashes closed, then re-opens in the default location" in the
+     * report.
+     *
+     * What the platform cannot know is *which conversation* a tab was showing and
+     * what its label was. That still comes from
+     * [com.github.yhk1038.claudecodegui.services.EditorTabStateService] — read
+     * during URL resolution, so a platform-restored tab is materialized with its
+     * path and title already in place.
+     *
+     * [ToolWindowHost] keeps its own restore: tool-window content tabs are not
+     * files, so the platform does not reopen them.
+     */
     override fun restorePersistedSessions(project: Project) {
-        val stateService = EditorTabStateService.getInstance(project)
-        val tabIds = stateService.getOpenTabIds()
-
-        if (tabIds.isEmpty()) {
-            logger.info("No saved editor tabs to restore")
-            return
-        }
-
-        val activeTabId = stateService.getActiveTabId()
-        val restoreOrder = ChatHostRouter.planRestoreOrder(tabIds, activeTabId)
-
-        logger.info("Restoring ${tabIds.size} editor tab(s): $tabIds")
-
-        ApplicationManager.getApplication().invokeLater {
-            // Inactive tabs first (original order), active tab last so it wins focus.
-            for (tabId in restoreOrder) {
-                doOpenOrFocus(
-                    project,
-                    tabId,
-                    stateService.getRestorePath(tabId),
-                    stateService.getTitle(tabId)
-                )
-            }
-            logger.info("Editor tabs restored successfully")
-        }
+        logger.info("Editor tabs are restored by the IDE (layout + splitters); skipping plugin-side restore")
     }
 }

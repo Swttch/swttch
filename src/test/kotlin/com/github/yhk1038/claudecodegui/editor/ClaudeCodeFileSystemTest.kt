@@ -48,13 +48,39 @@ class ClaudeCodeFileSystemTest {
 
     @Test
     fun `unknown tab id resolves to null rather than resurrecting a closed tab`() {
-        // During startup the platform asks for every persisted URL. Minting a file
-        // here would reopen tabs the user had closed before shutdown, so an unknown
-        // ID must answer null and let the platform skip that entry.
+        // A tab the user closed before shutdown is gone from both the in-memory
+        // map and EditorTabStateService, so its URL must answer null and let the
+        // platform skip that entry instead of reopening it.
         val fs = ClaudeCodeFileSystem()
 
         assertNull(fs.findFileByPath("no-such-tab"))
         assertNull(fs.refreshAndFindFileByPath("no-such-tab"))
+    }
+
+    @Test
+    fun `empty path resolves to null instead of being treated as a tab id`() {
+        val fs = ClaudeCodeFileSystem()
+
+        assertNull(fs.findFileByPath(""))
+        assertNull(fs.findFileByPath("/"))
+    }
+
+    @Test
+    fun `a URL round trips through urlFor and back into findFileByPath`() {
+        // Guards the seam the platform actually drives: it persists urlFor(...),
+        // then on restart splits that string and hands the remainder to
+        // findFileByPath. If either side ever grows a prefix or escaping, the two
+        // stop lining up and restore silently degrades to "No file exists".
+        val fs = ClaudeCodeFileSystem()
+        val tabId = "b1aa13f4-77b7-41ca-936b-f818f4a66b40"
+
+        val persisted = ClaudeCodeFileSystem.urlFor(tabId)
+        val pathHandedBack = persisted.substringAfter("://")
+
+        assertEquals(tabId, pathHandedBack)
+        // Unknown to both lookups here, so null — but it reached the lookup as the
+        // bare tab ID, which is the part this test pins.
+        assertNull(fs.findFileByPath(pathHandedBack))
     }
 
     @Test
