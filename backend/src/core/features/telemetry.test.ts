@@ -6,8 +6,6 @@ import { MessageType } from '../../shared';
 // 워커 프로세스 전역이라 다른 테스트 파일과 공유되고, vitest 병렬 실행 시 이 파일이 읽기
 // 직전에 원복/오염될 수 있다 → RYBBIT_API_KEY 빈 값 → send() 조기 return → flush 후
 // fetch 0회로 산발 실패(#192). holder는 파일-로컬이라 그 전역 경합에서 완전히 벗어난다.
-// (profile은 파일마다 값이 다르므로 loadTelemetry 내 doMock으로 계속 주입한다 — hoisted
-// vi.mock과 비-hoisted vi.doMock을 분리해야 서로 간섭하지 않는다.)
 const envHolder = vi.hoisted(() => ({ apiKey: '' }));
 vi.mock('../../config/environment', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../config/environment')>();
@@ -19,6 +17,23 @@ vi.mock('../../config/environment', async (importOriginal) => {
   };
 });
 
+// profile도 같은 이유로 hoisted mock이다. 테스트마다 값이 달라지는 것은 holder를 바꿔서
+// 표현하고, mock 자체는 파일 전 구간에서 절대 걷히지 않게 한다. doMock/doUnmock으로 매번
+// 붙였다 떼면 "떼어진 창"이 생기고, 그 창에 아직 살아 있던 전송이 readProfile()을 재개하면
+// **사용자의 실제 프로필 파일**(실제 UUID·실제 동의 상태)을 읽어 전송을 시도한다. 실측에서
+// 실제 UUID가 fetch body에 찍히는 것을 확인했다. 테스트는 어떤 타이밍에도 사용자 자산을
+// 읽어선 안 되므로, 창을 없애는 쪽으로 고정한다.
+const profileHolder = vi.hoisted(() => ({
+  current: { uuid: 'test-uuid', telemetryConsent: { status: 'pending', decidedAt: null } } as {
+    uuid: string;
+    telemetryConsent: { status: string; decidedAt: string | null };
+  },
+}));
+vi.mock('./profile', () => ({
+  readProfile: async () => profileHolder.current,
+  ConsentStatus: { PENDING: 'pending', ACCEPTED: 'accepted', DENIED: 'denied' },
+}));
+
 // 동의 상태별 전송 게이팅 검증. profile/settings/version을 주입한 뒤 telemetry 모듈을
 // 동적 import하여(모듈 로드 시 API key를 const로 고정하므로) fetch 호출 여부를 본다.
 // trackEvent/trackError는 fire-and-forget(void)이라 flushTelemetry()로 결정적으로 기다린다.
@@ -27,8 +42,6 @@ interface TestProfile {
   uuid: string;
   telemetryConsent: { status: string; decidedAt: string | null };
 }
-
-const CONSENT_ENUM = { PENDING: 'pending', ACCEPTED: 'accepted', DENIED: 'denied' };
 
 const accepted: TestProfile = {
   uuid: 'test-uuid',
@@ -71,10 +84,8 @@ async function loadTelemetry(
   // hoisted environment mock의 CCG_RYBBIT_API_KEY getter가 반환할 값을 이 파일에 주입한다
   // (process.env 전역을 건드리지 않음 — 상단 mock 주석 참고).
   envHolder.apiKey = apiKey;
-  vi.doMock('./profile', () => ({
-    readProfile: async () => profile,
-    ConsentStatus: CONSENT_ENUM,
-  }));
+  // profile은 hoisted mock이라 붙였다 떼지 않는다 — 값만 갈아끼운다(상단 mock 주석 참고).
+  profileHolder.current = profile;
   mockCommonDeps();
   const fetchMock = vi.fn(fetchImpl ?? (async () => ({ ok: true })));
   vi.stubGlobal('fetch', fetchMock);
@@ -89,19 +100,24 @@ async function loadTelemetry(
   };
 }
 
-// 각 테스트가 끝나면 그 테스트가 띄운 전송을 그 자리에서 비운다. 테스트 본문이
-// flushTelemetry()를 부르지 않고 끝나는 경우(전송을 기대하지 않는 케이스)에도 전송이
-// 다음 테스트로 새지 않도록 하는 안전망 — loadTelemetry의 리셋 전 드레인과 짝을 이룬다.
-afterEach(async () => {
+/**
+ * 그 테스트가 띄운 전송을 비운 뒤에 mock/stub을 걷는다. 각 describe의 afterEach는 이
+ * 함수 하나만 부른다 — 드레인과 unmock의 **순서**가 이 테스트의 결정성을 좌우하기 때문이다.
+ *
+ * vitest는 describe의 afterEach를 파일 최상위 afterEach보다 **먼저** 실행한다(실측). 그래서
+ * 드레인을 파일 최상위에 두고 언스텁을 describe에 두면 순서가 뒤집힌다 — 아직 살아 있는
+ * 전송이 언스텁 이후에 재개해, 다음 테스트가 stub한 fetchMock으로 전송해버린다.
+ * "PENDING인데 1번 호출됨"으로 산발 실패하던 경로가 이것이다(#192 방어가 이 순서 때문에
+ * 무력화됨). 드레인을 언스텁과 같은 훅 안에 두고 앞에 세워 순서를 고정한다.
+ */
+async function drainThenUnmock() {
   if (loadedTelemetry) await loadedTelemetry.flushTelemetry();
-});
+  vi.unstubAllGlobals();
+  vi.doUnmock('../handlers/getVersion');
+}
 
 describe('telemetry consent gating', () => {
-  afterEach(async () => {
-    vi.unstubAllGlobals();
-    vi.doUnmock('./profile');
-    vi.doUnmock('../handlers/getVersion');
-  });
+  afterEach(drainThenUnmock);
 
   it('ACCEPTED + API key면 전송한다', async () => {
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key');
@@ -176,11 +192,7 @@ describe('telemetry consent gating', () => {
 });
 
 describe('trackActivity (활동 단일 진입점)', () => {
-  afterEach(async () => {
-    vi.unstubAllGlobals();
-    vi.doUnmock('./profile');
-    vi.doUnmock('../handlers/getVersion');
-  });
+  afterEach(drainThenUnmock);
 
   it("event_name='activity:<메시지 타입>' 형태로 전송한다", async () => {
     const { trackActivity, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key');
