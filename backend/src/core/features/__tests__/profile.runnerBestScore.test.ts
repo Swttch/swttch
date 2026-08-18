@@ -28,6 +28,10 @@ const storedProfile = (runnerBestScore: unknown) =>
     dismissedAnnouncementIds: [],
     announcementsEnabled: true,
     runnerBestScore,
+    // Present so the profile reads as complete: a missing field is normalized on
+    // load and rewrites the file, which the "does not rewrite" cases below assert
+    // against.
+    voicePrompt: { status: 'pending', askedAt: null, decidedAt: null },
   });
 
 /** The score in the most recent write to profile.json. */

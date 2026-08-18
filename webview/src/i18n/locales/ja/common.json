@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "確認",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "close": "閉じる"
   },
   "zoomIndicator": {
     "label": "ズームレベル",

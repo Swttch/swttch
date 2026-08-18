@@ -20,6 +20,8 @@ import { getClaudeConfigDirHandler } from './getClaudeConfigDir';
 import { saveClaudeConfigDirHandler } from './saveClaudeConfigDir';
 import { getTelemetryConsentHandler } from './getTelemetryConsent';
 import { setTelemetryConsentHandler } from './setTelemetryConsent';
+import { getVoicePromptHandler } from './getVoicePrompt';
+import { setVoicePromptHandler } from './setVoicePrompt';
 import { getAnnouncementsHandler } from './getAnnouncements';
 import { dismissAnnouncementHandler } from './dismissAnnouncement';
 import { getAnnouncementsEnabledHandler } from './getAnnouncementsEnabled';
@@ -314,6 +316,12 @@ export async function handleMessage(
       break;
     case MessageType.GET_EXTEND_KIT_INFO:
       await getExtendKitInfoHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_VOICE_PROMPT:
+      await getVoicePromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_VOICE_PROMPT:
+      await setVoicePromptHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_ACCOUNT:
       await getAccountHandler(connectionId, message, connections, bridge);

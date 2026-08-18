@@ -10,8 +10,10 @@ import { ActionButtons } from './ActionButtons';
 import { MicButton } from './MicButton';
 import { useDictation } from './hooks/useDictation';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut';
+import toast from 'react-hot-toast';
 import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
-import { useExtendKit } from '@/hooks/queries/useExtendKit';
+import { useVoicePrompt } from '@/hooks/useVoicePrompt';
+import { useConfirmDialog, ConfirmResult } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -41,6 +43,14 @@ import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { isMobile, isBrowser } from '@/config/environment';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
+import {
+  decideVoiceGate,
+  VoiceGateAction,
+  effectOfVoiceAnswer,
+  VoiceAnswerEffect,
+  voiceSettingsAfterDecline,
+  isAnswer,
+} from './firstUseVoiceGate';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
 import { useIMEComposition } from './RichInput/useIMEComposition';
@@ -101,6 +111,13 @@ export function ChatInput() {
   // the usage panel already runs, so it reuses that mutation rather than adding
   // a second path that installs the same package.
   const { install: installKit, installing: installingKit } = useInstallCcb();
+  const { shouldAsk: shouldAskVoice, markAsked, decide } = useVoicePrompt();
+  const { confirmDialog, ask } = useConfirmDialog();
+
+  // Reachable even with the first-use question answered: someone who accepted
+  // and later removed the kit (in a terminal, or from Settings) is not asked
+  // again, so dictation fails here instead. Without this the banner would name
+  // the problem and offer no way out of it.
   const handleInstallKit = useCallback(async () => {
     try {
       await installKit();
@@ -111,18 +128,6 @@ export function ChatInput() {
       // The mutation surfaces its own failure through the same banner.
     }
   }, [installKit, dictation]);
-
-  // Retire the "install the kit" prompt the moment the kit is actually present —
-  // whether it was just installed here, installed over in Settings, or was
-  // installed all along and a stale mic attempt left the prompt up. Without this
-  // the banner lingers until the user presses the mic again to rediscover it
-  // cleared. Queried only while the prompt is showing, so it stays off the wire
-  // otherwise.
-  const kitMissing = !!dictation.error?.kitMissing;
-  const { info: kitInfo } = useExtendKit({ enabled: kitMissing });
-  useEffect(() => {
-    if (kitMissing && kitInfo?.installed) dictation.dismissError();
-  }, [kitMissing, kitInfo?.installed, dictation.dismissError]);
 
   // Read messages lazily via ref so ChatInput does not re-render every streaming token.
   const messagesRef = useRef(chatStream.messages);
@@ -150,7 +155,11 @@ export function ChatInput() {
     setIsDragOver,
   } = useAttachments();
 
-  const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
+  const {
+    settings: claudeSettings,
+    updateSetting: updateClaudeSetting,
+    updateSettingWithScope: updateClaudeSettingWithScope,
+  } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
   // The user can rebind this; the default lives with the other voice defaults.
@@ -167,13 +176,78 @@ export function ChatInput() {
   const voiceEnabled =
     (claudeSettings.voice as { enabled?: boolean } | undefined)?.enabled !== false;
 
+  // The one-time question, asked on the first attempt to dictate rather than on
+  // arrival: at that moment the user has just reached for the feature, so the
+  // question is about something they want, and the answer means something.
+  //
+  // Every way of starting dictation goes through here, so the button and the
+  // shortcut cannot answer it differently — or skip it.
+  const startDictation = useCallback(async () => {
+    if (decideVoiceGate(shouldAskVoice) === VoiceGateAction.Record) {
+      void dictation.start();
+      return;
+    }
+
+    // Written before the dialog is awaited: closing the app on an unanswered
+    // question must leave "we asked" behind, not look like we never did.
+    void markAsked();
+
+    // ask(), not confirm(): closing this is not the same as saying no. "No"
+    // turns voice input off for good, so Escape, the backdrop and the close
+    // button leave the question unanswered — it comes back on the next press.
+    const answer = await ask({
+      title: t('chatInput.dictation.firstUse.title'),
+      message: t('chatInput.dictation.firstUse.message'),
+      confirmLabel: t('chatInput.dictation.firstUse.accept'),
+      cancelLabel: t('chatInput.dictation.firstUse.decline'),
+    });
+    if (!isAnswer(answer)) return;
+
+    const accepted = answer === ConfirmResult.Confirmed;
+    await decide(accepted);
+
+    if (effectOfVoiceAnswer(accepted) === VoiceAnswerEffect.DisableVoice) {
+      // The same write the settings screen's own toggle makes, so there is one
+      // way to turn voice input off and one place it is stored. Global scope:
+      // this is a decision about the machine, not about the open project.
+      await updateClaudeSettingWithScope(
+        'voice',
+        voiceSettingsAfterDecline(claudeSettings.voice as Record<string, unknown> | undefined),
+        'global',
+      );
+      return;
+    }
+
+    try {
+      await installKit();
+      toast.success(t('chatInput.dictation.firstUse.installed'));
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : t('chatInput.dictation.firstUse.installFailed'),
+      );
+    }
+    // Recording deliberately does not start here. The install was a detour the
+    // user did not ask for; dropping them straight into a live microphone they
+    // did not expect is worse than letting them press again when ready.
+  }, [
+    shouldAskVoice,
+    dictation,
+    markAsked,
+    ask,
+    decide,
+    claudeSettings.voice,
+    updateClaudeSettingWithScope,
+    installKit,
+    t,
+  ]);
+
   // Bound globally rather than on the composer: the point of the shortcut is to
   // start talking without reaching for the mouse, which is exactly the moment
   // the composer does not have focus. Tap/hold is the same rule the microphone
   // button uses, so the two controls behave alike.
   useGlobalShortcut(voiceEnabled ? voiceShortcut : null, {
     isRecording: () => dictation.isRecording,
-    onStart: () => void dictation.start(),
+    onStart: () => void startDictation(),
     onStop: () => void dictation.stop(),
   });
   const { cycle: cycleEffort } = useEffort();
@@ -694,10 +768,12 @@ export function ChatInput() {
         />
       )}
       {/* 음성 입력 실패 안내. 툴팁이 아니라 인풋배너인 이유는, 사용자가 무언가
-          해야 하는 안내(권한 허용·설치·로그인)를 호버해야만 보이는 자리에 두면
-          안 되기 때문이다. 앞으로 다른 위치의 기능이 실패할 때도 같은 배너를
-          재사용한다. extend-kit 미설치는 우리가 대신 해결해줄 수 있는 유일한
-          경우라 설치 버튼을 함께 띄운다. */}
+          해야 하는 안내(권한 허용·로그인)를 호버해야만 보이는 자리에 두면 안 되기
+          때문이다. 앞으로 다른 위치의 기능이 실패할 때도 같은 배너를 재사용한다.
+
+          extend-kit 미설치는 여기 오지 않는다 — 첫 사용 질문이 마이크를 누른
+          직후에 설치를 제안하므로, 킷이 없어 실패하는 상황 자체가 그 질문에
+          "설치" 로 답한 뒤에나 남는다(설치 실패는 그 자리에서 토스트로 알린다). */}
       {dictation.error && (
         <InputBanner
           message={
@@ -829,7 +905,7 @@ export function ChatInput() {
               micDenied={dictation.error?.micDenied}
               disabled={disabled}
               shortcut={displayShortcut(voiceShortcut)}
-              onStart={() => void dictation.start()}
+              onStart={() => void startDictation()}
               onStop={() => void dictation.stop()}
             />
           )}
@@ -908,6 +984,10 @@ export function ChatInput() {
           </div>
         </div>
       </div>
+      {/* 첫 마이크 클릭에서 한 번만 뜨는 질문. 렌더 트리 최상단에 두는 이유는
+          Portal로 그려지므로 위치가 레이아웃에 영향을 주지 않고, 인풋 내부에
+          두면 컴포저가 조건부로 언마운트될 때 함께 사라지기 때문이다. */}
+      {confirmDialog}
     </div>
   );
 }

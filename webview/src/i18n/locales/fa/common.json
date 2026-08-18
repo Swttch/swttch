@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "تأیید",
-    "cancel": "لغو"
+    "cancel": "لغو",
+    "close": "بستن"
   },
   "zoomIndicator": {
     "label": "سطح بزرگ‌نمایی",

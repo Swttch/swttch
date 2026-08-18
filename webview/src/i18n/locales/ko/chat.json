@@ -99,7 +99,15 @@
       "noMic": "마이크를 찾을 수 없습니다",
       "kitMissing": "음성 입력에는 @swttch/extend-kit이 필요합니다",
       "install": "설치",
-      "installing": "설치 중…"
+      "installing": "설치 중…",
+      "firstUse": {
+        "title": "음성으로 입력해 보시겠어요?",
+        "message": "말하면 입력창에 받아쓰기 됩니다. @swttch/extend-kit을 한 번 설치해야 해요.\n\n사용하지 않으면 마이크 버튼을 숨깁니다. 설정 → 일반 → 음성 입력에서 언제든 다시 켤 수 있어요.",
+        "accept": "설치하고 사용",
+        "decline": "사용 안 함",
+        "installed": "이제 마이크를 눌러 말해 보세요.",
+        "installFailed": "음성 입력 도구를 설치하지 못했습니다"
+      }
     }
   },
   "sessionHeader": {

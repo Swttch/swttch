@@ -81,6 +81,11 @@ export function VoiceSection() {
   // Voice input cannot run without the kit, so its settings are inert until it
   // is there. Showing them live would let the user configure something that
   // does nothing and looks broken.
+  //
+  // The on/off toggle is exempt (see below): it is the one control that means
+  // something without the kit, and locking it would strand anyone who turned
+  // voice input off — including from the first-use question, whose whole promise
+  // is that this screen can turn it back on.
   const { info } = useExtendKit();
   const kitMissing = Boolean(info) && !info?.installed;
 
@@ -88,7 +93,6 @@ export function VoiceSection() {
     <SettingSection
       title={t('general.voice.title')}
       titleAction={<ExtendKitControl />}
-      disabled={kitMissing}
       description={kitMissing ? t('general.voice.kit.required') : undefined}
     >
       <SettingRow
@@ -112,13 +116,16 @@ export function VoiceSection() {
         />
       </SettingRow>
 
-      {/* Everything below only applies while voice input is on. Dimmed rather
-          than hidden so it is clear the settings still exist, and so the rows
-          do not jump around as the toggle is flipped. The toggle itself stays
-          live — it is the way back. */}
+      {/* Everything below only applies while voice input is on AND the kit is
+          installed. Dimmed rather than hidden so it is clear the settings still
+          exist, and so the rows do not jump around as the toggle is flipped.
+
+          The toggle above stays live in both cases — it is the way back, and a
+          user who turned voice input off must not need the kit installed to turn
+          it on again. */}
       <div
-        className={voiceEnabled ? '' : 'opacity-50 pointer-events-none select-none'}
-        aria-disabled={!voiceEnabled || undefined}
+        className={voiceEnabled && !kitMissing ? '' : 'opacity-50 pointer-events-none select-none'}
+        aria-disabled={!voiceEnabled || kitMissing || undefined}
       >
       <SettingRow
         label={t('general.voice.speechLanguage.label')}

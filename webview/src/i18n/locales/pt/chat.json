@@ -99,7 +99,15 @@
       "noMic": "Nenhum microfone encontrado",
       "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",
       "install": "Instalar",
-      "installing": "A instalar…"
+      "installing": "A instalar…",
+      "firstUse": {
+        "title": "Quer falar em vez de escrever?",
+        "message": "Fale e o texto é escrito no campo. Requer instalar o @swttch/extend-kit uma vez.\n\nSe não usar, o botão do microfone fica oculto. Pode reativá-lo quando quiser em Definições → Geral → Entrada de voz.",
+        "accept": "Instalar e usar",
+        "decline": "Não usar",
+        "installed": "Prima o microfone e comece a falar.",
+        "installFailed": "Não foi possível instalar a ferramenta de entrada de voz"
+      }
     }
   },
   "sessionHeader": {

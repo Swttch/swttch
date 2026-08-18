@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "确认",
-    "cancel": "取消"
+    "cancel": "取消",
+    "close": "关闭"
   },
   "zoomIndicator": {
     "label": "缩放级别",

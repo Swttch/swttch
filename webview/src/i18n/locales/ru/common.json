@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "Подтвердить",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "close": "Закрыть"
   },
   "zoomIndicator": {
     "label": "Масштаб",

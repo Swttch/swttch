@@ -88,6 +88,7 @@ describe('profile announcementsEnabled', () => {
         dismissedAnnouncementIds: [],
         announcementsEnabled: false,
         runnerBestScore: 0,
+        voicePrompt: { status: 'pending', askedAt: null, decidedAt: null },
       }),
     );
 

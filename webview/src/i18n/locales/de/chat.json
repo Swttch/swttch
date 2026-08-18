@@ -99,7 +99,15 @@
       "noMic": "Kein Mikrofon gefunden",
       "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
       "install": "Installieren",
-      "installing": "Wird installiert…"
+      "installing": "Wird installiert…",
+      "firstUse": {
+        "title": "Möchten Sie sprechen statt tippen?",
+        "message": "Sprechen Sie, und es wird ins Eingabefeld geschrieben. Erfordert eine einmalige Installation von @swttch/extend-kit.\n\nBei Ablehnung wird die Mikrofonschaltfläche ausgeblendet. Sie können sie jederzeit unter Einstellungen → Allgemein → Spracheingabe wieder einschalten.",
+        "accept": "Installieren und nutzen",
+        "decline": "Nicht nutzen",
+        "installed": "Drücken Sie das Mikrofon und sprechen Sie.",
+        "installFailed": "Das Spracheingabe-Werkzeug konnte nicht installiert werden"
+      }
     }
   },
   "sessionHeader": {
