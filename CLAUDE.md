@@ -28,9 +28,9 @@ JetBrains IDE용 Claude Code GUI 플러그인. Cursor의 Claude Code 확장과 �
 2. **WebView UI** - 채팅/세션/diff 카드 UI, Cursor UX 동일 구현 (WebSocket으로 Node.js와 통신)
 3. **Bridge (환경별 어댑터)** - BrowserBridge(브라우저) / KotlinBridge(JetBrains IDE 네이티브 API)
 
-## 참고 저장소
+## 구현 기준
 
-구현 시 `idea-claude-code-gui` (GitHub) 저장소를 1차 기준으로 삼음. 우선순위: Cursor UX > 참고 저장소 > JetBrains 관행
+구현 선택지가 갈릴 때는 Cursor UX를 1차 기준으로 삼음. 우선순위: Cursor UX > JetBrains 관행
 
 ## 기술 제약
 

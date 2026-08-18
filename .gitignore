@@ -7,6 +7,10 @@
 *.iml
 ignore/
 
+# 에이전트가 자동으로 읽는 지침 중, 공개 저장소에 넣지 않을 것들. CLAUDE.md는
+# 커밋되는 공개 문서이고, 이쪽은 같은 방식으로 로드되지만 우리끼리만 보는 쪽이다.
+CLAUDE.local.md
+
 # Gradle
 .gradle/
 build/

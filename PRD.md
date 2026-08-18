@@ -4,10 +4,9 @@
 
 본 문서는 **Cursor의 Claude Code 확장 UI/UX와 거의 동일한 경험**을 JetBrains IDE에서 제공하기 위한 **제품 요구사항 문서(PRD)**이다.
 
-본 PRD에서 **명확히 정의되지 않았거나 구현 선택지가 여러 개인 항목**은, 원칙적으로 다음 저장소의 **구조·패턴·결정**을 1차 기준으로 삼는다.
+본 PRD에서 **명확히 정의되지 않았거나 구현 선택지가 여러 개인 항목**은, 원칙적으로 **Cursor의 Claude Code 확장이 실제로 보여주는 동작**을 1차 기준으로 삼는다.
 
-* 참고 기준 저장소: idea-claude-code-gui (GitHub)
-* 원칙: *동작·UX·구조가 충돌할 경우, Cursor UX > 참고 저장소 > JetBrains 관행 순으로 우선*
+* 원칙: *동작·UX·구조가 충돌할 경우, Cursor UX > JetBrains 관행 순으로 우선*
 
 ---
 
@@ -60,7 +59,7 @@
 * 스트리밍 파싱
 * 상태 머신(plan/execute/verify)
 
-> 레이어 간 통신 및 책임 분리는 idea-claude-code-gui 저장소의 구조를 1차 기준으로 한다.
+> 레이어 간 통신 및 책임 분리는 각 레이어가 독립적으로 교체 가능하도록 설계한다.
 
 ---
 
@@ -80,7 +79,7 @@
 * Markdown + Code Block 렌더링
 * Tool-call / Plan / Result는 카드 UI로 표현
 
-> 구체적인 레이아웃, 컴포넌트 분리는 참고 저장소의 webview 구현을 따른다.
+> 구체적인 레이아웃, 컴포넌트 분리는 Cursor의 화면 구성을 기준으로 한다.
 
 ---
 
@@ -106,7 +105,7 @@
     * Apply
     * Reject
 
-> Patch 표시 방식, 카드 UI는 참고 저장소의 UX를 따른다.
+> Patch 표시 방식, 카드 UI는 Cursor의 diff UX를 따른다.
 
 ---
 
@@ -125,7 +124,7 @@
 2. 선택 영역
 3. 활성 파일
 
-> 자동 컨텍스트 주입 여부, 범위 제한 정책은 참고 저장소와 Cursor 동작을 따른다.
+> 자동 컨텍스트 주입 여부, 범위 제한 정책은 Cursor 동작을 따른다.
 
 ---
 
@@ -144,7 +143,7 @@
 * 승인 요청은 Tool-call 카드로 표시
 * 고위험 작업은 IDE 네이티브 다이얼로그 사용
 
-> 권한 기억(scope) 정책은 참고 저장소의 구현을 1차 기준으로 한다.
+> 권한 기억(scope) 정책은 Claude Code CLI가 제공하는 권한 범위를 1차 기준으로 한다.
 
 ---
 
@@ -156,7 +155,7 @@
 * 스트리밍 우선
 * 모든 요청은 request_id로 추적 가능
 
-> 이벤트 타입, payload 구조는 참고 저장소의 프로토콜 정의를 그대로 따르거나, 호환되도록 설계한다.
+> 이벤트 타입, payload 구조는 Claude Code CLI가 스트리밍하는 원본 구조와 호환되도록 설계한다.
 
 ---
 
@@ -187,7 +186,7 @@
 * Reject 시 변경 폐기
 * Undo 가능해야 함
 
-> Patch 포맷(unified diff vs file edits)은 참고 저장소의 구현을 따른다.
+> Patch 포맷(unified diff vs file edits)은 Claude Code CLI가 제안하는 편집 형식을 따른다.
 
 ---
 
@@ -232,7 +231,7 @@
 * WebView 상태 관리 방식
 * 에러/리커버리 전략
 
-👉 **idea-claude-code-gui 저장소의 최신 구현을 1차 기준으로 삼아 결정**한다.
+👉 **Cursor의 실제 동작과 Claude Code CLI의 공식 인터페이스를 1차 기준으로 삼아 결정**한다.
 
 ---
 
