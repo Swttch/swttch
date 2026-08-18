@@ -22,6 +22,30 @@ import org.jdom.Element
  * The platform already keeps one [FileEditorState] per editor and writes it into
  * the editor layout beside that pane's `<provider>` entry, so this both fixes the
  * sharing and restores each pane where it was.
+ *
+ * ## Known limitation: the tab TITLE is still shared
+ *
+ * The address is per pane now, but the label above it is not: the platform
+ * derives a tab's title from its FILE
+ * (`EditorTabPresentationUtil.getEditorTabTitle(Project, VirtualFile)` →
+ * `EditorTabTitleProvider`, neither of which is given the FileEditor). One file
+ * can therefore only ever show one title, so navigating in one pane of a split
+ * still renames both tabs. A tab opened with "+" is unaffected — it gets its own
+ * file.
+ *
+ * Splitting the title would mean one file per pane, and every stable route there
+ * is closed. Verified against the 2024.2 platform:
+ *
+ *  - overriding `FileEditor.getName()` — never consulted for the tab label;
+ *  - swapping the duplicate pane's file — `FileEditorManager.closeFile(file)`
+ *    closes it in EVERY pane, and the pane-scoped overloads plus
+ *    `createSplitter` take `EditorWindow`, which is `@ApiStatus.Internal`;
+ *  - intercepting the split action — `SplitAction` is an
+ *    `ActionRemoteBehaviorSpecification.Frontend`, so it never reaches an
+ *    `AnActionListener` on this side (confirmed by a run where the split
+ *    happened and the listener logged nothing);
+ *  - `SplitAction.FORBID_TAB_SPLIT` — hides the split action entirely, which
+ *    removes the feature instead of fixing it.
  */
 data class ClaudeCodeEditorState(val path: String?) : FileEditorState {
 
