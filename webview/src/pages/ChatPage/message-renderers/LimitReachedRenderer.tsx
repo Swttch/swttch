@@ -23,8 +23,8 @@ interface Props {
  * button sit in the same inline flow.
  *
  * `useAutoResume` derives the ACTIVE limit from the session's messages; only the
- * matching message gets the live action/countdown. Sponsor-only: non-sponsors
- * see just the text.
+ * matching message gets the live action/countdown. The action shows for everyone
+ * — sponsorship is checked on click, not on render.
  */
 
 const ACTION_LABEL_KEY: Record<AutoResumeAction, string> = {

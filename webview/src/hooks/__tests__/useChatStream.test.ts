@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChatStream, type LoadedMessage } from '../useChatStream';
 import type { LoadedMessageDto } from '../../types';
-import { ContextType, getTextContent } from '../../types';
+import { ContextType, getTextContent, isAuthErrorMessage, isLimitErrorMessage } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { MessageType } from '@/shared';
 
@@ -1447,6 +1447,134 @@ describe('useChatStream', () => {
       });
 
       expect(result.current.messages).toHaveLength(0);
+    });
+  });
+
+  // The live stream and the JSONL file disagree on spelling. The CLI writes the
+  // marker to disk as `isApiErrorMessage`, but emits it on stdout as
+  // `is_api_error_message` — same message, same uuid, two spellings. Reading only
+  // the camelCase one dropped the marker on the live path, so
+  // `isLimitErrorMessage()` returned false and the usage-limit notice rendered as
+  // ordinary text with no auto-resume button. Reloading the session re-read the
+  // JSONL and the button appeared, which is exactly the "works after refresh"
+  // symptom that was reported.
+  describe('API 오류 마커의 snake_case 표기 (자동재개 버튼)', () => {
+    // 실제 CLI stdout에서 캡처한 사용량 한도 assistant 이벤트.
+    const emitLimitNotice = (
+      emit: (type: string, payload: Record<string, unknown>) => void,
+    ) => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'assistant',
+        uuid: '563ce3f4-c5ed-4fb0-9bd2-3bcfbb1a1511',
+        timestamp: '2026-08-18T17:41:12.737Z',
+        session_id: '53b44151-c093-434e-8ef4-aaedca392ec3',
+        parent_tool_use_id: null,
+        error: 'rate_limit',
+        is_api_error_message: true,
+        message: {
+          id: 'a084fc1d-595b-4575-bfff-d024f7754f27',
+          role: 'assistant',
+          model: '<synthetic>',
+          type: 'message',
+          stop_reason: 'stop_sequence',
+          content: [
+            { type: 'text', text: "You've hit your session limit · resets 5:10am (Asia/Seoul)" },
+          ],
+        },
+      });
+    };
+
+    it('snake_case로 온 is_api_error_message를 마커로 보존한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => emitLimitNotice(emit));
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.isApiErrorMessage).toBe(true);
+      expect(last.error).toBe('rate_limit');
+    });
+
+    it('보존된 마커로 사용량 한도 메시지가 식별된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => emitLimitNotice(emit));
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      // 이 판정이 false면 LimitReachedRenderer로 라우팅되지 않아 버튼이 뜰 수 없다.
+      expect(isLimitErrorMessage(last)).toBe(true);
+    });
+
+    it('camelCase로 오던 기존 표기도 계속 동작한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          uuid: 'camel-1',
+          isApiErrorMessage: true,
+          apiErrorStatus: 429,
+          error: 'rate_limit',
+          message: {
+            id: 'msg-camel',
+            role: 'assistant',
+            content: [{ type: 'text', text: "You've hit your session limit · resets 5:10am" }],
+          },
+        });
+      });
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.isApiErrorMessage).toBe(true);
+      expect(last.apiErrorStatus).toBe(429);
+      expect(isLimitErrorMessage(last)).toBe(true);
+    });
+
+    it('인증 실패도 같은 경로로 마커가 보존된다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          uuid: 'auth-1',
+          error: 'authentication_failed',
+          is_api_error_message: true,
+          api_error_status: 401,
+          message: {
+            id: 'msg-auth',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'Failed to authenticate' }],
+          },
+        });
+      });
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.isApiErrorMessage).toBe(true);
+      expect(last.apiErrorStatus).toBe(401);
+      expect(isAuthErrorMessage(last)).toBe(true);
+    });
+
+    it('마커가 없는 평범한 응답은 한도 메시지로 오인되지 않는다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'assistant',
+          uuid: 'plain-1',
+          message: {
+            id: 'msg-plain',
+            role: 'assistant',
+            content: [{ type: 'text', text: "You've hit your session limit · resets 5:10am" }],
+          },
+        });
+      });
+
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.isApiErrorMessage).toBeUndefined();
+      expect(isLimitErrorMessage(last)).toBe(false);
     });
   });
 });
