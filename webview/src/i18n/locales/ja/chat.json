@@ -99,7 +99,15 @@
       "noMic": "マイクが見つかりません",
       "kitMissing": "音声入力には @swttch/extend-kit が必要です",
       "install": "インストール",
-      "installing": "インストール中…"
+      "installing": "インストール中…",
+      "firstUse": {
+        "title": "音声で入力してみませんか？",
+        "message": "話すと入力欄に書き起こされます。@swttch/extend-kit を一度インストールします。\n\n使わない場合はマイクボタンを非表示にします。設定 → 一般 → 音声入力からいつでも再開できます。",
+        "accept": "インストールして使う",
+        "decline": "使わない",
+        "installed": "マイクを押して話してみてください。",
+        "installFailed": "音声入力ツールをインストールできませんでした"
+      }
     }
   },
   "sessionHeader": {

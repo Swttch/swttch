@@ -181,6 +181,10 @@ export enum MessageType {
   GET_DICTATION_AVAILABILITY = 'GET_DICTATION_AVAILABILITY',
   /** Installed and latest @swttch/extend-kit versions, for the voice settings section. inbound webview→backend */
   GET_EXTEND_KIT_INFO = 'GET_EXTEND_KIT_INFO',
+  /** Read whether the user has answered the one-time "use voice input?" question, and when. Resolves to accepted without asking when the kit is already installed. inbound webview→backend */
+  GET_VOICE_PROMPT = 'GET_VOICE_PROMPT',
+  /** Record that the one-time voice question was shown (`{ asked: true }`) or answered (`{ accepted }`). inbound webview→backend */
+  SET_VOICE_PROMPT = 'SET_VOICE_PROMPT',
   /** Read usage/quota information for all accounts. */
   GET_ALL_USAGE = 'GET_ALL_USAGE',
   /** Read the plugin/backend version info. */

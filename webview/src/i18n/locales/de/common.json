@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "Bestätigen",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "close": "Schließen"
   },
   "zoomIndicator": {
     "label": "Zoomstufe",

@@ -99,7 +99,15 @@
       "noMic": "Aucun microphone détecté",
       "kitMissing": "La saisie vocale nécessite @swttch/extend-kit",
       "install": "Installer",
-      "installing": "Installation…"
+      "installing": "Installation…",
+      "firstUse": {
+        "title": "Envie de parler plutôt que de taper ?",
+        "message": "Parlez et le texte est écrit dans le champ. Nécessite d’installer @swttch/extend-kit une fois.\n\nSi vous refusez, le bouton du micro est masqué. Réactivez-le à tout moment dans Réglages → Général → Saisie vocale.",
+        "accept": "Installer et utiliser",
+        "decline": "Ne pas utiliser",
+        "installed": "Appuyez sur le micro et parlez.",
+        "installFailed": "Impossible d'installer l'outil de saisie vocale"
+      }
     }
   },
   "sessionHeader": {

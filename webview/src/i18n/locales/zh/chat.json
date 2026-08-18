@@ -99,7 +99,15 @@
       "noMic": "未找到麦克风",
       "kitMissing": "语音输入需要 @swttch/extend-kit",
       "install": "安装",
-      "installing": "正在安装…"
+      "installing": "正在安装…",
+      "firstUse": {
+        "title": "要试试语音输入吗？",
+        "message": "说话即可转写到输入框。需要一次性安装 @swttch/extend-kit。\n\n不使用则隐藏麦克风按钮。可随时在设置 → 常规 → 语音输入中重新开启。",
+        "accept": "安装并使用",
+        "decline": "不使用",
+        "installed": "按下麦克风开始说话。",
+        "installFailed": "无法安装语音输入工具"
+      }
     }
   },
   "sessionHeader": {

@@ -99,7 +99,15 @@
       "noMic": "找不到麥克風",
       "kitMissing": "語音輸入需要 @swttch/extend-kit",
       "install": "安裝",
-      "installing": "正在安裝…"
+      "installing": "正在安裝…",
+      "firstUse": {
+        "title": "要試試語音輸入嗎？",
+        "message": "說話即可轉寫到輸入框。需要一次性安裝 @swttch/extend-kit。\n\n不使用則隱藏麥克風按鈕。可隨時在設定 → 一般 → 語音輸入中重新開啟。",
+        "accept": "安裝並使用",
+        "decline": "不使用",
+        "installed": "按下麥克風開始說話。",
+        "installFailed": "無法安裝語音輸入工具"
+      }
     }
   },
   "sessionHeader": {

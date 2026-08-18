@@ -110,6 +110,63 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  // Where "no" is a recorded answer, leaving without choosing has to stay
+  // separate from giving it. onDismiss is how a caller says so.
+  it('routes Escape to onDismiss when one is given', () => {
+    const onCancel = vi.fn();
+    const onDismiss = vi.fn();
+    render(<ConfirmDialog {...baseProps} onCancel={onCancel} onDismiss={onDismiss} />);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('routes a backdrop click to onDismiss when one is given', () => {
+    const onCancel = vi.fn();
+    const onDismiss = vi.fn();
+    render(<ConfirmDialog {...baseProps} onCancel={onCancel} onDismiss={onDismiss} />);
+
+    fireEvent.click(screen.getByTestId('confirm-dialog-backdrop'));
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('shows a close button only when onDismiss is given', () => {
+    const { unmount } = render(<ConfirmDialog {...baseProps} />);
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
+    unmount();
+
+    const onDismiss = vi.fn();
+    render(<ConfirmDialog {...baseProps} onDismiss={onDismiss} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('still answers its buttons with onDismiss given', () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    const onDismiss = vi.fn();
+    render(
+      <ConfirmDialog
+        {...baseProps}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
   it('applies danger style classes to the Confirm button when variant is danger', () => {
     render(<ConfirmDialog {...baseProps} variant="danger" />);
 

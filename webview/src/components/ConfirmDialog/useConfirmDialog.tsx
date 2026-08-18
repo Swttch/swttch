@@ -10,33 +10,64 @@ export interface ConfirmOptions {
   variant?: 'default' | 'danger';
 }
 
+/** How the dialog was answered. */
+export enum ConfirmResult {
+  Confirmed = 'confirmed',
+  Declined = 'declined',
+  /** Closed without answering: Escape, the backdrop, or the close button. */
+  Dismissed = 'dismissed',
+}
+
 interface DialogState extends ConfirmOptions {
-  resolve: (value: boolean) => void;
+  /** Set when the caller used ask(), which tells dismissal apart from declining. */
+  dismissable: boolean;
+  resolve: (value: ConfirmResult) => void;
 }
 
 interface UseConfirmDialogReturn {
   confirmDialog: ReactNode;
+  /**
+   * Ask a yes/no question. Closing the dialog counts as "no", which is what a
+   * confirmation means by it.
+   */
   confirm: (options: ConfirmOptions) => Promise<boolean>;
+  /**
+   * Ask a question where closing is NOT an answer — the dialog grows a close
+   * button, and Escape/backdrop/close all resolve to `Dismissed`. For questions
+   * whose "no" is recorded and acted on, so walking away has to stay separate.
+   */
+  ask: (options: ConfirmOptions) => Promise<ConfirmResult>;
 }
 
 export function useConfirmDialog(): UseConfirmDialogReturn {
   const [state, setState] = useState<DialogState | null>(null);
 
-  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
-    return new Promise((resolve) => {
-      setState({ ...options, resolve });
-    });
-  }, []);
+  const open = useCallback(
+    (options: ConfirmOptions, dismissable: boolean): Promise<ConfirmResult> =>
+      new Promise((resolve) => {
+        setState({ ...options, dismissable, resolve });
+      }),
+    [],
+  );
 
-  const handleConfirm = useCallback(() => {
-    state?.resolve(true);
-    setState(null);
-  }, [state]);
+  const confirm = useCallback(
+    (options: ConfirmOptions): Promise<boolean> =>
+      open(options, false).then((result) => result === ConfirmResult.Confirmed),
+    [open],
+  );
 
-  const handleCancel = useCallback(() => {
-    state?.resolve(false);
-    setState(null);
-  }, [state]);
+  const ask = useCallback(
+    (options: ConfirmOptions): Promise<ConfirmResult> => open(options, true),
+    [open],
+  );
+
+  const settle = useCallback(
+    (result: ConfirmResult) => {
+      state?.resolve(result);
+      setState(null);
+    },
+    [state],
+  );
 
   const confirmDialog = state ? (
     <ConfirmDialog
@@ -45,10 +76,11 @@ export function useConfirmDialog(): UseConfirmDialogReturn {
       confirmLabel={state.confirmLabel}
       cancelLabel={state.cancelLabel}
       variant={state.variant}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
+      onDismiss={state.dismissable ? () => settle(ConfirmResult.Dismissed) : undefined}
+      onConfirm={() => settle(ConfirmResult.Confirmed)}
+      onCancel={() => settle(ConfirmResult.Declined)}
     />
   ) : null;
 
-  return { confirmDialog, confirm };
+  return { confirmDialog, confirm, ask };
 }

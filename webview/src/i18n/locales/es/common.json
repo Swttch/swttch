@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "Confirmar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "close": "Cerrar"
   },
   "zoomIndicator": {
     "label": "Nivel de zoom",

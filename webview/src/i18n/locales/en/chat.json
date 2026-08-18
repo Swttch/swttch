@@ -99,7 +99,15 @@
       "noMic": "No microphone was found",
       "kitMissing": "Voice input needs @swttch/extend-kit",
       "install": "Install",
-      "installing": "Installing…"
+      "installing": "Installing…",
+      "firstUse": {
+        "title": "Try speaking instead of typing?",
+        "message": "Speak and it is written into the composer. Takes a one-time install of @swttch/extend-kit.\n\nDecline and the microphone button is hidden. Turn it back on any time in Settings → General → Voice input.",
+        "accept": "Install and use",
+        "decline": "Don't use",
+        "installed": "Press the microphone and start speaking.",
+        "installFailed": "Could not install the voice input tool"
+      }
     }
   },
   "sessionHeader": {

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '../Portal';
 
@@ -8,6 +9,16 @@ interface Props {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
+  /**
+   * Closing without answering, when that is a distinct outcome from cancelling.
+   *
+   * By default Escape and a backdrop click route to `onCancel`, which is right
+   * while cancelling means "never mind". Pass this where the two buttons are a
+   * question and "no" is itself a recorded answer: leaving without choosing then
+   * has to mean "not now", not "no". Escape, the backdrop and a close button —
+   * which only appears when this is set — all land here instead.
+   */
+  onDismiss?: () => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -20,9 +31,14 @@ export function ConfirmDialog(props: Props) {
     confirmLabel = t('confirmDialog.confirm'),
     cancelLabel = t('confirmDialog.cancel'),
     variant = 'default',
+    onDismiss,
     onConfirm,
     onCancel,
   } = props;
+
+  // Where the caller distinguishes the two, leaving without answering is a
+  // dismissal; otherwise it stays what it has always been — a cancel.
+  const close = onDismiss ?? onCancel;
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
@@ -67,18 +83,18 @@ export function ConfirmDialog(props: Props) {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        onCancel();
+        close();
       }
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [onCancel]);
+  }, [close]);
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      onCancel();
+      close();
     }
   };
 
@@ -97,10 +113,26 @@ export function ConfirmDialog(props: Props) {
         <div
           ref={dialogRef}
           role="dialog"
-          className="bg-surface-raised border border-border-default rounded-xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
+          className="relative bg-surface-raised border border-border-default rounded-xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4"
         >
-          <h2 className="text-md font-semibold text-text-primary">{title}</h2>
-          <p className="text-sm text-text-secondary">{message}</p>
+          {/* Only where leaving without answering is its own outcome. A plain
+              confirmation has no need of it — Cancel already says that. */}
+          {onDismiss && (
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label={t('confirmDialog.close')}
+              title={t('confirmDialog.close')}
+              className="absolute right-3 top-3 rounded p-1 text-text-tertiary hover:text-text-primary hover:bg-surface-tooltip transition-colors"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          )}
+          <h2 className="text-md font-semibold text-text-primary pr-6">{title}</h2>
+          {/* pre-line so a message can break itself into paragraphs. Callers
+              write plain strings, and without this a `\n\n` collapses into a
+              space — one wall of text where two were intended. */}
+          <p className="text-sm text-text-secondary whitespace-pre-line">{message}</p>
           <div className="flex justify-end gap-2 mt-2">
             <button
               className="px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-tooltip transition-colors"

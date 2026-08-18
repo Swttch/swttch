@@ -25,6 +25,30 @@ export interface TelemetryConsent {
   decidedAt: string | null;
 }
 
+/**
+ * 음성 입력을 처음 쓰려 할 때 한 번 묻는 질문의 응답 상태.
+ * PENDING = 아직 응답하지 않음(다음 마이크 클릭에서 다시 묻는다).
+ */
+export enum VoicePromptStatus {
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  DECLINED = 'declined',
+}
+
+export interface VoicePrompt {
+  status: VoicePromptStatus;
+  /**
+   * 질문을 띄운 시각(ISO 8601). 아직 띄운 적이 없으면 null.
+   *
+   * 응답 시각과 따로 두는 이유: 물었는데 응답 없이 앱을 닫은 경우가
+   * "묻지 않았다"와 구분되어야 한다. 다시 물을 때마다 최신 시각으로 갱신한다.
+   * 킷이 이미 설치돼 있어 묻지 않고 ACCEPTED로 시작한 경우는 null로 남는다.
+   */
+  askedAt: string | null;
+  /** 응답한 시각(ISO 8601). 미응답이면 null. */
+  decidedAt: string | null;
+}
+
 export interface ProfileData {
   /** 설치 단위 가명 식별자. 동의 여부와 무관하게 항상 존재한다. */
   uuid: string;
@@ -35,6 +59,8 @@ export interface ProfileData {
   announcementsEnabled: boolean;
   /** 러너 게임(이스터에그) 최고 점수. 아직 기록이 없으면 0. */
   runnerBestScore: number;
+  /** 음성 입력을 쓸지 한 번 물은 질문의 응답. 설치 단위(글로벌)로 한 번만 묻는다. */
+  voicePrompt: VoicePrompt;
 }
 
 function createDefaultProfile(): ProfileData {
@@ -44,6 +70,7 @@ function createDefaultProfile(): ProfileData {
     dismissedAnnouncementIds: [],
     announcementsEnabled: true,
     runnerBestScore: 0,
+    voicePrompt: { status: VoicePromptStatus.PENDING, askedAt: null, decidedAt: null },
   };
 }
 
@@ -67,6 +94,29 @@ function normalizeAnnouncementsEnabled(value: unknown): boolean {
 /** 점수가 아닌 값(누락/손상/음수/소수)이면 0으로 보정한다. */
 function normalizeRunnerBestScore(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+/** ISO 문자열이 아닌 값(누락/손상)은 null로 보정한다. */
+function normalizeTimestamp(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+/**
+ * voicePrompt를 보정한다. 필드가 통째로 없는 기존 사용자는 PENDING으로 시작하므로,
+ * 다음에 마이크를 누를 때 질문을 받는다.
+ */
+export function normalizeVoicePrompt(value: unknown): VoicePrompt {
+  const raw = (value ?? {}) as Partial<VoicePrompt>;
+  const status =
+    raw.status === VoicePromptStatus.ACCEPTED || raw.status === VoicePromptStatus.DECLINED
+      ? raw.status
+      : VoicePromptStatus.PENDING;
+  return {
+    status,
+    askedAt: normalizeTimestamp(raw.askedAt),
+    // 미응답 상태에서 남아 있는 응답 시각은 모순이므로 버린다.
+    decidedAt: status === VoicePromptStatus.PENDING ? null : normalizeTimestamp(raw.decidedAt),
+  };
 }
 
 async function writeProfile(profile: ProfileData): Promise<void> {
@@ -94,6 +144,7 @@ export async function ensureProfile(): Promise<ProfileData> {
     );
     const announcementsEnabled = normalizeAnnouncementsEnabled(parsed.announcementsEnabled);
     const runnerBestScore = normalizeRunnerBestScore(parsed.runnerBestScore);
+    const voicePrompt = normalizeVoicePrompt(parsed.voicePrompt);
 
     const profile: ProfileData = {
       uuid:
@@ -105,6 +156,7 @@ export async function ensureProfile(): Promise<ProfileData> {
       dismissedAnnouncementIds,
       announcementsEnabled,
       runnerBestScore,
+      voicePrompt,
     };
 
     // 누락/손상 필드를 보정했으면 파일을 다시 써서 정규화한다.
@@ -115,7 +167,10 @@ export async function ensureProfile(): Promise<ProfileData> {
       !Array.isArray(parsed.dismissedAnnouncementIds) ||
       parsed.dismissedAnnouncementIds.length !== dismissedAnnouncementIds.length ||
       typeof parsed.announcementsEnabled !== 'boolean' ||
-      parsed.runnerBestScore !== runnerBestScore;
+      parsed.runnerBestScore !== runnerBestScore ||
+      parsed.voicePrompt?.status !== voicePrompt.status ||
+      parsed.voicePrompt?.askedAt !== voicePrompt.askedAt ||
+      parsed.voicePrompt?.decidedAt !== voicePrompt.decidedAt;
     if (needsRewrite) {
       await writeProfile(profile);
     }
@@ -142,6 +197,60 @@ export async function setTelemetryConsent(accepted: boolean): Promise<ProfileDat
   };
   await writeProfile(profile);
   return profile;
+}
+
+/** 음성 입력 질문의 현재 응답 상태를 읽는다. */
+export async function getVoicePrompt(): Promise<VoicePrompt> {
+  const profile = await ensureProfile();
+  return profile.voicePrompt;
+}
+
+/**
+ * 질문을 띄운 시각을 기록한다. 상태는 건드리지 않는다 — 아직 응답이 아니기 때문이다.
+ * 이미 응답한 뒤라면 다시 묻지 않으므로 아무것도 하지 않는다.
+ */
+export async function markVoicePromptAsked(): Promise<VoicePrompt> {
+  const profile = await ensureProfile();
+  if (profile.voicePrompt.status !== VoicePromptStatus.PENDING) return profile.voicePrompt;
+  profile.voicePrompt = { ...profile.voicePrompt, askedAt: new Date().toISOString() };
+  await writeProfile(profile);
+  return profile.voicePrompt;
+}
+
+/**
+ * 사용자의 응답을 기록한다.
+ *
+ * 설치 실패는 응답을 되돌리지 않는다 — 사용자의 의사는 "쓰겠다"였고, 실패는 그 의사와
+ * 별개다. 그래서 accepted는 설치 결과가 아니라 버튼을 누른 사실을 남긴다.
+ */
+export async function setVoicePromptDecision(accepted: boolean): Promise<VoicePrompt> {
+  const profile = await ensureProfile();
+  profile.voicePrompt = {
+    status: accepted ? VoicePromptStatus.ACCEPTED : VoicePromptStatus.DECLINED,
+    askedAt: profile.voicePrompt.askedAt,
+    decidedAt: new Date().toISOString(),
+  };
+  await writeProfile(profile);
+  return profile.voicePrompt;
+}
+
+/**
+ * 킷이 이미 설치돼 있으면 묻지 않고 ACCEPTED로 시작한다.
+ *
+ * 이미 킷을 가진 사람에게 "설치하시겠습니까"는 물을 이유가 없다. 묻지 않았으므로
+ * askedAt은 null로 두고, decidedAt에는 이렇게 정해진 시각을 남긴다.
+ * 이미 응답이 있으면 그 응답이 우선이므로 건드리지 않는다.
+ */
+export async function acceptVoicePromptForInstalledKit(): Promise<VoicePrompt> {
+  const profile = await ensureProfile();
+  if (profile.voicePrompt.status !== VoicePromptStatus.PENDING) return profile.voicePrompt;
+  profile.voicePrompt = {
+    status: VoicePromptStatus.ACCEPTED,
+    askedAt: null,
+    decidedAt: new Date().toISOString(),
+  };
+  await writeProfile(profile);
+  return profile.voicePrompt;
 }
 
 /** 현재까지 닫은(dismiss) 공지 id 목록을 읽는다. */

@@ -1,7 +1,8 @@
 {
   "confirmDialog": {
     "confirm": "확인",
-    "cancel": "취소"
+    "cancel": "취소",
+    "close": "닫기"
   },
   "zoomIndicator": {
     "label": "배율",

@@ -53,6 +53,18 @@ describe('Voice settings — the kit it depends on', () => {
     expect(rows?.className).toContain('pointer-events-none');
   });
 
+  // Voice input can be turned off from the first-use question, which promises
+  // this screen as the way back. Locking the toggle along with the rest would
+  // strand anyone who took that offer — and anyone who cannot install the kit at
+  // all is left staring at a microphone button they can never remove (#299).
+  it('leaves the on/off toggle usable when the kit is not installed', () => {
+    kitInfo = { packageName: '@swttch/extend-kit', installed: null, latest: '1.0.0', updatable: false };
+    render(<VoiceSection />);
+
+    const toggle = screen.getByRole('switch', { name: /voice input/i });
+    expect(toggle.closest('[aria-disabled="true"]')).toBeNull();
+  });
+
   it('offers an install button when the kit is missing', () => {
     kitInfo = { packageName: '@swttch/extend-kit', installed: null, latest: '1.0.0', updatable: false };
     render(<VoiceSection />);
