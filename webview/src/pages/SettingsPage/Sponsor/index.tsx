@@ -11,7 +11,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import { getAdapter } from '@/adapters';
-import { MessageType } from '@/shared';
+import { MessageType, ErrorCode } from '@/shared';
 import { PRICING_URL } from '@/config/app';
 import { useTranslation } from '@/i18n';
 
@@ -84,7 +84,10 @@ export function SponsorSettings() {
   const [opening, setOpening] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [verifying, setVerifying] = useState(false);
-  const [invalid, setInvalid] = useState(false);
+  // Which failure to explain, or null while there is nothing to report. Held as
+  // the code rather than a boolean because "we could not reach the server" and
+  // "that key is wrong" send the user to different places.
+  const [failure, setFailure] = useState<ErrorCode | null>(null);
 
   const handleSponsor = async () => {
     if (opening) return;
@@ -118,13 +121,13 @@ export function SponsorSettings() {
     const key = keyInput.trim();
     if (key === '' || verifying) return;
     setVerifying(true);
-    setInvalid(false);
+    setFailure(null);
     try {
       const result = await verify(key);
       if (result.valid) {
         setKeyInput('');
       } else {
-        setInvalid(true);
+        setFailure(result.errorCode ?? ErrorCode.SPONSOR_KEY_INVALID);
       }
     } finally {
       setVerifying(false);
@@ -233,7 +236,7 @@ export function SponsorSettings() {
               <input
                 type="text"
                 value={keyInput}
-                onChange={(e) => { setKeyInput(e.target.value); setInvalid(false); }}
+                onChange={(e) => { setKeyInput(e.target.value); setFailure(null); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') void handleActivate(); }}
                 placeholder={t('sponsor.activate.placeholder')}
                 spellCheck={false}
@@ -249,9 +252,20 @@ export function SponsorSettings() {
                 {verifying ? t('sponsor.activate.verifying') : t('sponsor.activate.button')}
               </button>
             </div>
-            {invalid && (
-              <p role="alert" className="mt-2 text-xs text-red-500 leading-relaxed">
-                {t('sponsor.activate.invalid')}
+            {failure !== null && (
+              <p
+                role="alert"
+                className={`mt-2 text-xs leading-relaxed ${
+                  // Being unable to reach us is not the user's mistake, so it is
+                  // not dressed as an input error the way a bad key is.
+                  failure === ErrorCode.SPONSOR_VERIFY_UNREACHABLE
+                    ? 'text-text-secondary'
+                    : 'text-red-500'
+                }`}
+              >
+                {failure === ErrorCode.SPONSOR_VERIFY_UNREACHABLE
+                  ? t('sponsor.activate.unreachable')
+                  : t('sponsor.activate.invalid')}
               </p>
             )}
           </div>

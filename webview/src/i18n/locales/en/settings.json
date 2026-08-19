@@ -438,7 +438,8 @@
       "placeholder": "Enter your sponsor key",
       "button": "Activate",
       "verifying": "Verifying…",
-      "invalid": "That key isn't valid. Please check it and try again."
+      "invalid": "That key isn't valid. Please check it and try again.",
+      "unreachable": "Couldn't reach the sponsorship server, so your key hasn't been checked yet. Your key may well be fine. If you're on a company network, a proxy, firewall or VPN may be blocking the connection."
     },
     "active": {
       "title": "Sponsoring",

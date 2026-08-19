@@ -436,7 +436,8 @@
       "placeholder": "Saisissez votre clé de sponsor",
       "button": "Activer",
       "verifying": "Vérification…",
-      "invalid": "Cette clé n'est pas valide. Vérifiez-la et réessayez."
+      "invalid": "Cette clé n'est pas valide. Vérifiez-la et réessayez.",
+      "unreachable": "Impossible de joindre le serveur de parrainage : votre clé n'a donc pas encore été vérifiée. Elle est peut-être tout à fait valide. Sur un réseau d'entreprise, un proxy, un pare-feu ou un VPN peut bloquer la connexion."
     },
     "active": {
       "title": "Parrainage actif",

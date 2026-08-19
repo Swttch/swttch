@@ -436,7 +436,8 @@
       "placeholder": "Sponsor-Schlüssel eingeben",
       "button": "Aktivieren",
       "verifying": "Wird geprüft…",
-      "invalid": "Dieser Schlüssel ist ungültig. Bitte überprüfe ihn und versuche es erneut."
+      "invalid": "Dieser Schlüssel ist ungültig. Bitte überprüfe ihn und versuche es erneut.",
+      "unreachable": "Der Sponsoring-Server war nicht erreichbar, dein Schlüssel wurde also noch nicht geprüft. Möglicherweise ist er völlig in Ordnung. In einem Firmennetzwerk können Proxy, Firewall oder VPN die Verbindung blockieren."
     },
     "active": {
       "title": "Sponsoring aktiv",
