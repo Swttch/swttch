@@ -5,7 +5,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { Route, routeToPath, withWorkingDir } from '@/router/routes';
 import { MessageType } from '@/shared';
 import { WORKING_DIR_PARAM_KEY } from './workingDirParam';
-import { ROOT_DIR_PARAM_KEY } from './rootDirParam';
+import { ascend, readAscentFromUrl } from './rootUpParam';
 
 interface WorkingDirContextValue {
   workingDirectory: string | null;
@@ -37,7 +37,7 @@ interface Props {
 }
 
 export { WORKING_DIR_PARAM_KEY, readWorkingDirFromUrl } from './workingDirParam';
-export { ROOT_DIR_PARAM_KEY, readRootDirFromUrl } from './rootDirParam';
+export { ROOT_UP_PARAM_KEY, ascend, ascentBetween } from './rootUpParam';
 
 export function WorkingDirProvider(props: Props) {
   const { children } = props;
@@ -54,14 +54,14 @@ export function WorkingDirProvider(props: Props) {
   const workingDirectory = rawWorkingDirectory
     ? rawWorkingDirectory.replace(/\/+$/, '') || rawWorkingDirectory
     : null;
-  // The single place `rootDir` is resolved. An absent parameter means the
-  // anchor and the session's directory coincide — the ordinary case — so it
-  // falls back to [workingDirectory] here rather than leaving every consumer
-  // to remember the same `?? workingDir` dance.
-  const rawRootDir = searchParams.get(ROOT_DIR_PARAM_KEY) || null;
-  const rootDir = rawRootDir
-    ? rawRootDir.replace(/\/+$/, '') || rawRootDir
-    : workingDirectory;
+  // The single place `rootDir` is resolved. The URL carries how far UP the
+  // anchor sits rather than a second absolute path, since the anchor is always
+  // an ancestor and spelling it out would repeat most of `workingDir`. Zero
+  // levels — an absent parameter — means the two coincide, the ordinary case,
+  // so consumers never have to remember a `?? workingDir` dance.
+  const rootDir = workingDirectory
+    ? ascend(workingDirectory, readAscentFromUrl(searchParams.toString()))
+    : null;
 
   const [ideRoot, setIdeRoot] = useState<string | null>(null);
 
