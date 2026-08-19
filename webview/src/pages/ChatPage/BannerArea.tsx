@@ -22,7 +22,7 @@ export function BannerArea(props: Props) {
 
   return (
     <div className="relative w-full">
-      <div ref={bannerRef} className="fixed top-[32px] start-0 w-full z-20">
+      <div ref={bannerRef} className="fixed top-10 start-0 w-full z-20">
         {children}
       </div>
       {bannerHeight > 0 && (

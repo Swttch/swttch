@@ -106,7 +106,36 @@ export function ChatMessageArea(props: Props) {
           */}
           {section.head && (
             <div
-              className="sticky top-0 z-[1] bg-surface-base"
+              className="sticky top-0 z-[1]"
+              /*
+                Content passing under the pinned message fades out instead of
+                meeting a hard edge, the way Cursor's extension does it.
+
+                A flat `bg-surface-base` cut the scrolled text off along a line
+                that read as a seam. The gradient is opaque across the message
+                itself and falls off below it, so text thins out as it travels
+                under rather than disappearing at a boundary.
+
+                `--surface-base-rgb` is the channel triplet the theme exposes
+                for exactly this (Tailwind's own `bg-surface-base/80` is built
+                on it), so the alpha goes straight into `rgb(... / a)` and the
+                fade follows the IDE theme along with everything else.
+
+                The falloff is squeezed into the last stretch (opaque to 88%,
+                then 0.6 / 0.3 / 0) so it lands on the trailing edge rather
+                than washing over the message box itself — the box keeps a
+                solid backdrop and stays readable while text thins out below
+                it. Raise 88% for an even later, sharper fade; spread the
+                three tail stops apart for a softer one.
+              */
+              style={{
+                background:
+                  'linear-gradient(to bottom,' +
+                  ' rgb(var(--surface-base-rgb)) 88%,' +
+                  ' rgb(var(--surface-base-rgb) / 0.6) 90%,' +
+                  ' rgb(var(--surface-base-rgb) / 0.3) 95%,' +
+                  ' rgb(var(--surface-base-rgb) / 0) 100%)',
+              }}
               onClick={() => {
                 console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
               }}
