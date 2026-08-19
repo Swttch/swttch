@@ -46,6 +46,31 @@ the instruction is hard to spot while scrolling past it — and pinning removes
 that problem one step earlier. There is no reason to make something easier to
 notice once it is always in view.
 
+### Content passing underneath fades out
+
+As the conversation scrolls under the pinned instruction it **thins out and
+fades** rather than being cut off.
+
+The first attempt painted a solid background, and the text ended abruptly
+along a line that read as a seam across the screen. The instruction itself now
+stays fully opaque while the area below it turns transparent, so words grow
+fainter as they travel under.
+
+### A button back to where it sits
+
+Pinning answers "what did I ask for?", but not **where in the conversation
+that instruction was.** What sits at the top is a copy held in place, so
+returning to its real position still meant scrolling around to find it.
+
+So the pinned instruction carries **a button that takes you back.** Press it
+and the view scrolls smoothly to where that message actually sits.
+
+The button appears **only while the instruction is genuinely pinned.** On one
+sitting at rest it would be a button that leads to where you already are —
+drawn over every instruction in the conversation. It also shows only while the
+pointer is over the instruction: with several on screen, a permanent icon on
+each is clutter in itself.
+
 ## What we learned building it
 
 ### Handing off instead of stacking meant changing the structure
@@ -76,6 +101,19 @@ Fortunately the repository already knew the difference. A rule for telling
 them apart was written for [#206](https://github.com/Swttch/swttch/issues/206),
 where the same trap kept dragging the view to the bottom, so it is reused here
 rather than written again.
+
+### Knowing it is pinned without watching the scroll
+
+Showing the button only while pinned means knowing that state, and watching
+the scroll position was not the way to get it. A conversation grows to
+thousands of entries, and attaching a watcher to every instruction that
+recalculates on every frame is weight the view has to carry.
+
+Instead each instruction has **a zero-height marker** just above it. While the
+instruction sits at rest that marker is on screen; the moment it rises far
+enough for the instruction to stick, the marker has left. The browser reports
+that entering and leaving only when it happens, so nothing is recomputed
+frame by frame.
 
 ### A gap made of six pixels
 
