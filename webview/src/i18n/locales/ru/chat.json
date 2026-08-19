@@ -166,7 +166,9 @@
       "loading": "Загрузка…",
       "noWorkingDirectoriesFound": "Рабочие каталоги не найдены",
       "browseAll": "Просмотреть все…",
-      "addNew": "+ Добавить новый"
+      "addNew": "+ Добавить новый",
+      "collapseSubtree": "Свернуть {{name}}",
+      "expandSubtree": "Развернуть {{name}}"
     }
   },
   "acceptPlan": {

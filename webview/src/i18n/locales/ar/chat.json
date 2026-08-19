@@ -166,7 +166,9 @@
       "loading": "جارٍ التحميل…",
       "noWorkingDirectoriesFound": "لم يتم العثور على أدلة عمل",
       "browseAll": "تصفح الكل…",
-      "addNew": "+ إضافة جديد"
+      "addNew": "+ إضافة جديد",
+      "collapseSubtree": "طي {{name}}",
+      "expandSubtree": "توسيع {{name}}"
     }
   },
   "acceptPlan": {

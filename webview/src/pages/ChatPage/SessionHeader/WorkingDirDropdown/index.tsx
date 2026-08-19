@@ -10,6 +10,7 @@ import { WorkingDirToggle } from './WorkingDirToggle';
 import { WorkingDirMenu } from './WorkingDirMenu';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { isMobile } from '@/config/environment';
 
 export function WorkingDirDropdown() {
   const { t } = useTranslation('chat');
@@ -89,8 +90,10 @@ export function WorkingDirDropdown() {
     void send(MessageType.OPEN_FOLDER_DIALOG, {});
   }, [send, subscribe, navigate]);
 
+  // On mobile the menu anchors to the viewport edges instead of this toggle, so
+  // the positioning context has to be dropped — same as SessionDropdown.
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={isMobile() ? '' : 'relative'} ref={containerRef}>
       <WorkingDirToggle
         isOpen={isOpen}
         disabled={isSessionActive}

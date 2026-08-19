@@ -166,7 +166,9 @@
       "loading": "正在載入…",
       "noWorkingDirectoriesFound": "找不到工作目錄",
       "browseAll": "瀏覽全部…",
-      "addNew": "+ 新增"
+      "addNew": "+ 新增",
+      "collapseSubtree": "摺疊 {{name}}",
+      "expandSubtree": "展開 {{name}}"
     }
   },
   "acceptPlan": {

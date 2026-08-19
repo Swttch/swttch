@@ -166,7 +166,9 @@
       "loading": "Carregando…",
       "noWorkingDirectoriesFound": "Nenhum diretório de trabalho encontrado",
       "browseAll": "Procurar todos…",
-      "addNew": "+ Adicionar novo"
+      "addNew": "+ Adicionar novo",
+      "collapseSubtree": "Recolher {{name}}",
+      "expandSubtree": "Expandir {{name}}"
     }
   },
   "acceptPlan": {

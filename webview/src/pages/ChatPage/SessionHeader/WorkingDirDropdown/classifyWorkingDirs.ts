@@ -30,12 +30,6 @@ function isInside(child: string, parent: string): boolean {
   return child.startsWith(parent + '/');
 }
 
-function isDirectChild(child: string, parent: string): boolean {
-  if (!isInside(child, parent)) return false;
-  const rest = child.slice(parent.length + 1);
-  return !rest.includes('/');
-}
-
 export function parentPathOf(path: string): string {
   const idx = path.lastIndexOf('/');
   return idx > 0 ? path.substring(0, idx) : '';
@@ -51,7 +45,7 @@ export function parentPathOf(path: string): string {
  *                [current] itself and the IDE root which is rendered as the
  *                anchor). This is what lets a user jump from `cli/` to
  *                `webview/` without first navigating up to the parent.
- * - descendants: direct children of [current] only (one level deep).
+ * - descendants: every working dir nested under [current], at any depth.
  * - ideRootEntry: the IDE root entry, always surfaced so the user can jump
  *                home even when the IDE root itself never hosted a Claude
  *                session.
@@ -119,8 +113,12 @@ export function classifyWorkingDirs(
         .sort((a, b) => a.path.localeCompare(b.path))
     : [];
 
+  // Every working dir nested under [current], at any depth — not just direct
+  // children. A monorepo keeps its sub-projects at `packages/<name>`, so a
+  // one-level cut hides exactly the entries the user is most likely to switch
+  // to. The menu reconstructs the intermediate folders as non-clickable rows.
   const descendants = all
-    .filter((e) => isDirectChild(e.path, current))
+    .filter((e) => isInside(e.path, current))
     .sort((a, b) => a.path.localeCompare(b.path));
 
   return {

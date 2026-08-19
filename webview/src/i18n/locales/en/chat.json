@@ -166,7 +166,9 @@
       "loading": "Loading…",
       "noWorkingDirectoriesFound": "No working directories found",
       "browseAll": "Browse all…",
-      "addNew": "+ Add new"
+      "addNew": "+ Add new",
+      "collapseSubtree": "Collapse {{name}}",
+      "expandSubtree": "Expand {{name}}"
     }
   },
   "acceptPlan": {

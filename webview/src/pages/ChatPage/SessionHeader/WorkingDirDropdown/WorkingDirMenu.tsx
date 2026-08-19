@@ -1,8 +1,10 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Route, routeToPath } from '@/router/routes';
 import { ClassifiedWorkingDirs, WorkingDirEntry } from './classifyWorkingDirs';
-import { TreeGlyph, WorkingDirItem } from './WorkingDirItem';
+import { WorkingDirItem } from './WorkingDirItem';
 import { useTranslation } from '@/i18n';
+import { isMobile } from '@/config/environment';
 
 interface Props {
   classified: ClassifiedWorkingDirs;
@@ -13,13 +15,21 @@ interface Props {
   onAddWorkingDir: () => void;
 }
 
-interface DisplayNode {
+export interface DisplayNode {
   entry: WorkingDirEntry;
   depth: number;
-  glyph: TreeGlyph;
   isCurrent: boolean;
   isIdeRoot: boolean;
   isDraft: boolean;
+  /**
+   * Structural row reconstructed to carry the tree shape (e.g. `packages/`
+   * between the repo root and `packages/webview`). It is not a registered
+   * working directory, so it renders unclickable with no session count.
+   */
+  isScaffold: boolean;
+  /** Path of the row this one hangs off, or null for the top-level rows. */
+  parentPath: string | null;
+  hasChildren: boolean;
 }
 
 function pathSegments(path: string): number {
@@ -27,21 +37,97 @@ function pathSegments(path: string): number {
 }
 
 /**
- * Flatten the classified entries into a depth-tagged list with tree glyphs.
+ * Render [descendants] as a real tree under [rootPath].
+ *
+ * Working dirs nest at arbitrary depth (`packages/claude-code-battery` sits two
+ * levels below the repo root), and the folders in between are usually not
+ * working dirs themselves. Those gaps are filled with scaffold rows so the
+ * nesting reads as a folder tree instead of a flat list of long paths.
+ *
+ * Depth is carried by indentation alone; each row also reports its parent so
+ * the menu can fold whole subtrees.
+ */
+function buildDescendantNodes(
+  descendants: WorkingDirEntry[],
+  rootPath: string,
+  baseDepth: number,
+): DisplayNode[] {
+  // Collect every path level between [rootPath] and each descendant, so the
+  // intermediate folders exist as nodes even when nobody ran claude in them.
+  const known = new Map<string, WorkingDirEntry>();
+  const allPaths = new Set<string>();
+
+  descendants.forEach((entry) => {
+    known.set(entry.path, entry);
+    const rest = entry.path.slice(rootPath.length + 1).split('/');
+    let acc = rootPath;
+    rest.forEach((segment) => {
+      acc = `${acc}/${segment}`;
+      allPaths.add(acc);
+    });
+  });
+
+  // parent path → its children, so each group can resolve its own last item.
+  const childrenOf = new Map<string, string[]>();
+  allPaths.forEach((path) => {
+    const parent = path.slice(0, path.lastIndexOf('/'));
+    const bucket = childrenOf.get(parent);
+    if (bucket) bucket.push(path);
+    else childrenOf.set(parent, [path]);
+  });
+  childrenOf.forEach((paths) => paths.sort((a, b) => a.localeCompare(b)));
+
+  const nodes: DisplayNode[] = [];
+
+  // The direct children of [rootPath] report it as their parent, so collapsing
+  // the current row folds the whole descendant tree in one step.
+  const walk = (parentPath: string) => {
+    const children = childrenOf.get(parentPath) ?? [];
+    children.forEach((path) => {
+      const depth = Math.max(0, pathSegments(path) - baseDepth);
+      const entry = known.get(path);
+
+      nodes.push({
+        entry: entry ?? {
+          name: path.split('/').pop() || path,
+          path,
+          sessionCount: 0,
+          lastModified: new Date(0).toISOString(),
+        },
+        depth,
+        isCurrent: false,
+        isIdeRoot: false,
+        isDraft: false,
+        isScaffold: !entry,
+        parentPath,
+        hasChildren: (childrenOf.get(path) ?? []).length > 0,
+      });
+
+      walk(path);
+    });
+  };
+
+  walk(rootPath);
+  return nodes;
+}
+
+/**
+ * Flatten the classified entries into a depth-tagged list.
  *
  * Layout order, top to bottom:
  *   1. IDE root (★ anchor) — unless [current] IS the IDE root
- *   2. ancestors chain — each is the only child at its depth, so they all
- *      render `└─`
- *   3. parent's children (siblings + current), sorted by path. Each gets
- *      `├─` or `└─` based on its position. The [current] entry within this
- *      group is highlighted as selected.
- *   4. current's direct descendants, indented under [current].
+ *   2. ancestors chain
+ *   3. parent's children (siblings + current), sorted by path. The [current]
+ *      entry within this group is highlighted as selected.
+ *   4. current's descendants at any depth, nested as a folder tree under
+ *      [current], with the in-between folders filled in as scaffold rows.
  *
  * Depth is real path-segment depth relative to the shallowest visible node,
- * so a `webview/` sitting under the IDE root nests one step.
+ * so a `webview/` sitting under the IDE root nests one step. Nesting is shown
+ * with indentation plus a folder icon and a disclosure chevron — the same
+ * vocabulary the host IDE's project tree uses.
  */
-function buildDisplayNodes(
+export function buildDisplayNodes(
   classified: ClassifiedWorkingDirs,
   currentPath: string | null,
 ): DisplayNode[] {
@@ -58,10 +144,12 @@ function buildDisplayNodes(
     nodes.push({
       entry: ideRootEntry,
       depth: 0,
-      glyph: null,
       isCurrent: false,
       isIdeRoot: true,
       isDraft: false,
+      isScaffold: false,
+      parentPath: null,
+      hasChildren: false,
     });
   }
 
@@ -70,10 +158,12 @@ function buildDisplayNodes(
     nodes.push({
       entry,
       depth,
-      glyph: depth === 0 ? null : 'last',
       isCurrent: false,
       isIdeRoot: false,
       isDraft: false,
+      isScaffold: false,
+      parentPath: null,
+      hasChildren: false,
     });
   });
 
@@ -82,33 +172,24 @@ function buildDisplayNodes(
       a.path.localeCompare(b.path),
     );
 
-    merged.forEach((entry, idx) => {
+    merged.forEach((entry) => {
       const isCurrentRow = entry.path === current.path;
-      const isLast = idx === merged.length - 1;
       const depth = Math.max(0, pathSegments(entry.path) - baseDepth);
 
       nodes.push({
         entry,
         depth,
-        glyph: depth === 0 ? null : isLast ? 'last' : 'mid',
         isCurrent: isCurrentRow,
         isIdeRoot: ideRootEntry?.path === entry.path,
         isDraft: isCurrentRow && currentIsDraft,
+        isScaffold: false,
+        parentPath: null,
+        // Only the current row hosts the descendant subtree below it.
+        hasChildren: isCurrentRow && descendants.length > 0,
       });
 
       if (isCurrentRow) {
-        descendants.forEach((desc, dIdx) => {
-          const dLast = dIdx === descendants.length - 1;
-          const dDepth = Math.max(0, pathSegments(desc.path) - baseDepth);
-          nodes.push({
-            entry: desc,
-            depth: dDepth,
-            glyph: dDepth === 0 ? null : dLast ? 'last' : 'mid',
-            isCurrent: false,
-            isIdeRoot: false,
-            isDraft: false,
-          });
-        });
+        nodes.push(...buildDescendantNodes(descendants, current.path, baseDepth));
       }
     });
   }
@@ -116,10 +197,49 @@ function buildDisplayNodes(
   return nodes;
 }
 
+/**
+ * Drop the rows sitting beneath a collapsed row.
+ *
+ * Walks the whole parent chain rather than checking the direct parent alone,
+ * so folding a branch high in the tree takes its entire subtree with it — a
+ * grandchild must not survive its grandparent being collapsed.
+ */
+export function visibleUnder(
+  nodes: DisplayNode[],
+  collapsed: ReadonlySet<string>,
+): DisplayNode[] {
+  if (collapsed.size === 0) return nodes;
+  const byPath = new Map(nodes.map((n) => [n.entry.path, n]));
+
+  return nodes.filter((node) => {
+    let ancestor = node.parentPath;
+    while (ancestor) {
+      if (collapsed.has(ancestor)) return false;
+      ancestor = byPath.get(ancestor)?.parentPath ?? null;
+    }
+    return true;
+  });
+}
+
 export function WorkingDirMenu(props: Props) {
   const { classified, currentPath, isLoading, onNavigate, onAddWorkingDir } = props;
   const { t } = useTranslation('chat');
   const nodes = buildDisplayNodes(classified, currentPath);
+
+  // Track only what is COLLAPSED, so "everything expanded" is the empty set —
+  // the default needs no seeding and stays correct when the tree changes shape
+  // underneath it. The menu unmounts on close, which resets this by itself:
+  // the fold is a way to read the current tree, not a preference to remember.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggle = (path: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(path)) next.add(path);
+      return next;
+    });
+
+  const visibleNodes = useMemo(() => visibleUnder(nodes, collapsed), [nodes, collapsed]);
 
   const handleFooterClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -128,7 +248,16 @@ export function WorkingDirMenu(props: Props) {
 
   return (
     <div
-      className="absolute start-0 top-full mt-1 w-[22rem] bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50"
+      // Mobile pins the panel to the viewport edges, matching the session
+      // dropdown. On desktop `w-[22rem]` is the FLOOR, not the width: deep
+      // trees push the panel wider (`w-max`) until it reaches the viewport,
+      // so a long nested path stays readable instead of being truncated.
+      className={[
+        'absolute top-full mt-1 bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50',
+        isMobile()
+          ? 'start-2 end-2'
+          : 'start-0 w-max min-w-[22rem] max-w-[calc(100vw-1rem)]',
+      ].join(' ')}
       role="menu"
     >
       {isLoading && nodes.length === 0 ? (
@@ -141,15 +270,18 @@ export function WorkingDirMenu(props: Props) {
         </div>
       ) : (
         <div className="max-h-[60vh] overflow-y-auto py-1">
-          {nodes.map((node) => (
+          {visibleNodes.map((node) => (
             <WorkingDirItem
               key={node.entry.path}
               entry={node.entry}
               depth={node.depth}
-              glyph={node.glyph}
               isCurrent={node.isCurrent}
               isIdeRoot={node.isIdeRoot}
               isDraft={node.isDraft}
+              isScaffold={node.isScaffold}
+              hasChildren={node.hasChildren}
+              isExpanded={!collapsed.has(node.entry.path)}
+              onToggle={() => toggle(node.entry.path)}
               onNavigate={onNavigate}
             />
           ))}

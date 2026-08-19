@@ -166,7 +166,9 @@
       "loading": "در حال بارگذاری…",
       "noWorkingDirectoriesFound": "هیچ دایرکتوری کاری یافت نشد",
       "browseAll": "مرور همه…",
-      "addNew": "+ افزودن جدید"
+      "addNew": "+ افزودن جدید",
+      "collapseSubtree": "جمع کردن {{name}}",
+      "expandSubtree": "باز کردن {{name}}"
     }
   },
   "acceptPlan": {

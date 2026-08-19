@@ -166,7 +166,9 @@
       "loading": "불러오는 중…",
       "noWorkingDirectoriesFound": "작업 디렉터리를 찾을 수 없습니다",
       "browseAll": "전체 찾아보기…",
-      "addNew": "+ 새로 추가"
+      "addNew": "+ 새로 추가",
+      "collapseSubtree": "{{name}} 접기",
+      "expandSubtree": "{{name}} 펼치기"
     }
   },
   "acceptPlan": {
