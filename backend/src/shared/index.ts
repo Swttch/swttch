@@ -9,3 +9,4 @@ export * from './scheduled-message';
 export * from './workflow';
 export * from './tool-decision';
 export * from './error-code';
+export * from './working-dir-path';

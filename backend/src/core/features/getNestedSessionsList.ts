@@ -1,3 +1,4 @@
+import { isInsideWorkingDir, isSameWorkingDir } from '../../shared';
 import { getProjectsList } from './getProjectsList';
 import { getSessionsList, type SessionListEntry } from './getSessionsList';
 
@@ -13,15 +14,6 @@ export type NestedSessionListEntry = SessionListEntry & {
 };
 
 /**
- * Posix-style containment that does not fire on a shared name prefix.
- * `/repo-worktrees` is NOT inside `/repo`, even though the string starts with it.
- */
-function isInside(child: string, parent: string): boolean {
-  if (child === parent) return false;
-  return child.startsWith(parent + '/');
-}
-
-/**
  * Sessions for [rootDir] plus every working directory nested under it.
  *
  * Reading a whole subtree costs one directory scan per working directory, so
@@ -32,10 +24,16 @@ function isInside(child: string, parent: string): boolean {
  */
 export async function getNestedSessionsList(rootDir: string): Promise<NestedSessionListEntry[]> {
   const projects = await getProjectsList();
-  const dirs = [rootDir, ...projects.map((p) => p.path).filter((p) => isInside(p, rootDir))];
+  const nested = projects.map((p) => p.path).filter((p) => isInsideWorkingDir(p, rootDir));
 
-  // Deduplicate: the root can also appear in the projects list.
-  const uniqueDirs = Array.from(new Set(dirs));
+  // Deduplicate: the root can also appear in the projects list, and on a
+  // case-insensitive file system two entries can name the same directory with
+  // different spellings — so identity is decided by isSameWorkingDir, not by
+  // string equality in a Set.
+  const uniqueDirs = [rootDir];
+  for (const dir of nested) {
+    if (!uniqueDirs.some((seen) => isSameWorkingDir(seen, dir))) uniqueDirs.push(dir);
+  }
 
   const perDir = await Promise.all(
     uniqueDirs.map(async (dir) => {

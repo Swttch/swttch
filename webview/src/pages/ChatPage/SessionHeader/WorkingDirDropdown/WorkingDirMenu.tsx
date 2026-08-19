@@ -7,6 +7,12 @@ import { WorkingDirItem } from './WorkingDirItem';
 import { useTranslation } from '@/i18n';
 import { isMobile } from '@/config/environment';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
+import {
+  isSameWorkingDir,
+  relativeWorkingDir,
+  workingDirName,
+  workingDirSegments,
+} from '@/shared';
 
 interface Props {
   classified: ClassifiedWorkingDirs;
@@ -44,7 +50,7 @@ export interface DisplayNode {
 }
 
 function pathSegments(path: string): number {
-  return path.split('/').filter(Boolean).length;
+  return workingDirSegments(path).length;
 }
 
 /**
@@ -69,12 +75,19 @@ function buildDescendantNodes(
   const known = new Map<string, WorkingDirEntry>();
   const allPaths = new Set<string>();
 
+  // Scaffold paths are built by re-joining segments onto [rootPath], so they
+  // must use the separator the real paths already use — otherwise a Windows
+  // subtree would grow forward-slash rows that no longer match the entries
+  // they stand for.
+  const separator = rootPath.includes('\\') && !rootPath.includes('/') ? '\\' : '/';
+
   descendants.forEach((entry) => {
     known.set(entry.path, entry);
-    const rest = entry.path.slice(rootPath.length + 1).split('/');
+    const relative = relativeWorkingDir(entry.path, rootPath);
+    if (relative === null) return;
     let acc = rootPath;
-    rest.forEach((segment) => {
-      acc = `${acc}/${segment}`;
+    relative.split('/').forEach((segment) => {
+      acc = `${acc}${separator}${segment}`;
       allPaths.add(acc);
     });
   });
@@ -82,7 +95,7 @@ function buildDescendantNodes(
   // parent path → its children, so each group can resolve its own last item.
   const childrenOf = new Map<string, string[]>();
   allPaths.forEach((path) => {
-    const parent = path.slice(0, path.lastIndexOf('/'));
+    const parent = path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
     const bucket = childrenOf.get(parent);
     if (bucket) bucket.push(path);
     else childrenOf.set(parent, [path]);
@@ -101,13 +114,13 @@ function buildDescendantNodes(
 
       nodes.push({
         entry: entry ?? {
-          name: path.split('/').pop() || path,
+          name: workingDirName(path),
           path,
           sessionCount: 0,
           lastModified: new Date(0).toISOString(),
         },
         depth,
-        isCurrent: path === selected,
+        isCurrent: !!selected && isSameWorkingDir(path, selected),
         isIdeRoot: false,
         isDraft: false,
         isScaffold: !entry,

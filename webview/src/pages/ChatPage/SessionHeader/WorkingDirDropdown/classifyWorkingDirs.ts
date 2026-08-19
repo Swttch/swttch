@@ -1,3 +1,10 @@
+import {
+  isInsideWorkingDir,
+  isSameWorkingDir,
+  parentWorkingDir,
+  workingDirName,
+} from '@/shared';
+
 export interface WorkingDirEntry {
   name: string;
   path: string;
@@ -21,18 +28,8 @@ export interface ClassifiedWorkingDirs {
   currentIsDraft: boolean;
 }
 
-/**
- * Posix-style path containment without trailing-slash false positives.
- * `/a/foo` is NOT inside `/a/fo` even though `'/a/foo'.startsWith('/a/fo')`.
- */
-function isInside(child: string, parent: string): boolean {
-  if (child === parent) return false;
-  return child.startsWith(parent + '/');
-}
-
 export function parentPathOf(path: string): string {
-  const idx = path.lastIndexOf('/');
-  return idx > 0 ? path.substring(0, idx) : '';
+  return parentWorkingDir(path);
 }
 
 /**
@@ -67,8 +64,8 @@ export function classifyWorkingDirs(
   }
 
   const ideRootEntry = ideRoot
-    ? (all.find((e) => e.path === ideRoot) ?? {
-        name: ideRoot.split('/').pop() || ideRoot,
+    ? (all.find((e) => isSameWorkingDir(e.path, ideRoot)) ?? {
+        name: workingDirName(ideRoot),
         path: ideRoot,
         sessionCount: 0,
         lastModified: new Date(0).toISOString(),
@@ -81,21 +78,23 @@ export function classifyWorkingDirs(
   // otherwise the user lands on a working dir that doesn't appear in its own
   // dropdown. The `currentIsDraft` flag downstream marks this row with a
   // "Draft" badge so the user knows the WD only persists once a session runs.
-  const foundCurrent = all.find((e) => e.path === current);
+  const foundCurrent = all.find((e) => isSameWorkingDir(e.path, current));
   const currentIsDraft = !foundCurrent;
   const currentEntry =
     foundCurrent ?? {
-      name: current.split('/').pop() || current,
+      name: workingDirName(current),
       path: current,
       sessionCount: 0,
       lastModified: new Date(0).toISOString(),
     };
 
   const ancestors = all
-    .filter((e) => isInside(current, e.path))
-    .filter((e) => (ideRoot ? e.path === ideRoot || isInside(e.path, ideRoot) : true))
+    .filter((e) => isInsideWorkingDir(current, e.path))
+    .filter((e) =>
+      ideRoot ? isSameWorkingDir(e.path, ideRoot) || isInsideWorkingDir(e.path, ideRoot) : true,
+    )
     // IDE root is rendered separately as the anchor — exclude here to dedupe.
-    .filter((e) => !ideRoot || e.path !== ideRoot)
+    .filter((e) => !ideRoot || !isSameWorkingDir(e.path, ideRoot))
     .sort((a, b) => a.path.length - b.path.length);
 
   // Sibling working directories share a common PARENT working directory —
@@ -104,12 +103,17 @@ export function classifyWorkingDirs(
   // sitting next to each other are not "siblings" in our domain, they're just
   // two unrelated working dirs that happen to live under the same folder.
   const currentParent = parentPathOf(current);
-  const parentIsWorkingDir = !!currentParent && all.some((e) => e.path === currentParent);
+  const parentIsWorkingDir =
+    !!currentParent && all.some((e) => isSameWorkingDir(e.path, currentParent));
   const siblings = parentIsWorkingDir
     ? all
-        .filter((e) => e.path !== current && parentPathOf(e.path) === currentParent)
+        .filter(
+          (e) =>
+            !isSameWorkingDir(e.path, current) &&
+            isSameWorkingDir(parentPathOf(e.path), currentParent),
+        )
         // Suppress the IDE root from sibling slot — it's already the anchor.
-        .filter((e) => !ideRoot || e.path !== ideRoot)
+        .filter((e) => !ideRoot || !isSameWorkingDir(e.path, ideRoot))
         .sort((a, b) => a.path.localeCompare(b.path))
     : [];
 
@@ -118,7 +122,7 @@ export function classifyWorkingDirs(
   // one-level cut hides exactly the entries the user is most likely to switch
   // to. The menu reconstructs the intermediate folders as non-clickable rows.
   const descendants = all
-    .filter((e) => isInside(e.path, current))
+    .filter((e) => isInsideWorkingDir(e.path, current))
     .sort((a, b) => a.path.localeCompare(b.path));
 
   return {

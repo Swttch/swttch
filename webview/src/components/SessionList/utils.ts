@@ -1,5 +1,6 @@
 import { SessionMetaDto } from '@/dto';
 import { i18n } from '@/i18n';
+import { isSameWorkingDir, relativeWorkingDir, workingDirName } from '@/shared';
 
 /**
  * 상대 시간 표시 (Cursor 방식). 표기는 활성 로케일을 따른다.
@@ -23,8 +24,10 @@ export function getSessionOriginLabel(
   rootDir: string | null,
 ): string | undefined {
   if (!sessionDir || !rootDir) return undefined;
-  if (sessionDir === rootDir) return sessionDir.split('/').pop() || sessionDir;
-  if (sessionDir.startsWith(rootDir + '/')) return sessionDir.slice(rootDir.length + 1);
+  if (isSameWorkingDir(sessionDir, rootDir)) return workingDirName(sessionDir);
+
+  const relative = relativeWorkingDir(sessionDir, rootDir);
+  if (relative !== null) return relative;
 
   // Outside the anchor entirely: nothing to trim against, so name it in full.
   return sessionDir;
