@@ -56,6 +56,7 @@ describe('SessionsApi', () => {
 
       expect(mockBridge.request).toHaveBeenCalledWith(MessageType.GET_SESSIONS, {
         workingDir: '/test/path',
+        includeNested: false,
       });
       expect(result.sessions).toHaveLength(2);
       expect(result.sessions[0]).toBeInstanceOf(SessionMetaDto);

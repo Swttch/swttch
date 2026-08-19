@@ -52,11 +52,11 @@ export class SessionsApi {
    * List all sessions
    * GET /sessions
    */
-  async index(workingDir?: string): Promise<SessionListResult> {
+  async index(workingDir?: string, includeNested?: boolean): Promise<SessionListResult> {
     const dir = workingDir ?? this.getConfig().workingDir;
     const response = await this.bridge.request<GetSessionsResponse>(
       MessageType.GET_SESSIONS,
-      { workingDir: dir }
+      { workingDir: dir, includeNested: includeNested ?? false }
     );
 
     if (!response?.sessions || !Array.isArray(response.sessions)) {

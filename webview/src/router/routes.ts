@@ -16,6 +16,9 @@ import {
   CodeBracketSquareIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
+// Imported from the parameter module rather than WorkingDirContext: that
+// context pulls in the api/bridge layer, which would cycle back through here.
+import { ROOT_UP_PARAM_KEY, ascentBetween } from '@/contexts/rootUpParam';
 
 /**
  * 아이콘 이름 enum - 모든 아이콘 참조는 이 enum 사용
@@ -290,6 +293,24 @@ export function withWorkingDir(path: string, workingDir?: string | null): string
 
   const sep = path.includes('?') ? '&' : '?';
   return `${path}${sep}workingDir=${encodeURIComponent(dir)}`;
+}
+
+/**
+ * Append `?rootUp=` when the anchor sits above the session's own directory.
+ *
+ * Carries the number of levels rather than the anchor path: the anchor is
+ * always an ancestor, so writing it in full would repeat most of `workingDir`
+ * again, percent-encoded. Omitted when the two coincide, which keeps every
+ * ordinary URL exactly as it was — absent already means "zero levels up".
+ */
+export function withRootDir(path: string, rootDir: string | null, workingDir: string | null): string {
+  if (!rootDir || !workingDir) return path;
+
+  const levels = ascentBetween(workingDir, rootDir);
+  if (levels === 0) return path;
+
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}${ROOT_UP_PARAM_KEY}=${levels}`;
 }
 
 /** Query param carrying where to return after a login completes. */

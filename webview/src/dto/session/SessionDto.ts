@@ -22,6 +22,12 @@ export class SessionMetaDto {
   isSidechain: boolean = false;
   projectPath?: string;
   gitBranch?: string;
+  /**
+   * The working directory this session belongs to. Always sent, so a row can
+   * name where it came from and be opened in its own directory rather than the
+   * one currently being browsed — they differ once nested sessions are listed.
+   */
+  sessionDir?: string;
 }
 
 /**

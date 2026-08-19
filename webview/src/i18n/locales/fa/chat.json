@@ -168,7 +168,9 @@
       "browseAll": "مرور همه…",
       "addNew": "+ افزودن جدید",
       "collapseSubtree": "جمع کردن {{name}}",
-      "expandSubtree": "باز کردن {{name}}"
+      "expandSubtree": "باز کردن {{name}}",
+      "refreshTitle": "تازه‌سازی فهرست",
+      "includeNested": "شامل زیرپروژه‌ها"
     }
   },
   "acceptPlan": {

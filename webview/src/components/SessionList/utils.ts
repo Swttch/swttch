@@ -6,6 +6,30 @@ import { i18n } from '@/i18n';
  * - 1분 미만: "now" / "방금"
  * - 1분~59분: "5m" / "5분"  (이하 시/일/월/년)
  */
+/**
+ * Label naming which project a session came from.
+ *
+ * Every row gets one while directories are merged — including the anchor's own
+ * sessions, which are named by their folder. Labelling only the nested rows
+ * would leave the anchor's rows looking like they had no origin at all, and
+ * make the rows uneven to scan.
+ *
+ * Nested rows show the path RELATIVE to the anchor (`packages/battery`): the
+ * shared prefix is the same on every row, so repeating it would push the part
+ * that actually distinguishes them out of a narrow dropdown.
+ */
+export function getSessionOriginLabel(
+  sessionDir: string | undefined,
+  rootDir: string | null,
+): string | undefined {
+  if (!sessionDir || !rootDir) return undefined;
+  if (sessionDir === rootDir) return sessionDir.split('/').pop() || sessionDir;
+  if (sessionDir.startsWith(rootDir + '/')) return sessionDir.slice(rootDir.length + 1);
+
+  // Outside the anchor entirely: nothing to trim against, so name it in full.
+  return sessionDir;
+}
+
 export function getRelativeTime(date: Date): string {
   const elapsed = Date.now() - date.getTime();
   const seconds = Math.floor(elapsed / 1000);

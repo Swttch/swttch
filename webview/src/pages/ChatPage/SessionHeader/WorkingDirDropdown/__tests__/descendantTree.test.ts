@@ -187,6 +187,36 @@ describe('buildDisplayNodes — a freshly picked working dir', () => {
   });
 });
 
+describe('buildDisplayNodes — anchor and highlight are separate', () => {
+  const NESTED = `${REPO}/packages/active-cli-sdk`;
+  // Browsing the repo root while a session nested under it is open.
+  const classified = classifyWorkingDirs(ALL, REPO, REPO);
+  const nodes = buildDisplayNodes(classified, REPO, NESTED);
+
+  it('keeps the tree rooted at the directory being browsed', () => {
+    // Re-rooting on the session's own directory would make the panel look
+    // exactly like having entered that sub-project directly — the sibling
+    // packages and the repo root would vanish from the tree.
+    expect(nodes.map((n) => n.entry.path)).toEqual([
+      REPO,
+      `${REPO}/packages`,
+      `${REPO}/packages/active-cli-sdk`,
+      `${REPO}/packages/claude-code-battery`,
+      `${REPO}/webview`,
+    ]);
+  });
+
+  it('highlights the session’s own directory, not the anchor', () => {
+    const highlighted = nodes.filter((n) => n.isCurrent).map((n) => n.entry.path);
+    expect(highlighted).toEqual([NESTED]);
+  });
+
+  it('highlights the anchor when no separate selection is given', () => {
+    const plain = buildDisplayNodes(classified, REPO);
+    expect(plain.filter((n) => n.isCurrent).map((n) => n.entry.path)).toEqual([REPO]);
+  });
+});
+
 describe('indentStyle — indentation without a ceiling', () => {
   it('steps in by a constant amount per level', () => {
     expect(indentStyle(0).paddingInlineStart).toBe('0.625rem');

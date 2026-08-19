@@ -168,7 +168,9 @@
       "browseAll": "Просмотреть все…",
       "addNew": "+ Добавить новый",
       "collapseSubtree": "Свернуть {{name}}",
-      "expandSubtree": "Развернуть {{name}}"
+      "expandSubtree": "Развернуть {{name}}",
+      "refreshTitle": "Обновить список",
+      "includeNested": "Включая вложенные"
     }
   },
   "acceptPlan": {

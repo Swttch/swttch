@@ -6,11 +6,13 @@ import type { SessionServiceError } from '../api/modules/SessionsApi';
 import { useBridgeContext } from './BridgeContext';
 import { useApi } from './ApiContext';
 import { useWorkingDir } from './WorkingDirContext';
+import { useSettingsOrNull } from './SettingsContext';
+import { SettingKey } from '@/types/settings';
 import { useClaudeSettings } from './ClaudeSettingsContext';
 import { getAdapter, onBridgeReady } from '../adapters';
 import { getLogForwarder } from '../api/logging';
 import { toTitle } from '../mappers/sessionTransformer';
-import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingDir } from '../router/routes';
+import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingDir, withRootDir } from '../router/routes';
 import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
@@ -75,7 +77,11 @@ interface SessionProviderProps {
 
 export function SessionProvider({ children }: SessionProviderProps) {
   const { subscribe, isConnected } = useBridgeContext();
-  const { workingDirectory, setWorkingDirectory } = useWorkingDir();
+  const { workingDirectory, setWorkingDirectory, rootDir } = useWorkingDir();
+  // Reading the setting only widens the listing scope; without a provider the
+  // default (off) is the correct answer, so this must not hard-require one.
+  const includeNested =
+    useSettingsOrNull()?.settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
   const { settings: claudeSettings } = useClaudeSettings();
   const api = useApi();
   const navigate = useNavigate();
@@ -173,13 +179,26 @@ export function SessionProvider({ children }: SessionProviderProps) {
   }, []);
 
   // Navigation helpers
-  const navigateToSession = useCallback((sessionId: string) => {
-    navigate(withWorkingDir(sessionToPath(sessionId)), { replace: isJetBrains() });
-  }, [navigate]);
+  //
+  // A session runs in the directory it was recorded under, which is not always
+  // the one being browsed — listing nested sessions surfaces rows from below the
+  // anchor. [sessionDir] carries that per-session directory; the anchor rides
+  // along in `rootDir` so the list keeps its scope after the jump instead of
+  // silently narrowing to wherever the opened session happens to live.
+  const navigateToSession = useCallback((sessionId: string, sessionDir?: string) => {
+    const dir = sessionDir ?? workingDirectory;
+    const path = withWorkingDir(sessionToPath(sessionId), dir);
+    navigate(withRootDir(path, rootDir, dir), { replace: isJetBrains() });
+  }, [navigate, workingDirectory, rootDir]);
 
+  // Clearing the conversation starts a new session in the SAME place the user
+  // was working, so the anchor rides along too. Dropping it would silently
+  // collapse the view onto the sub-project, which reads as having entered that
+  // project directly and loses the wider tree the user was browsing.
   const navigateToNewSession = useCallback(() => {
-    navigate(withWorkingDir(routeToPath(Route.NEW_SESSION)), { replace: isJetBrains() });
-  }, [navigate]);
+    const path = withWorkingDir(routeToPath(Route.NEW_SESSION), workingDirectory);
+    navigate(withRootDir(path, rootDir, workingDirectory), { replace: isJetBrains() });
+  }, [navigate, workingDirectory, rootDir]);
 
   // loadSessions - using new API
   const loadSessions = useCallback(async () => {
@@ -188,16 +207,20 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return;
     }
 
-    if (!workingDirectory) {
-      console.log('[SessionContext] No working directory set, cannot load sessions');
+    // Sessions are listed for where the user is LOOKING FROM, not for where the
+    // current session happens to run. The two are the same value until a nested
+    // session is opened, at which point the list must keep showing the wider
+    // scope instead of narrowing to the session that was just opened.
+    if (!rootDir) {
+      console.log('[SessionContext] No root directory set, cannot load sessions');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('[SessionContext] Loading sessions from:', workingDirectory);
+      console.log('[SessionContext] Loading sessions from:', rootDir, 'nested:', includeNested);
 
-      const result = await api.sessions.index(workingDirectory);
+      const result = await api.sessions.index(rootDir, includeNested);
       const sessions = result.sessions
         .filter(s => !s.isSidechain)
         .sort((a, b) => {
@@ -217,7 +240,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [isConnected, api.sessions, workingDirectory]);
+  }, [isConnected, api.sessions, rootDir, includeNested]);
 
   // Listen for state changes from Kotlin
   useEffect(() => {
@@ -279,9 +302,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const switchSession = useCallback((sessionId: string) => {
     console.log('[SessionContext] switchSession called with:', sessionId);
 
-    if (sessions.some(s => s.id === sessionId)) {
+    const target = sessions.find(s => s.id === sessionId);
+    if (target) {
       // URL change is the SSOT — SessionLoader reacts to clear state + load messages
-      navigateToSession(sessionId);
+      navigateToSession(sessionId, target.sessionDir);
     } else {
       console.warn('[SessionContext] Session not found in list:', sessionId);
     }

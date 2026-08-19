@@ -168,7 +168,9 @@
       "browseAll": "Browse all…",
       "addNew": "+ Add new",
       "collapseSubtree": "Collapse {{name}}",
-      "expandSubtree": "Expand {{name}}"
+      "expandSubtree": "Expand {{name}}",
+      "refreshTitle": "Refresh the list",
+      "includeNested": "Include nested"
     }
   },
   "acceptPlan": {

@@ -55,6 +55,11 @@ export enum SettingKey {
   // Chat history paging
   CHAT_PAGINATION = 'chatPagination',
 
+  // List sessions from directories nested under the one being browsed, not just
+  // that directory itself. Off by default: it widens what the session dropdown
+  // shows, which should be the user's choice rather than a surprise.
+  INCLUDE_NESTED_SESSIONS = 'includeNestedSessions',
+
   // UI mirroring (RTL/LTR layout direction)
   UI_DIRECTION = 'uiDirection',
 
@@ -296,6 +301,7 @@ export interface SettingsState {
   [SettingKey.HOST_MODE]: HostMode;
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode;
   [SettingKey.CHAT_PAGINATION]: boolean;
+  [SettingKey.INCLUDE_NESTED_SESSIONS]: boolean;
   [SettingKey.UI_DIRECTION]: UiDirection;
   [SettingKey.UI_LANGUAGE]: string | null;
   [SettingKey.VOICE]: VoiceSettings;
@@ -327,6 +333,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.HOST_MODE]: HostMode.EDITOR_TAB,
   [SettingKey.OPEN_SETTINGS_AS]: OpenSettingsMode.OVERLAY,
   [SettingKey.CHAT_PAGINATION]: true,
+  [SettingKey.INCLUDE_NESTED_SESSIONS]: false,
   [SettingKey.UI_DIRECTION]: UiDirection.LTR,
   [SettingKey.UI_LANGUAGE]: null,
   [SettingKey.VOICE]: {},

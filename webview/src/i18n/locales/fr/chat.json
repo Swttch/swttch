@@ -168,7 +168,9 @@
       "browseAll": "Parcourir tout…",
       "addNew": "+ Ajouter un nouveau",
       "collapseSubtree": "Réduire {{name}}",
-      "expandSubtree": "Développer {{name}}"
+      "expandSubtree": "Développer {{name}}",
+      "refreshTitle": "Actualiser la liste",
+      "includeNested": "Inclure les sous-projets"
     }
   },
   "acceptPlan": {

@@ -168,7 +168,9 @@
       "browseAll": "浏览全部…",
       "addNew": "+ 新增",
       "collapseSubtree": "折叠 {{name}}",
-      "expandSubtree": "展开 {{name}}"
+      "expandSubtree": "展开 {{name}}",
+      "refreshTitle": "刷新列表",
+      "includeNested": "包含子项目"
     }
   },
   "acceptPlan": {
