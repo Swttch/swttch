@@ -893,12 +893,20 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         const assistantMessage = cliEvent.message as Record<string, unknown> | undefined;
         if (!assistantMessage) return;
 
-        // Preserve top-level API-error metadata. Auth failures arrive as a
-        // synthetic assistant entry carrying isApiErrorMessage/apiErrorStatus/error
-        // (not inside `message`), which the renderer uses to show a login CTA.
+        // Preserve top-level API-error metadata. Rate limits and auth failures
+        // arrive as a synthetic assistant entry carrying the markers next to
+        // `message` (not inside it), which the renderers use to show the
+        // auto-resume action / login CTA.
+        //
+        // The CLI spells these two ways for the SAME entry: the live stdout event
+        // uses snake_case (`is_api_error_message`), while the JSONL it writes for
+        // the same uuid uses camelCase (`isApiErrorMessage`). Reading only
+        // camelCase dropped the marker on the live path, so a usage-limit notice
+        // rendered as ordinary text with no auto-resume button — and then appeared
+        // correctly after a reload, because that path re-reads the JSONL.
         const apiErrorFields = {
-          isApiErrorMessage: cliEvent.isApiErrorMessage as boolean | undefined,
-          apiErrorStatus: cliEvent.apiErrorStatus as number | undefined,
+          isApiErrorMessage: (cliEvent.isApiErrorMessage ?? cliEvent.is_api_error_message) as boolean | undefined,
+          apiErrorStatus: (cliEvent.apiErrorStatus ?? cliEvent.api_error_status) as number | undefined,
           error: cliEvent.error as string | undefined,
         };
 
