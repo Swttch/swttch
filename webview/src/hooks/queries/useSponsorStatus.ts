@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
-import { MessageType } from '@/shared';
+import { MessageType, ErrorCode } from '@/shared';
 
 interface SponsorStatusResponse {
   status?: string;
@@ -31,6 +31,8 @@ interface VerifyResponse {
   valid?: boolean;
   licenseStatus?: string;
   error?: string;
+  /** Which kind of failure this was — see ErrorCode. Absent on success. */
+  errorCode?: ErrorCode;
 }
 
 interface SponsorState {
@@ -46,6 +48,11 @@ interface SponsorState {
 export interface VerifyResult {
   valid: boolean;
   error?: string;
+  /**
+   * Which kind of failure this was, so the caller can say something true about
+   * it. A key we could not check is NOT a key we know to be wrong.
+   */
+  errorCode?: ErrorCode;
 }
 
 export interface UseSponsorStatusResult {
@@ -114,7 +121,14 @@ export function useSponsorStatus(): UseSponsorStatusResult {
         invalidate();
         return { valid: true };
       }
-      return { valid: false, error: res?.error };
+      // An older backend (or a dropped ACK) sends no errorCode; fall back to
+      // treating it as an invalid key, which is the message this screen showed
+      // for every failure before the two kinds were told apart.
+      return {
+        valid: false,
+        error: res?.error,
+        errorCode: res?.errorCode ?? ErrorCode.SPONSOR_KEY_INVALID,
+      };
     },
     [send, invalidate],
   );

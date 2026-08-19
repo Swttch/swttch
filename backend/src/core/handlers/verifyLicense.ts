@@ -2,12 +2,20 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { verifyLicenseRemote, saveLicense, reportActivation } from '../features/license';
-import { MessageType } from '../../shared';
+import { MessageType, ErrorCode } from '../../shared';
 
 /**
  * Verify a sponsor license key against www. On success the key is persisted so
  * the sponsor state survives restarts; on failure nothing is stored. Returns the
- * verification result to the webview (valid / status / error).
+ * verification result to the webview (valid / status / error / errorCode).
+ *
+ * A failure is reported with an `errorCode` saying WHICH kind it was, because
+ * "we asked and the key is bad" and "we never got to ask" need opposite advice.
+ * The two are told apart the same way `revalidateStoredLicense` tells them apart:
+ * `verifyLicenseRemote` returns an `error` only when the round-trip itself failed
+ * (transport/non-2xx), so `valid:false` WITHOUT an `error` is www's authoritative
+ * "not a valid key". Using one rule in both places keeps a single definition of
+ * what an authoritative rejection is.
  */
 export async function verifyLicenseHandler(
   connectionId: string,
@@ -24,6 +32,8 @@ export async function verifyLicenseHandler(
       status: 'ok',
       valid: false,
       error: 'licenseKey required',
+      // Nothing was sent anywhere, so this is about the input, not the network.
+      errorCode: ErrorCode.SPONSOR_KEY_INVALID,
     });
     return;
   }
@@ -50,5 +60,12 @@ export async function verifyLicenseHandler(
     valid: result.valid,
     licenseStatus: result.status,
     error: result.error,
+    // Only meaningful on failure; omitted on success so the webview has nothing
+    // to branch on when the key went through.
+    errorCode: result.valid
+      ? undefined
+      : result.error === undefined
+        ? ErrorCode.SPONSOR_KEY_INVALID
+        : ErrorCode.SPONSOR_VERIFY_UNREACHABLE,
   });
 }

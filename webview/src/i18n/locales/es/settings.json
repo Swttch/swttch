@@ -436,7 +436,8 @@
       "placeholder": "Introduce tu clave de patrocinador",
       "button": "Activar",
       "verifying": "Verificando…",
-      "invalid": "Esa clave no es válida. Compruébala e inténtalo de nuevo."
+      "invalid": "Esa clave no es válida. Compruébala e inténtalo de nuevo.",
+      "unreachable": "No se pudo conectar con el servidor de patrocinio, así que tu clave aún no se ha comprobado. Es posible que sea correcta. Si estás en una red corporativa, un proxy, un cortafuegos o una VPN pueden estar bloqueando la conexión."
     },
     "active": {
       "title": "Patrocinando",
