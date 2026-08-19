@@ -1,5 +1,6 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
+import { groupIntoSendSections } from './groupIntoSendSections';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../contexts/SessionContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
@@ -28,6 +29,9 @@ export function ChatMessageArea(props: Props) {
 
   // Auto-scroll is driven entirely by ChatPage's single poll loop, which scrolls
   // the container directly — this component only renders the messages.
+
+  // Above the early returns below: hooks cannot run conditionally.
+  const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
 
   const isEmpty = mergedMessages.length === 0;
 
@@ -79,11 +83,44 @@ export function ChatMessageArea(props: Props) {
 
         It is not debug residue. Do not remove it.
       */}
-      {mergedMessages.map((message, i) => (
-        <div key={message.uuid} onClick={() => {
-          console.log(message, i, mergedMessages); // NEVER REMOVE THIS LINE
-        }}>
-          <MessageBubble message={message} onRetry={onRetry} />
+      {sections.map(section => (
+        <div key={section.key}>
+          {/*
+            The send is pinned to the top of the viewport for as long as its
+            own reply is on screen, so the instruction that produced a long
+            run of tool calls stays readable while scrolling through them
+            (issue #274).
+
+            The section wrapper is what makes the headers hand off instead of
+            pile up: a sticky element cannot be pinned outside its parent, so
+            the next section scrolling into place pushes this header out —
+            the behaviour a flat list of siblings at `top: 0` cannot produce.
+
+            `top-0` pins to the inner edge of the scroll container's `pt-10`,
+            which lines up with the bottom of the fixed session header only
+            because that header is pinned to the same height (`h-10` in
+            `ChatPage`). It used to size itself from its contents — 34px, six
+            short of the padding — and those six pixels read as a slot of
+            earlier content sliding above the pinned message. Change one of
+            the two and the gap comes back.
+          */}
+          {section.head && (
+            <div
+              className="sticky top-0 z-[1] bg-surface-base"
+              onClick={() => {
+                console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
+              }}
+            >
+              <MessageBubble message={section.head} onRetry={onRetry} />
+            </div>
+          )}
+          {section.body.map(message => (
+            <div key={message.uuid} onClick={() => {
+              console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
+            }}>
+              <MessageBubble message={message} onRetry={onRetry} />
+            </div>
+          ))}
         </div>
       ))}
       {isStreaming && <StreamingIndicator />}

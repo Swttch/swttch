@@ -38,7 +38,7 @@ export function isOlderPagePrepend(
  * entries, transcript-only entries, and the carried-over compact summary
  * (which the CLI also emits as an ordinary `user` entry).
  */
-function isUserSend(message: LoadedMessageDto): boolean {
+export function isUserSend(message: LoadedMessageDto): boolean {
   if (message.type !== LoadedMessageType.User) return false;
   if (message.isSynthetic) return false;
   if (message.isVisibleInTranscriptOnly) return false;
