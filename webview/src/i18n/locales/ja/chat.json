@@ -168,7 +168,8 @@
       "browseAll": "すべて表示…",
       "addNew": "+ 新規追加",
       "collapseSubtree": "{{name}} を折りたたむ",
-      "expandSubtree": "{{name}} を展開する"
+      "expandSubtree": "{{name}} を展開する",
+      "refreshTitle": "一覧を更新"
     }
   },
   "acceptPlan": {

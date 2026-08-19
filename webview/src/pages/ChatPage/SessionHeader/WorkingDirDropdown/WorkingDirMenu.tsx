@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Route, routeToPath } from '@/router/routes';
 import { ClassifiedWorkingDirs, WorkingDirEntry } from './classifyWorkingDirs';
 import { WorkingDirItem } from './WorkingDirItem';
@@ -11,6 +12,9 @@ interface Props {
   currentPath: string | null;
   ideRoot: string | null;
   isLoading: boolean;
+  /** A fetch is in flight; the refresh button spins and stops accepting clicks. */
+  isRefreshing: boolean;
+  onRefresh: () => void;
   onNavigate: () => void;
   onAddWorkingDir: () => void;
 }
@@ -222,7 +226,8 @@ export function visibleUnder(
 }
 
 export function WorkingDirMenu(props: Props) {
-  const { classified, currentPath, isLoading, onNavigate, onAddWorkingDir } = props;
+  const { classified, currentPath, isLoading, isRefreshing, onRefresh, onNavigate, onAddWorkingDir } =
+    props;
   const { t } = useTranslation('chat');
   const nodes = buildDisplayNodes(classified, currentPath);
 
@@ -260,6 +265,19 @@ export function WorkingDirMenu(props: Props) {
       ].join(' ')}
       role="menu"
     >
+      <div className="flex items-center justify-end gap-1 px-2 py-1.5 border-b border-border-default">
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          title={t('sessionHeader.workingDir.refreshTitle')}
+          aria-label={t('sessionHeader.workingDir.refreshTitle')}
+          className="p-1 rounded text-text-tertiary hover:text-text-primary hover:bg-[var(--surface-hover)] disabled:hover:bg-transparent"
+        >
+          <ArrowPathIcon className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
       {isLoading && nodes.length === 0 ? (
         <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">
           {t('sessionHeader.workingDir.loading')}

@@ -168,7 +168,8 @@
       "browseAll": "تصفح الكل…",
       "addNew": "+ إضافة جديد",
       "collapseSubtree": "طي {{name}}",
-      "expandSubtree": "توسيع {{name}}"
+      "expandSubtree": "توسيع {{name}}",
+      "refreshTitle": "تحديث القائمة"
     }
   },
   "acceptPlan": {

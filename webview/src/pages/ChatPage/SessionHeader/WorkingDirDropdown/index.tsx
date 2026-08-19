@@ -38,10 +38,11 @@ export function WorkingDirDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  // Re-fetch every time the dropdown opens so a session just created in
-  // another directory (or descendant tree) shows up without a manual reload.
-  useEffect(() => {
-    if (!isOpen || !isConnected) return;
+  // Single fetch path, shared by the automatic load and the refresh button —
+  // the button presses exactly what opening the menu already does, so the two
+  // can never drift into fetching different things.
+  const fetchProjects = useCallback(() => {
+    if (!isConnected) return () => {};
     let cancelled = false;
     setIsLoading(true);
     const unsubscribe = subscribe(MessageType.PROJECTS_LIST, (message) => {
@@ -56,7 +57,14 @@ export function WorkingDirDropdown() {
       cancelled = true;
       unsubscribe();
     };
-  }, [isOpen, isConnected, send, subscribe]);
+  }, [isConnected, send, subscribe]);
+
+  // Re-fetch every time the dropdown opens so a session just created in
+  // another directory (or descendant tree) shows up without a manual reload.
+  useEffect(() => {
+    if (!isOpen) return;
+    return fetchProjects();
+  }, [isOpen, fetchProjects]);
 
   const classified = useMemo(
     () => classifyWorkingDirs(entries, workingDirectory, ideRoot),
@@ -112,6 +120,8 @@ export function WorkingDirDropdown() {
           currentPath={workingDirectory}
           ideRoot={ideRoot}
           isLoading={isLoading && entries.length === 0}
+          isRefreshing={isLoading}
+          onRefresh={fetchProjects}
           onNavigate={onNavigate}
           onAddWorkingDir={onAddWorkingDir}
         />

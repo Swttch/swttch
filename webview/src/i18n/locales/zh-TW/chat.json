@@ -168,7 +168,8 @@
       "browseAll": "瀏覽全部…",
       "addNew": "+ 新增",
       "collapseSubtree": "摺疊 {{name}}",
-      "expandSubtree": "展開 {{name}}"
+      "expandSubtree": "展開 {{name}}",
+      "refreshTitle": "重新整理清單"
     }
   },
   "acceptPlan": {
