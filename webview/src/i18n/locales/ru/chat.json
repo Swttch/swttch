@@ -448,7 +448,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "Загрузка рабочего каталога...",
     "loadingEarlierMessages": "Загрузка более ранних сообщений…",
-    "loadOlderMessages": "Загрузить более старые сообщения"
+    "loadOlderMessages": "Загрузить более старые сообщения",
+    "jumpToMessage": "Перейти к этому сообщению"
   },
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз"

@@ -444,7 +444,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "Cargando directorio de trabajo...",
     "loadingEarlierMessages": "Cargando mensajes anteriores…",
-    "loadOlderMessages": "Cargar mensajes anteriores"
+    "loadOlderMessages": "Cargar mensajes anteriores",
+    "jumpToMessage": "Ir a este mensaje"
   },
   "chatPage": {
     "scrollToBottom": "Desplazarse al final"

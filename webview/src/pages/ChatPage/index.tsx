@@ -311,8 +311,16 @@ export function ChatPage() {
 
   return (
     <div className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0" onMouseDown={handleContainerMouseDown}>
-      {/* Header - Minimal */}
-      <div className="fixed w-full top-0 bg-blend-darken bg-surface-base z-30">
+      {/*
+        Header - Minimal
+
+        `h-10` is load-bearing, not cosmetic: it must equal the scroll
+        container's `pt-10` below, which reserves the space this fixed header
+        covers. Left to size itself from its contents the header came out at
+        34px, and the 6px shortfall showed up as a sliver of scrolled content
+        above the sticky user message (issue #274).
+      */}
+      <div className="fixed w-full top-0 bg-blend-darken bg-surface-base z-30 h-10">
         <SessionHeader />
       </div>
 

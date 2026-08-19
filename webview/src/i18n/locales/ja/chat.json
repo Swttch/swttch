@@ -444,7 +444,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "作業ディレクトリを読み込み中...",
     "loadingEarlierMessages": "以前のメッセージを読み込み中…",
-    "loadOlderMessages": "以前のメッセージを読み込む"
+    "loadOlderMessages": "以前のメッセージを読み込む",
+    "jumpToMessage": "このメッセージの位置へ移動"
   },
   "chatPage": {
     "scrollToBottom": "一番下までスクロール"

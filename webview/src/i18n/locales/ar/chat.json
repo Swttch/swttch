@@ -452,7 +452,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "جارٍ تحميل دليل العمل...",
     "loadingEarlierMessages": "جارٍ تحميل الرسائل السابقة…",
-    "loadOlderMessages": "تحميل الرسائل الأقدم"
+    "loadOlderMessages": "تحميل الرسائل الأقدم",
+    "jumpToMessage": "الانتقال إلى هذه الرسالة"
   },
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل"
