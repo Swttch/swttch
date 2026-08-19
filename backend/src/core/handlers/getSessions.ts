@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getSessionsList } from '../features/getSessionsList';
+import { getNestedSessionsList } from '../features/getNestedSessionsList';
 import { isWslUncPath } from '../wsl-path';
 import { MessageType } from '../../shared';
 
@@ -46,9 +47,15 @@ export async function getSessionsHandler(
 
   console.error('[getSessions]', 'resolved workingDir:', workingDir);
 
-  const sessions = await getSessionsList(workingDir);
+  // `sessionDir` is attached on BOTH paths, so the panel never has to ask which
+  // request produced a row: every session states the directory it belongs to.
+  // Without nesting that is always the requested directory itself.
+  const includeNested = message.payload?.includeNested === true;
+  const sessions = includeNested
+    ? await getNestedSessionsList(workingDir)
+    : (await getSessionsList(workingDir)).map((s) => ({ ...s, sessionDir: workingDir }));
 
-  console.error('[getSessions]', 'returning sessions:', sessions.length);
+  console.error('[getSessions]', 'returning sessions:', sessions.length, 'nested:', includeNested);
 
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, sessions });
 }

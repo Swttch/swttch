@@ -6,6 +6,25 @@ import { i18n } from '@/i18n';
  * - 1분 미만: "now" / "방금"
  * - 1분~59분: "5m" / "5분"  (이하 시/일/월/년)
  */
+/**
+ * Label naming where a session came from, or undefined when it came from the
+ * directory being browsed and so needs no label.
+ *
+ * Shows the path RELATIVE to the anchor (`packages/battery`), because that is
+ * what distinguishes one row from another — repeating the shared prefix on
+ * every row would push the useful part out of a narrow dropdown.
+ */
+export function getSessionOriginLabel(
+  sessionDir: string | undefined,
+  rootDir: string | null,
+): string | undefined {
+  if (!sessionDir || !rootDir || sessionDir === rootDir) return undefined;
+  if (sessionDir.startsWith(rootDir + '/')) return sessionDir.slice(rootDir.length + 1);
+
+  // Outside the anchor entirely: nothing to trim against, so name it in full.
+  return sessionDir;
+}
+
 export function getRelativeTime(date: Date): string {
   const elapsed = Date.now() - date.getTime();
   const seconds = Math.floor(elapsed / 1000);

@@ -169,7 +169,8 @@
       "addNew": "+ Add new",
       "collapseSubtree": "Collapse {{name}}",
       "expandSubtree": "Expand {{name}}",
-      "refreshTitle": "Refresh the list"
+      "refreshTitle": "Refresh the list",
+      "includeNested": "Include nested"
     }
   },
   "acceptPlan": {

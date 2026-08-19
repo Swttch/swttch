@@ -169,7 +169,8 @@
       "addNew": "+ 新增",
       "collapseSubtree": "摺疊 {{name}}",
       "expandSubtree": "展開 {{name}}",
-      "refreshTitle": "重新整理清單"
+      "refreshTitle": "重新整理清單",
+      "includeNested": "包含子專案"
     }
   },
   "acceptPlan": {

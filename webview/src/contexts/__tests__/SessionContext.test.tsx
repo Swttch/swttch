@@ -57,6 +57,9 @@ vi.mock('../WorkingDirContext', () => ({
   useWorkingDir: () => ({
     workingDirectory: mockWorkingDirectory,
     setWorkingDirectory: mockSetWorkingDirectory,
+    // Mirrors the real resolution: absent `?rootDir=` means the anchor and the
+    // session's directory coincide, which is what these tests exercise.
+    rootDir: mockWorkingDirectory,
   }),
 }));
 

@@ -169,7 +169,8 @@
       "addNew": "+ افزودن جدید",
       "collapseSubtree": "جمع کردن {{name}}",
       "expandSubtree": "باز کردن {{name}}",
-      "refreshTitle": "تازه‌سازی فهرست"
+      "refreshTitle": "تازه‌سازی فهرست",
+      "includeNested": "شامل زیرپروژه‌ها"
     }
   },
   "acceptPlan": {

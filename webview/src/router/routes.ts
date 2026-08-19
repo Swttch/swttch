@@ -292,6 +292,20 @@ export function withWorkingDir(path: string, workingDir?: string | null): string
   return `${path}${sep}workingDir=${encodeURIComponent(dir)}`;
 }
 
+/**
+ * Append `?rootDir=` when the anchor differs from the session's own directory.
+ *
+ * Omitted when they match, which keeps every existing URL byte-identical: an
+ * absent parameter already means "the two coincide". Only opening a session
+ * that lives below the directory being browsed writes it out.
+ */
+export function withRootDir(path: string, rootDir: string | null, workingDir: string | null): string {
+  if (!rootDir || rootDir === workingDir) return path;
+
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}rootDir=${encodeURIComponent(rootDir)}`;
+}
+
 /** Query param carrying where to return after a login completes. */
 export const FALLBACK_PARAM = 'fallback';
 

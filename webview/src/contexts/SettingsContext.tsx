@@ -341,4 +341,16 @@ export function useSettings(): SettingsContextValue {
   return context;
 }
 
+/**
+ * Settings when a provider is mounted, null otherwise.
+ *
+ * For consumers that only read a setting to refine behaviour and have a sane
+ * answer without one — the mirror of [useWorkingDirOrNull]. Anything that
+ * cannot function without settings should keep using [useSettings] and fail
+ * loudly instead.
+ */
+export function useSettingsOrNull(): SettingsContextValue | null {
+  return useContext(SettingsContext);
+}
+
 export { SettingsContext };

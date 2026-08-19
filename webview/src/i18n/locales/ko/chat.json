@@ -169,7 +169,8 @@
       "addNew": "+ 새로 추가",
       "collapseSubtree": "{{name}} 접기",
       "expandSubtree": "{{name}} 펼치기",
-      "refreshTitle": "목록 새로고침"
+      "refreshTitle": "목록 새로고침",
+      "includeNested": "하위 프로젝트 포함"
     }
   },
   "acceptPlan": {

@@ -11,11 +11,15 @@ import { WorkingDirMenu } from './WorkingDirMenu';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { isMobile } from '@/config/environment';
+import { useSettings } from '@/contexts/SettingsContext';
+import { SettingKey } from '@/types/settings';
 
 export function WorkingDirDropdown() {
   const { t } = useTranslation('chat');
   const { isConnected, send, subscribe } = useBridgeContext();
-  const { workingDirectory, ideRoot } = useWorkingDir();
+  const { workingDirectory, rootDir, ideRoot } = useWorkingDir();
+  const { settings, updateSettingWithScope } = useSettings();
+  const includeNested = settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
   const { sessionState } = useSessionContext();
   const navigate = useNavigate();
 
@@ -66,9 +70,13 @@ export function WorkingDirDropdown() {
     return fetchProjects();
   }, [isOpen, fetchProjects]);
 
+  // The tree is anchored where the user is LOOKING FROM, so opening a session
+  // nested under the anchor keeps the same tree with the focus moved onto that
+  // entry — rather than re-rooting on the session's own directory, which would
+  // look identical to having entered that sub-project directly.
   const classified = useMemo(
-    () => classifyWorkingDirs(entries, workingDirectory, ideRoot),
-    [entries, workingDirectory, ideRoot],
+    () => classifyWorkingDirs(entries, rootDir, ideRoot),
+    [entries, rootDir, ideRoot],
   );
 
   const showOffRootIndicator =
@@ -117,11 +125,16 @@ export function WorkingDirDropdown() {
       {isOpen && (
         <WorkingDirMenu
           classified={classified}
-          currentPath={workingDirectory}
+          currentPath={rootDir}
+          selectedPath={workingDirectory}
           ideRoot={ideRoot}
           isLoading={isLoading && entries.length === 0}
           isRefreshing={isLoading}
           onRefresh={fetchProjects}
+          includeNested={includeNested}
+          onToggleIncludeNested={(next) =>
+            updateSettingWithScope(SettingKey.INCLUDE_NESTED_SESSIONS, next, 'global')
+          }
           onNavigate={onNavigate}
           onAddWorkingDir={onAddWorkingDir}
         />

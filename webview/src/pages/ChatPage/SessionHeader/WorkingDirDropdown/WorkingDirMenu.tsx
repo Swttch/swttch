@@ -6,15 +6,22 @@ import { ClassifiedWorkingDirs, WorkingDirEntry } from './classifyWorkingDirs';
 import { WorkingDirItem } from './WorkingDirItem';
 import { useTranslation } from '@/i18n';
 import { isMobile } from '@/config/environment';
+import { ToggleSwitch } from '@/components/ToggleSwitch';
 
 interface Props {
   classified: ClassifiedWorkingDirs;
+  /** Where the tree is rooted — the directory the user is browsing. */
   currentPath: string | null;
+  /** Which row is highlighted; differs from [currentPath] for a nested session. */
+  selectedPath: string | null;
   ideRoot: string | null;
   isLoading: boolean;
   /** A fetch is in flight; the refresh button spins and stops accepting clicks. */
   isRefreshing: boolean;
   onRefresh: () => void;
+  /** Whether the session list spans directories nested under the anchor. */
+  includeNested: boolean;
+  onToggleIncludeNested: (next: boolean) => void;
   onNavigate: () => void;
   onAddWorkingDir: () => void;
 }
@@ -55,6 +62,7 @@ function buildDescendantNodes(
   descendants: WorkingDirEntry[],
   rootPath: string,
   baseDepth: number,
+  selected: string | null,
 ): DisplayNode[] {
   // Collect every path level between [rootPath] and each descendant, so the
   // intermediate folders exist as nodes even when nobody ran claude in them.
@@ -99,7 +107,7 @@ function buildDescendantNodes(
           lastModified: new Date(0).toISOString(),
         },
         depth,
-        isCurrent: false,
+        isCurrent: path === selected,
         isIdeRoot: false,
         isDraft: false,
         isScaffold: !entry,
@@ -134,7 +142,15 @@ function buildDescendantNodes(
 export function buildDisplayNodes(
   classified: ClassifiedWorkingDirs,
   currentPath: string | null,
+  /**
+   * The row to highlight. Defaults to the anchor, which is the ordinary case;
+   * it differs once a session nested under the anchor is open, where the tree
+   * stays rooted where the user is browsing while the highlight follows the
+   * directory that session actually runs in.
+   */
+  selectedPath?: string | null,
 ): DisplayNode[] {
+  const selected = selectedPath ?? currentPath;
   const { ancestors, current, siblings, descendants, ideRootEntry, currentIsDraft } = classified;
 
   const topAnchor =
@@ -177,23 +193,23 @@ export function buildDisplayNodes(
     );
 
     merged.forEach((entry) => {
-      const isCurrentRow = entry.path === current.path;
+      const isAnchorRow = entry.path === current.path;
       const depth = Math.max(0, pathSegments(entry.path) - baseDepth);
 
       nodes.push({
         entry,
         depth,
-        isCurrent: isCurrentRow,
+        isCurrent: entry.path === selected,
         isIdeRoot: ideRootEntry?.path === entry.path,
-        isDraft: isCurrentRow && currentIsDraft,
+        isDraft: isAnchorRow && currentIsDraft,
         isScaffold: false,
         parentPath: null,
-        // Only the current row hosts the descendant subtree below it.
-        hasChildren: isCurrentRow && descendants.length > 0,
+        // Only the anchor row hosts the descendant subtree below it.
+        hasChildren: isAnchorRow && descendants.length > 0,
       });
 
-      if (isCurrentRow) {
-        nodes.push(...buildDescendantNodes(descendants, current.path, baseDepth));
+      if (isAnchorRow) {
+        nodes.push(...buildDescendantNodes(descendants, current.path, baseDepth, selected));
       }
     });
   }
@@ -226,10 +242,20 @@ export function visibleUnder(
 }
 
 export function WorkingDirMenu(props: Props) {
-  const { classified, currentPath, isLoading, isRefreshing, onRefresh, onNavigate, onAddWorkingDir } =
-    props;
+  const {
+    classified,
+    currentPath,
+    selectedPath,
+    isLoading,
+    isRefreshing,
+    onRefresh,
+    includeNested,
+    onToggleIncludeNested,
+    onNavigate,
+    onAddWorkingDir,
+  } = props;
   const { t } = useTranslation('chat');
-  const nodes = buildDisplayNodes(classified, currentPath);
+  const nodes = buildDisplayNodes(classified, currentPath, selectedPath);
 
   // Track only what is COLLAPSED, so "everything expanded" is the empty set —
   // the default needs no seeding and stays correct when the tree changes shape
@@ -265,7 +291,17 @@ export function WorkingDirMenu(props: Props) {
       ].join(' ')}
       role="menu"
     >
-      <div className="flex items-center justify-end gap-1 px-2 py-1.5 border-b border-border-default">
+      <div className="flex items-center justify-end gap-2 px-2 py-1.5 border-b border-border-default">
+        <label className="flex items-center gap-1.5 text-[11px] text-text-tertiary cursor-pointer">
+          <span className="whitespace-nowrap">{t('sessionHeader.workingDir.includeNested')}</span>
+          <ToggleSwitch
+            checked={includeNested}
+            onChange={onToggleIncludeNested}
+            size="small"
+            ariaLabel={t('sessionHeader.workingDir.includeNested')}
+          />
+        </label>
+
         <button
           type="button"
           onClick={onRefresh}

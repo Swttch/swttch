@@ -5,10 +5,22 @@ import { useApi } from '@/contexts/ApiContext';
 import { Route, routeToPath, withWorkingDir } from '@/router/routes';
 import { MessageType } from '@/shared';
 import { WORKING_DIR_PARAM_KEY } from './workingDirParam';
+import { ROOT_DIR_PARAM_KEY } from './rootDirParam';
 
 interface WorkingDirContextValue {
   workingDirectory: string | null;
   setWorkingDirectory: (dir: string | null, options?: NavigateOptions) => void;
+  /**
+   * Where the user is looking FROM: the anchor of the working-directory tree
+   * and the scope sessions are listed for. Always present alongside
+   * [workingDirectory], which is where the current session actually runs.
+   *
+   * The two carry the same value whenever the user is working in the directory
+   * they are browsing, and diverge when they open a session nested under it.
+   * Consumers should not branch on that — read the one that answers their
+   * question. Resolution from the URL happens here and nowhere else.
+   */
+  rootDir: string | null;
   /**
    * IDE project root that contains the current [workingDirectory]. JetBrains
    * hosts return `project.basePath`; browser hosts return null (no ancestor
@@ -25,6 +37,7 @@ interface Props {
 }
 
 export { WORKING_DIR_PARAM_KEY, readWorkingDirFromUrl } from './workingDirParam';
+export { ROOT_DIR_PARAM_KEY, readRootDirFromUrl } from './rootDirParam';
 
 export function WorkingDirProvider(props: Props) {
   const { children } = props;
@@ -41,6 +54,15 @@ export function WorkingDirProvider(props: Props) {
   const workingDirectory = rawWorkingDirectory
     ? rawWorkingDirectory.replace(/\/+$/, '') || rawWorkingDirectory
     : null;
+  // The single place `rootDir` is resolved. An absent parameter means the
+  // anchor and the session's directory coincide — the ordinary case — so it
+  // falls back to [workingDirectory] here rather than leaving every consumer
+  // to remember the same `?? workingDir` dance.
+  const rawRootDir = searchParams.get(ROOT_DIR_PARAM_KEY) || null;
+  const rootDir = rawRootDir
+    ? rawRootDir.replace(/\/+$/, '') || rawRootDir
+    : workingDirectory;
+
   const [ideRoot, setIdeRoot] = useState<string | null>(null);
 
   const setWorkingDirectory = useCallback((dir: string | null, options: NavigateOptions = {}) => {
@@ -89,6 +111,7 @@ export function WorkingDirProvider(props: Props) {
   const value: WorkingDirContextValue = {
     workingDirectory,
     setWorkingDirectory,
+    rootDir,
     ideRoot,
   };
 

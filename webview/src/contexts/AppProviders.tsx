@@ -18,7 +18,7 @@ import { ChatInputFocusProvider } from './ChatInputFocusContext';
 import { ChatInputStateProvider } from './ChatInputStateContext';
 import { IdeSelectionProvider } from './IdeSelectionContext';
 import type { IdeSelectionPayload } from '@/hooks/useIdeSelection';
-import { WorkingDirProvider } from './WorkingDirContext';
+import { WorkingDirProvider, useWorkingDir, readWorkingDirFromUrl } from './WorkingDirContext';
 import { WorkflowStateProvider } from './WorkflowStateContext';
 import { ScheduledMessagesProvider } from './ScheduledMessagesContext';
 import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
@@ -57,6 +57,9 @@ function SessionLoader({ children }: { children: ReactNode }) {
   } = useSessionContext();
   const { loadMessages, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
   const { settings } = useSettings();
+  // Not read directly — it is what makes the session-loading effect re-run when
+  // a navigation swaps the working directory alongside the session id.
+  const { workingDirectory } = useWorkingDir();
 
   // Ref to track currentSessionId for SESSION_LOADED validation (avoids stale closure)
   const currentSessionIdRef = useRef<string | null>(currentSessionId);
@@ -120,9 +123,15 @@ function SessionLoader({ children }: { children: ReactNode }) {
     // Paging off → request a huge page so the entire conversation loads at once.
     if (currentSessionId && !isNewlyCreatedSession(currentSessionId)) {
       const limit = chatPagination ? undefined : NO_PAGINATION_LIMIT;
-      api.sessions.load(currentSessionId, undefined, limit);
+      // Read the directory from the URL rather than letting the API fall back
+      // to its configured one. Opening a session nested under the directory
+      // being browsed changes the session id and the working dir in the same
+      // navigation, and the API's copy is refreshed by a separate effect — so
+      // the fallback can still hold the previous directory here and the lookup
+      // misses, leaving the conversation blank.
+      api.sessions.load(currentSessionId, readWorkingDirFromUrl(), limit);
     }
-  }, [currentSessionId, isConnected, chatPagination, resetForSessionSwitch, setSessionState, api.sessions, isNewlyCreatedSession]);
+  }, [currentSessionId, workingDirectory, isConnected, chatPagination, resetForSessionSwitch, setSessionState, api.sessions, isNewlyCreatedSession]);
 
   // 3. Subscribe to SESSION_LOADED — with sessionId guard against stale responses
   useEffect(() => {

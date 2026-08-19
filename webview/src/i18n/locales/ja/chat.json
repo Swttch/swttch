@@ -169,7 +169,8 @@
       "addNew": "+ 新規追加",
       "collapseSubtree": "{{name}} を折りたたむ",
       "expandSubtree": "{{name}} を展開する",
-      "refreshTitle": "一覧を更新"
+      "refreshTitle": "一覧を更新",
+      "includeNested": "下位プロジェクトを含む"
     }
   },
   "acceptPlan": {

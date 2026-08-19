@@ -16,8 +16,15 @@ vi.mock('@/contexts/WorkingDirContext', () => ({useWorkingDirOrNull: vi.fn(() =>
 import {useWorkingDirOrNull} from '@/contexts/WorkingDirContext';
 const mockWd = vi.mocked(useWorkingDirOrNull);
 
+// rootDir defaults to workingDirectory: these cases browse the directory they
+// are working in, which is when the anchor and the session's cwd coincide.
 const setCwd = (workingDirectory: string | null, ideRoot: string | null = null) =>
-    mockWd.mockReturnValue({workingDirectory, ideRoot, setWorkingDirectory: vi.fn()});
+    mockWd.mockReturnValue({
+        workingDirectory,
+        rootDir: workingDirectory,
+        ideRoot,
+        setWorkingDirectory: vi.fn(),
+    });
 
 function renderChip(input: Record<string, unknown>) {
     const toolUse = makeToolUse(input, 'mcp__idea__read_file');

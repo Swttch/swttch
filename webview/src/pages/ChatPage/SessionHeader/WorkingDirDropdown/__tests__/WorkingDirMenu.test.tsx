@@ -35,10 +35,13 @@ function renderMenu(overrides: Partial<Parameters<typeof WorkingDirMenu>[0]> = {
   const props = {
     classified: classifyWorkingDirs(ALL, REPO, REPO),
     currentPath: REPO,
+    selectedPath: REPO,
     ideRoot: REPO,
     isLoading: false,
     isRefreshing: false,
     onRefresh: vi.fn(),
+    includeNested: false,
+    onToggleIncludeNested: vi.fn(),
     onNavigate: vi.fn(),
     onAddWorkingDir: vi.fn(),
     ...overrides,
@@ -79,6 +82,32 @@ describe('WorkingDirMenu — toolbar', () => {
 
     expect(screen.getByText('webview')).toBeInTheDocument();
     expect(screen.queryByText('sessionHeader.workingDir.loading')).not.toBeInTheDocument();
+  });
+});
+
+describe('WorkingDirMenu — include-nested toggle', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('reports the flipped value when switched on', () => {
+    const props = renderMenu({ includeNested: false });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(props.onToggleIncludeNested).toHaveBeenCalledWith(true);
+  });
+
+  it('reports the flipped value when switched off', () => {
+    const props = renderMenu({ includeNested: true });
+
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(props.onToggleIncludeNested).toHaveBeenCalledWith(false);
+  });
+
+  it('reflects the current setting in the switch state', () => {
+    renderMenu({ includeNested: true });
+
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
   });
 });
 

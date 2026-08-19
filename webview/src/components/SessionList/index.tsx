@@ -1,7 +1,8 @@
-import { GroupedSessions, GROUP_ORDER } from './utils';
+import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 
 interface Props {
   groupedSessions: GroupedSessions;
@@ -19,6 +20,10 @@ export function SessionList(props: Props) {
   const { groupedSessions, currentSessionId, highlightedSessionId = null, onSelectSession, onDeleteSession, onRenameSession, className = 'max-h-80' } = props;
   const scale = useSessionListScale();
   const { t } = useTranslation('common');
+  // Tolerate a missing provider: this list also renders in contexts that do not
+  // mount one, and an origin badge is not worth making the component unusable
+  // there — without an anchor there is simply nothing to compare against.
+  const rootDir = useWorkingDirOrNull()?.rootDir ?? null;
 
   return (
     <div className={`${className} overflow-y-auto ${scale.listPad} flex flex-col gap-0.5`}>
@@ -37,6 +42,7 @@ export function SessionList(props: Props) {
                 session={session}
                 isSelected={session.id === currentSessionId}
                 isHighlighted={session.id === highlightedSessionId}
+                originLabel={getSessionOriginLabel(session.sessionDir, rootDir)}
                 onSelect={() => onSelectSession(session.id)}
                 onDelete={() => onDeleteSession(session.id)}
                 onRename={(title) => onRenameSession(session.id, title)}

@@ -169,7 +169,8 @@
       "addNew": "+ إضافة جديد",
       "collapseSubtree": "طي {{name}}",
       "expandSubtree": "توسيع {{name}}",
-      "refreshTitle": "تحديث القائمة"
+      "refreshTitle": "تحديث القائمة",
+      "includeNested": "تضمين المشاريع الفرعية"
     }
   },
   "acceptPlan": {

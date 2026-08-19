@@ -71,12 +71,16 @@ vi.mock('react-router-dom', () => ({
 }));
 
 // Mock WorkingDirContext (ProjectButton uses useWorkingDir)
-vi.mock('../../../contexts/WorkingDirContext', () => ({
-  useWorkingDir: () => ({
+vi.mock('../../../contexts/WorkingDirContext', () => {
+  const value = {
     workingDirectory: '/test',
     setWorkingDirectory: vi.fn(),
-  }),
-}));
+    rootDir: '/test',
+  };
+  // SessionList reads the anchor through the tolerant hook to decide whether a
+  // row needs an origin badge, so the mock has to expose both entry points.
+  return { useWorkingDir: () => value, useWorkingDirOrNull: () => value };
+});
 
 // Mock AuthContext (AccountSwitcher uses useAuthContext). Logged-out → the
 // account switcher renders nothing, leaving these header tests unaffected.

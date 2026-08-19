@@ -12,10 +12,17 @@ interface Props {
   onSelect: () => void;
   onDelete: () => void;
   onRename: (title: string) => void;
+  /**
+   * Path of the session's own directory relative to the one being browsed,
+   * shown when the two differ. The caller decides that — the row does not know
+   * what the list is anchored to.
+   */
+  originLabel?: string;
 }
 
 export function SessionItem(props: Props) {
-  const { session, isSelected, isHighlighted = false, onSelect, onDelete, onRename } = props;
+  const { session, isSelected, isHighlighted = false, onSelect, onDelete, onRename, originLabel } =
+    props;
   const { t } = useTranslation('common');
   const scale = useSessionListScale();
   const [isHovered, setIsHovered] = useState(false);
@@ -118,6 +125,14 @@ export function SessionItem(props: Props) {
       title={session.title}
     >
       <span className="truncate flex-1">{session.title}</span>
+      {originLabel && (
+        <span
+          className={`flex-shrink-0 ${scale.itemTime} px-1 py-0.5 rounded bg-surface-overlay text-text-tertiary max-w-[8rem] truncate`}
+          title={session.sessionDir}
+        >
+          {originLabel}
+        </span>
+      )}
       {isHovered ? (
         <span className="flex-shrink-0 flex items-center gap-1.5">
           <span

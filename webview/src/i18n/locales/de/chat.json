@@ -169,7 +169,8 @@
       "addNew": "+ Neu hinzufügen",
       "collapseSubtree": "{{name}} einklappen",
       "expandSubtree": "{{name}} ausklappen",
-      "refreshTitle": "Liste aktualisieren"
+      "refreshTitle": "Liste aktualisieren",
+      "includeNested": "Unterprojekte einbeziehen"
     }
   },
   "acceptPlan": {
