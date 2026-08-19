@@ -444,7 +444,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "در حال بارگذاری دایرکتوری کاری...",
     "loadingEarlierMessages": "در حال بارگذاری پیام‌های قبلی…",
-    "loadOlderMessages": "بارگذاری پیام‌های قدیمی‌تر"
+    "loadOlderMessages": "بارگذاری پیام‌های قدیمی‌تر",
+    "jumpToMessage": "رفتن به این پیام"
   },
   "chatPage": {
     "scrollToBottom": "پیمایش به پایین"

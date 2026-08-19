@@ -444,7 +444,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "正在載入工作目錄...",
     "loadingEarlierMessages": "正在載入較早的訊息…",
-    "loadOlderMessages": "載入較舊的訊息"
+    "loadOlderMessages": "載入較舊的訊息",
+    "jumpToMessage": "跳至該訊息位置"
   },
   "chatPage": {
     "scrollToBottom": "捲動到底部"

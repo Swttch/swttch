@@ -448,7 +448,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "Loading working directory...",
     "loadingEarlierMessages": "Loading earlier messages…",
-    "loadOlderMessages": "Load older messages"
+    "loadOlderMessages": "Load older messages",
+    "jumpToMessage": "Jump to this message"
   },
   "chatPage": {
     "scrollToBottom": "Scroll to bottom"

@@ -444,7 +444,8 @@
   "chatMessageArea": {
     "loadingWorkingDirectory": "正在加载工作目录...",
     "loadingEarlierMessages": "正在加载更早的消息…",
-    "loadOlderMessages": "加载更早的消息"
+    "loadOlderMessages": "加载更早的消息",
+    "jumpToMessage": "跳转到该消息位置"
   },
   "chatPage": {
     "scrollToBottom": "滚动到底部"
