@@ -90,31 +90,16 @@ export function SessionItem(props: Props) {
     onDelete();
   };
 
-  if (isEditing) {
-    return (
-      <div
-        className={`w-full ${scale.itemPad} rounded flex items-center ${
-          isSelected ? 'bg-[var(--surface-selected)]' : ''
-        }`}
-      >
-        <input
-          ref={inputRef}
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={commit}
-          onClick={(e) => e.stopPropagation()}
-          className={`w-full bg-transparent ${scale.itemText} text-text-primary outline-none border-b border-text-tertiary/40`}
-        />
-      </div>
-    );
-  }
+
+  // A <button> may not contain an <input>, and while renaming the row must not
+  // act as one anyway — clicking into the field would otherwise also open the
+  // session. The row keeps its looks and drops to a plain container instead.
+  const Row = isEditing ? 'div' : 'button';
 
   return (
-    <button
-      ref={buttonRef}
-      onClick={onSelect}
+    <Row
+      ref={buttonRef as never}
+      onClick={isEditing ? undefined : onSelect}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={`w-full ${scale.itemPad} text-start ${scale.itemText} rounded transition-colors flex justify-between items-center gap-2 ${
@@ -122,18 +107,40 @@ export function SessionItem(props: Props) {
           ? 'text-text-primary bg-[var(--surface-selected)]'
           : 'text-text-secondary hover:text-text-primary hover:bg-[var(--surface-selected)]'
       }`}
-      title={session.title}
+      title={isEditing ? undefined : session.title}
     >
-      <span className="truncate flex-1">{session.title}</span>
-      {originLabel && (
-        <span
-          className={`flex-shrink-0 ${scale.itemTime} px-1 py-0.5 rounded bg-surface-overlay text-text-tertiary max-w-[8rem] truncate`}
-          title={session.sessionDir}
-        >
-          {originLabel}
-        </span>
-      )}
-      {isHovered ? (
+      {/* The origin sits ABOVE the title rather than beside it: squeezed onto
+          one row it competed with the title for the same horizontal space and
+          both ended up truncated, which is worse than either alone. */}
+      <span className="flex-1 min-w-0 overflow-hidden flex flex-col">
+        {originLabel && (
+          <span
+            className={`${scale.itemTime} text-text-tertiary truncate`}
+            title={session.sessionDir}
+          >
+            {originLabel}
+          </span>
+        )}
+        {/* Renaming swaps only the TITLE line for an input. Replacing the whole
+            row instead would take the project line down with it, so the row
+            being renamed would lose the very context that tells the user which
+            of several same-named conversations they are editing. */}
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={commit}
+            onClick={(e) => e.stopPropagation()}
+            className={`w-full bg-transparent ${scale.itemText} text-text-primary outline-none border-b border-text-tertiary/40`}
+          />
+        ) : (
+          <span className="truncate">{session.title}</span>
+        )}
+      </span>
+      {isHovered && !isEditing ? (
         <span className="flex-shrink-0 flex items-center gap-1.5">
           <span
             role="button"
@@ -191,6 +198,6 @@ export function SessionItem(props: Props) {
           {getRelativeTime(session.updatedAt)}
         </span>
       ) : null}
-    </button>
+    </Row>
   );
 }

@@ -4,8 +4,10 @@ import { getSessionOriginLabel } from '../utils';
 const ROOT = '/repo';
 
 describe('getSessionOriginLabel', () => {
-  it('stays silent for sessions from the directory being browsed', () => {
-    expect(getSessionOriginLabel(ROOT, ROOT)).toBeUndefined();
+  it('names the anchor’s own sessions by their folder', () => {
+    // The anchor's rows get a label too, so every row in a merged list states
+    // where it came from instead of leaving some rows unexplained.
+    expect(getSessionOriginLabel(ROOT, ROOT)).toBe('repo');
   });
 
   it('names a nested session by its path relative to the anchor', () => {

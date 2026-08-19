@@ -26,17 +26,23 @@ export function useSessionList(): UseSessionListResult {
   const { confirmDialog, confirm } = useConfirmDialog();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter sessions by title or session id (uuid), using regex with a
-  // substring-match fallback on invalid regex.
+  // Filter sessions by title, session id (uuid), or the directory the session
+  // belongs to, using regex with a substring-match fallback on invalid regex.
+  //
+  // The directory is searchable whether or not directories are currently
+  // merged: typing a project name is a natural way to reach for a conversation
+  // regardless of what the list happens to be showing, and it costs nothing to
+  // match against a field every session already carries.
   const filteredSessions = useMemo(() => {
     if (!searchQuery.trim()) return sessions;
+    const haystack = (s: SessionMetaDto) => [s.title, s.id, s.sessionDir ?? ''];
     try {
       const regex = new RegExp(searchQuery, 'i');
-      return sessions.filter(s => regex.test(s.title) || regex.test(s.id));
+      return sessions.filter(s => haystack(s).some(field => regex.test(field)));
     } catch {
       const query = searchQuery.toLowerCase();
       return sessions.filter(s =>
-        s.title.toLowerCase().includes(query) || s.id.toLowerCase().includes(query)
+        haystack(s).some(field => field.toLowerCase().includes(query))
       );
     }
   }, [sessions, searchQuery]);

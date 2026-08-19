@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
 import { useSessionListScale } from './scale';
@@ -25,6 +26,19 @@ export function SessionList(props: Props) {
   // there — without an anchor there is simply nothing to compare against.
   const rootDir = useWorkingDirOrNull()?.rootDir ?? null;
 
+  // Derived from the rows themselves rather than read from the setting: if a
+  // session sits somewhere other than the anchor, directories are merged. This
+  // keeps the list honest about what it is actually showing — the setting can
+  // be on while the anchor has no sub-projects, and then there is nothing to
+  // disambiguate and no reason to spend a second line on every row.
+  const isMerged = useMemo(
+    () =>
+      GROUP_ORDER.flatMap((key) => groupedSessions[key]).some(
+        (s) => s.sessionDir && s.sessionDir !== rootDir,
+      ),
+    [groupedSessions, rootDir],
+  );
+
   return (
     <div className={`${className} overflow-y-auto ${scale.listPad} flex flex-col gap-0.5`}>
       {GROUP_ORDER.map((groupKey) => {
@@ -42,7 +56,9 @@ export function SessionList(props: Props) {
                 session={session}
                 isSelected={session.id === currentSessionId}
                 isHighlighted={session.id === highlightedSessionId}
-                originLabel={getSessionOriginLabel(session.sessionDir, rootDir)}
+                originLabel={
+                  isMerged ? getSessionOriginLabel(session.sessionDir, rootDir) : undefined
+                }
                 onSelect={() => onSelectSession(session.id)}
                 onDelete={() => onDeleteSession(session.id)}
                 onRename={(title) => onRenameSession(session.id, title)}
