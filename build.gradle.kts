@@ -188,24 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.27.2 - Tab layout restore, and turning voice input off 📌</h3>
+            <h3>0.28.0 - Nested project &amp; mergeable session list 🌳</h3>
             <ul>
-                <li>Fix chat tabs not returning to the split they were in after restarting the IDE (#306, reported by @CraftedFury)</li>
-                <li>Fix the voice input toggle being locked when the kit is not installed (#304, reported by @hollandjake)</li>
-                <li>Ask on the first microphone press whether to install voice input, before any recording starts (#304)</li>
-            </ul>
-            <h3>0.27.1 - Line-by-line Diff Review support 🔍</h3>
-            <ul>
-                <li>Add diff review so you can accept or reject individual changes before a file is written (#300, requested by @SLIN0322)</li>
-                <li>Open proposed changes in the IDE's own diff viewer before approving (#300, requested by @macro128)</li>
-                <li>Fix the voice input kit installing where the backend could not load it (#303, reported by @hollandjake)</li>
-                <li>Add a button to remove the voice input kit from settings (#303)</li>
-            </ul>
-            <h3>0.27.0 - Voice-To-Text is now available 🎉</h3>
-            <ul>
-                <li>Add Voice-To-Text to the composer (#293, requested by @ideal-chris)</li>
-                <li>Add a Voice-To-Text section in settings (#293)</li>
-                <li>Fix the blank chat window on Android Studio so it explains what to do (#296)</li>
+                <li>Show every nested working directory in the dropdown, at any depth (#311, requested by @CraftedFury)</li>
+                <li>Add a toggle to list sessions from all nested directories together (#311, requested by @CraftedFury)</li>
+                <li>Add a refresh button to the working-directory dropdown (#311)</li>
+                <li>Fix nested working directories not appearing on Windows (#311)</li>
+                <li>Fix the usage-limit notice showing up without its resume button (#309)</li>
             </ul>
         """.trimIndent()
     }
