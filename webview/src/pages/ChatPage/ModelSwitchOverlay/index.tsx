@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckIcon } from '@heroicons/react/24/outline';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useBridge } from '@/hooks/useBridge';
@@ -20,6 +20,22 @@ import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 export const SWITCH_MODEL_EVENT = 'switch-model';
+
+/**
+ * Height bounds for the picker, which grows upward from the composer.
+ *
+ * Uncapped, a large catalog runs off the top of the window and those rows can
+ * be neither scrolled to nor clicked (issue #314). The cap is the smaller of
+ * {@link MAX_PANEL_HEIGHT} — matching the sibling command palette, so the two
+ * panels open to the same size — and the room actually left above the composer,
+ * so a short window shrinks the list instead of hiding its header behind the
+ * top bar. {@link MIN_PANEL_HEIGHT} keeps a few rows reachable when there is
+ * almost no room at all.
+ */
+const MAX_PANEL_HEIGHT = 320;
+const MIN_PANEL_HEIGHT = 120;
+/** Breathing room kept between the panel and the top of the window. */
+const VIEWPORT_PADDING = 8;
 
 interface ModelSwitchOverlayProps {
   onClose: () => void;
@@ -117,6 +133,38 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
     if (info) void handleSelect(info.value);
   }, [autoSelectQuery, models, handleSelect]);
 
+  // How tall the panel may grow. It opens upward from the composer, so the
+  // ceiling is whatever room is left above the composer — not a constant. A
+  // fixed cap either wastes a tall window or, in a short one, pushes the panel
+  // under the top bar and hides its own header. Measured once per open (and on
+  // resize); `null` until measured, which is the first paint only.
+  const [maxHeight, setMaxHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      // The panel's bottom edge is pinned above the composer and does not move
+      // with its height, so the room above it is exactly that edge minus the
+      // margin we keep from the top of the window.
+      const room = panel.getBoundingClientRect().bottom - VIEWPORT_PADDING;
+      setMaxHeight(Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, room)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+    // Re-measure when the row count changes the panel's own geometry.
+  }, [models.length]);
+
+  // Once the list scrolls, the current model is off-screen whenever it sits
+  // past the visible rows — the picker would open showing no ticked row and
+  // hide which model is running. Bring it into view on open.
+  const selectedRowRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    // scrollIntoView is unimplemented in jsdom; guard so tests don't throw.
+    selectedRowRef.current?.scrollIntoView?.({ block: 'nearest' });
+    // Also runs after maxHeight lands, so the reveal measures the final box.
+  }, [currentInfo, maxHeight]);
+
   return (
     <div
       ref={panelRef}
@@ -126,6 +174,16 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
         left: '0',
         marginBottom: '12px',
         width: 'calc(100%)',
+        // See MAX_PANEL_HEIGHT: capped to the room above the composer so a long
+        // catalog scrolls inside the panel instead of running off the top of
+        // the window (issue #314). Before the first measurement, fall back to
+        // the constant cap rather than opening uncapped.
+        maxHeight: `${maxHeight ?? MAX_PANEL_HEIGHT}px`,
+        // Column layout so the header keeps its height and the list takes the
+        // rest: the scroll belongs to the list alone, otherwise the "select
+        // model" header scrolls away with it.
+        display: 'flex',
+        flexDirection: 'column',
         backgroundColor: 'var(--panel-bg, #252526)',
         borderRadius: 'var(--panel-radius, 6px)',
         boxShadow: 'var(--panel-shadow, 0 4px 12px rgba(0,0,0,0.3))',
@@ -134,7 +192,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
       }}
     >
       {/* Header */}
-      <div className="pt-1 pb-1.5 px-3 text-[0.9230rem] text-text-tertiary flex items-center justify-between">
+      <div className="flex-shrink-0 pt-1 pb-1.5 px-3 text-[0.9230rem] text-text-tertiary flex items-center justify-between">
         <span>{t('modelSwitch.selectModel')}</span>
         <kbd className="inline-flex items-center px-1.5 py-0.5 bg-surface-tooltip rounded text-text-secondary text-xs font-mono">
           {isMac ? '⌘⇧M' : 'Ctrl+Shift+M'}
@@ -142,7 +200,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
       </div>
 
       {/* Model list */}
-      <div className="pb-1.5 px-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-1.5 px-1">
         {models.length === 0 ? (
           <div className="px-2 py-1 text-[0.9230rem] text-text-tertiary">{t('modelSwitch.loadingModels')}</div>
         ) : models.map((m, i) => {
@@ -157,6 +215,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
               // this list — a proxy catalog can list one id in two slots, and a
               // duplicated key makes React reuse the wrong row.
               key={i}
+              ref={selected ? selectedRowRef : undefined}
               onClick={() => void handleSelect(m.value)}
               className={`w-full relative flex items-center justify-between px-2 py-1 rounded-md text-start transition-colors ${
                 selected ? 'bg-surface-pressed' : 'hover:bg-surface-hover'
