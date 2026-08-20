@@ -188,7 +188,7 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.28.1 - Sticky user message + scrollable model picker</h3>
+            <h3>0.28.2 - Sticky user message + scrollable model picker</h3>
             <ul>
                 <li>Pin your sent message to the top of the chat while its reply is running (#313, requested by @deniskrizanovic)</li>
                 <li>Fix models past the 16th being unreachable in the model picker (#316, reported by @JairDavis)</li>

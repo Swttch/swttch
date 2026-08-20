@@ -1,7 +1,7 @@
 {
   "name": "claude-code-webview",
   "private": true,
-  "version": "0.28.1",
+  "version": "0.28.2",
   "type": "module",
   "packageManager": "pnpm@11.17.0",
   "scripts": {
