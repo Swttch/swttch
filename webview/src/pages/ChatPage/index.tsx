@@ -333,7 +333,13 @@ export function ChatPage() {
       </BannerArea>
 
       {/* Messages Area */}
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0">
+      {/*
+        `data-chat-scroll` is how a pinned send finds this element to measure
+        its fold against (see useScrollFold). A class selector would do until
+        someone restyles the container; the attribute says out loud that
+        something depends on it.
+      */}
+      <div ref={scrollContainerRef} data-chat-scroll onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0">
         <ChatMessageArea
           isStreaming={isStreaming && !pendingUserAnswer && !pendingPlan && !pendingPermission}
           mergedMessages={mergedMessages}
