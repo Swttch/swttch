@@ -78,6 +78,7 @@ class JcefRuntimeMismatchPanel : JPanel(BorderLayout()) {
     }
 
     companion object {
-        private const val DETAILS_URL = "https://github.com/Swttch/swttch/issues/295"
+        private const val DETAILS_URL =
+            "https://github.com/Swttch/swttch/blob/main/docs/troubleshooting/en/android-studio-jcef.md"
     }
 }

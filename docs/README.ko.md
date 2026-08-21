@@ -130,6 +130,15 @@ Cursor와 VS Code에서 사랑받는 Claude Code GUI를 이제 JetBrains IDE에�
 - `Ctrl+Shift+C` — Claude Code 패널 열기
 - `Cmd+N` / `Ctrl+N` (패널 포커스) — 새 세션 탭
 
+## 문제 해결
+
+자주 발생하는 문제들 중, 아직 저희가 직접 고치지 못했지만 알려진 해결 방법이 있는 것들을 **[docs/troubleshooting](troubleshooting/ko/README.md)** 에 증상·원인·해결 방법과 관련 이슈 링크와 함께 정리해두었습니다.
+
+- [Wayland 클립보드](troubleshooting/ko/wayland-clipboard.md) — Linux · Wayland · KDE Plasma 에서 채팅 입력창에 붙여넣기가 안 될 때
+- [Android Studio JCEF 런타임](troubleshooting/ko/android-studio-jcef.md) — Android Studio 에서 채팅 화면 대신 안내 패널이 뜨거나 창이 비어 있을 때
+
+목록에 없는 문제라면 [이슈를 열어](https://github.com/Swttch/swttch/issues/new/choose) 알려주세요.
+
 ## 기여
 
 모든 종류의 기여를 환영합니다 — 버그 리포트, 기능 제안, 코드, 문서, 번역 등.

@@ -147,34 +147,14 @@ ccg
 
 Same backend, same UI, opened in your default browser on `http://localhost:19836`. Coexists with the JetBrains plugin on port 19836. See [cli/README.md](cli/README.md) for details.
 
-## Android Studio Compatibility
+## Troubleshooting
 
-Android Studio ships with a JetBrains Runtime (JBR) that does **not** include JCEF (Chromium Embedded Framework). This plugin's WebView UI relies on JCEF, so it will display a guidance panel instead of the chat UI when launched on the default Android Studio runtime.
+Problems that come up often, which we have not been able to fix on our side yet but for which a known workaround exists, are collected in **[docs/troubleshooting](docs/troubleshooting/en/README.md)** — each with the symptoms, the cause, how to fix it, and links to the related issues.
 
-### Requires Android Studio 2026.1.3 or later
+- [Wayland clipboard](docs/troubleshooting/en/wayland-clipboard.md) — pasting into the chat input fails on Linux · Wayland · KDE Plasma
+- [Android Studio JCEF runtime](docs/troubleshooting/en/android-studio-jcef.md) — Android Studio shows a guidance panel instead of the chat UI, or a blank window
 
-On **2026.1.2 and earlier there is no working combination**, so update the IDE before swapping the runtime. Those versions boot on Java 21 and bundle their own `JCefAppConfig`; a JCEF-enabled JBR 21 shadows it from the boot layer with a copy missing a method the platform calls, so the browser throws while being created and the panel stays blank. JBR 25 has that method, but those builds cannot boot on Java 25 at all. Android Studio 2026.1.3 moved its bundled runtime to Java 25, which resolves it — see [#295](https://github.com/Swttch/swttch/issues/295) for the full test matrix.
-
-### Switch to a JCEF-enabled runtime
-
-1. Open Find Action: `Cmd+Shift+A` (macOS) or `Ctrl+Shift+A` (Windows/Linux).
-2. Search for **Choose Boot Java Runtime for the IDE…** and run it.
-3. In the dropdown, pick a runtime whose name contains **"JCEF"** or **"with JCEF"**.
-4. Click **OK** and restart the IDE when prompted.
-
-When the plugin detects a missing JCEF runtime, it also shows a notification with a one-click **Switch Runtime** button that opens the same dialog.
-
-### Recovering from a bad runtime swap
-
-If the IDE fails to boot after a runtime swap, delete the `studio.jdk` file from the Android Studio config directory to restore the default runtime:
-
-- **macOS**: `~/Library/Application Support/Google/AndroidStudio<version>/studio.jdk`
-- **Linux**: `~/.config/Google/AndroidStudio<version>/studio.jdk`
-- **Windows**: `%APPDATA%\Google\AndroidStudio<version>\studio.jdk`
-
-### Future support
-
-JetBrains released an experimental **Web Browser (JCEF)** marketplace plugin (ID 31360) in April 2025 to bring JCEF to Android Studio 2026.1 Nightly and later. Once that becomes stable, the runtime swap above will no longer be needed.
+If your problem is not listed there, please [open an issue](https://github.com/Swttch/swttch/issues/new/choose).
 
 ## Contributing
 

@@ -130,6 +130,15 @@
 - `Ctrl+Shift+C` — 打开 Claude Code 面板
 - `Cmd+N` / `Ctrl+N`（面板聚焦时）— 新建会话标签页
 
+## 故障排查
+
+常见问题中，我们尚未能自行修复、但已有已知解决方法的那些，整理在 **[docs/troubleshooting](troubleshooting/zh/README.md)** 中，每篇都包含症状、原因、解决方法以及相关 Issue 的链接。
+
+- [Wayland 剪贴板](troubleshooting/zh/wayland-clipboard.md) — 在 Linux · Wayland · KDE Plasma 上无法向聊天输入框粘贴时
+- [Android Studio JCEF 运行时](troubleshooting/zh/android-studio-jcef.md) — Android Studio 显示引导面板而不是聊天界面，或者窗口空白时
+
+如果列表中没有您遇到的问题，请[提交 Issue](https://github.com/Swttch/swttch/issues/new/choose) 告诉我们。
+
 ## 贡献
 
 欢迎各种形式的贡献 — 错误报告、功能建议、代码、文档、翻译等。

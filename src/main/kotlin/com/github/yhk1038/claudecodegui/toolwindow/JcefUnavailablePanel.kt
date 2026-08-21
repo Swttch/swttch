@@ -86,6 +86,6 @@ class JcefUnavailablePanel : JPanel(BorderLayout()) {
 
     companion object {
         private const val LEARN_MORE_URL =
-            "https://github.com/Swttch/swttch#android-studio-compatibility"
+            "https://github.com/Swttch/swttch/blob/main/docs/troubleshooting/en/android-studio-jcef.md"
     }
 }
