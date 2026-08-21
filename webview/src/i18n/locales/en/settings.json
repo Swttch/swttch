@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Not set"
       }
     },
+    "softWrap": {
+      "label": "Soft Wrap",
+      "description": "Fold long lines in diffs and tool output instead of scrolling sideways."
+    },
     "scrolling": {
       "sectionTitle": "Scrolling",
       "autoScrollThreshold": {

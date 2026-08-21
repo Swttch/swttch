@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Não definido"
       }
     },
+    "softWrap": {
+      "label": "Quebra de linha",
+      "description": "Dobrar as linhas longas dos diffs e saídas de ferramentas em vez de rolar na horizontal."
+    },
     "scrolling": {
       "sectionTitle": "Rolagem",
       "autoScrollThreshold": {

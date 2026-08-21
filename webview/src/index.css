@@ -627,7 +627,7 @@ body {
 }
 
 /* ============================================
-   Diff row tint spans the full line (#179)
+   Soft wrap in monospace blocks (#179)
    ============================================ */
 
 /* A diff row is a block inside a horizontally scrolling <pre>, so its width
@@ -637,7 +637,10 @@ body {
    Sizing each row to its own text (`width: fit-content`) does not fix this: it
    makes every row a different width, so each one's tint stops wherever that
    line happens to end. The rows have to share one width — the longest line's.
-   So `.diff-body` takes that width and each row fills it. */
+   So `.diff-body` takes that width and each row fills it.
+
+   Applies whether or not soft wrap is on: with wrapping there is nothing to
+   scroll to, without it the tint now follows the text all the way out. */
 .diff-body {
   min-width: max-content;
 }
@@ -647,6 +650,27 @@ body {
   min-width: 100%;
 }
 
+/* Fold long lines to the block's width instead of scrolling them sideways.
+   `break-all` because these are paths, JSON and code, which have no spaces to
+   break at for long stretches — breaking only at spaces would leave the line
+   overflowing anyway. */
+.soft-wrap .diff-body-line,
+.soft-wrap .monospace-block {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+}
+
+/* With wrapping on there is no longest line to match — `max-content` would keep
+   the box wide enough for the unwrapped text and defeat the fold. */
+.soft-wrap .diff-body {
+  min-width: 0;
+}
+
+.soft-wrap .diff-viewer .diff-code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 
 /* ============================================
    Slash Command Panel Variables (semantic-token wired)

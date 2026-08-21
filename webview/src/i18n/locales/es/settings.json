@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Sin definir"
       }
     },
+    "softWrap": {
+      "label": "Ajuste de línea",
+      "description": "Plegar las líneas largas de los diffs y salidas de herramientas en vez de desplazarse en horizontal."
+    },
     "scrolling": {
       "sectionTitle": "Desplazamiento",
       "autoScrollThreshold": {

@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Nicht festgelegt"
       }
     },
+    "softWrap": {
+      "label": "Zeilenumbruch",
+      "description": "Lange Zeilen in Diffs und Werkzeugausgaben umbrechen statt seitlich zu scrollen."
+    },
     "scrolling": {
       "sectionTitle": "Scrollen",
       "autoScrollThreshold": {

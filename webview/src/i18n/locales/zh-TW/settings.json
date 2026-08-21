@@ -148,6 +148,10 @@
         "notSetPlaceholder": "未設定"
       }
     },
+    "softWrap": {
+      "label": "軟換行",
+      "description": "折疊差異和工具輸出中的長行，而不是橫向捲動。"
+    },
     "scrolling": {
       "sectionTitle": "捲動",
       "autoScrollThreshold": {

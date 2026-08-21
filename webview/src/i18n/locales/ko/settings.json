@@ -148,6 +148,10 @@
         "notSetPlaceholder": "설정 안 함"
       }
     },
+    "softWrap": {
+      "label": "자동 줄바꿈",
+      "description": "diff와 도구 출력의 긴 줄을 가로 스크롤 대신 접어서 보여줍니다."
+    },
     "scrolling": {
       "sectionTitle": "스크롤",
       "autoScrollThreshold": {

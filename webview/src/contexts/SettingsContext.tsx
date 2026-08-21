@@ -133,6 +133,17 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     }
   }, [settings]);
 
+  // Fold long lines in the monospace blocks (diffs, tool input/output) instead
+  // of scrolling them sideways. Carried as a class on <html> rather than read by
+  // each renderer: the blocks live in a dozen components, and a class costs one
+  // CSS rule instead of a subscription and a prop in every one of them.
+  useEffect(() => {
+    document.documentElement.classList.toggle(
+      'soft-wrap',
+      settings[SettingKey.SOFT_WRAP] === true,
+    );
+  }, [settings]);
+
   // Apply theme to <html> element. Toggles `.dark` class based on theme setting.
   // - LIGHT: explicit light, no `.dark` class
   // - DARK: explicit dark, `.dark` class on

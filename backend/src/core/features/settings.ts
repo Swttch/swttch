@@ -46,6 +46,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   zoomLevel: 1,
   lineHeight: 1.6,
   autoScrollThreshold: 80,
+  softWrap: false,
   debugMode: false,
   logLevel: 'info',
   terminalApp: null,
@@ -92,6 +93,7 @@ const COMMENT_MAP: Record<string, string> = {
   zoomLevel: 'UI 배율(0.5~3). Ctrl/Cmd +,- 와 Ctrl/Cmd + 휠로 조절. 글꼴 크기와 별개로 아이콘·여백까지 함께 확대',
   lineHeight: '채팅 메시지 줄 간격(line-height 배수, 0.5~10)',
   autoScrollThreshold: '자동 스크롤 임계점(px). 메시지 끝에서 이 거리 안에 있을 때만 스트림을 따라 내려간다',
+  softWrap: '긴 줄을 코드 블록 너비에 맞춰 접는다(diff, 도구 입출력 등). false면 가로 스크롤',
   debugMode: '디버그 모드 활성화',
   logLevel: '로그 레벨: "debug" | "info" | "warn" | "error"',
   terminalApp: '터미널 프로그램 (null이면 OS 기본 터미널)',
@@ -313,6 +315,7 @@ function validateSetting(key: string, value: unknown): string | null {
       break;
     case 'chatPagination':
     case 'includeNestedSessions':
+    case 'softWrap':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
       }

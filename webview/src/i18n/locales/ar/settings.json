@@ -148,6 +148,10 @@
         "notSetPlaceholder": "غير معيّن"
       }
     },
+    "softWrap": {
+      "label": "التفاف النص",
+      "description": "طيّ الأسطر الطويلة في الفروق ومخرجات الأدوات بدلاً من التمرير الأفقي."
+    },
     "scrolling": {
       "sectionTitle": "التمرير",
       "autoScrollThreshold": {

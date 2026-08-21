@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Не задано"
       }
     },
+    "softWrap": {
+      "label": "Перенос строк",
+      "description": "Переносить длинные строки в диффах и выводе инструментов вместо горизонтальной прокрутки."
+    },
     "scrolling": {
       "sectionTitle": "Прокрутка",
       "autoScrollThreshold": {

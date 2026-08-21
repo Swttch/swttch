@@ -1,4 +1,5 @@
 import { SettingSection, SettingRow } from '../common';
+import { SoftWrapRow } from './SoftWrapRow';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
@@ -137,6 +138,8 @@ export function AppearanceSettings() {
             }`}
           />
         </SettingRow>
+
+        <SoftWrapRow />
       </SettingSection>
 
       <SettingSection title={t('appearance.scrolling.sectionTitle')}>

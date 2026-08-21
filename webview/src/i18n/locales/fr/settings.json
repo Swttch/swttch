@@ -148,6 +148,10 @@
         "notSetPlaceholder": "Non défini"
       }
     },
+    "softWrap": {
+      "label": "Retour à la ligne",
+      "description": "Replier les longues lignes des diffs et sorties d'outils au lieu de défiler latéralement."
+    },
     "scrolling": {
       "sectionTitle": "Défilement",
       "autoScrollThreshold": {

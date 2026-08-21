@@ -148,6 +148,10 @@
         "notSetPlaceholder": "تنظیم نشده"
       }
     },
+    "softWrap": {
+      "label": "شکستن خودکار خط",
+      "description": "به‌جای پیمایش افقی، خط‌های بلند در تفاوت‌ها و خروجی ابزارها را بشکن."
+    },
     "scrolling": {
       "sectionTitle": "اسکرول",
       "autoScrollThreshold": {
