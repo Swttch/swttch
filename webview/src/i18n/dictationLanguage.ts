@@ -4,13 +4,12 @@
  * Claude Code has no dedicated dictation-language setting: its `language` key —
  * the one that decides what language Claude replies in — doubles as the
  * dictation language, and accepts either a BCP-47 code ('ja') or a plain name
- * ('japanese'). That key is authoritative here for the same reason it is in the
- * CLI, so this module resolves it first and only then falls back.
+ * ('japanese').
  *
- * The fallback exists because the two genuinely come apart: someone can have
- * Claude answer in English while speaking Korean. The docs give VS Code exactly
- * this arrangement — `language` first, then the extension's own
- * `accessibility.voice.speechLanguage`, then English — and ours mirrors it.
+ * That single key is not enough, because the two genuinely come apart: someone
+ * can have Claude answer in Korean while speaking English. So we offer a spoken
+ * language of our own, and — unlike the documented order — let it win when it
+ * is set. See {@link resolveDictationLanguage} for why.
  */
 
 import { LANGUAGE_TO_LOCALE } from './languageMap';
@@ -116,9 +115,20 @@ export function languageSettingToCode(language: string | null | undefined): stri
 /**
  * The language to transcribe in, or null to let the service decide.
  *
- * Order: the official `language` setting, then our own `voice.speechLanguage`,
+ * Order: our own `voice.speechLanguage`, then the official `language` setting,
  * then the interface language as a last guess — someone reading the UI in
  * Korean is far more likely to speak Korean than English.
+ *
+ * The official docs put `language` first and our setting second (the order the
+ * VS Code extension uses). We deliberately invert those two, because the two
+ * orders differ only when the user has explicitly picked a spoken language —
+ * and at that point the documented order makes the control they just used do
+ * nothing, with no indication why. Left unset, `speechLanguage` means "follow",
+ * and the resolution below is exactly the documented one.
+ *
+ * This does not weaken CLI equivalence: the CLI has no spoken-language setting,
+ * so nothing a CLI user can do is unreachable here — clearing the control
+ * reproduces the CLI's behaviour precisely.
  */
 export function resolveDictationLanguage(sources: {
   /** Claude's `language` setting, from the native settings file. */
@@ -128,11 +138,11 @@ export function resolveDictationLanguage(sources: {
   /** The active interface locale, already BCP-47. */
   uiLocale?: string | null;
 }): string | null {
-  const official = languageSettingToCode(sources.claudeLanguage);
-  if (official) return official;
-
   const ours = languageSettingToCode(sources.speechLanguage);
   if (ours) return ours;
+
+  const official = languageSettingToCode(sources.claudeLanguage);
+  if (official) return official;
 
   // Already a locale ('ko'), so it is passed through rather than run through
   // toLocale — that maps setting values ('korean') and would answer 'en' for

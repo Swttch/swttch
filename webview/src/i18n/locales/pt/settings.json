@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (ainda não reconhecido)",
         "fallbackWarning": "Este idioma ainda não é reconhecido, então a fala é transcrita como inglês.",
         "search": "Pesquisar idiomas",
-        "noMatch": "Nenhum idioma correspondente"
+        "noMatch": "Nenhum idioma correspondente",
+        "differsTitle": "Diferença em relação ao comportamento oficial",
+        "differsBody": "O Claude Code define o idioma da transcrição pela configuração «Idioma». Este plugin usa primeiro o «Idioma falado», então transcreve no idioma que você escolher aqui. Se deixar em seguir, ele segue a configuração «Idioma», como o Claude Code."
       },
       "silenceTimeout": {
         "label": "Tempo de espera",

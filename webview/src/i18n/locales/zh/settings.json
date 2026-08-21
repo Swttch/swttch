@@ -51,7 +51,9 @@
         "unsupported": "{{language}}（尚未识别）",
         "fallbackWarning": "该语言尚未被识别，说话内容会被转写为英文。",
         "search": "搜索语言",
-        "noMatch": "没有匹配的语言"
+        "noMatch": "没有匹配的语言",
+        "differsTitle": "与官方行为的差异",
+        "differsBody": "Claude Code 从「语言」设置中获取听写语言。本插件优先使用「说话语言」，因此会按你在此处选择的语言进行听写。保持跟随时，则与 Claude Code 一样遵循「语言」设置。"
       },
       "silenceTimeout": {
         "label": "等待时间",

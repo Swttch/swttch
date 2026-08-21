@@ -51,7 +51,9 @@
         "unsupported": "{{language}}（まだ認識されません）",
         "fallbackWarning": "この言語はまだ認識されないため、話しても英語で文字起こしされます。",
         "search": "言語を検索",
-        "noMatch": "一致する言語がありません"
+        "noMatch": "一致する言語がありません",
+        "differsTitle": "公式の動作との違い",
+        "differsBody": "Claude Code は書き起こしの言語を「言語」設定から決めます。このプラグインは「話す言語」を優先するため、ここで選んだ言語で書き起こします。追従のままにすると、Claude Code と同じく「言語」設定に従います。"
       },
       "silenceTimeout": {
         "label": "待機時間",

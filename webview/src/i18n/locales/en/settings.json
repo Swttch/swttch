@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (not recognised yet)",
         "fallbackWarning": "This language is not recognised yet, so speech is transcribed as English.",
         "search": "Search languages",
-        "noMatch": "No matching language"
+        "noMatch": "No matching language",
+        "differsTitle": "Different from the official behaviour",
+        "differsBody": "Claude Code picks the dictation language from the Language setting. This plugin uses Spoken language first, so the language you pick here is the one it listens for. Leave it on follow and it uses the Language setting, exactly as Claude Code does."
       },
       "silenceTimeout": {
         "label": "Wait time",

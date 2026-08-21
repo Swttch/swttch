@@ -51,7 +51,9 @@
         "unsupported": "{{language}}（尚未辨識）",
         "fallbackWarning": "此語言尚未被辨識，說話內容會被轉寫為英文。",
         "search": "搜尋語言",
-        "noMatch": "沒有相符的語言"
+        "noMatch": "沒有相符的語言",
+        "differsTitle": "與官方行為的差異",
+        "differsBody": "Claude Code 會從「語言」設定取得聽寫語言。本外掛優先使用「說話語言」，因此會依你在此處選擇的語言進行聽寫。保持跟隨時，則與 Claude Code 一樣遵循「語言」設定。"
       },
       "silenceTimeout": {
         "label": "等待時間",

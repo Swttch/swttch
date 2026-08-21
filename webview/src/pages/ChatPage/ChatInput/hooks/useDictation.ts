@@ -95,8 +95,8 @@ export function useDictation(getTarget: () => DictationTarget) {
   const { settings } = useSettings();
   const { settings: claudeSettings } = useClaudeSettings();
   const voice = settings[SettingKey.VOICE] ?? {};
-  // Claude's own `language` decides this in the CLI, so it decides it here too;
-  // ours only answers when that is empty or is prose we cannot read.
+  // The spoken language the user picked wins; Claude's own `language` answers
+  // when they left it on "follow", which is what the CLI does.
   const spokenLanguage = resolveDictationLanguage({
     claudeLanguage: claudeSettings.language as string | undefined,
     speechLanguage: voice.speechLanguage,

@@ -41,19 +41,37 @@ describe('languageSettingToCode', () => {
 });
 
 describe('resolveDictationLanguage', () => {
-  it("prefers Claude's own language setting", () => {
-    // The CLI treats `language` as the dictation language, so a value there
-    // wins over everything else — changing it in /config must move the GUI too.
+  it('prefers the spoken language the user picked', () => {
+    // A value here was chosen deliberately in a control labelled "spoken
+    // language", and there is nothing else it could mean. Letting `language`
+    // override it makes the control inert: the user picks English, keeps
+    // hearing Korean transcripts, and the screen never says why.
+    //
+    // This is where we depart from the documented CLI order (`language` first,
+    // then English). The CLI has no spoken-language setting at all, so a CLI
+    // user cannot reach this conflict — nothing they can do is blocked by it.
     expect(
       resolveDictationLanguage({
         claudeLanguage: 'japanese',
         speechLanguage: 'ko',
         uiLocale: 'en',
       }),
+    ).toBe('ko');
+  });
+
+  it("follows Claude's language when no spoken language is set", () => {
+    // Left unset, the setting means "follow" — and following `language` is
+    // what the CLI does, so an untouched install behaves identically to it.
+    expect(
+      resolveDictationLanguage({
+        claudeLanguage: 'japanese',
+        speechLanguage: null,
+        uiLocale: 'en',
+      }),
     ).toBe('ja');
   });
 
-  it('falls back to our own setting when the official one is empty', () => {
+  it('uses our setting when the official one is empty', () => {
     expect(
       resolveDictationLanguage({
         claudeLanguage: null,
@@ -63,14 +81,26 @@ describe('resolveDictationLanguage', () => {
     ).toBe('ko');
   });
 
-  it('falls back to our own setting when the official one is unreadable', () => {
+  it('ignores a spoken language we cannot read', () => {
+    // Prose in our own setting is not a language tag; fall through rather than
+    // passing it to the service.
+    expect(
+      resolveDictationLanguage({
+        claudeLanguage: 'japanese',
+        speechLanguage: 'be concise',
+        uiLocale: 'en',
+      }),
+    ).toBe('ja');
+  });
+
+  it('skips an unreadable official setting', () => {
     // "be concise" is a legitimate thing to put in `language`, and it tells us
     // nothing about what the user speaks — so the next source should answer.
     expect(
       resolveDictationLanguage({
         claudeLanguage: 'be concise',
-        speechLanguage: 'ko',
-        uiLocale: 'en',
+        speechLanguage: null,
+        uiLocale: 'ko',
       }),
     ).toBe('ko');
   });
