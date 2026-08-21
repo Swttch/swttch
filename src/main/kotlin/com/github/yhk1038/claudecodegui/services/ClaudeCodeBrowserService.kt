@@ -221,10 +221,25 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
      *
      * Cheap to call — does NOT initialize CefApp (only [JBCefApp.isSupported]
      * is consulted, which is a capability probe, not a builder).
+     *
+     * `isSupported()` answers whether JCEF *works*; it presupposes the JCEF
+     * classes are loadable at all. On Android Studio 2026.2 Canary they are not —
+     * `com.intellij.modules.jcef` fails to resolve, so this plugin's class loader
+     * has no `com.intellij.ui.jcef` package and the call itself raises
+     * NoClassDefFoundError (issue #321). Catching Error here is what lets the
+     * guard answer "unavailable" rather than propagate, so callers can fall back
+     * to [com.github.yhk1038.claudecodegui.toolwindow.JcefUnavailablePanel].
+     * LinkageError also covers the runtime-mismatch shape from issue #295, where
+     * the classes exist but disagree with the platform's own copy.
      */
     fun isJcefAvailable(): Boolean {
         if (java.lang.Boolean.getBoolean("claude.simulate.no.jcef")) return false
-        return JBCefApp.isSupported()
+        return try {
+            JBCefApp.isSupported()
+        } catch (e: LinkageError) {
+            logger.warn("JCEF classes are not loadable in this runtime — treating JCEF as unavailable", e)
+            false
+        }
     }
 
     /**
@@ -258,7 +273,10 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
             // show the mismatch panel.
             runCatching { createHolder() }
                 .onFailure { e ->
-                    if (e !is NoSuchMethodError && e !is NoClassDefFoundError) throw e
+                    // LinkageError covers both shapes: a method the runtime's JCEF
+                    // lacks (NoSuchMethodError, #295) and a JCEF class the class
+                    // loader cannot see at all (NoClassDefFoundError, #321).
+                    if (e !is LinkageError) throw e
                     logger.warn("JCEF runtime is incompatible with this IDE — cannot create browser for tab: $tabId", e)
                 }
                 .getOrNull()
