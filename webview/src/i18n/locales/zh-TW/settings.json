@@ -241,6 +241,8 @@
       "title": "版本資訊",
       "pluginVersion": "外掛版本",
       "cliVersion": "{{appName}} 版本",
+      "ide": "IDE / 瀏覽器",
+      "os": "作業系統",
       "notDetected": "未偵測到",
       "refreshVersion": "重新整理版本",
       "refresh": "重新整理"

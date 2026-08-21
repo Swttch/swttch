@@ -7,7 +7,7 @@ import { CliUpdateControl } from './CliUpdateControl';
 
 export function AboutSettings() {
   const { t } = useTranslation('settings');
-  const { pluginVersion, cliVersion, refresh, isLoading } = useVersionInfo();
+  const { pluginVersion, cliVersion, clientInfo, osInfo, refresh, isLoading } = useVersionInfo();
 
   return (
     <div>
@@ -34,6 +34,20 @@ export function AboutSettings() {
               <ArrowPathIcon className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
+        </SettingRow>
+
+        {/* Both rows exist so a bug report can be filled in without hunting through
+            IDE menus — see issue #320. */}
+        <SettingRow label={t('about.versionInfo.ide')}>
+          <span className="text-sm text-text-secondary">
+            {clientInfo ?? t('about.versionInfo.notDetected')}
+          </span>
+        </SettingRow>
+
+        <SettingRow label={t('about.versionInfo.os')}>
+          <span className="text-sm text-text-secondary">
+            {osInfo ?? t('about.versionInfo.notDetected')}
+          </span>
         </SettingRow>
       </SettingSection>
 

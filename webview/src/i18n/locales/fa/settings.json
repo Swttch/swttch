@@ -241,6 +241,8 @@
       "title": "اطلاعات نسخه",
       "pluginVersion": "نسخه پلاگین",
       "cliVersion": "نسخه {{appName}}",
+      "ide": "IDE / مرورگر",
+      "os": "سیستم‌عامل",
       "notDetected": "شناسایی نشد",
       "refreshVersion": "تازه‌سازی نسخه",
       "refresh": "تازه‌سازی"

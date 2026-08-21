@@ -241,6 +241,8 @@
       "title": "Информация о версии",
       "pluginVersion": "Версия плагина",
       "cliVersion": "Версия {{appName}}",
+      "ide": "IDE / Браузер",
+      "os": "ОС",
       "notDetected": "не обнаружено",
       "refreshVersion": "Обновить версию",
       "refresh": "Обновить"

@@ -7,6 +7,10 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { resolve, dirname } from 'path';
 import { MessageType } from '../../shared';
+import { isJetBrainsMode } from '../../config/environment';
+import { getRawClientInfo } from '../features/telemetry';
+import { formatClientInfo } from '../client-info';
+import { getOsInfo } from '../os-info';
 
 declare const __PLUGIN_VERSION__: string;
 
@@ -44,11 +48,16 @@ export async function getVersionHandler(
   bridge: Bridge,
 ): Promise<void> {
   try {
-    const [cliVersion, requiresRestart] = await Promise.all([
+    const [cliVersion, requiresRestart, osInfo] = await Promise.all([
       getCliVersion(),
       bridge.requiresRestart().catch(() => true),
+      // Never rejects, but keep the guard so a future change cannot take About down.
+      getOsInfo().catch(() => null),
     ]);
     const pluginVersion = getPluginVersion();
+    // The IDE product string in JetBrains mode, the browser in standalone mode;
+    // null when the backend genuinely has no client identity to report.
+    const clientInfo = formatClientInfo(getRawClientInfo(), isJetBrainsMode);
 
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
@@ -56,6 +65,8 @@ export async function getVersionHandler(
       pluginVersion,
       cliVersion,
       requiresRestart,
+      clientInfo,
+      osInfo,
     });
   } catch (err) {
     connections.sendTo(connectionId, MessageType.ACK, {

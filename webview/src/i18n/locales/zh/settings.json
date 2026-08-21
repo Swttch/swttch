@@ -241,6 +241,8 @@
       "title": "版本信息",
       "pluginVersion": "插件版本",
       "cliVersion": "{{appName}} 版本",
+      "ide": "IDE / 浏览器",
+      "os": "操作系统",
       "notDetected": "未检测到",
       "refreshVersion": "刷新版本",
       "refresh": "刷新"

@@ -124,6 +124,19 @@ function getClientInfo(): string {
 }
 
 /**
+ * The raw client identifier, or '' when only the mode fallback is known.
+ *
+ * About needs to tell "we know what this client is" from "we are guessing from
+ * the run mode", which getClientInfo() flattens by returning 'jetbrains' /
+ * 'browser' for the unknown case. Telemetry keeps using that flattened value.
+ */
+export function getRawClientInfo(): string {
+  if (ccgClientInfo.length > 0) return ccgClientInfo;
+  if (browserClient.length > 0) return browserClient;
+  return '';
+}
+
+/**
  * 사용자의 셸 종류(zsh/bash/powershell 등)를 감지한다. Unix는 $SHELL, Windows는
  * PowerShell(PSModulePath 존재)/cmd($ComSpec)로 판별한다. 미확인이면 빈 문자열.
  */

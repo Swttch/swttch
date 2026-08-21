@@ -241,6 +241,8 @@
       "title": "Informations de version",
       "pluginVersion": "Version du plugin",
       "cliVersion": "Version de {{appName}}",
+      "ide": "IDE / Navigateur",
+      "os": "Système d'exploitation",
       "notDetected": "non détecté",
       "refreshVersion": "Actualiser la version",
       "refresh": "Actualiser"
