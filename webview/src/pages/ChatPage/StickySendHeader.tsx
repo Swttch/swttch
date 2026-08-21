@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
+import { useScrollFold, FOLD_MIN_HEIGHT } from './useScrollFold';
+import { ScrollFoldContext } from './ScrollFoldContext';
 
 interface Props {
   children: ReactNode;
@@ -35,10 +37,14 @@ export function StickySendHeader(props: Props) {
   const { t } = useTranslation('chat');
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
+  const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
+    // The same element the observer defaults to, held onto so the fold can
+    // measure against its top edge.
+    setScrollRoot(sentinel.closest<HTMLElement>('[data-chat-scroll]'));
     // Default root: the nearest scrollable ancestor, which is ChatPage's
     // message container.
     const observer = new IntersectionObserver(
@@ -48,6 +54,28 @@ export function StickySendHeader(props: Props) {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, []);
+
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const { height: foldHeight, restingHeight } = useScrollFold(scrollRoot, pinned, bubbleRef);
+
+  // What the fold takes off the bubble is added back here, immediately after
+  // the pinned element and outside it.
+  //
+  // Sticky looks detached but keeps its slot in the flow, so a bubble that
+  // shrinks in place drags the whole transcript up behind it. Holding the slot
+  // open inside the sticky element fixes that but pins the empty part to the
+  // screen too — a band of blank surface under the folded bubble, which is the
+  // very space this feature exists to reclaim. Out here the sticky element
+  // hugs the bubble, and the flow keeps its length regardless.
+  //
+  // The gap is the difference between the two numbers the fold already
+  // produced, so it needs no measuring of its own: reading layout during
+  // render would force a reflow every frame and still be a frame behind. Both
+  // sides floor at one line, or they would drift apart once the fold bottoms
+  // out and the spacer would keep growing under a bubble that had stopped.
+  const spacer = foldHeight === null
+    ? 0
+    : Math.max(restingHeight - Math.max(foldHeight, FOLD_MIN_HEIGHT), 0);
 
   const scrollToSelf = () => {
     // Same move as ChatPage's "scroll to bottom": let the browser do it, so a
@@ -104,7 +132,16 @@ export function StickySendHeader(props: Props) {
         }}
         onClick={onClick}
       >
-        {children}
+        {/*
+          Wraps the bubble so the fold can read its resting height as the send
+          pins. It must not carry styling of its own — the height read here is
+          the number the whole fold counts down from.
+        */}
+        <div ref={bubbleRef}>
+          <ScrollFoldContext.Provider value={pinned && foldHeight !== null ? { height: foldHeight, restingHeight } : null}>
+            {children}
+          </ScrollFoldContext.Provider>
+        </div>
         {pinned && (
           <button
             type="button"
@@ -122,6 +159,8 @@ export function StickySendHeader(props: Props) {
           </button>
         )}
       </div>
+      {/* Stands in for the height the fold took off the bubble — see above. */}
+      <div aria-hidden style={{ height: spacer }} />
     </>
   );
 }
