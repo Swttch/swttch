@@ -241,6 +241,8 @@
       "title": "Version Information",
       "pluginVersion": "Plugin Version",
       "cliVersion": "{{appName}} Version",
+      "ide": "IDE / Browser",
+      "os": "OS",
       "notDetected": "not detected",
       "refreshVersion": "Refresh version",
       "refresh": "Refresh"

@@ -241,6 +241,8 @@
       "title": "バージョン情報",
       "pluginVersion": "プラグインバージョン",
       "cliVersion": "{{appName}} バージョン",
+      "ide": "IDE / ブラウザ",
+      "os": "OS",
       "notDetected": "検出されませんでした",
       "refreshVersion": "バージョンを更新",
       "refresh": "更新"

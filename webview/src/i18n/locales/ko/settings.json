@@ -241,6 +241,8 @@
       "title": "버전 정보",
       "pluginVersion": "플러그인 버전",
       "cliVersion": "{{appName}} 버전",
+      "ide": "IDE / 브라우저",
+      "os": "OS",
       "notDetected": "감지되지 않음",
       "refreshVersion": "버전 새로고침",
       "refresh": "새로고침"

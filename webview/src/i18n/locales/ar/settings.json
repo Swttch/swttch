@@ -241,6 +241,8 @@
       "title": "معلومات الإصدار",
       "pluginVersion": "إصدار الإضافة",
       "cliVersion": "إصدار {{appName}}",
+      "ide": "IDE / المتصفح",
+      "os": "نظام التشغيل",
       "notDetected": "لم يُكتشف",
       "refreshVersion": "تحديث الإصدار",
       "refresh": "تحديث"
