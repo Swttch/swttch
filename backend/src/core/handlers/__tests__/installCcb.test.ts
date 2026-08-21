@@ -9,7 +9,13 @@ vi.mock('child_process', () => ({
 }));
 // Spy on the cache reset without pulling the real usage module's other exports.
 vi.mock('../getUsage', () => ({ resetUsageCache: vi.fn() }));
-vi.mock('../../extend-kit', () => ({ resetExtendKitCache: vi.fn() }));
+// `getExtendKitVersion` is what turns "the command exited 0" into "the kit is
+// actually there": the handler now confirms the install by finding the package
+// rather than by trusting an exit code.
+vi.mock('../../extend-kit', () => ({
+  resetExtendKitCache: vi.fn(),
+  getExtendKitVersion: vi.fn(async () => '0.4.0'),
+}));
 // The handler now asks where `claude` lives, because the manager that owns this
 // machine's global packages is read off the CLI the user runs in a terminal
 // before falling back to the running Node (#298). Stubbed so these tests assert
@@ -19,7 +25,7 @@ vi.mock('../getCliUpdateInfo', () => ({ resolveClaudePaths: vi.fn(async () => [n
 import { execFile as cpExecFile } from 'child_process';
 import { installCcbHandler } from '../installCcb';
 import { resetUsageCache } from '../getUsage';
-import { resetExtendKitCache } from '../../extend-kit';
+import { resetExtendKitCache, getExtendKitVersion } from '../../extend-kit';
 import { resolveClaudePaths } from '../getCliUpdateInfo';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
@@ -29,6 +35,7 @@ import { MessageType } from '../../../shared';
 const mockExecFile = vi.mocked(cpExecFile);
 const mockResetUsageCache = vi.mocked(resetUsageCache);
 const mockResetExtendKitCache = vi.mocked(resetExtendKitCache);
+const mockGetExtendKitVersion = vi.mocked(getExtendKitVersion);
 const bridge = {} as Bridge;
 const msg: IPCMessage = { type: MessageType.INSTALL_CCB, payload: {}, timestamp: 0, requestId: 'req-1' };
 
@@ -73,6 +80,9 @@ beforeEach(() => {
   execPathSpy = vi.spyOn(process, 'execPath', 'get');
   execPathSpy.mockReturnValue('/nonexistent-for-tests/bin/node');
   mockResolveClaudePaths.mockResolvedValue([null, null]);
+  // Default: the kit is findable after installing. Tests about the "installed
+  // but not findable" path override this.
+  mockGetExtendKitVersion.mockResolvedValue('0.4.0');
 });
 
 afterEach(() => {
@@ -281,5 +291,95 @@ describe('installCcbHandler', () => {
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
     expect(String(p.error)).toContain('network ETIMEDOUT');
+  });
+});
+
+/**
+ * #298 follow-up.
+ *
+ * An exit code of 0 says the COMMAND succeeded, not that the kit is loadable.
+ * Every failure in this issue's history has the same shape: a command that
+ * reports success against a place the loader never reads — a different Node's
+ * global folder, volta's own store, an `npm_config_prefix` redirect. The user
+ * sees "installed" and voice input still does not work.
+ *
+ * So success is now defined as FINDING the package, using the very function
+ * dictation loads it with, and a first miss is retried once — the reporter's own
+ * workaround was running the identical command a second time.
+ */
+describe('installCcbHandler — confirming the install rather than trusting exit 0', () => {
+  it('acks ok only after the kit is actually found', async () => {
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    mockGetExtendKitVersion.mockResolvedValue('0.4.0');
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    expect(lastPayload(conns)).toMatchObject({ status: 'ok' });
+    // Looked for the kit rather than reading the command's output.
+    expect(mockGetExtendKitVersion).toHaveBeenCalled();
+  });
+
+  it('re-runs the install command when the kit is not found the first time', async () => {
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    // Missing after the first install, present after the second — exactly what
+    // the reporter observed running the same command twice by hand.
+    mockGetExtendKitVersion.mockResolvedValueOnce(null).mockResolvedValue('0.4.0');
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    const installs = mockExecFile.mock.calls
+      .map((_c, i) => spawnedArgv(i))
+      .filter((a) => a.includes('@swttch/extend-kit') && !a.includes('uninstall'));
+    expect(installs).toHaveLength(2);
+    expect(lastPayload(conns)).toMatchObject({ status: 'ok' });
+  });
+
+  it('asks the user to try again when the kit is still missing after the retry', async () => {
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    mockGetExtendKitVersion.mockResolvedValue(null);
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    const p = lastPayload(conns);
+    expect(p.status).toBe('error');
+    // Not "failed" (the command succeeded) and not an explanation of our own
+    // lookup — just what happened and what to do about it.
+    expect(String(p.error)).toContain('did not complete');
+    expect(String(p.error)).toContain('try again');
+  });
+
+  it('does not retry when the install command itself failed', async () => {
+    // A command that never ran is not a lookup problem; running it twice only
+    // doubles the wait before the real error reaches the user.
+    mockExecFile.mockImplementation(fakeExecFile({
+      err: new Error('Command failed'),
+      stderr: 'npm error network ETIMEDOUT',
+    }));
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    const installs = mockExecFile.mock.calls
+      .map((_c, i) => spawnedArgv(i))
+      .filter((a) => a.includes('@swttch/extend-kit') && !a.includes('uninstall'));
+    expect(installs).toHaveLength(1);
+    expect(String(lastPayload(conns).error)).toContain('network ETIMEDOUT');
+  });
+
+  it('re-resolves before looking, so the lookup cannot answer from the pre-install cache', async () => {
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    mockGetExtendKitVersion.mockResolvedValue('0.4.0');
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    // The cache holds "found nowhere" from before the install. Looking without
+    // dropping it first would report the fresh install as missing.
+    const resetOrder = mockResetExtendKitCache.mock.invocationCallOrder[0];
+    const lookupOrder = mockGetExtendKitVersion.mock.invocationCallOrder[0];
+    expect(resetOrder).toBeLessThan(lookupOrder);
   });
 });

@@ -5,7 +5,7 @@ import { runLauncher } from '../run-launcher';
 import { MessageType } from '../../shared';
 import { isPermissionFailure, permissionErrorMessage } from './updateCli';
 import { resetUsageCache } from './getUsage';
-import { resetExtendKitCache } from '../extend-kit';
+import { resetExtendKitCache, getExtendKitVersion } from '../extend-kit';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 import {
   EXTEND_KIT_PACKAGE,
@@ -26,6 +26,42 @@ const INSTALL_MAX_BUFFER = 10 * 1024 * 1024;
 /** Run one install-related command through the shared launcher runner. */
 function run(command: string, args: string[]): Promise<{ ok: boolean; output: string }> {
   return runLauncher(command, args, { timeout: INSTALL_TIMEOUT_MS, maxBuffer: INSTALL_MAX_BUFFER });
+}
+
+/**
+ * How many times an install that REPORTS success may be run before giving up.
+ *
+ * Two, because the second one is what the reporter in #298 did by hand: the same
+ * command, unchanged, and the kit appeared. Whatever leaves a first run finished
+ * but unfindable — a half-written package directory, a link npm had not yet
+ * completed — a plain re-run resolves, and re-running an install is safe by
+ * construction: `npm i -g` on an already-present package is a no-op.
+ */
+const INSTALL_ATTEMPTS = 2;
+
+/**
+ * Is the kit actually loadable now?
+ *
+ * The lookup deliberately goes through {@link getExtendKitVersion}, the same
+ * resolution dictation uses to LOAD the kit, rather than reading the installer's
+ * output. Every failure in #298's history is a command that succeeded against a
+ * place the loader never reads — a different Node's global folder, volta's own
+ * store, an `npm_config_prefix` redirect — so parsing "added N packages" would
+ * confirm the one thing that was never in doubt while missing the thing that
+ * actually breaks. Asking the loader collapses install-target and load-target
+ * into a single question, which is the only one the user cares about.
+ *
+ * The cache is dropped first: it holds "found nowhere" from before the install,
+ * and reading through it would report every fresh install as missing.
+ */
+async function kitIsLoadable(): Promise<boolean> {
+  resetExtendKitCache();
+  try {
+    return (await getExtendKitVersion()) !== null;
+  } catch {
+    // A lookup that throws is not a found kit.
+    return false;
+  }
 }
 
 /**
@@ -72,8 +108,13 @@ function isBlockedByPredecessor(output: string): boolean {
  *
  * On a permission-blocked global location we don't fail silently — we hand back
  * the exact command (with sudo where needed) so the user can run it in a
- * terminal, reusing updateCli's classification. On success both caches are
- * cleared so the next lookup sees the new install rather than the old answer.
+ * terminal, reusing updateCli's classification.
+ *
+ * Success is CONFIRMED, not assumed: an exit code of 0 says the command ran,
+ * while every bug in this issue's history is a command that ran fine against a
+ * place the loader never reads. So the kit is looked up afterwards through the
+ * same resolution dictation loads it with, and a first miss re-runs the install
+ * once — the reporter's own workaround. Only a kit we can actually find acks ok.
  */
 export async function installCcbHandler(
   connectionId: string,
@@ -93,43 +134,68 @@ export async function installCcbHandler(
     '\n',
   );
 
-  let result = await run(command, args);
-  if (!result.ok && isBlockedByPredecessor(result.output)) {
-    // The predecessor still owns `ccb` from an install that predates the rename.
-    // The two ship the same code — the old package is a re-export shell — so
-    // removing it loses nothing, and asking the user to do it by hand for a name
-    // collision we created ourselves would be the wrong way round.
-    //
-    // Removal must use the manager that owns the collision: uninstalling with
-    // the wrong tool leaves the shim in place and the retry fails identically.
-    const rm = buildUninstallSpec(coord, PREDECESSOR_PACKAGE, process.execPath);
-    await run(rm.command, rm.args);
-    result = await run(command, args);
+  for (let attempt = 1; attempt <= INSTALL_ATTEMPTS; attempt++) {
+    let result = await run(command, args);
+    if (!result.ok && isBlockedByPredecessor(result.output)) {
+      // The predecessor still owns `ccb` from an install that predates the
+      // rename. The two ship the same code — the old package is a re-export
+      // shell — so removing it loses nothing, and asking the user to do it by
+      // hand for a name collision we created ourselves would be the wrong way
+      // round.
+      //
+      // Removal must use the manager that owns the collision: uninstalling with
+      // the wrong tool leaves the shim in place and the retry fails identically.
+      const rm = buildUninstallSpec(coord, PREDECESSOR_PACKAGE, process.execPath);
+      await run(rm.command, rm.args);
+      result = await run(command, args);
+    }
+
+    if (!result.ok) {
+      // The command itself failed, which is a different thing from an install
+      // that cannot be found afterwards: there is nothing for a re-run to
+      // settle, so report it now rather than making the user wait through a
+      // second identical failure.
+      //
+      // A global install location the non-interactive backend cannot write to
+      // (sudo-needing system PM, admin-only Program Files) is the common case.
+      // Don't fail silently — hand back the exact command to run in a terminal.
+      const error = isPermissionFailure(result.output)
+        ? permissionErrorMessage(command, args, result.output)
+        : result.output || `${EXTEND_KIT_PACKAGE} install failed`;
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'error',
+        error,
+      });
+      return;
+    }
+
+    // Exit code 0 means the command ran, not that the kit is there. Confirm it
+    // by finding the package the way dictation will, and only then call it done.
+    if (await kitIsLoadable()) {
+      // Next usage fetch should re-run ccb rather than serve the cached error.
+      resetUsageCache();
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'ok',
+      });
+      return;
+    }
+
+    console.log(
+      'extend-kit install reported success but the kit was not found\n',
+      JSON.stringify({ attempt, of: INSTALL_ATTEMPTS, command, args }),
+      '\n',
+    );
   }
 
-  if (!result.ok) {
-    // A global install location the non-interactive backend cannot write to
-    // (sudo-needing system PM, admin-only Program Files). Don't fail silently —
-    // tell the user to run it in a terminal, with the exact command.
-    const error = isPermissionFailure(result.output)
-      ? permissionErrorMessage(command, args, result.output)
-      : result.output || `${EXTEND_KIT_PACKAGE} install failed`;
-    connections.sendTo(connectionId, MessageType.ACK, {
-      requestId: message.requestId,
-      status: 'error',
-      error,
-    });
-    return;
-  }
-
-  // Next usage fetch should re-run ccb rather than serve the cached error.
-  resetUsageCache();
-  // The loader caches where it looked for the kit, including having found it
-  // nowhere. Without this the install succeeds and every later lookup still
-  // answers from that cache, so the version on screen never moves.
-  resetExtendKitCache();
+  // Installed by every measure the command offers, and still not loadable. We
+  // cannot honestly call this a failure (nothing failed) and the user has no use
+  // for our lookup's troubles, so the message says only what happened and what
+  // to do — the same re-run that worked for the reporter.
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
-    status: 'ok',
+    status: 'error',
+    error: `The ${EXTEND_KIT_PACKAGE} installation did not complete. Please try again.`,
   });
 }
