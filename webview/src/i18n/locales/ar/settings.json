@@ -79,7 +79,8 @@
         "removeConfirmTitle": "هل تريد إزالة @swttch/extend-kit؟",
         "removeConfirmMessage": "سيتوقف الإدخال الصوتي على هذا الجهاز إلى أن تعيد تثبيته. وتستخدم لوحة الاستهلاك الحزمة نفسها.",
         "refresh": "إعادة الفحص",
-        "refreshing": "جارٍ الفحص…"
+        "refreshing": "جارٍ الفحص…",
+        "dismiss": "إغلاق"
       }
     },
     "uiDirection": {

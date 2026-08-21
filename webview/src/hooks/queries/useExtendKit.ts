@@ -79,9 +79,15 @@ export function useExtendKit(options?: { enabled?: boolean }) {
       if (r?.status !== 'ok') throw new Error(r?.error ?? 'Failed to install the kit');
     },
     onSuccess: () => {
-      // Same reason as removal below: whatever the backend cached about where
-      // the kit is (including having found none) is stale the moment this
-      // succeeds, so the refetch has to make it look again.
+      // Installing is finished; what the section should now SHOW is the version
+      // lookup's job, not this mutation's. So hand straight over to the very
+      // path the version control runs when it is clicked — same flag, same
+      // invalidation — instead of keeping a second notion of "installed" here
+      // that could disagree with the one the rest of the section reads.
+      //
+      // Whatever the backend cached about where the kit is (including having
+      // found none) is stale the moment this succeeds, so the refetch has to
+      // make it look again.
       forceRefreshNextFetch = true;
       void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
       // The usage panel reads the same package, so a fresh install fixes it too.

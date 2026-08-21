@@ -79,7 +79,8 @@
         "removeConfirmTitle": "@swttch/extend-kit을 삭제할까요?",
         "removeConfirmMessage": "다시 설치하기 전까지 이 기기에서 음성 입력을 쓸 수 없습니다. 사용량 패널도 같은 패키지를 사용합니다.",
         "refresh": "다시 확인",
-        "refreshing": "확인 중…"
+        "refreshing": "확인 중…",
+        "dismiss": "닫기"
       }
     },
     "uiDirection": {

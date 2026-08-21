@@ -79,7 +79,8 @@
         "removeConfirmTitle": "要删除 @swttch/extend-kit 吗？",
         "removeConfirmMessage": "在重新安装之前，此设备将无法使用语音输入。用量面板也使用同一个包。",
         "refresh": "重新检查",
-        "refreshing": "检查中…"
+        "refreshing": "检查中…",
+        "dismiss": "关闭"
       }
     },
     "uiDirection": {

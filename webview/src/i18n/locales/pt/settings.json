@@ -79,7 +79,8 @@
         "removeConfirmTitle": "Remover o @swttch/extend-kit?",
         "removeConfirmMessage": "A entrada por voz deixará de funcionar nesta máquina até você instalá-lo novamente. O painel de uso utiliza o mesmo pacote.",
         "refresh": "Verificar novamente",
-        "refreshing": "Verificando…"
+        "refreshing": "Verificando…",
+        "dismiss": "Fechar"
       }
     },
     "uiDirection": {

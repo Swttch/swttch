@@ -4,6 +4,7 @@ import {
   ArrowDownTrayIcon,
   CheckCircleIcon,
   TrashIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
@@ -52,7 +53,32 @@ export function ExtendKitControl() {
     } catch (err) {
       // The backend hands back a runnable command when a global install needs
       // elevation, so the message is worth showing verbatim.
-      toast.error(err instanceof Error ? err.message : t('general.voice.kit.failed'));
+      //
+      // It also has to stay up long enough to USE. react-hot-toast dismisses an
+      // error after 4s, which is not enough time to read a multi-line message,
+      // find the command inside it and retype it into a terminal — so the one
+      // person who hit this in #298 went and worked the command out themselves
+      // instead. Errors here wait to be dismissed, which means they need a way
+      // to BE dismissed; `whiteSpace` keeps the command on its own line rather
+      // than reflowing it into the prose.
+      const text = err instanceof Error ? err.message : t('general.voice.kit.failed');
+      toast.error(
+        (instance) => (
+          <span className="flex items-start gap-3">
+            <span className="whitespace-pre-wrap">{text}</span>
+            <button
+              type="button"
+              onClick={() => toast.dismiss(instance.id)}
+              className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"
+              aria-label={t('general.voice.kit.dismiss')}
+              title={t('general.voice.kit.dismiss')}
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          </span>
+        ),
+        { duration: Infinity },
+      );
     }
   };
 

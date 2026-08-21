@@ -79,7 +79,8 @@
         "removeConfirmTitle": "@swttch/extend-kit entfernen?",
         "removeConfirmMessage": "Die Spracheingabe funktioniert auf diesem Rechner nicht mehr, bis du sie erneut installierst. Das Nutzungs-Panel verwendet dasselbe Paket.",
         "refresh": "Erneut prüfen",
-        "refreshing": "Wird geprüft…"
+        "refreshing": "Wird geprüft…",
+        "dismiss": "Schließen"
       }
     },
     "uiDirection": {
