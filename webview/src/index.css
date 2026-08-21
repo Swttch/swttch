@@ -627,6 +627,28 @@ body {
 }
 
 /* ============================================
+   Diff row tint spans the full line (#179)
+   ============================================ */
+
+/* A diff row is a block inside a horizontally scrolling <pre>, so its width
+   resolves against the container's *visible* width while the text runs past it.
+   Scroll sideways and the row's tint ends mid-line.
+
+   Sizing each row to its own text (`width: fit-content`) does not fix this: it
+   makes every row a different width, so each one's tint stops wherever that
+   line happens to end. The rows have to share one width — the longest line's.
+   So `.diff-body` takes that width and each row fills it. */
+.diff-body {
+  min-width: max-content;
+}
+
+.diff-body-line {
+  display: block;
+  min-width: 100%;
+}
+
+
+/* ============================================
    Slash Command Panel Variables (semantic-token wired)
    ============================================ */
 :root {

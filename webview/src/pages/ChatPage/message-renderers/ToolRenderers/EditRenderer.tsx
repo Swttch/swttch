@@ -123,12 +123,18 @@ export function EditRenderer(props: RendererProps) {
                 {showDiff && (
                     <div className="rounded overflow-hidden border border-border-default mt-2.5">
                         <pre dir="ltr" className="text-[0.9230rem] leading-[1.5] font-mono overflow-x-auto m-0">
-                            {diffLines.map((line, i) => (
-                                <div key={i} className={`${lineStyles[line.type]}`}>
-                                    <div className={`${prefixMap[line.type].trim() ? 'inline-flex' : 'inline-block'} items-center justify-center w-4 select-none bg-surface-pressed/20`}>{prefixMap[line.type]}</div>
-                                    {line.content}
-                                </div>
-                            ))}
+                            {/* Sized to the longest line rather than to the visible width, so the
+                                rows inside can fill it. A row is a block, so its width resolves
+                                against this box — without it every row stops at the container's
+                                edge and its tint runs out mid-line once scrolled (#179). */}
+                            <div className="diff-body">
+                                {diffLines.map((line, i) => (
+                                    <div key={i} className={`diff-body-line ${lineStyles[line.type]}`}>
+                                        <div className={`${prefixMap[line.type].trim() ? 'inline-flex' : 'inline-block'} items-center justify-center w-4 select-none bg-surface-pressed/20`}>{prefixMap[line.type]}</div>
+                                        {line.content}
+                                    </div>
+                                ))}
+                            </div>
                         </pre>
                     </div>
                 )}
