@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.28.3 - Folding pinned instruction, soft wrap, voice fixes</h3>
+            <ul>
+                <li>Fold a pinned instruction away as you scroll past it (#318)</li>
+                <li>Fix Ctrl-based voice shortcuts not working under non-Latin input methods (#324, reported by @hollandjake)</li>
+                <li>Fix dictation ignoring the spoken language you picked (#324, reported by @hollandjake)</li>
+                <li>Fix the voice input kit reporting a successful install while voice input stayed broken (#323, reported by @hollandjake)</li>
+                <li>Add a Soft Wrap setting for long lines in diffs and tool output (#322, requested by @deniskrizanovic)</li>
+                <li>Fix diff row colours stopping short of the end of long lines (#322, reported by @deniskrizanovic)</li>
+                <li>Fix empty message bubbles appearing during runs that use tools (#258, reported by @StarCode000)</li>
+            </ul>
             <h3>0.28.2 - Sticky user message + scrollable model picker</h3>
             <ul>
                 <li>Pin your sent message to the top of the chat while its reply is running (#313, requested by @deniskrizanovic)</li>
