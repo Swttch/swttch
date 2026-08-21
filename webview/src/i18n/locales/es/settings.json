@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (aún no se reconoce)",
         "fallbackWarning": "Este idioma aún no se reconoce, por lo que se transcribe como inglés.",
         "search": "Buscar idiomas",
-        "noMatch": "Ningún idioma coincide"
+        "noMatch": "Ningún idioma coincide",
+        "differsTitle": "Diferencia con el comportamiento oficial",
+        "differsBody": "Claude Code toma el idioma de dictado del ajuste «Idioma». Este complemento usa primero «Idioma hablado», así que transcribe en el idioma que elijas aquí. Si lo dejas en seguir, aplica el ajuste «Idioma», igual que Claude Code."
       },
       "silenceTimeout": {
         "label": "Tiempo de espera",

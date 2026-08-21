@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (pas encore reconnu)",
         "fallbackWarning": "Cette langue n'est pas encore reconnue : la parole est transcrite en anglais.",
         "search": "Rechercher une langue",
-        "noMatch": "Aucune langue correspondante"
+        "noMatch": "Aucune langue correspondante",
+        "differsTitle": "Différence avec le comportement officiel",
+        "differsBody": "Claude Code choisit la langue de dictée d'après le paramètre « Langue ». Cette extension utilise d'abord « Langue parlée », donc la langue choisie ici est celle qui est reconnue. Laissée sur « suivre », elle applique le paramètre « Langue », comme Claude Code."
       },
       "silenceTimeout": {
         "label": "Temps d'attente",

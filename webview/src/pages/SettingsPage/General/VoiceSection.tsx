@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { SettingSection, SettingRow } from '../common';
+import { SettingSection, SettingRow, DiffersFromOfficialHint } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
@@ -130,9 +130,15 @@ export function VoiceSection() {
       <SettingRow
         label={t('general.voice.speechLanguage.label')}
         description={
-          showsFallbackWarning
-            ? t('general.voice.speechLanguage.fallbackWarning')
-            : t('general.voice.speechLanguage.description')
+          <>
+            {showsFallbackWarning
+              ? t('general.voice.speechLanguage.fallbackWarning')
+              : t('general.voice.speechLanguage.description')}
+            <DiffersFromOfficialHint
+              title={t('general.voice.speechLanguage.differsTitle')}
+              body={t('general.voice.speechLanguage.differsBody')}
+            />
+          </>
         }
       >
         <Select

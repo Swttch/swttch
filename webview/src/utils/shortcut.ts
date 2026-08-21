@@ -18,21 +18,71 @@ export interface ShortcutParts {
   key: string;
 }
 
-/** Read the parts out of a keyboard event. */
-export function shortcutPartsFromEvent(e: {
+/**
+ * The parts of a keyboard event a shortcut reads.
+ *
+ * `code` is optional so callers can pass a plain object (and so synthetic
+ * events without it still work); when present it wins over `key`. See
+ * {@link keyOfEvent}.
+ */
+export interface ShortcutEvent {
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
   metaKey: boolean;
   key: string;
-}): ShortcutParts {
+  code?: string;
+}
+
+/** Read the parts out of a keyboard event. */
+export function shortcutPartsFromEvent(e: ShortcutEvent): ShortcutParts {
   return {
     ctrl: e.ctrlKey,
     alt: e.altKey,
     shift: e.shiftKey,
     meta: e.metaKey,
-    key: normaliseKey(e.key),
+    key: keyOfEvent(e),
   };
+}
+
+/**
+ * Which key the binding is about, preferring the physical key over the
+ * character it produced.
+ *
+ * `key` is what the layout and input method decided the press means, so it
+ * moves with them: with a Korean IME active, Ctrl+A arrives as 'ㅁ' while the
+ * key under the finger is still A (issue #315). Binding the character stored
+ * the IME's output, and the binding then stopped matching the moment the input
+ * mode changed.
+ *
+ * `code` names the physical key ('KeyA', 'Digit1') and does not move, so it is
+ * used whenever it describes one. It is deliberately NOT used for keys whose
+ * identity is their meaning rather than their position — Enter, the arrows, the
+ * function keys — where `key` already says the same thing on every layout and
+ * reads better in storage.
+ *
+ * Falls back to `key` when `code` is absent, which is what synthetic events and
+ * older browsers report.
+ */
+export function keyOfEvent(e: { key: string; code?: string }): string {
+  const fromCode = physicalKey(e.code);
+  return fromCode ?? normaliseKey(e.key);
+}
+
+/**
+ * The letter or digit a `code` refers to, or null when it is not one.
+ *
+ * Only the shapes whose character is fixed by position are unwrapped, so the
+ * stored form stays the letter the user pressed ('Alt+D') rather than the raw
+ * code ('Alt+KeyD') — existing stored shortcuts keep parsing unchanged.
+ */
+function physicalKey(code: string | undefined): string | null {
+  if (!code) return null;
+  const letter = /^Key([A-Z])$/.exec(code);
+  if (letter) return letter[1].toLowerCase();
+  const digit = /^Digit([0-9])$/.exec(code);
+  if (digit) return digit[1];
+  return null;
 }
 
 /**
@@ -104,24 +154,14 @@ export function parseShortcut(stored: string | null | undefined): ShortcutParts 
  * (scrolling, say) may legitimately want to run on every repeat.
  */
 export function shouldToggleOnShortcut(
-  e: {
-    ctrlKey: boolean;
-    altKey: boolean;
-    shiftKey: boolean;
-    metaKey: boolean;
-    key: string;
-    repeat?: boolean;
-  },
+  e: ShortcutEvent & { repeat?: boolean },
   stored: string | null | undefined,
 ): boolean {
   return !e.repeat && matchesShortcut(e, stored);
 }
 
 /** Does this event match the stored shortcut? */
-export function matchesShortcut(
-  e: { ctrlKey: boolean; altKey: boolean; shiftKey: boolean; metaKey: boolean; key: string },
-  stored: string | null | undefined,
-): boolean {
+export function matchesShortcut(e: ShortcutEvent, stored: string | null | undefined): boolean {
   const want = parseShortcut(stored);
   if (!want) return false;
   const got = shortcutPartsFromEvent(e);

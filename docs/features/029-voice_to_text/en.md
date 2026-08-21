@@ -61,6 +61,9 @@ cannot be mistyped.
 One of Ctrl, Alt or Cmd has to be part of it. A shortcut that is just a letter would take that letter
 away from the input box.
 
+The shortcut remembers **the key's place on the keyboard**. Assign Ctrl+A with a Korean input method
+active and it still stores `⌃A`, and it keeps working after you switch back to Latin input.
+
 **Tap it** and recording starts and stays on; tap again to finish. Good for dictating something
 long.
 
@@ -105,15 +108,32 @@ transcribes everything else phonetically through it — "안녕하세요" comes 
 
 ![The spoken-language dropdown, with a search box above the list and "Follow Claude's setting" first](./assets/language-picker.png)
 
-Hence **Settings → General → Voice input language**. It defaults to **follow interface language**,
-which is right for most people without touching anything: someone reading the UI in Korean is likely
-to speak Korean.
+Hence **Settings → General → Voice input language**. It defaults to **follow**, which is right for
+most people without touching anything.
 
-It exists separately from the interface language because the two genuinely come apart — reading the
-UI in English while speaking Korean, say. That is the case this setting is for.
+Following reads Claude's **response language** first, and the interface language when that is empty:
+someone reading the UI in Korean is likely to speak Korean.
 
-Claude's response language would not do the job: it is a free-text field that might hold "Korean",
-or "be concise", where the recognizer takes only a standard code like `ko`.
+It exists separately because the two genuinely come apart — telling Claude to answer in Korean while
+speaking English, say. That is the case this setting is for.
+
+### Where this differs from the official behaviour
+
+Claude Code takes the dictation language **from the response-language setting**. It has no dedicated
+one.
+
+This plugin uses **the spoken language you pick here first**. The order is inverted because the
+documented one makes the setting you just changed do nothing: as long as a response language is set
+— which is the normal case — switching the spoken language to English keeps producing Korean
+transcripts, with nothing on screen to say why.
+
+**Left on follow, it behaves exactly as the official does.** The two orders diverge only for someone
+who explicitly picked a spoken language, and that person wanted to be transcribed in it.
+
+The CLI has no spoken-language setting at all, so this difference blocks nothing that works there:
+clearing the control reproduces the official resolution precisely.
+
+The same explanation is on the ⓘ next to the setting.
 
 The list holds **every language that has a code**. Unlike the interface translations this is only a
 value we pass along, so there was no reason to narrow it to the handful we happened to pick. The

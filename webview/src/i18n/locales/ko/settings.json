@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (아직 인식 안 됨)",
         "fallbackWarning": "이 언어는 아직 인식되지 않아, 말해도 영어로 받아써집니다.",
         "search": "언어 검색",
-        "noMatch": "일치하는 언어가 없습니다"
+        "noMatch": "일치하는 언어가 없습니다",
+        "differsTitle": "공식 동작과 다른 점",
+        "differsBody": "Claude Code는 받아쓰기 언어를 '언어' 설정에서 가져옵니다. 이 플러그인은 '말하는 언어'를 먼저 사용하므로, 여기서 고른 언어로 받아씁니다. 따라가기로 두면 Claude Code와 똑같이 '언어' 설정을 따릅니다."
       },
       "silenceTimeout": {
         "label": "대기 시간",

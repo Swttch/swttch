@@ -51,7 +51,9 @@
         "unsupported": "{{language}} (noch nicht erkannt)",
         "fallbackWarning": "Diese Sprache wird noch nicht erkannt, daher wird Gesprochenes als Englisch transkribiert.",
         "search": "Sprachen suchen",
-        "noMatch": "Keine passende Sprache"
+        "noMatch": "Keine passende Sprache",
+        "differsTitle": "Unterschied zum offiziellen Verhalten",
+        "differsBody": "Claude Code bestimmt die Diktatsprache über die Einstellung „Sprache“. Dieses Plugin verwendet zuerst „Gesprochene Sprache“, sodass die hier gewählte Sprache erkannt wird. Bleibt sie auf „folgen“, gilt wie bei Claude Code die Einstellung „Sprache“."
       },
       "silenceTimeout": {
         "label": "Wartezeit",

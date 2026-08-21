@@ -161,11 +161,21 @@ describe('useDictation — the spoken language reaches the service', () => {
     return (call?.[1] as { language?: unknown } | undefined)?.language;
   }
 
-  it("prefers Claude's own language setting", async () => {
-    // The CLI uses `language` as the dictation language, so changing it there
-    // has to move the GUI too rather than being shadowed by our setting.
+  it('prefers the spoken language the user picked', async () => {
+    // Picking a spoken language has to reach the service, or the control is
+    // inert: the user selects English and keeps getting Korean transcripts.
     claudeLanguage = 'japanese';
     speechLanguage = 'ko';
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    expect(sentLanguage()).toBe('ko');
+  });
+
+  it("follows Claude's language when no spoken language is set", async () => {
+    // Left on "follow", the CLI's own key decides — so an untouched install
+    // dictates in the same language the CLI would.
+    claudeLanguage = 'japanese';
     const { hook } = renderDictation();
     await startListening(hook);
 
@@ -180,7 +190,7 @@ describe('useDictation — the spoken language reaches the service', () => {
     expect(sentLanguage()).toBe('ko');
   });
 
-  it('uses our setting when the official one holds prose', async () => {
+  it('skips the official setting when it holds prose', async () => {
     // `language` is free text and may hold an instruction, which says nothing
     // about what the user speaks.
     claudeLanguage = 'be concise';

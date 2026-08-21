@@ -13,10 +13,21 @@ import {
 vi.mock('@/config/environment', () => ({ isMac: () => mockIsMac }));
 let mockIsMac = false;
 
-/** A keyboard event, with only the fields a shortcut cares about. */
-function press(key: string, mods: Partial<Record<'ctrl' | 'alt' | 'shift' | 'meta', boolean>> = {}) {
+/**
+ * A keyboard event, with only the fields a shortcut cares about.
+ *
+ * `code` defaults to the physical key that types `key` on a US layout, which is
+ * what an unmodified Latin press reports. Tests that care about the two
+ * disagreeing (an IME, a non-US layout) pass `code` explicitly.
+ */
+function press(
+  key: string,
+  mods: Partial<Record<'ctrl' | 'alt' | 'shift' | 'meta', boolean>> = {},
+  code?: string,
+) {
   return {
     key,
+    code: code ?? (key.length === 1 ? `Key${key.toUpperCase()}` : key),
     ctrlKey: mods.ctrl ?? false,
     altKey: mods.alt ?? false,
     shiftKey: mods.shift ?? false,
@@ -48,6 +59,48 @@ describe('formatShortcut / parseShortcut', () => {
   });
 });
 
+/**
+ * Issue #315: with a Korean IME active, Ctrl+A arrives as key="ㅁ" while
+ * code stays "KeyA". Recording stored the character, so the binding was saved
+ * as the IME's output and stopped matching once the layout changed.
+ *
+ * Measured in JCEF on macOS (WebStorm sandbox), Korean input source:
+ *   DOWN key="ㅁ" code=KeyA [CTRL]     ← Ctrl+A
+ *   DOWN key="a"  code=KeyA [ALT]      ← Option+A
+ */
+describe('layout-independent binding (issue #315)', () => {
+  const ctrlAKorean = press('ㅁ', { ctrl: true }, 'KeyA');
+  const ctrlALatin = press('a', { ctrl: true }, 'KeyA');
+
+  it('stores the physical key, not the character the IME produced', () => {
+    expect(formatShortcut(shortcutPartsFromEvent(ctrlAKorean))).toBe('Ctrl+A');
+  });
+
+  it('stores the same value whether or not the IME is active', () => {
+    const withIme = formatShortcut(shortcutPartsFromEvent(ctrlAKorean));
+    const withoutIme = formatShortcut(shortcutPartsFromEvent(ctrlALatin));
+    expect(withIme).toBe(withoutIme);
+  });
+
+  it('matches the binding with the IME on and off', () => {
+    // The whole point: bind it in one input mode, use it in the other.
+    expect(matchesShortcut(ctrlAKorean, 'Ctrl+A')).toBe(true);
+    expect(matchesShortcut(ctrlALatin, 'Ctrl+A')).toBe(true);
+  });
+
+  it('accepts a Ctrl combination the IME rewrote', () => {
+    // It was never rejected outright, but guard it: the recorder must not treat
+    // 'ㅁ' as a bare character press.
+    expect(isBindableShortcut(shortcutPartsFromEvent(ctrlAKorean))).toBe(true);
+  });
+
+  it('displays the physical key rather than the IME character', () => {
+    mockIsMac = true;
+    expect(displayShortcut(formatShortcut(shortcutPartsFromEvent(ctrlAKorean)))).toBe('⌃A');
+    mockIsMac = false;
+  });
+});
+
 describe('matchesShortcut', () => {
   it('matches the bound combination', () => {
     expect(matchesShortcut(press('d', { alt: true }), 'Alt+D')).toBe(true);
@@ -71,6 +124,28 @@ describe('matchesShortcut', () => {
 
   it('matches nothing when no shortcut is bound', () => {
     expect(matchesShortcut(press('d', { alt: true }), null)).toBe(false);
+  });
+});
+
+describe('values stored by earlier versions', () => {
+  // Shortcuts already saved to settings must keep working across the upgrade —
+  // silently unbinding someone's voice key is worse than the bug being fixed.
+  it('still matches a shortcut stored before the change', () => {
+    expect(matchesShortcut(press('d', { alt: true }), 'Alt+D')).toBe(true);
+  });
+
+  it('reads the default binding', () => {
+    expect(parseShortcut('Alt+D')).not.toBeNull();
+  });
+
+  it('matches a stored letter pressed under an IME', () => {
+    // 'Alt+D' was stored before the fix; the user now types in Korean.
+    expect(matchesShortcut(press('ㅇ', { alt: true }, 'KeyD'), 'Alt+D')).toBe(true);
+  });
+
+  it('still displays a shortcut stored before the change', () => {
+    mockIsMac = false;
+    expect(displayShortcut('Alt+D')).toBe('Alt+D');
   });
 });
 

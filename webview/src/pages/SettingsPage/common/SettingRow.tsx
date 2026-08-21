@@ -3,7 +3,12 @@ import { SettingDescription } from './SettingDescription';
 
 interface SettingRowProps {
   label: string;
-  description?: string;
+  /**
+   * ReactNode rather than string so a row can end its description with an
+   * inline affordance — e.g. the ⓘ that explains where voice input departs
+   * from the CLI. Plain strings still work unchanged.
+   */
+  description?: ReactNode;
   /** Optional badge(s) shown to the right of the label (e.g. sponsor / native). */
   badge?: ReactNode;
   children: ReactNode;
