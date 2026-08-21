@@ -23,6 +23,39 @@ interface IfVisibleProps {
   children: React.ReactNode;
   /** True when non-text content (images, pills) makes this worth showing. */
   extra?: boolean;
+  /**
+   * Identifies the entry for the debugging trail below, e.g. the `tool_use_id`
+   * of a tool_result that found no tool card to fold into. Optional: an entry
+   * with nothing to identify it still gets counted, just without an id.
+   */
+  debugId?: string;
+}
+
+/**
+ * Records an entry this gate removed, so "how often would an empty bubble have
+ * appeared here?" stays answerable after the bubble itself is gone.
+ *
+ * Both trails are deliberately left on in production. They cost one attribute
+ * and one array entry per hidden bubble, are invisible to the user, and are the
+ * only way to tell "the defect is fixed" apart from "the conditions never
+ * occurred" — including on a reporter's machine, where the console is all we
+ * get. See `ccgLogs` for the same reasoning applied to logs.
+ *
+ *   document.querySelectorAll('[data-ccg-would-be-empty]')   where, in the DOM
+ *   window.ccgEmptyBubbles                                   how many, and which ids
+ */
+const WOULD_BE_EMPTY_ATTR = 'data-ccg-would-be-empty';
+
+interface EmptyBubbleTrail {
+  count: number;
+  ids: string[];
+}
+
+function recordWouldBeEmpty(debugId: string | undefined): void {
+  const w = window as unknown as { ccgEmptyBubbles?: EmptyBubbleTrail };
+  const trail = (w.ccgEmptyBubbles ??= { count: 0, ids: [] });
+  trail.count += 1;
+  if (debugId) trail.ids.push(debugId);
 }
 
 /**
@@ -59,9 +92,12 @@ export function hasVisibleGlyph(text: string | null | undefined): boolean {
   return (text ?? '').replace(INVISIBLE, '') !== '';
 }
 
-export const IfVisible: React.FC<IfVisibleProps> = ({ children, extra = false }) => {
+export const IfVisible: React.FC<IfVisibleProps> = ({ children, extra = false, debugId }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [hidden, setHidden] = useState(false);
+  // The effect below runs on every render, but one bubble is one occurrence —
+  // a re-render (or StrictMode's double invoke) must not inflate the tally.
+  const counted = useRef(false);
 
   // useLayoutEffect so the removal happens before the browser paints — an empty
   // bubble must never flash on screen.
@@ -70,11 +106,15 @@ export const IfVisible: React.FC<IfVisibleProps> = ({ children, extra = false })
       setHidden(false);
       return;
     }
-    setHidden(!hasVisibleGlyph(ref.current?.textContent));
+    const isEmpty = !hasVisibleGlyph(ref.current?.textContent);
+    if (isEmpty && !counted.current) {
+      counted.current = true;
+      recordWouldBeEmpty(debugId);
+    }
+    setHidden(isEmpty);
   });
 
-  if (hidden) return null;
   // `display: contents` keeps this wrapper out of the layout entirely, so the
   // children lay out exactly as they did before the gate existed.
-  return <div ref={ref} style={{ display: 'contents' }}>{children}</div>;
+  return <div ref={ref} {...{ [WOULD_BE_EMPTY_ATTR]: debugId ?? '' }} style={{ display: hidden ? 'none' : 'contents' }}>{children}</div>;
 };

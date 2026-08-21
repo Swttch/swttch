@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { LoadedMessageDto, getTextContent, isContentBlockArray } from '../../../types';
-import type { ImageBlockDto } from '../../../dto/message/ContentBlockDto';
+import type { ImageBlockDto, ToolResultBlockDto } from '../../../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
 import { useCopyToClipboard } from './hooks/useCopyToClipboard';
 import { ContextPills } from './components/ContextPills';
@@ -36,6 +36,18 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
     const content = message.message?.content;
     if (!isContentBlockArray(content)) return [];
     return content.filter((b): b is ImageBlockDto => b.type === ContentBlockType.Image);
+  }, [message.message?.content]);
+
+  // Labels this entry in the hidden-bubble trail `IfVisible` keeps. A
+  // tool_result that reaches this renderer at all is one `mergeToolResults`
+  // could not fold into its tool card, so its tool_use_id is the thread back to
+  // what went missing — the identifier worth carrying when the bubble is
+  // dropped. Entries of other kinds have no such handle and are counted anonymously.
+  const debugId = useMemo(() => {
+    const content = message.message?.content;
+    if (!isContentBlockArray(content)) return undefined;
+    const block = content.find(b => b.type === ContentBlockType.ToolResult);
+    return block ? (block as ToolResultBlockDto).tool_use_id : undefined;
   }, [message.message?.content]);
 
   const handleCopy = () => {
@@ -94,7 +106,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // glyph, and let a nameless entry fall through to the paths below.
   if (hasVisibleGlyph(parsedContent.commandName)) {
     return (
-      <IfVisible extra={allContexts.length > 0 || imageBlocks.length > 0}>
+      <IfVisible extra={allContexts.length > 0 || imageBlocks.length > 0} debugId={debugId}>
         <div className="group py-2 px-4">
           <div className="flex items-start gap-2">
             <div className="min-w-0">
@@ -144,7 +156,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // simple — the rich per-tool renderers need the tool_use that is missing here.
   if (!parsedContent.text.trim() && unmergedToolResultText) {
     return (
-      <IfVisible extra={allContexts.length > 0}>
+      <IfVisible extra={allContexts.length > 0} debugId={debugId}>
         <div className="group pt-2 pb-4 px-4 space-y-2.5">
           <div className="flex items-start gap-2">
             <div className="min-w-0">
@@ -162,7 +174,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   }
 
   return (
-    <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0}>
+    <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0} debugId={debugId}>
       <div className="group pt-2 pb-4 px-4 space-y-2.5">
         <div className="flex items-start gap-2">
           <div className="min-w-0">
