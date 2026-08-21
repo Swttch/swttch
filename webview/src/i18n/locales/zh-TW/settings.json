@@ -127,7 +127,6 @@
   "appearance": {
     "title": "外觀",
     "theme": {
-      "sectionTitle": "主題",
       "colorTheme": {
         "label": "配色主題",
         "description": "選擇介面的配色主題",

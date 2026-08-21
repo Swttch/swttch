@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Erscheinungsbild",
     "theme": {
-      "sectionTitle": "Design",
       "colorTheme": {
         "label": "Farbdesign",
         "description": "Wähle das Farbdesign für die Oberfläche",

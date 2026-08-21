@@ -127,7 +127,6 @@
   "appearance": {
     "title": "ظاهر",
     "theme": {
-      "sectionTitle": "پوسته",
       "colorTheme": {
         "label": "پوسته رنگی",
         "description": "پوسته رنگی رابط کاربری را انتخاب کنید",

@@ -1,6 +1,8 @@
 /**
- * The soft-wrap toggle (#179) is a new Appearance setting, and a missing
- * translation shows a raw key rather than failing a type check.
+ * The soft-wrap toggle (issue #179) is a new Appearance setting, and adding it
+ * came with removing the "Theme" section heading above it. Both are i18n-facing:
+ * a missing translation shows a raw key, and a leftover heading string would sit
+ * in twelve files with nothing rendering it.
  */
 import { describe, it, expect } from 'vitest';
 import { resources } from '@/i18n/config';
@@ -18,7 +20,7 @@ function forEachLocale(assert: (locale: string) => void): void {
   for (const locale of locales) assert(locale);
 }
 
-describe('soft wrap setting i18n (#179)', () => {
+describe('soft wrap setting i18n', () => {
   it('ships every locale we already had', () => {
     expect(locales.length).toBeGreaterThanOrEqual(12);
   });
@@ -38,5 +40,26 @@ describe('soft wrap setting i18n (#179)', () => {
     for (const locale of ['ko', 'ja', 'zh', 'ru', 'ar', 'fa']) {
       expect(appearanceOf(locale).softWrap.label, locale).not.toBe(en);
     }
+  });
+
+  it('drops the retired Theme section heading in every locale', () => {
+    // Nothing renders it any more; a leftover copy would drift out of sync with
+    // no screen to catch it.
+    forEachLocale((locale) => {
+      expect(
+        appearanceOf(locale)?.theme?.sectionTitle,
+        `${locale}.appearance.theme.sectionTitle`,
+      ).toBeUndefined();
+    });
+  });
+
+  it('keeps the settings that lived under that heading', () => {
+    // Removing the heading must not take its rows with it.
+    forEachLocale((locale) => {
+      const theme = appearanceOf(locale)?.theme;
+      for (const key of ['colorTheme', 'fontSize', 'lineSpacing']) {
+        expect(theme?.[key]?.label, `${locale}.appearance.theme.${key}.label`).toBeTruthy();
+      }
+    });
   });
 });

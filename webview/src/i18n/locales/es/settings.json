@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Apariencia",
     "theme": {
-      "sectionTitle": "Tema",
       "colorTheme": {
         "label": "Tema de color",
         "description": "Elige el tema de color para la interfaz",

@@ -127,7 +127,6 @@
   "appearance": {
     "title": "外観",
     "theme": {
-      "sectionTitle": "テーマ",
       "colorTheme": {
         "label": "カラーテーマ",
         "description": "インターフェースのカラーテーマを選択します",

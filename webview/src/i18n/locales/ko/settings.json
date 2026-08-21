@@ -127,7 +127,6 @@
   "appearance": {
     "title": "모양",
     "theme": {
-      "sectionTitle": "테마",
       "colorTheme": {
         "label": "색상 테마",
         "description": "인터페이스의 색상 테마를 선택합니다",

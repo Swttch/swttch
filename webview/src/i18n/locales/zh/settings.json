@@ -127,7 +127,6 @@
   "appearance": {
     "title": "外观",
     "theme": {
-      "sectionTitle": "主题",
       "colorTheme": {
         "label": "配色主题",
         "description": "选择界面的配色主题",

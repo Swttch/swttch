@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Внешний вид",
     "theme": {
-      "sectionTitle": "Тема",
       "colorTheme": {
         "label": "Цветовая тема",
         "description": "Выберите цветовую тему интерфейса",

@@ -62,7 +62,7 @@ export function AppearanceSettings() {
         {t('appearance.title')}
       </h2>
 
-      <SettingSection title={t('appearance.theme.sectionTitle')}>
+      <SettingSection>
         <SettingRow
           label={t('appearance.theme.colorTheme.label')}
           description={t('appearance.theme.colorTheme.description')}
