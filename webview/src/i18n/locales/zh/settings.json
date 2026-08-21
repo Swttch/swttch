@@ -127,7 +127,6 @@
   "appearance": {
     "title": "外观",
     "theme": {
-      "sectionTitle": "主题",
       "colorTheme": {
         "label": "配色主题",
         "description": "选择界面的配色主题",
@@ -147,6 +146,10 @@
         "description": "聊天消息文本的行高",
         "notSetPlaceholder": "未设置"
       }
+    },
+    "softWrap": {
+      "label": "软换行",
+      "description": "折叠差异和工具输出中的长行，而不是横向滚动。"
     },
     "scrolling": {
       "sectionTitle": "滚动",

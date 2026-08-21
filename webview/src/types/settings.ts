@@ -31,6 +31,11 @@ export enum SettingKey {
   ZOOM_LEVEL = 'zoomLevel',
   LINE_HEIGHT = 'lineHeight',
   AUTO_SCROLL_THRESHOLD = 'autoScrollThreshold',
+  // Fold long lines to the width of the code block instead of scrolling them
+  // sideways — diffs, tool input/output, and the other monospace blocks that
+  // render with `whitespace-pre`. Off by default so the existing horizontal
+  // scroll stays the default reading mode (issue #179).
+  SOFT_WRAP = 'softWrap',
 
   // Advanced
   DEBUG_MODE = 'debugMode',
@@ -293,6 +298,7 @@ export interface SettingsState {
   [SettingKey.ZOOM_LEVEL]: number;
   [SettingKey.LINE_HEIGHT]: number;
   [SettingKey.AUTO_SCROLL_THRESHOLD]: number;
+  [SettingKey.SOFT_WRAP]: boolean;
   [SettingKey.DEBUG_MODE]: boolean;
   [SettingKey.LOG_LEVEL]: LogLevel;
   [SettingKey.TERMINAL_APP]: string | null;
@@ -325,6 +331,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.ZOOM_LEVEL]: ZOOM_DEFAULT,
   [SettingKey.LINE_HEIGHT]: LINE_HEIGHT_DEFAULT,
   [SettingKey.AUTO_SCROLL_THRESHOLD]: AUTO_SCROLL_THRESHOLD_DEFAULT,
+  [SettingKey.SOFT_WRAP]: false,
   [SettingKey.DEBUG_MODE]: false,
   [SettingKey.LOG_LEVEL]: LogLevel.INFO,
   [SettingKey.TERMINAL_APP]: null,

@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Apparence",
     "theme": {
-      "sectionTitle": "Thème",
       "colorTheme": {
         "label": "Thème de couleur",
         "description": "Choisissez le thème de couleur de l'interface",
@@ -147,6 +146,10 @@
         "description": "Hauteur de ligne du texte des messages",
         "notSetPlaceholder": "Non défini"
       }
+    },
+    "softWrap": {
+      "label": "Retour à la ligne",
+      "description": "Replier les longues lignes des diffs et sorties d'outils au lieu de défiler latéralement."
     },
     "scrolling": {
       "sectionTitle": "Défilement",

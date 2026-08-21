@@ -127,7 +127,6 @@
   "appearance": {
     "title": "ظاهر",
     "theme": {
-      "sectionTitle": "پوسته",
       "colorTheme": {
         "label": "پوسته رنگی",
         "description": "پوسته رنگی رابط کاربری را انتخاب کنید",
@@ -147,6 +146,10 @@
         "description": "ارتفاع خط متن پیام‌های گفتگو",
         "notSetPlaceholder": "تنظیم نشده"
       }
+    },
+    "softWrap": {
+      "label": "شکستن خودکار خط",
+      "description": "به‌جای پیمایش افقی، خط‌های بلند در تفاوت‌ها و خروجی ابزارها را بشکن."
     },
     "scrolling": {
       "sectionTitle": "اسکرول",

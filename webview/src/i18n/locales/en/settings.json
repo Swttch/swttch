@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Appearance",
     "theme": {
-      "sectionTitle": "Theme",
       "colorTheme": {
         "label": "Color Theme",
         "description": "Choose the color theme for the interface",
@@ -147,6 +146,10 @@
         "description": "Line height for chat message text",
         "notSetPlaceholder": "Not set"
       }
+    },
+    "softWrap": {
+      "label": "Soft Wrap",
+      "description": "Fold long lines in diffs and tool output instead of scrolling sideways."
     },
     "scrolling": {
       "sectionTitle": "Scrolling",

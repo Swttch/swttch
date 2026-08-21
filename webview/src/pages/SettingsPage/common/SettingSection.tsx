@@ -1,7 +1,12 @@
 import {ReactNode} from "react";
 
 interface SettingSectionProps {
-  title: ReactNode;
+  /**
+   * Omit for a section that opens a screen and so has nothing to distinguish
+   * itself from: the screen's own heading already says what it is, and a
+   * subtitle repeating it adds a line without adding a distinction.
+   */
+  title?: ReactNode;
   description?: ReactNode;
   /**
    * Rendered at the far right of the title row. For status that belongs to the
@@ -29,12 +34,16 @@ export function SettingSection({
 }: SettingSectionProps) {
   return (
     <section className="mb-8">
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <h2 className="text-[0.9230rem] font-semibold text-text-tertiary uppercase tracking-wider">
-          {title}
-        </h2>
-        {titleAction}
-      </div>
+      {(title || titleAction) && (
+        <div className={`flex items-center gap-4 mb-4 ${title ? 'justify-between' : 'justify-end'}`}>
+          {title && (
+            <h2 className="text-[0.9230rem] font-semibold text-text-tertiary uppercase tracking-wider">
+              {title}
+            </h2>
+          )}
+          {titleAction}
+        </div>
+      )}
       {description && (typeof description === 'string' ? (
         <p className="text-[0.8461rem] font-normal text-text-tertiary -mt-2 mb-3">{description}</p>
       ) : description)}

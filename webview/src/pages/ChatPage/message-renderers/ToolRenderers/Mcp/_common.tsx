@@ -133,7 +133,7 @@ export const McpToolRow = (props: {label: string; children?: ReactNode}) => {
             </span>
             <CollapsibleBox
                 collapsedMaxHeight={60}
-                className="flex-1 text-text-primary/80 whitespace-pre overflow-x-auto no-scrollbar"
+                className="monospace-block flex-1 text-text-primary/80 whitespace-pre overflow-x-auto no-scrollbar"
             >
                 {children}
             </CollapsibleBox>

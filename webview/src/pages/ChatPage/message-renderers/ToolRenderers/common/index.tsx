@@ -174,7 +174,7 @@ export const Value = (props: {
     const {isFocused, onClick, children, maxHeight = 'max-h-[105px]'} = props;
 
     return (
-        <div dir="ltr" className={`flex-1 text-text-primary/80 whitespace-pre font-mono overflow-y-hidden overflow-x-auto no-scrollbar cursor-pointer ${isFocused ? '' : maxHeight}`} onClick={onClick}>
+        <div dir="ltr" className={`monospace-block flex-1 text-text-primary/80 whitespace-pre font-mono overflow-y-hidden overflow-x-auto no-scrollbar cursor-pointer ${isFocused ? '' : maxHeight}`} onClick={onClick}>
             {children}
         </div>
     );

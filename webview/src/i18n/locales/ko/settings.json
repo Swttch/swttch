@@ -127,7 +127,6 @@
   "appearance": {
     "title": "모양",
     "theme": {
-      "sectionTitle": "테마",
       "colorTheme": {
         "label": "색상 테마",
         "description": "인터페이스의 색상 테마를 선택합니다",
@@ -147,6 +146,10 @@
         "description": "채팅 메시지 텍스트의 줄 간격",
         "notSetPlaceholder": "설정 안 함"
       }
+    },
+    "softWrap": {
+      "label": "자동 줄바꿈",
+      "description": "diff와 도구 출력의 긴 줄을 가로 스크롤 대신 접어서 보여줍니다."
     },
     "scrolling": {
       "sectionTitle": "스크롤",

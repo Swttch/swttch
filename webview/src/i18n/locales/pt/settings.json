@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Aparência",
     "theme": {
-      "sectionTitle": "Tema",
       "colorTheme": {
         "label": "Tema de Cores",
         "description": "Escolha o tema de cores da interface",
@@ -147,6 +146,10 @@
         "description": "Altura da linha do texto das mensagens de chat",
         "notSetPlaceholder": "Não definido"
       }
+    },
+    "softWrap": {
+      "label": "Quebra de linha",
+      "description": "Dobrar as linhas longas dos diffs e saídas de ferramentas em vez de rolar na horizontal."
     },
     "scrolling": {
       "sectionTitle": "Rolagem",

@@ -127,7 +127,6 @@
   "appearance": {
     "title": "المظهر",
     "theme": {
-      "sectionTitle": "السمة",
       "colorTheme": {
         "label": "سمة الألوان",
         "description": "اختر سمة الألوان للواجهة",
@@ -147,6 +146,10 @@
         "description": "ارتفاع سطر نص رسائل المحادثة",
         "notSetPlaceholder": "غير معيّن"
       }
+    },
+    "softWrap": {
+      "label": "التفاف النص",
+      "description": "طيّ الأسطر الطويلة في الفروق ومخرجات الأدوات بدلاً من التمرير الأفقي."
     },
     "scrolling": {
       "sectionTitle": "التمرير",

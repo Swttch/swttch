@@ -127,7 +127,6 @@
   "appearance": {
     "title": "外観",
     "theme": {
-      "sectionTitle": "テーマ",
       "colorTheme": {
         "label": "カラーテーマ",
         "description": "インターフェースのカラーテーマを選択します",
@@ -147,6 +146,10 @@
         "description": "チャットメッセージ本文の行の高さ",
         "notSetPlaceholder": "未設定"
       }
+    },
+    "softWrap": {
+      "label": "ソフトラップ",
+      "description": "差分やツール出力の長い行を横スクロールせずに折り返します。"
     },
     "scrolling": {
       "sectionTitle": "スクロール",

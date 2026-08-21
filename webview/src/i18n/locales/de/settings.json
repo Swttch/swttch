@@ -127,7 +127,6 @@
   "appearance": {
     "title": "Erscheinungsbild",
     "theme": {
-      "sectionTitle": "Design",
       "colorTheme": {
         "label": "Farbdesign",
         "description": "Wähle das Farbdesign für die Oberfläche",
@@ -147,6 +146,10 @@
         "description": "Zeilenhöhe für den Text von Chat-Nachrichten",
         "notSetPlaceholder": "Nicht festgelegt"
       }
+    },
+    "softWrap": {
+      "label": "Zeilenumbruch",
+      "description": "Lange Zeilen in Diffs und Werkzeugausgaben umbrechen statt seitlich zu scrollen."
     },
     "scrolling": {
       "sectionTitle": "Scrollen",
