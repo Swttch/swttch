@@ -212,4 +212,39 @@ describe('useGlobalShortcut', () => {
       expect(onStart).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * Issue #315: an input method rewrites `key` while `code` keeps naming the
+   * physical key. Alt+D pressed in Korean arrives as key='ㅇ' code='KeyD'.
+   */
+  describe('with an input method active', () => {
+    /** Press/release Alt+D the way a Korean IME reports it. */
+    const imeDown = () =>
+      act(() => {
+        document.body.dispatchEvent(
+          keyEvent('keydown', 'ㅇ', { altKey: true, code: 'KeyD' }),
+        );
+      });
+    const imeUp = (heldFor: number) => {
+      vi.advanceTimersByTime(heldFor);
+      act(() => {
+        document.body.dispatchEvent(keyEvent('keyup', 'ㅇ', { altKey: true, code: 'KeyD' }));
+      });
+    };
+
+    it('starts recording on the bound key', () => {
+      mount('Alt+D');
+      imeDown();
+      expect(onStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops when the held key is released', () => {
+      // The release is matched separately from the press, so it needs the same
+      // fix — otherwise a hold starts recording that nothing ever stops.
+      mount('Alt+D');
+      imeDown();
+      imeUp(HOLD_THRESHOLD_MS + 50);
+      expect(onStop).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { matchesShortcut, parseShortcut } from '@/utils/shortcut';
+import { matchesShortcut, parseShortcut, keyOfEvent } from '@/utils/shortcut';
 import { PressToTalk, PressAction } from './pressToTalk';
 
 interface Handlers {
@@ -55,9 +55,12 @@ export function useGlobalShortcut(shortcut: string | null | undefined, handlers:
     // The release is matched on the key alone. Letting go of the modifier first
     // ("Alt+D" released as D-then-Alt, or Alt-then-D) would otherwise leave the
     // recording running with nothing left to stop it.
+    //
+    // Read through the same helper as the press, so an input method that
+    // rewrites the character cannot make a hold unstoppable (issue #315): the
+    // release reports key='ㅇ' where the press was bound as 'd'.
     const onKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      const released = key === parsed.key || isModifierOf(e.key, parsed);
+      const released = keyOfEvent(e) === parsed.key || isModifierOf(e.key, parsed);
       if (!released) return;
       run(press.release());
     };
