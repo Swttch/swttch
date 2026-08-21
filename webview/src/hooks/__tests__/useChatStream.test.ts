@@ -1578,3 +1578,224 @@ describe('useChatStream', () => {
     });
   });
 });
+
+/**
+ * A turn that runs tools does not end at `result`: the CLI keeps going and
+ * emits a NEW assistant message per continuation, each with its own
+ * `message.id`. The streaming placeholder, however, lives until `result`.
+ *
+ * Both messages therefore resolved to the same placeholder, and the second
+ * payload replaced the first one's blocks instead of following them — taking
+ * that turn's `tool_use` with it. The matching `tool_result` still arrived,
+ * found no tool call to fold into, and rendered as a bubble with nothing in it,
+ * one per overwritten turn (issue #232).
+ *
+ * The session logs attached to the issue are what pinned this down: streamed,
+ * 14 standalone tool_results whose tool_use_id matched none of the 236 tool_use
+ * blocks present; reloaded, the same 14 ids all present, each on its own
+ * assistant entry. Same data, so nothing was lost in transport — only the live
+ * assembly collapsed them.
+ */
+describe('useChatStream — one assistant entry per CLI message id (issue #232)', () => {
+  function toolUseIdsIn(messages: LoadedMessage[]): string[] {
+    return messages.flatMap(m => {
+      const content = m.message?.content;
+      if (!Array.isArray(content)) return [];
+      return content
+        .filter((b): b is typeof b & { id: string } => b.type === 'tool_use')
+        .map(b => b.id);
+    });
+  }
+
+  /**
+   * Streams one assistant turn that calls a single tool, as the CLI does.
+   *
+   * `content_block_start` matters as much as the payload: it is what opens the
+   * streaming placeholder, and the overwrite only happens while one is open. A
+   * turn built from `message_start` + the final payload alone never reproduced
+   * the bug, because the placeholder was already closed and the second turn
+   * took the append path regardless.
+   */
+  function emitToolTurn(
+    emit: (type: string, payload: Record<string, unknown>) => void,
+    apiMessageId: string,
+    toolUseId: string,
+  ) {
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: { type: 'message_start', message: { id: apiMessageId } },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: {
+        type: 'content_block_start',
+        index: 0,
+        content_block: { type: 'tool_use', id: toolUseId, name: 'Bash', input: {} },
+      },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'assistant',
+      message: {
+        id: apiMessageId,
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: toolUseId, name: 'Bash', input: { command: 'ls' } }],
+      },
+    });
+  }
+
+  /**
+   * A full turn: text streamed as deltas and confirmed by a payload, then a
+   * tool call under the SAME message id — the shape the session logs show, where
+   * one id spans several `assistant` events.
+   */
+  function emitTextThenToolTurn(
+    emit: (type: string, payload: Record<string, unknown>) => void,
+    apiMessageId: string,
+    text: string,
+    toolUseId: string,
+  ) {
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: { type: 'message_start', message: { id: apiMessageId } },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: { delta: { type: 'text_delta', text } },
+    });
+    flushRAF();
+    emit(MessageType.CLI_EVENT, {
+      type: 'assistant',
+      message: { id: apiMessageId, role: 'assistant', content: [{ type: 'text', text }] },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'stream_event',
+      event: {
+        type: 'content_block_start',
+        index: 1,
+        content_block: { type: 'tool_use', id: toolUseId, name: 'Bash', input: {} },
+      },
+    });
+    emit(MessageType.CLI_EVENT, {
+      type: 'assistant',
+      message: {
+        id: apiMessageId,
+        role: 'assistant',
+        content: [
+          { type: 'text', text },
+          { type: 'tool_use', id: toolUseId, name: 'Bash', input: { command: 'ls' } },
+        ],
+      },
+    });
+  }
+
+  it('keeps an earlier turn\'s tool_use when the next turn arrives', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    // One `act`, as the CLI delivers it: the turns arrive back to back with no
+    // render committed in between, which is the state the placeholder is open
+    // in. Splitting them across two `act` calls lets React close the stream
+    // first, and then the second turn appends no matter what — the bug cannot
+    // reproduce and the test proves nothing.
+    act(() => {
+      emitToolTurn(emit, 'msg_first', 'toolu_first');
+      emitToolTurn(emit, 'msg_second', 'toolu_second');
+      flushRAF();
+    });
+
+    // Before the fix the second payload overwrote the first, leaving only
+    // `toolu_second` — and stranding `toolu_first`'s result as an empty bubble.
+    expect(toolUseIdsIn(result.current.messages)).toEqual(['toolu_first', 'toolu_second']);
+  });
+
+  it('gives each CLI message id its own entry, so a tool_result finds its call', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    // Five continuations of one turn, the shape the reported session had.
+    const ids = ['a', 'b', 'c', 'd', 'e'];
+    act(() => {
+      ids.forEach(id => emitToolTurn(emit, `msg_${id}`, `toolu_${id}`));
+      flushRAF();
+    });
+
+    expect(toolUseIdsIn(result.current.messages)).toEqual(ids.map(id => `toolu_${id}`));
+
+    // Every tool_result now has a tool_use to fold into — the property whose
+    // absence *is* the empty bubble.
+    const present = new Set(toolUseIdsIn(result.current.messages));
+    ids.forEach(id => expect(present.has(`toolu_${id}`)).toBe(true));
+  });
+
+  it('does not repeat text when a message spans several assistant events', () => {
+    // The first attempt at this fix sealed on the `assistant` payload instead of
+    // `message_start`. By then the message's deltas were already in the entry,
+    // so the next payload re-added the same text under a fresh entry and every
+    // line of the reply appeared twice on screen. Sealing on `message_start` —
+    // before any delta of the new message arrives — is what keeps each block in
+    // exactly one entry.
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emitTextThenToolTurn(emit, 'msg_first', 'HELLO', 'toolu_first');
+      emitTextThenToolTurn(emit, 'msg_second', 'WORLD', 'toolu_second');
+      flushRAF();
+    });
+
+    const texts = result.current.messages.flatMap(m => {
+      const content = m.message?.content;
+      if (!Array.isArray(content)) return [];
+      return content
+        .filter((b): b is typeof b & { text: string } => b.type === 'text')
+        .map(b => b.text)
+        .filter(t => t !== '');
+    });
+
+    expect(texts).toEqual(['HELLO', 'WORLD']);
+    // Both tool calls survive too — the defect this fix exists for.
+    expect(toolUseIdsIn(result.current.messages)).toEqual(['toolu_first', 'toolu_second']);
+  });
+
+  it('does not split a turn whose deltas keep arriving under one message id', () => {
+    // The seal keys on the id CHANGING, not on every assistant event. Text
+    // deltas and their final payload all carry one id, and splitting there
+    // would scatter a single reply across several bubbles.
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'stream_event',
+        event: { type: 'message_start', message: { id: 'msg_same' } },
+      });
+      emit(MessageType.CLI_EVENT, {
+        type: 'stream_event',
+        event: { delta: { type: 'text_delta', text: 'first' } },
+      });
+      emit(MessageType.CLI_EVENT, {
+        type: 'stream_event',
+        event: { delta: { type: 'text_delta', text: ' and second' } },
+      });
+      emit(MessageType.CLI_EVENT, {
+        type: 'assistant',
+        message: {
+          id: 'msg_same',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'first and second' }],
+        },
+      });
+      flushRAF();
+    });
+
+    const assistantEntries = result.current.messages.filter(
+      m => m.type === LoadedMessageType.Assistant,
+    );
+    expect(assistantEntries).toHaveLength(1);
+    expect(getTextContent(assistantEntries[0] as LoadedMessageDto)).toContain('first and second');
+  });
+});

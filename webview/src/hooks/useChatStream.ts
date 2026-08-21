@@ -163,6 +163,12 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const activeThinkingBlockIndexRef = useRef<number>(-1);     // content 배열 내 현재 활성 thinking 블록 인덱스
   const activeToolUseBlockIndexRef = useRef<number>(-1);      // content 배열 내 현재 활성 tool_use 블록 인덱스
   const turnStartBlockCountRef = useRef<number>(0);           // 현재 턴 시작 시 content 배열의 길이 (병합 기준점)
+  // CLI `message.id` the streaming placeholder currently stands for. The CLI
+  // starts a NEW assistant message per turn while the placeholder lives until
+  // `result`, so without this the second turn's payload overwrote the first
+  // one's blocks — taking its tool_use with it, and stranding the tool_result
+  // that referenced it as an empty bubble (issue #232).
+  const streamingApiMessageIdRef = useRef<string | null>(null);
   const devModeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const devModeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSkillToolUseIdRef = useRef<string | null>(null);    // Skill tool_result의 tool_use_id 추적 (isSynthetic 매칭용)
@@ -415,6 +421,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     activeToolUseBlockIndexRef.current = -1;
     turnStartBlockCountRef.current = 0;
     accumulatedInputJsonRef.current = '';
+    streamingApiMessageIdRef.current = null;
   }, [flushPendingDeltas, updateMessage, setStreamingMessageId]);
 
   // End streaming helper
@@ -443,6 +450,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     activeToolUseBlockIndexRef.current = -1;
     turnStartBlockCountRef.current = 0;
     accumulatedInputJsonRef.current = '';
+    streamingApiMessageIdRef.current = null;
   }, [flushPendingDeltas, updateMessage]);
 
   // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
@@ -644,6 +652,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setIsStreaming(false);
     setStreamingMessageId(null);
     streamingMessageIdRef.current = null;
+    streamingApiMessageIdRef.current = null;
     controlRequestPendingRef.current = false;
     pendingTextRef.current = '';
     pendingThinkingRef.current = '';
@@ -735,6 +744,38 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
         const streamEventType = innerEvent.type as string | undefined;
         const delta = innerEvent.delta as Record<string, unknown> | undefined;
+
+        // message_start: the CLI begins a NEW assistant message.
+        //
+        // A turn that runs tools does not stop at one message — the CLI keeps
+        // going and starts another for each continuation. The placeholder,
+        // though, lives until `result`, so every message resolved to the same
+        // entry and each payload replaced the previous message's blocks instead
+        // of following them. What that dropped was the finished message's
+        // `tool_use`; its `tool_result` still arrived, found no tool call to
+        // fold into, and was left as a bubble with nothing in it — one per
+        // overwritten message, which is why they appeared in runs (issue #232).
+        //
+        // Sealing belongs here and not on the `assistant` payload: this event
+        // arrives before any of the new message's deltas, so the entry closes on
+        // exactly the content that belongs to it. Sealing on the payload instead
+        // let the following deltas keep flowing into the entry that was just
+        // closed, which both corrupted it and re-rendered the same text under
+        // the next one.
+        if (streamEventType === 'message_start') {
+          const startedApiMessageId = (innerEvent.message as { id?: string } | undefined)?.id;
+          if (
+            startedApiMessageId
+            && streamingApiMessageIdRef.current
+            && startedApiMessageId !== streamingApiMessageIdRef.current
+          ) {
+            sealStreamingAssistant();
+          }
+          if (startedApiMessageId) streamingApiMessageIdRef.current = startedApiMessageId;
+          // Falls through: the event carries no delta, so the handlers below are
+          // no-ops for it, and returning here would be a behaviour change beyond
+          // the seal.
+        }
 
         // content_block_start: 새로운 content block 시작
         if (streamEventType === 'content_block_start') {
@@ -938,6 +979,20 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         // with no partial stream_events — result's endStreaming() nulls
         // streamingMessageIdRef.current in between. Reading the ref inside the callback
         // would then match nothing and drop the finished content (#196).
+        // A turn that runs tools does not end at `result` — the CLI keeps going,
+        // and every continuation is a NEW assistant message with its own
+        // `message.id`. The placeholder, though, lives until `result`, so both
+        // messages resolved to the same `streamingId` and the second payload
+        // replaced the first one's blocks instead of following them.
+        //
+        // What was lost that way was the earlier turn's `tool_use`. Its
+        // `tool_result` still arrived, found no tool call to fold into, and was
+        // left as a bubble with nothing in it — one per overwritten turn, which
+        // is why they came in runs (issue #232). Reloading the session fixed it,
+        // because the JSONL keeps each assistant message as its own entry.
+        //
+        // So a new `message.id` seals the placeholder and starts a fresh entry:
+        // the same shape the reload path produces, arrived at live.
         const streamingId = streamingMessageIdRef.current;
         if (streamingId) {
           // Flush any pending deltas before replacing
