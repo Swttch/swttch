@@ -79,7 +79,8 @@
         "removeConfirmTitle": "¿Eliminar @swttch/extend-kit?",
         "removeConfirmMessage": "La entrada de voz dejará de funcionar en este equipo hasta que vuelvas a instalarlo. El panel de uso emplea el mismo paquete.",
         "refresh": "Comprobar de nuevo",
-        "refreshing": "Comprobando…"
+        "refreshing": "Comprobando…",
+        "dismiss": "Cerrar"
       }
     },
     "uiDirection": {

@@ -79,7 +79,8 @@
         "removeConfirmTitle": "Supprimer @swttch/extend-kit ?",
         "removeConfirmMessage": "La saisie vocale cessera de fonctionner sur cette machine jusqu'à ce que vous la réinstalliez. Le panneau d'utilisation emploie le même paquet.",
         "refresh": "Vérifier à nouveau",
-        "refreshing": "Vérification…"
+        "refreshing": "Vérification…",
+        "dismiss": "Fermer"
       }
     },
     "uiDirection": {

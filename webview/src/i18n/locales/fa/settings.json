@@ -79,7 +79,8 @@
         "removeConfirmTitle": "‏@swttch/extend-kit حذف شود؟",
         "removeConfirmMessage": "تا زمانی که دوباره نصبش نکنید، ورودی صوتی روی این دستگاه کار نمی‌کند. پنل مصرف هم از همین بسته استفاده می‌کند.",
         "refresh": "بررسی دوباره",
-        "refreshing": "در حال بررسی…"
+        "refreshing": "در حال بررسی…",
+        "dismiss": "بستن"
       }
     },
     "uiDirection": {

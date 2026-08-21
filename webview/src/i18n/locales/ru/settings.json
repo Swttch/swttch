@@ -79,7 +79,8 @@
         "removeConfirmTitle": "Удалить @swttch/extend-kit?",
         "removeConfirmMessage": "Голосовой ввод перестанет работать на этом компьютере, пока вы не установите пакет заново. Панель использования работает с тем же пакетом.",
         "refresh": "Проверить снова",
-        "refreshing": "Проверка…"
+        "refreshing": "Проверка…",
+        "dismiss": "Закрыть"
       }
     },
     "uiDirection": {
