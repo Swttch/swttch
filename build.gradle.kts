@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.28.4 - Windows text, keyboard, and tab restore fixes</h3>
+            <ul>
+                <li>Fix garbled console output on Windows (#338)</li>
+                <li>Fix Option/Alt+Arrow not reaching the chat input (#337)</li>
+                <li>Free up F12 for the IDE — DevTools moved into Settings (#333, reported by @EndiButler)</li>
+                <li>Fix chat tabs not being restored after an IDE restart (#312, reported by @i-kulbitski)</li>
+                <li>Fix a new chat tab's title showing a UUID (#335)</li>
+                <li>Keep the chat panel loadable on IDEs without JCEF (#321, reported by @maicol07)</li>
+                <li>Show IDE and OS versions in About (#320, reported by @CraftedFury)</li>
+            </ul>
             <h3>0.28.3 - Folding pinned instruction, soft wrap, voice fixes</h3>
             <ul>
                 <li>Fold a pinned instruction away as you scroll past it (#318)</li>
