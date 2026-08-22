@@ -552,6 +552,12 @@
       "label": "Claudes Änderungen im Diff-Viewer der IDE anzeigen",
       "description": "Wenn Claude eine Datei bearbeiten möchte, wird die Änderung im Diff-Viewer der IDE geöffnet, sodass Sie sie bei der Entscheidung sehen.",
       "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Starten Sie die Anwendung aus Ihrer IDE."
+    },
+    "devTools": {
+      "label": "Entwicklertools",
+      "description": "Öffnet die DevTools des eingebetteten Browsers für den Chat in einem separaten Fenster. Dafür gibt es kein Tastenkürzel — öffnen Sie sie von hier aus.",
+      "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Verwenden Sie in einem Browser dessen eigene Entwicklertools.",
+      "action": "Öffnen"
     }
   }
 }

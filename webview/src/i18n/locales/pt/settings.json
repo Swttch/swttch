@@ -552,6 +552,12 @@
       "label": "Mostrar as edições do Claude no visualizador de diferenças do IDE",
       "description": "Quando o Claude pedir para editar um arquivo, abre a alteração no visualizador de diferenças do IDE para você ver enquanto decide.",
       "unavailable": "Disponível ao executar dentro de um IDE. Inicie o aplicativo a partir do seu IDE para usar."
+    },
+    "devTools": {
+      "label": "Ferramentas de desenvolvedor",
+      "description": "Abra o DevTools do navegador incorporado do chat em uma janela separada. Não há atalho de teclado para isso — abra por aqui.",
+      "unavailable": "Disponível ao executar dentro de um IDE. No navegador, use o DevTools do seu próprio navegador.",
+      "action": "Abrir"
     }
   }
 }

@@ -75,6 +75,13 @@ export class BrowserAdapter implements IdeAdapter {
     console.log('[BrowserAdapter] Sent OPEN_FILE request:', filePath, line ?? '');
   }
 
+  async openDevTools(): Promise<void> {
+    // A browser opens its own DevTools with the user's own shortcut, and there is
+    // no JCEF window for us to open. The settings button is disabled without an
+    // IDE attached, so this only exists to satisfy the interface.
+    console.warn('[BrowserAdapter] openDevTools() is a no-op outside an IDE');
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     try {
       await getBridge().request(MessageType.OPEN_TERMINAL, { workingDir });

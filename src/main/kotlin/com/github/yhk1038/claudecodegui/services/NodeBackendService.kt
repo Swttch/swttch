@@ -229,6 +229,10 @@ class NodeBackendService : Disposable {
                 any()?.openTerminal(workingDir) ?: warn("openTerminal")
             }
 
+            override suspend fun openDevTools() {
+                any()?.openDevTools() ?: warn("openDevTools")
+            }
+
             override suspend fun openUrl(url: String) {
                 any()?.openUrl(url) ?: warn("openUrl")
             }
