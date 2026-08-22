@@ -161,14 +161,38 @@ describe('revalidateStoredLicense', () => {
     expect(mockReportActivation).not.toHaveBeenCalled();
   });
 
-  it('clears the license when www authoritatively says the key is no longer valid', async () => {
+  // Losing entitlement must not erase the fact that this person once paid. The
+  // key is the credential the billing history is fetched with, so deleting it
+  // would take their receipts with it — and they have no copy to re-enter, since
+  // the key is minted and picked up automatically. Keep the key, record that it
+  // is no longer active, and let the caller decide what that unlocks.
+  it.each(['expired', 'refunded'])(
+    'keeps the key but records status when www says it is %s',
+    async (status) => {
+      mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(999)));
+      mockVerifyRemote.mockResolvedValue({ valid: false, status });
+
+      await revalidateStoredLicense(mockVerifyRemote);
+
+      expect(mockClearLicense).not.toHaveBeenCalled();
+      expect(mockSaveLicense).toHaveBeenCalledWith(
+        expect.objectContaining({ licenseKey: 'CCG-abc', status }),
+      );
+    },
+  );
+
+  // Without a status we still know entitlement ended, but not why. Fall back to
+  // a value that is definitely not "active" rather than leaving the old one,
+  // which would keep unlocking sponsor features.
+  it('records a non-active status even when www does not say which', async () => {
     mockReadLicense.mockResolvedValue(storedLicense(hoursAgo(999)));
-    // A refund/cancellation flips the row to refunded/expired → valid:false.
-    mockVerifyRemote.mockResolvedValue({ valid: false, status: 'refunded' });
+    mockVerifyRemote.mockResolvedValue({ valid: false });
 
     await revalidateStoredLicense(mockVerifyRemote);
 
-    expect(mockClearLicense).toHaveBeenCalledTimes(1);
+    expect(mockClearLicense).not.toHaveBeenCalled();
+    const saved = mockSaveLicense.mock.calls[0]?.[0] as { status?: string };
+    expect(saved.status).not.toBe('active');
   });
 
   it('does NOT revoke sponsorship when the check fails for a network reason', async () => {

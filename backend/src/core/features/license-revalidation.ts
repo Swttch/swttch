@@ -1,4 +1,4 @@
-import { readLicense, saveLicense, clearLicense, reportActivation } from './license';
+import { readLicense, saveLicense, reportActivation } from './license';
 import type { LicenseVerifyResult } from './license';
 
 /**
@@ -19,6 +19,12 @@ import type { LicenseVerifyResult } from './license';
  * that merely means "could not ask" — leaves the license untouched, because
  * stripping a paying sponsor for being offline is far worse than letting a
  * refunded one linger until the next successful check.
+ *
+ * Revoking here means recording a non-active status, NOT deleting the key. Being
+ * a sponsor and having once paid are different facts, and only the first one
+ * ends: the key is what the billing history is fetched with, and it is minted
+ * and picked up automatically, so a user whose key was deleted could never see
+ * their own receipts again. Deleting stays reserved for an explicit Deactivate.
  */
 
 /** How long a verification stays good before the key is re-checked. */
@@ -64,7 +70,24 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
     // failure), not "not a sponsor" — see verifyLicenseRemote. Only an answer
     // that actually reached www may revoke.
     if (!result.valid && result.error === undefined) {
-      await clearLicense();
+      // Entitlement ends here, but the key stays on disk. It is the credential
+      // the billing history is fetched with, and it is minted and picked up
+      // automatically — the user has no copy to re-enter — so deleting it would
+      // permanently take their receipts with it. Record the new status instead
+      // and let getSponsorStatus decide what an inactive key still unlocks.
+      // Clearing remains what an explicit Deactivate does.
+      await saveLicense({
+        licenseKey: license.licenseKey,
+        // www names the reason (expired/refunded) when it knows it. Falling back
+        // to "expired" keeps the stored status definitely-not-active, which is
+        // what entitlement is judged on.
+        status: result.status ?? 'expired',
+        verifiedAt: new Date().toISOString(),
+        tier: result.tier ?? license.tier ?? null,
+        interval: result.interval ?? license.interval ?? null,
+        price: result.price ?? license.price ?? null,
+        cancellable: result.cancellable ?? license.cancellable ?? null,
+      });
       return;
     }
     if (!result.valid) return;
