@@ -136,7 +136,7 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 Los problemas frecuentes que todavía no hemos podido corregir por nuestra parte, pero para los que existe una solución conocida, están recogidos en **[docs/troubleshooting](troubleshooting/es/README.md)**, cada uno con los síntomas, la causa, cómo solucionarlo y enlaces a los issues relacionados.
 
 - [Portapapeles en Wayland](troubleshooting/es/wayland-clipboard.md) — cuando pegar en el campo de chat falla en Linux · Wayland · KDE Plasma
-- [Runtime JCEF de Android Studio](troubleshooting/es/android-studio-jcef.md) — cuando Android Studio muestra un panel informativo en lugar del chat, o una ventana en blanco
+- [JCEF en Android Studio](troubleshooting/es/android-studio-jcef.md) — cuando Android Studio muestra un panel informativo o una excepción en lugar del chat, o una ventana en blanco
 
 Si tu problema no está en la lista, por favor [abre un issue](https://github.com/Swttch/swttch/issues/new/choose).
 
