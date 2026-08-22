@@ -3,9 +3,13 @@
  * with the hunks the user kept (#109).
  *
  * The selection is made in the diff — that is where the change is legible, and
- * where JetBrains already draws per-range controls. Only hunk numbers travel
- * back: the backend still holds the change it diffed, so what gets written is
- * the text that was reviewed rather than something reassembled from a viewer.
+ * where JetBrains already draws per-range controls. An untouched review sends
+ * back only hunk ranges, and the backend rebuilds from the change it still
+ * holds, so what gets written is the text that was reviewed.
+ *
+ * A reviewer who edits the proposed side sends that text instead (#305). Once
+ * they have typed over the proposal, no set of ranges into the original
+ * proposal can describe what is now on screen — so the screen wins.
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
@@ -23,6 +27,14 @@ export interface ResolveDiffParams {
    * they rejected the whole change.
    */
   acceptedRanges: AcceptedRange[];
+  /**
+   * The proposed side as the reviewer left it, when they edited it (#305).
+   *
+   * Absent means they did not type anything, and the ranges above describe the
+   * answer on their own. Present, it IS the answer — it already contains the
+   * result of every checkbox they unticked before typing.
+   */
+  editedContent?: string;
 }
 
 /** Parse a JSON-RPC notification payload, or null when it is not usable. */
@@ -41,7 +53,10 @@ export function parseResolveDiffParams(
     ? raw.filter(isAcceptedRange)
     : [];
 
-  return { toolUseId, controlRequestId, sessionId, acceptedRanges };
+  const edited = params.editedContent;
+  const editedContent = typeof edited === 'string' ? edited : undefined;
+
+  return { toolUseId, controlRequestId, sessionId, acceptedRanges, editedContent };
 }
 
 /** Whether a wire value is a usable line range; anything else is dropped. */
@@ -84,18 +99,27 @@ export function resolveDiffFromIde(
     return;
   }
 
-  if (params.acceptedRanges.length === 0) {
+  // An edited proposal answers on its own: the reviewer's text already reflects
+  // whatever they unticked before typing, so "kept no ranges" is not a denial
+  // here the way it is for an untouched diff.
+  const edited = params.editedContent;
+  const keptNothing =
+    edited !== undefined ? edited === preview.oldContent : params.acceptedRanges.length === 0;
+
+  if (keptNothing) {
     respond({ behavior: 'deny', message: buildUserDeclinedContent() });
     console.error('[node-backend]', `Diff resolved for ${params.toolUseId}: kept nothing (denied)`);
     notifyResolved(connections, params);
     return;
   }
 
-  const amended = buildPartialApproval(preview, params.acceptedRanges);
+  const amended = buildPartialApproval(preview, params.acceptedRanges, edited);
   respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });
   console.error(
     '[node-backend]',
-    `Diff resolved for ${params.toolUseId}: kept ${params.acceptedRanges.length} region(s)`,
+    edited !== undefined
+      ? `Diff resolved for ${params.toolUseId}: applied the reviewer's edited text`
+      : `Diff resolved for ${params.toolUseId}: kept ${params.acceptedRanges.length} region(s)`,
   );
 
   notifyResolved(connections, params);

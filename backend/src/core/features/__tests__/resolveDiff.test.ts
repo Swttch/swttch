@@ -75,6 +75,21 @@ describe('parseResolveDiffParams', () => {
     });
     expect(parsed?.acceptedRanges).toEqual([R_DEBUG, R_TIMEOUT]);
   });
+
+  it('carries the edited proposal through (#305)', () => {
+    const parsed = parseResolveDiffParams({ ...good, editedContent: 'typed\n' });
+    expect(parsed?.editedContent).toBe('typed\n');
+  });
+
+  it('treats an empty edit as text, not as absent', () => {
+    // Emptying the proposed side is a real answer — "write nothing" — and must
+    // not fall back to rebuilding the proposal from ranges.
+    expect(parseResolveDiffParams({ ...good, editedContent: '' })?.editedContent).toBe('');
+  });
+
+  it('ignores a non-string edit rather than trusting the wire', () => {
+    expect(parseResolveDiffParams({ ...good, editedContent: 42 })?.editedContent).toBeUndefined();
+  });
 });
 
 describe('resolveDiffFromIde', () => {
@@ -141,6 +156,67 @@ describe('resolveDiffFromIde', () => {
     };
     resolveDiffFromIde(connections(), params);
     expect(takePreview('t-once')).toBeUndefined();
+  });
+
+  it('writes what the reviewer typed, not what was proposed (#305)', () => {
+    pending('t-edited');
+    const typed = original.replace('debug: false', 'debug: MAYBE');
+    resolveDiffFromIde(connections(), {
+      toolUseId: 't-edited', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      // Ranges still say "keep everything"; the typed text overrides them.
+      acceptedRanges: [R_DEBUG, R_TIMEOUT],
+      editedContent: typed,
+    });
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    const input = response.response.updatedInput;
+    expect(response.response.behavior).toBe('allow');
+    expect(original.replace(input.old_string, input.new_string)).toBe(typed);
+    expect(input.new_string).toContain('debug: MAYBE');
+    expect(input.new_string).not.toContain('debug: true');
+  });
+
+  it('applies an edit even when no hunk was ticked', () => {
+    // Unticking everything then typing is an answer, not a denial: the text on
+    // screen differs from the file, so there is something to write.
+    pending('t-edited-none');
+    const typed = original.replace('debug: false', 'debug: MAYBE');
+    resolveDiffFromIde(connections(), {
+      toolUseId: 't-edited-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [], editedContent: typed,
+    });
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.behavior).toBe('allow');
+    expect(response.response.updatedInput.new_string).toContain('debug: MAYBE');
+  });
+
+  it('denies when the reviewer edited the proposal back to the original', () => {
+    // Leaving the proposed side identical to the file means nothing to write.
+    // Approving it would report success for an edit that never happened.
+    pending('t-edited-back');
+    resolveDiffFromIde(connections(), {
+      toolUseId: 't-edited-back', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: original,
+    });
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.behavior).toBe('deny');
+    expect(response.response.message).toContain(USER_DECLINED_PREFIX);
+  });
+
+  it('lets an untouched edit through unchanged', () => {
+    // Typing and undoing leaves the proposal exactly as Claude wrote it, so the
+    // original call should still go through rather than be synthesised.
+    pending('t-edited-noop');
+    resolveDiffFromIde(connections(), {
+      toolUseId: 't-edited-noop', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
+    });
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.behavior).toBe('allow');
+    expect(response.response.updatedInput).toEqual({});
   });
 
   it('quotes the request id the CLI is waiting on', () => {

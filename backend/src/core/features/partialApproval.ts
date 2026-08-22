@@ -30,14 +30,20 @@ export interface PartialApproval {
  * Null means "nothing to amend": the regions add up to the whole proposal, so
  * Claude's own input already says it. Rejecting everything is NOT expressed
  * here — that is a denial, and denying is the caller's job.
+ *
+ * [editedContent], when given, is the reviewer's own text for the whole file
+ * and replaces the reassembly entirely (#305).
  */
 export function buildPartialApproval(
   preview: StoredPreview,
   accepted: readonly AcceptedRange[],
+  editedContent?: string,
 ): PartialApproval | null {
-  if (accepted.length === 0) return null;
-
-  const content = applyAcceptedRanges(preview.oldContent, preview.newContent, accepted);
+  // What the reviewer edited outranks what was proposed (#305). The viewer's
+  // text IS the answer: hunk ranges describe the proposal it started from, so
+  // reassembling from them would discard whatever was typed over it.
+  const content =
+    editedContent ?? applyAcceptedRanges(preview.oldContent, preview.newContent, accepted);
   if (content === null) return null;
 
   // Keeping everything reproduces the proposal, so let the original call
