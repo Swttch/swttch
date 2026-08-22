@@ -60,6 +60,17 @@ export interface IdeAdapter {
   openTerminal(workingDir: string): Promise<void>;
 
   /**
+   * Open the embedded browser's DevTools
+   * - In JetBrains: Opens the JCEF DevTools window for the chat webview
+   * - In Browser: Not applicable — the browser has its own DevTools, so the
+   *   settings button that calls this renders disabled there
+   *
+   * Offered from the settings screen only. No key is bound to it: F12 used to be,
+   * and the chat then swallowed the IDE's own F12 shortcuts (issue #333).
+   */
+  openDevTools(): Promise<void>;
+
+  /**
    * Open a URL in an external browser
    * - In JetBrains: Delegates to Node.js backend which calls the bridge
    * - In Browser: Opens the URL in a new tab

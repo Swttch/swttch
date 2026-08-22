@@ -52,6 +52,7 @@ import { openSessionHandler } from './openSession';
 import { openSettingsHandler } from './openSettings';
 import { restartBackendHandler } from './restartBackend';
 import { openTerminalHandler } from './openTerminal';
+import { openDevToolsHandler } from './openDevTools';
 import { getVersionHandler } from './getVersion';
 import { getCliUpdateInfoHandler } from './getCliUpdateInfo';
 import { updateCliHandler } from './updateCli';
@@ -282,6 +283,10 @@ export async function handleMessage(
       break;
     case MessageType.OPEN_TERMINAL:
       await openTerminalHandler(connectionId, message, connections, bridge);
+      break;
+
+    case MessageType.OPEN_DEV_TOOLS:
+      await openDevToolsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_VERSION:
       await getVersionHandler(connectionId, message, connections, bridge);

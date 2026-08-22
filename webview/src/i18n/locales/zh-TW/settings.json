@@ -552,6 +552,12 @@
       "label": "在 IDE 差異檢視器中顯示 Claude 的修改",
       "description": "當 Claude 要求修改檔案時，在 IDE 的差異檢視器中開啟該修改，方便你在決定時檢視。",
       "unavailable": "僅在 IDE 內執行時可用。請從 IDE 啟動應用程式。"
+    },
+    "devTools": {
+      "label": "開發人員工具",
+      "description": "在獨立視窗中開啟聊天內嵌瀏覽器的 DevTools。此功能沒有快速鍵，請由此開啟。",
+      "unavailable": "僅在 IDE 內執行時可用。在瀏覽器中，請使用你瀏覽器本身的 DevTools。",
+      "action": "開啟"
     }
   }
 }

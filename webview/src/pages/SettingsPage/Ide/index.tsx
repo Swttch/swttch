@@ -1,5 +1,6 @@
 import { SettingSection, SettingRow } from '../common';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
+import { getAdapter } from '@/adapters';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useIdeDiffAvailable } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey } from '@/types/settings';
@@ -17,6 +18,13 @@ interface Props {
  * section existed, and hiding the section would take that away from standalone
  * users. Only the IDE-diff toggle — which has nothing to open without an IDE —
  * renders disabled, with a hint saying why.
+ *
+ * The DevTools row is an action, not a setting: there is nothing to persist, so
+ * it is a button rather than a toggle. It is also the ONLY way to reach the
+ * embedded browser's DevTools — the plugin binds no key to them. F12 used to,
+ * which meant the chat swallowed the IDE's own F12 shortcuts, Alt+F12 (the
+ * Terminal tool window in WebStorm) included, with no way to turn it off. Moving
+ * the entry point here costs a few clicks and gives the keyboard back (#333).
  */
 export const IdeSettings = (props: Props) => {
   const { className = '' } = props;
@@ -77,6 +85,25 @@ export const IdeSettings = (props: Props) => {
             onChange={(checked) => updateSetting(SettingKey.SHOW_DIFF_IN_IDE, checked)}
             ariaLabel={t('ide.showDiffInIde.label')}
           />
+        </SettingRow>
+
+        <SettingRow
+          label={t('ide.devTools.label')}
+          description={
+            ideAttached ? t('ide.devTools.description') : t('ide.devTools.unavailable')
+          }
+        >
+          <button
+            type="button"
+            aria-label={t('ide.devTools.label')}
+            disabled={!ideAttached}
+            onClick={() => {
+              void getAdapter().openDevTools();
+            }}
+            className="rounded-lg border border-border-default bg-surface-overlay px-3 py-1.5 text-sm text-text-primary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-overlay"
+          >
+            {t('ide.devTools.action')}
+          </button>
         </SettingRow>
       </SettingSection>
     </div>

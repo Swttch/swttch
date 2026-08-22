@@ -38,6 +38,15 @@ export interface Bridge {
   /** @param path settings page to land on (e.g. '/settings/sponsor'); omit for the landing page. */
   openSettings(workingDir?: string, path?: string): Promise<void>;
   openTerminal(workingDir: string): Promise<void>;
+  /**
+   * Open the IDE's embedded-browser DevTools for the chat webview, in its own
+   * window. Offered from the settings screen only; no key is bound to it (see
+   * MessageType.OPEN_DEV_TOOLS and issue #333).
+   *
+   * JetBrains mode only — the browser bridge rejects, since a browser already
+   * has its own DevTools and there is no JCEF window for us to open.
+   */
+  openDevTools(): Promise<void>;
   openUrl(url: string): Promise<void>;
   pickFiles(options: {
     mode: 'files' | 'folders' | 'both';

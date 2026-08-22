@@ -324,6 +324,10 @@ class RpcWebSocketClient(
                 rpcHandler.openTerminal(workingDir)
                 buildJsonObject {}
             }
+            "OPEN_DEV_TOOLS" -> {
+                rpcHandler.openDevTools()
+                buildJsonObject {}
+            }
             "OPEN_URL" -> {
                 val url = params["url"]?.jsonPrimitive?.content
                     ?: throw IllegalArgumentException("Missing 'url' param")

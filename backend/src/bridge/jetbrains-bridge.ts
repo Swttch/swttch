@@ -310,6 +310,10 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.OPEN_TERMINAL, { workingDir });
   }
 
+  async openDevTools(): Promise<void> {
+    await this.request(MessageType.OPEN_DEV_TOOLS, {});
+  }
+
   async openUrl(url: string): Promise<void> {
     await this.request(MessageType.OPEN_URL, { url });
   }

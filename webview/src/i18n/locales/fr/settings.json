@@ -552,6 +552,12 @@
       "label": "Afficher les modifications de Claude dans la visionneuse de différences de l'IDE",
       "description": "Quand Claude demande à modifier un fichier, ouvre la modification dans la visionneuse de différences de l'IDE pour que vous la voyiez au moment de décider.",
       "unavailable": "Disponible lors de l'exécution dans un IDE. Lancez l'application depuis votre IDE pour l'utiliser."
+    },
+    "devTools": {
+      "label": "Outils de développement",
+      "description": "Ouvre les DevTools du navigateur intégré pour le chat, dans une fenêtre séparée. Il n'existe pas de raccourci clavier pour cela — ouvrez-les depuis ici.",
+      "unavailable": "Disponible lors de l'exécution dans un IDE. Dans un navigateur, utilisez les outils de développement propres à votre navigateur.",
+      "action": "Ouvrir"
     }
   }
 }

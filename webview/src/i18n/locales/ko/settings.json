@@ -552,6 +552,12 @@
       "label": "Claude의 편집을 IDE diff 뷰어에 표시",
       "description": "Claude가 파일 편집을 요청하면 IDE의 diff 뷰어로 변경 내용을 열어, 승인 여부를 정하는 동안 볼 수 있게 합니다.",
       "unavailable": "IDE 안에서 실행할 때 사용할 수 있습니다. IDE에서 앱을 시작해 주세요."
+    },
+    "devTools": {
+      "label": "개발자 도구",
+      "description": "채팅 화면을 그리는 내장 브라우저의 DevTools를 별도 창으로 엽니다. 단축키는 없으며, 여기에서만 열 수 있습니다.",
+      "unavailable": "IDE 안에서 실행할 때 사용할 수 있습니다. 브라우저에서는 브라우저 자체 개발자 도구를 사용해 주세요.",
+      "action": "열기"
     }
   }
 }

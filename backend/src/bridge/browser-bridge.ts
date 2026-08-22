@@ -316,6 +316,12 @@ if ($dialog.ShowDialog() -eq 'OK') {
     return null;
   }
 
+  async openDevTools(): Promise<void> {
+    // no-op: there is no JCEF window to open here, and the browser already has
+    // its own DevTools. The settings button that would call this renders
+    // disabled without an IDE attached, so this is only a backstop.
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     // The terminal is opened *in* this project, so its choice is resolved per
     // project too — global still applies when the project sets none (issue #7).

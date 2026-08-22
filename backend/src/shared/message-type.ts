@@ -237,6 +237,17 @@ export enum MessageType {
   OPEN_SETTINGS = 'OPEN_SETTINGS',
   /** Open a terminal at the working directory. */
   OPEN_TERMINAL = 'OPEN_TERMINAL',
+  /**
+   * Open the IDE's embedded-browser DevTools for the chat webview, in its own
+   * window. JetBrains mode only — a browser has its own DevTools, so the browser
+   * bridge rejects this rather than pretending to honour it.
+   *
+   * Reachable ONLY from the settings screen. The plugin deliberately binds no
+   * key to it: F12 used to, which meant the chat swallowed the IDE's own F12
+   * shortcuts (Alt+F12 opens the Terminal tool window in WebStorm) with no way
+   * to turn it off — issue #333.
+   */
+  OPEN_DEV_TOOLS = 'OPEN_DEV_TOOLS',
   /** Open a URL in the external browser. */
   OPEN_URL = 'OPEN_URL',
   /** Open the native folder-picker dialog. */

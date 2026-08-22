@@ -500,7 +500,7 @@ class ClaudeCodePanel(
 
         // Keyboard handler: prevent IDE from intercepting WebView shortcuts
         b.jbCefClient.addKeyboardHandler(
-            WebViewKeyboardHandler(onOpenDevTools = { openDevTools() }),
+            WebViewKeyboardHandler(),
             b.cefBrowser
         )
 
@@ -1124,12 +1124,24 @@ class ClaudeCodePanel(
     }
 
     /**
-     * Opens the JCEF DevTools for debugging.
+     * Opens the JCEF DevTools window for this panel's webview.
+     *
+     * Named apart from the [NodeProcessManager.RpcHandler.openDevTools] override that
+     * calls it: inside that anonymous object an unqualified `openDevTools()` would
+     * resolve to the override itself and recurse.
+     *
+     * Unlike the old F12 path, the caller here is the settings screen, which can be
+     * reached before the browser is realized — hence the null-safe read of [holder]
+     * rather than an assertion.
      */
-    // Called only from WebViewKeyboardHandler installed via realizeBrowser() — browser is non-null.
-    private fun openDevTools() {
+    private fun openJcefDevTools() {
+        val browser = holder?.browser
+        if (browser == null) {
+            logger.warn("Failed to open DevTools: browser is not realized yet")
+            return
+        }
         try {
-            (holder!!.browser as? com.intellij.ui.jcef.JBCefBrowserBase)?.openDevtools()
+            (browser as? com.intellij.ui.jcef.JBCefBrowserBase)?.openDevtools()
                 ?: logger.warn("Failed to open DevTools: browser is not JBCefBrowserBase")
         } catch (e: Exception) {
             logger.error("Failed to open DevTools", e)
@@ -1588,6 +1600,14 @@ class ClaudeCodePanel(
                     val target = path?.takeIf { it.isNotBlank() } ?: "/settings/general"
                     OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), target)
                     logger.info("Opened Claude Code settings in editor tab (workingDir=$workingDir, path=$target)")
+                }
+            }
+
+            override suspend fun openDevTools() {
+                // Opening the DevTools window touches Swing, so hop to the EDT like
+                // the other UI actions here.
+                ApplicationManager.getApplication().invokeLater {
+                    openJcefDevTools()
                 }
             }
 

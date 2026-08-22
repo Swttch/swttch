@@ -223,6 +223,15 @@ class NodeProcessManager(
         /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
         suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)
+
+        /**
+         * Open the JCEF DevTools window for this panel's webview.
+         *
+         * Driven from the settings screen only; no key is bound to it. F12 used to
+         * be, which made the chat swallow the IDE's own F12 shortcuts — Alt+F12 is
+         * the Terminal tool window in WebStorm (issue #333).
+         */
+        suspend fun openDevTools()
         suspend fun openUrl(url: String)
         suspend fun pickFiles(mode: String, multiple: Boolean): List<String>
         suspend fun updatePlugin()
