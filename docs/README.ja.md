@@ -135,7 +135,7 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
 よく発生する問題のうち、まだこちらで直せていないものの既知の解決方法があるものを、**[docs/troubleshooting](troubleshooting/ja/README.md)** に症状・原因・解決方法と関連 Issue へのリンクとともにまとめてあります。
 
 - [Wayland のクリップボード](troubleshooting/ja/wayland-clipboard.md) — Linux · Wayland · KDE Plasma でチャット入力欄に貼り付けができないとき
-- [Android Studio の JCEF ランタイム](troubleshooting/ja/android-studio-jcef.md) — Android Studio でチャット画面の代わりに案内パネルが出る、またはウィンドウが空のとき
+- [Android Studio の JCEF](troubleshooting/ja/android-studio-jcef.md) — Android Studio でチャット画面の代わりに案内パネルや例外が出る、またはウィンドウが空のとき
 
 一覧にない問題は [Issue を開いて](https://github.com/Swttch/swttch/issues/new/choose)お知らせください。
 
