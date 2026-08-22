@@ -35,26 +35,11 @@ class JcefUnavailablePanel : JPanel(BorderLayout()) {
             alignmentX = Component.CENTER_ALIGNMENT
         }
 
-        val message = JLabel(
-            "<html><div style='text-align:center; width: 480px;'>" +
-            "<h2 style='margin-top:0;'>Claude Code GUI needs JCEF</h2>" +
-            "<p>This IDE is running without JCEF, which Claude Code GUI requires " +
-            "to render its chat UI. Click below to install a JCEF-enabled JetBrains " +
-            "Runtime — the IDE will download and apply it automatically, then ask you " +
-            "to restart.</p>" +
-            "<br/>" +
-            "<p style='text-align:left;'><b>If the button does not work, do this manually:</b></p>" +
-            "<ol style='text-align:left;'>" +
-            "<li>Open Find Action: <b>Cmd+Shift+A</b> (macOS) or <b>Ctrl+Shift+A</b> (Windows/Linux)</li>" +
-            "<li>Search for <b>&quot;Choose Boot Java Runtime for the IDE&hellip;&quot;</b> and run it</li>" +
-            "<li>Pick a runtime whose name contains <b>&quot;JCEF&quot;</b> or <b>&quot;with JCEF&quot;</b></li>" +
-            "<li>The IDE downloads and installs it, then prompts to restart</li>" +
-            "</ol>" +
-            "</div></html>"
-        ).apply {
+        val message = JLabel().apply {
             horizontalAlignment = SwingConstants.CENTER
             alignmentX = Component.CENTER_ALIGNMENT
         }
+        installReflowingMessage(message, MESSAGE_BODY)
 
         val installButton = JButton("Install JCEF Runtime").apply {
             alignmentX = Component.CENTER_ALIGNMENT
@@ -85,6 +70,25 @@ class JcefUnavailablePanel : JPanel(BorderLayout()) {
     }
 
     companion object {
+        /**
+         * The document body, without the width-bearing wrapper — [installReflowingMessage]
+         * supplies that, and re-supplies it whenever the panel is resized.
+         */
+        private const val MESSAGE_BODY =
+            "<h2 style='margin-top:0;'>Claude Code GUI needs JCEF</h2>" +
+            "<p>This IDE is running without JCEF, which Claude Code GUI requires " +
+            "to render its chat UI. Click below to install a JCEF-enabled JetBrains " +
+            "Runtime — the IDE will download and apply it automatically, then ask you " +
+            "to restart.</p>" +
+            "<br/>" +
+            "<p style='text-align:left;'><b>If the button does not work, do this manually:</b></p>" +
+            "<ol style='text-align:left;'>" +
+            "<li>Open Find Action: <b>Cmd+Shift+A</b> (macOS) or <b>Ctrl+Shift+A</b> (Windows/Linux)</li>" +
+            "<li>Search for <b>&quot;Choose Boot Java Runtime for the IDE&hellip;&quot;</b> and run it</li>" +
+            "<li>Pick a runtime whose name contains <b>&quot;JCEF&quot;</b> or <b>&quot;with JCEF&quot;</b></li>" +
+            "<li>The IDE downloads and installs it, then prompts to restart</li>" +
+            "</ol>"
+
         private const val LEARN_MORE_URL =
             "https://github.com/Swttch/swttch/blob/main/docs/troubleshooting/en/android-studio-jcef.md"
     }

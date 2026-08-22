@@ -41,27 +41,11 @@ class JcefRuntimeMismatchPanel : JPanel(BorderLayout()) {
             alignmentX = Component.CENTER_ALIGNMENT
         }
 
-        val message = JLabel(
-            "<html><div style='text-align:center; width: 480px;'>" +
-            "<h2 style='margin-top:0;'>This IDE and its runtime disagree</h2>" +
-            "<p>The chat UI could not start because the selected JetBrains Runtime " +
-            "ships a version of JCEF that this IDE was not built against. The browser " +
-            "fails while it is being created, which is why this panel is here instead " +
-            "of the chat.</p>" +
-            "<p style='text-align:left;'><b>On Android Studio, update the IDE:</b></p>" +
-            "<ol style='text-align:left;'>" +
-            "<li>Update Android Studio to <b>2026.1.3 or later</b></li>" +
-            "<li>Open Find Action: <b>Cmd+Shift+A</b> (macOS) or <b>Ctrl+Shift+A</b> (Windows/Linux)</li>" +
-            "<li>Run <b>&quot;Choose Boot Java Runtime for the IDE&hellip;&quot;</b></li>" +
-            "<li>Pick a runtime whose name contains <b>JCEF</b>, then restart</li>" +
-            "</ol>" +
-            "<p>Selecting a different runtime on 2026.1.2 or earlier will not help — " +
-            "those versions have no working combination.</p>" +
-            "</div></html>"
-        ).apply {
+        val message = JLabel().apply {
             horizontalAlignment = SwingConstants.CENTER
             alignmentX = Component.CENTER_ALIGNMENT
         }
+        installReflowingMessage(message, MESSAGE_BODY)
 
         val details = HyperlinkLabel("Read the full explanation").apply {
             alignmentX = Component.CENTER_ALIGNMENT
@@ -78,6 +62,26 @@ class JcefRuntimeMismatchPanel : JPanel(BorderLayout()) {
     }
 
     companion object {
+        /**
+         * The document body, without the width-bearing wrapper — [installReflowingMessage]
+         * supplies that, and re-supplies it whenever the panel is resized.
+         */
+        private const val MESSAGE_BODY =
+            "<h2 style='margin-top:0;'>This IDE and its runtime disagree</h2>" +
+            "<p>The chat UI could not start because the selected JetBrains Runtime " +
+            "ships a version of JCEF that this IDE was not built against. The browser " +
+            "fails while it is being created, which is why this panel is here instead " +
+            "of the chat.</p>" +
+            "<p style='text-align:left;'><b>On Android Studio, update the IDE:</b></p>" +
+            "<ol style='text-align:left;'>" +
+            "<li>Update Android Studio to <b>2026.1.3 or later</b></li>" +
+            "<li>Open Find Action: <b>Cmd+Shift+A</b> (macOS) or <b>Ctrl+Shift+A</b> (Windows/Linux)</li>" +
+            "<li>Run <b>&quot;Choose Boot Java Runtime for the IDE&hellip;&quot;</b></li>" +
+            "<li>Pick a runtime whose name contains <b>JCEF</b>, then restart</li>" +
+            "</ol>" +
+            "<p>Selecting a different runtime on 2026.1.2 or earlier will not help — " +
+            "those versions have no working combination.</p>"
+
         private const val DETAILS_URL =
             "https://github.com/Swttch/swttch/blob/main/docs/troubleshooting/en/android-studio-jcef.md"
     }
