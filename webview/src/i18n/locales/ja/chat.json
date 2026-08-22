@@ -482,5 +482,10 @@
     "scheduledToast": "自動再開を予約しました",
     "canceledToast": "自動再開の予約をキャンセルしました",
     "scheduled": "自動再開を予約済み"
+  },
+  "reviewDiff": {
+    "loading": "変更を読み込み中…",
+    "apply": "適用",
+    "reject": "却下"
   }
 }

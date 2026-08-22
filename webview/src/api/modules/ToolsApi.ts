@@ -12,6 +12,31 @@ interface DiffAvailablePayload {
 }
 
 /**
+ * The change behind a pending permission request, as the backend holds it.
+ *
+ * Mirrors the backend's stored preview rather than restating a subset, so the
+ * two do not drift; fields this UI does not read yet are still carried.
+ */
+export interface DiffPreview {
+  filePath: string;
+  oldContent: string;
+  newContent: string;
+  toolName: string;
+  hunks: unknown[];
+  input?: Record<string, unknown>;
+  sessionId?: string;
+  controlRequestId?: string;
+}
+
+/** A region of the proposal a reviewer kept, in 0-based end-exclusive lines. */
+export interface AcceptedRange {
+  oldStart: number;
+  oldEnd: number;
+  newStart: number;
+  newEnd: number;
+}
+
+/**
  * Tools API module
  * Handles tool permissions and diff operations
  */
@@ -100,6 +125,39 @@ export class ToolsApi {
    */
   async openDiffForRequest(toolUseId: string): Promise<void> {
     await this.bridge.request(MessageType.OPEN_DIFF, { toolUseId });
+  }
+
+  /**
+   * The change behind a pending permission request, for drawing the review
+   * diff here rather than in the IDE.
+   *
+   * Null once the request has been answered — the fetch lost a race with the
+   * decision, which is not an error and leaves nothing to draw.
+   */
+  async getDiffPreview(toolUseId: string): Promise<DiffPreview | null> {
+    const response = await this.bridge.request<{ preview: DiffPreview | null }>(
+      MessageType.GET_DIFF_PREVIEW,
+      { toolUseId },
+    );
+    return response?.preview ?? null;
+  }
+
+  /**
+   * Answer a permission request from the review diff drawn here.
+   *
+   * The same message the IDE's diff sends, so both surfaces settle a request
+   * the same way. [editedContent] is the proposed side as the reviewer left it
+   * and, when present, is what gets written (#305); omit it when they did not
+   * edit, so an untouched review lets Claude's own call through.
+   */
+  async resolveDiff(params: {
+    toolUseId: string;
+    controlRequestId: string;
+    sessionId: string;
+    acceptedRanges: AcceptedRange[];
+    editedContent?: string;
+  }): Promise<void> {
+    await this.bridge.request(MessageType.RESOLVE_DIFF, { ...params });
   }
 
   /**

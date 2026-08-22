@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
+import { ReviewDiff } from './ReviewDiff';
 import { useApi } from '../../contexts/ApiContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useIdeDiffAvailable } from '../../hooks/useIdeDiffAvailable';
@@ -181,12 +182,25 @@ export function PermissionBanner(props: Props) {
     stop();
   }, [onDeny, stop]);
 
+  /**
+   * Where the change gets reviewed.
+   *
+   * With an IDE attached the diff opens there, in a native editor that brings
+   * its own keymap and code assistance — the file name in the title is the way
+   * in. Without one there is no such tab (`BrowserBridge.openDiff` is a no-op),
+   * and until now that meant the change could not be seen at all. Drawing it
+   * here is that host's review surface, not a second one competing with the
+   * IDE's: only ever one of the two is shown.
+   */
+  const reviewInline = !diffAvailable && Boolean(parts.file);
+
   return (
     <ApprovalPanel
       title={title}
       collapsedTitle={t(parts.key, { ...parts.values, file: parts.file })}
       subtitle={subtitle}
       notice={notice}
+      preview={reviewInline ? <ReviewDiff toolUseId={permission.toolUseId} /> : undefined}
       options={options}
       onOptionSelect={handleOptionSelect}
       textareaPlaceholder={t('permissionBanner.textareaPlaceholder')}

@@ -486,5 +486,10 @@
     "scheduledToast": "Auto-resume scheduled",
     "canceledToast": "Auto-resume canceled",
     "scheduled": "Auto-resume scheduled"
+  },
+  "reviewDiff": {
+    "loading": "Loading the change…",
+    "apply": "Apply",
+    "reject": "Reject"
   }
 }

@@ -14,8 +14,12 @@ vi.mock('../../../hooks/useIdeDiffAvailable', () => ({
 }));
 
 const openDiffForRequest = vi.fn();
+// Answers no pending change, so these tests see the panel without a review
+// diff. Drawing one inline is the no-IDE path and has its own tests.
+const getDiffPreview = vi.fn(async () => null);
+const resolveDiff = vi.fn();
 vi.mock('../../../contexts/ApiContext', () => ({
-  useApi: () => ({ tools: { openDiffForRequest } }),
+  useApi: () => ({ tools: { openDiffForRequest, getDiffPreview, resolveDiff } }),
 }));
 
 const mockPermission: PendingPermission = {

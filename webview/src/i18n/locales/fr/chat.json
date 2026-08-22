@@ -482,5 +482,10 @@
     "scheduledToast": "Reprise automatique planifiée",
     "canceledToast": "Reprise automatique annulée",
     "scheduled": "Reprise automatique planifiée"
+  },
+  "reviewDiff": {
+    "loading": "Chargement de la modification…",
+    "apply": "Appliquer",
+    "reject": "Rejeter"
   }
 }

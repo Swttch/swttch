@@ -482,5 +482,10 @@
     "scheduledToast": "已預約自動恢復",
     "canceledToast": "已取消自動恢復",
     "scheduled": "已預約自動恢復"
+  },
+  "reviewDiff": {
+    "loading": "正在載入變更…",
+    "apply": "套用",
+    "reject": "拒絕"
   }
 }

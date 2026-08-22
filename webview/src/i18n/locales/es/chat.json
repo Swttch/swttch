@@ -482,5 +482,10 @@
     "scheduledToast": "Reanudación automática programada",
     "canceledToast": "Reanudación automática cancelada",
     "scheduled": "Reanudación automática programada"
+  },
+  "reviewDiff": {
+    "loading": "Cargando el cambio…",
+    "apply": "Aplicar",
+    "reject": "Rechazar"
   }
 }
