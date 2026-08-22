@@ -210,9 +210,10 @@ case "${1:-}" in
     cp "$ROOT/backend/dist/backend.mjs" "$stage/"
     cp "$ROOT/backend/dist/account-cli.mjs" "$stage/"
     cp "$ROOT/backend/dist/win-job-wrapper.ps1" "$stage/"
+    cp "$ROOT/backend/dist/win-bash-env.sh" "$stage/"
     cp -R "$ROOT/webview/dist/." "$stage/webview/"
     out="$ROOT/dist/claude-code-gui-standalone-v$version.tgz"
-    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 webview
+    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 win-bash-env.sh webview
     rm -rf "$stage"
     echo "Created: $out"
     ;;

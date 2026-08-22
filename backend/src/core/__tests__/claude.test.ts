@@ -266,6 +266,53 @@ describe('Claude', () => {
 // — exactly like CLAUDE_CONFIG_DIR before it (#123) — the value is projected when a
 // context LOADS rather than being cached per call site. applyConfigDir is that
 // load-time hook and already runs on every entry point, so the CLI path rides along.
+// `where` / `claude` run through cmd.exe, which writes non-ASCII on stdout in the system's
+// legacy OEM codepage rather than UTF-8. Letting Node decode that as utf8 turns an install
+// path under a Korean or Chinese user directory into U+FFFD, and the launcher we resolve
+// from it can no longer be spawned. See console-encoding.ts.
+describe('console output decoding on win32 paths', () => {
+  // which() caches its win32 result; changing cliPath is how the class drops that cache,
+  // so each test here starts from a cold resolve rather than a stale hit.
+  async function coldLauncherCache(): Promise<void> {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({ settings: { cliPath: 'claude' }, overrides: [] });
+    await Claude.applyConfigDir('/cold/a');
+    vi.mocked(readMergedSettings).mockResolvedValue({ settings: { cliPath: null }, overrides: [] });
+    await Claude.applyConfigDir('/cold/b');
+    vi.clearAllMocks();
+  }
+
+  afterEach(async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({ settings: { cliPath: null }, overrides: [] });
+    vi.clearAllMocks();
+  });
+
+  it('asks execFile for raw bytes instead of Node default utf8 decoding', async () => {
+    await coldLauncherCache();
+    await Claude.which();
+
+    const opts = vi.mocked(cpExecFile).mock.calls[0][2] as { encoding?: string };
+    expect(opts.encoding).toBe('buffer');
+  });
+
+  it('resolves a launcher path delivered as a Buffer (locale-independent)', async () => {
+    await coldLauncherCache();
+    vi.mocked(cpExecFile).mockImplementationOnce(((
+      _cmd: string,
+      _args: unknown,
+      _opts: unknown,
+      cb?: (e: unknown, o: Buffer, s: Buffer) => void,
+    ) => {
+      cb?.(null, Buffer.from(`${FAKE_CLAUDE_CMD}
+`, 'utf8'), Buffer.alloc(0));
+      return { on: vi.fn() };
+    }) as unknown as typeof cpExecFile);
+
+    expect(await Claude.which()).toBe(FAKE_CLAUDE_CMD);
+  });
+});
+
 describe('Claude.applyConfigDir — per-project cliPath', () => {
   afterEach(() => {
     vi.clearAllMocks();

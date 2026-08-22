@@ -44,15 +44,48 @@ export function spawnWin32JobCli(
   sessionId: string,
   options: SpawnOptions,
 ): ChildProcess {
+  const cmdline = buildWin32CmdLine(command, args);
   const wrapper = jobWrapperPath();
   if (!existsSync(wrapper)) {
     console.error('[node-backend]', `Job wrapper not found at ${wrapper} — spawning without a job (orphan guard degraded)`);
     return cpSpawn(command, args, { ...options, shell: true });
   }
-  const cmdline = buildWin32CmdLine(command, args);
   return cpSpawn(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', wrapper, sessionId],
     { ...options, shell: false, env: { ...options.env, CCG_JOB_CMDLINE: cmdline } },
   );
+}
+
+/** Absolute path to the shipped BASH_ENV script, resolved next to the running bundle. */
+export function bashEnvScriptPath(): string {
+  return fileURLToPath(new URL('./win-bash-env.sh', import.meta.url));
+}
+
+/**
+ * Rewrite a win32 path into the MSYS form git-bash understands (`C:\a\b` -> `/c/a/b`).
+ * bash reads $BASH_ENV with its own path rules, so a drive-letter path would not resolve.
+ */
+export function toMsysPath(win32Path: string): string {
+  const drive = /^([A-Za-z]):[\\/]/.exec(win32Path);
+  if (!drive) return win32Path.split('\\').join('/');
+  return `/${drive[1].toLowerCase()}/${win32Path.slice(3).split('\\').join('/')}`;
+}
+
+/**
+ * The BASH_ENV overrides that make the CLI's Bash tool emit UTF-8 (see win-bash-env.sh).
+ *
+ * Returns nothing off win32, or when the script is missing — a missing script must never
+ * break chat, it only lets the garbling back in. Any BASH_ENV the user already set is
+ * carried in CCG_PREV_BASH_ENV so the script can source it instead of silently dropping it.
+ */
+export function utf8BashEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  if (process.platform !== 'win32') return {};
+  const script = bashEnvScriptPath();
+  if (!existsSync(script)) return {};
+  const previous = env.BASH_ENV;
+  return {
+    ...(previous ? { CCG_PREV_BASH_ENV: previous } : {}),
+    BASH_ENV: toMsysPath(script),
+  };
 }

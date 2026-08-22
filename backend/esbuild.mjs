@@ -86,4 +86,11 @@ await build({ ...common, entryPoints: ['src/cli/account.ts'], outfile: 'dist/acc
 // syncResources, standalone tgz) copy it from dist/ alongside backend.mjs.
 copyFileSync('src/core/win-job-wrapper.ps1', 'dist/win-job-wrapper.ps1');
 
+// Same deal for the BASH_ENV script the CLI's bash sources on every non-interactive
+// start (win-job.ts `utf8BashEnv`). It is what keeps CJK console output from reaching
+// the chat as U+FFFD, and utf8BashEnv stays SILENT when the file is absent — so a
+// distributable that forgets to carry it degrades invisibly. Keep all three copy
+// sites (here, gradle syncResources, standalone tgz) in step.
+copyFileSync('src/core/win-bash-env.sh', 'dist/win-bash-env.sh');
+
 console.log('Backend bundled successfully');
