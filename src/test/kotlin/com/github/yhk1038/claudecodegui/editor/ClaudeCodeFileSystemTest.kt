@@ -1,7 +1,9 @@
 package com.github.yhk1038.claudecodegui.editor
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -47,14 +49,41 @@ class ClaudeCodeFileSystemTest {
     }
 
     @Test
-    fun `unknown tab id resolves to null rather than resurrecting a closed tab`() {
-        // A tab the user closed before shutdown is gone from both the in-memory
-        // map and EditorTabStateService, so its URL must answer null and let the
-        // platform skip that entry instead of reopening it.
+    fun `a tab resolves with no project open, which is when the platform asks`() {
+        // Issue #312. The platform restores the editor layout while the project
+        // is still opening: a logged run showed ProjectManager.openProjects empty
+        // at the moment of the lookup and the project appearing there 3.8s LATER.
+        // So a lookup that needs an open project to answer never answers, the
+        // platform logs "No file exists: claude-code://..." and drops the tab —
+        // and with it the splitter it was in, which is what the reporter saw.
+        //
+        // Resolving a tab must therefore not depend on project state. This test
+        // runs with no application and no project at all, exactly the emptiness
+        // the real restore hits.
         val fs = ClaudeCodeFileSystem()
+        val tabId = "77816be2-84a0-4056-8955-763c361b3c97"
 
-        assertNull(fs.findFileByPath("no-such-tab"))
-        assertNull(fs.refreshAndFindFileByPath("no-such-tab"))
+        val file = fs.findFileByPath(tabId)
+
+        assertNotNull(file, "a persisted chat tab must resolve even before any project is open")
+        assertEquals(tabId, (file as ClaudeCodeVirtualFile).tabId)
+        assertEquals(ClaudeCodeFileSystem.urlFor(tabId), file.url)
+    }
+
+    @Test
+    fun `the same tab id always resolves to the same file`() {
+        // The platform compares files by identity in places (detaching a browser
+        // component from its old parent, for one), and two files for one tab
+        // would each carry their own display name and path. Whoever asks first
+        // mints it; everyone after gets that same instance.
+        val fs = ClaudeCodeFileSystem()
+        val tabId = "3d3f1a2c-0000-4000-8000-000000000001"
+
+        val first = fs.findFileByPath(tabId)
+        val second = fs.refreshAndFindFileByPath(tabId)
+
+        assertNotNull(first)
+        assertSame(first, second)
     }
 
     @Test
@@ -78,9 +107,11 @@ class ClaudeCodeFileSystemTest {
         val pathHandedBack = persisted.substringAfter("://")
 
         assertEquals(tabId, pathHandedBack)
-        // Unknown to both lookups here, so null — but it reached the lookup as the
-        // bare tab ID, which is the part this test pins.
-        assertNull(fs.findFileByPath(pathHandedBack))
+        // And the lookup answers with that same tab, which is the whole point of
+        // the round trip: the platform gets a file back to put in the layout.
+        val resolved = fs.findFileByPath(pathHandedBack)
+        assertNotNull(resolved)
+        assertEquals(tabId, (resolved as ClaudeCodeVirtualFile).tabId)
     }
 
     @Test
