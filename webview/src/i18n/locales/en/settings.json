@@ -554,7 +554,7 @@
     },
     "showDiffInIde": {
       "label": "Show Claude's edits in the IDE diff viewer",
-      "description": "When Claude asks to edit a file, open the change in the IDE's diff viewer so you can see it while you decide.",
+      "description": "When Claude asks to edit a file, open the change in the IDE's diff viewer so you can see it while you decide. Turn this off to review the change in the chat instead.",
       "unavailable": "Available when running inside an IDE. Start the app from your IDE to use this."
     },
     "devTools": {

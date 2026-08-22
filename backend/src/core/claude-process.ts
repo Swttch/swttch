@@ -772,12 +772,14 @@ export function sendControlResponseToProcess(
 }
 
 /**
- * When the CLI asks permission for a file edit, open that edit in the IDE's
- * diff viewer so the user can see it while deciding.
+ * When the CLI asks permission for a file edit, make that edit reviewable while
+ * the user decides.
  *
- * Gated on the `showDiffInIde` setting, read per session working directory so a
- * project can opt out on its own. Off means the flow behaves exactly as it did
- * before this existed — no tab, no diff, prompt unchanged.
+ * The change is always stored, because it is what a review reads. The
+ * `showDiffInIde` setting — read per session working directory, so a project
+ * can opt out on its own — decides only whether the IDE opens a diff tab for
+ * it. Off, the webview draws the review from the same entry, which is also
+ * what happens on a host that has no IDE diff to open at all.
  *
  * Deliberately not awaited by the caller: reading the setting and the file both
  * touch disk, and the permission prompt must reach the WebView immediately.
@@ -800,36 +802,66 @@ function maybeOpenPermissionDiff(
   const toolUseId = request.tool_use_id as string | undefined;
   const toolInput = input as Record<string, unknown>;
 
-  void (async () => {
-    try {
-      const { settings } = await readMergedSettings(workingDir);
-      // Default on: the setting only exists to let people turn it back off.
-      if (settings.showDiffInIde === false) return;
+  void preparePermissionReview({
+    bridge,
+    sessionId: targetSessionId,
+    workingDir,
+    toolName,
+    toolInput,
+    toolUseId,
+    controlRequestId: String(event.request_id ?? ''),
+  }).catch((err) => {
+    console.error('[node-backend]', 'Permission diff preview failed:', err);
+  });
+}
 
-      const preview = await resolveDiffPreview(toolName, toolInput);
-      if (!preview) return;
+/**
+ * Store the proposed change for review, and open the IDE's diff on it when that
+ * is where the review happens.
+ *
+ * Split out from its caller so the storing and the opening can be tested apart:
+ * the two used to be one decision, and collapsing them again would take the
+ * review away from every host that does not use the IDE's viewer.
+ */
+export async function preparePermissionReview(params: {
+  bridge: Bridge;
+  sessionId: string;
+  workingDir: string | undefined;
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  toolUseId: string | undefined;
+  controlRequestId: string;
+}): Promise<void> {
+  const { settings } = await readMergedSettings(params.workingDir);
 
-      // Hold the change backend-side so the IDE's answer can name hunks rather
-      // than ship file contents back: what gets written is then the text we
-      // diffed, not something reassembled from what a viewer rendered.
-      const controlRequestId = String(event.request_id ?? '');
-      if (toolUseId) {
-        rememberPreview(toolUseId, {
-          ...preview,
-          input: toolInput,
-          toolName,
-          sessionId: targetSessionId,
-          controlRequestId,
-        });
-      }
-      await openDiffForPermission(bridge, preview, toolUseId, {
-        sessionId: targetSessionId,
-        controlRequestId,
-      });
-    } catch (err) {
-      console.error('[node-backend]', 'Permission diff preview failed:', err);
-    }
-  })();
+  const preview = await resolveDiffPreview(params.toolName, params.toolInput);
+  if (!preview) return;
+
+  // Hold the change backend-side so an answer can name hunks rather than ship
+  // file contents back: what gets written is then the text we diffed, not
+  // something reassembled from what a viewer rendered.
+  //
+  // Stored whatever the setting says. It decides WHERE the change is reviewed,
+  // not whether it is: with the IDE viewer off, the webview draws the review
+  // from this same entry, and skipping it would leave that reviewer with
+  // nothing to look at.
+  if (params.toolUseId) {
+    rememberPreview(params.toolUseId, {
+      ...preview,
+      input: params.toolInput,
+      toolName: params.toolName,
+      sessionId: params.sessionId,
+      controlRequestId: params.controlRequestId,
+    });
+  }
+
+  // Default on: the setting only exists to let people turn it back off.
+  if (settings.showDiffInIde === false) return;
+
+  await openDiffForPermission(params.bridge, preview, params.toolUseId, {
+    sessionId: params.sessionId,
+    controlRequestId: params.controlRequestId,
+  });
 }
 
 function handleStreamEvent(

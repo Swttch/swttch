@@ -552,7 +552,7 @@
     },
     "showDiffInIde": {
       "label": "Claudes Änderungen im Diff-Viewer der IDE anzeigen",
-      "description": "Wenn Claude eine Datei bearbeiten möchte, wird die Änderung im Diff-Viewer der IDE geöffnet, sodass Sie sie bei der Entscheidung sehen.",
+      "description": "Wenn Claude eine Datei bearbeiten möchte, wird die Änderung im Diff-Viewer der IDE geöffnet, damit du sie beim Entscheiden sehen kannst. Deaktiviere dies, um die Änderung stattdessen im Chat zu prüfen.",
       "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Starten Sie die Anwendung aus Ihrer IDE."
     },
     "devTools": {

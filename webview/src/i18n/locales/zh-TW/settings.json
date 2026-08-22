@@ -552,7 +552,7 @@
     },
     "showDiffInIde": {
       "label": "在 IDE 差異檢視器中顯示 Claude 的修改",
-      "description": "當 Claude 要求修改檔案時，在 IDE 的差異檢視器中開啟該修改，方便你在決定時檢視。",
+      "description": "當 Claude 要求編輯檔案時，在 IDE 的 diff 檢視器中開啟變更，方便你邊看邊決定。關閉後將在聊天中檢視變更。",
       "unavailable": "僅在 IDE 內執行時可用。請從 IDE 啟動應用程式。"
     },
     "devTools": {

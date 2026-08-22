@@ -552,7 +552,7 @@
     },
     "showDiffInIde": {
       "label": "Claude の編集を IDE の差分ビューアーに表示",
-      "description": "Claude がファイルの編集を求めたとき、IDE の差分ビューアーで変更内容を開き、判断しながら確認できるようにします。",
+      "description": "Claude がファイルの編集を求めたとき、IDE の diff ビューアーで変更を開き、確認しながら判断できます。オフにするとチャット内で変更を確認します。",
       "unavailable": "IDE 内で実行しているときに利用できます。IDE からアプリを起動してください。"
     },
     "devTools": {

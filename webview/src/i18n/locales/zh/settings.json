@@ -552,7 +552,7 @@
     },
     "showDiffInIde": {
       "label": "在 IDE 差异查看器中显示 Claude 的修改",
-      "description": "当 Claude 请求修改文件时，在 IDE 的差异查看器中打开该修改，便于你在决定时查看。",
+      "description": "当 Claude 请求编辑文件时，在 IDE 的 diff 查看器中打开更改，便于你边看边决定。关闭后将在聊天中查看更改。",
       "unavailable": "仅在 IDE 内运行时可用。请从 IDE 启动应用。"
     },
     "devTools": {

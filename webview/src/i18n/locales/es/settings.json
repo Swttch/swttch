@@ -552,7 +552,7 @@
     },
     "showDiffInIde": {
       "label": "Mostrar los cambios de Claude en el visor de diferencias del IDE",
-      "description": "Cuando Claude pida editar un archivo, abre el cambio en el visor de diferencias del IDE para que puedas verlo mientras decides.",
+      "description": "Cuando Claude pida editar un archivo, abre el cambio en el visor de diferencias del IDE para verlo mientras decides. Desactívalo para revisar el cambio en el chat.",
       "unavailable": "Disponible al ejecutarse dentro de un IDE. Inicia la aplicación desde tu IDE para usarlo."
     },
     "devTools": {
