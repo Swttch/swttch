@@ -46,6 +46,12 @@
         <fileEditorProvider
             implementation="com.github.yhk1038.claudecodegui.editor.ClaudeCodeEditorProvider"/>
 
+        <!-- Tab label. Claims the chat tab's title before the platform's
+             unique-name pass can reach it: two untitled tabs share the name
+             "Claude Code", and that pass disambiguates by path — which for us is
+             the tab's UUID, so pressing "+" relabelled both tabs with a UUID. -->
+        <editorTabTitleProvider implementation="com.github.yhk1038.claudecodegui.editor.ClaudeCodeEditorTabTitleProvider"/>
+
         <!-- Project service for session management -->
         <projectService
             serviceImplementation="com.github.yhk1038.claudecodegui.services.ClaudeSessionService"/>
