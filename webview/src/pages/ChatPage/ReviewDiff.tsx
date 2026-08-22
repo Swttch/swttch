@@ -96,7 +96,7 @@ export function ReviewDiff({ toolUseId }: Props) {
 
   return (
     <div className="review-diff border border-border-default rounded-md overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-bg-secondary">
+      <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-bg-secondary">
         <span className="text-sm text-text-primary font-medium truncate" title={preview.filePath}>
           {fileName}
         </span>
@@ -120,9 +120,17 @@ export function ReviewDiff({ toolUseId }: Props) {
         </div>
       </div>
 
-      <Suspense fallback={<div className="text-text-tertiary text-sm p-3">{t('reviewDiff.loading')}</div>}>
-        <ReviewDiffSurface preview={preview} onEdit={handleEdit} />
-      </Suspense>
+      {/*
+        Capped and scrolled rather than left to its natural height. A whole-file
+        rewrite runs to hundreds of lines, and at full height it pushed this
+        panel's own header — the file name and the two decisions — off the top
+        of the screen, leaving a diff with no visible way to answer it.
+      */}
+      <div className="max-h-[26rem] overflow-auto">
+        <Suspense fallback={<div className="text-text-tertiary text-sm p-3">{t('reviewDiff.loading')}</div>}>
+          <ReviewDiffSurface preview={preview} onEdit={handleEdit} />
+        </Suspense>
+      </div>
     </div>
   );
 }

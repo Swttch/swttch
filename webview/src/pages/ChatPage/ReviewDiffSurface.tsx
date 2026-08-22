@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileDiff, EditProvider, type FileContents } from '@pierre/diffs/react';
 import { parseDiffFromFile } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
@@ -46,17 +46,38 @@ export default function ReviewDiffSurface({ preview, onEdit }: Props) {
     [onEdit],
   );
 
+  // Side-by-side halves the room each side gets, and this sits inside the chat
+  // column rather than a full window. Below the threshold every line wraps or
+  // scrolls away, so one column above it and stacked below.
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(true);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setWide(entry.contentRect.width >= SPLIT_MIN_WIDTH);
+    });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
   const options = useMemo(
     () => ({
-      diffStyle: 'split' as const,
+      diffStyle: (wide ? 'split' : 'unified') as 'split' | 'unified',
       themeType: (isDark ? 'dark' : 'light') as 'dark' | 'light',
     }),
-    [isDark],
+    [wide, isDark],
   );
 
   return (
-    <EditProvider createEditor={createEditor}>
-      <FileDiff fileDiff={fileDiff} options={options} edit editorOptions={editorOptions} />
-    </EditProvider>
+    <div ref={hostRef}>
+      <EditProvider createEditor={createEditor}>
+        <FileDiff fileDiff={fileDiff} options={options} edit editorOptions={editorOptions} />
+      </EditProvider>
+    </div>
   );
 }
+
+/** Narrower than this and each side of a split view is too thin to read. */
+const SPLIT_MIN_WIDTH = 720;
