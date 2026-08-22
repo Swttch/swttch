@@ -56,7 +56,13 @@ private val REJECT_COLOR = Color(0xA8, 0x3E, 0x3E)
 
 class DiffReviewPanel(
     private val selection: HunkSelection,
-    private val onResolve: (accepted: List<AcceptedRange>) -> Unit,
+    /**
+     * Answer the request. [keepEdits] separates the two ways of keeping
+     * nothing: Apply with every box unticked can still carry the reviewer's own
+     * text, while Reject refuses outright and must not smuggle it through
+     * (#305).
+     */
+    private val onResolve: (accepted: List<AcceptedRange>, keepEdits: Boolean) -> Unit,
 ) {
     private lateinit var root: JPanel
     private val summary = JBLabel()
@@ -69,8 +75,8 @@ class DiffReviewPanel(
     val component: JComponent = build()
 
     private fun build(): JComponent {
-        applyButton.addActionListener { onResolve(selection.acceptedRanges()) }
-        rejectButton.addActionListener { onResolve(emptyList()) }
+        applyButton.addActionListener { onResolve(selection.acceptedRanges(), true) }
+        rejectButton.addActionListener { onResolve(emptyList(), false) }
         // Green for accept, red for refuse. Set through the LaF's own colour
         // property so it renders the same on every OS (macOS ignores the Swing
         // "JButton.buttonType" hint entirely).

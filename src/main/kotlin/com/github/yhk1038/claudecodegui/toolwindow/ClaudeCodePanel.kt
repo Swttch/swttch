@@ -1516,11 +1516,13 @@ class ClaudeCodePanel(
                 controlRequestId: String?
             ) {
                 // Answering happens in the diff window itself, so the review and
-                // the decision sit together. Only the kept hunk numbers go back;
-                // the backend holds the change and rewrites the tool call (#109).
-                val onResolve: ((List<AcceptedRange>) -> Unit)? =
+                // the decision sit together. The kept hunk numbers go back and
+                // the backend holds the change and rewrites the tool call
+                // (#109) -- unless the reviewer edited the proposed side, in
+                // which case their text goes with them and wins (#305).
+                val onResolve: ((List<AcceptedRange>, String?) -> Unit)? =
                     if (sessionId != null && controlRequestId != null && toolUseId != null) {
-                        { accepted ->
+                        { accepted, editedContent ->
                             val params = buildJsonObject {
                                 put("toolUseId", toolUseId)
                                 put("controlRequestId", controlRequestId)
@@ -1535,6 +1537,10 @@ class ClaudeCodePanel(
                                         })
                                     }
                                 }
+                                // Only present when the reviewer edited the
+                                // proposed side; the backend then writes this
+                                // instead of rebuilding from the ranges (#305).
+                                editedContent?.let { put("editedContent", it) }
                             }
                             backendService.sendNotification(project.basePath ?: "", "RESOLVE_DIFF", params)
                         }
