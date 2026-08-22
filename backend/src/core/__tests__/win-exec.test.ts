@@ -102,6 +102,48 @@ describe('execViaCmdArgv', () => {
     await expect(execViaCmdArgv('%LAUNCHER%.cmd', ['update'])).rejects.toThrow(/%/);
     expect(vi.mocked(cpExecFile)).not.toHaveBeenCalled();
   });
+
+  // cmd.exe writes non-ASCII on stdout in the system's legacy OEM codepage, not UTF-8.
+  // Taking Node's default utf8 decoding turns a Korean/Chinese install path into U+FFFD,
+  // so we must receive raw bytes and decode them ourselves (see console-encoding.ts).
+  it('asks execFile for raw bytes instead of Node default utf8 decoding', async () => {
+    await execViaCmdArgv('npm.cmd', ['view', 'pkg']);
+
+    const opts = vi.mocked(cpExecFile).mock.calls[0][2] as { encoding?: string };
+    expect(opts.encoding).toBe('buffer');
+  });
+
+  it('decodes a Buffer stdout rather than returning "[object Object]"', async () => {
+    vi.mocked(cpExecFile).mockImplementationOnce(((
+      _cmd: string,
+      _args: unknown,
+      _opts: unknown,
+      cb?: (e: unknown, o: Buffer, s: Buffer) => void,
+    ) => {
+      cb?.(null, Buffer.from('C:\tools\claude.cmd', 'utf8'), Buffer.alloc(0));
+      return { on: vi.fn() };
+    }) as unknown as typeof cpExecFile);
+
+    const result = await execViaCmdArgv('where.exe', ['claude']);
+    expect(result.stdout).toBe('C:\tools\claude.cmd');
+    expect(result.stderr).toBe('');
+  });
+
+  it('keeps valid UTF-8 bytes intact (locale-independent)', async () => {
+    const text = 'C:\사용자\claude.cmd';
+    vi.mocked(cpExecFile).mockImplementationOnce(((
+      _cmd: string,
+      _args: unknown,
+      _opts: unknown,
+      cb?: (e: unknown, o: Buffer, s: Buffer) => void,
+    ) => {
+      cb?.(null, Buffer.from(text, 'utf8'), Buffer.alloc(0));
+      return { on: vi.fn() };
+    }) as unknown as typeof cpExecFile);
+
+    const result = await execViaCmdArgv('where.exe', ['claude']);
+    expect(result.stdout).toBe(text);
+  });
 });
 
 describe('assertNoCmdPercentExpansion', () => {

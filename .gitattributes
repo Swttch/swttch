@@ -1,0 +1,5 @@
+# Runtime shell assets must stay LF no matter what core.autocrlf a contributor has.
+# win-bash-env.sh is sourced by bash (via BASH_ENV) rather than run by Windows, and it
+# is copied verbatim into every distributable — a CRLF checkout would ship CRLF. Git
+# Bash tolerates the CR, but the GNU bash a WSL user gets does not have to.
+backend/src/core/win-bash-env.sh text eol=lf

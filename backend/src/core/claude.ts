@@ -5,6 +5,7 @@ import {
   type ChildProcess,
   type SpawnOptions,
   type ExecFileOptions,
+  type ExecFileOptionsWithBufferEncoding,
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
 import { getStrippableAuthEnvKeys } from './features/claude-settings';
@@ -12,7 +13,8 @@ import { augmentedPath } from './augmented-path';
 import { resolveWslCwd } from './wsl-path';
 import { execViaCmdArgv } from './win-exec';
 import { pickWin32Launcher } from './which-launcher';
-import { spawnWin32JobCli } from './win-job';
+import { spawnWin32JobCli, utf8BashEnv } from './win-job';
+import { decodeConsoleOutput } from './console-encoding';
 
 export class Claude {
   private static cliPath: string | null = null;
@@ -102,7 +104,8 @@ export class Claude {
    */
   static spawn(args: string[], options?: SpawnOptions, win32JobSessionId?: string): ChildProcess {
     const cwd = resolveWslCwd(options?.cwd);
-    const env = { ...Claude.env, ...options?.env };
+    const merged = { ...Claude.env, ...options?.env };
+    const env = { ...merged, ...utf8BashEnv(merged) };
     if (process.platform === 'win32' && win32JobSessionId) {
       return spawnWin32JobCli(Claude.command, args, win32JobSessionId, { ...options, cwd, env });
     }
@@ -224,9 +227,14 @@ export class Claude {
     options?: ExecFileOptions,
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      cpExecFile(command, args, {
+      // encoding:'buffer' — on win32 this runs through cmd.exe, whose own messages (and any
+      // non-ASCII path echoed back) arrive in the system's legacy OEM codepage, not UTF-8.
+      // Node's default utf8 decoding would replace those bytes with U+FFFD before we could
+      // recover them; decodeConsoleOutput below reads them with the right codepage.
+      const execOptions: ExecFileOptionsWithBufferEncoding = {
         timeout: 10000,
         ...options,
+        encoding: 'buffer',
         cwd: resolveWslCwd(options?.cwd),
         // On Windows the `claude` launcher is a .cmd/.ps1 wrapper that execFile
         // cannot run without a shell (it fails with ENOENT). spawn() already
@@ -239,9 +247,10 @@ export class Claude {
           ...Claude.env,
           ...options?.env,
         },
-      }, (err, stdout, stderr) => {
-        const out = stdout?.toString() ?? '';
-        const errText = stderr?.toString() ?? '';
+      };
+      cpExecFile(command, args, execOptions, (err, stdout, stderr) => {
+        const out = decodeConsoleOutput(stdout ?? '');
+        const errText = decodeConsoleOutput(stderr ?? '');
         if (err) {
           // Preserve captured output on the rejected error so callers can tell a
           // clean non-zero exit that still printed valid data (e.g. `auth status`
@@ -310,11 +319,17 @@ export class Claude {
       return Promise.resolve(Claude.resolvedWin32Path);
     }
     const cmd = process.platform === 'win32' ? 'where' : 'which';
+    // encoding:'buffer' — `where` prints the launcher path in the console's legacy OEM
+    // codepage. Under a Korean/Chinese user directory, utf8-decoding it yields a path full
+    // of U+FFFD that no longer exists on disk, so the launcher we resolve cannot be spawned.
+    const whichOptions: ExecFileOptionsWithBufferEncoding = {
+      env: Claude.env,
+      timeout: 5000,
+      encoding: 'buffer',
+    };
     return new Promise((resolve) => {
-      cpExecFile(cmd, [Claude.command], {
-        env: Claude.env,
-        timeout: 5000,
-      }, (err, stdout) => {
+      cpExecFile(cmd, [Claude.command], whichOptions, (err, stdout) => {
+        const out = decodeConsoleOutput(stdout ?? '');
         let resolved: string | null;
         if (err) {
           resolved = null;
@@ -322,7 +337,7 @@ export class Claude {
           // `where` also lists the extension-less MSYS script (`...\npm\claude`);
           // pick the launcher cmd.exe actually runs (first PATHEXT match) so
           // which() agrees with the binary spawn()/exec() resolve through cmd.exe.
-          resolved = pickWin32Launcher(stdout?.toString() ?? '');
+          resolved = pickWin32Launcher(out);
         } else {
           resolved = (stdout?.toString() ?? '').trim().split('\n')[0]?.trim() || null;
         }

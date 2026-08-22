@@ -1,4 +1,9 @@
-import { execFile as cpExecFile, type ExecFileOptions } from 'child_process';
+import {
+  execFile as cpExecFile,
+  type ExecFileOptions,
+  type ExecFileOptionsWithBufferEncoding,
+} from 'child_process';
+import { decodeConsoleOutput } from './console-encoding';
 
 /**
  * Windows-only: run an external launcher through cmd.exe with an argv ARRAY so
@@ -41,29 +46,30 @@ export async function execViaCmdArgv(
   const comspec = process.env.ComSpec || 'cmd.exe';
   // `/d` skips AutoRun, `/s` keeps quoting predictable, `/c` runs then exits.
   const cmdArgs = ['/d', '/s', '/c', command, ...args];
+  // encoding:'buffer' is pinned AFTER ...options on purpose. cmd.exe writes non-ASCII on
+  // stdout in the system's legacy OEM codepage (CP949/CP936/CP932), never UTF-8, so Node's
+  // default utf8 decoding would turn a Korean or Chinese install path into U+FFFD before we
+  // ever see it — losing the bytes decodeConsoleOutput needs to recover the text.
+  const execOptions: ExecFileOptionsWithBufferEncoding = {
+    // Match Claude.exec's historic 10s default; callers (CLI update, which
+    // downloads + links) pass their own longer timeout to override it.
+    timeout: 10000,
+    ...options,
+    encoding: 'buffer',
+    // shell:false — Node spawns cmd.exe directly, not nested in another shell.
+    // windowsVerbatimArguments stays false so Node's standard quoting applies
+    // (verbatim mode would pass args raw and re-expose `& | < >` to cmd).
+    shell: false,
+    windowsVerbatimArguments: false,
+  };
   return new Promise((resolve) => {
-    cpExecFile(
-      comspec,
-      cmdArgs,
-      {
-        // Match Claude.exec's historic 10s default; callers (CLI update, which
-        // downloads + links) pass their own longer timeout to override it.
-        timeout: 10000,
-        ...options,
-        // shell:false — Node spawns cmd.exe directly, not nested in another shell.
-        // windowsVerbatimArguments stays false so Node's standard quoting applies
-        // (verbatim mode would pass args raw and re-expose `& | < >` to cmd).
-        shell: false,
-        windowsVerbatimArguments: false,
-      },
-      (err, stdout, stderr) => {
-        resolve({
-          err: err ?? null,
-          stdout: stdout?.toString() ?? '',
-          stderr: stderr?.toString() ?? '',
-        });
-      },
-    );
+    cpExecFile(comspec, cmdArgs, execOptions, (err, stdout, stderr) => {
+      resolve({
+        err: err ?? null,
+        stdout: decodeConsoleOutput(stdout ?? ''),
+        stderr: decodeConsoleOutput(stderr ?? ''),
+      });
+    });
   });
 }
 
