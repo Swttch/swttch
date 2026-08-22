@@ -13,7 +13,7 @@ Jedes Dokument enthält die Symptome, die Ursache, die Lösung und Links zu den 
 | Dokument | Wann Sie hier nachlesen sollten |
 |---|---|
 | [Wayland-Zwischenablage](wayland-clipboard.md) | Wenn das Einfügen in das Chat-Eingabefeld unter Linux · Wayland · KDE Plasma fehlschlägt |
-| [Android-Studio-JCEF-Runtime](android-studio-jcef.md) | Wenn Android Studio ein Hinweispanel statt der Chat-Oberfläche oder ein leeres Fenster zeigt |
+| [JCEF in Android Studio](android-studio-jcef.md) | Wenn Android Studio ein Hinweispanel oder eine Ausnahme statt der Chat-Oberfläche oder ein leeres Fenster zeigt |
 
 ## Wenn Ihr Problem hier nicht steht
 

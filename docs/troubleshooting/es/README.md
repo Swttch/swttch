@@ -13,7 +13,7 @@ Cada documento incluye los síntomas, la causa, cómo solucionarlo y enlaces a l
 | Documento | Cuándo consultarlo |
 |---|---|
 | [Portapapeles en Wayland](wayland-clipboard.md) | Cuando pegar en el campo de chat falla en Linux · Wayland · KDE Plasma |
-| [Runtime JCEF de Android Studio](android-studio-jcef.md) | Cuando Android Studio muestra un panel informativo en lugar del chat, o una ventana en blanco |
+| [JCEF en Android Studio](android-studio-jcef.md) | Cuando Android Studio muestra un panel informativo o una excepción en lugar del chat, o una ventana en blanco |
 
 ## Si tu problema no está aquí
 

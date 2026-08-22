@@ -13,7 +13,7 @@ _최종 업데이트: 2026-08-22_
 | 문서 | 이런 경우에 보세요 |
 |---|---|
 | [Wayland 클립보드](wayland-clipboard.md) | Linux · Wayland · KDE Plasma 에서 채팅 입력창에 붙여넣기가 안 될 때 |
-| [Android Studio JCEF 런타임](android-studio-jcef.md) | Android Studio 에서 채팅 화면 대신 안내 패널이 뜨거나 창이 비어 있을 때 |
+| [Android Studio JCEF](android-studio-jcef.md) | Android Studio 에서 채팅 화면 대신 안내 패널이나 예외가 뜨거나, 창이 비어 있을 때 |
 
 ## 여기에 없는 문제라면
 
