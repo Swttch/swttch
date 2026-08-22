@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.editor
 
+import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
@@ -15,8 +16,24 @@ class ClaudeCodeEditorProvider : FileEditorProvider, DumbAware {
         return file is ClaudeCodeVirtualFile
     }
 
+    /**
+     * Build the pane, and tie a restored tab to its project on the way.
+     *
+     * A tab revived by the platform's layout restore is created before any
+     * project is open (issue #312), so it arrives here bare: no owner, no
+     * conversation, the generic label. This is the first moment a [Project] is
+     * in hand, so it is where the tab is claimed and filled in from
+     * [EditorTabStateService]. Both calls are no-ops for a tab that was opened
+     * normally, which already has all three.
+     */
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
-        return ClaudeCodeFileEditor(project, file as ClaudeCodeVirtualFile)
+        val chatTab = file as ClaudeCodeVirtualFile
+        ClaudeCodeVirtualFile.claim(project, chatTab.tabId)
+
+        val state = EditorTabStateService.getInstance(project)
+        chatTab.seedRestoredState(state.getPath(chatTab.tabId), state.getTitle(chatTab.tabId))
+
+        return ClaudeCodeFileEditor(project, chatTab)
     }
 
     override fun getEditorTypeId(): String = "ClaudeCodeEditor"

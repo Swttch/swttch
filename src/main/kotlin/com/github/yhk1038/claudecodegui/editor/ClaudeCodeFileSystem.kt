@@ -45,40 +45,56 @@ import java.io.IOException
  *
  * ## Lifetime
  *
- * [findFileByPath] hands back a file only for a tab the plugin already knows
- * about — either live in memory, or recorded in [EditorTabStateService]. A stale
- * URL (a tab the user closed before shutdown) resolves to null and the platform
- * simply skips it, which is the desired outcome.
+ * [findFileByPath] answers for any well-formed tab ID, because the platform is
+ * the one that decides which tabs exist: it only asks about URLs it persisted,
+ * and a tab the user closed is already gone from that layout. Making existence
+ * conditional on plugin state instead is what broke restore outright in issue
+ * #312 — see [findFileByPath].
  */
 class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
 
     override fun getProtocol(): String = PROTOCOL
 
     /**
-     * Resolve `claude-code://<tabId>` back to its tab.
+     * Resolve `claude-code://<tabId>` back to its tab. Never answers null for a
+     * well-formed ID.
      *
-     * Two sources, in order:
+     * ## Why it always answers
      *
-     *  1. a tab already live in memory — the normal case once the session is
-     *     running (a tab being moved between splitters, say);
-     *  2. a tab recorded in [EditorTabStateService] — the restore case.
+     * This is the single point the platform's restore hangs on: a tab whose URL
+     * does not resolve is dropped from the layout, and the (now empty) editor
+     * window is removed from its splitter. So a null here is not "skip one tab",
+     * it is "that chat, and the pane it lived in, are gone".
      *
-     * The second source is what makes restart restore work at all. The platform
-     * resolves persisted URLs *before* the plugin has opened anything, so at that
-     * moment no tab is live and an in-memory-only lookup answers null for every
-     * URL. That is exactly what happened when this returned only (1): the IDE
-     * logged `No file exists: claude-code://…`, dropped the tab from the restored
-     * layout, and the splitter placement was lost — the bug this whole change is
-     * meant to fix (#302).
+     * This used to answer only for a tab recorded in [EditorTabStateService],
+     * found by scanning `ProjectManager.openProjects`. That never worked after a
+     * restart, because the platform revives the layout *while the project is
+     * still opening*: a logged run of issue #312 caught `openProjects` empty at
+     * the lookup, with the project turning up there 3.8 seconds later. The state
+     * was intact the whole time — there was simply nobody to ask yet, so every
+     * chat tab was dropped on every restart and the IDE logged
+     * `No file exists: claude-code://…`.
      *
-     * It still does not mint tabs out of thin air. An ID absent from the
-     * persisted state resolves to null, so a tab the user closed before shutdown
-     * stays closed: [EditorTabStateService.removeTab] has already dropped it.
+     * The guard was not buying anything either. It was there to keep a tab the
+     * user had closed from being resurrected, but the platform only ever asks
+     * about URLs it persisted, and a closed tab is already out of that layout.
+     * So existence is decided where it belongs — in the platform's own record of
+     * what was open — and this call just hands back the address it was given.
      *
-     * The lookup spans open projects because a URL identifies a file, not a
-     * project, and this call carries no [com.intellij.openapi.project.Project].
-     * Tab IDs are per-tab UUIDs, so cross-project collision is not a practical
-     * concern.
+     * ## Where a tab's conversation and title come from
+     *
+     * When a project that remembers the tab is available, the file is seeded
+     * from [EditorTabStateService] as before. When none is — the restart case —
+     * the file is created bare and
+     * [ClaudeCodeEditorProvider.createEditor] fills both in as soon as it has a
+     * project, via [ClaudeCodeVirtualFile.seedRestoredState]. The pane's own
+     * address also arrives independently, through
+     * [ClaudeCodeEditorProvider.readState] → [ClaudeCodeFileEditor.setState].
+     *
+     * The project scan spans every open project because a URL identifies a file,
+     * not a project, and this call carries no
+     * [com.intellij.openapi.project.Project]. Tab IDs are per-tab UUIDs, so
+     * cross-project collision is not a practical concern.
      */
     override fun findFileByPath(path: String): VirtualFile? {
         val tabId = path.trim('/')
@@ -96,7 +112,13 @@ class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
                 ?.firstOrNull {
                     !it.isDisposed && tabId in EditorTabStateService.getInstance(it).getOpenTabIds()
                 }
-        }.getOrNull() ?: return null
+        }.getOrNull()
+
+        if (project == null) {
+            // The restart case: no project can vouch for this tab yet. Hand back
+            // the tab anyway — see the note above on why waiting for one loses it.
+            return ClaudeCodeVirtualFile.getOrCreateUnclaimed(tabId)
+        }
 
         val state = EditorTabStateService.getInstance(project)
         return ClaudeCodeVirtualFile.getOrCreate(
