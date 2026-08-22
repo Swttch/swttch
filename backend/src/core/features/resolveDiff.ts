@@ -1,11 +1,15 @@
 /**
- * Answer a pending file-edit permission request from the IDE's diff viewer,
- * with the hunks the user kept (#109).
+ * Answer a pending file-edit permission request from a review diff, with the
+ * hunks the user kept (#109).
  *
- * The selection is made in the diff — that is where the change is legible, and
- * where JetBrains already draws per-range controls. An untouched review sends
- * back only hunk ranges, and the backend rebuilds from the change it still
- * holds, so what gets written is the text that was reviewed.
+ * Shared by both review surfaces — the IDE's native diff and the webview's own
+ * — because a review is a review wherever it is drawn, and a second decision
+ * path would let the two disagree about what an answer means.
+ *
+ * The selection is made in the diff, which is where the change is legible. An
+ * untouched review sends back only hunk ranges, and the backend rebuilds from
+ * the change it still holds, so what gets written is the text that was
+ * reviewed.
  *
  * A reviewer who edits the proposed side sends that text instead (#305). Once
  * they have typed over the proposal, no set of ranges into the original
@@ -23,8 +27,8 @@ export interface ResolveDiffParams {
   controlRequestId: string;
   sessionId: string;
   /**
-   * Regions of the proposal the user kept, as the IDE split them. Empty means
-   * they rejected the whole change.
+   * Regions of the proposal the user kept, as the review surface split them.
+   * Empty means they rejected the whole change.
    */
   acceptedRanges: AcceptedRange[];
   /**
@@ -37,7 +41,12 @@ export interface ResolveDiffParams {
   editedContent?: string;
 }
 
-/** Parse a JSON-RPC notification payload, or null when it is not usable. */
+/**
+ * Parse an answer payload, or null when it is not usable.
+ *
+ * Reached from a JSON-RPC notification (the IDE) and from a webview request
+ * alike, so it trusts neither and validates the same way for both.
+ */
 export function parseResolveDiffParams(
   params: Record<string, unknown>,
 ): ResolveDiffParams | null {
@@ -69,14 +78,14 @@ function isAcceptedRange(value: unknown): value is AcceptedRange {
 }
 
 /**
- * Turn the IDE's answer into the CLI's `control_response`.
+ * Turn the reviewer's answer into the CLI's `control_response`.
  *
  * Keeping every hunk sends the request through untouched, so an Edit stays the
  * Edit Claude wrote. Keeping some rewrites the tool input to exactly that
  * subset. Keeping none is a denial — writing the file back unchanged would
  * report success for an edit that never happened.
  */
-export function resolveDiffFromIde(
+export function resolveDiffReview(
   connections: ConnectionManager,
   params: ResolveDiffParams,
 ): void {

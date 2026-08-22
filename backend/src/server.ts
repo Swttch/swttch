@@ -13,7 +13,7 @@ import { tunnelPairing } from './core/features/tunnel-pairing';
 import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
-import { parseResolveDiffParams, resolveDiffFromIde } from './core/features/resolveDiff';
+import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -367,7 +367,7 @@ async function main() {
       console.error('[node-backend]', 'RESOLVE_DIFF ignored: malformed params');
       return;
     }
-    resolveDiffFromIde(connections, parsed);
+    resolveDiffReview(connections, parsed);
   });
 
   // 4. Logger에 LogWS 참조 설정

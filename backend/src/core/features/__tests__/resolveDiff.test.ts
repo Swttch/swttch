@@ -1,6 +1,8 @@
 /**
- * The IDE's diff answers the CLI's permission request, so this is where a
- * mis-parse or a wrong default writes the wrong thing to disk.
+ * A review diff answers the CLI's permission request, so this is where a
+ * mis-parse or a wrong default writes the wrong thing to disk. Shared by the
+ * IDE's diff and the webview's own, which is why the ranges below are written
+ * as "the review surface reported them" rather than as anything IDE-specific.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -9,7 +11,7 @@ vi.mock('../../claude-process', () => ({
   sendControlResponseToProcess: (...args: unknown[]) => sendControlResponseToProcess(...args),
 }));
 
-import { parseResolveDiffParams, resolveDiffFromIde } from '../resolveDiff';
+import { parseResolveDiffParams, resolveDiffReview } from '../resolveDiff';
 import { rememberPreview, clearPreviews, takePreview } from '../diffPreview';
 import { computeHunks, type AcceptedRange } from '../hunks';
 import { USER_DECLINED_PREFIX } from '../../../shared';
@@ -92,10 +94,10 @@ describe('parseResolveDiffParams', () => {
   });
 });
 
-describe('resolveDiffFromIde', () => {
+describe('resolveDiffReview', () => {
   it('keeping every hunk sends the request through unchanged', () => {
     pending('t-all');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-all', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT],
     });
@@ -109,7 +111,7 @@ describe('resolveDiffFromIde', () => {
 
   it('keeping some rewrites the tool input to that subset', () => {
     pending('t-partial');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-partial', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
@@ -125,7 +127,7 @@ describe('resolveDiffFromIde', () => {
 
   it('keeping nothing is a denial, not a write of unchanged content', () => {
     pending('t-none');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [],
     });
@@ -138,7 +140,7 @@ describe('resolveDiffFromIde', () => {
   it('answers a request we never previewed as a plain approval', () => {
     // No stored change means no basis to narrow it; inventing a decision the
     // user did not make would be worse than approving what they were shown.
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-unknown', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
@@ -154,14 +156,14 @@ describe('resolveDiffFromIde', () => {
       toolUseId: 't-once', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     };
-    resolveDiffFromIde(connections(), params);
+    resolveDiffReview(connections(), params);
     expect(takePreview('t-once')).toBeUndefined();
   });
 
   it('writes what the reviewer typed, not what was proposed (#305)', () => {
     pending('t-edited');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-edited', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       // Ranges still say "keep everything"; the typed text overrides them.
       acceptedRanges: [R_DEBUG, R_TIMEOUT],
@@ -181,7 +183,7 @@ describe('resolveDiffFromIde', () => {
     // screen differs from the file, so there is something to write.
     pending('t-edited-none');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-edited-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [], editedContent: typed,
     });
@@ -195,7 +197,7 @@ describe('resolveDiffFromIde', () => {
     // Leaving the proposed side identical to the file means nothing to write.
     // Approving it would report success for an edit that never happened.
     pending('t-edited-back');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-edited-back', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: original,
     });
@@ -209,7 +211,7 @@ describe('resolveDiffFromIde', () => {
     // Typing and undoing leaves the proposal exactly as Claude wrote it, so the
     // original call should still go through rather than be synthesised.
     pending('t-edited-noop');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-edited-noop', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
     });
@@ -221,7 +223,7 @@ describe('resolveDiffFromIde', () => {
 
   it('quotes the request id the CLI is waiting on', () => {
     pending('t-id');
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-id', controlRequestId: 'ctrl-42', sessionId: 'sess-9',
       acceptedRanges: [R_DEBUG],
     });
@@ -257,7 +259,7 @@ describe('several files under review at once', () => {
     remember('t-b', '/tmp/b.ts', fileB, fileBNew);
 
     // Answer B first, keeping only its first hunk.
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-b', controlRequestId: 'ctrl-b', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const bInput = sendControlResponseToProcess.mock.calls[0][2].response.updatedInput;
@@ -266,7 +268,7 @@ describe('several files under review at once', () => {
     expect(bInput.new_string).not.toContain('c: 60');
 
     // A is untouched by that, and still resolvable on its own terms.
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const aInput = sendControlResponseToProcess.mock.calls[1][2].response.updatedInput;
@@ -277,7 +279,7 @@ describe('several files under review at once', () => {
     remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
     remember('t-b', '/tmp/b.ts', fileB, fileBNew);
 
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 
@@ -289,7 +291,7 @@ describe('several files under review at once', () => {
     remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
     remember('t-b', '/tmp/b.ts', fileB, fileBNew);
 
-    resolveDiffFromIde(connections(), {
+    resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [],
     });
 
@@ -303,7 +305,7 @@ describe('several files under review at once', () => {
     remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
     const conn = connections();
 
-    resolveDiffFromIde(conn, {
+    resolveDiffReview(conn, {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 

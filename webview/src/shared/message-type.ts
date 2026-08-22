@@ -214,9 +214,20 @@ export enum MessageType {
    */
   CLOSE_DIFF = 'CLOSE_DIFF',
   /**
+   * inbound webview→backend: fetch the stored preview for a pending permission
+   * request, so the webview can draw the review diff itself.
+   *
+   * The IDE reads the same preview through OPEN_DIFF; this is the door for
+   * hosts that have no IDE diff to open, where the review would otherwise be
+   * unavailable entirely.
+   */
+  GET_DIFF_PREVIEW = 'GET_DIFF_PREVIEW',
+  /**
    * Node↔Kotlin: the IDE reporting which hunks of a pending edit the user kept,
    * so the backend can amend the tool call to just that subset (#109). Sent
    * from the diff viewer's own controls; an empty selection means a refusal.
+   *
+   * The webview's own review diff answers through the same message.
    */
   RESOLVE_DIFF = 'RESOLVE_DIFF',
   /**
