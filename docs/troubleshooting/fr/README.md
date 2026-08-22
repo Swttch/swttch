@@ -13,7 +13,7 @@ Chaque document présente les symptômes, la cause, la solution et des liens ver
 | Document | À consulter quand |
 |---|---|
 | [Presse-papiers Wayland](wayland-clipboard.md) | Le collage dans le champ de chat échoue sous Linux · Wayland · KDE Plasma |
-| [Runtime JCEF d'Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information au lieu du chat, ou une fenêtre vide |
+| [JCEF dans Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide |
 
 ## Si votre problème ne figure pas ici
 

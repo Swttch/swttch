@@ -35,8 +35,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
-import com.intellij.ui.jcef.JBCefBrowser
-import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import javax.swing.UIManager
 import kotlinx.coroutines.CancellationException
@@ -53,9 +51,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
-import org.cef.callback.CefDragData
 import org.cef.handler.CefDisplayHandlerAdapter
-import org.cef.handler.CefDragHandler
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.handler.CefRequestHandlerAdapter
@@ -105,9 +101,24 @@ class ClaudeCodePanel(
     // Returns null when JCEF is not supported (e.g. Android Studio without JCEF JBR).
     private val browserService = ClaudeCodeBrowserService.getInstance(project)
     private var holder: ClaudeCodeBrowserService.BrowserHolder? = null
-    private val browser: JBCefBrowser? get() = holder?.browser
-    private val cursorQuery: JBCefJSQuery? get() = holder?.cursorQuery
-    private val streamingQuery: JBCefJSQuery? get() = holder?.streamingQuery
+
+    // No `browser` / `cursorQuery` / `streamingQuery` accessors here, on purpose.
+    //
+    // A JCEF type in the SIGNATURE of any member — even a private one — makes this
+    // class impossible to instantiate on a runtime without JCEF. Constructing a
+    // Component runs Component.isCoalesceEventsOverriden(), which reflects over
+    // getDeclaredMethods() and resolves every signature; an absent JCEF class then
+    // throws NoClassDefFoundError from inside the JPanel constructor, before the
+    // isJcefAvailable() guard in init can run. Android Studio 2026.2 Canary ships
+    // without the jcef module, so its class loader has no JBCefJSQuery at all and
+    // opening the tool window threw (issue #321).
+    //
+    // Reflection ignores visibility, so `private` does not help, and writing the
+    // type fully-qualified does not either — the bytecode signature is the same.
+    // The JCEF objects are reached through `holder` inside method bodies instead,
+    // which keeps the class loadable so the guard can run and the fallback panel
+    // can be shown. `holder`'s own type is safe: a field type is resolved lazily,
+    // only when the field is actually read.
 
     // Set by installOsrRepaintNudge while an OSR browser is alive; null otherwise
     // (windowed rendering has no ghosts to clear, and there is nothing to nudge
@@ -171,12 +182,15 @@ class ClaudeCodePanel(
     private var errorPanel: JPanel? = null
 
     init {
-        if (!browserService.isJcefAvailable()) {
+        val jcef = browserService.jcefAvailability()
+        if (!jcef.isUsable) {
             // JCEF unavailable (e.g. Android Studio without JCEF JBR). Fallback panel
             // shown immediately; no background realization will be scheduled.
-            add(JcefUnavailablePanel(), BorderLayout.CENTER)
-            logger.warn("JCEF is not supported in this runtime — showing fallback panel")
-            JcefRuntimeNotifier.notify(project)
+            // The reason is passed along: an absent-classes IDE and an unsupported
+            // runtime need opposite instructions (issue #321).
+            add(JcefUnavailablePanel(jcef), BorderLayout.CENTER)
+            logger.warn("JCEF is not usable in this runtime ($jcef) — showing fallback panel")
+            JcefRuntimeNotifier.notify(project, jcef)
         } else {
             // Browser realization is deferred until addNotify() + DumbService.runWhenSmart.
             // Show the indexing-wait placeholder so the user knows the tab is alive.
@@ -322,14 +336,21 @@ class ClaudeCodePanel(
 
     // ─── Browser handlers (JCEF) ────────────────────────────────────
 
-    // Called only from realizeBrowser() — holder, browser, cursorQuery, streamingQuery are guaranteed non-null here.
+    // Called only from realizeBrowser() — the holder is guaranteed non-null here.
     private fun setupBrowserHandlers() {
-        val b = browser!!
-        val cq = cursorQuery!!
-        val sq = streamingQuery!!
+        val h = holder!!
+        val b = h.browser
+        val cq = h.cursorQuery
+        val sq = h.streamingQuery
+        // The lambdas below must not capture `b` or mention JBCefJSQuery.Response,
+        // or Kotlin lowers them into static methods ON THIS CLASS whose signatures
+        // name a JCEF type — which AWT resolves in the JPanel constructor, bringing
+        // back issue #321. Capturing the plain AWT component keeps them clean, and
+        // the Response values are built by JcefHandlers, outside this class.
+        val browserComponent: java.awt.Component = b.component
 
         // Handle CSS cursor changes from WebView
-        cq.addHandler { cursorName: String ->
+        JcefHandlers.onQuery(cq) { cursorName: String ->
             val javaCursorType = when (cursorName) {
                 "text" -> java.awt.Cursor.TEXT_CURSOR
                 "pointer" -> java.awt.Cursor.HAND_CURSOR
@@ -345,9 +366,8 @@ class ClaudeCodePanel(
                 else -> java.awt.Cursor.DEFAULT_CURSOR
             }
             javax.swing.SwingUtilities.invokeLater {
-                b.component.cursor = java.awt.Cursor.getPredefinedCursor(javaCursorType)
+                browserComponent.cursor = java.awt.Cursor.getPredefinedCursor(javaCursorType)
             }
-            JBCefJSQuery.Response(null)
         }
 
         // Handle streaming state changes from WebView.
@@ -356,13 +376,12 @@ class ClaudeCodePanel(
         // own: a second query would mean another field on the pooled BrowserHolder and
         // another object to keep alive across tab move/split, for a message that is
         // just "the page changed, push a frame".
-        sq.addHandler { state: String ->
+        JcefHandlers.onQuery(sq) { state: String ->
             if (state == "repaint") {
                 requestRepaintNudge?.invoke()
             } else {
                 holder!!.onStreamingStateChanged?.invoke(state == "streaming")
             }
-            JBCefJSQuery.Response(null)
         }
 
         // Inject scripts on page load
@@ -388,10 +407,14 @@ class ClaudeCodePanel(
                             0,
                         )
                     }
-                    injectCursorTracking(frame)
-                    injectStreamingStateBridge(frame)
+                    // These build the script text rather than injecting it themselves,
+                    // so that no member of ClaudeCodePanel takes a CefFrame — see the
+                    // note next to `holder` (issue #321). Injection happens here, inside
+                    // this anonymous handler, which is a class of its own.
+                    frame.executeJavaScript(cursorTrackingScript(), frame.url, 0)
+                    frame.executeJavaScript(streamingStateBridgeScript(), frame.url, 0)
                     // After the streaming bridge: the repaint reporter calls through it.
-                    injectRepaintNudgeBridge(frame)
+                    frame.executeJavaScript(repaintNudgeBridgeScript(), frame.url, 0)
                     installImeWorkaround()
                     logger.info("WebView loaded successfully")
                     // The webview (IDE-selection chip consumer) just reloaded, so
@@ -494,21 +517,14 @@ class ClaudeCodePanel(
         //      the backend replay the stashed paths back as NATIVE_DROP_ENTRIES.
         // Net effect: attach happens on drop (not on hover) AND uses the real
         // OS paths Kotlin received from CEF.
-        b.jbCefClient.addDragHandler(CefDragHandler { _, dragData, _ ->
-            if (dragData?.isFile == true) {
-                val names = java.util.Vector<String>()
-                dragData.getFileNames(names)
-                if (names.isNotEmpty()) {
-                    logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${names.size} file(s)")
-                    val files = names.map { path ->
-                        val file = File(path)
-                        DroppedFile(file.absolutePath, file.isDirectory)
-                    }
-                    dispatchNativeDrop(files)
-                }
+        JcefHandlers.onFileDrag(b) { paths ->
+            logger.debug("[NativeDrop] CefDragHandler.onDragEnter stashing ${paths.size} file(s)")
+            val files = paths.map { path ->
+                val file = File(path)
+                DroppedFile(file.absolutePath, file.isDirectory)
             }
-            false
-        }, b.cefBrowser)
+            dispatchNativeDrop(files)
+        }
 
         // Safety net: if a file:// navigation still slips through (e.g. via the JS layer),
         // cancel it before CEF's popup blocker jumps the tab to about:blank#blocked.
@@ -579,20 +595,21 @@ class ClaudeCodePanel(
     }
 
     /**
-     * Inject streaming state bridge so WebView can notify Kotlin of streaming changes
-     * via JBCefJSQuery instead of encoding state into document.title.
+     * Script for the streaming state bridge, so the WebView can notify Kotlin of
+     * streaming changes via JBCefJSQuery instead of encoding state into document.title.
      */
-    // Called only from setupBrowserHandlers() which is only called from realizeBrowser() — streamingQuery is non-null.
-    private fun injectStreamingStateBridge(frame: CefFrame) {
-        val js = """
+    // Returns the script instead of taking a CefFrame and injecting it, so this
+    // member's signature stays free of JCEF types — see the note next to `holder`
+    // (issue #321). Called only from the load handler, i.e. only once JCEF is
+    // present, which is what makes reading `holder!!` safe here.
+    private fun streamingStateBridgeScript(): String =
+        """
             (function() {
                 window.__notifyStreamingState = function(state) {
-                    ${streamingQuery!!.inject("state")}
+                    ${holder!!.streamingQuery.inject("state")}
                 };
             })();
         """.trimIndent()
-        frame.executeJavaScript(js, frame.url, 0)
-    }
 
     /**
      * Ask CEF for a fresh frame whenever the page talks to the backend.
@@ -618,8 +635,9 @@ class ClaudeCodePanel(
      * painted frame. No extra throttle — a timed gap here would reintroduce the
      * very delay this exists to remove.
      */
-    private fun injectRepaintNudgeBridge(frame: CefFrame) {
-        val js = """
+    // Returns the script rather than injecting it — see streamingStateBridgeScript.
+    private fun repaintNudgeBridgeScript(): String =
+        """
             (function() {
                 if (window.__repaintNudgeInstalled) return;
                 window.__repaintNudgeInstalled = true;
@@ -650,28 +668,24 @@ class ClaudeCodePanel(
                 window.addEventListener('scroll', report, { passive: true, capture: true });
             })();
         """.trimIndent()
-        frame.executeJavaScript(js, frame.url, 0)
-    }
 
     /**
-     * Inject cursor CSS tracking script into the loaded page.
+     * Script that tracks the page's CSS cursor and reports changes to Kotlin.
      */
-    // Called only from setupBrowserHandlers() which is only called from realizeBrowser() — cursorQuery is non-null.
-    private fun injectCursorTracking(frame: CefFrame) {
-        val js = """
+    // Returns the script rather than injecting it — see streamingStateBridgeScript.
+    private fun cursorTrackingScript(): String =
+        """
             (function() {
                 var lastCursor = '';
                 document.addEventListener('mouseover', function(e) {
                     var cursor = window.getComputedStyle(e.target).cursor;
                     if (cursor !== lastCursor) {
                         lastCursor = cursor;
-                        ${cursorQuery!!.inject("cursor")}
+                        ${holder!!.cursorQuery.inject("cursor")}
                     }
                 }, true);
             })();
         """.trimIndent()
-        frame.executeJavaScript(js, frame.url, 0)
-    }
 
     /**
      * JCEF IME NPE workaround.
@@ -682,7 +696,12 @@ class ClaudeCodePanel(
     private fun installImeWorkaround() {
         val h = holder!!
         if (h.imeWorkaroundInstalled) return
-        val b = browser!!
+        // Pull the plain AWT component out before the lambda below closes over it.
+        // Capturing the JBCefBrowser instead would put a JCEF type in the captured
+        // lambda's signature, and Kotlin compiles that lambda into a static method
+        // ON THIS CLASS — which AWT then resolves while the JPanel constructor runs,
+        // reintroducing issue #321. See the note next to `holder`.
+        val browserComponent: java.awt.Component = h.browser.component
 
         fun wrapListeners(component: java.awt.Component) {
             val listeners = component.inputMethodListeners
@@ -720,7 +739,7 @@ class ClaudeCodePanel(
         }
 
         javax.swing.SwingUtilities.invokeLater {
-            traverseAndWrap(b.component)
+            traverseAndWrap(browserComponent)
             h.imeWorkaroundInstalled = true
             logger.info("JCEF IME NPE workaround installed")
         }
@@ -941,8 +960,14 @@ class ClaudeCodePanel(
             connection.subscribe(
                 com.intellij.ide.ui.LafManagerListener.TOPIC,
                 com.intellij.ide.ui.LafManagerListener {
-                    val b = browser ?: return@LafManagerListener
+                    // Neither this lambda nor the nested invokeLater one may capture
+                    // a JBCefBrowser: Kotlin turns both into static methods on this
+                    // class, and a JCEF type in their signature is what issue #321
+                    // was. The holder is re-read inside instead — which is also more
+                    // correct, since the theme can change after a tab move swapped it.
+                    if (holder == null) return@LafManagerListener
                     ApplicationManager.getApplication().invokeLater {
+                        val current = holder ?: return@invokeLater
                         val newTheme = if (com.intellij.ui.JBColor.isBright()) "light" else "dark"
                         // Re-read the colors on every LAF change: this is what makes
                         // bundled presets, marketplace themes and hand-written custom
@@ -953,8 +978,7 @@ class ClaudeCodePanel(
                             (if (colorsJs.isNotEmpty()) markIdeColorsAvailableJs() + logIdeColorsJs() else "") +
                             "window.dispatchEvent(new Event('ide-theme-changed'));"
                         try {
-                            val cef = b.cefBrowser
-                            cef.executeJavaScript(js, cef.url, 0)
+                            JcefHandlers.executeJavaScript(current.browser, js)
                         } catch (e: Exception) {
                             logger.warn("Failed to propagate LAF change to WebView", e)
                         }
@@ -1023,7 +1047,7 @@ class ClaudeCodePanel(
         var loggedNudgePath = false
 
         fun nudge() {
-            val b = browser ?: return
+            val b = holder?.browser ?: return
             if (!b.component.isShowing) return
             val w = b.component.width
             val h = b.component.height
@@ -1080,7 +1104,10 @@ class ClaudeCodePanel(
         // (b) Throttled mouse-motion nudge: clear ghosts promptly during interaction,
         // but no more than once per REPAINT_NUDGE_MIN_GAP_NANOS so we don't re-frame
         // CEF on every pixel of movement.
-        val b = browser!!
+        // Plain AWT component, so the Disposable lambda below does not close over a
+        // JBCefBrowser — that would put a JCEF type in a static method generated on
+        // this class, which is issue #321.
+        val browserComponent: java.awt.Component = holder!!.browser.component
         var lastNudgeNanos = 0L
         val motionListener = object : java.awt.event.MouseMotionAdapter() {
             override fun mouseMoved(e: java.awt.event.MouseEvent?) {
@@ -1090,8 +1117,8 @@ class ClaudeCodePanel(
                 nudge()
             }
         }
-        b.component.addMouseMotionListener(motionListener)
-        Disposer.register(parent, Disposable { b.component.removeMouseMotionListener(motionListener) })
+        browserComponent.addMouseMotionListener(motionListener)
+        Disposer.register(parent, Disposable { browserComponent.removeMouseMotionListener(motionListener) })
 
         logger.info("OSR repaint nudge installed for tab: $tabId")
     }
@@ -1102,7 +1129,7 @@ class ClaudeCodePanel(
     // Called only from WebViewKeyboardHandler installed via realizeBrowser() — browser is non-null.
     private fun openDevTools() {
         try {
-            (browser!! as? com.intellij.ui.jcef.JBCefBrowserBase)?.openDevtools()
+            (holder!!.browser as? com.intellij.ui.jcef.JBCefBrowserBase)?.openDevtools()
                 ?: logger.warn("Failed to open DevTools: browser is not JBCefBrowserBase")
         } catch (e: Exception) {
             logger.error("Failed to open DevTools", e)
@@ -1112,7 +1139,8 @@ class ClaudeCodePanel(
     // ─── Native (Swing / IDE) drag-and-drop bridge ──────────────────
 
     private fun setupNativeDropBridge() {
-        val b = browser ?: return
+        // JComponent, not JBCefBrowser — see the note next to `holder` (issue #321).
+        val browserComponent: JComponent = holder?.browser?.component ?: return
         val dropTarget = object : DropTargetAdapter() {
             override fun dragEnter(event: DropTargetDragEvent) {
                 event.acceptDrag(DnDConstants.ACTION_COPY)
@@ -1136,9 +1164,9 @@ class ClaudeCodePanel(
             }
         }
         installDropTarget(this, dropTarget)
-        installDropTarget(b.component, dropTarget)
+        installDropTarget(browserComponent, dropTarget)
         installIdeaDnDTarget(this)
-        installIdeaDnDTarget(b.component as JComponent)
+        installIdeaDnDTarget(browserComponent)
     }
 
     private fun installDropTarget(component: Component, dropTarget: DropTargetAdapter) {
@@ -1333,8 +1361,8 @@ class ClaudeCodePanel(
         logger.info("Loading WebView from Node.js backend: $loggedUrl")
 
         javax.swing.SwingUtilities.invokeLater {
-            val b = browser!!
             val h = holder!!
+            val b = h.browser
             remove(loadingLabel)
             // Paint the Swing component with the IDE surface color so the JCEF
             // native first paint is not white. Heavyweight (non-OSR) mode limits
@@ -1764,7 +1792,7 @@ class ClaudeCodePanel(
         // The browser is owned by ClaudeCodeBrowserService and survives tab move/split.
         // It will be reattached when a new ClaudeCodePanel is created for the same session.
         // When holder is null (JCEF unavailable), browser was never added, so nothing to detach.
-        browser?.let { remove(it.component) }
+        holder?.let { remove(it.browser.component) }
 
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         val acquiredHolder = holder

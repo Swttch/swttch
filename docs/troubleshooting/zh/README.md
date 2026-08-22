@@ -13,7 +13,7 @@ _最后更新：2026-08-22_
 | 文档 | 什么时候看 |
 |---|---|
 | [Wayland 剪贴板](wayland-clipboard.md) | 在 Linux · Wayland · KDE Plasma 上无法向聊天输入框粘贴时 |
-| [Android Studio JCEF 运行时](android-studio-jcef.md) | Android Studio 显示引导面板而不是聊天界面，或者窗口空白时 |
+| [Android Studio JCEF](android-studio-jcef.md) | Android Studio 显示引导面板或抛出异常而不是聊天界面，或者窗口空白时 |
 
 ## 如果这里没有您遇到的问题
 

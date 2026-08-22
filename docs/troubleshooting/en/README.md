@@ -13,7 +13,7 @@ Each document has the symptoms, the cause, how to fix it, and links to the relat
 | Document | Read this when |
 |---|---|
 | [Wayland clipboard](wayland-clipboard.md) | Pasting into the chat input fails on Linux · Wayland · KDE Plasma |
-| [Android Studio JCEF runtime](android-studio-jcef.md) | Android Studio shows a guidance panel instead of the chat UI, or a blank window |
+| [Android Studio JCEF](android-studio-jcef.md) | Android Studio shows a guidance panel or an exception instead of the chat UI, or a blank window |
 
 ## If your problem is not here
 

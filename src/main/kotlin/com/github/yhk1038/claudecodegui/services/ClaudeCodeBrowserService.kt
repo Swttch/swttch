@@ -1,5 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.toolwindow.JcefAvailability
+import com.github.yhk1038.claudecodegui.toolwindow.resolveJcefAvailability
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -221,11 +223,37 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
      *
      * Cheap to call — does NOT initialize CefApp (only [JBCefApp.isSupported]
      * is consulted, which is a capability probe, not a builder).
+     *
+     * `isSupported()` answers whether JCEF *works*; it presupposes the JCEF
+     * classes are loadable at all. On Android Studio 2026.2 Canary they are not —
+     * `com.intellij.modules.jcef` fails to resolve, so this plugin's class loader
+     * has no `com.intellij.ui.jcef` package and the call itself raises
+     * NoClassDefFoundError (issue #321). Catching Error here is what lets the
+     * guard answer "unavailable" rather than propagate, so callers can fall back
+     * to [com.github.yhk1038.claudecodegui.toolwindow.JcefUnavailablePanel].
+     * LinkageError also covers the runtime-mismatch shape from issue #295, where
+     * the classes exist but disagree with the platform's own copy.
      */
-    fun isJcefAvailable(): Boolean {
-        if (java.lang.Boolean.getBoolean("claude.simulate.no.jcef")) return false
-        return JBCefApp.isSupported()
-    }
+    fun isJcefAvailable(): Boolean = jcefAvailability().isUsable
+
+    /**
+     * Why JCEF cannot host the chat, for callers that have to explain it.
+     *
+     * [isJcefAvailable] answers whether to build a browser; this answers which
+     * fallback screen to show. The two failures need opposite instructions —
+     * a 2026.1 user swaps runtime, a 2026.2 user installs a plugin — so the
+     * reason is kept rather than flattened into a boolean (issue #321).
+     *
+     * The `JBCefApp.isSupported()` call lives here, inside a lambda body, which
+     * is the one place allowed to name a class that may be absent: bodies
+     * resolve lazily, so the reference costs nothing until this runs.
+     */
+    fun jcefAvailability(): JcefAvailability =
+        resolveJcefAvailability { JBCefApp.isSupported() }.also { availability ->
+            if (availability == JcefAvailability.CLASSES_ABSENT) {
+                logger.warn("JCEF classes are not loadable in this runtime — treating JCEF as unavailable")
+            }
+        }
 
     /**
      * Acquire a browser holder for the tab: reuse an unoccupied pooled holder if
@@ -258,7 +286,10 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
             // show the mismatch panel.
             runCatching { createHolder() }
                 .onFailure { e ->
-                    if (e !is NoSuchMethodError && e !is NoClassDefFoundError) throw e
+                    // LinkageError covers both shapes: a method the runtime's JCEF
+                    // lacks (NoSuchMethodError, #295) and a JCEF class the class
+                    // loader cannot see at all (NoClassDefFoundError, #321).
+                    if (e !is LinkageError) throw e
                     logger.warn("JCEF runtime is incompatible with this IDE — cannot create browser for tab: $tabId", e)
                 }
                 .getOrNull()

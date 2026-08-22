@@ -13,7 +13,7 @@ _最終更新: 2026-08-22_
 | 文書 | こんなときに |
 |---|---|
 | [Wayland のクリップボード](wayland-clipboard.md) | Linux · Wayland · KDE Plasma でチャット入力欄に貼り付けができないとき |
-| [Android Studio の JCEF ランタイム](android-studio-jcef.md) | Android Studio でチャット画面の代わりに案内パネルが出る、またはウィンドウが空のとき |
+| [Android Studio の JCEF](android-studio-jcef.md) | Android Studio でチャット画面の代わりに案内パネルや例外が出る、またはウィンドウが空のとき |
 
 ## ここにない問題の場合
 
