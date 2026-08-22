@@ -18,6 +18,13 @@ import { buildDeviceName } from './deviceName';
 const LICENSE_DIR = join(homedir(), '.claude-code-gui');
 const LICENSE_FILE = join(LICENSE_DIR, 'license.json');
 
+/**
+ * The one status that grants sponsor features. www mirrors its own
+ * license_status enum here ("active" | "expired" | "refunded"); everything that
+ * is not active has ended, whatever the reason.
+ */
+const LICENSE_STATUS_ACTIVE = 'active';
+
 // Our SaaS API base. Overridable for local development against a dev www server
 // (e.g. CCG_WWW_API_BASE=http://localhost:8080/api); defaults to production.
 function wwwApiBase(): string {
@@ -96,7 +103,16 @@ export interface StoredLicense {
 
 /** Sponsor entitlement derived from local storage — what the UI toggles on. */
 export interface SponsorStatus {
+  /**
+   * Whether sponsor-only features are unlocked right now. Distinct from having a
+   * key: a lapsed sponsor keeps their key (and their receipts) but not this.
+   */
   isSponsor: boolean;
+  /**
+   * The stored key, present whenever this install has ever been activated —
+   * including after entitlement ended. Callers that want "has this person ever
+   * sponsored?" (billing history, past-sponsor UI) ask this, not `isSponsor`.
+   */
   licenseKey?: string;
   status?: string;
   tier?: string;
@@ -232,13 +248,22 @@ export async function clearLicense(): Promise<void> {
 }
 
 /**
- * The sponsor entitlement the UI consumes. Derived from the locally stored key:
- * having a verified key on file means "sponsor" here, which is what lets the
- * state survive restarts and work offline.
+ * The sponsor entitlement the UI consumes, derived from the locally stored key.
+ * Storing it locally is what lets the state survive restarts and work offline.
+ *
+ * Entitlement is the stored STATUS, not the mere presence of a key. The two used
+ * to be the same thing, which meant the only way to end sponsorship was to
+ * delete the key — and that also deleted the one credential the billing history
+ * is fetched with, erasing the fact that the user had ever paid. Splitting them
+ * lets a lapsed sponsor keep their key (and their receipts) while losing access
+ * to sponsor-only features.
+ *
+ * A missing status is read as active: licenses stored before www reported one
+ * are genuine sponsors, and a stored key only ever got there by verifying.
  *
  * To keep that local trust from going stale, a throttled re-check against www
  * runs first (see license-revalidation): if the key has since been refunded or
- * expired it is cleared here, so the caller sees the corrected state. The check
+ * expired, the stored status says so and this returns isSponsor:false. The check
  * is skipped while the last verification is still fresh, and it never revokes on
  * a network failure — see revalidateStoredLicense for the fail-open rules.
  */
@@ -251,7 +276,7 @@ export async function getSponsorStatus(): Promise<SponsorStatus> {
   const license = await readLicense();
   if (license === null) return { isSponsor: false };
   return {
-    isSponsor: true,
+    isSponsor: license.status === null || license.status === LICENSE_STATUS_ACTIVE,
     licenseKey: license.licenseKey,
     status: license.status ?? undefined,
     tier: license.tier ?? undefined,

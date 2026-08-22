@@ -57,6 +57,22 @@ export function SponsorSettings() {
     checkByInstall,
   } = useSponsorStatus();
 
+  /**
+   * Someone who sponsored before but is not entitled right now — cancelled and
+   * lapsed, or refunded.
+   *
+   * They see the same invitation a first-time visitor sees, because re-starting
+   * a sponsorship is the same act as starting one and deserves the same screen
+   * rather than a lesser "you used to be a sponsor" variant. The single thing
+   * they keep is their payment history: losing entitlement must not erase the
+   * fact that they once paid, and their receipts are theirs.
+   *
+   * Note the condition is the KEY, not the entitlement — that is the whole point
+   * of the split. `isSponsor` says what is unlocked today; `licenseKey` says
+   * this install has been activated at some point.
+   */
+  const isPastSponsor = !isSponsor && licenseKey !== null;
+
   // Copy/paste-free activation: after the user opens the checkout page, poll www
   // for a key minted for this install so a completed payment flips this screen to
   // "sponsoring" without them copying the key back.
@@ -269,6 +285,15 @@ export function SponsorSettings() {
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* A past sponsor keeps their receipts. Rendered outside the entitlement
+          branch above precisely so it does not need a past-sponsor variant of
+          the invitation: they get the ordinary screen, plus this. */}
+      {isPastSponsor && (
+        <div className="mt-6 rounded-xl border border-border-default bg-surface-raised px-6 pb-6">
+          <SponsorBillingSection />
         </div>
       )}
     </div>
