@@ -1,5 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.toolwindow.JcefAvailability
+import com.github.yhk1038.claudecodegui.toolwindow.resolveJcefAvailability
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -232,15 +234,26 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
      * LinkageError also covers the runtime-mismatch shape from issue #295, where
      * the classes exist but disagree with the platform's own copy.
      */
-    fun isJcefAvailable(): Boolean {
-        if (java.lang.Boolean.getBoolean("claude.simulate.no.jcef")) return false
-        return try {
-            JBCefApp.isSupported()
-        } catch (e: LinkageError) {
-            logger.warn("JCEF classes are not loadable in this runtime — treating JCEF as unavailable", e)
-            false
+    fun isJcefAvailable(): Boolean = jcefAvailability().isUsable
+
+    /**
+     * Why JCEF cannot host the chat, for callers that have to explain it.
+     *
+     * [isJcefAvailable] answers whether to build a browser; this answers which
+     * fallback screen to show. The two failures need opposite instructions —
+     * a 2026.1 user swaps runtime, a 2026.2 user installs a plugin — so the
+     * reason is kept rather than flattened into a boolean (issue #321).
+     *
+     * The `JBCefApp.isSupported()` call lives here, inside a lambda body, which
+     * is the one place allowed to name a class that may be absent: bodies
+     * resolve lazily, so the reference costs nothing until this runs.
+     */
+    fun jcefAvailability(): JcefAvailability =
+        resolveJcefAvailability { JBCefApp.isSupported() }.also { availability ->
+            if (availability == JcefAvailability.CLASSES_ABSENT) {
+                logger.warn("JCEF classes are not loadable in this runtime — treating JCEF as unavailable")
+            }
         }
-    }
 
     /**
      * Acquire a browser holder for the tab: reuse an unoccupied pooled holder if

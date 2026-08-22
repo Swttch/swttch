@@ -24,8 +24,18 @@ class FallbackMessageWidthTest {
 
         @Test
         fun `uses the panel width when it is narrower than the readable maximum`() {
-            // 320px panel, 80px of border → 240px of usable text column.
-            assertEquals(240, fallbackMessageWidth(panelWidth = 320, horizontalInsets = 80))
+            // 320px panel, 80px of border, 24px of gutter → 216px of text column.
+            assertEquals(216, fallbackMessageWidth(panelWidth = 320, horizontalInsets = 80))
+        }
+
+        @Test
+        fun `leaves the gutter free even when the panel could hold the maximum`() {
+            // The measured regression: 564px panel with 80px of border leaves 484px,
+            // and asking for the full 480px maximum still clipped, because the
+            // rendered width overshoots what the markup asks for.
+            val result = fallbackMessageWidth(panelWidth = 564, horizontalInsets = 80)
+            assertEquals(460, result)
+            assertTrue(result <= 564 - 80 - FALLBACK_MESSAGE_GUTTER)
         }
 
         @Test
@@ -56,17 +66,17 @@ class FallbackMessageWidthTest {
         }
 
         @Test
-        fun `fits the panel whenever the panel can hold the minimum`() {
+        fun `always leaves the gutter free when the panel can hold the minimum`() {
             // The property that actually matters. Panels narrower than the minimum
             // are the deliberate exception — see the test above — so they are excluded
             // rather than silently passing.
-            for (panelWidth in listOf(260, 300, 400, 559, 560, 561, 900)) {
-                val usable = panelWidth - 80
+            for (panelWidth in listOf(300, 400, 559, 560, 561, 900, 1500)) {
+                val usable = panelWidth - 80 - FALLBACK_MESSAGE_GUTTER
                 assertTrue(usable >= FALLBACK_MESSAGE_MIN_WIDTH) { "bad fixture: $panelWidth" }
 
                 val result = fallbackMessageWidth(panelWidth, horizontalInsets = 80)
                 assertTrue(result <= usable) {
-                    "width $result overflows the $usable px available in a ${panelWidth}px panel"
+                    "width $result leaves no gutter in the $usable px available in a ${panelWidth}px panel"
                 }
             }
         }

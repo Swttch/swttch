@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.toolwindow
 
+import java.awt.Dimension
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JLabel
@@ -29,6 +30,18 @@ internal const val FALLBACK_MESSAGE_MAX_WIDTH = 480
 internal const val FALLBACK_MESSAGE_MIN_WIDTH = 180
 
 /**
+ * Slack between the width we ask the markup for and the width the panel actually
+ * has.
+ *
+ * A `width: Npx` in Swing's HTML sizes the text block, not the rendered label:
+ * list indentation and element margins push the real preferred width past N. A
+ * first attempt handed the markup every available pixel and the text still
+ * clipped — measured at panelWidth=564, insets=80, so 480px of markup inside
+ * 484px of space, and the `<ol>` overhang ate the remaining 4px.
+ */
+internal const val FALLBACK_MESSAGE_GUTTER = 24
+
+/**
  * The width to lay the message out at inside a panel [panelWidth] wide whose
  * border eats [horizontalInsets] pixels.
  *
@@ -38,7 +51,7 @@ internal const val FALLBACK_MESSAGE_MIN_WIDTH = 180
  */
 internal fun fallbackMessageWidth(panelWidth: Int, horizontalInsets: Int): Int {
     if (panelWidth <= 0) return FALLBACK_MESSAGE_MAX_WIDTH
-    return (panelWidth - horizontalInsets)
+    return (panelWidth - horizontalInsets - FALLBACK_MESSAGE_GUTTER)
         .coerceIn(FALLBACK_MESSAGE_MIN_WIDTH, FALLBACK_MESSAGE_MAX_WIDTH)
 }
 
@@ -52,6 +65,18 @@ internal fun fallbackMessageHtml(bodyHtml: String, widthPx: Int): String =
  * Re-flowing on resize rather than picking one width up front is what makes the
  * text survive both a narrow docked tool window and a wide editor tab — the user
  * can drag between the two at any time.
+ *
+ * Pinning the label's width is the second half of the fix, and it takes all
+ * three size hints. A `JLabel` derives every one of them from its rendered HTML,
+ * so when that overshoots the column — which it does, hence the gutter — the
+ * layout honours the oversized *minimum* and lets the surplus hang off the right
+ * edge. Capping only the maximum leaves the minimum in charge and changes
+ * nothing; that was measured, with the heading itself clipped mid-word on a
+ * narrow tool window.
+ *
+ * The height still has to come from the text, so the hints are cleared before
+ * asking for the preferred size — otherwise the previous answer is echoed back
+ * and the panel keeps the height of whatever width it had last.
  */
 internal fun JPanel.installReflowingMessage(label: JLabel, bodyHtml: String) {
     fun reflow() {
@@ -60,6 +85,18 @@ internal fun JPanel.installReflowingMessage(label: JLabel, bodyHtml: String) {
             bodyHtml,
             fallbackMessageWidth(width, insets.left + insets.right)
         )
+
+        val available = width - insets.left - insets.right
+        if (available <= 0) return
+
+        label.minimumSize = null
+        label.preferredSize = null
+        label.maximumSize = null
+
+        val pinned = Dimension(available, label.preferredSize.height)
+        label.minimumSize = pinned
+        label.preferredSize = pinned
+        label.maximumSize = pinned
     }
 
     reflow()

@@ -182,12 +182,15 @@ class ClaudeCodePanel(
     private var errorPanel: JPanel? = null
 
     init {
-        if (!browserService.isJcefAvailable()) {
+        val jcef = browserService.jcefAvailability()
+        if (!jcef.isUsable) {
             // JCEF unavailable (e.g. Android Studio without JCEF JBR). Fallback panel
             // shown immediately; no background realization will be scheduled.
-            add(JcefUnavailablePanel(), BorderLayout.CENTER)
-            logger.warn("JCEF is not supported in this runtime — showing fallback panel")
-            JcefRuntimeNotifier.notify(project)
+            // The reason is passed along: an absent-classes IDE and an unsupported
+            // runtime need opposite instructions (issue #321).
+            add(JcefUnavailablePanel(jcef), BorderLayout.CENTER)
+            logger.warn("JCEF is not usable in this runtime ($jcef) — showing fallback panel")
+            JcefRuntimeNotifier.notify(project, jcef)
         } else {
             // Browser realization is deferred until addNotify() + DumbService.runWhenSmart.
             // Show the indexing-wait placeholder so the user knows the tab is alive.
