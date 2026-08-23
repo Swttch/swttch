@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "Ouvrir l'outil intégré en tant que",
-      "description": "Comment l'outil de diff intégré s'ouvre dans un navigateur. Dans un IDE, il s'ouvre toujours dans un onglet d'éditeur.",
+      "description": "Comment l'outil de diff intégré s'ouvre. Dans un IDE, la superposition nécessite que le chat soit dans un panneau.",
       "builtInOnly": "S'applique lorsque les modifications sont examinées dans l'outil de diff intégré.",
       "newTab": "Nouvel onglet",
-      "overlay": "Superposition"
+      "overlay": "Superposition",
+      "sidebarOnlyNewTab": "Une barre latérale est trop étroite pour relire un diff par-dessus, il s'ouvre donc dans un onglet d'éditeur. Déplacez le chat dans un panneau pour choisir."
     }
   },
   "appearance": {

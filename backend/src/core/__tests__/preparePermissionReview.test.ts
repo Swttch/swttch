@@ -22,7 +22,26 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 
 function fakeBridge() {
-  return { openDiff: vi.fn(async () => undefined) } as never;
+  return {
+    openDiff: vi.fn(async () => undefined),
+    openDiffTab: vi.fn(async () => undefined),
+  } as never;
+}
+
+/** The bridge's calls, named so a test reads as what the IDE was asked for. */
+function calls(bridge: unknown) {
+  return bridge as { openDiff: ReturnType<typeof vi.fn>; openDiffTab: ReturnType<typeof vi.fn> };
+}
+
+/** Settings for the built-in surface, with the presentation and chat host given. */
+function builtIn(presentation?: string, hostMode?: string) {
+  return {
+    settings: {
+      diffSurface: DiffSurface.BUILT_IN,
+      ...(presentation ? { browserDiffPresentation: presentation } : {}),
+      ...(hostMode ? { hostMode } : {}),
+    },
+  };
 }
 
 let dir = '';
@@ -78,6 +97,57 @@ describe('preparePermissionReview', () => {
     await request(bridge);
 
     expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).toHaveBeenCalled();
+  });
+
+  /**
+   * Which window the built-in review gets.
+   *
+   * An editor tab is ours to ask the IDE for. An overlay is not — the webview
+   * draws it over a screen this process does not own, and opens it itself — so
+   * asking for a tab as well would put the same change on screen twice. That is
+   * what shipped: the setting said overlay and a tab opened anyway.
+   */
+  describe('the built-in surface, tab or overlay', () => {
+    it('asks for an editor tab by default', async () => {
+      const bridge = fakeBridge();
+      readMergedSettings.mockResolvedValue(builtIn());
+      await request(bridge);
+
+      expect(calls(bridge).openDiffTab).toHaveBeenCalled();
+    });
+
+    it('leaves the overlay to the webview', async () => {
+      const bridge = fakeBridge();
+      readMergedSettings.mockResolvedValue(builtIn('overlay', 'editor-tab'));
+      await request(bridge);
+
+      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
+      // Still stored, or the overlay would have nothing to draw.
+      expect(peekPreview('toolu_1')).toBeDefined();
+    });
+
+    /*
+     * An overlay inherits the room of what it covers, and a sidebar chat is a
+     * column. The preference cannot be honoured there, so the tab is the answer
+     * — the same rule the webview applies to the file-name link.
+     */
+    it('asks for a tab when an overlay has no room', async () => {
+      const bridge = fakeBridge();
+      readMergedSettings.mockResolvedValue(builtIn('overlay', 'tool-window'));
+      await request(bridge);
+
+      expect(calls(bridge).openDiffTab).toHaveBeenCalled();
+    });
+
+    it('reads an unset chat host as the panel', async () => {
+      // The settings file falls back to editor-tab, so an overlay must work for
+      // someone who has never opened that setting.
+      const bridge = fakeBridge();
+      readMergedSettings.mockResolvedValue(builtIn('overlay'));
+      await request(bridge);
+
+      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
+    });
   });
 
   it('keeps the stored change faithful to what was proposed', async () => {

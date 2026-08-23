@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "內建檢視器的開啟方式",
-      "description": "內建差異檢視器在瀏覽器中的開啟方式。在 IDE 內一律以編輯器分頁開啟。",
+      "description": "內建差異檢視器的開啟方式。在 IDE 中，只有聊天位於面板時才能使用浮層。",
       "builtInOnly": "僅在使用內建檢視器檢視變更時生效。",
       "newTab": "新分頁",
-      "overlay": "覆蓋層"
+      "overlay": "覆蓋層",
+      "sidebarOnlyNewTab": "側邊欄太窄，無法在其上檢視差異，因此以編輯器分頁開啟。將聊天移到面板即可選擇。"
     }
   },
   "appearance": {

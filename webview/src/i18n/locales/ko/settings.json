@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "자체 뷰어를 여는 방식",
-      "description": "브라우저에서 자체 diff 뷰어를 어떻게 열지 정합니다. IDE 안에서는 항상 에디터 탭으로 열립니다.",
+      "description": "자체 diff 뷰어를 어떻게 열지 정합니다. IDE에서 오버레이는 채팅이 패널에 있을 때만 가능합니다.",
       "builtInOnly": "자체 diff 뷰어로 편집을 검토할 때 적용됩니다.",
       "newTab": "새 탭",
-      "overlay": "오버레이"
+      "overlay": "오버레이",
+      "sidebarOnlyNewTab": "사이드바는 폭이 좁아 diff를 덮어 볼 수 없어서 에디터 탭으로 열립니다. 채팅을 패널로 옮기면 고를 수 있습니다."
     }
   },
   "appearance": {

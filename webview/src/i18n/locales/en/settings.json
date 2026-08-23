@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "Open the built-in viewer as",
-      "description": "How the built-in diff viewer opens in a browser. Inside an IDE it always opens as an editor tab.",
+      "description": "How the built-in diff viewer opens. In an IDE an overlay needs the chat to be in a panel.",
       "builtInOnly": "Applies when edits are reviewed in the built-in viewer.",
       "newTab": "New tab",
-      "overlay": "Overlay"
+      "overlay": "Overlay",
+      "sidebarOnlyNewTab": "A sidebar is too narrow to review a diff over, so it opens as an editor tab. Move the chat to a panel to choose."
     }
   },
   "appearance": {

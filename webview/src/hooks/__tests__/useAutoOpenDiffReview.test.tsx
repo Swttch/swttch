@@ -26,6 +26,14 @@ vi.mock('../useIdeDiffAvailable', () => ({
   useResolvedDiffSurface: () => resolvedSurface(),
 }));
 
+// Whether the review will be drawn over the chat rather than in a window. The
+// backend declines to open a tab in exactly that case, so it decides whether
+// this hook has anything to do.
+const opensAsOverlay = vi.fn();
+vi.mock('../useDiffOverlayAllowed', () => ({
+  useDiffOpensAsOverlay: () => opensAsOverlay(),
+}));
+
 import { useAutoOpenDiffReview, resetOpenedDiffReviews } from '../useAutoOpenDiffReview';
 
 /** A change exists for this request — the shape is irrelevant, its presence is not. */
@@ -43,9 +51,11 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 beforeEach(() => {
   getDiffPreview.mockReset().mockResolvedValue(SOME_PREVIEW);
   openDiffReview.mockReset().mockResolvedValue({ kind: 'opened' });
-  // The case this hook exists for: a browser drawing the built-in page.
+  // The case this hook exists for: a browser drawing the built-in page, in a
+  // tab of its own.
   isJetBrains.mockReturnValue(false);
   resolvedSurface.mockReturnValue(DiffSurface.BUILT_IN);
+  opensAsOverlay.mockReturnValue(false);
   // The guard outlives a mount by design, so it has to be cleared between cases
   // or the first test's id suppresses every later one.
   resetOpenedDiffReviews();
@@ -131,13 +141,28 @@ describe('useAutoOpenDiffReview', () => {
    * The backend opens the review itself for these two, when the prompt goes up.
    * Opening from here as well is how the same change ends up on screen twice.
    */
-  it('leaves it to the backend in an IDE', async () => {
+  it('leaves it to the backend when an IDE opens an editor tab', async () => {
     isJetBrains.mockReturnValue(true);
 
     renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
 
     await settle();
     expect(openDiffReview).not.toHaveBeenCalled();
+  });
+
+  /*
+   * An overlay is drawn over a screen the backend does not own, so it declines
+   * to open a tab and leaves this to the webview — in an IDE as much as in a
+   * browser. Skipping it here on the host alone left the reviewer with nothing
+   * opening at all.
+   */
+  it('opens the overlay itself, even in an IDE', async () => {
+    isJetBrains.mockReturnValue(true);
+    opensAsOverlay.mockReturnValue(true);
+
+    renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
+
+    await waitFor(() => expect(openDiffReview).toHaveBeenCalledWith('toolu_1'));
   });
 
   it("leaves it to the backend when the IDE's own viewer draws it", async () => {

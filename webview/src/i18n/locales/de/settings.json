@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "Integrierten Viewer öffnen als",
-      "description": "Wie der integrierte Diff-Viewer im Browser geöffnet wird. In einer IDE öffnet er sich immer als Editor-Tab.",
+      "description": "Wie der integrierte Diff-Viewer geöffnet wird. In einer IDE ist ein Overlay nur möglich, wenn der Chat in einem Panel liegt.",
       "builtInOnly": "Gilt, wenn Änderungen im integrierten Viewer geprüft werden.",
       "newTab": "Neuer Tab",
-      "overlay": "Overlay"
+      "overlay": "Overlay",
+      "sidebarOnlyNewTab": "Eine Seitenleiste ist zu schmal, um darüber einen Diff zu prüfen — er öffnet daher als Editor-Tab. Verschiebe den Chat in ein Panel, um zu wählen."
     }
   },
   "appearance": {

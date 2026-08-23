@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
+import { useDiffOverlayAllowed } from '@/hooks/useDiffOverlayAllowed';
 import { getAdapter } from '@/adapters';
 import { isJetBrains } from '@/config/environment';
 import { SettingKey, DiffSurface, BrowserDiffPresentation } from '@/types/settings';
@@ -26,6 +27,7 @@ export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResu
   const api = useApi();
   const { scopeSettings } = useSettings();
   const surface = useResolvedDiffSurface();
+  const overlayAllowed = useDiffOverlayAllowed();
 
   return useCallback(
     async (toolUseId: string): Promise<OpenDiffResult> => {
@@ -36,6 +38,17 @@ export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResu
         return { kind: 'opened' };
       }
 
+      const presentation =
+        (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
+        BrowserDiffPresentation.NEW_TAB;
+
+      // Asked for and available. In an IDE that means the chat is in an editor
+      // tab, which has the room to be drawn over; a sidebar chat does not, so
+      // overlayAllowed is false there and the request falls through to a tab.
+      if (presentation === BrowserDiffPresentation.OVERLAY && overlayAllowed) {
+        return { kind: 'overlay', toolUseId };
+      }
+
       // Inside an IDE the built-in page gets an editor tab, which only the IDE
       // side can open — so it goes through the backend, the same way the
       // unprompted open does.
@@ -44,17 +57,9 @@ export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResu
         return { kind: 'opened' };
       }
 
-      const presentation =
-        (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
-        BrowserDiffPresentation.NEW_TAB;
-
-      if (presentation === BrowserDiffPresentation.OVERLAY) {
-        return { kind: 'overlay', toolUseId };
-      }
-
       await getAdapter().openDiff(toolUseId);
       return { kind: 'opened' };
     },
-    [api, scopeSettings, surface],
+    [api, scopeSettings, surface, overlayAllowed],
   );
 }

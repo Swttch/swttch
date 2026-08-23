@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "Abrir el visor integrado como",
-      "description": "Cómo se abre el visor de diferencias integrado en un navegador. Dentro de un IDE siempre se abre como una pestaña del editor.",
+      "description": "Cómo se abre el visor de diferencias integrado. En un IDE, la superposición requiere que el chat esté en un panel.",
       "builtInOnly": "Se aplica cuando los cambios se revisan en el visor integrado.",
       "newTab": "Nueva pestaña",
-      "overlay": "Superposición"
+      "overlay": "Superposición",
+      "sidebarOnlyNewTab": "Una barra lateral es demasiado estrecha para revisar un diff encima, así que se abre como pestaña del editor. Mueve el chat a un panel para elegir."
     }
   },
   "appearance": {

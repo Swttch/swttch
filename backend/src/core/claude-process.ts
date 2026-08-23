@@ -16,7 +16,7 @@ import {
 } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
-import { MessageType, DiffSurface } from '../shared';
+import { MessageType, DiffSurface, BrowserDiffPresentation } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -871,12 +871,25 @@ export async function preparePermissionReview(params: {
     return;
   }
 
-  // The built-in page gets a window of its own rather than a strip inside the
-  // chat. Only an IDE needs us for that — it is the side that owns editor tabs;
-  // in a browser the webview opens its own tab or overlay and the bridge call
-  // is a no-op. Nothing but the tool call goes across: the page fetches the
-  // change itself, the same way it does in a browser.
-  if (params.toolUseId) {
+  /*
+   * The built-in page, in a window of its own or over the chat.
+   *
+   * An editor tab is ours to ask for — only the IDE side can open one — so that
+   * case goes across the bridge. An overlay is not: the webview draws it over a
+   * screen this process does not own, and it already opens one for itself when
+   * the prompt arrives. Asking for a tab as well would put the same change on
+   * screen twice.
+   *
+   * An overlay needs room to be drawn in, which a sidebar chat does not have.
+   * `hostMode` says where the chat lives; with it in the sidebar the preference
+   * cannot be honoured and the tab is the answer. Mirrors useDiffOverlayAllowed
+   * on the webview side, which decides the same thing for the file-name link.
+   */
+  const wantsOverlay = settings.browserDiffPresentation === BrowserDiffPresentation.OVERLAY;
+  // Absent reads as the default the settings file itself falls back to.
+  const inPanel = (settings.hostMode ?? 'editor-tab') === 'editor-tab';
+
+  if (params.toolUseId && !(wantsOverlay && inPanel)) {
     await openDiffTabForPermission(params.bridge, params.toolUseId);
   }
 }

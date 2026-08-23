@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { isJetBrains } from '@/config/environment';
 import { useResolvedDiffSurface } from './useIdeDiffAvailable';
+import { useDiffOpensAsOverlay } from './useDiffOverlayAllowed';
 import { DiffSurface } from '@/types/settings';
 import { useOpenDiffReview, type OpenDiffResult } from './useOpenDiffReview';
 
@@ -46,17 +47,22 @@ export function useAutoOpenDiffReview(
   const api = useApi();
   const openDiffReview = useOpenDiffReview();
   const surface = useResolvedDiffSurface();
+  const asOverlay = useDiffOpensAsOverlay();
 
   /*
    * Only where nobody else is already opening it.
    *
-   * The backend opens the review itself for the IDE's viewer and for our page in
-   * an editor tab — both go through preparePermissionReview when the prompt goes
-   * up. Opening again from here would put up a second copy of the same change.
-   * What is left, and what this hook is for, is a browser drawing the built-in
-   * page: there the backend's call reaches a bridge that does nothing.
+   * The backend opens the review itself when it goes to the IDE's own viewer or
+   * to an editor tab — both from preparePermissionReview, as the prompt goes up.
+   * Opening again from here would put the same change on screen twice.
+   *
+   * An overlay is the exception, in an IDE as much as in a browser: it is drawn
+   * over a screen the backend does not own, so it has to come from here. That is
+   * why this mirrors the backend's condition rather than checking the host — an
+   * IDE showing an overlay gets no tab from the backend, and without this it
+   * would get nothing at all.
    */
-  const backendOpensIt = isJetBrains() || surface === DiffSurface.IDE;
+  const backendOpensIt = surface === DiffSurface.IDE || (isJetBrains() && !asOverlay);
 
   // Held in a ref so the effect below depends on the request alone. Both of
   // these change identity on renders that have nothing to do with a new

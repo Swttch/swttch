@@ -2,6 +2,7 @@ import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
+import { useDiffOverlayAllowed } from '@/hooks/useDiffOverlayAllowed';
 import { SettingKey, DiffSurface, BrowserDiffPresentation } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 
@@ -25,6 +26,9 @@ export function DiffViewSection() {
   // answer whatever the saved preference says. Showing the stored value instead
   // would leave a setting that claims the IDE while the built-in page opens.
   const surface = useResolvedDiffSurface();
+  // Whether an overlay is even possible here. Same rule the code that opens the
+  // review applies, so the setting cannot offer something that will be ignored.
+  const overlayAllowed = useDiffOverlayAllowed();
   const presentation =
     (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
     BrowserDiffPresentation.NEW_TAB;
@@ -61,23 +65,25 @@ export function DiffViewSection() {
       </SettingRow>
 
       {/*
-        Only meaningful for the built-in surface, and only in a browser: inside
-        an IDE it opens as an editor tab, which is neither of these choices.
-        Shown disabled rather than hidden so the option does not appear and
-        vanish as the other row changes.
+        Only meaningful for the built-in surface, and only where an overlay has
+        room to be drawn — in an IDE that means a chat living in an editor tab,
+        not a sidebar. Shown disabled rather than hidden so the option does not
+        appear and vanish as the rows around it change.
       */}
       <SettingRow
         label={t('diffView.presentation.label')}
         description={
-          surface === DiffSurface.BUILT_IN
-            ? t('diffView.presentation.description')
-            : t('diffView.presentation.builtInOnly')
+          surface !== DiffSurface.BUILT_IN
+            ? t('diffView.presentation.builtInOnly')
+            : overlayAllowed
+              ? t('diffView.presentation.description')
+              : t('diffView.presentation.sidebarOnlyNewTab')
         }
       >
         <Select
-          value={presentation}
+          value={overlayAllowed ? presentation : BrowserDiffPresentation.NEW_TAB}
           options={presentationOptions}
-          disabled={surface !== DiffSurface.BUILT_IN}
+          disabled={surface !== DiffSurface.BUILT_IN || !overlayAllowed}
           ariaLabel={t('diffView.presentation.label')}
           className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
           onChange={(value) =>

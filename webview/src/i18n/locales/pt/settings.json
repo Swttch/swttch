@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "Abrir o visualizador integrado como",
-      "description": "Como o visualizador de diferenças integrado abre em um navegador. Dentro de um IDE, ele sempre abre como uma aba do editor.",
+      "description": "Como o visualizador de diferenças integrado abre. Em um IDE, a sobreposição exige que o chat esteja em um painel.",
       "builtInOnly": "Aplica-se quando as alterações são revisadas no visualizador integrado.",
       "newTab": "Nova aba",
-      "overlay": "Sobreposição"
+      "overlay": "Sobreposição",
+      "sidebarOnlyNewTab": "Uma barra lateral é estreita demais para revisar um diff por cima, então ele abre como aba do editor. Mova o chat para um painel para escolher."
     }
   },
   "appearance": {

@@ -138,10 +138,11 @@
     },
     "presentation": {
       "label": "内置查看器的打开方式",
-      "description": "内置差异查看器在浏览器中的打开方式。在 IDE 内始终以编辑器标签页打开。",
+      "description": "内置差异查看器的打开方式。在 IDE 中，只有聊天位于面板时才能使用浮层。",
       "builtInOnly": "仅在使用内置查看器查看更改时生效。",
       "newTab": "新标签页",
-      "overlay": "覆盖层"
+      "overlay": "覆盖层",
+      "sidebarOnlyNewTab": "侧边栏太窄，无法在其上查看差异，因此以编辑器标签页打开。将聊天移到面板即可选择。"
     }
   },
   "appearance": {
