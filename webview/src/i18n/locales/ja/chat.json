@@ -489,17 +489,17 @@
     "reject": "却下"
   },
   "diffPage": {
+    "confirm": "確定",
+    "cancel": "キャンセル",
     "close": "閉じる",
     "unavailable": {
       "title": "このリクエストはすでに回答済みです。",
       "description": "チャットから回答されたか、セッションの終了時に期限切れになった可能性があります。ここで確認できるものは残っていません。"
     },
     "hunk": {
-      "kept": "適用",
-      "dropped": "除外",
-      "summary": "{{total}} 件中 {{kept}} 件を適用",
-      "keepAll": "すべて適用",
-      "dropAll": "すべて除外"
+      "include": "この変更を含める",
+      "selectAll": "すべて選択",
+      "summary": "{{total}} 件中 {{kept}} 件を選択"
     }
   }
 }

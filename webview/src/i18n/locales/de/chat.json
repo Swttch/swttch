@@ -489,17 +489,17 @@
     "reject": "Ablehnen"
   },
   "diffPage": {
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
     "close": "Schließen",
     "unavailable": {
       "title": "Diese Anfrage wurde bereits beantwortet.",
       "description": "Sie wurde möglicherweise im Chat beantwortet oder ist beim Ende der Sitzung abgelaufen. Hier gibt es nichts mehr zu prüfen."
     },
     "hunk": {
-      "kept": "Übernommen",
-      "dropped": "Verworfen",
-      "summary": "{{kept}} von {{total}} übernommen",
-      "keepAll": "Alle übernehmen",
-      "dropAll": "Alle verwerfen"
+      "include": "Diese Änderung einbeziehen",
+      "selectAll": "Alle auswählen",
+      "summary": "{{kept}} von {{total}} ausgewählt"
     }
   }
 }

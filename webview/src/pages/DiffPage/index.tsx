@@ -4,6 +4,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { useTranslation } from '@/i18n';
 import { useStaticDocumentTitle } from '@/hooks/useStaticDocumentTitle';
 import { useHunkSelection } from './useHunkSelection';
+import { SelectAllHunks } from './SelectAllHunks';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
@@ -185,41 +186,35 @@ export function DiffPage(props: Props) {
           {fileName}
         </span>
         <div className="flex shrink-0 items-center gap-2">
-          {/* Only when there is a split to pick from — see canPickHunks. */}
+          {/*
+            Selecting is not deciding.
+
+            This checkbox changes what is ticked; the two buttons after it end
+            the review. They used to sit side by side under the same verb —
+            "apply all" next to "apply" — one moving ticks around and the other
+            writing to disk, which is not undoable.
+          */}
           {canPickHunks && (
             <>
+              <SelectAllHunks selection={selection} disabled={resolving} />
               <span className="text-xs text-text-tertiary">
                 {t('diffPage.hunk.summary', {
                   kept: selection.keptCount,
                   total: selection.total,
                 })}
               </span>
-              <button
-                type="button"
-                className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
-                disabled={resolving || selection.keptCount === selection.total}
-                onClick={selection.keepAll}
-              >
-                {t('diffPage.hunk.keepAll')}
-              </button>
-              <button
-                type="button"
-                className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
-                disabled={resolving || selection.keptCount === 0}
-                onClick={selection.dropAll}
-              >
-                {t('diffPage.hunk.dropAll')}
-              </button>
               <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
             </>
           )}
           <button
             type="button"
             className="rounded bg-state-success-bg px-3 py-1.5 text-sm text-state-success-fg disabled:opacity-50"
-            disabled={resolving}
+            // Nothing ticked is a refusal, and this button does not say that.
+            // Confirming here would answer no while reading "confirm".
+            disabled={resolving || (canPickHunks && selection.keptCount === 0)}
             onClick={() => void resolve(true)}
           >
-            {t('reviewDiff.apply')}
+            {t('diffPage.confirm')}
           </button>
           <button
             type="button"
@@ -227,7 +222,7 @@ export function DiffPage(props: Props) {
             disabled={resolving}
             onClick={() => void resolve(false)}
           >
-            {t('reviewDiff.reject')}
+            {t('diffPage.cancel')}
           </button>
         </div>
       </header>

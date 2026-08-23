@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from '@/i18n';
 
 interface Props {
@@ -8,32 +9,35 @@ interface Props {
 }
 
 /**
- * Keep-or-drop for one hunk, drawn beside the change it decides.
+ * Whether one hunk is included, drawn beside the change it decides.
  *
  * Beside the change rather than in a list at the top: the whole reason to split
  * a proposal is that the parts differ, and a control that names a hunk by number
  * makes the reviewer hold that mapping in their head.
  *
- * Two states of one control rather than an accept button and a reject button.
- * Every hunk starts kept — the reviewer is reading a proposal, not assembling
- * one — so what they do is take things OUT, and a pair of buttons would leave
- * the current state unsaid.
+ * A checkbox, like the select-all in the header — one ticks a hunk, the other
+ * ticks them all, and two shapes for one action would read as two features.
+ *
+ * It carries no label. The word would have to be a state ("included") next to a
+ * header that gives commands ("Confirm"), and a reader should not have to work
+ * out whether a control is telling them something or asking them something. A
+ * tick answers that on sight.
  */
 export function HunkControl({ kept, onToggle }: Props) {
   const { t } = useTranslation('chat');
+  const id = useId();
 
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={kept}
-      className={`rounded border px-2 py-0.5 text-xs transition-colors ${
-        kept
-          ? 'border-state-success-fg/40 bg-state-success-bg text-state-success-fg'
-          : 'border-border-default bg-surface-overlay text-text-tertiary'
-      }`}
-    >
-      {kept ? t('diffPage.hunk.kept') : t('diffPage.hunk.dropped')}
-    </button>
+    <input
+      id={id}
+      type="checkbox"
+      checked={kept}
+      onChange={onToggle}
+      // Named for screen readers and for hover, since nothing is written next
+      // to it.
+      aria-label={t('diffPage.hunk.include')}
+      title={t('diffPage.hunk.include')}
+      className="h-3.5 w-3.5 cursor-pointer accent-state-success-fg"
+    />
   );
 }

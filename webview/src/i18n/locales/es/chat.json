@@ -489,17 +489,17 @@
     "reject": "Rechazar"
   },
   "diffPage": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
     "close": "Cerrar",
     "unavailable": {
       "title": "Esta solicitud ya fue respondida.",
       "description": "Puede que se respondiera desde el chat o que caducara al terminar la sesión. Aquí ya no queda nada por revisar."
     },
     "hunk": {
-      "kept": "Conservado",
-      "dropped": "Descartado",
-      "summary": "{{kept}} de {{total}} conservados",
-      "keepAll": "Conservar todo",
-      "dropAll": "Descartar todo"
+      "include": "Incluir este cambio",
+      "selectAll": "Seleccionar todo",
+      "summary": "{{kept}} de {{total}} seleccionados"
     }
   }
 }

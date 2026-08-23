@@ -493,17 +493,17 @@
     "reject": "Reject"
   },
   "diffPage": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
     "close": "Close",
     "unavailable": {
       "title": "This request has already been answered.",
       "description": "It may have been answered from the chat, or it expired when the session ended. There is nothing left to review here."
     },
     "hunk": {
-      "kept": "Keeping",
-      "dropped": "Dropped",
-      "summary": "Keeping {{kept}} of {{total}}",
-      "keepAll": "Keep all",
-      "dropAll": "Drop all"
+      "include": "Include this change",
+      "selectAll": "Select all",
+      "summary": "{{kept}} of {{total}} selected"
     }
   }
 }

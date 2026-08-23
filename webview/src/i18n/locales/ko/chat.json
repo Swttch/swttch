@@ -489,17 +489,17 @@
     "reject": "거부"
   },
   "diffPage": {
+    "confirm": "확인",
+    "cancel": "취소",
     "close": "닫기",
     "unavailable": {
       "title": "이미 응답한 요청이에요.",
       "description": "채팅에서 먼저 응답했거나, 세션이 끝나며 만료됐을 수 있어요. 여기서 검토할 내용은 남아있지 않아요."
     },
     "hunk": {
-      "kept": "적용함",
-      "dropped": "제외함",
-      "summary": "{{total}}개 중 {{kept}}개 적용",
-      "keepAll": "모두 적용",
-      "dropAll": "모두 제외"
+      "include": "이 변경 포함",
+      "selectAll": "모두 선택",
+      "summary": "{{total}}개 중 {{kept}}개 선택"
     }
   }
 }

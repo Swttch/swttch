@@ -489,17 +489,17 @@
     "reject": "拒绝"
   },
   "diffPage": {
+    "confirm": "确定",
+    "cancel": "取消",
     "close": "关闭",
     "unavailable": {
       "title": "此请求已被回应。",
       "description": "它可能已在聊天中被回应，或者在会话结束时已过期。这里没有需要审查的内容了。"
     },
     "hunk": {
-      "kept": "保留",
-      "dropped": "已舍弃",
-      "summary": "保留 {{total}} 处中的 {{kept}} 处",
-      "keepAll": "全部保留",
-      "dropAll": "全部舍弃"
+      "include": "包含此更改",
+      "selectAll": "全选",
+      "summary": "已选择 {{total}} 项中的 {{kept}} 项"
     }
   }
 }

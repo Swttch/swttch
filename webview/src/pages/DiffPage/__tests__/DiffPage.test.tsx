@@ -1,8 +1,8 @@
 /**
  * Reviewing a proposed edit on the built-in surface.
  *
- * These are the decisions that write files — chiefly that Apply carries the
- * reviewer's edit and Reject never does — so they are asserted on what actually
+ * These are the decisions that write files — chiefly that Confirm carries the
+ * reviewer's edit and Cancel never does — so they are asserted on what actually
  * goes over the wire rather than on what the screen shows.
  *
  * Carried over from the review that used to be drawn inside the approval panel:
@@ -103,7 +103,7 @@ describe('DiffPage', () => {
     // No editedContent means the backend lets Claude's own call through, which
     // is what an untouched review must do.
     render(<DiffPage toolUseId="toolu_1" />);
-    fireEvent.click(await screen.findByText('reviewDiff.apply'));
+    fireEvent.click(await screen.findByText('diffPage.confirm'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
     expect(answer().editedContent).toBeUndefined();
@@ -113,17 +113,17 @@ describe('DiffPage', () => {
   it('sends the reviewer text when they edited the proposal (#305)', async () => {
     render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('simulate-edit'));
-    fireEvent.click(screen.getByText('reviewDiff.apply'));
+    fireEvent.click(screen.getByText('diffPage.confirm'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
     expect(answer().editedContent).toBe('edited by hand\n');
   });
 
-  it('discards the edit when the reviewer rejects', async () => {
+  it('discards the edit when the reviewer cancels', async () => {
     // Refusing a change is not a way to write a different one.
     render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('simulate-edit'));
-    fireEvent.click(screen.getByText('reviewDiff.reject'));
+    fireEvent.click(screen.getByText('diffPage.cancel'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
     const sent = answer();
@@ -133,7 +133,7 @@ describe('DiffPage', () => {
 
   it('quotes the ids the CLI is waiting on', async () => {
     render(<DiffPage toolUseId="toolu_1" />);
-    fireEvent.click(await screen.findByText('reviewDiff.apply'));
+    fireEvent.click(await screen.findByText('diffPage.confirm'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
     const sent = answer();
@@ -148,7 +148,7 @@ describe('DiffPage', () => {
   it('dismisses the window once the request is answered', async () => {
     const onClose = vi.fn();
     render(<DiffPage toolUseId="toolu_1" onClose={onClose} />);
-    fireEvent.click(await screen.findByText('reviewDiff.apply'));
+    fireEvent.click(await screen.findByText('diffPage.confirm'));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -173,7 +173,7 @@ describe('DiffPage', () => {
     it('keeps every hunk unless the reviewer says otherwise', async () => {
       // They are reading a proposal, not assembling one.
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('reviewDiff.apply'));
+      fireEvent.click(await screen.findByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
@@ -182,26 +182,40 @@ describe('DiffPage', () => {
     it('leaves out the hunk the reviewer dropped', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
       fireEvent.click(await screen.findByText('toggle-hunk-0'));
-      fireEvent.click(screen.getByText('reviewDiff.apply'));
+      fireEvent.click(screen.getByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toEqual([hunkToAcceptedRange(hunks[1])]);
     });
 
-    it('sends nothing when every hunk is dropped, which is a refusal', async () => {
+    // Confirming with nothing ticked would answer "no" under a button that says
+    // "Confirm". The reviewer has to say that with Cancel, which does say it.
+    it('will not confirm once every hunk is dropped', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
       fireEvent.click(await screen.findByText('toggle-hunk-0'));
       fireEvent.click(screen.getByText('toggle-hunk-1'));
-      fireEvent.click(screen.getByText('reviewDiff.apply'));
 
-      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
-      expect(answer().acceptedRanges).toEqual([]);
+      const confirm = screen.getByText('diffPage.confirm');
+      expect(confirm).toBeDisabled();
+
+      fireEvent.click(confirm);
+      expect(resolveDiff).not.toHaveBeenCalled();
     });
 
-    it('ignores the picking when the reviewer rejects outright', async () => {
-      // Reject is not "apply what is ticked" — it answers no to the request.
+    it('confirms again once a hunk is put back', async () => {
+      // The button must come back, not stay dead for the rest of the review.
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('reviewDiff.reject'));
+      fireEvent.click(await screen.findByText('toggle-hunk-0'));
+      fireEvent.click(screen.getByText('toggle-hunk-1'));
+      fireEvent.click(screen.getByText('toggle-hunk-0'));
+
+      expect(screen.getByText('diffPage.confirm')).not.toBeDisabled();
+    });
+
+    it('ignores the picking when the reviewer cancels outright', async () => {
+      // Cancel is not "write what is ticked" — it answers no to the request.
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('diffPage.cancel'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toEqual([]);
@@ -216,14 +230,14 @@ describe('DiffPage', () => {
   describe('a change with no hunks', () => {
     it('offers no per-hunk controls', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
-      await screen.findByText('reviewDiff.apply');
+      await screen.findByText('diffPage.confirm');
 
       expect(screen.queryByText('toggle-hunk-0')).not.toBeInTheDocument();
     });
 
     it('applies the whole proposal', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('reviewDiff.apply'));
+      fireEvent.click(await screen.findByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toHaveLength(1);
@@ -258,7 +272,7 @@ describe('DiffPage', () => {
       await screen.findByText('diffPage.unavailable.title');
 
       expect(screen.queryByText('cart.js')).not.toBeInTheDocument();
-      expect(screen.queryByText('reviewDiff.apply')).not.toBeInTheDocument();
+      expect(screen.queryByText('diffPage.confirm')).not.toBeInTheDocument();
     });
   });
 });
