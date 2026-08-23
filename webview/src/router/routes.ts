@@ -76,6 +76,18 @@ export enum Route {
   SWITCH_ACCOUNT = 'switch-account',
 }
 
+/**
+ * Path prefix of the diff review route, shared by its matcher, parser and
+ * builder.
+ *
+ * Declared above `pathToRoute` rather than beside the helpers at the bottom.
+ * Module-level order does not matter once the module has finished evaluating,
+ * but this one is read on every route lookup, and a value that reads ahead of
+ * its declaration is one more thing to reason about when the module is only
+ * half-evaluated — which is what a failed hot reload leaves behind.
+ */
+const DIFF_PATH_PREFIX = '/diff/';
+
 export interface RouteMeta {
   path: string;
   label: string;
@@ -287,9 +299,6 @@ export function parseSessionIdFromPath(pathname: string): string | null {
 export function sessionToPath(sessionId: string): string {
   return `/sessions/${sessionId}`;
 }
-
-/** Path prefix of the diff review route, shared by its parser and builder. */
-const DIFF_PATH_PREFIX = '/diff/';
 
 /**
  * The tool call a diff review URL is about, or null when the path is not one.
