@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProviders } from './contexts';
 import { I18nLocaleSync } from './i18n/I18nLocaleSync';
-import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage } from './pages';
+import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage } from './pages';
 import { AccountUsageModal } from './components/AccountUsageModal';
 import { TunnelModal } from './components/TunnelModal';
 import { ForbiddenNotice } from './components/ForbiddenNotice';
@@ -57,6 +57,9 @@ function AppContent() {
         <Route path="/sessions/new" element={<ChatPage />} />
         <Route path="/sessions/:current_session_id" element={<ChatPage />} />
         <Route path="/session-panel" element={<SessionPanelPage />} />
+        {/* Its own window (IDE editor tab or browser tab), so it sits beside the
+            chat rather than inside it — see DiffPage. */}
+        <Route path="/diff/:tool_use_id" element={<DiffPage />} />
         <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
         <Route path="/settings/*" element={<SettingsPage />} />
         <Route path="/switch-account" element={<SwitchAccountPage />} />

@@ -8,7 +8,12 @@ import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
-import { openDiffForPermission, rememberPreview, resolveDiffPreview } from './features/diffPreview';
+import {
+  openDiffForPermission,
+  openDiffTabForPermission,
+  rememberPreview,
+  resolveDiffPreview,
+} from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { MessageType, DiffSurface } from '../shared';
@@ -855,16 +860,25 @@ export async function preparePermissionReview(params: {
     });
   }
 
-  // Only the IDE's own viewer is opened from here. The built-in one is drawn by
-  // the webview from the entry stored above, so choosing it means there is
-  // nothing for the backend to open — as on a host with no IDE at all.
   // Absent reads as the IDE, which is the default and the behaviour that shipped.
-  if ((settings.diffSurface ?? DiffSurface.IDE) !== DiffSurface.IDE) return;
+  const surface = settings.diffSurface ?? DiffSurface.IDE;
 
-  await openDiffForPermission(params.bridge, preview, params.toolUseId, {
-    sessionId: params.sessionId,
-    controlRequestId: params.controlRequestId,
-  });
+  if (surface === DiffSurface.IDE) {
+    await openDiffForPermission(params.bridge, preview, params.toolUseId, {
+      sessionId: params.sessionId,
+      controlRequestId: params.controlRequestId,
+    });
+    return;
+  }
+
+  // The built-in page gets a window of its own rather than a strip inside the
+  // chat. Only an IDE needs us for that — it is the side that owns editor tabs;
+  // in a browser the webview opens its own tab or overlay and the bridge call
+  // is a no-op. Nothing but the tool call goes across: the page fetches the
+  // change itself, the same way it does in a browser.
+  if (params.toolUseId) {
+    await openDiffTabForPermission(params.bridge, params.toolUseId);
+  }
 }
 
 function handleStreamEvent(

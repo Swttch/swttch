@@ -9,6 +9,8 @@ export {
   routeToPath,
   parseSessionIdFromPath,
   sessionToPath,
+  parseToolUseIdFromPath,
+  diffToPath,
   withWorkingDir,
   isSettingsRoute,
   isSwitchAccountRoute,

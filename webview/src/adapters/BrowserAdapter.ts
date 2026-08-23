@@ -2,7 +2,7 @@ import { MessageType, ClientEnv } from '../shared';
 import type { IdeAdapter } from './IdeAdapter';
 import { getBridge } from '../api/bridge/Bridge';
 import { assertFileOpened } from './openFileResult';
-import { Route, routeToPath } from '../router';
+import { Route, routeToPath, diffToPath } from '../router';
 import { readWorkingDirFromUrl } from '@/contexts/workingDirParam';
 
 /**
@@ -43,6 +43,22 @@ export class BrowserAdapter implements IdeAdapter {
     }
 
     console.log('[BrowserAdapter] Opened session in new browser tab:', sessionId);
+  }
+
+  async openDiff(toolUseId: string): Promise<void> {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    // The query (workingDir etc.) rides along on window.location.href, the same
+    // way it does for a session tab — without it the new tab has no working
+    // directory and bounces to the project picker.
+    url.pathname = diffToPath(toolUseId);
+    const newWindow = window.open(url.toString(), '_blank');
+
+    if (!newWindow) {
+      throw new Error('Failed to open diff tab. Pop-up might be blocked.');
+    }
+
+    console.log('[BrowserAdapter] Opened diff review in new browser tab:', toolUseId);
   }
 
   async openSettings(route?: Route): Promise<void> {

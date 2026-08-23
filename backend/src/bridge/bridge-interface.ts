@@ -14,6 +14,17 @@ export interface Bridge {
     sessionId?: string;
     controlRequestId?: string;
   }): Promise<void>;
+  /**
+   * Open our own diff page in an editor tab, for a review the IDE's viewer is
+   * not drawing.
+   *
+   * Carries only the tool call: the page fetches the change itself and answers
+   * through the same messages it uses in a browser, so the IDE side stays a tab
+   * opener and nothing more.
+   */
+  openDiffTab(params: { toolUseId: string }): Promise<void>;
+  /** Close the tab opened by {@link openDiffTab}, once its request is answered. */
+  closeDiffTab(params: { toolUseId: string }): Promise<void>;
   applyDiff(params: {
     filePath: string;
     newContent: string;

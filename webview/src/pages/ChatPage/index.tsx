@@ -14,6 +14,7 @@ import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
+import { DiffOverlay } from '../DiffPage/DiffOverlay';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
@@ -46,6 +47,12 @@ export function ChatPage() {
   useMcpServers();
   const queryClient = useQueryClient();
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
+  // The review being shown over this screen, when the settings ask for an
+  // overlay rather than a tab. Null the rest of the time, which is every host
+  // that opens a window of its own — there the review is not this screen's to
+  // hold. Carries the tool call rather than the change: the page fetches that
+  // itself, exactly as it does in a tab.
+  const [diffOverlayToolUseId, setDiffOverlayToolUseId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = () => {
@@ -379,6 +386,7 @@ export function ChatPage() {
                   onApprove={() => approvePermission(pendingPermission.controlRequestId)}
                   onApproveForSession={() => approveForSession(pendingPermission.controlRequestId)}
                   onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
+                  onOpenDiffOverlay={setDiffOverlayToolUseId}
               />
           ) : (
               <ChatInput />
@@ -390,6 +398,15 @@ export function ChatPage() {
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
+      {/* Only while its question is still open: a prompt that has been answered
+          — here, from the overlay itself, or anywhere else — takes the review
+          with it, the same way closing the tab does on the other surfaces. */}
+      {diffOverlayToolUseId && pendingPermission?.toolUseId === diffOverlayToolUseId && (
+        <DiffOverlay
+          toolUseId={diffOverlayToolUseId}
+          onClose={() => setDiffOverlayToolUseId(null)}
+        />
+      )}
       <AnnouncementModalSlot />
     </div>
   );

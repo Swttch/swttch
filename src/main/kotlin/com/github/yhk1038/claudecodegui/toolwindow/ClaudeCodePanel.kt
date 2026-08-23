@@ -8,6 +8,7 @@ import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
+import com.github.yhk1038.claudecodegui.services.DiffTabService
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.toolwindow.realization.CallbackStaging
@@ -1566,6 +1567,18 @@ class ClaudeCodePanel(
             override suspend fun rejectDiff(toolUseId: String?) {
                 toolUseId?.let { diffService.closeDiffViewer(it) }
                 logger.info("Diff rejected (toolUseId=$toolUseId)")
+            }
+
+            // Our own diff page, in a tab of its own. Unlike openDiff above, the
+            // change does not come through here at all: the page fetches it and
+            // answers over the backend's own messages, the same way it does in a
+            // browser. This side only owns the window.
+            override suspend fun openDiffTab(toolUseId: String) {
+                DiffTabService.getInstance(project).open(toolUseId)
+            }
+
+            override suspend fun closeDiffTab(toolUseId: String) {
+                DiffTabService.getInstance(project).close(toolUseId)
             }
 
             override suspend fun closeDiff(toolUseId: String) {

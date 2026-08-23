@@ -361,13 +361,14 @@ async function main() {
   // The IDE's diff viewer reporting which hunks of a pending edit the user kept
   // (#109). Answering happens there because that is where the change is legible;
   // the backend turns the selection into the CLI's control_response.
-  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.RESOLVE_DIFF, (_method, params) => {
+  const jetbrainsBridge = bridges[ClientEnv.JETBRAINS] as JetBrainsBridge;
+  jetbrainsBridge.onNotification(MessageType.RESOLVE_DIFF, (_method, params) => {
     const parsed = parseResolveDiffParams(params);
     if (!parsed) {
       console.error('[node-backend]', 'RESOLVE_DIFF ignored: malformed params');
       return;
     }
-    resolveDiffReview(connections, parsed);
+    resolveDiffReview(connections, parsed, jetbrainsBridge);
   });
 
   // 4. Logger에 LogWS 참조 설정

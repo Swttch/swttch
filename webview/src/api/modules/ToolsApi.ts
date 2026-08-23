@@ -128,6 +128,18 @@ export class ToolsApi {
   }
 
   /**
+   * Open OUR diff page in an IDE editor tab, for the same request.
+   *
+   * The counterpart to {@link openDiffForRequest} for the built-in surface.
+   * Routed through the backend because only the IDE side can open an editor
+   * tab; in a browser the webview opens its own tab or overlay instead and this
+   * is not used.
+   */
+  async openDiffTab(toolUseId: string): Promise<void> {
+    await this.bridge.request(MessageType.OPEN_DIFF_TAB, { toolUseId });
+  }
+
+  /**
    * The change behind a pending permission request, for drawing the review
    * diff here rather than in the IDE.
    *

@@ -1,13 +1,16 @@
 /**
- * Reviewing a proposed edit without an IDE.
+ * Reviewing a proposed edit on the built-in surface.
  *
- * This is the whole review on hosts where `BrowserBridge.openDiff` is a no-op,
- * so the decisions it sends are the ones that write files — chiefly that Apply
- * carries the reviewer's edit and Reject never does.
+ * These are the decisions that write files — chiefly that Apply carries the
+ * reviewer's edit and Reject never does — so they are asserted on what actually
+ * goes over the wire rather than on what the screen shows.
+ *
+ * Carried over from the review that used to be drawn inside the approval panel:
+ * the container changed, the contract did not.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { ReviewDiff } from '../ReviewDiff';
+import { DiffPage } from '..';
 
 interface ResolveDiffCall {
   toolUseId: string;
@@ -19,16 +22,16 @@ interface ResolveDiffCall {
 
 const getDiffPreview = vi.fn();
 const resolveDiff = vi.fn(async (_params: ResolveDiffCall) => undefined);
-// One stable object: the component refetches when `api` changes identity, so a
-// fresh literal per render would reload forever.
+// One stable object: the page refetches when `api` changes identity, so a fresh
+// literal per render would reload forever.
 const api = { tools: { getDiffPreview, resolveDiff } };
-vi.mock('../../../contexts/ApiContext', () => ({
+vi.mock('@/contexts/ApiContext', () => ({
   useApi: () => api,
 }));
 
 // The renderer itself is exercised by its own package; here it stands in as a
 // surface that reports edits, so the decision logic is what gets tested.
-vi.mock('../ReviewDiffSurface', () => ({
+vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
   default: ({ onEdit }: { onEdit: (contents: string) => void }) => (
     <button type="button" onClick={() => onEdit('edited by hand\n')}>
       simulate-edit
@@ -38,6 +41,13 @@ vi.mock('../ReviewDiffSurface', () => ({
 
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+// The page reads its id from the route in production; passed in directly here so
+// the tests do not need a router around every render.
+vi.mock('react-router-dom', () => ({
+  useParams: () => ({}),
+  useNavigate: () => vi.fn(),
 }));
 
 const preview = {
@@ -64,25 +74,16 @@ function answer(): ResolveDiffCall {
   return call[0];
 }
 
-describe('ReviewDiff', () => {
+describe('DiffPage', () => {
   it('shows the file under review', async () => {
-    render(<ReviewDiff toolUseId="toolu_1" />);
+    render(<DiffPage toolUseId="toolu_1" />);
     expect(await screen.findByText('cart.js')).toBeInTheDocument();
-  });
-
-  it('draws nothing for a request that was already answered', async () => {
-    // The fetch lost a race with the decision; an empty panel is right, an
-    // error is not.
-    getDiffPreview.mockResolvedValue(null);
-    const { container } = render(<ReviewDiff toolUseId="toolu_1" />);
-    await waitFor(() => expect(getDiffPreview).toHaveBeenCalled());
-    await waitFor(() => expect(container.textContent).not.toContain('cart.js'));
   });
 
   it('applies without an edit when the reviewer only looked', async () => {
     // No editedContent means the backend lets Claude's own call through, which
     // is what an untouched review must do.
-    render(<ReviewDiff toolUseId="toolu_1" />);
+    render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('reviewDiff.apply'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
@@ -91,7 +92,7 @@ describe('ReviewDiff', () => {
   });
 
   it('sends the reviewer text when they edited the proposal (#305)', async () => {
-    render(<ReviewDiff toolUseId="toolu_1" />);
+    render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('simulate-edit'));
     fireEvent.click(screen.getByText('reviewDiff.apply'));
 
@@ -101,7 +102,7 @@ describe('ReviewDiff', () => {
 
   it('discards the edit when the reviewer rejects', async () => {
     // Refusing a change is not a way to write a different one.
-    render(<ReviewDiff toolUseId="toolu_1" />);
+    render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('simulate-edit'));
     fireEvent.click(screen.getByText('reviewDiff.reject'));
 
@@ -112,7 +113,7 @@ describe('ReviewDiff', () => {
   });
 
   it('quotes the ids the CLI is waiting on', async () => {
-    render(<ReviewDiff toolUseId="toolu_1" />);
+    render(<DiffPage toolUseId="toolu_1" />);
     fireEvent.click(await screen.findByText('reviewDiff.apply'));
 
     await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
@@ -120,5 +121,47 @@ describe('ReviewDiff', () => {
     expect(sent.toolUseId).toBe('toolu_1');
     expect(sent.controlRequestId).toBe('ctrl-1');
     expect(sent.sessionId).toBe('sess-1');
+  });
+
+  // The page fills a window of its own, so an answered request must not leave it
+  // sitting there. Inside the chat this did not matter — the panel closed with
+  // the prompt.
+  it('dismisses the window once the request is answered', async () => {
+    const onClose = vi.fn();
+    render(<DiffPage toolUseId="toolu_1" onClose={onClose} />);
+    fireEvent.click(await screen.findByText('reviewDiff.apply'));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  describe('a request that is no longer pending', () => {
+    beforeEach(() => {
+      getDiffPreview.mockResolvedValue(null);
+    });
+
+    // Answered from the chat, opened twice, or reloaded long after. An empty
+    // window would read as broken rather than finished.
+    it('says so rather than showing an empty window', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+
+      expect(await screen.findByText('diffPage.unavailable.title')).toBeInTheDocument();
+      expect(screen.getByText('diffPage.unavailable.description')).toBeInTheDocument();
+    });
+
+    it('offers a way to close the window', async () => {
+      const onClose = vi.fn();
+      render(<DiffPage toolUseId="toolu_1" onClose={onClose} />);
+
+      fireEvent.click(await screen.findByText('diffPage.close'));
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('does not show the file or the decisions', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('diffPage.unavailable.title');
+
+      expect(screen.queryByText('cart.js')).not.toBeInTheDocument();
+      expect(screen.queryByText('reviewDiff.apply')).not.toBeInTheDocument();
+    });
   });
 });

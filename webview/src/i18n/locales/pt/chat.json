@@ -487,5 +487,12 @@
     "loading": "Carregando a alteração…",
     "apply": "Aplicar",
     "reject": "Rejeitar"
+  },
+  "diffPage": {
+    "close": "Fechar",
+    "unavailable": {
+      "title": "Esta solicitação já foi respondida.",
+      "description": "Ela pode ter sido respondida no chat ou ter expirado quando a sessão terminou. Não há mais nada para revisar aqui."
+    }
   }
 }

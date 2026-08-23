@@ -46,9 +46,11 @@ export default function ReviewDiffSurface({ preview, onEdit }: Props) {
     [onEdit],
   );
 
-  // Side-by-side halves the room each side gets, and this sits inside the chat
-  // column rather than a full window. Below the threshold every line wraps or
-  // scrolls away, so one column above it and stacked below.
+  // Side-by-side halves the room each side gets. A full window has room for it;
+  // a narrow overlay does not, and below the threshold every line wraps or
+  // scrolls away — so one column above it and stacked below. Measured from the
+  // host element rather than the viewport, because what matters is the width
+  // this surface actually got, not the size of the screen around it.
   const hostRef = useRef<HTMLDivElement>(null);
   const [wide, setWide] = useState(true);
 

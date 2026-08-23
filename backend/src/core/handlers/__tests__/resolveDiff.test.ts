@@ -34,6 +34,14 @@ function fakeConnections() {
   };
 }
 
+/**
+ * The IDE side, reduced to the one call this handler makes on it: closing the
+ * diff tab that asked the question.
+ */
+function fakeBridge() {
+  return { closeDiffTab: vi.fn(async () => undefined) };
+}
+
 function pending(toolUseId: string) {
   rememberPreview(toolUseId, {
     filePath: '/tmp/config.txt',
@@ -65,7 +73,7 @@ describe('resolveDiffHandler', () => {
       controlRequestId: 'ctrl-1',
       sessionId: 'sess-1',
       acceptedRanges: [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }],
-    }), connections as never);
+    }), connections as never, fakeBridge() as never);
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
     expect(response.response.behavior).toBe('allow');
@@ -82,7 +90,7 @@ describe('resolveDiffHandler', () => {
       sessionId: 'sess-1',
       acceptedRanges: [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }],
       editedContent: 'debug: MAYBE\n',
-    }), connections as never);
+    }), connections as never, fakeBridge() as never);
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
     expect(response.response.updatedInput.new_string).toContain('debug: MAYBE');
@@ -97,7 +105,7 @@ describe('resolveDiffHandler', () => {
       controlRequestId: 'ctrl-1',
       sessionId: 'sess-1',
       acceptedRanges: [],
-    }), connections as never);
+    }), connections as never, fakeBridge() as never);
 
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
     expect(response.response.behavior).toBe('deny');
@@ -113,7 +121,7 @@ describe('resolveDiffHandler', () => {
       controlRequestId: 'ctrl-1',
       sessionId: 'sess-1',
       acceptedRanges: [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }],
-    }), connections as never);
+    }), connections as never, fakeBridge() as never);
 
     expect(takePreview('toolu_once')).toBeUndefined();
   });
@@ -126,9 +134,72 @@ describe('resolveDiffHandler', () => {
       toolUseId: 'toolu_1',
       sessionId: 'sess-1',
       acceptedRanges: [],
-    }), connections as never);
+    }), connections as never, fakeBridge() as never);
 
     expect(sendControlResponseToProcess).not.toHaveBeenCalled();
     expect(connections.sent[0].payload.status).toBe('error');
+  });
+
+  // The diff page fills a window of its own, so an answered request must not
+  // leave that window sitting there asking a settled question.
+  describe('closes the window the review was in', () => {
+    it('closes the tab when the change is kept', async () => {
+      const bridge = fakeBridge();
+      pending('toolu_keep');
+
+      await resolveDiffHandler('conn-1', message({
+        toolUseId: 'toolu_keep',
+        controlRequestId: 'ctrl-1',
+        sessionId: 'sess-1',
+        acceptedRanges: [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }],
+      }), fakeConnections() as never, bridge as never);
+
+      expect(bridge.closeDiffTab).toHaveBeenCalledWith({ toolUseId: 'toolu_keep' });
+    });
+
+    it('closes the tab when the change is refused', async () => {
+      const bridge = fakeBridge();
+      pending('toolu_deny');
+
+      await resolveDiffHandler('conn-1', message({
+        toolUseId: 'toolu_deny',
+        controlRequestId: 'ctrl-1',
+        sessionId: 'sess-1',
+        acceptedRanges: [],
+      }), fakeConnections() as never, bridge as never);
+
+      expect(bridge.closeDiffTab).toHaveBeenCalledWith({ toolUseId: 'toolu_deny' });
+    });
+
+    // Nothing stored means the request was already answered elsewhere — and a
+    // tab opened for it is exactly what would still be on screen.
+    it('closes the tab for a request it holds no preview for', async () => {
+      const bridge = fakeBridge();
+
+      await resolveDiffHandler('conn-1', message({
+        toolUseId: 'toolu_gone',
+        controlRequestId: 'ctrl-1',
+        sessionId: 'sess-1',
+        acceptedRanges: [],
+      }), fakeConnections() as never, bridge as never);
+
+      expect(bridge.closeDiffTab).toHaveBeenCalledWith({ toolUseId: 'toolu_gone' });
+    });
+
+    // A tab that will not close must not take the decision down with it: the
+    // answer has already gone to the CLI by then.
+    it('still answers when closing the tab fails', async () => {
+      const bridge = { closeDiffTab: vi.fn(async () => { throw new Error('no such tab'); }) };
+      pending('toolu_err');
+
+      await resolveDiffHandler('conn-1', message({
+        toolUseId: 'toolu_err',
+        controlRequestId: 'ctrl-1',
+        sessionId: 'sess-1',
+        acceptedRanges: [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }],
+      }), fakeConnections() as never, bridge as never);
+
+      expect(sendControlResponseToProcess).toHaveBeenCalled();
+    });
   });
 });

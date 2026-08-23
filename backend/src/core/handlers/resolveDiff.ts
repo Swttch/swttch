@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { parseResolveDiffParams, resolveDiffReview } from '../features/resolveDiff';
+import type { Bridge } from '../../bridge/bridge-interface';
 
 /**
  * Answer a pending file-edit permission request from the webview's own review
@@ -17,6 +18,7 @@ export async function resolveDiffHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
+  bridge: Bridge,
 ): Promise<void> {
   const parsed = parseResolveDiffParams((message.payload ?? {}) as Record<string, unknown>);
   if (!parsed) {
@@ -28,7 +30,7 @@ export async function resolveDiffHandler(
     return;
   }
 
-  resolveDiffReview(connections, parsed);
+  resolveDiffReview(connections, parsed, bridge);
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

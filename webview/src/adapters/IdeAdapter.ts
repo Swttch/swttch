@@ -34,6 +34,17 @@ export interface IdeAdapter {
   openSession(sessionId: string): Promise<void>;
 
   /**
+   * Open the review for a proposed file edit in a tab/window of its own.
+   *
+   * - In Browser: opens a new browser tab at the diff route
+   * - In JetBrains: not this way — an editor tab can only be opened by the IDE
+   *   side, so the backend does it (see `useOpenDiffReview`). Implemented here
+   *   as a no-op rather than left out, so a caller that reaches it anyway does
+   *   nothing instead of throwing.
+   */
+  openDiff(toolUseId: string): Promise<void>;
+
+  /**
    * Open settings in a new tab/window
    * - In JetBrains: Opens a new editor tab navigated to settings
    * - In Browser: Opens a new browser tab with settings hash

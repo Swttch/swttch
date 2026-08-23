@@ -487,5 +487,12 @@
     "loading": "正在載入變更…",
     "apply": "套用",
     "reject": "拒絕"
+  },
+  "diffPage": {
+    "close": "關閉",
+    "unavailable": {
+      "title": "此請求已被回應。",
+      "description": "它可能已在聊天中被回應，或者在工作階段結束時已過期。這裡沒有需要審查的內容了。"
+    }
   }
 }

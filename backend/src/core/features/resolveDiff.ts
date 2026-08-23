@@ -17,7 +17,8 @@
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview, type StoredPreview } from './diffPreview';
+import { takePreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
 import type { AcceptedRange } from './hunks';
@@ -89,8 +90,18 @@ function isAcceptedRange(value: unknown): value is AcceptedRange {
 export function resolveDiffReview(
   connections: ConnectionManager,
   params: ResolveDiffParams,
+  bridge?: Bridge,
 ): void {
   const preview = takePreview(params.toolUseId);
+
+  // The question is settled however this ended, so the window that asked it goes
+  // too. Done here rather than in each caller because both of them — the IDE's
+  // own diff and our diff page — must close it on every branch below, and one
+  // that forgot would strand a tab on an answered request.
+  //
+  // Only the built-in surface has a tab of ours to close; the IDE's viewer
+  // closes itself, and an unknown id is a no-op there anyway.
+  if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
 
   const respond = (response: Record<string, unknown>) => {
     sendControlResponseToProcess(connections, params.sessionId, {

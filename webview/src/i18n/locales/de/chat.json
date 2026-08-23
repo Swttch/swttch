@@ -487,5 +487,12 @@
     "loading": "Änderung wird geladen…",
     "apply": "Anwenden",
     "reject": "Ablehnen"
+  },
+  "diffPage": {
+    "close": "Schließen",
+    "unavailable": {
+      "title": "Diese Anfrage wurde bereits beantwortet.",
+      "description": "Sie wurde möglicherweise im Chat beantwortet oder ist beim Ende der Sitzung abgelaufen. Hier gibt es nichts mehr zu prüfen."
+    }
   }
 }

@@ -28,6 +28,14 @@ export class JetBrainsAdapter implements IdeAdapter {
     console.log('[JetBrainsAdapter] Sent OPEN_SESSION via WebSocket bridge:', sessionId);
   }
 
+  // An editor tab can only be opened by the IDE side, so this does not go
+  // through the adapter at all — `useOpenDiffReview` asks the backend, which
+  // asks the IDE. Present so the interface is satisfied and a caller that
+  // reaches it does nothing rather than throwing.
+  async openDiff(_toolUseId: string): Promise<void> {
+    console.warn('[JetBrainsAdapter] openDiff() is a no-op; the backend opens the diff tab');
+  }
+
   async openSettings(route?: Route): Promise<void> {
     // `path` tells Kotlin which settings page the new editor tab should land on.
     // Omitted → Kotlin falls back to the settings landing page.

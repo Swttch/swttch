@@ -487,5 +487,12 @@
     "loading": "正在加载更改…",
     "apply": "应用",
     "reject": "拒绝"
+  },
+  "diffPage": {
+    "close": "关闭",
+    "unavailable": {
+      "title": "此请求已被回应。",
+      "description": "它可能已在聊天中被回应，或者在会话结束时已过期。这里没有需要审查的内容了。"
+    }
   }
 }

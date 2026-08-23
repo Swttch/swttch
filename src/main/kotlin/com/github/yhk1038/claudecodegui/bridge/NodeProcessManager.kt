@@ -216,6 +216,19 @@ class NodeProcessManager(
         suspend fun rejectDiff(toolUseId: String?)
         /** Dismiss the review diff opened for a permission request, however it was answered. */
         suspend fun closeDiff(toolUseId: String)
+
+        /**
+         * Open OUR diff page in an editor tab, for a review the IDE's own viewer
+         * is not drawing (the `diffSurface` setting names the built-in one).
+         *
+         * Only the tool call goes across: the page fetches the change itself and
+         * answers through the same messages it uses in a browser, so this side
+         * opens a tab and nothing more.
+         */
+        suspend fun openDiffTab(toolUseId: String)
+
+        /** Close the tab opened by [openDiffTab], once its request is answered. */
+        suspend fun closeDiffTab(toolUseId: String)
         suspend fun refreshFiles(paths: List<String>)
         suspend fun createSession(workingDir: String)
         suspend fun openNewTab(workingDir: String)

@@ -491,5 +491,12 @@
     "loading": "Loading the change…",
     "apply": "Apply",
     "reject": "Reject"
+  },
+  "diffPage": {
+    "close": "Close",
+    "unavailable": {
+      "title": "This request has already been answered.",
+      "description": "It may have been answered from the chat, or it expired when the session ended. There is nothing left to review here."
+    }
   }
 }

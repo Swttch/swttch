@@ -288,6 +288,18 @@ class RpcWebSocketClient(
                 rpcHandler.closeDiff(toolUseId)
                 buildJsonObject {}
             }
+            "OPEN_DIFF_TAB" -> {
+                val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'toolUseId' param")
+                rpcHandler.openDiffTab(toolUseId)
+                buildJsonObject {}
+            }
+            "CLOSE_DIFF_TAB" -> {
+                val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'toolUseId' param")
+                rpcHandler.closeDiffTab(toolUseId)
+                buildJsonObject {}
+            }
             "REFRESH_FILES" -> {
                 rpcHandler.refreshFiles(parseRefreshFilePaths(params))
                 buildJsonObject {}

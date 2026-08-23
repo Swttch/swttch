@@ -204,6 +204,14 @@ class NodeBackendService : Disposable {
                 any()?.closeDiff(toolUseId) ?: warn("closeDiff")
             }
 
+            override suspend fun openDiffTab(toolUseId: String) {
+                any()?.openDiffTab(toolUseId) ?: warn("openDiffTab")
+            }
+
+            override suspend fun closeDiffTab(toolUseId: String) {
+                any()?.closeDiffTab(toolUseId) ?: warn("closeDiffTab")
+            }
+
             override suspend fun refreshFiles(paths: List<String>) {
                 if (paths.isEmpty()) return
                 any()?.refreshFiles(paths) ?: warn("refreshFiles")
