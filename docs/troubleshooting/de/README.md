@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | **Deutsch** | [Français](../fr/README.md)
 
-_Zuletzt aktualisiert: 2026-08-22_
+_Zuletzt aktualisiert: 2026-08-24_
 
 Hier sind häufig auftretende Probleme gesammelt, die wir noch nicht selbst beheben konnten, für die es aber eine bekannte Lösung gibt.
 
@@ -14,6 +14,7 @@ Jedes Dokument enthält die Symptome, die Ursache, die Lösung und Links zu den 
 |---|---|
 | [Wayland-Zwischenablage](wayland-clipboard.md) | Wenn das Einfügen in das Chat-Eingabefeld unter Linux · Wayland · KDE Plasma fehlschlägt |
 | [JCEF in Android Studio](android-studio-jcef.md) | Wenn Android Studio ein Hinweispanel oder eine Ausnahme statt der Chat-Oberfläche oder ein leeres Fenster zeigt |
+| [Farben der Prüfansicht](diff-colors-old-ide.md) | Die Prüfansicht kommt auf IDE 2025.2 und älter ohne Farbe |
 
 ## Wenn Ihr Problem hier nicht steht
 

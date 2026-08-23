@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | **Français**
 
-_Dernière mise à jour : 2026-08-22_
+_Dernière mise à jour : 2026-08-24_
 
 Vous trouverez ici des problèmes fréquents que nous n'avons pas encore pu corriger de notre côté, mais pour lesquels une solution connue existe.
 
@@ -14,6 +14,7 @@ Chaque document présente les symptômes, la cause, la solution et des liens ver
 |---|---|
 | [Presse-papiers Wayland](wayland-clipboard.md) | Le collage dans le champ de chat échoue sous Linux · Wayland · KDE Plasma |
 | [JCEF dans Android Studio](android-studio-jcef.md) | Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide |
+| [Couleurs de l'écran de revue](diff-colors-old-ide.md) | L'écran de revue s'affiche sans couleur sur les IDE 2025.2 et antérieurs |
 
 ## Si votre problème ne figure pas ici
 
