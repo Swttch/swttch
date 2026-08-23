@@ -85,8 +85,17 @@ class DiffTabService(private val project: Project) {
     companion object {
         fun getInstance(project: Project): DiffTabService = project.getService(DiffTabService::class.java)
 
-        /** Label a review tab wears; the page has no conversation to name it after. */
-        private const val REVIEW_TAB_TITLE = "Review edit"
+        /**
+         * Label the tab wears until the page reports its own.
+         *
+         * The page names itself after the file under review, through
+         * `document.title` — which is where this tab reads its label from once
+         * the WebView is up (see ClaudeCodeFileEditor). This is only the first
+         * paint, and it must say the same thing the page will: the file is not
+         * known yet at open time, because the tab is addressed by tool call and
+         * fetches the change itself.
+         */
+        private const val REVIEW_TAB_TITLE = "Diff view"
 
         /**
          * Tab id for the review of [toolUseId].

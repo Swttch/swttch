@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useParams } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContext';
 import { useTranslation } from '@/i18n';
+import { useStaticDocumentTitle } from '@/hooks/useStaticDocumentTitle';
+import { useHunkSelection } from './useHunkSelection';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
@@ -22,6 +24,15 @@ interface Props {
   toolUseId?: string;
   /** Dismiss an overlay. Absent when the page fills a window it can close. */
   onClose?: () => void;
+  /**
+   * Whether this page is drawn over a screen that is not its own.
+   *
+   * Decides one thing: whether the page may name the tab. See {@link diffTabTitle}
+   * — an overlay must not, because the tab still belongs to the chat underneath.
+   *
+   * Separate from `onClose`, which both surfaces pass.
+   */
+  isOverlay?: boolean;
 }
 
 /**
@@ -43,6 +54,7 @@ export function DiffPage(props: Props) {
   const { t } = useTranslation('chat');
   const closeWindow = useCloseDiffWindow();
   const close = props.onClose ?? closeWindow;
+  const isOverlay = props.isOverlay ?? false;
 
   const [preview, setPreview] = useState<DiffPreview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +87,38 @@ export function DiffPage(props: Props) {
     editedRef.current = contents;
   }, []);
 
+  const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
+  const selection = useHunkSelection(hunks);
+
+  /*
+   * Whether the reviewer can pick parts of this change.
+   *
+   * They cannot when the backend could not split it — computeHunks answers null
+   * for a change too large to diff, and stores an empty list. There is nothing
+   * to tick there, and offering controls that decide nothing would be worse
+   * than offering none.
+   */
+  const canPickHunks = hunks.length > 0;
+
+  /*
+   * The regions to write.
+   *
+   * With no split to work from, the whole proposal is the only region we can
+   * name — which is what this screen sent for every review before it could pick.
+   */
+  const acceptedRanges = useMemo(() => {
+    if (!preview) return [];
+    if (canPickHunks) return selection.acceptedRanges;
+    return [
+      {
+        oldStart: 0,
+        oldEnd: lineCount(preview.oldContent),
+        newStart: 0,
+        newEnd: lineCount(preview.newContent),
+      },
+    ];
+  }, [preview, canPickHunks, selection.acceptedRanges]);
+
   const resolve = useCallback(
     async (keepEdits: boolean) => {
       if (!preview?.sessionId || !preview.controlRequestId) return;
@@ -84,18 +128,9 @@ export function DiffPage(props: Props) {
           toolUseId,
           controlRequestId: preview.controlRequestId,
           sessionId: preview.sessionId,
-          // Every region, because this surface does not offer per-hunk picking
-          // yet. Sending nothing would read as a refusal.
-          acceptedRanges: keepEdits
-            ? [
-                {
-                  oldStart: 0,
-                  oldEnd: lineCount(preview.oldContent),
-                  newStart: 0,
-                  newEnd: lineCount(preview.newContent),
-                },
-              ]
-            : [],
+          // What the reviewer kept. Empty is a refusal, which is exactly what
+          // Reject means and also what unticking every hunk means.
+          acceptedRanges: keepEdits ? acceptedRanges : [],
           // Reject discards any edit: refusing a change is not a way to write
           // a different one.
           editedContent: keepEdits ? editedRef.current : undefined,
@@ -107,13 +142,26 @@ export function DiffPage(props: Props) {
         setResolving(false);
       }
     },
-    [api, preview, toolUseId, close],
+    [api, preview, toolUseId, close, acceptedRanges],
   );
 
   const fileName = useMemo(
     () => (preview ? (preview.filePath.split(/[\\/]/).pop() ?? preview.filePath) : ''),
     [preview],
   );
+
+  /*
+   * Name the window after the file being reviewed.
+   *
+   * One line covers both hosts: a browser tab reads document.title directly,
+   * and the JetBrains editor tab derives its label from it too (see
+   * useStaticDocumentTitle). Without this the tab wore the raw URL.
+   *
+   * The file name is not known at open time — the tab is addressed by tool call
+   * and fetches the rest — so the label starts generic and narrows once the
+   * change arrives, the way a chat tab does when its conversation is named.
+   */
+  useStaticDocumentTitle(diffTabTitle(fileName, isOverlay));
 
   if (loading) {
     return (
@@ -137,6 +185,34 @@ export function DiffPage(props: Props) {
           {fileName}
         </span>
         <div className="flex shrink-0 items-center gap-2">
+          {/* Only when there is a split to pick from — see canPickHunks. */}
+          {canPickHunks && (
+            <>
+              <span className="text-xs text-text-tertiary">
+                {t('diffPage.hunk.summary', {
+                  kept: selection.keptCount,
+                  total: selection.total,
+                })}
+              </span>
+              <button
+                type="button"
+                className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                disabled={resolving || selection.keptCount === selection.total}
+                onClick={selection.keepAll}
+              >
+                {t('diffPage.hunk.keepAll')}
+              </button>
+              <button
+                type="button"
+                className="rounded border border-border-default px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+                disabled={resolving || selection.keptCount === 0}
+                onClick={selection.dropAll}
+              >
+                {t('diffPage.hunk.dropAll')}
+              </button>
+              <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
+            </>
+          )}
           <button
             type="button"
             className="rounded bg-state-success-bg px-3 py-1.5 text-sm text-state-success-fg disabled:opacity-50"
@@ -167,11 +243,50 @@ export function DiffPage(props: Props) {
             <div className="p-4 text-sm text-text-tertiary">{t('reviewDiff.loading')}</div>
           }
         >
-          <ReviewDiffSurface preview={preview} onEdit={handleEdit} />
+          <ReviewDiffSurface
+            preview={preview}
+            onEdit={handleEdit}
+            // Omitted when there is no split to pick from, which is what keeps
+            // the per-hunk controls off that diff entirely.
+            selection={canPickHunks ? selection : undefined}
+          />
         </Suspense>
       </div>
     </div>
   );
+}
+
+/**
+ * What the window is called, before the file name is known.
+ *
+ * Not translated, and deliberately: this is the tab label, which sits next to
+ * source file names in an editor's tab strip. "Diff" reads the same to every
+ * developer, and a localized word here would be the odd one out in that row.
+ */
+const DIFF_TITLE_PREFIX = 'Diff';
+
+/**
+ * The label before the file name arrives, and for a request with no file to
+ * name. Spelled out rather than a bare "Diff" so a tab in this state reads as a
+ * screen rather than a truncated title.
+ */
+const DIFF_TITLE_FALLBACK = 'Diff view';
+
+/**
+ * What this page should call the tab it is drawn in — or '' to leave the tab's
+ * name alone.
+ *
+ * An overlay names nothing. It is drawn OVER a chat that still owns the tab, and
+ * the IDE takes an editor tab's label from document.title and persists it: a
+ * review shown as an overlay would rename the chat underneath, and the wrong
+ * name would outlive the overlay. Settings hit exactly this and answers it the
+ * same way (see settingsTabTitle).
+ *
+ * Exported so the rule can be asserted directly, without a window to inspect.
+ */
+export function diffTabTitle(fileName: string, isOverlay: boolean): string {
+  if (isOverlay) return '';
+  return fileName ? `${DIFF_TITLE_PREFIX}: ${fileName}` : DIFF_TITLE_FALLBACK;
 }
 
 /** Lines in [text], counting the way the backend's ranges do. */

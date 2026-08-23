@@ -49,7 +49,9 @@ export function DiffOverlay({ toolUseId, onClose }: Props) {
             isMobile() ? 'h-full' : 'h-[85vh]'
           }`}
         >
-          <DiffPage toolUseId={toolUseId} onClose={onClose} />
+          {/* isOverlay: the tab still belongs to the chat underneath, so the
+              page must not rename it — see diffTabTitle. */}
+          <DiffPage toolUseId={toolUseId} onClose={onClose} isOverlay />
         </div>
       </div>
     </Portal>
