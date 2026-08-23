@@ -57,6 +57,12 @@ interface Props {
  * layers MUST agree on font, padding, line-height and wrapping so the visible
  * (mirror) glyphs land exactly under the (transparent) editable glyphs and the
  * caret. Keep this list the single source of truth for both layers.
+ *
+ * One thing they must also agree on lives in CSS instead: only the editable
+ * layer scrolls, so `scrollbar-gutter: stable` is applied to BOTH layers
+ * (index.css) to keep their content boxes equally wide where the platform draws
+ * a space-taking scrollbar. Without it they wrap at different points and the
+ * same glyph lands a line apart (issue #329).
  */
 const LAYOUT_CLASSES = [
   // pe-11 keeps text clear of the mic button, which floats over the box's top
