@@ -206,7 +206,12 @@
     "finishedCount": "{{count}} terminé(s)",
     "clear": "Effacer",
     "dismiss": "Ignorer",
-    "dismissRunning": "Ignorer (efface un workflow bloqué)",
+    "cancelRunning": "Annuler cette tâche",
+    "stopAll": {
+      "title": "Arrêter les tâches en arrière-plan ?",
+      "message": "{{count}} tâche(s) en arrière-plan sont encore en cours. Toutes les arrêter ?",
+      "confirm": "Tout arrêter"
+    },
     "workflowLabel": "Workflow",
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",

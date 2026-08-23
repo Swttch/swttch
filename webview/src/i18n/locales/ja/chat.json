@@ -206,7 +206,12 @@
     "finishedCount": "{{count}} 件完了",
     "clear": "クリア",
     "dismiss": "閉じる",
-    "dismissRunning": "閉じる(停止したワークフローをクリアします)",
+    "cancelRunning": "このタスクをキャンセル",
+    "stopAll": {
+      "title": "バックグラウンドタスクを停止しますか?",
+      "message": "実行中のバックグラウンドタスクが {{count}} 件あります。すべて停止しますか?",
+      "confirm": "すべて停止"
+    },
     "workflowLabel": "ワークフロー",
     "agentsCount": "{{count}} エージェント",
     "agentsCount_one": "{{count}} エージェント",

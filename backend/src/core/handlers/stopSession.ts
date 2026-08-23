@@ -1,10 +1,23 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { sendInterruptToProcess, stopWorkflowsForSession } from '../claude-process';
+import { sendInterruptToProcess } from '../claude-process';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
+/**
+ * Interrupt the current turn, leaving background tasks alone.
+ *
+ * Escape stops the foreground turn only, matching the CLI: there, Escape ends
+ * the turn while background tasks keep running, and cancelling one is a
+ * separate action (issue #330). We used to settle every running workflow of the
+ * session here, so a single Escape also wiped the Background tasks panel.
+ *
+ * Nothing is left hanging on "running" by not settling here: when the CLI
+ * process actually dies its `close` handler calls `workflowTracker.stopSession`,
+ * which settles and drops the entries. That is the case this cleanup was for —
+ * a live process still reports its own `task_notification`.
+ */
 export function stopSessionHandler(
   connectionId: string,
   message: IPCMessage,
@@ -25,9 +38,6 @@ export function stopSessionHandler(
         console.error('[node-backend]', `Interrupt failed, falling back to SIGTERM for ${sessionId}`);
         Claude.killTree(session.process);
       }
-      // Settle any background workflows the stop just cancelled so the panel
-      // doesn't leave them hanging on "running".
-      stopWorkflowsForSession(sessionId);
     }
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });

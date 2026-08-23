@@ -206,7 +206,12 @@
     "finishedCount": "{{count}} پایان‌یافته",
     "clear": "پاک کردن",
     "dismiss": "نادیده گرفتن",
-    "dismissRunning": "نادیده گرفتن (یک جریان کاری گیرکرده را پاک می‌کند)",
+    "cancelRunning": "لغو این وظیفه",
+    "stopAll": {
+      "title": "توقف وظایف پس‌زمینه؟",
+      "message": "{{count}} وظیفه پس‌زمینه هنوز در حال اجراست. همه را متوقف می‌کنید؟",
+      "confirm": "توقف همه"
+    },
     "workflowLabel": "جریان کاری",
     "agentsCount": "{{count}} ایجنت",
     "agentsCount_one": "{{count}} ایجنت",

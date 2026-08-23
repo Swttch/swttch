@@ -206,7 +206,12 @@
     "finishedCount": "{{count}}개 완료",
     "clear": "지우기",
     "dismiss": "닫기",
-    "dismissRunning": "닫기 (멈춘 워크플로를 정리합니다)",
+    "cancelRunning": "이 작업 취소",
+    "stopAll": {
+      "title": "백그라운드 작업을 중지할까요?",
+      "message": "아직 실행 중인 백그라운드 작업이 {{count}}개 있습니다. 전부 중지할까요?",
+      "confirm": "전부 중지"
+    },
     "workflowLabel": "워크플로",
     "agentsCount": "에이전트 {{count}}명",
     "agentsCount_one": "에이전트 {{count}}명",

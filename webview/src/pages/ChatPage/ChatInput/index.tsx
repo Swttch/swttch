@@ -19,6 +19,8 @@ import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
+import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
+import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { getTextContent, SessionState } from '@/types';
 import { LoadedMessageType } from '@/dto';
@@ -112,7 +114,7 @@ export function ChatInput() {
   // a second path that installs the same package.
   const { install: installKit, installing: installingKit } = useInstallCcb();
   const { shouldAsk: shouldAskVoice, markAsked, decide } = useVoicePrompt();
-  const { confirmDialog, ask } = useConfirmDialog();
+  const { confirmDialog, ask, confirm } = useConfirmDialog();
 
   // Reachable even with the first-use question answered: someone who accepted
   // and later removed the kit (in a terminal, or from Settings) is not asked
@@ -542,22 +544,58 @@ export function ChatInput() {
 
   const isInterruptible = isActive;
 
+  // Counts the Escapes that follow an interrupt (issue #330). A ref, not state:
+  // it must survive re-renders without causing any, and the keydown effect reads
+  // it directly.
+  const escapeStreak = useRef(new EscapeStreak());
+  const { cancelAllRunning, runningCount } = useBackgroundTaskActions();
+
+  // Escape ×3 on an idle chat offers to stop the background tasks the interrupt
+  // left running. Nothing running means nothing to ask about, so the gesture
+  // stays silent rather than opening a dialog with no subject.
+  const confirmStopBackgroundTasks = useCallback(async () => {
+    if (runningCount === 0) return;
+    const ok = await confirm({
+      title: t('backgroundTasks.stopAll.title'),
+      message: t('backgroundTasks.stopAll.message', { count: runningCount }),
+      confirmLabel: t('backgroundTasks.stopAll.confirm'),
+      variant: 'danger',
+    });
+    if (ok) cancelAllRunning();
+  }, [runningCount, confirm, cancelAllRunning, t]);
+
   // ESC key: interrupt streaming or active state. Suppressed while the
   // schedule-send popover is open — there Escape closes the popover instead of
   // interrupting the stream (the popover owns its own Escape handler).
+  //
+  // Escape also carries a second gesture: three more presses on an already-idle
+  // chat ask about stopping the background tasks the interrupt deliberately left
+  // running (issue #330). EscapeStreak owns that rule; see its note on why a
+  // four-tap run is interrupt + three.
   useEffect(() => {
     const handleEscKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape' && isInterruptible && !showSchedulePopover) {
+      if (e.key !== 'Escape' || showSchedulePopover) return;
+
+      if (isInterruptible) {
         e.preventDefault();
+        escapeStreak.current.press(true);
         onStop();
         // Re-focus textarea after interrupt
         setTimeout(() => textareaRef.current?.focus(), 50);
+        return;
+      }
+
+      // Idle chat. Only take over the key once the streak completes, so a lone
+      // Escape still reaches whatever else listens for it.
+      if (escapeStreak.current.press(false)) {
+        e.preventDefault();
+        void confirmStopBackgroundTasks();
       }
     };
 
     window.addEventListener('keydown', handleEscKey);
     return () => window.removeEventListener('keydown', handleEscKey);
-  }, [isInterruptible, onStop, textareaRef, showSchedulePopover]);
+  }, [isInterruptible, onStop, textareaRef, showSchedulePopover, confirmStopBackgroundTasks]);
 
   // [KeyDebug] window 캡처 단계 Arrow 키 로깅
   useEffect(() => {
