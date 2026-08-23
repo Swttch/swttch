@@ -9,6 +9,8 @@ import java.awt.Color
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.HierarchyEvent
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -49,6 +51,12 @@ private val MEASURING_BUTTON = JButton("Apply")
 
 /** How wide an icon-only button is, before HiDPI scaling. */
 private const val ICON_BUTTON_WIDTH = 42
+
+/**
+ * Marks a splitter we have already attached the resize listener to, so a
+ * re-parented panel does not stack a second one on the same splitter.
+ */
+private const val PROPORTION_LISTENER_INSTALLED = "ccg.diffReview.proportionListener"
 
 /** Green for accept, red for refuse — same values in light and dark themes. */
 private val ACCEPT_COLOR = Color(0x3A, 0x8A, 0x4F)
@@ -125,17 +133,33 @@ class DiffReviewPanel(
         root.add(rejectButton)
 
         // The diff hands BOTTOM_PANEL to a Splitter as its second component
-        // (measured in DiffRequestProcessor), and a Splitter divides by ratio
-        // and ignores its children's sizes unless told otherwise. Turn that on
-        // so the height above is the height used, at any window size.
+        // (measured in DiffRequestProcessor). A Splitter divides by fraction,
+        // and what this row needs is an absolute height — so the fraction has
+        // to be computed from that height rather than left to whatever the
+        // splitter happens to be holding.
+        //
+        // What it happens to be holding is not neutral. The platform builds
+        // this one as `JBSplitter(true, "DiffRequestProcessor.
+        // BottomComponentSplitter", 0.8f)`, and a proportion key means
+        // `addNotify()` calls `loadProportion()` — restoring a remembered
+        // fraction over anything set earlier. 0.8 of the window is not this
+        // row's height, which is how the buttons ended up under the bottom
+        // edge.
+        //
+        // `setHonorComponentsPreferredSize` is deliberately NOT used. It only
+        // raises a component to its preferred size when the fraction would
+        // have given it less, and only when `HonorComponentsMinimumSize` is on
+        // as well (measured: `computeFirstComponentSize` returns the plain
+        // fraction before it ever reads a preferred size). It is a floor, not
+        // a height, and a floor cannot express "exactly one row".
         root.addHierarchyListener { event ->
-            if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() == 0L) return@addHierarchyListener
+            val interesting = HierarchyEvent.PARENT_CHANGED or HierarchyEvent.SHOWING_CHANGED
+            if (event.changeFlags and interesting.toLong() == 0L) return@addHierarchyListener
             var parent: Container? = root.parent
             while (parent != null && parent !is Splitter) parent = parent.parent
-            (parent as? Splitter)?.apply {
-                setHonorComponentsPreferredSize(true)
-                setResizeEnabled(false)
-            }
+            val splitter = parent as? Splitter ?: return@addHierarchyListener
+            splitter.setResizeEnabled(false)
+            pinProportionToRowHeight(splitter)
         }
 
         // The gutter owns the tick boxes, so the bar has to follow their state
@@ -190,6 +214,54 @@ class DiffReviewPanel(
      */
     private fun rowHeight(): Int =
         MEASURING_BUTTON.preferredSize.height + JBUI.scale(TOP_PADDING + BOTTOM_PADDING)
+
+    /**
+     * Hold [splitter]'s divider exactly one row above its bottom edge.
+     *
+     * The proportion is the fraction the FIRST component gets, so the row's
+     * share is what is left. It has to be recomputed whenever the splitter is
+     * resized: a fraction that leaves one row's height in a tall window leaves
+     * far less in a short one, which is how the buttons disappeared when the
+     * window was not full-screen.
+     *
+     * Reapplied rather than set once because the platform builds this splitter
+     * with a proportion key, and every `addNotify()` restores the remembered
+     * value over ours.
+     */
+    private fun pinProportionToRowHeight(splitter: Splitter) {
+        applyRowProportion(splitter)
+        if (splitter.getClientProperty(PROPORTION_LISTENER_INSTALLED) == true) return
+        splitter.putClientProperty(PROPORTION_LISTENER_INSTALLED, true)
+        splitter.addComponentListener(object : ComponentAdapter() {
+            override fun componentResized(e: ComponentEvent) = applyRowProportion(splitter)
+            override fun componentShown(e: ComponentEvent) = applyRowProportion(splitter)
+        })
+    }
+
+    /**
+     * The contract this expresses:
+     *
+     *     splitter height = one fixed row at the bottom + whatever is left on top
+     *
+     * The row's height is the truth; the proportion is derived from it every
+     * time. `Splitter` takes no absolute size — only a fraction — so the
+     * fraction has to be recomputed whenever the height it is a fraction OF
+     * changes.
+     *
+     * The divider is subtracted by `doLayout` before the proportion is applied
+     * (measured in the bytecode: `getDividerWidth` → `isub` →
+     * `computeFirstComponentSize`), so the fraction is taken over the space the
+     * two components actually share, not the whole splitter.
+     */
+    private fun applyRowProportion(splitter: Splitter) {
+        // Before the first layout there is nothing to divide; the resize
+        // listener above runs again once there is.
+        val shared = splitter.height - splitter.dividerWidth
+        if (shared <= 0) return
+        val row = rowHeight().coerceAtMost(shared)
+        val proportion = ((shared - row).toFloat() / shared).coerceIn(0f, 1f)
+        if (splitter.proportion != proportion) splitter.proportion = proportion
+    }
 
     private fun applyLabels(width: Int) {
         val total = selection.total
