@@ -6,6 +6,7 @@ import { useBridge } from '@/hooks/useBridge';
 import { SettingKey, OPEN_FILES_WITH_CUSTOM_VALUE } from '@/types/settings';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** A detected editor as returned by GET_AVAILABLE_EDITORS. */
 interface EditorInfo {
@@ -27,6 +28,7 @@ const TARGET_PATH = '%TARGET_PATH%';
  * (executable path + argument template), or the OS default (empty).
  */
 export function OpenFilesWithRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { settings, updateSetting, ideAttached, ideProduct } = useSettings();
   const { send } = useBridge();
@@ -53,6 +55,7 @@ export function OpenFilesWithRow() {
       <SettingRow
         label={t('cli.openFilesWith.label')}
         description={t('cli.openFilesWith.jetbrainsDescription')}
+        isOverridden={isOverridden(SettingKey.OPEN_FILES_WITH)}
       >
         <span className="text-sm text-text-tertiary">
           {ideProduct || t('cli.openFilesWith.jetbrainsFallback')}
@@ -105,6 +108,7 @@ export function OpenFilesWithRow() {
     <SettingRow
       label={t('cli.openFilesWith.label')}
       description={t('cli.openFilesWith.description')}
+      isOverridden={isOverridden(SettingKey.OPEN_FILES_WITH)}
     >
       {loading ? (
         <span className="text-sm text-text-tertiary">{t('cli.openFilesWith.detecting')}</span>

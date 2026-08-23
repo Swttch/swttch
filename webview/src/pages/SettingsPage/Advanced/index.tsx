@@ -4,10 +4,12 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, LogLevel } from '@/types/settings';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 const NOT_SET_VALUE = '__NOT_SET__';
 
 export function AdvancedSettings() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
 
@@ -36,6 +38,7 @@ export function AdvancedSettings() {
         <SettingRow
           label={t('advanced.debugging.debugMode.label')}
           description={t('advanced.debugging.debugMode.description')}
+          isOverridden={isOverridden(SettingKey.DEBUG_MODE)}
         >
           {isDebugNotSet ? (
             <div className="flex items-center gap-2">
@@ -57,6 +60,7 @@ export function AdvancedSettings() {
         <SettingRow
           label={t('advanced.debugging.logLevel.label')}
           description={t('advanced.debugging.logLevel.description')}
+          isOverridden={isOverridden(SettingKey.LOG_LEVEL)}
         >
           <Select
             value={logLevelValue}

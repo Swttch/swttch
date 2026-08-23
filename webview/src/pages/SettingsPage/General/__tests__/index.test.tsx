@@ -19,6 +19,8 @@ let mockScopeSettings: Record<string, unknown> = {};
 let mockClaudeScopeSettings: Record<string, unknown> = {};
 
 vi.mock('@/contexts/SettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useSettingsOrNull: () => null,
   useSettings: () => ({
     scopeSettings: mockScopeSettings,
     updateSetting: updateSettingMock,
@@ -29,6 +31,8 @@ vi.mock('@/contexts/SettingsContext', () => ({
 }));
 
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useClaudeSettingsOrNull: () => null,
   useClaudeSettings: () => ({
     scopeSettings: mockClaudeScopeSettings,
     updateSetting: updateClaudeSettingMock,

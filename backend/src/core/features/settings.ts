@@ -515,6 +515,12 @@ export async function saveEnvVarToScope(
 /**
  * Save a setting to the specified scope.
  * For project scope, saves to {projectPath}/.claude-code-gui/settings.json
+ *
+ * At project scope, `value === null` removes the key rather than storing a null —
+ * the same convention {@link saveEnvVarToScope} uses for env vars. That is what
+ * "reset to the global value" means here: a stored null would keep the key in the
+ * file, so it would still count as a project override and still win the merge,
+ * and the global value would never come back (issue #344).
  */
 export async function saveSettingToScope(
   key: string,
@@ -524,8 +530,14 @@ export async function saveSettingToScope(
 ): Promise<SaveResult> {
   if (scope === 'project') {
     if (!projectPath) return { status: 'error', error: 'projectPath required for project scope' };
-    const validationError = validateSetting(key, value);
-    if (validationError) return { status: 'error', error: validationError };
+    // A removal still has to name a real key, but the value-shape checks do not
+    // apply to it — validateSetting('theme', null) would reject, which would make
+    // resetting a key to the global value fail for every typed setting.
+    if (!(key in DEFAULT_SETTINGS)) return { status: 'error', error: `Unknown settings key: ${key}` };
+    if (value !== null) {
+      const validationError = validateSetting(key, value);
+      if (validationError) return { status: 'error', error: validationError };
+    }
 
     try {
       const filePath = join(projectPath, '.claude-code-gui', 'settings.json');
@@ -535,7 +547,11 @@ export async function saveSettingToScope(
           current = JSON.parse(await readFile(filePath, 'utf-8')) as Record<string, unknown>;
         }
       } catch { /* start fresh */ }
-      current[key] = value;
+      if (value === null) {
+        delete current[key];
+      } else {
+        current[key] = value;
+      }
       await mkdir(join(projectPath, '.claude-code-gui'), { recursive: true });
       await writeFile(filePath, JSON.stringify(current, null, 2) + '\n', 'utf-8');
       return { status: 'ok' };

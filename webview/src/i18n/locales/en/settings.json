@@ -538,6 +538,8 @@
     "claudeNative": "Claude Code native setting",
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
+    "projectOverride": "The project overrides this. Changing it here has no effect",
+    "projectOverrideLabel": "P",
     "openDocs": "Open docs"
   },
   "ide": {

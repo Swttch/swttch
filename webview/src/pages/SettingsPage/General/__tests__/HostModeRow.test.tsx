@@ -11,6 +11,8 @@ let mockHostMode: HostMode = HostMode.EDITOR_TAB;
 let mockIsJetBrains = true;
 
 vi.mock('@/contexts/SettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useSettingsOrNull: () => null,
   useSettings: () => ({
     settings: { [SettingKey.HOST_MODE]: mockHostMode },
     updateSettingWithScope: updateSettingWithScopeMock,

@@ -3,6 +3,7 @@ import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, OpenSettingsMode } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Lets the user choose how the Settings screen opens from the gear button:
@@ -10,6 +11,7 @@ import { useTranslation } from '@/i18n';
  * dedicated new tab. App-global behaviour, so always written to the global scope.
  */
 export function OpenSettingsRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { settings, updateSettingWithScope } = useSettings();
   const { t } = useTranslation('settings');
 
@@ -24,6 +26,7 @@ export function OpenSettingsRow() {
     <SettingRow
       label={t('general.openSettings.label')}
       description={t('general.openSettings.description')}
+      isOverridden={isOverridden(SettingKey.OPEN_SETTINGS_AS)}
     >
       <Select
         value={mode}

@@ -15,6 +15,7 @@ import { DEFAULT_MODEL_ALIAS, withFableFallback } from '@/types/models';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 import { OpenFilesWithRow } from './OpenFilesWithRow';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 interface TerminalInfo {
   id: string;
@@ -32,6 +33,7 @@ function toSelectValue(app: string | null, terminals: TerminalInfo[]): string {
 }
 
 export function CliSettings() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { settings, updateSetting } = useSettings();
   const { send } = useBridge();
@@ -139,6 +141,7 @@ export function CliSettings() {
               ? t('cli.terminal.app.jetbrainsDescription')
               : t('cli.terminal.app.description')
           }
+          isOverridden={isOverridden(SettingKey.TERMINAL_APP)}
         >
           {isJetBrainsEnv ? (
             <span className="text-sm text-text-tertiary">{t('cli.terminal.app.jetbrainsValue')}</span>
@@ -171,6 +174,7 @@ export function CliSettings() {
         <SettingRow
           label={t('cli.model.label')}
           description={t('cli.model.description')}
+          isOverridden={isOverridden('model')}
           badge={
             <SettingBadge
               variant={SettingBadgeVariant.ClaudeNative}
@@ -192,6 +196,7 @@ export function CliSettings() {
         <SettingRow
           label={t('cli.path.label')}
           description={t('cli.path.description')}
+          isOverridden={isOverridden(SettingKey.CLI_PATH)}
         >
           <div className="flex flex-col items-end gap-1">
             <input
@@ -214,6 +219,7 @@ export function CliSettings() {
         <SettingRow
           label={t('cli.nodePath.label')}
           description={t('cli.nodePath.description')}
+          isOverridden={isOverridden(SettingKey.NODE_PATH)}
         >
           <div className="flex flex-col items-end gap-1">
             <input

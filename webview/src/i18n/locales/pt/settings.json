@@ -536,6 +536,8 @@
     "claudeNative": "Configuração nativa do Claude Code",
     "sponsorLabel": "P",
     "claudeNativeLabel": "C",
+    "projectOverride": "O projeto sobrescreve este valor. Alterá-lo aqui não tem efeito",
+    "projectOverrideLabel": "J",
     "openDocs": "Abrir documentação"
   },
   "ide": {

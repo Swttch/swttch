@@ -10,10 +10,14 @@ let claudeVoice: Record<string, unknown> | undefined;
 const updateClaudeSetting = vi.fn();
 
 vi.mock('@/contexts/SettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useSettingsOrNull: () => null,
   useSettings: () => ({ scopeSettings: { voice: {} }, updateSetting: vi.fn() }),
 }));
 
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useClaudeSettingsOrNull: () => null,
   useClaudeSettings: () => ({
     scopeSettings: { voice: claudeVoice },
     updateSetting: updateClaudeSetting,

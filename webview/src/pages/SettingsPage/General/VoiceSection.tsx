@@ -19,6 +19,7 @@ import {
 } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import i18n from '@/i18n/config';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 import {
   listDictationLanguages,
   languageSettingToCode,
@@ -36,6 +37,7 @@ const FOLLOW_VALUE = '__FOLLOW__';
  * the two language settings above it if they sit in the same list.
  */
 export function VoiceSection() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting } = useSettings();
   const { scopeSettings: claudeScopeSettings, updateSetting: updateClaudeSetting } =
@@ -98,6 +100,7 @@ export function VoiceSection() {
       <SettingRow
         label={t('general.voice.enabled.label')}
         description={t('general.voice.enabled.description')}
+        isOverridden={isOverridden('voice')}
         badge={
           <SettingBadge
             variant={SettingBadgeVariant.ClaudeNative}
@@ -129,6 +132,7 @@ export function VoiceSection() {
       >
       <SettingRow
         label={t('general.voice.speechLanguage.label')}
+        isOverridden={isOverridden('voice')}
         description={
           <>
             {showsFallbackWarning
@@ -164,6 +168,7 @@ export function VoiceSection() {
         description={t('general.voice.silenceTimeout.description', {
           max: VOICE_SILENCE_TIMEOUT_MAX,
         })}
+        isOverridden={isOverridden('voice')}
       >
         <input
           type="number"
@@ -190,6 +195,7 @@ export function VoiceSection() {
       <SettingRow
         label={t('general.voice.shortcut.label')}
         description={t('general.voice.shortcut.description')}
+        isOverridden={isOverridden('voice')}
       >
         <ShortcutInput
           value={voice.shortcut ?? VOICE_SHORTCUT_DEFAULT}

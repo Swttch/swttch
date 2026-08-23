@@ -4,6 +4,7 @@ import { ClaudeSettingsState, DEFAULT_CLAUDE_SETTINGS } from '@/types/claude-set
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
+import { isShadowedByProject } from '@/utils/settingsScope';
 
 interface ClaudeSettingsContextValue {
   settings: ClaudeSettingsState;
@@ -91,46 +92,56 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
     [send, workingDirectory],
   );
 
+  /**
+   * Patch the merged cache to show the new value, unless the project overrides the
+   * key and the save is going to the global scope — then the project value still
+   * wins and nothing the user can see has changed (issue #344).
+   */
+  const applyOptimistic = useCallback(
+    <K extends keyof ClaudeSettingsState>(key: K, value: ClaudeSettingsState[K], targetScope: 'global' | 'project') => {
+      const cacheKey = [MessageType.GET_CLAUDE_SETTINGS, 'merged', workingDirectory];
+      const previous = queryClient.getQueryData<ClaudeSettingsResponse>(cacheKey);
+      if (!isShadowedByProject(key as string, targetScope, previous?.overrides)) {
+        queryClient.setQueryData<ClaudeSettingsResponse>(cacheKey, (old) => ({
+          ...old,
+          settings: { ...(old?.settings ?? DEFAULT_CLAUDE_SETTINGS), [key]: value },
+        }));
+      }
+      return { cacheKey, previous };
+    },
+    [queryClient, workingDirectory],
+  );
+
   // Update at the current scope with an optimistic merged-cache patch.
   const updateSetting = useCallback(
     async <K extends keyof ClaudeSettingsState>(key: K, value: ClaudeSettingsState[K]) => {
-      const key1 = [MessageType.GET_CLAUDE_SETTINGS, 'merged', workingDirectory];
-      const previous = queryClient.getQueryData<ClaudeSettingsResponse>(key1);
-      queryClient.setQueryData<ClaudeSettingsResponse>(key1, (old) => ({
-        ...old,
-        settings: { ...(old?.settings ?? DEFAULT_CLAUDE_SETTINGS), [key]: value },
-      }));
+      const { cacheKey, previous } = applyOptimistic(key, value, scope);
       try {
         if (!isConnected) throw new Error('Bridge not connected');
         await persist(key, value, scope);
         queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
       } catch (error) {
-        queryClient.setQueryData(key1, previous); // rollback
+        queryClient.setQueryData(cacheKey, previous); // rollback
         console.warn('[ClaudeSettingsContext] Failed to save setting:', error);
         throw error;
       }
     },
-    [queryClient, isConnected, persist, scope, workingDirectory],
+    [applyOptimistic, queryClient, isConnected, persist, scope],
   );
 
   const updateSettingWithScope = useCallback(
     async <K extends keyof ClaudeSettingsState>(key: K, value: ClaudeSettingsState[K], targetScope: 'global' | 'project') => {
-      const key1 = [MessageType.GET_CLAUDE_SETTINGS, 'merged', workingDirectory];
-      const previous = queryClient.getQueryData<ClaudeSettingsResponse>(key1);
-      queryClient.setQueryData<ClaudeSettingsResponse>(key1, (old) => ({
-        ...old,
-        settings: { ...(old?.settings ?? DEFAULT_CLAUDE_SETTINGS), [key]: value },
-      }));
+      const { cacheKey, previous } = applyOptimistic(key, value, targetScope);
       try {
         if (!isConnected) throw new Error('Not connected');
         await persist(key, value, targetScope);
         queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
       } catch (error) {
-        queryClient.setQueryData(key1, previous);
+        queryClient.setQueryData(cacheKey, previous);
         console.warn('[ClaudeSettingsContext] Failed to save setting with scope:', error);
       }
     },
-    [queryClient, isConnected, persist, workingDirectory],
+    [applyOptimistic, queryClient, isConnected, persist],
   );
 
   // Remove a project override, reverting to the global value.
@@ -172,6 +183,18 @@ export function useClaudeSettings(): ClaudeSettingsContextValue {
     throw new Error('useClaudeSettings must be used within a ClaudeSettingsProvider');
   }
   return context;
+}
+
+/**
+ * Claude settings when a provider is mounted, null otherwise.
+ *
+ * The mirror of [useSettingsOrNull], for consumers that only read a value to
+ * refine presentation and have a sane answer without one. Anything that cannot
+ * function without these settings should keep using [useClaudeSettings] and fail
+ * loudly instead.
+ */
+export function useClaudeSettingsOrNull(): ClaudeSettingsContextValue | null {
+  return useContext(ClaudeSettingsContext);
 }
 
 export { ClaudeSettingsContext };

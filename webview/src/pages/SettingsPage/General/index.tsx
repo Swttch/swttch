@@ -17,6 +17,7 @@ import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
 import { isMac } from '@/config/environment';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 const NOT_SET_VALUE = '__NOT_SET__';
 
@@ -39,6 +40,7 @@ const LANGUAGE_OPTIONS = [
 ] as const;
 
 export function GeneralSettings() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   // uiLanguage / useCtrlEnterToSend / focusInputOnEditorContext live in the app
   // settings (they are NOT in Claude's official schema). `language` and
@@ -83,6 +85,7 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.language.label')}
           description={t('general.language.description')}
+          isOverridden={isOverridden('language')}
           badge={
             <SettingBadge
               variant={SettingBadgeVariant.ClaudeNative}
@@ -103,6 +106,7 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.uiLanguage.label')}
           description={t('general.uiLanguage.description')}
+          isOverridden={isOverridden(SettingKey.UI_LANGUAGE)}
         >
           <Select
             value={currentUiLanguage}
@@ -140,6 +144,7 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
           description={t('general.useCtrlEnterToSend.description')}
+          isOverridden={isOverridden(SettingKey.USE_CTRL_ENTER_TO_SEND)}
         >
           <ToggleSwitch
             checked={useCtrlEnterToSend}
@@ -151,6 +156,7 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.respectGitignore.label')}
           description={t('general.respectGitignore.description')}
+          isOverridden={isOverridden('respectGitignore')}
           badge={
             <SettingBadge
               variant={SettingBadgeVariant.ClaudeNative}
@@ -168,6 +174,7 @@ export function GeneralSettings() {
         <SettingRow
           label={t('general.autoResumeOnLimit.label')}
           description={t('general.autoResumeOnLimit.description')}
+          isOverridden={isOverridden(SettingKey.AUTO_RESUME_ON_LIMIT)}
           badge={<SettingBadge variant={SettingBadgeVariant.Sponsor} />}
         >
           <ToggleSwitch

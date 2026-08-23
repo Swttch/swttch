@@ -17,6 +17,12 @@ export enum SettingBadgeVariant {
   Sponsor = 'sponsor',
   /** Maps to a Claude Code native settings.json key. */
   ClaudeNative = 'claudeNative',
+  /**
+   * The project sets this key too, so the project value is the one in effect and
+   * editing it here changes nothing visible. Shown on the global tab only —
+   * on the project tab the value on screen is already the winning one.
+   */
+  ProjectOverride = 'projectOverride',
 }
 
 interface BadgeConfig {
@@ -38,6 +44,11 @@ const BADGE_CONFIG: Record<SettingBadgeVariant, BadgeConfig> = {
     labelKey: 'badges.claudeNativeLabel',
     tooltipKey: 'badges.claudeNative',
     className: 'bg-accent-claude/20 text-accent-claude',
+  },
+  [SettingBadgeVariant.ProjectOverride]: {
+    labelKey: 'badges.projectOverrideLabel',
+    tooltipKey: 'badges.projectOverride',
+    className: 'bg-state-warning-bg text-state-warning-fg',
   },
 };
 

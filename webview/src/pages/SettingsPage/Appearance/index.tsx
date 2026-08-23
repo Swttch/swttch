@@ -12,6 +12,7 @@ import {
 } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 import {
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   AUTO_SCROLL_THRESHOLD_MIN,
@@ -22,6 +23,7 @@ import {
 const NOT_SET_VALUE = '__NOT_SET__';
 
 export function AppearanceSettings() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
 
@@ -66,6 +68,7 @@ export function AppearanceSettings() {
         <SettingRow
           label={t('appearance.theme.colorTheme.label')}
           description={t('appearance.theme.colorTheme.description')}
+          isOverridden={isOverridden(SettingKey.THEME)}
         >
           <Select
             value={themeValue}
@@ -87,6 +90,7 @@ export function AppearanceSettings() {
         <SettingRow
           label={t('appearance.theme.fontSize.label')}
           description={t('appearance.theme.fontSize.description')}
+          isOverridden={isOverridden(SettingKey.FONT_SIZE)}
         >
           <input
             type="number"
@@ -113,6 +117,7 @@ export function AppearanceSettings() {
         <SettingRow
           label={t('appearance.theme.lineSpacing.label')}
           description={t('appearance.theme.lineSpacing.description')}
+          isOverridden={isOverridden(SettingKey.LINE_HEIGHT)}
         >
           <input
             type="number"
@@ -146,6 +151,7 @@ export function AppearanceSettings() {
         <SettingRow
           label={t('appearance.scrolling.autoScrollThreshold.label')}
           description={t('appearance.scrolling.autoScrollThreshold.description', { value: AUTO_SCROLL_THRESHOLD_DEFAULT })}
+          isOverridden={isOverridden(SettingKey.AUTO_SCROLL_THRESHOLD)}
         >
           <input
             type="number"

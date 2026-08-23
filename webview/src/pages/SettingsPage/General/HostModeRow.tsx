@@ -4,6 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, HostMode } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Lets the user choose where new chats open — a dedicated editor tab or the
@@ -16,6 +17,7 @@ import { useTranslation } from '@/i18n';
  * settings scope tab.
  */
 export function HostModeRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { settings, updateSettingWithScope } = useSettings();
   const { t } = useTranslation('settings');
 
@@ -32,6 +34,7 @@ export function HostModeRow() {
     <SettingRow
       label={t('general.hostMode.label')}
       description={t('general.hostMode.description')}
+      isOverridden={isOverridden(SettingKey.HOST_MODE)}
     >
       <Select
         value={hostMode}

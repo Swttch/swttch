@@ -3,6 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Toggles chat-history paging. On (default): the chat loads the latest page and
@@ -10,6 +11,7 @@ import { useTranslation } from '@/i18n';
  * once (heavier for long sessions). App-global behaviour → written to global scope.
  */
 export function ChatPaginationRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { settings, updateSettingWithScope } = useSettings();
   const { t } = useTranslation('settings');
 
@@ -19,6 +21,7 @@ export function ChatPaginationRow() {
     <SettingRow
       label={t('general.chatPagination.label')}
       description={t('general.chatPagination.description')}
+      isOverridden={isOverridden(SettingKey.CHAT_PAGINATION)}
     >
       <ToggleSwitch
         checked={enabled}

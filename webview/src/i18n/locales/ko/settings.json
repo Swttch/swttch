@@ -536,6 +536,8 @@
     "claudeNative": "클로드 코드 네이티브 설정",
     "sponsorLabel": "후",
     "claudeNativeLabel": "클",
+    "projectOverride": "프로젝트 설정이 이 값을 덮어씁니다. 여기서 바꿔도 적용되지 않습니다",
+    "projectOverrideLabel": "프",
     "openDocs": "문서 열기"
   },
   "ide": {

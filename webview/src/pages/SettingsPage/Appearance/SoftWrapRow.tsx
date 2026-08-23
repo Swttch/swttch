@@ -3,6 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Folds long lines in diffs and tool input/output to the block's width rather
@@ -11,6 +12,7 @@ import { useTranslation } from '@/i18n';
  * into, not the other way round.
  */
 export function SoftWrapRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting } = useSettings();
 
@@ -18,6 +20,7 @@ export function SoftWrapRow() {
     <SettingRow
       label={t('appearance.softWrap.label')}
       description={t('appearance.softWrap.description')}
+      isOverridden={isOverridden(SettingKey.SOFT_WRAP)}
     >
       <ToggleSwitch
         checked={scopeSettings[SettingKey.SOFT_WRAP] === true}

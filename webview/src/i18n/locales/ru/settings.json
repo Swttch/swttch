@@ -536,6 +536,8 @@
     "claudeNative": "Нативная настройка Claude Code",
     "sponsorLabel": "С",
     "claudeNativeLabel": "К",
+    "projectOverride": "Настройки проекта переопределяют это значение. Изменение здесь ни на что не влияет",
+    "projectOverrideLabel": "П",
     "openDocs": "Открыть документацию"
   },
   "ide": {
