@@ -16,20 +16,12 @@
 /** How many unchanged lines to keep either side of a change, as `git diff` does. */
 const CONTEXT_LINES = 3;
 
-export interface Hunk {
-  /** Stable identity for the WebView to select by; index in the hunk list. */
-  index: number;
-  /** 1-based first line of this hunk in the original file. */
-  oldStart: number;
-  /** Number of original lines this hunk spans. */
-  oldLines: number;
-  /** 1-based first line of this hunk in the proposed file. */
-  newStart: number;
-  /** Number of proposed lines this hunk spans. */
-  newLines: number;
-  /** Unified-diff body: ' ' context, '-' removed, '+' added. */
-  lines: string[];
-}
+// Defined in shared/ because the review screen reads the same entries this
+// module produces. Imported for use below and re-exported so the callers that
+// already reach for them here are unchanged.
+import type { Hunk, AcceptedRange } from '../../shared';
+
+export type { Hunk, AcceptedRange };
 
 type Op = { type: 'equal' | 'delete' | 'insert'; line: string };
 
@@ -246,29 +238,13 @@ export function applySelectedHunks(
   return joinLines(result, trailing);
 }
 
-/** A range of the proposed file the reviewer chose to keep, in 0-based lines. */
-export interface AcceptedRange {
-  /** First proposed line kept, 0-based. */
-  newStart: number;
-  /** One past the last proposed line kept. */
-  newEnd: number;
-  /** First original line this replaces, 0-based. */
-  oldStart: number;
-  /** One past the last original line it replaces. */
-  oldEnd: number;
-}
-
 /**
  * Rebuild the file keeping only [accepted], with every other region left as it
  * is in [oldContent].
  *
- * Takes ranges rather than hunk numbers because the IDE and this module split a
- * change differently — the IDE counted four where we counted two on a real file
- * — and a number only means something if both sides agree on the split. Ranges
- * carry their own meaning, so whoever draws the checkboxes decides the units.
- *
  * Ranges must not overlap and must be in ascending order, which is what the
- * IDE's own change list gives.
+ * IDE's own change list gives. See {@link AcceptedRange} for why the unit is a
+ * range rather than a hunk number.
  */
 export function applyAcceptedRanges(
   oldContent: string,

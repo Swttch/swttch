@@ -493,6 +493,13 @@
     "unavailable": {
       "title": "Esta solicitação já foi respondida.",
       "description": "Ela pode ter sido respondida no chat ou ter expirado quando a sessão terminou. Não há mais nada para revisar aqui."
+    },
+    "hunk": {
+      "kept": "Mantido",
+      "dropped": "Descartado",
+      "summary": "{{kept}} de {{total}} mantidos",
+      "keepAll": "Manter tudo",
+      "dropAll": "Descartar tudo"
     }
   }
 }

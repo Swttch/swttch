@@ -1,6 +1,6 @@
 import { BridgeClient } from '../bridge/BridgeClient';
 import { PermissionType, RiskLevel, FileOperation } from '../../dto/common';
-import { MessageType } from '@/shared';
+import { MessageType, type Hunk, type AcceptedRange } from '@/shared';
 
 interface DiffAvailablePayload {
   toolUseId: string;
@@ -22,19 +22,21 @@ export interface DiffPreview {
   oldContent: string;
   newContent: string;
   toolName: string;
-  hunks: unknown[];
+  /**
+   * How the backend split this change. Typed rather than `unknown[]` because
+   * the review screen offers one accept/reject control per entry — see
+   * {@link Hunk}.
+   */
+  hunks: Hunk[];
   input?: Record<string, unknown>;
   sessionId?: string;
   controlRequestId?: string;
 }
 
-/** A region of the proposal a reviewer kept, in 0-based end-exclusive lines. */
-export interface AcceptedRange {
-  oldStart: number;
-  oldEnd: number;
-  newStart: number;
-  newEnd: number;
-}
+// Defined in shared/ alongside the hunks it is derived from, and re-exported
+// here so the callers that already reach for it through this module are
+// unchanged.
+export type { AcceptedRange };
 
 /**
  * Tools API module

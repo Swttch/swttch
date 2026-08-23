@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { DiffPage } from '..';
+import { hunkToAcceptedRange, type Hunk } from '@/shared';
 
 interface ResolveDiffCall {
   toolUseId: string;
@@ -30,12 +31,30 @@ vi.mock('@/contexts/ApiContext', () => ({
 }));
 
 // The renderer itself is exercised by its own package; here it stands in as a
-// surface that reports edits, so the decision logic is what gets tested.
+// surface that reports edits and exposes the per-hunk controls, so the decision
+// logic is what gets tested.
 vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
-  default: ({ onEdit }: { onEdit: (contents: string) => void }) => (
-    <button type="button" onClick={() => onEdit('edited by hand\n')}>
-      simulate-edit
-    </button>
+  default: ({
+    onEdit,
+    selection,
+  }: {
+    onEdit: (contents: string) => void;
+    selection?: { toggle: (i: number) => void; total: number };
+  }) => (
+    <>
+      <button type="button" onClick={() => onEdit('edited by hand\n')}>
+        simulate-edit
+      </button>
+      {/* One per hunk, so a test can drop exactly the one it means to. Absent
+          when the page passes no selection, which is itself worth asserting. */}
+      {selection
+        ? Array.from({ length: selection.total }, (_, i) => (
+            <button key={i} type="button" onClick={() => selection.toggle(i)}>
+              {`toggle-hunk-${i}`}
+            </button>
+          ))
+        : null}
+    </>
   ),
 }));
 
@@ -132,6 +151,84 @@ describe('DiffPage', () => {
     fireEvent.click(await screen.findByText('reviewDiff.apply'));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  /**
+   * Picking parts of a proposal.
+   *
+   * The ranges sent here are what the backend rebuilds the file from, so these
+   * assert the wire payload rather than the screen.
+   */
+  describe('per-hunk picking', () => {
+    // A change split in two, far enough apart to be unmistakable in a range list.
+    const hunks: Hunk[] = [
+      { index: 0, oldStart: 10, oldLines: 3, newStart: 10, newLines: 5, lines: [] },
+      { index: 1, oldStart: 40, oldLines: 2, newStart: 42, newLines: 2, lines: [] },
+    ];
+
+    beforeEach(() => {
+      getDiffPreview.mockResolvedValue({ ...preview, hunks });
+    });
+
+    it('keeps every hunk unless the reviewer says otherwise', async () => {
+      // They are reading a proposal, not assembling one.
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('reviewDiff.apply'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+    });
+
+    it('leaves out the hunk the reviewer dropped', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('toggle-hunk-0'));
+      fireEvent.click(screen.getByText('reviewDiff.apply'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual([hunkToAcceptedRange(hunks[1])]);
+    });
+
+    it('sends nothing when every hunk is dropped, which is a refusal', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('toggle-hunk-0'));
+      fireEvent.click(screen.getByText('toggle-hunk-1'));
+      fireEvent.click(screen.getByText('reviewDiff.apply'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual([]);
+    });
+
+    it('ignores the picking when the reviewer rejects outright', async () => {
+      // Reject is not "apply what is ticked" — it answers no to the request.
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('reviewDiff.reject'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual([]);
+    });
+  });
+
+  /**
+   * A change the backend could not split — computeHunks answers null for one too
+   * large to diff, and stores an empty list. There is nothing to tick, so the
+   * decision is whole-file and no controls are offered.
+   */
+  describe('a change with no hunks', () => {
+    it('offers no per-hunk controls', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('reviewDiff.apply');
+
+      expect(screen.queryByText('toggle-hunk-0')).not.toBeInTheDocument();
+    });
+
+    it('applies the whole proposal', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('reviewDiff.apply'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toHaveLength(1);
+      expect(answer().acceptedRanges[0]).toMatchObject({ oldStart: 0, newStart: 0 });
+    });
   });
 
   describe('a request that is no longer pending', () => {

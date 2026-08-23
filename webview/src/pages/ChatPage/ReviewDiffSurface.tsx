@@ -1,14 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileDiff, EditProvider, type FileContents } from '@pierre/diffs/react';
+import type { DiffLineAnnotation } from '@pierre/diffs';
 import { parseDiffFromFile } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
+import { HunkControl } from '../DiffPage/HunkControl';
+import type { HunkSelection } from '../DiffPage/useHunkSelection';
+
+/** What a hunk's annotation carries: which hunk its control decides. */
+interface HunkAnnotation {
+  hunkIndex: number;
+}
 
 interface Props {
   preview: DiffPreview;
   /** Called with the proposed side's full text after every edit. */
   onEdit: (contents: string) => void;
+  /**
+   * Whether each hunk is being kept, and how to flip one. Absent leaves the
+   * diff read-only in that sense — no per-hunk controls are drawn, and the
+   * decision is whole-file.
+   */
+  selection?: HunkSelection;
 }
 
 /**
@@ -21,8 +35,38 @@ interface Props {
  * as it is on disk, where typing would look like an edit while changing
  * nothing.
  */
-export default function ReviewDiffSurface({ preview, onEdit }: Props) {
+export default function ReviewDiffSurface({ preview, onEdit, selection }: Props) {
   const { isDark } = useThemeContext();
+
+  /*
+   * One control per hunk, anchored to the first proposed line it touches.
+   *
+   * The annotation carries the hunk index rather than a rendered node, so the
+   * control below re-reads the current state on every draw — an annotation list
+   * rebuilt on each toggle would restart the edit session underneath it.
+   *
+   * A hunk that only deletes has no proposed line of its own; it is anchored to
+   * where those lines were, which is where the gap is drawn.
+   */
+  const lineAnnotations = useMemo<DiffLineAnnotation<HunkAnnotation>[]>(() => {
+    if (!selection) return [];
+    return preview.hunks.map((hunk) => ({
+      side: 'additions' as const,
+      lineNumber: hunk.newStart,
+      metadata: { hunkIndex: hunk.index },
+    }));
+  }, [selection, preview.hunks]);
+
+  const renderAnnotation = useCallback(
+    (annotation: DiffLineAnnotation<HunkAnnotation>) => {
+      if (!selection) return null;
+      const index = annotation.metadata.hunkIndex;
+      return (
+        <HunkControl kept={selection.isKept(index)} onToggle={() => selection.toggle(index)} />
+      );
+    },
+    [selection],
+  );
 
   const fileDiff = useMemo(() => {
     const name = preview.filePath.split(/[\\/]/).pop() ?? preview.filePath;
@@ -75,7 +119,14 @@ export default function ReviewDiffSurface({ preview, onEdit }: Props) {
   return (
     <div ref={hostRef}>
       <EditProvider createEditor={createEditor}>
-        <FileDiff fileDiff={fileDiff} options={options} edit editorOptions={editorOptions} />
+        <FileDiff
+          fileDiff={fileDiff}
+          options={options}
+          edit
+          editorOptions={editorOptions}
+          lineAnnotations={lineAnnotations}
+          renderAnnotation={renderAnnotation}
+        />
       </EditProvider>
     </div>
   );

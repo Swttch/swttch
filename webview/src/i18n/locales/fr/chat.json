@@ -493,6 +493,13 @@
     "unavailable": {
       "title": "Cette demande a déjà reçu une réponse.",
       "description": "Elle a peut-être reçu une réponse depuis le chat, ou elle a expiré à la fin de la session. Il n'y a plus rien à examiner ici."
+    },
+    "hunk": {
+      "kept": "Conservé",
+      "dropped": "Écarté",
+      "summary": "{{kept}} sur {{total}} conservés",
+      "keepAll": "Tout conserver",
+      "dropAll": "Tout écarter"
     }
   }
 }
