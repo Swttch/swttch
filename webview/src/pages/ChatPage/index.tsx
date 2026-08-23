@@ -15,6 +15,7 @@ import { BackgroundTasksPanel } from './BackgroundTasksPanel';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { DiffOverlay } from '../DiffPage/DiffOverlay';
+import { CHAT_FOOTER_ID } from './chatFooter';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
@@ -358,7 +359,10 @@ export function ChatPage() {
         <div id="scroll-bottom-marker" />
 
         {/* Input Area */}
-        <div className="sticky w-full start-0 bottom-0 z-10">
+        {/* Named so a collapsed review can sit clear of it: the review is drawn
+            in a portal and cannot see this from where it is, so it measures it.
+            See CHAT_FOOTER_ID. */}
+        <div id={CHAT_FOOTER_ID} className="sticky w-full start-0 bottom-0 z-10">
           {showScrollButton && (
               <button
                   onClick={scrollToBottom}
