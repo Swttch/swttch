@@ -62,8 +62,9 @@ in-chat diff is the only route.*
 
 ## Worth knowing
 
-**Your edit reaches Claude too.** The conversation continues from what was
-actually written, not from what was proposed.
+**Your edit reaches Claude too.** What you changed is passed along as written,
+so the conversation continues from what actually landed on disk rather than from
+what was proposed. The notice does not appear in the chat.
 
 **Undo everything and Apply**, and Claude's original call goes through
 untouched. Typing and then pressing `Cmd+Z` lands here.

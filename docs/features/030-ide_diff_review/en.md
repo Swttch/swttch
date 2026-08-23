@@ -79,8 +79,9 @@ interruption, so the conversation carries on as before.
 Only the parts you kept. The parts you unticked stay exactly as they are on
 disk — not reverted afterwards, but never written in the first place.
 
-Claude is told what was applied, so it carries on from the file as it really is
-rather than from what it proposed.
+Claude, though, goes on describing what it proposed: that some of it was left
+unticked is not passed back. It reads the file again the next time it works on
+it, and sees the real state then.
 
 ## Turning it off
 
