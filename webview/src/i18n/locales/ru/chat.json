@@ -206,7 +206,12 @@
     "finishedCount": "Завершено: {{count}}",
     "clear": "Очистить",
     "dismiss": "Скрыть",
-    "dismissRunning": "Скрыть (сбрасывает зависший процесс)",
+    "cancelRunning": "Отменить эту задачу",
+    "stopAll": {
+      "title": "Остановить фоновые задачи?",
+      "message": "Ещё выполняется фоновых задач: {{count}}. Остановить все?",
+      "confirm": "Остановить все"
+    },
     "workflowLabel": "Рабочий процесс",
     "agentsCount": "{{count}} агентов",
     "agentsCount_one": "{{count}} агент",

@@ -206,7 +206,12 @@
     "finishedCount": "已完成 {{count}} 个",
     "clear": "清除",
     "dismiss": "关闭",
-    "dismissRunning": "关闭(清除卡住的工作流)",
+    "cancelRunning": "取消此任务",
+    "stopAll": {
+      "title": "要停止后台任务吗?",
+      "message": "仍有 {{count}} 个后台任务在运行。要全部停止吗?",
+      "confirm": "全部停止"
+    },
     "workflowLabel": "工作流",
     "agentsCount": "{{count}} 个智能体",
     "agentsCount_one": "{{count}} 个智能体",

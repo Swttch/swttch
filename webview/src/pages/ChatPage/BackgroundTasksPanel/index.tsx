@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
+import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import type { WorkflowTask } from '@/shared';
 import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
 import { useTranslation } from '@/i18n';
@@ -22,11 +23,13 @@ function WorkflowTaskRow({
     now,
     focused,
     onDismiss,
+    onCancel,
 }: {
     task: WorkflowTask;
     now: number;
     focused: boolean;
     onDismiss: (toolUseId: string) => void;
+    onCancel: (task: WorkflowTask) => void;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const { t } = useTranslation('chat');
@@ -57,10 +60,12 @@ function WorkflowTaskRow({
                     {task.name}
                 </div>
                 <span className={`text-[0.8461rem] shrink-0 ${statusColor}`}>{task.status}</span>
+                {/* Running: cancel the task (issue #330). Finished: it is over,
+                    so the same ✕ only takes the row out of the list. */}
                 <button
-                    onClick={() => onDismiss(task.toolUseId)}
+                    onClick={() => (isRunning ? onCancel(task) : onDismiss(task.toolUseId))}
                     className="shrink-0 p-0.5 rounded hover:bg-surface-hover transition-colors"
-                    title={isRunning ? t('backgroundTasks.dismissRunning') : t('backgroundTasks.dismiss')}
+                    title={isRunning ? t('backgroundTasks.cancelRunning') : t('backgroundTasks.dismiss')}
                 >
                     <XMarkIcon className="w-3.5 h-3.5 text-text-tertiary hover:text-text-secondary" />
                 </button>
@@ -148,6 +153,8 @@ export function BackgroundTasksPanel() {
     const panelRef = useRef<HTMLDivElement>(null);
     const now = useNow(panelOpen && runningTasks.length > 0);
 
+    const { cancelTask } = useBackgroundTaskActions();
+
     // When the panel opens, move focus into it so keystrokes (notably Escape)
     // act on the panel — closing it — instead of the chat input behind it. On
     // close, restore focus to wherever it was (e.g. the chat input).
@@ -201,6 +208,7 @@ export function BackgroundTasksPanel() {
                                     now={now}
                                     focused={task.toolUseId === focusedToolUseId}
                                     onDismiss={dismissTask}
+                                    onCancel={cancelTask}
                                 />
                             ))}
                         </section>
@@ -230,6 +238,7 @@ export function BackgroundTasksPanel() {
                                         now={now}
                                         focused={task.toolUseId === focusedToolUseId}
                                         onDismiss={dismissTask}
+                                    onCancel={cancelTask}
                                     />
                                 ))}
                         </section>

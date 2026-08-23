@@ -206,7 +206,12 @@
     "finishedCount": "Finished {{count}}",
     "clear": "Clear",
     "dismiss": "Dismiss",
-    "dismissRunning": "Dismiss (clears a stuck workflow)",
+    "cancelRunning": "Cancel this task",
+    "stopAll": {
+      "title": "Stop background tasks?",
+      "message": "{{count}} background task(s) are still running. Stop all of them?",
+      "confirm": "Stop all"
+    },
     "workflowLabel": "Workflow",
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",

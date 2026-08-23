@@ -206,7 +206,12 @@
     "finishedCount": "已完成 {{count}} 個",
     "clear": "清除",
     "dismiss": "關閉",
-    "dismissRunning": "關閉（清除卡住的工作流程）",
+    "cancelRunning": "取消此工作",
+    "stopAll": {
+      "title": "要停止背景工作嗎?",
+      "message": "仍有 {{count}} 個背景工作在執行。要全部停止嗎?",
+      "confirm": "全部停止"
+    },
     "workflowLabel": "工作流程",
     "agentsCount": "{{count}} 個代理程式",
     "agentsCount_one": "{{count}} 個代理程式",

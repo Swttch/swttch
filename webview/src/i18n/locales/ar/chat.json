@@ -206,7 +206,12 @@
     "finishedCount": "اكتمل {{count}}",
     "clear": "مسح",
     "dismiss": "تجاهل",
-    "dismissRunning": "تجاهل (يمسح مهمة سير عمل عالقة)",
+    "cancelRunning": "إلغاء هذه المهمة",
+    "stopAll": {
+      "title": "إيقاف المهام في الخلفية؟",
+      "message": "لا تزال {{count}} مهمة في الخلفية قيد التشغيل. هل تريد إيقافها جميعًا؟",
+      "confirm": "إيقاف الكل"
+    },
     "workflowLabel": "مهمة سير العمل",
     "agentsCount": "{{count}} وكلاء",
     "agentsCount_zero": "لا وكلاء",

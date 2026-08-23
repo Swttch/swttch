@@ -206,7 +206,12 @@
     "finishedCount": "Concluídos {{count}}",
     "clear": "Limpar",
     "dismiss": "Dispensar",
-    "dismissRunning": "Dispensar (limpa um fluxo de trabalho travado)",
+    "cancelRunning": "Cancelar esta tarefa",
+    "stopAll": {
+      "title": "Parar as tarefas em segundo plano?",
+      "message": "Ainda há {{count}} tarefa(s) em segundo plano em execução. Parar todas?",
+      "confirm": "Parar todas"
+    },
     "workflowLabel": "Fluxo de trabalho",
     "agentsCount": "{{count}} agentes",
     "agentsCount_one": "{{count}} agente",

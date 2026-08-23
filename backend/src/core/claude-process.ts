@@ -28,9 +28,18 @@ function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTra
 
 /**
  * Settle a session's still-running background workflows as `stopped` and push a
- * final update to the webview. Called when the user interrupts/stops generation
- * — the CLI process stays alive, so a stopped workflow would otherwise never
- * receive a terminal task_notification and hang on "running" in the panel.
+ * final update to the webview.
+ *
+ * NOT called on interrupt any more (issue #330). An `interrupt` ends the turn
+ * but leaves background tasks running — measured: the CLI answers the interrupt
+ * and emits `result`, while the task sends no `task_notification` and keeps
+ * going. Settling here painted live tasks as stopped, and a single Escape wiped
+ * the Background tasks panel. A task still shown as "running" after Escape is
+ * running.
+ *
+ * Kept for a caller that needs to settle workflows while the process lives on;
+ * process death is already handled by `workflowTracker.stopSession` in the CLI
+ * `close` handler.
  */
 export function stopWorkflowsForSession(sessionId: string): void {
   workflowTracker?.stopRunning(sessionId);

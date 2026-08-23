@@ -206,7 +206,12 @@
     "finishedCount": "{{count}} abgeschlossen",
     "clear": "Leeren",
     "dismiss": "Verwerfen",
-    "dismissRunning": "Verwerfen (löscht einen hängenden Workflow)",
+    "cancelRunning": "Diese Aufgabe abbrechen",
+    "stopAll": {
+      "title": "Hintergrundaufgaben stoppen?",
+      "message": "Es laufen noch {{count}} Hintergrundaufgabe(n). Alle stoppen?",
+      "confirm": "Alle stoppen"
+    },
     "workflowLabel": "Workflow",
     "agentsCount": "{{count}} Agenten",
     "agentsCount_one": "{{count}} Agent",

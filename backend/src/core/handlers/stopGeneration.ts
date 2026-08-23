@@ -1,10 +1,16 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { sendInterruptToProcess, stopWorkflowsForSession } from '../claude-process';
+import { sendInterruptToProcess } from '../claude-process';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
+/**
+ * Interrupt the current turn, leaving background tasks alone.
+ *
+ * Same contract as {@link stopSessionHandler} — see the note there on why
+ * background workflows are not settled on an interrupt (issue #330).
+ */
 export function stopGenerationHandler(
   connectionId: string,
   message: IPCMessage,
@@ -22,9 +28,6 @@ export function stopGenerationHandler(
         console.error('[node-backend]', `Interrupt failed, falling back to SIGTERM for ${sessionId}`);
         Claude.killTree(session.process);
       }
-      // Settle any background workflows the interrupt just cancelled so the panel
-      // doesn't leave them hanging on "running".
-      stopWorkflowsForSession(sessionId);
     }
   }
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });

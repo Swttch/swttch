@@ -206,7 +206,12 @@
     "finishedCount": "Finalizados {{count}}",
     "clear": "Limpiar",
     "dismiss": "Descartar",
-    "dismissRunning": "Descartar (borra un flujo de trabajo atascado)",
+    "cancelRunning": "Cancelar esta tarea",
+    "stopAll": {
+      "title": "¿Detener las tareas en segundo plano?",
+      "message": "Todavía hay {{count}} tarea(s) en segundo plano en ejecución. ¿Detenerlas todas?",
+      "confirm": "Detener todas"
+    },
     "workflowLabel": "Flujo de trabajo",
     "agentsCount": "{{count}} agentes",
     "agentsCount_one": "{{count}} agente",
