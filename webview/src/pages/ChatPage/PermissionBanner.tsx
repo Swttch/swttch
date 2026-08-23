@@ -5,6 +5,7 @@ import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useOpenDiffReview } from '../../hooks/useOpenDiffReview';
+import { useAutoOpenDiffReview } from '../../hooks/useAutoOpenDiffReview';
 import { PendingPermission } from '../../hooks/usePendingPermissions';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
@@ -143,6 +144,10 @@ export function PermissionBanner(props: Props) {
       if (result.kind === 'overlay') onOpenDiffOverlay?.(result.toolUseId);
     });
   }, [openDiffReview, permission.toolUseId, onOpenDiffOverlay]);
+
+  // Shown without being asked for, the way the IDE shows it. The file link below
+  // stays: it is how the review is reached again after being closed.
+  useAutoOpenDiffReview(permission.toolUseId, onOpenDiffOverlay);
 
   /**
    * The file name links to the review, which the user may have closed while its

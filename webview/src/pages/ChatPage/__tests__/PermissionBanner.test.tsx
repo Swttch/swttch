@@ -20,6 +20,15 @@ vi.mock('../../../hooks/useOpenDiffReview', () => ({
   useOpenDiffReview: () => openDiffReview,
 }));
 
+// Opening the review unprompted is the auto-open hook's own business, and it has
+// its own tests. Stubbed here so these cases stay about the panel — but recorded,
+// because the panel is what tells it which request to open.
+const autoOpen = vi.fn();
+vi.mock('../../../hooks/useAutoOpenDiffReview', () => ({
+  useAutoOpenDiffReview: (toolUseId: string | undefined, onOverlay: unknown) =>
+    autoOpen(toolUseId, onOverlay),
+}));
+
 const mockPermission: PendingPermission = {
   controlRequestId: 'ctrl-1',
   toolName: 'Bash',
@@ -32,6 +41,7 @@ const mockPermission: PendingPermission = {
 beforeEach(() => {
   mockStop.mockClear();
   openDiffReview.mockClear();
+  autoOpen.mockClear();
   openResult = { kind: 'opened' };
 });
 
@@ -393,5 +403,18 @@ describe('PermissionBanner — the file name links to the review', () => {
     renderBanner({ ...writePermission, toolName: 'Bash', input: { command: 'ls' } });
 
     expect(screen.getByText('Run this command?')).toBeInTheDocument();
+  });
+
+  /*
+   * The review also opens on its own, the way the IDE opens it. Whether it
+   * should is decided inside the hook; what the panel owes it is the request to
+   * open and the way back for an overlay — without the latter the auto-opened
+   * overlay would have nothing to mount it.
+   */
+  it('points the auto-open at this request, with a way back for an overlay', () => {
+    const onOpenDiffOverlay = vi.fn();
+    renderBanner(writePermission, onOpenDiffOverlay);
+
+    expect(autoOpen).toHaveBeenCalledWith(writePermission.toolUseId, onOpenDiffOverlay);
   });
 });
