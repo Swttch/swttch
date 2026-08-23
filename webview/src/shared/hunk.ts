@@ -47,6 +47,27 @@ export interface AcceptedRange {
 }
 
 /**
+ * The first proposed line [hunk] actually changes, 1-based.
+ *
+ * NOT `newStart`, which is where the hunk begins — three lines of context
+ * earlier, as `git diff` writes them. Anchoring a control there puts it beside
+ * a line the hunk does not touch, which is what shipped first: the tick sat two
+ * rows above the change it decided.
+ *
+ * Falls back to `newStart` for a hunk that only deletes: it adds no proposed
+ * line to point at, so the control goes where those lines used to be.
+ */
+export function firstChangedLine(hunk: Hunk): number {
+  let line = hunk.newStart;
+  for (const entry of hunk.lines) {
+    if (entry.startsWith('+')) return line;
+    // Only context and additions advance the proposed side's line count.
+    if (!entry.startsWith('-')) line++;
+  }
+  return hunk.newStart;
+}
+
+/**
  * The region [hunk] covers, as an {@link AcceptedRange}.
  *
  * Bridges the two coordinate systems in one place: a hunk counts from 1 and

@@ -7,6 +7,7 @@ import { useThemeContext } from '@/contexts/ThemeContext';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { HunkControl } from '../DiffPage/HunkControl';
 import type { HunkSelection } from '../DiffPage/useHunkSelection';
+import { firstChangedLine } from '@/shared';
 
 /** What a hunk's annotation carries: which hunk its control decides. */
 interface HunkAnnotation {
@@ -45,14 +46,15 @@ export default function ReviewDiffSurface({ preview, onEdit, selection }: Props)
    * control below re-reads the current state on every draw — an annotation list
    * rebuilt on each toggle would restart the edit session underneath it.
    *
-   * A hunk that only deletes has no proposed line of its own; it is anchored to
-   * where those lines were, which is where the gap is drawn.
+   * Anchored to the first line the hunk CHANGES, not where the hunk begins —
+   * a hunk starts three lines of context earlier, and a control sitting beside
+   * an unchanged line reads as deciding that line. See firstChangedLine.
    */
   const lineAnnotations = useMemo<DiffLineAnnotation<HunkAnnotation>[]>(() => {
     if (!selection) return [];
     return preview.hunks.map((hunk) => ({
       side: 'additions' as const,
-      lineNumber: hunk.newStart,
+      lineNumber: firstChangedLine(hunk),
       metadata: { hunkIndex: hunk.index },
     }));
   }, [selection, preview.hunks]);
