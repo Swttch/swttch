@@ -188,6 +188,15 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.28.5 - Chat input text fixes and background task control</h3>
+            <ul>
+                <li>Fix highlighted text in the chat input being drawn one line off (#329, reported by @CraftedFury)</li>
+                <li>Fix Cmd/Ctrl+Left/Right moving past the current line in the chat input (#329, reported by @CraftedFury)</li>
+                <li>Fix pasted text not appearing in the chat input (#180, reported by @JaydenPeng)</li>
+                <li>Cancel a running background task from its ✕ (#330, reported by @CraftedFury)</li>
+                <li>Escape now stops only the foreground reply and leaves background tasks running (#330, reported by @CraftedFury)</li>
+                <li>Fix a global setting change showing as applied when the project overrides that key (#344)</li>
+            </ul>
             <h3>0.28.4 - Windows text, keyboard, and tab restore fixes</h3>
             <ul>
                 <li>Fix garbled console output on Windows (#338)</li>
