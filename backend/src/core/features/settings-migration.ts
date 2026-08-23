@@ -1,5 +1,6 @@
 import { readClaudeSettings, saveClaudeSetting } from './claude-settings';
 import { readSettingsFile, saveSettingToFile } from './settings';
+import { DiffSurface } from '../../shared';
 
 /**
  * Where a settings key belongs is decided by ONE source of truth: the official
@@ -61,6 +62,17 @@ export const CONFIG_DIR_ENV_KEY = 'CLAUDE_CONFIG_DIR';
 export const RENAMED_TO_NATIVE_KEYS: Record<string, string> = {
   respectGitignoreForContext: 'respectGitignore',
 };
+
+/**
+ * App → app: `showDiffInIde` (a yes/no about the IDE) became `diffSurface` (which
+ * surface draws the diff), so the stored value has to be carried across.
+ *
+ * Both keys are ours and both live in the app settings; nothing native is
+ * involved. The mapping is the old key's own meaning: `false` said "not in the
+ * IDE", which is exactly the built-in surface, and `true` said the IDE's.
+ */
+export const LEGACY_SHOW_DIFF_IN_IDE_KEY = 'showDiffInIde';
+export const DIFF_SURFACE_KEY = 'diffSurface';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -234,6 +246,45 @@ async function migrateRenamedKeys(
 }
 
 /**
+ * App → app: carry `showDiffInIde` over to `diffSurface`.
+ *
+ * A non-boolean legacy value is dropped rather than guessed at: the key only
+ * ever held a boolean, so anything else is corruption, and the default surface
+ * is a better answer than a made-up one.
+ */
+async function migrateDiffSurface(app: Record<string, unknown>): Promise<void> {
+  const legacy = app[LEGACY_SHOW_DIFF_IN_IDE_KEY];
+  if (legacy === null || legacy === undefined) return;
+
+  // An explicit choice under the new key wins: it is what the current version
+  // writes, so it is newer than anything left under the old name.
+  const alreadyChosen =
+    app[DIFF_SURFACE_KEY] !== null && app[DIFF_SURFACE_KEY] !== undefined;
+
+  if (!alreadyChosen && typeof legacy === 'boolean') {
+    const surface = legacy ? DiffSurface.IDE : DiffSurface.BUILT_IN;
+    const copyResult = await saveSettingToFile(DIFF_SURFACE_KEY, surface);
+    if (copyResult.status !== 'ok') {
+      console.error(
+        '[node-backend]',
+        `settings migration: failed to copy "${LEGACY_SHOW_DIFF_IN_IDE_KEY}" to "${DIFF_SURFACE_KEY}", keeping the original:`,
+        copyResult.error,
+      );
+      return;
+    }
+  }
+
+  const clearResult = await saveSettingToFile(LEGACY_SHOW_DIFF_IN_IDE_KEY, null);
+  if (clearResult.status !== 'ok') {
+    console.error(
+      '[node-backend]',
+      `settings migration: failed to clear app key "${LEGACY_SHOW_DIFF_IN_IDE_KEY}":`,
+      clearResult.error,
+    );
+  }
+}
+
+/**
  * One-time, idempotent migration run once at backend startup.
  *
  * Idempotency: "needs migration" is derived purely from where a key currently
@@ -253,6 +304,7 @@ export async function migrateSettingsToCorrectStore(): Promise<void> {
     await moveGuiKeysOutOfNative(native);
     await reclaimNativeKeys(native, app);
     await migrateRenamedKeys(native, app);
+    await migrateDiffSurface(app);
   } catch (err) {
     console.error('[node-backend]', 'settings migration failed (non-fatal):', err);
   }

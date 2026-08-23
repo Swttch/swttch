@@ -2,10 +2,10 @@
  * Where a proposed edit gets reviewed, and the one thing that must hold either
  * way: the change is stored, so SOME surface can show it.
  *
- * `showDiffInIde` used to gate the storing as well as the opening, which was
- * fine while the IDE's viewer was the only review there was. It is not any
- * more — the webview draws its own from the same entry — so turning the setting
- * off must stop the IDE tab without taking the change away.
+ * The setting behind this used to gate the storing as well as the opening, which
+ * was fine while the IDE's viewer was the only review there was. It is not any
+ * more — the webview draws its own from the same entry — so choosing another
+ * surface must stop the IDE tab without taking the change away.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -15,6 +15,7 @@ vi.mock('../features/settings', () => ({
 }));
 
 import { preparePermissionReview } from '../claude-process';
+import { DiffSurface } from '../../shared';
 import { clearPreviews, peekPreview } from '../features/diffPreview';
 import { writeFile, mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -57,16 +58,26 @@ describe('preparePermissionReview', () => {
     expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).toHaveBeenCalled();
   });
 
-  it('still stores the change when the IDE viewer is turned off', async () => {
+  it('still stores the change when the built-in surface is chosen', async () => {
     // The setting says where to review, not whether to. Dropping the entry here
     // would leave the webview's review with nothing to draw — the bug this test
     // exists to prevent.
-    readMergedSettings.mockResolvedValue({ settings: { showDiffInIde: false } });
+    readMergedSettings.mockResolvedValue({ settings: { diffSurface: DiffSurface.BUILT_IN } });
     const bridge = fakeBridge();
     await request(bridge);
 
     expect(peekPreview('toolu_1')).toBeDefined();
     expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).not.toHaveBeenCalled();
+  });
+
+  it('opens the IDE viewer when the surface is unset', async () => {
+    // Absent must keep behaving as it did before the setting was a choice,
+    // including for anyone whose file the migration has not rewritten yet.
+    readMergedSettings.mockResolvedValue({ settings: {} });
+    const bridge = fakeBridge();
+    await request(bridge);
+
+    expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).toHaveBeenCalled();
   });
 
   it('keeps the stored change faithful to what was proposed', async () => {

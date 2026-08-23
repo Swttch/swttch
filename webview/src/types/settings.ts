@@ -1,5 +1,6 @@
 import { AUTO_SCROLL_THRESHOLD_DEFAULT } from '@/utils/autoScroll';
 import { ZOOM_DEFAULT } from '@/utils/zoom';
+import { DiffSurface, BrowserDiffPresentation } from '@/shared';
 
 /**
  * Chat message line-height (unitless multiplier). Matches the CSS default in
@@ -104,10 +105,18 @@ export enum SettingKey {
   // missing or unreadable value leaves the feature on rather than silently off.
   ATTACH_EDITOR_CONTEXT = 'attachEditorContext',
 
-  // Show Claude's proposed file edits in the IDE's own diff viewer while the
-  // permission prompt is up, so the user can see WHAT they are approving instead
-  // of just the file name. JetBrains mode only — a standalone backend has no IDE
-  // to open, so the toggle renders disabled there and the flow stays as it was.
+  // Where a proposed file edit is shown for review while the permission prompt
+  // is up, so the user can see WHAT they are approving instead of just the file
+  // name. See {@link DiffSurface} for what each value means.
+  DIFF_SURFACE = 'diffSurface',
+
+  // How the built-in diff appears in a browser. Browser-only: an IDE shows it in
+  // an editor tab, which is not one of these. See {@link BrowserDiffPresentation}.
+  BROWSER_DIFF_PRESENTATION = 'browserDiffPresentation',
+
+  // [Legacy] Superseded by DIFF_SURFACE, which says WHERE to draw the diff rather
+  // than only whether the IDE may. Kept so the migration can read the old value
+  // (false meant "not in the IDE" = BUILT_IN) and then clear it.
   SHOW_DIFF_IN_IDE = 'showDiffInIde',
 
   // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
@@ -182,6 +191,11 @@ export enum OpenSettingsMode {
   OVERLAY = 'overlay',
   NEW_TAB = 'new-tab',
 }
+
+// Defined in shared/ because the backend decides on them too (whether to ask the
+// IDE for a diff at all), and re-exported here so callers reach every setting
+// value through this module the way they do for the enums declared above.
+export { DiffSurface, BrowserDiffPresentation };
 
 /**
  * 채팅을 띄우는 자리(호스트) - Kotlin HostMode / 백엔드 hostMode 와 동기화.
@@ -315,7 +329,9 @@ export interface SettingsState {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
-  [SettingKey.SHOW_DIFF_IN_IDE]: boolean;
+  [SettingKey.DIFF_SURFACE]: DiffSurface;
+  [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation;
+  [SettingKey.SHOW_DIFF_IN_IDE]: boolean | null;
   [SettingKey.ULTRACODE]: boolean | null;
   [SettingKey.DOCK_LAYOUT]: DockLayout;
 }
@@ -348,7 +364,9 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
-  [SettingKey.SHOW_DIFF_IN_IDE]: true,
+  [SettingKey.DIFF_SURFACE]: DiffSurface.IDE,
+  [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.NEW_TAB,
+  [SettingKey.SHOW_DIFF_IN_IDE]: null,
   [SettingKey.ULTRACODE]: null,
   [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
 };

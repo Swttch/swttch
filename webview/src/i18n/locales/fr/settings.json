@@ -127,6 +127,23 @@
       "description": "Lorsque vous atteignez la limite de session, la reprise s'effectue automatiquement une fois le quota réinitialisé. C'est la valeur par défaut pour les nouvelles sessions ; chaque session peut toujours la modifier."
     }
   },
+  "diffView": {
+    "sectionTitle": "Affichage des diffs",
+    "surface": {
+      "label": "Examiner les modifications dans",
+      "description": "L'endroit où s'ouvre une modification de fichier proposée, pour que vous la voyiez avant de décider.",
+      "noIde": "L'outil de diff intégré, car aucun IDE n'héberge cette application. Démarrez-la depuis votre IDE pour utiliser l'outil de diff de l'IDE.",
+      "ide": "Outil de diff de l'IDE",
+      "builtIn": "Outil de diff intégré"
+    },
+    "presentation": {
+      "label": "Ouvrir l'outil intégré en tant que",
+      "description": "Comment l'outil de diff intégré s'ouvre dans un navigateur. Dans un IDE, il s'ouvre toujours dans un onglet d'éditeur.",
+      "builtInOnly": "S'applique lorsque les modifications sont examinées dans l'outil de diff intégré.",
+      "newTab": "Nouvel onglet",
+      "overlay": "Superposition"
+    }
+  },
   "appearance": {
     "title": "Apparence",
     "theme": {
@@ -549,11 +566,6 @@
     "focusInputOnEditorContext": {
       "label": "Focaliser la saisie de chat après l'ajout d'un chemin de fichier",
       "description": "Lorsque vous appuyez sur Alt+K dans l'éditeur, déplace le focus vers la saisie de chat après l'insertion du chemin de fichier."
-    },
-    "showDiffInIde": {
-      "label": "Afficher les modifications de Claude dans la visionneuse de différences de l'IDE",
-      "description": "Quand Claude demande à modifier un fichier, ouvre la modification dans le visualiseur de différences de l'IDE pour la voir pendant que tu décides. Désactive cette option pour examiner la modification dans le chat.",
-      "unavailable": "Disponible lors de l'exécution dans un IDE. Lancez l'application depuis votre IDE pour l'utiliser."
     },
     "devTools": {
       "label": "Outils de développement",

@@ -2,7 +2,6 @@ import { SettingSection, SettingRow } from '../common';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { getAdapter } from '@/adapters';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useIdeDiffAvailable } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { useIsOverriddenByProject } from '@/utils/settingsScope';
@@ -17,8 +16,12 @@ interface Props {
  * The section is ALWAYS listed, even with no IDE attached: the editor-context
  * options below have been settable from a browser since long before this
  * section existed, and hiding the section would take that away from standalone
- * users. Only the IDE-diff toggle — which has nothing to open without an IDE —
- * renders disabled, with a hint saying why.
+ * users.
+ *
+ * Choosing where a proposed edit is reviewed does NOT live here: it is one half
+ * of a question whose other half (how the built-in diff appears) has nothing to
+ * do with an IDE, and splitting the pair across two screens would hide that the
+ * first answer decides whether the second applies. Both are in General.
  *
  * The DevTools row is an action, not a setting: there is nothing to persist, so
  * it is a button rather than a toggle. It is also the ONLY way to reach the
@@ -38,13 +41,6 @@ export const IdeSettings = (props: Props) => {
   // other toggles use — anything unreadable must leave the feature on.
   const attachEditorContext = scopeSettings[SettingKey.ATTACH_EDITOR_CONTEXT] !== false;
   const focusInputOnEditorContext = scopeSettings[SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT] ?? true;
-  // With no IDE attached there is nothing to open a diff in, so the feature is
-  // off in practice whatever the stored value says. Show it that way rather than
-  // leaving a switched-on toggle the user cannot act on — the stored value is
-  // untouched and comes back as soon as an IDE hosts the backend again. Shared
-  // with the approval prompt's file link, which must offer a diff on exactly
-  // the same terms.
-  const showDiffInIde = useIdeDiffAvailable();
 
   return (
     <div className={className}>
@@ -72,23 +68,6 @@ export const IdeSettings = (props: Props) => {
             checked={focusInputOnEditorContext}
             onChange={(checked) => updateSetting(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT, checked)}
             ariaLabel={t('ide.focusInputOnEditorContext.label')}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label={t('ide.showDiffInIde.label')}
-          description={
-            ideAttached
-              ? t('ide.showDiffInIde.description')
-              : t('ide.showDiffInIde.unavailable')
-          }
-          isOverridden={isOverridden(SettingKey.SHOW_DIFF_IN_IDE)}
-        >
-          <ToggleSwitch
-            checked={showDiffInIde}
-            disabled={!ideAttached}
-            onChange={(checked) => updateSetting(SettingKey.SHOW_DIFF_IN_IDE, checked)}
-            ariaLabel={t('ide.showDiffInIde.label')}
           />
         </SettingRow>
 

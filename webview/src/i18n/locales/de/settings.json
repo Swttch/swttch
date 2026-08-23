@@ -127,6 +127,23 @@
       "description": "Wenn Sie Ihr Sitzungslimit erreichen, wird nach dem Zurücksetzen des Kontingents automatisch fortgesetzt. Dies ist die Voreinstellung für neue Sitzungen; jede Sitzung kann es weiterhin umschalten."
     }
   },
+  "diffView": {
+    "sectionTitle": "Diff-Ansicht",
+    "surface": {
+      "label": "Änderungen prüfen in",
+      "description": "Wo eine vorgeschlagene Dateiänderung geöffnet wird, damit sie vor der Entscheidung sichtbar ist.",
+      "noIde": "Der integrierte Viewer, da diese App in keiner IDE läuft. Starte sie aus deiner IDE, um den Diff-Viewer der IDE zu verwenden.",
+      "ide": "Diff-Viewer der IDE",
+      "builtIn": "Integrierter Diff-Viewer"
+    },
+    "presentation": {
+      "label": "Integrierten Viewer öffnen als",
+      "description": "Wie der integrierte Diff-Viewer im Browser geöffnet wird. In einer IDE öffnet er sich immer als Editor-Tab.",
+      "builtInOnly": "Gilt, wenn Änderungen im integrierten Viewer geprüft werden.",
+      "newTab": "Neuer Tab",
+      "overlay": "Overlay"
+    }
+  },
   "appearance": {
     "title": "Erscheinungsbild",
     "theme": {
@@ -549,11 +566,6 @@
     "focusInputOnEditorContext": {
       "label": "Fokus nach Anhängen des Dateipfads auf das Chat-Eingabefeld setzen",
       "description": "Wenn du im Editor Alt+K drückst, wird der Fokus nach dem Einfügen des Dateipfads auf das Chat-Eingabefeld verschoben."
-    },
-    "showDiffInIde": {
-      "label": "Claudes Änderungen im Diff-Viewer der IDE anzeigen",
-      "description": "Wenn Claude eine Datei bearbeiten möchte, wird die Änderung im Diff-Viewer der IDE geöffnet, damit du sie beim Entscheiden sehen kannst. Deaktiviere dies, um die Änderung stattdessen im Chat zu prüfen.",
-      "unavailable": "Verfügbar, wenn die Anwendung in einer IDE läuft. Starten Sie die Anwendung aus Ihrer IDE."
     },
     "devTools": {
       "label": "Entwicklertools",

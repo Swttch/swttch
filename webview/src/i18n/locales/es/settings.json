@@ -127,6 +127,23 @@
       "description": "Cuando alcances el límite de sesión, se reanudará automáticamente una vez que se reinicie el límite. Es el valor predeterminado para las sesiones nuevas; cada sesión puede cambiarlo."
     }
   },
+  "diffView": {
+    "sectionTitle": "Vista de diferencias",
+    "surface": {
+      "label": "Revisar los cambios en",
+      "description": "Dónde se abre un cambio propuesto de archivo para que lo veas mientras decides.",
+      "noIde": "El visor integrado, ya que ningún IDE aloja esta aplicación. Iníciala desde tu IDE para usar el visor de diferencias del propio IDE.",
+      "ide": "Visor de diferencias del IDE",
+      "builtIn": "Visor de diferencias integrado"
+    },
+    "presentation": {
+      "label": "Abrir el visor integrado como",
+      "description": "Cómo se abre el visor de diferencias integrado en un navegador. Dentro de un IDE siempre se abre como una pestaña del editor.",
+      "builtInOnly": "Se aplica cuando los cambios se revisan en el visor integrado.",
+      "newTab": "Nueva pestaña",
+      "overlay": "Superposición"
+    }
+  },
   "appearance": {
     "title": "Apariencia",
     "theme": {
@@ -549,11 +566,6 @@
     "focusInputOnEditorContext": {
       "label": "Enfocar el chat tras adjuntar una ruta de archivo",
       "description": "Al presionar Alt+K en el editor, mueve el foco al campo de chat después de insertar la ruta del archivo."
-    },
-    "showDiffInIde": {
-      "label": "Mostrar los cambios de Claude en el visor de diferencias del IDE",
-      "description": "Cuando Claude pida editar un archivo, abre el cambio en el visor de diferencias del IDE para verlo mientras decides. Desactívalo para revisar el cambio en el chat.",
-      "unavailable": "Disponible al ejecutarse dentro de un IDE. Inicia la aplicación desde tu IDE para usarlo."
     },
     "devTools": {
       "label": "Herramientas de desarrollo",

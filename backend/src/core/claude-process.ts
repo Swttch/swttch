@@ -11,7 +11,7 @@ import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { openDiffForPermission, rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
-import { MessageType } from '../shared';
+import { MessageType, DiffSurface } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -776,10 +776,10 @@ export function sendControlResponseToProcess(
  * the user decides.
  *
  * The change is always stored, because it is what a review reads. The
- * `showDiffInIde` setting — read per session working directory, so a project
- * can opt out on its own — decides only whether the IDE opens a diff tab for
- * it. Off, the webview draws the review from the same entry, which is also
- * what happens on a host that has no IDE diff to open at all.
+ * `diffSurface` setting — read per session working directory, so a project can
+ * choose on its own — decides only whether the IDE opens a diff tab for it. Set
+ * to the built-in surface, the webview draws the review from the same entry,
+ * which is also what happens on a host that has no IDE diff to open at all.
  *
  * Deliberately not awaited by the caller: reading the setting and the file both
  * touch disk, and the permission prompt must reach the WebView immediately.
@@ -855,8 +855,11 @@ export async function preparePermissionReview(params: {
     });
   }
 
-  // Default on: the setting only exists to let people turn it back off.
-  if (settings.showDiffInIde === false) return;
+  // Only the IDE's own viewer is opened from here. The built-in one is drawn by
+  // the webview from the entry stored above, so choosing it means there is
+  // nothing for the backend to open — as on a host with no IDE at all.
+  // Absent reads as the IDE, which is the default and the behaviour that shipped.
+  if ((settings.diffSurface ?? DiffSurface.IDE) !== DiffSurface.IDE) return;
 
   await openDiffForPermission(params.bridge, preview, params.toolUseId, {
     sessionId: params.sessionId,

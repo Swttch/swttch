@@ -2,6 +2,12 @@ import { readFile, writeFile, mkdir, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import {
+  DiffSurface,
+  BrowserDiffPresentation,
+  DIFF_SURFACES,
+  BROWSER_DIFF_PRESENTATIONS,
+} from '../../shared';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
 
@@ -65,7 +71,8 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
-  showDiffInIde: true,
+  diffSurface: DiffSurface.IDE,
+  browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
   ultracode: null,
   // Header dock arrangement: `order` is the row order in the ⋮ menu (and, once
   // filtered to `visible`, the dock's icon order too); `visible` names which of
@@ -83,6 +90,10 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // stranding the old value here forever. Drop them once the migration retires.
   language: null,
   respectGitignoreForContext: false,
+  // Unlike the two above, this one did not go native — it was replaced by our own
+  // `diffSurface`, which names the surface instead of asking a yes/no about the
+  // IDE. null is the default so a value here always means "not migrated yet".
+  showDiffInIde: null,
 };
 
 const COMMENT_MAP: Record<string, string> = {
@@ -110,10 +121,12 @@ const COMMENT_MAP: Record<string, string> = {
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
-  showDiffInIde: 'true면 파일 편집 권한을 물을 때 IDE diff 뷰어에 변경 내용을 띄운다(승인 전 미리보기). IDE 없이 실행 중이면 무시된다',
+  diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
+  browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
   dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
+  showDiffInIde: '[레거시] diffSurface로 대체됨. 마이그레이션이 값을 옮기고 비우는 용도로만 남김',
   language: '[레거시] 네이티브 settings.json으로 이관됨. 마이그레이션이 비우는 용도로만 남김',
   respectGitignoreForContext: '[레거시] 네이티브 respectGitignore로 이관됨. 마이그레이션이 비우는 용도로만 남김',
 };
@@ -313,6 +326,16 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'openSettingsAs must be one of "overlay", "new-tab"';
       }
       break;
+    case 'diffSurface':
+      if (!DIFF_SURFACES.includes(value as string)) {
+        return `diffSurface must be one of ${DIFF_SURFACES.map((s) => `"${s}"`).join(', ')}`;
+      }
+      break;
+    case 'browserDiffPresentation':
+      if (!BROWSER_DIFF_PRESENTATIONS.includes(value as string)) {
+        return `browserDiffPresentation must be one of ${BROWSER_DIFF_PRESENTATIONS.map((p) => `"${p}"`).join(', ')}`;
+      }
+      break;
     case 'chatPagination':
     case 'includeNestedSessions':
     case 'softWrap':
@@ -376,9 +399,16 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
     case 'attachEditorContext':
-    case 'showDiffInIde':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
+      }
+      break;
+    // Legacy: null clears it once the value has moved to `diffSurface`. Rejecting
+    // null would leave the old key in the file forever, and the migration would
+    // retry the same failing write on every startup.
+    case 'showDiffInIde':
+      if (value !== null && typeof value !== 'boolean') {
+        return 'showDiffInIde must be a boolean or null';
       }
       break;
     // null = off/cleared, mirroring how the effort slider clears the top step.

@@ -53,14 +53,12 @@ describe('IDE settings section i18n', () => {
     });
   });
 
-  it('translates the new IDE-diff toggle in every locale', () => {
+  // Choosing where a proposed edit is reviewed moved to General's Diff View
+  // section, because its companion setting (how the built-in viewer opens) has
+  // nothing to do with an IDE. See DiffViewSection.
+  it('no longer keeps the diff-surface strings under ide', () => {
     forEachLocale((locale) => {
-      const diff = settingsOf(locale).ide?.showDiffInIde;
-      // `unavailable` is the hint shown when no IDE is attached; without it a
-      // standalone user sees a dead toggle and no reason why.
-      for (const key of ['label', 'description', 'unavailable']) {
-        expect(diff?.[key], `${locale}.ide.showDiffInIde.${key}`).toBeTruthy();
-      }
+      expect(settingsOf(locale).ide?.showDiffInIde, `${locale}.ide.showDiffInIde`).toBeUndefined();
     });
   });
 
@@ -73,12 +71,12 @@ describe('IDE settings section i18n', () => {
     });
   });
 
-  it('translates the new strings rather than leaving English everywhere', () => {
+  it('translates the section strings rather than leaving English everywhere', () => {
     // A migration that seeds English placeholders passes every check above.
     // Non-Latin locales must actually differ from the English source.
-    const en = settingsOf('en').ide.showDiffInIde.label;
+    const en = settingsOf('en').ide.attachEditorContext.label;
     for (const locale of ['ko', 'ja', 'zh', 'ru', 'ar', 'fa']) {
-      expect(settingsOf(locale).ide.showDiffInIde.label, locale).not.toBe(en);
+      expect(settingsOf(locale).ide.attachEditorContext.label, locale).not.toBe(en);
     }
   });
 });
