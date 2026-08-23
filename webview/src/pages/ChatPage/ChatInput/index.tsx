@@ -253,7 +253,6 @@ export function ChatInput() {
     onStop: () => void dictation.stop(),
   });
   const { cycle: cycleEffort } = useEffort();
-  const lastMetaArrowTime = useRef<number>(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showModelSwitch, setShowModelSwitch] = useState(false);
   const [modelSwitchQuery, setModelSwitchQuery] = useState<string | null>(null);
@@ -597,16 +596,6 @@ export function ChatInput() {
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isInterruptible, onStop, textareaRef, showSchedulePopover, confirmStopBackgroundTasks]);
 
-  // [KeyDebug] window 캡처 단계 Arrow 키 로깅
-  useEffect(() => {
-    const handleArrowCapture = (e: globalThis.KeyboardEvent) => {
-      if (!e.key.startsWith('Arrow')) return;
-      console.log('[KeyDebug:window-capture]', e.key, { altKey: e.altKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, defaultPrevented: e.defaultPrevented });
-    };
-    window.addEventListener('keydown', handleArrowCapture, true);
-    return () => window.removeEventListener('keydown', handleArrowCapture, true);
-  }, []);
-
   // Populate input history from session messages on session change.
   // Read messages via ref to avoid re-running this effect on every streaming token —
   // we only care about the messages snapshot at session-switch time.
@@ -633,22 +622,12 @@ export function ChatInput() {
   }, [onChange, palette, mention, textareaRef]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key.startsWith('Arrow')) console.log('[KeyDebug:textarea-keydown]', e.key, { altKey: e.altKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, defaultPrevented: e.defaultPrevented });
-
     // Feed the IME truth: keyCode 229 means the IME is still processing this
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
 
     // 받아쓰기 토글은 여기서 처리하지 않는다. useGlobalShortcut이 window의
     // capture 단계에서 먼저 가로채므로, 포커스가 어디에 있든 동작한다.
-
-    // JCEF workaround: Cmd+Arrow 처리 후 발생하는 순수 Arrow 유령 이벤트 무시
-    const isArrowKey = e.key.startsWith('Arrow');
-    const hasModifier = e.metaKey || e.altKey || e.ctrlKey;
-    if (isArrowKey && !hasModifier && Date.now() - lastMetaArrowTime.current < 50) {
-      e.preventDefault();
-      return;
-    }
 
     // Shift+Tab: 모드 전환
     if (e.shiftKey && e.key === 'Tab') {
@@ -657,30 +636,15 @@ export function ChatInput() {
       return;
     }
 
-    // JCEF workaround: Cmd+Arrow (macOS 줄 처음/끝 이동) 수동 처리
-    // shiftKey가 있으면 선택 영역 확장이므로 기본 동작에 맡김
-    if (e.metaKey && !e.altKey && !e.ctrlKey && !e.shiftKey && isArrowKey) {
-      const editor = e.currentTarget;
-      const pos = getCaretOffset(editor);
-      const text = editor.textContent ?? '';
-
-      e.preventDefault();
-      lastMetaArrowTime.current = Date.now();
-
-      if (e.key === 'ArrowLeft') {
-        const lineStart = text.lastIndexOf('\n', pos - 1) + 1;
-        setCaretOffset(editor, lineStart);
-      } else if (e.key === 'ArrowRight') {
-        let lineEnd = text.indexOf('\n', pos);
-        if (lineEnd === -1) lineEnd = text.length;
-        setCaretOffset(editor, lineEnd);
-      } else if (e.key === 'ArrowUp') {
-        setCaretOffset(editor, 0);
-      } else if (e.key === 'ArrowDown') {
-        setCaretOffset(editor, text.length);
-      }
-      return;
-    }
+    // Cmd+Arrow is left to the browser. It moves by *visual* line — the same
+    // unit Up/Down and Cmd+Shift+Arrow already use — and scrolls the caret into
+    // view on its way. Handling it here once meant a <textarea> under JCEF
+    // ignored the native binding and emitted a ghost Arrow afterwards; with the
+    // composer now a contentEditable (RichInput) neither happens, and taking it
+    // over cost more than it bought: line start/end were computed by scanning
+    // for "\n", so a soft-wrapped paragraph jumped to the paragraph's edge
+    // rather than the visual line's, and moving the caret by hand left the
+    // scroll position behind.
 
     // Mention interaction (must precede slash command handling)
     if (mention.isActive && mention.handleKeyDown(e)) return;
@@ -731,7 +695,6 @@ export function ChatInput() {
       }
       return;
     } else if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
-      console.log('[KeyDebug:history-up-triggered]');
       // 복수행: 커서가 첫 번째 줄에 있을 때만 히스토리 탐색
       const pos = getCaretOffset(e.currentTarget);
       if (value.lastIndexOf('\n', pos - 1) !== -1) return;
@@ -741,7 +704,6 @@ export function ChatInput() {
       e.preventDefault();
       onChange(historyValue);
     } else if (e.key === 'ArrowDown' && !palette.showSlashCommands) {
-      console.log('[KeyDebug:history-down-triggered]');
       // 복수행: 커서가 마지막 줄에 있을 때만 히스토리 탐색
       const pos = getCaretOffset(e.currentTarget);
       if (value.indexOf('\n', pos) !== -1) return;
