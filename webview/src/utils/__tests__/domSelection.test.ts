@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   textOffsetToPoint,
   pointToTextOffset,
@@ -380,5 +380,113 @@ describe('Layer B Selection wrappers (smoke tests)', () => {
     // Don't attach to body — simulates out-of-document element
     // Should not throw
     expect(() => setSelectionRange(root, 0, 3)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Caret scrolling
+// ---------------------------------------------------------------------------
+
+/**
+ * Moving the caret through the Selection API does not scroll the box — the
+ * browser only does that for a move it performed itself. So a paste, a history
+ * recall or any programmatic jump would leave the caret off-screen with the
+ * view still parked where it was.
+ *
+ * jsdom lays nothing out, so the scroll cannot be observed for real. Stubbing
+ * the two rects the logic reads makes the decision itself testable: does it
+ * scroll up when the caret sits above the visible box, down when below, and
+ * stay put when the caret is already inside.
+ */
+describe('caret scrolling on programmatic moves', () => {
+  /**
+   * Give `root` a fixed viewport box and force every Range inside it to report
+   * `caretTop`, so the caret can be placed above, below or within the box.
+   */
+  function stubLayout(root: HTMLElement, box: { top: number; bottom: number }, caretTop: number) {
+    root.getBoundingClientRect = () =>
+      ({ top: box.top, bottom: box.bottom, height: box.bottom - box.top, width: 300 }) as DOMRect;
+    const caretRect = {
+      top: caretTop,
+      bottom: caretTop + 20,
+      height: 20,
+      width: 0,
+    } as DOMRect;
+    Range.prototype.getClientRects = () => [caretRect] as unknown as DOMRectList;
+    Range.prototype.getBoundingClientRect = () => caretRect;
+  }
+
+  const originalRects = Range.prototype.getClientRects;
+  const originalBounding = Range.prototype.getBoundingClientRect;
+  afterEach(() => {
+    Range.prototype.getClientRects = originalRects;
+    Range.prototype.getBoundingClientRect = originalBounding;
+  });
+
+  it('scrolls up when the caret sits above the visible box', () => {
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    // Box spans 100..300; caret is 40px above its top edge.
+    stubLayout(root, { top: 100, bottom: 300 }, 60);
+    root.scrollTop = 500;
+
+    setCaretOffset(root, 3);
+
+    expect(root.scrollTop).toBe(460);
+    document.body.removeChild(root);
+  });
+
+  it('scrolls down when the caret sits below the visible box', () => {
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    // Caret's bottom (350+20) overshoots the box's bottom (300) by 70.
+    stubLayout(root, { top: 100, bottom: 300 }, 350);
+    root.scrollTop = 0;
+
+    setCaretOffset(root, 3);
+
+    expect(root.scrollTop).toBe(70);
+    document.body.removeChild(root);
+  });
+
+  it('leaves the scroll alone when the caret is already visible', () => {
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    stubLayout(root, { top: 100, bottom: 300 }, 150);
+    root.scrollTop = 42;
+
+    setCaretOffset(root, 3);
+
+    expect(root.scrollTop).toBe(42);
+    document.body.removeChild(root);
+  });
+
+  it('follows the end of a selection, not its start', () => {
+    // The caret rests at the end of a selection, so that is what must be
+    // brought into view — scrolling to the start would strand it.
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    stubLayout(root, { top: 100, bottom: 300 }, 350);
+    root.scrollTop = 0;
+
+    setSelectionRange(root, 0, 5);
+
+    expect(root.scrollTop).toBe(70);
+    document.body.removeChild(root);
+  });
+
+  it('does nothing where the environment reports no layout', () => {
+    // Guards the jsdom/headless path: an all-zero root rect must not be read as
+    // "the caret is out of view" and trigger a bogus scroll.
+    const root = makeDiv('hello world');
+    document.body.appendChild(root);
+    root.getBoundingClientRect = () =>
+      ({ top: 0, bottom: 0, height: 0, width: 0 }) as DOMRect;
+    root.scrollTop = 17;
+
+    setCaretOffset(root, 3);
+
+    expect(root.scrollTop).toBe(17);
+    document.body.removeChild(root);
   });
 });

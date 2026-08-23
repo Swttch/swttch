@@ -169,7 +169,42 @@ export function getCaretOffset(root: HTMLElement): number {
 }
 
 /**
- * Move the caret to `offset` (plain-text, relative to `root.textContent`).
+ * Scroll `root` so the caret sitting at `range` is visible.
+ *
+ * Moving the caret through the Selection API does not scroll — that only comes
+ * free when the browser moves it itself, in response to a key it handled. So
+ * every caret jump we perform (paste, history recall, programmatic insert) has
+ * to bring the caret back into view or it lands off-screen while the box stays
+ * where it was.
+ *
+ * A collapsed range has no width, and in some engines no rects at all, so the
+ * caret's own rect is not dependable; the enclosing line's rect is. Compared in
+ * viewport coordinates against `root`'s own box, then applied as a `scrollTop`
+ * delta, which needs no layout support beyond rects and so degrades quietly
+ * where they are unavailable (jsdom returns zeroes and this becomes a no-op).
+ */
+function scrollCaretIntoView(root: HTMLElement, range: Range): void {
+  // `getClientRects` on a collapsed range yields the caret line in browsers
+  // that support it; fall back to the bounding rect, then give up.
+  const caretRect = range.getClientRects?.()?.[0] ?? range.getBoundingClientRect?.();
+  if (!caretRect) return;
+
+  const rootRect = root.getBoundingClientRect();
+  // All-zero rects mean the environment does no layout — nothing to scroll to.
+  if (rootRect.height === 0 && rootRect.width === 0) return;
+
+  const above = caretRect.top - rootRect.top;
+  const below = caretRect.bottom - rootRect.bottom;
+  if (above < 0) {
+    root.scrollTop += above;
+  } else if (below > 0) {
+    root.scrollTop += below;
+  }
+}
+
+/**
+ * Move the caret to `offset` (plain-text, relative to `root.textContent`) and
+ * scroll it into view.
  * No-op if there is no Selection API or if `root` has no content at that offset.
  */
 export function setCaretOffset(root: HTMLElement, offset: number): void {
@@ -183,6 +218,7 @@ export function setCaretOffset(root: HTMLElement, offset: number): void {
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
+    scrollCaretIntoView(root, range);
   } catch {
     // Silently ignore if DOM is in an unexpected state
   }
@@ -220,7 +256,8 @@ export function getSelectionRange(root: HTMLElement): TextRange {
 
 /**
  * Set the selection to [start, end] (plain-text offsets, relative to
- * `root.textContent`). Silently ignores errors (e.g., root not in document).
+ * `root.textContent`) and scroll its end into view.
+ * Silently ignores errors (e.g., root not in document).
  */
 export function setSelectionRange(
   root: HTMLElement,
@@ -238,6 +275,13 @@ export function setSelectionRange(
     range.setEnd(endPoint.node, endPoint.offset);
     selection.removeAllRanges();
     selection.addRange(range);
+
+    // Follow the end of the selection, which is where the caret rests and what
+    // the user is expected to keep typing from.
+    const caret = document.createRange();
+    caret.setStart(endPoint.node, endPoint.offset);
+    caret.collapse(true);
+    scrollCaretIntoView(root, caret);
   } catch {
     // Silently ignore if DOM is not attached or in an unexpected state
   }

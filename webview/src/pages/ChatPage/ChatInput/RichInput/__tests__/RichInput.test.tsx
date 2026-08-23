@@ -383,3 +383,41 @@ describe('RichInput — placeholder', () => {
     expect(el.childNodes.length).toBe(0);
   });
 });
+
+/**
+ * Issue #329 — the two layers must wrap identically.
+ *
+ * Only the editable layer scrolls, so on platforms that draw a classic,
+ * space-taking scrollbar (Windows/Linux JCEF & Chromium) its content box would
+ * narrow once the text overflows, while the clipped mirror stays full width.
+ * The layers then wrap at different points and the same glyph lands a line
+ * apart — invisible until ::selection paints the transparent editable glyphs.
+ *
+ * jsdom has no layout engine, so the wrap itself cannot be measured here. The
+ * markup half of the contract is assertable: both layers carry the same
+ * width-affecting layout classes. The stylesheet half (the scrollbar gutter)
+ * is guarded in theme/__tests__/richInputGutter.css.test.ts.
+ */
+describe('RichInput — mirror/editable wrap parity (issue #329)', () => {
+  /** Classes that change how wide the content box is, and thus where text wraps. */
+  const WIDTH_AFFECTING = [
+    'w-full',
+    'ps-3',
+    'pe-11',
+    'text-base',
+    'leading-normal',
+    'whitespace-pre-wrap',
+    'break-words',
+  ];
+
+  it('gives both layers the same width-affecting layout classes', () => {
+    const { container, getByRole } = render(<RichInput value="hello" onChange={() => {}} />);
+    const editable = getByRole('textbox');
+    const mirror = container.querySelector('.richInputMirror');
+
+    for (const cls of WIDTH_AFFECTING) {
+      expect(editable.classList.contains(cls), `editable is missing ${cls}`).toBe(true);
+      expect(mirror?.classList.contains(cls), `mirror is missing ${cls}`).toBe(true);
+    }
+  });
+});

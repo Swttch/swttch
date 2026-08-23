@@ -55,6 +55,26 @@
    path tokens in chips. Both layers share identical font/padding/wrapping
    (Tailwind LAYOUT_CLASSES) so the mirror glyphs sit exactly under the caret.
    ============================================ */
+/* Reserve the scrollbar gutter on BOTH layers so their content boxes stay the
+   same width (issue #329).
+
+   Only the editable layer scrolls (overflow-y-auto); the mirror is clipped
+   (overflow-hidden). Where the platform draws a classic, space-taking scrollbar
+   — Windows/Linux JCEF & Chromium, unlike macOS overlay scrollbars (see the
+   color-scheme note under :root, issue #200) — the editable layer's content box
+   would narrow by the scrollbar's width once the text overflows. The two layers
+   would then wrap at different points, so the same glyph could land a line
+   apart. That misalignment is invisible while the editable glyphs are
+   transparent, but ::selection paints them opaque, which is exactly how it was
+   reported: highlighted text drawn one line off.
+
+   `stable` reserves the gutter on both layers whether or not a scrollbar is
+   showing, so the content widths match in every state. */
+.richInputEditable,
+.richInputMirror {
+  scrollbar-gutter: stable;
+}
+
 .richInputEditable {
   /* Hide the editable glyphs — the mirror paints them — but keep the caret. */
   color: transparent;
