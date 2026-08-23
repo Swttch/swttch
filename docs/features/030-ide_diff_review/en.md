@@ -91,7 +91,7 @@ diff tab opens in the IDE.
 > A later release changed what this setting means, from whether you see a diff
 > to **where** you see one. Turning it off now shows the diff in the chat
 > instead, so the change is never hidden either way. See
-> [Fix the proposed code where you are reading it](../040-editable_diff_review/en.md).
+> [Fix the proposed code where you are reading it](../042-editable_diff_review/en.md).
 
 Running outside an IDE, the option is shown but inactive, since there is no IDE
 window to open anything in.
