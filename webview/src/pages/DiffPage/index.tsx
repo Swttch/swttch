@@ -3,8 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContext';
 import { useTranslation } from '@/i18n';
 import { useStaticDocumentTitle } from '@/hooks/useStaticDocumentTitle';
-import { useHunkSelection } from './useHunkSelection';
-import { SelectAllHunks } from './SelectAllHunks';
+import { useHunkDecisions } from './useHunkDecisions';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
@@ -89,7 +88,7 @@ export function DiffPage(props: Props) {
   }, []);
 
   const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
-  const selection = useHunkSelection(hunks);
+  const decisions = useHunkDecisions(hunks);
 
   /*
    * Whether the reviewer can pick parts of this change.
@@ -109,7 +108,7 @@ export function DiffPage(props: Props) {
    */
   const acceptedRanges = useMemo(() => {
     if (!preview) return [];
-    if (canPickHunks) return selection.acceptedRanges;
+    if (canPickHunks) return decisions.acceptedRanges;
     return [
       {
         oldStart: 0,
@@ -118,7 +117,7 @@ export function DiffPage(props: Props) {
         newEnd: lineCount(preview.newContent),
       },
     ];
-  }, [preview, canPickHunks, selection.acceptedRanges]);
+  }, [preview, canPickHunks, decisions.acceptedRanges]);
 
   const resolve = useCallback(
     async (keepEdits: boolean) => {
@@ -187,21 +186,16 @@ export function DiffPage(props: Props) {
         </span>
         <div className="flex shrink-0 items-center gap-2">
           {/*
-            Selecting is not deciding.
+            A count of what is still open, not a control.
 
-            This checkbox changes what is ticked; the two buttons after it end
-            the review. They used to sit side by side under the same verb —
-            "apply all" next to "apply" — one moving ticks around and the other
-            writing to disk, which is not undoable.
+            Answering a hunk collapses it out of the diff, so the screen already
+            says which ones are left; this only puts a number on it for a long
+            file where the remaining ones are off-screen.
           */}
-          {canPickHunks && (
+          {canPickHunks && decisions.openCount > 0 && (
             <>
-              <SelectAllHunks selection={selection} disabled={resolving} />
               <span className="text-xs text-text-tertiary">
-                {t('diffPage.hunk.summary', {
-                  kept: selection.keptCount,
-                  total: selection.total,
-                })}
+                {t('diffPage.hunk.remaining', { count: decisions.openCount })}
               </span>
               <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
             </>
@@ -211,7 +205,7 @@ export function DiffPage(props: Props) {
             className="rounded bg-state-success-bg px-3 py-1.5 text-sm text-state-success-fg disabled:opacity-50"
             // Nothing ticked is a refusal, and this button does not say that.
             // Confirming here would answer no while reading "confirm".
-            disabled={resolving || (canPickHunks && selection.keptCount === 0)}
+            disabled={resolving || (canPickHunks && decisions.keptCount === 0)}
             onClick={() => void resolve(true)}
           >
             {t('diffPage.confirm')}
@@ -243,7 +237,7 @@ export function DiffPage(props: Props) {
             onEdit={handleEdit}
             // Omitted when there is no split to pick from, which is what keeps
             // the per-hunk controls off that diff entirely.
-            selection={canPickHunks ? selection : undefined}
+            decisions={canPickHunks ? decisions : undefined}
           />
         </Suspense>
       </div>
@@ -257,6 +251,11 @@ export function DiffPage(props: Props) {
  * Not translated, and deliberately: this is the tab label, which sits next to
  * source file names in an editor's tab strip. "Diff" reads the same to every
  * developer, and a localized word here would be the odd one out in that row.
+ *
+ * This is NOT licence to leave other strings in English. It holds because the
+ * row this word sits in is filenames; anything inside the page sits beside
+ * translated text and has to match it. The hunk buttons were left half-English
+ * on exactly this reasoning once, and read as a bug.
  */
 const DIFF_TITLE_PREFIX = 'Diff';
 

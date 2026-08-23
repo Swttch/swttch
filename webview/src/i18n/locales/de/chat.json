@@ -497,9 +497,12 @@
       "description": "Sie wurde möglicherweise im Chat beantwortet oder ist beim Ende der Sitzung abgelaufen. Hier gibt es nichts mehr zu prüfen."
     },
     "hunk": {
-      "include": "Diese Änderung einbeziehen",
-      "selectAll": "Alle auswählen",
-      "summary": "{{kept}} von {{total}} ausgewählt"
+      "keep": "Übernehmen",
+      "undo": "Verwerfen",
+      "reset": "Neu wählen",
+      "resetFromKeep": "Übernahme rückgängig machen",
+      "resetFromUndo": "Diese Änderung zurückholen",
+      "remaining": "Noch {{count}} zu prüfen"
     }
   }
 }

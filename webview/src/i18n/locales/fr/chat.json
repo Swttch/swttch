@@ -497,9 +497,12 @@
       "description": "Elle a peut-être reçu une réponse depuis le chat, ou elle a expiré à la fin de la session. Il n'y a plus rien à examiner ici."
     },
     "hunk": {
-      "include": "Inclure cette modification",
-      "selectAll": "Tout sélectionner",
-      "summary": "{{kept}} sur {{total}} sélectionnées"
+      "keep": "Garder",
+      "undo": "Annuler",
+      "reset": "Rechoisir",
+      "resetFromKeep": "Annuler la conservation de cette modification",
+      "resetFromUndo": "Rétablir cette modification",
+      "remaining": "{{count}} restante(s) à examiner"
     }
   }
 }

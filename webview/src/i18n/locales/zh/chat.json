@@ -497,9 +497,12 @@
       "description": "它可能已在聊天中被回应，或者在会话结束时已过期。这里没有需要审查的内容了。"
     },
     "hunk": {
-      "include": "包含此更改",
-      "selectAll": "全选",
-      "summary": "已选择 {{total}} 项中的 {{kept}} 项"
+      "keep": "应用",
+      "undo": "撤销",
+      "reset": "重新选择",
+      "resetFromKeep": "撤销应用并重新审查",
+      "resetFromUndo": "重新显示此更改",
+      "remaining": "还剩 {{count}} 项待审查"
     }
   }
 }

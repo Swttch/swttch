@@ -36,22 +36,29 @@ vi.mock('@/contexts/ApiContext', () => ({
 vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
   default: ({
     onEdit,
-    selection,
+    decisions,
   }: {
     onEdit: (contents: string) => void;
-    selection?: { toggle: (i: number) => void; total: number };
+    decisions?: {
+      keep: (i: number) => void;
+      undo: (i: number) => void;
+      reset: (i: number) => void;
+      total: number;
+    };
   }) => (
     <>
       <button type="button" onClick={() => onEdit('edited by hand\n')}>
         simulate-edit
       </button>
-      {/* One per hunk, so a test can drop exactly the one it means to. Absent
-          when the page passes no selection, which is itself worth asserting. */}
-      {selection
-        ? Array.from({ length: selection.total }, (_, i) => (
-            <button key={i} type="button" onClick={() => selection.toggle(i)}>
-              {`toggle-hunk-${i}`}
-            </button>
+      {/* Three per hunk, so a test can answer exactly the one it means to.
+          Absent when the page passes no decisions, which is worth asserting. */}
+      {decisions
+        ? Array.from({ length: decisions.total }, (_, i) => (
+            <span key={i}>
+              <button type="button" onClick={() => decisions.keep(i)}>{`keep-${i}`}</button>
+              <button type="button" onClick={() => decisions.undo(i)}>{`undo-${i}`}</button>
+              <button type="button" onClick={() => decisions.reset(i)}>{`reset-${i}`}</button>
+            </span>
           ))
         : null}
     </>
@@ -170,8 +177,9 @@ describe('DiffPage', () => {
       getDiffPreview.mockResolvedValue({ ...preview, hunks });
     });
 
-    it('keeps every hunk unless the reviewer says otherwise', async () => {
-      // They are reading a proposal, not assembling one.
+    it('writes every hunk when the reviewer answers none of them', async () => {
+      // They are reading a proposal, not assembling one: an untouched hunk is
+      // taken, which is what Confirm meant before any of this existed.
       render(<DiffPage toolUseId="toolu_1" />);
       fireEvent.click(await screen.findByText('diffPage.confirm'));
 
@@ -179,21 +187,44 @@ describe('DiffPage', () => {
       expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
     });
 
-    it('leaves out the hunk the reviewer dropped', async () => {
+    it('leaves out a hunk the reviewer undid', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('toggle-hunk-0'));
+      fireEvent.click(await screen.findByText('undo-0'));
       fireEvent.click(screen.getByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toEqual([hunkToAcceptedRange(hunks[1])]);
     });
 
-    // Confirming with nothing ticked would answer "no" under a button that says
-    // "Confirm". The reviewer has to say that with Cancel, which does say it.
-    it('will not confirm once every hunk is dropped', async () => {
+    it('keeps a hunk the reviewer kept', async () => {
+      // Keeping is the same outcome as leaving it alone; what changes is that
+      // the hunk stops being drawn as an open question.
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('toggle-hunk-0'));
-      fireEvent.click(screen.getByText('toggle-hunk-1'));
+      fireEvent.click(await screen.findByText('keep-0'));
+      fireEvent.click(screen.getByText('diffPage.confirm'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+    });
+
+    // Reset is the whole reason the decisions are replayed onto an untouched
+    // original rather than accumulated: an answered hunk has to be recoverable.
+    it('puts an undone hunk back when it is reset', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('undo-0'));
+      fireEvent.click(screen.getByText('reset-0'));
+      fireEvent.click(screen.getByText('diffPage.confirm'));
+
+      await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
+      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+    });
+
+    // Confirming with nothing left would answer "no" under a button that says
+    // "Confirm". The reviewer has to say that with Cancel, which does say it.
+    it('will not confirm once every hunk is undone', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('undo-0'));
+      fireEvent.click(screen.getByText('undo-1'));
 
       const confirm = screen.getByText('diffPage.confirm');
       expect(confirm).toBeDisabled();
@@ -202,20 +233,21 @@ describe('DiffPage', () => {
       expect(resolveDiff).not.toHaveBeenCalled();
     });
 
-    it('confirms again once a hunk is put back', async () => {
+    it('confirms again once an undone hunk is reset', async () => {
       // The button must come back, not stay dead for the rest of the review.
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('toggle-hunk-0'));
-      fireEvent.click(screen.getByText('toggle-hunk-1'));
-      fireEvent.click(screen.getByText('toggle-hunk-0'));
+      fireEvent.click(await screen.findByText('undo-0'));
+      fireEvent.click(screen.getByText('undo-1'));
+      fireEvent.click(screen.getByText('reset-0'));
 
       expect(screen.getByText('diffPage.confirm')).not.toBeDisabled();
     });
 
     it('ignores the picking when the reviewer cancels outright', async () => {
-      // Cancel is not "write what is ticked" — it answers no to the request.
+      // Cancel is not "write what is left" — it answers no to the request.
       render(<DiffPage toolUseId="toolu_1" />);
-      fireEvent.click(await screen.findByText('diffPage.cancel'));
+      fireEvent.click(await screen.findByText('keep-0'));
+      fireEvent.click(screen.getByText('diffPage.cancel'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
       expect(answer().acceptedRanges).toEqual([]);
@@ -232,7 +264,7 @@ describe('DiffPage', () => {
       render(<DiffPage toolUseId="toolu_1" />);
       await screen.findByText('diffPage.confirm');
 
-      expect(screen.queryByText('toggle-hunk-0')).not.toBeInTheDocument();
+      expect(screen.queryByText('keep-0')).not.toBeInTheDocument();
     });
 
     it('applies the whole proposal', async () => {

@@ -497,9 +497,12 @@
       "description": "チャットから回答されたか、セッションの終了時に期限切れになった可能性があります。ここで確認できるものは残っていません。"
     },
     "hunk": {
-      "include": "この変更を含める",
-      "selectAll": "すべて選択",
-      "summary": "{{total}} 件中 {{kept}} 件を選択"
+      "keep": "適用",
+      "undo": "取り消し",
+      "reset": "選び直す",
+      "resetFromKeep": "適用をやめて再検討する",
+      "resetFromUndo": "この変更をもう一度表示する",
+      "remaining": "残り {{count}} 件"
     }
   }
 }

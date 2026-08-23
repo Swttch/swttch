@@ -497,9 +497,12 @@
       "description": "Puede que se respondiera desde el chat o que caducara al terminar la sesión. Aquí ya no queda nada por revisar."
     },
     "hunk": {
-      "include": "Incluir este cambio",
-      "selectAll": "Seleccionar todo",
-      "summary": "{{kept}} de {{total}} seleccionados"
+      "keep": "Mantener",
+      "undo": "Descartar",
+      "reset": "Volver a elegir",
+      "resetFromKeep": "Deshacer el mantener este cambio",
+      "resetFromUndo": "Recuperar este cambio",
+      "remaining": "Queda(n) {{count}} por revisar"
     }
   }
 }

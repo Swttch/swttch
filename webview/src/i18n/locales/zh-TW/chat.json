@@ -497,9 +497,12 @@
       "description": "它可能已在聊天中被回應，或者在工作階段結束時已過期。這裡沒有需要審查的內容了。"
     },
     "hunk": {
-      "include": "包含此變更",
-      "selectAll": "全選",
-      "summary": "已選擇 {{total}} 項中的 {{kept}} 項"
+      "keep": "套用",
+      "undo": "復原",
+      "reset": "重新選擇",
+      "resetFromKeep": "取消套用並重新審查",
+      "resetFromUndo": "重新顯示此變更",
+      "remaining": "還剩 {{count}} 項待審查"
     }
   }
 }

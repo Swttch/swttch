@@ -497,9 +497,12 @@
       "description": "Ela pode ter sido respondida no chat ou ter expirado quando a sessão terminou. Não há mais nada para revisar aqui."
     },
     "hunk": {
-      "include": "Incluir esta alteração",
-      "selectAll": "Selecionar tudo",
-      "summary": "{{kept}} de {{total}} selecionadas"
+      "keep": "Manter",
+      "undo": "Descartar",
+      "reset": "Escolher de novo",
+      "resetFromKeep": "Desfazer a manutenção desta alteração",
+      "resetFromUndo": "Trazer esta alteração de volta",
+      "remaining": "{{count}} restante(s) para revisar"
     }
   }
 }

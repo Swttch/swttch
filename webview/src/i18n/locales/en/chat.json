@@ -501,9 +501,12 @@
       "description": "It may have been answered from the chat, or it expired when the session ended. There is nothing left to review here."
     },
     "hunk": {
-      "include": "Include this change",
-      "selectAll": "Select all",
-      "summary": "{{kept}} of {{total}} selected"
+      "keep": "Keep",
+      "undo": "Undo",
+      "reset": "Reset",
+      "resetFromKeep": "Undo keeping this change",
+      "resetFromUndo": "Bring this change back",
+      "remaining": "{{count}} left to review"
     }
   }
 }

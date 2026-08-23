@@ -68,6 +68,26 @@ export function firstChangedLine(hunk: Hunk): number {
 }
 
 /**
+ * The last proposed line [hunk] changes, 1-based.
+ *
+ * Where the decision control goes: at the bottom of the change, so it reads as
+ * belonging to the whole block rather than to the line it happens to sit on.
+ *
+ * Falls back to {@link firstChangedLine} for a hunk that only deletes, which
+ * adds no proposed line to anchor to.
+ */
+export function lastChangedLine(hunk: Hunk): number {
+  let line = hunk.newStart;
+  let last: number | undefined;
+  for (const entry of hunk.lines) {
+    if (entry.startsWith('+')) last = line;
+    // Only context and additions advance the proposed side's line count.
+    if (!entry.startsWith('-')) line++;
+  }
+  return last ?? firstChangedLine(hunk);
+}
+
+/**
  * The region [hunk] covers, as an {@link AcceptedRange}.
  *
  * Bridges the two coordinate systems in one place: a hunk counts from 1 and
