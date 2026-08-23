@@ -7,8 +7,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const sendControlResponseToProcess = vi.fn();
+const sendMessageToProcess = vi.fn();
 vi.mock('../../claude-process', () => ({
   sendControlResponseToProcess: (...args: unknown[]) => sendControlResponseToProcess(...args),
+  sendMessageToProcess: (...args: unknown[]) => sendMessageToProcess(...args),
 }));
 
 import { parseResolveDiffParams, resolveDiffReview } from '../resolveDiff';
@@ -42,6 +44,7 @@ function pending(toolUseId: string) {
 
 beforeEach(() => {
   sendControlResponseToProcess.mockClear();
+  sendMessageToProcess.mockClear();
   clearPreviews();
 });
 
@@ -219,6 +222,98 @@ describe('resolveDiffReview', () => {
     const [, , response] = sendControlResponseToProcess.mock.calls[0];
     expect(response.response.behavior).toBe('allow');
     expect(response.response.updatedInput).toEqual({});
+  });
+
+  it('tells Claude the proposal was edited, quoting what was applied (#305)', () => {
+    // The permission protocol cannot carry this: the transcript keeps the
+    // model's own tool_use, so without the reminder it goes on believing it
+    // wrote the value it proposed.
+    pending('t-notice');
+    const typed = original.replace('debug: false', 'debug: MAYBE');
+    resolveDiffReview(connections(), {
+      toolUseId: 't-notice', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
+    });
+
+    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
+    const [, sessionId, text] = sendMessageToProcess.mock.calls[0];
+    expect(sessionId).toBe('sess-1');
+    // Hidden from the chat: our webview strips this tag before rendering.
+    expect(text).toContain('<system-reminder>');
+    expect(text).toContain('The user edited your proposed change');
+    // Quotes the applied text rather than summarising it.
+    expect(text).toContain('debug: MAYBE');
+    expect(text).toContain('I have taken your edits into account.');
+  });
+
+  it('sends the reminder only after the request has been answered', () => {
+    // Arriving while the CLI waits on the control_response would read as an
+    // answer to a different question.
+    pending('t-order');
+    const typed = original.replace('debug: false', 'debug: MAYBE');
+    const order: string[] = [];
+    sendControlResponseToProcess.mockImplementation(() => order.push('control_response'));
+    sendMessageToProcess.mockImplementation(() => order.push('reminder'));
+
+    resolveDiffReview(connections(), {
+      toolUseId: 't-order', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG], editedContent: typed,
+    });
+
+    expect(order).toEqual(['control_response', 'reminder']);
+    sendControlResponseToProcess.mockReset();
+    sendMessageToProcess.mockReset();
+  });
+
+  it('reports only what the reviewer changed about the proposal', () => {
+    // Measured against the proposal, not the file: the model already knows
+    // what it asked for, and a Write's amended input is the whole file — once
+    // 3.7KB to say a single number had changed.
+    pending('t-narrow');
+    const typed = proposed.replace('debug: true', 'debug: MAYBE');
+    resolveDiffReview(connections(), {
+      toolUseId: 't-narrow', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
+    });
+
+    const [, , text] = sendMessageToProcess.mock.calls[0];
+    expect(text).toContain('debug: MAYBE');
+    // The untouched lines of the proposal stay out of it.
+    expect(text).not.toContain('pad-4');
+    expect(text).not.toContain('timeout: 60');
+  });
+
+  it('says nothing when the reviewer only picked hunks', () => {
+    // Picking hunks changes how much of the proposal lands, not what it says,
+    // so the model can still describe its own proposal truthfully.
+    pending('t-quiet');
+    resolveDiffReview(connections(), {
+      toolUseId: 't-quiet', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG],
+    });
+
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when an edit reproduced the proposal', () => {
+    // Typing and undoing leaves nothing to correct.
+    pending('t-quiet-noop');
+    resolveDiffReview(connections(), {
+      toolUseId: 't-quiet-noop', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
+    });
+
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
+  });
+
+  it('says nothing when the reviewer rejected the change', () => {
+    pending('t-quiet-deny');
+    resolveDiffReview(connections(), {
+      toolUseId: 't-quiet-deny', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
+      acceptedRanges: [], editedContent: original,
+    });
+
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
   });
 
   it('quotes the request id the CLI is waiting on', () => {

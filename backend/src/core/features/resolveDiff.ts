@@ -17,10 +17,11 @@
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview } from './diffPreview';
-import { buildPartialApproval } from './partialApproval';
+import { takePreview, type StoredPreview } from './diffPreview';
+import { buildPartialApproval, narrowToDifference } from './partialApproval';
+import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
 import type { AcceptedRange } from './hunks';
-import { sendControlResponseToProcess } from '../claude-process';
+import { sendControlResponseToProcess, sendMessageToProcess } from '../claude-process';
 
 export interface ResolveDiffParams {
   toolUseId: string;
@@ -132,6 +133,55 @@ export function resolveDiffReview(
   );
 
   notifyResolved(connections, params);
+
+  // Only for an edit. A hunk selection changes how much of the proposal lands,
+  // not what it says, and the model can still describe its own proposal
+  // truthfully; typing over it makes that description wrong.
+  //
+  // Measured before this existed: the model went on reporting the value it had
+  // proposed (20000) after the reviewer applied 15000. With the reminder it
+  // reports 15000, which is what is on disk.
+  if (edited !== undefined) {
+    tellClaudeAboutTheEdit(connections, params.sessionId, preview, edited);
+  }
+}
+
+/**
+ * Send the reminder about a corrected proposal, once the request itself has
+ * been answered.
+ *
+ * After, never before: the CLI is waiting on the control_response, and a user
+ * message that arrives while it waits would be read as an answer to a different
+ * question.
+ */
+function tellClaudeAboutTheEdit(
+  connections: ConnectionManager,
+  sessionId: string,
+  preview: StoredPreview,
+  applied: string,
+): void {
+  const notice = buildEditedProposalNotice(describeCorrection(preview.newContent, applied));
+  if (!notice) return;
+  sendMessageToProcess(connections, sessionId, notice);
+}
+
+/**
+ * What the reviewer changed about the PROPOSAL, narrowed to the lines that
+ * actually differ.
+ *
+ * Measured against `newContent` — what the model proposed — rather than against
+ * the file on disk, because that is the correction being reported: the model
+ * knows what it asked for, and needs to be told where the result departs from
+ * it. Diffing against the file instead would restate the whole edit, most of
+ * which the model already wrote itself.
+ *
+ * That also keeps a Write's notice short. Its amended input carries the entire
+ * file, so quoting it verbatim sent 3.7KB to say one number had changed.
+ */
+function describeCorrection(proposed: string, applied: string): EditedProposalChange | null {
+  const pair = narrowToDifference(proposed, applied);
+  if (!pair) return null;
+  return { oldText: pair.oldText, newText: pair.newText };
 }
 
 /**

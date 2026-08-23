@@ -83,7 +83,7 @@ export function buildPartialApproval(
  * The trim stops at a line boundary so the pair reads as whole lines in the
  * transcript rather than a fragment starting mid-token.
  */
-function narrowToDifference(
+export function narrowToDifference(
   oldContent: string,
   newContent: string,
 ): { oldText: string; newText: string } | null {

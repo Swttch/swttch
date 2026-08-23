@@ -9,8 +9,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const sendControlResponseToProcess = vi.fn();
+const sendMessageToProcess = vi.fn();
 vi.mock('../../claude-process', () => ({
   sendControlResponseToProcess: (...args: unknown[]) => sendControlResponseToProcess(...args),
+  sendMessageToProcess: (...args: unknown[]) => sendMessageToProcess(...args),
 }));
 
 import { resolveDiffHandler } from '../resolveDiff';
@@ -49,6 +51,7 @@ function message(payload: Record<string, unknown>) {
 
 beforeEach(() => {
   sendControlResponseToProcess.mockClear();
+  sendMessageToProcess.mockClear();
   clearPreviews();
 });
 
