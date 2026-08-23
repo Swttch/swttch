@@ -19,6 +19,8 @@
  * and the correction is worth least when it arrives last.
  */
 
+import { computeHunks } from './hunks';
+
 /** What the reviewer's correction changed, as it was written to the file. */
 export interface EditedProposalChange {
   /** The text as the file had it before this write. */
@@ -47,8 +49,7 @@ export function buildEditedProposalNotice(change: EditedProposalChange | null): 
     'This is what was actually written to the file:',
     '',
     '```diff',
-    ...change.oldText.split('\n').map((line) => `- ${line}`),
-    ...change.newText.split('\n').map((line) => `+ ${line}`),
+    ...renderDiff(change),
     '```',
     '',
     // Without this the assistant tends to narrate the correction back, which
@@ -60,4 +61,27 @@ export function buildEditedProposalNotice(change: EditedProposalChange | null): 
   ].join('\n');
 
   return `<system-reminder>\n${body}\n</system-reminder>`;
+}
+
+/**
+ * The change as unified-diff lines: the edited lines with a little context
+ * around each, rather than both versions in full.
+ *
+ * Measured before this: correcting three scattered places in one file produced
+ * an 80-line notice for three changed lines, because every unchanged line was
+ * listed once as removed and again as added.
+ *
+ * Falls back to the whole pair when the differ declines — it bails on inputs
+ * too large to diff cheaply, and a long notice still says something true where
+ * an empty one would say nothing at all.
+ */
+function renderDiff(change: EditedProposalChange): string[] {
+  const hunks = computeHunks(change.oldText, change.newText);
+  if (hunks && hunks.length > 0) {
+    return hunks.flatMap((hunk) => hunk.lines);
+  }
+  return [
+    ...change.oldText.split('\n').map((line) => `- ${line}`),
+    ...change.newText.split('\n').map((line) => `+ ${line}`),
+  ];
 }
