@@ -497,12 +497,14 @@
       "description": "Ela pode ter sido respondida no chat ou ter expirado quando a sessão terminou. Não há mais nada para revisar aqui."
     },
     "hunk": {
-      "keep": "Manter",
-      "undo": "Descartar",
-      "reset": "Escolher de novo",
-      "resetFromKeep": "Desfazer a manutenção desta alteração",
-      "resetFromUndo": "Trazer esta alteração de volta",
-      "remaining": "{{count}} restante(s) para revisar"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Descartar suas edições aqui e restaurar a proposta do Claude",
+      "backHint": "Reabrir esta seção mantendo suas edições",
+      "remaining": "{{count}} restante(s) para revisar",
+      "selectAll": "Select all"
     }
   }
 }

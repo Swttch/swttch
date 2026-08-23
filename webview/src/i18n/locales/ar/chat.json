@@ -505,12 +505,14 @@
       "description": "ربما تمت الإجابة عليه من المحادثة، أو انتهت صلاحيته عند انتهاء الجلسة. لم يعد هناك ما تراجعه هنا."
     },
     "hunk": {
-      "keep": "إبقاء",
-      "undo": "تراجع",
-      "reset": "إعادة الاختيار",
-      "resetFromKeep": "التراجع عن إبقاء هذا التغيير",
-      "resetFromUndo": "إعادة هذا التغيير",
-      "remaining": "بقي {{count}} للمراجعة"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "تجاهل تعديلاتك هنا واستعادة اقتراح Claude",
+      "backHint": "إعادة فتح هذا الجزء مع الاحتفاظ بتعديلاتك",
+      "remaining": "بقي {{count}} للمراجعة",
+      "selectAll": "Select all"
     }
   }
 }

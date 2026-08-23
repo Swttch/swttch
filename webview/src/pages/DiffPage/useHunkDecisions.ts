@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { hunkToAcceptedRange, type Hunk, type AcceptedRange } from '@/shared';
+import type { AcceptedRange } from '@/shared';
+import { blockToAcceptedRange, type ChangeBlock } from './changeBlocks';
 
 /**
  * What the reviewer has said about one hunk.
@@ -19,6 +20,12 @@ export interface HunkDecisions {
   undo(index: number): void;
   /** Put this hunk back in play, as if it had never been answered. */
   reset(index: number): void;
+  /** Accept every hunk at once. */
+  acceptAll(): void;
+  /** Put every hunk back in play, as if none had been answered. */
+  resetAll(): void;
+  /** Whether every hunk has been accepted. */
+  allAccepted: boolean;
   /** How many hunks are still waiting on the reviewer. */
   openCount: number;
   /** How many will be written. */
@@ -46,7 +53,7 @@ export interface HunkDecisions {
  * That is also what makes Reset possible: nothing is destroyed when a hunk is
  * answered, so putting it back is just dropping its entry here.
  */
-export function useHunkDecisions(hunks: readonly Hunk[]): HunkDecisions {
+export function useHunkDecisions(hunks: readonly ChangeBlock[]): HunkDecisions {
   const [decisions, setDecisions] = useState<ReadonlyMap<number, HunkDecision>>(
     () => new Map(),
   );
@@ -63,6 +70,14 @@ export function useHunkDecisions(hunks: readonly Hunk[]): HunkDecisions {
   const keep = useCallback((index: number) => set(index, 'keep'), [set]);
   const undo = useCallback((index: number) => set(index, 'undo'), [set]);
   const reset = useCallback((index: number) => set(index, undefined), [set]);
+
+  const acceptAll = useCallback(() => {
+    setDecisions(new Map(hunks.map((h) => [h.index, 'keep' as const])));
+  }, [hunks]);
+
+  // Back to undecided rather than to denied: clearing a selection should not
+  // itself be a decision, and nothing typed is lost this way.
+  const resetAll = useCallback(() => setDecisions(new Map()), []);
 
   const decisionFor = useCallback(
     (index: number) => decisions.get(index),
@@ -82,7 +97,7 @@ export function useHunkDecisions(hunks: readonly Hunk[]): HunkDecisions {
   const acceptedRanges = useMemo(
     // Ascending and non-overlapping, which is what the backend requires to
     // rebuild the file. computeHunks already emits them in order.
-    () => kept.map(hunkToAcceptedRange),
+    () => kept.map(blockToAcceptedRange),
     [kept],
   );
 
@@ -91,6 +106,9 @@ export function useHunkDecisions(hunks: readonly Hunk[]): HunkDecisions {
     keep,
     undo,
     reset,
+    acceptAll,
+    resetAll,
+    allAccepted: hunks.length > 0 && hunks.every((h) => decisions.get(h.index) === 'keep'),
     openCount,
     keptCount: kept.length,
     total: hunks.length,

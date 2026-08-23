@@ -497,12 +497,14 @@
       "description": "Puede que se respondiera desde el chat o que caducara al terminar la sesión. Aquí ya no queda nada por revisar."
     },
     "hunk": {
-      "keep": "Mantener",
-      "undo": "Descartar",
-      "reset": "Volver a elegir",
-      "resetFromKeep": "Deshacer el mantener este cambio",
-      "resetFromUndo": "Recuperar este cambio",
-      "remaining": "Queda(n) {{count}} por revisar"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Descartar tus ediciones aquí y restaurar la propuesta de Claude",
+      "backHint": "Reabrir esta sección conservando tus ediciones",
+      "remaining": "Queda(n) {{count}} por revisar",
+      "selectAll": "Select all"
     }
   }
 }

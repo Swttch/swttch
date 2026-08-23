@@ -11,7 +11,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { DiffPage } from '..';
-import { hunkToAcceptedRange, type Hunk } from '@/shared';
+// The same two the page uses to work out what the reviewer is deciding on, so
+// these tests expect what it will actually produce rather than a copy of it.
+import { parseDiffFromFile } from '@pierre/diffs';
+import { changeBlocksOf, blockToAcceptedRange } from '../changeBlocks';
+
+/** A file of [rows], newline-terminated the way a real one is. */
+function lines(rows: string[]): string {
+  return rows.map((row) => `${row}\n`).join('');
+}
 
 interface ResolveDiffCall {
   toolUseId: string;
@@ -38,7 +46,7 @@ vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
     onEdit,
     decisions,
   }: {
-    onEdit: (contents: string) => void;
+    onEdit: (contents: string, changes: readonly { range: unknown }[]) => void;
     decisions?: {
       keep: (i: number) => void;
       undo: (i: number) => void;
@@ -47,7 +55,16 @@ vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
     };
   }) => (
     <>
-      <button type="button" onClick={() => onEdit('edited by hand\n')}>
+      {/* The editor reports the whole text plus the ranges it replaced; the
+          range here covers hunk 0's lines so the page marks it as edited. */}
+      <button
+        type="button"
+        onClick={() =>
+          onEdit('edited by hand\n', [
+            { range: { start: { line: 9, character: 0 }, end: { line: 13, character: 0 } } },
+          ])
+        }
+      >
         simulate-edit
       </button>
       {/* Three per hunk, so a test can answer exactly the one it means to.
@@ -101,9 +118,12 @@ function answer(): ResolveDiffCall {
 }
 
 describe('DiffPage', () => {
-  it('shows the file under review', async () => {
+  it('says which file is under review, and that it is a diff', async () => {
+    // Named the way the tab is. Collapsed to a single strip above the approval
+    // prompt, a bare file name does not say what the strip IS — the word is
+    // what makes it read as a review rather than a second prompt.
     render(<DiffPage toolUseId="toolu_1" />);
-    expect(await screen.findByText('cart.js')).toBeInTheDocument();
+    expect(await screen.findByText('Diff: cart.js')).toBeInTheDocument();
   });
 
   it('applies without an edit when the reviewer only looked', async () => {
@@ -167,14 +187,32 @@ describe('DiffPage', () => {
    * assert the wire payload rather than the screen.
    */
   describe('per-hunk picking', () => {
-    // A change split in two, far enough apart to be unmistakable in a range list.
-    const hunks: Hunk[] = [
-      { index: 0, oldStart: 10, oldLines: 3, newStart: 10, newLines: 5, lines: [] },
-      { index: 1, oldStart: 40, oldLines: 2, newStart: 42, newLines: 2, lines: [] },
-    ];
+    /*
+     * A change split in two, far enough apart that no grouping could merge them.
+     *
+     * Given as file CONTENT rather than as a hunk list because that is what the
+     * page decides on: it diffs the two sides itself and attaches controls to
+     * what the renderer draws, so a hunk list handed to it would decide nothing.
+     */
+    const oldContent = lines(['a', 'b', 'c', 'ORIGINAL ONE', 'e', 'f', 'g', 'h', 'i', 'ORIGINAL TWO', 'k']);
+    const newContent = lines(['a', 'b', 'c', 'CHANGED ONE', 'e', 'f', 'g', 'h', 'i', 'CHANGED TWO', 'k']);
+
+    // What the page will find in that content, derived the same way it derives
+    // it — writing the ranges out by hand here would just be a second, unchecked
+    // copy of changeBlocksOf.
+    const blocks = changeBlocksOf(
+      parseDiffFromFile({ name: 'cart.js', contents: oldContent }, { name: 'cart.js', contents: newContent }),
+    );
+    const rangeOf = (i: number) => blockToAcceptedRange(blocks[i]);
 
     beforeEach(() => {
-      getDiffPreview.mockResolvedValue({ ...preview, hunks });
+      getDiffPreview.mockResolvedValue({ ...preview, oldContent, newContent });
+    });
+
+    // The rest of this block is meaningless if the content above collapses into
+    // one change, and it would still "pass" for the wrong reason.
+    it('is a change the page sees as two', () => {
+      expect(blocks).toHaveLength(2);
     });
 
     it('writes every hunk when the reviewer answers none of them', async () => {
@@ -184,7 +222,7 @@ describe('DiffPage', () => {
       fireEvent.click(await screen.findByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
-      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+      expect(answer().acceptedRanges).toEqual([rangeOf(0), rangeOf(1)]);
     });
 
     it('leaves out a hunk the reviewer undid', async () => {
@@ -193,7 +231,7 @@ describe('DiffPage', () => {
       fireEvent.click(screen.getByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
-      expect(answer().acceptedRanges).toEqual([hunkToAcceptedRange(hunks[1])]);
+      expect(answer().acceptedRanges).toEqual([rangeOf(1)]);
     });
 
     it('keeps a hunk the reviewer kept', async () => {
@@ -204,7 +242,7 @@ describe('DiffPage', () => {
       fireEvent.click(screen.getByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
-      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+      expect(answer().acceptedRanges).toEqual([rangeOf(0), rangeOf(1)]);
     });
 
     // Reset is the whole reason the decisions are replayed onto an untouched
@@ -216,7 +254,7 @@ describe('DiffPage', () => {
       fireEvent.click(screen.getByText('diffPage.confirm'));
 
       await waitFor(() => expect(resolveDiff).toHaveBeenCalled());
-      expect(answer().acceptedRanges).toEqual(hunks.map(hunkToAcceptedRange));
+      expect(answer().acceptedRanges).toEqual([rangeOf(0), rangeOf(1)]);
     });
 
     // Confirming with nothing left would answer "no" under a button that says
@@ -255,11 +293,142 @@ describe('DiffPage', () => {
   });
 
   /**
-   * A change the backend could not split — computeHunks answers null for one too
-   * large to diff, and stores an empty list. There is nothing to tick, so the
-   * decision is whole-file and no controls are offered.
+   * Folding the diff away without answering it.
+   *
+   * The same gesture the approval and question panels offer, and it has to mean
+   * the same thing here: the request stays open, only the code stops taking the
+   * screen.
    */
-  describe('a change with no hunks', () => {
+  describe('collapsing', () => {
+    /** The chevron beside the file name, by the label it wears. */
+    const toggle = () => screen.getByLabelText('promptPanel.collapse');
+
+    it('hides the diff', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      // Drawn by the surface, so its absence is the diff being gone rather than
+      // some wrapper losing its height.
+      expect(await screen.findByText('simulate-edit')).toBeInTheDocument();
+
+      fireEvent.click(toggle());
+      expect(screen.queryByText('simulate-edit')).not.toBeInTheDocument();
+    });
+
+    it('leaves the request open', async () => {
+      // Folding the diff away is not answering it. The request stays up — on
+      // the approval prompt this bar sits above, and here in the page itself,
+      // which must not have resolved anything on its way to being collapsed.
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('diffPage.confirm');
+
+      fireEvent.click(toggle());
+
+      // Establishes that the page really did collapse; without it this would
+      // pass against a page that ignores the chevron altogether.
+      expect(screen.queryByText('simulate-edit')).not.toBeInTheDocument();
+      expect(screen.getByText('Diff: cart.js')).toBeInTheDocument();
+      expect(resolveDiff).not.toHaveBeenCalled();
+    });
+
+    it('brings the diff back', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('simulate-edit');
+
+      fireEvent.click(toggle());
+      // Asserted on the way through, so this cannot pass by the diff never
+      // having gone anywhere — which is exactly how it passed against a page
+      // that had lost its collapse entirely.
+      expect(screen.queryByText('simulate-edit')).not.toBeInTheDocument();
+
+      // The label follows the state, so expanding is a different button to find.
+      fireEvent.click(screen.getByLabelText('promptPanel.expand'));
+      expect(screen.getByText('simulate-edit')).toBeInTheDocument();
+    });
+
+    /*
+     * Collapsed, this bar sits directly on top of the approval prompt, which
+     * asks the same question and has its own Yes/No. Showing Confirm, Cancel
+     * and the hunk count there as well is one decision offered twice.
+     */
+    it('shows the file and nothing else to answer with', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      const confirm = await screen.findByText('diffPage.confirm');
+      const controls = confirm.parentElement;
+
+      fireEvent.click(toggle());
+
+      expect(screen.getByText('Diff: cart.js')).toBeInTheDocument();
+      // Asserted as the class rather than with toBeVisible, which needs real
+      // CSS to know that Tailwind's `hidden` means display:none — jsdom loads
+      // none, so every element there reads as visible.
+      expect(controls?.className).toContain('hidden');
+    });
+
+    // A one-line strip is a small thing to ask someone to aim at, and with the
+    // controls hidden there is nothing else in it to hit by mistake.
+    it('expands again when the bar itself is clicked', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('simulate-edit');
+      fireEvent.click(toggle());
+
+      // The bar, not the chevron: same element the label is on now.
+      fireEvent.click(screen.getByLabelText('promptPanel.expand'));
+
+      expect(screen.getByText('simulate-edit')).toBeInTheDocument();
+    });
+
+    it('is reachable from the keyboard', async () => {
+      // The bar is a div wearing role=button, so Enter and Space have to be
+      // wired by hand — a real button would have had them.
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('simulate-edit');
+      fireEvent.click(toggle());
+
+      fireEvent.keyDown(screen.getByLabelText('promptPanel.expand'), { key: 'Enter' });
+
+      expect(screen.getByText('simulate-edit')).toBeInTheDocument();
+    });
+
+    /*
+     * The overlay sizes itself to this page, so a collapsed page that still
+     * claims the full height leaves a full-screen box with nothing in it —
+     * which is what shipped first, and hid the very conversation the collapse
+     * was meant to uncover.
+     */
+    it('stops claiming the whole height once collapsed', async () => {
+      const { container } = render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('diffPage.confirm');
+      const page = container.firstElementChild as HTMLElement;
+      expect(page.className).toContain('h-full');
+
+      fireEvent.click(toggle());
+      expect(page.className).not.toContain('h-full');
+    });
+  });
+
+  /**
+   * A proposal that changes nothing.
+   *
+   * The one case with no blocks to decide on. Every real change has at least
+   * one — an addition and a deletion are both drawn as a block, so "no blocks"
+   * means the two sides are identical, which is a proposal Claude can still
+   * make. Answering it whole is the only thing left to do with it.
+   */
+  describe('a proposal that changes nothing', () => {
+    const contents = lines(['a', 'b', 'c']);
+
+    beforeEach(() => {
+      getDiffPreview.mockResolvedValue({ ...preview, oldContent: contents, newContent: contents });
+    });
+
+    // Without this, the two below would pass just as happily against a change
+    // that DOES split — and would then be asserting nothing they claim to.
+    it('is a proposal the page finds no blocks in', () => {
+      const blocks = changeBlocksOf(
+        parseDiffFromFile({ name: 'cart.js', contents }, { name: 'cart.js', contents }),
+      );
+      expect(blocks).toHaveLength(0);
+    });
+
     it('offers no per-hunk controls', async () => {
       render(<DiffPage toolUseId="toolu_1" />);
       await screen.findByText('diffPage.confirm');
@@ -303,7 +472,9 @@ describe('DiffPage', () => {
       render(<DiffPage toolUseId="toolu_1" />);
       await screen.findByText('diffPage.unavailable.title');
 
-      expect(screen.queryByText('cart.js')).not.toBeInTheDocument();
+      // Matched loosely: the header renders the name with a prefix, and an exact
+      // 'cart.js' would miss it and pass while the header was still on screen.
+      expect(screen.queryByText(/cart\.js/)).not.toBeInTheDocument();
       expect(screen.queryByText('diffPage.confirm')).not.toBeInTheDocument();
     });
   });

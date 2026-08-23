@@ -1,12 +1,21 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+// The same arrow CollapseToggle draws when collapsed, so the two states of this
+// header do not disagree about which way it points.
+import { ChevronUpIcon } from '@heroicons/react/20/solid';
 import { useParams } from 'react-router-dom';
 import { useApi } from '@/contexts/ApiContext';
 import { useTranslation } from '@/i18n';
 import { useStaticDocumentTitle } from '@/hooks/useStaticDocumentTitle';
 import { useHunkDecisions } from './useHunkDecisions';
+import { changeBlocksOf } from './changeBlocks';
+import { useEditedProposal } from './useEditedProposal';
+import { SelectAllHunks } from './SelectAllHunks';
+import { parseDiffFromFile } from '@pierre/diffs';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
+import { CollapseToggle } from '../ChatPage/PromptPanelChrome/CollapseToggle';
+import { useCollapsiblePanel } from '../ChatPage/PromptPanelChrome/useCollapsiblePanel';
 
 /**
  * Loaded lazily because the renderer is large and most sessions never open this
@@ -33,6 +42,15 @@ interface Props {
    * Separate from `onClose`, which both surfaces pass.
    */
   isOverlay?: boolean;
+  /**
+   * Told when the reviewer folds the diff away, or unfolds it again.
+   *
+   * A host that draws this page over another screen has to know: collapsed, the
+   * page is a header and the rest of that screen is meant to be usable — read,
+   * scrolled, clicked. The host is the only one that can stop covering it.
+   * Absent for a page that fills a window of its own, where nothing is behind it.
+   */
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 /**
@@ -55,13 +73,20 @@ export function DiffPage(props: Props) {
   const closeWindow = useCloseDiffWindow();
   const close = props.onClose ?? closeWindow;
   const isOverlay = props.isOverlay ?? false;
+  // Fold the diff away without answering, the way the approval and question
+  // panels do — the request stays open, the screen behind it becomes readable.
+  const { collapsed, toggle: toggleCollapsed } = useCollapsiblePanel();
+
+  // "Becomes readable" is not this page's to deliver: whatever is behind it is
+  // covered by the host, so the host is told and gets out of the way.
+  const { onCollapsedChange } = props;
+  useEffect(() => {
+    onCollapsedChange?.(collapsed);
+  }, [collapsed, onCollapsedChange]);
 
   const [preview, setPreview] = useState<DiffPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState(false);
-  // The proposed side as the reviewer has it now. Undefined until they touch
-  // it, which is what tells the backend to let Claude's own call through.
-  const editedRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!toolUseId) {
@@ -83,22 +108,43 @@ export function DiffPage(props: Props) {
     };
   }, [api, toolUseId]);
 
-  const handleEdit = useCallback((contents: string) => {
-    editedRef.current = contents;
-  }, []);
-
   const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
-  const decisions = useHunkDecisions(hunks);
+  // The proposed side as the reviewer has it now, and which parts they typed
+  // into. The diff is rendered from this, so an edit survives resolving a block
+  // elsewhere in the file — rebuilding from the untouched proposal is what used
+  // to drop every edit but the last.
+  const edited = useEditedProposal(preview?.newContent ?? '', hunks);
+
+  /*
+   * The blocks the reviewer decides on, taken from what the RENDERER draws
+   * rather than from the backend's hunks.
+   *
+   * The two disagree: `computeHunks` merges edits that sit within three lines
+   * of each other, the renderer keeps them apart. Deciding by the backend's
+   * units left visible changes with no controls at all — four blocks on screen,
+   * two pairs of buttons.
+   */
+  const blocks = useMemo(() => {
+    if (!preview) return [];
+    const name = preview.filePath.split(/[\\/]/).pop() ?? preview.filePath;
+    return changeBlocksOf(
+      parseDiffFromFile(
+        { name, contents: preview.oldContent },
+        { name, contents: preview.newContent },
+      ),
+    );
+  }, [preview]);
+
+  const decisions = useHunkDecisions(blocks);
 
   /*
    * Whether the reviewer can pick parts of this change.
    *
-   * They cannot when the backend could not split it — computeHunks answers null
-   * for a change too large to diff, and stores an empty list. There is nothing
-   * to tick there, and offering controls that decide nothing would be worse
-   * than offering none.
+   * They cannot when the change has no separable blocks — a whole-file rewrite
+   * with nothing unchanged between edits. There is nothing to pick apart there,
+   * and offering controls that decide nothing would be worse than none.
    */
-  const canPickHunks = hunks.length > 0;
+  const canPickHunks = blocks.length > 0;
 
   /*
    * The regions to write.
@@ -133,7 +179,7 @@ export function DiffPage(props: Props) {
           acceptedRanges: keepEdits ? acceptedRanges : [],
           // Reject discards any edit: refusing a change is not a way to write
           // a different one.
-          editedContent: keepEdits ? editedRef.current : undefined,
+          editedContent: keepEdits && edited.isEdited ? edited.contents : undefined,
         });
         // Answered, so the window has done its job. In an IDE the backend closes
         // the tab; elsewhere this is what dismisses it.
@@ -142,7 +188,7 @@ export function DiffPage(props: Props) {
         setResolving(false);
       }
     },
-    [api, preview, toolUseId, close, acceptedRanges],
+    [api, preview, toolUseId, close, acceptedRanges, edited.isEdited, edited.contents],
   );
 
   const fileName = useMemo(
@@ -176,15 +222,64 @@ export function DiffPage(props: Props) {
   if (!preview) return <DiffUnavailable onClose={close} />;
 
   return (
-    <div className="flex h-full w-full flex-col bg-bg-primary">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border-default px-4 py-3">
-        <span
-          className="truncate text-sm font-medium text-text-primary"
-          title={preview.filePath}
-        >
-          {fileName}
+    // Collapsed, the page is only as tall as its header, so a host that sizes
+    // itself to this — the browser overlay — shrinks with it. Expanded it takes
+    // the height it is given, whether that is a window or an overlay's ceiling.
+    <div className={`flex w-full min-h-0 flex-col bg-bg-primary ${collapsed ? '' : 'h-full flex-1'}`}>
+      {/*
+        Collapsed, the whole bar expands the diff again — the chevron is a hint
+        about what will happen, not the only thing that can be hit. A one-line
+        strip is a small target to ask someone to aim at, and there is nothing
+        else in the bar to hit by mistake once the controls are hidden.
+      */}
+      <header
+        className={`flex shrink-0 items-center justify-between gap-4 border-b border-border-default px-4 ${
+          collapsed ? 'cursor-pointer py-1.5 hover:bg-surface-hover' : 'py-3'
+        }`}
+        // Collapsed the bar IS the control, so it carries the role and the name
+        // the chevron used to — otherwise the only way back would be a strip
+        // with nothing announcing what it does, reachable by mouse alone.
+        {...(collapsed
+          ? {
+              role: 'button',
+              tabIndex: 0,
+              'aria-expanded': false,
+              'aria-label': t('promptPanel.expand'),
+              onClick: toggleCollapsed,
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  toggleCollapsed();
+                }
+              },
+            }
+          : {})}
+      >
+        <span className="flex min-w-0 items-center gap-1">
+          {/* Collapsed the header owns the click, so the button would be a
+              button inside a clickable bar — two hit targets doing one thing.
+              Left as the arrow alone, which is what it was drawing anyway. */}
+          {collapsed ? (
+            <ChevronUpIcon className="h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
+          ) : (
+            <CollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />
+          )}
+          <span
+            className="truncate text-sm font-medium text-text-primary"
+            title={preview.filePath}
+          >
+            {`${DIFF_TITLE_PREFIX}: ${fileName}`}
+          </span>
         </span>
-        <div className="flex shrink-0 items-center gap-2">
+        {/*
+          Hidden while collapsed.
+
+          Folded away, this bar sits directly above the approval prompt, which
+          asks the same question with its own Yes/No. Two sets of controls for
+          one decision, stacked, is a worse thing to look at than a strip that
+          only says which file is waiting — and the diff is one click away.
+        */}
+        <div className={`flex shrink-0 items-center gap-2 ${collapsed ? 'hidden' : ''}`}>
           {/*
             A count of what is still open, not a control.
 
@@ -192,11 +287,16 @@ export function DiffPage(props: Props) {
             says which ones are left; this only puts a number on it for a long
             file where the remaining ones are off-screen.
           */}
-          {canPickHunks && decisions.openCount > 0 && (
+          {canPickHunks && (
             <>
-              <span className="text-xs text-text-tertiary">
-                {t('diffPage.hunk.remaining', { count: decisions.openCount })}
-              </span>
+              {/* Before the checkbox, so the checkbox keeps its place as the
+                  count appears and disappears. */}
+              {decisions.openCount > 0 && (
+                <span className="text-xs text-text-tertiary">
+                  {t('diffPage.hunk.remaining', { count: decisions.openCount })}
+                </span>
+              )}
+              <SelectAllHunks decisions={decisions} disabled={resolving} />
               <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
             </>
           )}
@@ -226,6 +326,10 @@ export function DiffPage(props: Props) {
         header — the file name and the two decisions — stays put however long
         the change is.
       */}
+      {/* Collapsed, the header IS the panel: the file name, what is left to
+          review, and both decisions all live there, so folding the diff away
+          hides the code without hiding the question. */}
+      {!collapsed && (
       <div className="min-h-0 flex-1 overflow-auto">
         <Suspense
           fallback={
@@ -234,13 +338,17 @@ export function DiffPage(props: Props) {
         >
           <ReviewDiffSurface
             preview={preview}
-            onEdit={handleEdit}
+            proposedContents={edited.contents}
+            onEdit={edited.applyEdit}
+            isHunkEdited={edited.isHunkEdited}
+            onResetHunk={edited.resetHunk}
             // Omitted when there is no split to pick from, which is what keeps
             // the per-hunk controls off that diff entirely.
             decisions={canPickHunks ? decisions : undefined}
           />
         </Suspense>
       </div>
+      )}
     </div>
   );
 }

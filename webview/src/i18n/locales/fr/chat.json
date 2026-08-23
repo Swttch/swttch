@@ -497,12 +497,14 @@
       "description": "Elle a peut-être reçu une réponse depuis le chat, ou elle a expiré à la fin de la session. Il n'y a plus rien à examiner ici."
     },
     "hunk": {
-      "keep": "Garder",
-      "undo": "Annuler",
-      "reset": "Rechoisir",
-      "resetFromKeep": "Annuler la conservation de cette modification",
-      "resetFromUndo": "Rétablir cette modification",
-      "remaining": "{{count}} restante(s) à examiner"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Abandonner vos modifications ici et rétablir la proposition de Claude",
+      "backHint": "Rouvrir cette section en conservant vos modifications",
+      "remaining": "{{count}} restante(s) à examiner",
+      "selectAll": "Select all"
     }
   }
 }

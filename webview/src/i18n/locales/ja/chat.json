@@ -497,12 +497,14 @@
       "description": "チャットから回答されたか、セッションの終了時に期限切れになった可能性があります。ここで確認できるものは残っていません。"
     },
     "hunk": {
-      "keep": "適用",
-      "undo": "取り消し",
-      "reset": "選び直す",
-      "resetFromKeep": "適用をやめて再検討する",
-      "resetFromUndo": "この変更をもう一度表示する",
-      "remaining": "残り {{count}} 件"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "ここでの編集を破棄して、Claudeの提案に戻します",
+      "backHint": "編集内容を保持したまま、この変更箇所をもう一度開きます",
+      "remaining": "残り {{count}} 件",
+      "selectAll": "Select all"
     }
   }
 }

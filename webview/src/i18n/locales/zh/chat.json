@@ -497,12 +497,14 @@
       "description": "它可能已在聊天中被回应，或者在会话结束时已过期。这里没有需要审查的内容了。"
     },
     "hunk": {
-      "keep": "应用",
-      "undo": "撤销",
-      "reset": "重新选择",
-      "resetFromKeep": "撤销应用并重新审查",
-      "resetFromUndo": "重新显示此更改",
-      "remaining": "还剩 {{count}} 项待审查"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "放弃你在此处的编辑，恢复 Claude 的提议",
+      "backHint": "重新打开这处更改，并保留你的编辑",
+      "remaining": "还剩 {{count}} 项待审查",
+      "selectAll": "Select all"
     }
   }
 }

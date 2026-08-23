@@ -501,12 +501,14 @@
       "description": "It may have been answered from the chat, or it expired when the session ended. There is nothing left to review here."
     },
     "hunk": {
-      "keep": "Keep",
-      "undo": "Undo",
+      "accept": "Accept",
+      "deny": "Deny",
       "reset": "Reset",
-      "resetFromKeep": "Undo keeping this change",
-      "resetFromUndo": "Bring this change back",
-      "remaining": "{{count}} left to review"
+      "back": "Back",
+      "resetHint": "Discard your edits here and restore Claude's proposal",
+      "backHint": "Reopen this hunk, keeping your edits",
+      "remaining": "{{count}} left to review",
+      "selectAll": "Select all"
     }
   }
 }

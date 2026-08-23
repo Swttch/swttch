@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileDiff, EditProvider, type FileContents } from '@pierre/diffs/react';
-import type { DiffLineAnnotation } from '@pierre/diffs';
+import type { DiffLineAnnotation, EditorChange, EditorChangeEvent } from '@pierre/diffs';
 import { parseDiffFromFile } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
 import { useThemeContext } from '@/contexts/ThemeContext';
@@ -8,7 +8,7 @@ import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { HunkActions } from '../DiffPage/HunkActions';
 import type { HunkDecisions } from '../DiffPage/useHunkDecisions';
 import { useResolvedDiff } from '../DiffPage/useResolvedDiff';
-import { lastChangedLine } from '@/shared';
+import { changeBlocksOf, blockAnchorLine } from '../DiffPage/changeBlocks';
 
 /** What a hunk's annotation carries: which hunk its control decides. */
 interface HunkAnnotation {
@@ -17,14 +17,24 @@ interface HunkAnnotation {
 
 interface Props {
   preview: DiffPreview;
-  /** Called with the proposed side's full text after every edit. */
-  onEdit: (contents: string) => void;
+  /**
+   * The proposed side as it stands, edits included. The diff is built from
+   * this rather than from `preview.newContent`, so resolving one hunk does not
+   * rebuild the file from the untouched proposal and drop every edit with it.
+   */
+  proposedContents: string;
+  /** Called with the full text and the ranges that changed, after every edit. */
+  onEdit: (contents: string, changes: readonly EditorChange[]) => void;
   /**
    * What the reviewer has answered per hunk, and how to answer. Absent draws no
    * per-hunk controls at all, which is the case for a change the backend could
    * not split — there the decision is whole-file.
    */
   decisions?: HunkDecisions;
+  /** Whether the reviewer has typed inside a given hunk. */
+  isHunkEdited?: (hunkIndex: number) => boolean;
+  /** Discard what was typed in a hunk, back to what Claude proposed. */
+  onResetHunk?: (hunkIndex: number) => void;
 }
 
 /**
@@ -37,8 +47,41 @@ interface Props {
  * as it is on disk, where typing would look like an edit while changing
  * nothing.
  */
-export default function ReviewDiffSurface({ preview, onEdit, decisions }: Props) {
+export default function ReviewDiffSurface({
+  preview,
+  proposedContents,
+  onEdit,
+  decisions,
+  isHunkEdited = () => false,
+  onResetHunk = () => {},
+}: Props) {
   const { isDark } = useThemeContext();
+
+  const renderAnnotation = useCallback(
+    (annotation: DiffLineAnnotation<HunkAnnotation>) => {
+      if (!decisions) return null;
+      const index = annotation.metadata.hunkIndex;
+      return (
+        <HunkActions
+          decision={decisions.decisionFor(index)}
+          isEdited={isHunkEdited(index)}
+          onAccept={() => decisions.keep(index)}
+          onDeny={() => decisions.undo(index)}
+          onReset={() => onResetHunk(index)}
+          onBack={() => decisions.reset(index)}
+        />
+      );
+    },
+    [decisions, isHunkEdited, onResetHunk],
+  );
+
+  const originalDiff = useMemo(() => {
+    const name = preview.filePath.split(/[\\/]/).pop() ?? preview.filePath;
+    const oldFile: FileContents = { name, contents: preview.oldContent };
+    // The edited text, not the proposal: see `proposedContents`.
+    const newFile: FileContents = { name, contents: proposedContents };
+    return parseDiffFromFile(oldFile, newFile);
+  }, [preview.filePath, preview.oldContent, proposedContents]);
 
   /*
    * One control per hunk, anchored to the first proposed line it touches.
@@ -53,35 +96,14 @@ export default function ReviewDiffSurface({ preview, onEdit, decisions }: Props)
    */
   const lineAnnotations = useMemo<DiffLineAnnotation<HunkAnnotation>[]>(() => {
     if (!decisions) return [];
-    return preview.hunks.map((hunk) => ({
+    // From the ORIGINAL diff, not the resolved one: an answered block collapses
+    // to context there, and its control has to stay put so Back can reach it.
+    return changeBlocksOf(originalDiff).map((block) => ({
       side: 'additions' as const,
-      lineNumber: lastChangedLine(hunk),
-      metadata: { hunkIndex: hunk.index },
+      lineNumber: blockAnchorLine(block),
+      metadata: { hunkIndex: block.index },
     }));
-  }, [decisions, preview.hunks]);
-
-  const renderAnnotation = useCallback(
-    (annotation: DiffLineAnnotation<HunkAnnotation>) => {
-      if (!decisions) return null;
-      const index = annotation.metadata.hunkIndex;
-      return (
-        <HunkActions
-          decision={decisions.decisionFor(index)}
-          onKeep={() => decisions.keep(index)}
-          onUndo={() => decisions.undo(index)}
-          onReset={() => decisions.reset(index)}
-        />
-      );
-    },
-    [decisions],
-  );
-
-  const originalDiff = useMemo(() => {
-    const name = preview.filePath.split(/[\\/]/).pop() ?? preview.filePath;
-    const oldFile: FileContents = { name, contents: preview.oldContent };
-    const newFile: FileContents = { name, contents: preview.newContent };
-    return parseDiffFromFile(oldFile, newFile);
-  }, [preview.filePath, preview.oldContent, preview.newContent]);
+  }, [decisions, originalDiff]);
 
   // An answered hunk collapses to context, so what stays on screen is what is
   // left to decide. Replayed from the original every time — see useResolvedDiff.
@@ -97,7 +119,8 @@ export default function ReviewDiffSurface({ preview, onEdit, decisions }: Props)
 
   const editorOptions = useMemo(
     () => ({
-      onChange: (file: FileContents) => onEdit(file.contents),
+      onChange: (file: FileContents, _annotations: unknown, event: EditorChangeEvent<unknown>) =>
+        onEdit(file.contents, event.changes),
     }),
     [onEdit],
   );

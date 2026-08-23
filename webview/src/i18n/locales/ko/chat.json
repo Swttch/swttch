@@ -497,12 +497,14 @@
       "description": "채팅에서 먼저 응답했거나, 세션이 끝나며 만료됐을 수 있어요. 여기서 검토할 내용은 남아있지 않아요."
     },
     "hunk": {
-      "keep": "적용",
-      "undo": "되돌리기",
-      "reset": "다시 선택",
-      "resetFromKeep": "적용을 취소하고 다시 검토",
-      "resetFromUndo": "이 변경을 다시 표시",
-      "remaining": "검토할 항목 {{count}}개"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "편집한 내용을 버리고 Claude가 제안한 내용으로 되돌립니다",
+      "backHint": "편집한 내용은 두고 이 부분을 다시 검토합니다",
+      "remaining": "검토할 항목 {{count}}개",
+      "selectAll": "모두 선택"
     }
   }
 }

@@ -497,12 +497,14 @@
       "description": "它可能已在聊天中被回應，或者在工作階段結束時已過期。這裡沒有需要審查的內容了。"
     },
     "hunk": {
-      "keep": "套用",
-      "undo": "復原",
-      "reset": "重新選擇",
-      "resetFromKeep": "取消套用並重新審查",
-      "resetFromUndo": "重新顯示此變更",
-      "remaining": "還剩 {{count}} 項待審查"
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "捨棄你在此處的編輯，還原 Claude 的提議",
+      "backHint": "重新開啟這處變更，並保留你的編輯",
+      "remaining": "還剩 {{count}} 項待審查",
+      "selectAll": "Select all"
     }
   }
 }
