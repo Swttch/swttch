@@ -303,8 +303,16 @@ describe('DiffPage', () => {
     /** The chevron beside the file name, by the label it wears. */
     const toggle = () => screen.getByLabelText('promptPanel.collapse');
 
+    /**
+     * The page as an overlay, which is the only place folding means anything.
+     *
+     * A page filling a window of its own covers nothing, so there is nothing to
+     * uncover — see the sibling describe, which asserts it does not offer to.
+     */
+    const renderOverlay = () => render(<DiffPage toolUseId="toolu_1" isOverlay />);
+
     it('hides the diff', async () => {
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       // Drawn by the surface, so its absence is the diff being gone rather than
       // some wrapper losing its height.
       expect(await screen.findByText('simulate-edit')).toBeInTheDocument();
@@ -317,7 +325,7 @@ describe('DiffPage', () => {
       // Folding the diff away is not answering it. The request stays up — on
       // the approval prompt this bar sits above, and here in the page itself,
       // which must not have resolved anything on its way to being collapsed.
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       await screen.findByText('diffPage.confirm');
 
       fireEvent.click(toggle());
@@ -330,7 +338,7 @@ describe('DiffPage', () => {
     });
 
     it('brings the diff back', async () => {
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       await screen.findByText('simulate-edit');
 
       fireEvent.click(toggle());
@@ -350,7 +358,7 @@ describe('DiffPage', () => {
      * and the hunk count there as well is one decision offered twice.
      */
     it('shows the file and nothing else to answer with', async () => {
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       const confirm = await screen.findByText('diffPage.confirm');
       const controls = confirm.parentElement;
 
@@ -366,7 +374,7 @@ describe('DiffPage', () => {
     // A one-line strip is a small thing to ask someone to aim at, and with the
     // controls hidden there is nothing else in it to hit by mistake.
     it('expands again when the bar itself is clicked', async () => {
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       await screen.findByText('simulate-edit');
       fireEvent.click(toggle());
 
@@ -379,7 +387,7 @@ describe('DiffPage', () => {
     it('is reachable from the keyboard', async () => {
       // The bar is a div wearing role=button, so Enter and Space have to be
       // wired by hand — a real button would have had them.
-      render(<DiffPage toolUseId="toolu_1" />);
+      renderOverlay();
       await screen.findByText('simulate-edit');
       fireEvent.click(toggle());
 
@@ -395,13 +403,38 @@ describe('DiffPage', () => {
      * was meant to uncover.
      */
     it('stops claiming the whole height once collapsed', async () => {
-      const { container } = render(<DiffPage toolUseId="toolu_1" />);
+      const { container } = renderOverlay();
       await screen.findByText('diffPage.confirm');
       const page = container.firstElementChild as HTMLElement;
       expect(page.className).toContain('h-full');
 
       fireEvent.click(toggle());
       expect(page.className).not.toContain('h-full');
+    });
+  });
+
+  /**
+   * A page filling a window of its own — an editor tab, a browser tab.
+   *
+   * Folding is about uncovering what the review is drawn over, and here that is
+   * nothing. Offered anyway, it emptied the window: a header on a blank screen,
+   * the diff gone and nothing revealed in its place.
+   */
+  describe('in a window of its own', () => {
+    it('does not offer to fold the diff away', async () => {
+      render(<DiffPage toolUseId="toolu_1" />);
+      await screen.findByText('diffPage.confirm');
+
+      expect(screen.queryByLabelText('promptPanel.collapse')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('promptPanel.expand')).not.toBeInTheDocument();
+    });
+
+    it('keeps the diff and the decisions on screen', async () => {
+      // The state the missing control protects: everything stays where it is.
+      render(<DiffPage toolUseId="toolu_1" />);
+
+      expect(await screen.findByText('simulate-edit')).toBeInTheDocument();
+      expect(screen.getByText('diffPage.confirm')).toBeInTheDocument();
     });
   });
 

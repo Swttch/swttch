@@ -75,7 +75,18 @@ export function DiffPage(props: Props) {
   const isOverlay = props.isOverlay ?? false;
   // Fold the diff away without answering, the way the approval and question
   // panels do — the request stays open, the screen behind it becomes readable.
-  const { collapsed, toggle: toggleCollapsed } = useCollapsiblePanel();
+  const { collapsed: wantsCollapse, toggle: toggleCollapsed } = useCollapsiblePanel();
+
+  /*
+   * Folding is an overlay's gesture only.
+   *
+   * The point of it is to uncover what the review is drawn over. A page filling
+   * a window of its own — an editor tab, a browser tab — covers nothing, so
+   * collapsing there just empties the window: a header on a blank screen, with
+   * the diff it was showing gone and nothing revealed in its place.
+   */
+  const canCollapse = isOverlay;
+  const collapsed = canCollapse && wantsCollapse;
 
   // "Becomes readable" is not this page's to deliver: whatever is behind it is
   // covered by the host, so the host is told and gets out of the way.
@@ -259,9 +270,13 @@ export function DiffPage(props: Props) {
           {/* Collapsed the header owns the click, so the button would be a
               button inside a clickable bar — two hit targets doing one thing.
               Left as the arrow alone, which is what it was drawing anyway. */}
-          {collapsed ? (
+          {collapsed && (
             <ChevronUpIcon className="h-4 w-4 shrink-0 text-text-tertiary" aria-hidden />
-          ) : (
+          )}
+          {/* Absent where folding does nothing: a control that cannot act is
+              worse than none, and this one would look like the diff is about to
+              go somewhere. */}
+          {canCollapse && !collapsed && (
             <CollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />
           )}
           <span
