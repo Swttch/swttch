@@ -4,6 +4,7 @@ import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
 import type { FileSuggestionConfig } from '@/types/claude-settings';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Edits the Claude `fileSuggestion` command — the shell command that builds the
@@ -12,6 +13,7 @@ import type { FileSuggestionConfig } from '@/types/claude-settings';
  * SettingsPage/CLAUDE.md. Reads/writes the active scope tab. Issue #201.
  */
 export function FileSuggestionRow() {
+  const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting } = useClaudeSettings();
 
@@ -35,6 +37,7 @@ export function FileSuggestionRow() {
     <SettingRow
       label="fileSuggestion"
       description={t('general.fileSuggestion.description')}
+      isOverridden={isOverridden('fileSuggestion')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

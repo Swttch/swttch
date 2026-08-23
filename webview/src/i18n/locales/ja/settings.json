@@ -536,6 +536,8 @@
     "claudeNative": "Claude Code ネイティブ設定",
     "sponsorLabel": "ス",
     "claudeNativeLabel": "ク",
+    "projectOverride": "プロジェクト設定がこの値を上書きします。ここで変更しても反映されません",
+    "projectOverrideLabel": "プ",
     "openDocs": "ドキュメントを開く"
   },
   "ide": {

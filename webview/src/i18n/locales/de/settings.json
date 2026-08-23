@@ -536,6 +536,8 @@
     "claudeNative": "Claude Code native Einstellung",
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
+    "projectOverride": "Das Projekt überschreibt diesen Wert. Eine Änderung hier hat keine Wirkung",
+    "projectOverrideLabel": "P",
     "openDocs": "Doku öffnen"
   },
   "ide": {

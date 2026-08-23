@@ -536,6 +536,8 @@
     "claudeNative": "Claude Code 原生设置",
     "sponsorLabel": "赞",
     "claudeNativeLabel": "原",
+    "projectOverride": "项目设置会覆盖此值。在这里修改不会生效",
+    "projectOverrideLabel": "项",
     "openDocs": "打开文档"
   },
   "ide": {

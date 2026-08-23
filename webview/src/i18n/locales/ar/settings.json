@@ -536,6 +536,8 @@
     "claudeNative": "إعداد Claude Code الأصلي",
     "sponsorLabel": "ر",
     "claudeNativeLabel": "ك",
+    "projectOverride": "إعدادات المشروع تتجاوز هذه القيمة. تغييرها هنا لا يؤثر في شيء",
+    "projectOverrideLabel": "م",
     "openDocs": "فتح المستندات"
   },
   "ide": {

@@ -9,6 +9,8 @@ let mockIdeProduct = '';
 const sendMock = vi.fn();
 
 vi.mock('@/contexts/SettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useSettingsOrNull: () => null,
   useSettings: () => ({
     settings: mockSettings,
     updateSetting: updateSettingMock,

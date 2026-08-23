@@ -536,6 +536,8 @@
     "claudeNative": "Paramètre natif de Claude Code",
     "sponsorLabel": "S",
     "claudeNativeLabel": "C",
+    "projectOverride": "Le projet remplace cette valeur. La modifier ici n'a aucun effet",
+    "projectOverrideLabel": "P",
     "openDocs": "Ouvrir la doc"
   },
   "ide": {

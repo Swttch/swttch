@@ -5,6 +5,8 @@ const updateSettingMock = vi.fn();
 let mockScopeSettings: Record<string, unknown> = {};
 
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useClaudeSettingsOrNull: () => null,
   useClaudeSettings: () => ({
     scopeSettings: mockScopeSettings,
     updateSetting: updateSettingMock,

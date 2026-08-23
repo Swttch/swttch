@@ -18,9 +18,13 @@ let mockClaudeSettings: Record<string, unknown> = {};
 let mockModels: ModelInfo[] = [];
 
 vi.mock('@/contexts/SettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useSettingsOrNull: () => null,
   useSettings: () => ({ settings: {}, updateSetting: vi.fn(), ideAttached: false, ideProduct: '' }),
 }));
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
+  // Rows read project-override info through this; null = nothing overridden.
+  useClaudeSettingsOrNull: () => null,
   useClaudeSettings: () => ({ settings: mockClaudeSettings, updateSetting: updateClaudeSettingMock }),
 }));
 vi.mock('@/contexts/CliConfigContext', () => ({

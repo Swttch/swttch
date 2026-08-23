@@ -22,6 +22,7 @@ import {
   readMergedSettings,
   resolveClaudeConfigDirOverride,
   saveEnvVarToScope,
+  saveSettingToScope,
 } from '../settings';
 
 const mockReadFile = vi.mocked(readFile);
@@ -750,6 +751,97 @@ export default {
       const result = await readSettingsFile();
       expect(result.theme).toBe('dark');
       expect(result.fontSize).toBe(14);
+    });
+  });
+
+  describe('saveSettingToScope() - project scope', () => {
+    beforeEach(() => {
+      mockMkdir.mockResolvedValue(undefined);
+      mockRename.mockResolvedValue(undefined);
+      mockExistsSync.mockReturnValue(true);
+    });
+
+    // Resetting a key to the global value is expressed as value === null (the
+    // webview's resetToGlobal). Writing the null through would leave the key in
+    // the file, so it keeps counting as a project override AND wins the merge
+    // with a null value — the global value never comes back (issue #344).
+    it('removes the key instead of storing null', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ uiLanguage: 'korean', theme: 'dark' }));
+      let written = '';
+      mockWriteFile.mockImplementation((async (_p: string, content: string) => {
+        written = String(content);
+      }) as unknown as typeof writeFile);
+
+      const result = await saveSettingToScope('uiLanguage', null, 'project', '/proj');
+
+      expect(result.status).toBe('ok');
+      expect(JSON.parse(written)).toEqual({ theme: 'dark' });
+    });
+
+    it('leaves the file unchanged when removing a key it does not have', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ theme: 'dark' }));
+      let written = '';
+      mockWriteFile.mockImplementation((async (_p: string, content: string) => {
+        written = String(content);
+      }) as unknown as typeof writeFile);
+
+      const result = await saveSettingToScope('uiLanguage', null, 'project', '/proj');
+
+      expect(result.status).toBe('ok');
+      expect(JSON.parse(written)).toEqual({ theme: 'dark' });
+    });
+
+    // The value-shape checks reject null ('theme must be one of ...'), so running
+    // them on a removal would make reset-to-global fail for every typed setting.
+    it('removes a typed setting whose validator would reject null', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ theme: 'dark', fontSize: 14 }));
+      let written = '';
+      mockWriteFile.mockImplementation((async (_p: string, content: string) => {
+        written = String(content);
+      }) as unknown as typeof writeFile);
+
+      const result = await saveSettingToScope('theme', null, 'project', '/proj');
+
+      expect(result.status).toBe('ok');
+      expect(JSON.parse(written)).toEqual({ fontSize: 14 });
+    });
+
+    it('still rejects an unknown key when removing', async () => {
+      const result = await saveSettingToScope('unknownKey', null, 'project', '/proj');
+
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('Unknown settings key');
+    });
+  });
+
+  describe('readMergedSettings() - overrides', () => {
+    beforeEach(() => {
+      mockExistsSync.mockReturnValue(true);
+    });
+
+    function mockGlobalAndProject(global: unknown, project: unknown) {
+      mockReadFile.mockImplementation((async (p: string) => {
+        if (String(p).endsWith('.js')) return `export default ${JSON.stringify(global)};`;
+        return JSON.stringify(project);
+      }) as unknown as typeof readFile);
+    }
+
+    it('reports a project-set key as overridden and lets it win the merge', async () => {
+      mockGlobalAndProject({ uiLanguage: 'english' }, { uiLanguage: 'korean' });
+
+      const { settings, overrides } = await readMergedSettings('/proj');
+
+      expect(settings.uiLanguage).toBe('korean');
+      expect(overrides).toContain('uiLanguage');
+    });
+
+    it('does not report a key the project does not set', async () => {
+      mockGlobalAndProject({ uiLanguage: 'english' }, { theme: 'dark' });
+
+      const { settings, overrides } = await readMergedSettings('/proj');
+
+      expect(settings.uiLanguage).toBe('english');
+      expect(overrides).not.toContain('uiLanguage');
     });
   });
 

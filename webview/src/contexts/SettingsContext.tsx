@@ -7,6 +7,7 @@ import { isJetBrains, isMobile, getIdeTheme, subscribeIdeTheme } from '@/config/
 import { applyZoom, MOBILE_BASE_ZOOM, ZOOM_DEFAULT } from '@/utils/zoom';
 import { MessageType } from '@/shared';
 import { setCurrentSettings } from '@/utils/openSettingsAt';
+import { isShadowedByProject } from '@/utils/settingsScope';
 
 interface SettingsContextValue {
   settings: SettingsState;
@@ -255,12 +256,30 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   // Optimistically patch the merged cache, persist via bridge, and mirror to
   // localStorage. When the bridge is unavailable, fall back to localStorage only.
+  //
+  // The merged cache is what the whole app renders from, so writing into it claims
+  // the effective value changed. That claim is only true when the scope being
+  // written to is the one that wins. Saving globally while the project overrides
+  // the same key changes nothing the user can see — and showing it anyway is what
+  // made a global change look applied until the next reload (issue #344).
+  //
+  // `overrides` rides along with the merged settings and names exactly which keys
+  // the project has taken over, so the check needs no extra state: it reads the
+  // cache entry that is already there.
   const applyOptimistic = useCallback(
-    <K extends keyof SettingsState>(key: K, value: SettingsState[K]): { mergedKey: unknown[]; previous: SettingsResponse | undefined; next: SettingsState } => {
+    <K extends keyof SettingsState>(key: K, value: SettingsState[K], targetScope: 'global' | 'project'): { mergedKey: unknown[]; previous: SettingsResponse | undefined; next: SettingsState } => {
       const mergedKey = [MessageType.GET_SETTINGS, 'merged', workingDirectory];
       const previous = queryClient.getQueryData<SettingsResponse>(mergedKey);
-      const next = { ...(previous?.settings ?? DEFAULT_SETTINGS), [key]: value };
-      queryClient.setQueryData<SettingsResponse>(mergedKey, (old) => ({ ...old, settings: next }));
+      const shadowedByProject = isShadowedByProject(key as string, targetScope, previous?.overrides);
+      // A shadowed save leaves the effective value alone, so `next` keeps the
+      // current one. Callers mirror `next` into localStorage, which is the
+      // last-known merged value painted before the bridge answers on the next
+      // load — writing the shadowed value there would flash it on every startup.
+      const base = previous?.settings ?? DEFAULT_SETTINGS;
+      const next = shadowedByProject ? { ...base } : { ...base, [key]: value };
+      if (!shadowedByProject) {
+        queryClient.setQueryData<SettingsResponse>(mergedKey, (old) => ({ ...old, settings: next }));
+      }
       return { mergedKey, previous, next };
     },
     [queryClient, workingDirectory],
@@ -268,7 +287,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const updateSetting = useCallback(
     async <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
-      const { mergedKey, previous, next } = applyOptimistic(key, value);
+      const { mergedKey, previous, next } = applyOptimistic(key, value, scope);
       try {
         if (isConnected) {
           const response = await send<SettingsResponse>(MessageType.SAVE_SETTINGS, { key, value, scope, workingDir: workingDirectory });
@@ -295,7 +314,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
 
   const updateSettingWithScope = useCallback(
     async <K extends keyof SettingsState>(key: K, value: SettingsState[K], targetScope: 'global' | 'project') => {
-      const { mergedKey, previous, next } = applyOptimistic(key, value);
+      const { mergedKey, previous, next } = applyOptimistic(key, value, targetScope);
       try {
         if (!isConnected) throw new Error('Not connected');
         const response = await send<SettingsResponse>(MessageType.SAVE_SETTINGS, { key, value, scope: targetScope, workingDir: workingDirectory });

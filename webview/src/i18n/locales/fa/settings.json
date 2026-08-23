@@ -536,6 +536,8 @@
     "claudeNative": "تنظیم بومی Claude Code",
     "sponsorLabel": "ح",
     "claudeNativeLabel": "ک",
+    "projectOverride": "تنظیمات پروژه این مقدار را بازنویسی می‌کند. تغییر آن در اینجا اثری ندارد",
+    "projectOverrideLabel": "پ",
     "openDocs": "باز کردن مستندات"
   },
   "ide": {

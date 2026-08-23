@@ -5,6 +5,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useIdeDiffAvailable } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 interface Props {
   className?: string;
@@ -30,6 +31,7 @@ export const IdeSettings = (props: Props) => {
   const { className = '' } = props;
   const { t } = useTranslation('settings');
   const { scopeSettings, updateSetting, ideAttached } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
 
   // Seeds the editor-context chip at the start of a session (#237). Only an
   // explicit false disables it, so `!== false` rather than the `?? true` the
@@ -52,6 +54,7 @@ export const IdeSettings = (props: Props) => {
         <SettingRow
           label={t('ide.attachEditorContext.label')}
           description={t('ide.attachEditorContext.description')}
+          isOverridden={isOverridden(SettingKey.ATTACH_EDITOR_CONTEXT)}
         >
           <ToggleSwitch
             checked={attachEditorContext}
@@ -63,6 +66,7 @@ export const IdeSettings = (props: Props) => {
         <SettingRow
           label={t('ide.focusInputOnEditorContext.label')}
           description={t('ide.focusInputOnEditorContext.description')}
+          isOverridden={isOverridden(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT)}
         >
           <ToggleSwitch
             checked={focusInputOnEditorContext}
@@ -78,6 +82,7 @@ export const IdeSettings = (props: Props) => {
               ? t('ide.showDiffInIde.description')
               : t('ide.showDiffInIde.unavailable')
           }
+          isOverridden={isOverridden(SettingKey.SHOW_DIFF_IN_IDE)}
         >
           <ToggleSwitch
             checked={showDiffInIde}
