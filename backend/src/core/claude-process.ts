@@ -37,9 +37,10 @@ function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTra
  * the Background tasks panel. A task still shown as "running" after Escape is
  * running.
  *
- * Kept for a caller that needs to settle workflows while the process lives on;
- * process death is already handled by `workflowTracker.stopSession` in the CLI
- * `close` handler.
+ * Has no caller at the moment. Process death is already handled by
+ * `workflowTracker.stopSession` in the CLI `close` handler, which covers the
+ * case this was written for; what is left here is settling workflows while the
+ * process lives on, and nothing needs that today.
  */
 export function stopWorkflowsForSession(sessionId: string): void {
   workflowTracker?.stopRunning(sessionId);
