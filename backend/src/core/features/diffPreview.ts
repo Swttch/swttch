@@ -145,3 +145,40 @@ export async function openDiffForPermission(
     console.error('[node-backend]', 'Failed to open IDE diff for permission request:', err);
   }
 }
+
+/**
+ * Open our own diff page in an IDE editor tab for a pending permission request.
+ *
+ * The counterpart to {@link openDiffForPermission} for the built-in surface, and
+ * bound by the same rule: never throws, never holds up the permission prompt. A
+ * browser resolves to a bridge where this is a no-op — there the webview opens
+ * its own window — so the caller does not have to know which host it is on.
+ */
+export async function openDiffTabForPermission(
+  bridge: Bridge,
+  toolUseId: string,
+): Promise<void> {
+  try {
+    await bridge.openDiffTab({ toolUseId });
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to open diff tab for permission request:', err);
+  }
+}
+
+/**
+ * Close the diff tab opened for [toolUseId], whichever way its request was
+ * answered — from that page, the chat prompt, or the CLI giving up.
+ *
+ * Same contract again: a tab we cannot close must not take the answer down with
+ * it, since the decision itself has already been made and sent.
+ */
+export async function closeDiffTabForPermission(
+  bridge: Bridge,
+  toolUseId: string,
+): Promise<void> {
+  try {
+    await bridge.closeDiffTab({ toolUseId });
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to close diff tab:', err);
+  }
+}

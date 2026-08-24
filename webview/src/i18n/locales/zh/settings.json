@@ -127,6 +127,24 @@
       "description": "当您达到会话上限时，在额度重置后自动恢复。这是新会话的默认值；每个会话仍可单独切换。"
     }
   },
+  "diffView": {
+    "sectionTitle": "差异视图",
+    "surface": {
+      "label": "查看更改的位置",
+      "description": "打开待确认的文件更改的位置，便于您在决定时查看内容。",
+      "noIde": "由于没有 IDE 托管本应用，将使用内置查看器。若要使用 IDE 自带的差异查看器，请从 IDE 中启动。",
+      "ide": "IDE 差异查看器",
+      "builtIn": "内置差异查看器"
+    },
+    "presentation": {
+      "label": "内置查看器的打开方式",
+      "description": "内置差异查看器的打开方式。在 IDE 中，只有聊天位于面板时才能使用浮层。",
+      "builtInOnly": "仅在使用内置查看器查看更改时生效。",
+      "newTab": "新标签页",
+      "overlay": "覆盖层",
+      "sidebarOnlyNewTab": "侧边栏太窄，无法在其上查看差异，因此以编辑器标签页打开。将聊天移到面板即可选择。"
+    }
+  },
   "appearance": {
     "title": "外观",
     "theme": {
@@ -549,11 +567,6 @@
     "focusInputOnEditorContext": {
       "label": "插入文件路径后聚焦聊天输入框",
       "description": "在编辑器中按 Alt+K 插入文件路径后,自动将焦点移动到聊天输入框。"
-    },
-    "showDiffInIde": {
-      "label": "在 IDE 差异查看器中显示 Claude 的修改",
-      "description": "当 Claude 请求修改文件时，在 IDE 的差异查看器中打开该修改，便于你在决定时查看。",
-      "unavailable": "仅在 IDE 内运行时可用。请从 IDE 启动应用。"
     },
     "devTools": {
       "label": "开发者工具",

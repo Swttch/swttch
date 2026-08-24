@@ -1,20 +1,35 @@
 import { useSettings } from '@/contexts/SettingsContext';
-import { SettingKey } from '@/types/settings';
+import { SettingKey, DiffSurface } from '@/types/settings';
 
 /**
- * Whether a diff can be opened in the IDE right now.
+ * Which surface will actually draw the next review diff.
  *
- * Two conditions, and both are about the same question — is there an IDE that
- * will show it? The backend has to be hosted by one (`ideAttached`), and the
- * project must not have opted out (`showDiffInIde`). Neither the settings
- * toggle nor the file-name link in the approval prompt should offer something
- * that cannot happen.
+ * The stored setting is a preference, not an answer: it can name the IDE on a
+ * backend no IDE is hosting, where there is nothing to open. `ideAttached`
+ * decides whether that preference can be honoured, and when it cannot the
+ * built-in surface is the answer — every host can draw that one.
  *
- * Shared rather than repeated so the two cannot drift into disagreeing about
- * when the feature is on.
+ * Note this is about the BACKEND's host, not the client's: a browser attached
+ * through the tunnel to an IDE-hosted backend still gets the IDE's diff, which
+ * opens on the machine running the IDE.
+ *
+ * Shared rather than repeated so the settings screen, the approval prompt and
+ * anything else that opens a diff cannot drift into disagreeing about where it
+ * goes.
+ */
+export function useResolvedDiffSurface(): DiffSurface {
+  const { scopeSettings, ideAttached } = useSettings();
+  if (!ideAttached) return DiffSurface.BUILT_IN;
+  return (scopeSettings[SettingKey.DIFF_SURFACE] as DiffSurface | undefined) ?? DiffSurface.IDE;
+}
+
+/**
+ * Whether the next review diff opens in the IDE's own viewer.
+ *
+ * Kept as its own name because most callers only care about this one surface —
+ * the approval prompt's file link, for instance, offers the IDE's diff or
+ * nothing.
  */
 export function useIdeDiffAvailable(): boolean {
-  const { scopeSettings, ideAttached } = useSettings();
-  // Default on: the setting exists only to let people turn it back off.
-  return ideAttached && (scopeSettings[SettingKey.SHOW_DIFF_IN_IDE] ?? true);
+  return useResolvedDiffSurface() === DiffSurface.IDE;
 }

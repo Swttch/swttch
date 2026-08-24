@@ -482,5 +482,29 @@
     "scheduledToast": "Automatische Fortsetzung geplant",
     "canceledToast": "Automatische Fortsetzung abgebrochen",
     "scheduled": "Automatische Fortsetzung geplant"
+  },
+  "reviewDiff": {
+    "loading": "Änderung wird geladen…",
+    "apply": "Anwenden",
+    "reject": "Ablehnen"
+  },
+  "diffPage": {
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "unavailable": {
+      "title": "Diese Anfrage wurde bereits beantwortet.",
+      "description": "Sie wurde möglicherweise im Chat beantwortet oder ist beim Ende der Sitzung abgelaufen. Hier gibt es nichts mehr zu prüfen."
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Ihre Änderungen hier verwerfen und Claudes Vorschlag wiederherstellen",
+      "backHint": "Diesen Abschnitt erneut öffnen, Ihre Änderungen bleiben erhalten",
+      "remaining": "Noch {{count}} zu prüfen",
+      "selectAll": "Select all"
+    }
   }
 }

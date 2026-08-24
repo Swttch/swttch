@@ -490,5 +490,29 @@
     "scheduledToast": "تمت جدولة الاستئناف التلقائي",
     "canceledToast": "تم إلغاء الاستئناف التلقائي",
     "scheduled": "تمت جدولة الاستئناف التلقائي"
+  },
+  "reviewDiff": {
+    "loading": "جارٍ تحميل التغيير…",
+    "apply": "تطبيق",
+    "reject": "رفض"
+  },
+  "diffPage": {
+    "confirm": "تأكيد",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "unavailable": {
+      "title": "تمت الإجابة على هذا الطلب بالفعل.",
+      "description": "ربما تمت الإجابة عليه من المحادثة، أو انتهت صلاحيته عند انتهاء الجلسة. لم يعد هناك ما تراجعه هنا."
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "تجاهل تعديلاتك هنا واستعادة اقتراح Claude",
+      "backHint": "إعادة فتح هذا الجزء مع الاحتفاظ بتعديلاتك",
+      "remaining": "بقي {{count}} للمراجعة",
+      "selectAll": "Select all"
+    }
   }
 }

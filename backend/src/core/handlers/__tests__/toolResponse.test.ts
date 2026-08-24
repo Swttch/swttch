@@ -21,12 +21,16 @@ function makeConnections() {
 }
 
 const closeDiff = vi.fn().mockResolvedValue(undefined);
-const bridge = { closeDiff } as any;
+// Both review surfaces are told, because which one a request opened depends on
+// a setting that may have changed since — see toolResponseHandler.
+const closeDiffTab = vi.fn().mockResolvedValue(undefined);
+const bridge = { closeDiff, closeDiffTab } as any;
 
 beforeEach(() => {
   sendControlResponseToProcess.mockClear();
   sendToolResultToProcess.mockClear();
   closeDiff.mockClear();
+  closeDiffTab.mockClear();
 });
 
 describe('toolResponseHandler — permission denial (control_response path)', () => {
@@ -107,7 +111,7 @@ describe('toolResponseHandler — legacy tool_result path (no controlRequestId)'
   });
 });
 
-describe('toolResponseHandler — IDE review diff cleanup', () => {
+describe('toolResponseHandler — review surface cleanup', () => {
   // The diff was opened to answer a question. Once answered, leaving it behind
   // means a stale preview per edit for the user to close by hand.
   it('closes the diff after an approval', () => {
@@ -118,6 +122,7 @@ describe('toolResponseHandler — IDE review diff cleanup', () => {
       bridge,
     );
     expect(closeDiff).toHaveBeenCalledWith({ toolUseId: 't1' });
+    expect(closeDiffTab).toHaveBeenCalledWith({ toolUseId: 't1' });
   });
 
   it('closes the diff after a denial too', () => {
@@ -128,6 +133,7 @@ describe('toolResponseHandler — IDE review diff cleanup', () => {
       bridge,
     );
     expect(closeDiff).toHaveBeenCalledWith({ toolUseId: 't1' });
+    expect(closeDiffTab).toHaveBeenCalledWith({ toolUseId: 't1' });
   });
 
   it('does not ask the IDE to close anything when there is no tool id', () => {
@@ -138,6 +144,7 @@ describe('toolResponseHandler — IDE review diff cleanup', () => {
       bridge,
     );
     expect(closeDiff).not.toHaveBeenCalled();
+    expect(closeDiffTab).not.toHaveBeenCalled();
   });
 
   it('still answers the CLI when closing the diff fails', async () => {
@@ -153,6 +160,21 @@ describe('toolResponseHandler — IDE review diff cleanup', () => {
 
     expect(sendControlResponseToProcess).toHaveBeenCalledTimes(1);
     // Let the rejected promise settle so the suite does not see it as unhandled.
+    await Promise.resolve();
+  });
+
+  it('still answers the CLI when closing the diff tab fails', async () => {
+    // Same contract for the other surface: the decision is already made.
+    closeDiffTab.mockRejectedValueOnce(new Error('no such tab'));
+
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    expect(sendControlResponseToProcess).toHaveBeenCalledTimes(1);
     await Promise.resolve();
   });
 });

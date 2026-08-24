@@ -127,6 +127,24 @@
       "description": "當您達到工作階段上限時，在額度重置後自動恢復。這是新工作階段的預設值；每個工作階段仍可個別切換。"
     }
   },
+  "diffView": {
+    "sectionTitle": "差異檢視",
+    "surface": {
+      "label": "檢視變更的位置",
+      "description": "開啟待確認檔案變更的位置，方便您在決定時檢視內容。",
+      "noIde": "由於沒有 IDE 承載本應用程式，將使用內建檢視器。若要使用 IDE 內建的差異檢視器，請從 IDE 啟動。",
+      "ide": "IDE 差異檢視器",
+      "builtIn": "內建差異檢視器"
+    },
+    "presentation": {
+      "label": "內建檢視器的開啟方式",
+      "description": "內建差異檢視器的開啟方式。在 IDE 中，只有聊天位於面板時才能使用浮層。",
+      "builtInOnly": "僅在使用內建檢視器檢視變更時生效。",
+      "newTab": "新分頁",
+      "overlay": "覆蓋層",
+      "sidebarOnlyNewTab": "側邊欄太窄，無法在其上檢視差異，因此以編輯器分頁開啟。將聊天移到面板即可選擇。"
+    }
+  },
   "appearance": {
     "title": "外觀",
     "theme": {
@@ -549,11 +567,6 @@
     "focusInputOnEditorContext": {
       "label": "附加檔案路徑後將焦點移至聊天輸入框",
       "description": "在編輯器中按下 Alt+K 插入檔案路徑後,自動將焦點移至聊天輸入框。"
-    },
-    "showDiffInIde": {
-      "label": "在 IDE 差異檢視器中顯示 Claude 的修改",
-      "description": "當 Claude 要求修改檔案時，在 IDE 的差異檢視器中開啟該修改，方便你在決定時檢視。",
-      "unavailable": "僅在 IDE 內執行時可用。請從 IDE 啟動應用程式。"
     },
     "devTools": {
       "label": "開發人員工具",

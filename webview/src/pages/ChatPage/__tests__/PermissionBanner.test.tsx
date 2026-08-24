@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PermissionBanner } from '../PermissionBanner';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
@@ -8,14 +8,25 @@ vi.mock('../../../contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => ({ stop: mockStop }),
 }));
 
-let diffAvailable = true;
-vi.mock('../../../hooks/useIdeDiffAvailable', () => ({
-  useIdeDiffAvailable: () => diffAvailable,
+// What opening the review resolves to. The panel does not choose the surface —
+// one hook does, for every entry point — so here it stands in as "a review was
+// opened", and the overlay case is the one the panel still has work to do for.
+let openResult: { kind: 'opened' } | { kind: 'overlay'; toolUseId: string } = { kind: 'opened' };
+const openDiffReview = vi.fn(async (toolUseId: string) => {
+  void toolUseId;
+  return openResult;
+});
+vi.mock('../../../hooks/useOpenDiffReview', () => ({
+  useOpenDiffReview: () => openDiffReview,
 }));
 
-const openDiffForRequest = vi.fn();
-vi.mock('../../../contexts/ApiContext', () => ({
-  useApi: () => ({ tools: { openDiffForRequest } }),
+// Opening the review unprompted is the auto-open hook's own business, and it has
+// its own tests. Stubbed here so these cases stay about the panel — but recorded,
+// because the panel is what tells it which request to open.
+const autoOpen = vi.fn();
+vi.mock('../../../hooks/useAutoOpenDiffReview', () => ({
+  useAutoOpenDiffReview: (toolUseId: string | undefined, onOverlay: unknown) =>
+    autoOpen(toolUseId, onOverlay),
 }));
 
 const mockPermission: PendingPermission = {
@@ -29,10 +40,9 @@ const mockPermission: PendingPermission = {
 
 beforeEach(() => {
   mockStop.mockClear();
-  openDiffForRequest.mockClear();
-  // The prompt's file name is only a link where a diff can be shown; most tests
-  // here are about the rest of the panel, so keep it available by default.
-  diffAvailable = true;
+  openDiffReview.mockClear();
+  autoOpen.mockClear();
+  openResult = { kind: 'opened' };
 });
 
 describe('PermissionBanner', () => {
@@ -322,18 +332,22 @@ const writePermission: PendingPermission = {
   description: 'Write file: /tmp/ccg-demo/src/cart.js',
 };
 
-function renderBanner(p: PendingPermission = writePermission) {
+function renderBanner(
+  p: PendingPermission = writePermission,
+  onOpenDiffOverlay?: (toolUseId: string) => void,
+) {
   render(
     <PermissionBanner
       permission={p}
       onApprove={vi.fn()}
       onApproveForSession={vi.fn()}
       onDeny={vi.fn()}
+      onOpenDiffOverlay={onOpenDiffOverlay}
     />,
   );
 }
 
-describe('PermissionBanner — the file name links to the diff', () => {
+describe('PermissionBanner — the file name links to the review', () => {
   it('renders the file name as a link and keeps the rest of the title as text', () => {
     renderBanner();
 
@@ -343,14 +357,15 @@ describe('PermissionBanner — the file name links to the diff', () => {
     expect(screen.getByText(/Write to/)).toBeInTheDocument();
   });
 
-  it('opens the diff for this request when the name is clicked', () => {
+  it('opens the review for this request when the name is clicked', () => {
     renderBanner();
 
     fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
 
-    // By id: the contents live backend-side, so the click names the request
-    // rather than shipping the file through the webview.
-    expect(openDiffForRequest).toHaveBeenCalledWith('toolu_1');
+    // By id: the change lives backend-side, so the click names the request
+    // rather than shipping the file through the webview. WHERE it opens is not
+    // decided here — see useOpenDiffReview.
+    expect(openDiffReview).toHaveBeenCalledWith('toolu_1');
   });
 
   it('does not answer or interrupt the request', () => {
@@ -360,19 +375,46 @@ describe('PermissionBanner — the file name links to the diff', () => {
     expect(mockStop).not.toHaveBeenCalled();
   });
 
-  it('leaves the name as plain text when no diff can be shown', () => {
-    diffAvailable = false;
-    renderBanner();
+  it('hands the overlay back to the screen when that is the chosen surface', async () => {
+    // The panel cannot mount an overlay over the screen it sits in, so it asks
+    // the page to. Every other surface opens a window of its own and there is
+    // nothing to hand back.
+    openResult = { kind: 'overlay', toolUseId: 'toolu_1' };
+    const onOpenDiffOverlay = vi.fn();
+    renderBanner(writePermission, onOpenDiffOverlay);
 
-    expect(screen.queryByRole('button', { name: 'cart.js' })).toBeNull();
-    expect(screen.getByText('Write to cart.js?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+
+    await waitFor(() => expect(onOpenDiffOverlay).toHaveBeenCalledWith('toolu_1'));
+  });
+
+  it('asks for no overlay when the review opened in a window of its own', async () => {
+    const onOpenDiffOverlay = vi.fn();
+    renderBanner(writePermission, onOpenDiffOverlay);
+
+    fireEvent.click(screen.getByRole('button', { name: 'cart.js' }));
+
+    await waitFor(() => expect(openDiffReview).toHaveBeenCalled());
+    expect(onOpenDiffOverlay).not.toHaveBeenCalled();
   });
 
   it('leaves a title with no file name alone', () => {
     // Bash has no file to link to; its title must render as it always did.
-    diffAvailable = true;
     renderBanner({ ...writePermission, toolName: 'Bash', input: { command: 'ls' } });
 
     expect(screen.getByText('Run this command?')).toBeInTheDocument();
+  });
+
+  /*
+   * The review also opens on its own, the way the IDE opens it. Whether it
+   * should is decided inside the hook; what the panel owes it is the request to
+   * open and the way back for an overlay — without the latter the auto-opened
+   * overlay would have nothing to mount it.
+   */
+  it('points the auto-open at this request, with a way back for an overlay', () => {
+    const onOpenDiffOverlay = vi.fn();
+    renderBanner(writePermission, onOpenDiffOverlay);
+
+    expect(autoOpen).toHaveBeenCalledWith(writePermission.toolUseId, onOpenDiffOverlay);
   });
 });

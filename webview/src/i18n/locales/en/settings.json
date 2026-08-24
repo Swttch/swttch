@@ -127,6 +127,24 @@
       "description": "When you hit your session limit, automatically resume once the quota resets. This is the default for new sessions; each session can still toggle it."
     }
   },
+  "diffView": {
+    "sectionTitle": "Diff View",
+    "surface": {
+      "label": "Review edits in",
+      "description": "Where a proposed file edit opens so you can see it while you decide.",
+      "noIde": "The built-in viewer, since no IDE is hosting this app. Start it from your IDE to use the IDE's own diff viewer.",
+      "ide": "IDE diff viewer",
+      "builtIn": "Built-in diff viewer"
+    },
+    "presentation": {
+      "label": "Open the built-in viewer as",
+      "description": "How the built-in diff viewer opens. In an IDE an overlay needs the chat to be in a panel.",
+      "builtInOnly": "Applies when edits are reviewed in the built-in viewer.",
+      "newTab": "New tab",
+      "overlay": "Overlay",
+      "sidebarOnlyNewTab": "A sidebar is too narrow to review a diff over, so it opens as an editor tab. Move the chat to a panel to choose."
+    }
+  },
   "appearance": {
     "title": "Appearance",
     "theme": {
@@ -551,11 +569,6 @@
     "focusInputOnEditorContext": {
       "label": "Focus chat input after attaching file path",
       "description": "When you press Alt+K in the editor, move focus to the chat input after inserting the file path."
-    },
-    "showDiffInIde": {
-      "label": "Show Claude's edits in the IDE diff viewer",
-      "description": "When Claude asks to edit a file, open the change in the IDE's diff viewer so you can see it while you decide.",
-      "unavailable": "Available when running inside an IDE. Start the app from your IDE to use this."
     },
     "devTools": {
       "label": "Developer tools",

@@ -127,6 +127,24 @@
       "description": "Quando você atingir o limite da sessão, a retomada ocorrerá automaticamente após a redefinição da cota. Este é o padrão para novas sessões; cada sessão ainda pode alterná-lo."
     }
   },
+  "diffView": {
+    "sectionTitle": "Visualização de diferenças",
+    "surface": {
+      "label": "Revisar as alterações em",
+      "description": "Onde uma alteração de arquivo proposta é aberta para você vê-la enquanto decide.",
+      "noIde": "O visualizador integrado, já que nenhum IDE está hospedando este aplicativo. Inicie-o pelo seu IDE para usar o visualizador de diferenças do próprio IDE.",
+      "ide": "Visualizador de diferenças do IDE",
+      "builtIn": "Visualizador de diferenças integrado"
+    },
+    "presentation": {
+      "label": "Abrir o visualizador integrado como",
+      "description": "Como o visualizador de diferenças integrado abre. Em um IDE, a sobreposição exige que o chat esteja em um painel.",
+      "builtInOnly": "Aplica-se quando as alterações são revisadas no visualizador integrado.",
+      "newTab": "Nova aba",
+      "overlay": "Sobreposição",
+      "sidebarOnlyNewTab": "Uma barra lateral é estreita demais para revisar um diff por cima, então ele abre como aba do editor. Mova o chat para um painel para escolher."
+    }
+  },
   "appearance": {
     "title": "Aparência",
     "theme": {
@@ -549,11 +567,6 @@
     "focusInputOnEditorContext": {
       "label": "Focar o campo de chat após anexar o caminho do arquivo",
       "description": "Ao pressionar Alt+K no editor, move o foco para o campo de chat depois de inserir o caminho do arquivo."
-    },
-    "showDiffInIde": {
-      "label": "Mostrar as edições do Claude no visualizador de diferenças do IDE",
-      "description": "Quando o Claude pedir para editar um arquivo, abre a alteração no visualizador de diferenças do IDE para você ver enquanto decide.",
-      "unavailable": "Disponível ao executar dentro de um IDE. Inicie o aplicativo a partir do seu IDE para usar."
     },
     "devTools": {
       "label": "Ferramentas de desenvolvedor",

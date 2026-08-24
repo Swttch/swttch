@@ -47,6 +47,8 @@ class DiffService(private val project: Project) {
      * @param onResolve Called with the regions the user kept when they answer
      *   in the diff window. An empty list means they rejected the change. The
      *   regions are the IDE's own split, learned once the diff has compared.
+     *   The second argument is the proposed side as the reviewer left it, or
+     *   null when they never typed in it (#305).
      */
     @JvmOverloads
     fun openDiffViewer(
@@ -54,7 +56,7 @@ class DiffService(private val project: Project) {
         oldContent: String,
         newContent: String,
         toolUseId: String? = null,
-        onResolve: ((List<AcceptedRange>) -> Unit)? = null,
+        onResolve: ((List<AcceptedRange>, String?) -> Unit)? = null,
     ) {
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -75,7 +77,14 @@ class DiffService(private val project: Project) {
                 // syntax-highlighted like the editor rather than plain text.
                 val fileType = FileTypeManager.getInstance().getFileTypeByFileName(File(filePath).name)
                 val leftContent = contentFactory.create(project, oldContent, fileType)
-                val rightContent = contentFactory.create(project, newContent, fileType)
+                // The proposed side is editable so a reviewer can fix a small
+                // slip in place rather than describing it back to the agent
+                // (#305). `create` hands back a read-only document; only
+                // `createEditable` leaves it writable. The original stays
+                // read-only: it is the file on disk, not a draft.
+                val rightContent =
+                    if (onResolve != null) contentFactory.createEditable(project, newContent, fileType)
+                    else contentFactory.create(project, newContent, fileType)
 
                 // Create diff request with file name as title
                 val fileName = File(filePath).name
@@ -105,9 +114,18 @@ class DiffService(private val project: Project) {
                 if (onResolve != null) {
                     val selection = HunkSelection()
                     request.putUserData(HunkSelection.KEY, selection)
-                    val panel = DiffReviewPanel(selection) { accepted ->
+                    val panel = DiffReviewPanel(selection) { accepted, keepEdits ->
+                        // Read the proposed side before the tab closes, and only
+                        // report it when it actually differs from what was
+                        // proposed: an untouched review must keep answering with
+                        // ranges alone so Claude's own call goes through as it
+                        // always did. Reject discards it -- refusing a change is
+                        // not a way to write a different one.
+                        val edited =
+                            if (keepEdits) rightContent.document.text.takeIf { it != newContent }
+                            else null
                         toolUseId?.let { closeDiffViewer(it) }
-                        onResolve(accepted)
+                        onResolve(accepted, edited)
                     }
                     chain.putUserData(DiffUserDataKeysEx.BOTTOM_PANEL, panel.component)
                 }

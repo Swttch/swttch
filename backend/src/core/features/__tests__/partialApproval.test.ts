@@ -126,3 +126,59 @@ describe('buildPartialApproval', () => {
   });
 });
 
+/**
+ * Editing the proposed side (#305). The reviewer's text is the whole answer, so
+ * these assert it survives instead of being rebuilt from the ranges — which
+ * describe the ORIGINAL proposal and cannot express what was typed over it.
+ */
+describe('buildPartialApproval with an edited proposal', () => {
+  const typed = before.replace('line 2', 'TYPED BY HAND');
+
+  it('writes the reviewer text rather than the proposal', () => {
+    const p = preview('Edit', before, after);
+    // Ranges still say "keep both proposed changes"; the edit overrides them.
+    const amended = buildPartialApproval(p, [FIRST, SECOND], typed)!;
+    const applied = before.replace(
+      amended.input.old_string as string,
+      amended.input.new_string as string,
+    );
+    expect(applied).toBe(typed);
+    expect(applied).toContain('TYPED BY HAND');
+    expect(applied).not.toContain('CHANGED 2');
+  });
+
+  it('keeps an edited Edit in Edit shape', () => {
+    const p = preview('Edit', before, after);
+    const amended = buildPartialApproval(p, [FIRST], typed)!;
+    expect(amended.input).toHaveProperty('old_string');
+    expect(amended.input).not.toHaveProperty('content');
+    // The CLI matches old_string against the file, so it must occur verbatim.
+    expect(before).toContain(amended.input.old_string as string);
+  });
+
+  it('replaces the whole file for a Write', () => {
+    const p = preview('Write', before, after, { content: after });
+    const amended = buildPartialApproval(p, [FIRST], typed)!;
+    expect(amended.input.content).toBe(typed);
+  });
+
+  it('has nothing to amend when the edit reproduces the proposal', () => {
+    // Typing something and undoing it must not turn an untouched Edit into a
+    // synthesized one.
+    const p = preview('Edit', before, after);
+    expect(buildPartialApproval(p, [FIRST, SECOND], after)).toBeNull();
+  });
+
+  it('accepts an edit that lands on lines no range covers', () => {
+    // Nothing was ticked, yet the reviewer wrote something. Rebuilding from the
+    // empty range list would silently drop it.
+    const p = preview('Edit', before, after);
+    const amended = buildPartialApproval(p, [], typed)!;
+    const applied = before.replace(
+      amended.input.old_string as string,
+      amended.input.new_string as string,
+    );
+    expect(applied).toBe(typed);
+  });
+});
+

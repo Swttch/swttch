@@ -482,5 +482,29 @@
     "scheduledToast": "Retomada automática agendada",
     "canceledToast": "Retomada automática cancelada",
     "scheduled": "Retomada automática agendada"
+  },
+  "reviewDiff": {
+    "loading": "Carregando a alteração…",
+    "apply": "Aplicar",
+    "reject": "Rejeitar"
+  },
+  "diffPage": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "unavailable": {
+      "title": "Esta solicitação já foi respondida.",
+      "description": "Ela pode ter sido respondida no chat ou ter expirado quando a sessão terminou. Não há mais nada para revisar aqui."
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Descartar suas edições aqui e restaurar a proposta do Claude",
+      "backHint": "Reabrir esta seção mantendo suas edições",
+      "remaining": "{{count}} restante(s) para revisar",
+      "selectAll": "Select all"
+    }
   }
 }

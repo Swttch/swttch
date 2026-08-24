@@ -264,6 +264,14 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.OPEN_DIFF, params);
   }
 
+  async openDiffTab(params: { toolUseId: string }): Promise<void> {
+    await this.request(MessageType.OPEN_DIFF_TAB, params);
+  }
+
+  async closeDiffTab(params: { toolUseId: string }): Promise<void> {
+    await this.request(MessageType.CLOSE_DIFF_TAB, params);
+  }
+
   async applyDiff(params: {
     filePath: string;
     newContent: string;

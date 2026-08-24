@@ -486,5 +486,29 @@
     "scheduledToast": "Auto-resume scheduled",
     "canceledToast": "Auto-resume canceled",
     "scheduled": "Auto-resume scheduled"
+  },
+  "reviewDiff": {
+    "loading": "Loading the change…",
+    "apply": "Apply",
+    "reject": "Reject"
+  },
+  "diffPage": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "unavailable": {
+      "title": "This request has already been answered.",
+      "description": "It may have been answered from the chat, or it expired when the session ended. There is nothing left to review here."
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "Discard your edits here and restore Claude's proposal",
+      "backHint": "Reopen this hunk, keeping your edits",
+      "remaining": "{{count}} left to review",
+      "selectAll": "Select all"
+    }
   }
 }

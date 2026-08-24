@@ -101,6 +101,18 @@ export class BrowserBridge implements Bridge {
     // no-op: diff viewer not available in browser mode
   }
 
+  // no-op both ways: in a browser the webview opens and closes the diff itself
+  // (a tab of its own or an overlay), so there is no window on this side to act
+  // on. The backend still calls these unconditionally — which surface is in use
+  // is the setting's business, not the caller's.
+  async openDiffTab(): Promise<void> {
+    // no-op
+  }
+
+  async closeDiffTab(): Promise<void> {
+    // no-op
+  }
+
   async applyDiff(): Promise<{ applied: boolean }> {
     return { applied: false };
   }

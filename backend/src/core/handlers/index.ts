@@ -44,6 +44,9 @@ import { getUsageReportHandler } from './getUsageReport';
 import { getAllUsageHandler } from './getAllUsage';
 import { openFileHandler } from './openFile';
 import { openDiffHandler } from './openDiff';
+import { openDiffTabHandler } from './openDiffTab';
+import { getDiffPreviewHandler } from './getDiffPreview';
+import { resolveDiffHandler } from './resolveDiff';
 import { applyDiffHandler } from './applyDiff';
 import { rejectDiffHandler } from './rejectDiff';
 import { createSessionHandler } from './createSession';
@@ -259,6 +262,15 @@ export async function handleMessage(
       break;
     case MessageType.OPEN_DIFF:
       await openDiffHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.OPEN_DIFF_TAB:
+      await openDiffTabHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_DIFF_PREVIEW:
+      await getDiffPreviewHandler(connectionId, message, connections);
+      break;
+    case MessageType.RESOLVE_DIFF:
+      await resolveDiffHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.APPLY_DIFF:
       await applyDiffHandler(connectionId, message, connections, bridge);

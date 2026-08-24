@@ -1,6 +1,34 @@
 import { useCallback, useEffect } from 'react';
 import { isMobile } from '@/config/environment';
 
+/**
+ * Whether this keystroke is somebody typing, rather than an answer to the
+ * panel.
+ *
+ * Reads the composed path rather than `e.target`, because the review diff's
+ * editable side lives in a shadow root: the platform retargets `e.target` to
+ * the host element, so a digit typed into a proposed edit looked like a digit
+ * pressed at the panel and picked an option instead of reaching the text. The
+ * path still holds the real element.
+ *
+ * `contenteditable` counts for the same reason a textarea does — it is where
+ * characters are meant to land.
+ */
+function isTypingTarget(event: globalThis.KeyboardEvent): boolean {
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [event.target];
+  for (const node of path) {
+    if (!(node instanceof HTMLElement)) continue;
+    if (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA') return true;
+    // The attribute as well as the resolved property: jsdom does not implement
+    // `isContentEditable`, and the renderer marks its editable side with the
+    // attribute either way.
+    const attr = node.getAttribute('contenteditable');
+    if (attr !== null && attr !== 'false') return true;
+    if (node.isContentEditable) return true;
+  }
+  return false;
+}
+
 interface UseApprovalKeyboardParams {
   optionCount: number;
   focusedIndex: number;
@@ -36,8 +64,7 @@ export function useApprovalKeyboard(params: UseApprovalKeyboardParams) {
 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      const isInputFocused = tag === 'INPUT' || tag === 'TEXTAREA';
+      const isInputFocused = isTypingTarget(e);
 
       if (e.key === 'Escape') {
         e.preventDefault();

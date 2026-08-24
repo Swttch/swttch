@@ -8,6 +8,7 @@ import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
+import com.github.yhk1038.claudecodegui.services.DiffTabService
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.toolwindow.realization.CallbackStaging
@@ -1516,11 +1517,13 @@ class ClaudeCodePanel(
                 controlRequestId: String?
             ) {
                 // Answering happens in the diff window itself, so the review and
-                // the decision sit together. Only the kept hunk numbers go back;
-                // the backend holds the change and rewrites the tool call (#109).
-                val onResolve: ((List<AcceptedRange>) -> Unit)? =
+                // the decision sit together. The kept hunk numbers go back and
+                // the backend holds the change and rewrites the tool call
+                // (#109) -- unless the reviewer edited the proposed side, in
+                // which case their text goes with them and wins (#305).
+                val onResolve: ((List<AcceptedRange>, String?) -> Unit)? =
                     if (sessionId != null && controlRequestId != null && toolUseId != null) {
-                        { accepted ->
+                        { accepted, editedContent ->
                             val params = buildJsonObject {
                                 put("toolUseId", toolUseId)
                                 put("controlRequestId", controlRequestId)
@@ -1535,6 +1538,10 @@ class ClaudeCodePanel(
                                         })
                                     }
                                 }
+                                // Only present when the reviewer edited the
+                                // proposed side; the backend then writes this
+                                // instead of rebuilding from the ranges (#305).
+                                editedContent?.let { put("editedContent", it) }
                             }
                             backendService.sendNotification(project.basePath ?: "", "RESOLVE_DIFF", params)
                         }
@@ -1560,6 +1567,18 @@ class ClaudeCodePanel(
             override suspend fun rejectDiff(toolUseId: String?) {
                 toolUseId?.let { diffService.closeDiffViewer(it) }
                 logger.info("Diff rejected (toolUseId=$toolUseId)")
+            }
+
+            // Our own diff page, in a tab of its own. Unlike openDiff above, the
+            // change does not come through here at all: the page fetches it and
+            // answers over the backend's own messages, the same way it does in a
+            // browser. This side only owns the window.
+            override suspend fun openDiffTab(toolUseId: String) {
+                DiffTabService.getInstance(project).open(toolUseId)
+            }
+
+            override suspend fun closeDiffTab(toolUseId: String) {
+                DiffTabService.getInstance(project).close(toolUseId)
             }
 
             override suspend fun closeDiff(toolUseId: String) {

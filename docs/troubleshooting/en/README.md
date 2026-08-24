@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/README.md) | [日本語](../ja/README.md) | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_Last updated: 2026-08-22_
+_Last updated: 2026-08-24_
 
 This is a collection of problems that come up often, which we have not been able to fix on our side yet, but for which a known workaround exists.
 
@@ -14,6 +14,7 @@ Each document has the symptoms, the cause, how to fix it, and links to the relat
 |---|---|
 | [Wayland clipboard](wayland-clipboard.md) | Pasting into the chat input fails on Linux · Wayland · KDE Plasma |
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio shows a guidance panel or an exception instead of the chat UI, or a blank window |
+| [Review screen colours](diff-colors-old-ide.md) | The review screen comes out with no colour on IDE 2025.2 and older |
 
 ## If your problem is not here
 

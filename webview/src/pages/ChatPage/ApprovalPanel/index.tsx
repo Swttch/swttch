@@ -21,6 +21,12 @@ interface Props {
   subtitle?: string;
   /** Optional highlighted note shown under the title (e.g. a usage warning). */
   notice?: string;
+  /**
+   * Optional content between the heading and the options — what the question
+   * is about, shown where it is read before answering. Used by the permission
+   * prompt for the review diff on hosts that cannot open one in an IDE.
+   */
+  preview?: ReactNode;
   options: OptionItem[];
   onOptionSelect: (index: number) => void;
   textareaPlaceholder?: string;
@@ -30,7 +36,7 @@ interface Props {
 
 export function ApprovalPanel(props: Props) {
   const { t } = useTranslation('chat');
-  const { title, collapsedTitle, subtitle, notice, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
+  const { title, collapsedTitle, subtitle, notice, preview, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
 
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
@@ -102,6 +108,8 @@ export function ApprovalPanel(props: Props) {
           </div>
           <CollapseToggle collapsed={false} onToggle={toggleCollapsed} />
         </div>
+
+        {preview && <div className="px-2 pb-2">{preview}</div>}
 
         {/* 옵션 목록 */}
         <div className="px-2 flex flex-col gap-[7px]">

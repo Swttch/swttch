@@ -482,5 +482,29 @@
     "scheduledToast": "已預約自動恢復",
     "canceledToast": "已取消自動恢復",
     "scheduled": "已預約自動恢復"
+  },
+  "reviewDiff": {
+    "loading": "正在載入變更…",
+    "apply": "套用",
+    "reject": "拒絕"
+  },
+  "diffPage": {
+    "confirm": "確定",
+    "cancel": "取消",
+    "close": "關閉",
+    "unavailable": {
+      "title": "此請求已被回應。",
+      "description": "它可能已在聊天中被回應，或者在工作階段結束時已過期。這裡沒有需要審查的內容了。"
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "捨棄你在此處的編輯，還原 Claude 的提議",
+      "backHint": "重新開啟這處變更，並保留你的編輯",
+      "remaining": "還剩 {{count}} 項待審查",
+      "selectAll": "Select all"
+    }
   }
 }

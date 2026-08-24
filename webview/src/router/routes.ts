@@ -53,6 +53,11 @@ export enum Route {
   // 좌측 세션 패널 전용 뷰. '/sessions/'와 분리된 prefix를 써야
   // parseSessionIdFromPath가 'panel'을 세션 ID로 오인하지 않는다.
   SESSION_PANEL = 'session-panel',
+  // Reviewing one proposed file edit, addressed by the tool call that asked for
+  // it. Its own route rather than a chat sub-view because it is opened as a
+  // window of its own — an IDE editor tab, or a browser tab — where the only
+  // thing carried across is this URL.
+  DIFF = 'diff/:tool_use_id',
   SETTINGS = 'settings',
   SETTINGS_GENERAL = 'settings/general',
   SETTINGS_APPEARANCE = 'settings/appearance',
@@ -70,6 +75,18 @@ export enum Route {
   SETTINGS_PRIVACY = 'settings/privacy',
   SWITCH_ACCOUNT = 'switch-account',
 }
+
+/**
+ * Path prefix of the diff review route, shared by its matcher, parser and
+ * builder.
+ *
+ * Declared above `pathToRoute` rather than beside the helpers at the bottom.
+ * Module-level order does not matter once the module has finished evaluating,
+ * but this one is read on every route lookup, and a value that reads ahead of
+ * its declaration is one more thing to reason about when the module is only
+ * half-evaluated — which is what a failed hot reload leaves behind.
+ */
+const DIFF_PATH_PREFIX = '/diff/';
 
 export interface RouteMeta {
   path: string;
@@ -102,6 +119,11 @@ export const ROUTE_META: Record<Route, RouteMeta> = {
     path: '/session-panel',
     label: 'Sessions',
     icon: null
+  },
+  [Route.DIFF]: {
+    path: '/diff/:tool_use_id',
+    label: 'Review Edit',
+    icon: null,
   },
   [Route.SWITCH_ACCOUNT]: {
     path: '/switch-account',
@@ -246,6 +268,11 @@ export function pathToRoute(pathname: string): Route {
     return Route.SESSION;
   }
 
+  // 동적 diff 라우트: /diff/{toolUseId}
+  if (path.startsWith(DIFF_PATH_PREFIX)) {
+    return Route.DIFF;
+  }
+
   for (const [route, meta] of Object.entries(ROUTE_META)) {
     if (meta.path === path) {
       return route as Route;
@@ -271,6 +298,22 @@ export function parseSessionIdFromPath(pathname: string): string | null {
  */
 export function sessionToPath(sessionId: string): string {
   return `/sessions/${sessionId}`;
+}
+
+/**
+ * The tool call a diff review URL is about, or null when the path is not one.
+ *
+ * Mirrors parseSessionIdFromPath: the id is whatever follows the prefix, left
+ * exactly as the backend issued it.
+ */
+export function parseToolUseIdFromPath(pathname: string): string | null {
+  if (!pathname.startsWith(DIFF_PATH_PREFIX)) return null;
+  return pathname.slice(DIFF_PATH_PREFIX.length) || null;
+}
+
+/** The diff review path for [toolUseId]. */
+export function diffToPath(toolUseId: string): string {
+  return `${DIFF_PATH_PREFIX}${encodeURIComponent(toolUseId)}`;
 }
 
 /**

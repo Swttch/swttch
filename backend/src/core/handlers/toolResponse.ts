@@ -40,13 +40,18 @@ export function toolResponseHandler(
   // answered either way, and a leftover entry would outlive its question.
   if (toolUseId) takePreview(toolUseId);
 
-  // The user has answered, so the IDE diff that previewed this edit has served
-  // its purpose — close it either way. Unknown ids are a no-op on the IDE side,
-  // so there is no need to know whether this request opened one. Fire-and-
-  // forget: the CLI is waiting on the response below, not on a closing tab.
+  // The user has answered, so whatever previewed this edit has served its
+  // purpose — close it either way. Both surfaces are told, because which one was
+  // opened depends on a setting read when the request arrived, and it may have
+  // changed since; unknown ids are a no-op on the IDE side, so telling both is
+  // cheaper than remembering. Fire-and-forget: the CLI is waiting on the
+  // response below, not on a closing tab.
   if (toolUseId) {
     bridge.closeDiff({ toolUseId }).catch((err) => {
       console.error('[node-backend]', 'Failed to close IDE diff after decision:', err);
+    });
+    bridge.closeDiffTab({ toolUseId }).catch((err) => {
+      console.error('[node-backend]', 'Failed to close diff tab after decision:', err);
     });
   }
 

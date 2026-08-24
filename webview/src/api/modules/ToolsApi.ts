@@ -1,6 +1,6 @@
 import { BridgeClient } from '../bridge/BridgeClient';
 import { PermissionType, RiskLevel, FileOperation } from '../../dto/common';
-import { MessageType } from '@/shared';
+import { MessageType, type Hunk, type AcceptedRange } from '@/shared';
 
 interface DiffAvailablePayload {
   toolUseId: string;
@@ -10,6 +10,33 @@ interface DiffAvailablePayload {
   oldContent?: string;
   newContent?: string;
 }
+
+/**
+ * The change behind a pending permission request, as the backend holds it.
+ *
+ * Mirrors the backend's stored preview rather than restating a subset, so the
+ * two do not drift; fields this UI does not read yet are still carried.
+ */
+export interface DiffPreview {
+  filePath: string;
+  oldContent: string;
+  newContent: string;
+  toolName: string;
+  /**
+   * How the backend split this change. Typed rather than `unknown[]` because
+   * the review screen offers one accept/reject control per entry — see
+   * {@link Hunk}.
+   */
+  hunks: Hunk[];
+  input?: Record<string, unknown>;
+  sessionId?: string;
+  controlRequestId?: string;
+}
+
+// Defined in shared/ alongside the hunks it is derived from, and re-exported
+// here so the callers that already reach for it through this module are
+// unchanged.
+export type { AcceptedRange };
 
 /**
  * Tools API module
@@ -100,6 +127,51 @@ export class ToolsApi {
    */
   async openDiffForRequest(toolUseId: string): Promise<void> {
     await this.bridge.request(MessageType.OPEN_DIFF, { toolUseId });
+  }
+
+  /**
+   * Open OUR diff page in an IDE editor tab, for the same request.
+   *
+   * The counterpart to {@link openDiffForRequest} for the built-in surface.
+   * Routed through the backend because only the IDE side can open an editor
+   * tab; in a browser the webview opens its own tab or overlay instead and this
+   * is not used.
+   */
+  async openDiffTab(toolUseId: string): Promise<void> {
+    await this.bridge.request(MessageType.OPEN_DIFF_TAB, { toolUseId });
+  }
+
+  /**
+   * The change behind a pending permission request, for drawing the review
+   * diff here rather than in the IDE.
+   *
+   * Null once the request has been answered — the fetch lost a race with the
+   * decision, which is not an error and leaves nothing to draw.
+   */
+  async getDiffPreview(toolUseId: string): Promise<DiffPreview | null> {
+    const response = await this.bridge.request<{ preview: DiffPreview | null }>(
+      MessageType.GET_DIFF_PREVIEW,
+      { toolUseId },
+    );
+    return response?.preview ?? null;
+  }
+
+  /**
+   * Answer a permission request from the review diff drawn here.
+   *
+   * The same message the IDE's diff sends, so both surfaces settle a request
+   * the same way. [editedContent] is the proposed side as the reviewer left it
+   * and, when present, is what gets written (#305); omit it when they did not
+   * edit, so an untouched review lets Claude's own call through.
+   */
+  async resolveDiff(params: {
+    toolUseId: string;
+    controlRequestId: string;
+    sessionId: string;
+    acceptedRanges: AcceptedRange[];
+    editedContent?: string;
+  }): Promise<void> {
+    await this.bridge.request(MessageType.RESOLVE_DIFF, { ...params });
   }
 
   /**

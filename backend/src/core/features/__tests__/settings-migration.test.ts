@@ -22,7 +22,10 @@ import {
   RECLAIMED_NATIVE_KEYS,
   RENAMED_TO_NATIVE_KEYS,
   CONFIG_DIR_ENV_KEY,
+  LEGACY_SHOW_DIFF_IN_IDE_KEY,
+  DIFF_SURFACE_KEY,
 } from '../settings-migration';
+import { DiffSurface } from '../../../shared';
 
 const mockReadClaudeSettings = vi.mocked(readClaudeSettings);
 const mockSaveClaudeSetting = vi.mocked(saveClaudeSetting);
@@ -256,6 +259,102 @@ describe('migrateSettingsToCorrectStore', () => {
       mockReadSettingsFile.mockRejectedValue(new Error('read failed'));
 
       await expect(migrateSettingsToCorrectStore()).resolves.toBeUndefined();
+    });
+  });
+
+  // `showDiffInIde` asked whether the IDE may show the diff; `diffSurface` names
+  // which surface draws it. Both keys are ours and both live in the app settings,
+  // so this migration never touches the native file.
+  describe('showDiffInIde → diffSurface', () => {
+    it('carries a false value onto the built-in surface', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: false });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(
+        DIFF_SURFACE_KEY,
+        DiffSurface.BUILT_IN,
+      );
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(LEGACY_SHOW_DIFF_IN_IDE_KEY, null);
+    });
+
+    it('carries a true value onto the IDE surface', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(DIFF_SURFACE_KEY, DiffSurface.IDE);
+    });
+
+    it('never writes the native file for a migration between two app keys', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: false });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveClaudeSetting).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the legacy key is absent', async () => {
+      mockReadSettingsFile.mockResolvedValue({});
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalled();
+    });
+
+    // Idempotency: the first run clears the legacy key, so a second run reads an
+    // app store without it and has nothing to do.
+    it('does nothing when the legacy key was already cleared to null', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: null });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalled();
+    });
+
+    // The new key is what the current version writes, so a value under it is
+    // newer than anything still sitting under the old name.
+    it('keeps an existing diffSurface choice and only clears the legacy key', async () => {
+      mockReadSettingsFile.mockResolvedValue({
+        [LEGACY_SHOW_DIFF_IN_IDE_KEY]: true,
+        [DIFF_SURFACE_KEY]: DiffSurface.BUILT_IN,
+      });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(
+        DIFF_SURFACE_KEY,
+        expect.anything(),
+      );
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(LEGACY_SHOW_DIFF_IN_IDE_KEY, null);
+    });
+
+    // The key only ever held a boolean, so anything else is corruption. Falling
+    // back to the default surface beats guessing at a surface from garbage.
+    it('drops a non-boolean legacy value rather than guessing a surface', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: 'yes' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(
+        DIFF_SURFACE_KEY,
+        expect.anything(),
+      );
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith(LEGACY_SHOW_DIFF_IN_IDE_KEY, null);
+    });
+
+    // A failed copy must leave the source alone so the value is never lost and
+    // the next startup retries — the same contract the other migrations keep.
+    it('keeps the legacy key when writing the new one fails', async () => {
+      mockReadSettingsFile.mockResolvedValue({ [LEGACY_SHOW_DIFF_IN_IDE_KEY]: false });
+      mockSaveSettingToFile.mockResolvedValue({ status: 'error', error: 'disk full' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith(
+        LEGACY_SHOW_DIFF_IN_IDE_KEY,
+        null,
+      );
     });
   });
 });

@@ -1,31 +1,54 @@
 /**
- * Answer a pending file-edit permission request from the IDE's diff viewer,
- * with the hunks the user kept (#109).
+ * Answer a pending file-edit permission request from a review diff, with the
+ * hunks the user kept (#109).
  *
- * The selection is made in the diff — that is where the change is legible, and
- * where JetBrains already draws per-range controls. Only hunk numbers travel
- * back: the backend still holds the change it diffed, so what gets written is
- * the text that was reviewed rather than something reassembled from a viewer.
+ * Shared by both review surfaces — the IDE's native diff and the webview's own
+ * — because a review is a review wherever it is drawn, and a second decision
+ * path would let the two disagree about what an answer means.
+ *
+ * The selection is made in the diff, which is where the change is legible. An
+ * untouched review sends back only hunk ranges, and the backend rebuilds from
+ * the change it still holds, so what gets written is the text that was
+ * reviewed.
+ *
+ * A reviewer who edits the proposed side sends that text instead (#305). Once
+ * they have typed over the proposal, no set of ranges into the original
+ * proposal can describe what is now on screen — so the screen wins.
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview } from './diffPreview';
-import { buildPartialApproval } from './partialApproval';
+import { takePreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import type { Bridge } from '../../bridge/bridge-interface';
+import { buildPartialApproval, narrowToDifference } from './partialApproval';
+import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
 import type { AcceptedRange } from './hunks';
-import { sendControlResponseToProcess } from '../claude-process';
+import { sendControlResponseToProcess, sendMessageToProcess } from '../claude-process';
 
 export interface ResolveDiffParams {
   toolUseId: string;
   controlRequestId: string;
   sessionId: string;
   /**
-   * Regions of the proposal the user kept, as the IDE split them. Empty means
-   * they rejected the whole change.
+   * Regions of the proposal the user kept, as the review surface split them.
+   * Empty means they rejected the whole change.
    */
   acceptedRanges: AcceptedRange[];
+  /**
+   * The proposed side as the reviewer left it, when they edited it (#305).
+   *
+   * Absent means they did not type anything, and the ranges above describe the
+   * answer on their own. Present, it IS the answer — it already contains the
+   * result of every checkbox they unticked before typing.
+   */
+  editedContent?: string;
 }
 
-/** Parse a JSON-RPC notification payload, or null when it is not usable. */
+/**
+ * Parse an answer payload, or null when it is not usable.
+ *
+ * Reached from a JSON-RPC notification (the IDE) and from a webview request
+ * alike, so it trusts neither and validates the same way for both.
+ */
 export function parseResolveDiffParams(
   params: Record<string, unknown>,
 ): ResolveDiffParams | null {
@@ -41,7 +64,10 @@ export function parseResolveDiffParams(
     ? raw.filter(isAcceptedRange)
     : [];
 
-  return { toolUseId, controlRequestId, sessionId, acceptedRanges };
+  const edited = params.editedContent;
+  const editedContent = typeof edited === 'string' ? edited : undefined;
+
+  return { toolUseId, controlRequestId, sessionId, acceptedRanges, editedContent };
 }
 
 /** Whether a wire value is a usable line range; anything else is dropped. */
@@ -54,18 +80,28 @@ function isAcceptedRange(value: unknown): value is AcceptedRange {
 }
 
 /**
- * Turn the IDE's answer into the CLI's `control_response`.
+ * Turn the reviewer's answer into the CLI's `control_response`.
  *
  * Keeping every hunk sends the request through untouched, so an Edit stays the
  * Edit Claude wrote. Keeping some rewrites the tool input to exactly that
  * subset. Keeping none is a denial — writing the file back unchanged would
  * report success for an edit that never happened.
  */
-export function resolveDiffFromIde(
+export function resolveDiffReview(
   connections: ConnectionManager,
   params: ResolveDiffParams,
+  bridge?: Bridge,
 ): void {
   const preview = takePreview(params.toolUseId);
+
+  // The question is settled however this ended, so the window that asked it goes
+  // too. Done here rather than in each caller because both of them — the IDE's
+  // own diff and our diff page — must close it on every branch below, and one
+  // that forgot would strand a tab on an answered request.
+  //
+  // Only the built-in surface has a tab of ours to close; the IDE's viewer
+  // closes itself, and an unknown id is a no-op there anyway.
+  if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
 
   const respond = (response: Record<string, unknown>) => {
     sendControlResponseToProcess(connections, params.sessionId, {
@@ -84,21 +120,79 @@ export function resolveDiffFromIde(
     return;
   }
 
-  if (params.acceptedRanges.length === 0) {
+  // An edited proposal answers on its own: the reviewer's text already reflects
+  // whatever they unticked before typing, so "kept no ranges" is not a denial
+  // here the way it is for an untouched diff.
+  const edited = params.editedContent;
+  const keptNothing =
+    edited !== undefined ? edited === preview.oldContent : params.acceptedRanges.length === 0;
+
+  if (keptNothing) {
     respond({ behavior: 'deny', message: buildUserDeclinedContent() });
     console.error('[node-backend]', `Diff resolved for ${params.toolUseId}: kept nothing (denied)`);
     notifyResolved(connections, params);
     return;
   }
 
-  const amended = buildPartialApproval(preview, params.acceptedRanges);
+  const amended = buildPartialApproval(preview, params.acceptedRanges, edited);
   respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });
   console.error(
     '[node-backend]',
-    `Diff resolved for ${params.toolUseId}: kept ${params.acceptedRanges.length} region(s)`,
+    edited !== undefined
+      ? `Diff resolved for ${params.toolUseId}: applied the reviewer's edited text`
+      : `Diff resolved for ${params.toolUseId}: kept ${params.acceptedRanges.length} region(s)`,
   );
 
   notifyResolved(connections, params);
+
+  // Only for an edit. A hunk selection changes how much of the proposal lands,
+  // not what it says, and the model can still describe its own proposal
+  // truthfully; typing over it makes that description wrong.
+  //
+  // Measured before this existed: the model went on reporting the value it had
+  // proposed (20000) after the reviewer applied 15000. With the reminder it
+  // reports 15000, which is what is on disk.
+  if (edited !== undefined) {
+    tellClaudeAboutTheEdit(connections, params.sessionId, preview, edited);
+  }
+}
+
+/**
+ * Send the reminder about a corrected proposal, once the request itself has
+ * been answered.
+ *
+ * After, never before: the CLI is waiting on the control_response, and a user
+ * message that arrives while it waits would be read as an answer to a different
+ * question.
+ */
+function tellClaudeAboutTheEdit(
+  connections: ConnectionManager,
+  sessionId: string,
+  preview: StoredPreview,
+  applied: string,
+): void {
+  const notice = buildEditedProposalNotice(describeCorrection(preview.newContent, applied));
+  if (!notice) return;
+  sendMessageToProcess(connections, sessionId, notice);
+}
+
+/**
+ * What the reviewer changed about the PROPOSAL, narrowed to the lines that
+ * actually differ.
+ *
+ * Measured against `newContent` — what the model proposed — rather than against
+ * the file on disk, because that is the correction being reported: the model
+ * knows what it asked for, and needs to be told where the result departs from
+ * it. Diffing against the file instead would restate the whole edit, most of
+ * which the model already wrote itself.
+ *
+ * That also keeps a Write's notice short. Its amended input carries the entire
+ * file, so quoting it verbatim sent 3.7KB to say one number had changed.
+ */
+function describeCorrection(proposed: string, applied: string): EditedProposalChange | null {
+  const pair = narrowToDifference(proposed, applied);
+  if (!pair) return null;
+  return { oldText: pair.oldText, newText: pair.newText };
 }
 
 /**

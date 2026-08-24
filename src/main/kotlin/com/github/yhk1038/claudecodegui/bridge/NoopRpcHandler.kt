@@ -26,6 +26,8 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun applyDiff(filePath: String, newContent: String, toolUseId: String?): Boolean = false
     override suspend fun rejectDiff(toolUseId: String?) {}
     override suspend fun closeDiff(toolUseId: String) {}
+    override suspend fun openDiffTab(toolUseId: String) {}
+    override suspend fun closeDiffTab(toolUseId: String) {}
     override suspend fun refreshFiles(paths: List<String>) {}
     override suspend fun createSession(workingDir: String) {}
     override suspend fun openNewTab(workingDir: String) {}

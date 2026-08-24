@@ -214,9 +214,38 @@ export enum MessageType {
    */
   CLOSE_DIFF = 'CLOSE_DIFF',
   /**
+   * inbound webview→backend: fetch the stored preview for a pending permission
+   * request, so the webview can draw the review diff itself.
+   *
+   * The IDE reads the same preview through OPEN_DIFF; this is the door for
+   * hosts that have no IDE diff to open, where the review would otherwise be
+   * unavailable entirely.
+   */
+  GET_DIFF_PREVIEW = 'GET_DIFF_PREVIEW',
+  /**
+   * Node→Kotlin: open our own diff page in an editor tab, for a review the IDE's
+   * viewer is not drawing (the `diffSurface` setting names the built-in one).
+   *
+   * Distinct from OPEN_DIFF, which hands the change to the IDE's diff viewer and
+   * gets an answer back through its own controls. This one only opens a tab
+   * pointed at a WebView route; the page inside fetches the change itself with
+   * GET_DIFF_PREVIEW and answers with RESOLVE_DIFF, exactly as it does in a
+   * browser.
+   */
+  OPEN_DIFF_TAB = 'OPEN_DIFF_TAB',
+  /**
+   * Node→Kotlin: close the editor tab opened by OPEN_DIFF_TAB, once the request
+   * it was reviewing has been answered — from that page or anywhere else.
+   *
+   * Distinct from CLOSE_DIFF, which dismisses the IDE viewer's preview.
+   */
+  CLOSE_DIFF_TAB = 'CLOSE_DIFF_TAB',
+  /**
    * Node↔Kotlin: the IDE reporting which hunks of a pending edit the user kept,
    * so the backend can amend the tool call to just that subset (#109). Sent
    * from the diff viewer's own controls; an empty selection means a refusal.
+   *
+   * The webview's own review diff answers through the same message.
    */
   RESOLVE_DIFF = 'RESOLVE_DIFF',
   /**

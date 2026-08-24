@@ -482,5 +482,29 @@
     "scheduledToast": "자동 재개가 예약되었습니다",
     "canceledToast": "자동 재개 예약을 취소했습니다",
     "scheduled": "자동 재개 예정됨"
+  },
+  "reviewDiff": {
+    "loading": "변경 내용을 불러오는 중…",
+    "apply": "적용",
+    "reject": "거부"
+  },
+  "diffPage": {
+    "confirm": "확인",
+    "cancel": "취소",
+    "close": "닫기",
+    "unavailable": {
+      "title": "이미 응답한 요청이에요.",
+      "description": "채팅에서 먼저 응답했거나, 세션이 끝나며 만료됐을 수 있어요. 여기서 검토할 내용은 남아있지 않아요."
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "편집한 내용을 버리고 Claude가 제안한 내용으로 되돌립니다",
+      "backHint": "편집한 내용은 두고 이 부분을 다시 검토합니다",
+      "remaining": "검토할 항목 {{count}}개",
+      "selectAll": "모두 선택"
+    }
   }
 }

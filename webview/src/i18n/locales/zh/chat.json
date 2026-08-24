@@ -482,5 +482,29 @@
     "scheduledToast": "已预约自动恢复",
     "canceledToast": "已取消自动恢复",
     "scheduled": "已预约自动恢复"
+  },
+  "reviewDiff": {
+    "loading": "正在加载更改…",
+    "apply": "应用",
+    "reject": "拒绝"
+  },
+  "diffPage": {
+    "confirm": "确定",
+    "cancel": "取消",
+    "close": "关闭",
+    "unavailable": {
+      "title": "此请求已被回应。",
+      "description": "它可能已在聊天中被回应，或者在会话结束时已过期。这里没有需要审查的内容了。"
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "放弃你在此处的编辑，恢复 Claude 的提议",
+      "backHint": "重新打开这处更改，并保留你的编辑",
+      "remaining": "还剩 {{count}} 项待审查",
+      "selectAll": "Select all"
+    }
   }
 }

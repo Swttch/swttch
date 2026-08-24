@@ -482,5 +482,29 @@
     "scheduledToast": "自動再開を予約しました",
     "canceledToast": "自動再開の予約をキャンセルしました",
     "scheduled": "自動再開を予約済み"
+  },
+  "reviewDiff": {
+    "loading": "変更を読み込み中…",
+    "apply": "適用",
+    "reject": "却下"
+  },
+  "diffPage": {
+    "confirm": "確定",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "unavailable": {
+      "title": "このリクエストはすでに回答済みです。",
+      "description": "チャットから回答されたか、セッションの終了時に期限切れになった可能性があります。ここで確認できるものは残っていません。"
+    },
+    "hunk": {
+      "accept": "Accept",
+      "deny": "Deny",
+      "reset": "Reset",
+      "back": "Back",
+      "resetHint": "ここでの編集を破棄して、Claudeの提案に戻します",
+      "backHint": "編集内容を保持したまま、この変更箇所をもう一度開きます",
+      "remaining": "残り {{count}} 件",
+      "selectAll": "Select all"
+    }
   }
 }

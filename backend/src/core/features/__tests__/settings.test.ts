@@ -24,6 +24,7 @@ import {
   saveEnvVarToScope,
   saveSettingToScope,
 } from '../settings';
+import { DiffSurface, BrowserDiffPresentation } from '../../../shared';
 
 const mockReadFile = vi.mocked(readFile);
 const mockWriteFile = vi.mocked(writeFile);
@@ -377,7 +378,6 @@ describe('settings', () => {
         'focusInputOnEditorContext',
         'autoResumeOnLimit',
         'attachEditorContext',
-        'showDiffInIde',
       ]) {
         expect((await saveSettingToFile(key, true)).status).toBe('ok');
         expect((await saveSettingToFile(key, false)).status).toBe('ok');
@@ -391,9 +391,30 @@ describe('settings', () => {
     // copying the value into the native file. Rejecting null would strand the
     // old value here forever.
     it('should accept null for legacy keys the migration clears', async () => {
-      for (const key of ['language', 'respectGitignoreForContext']) {
+      // showDiffInIde is cleared by an app→app migration onto diffSurface. If a
+      // null write were rejected the old key would stay in the file forever and
+      // the migration would retry the same failing write on every startup.
+      for (const key of ['language', 'respectGitignoreForContext', 'showDiffInIde']) {
         expect((await saveSettingToFile(key, null)).status).toBe('ok');
       }
+    });
+
+    it('should accept the named diff surfaces and reject anything else', async () => {
+      for (const surface of Object.values(DiffSurface)) {
+        expect((await saveSettingToFile('diffSurface', surface)).status).toBe('ok');
+      }
+      const bad = await saveSettingToFile('diffSurface', 'editor');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('diffSurface must be one of');
+    });
+
+    it('should accept the named browser presentations and reject anything else', async () => {
+      for (const presentation of Object.values(BrowserDiffPresentation)) {
+        expect((await saveSettingToFile('browserDiffPresentation', presentation)).status).toBe('ok');
+      }
+      const bad = await saveSettingToFile('browserDiffPresentation', 'popup');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('browserDiffPresentation must be one of');
     });
 
     it('should accept boolean or null ultracode and reject other types', async () => {
@@ -596,12 +617,14 @@ describe('settings', () => {
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
-        showDiffInIde: true,
+        diffSurface: DiffSurface.IDE,
+        browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
         ultracode: null,
         dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,
+        showDiffInIde: null,
       });
       expect(mockWriteFile).toHaveBeenCalled();
     });
@@ -722,12 +745,14 @@ export default {
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
-        showDiffInIde: true,
+        diffSurface: DiffSurface.IDE,
+        browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
         ultracode: null,
         dockLayout: { order: [], visible: [] },
         env: {},
         language: null,
         respectGitignoreForContext: false,
+        showDiffInIde: null,
       });
     });
 

@@ -3,9 +3,9 @@ import type { TFunction } from 'i18next';
 import { ApprovalPanel } from './ApprovalPanel';
 import { OptionItem } from './ApprovalPanel/OptionButton';
 import { TitleWithFileLink } from './PermissionBanner/TitleWithFileLink';
-import { useApi } from '../../contexts/ApiContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
-import { useIdeDiffAvailable } from '../../hooks/useIdeDiffAvailable';
+import { useOpenDiffReview } from '../../hooks/useOpenDiffReview';
+import { useAutoOpenDiffReview } from '../../hooks/useAutoOpenDiffReview';
 import { PendingPermission } from '../../hooks/usePendingPermissions';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
@@ -16,6 +16,14 @@ interface Props {
   onApprove: () => void;
   onApproveForSession: () => void;
   onDeny: (reason?: string) => void;
+  /**
+   * Show the review as an overlay over this screen.
+   *
+   * Only called when the settings ask for one; every other surface opens a
+   * window this panel does not own (an IDE editor tab, a browser tab), so it has
+   * nothing to hand back. Absent where no overlay can be mounted.
+   */
+  onOpenDiffOverlay?: (toolUseId: string) => void;
 }
 
 /**
@@ -119,10 +127,9 @@ function titleParts(toolName: string, input: Record<string, unknown>): TitlePart
 }
 
 export function PermissionBanner(props: Props) {
-  const { permission, onApprove, onApproveForSession, onDeny } = props;
+  const { permission, onApprove, onApproveForSession, onDeny, onOpenDiffOverlay } = props;
   const { stop } = useChatStreamContext();
-  const api = useApi();
-  const diffAvailable = useIdeDiffAvailable();
+  const openDiffReview = useOpenDiffReview();
   const { t } = useTranslation('chat');
 
   const parts = useMemo(
@@ -133,16 +140,26 @@ export function PermissionBanner(props: Props) {
   const openDiff = useCallback(() => {
     // Looking at the change is not answering the question: the request stays
     // open and the turn keeps running.
-    void api.tools.openDiffForRequest(permission.toolUseId);
-  }, [api, permission.toolUseId]);
+    void openDiffReview(permission.toolUseId).then((result) => {
+      if (result.kind === 'overlay') onOpenDiffOverlay?.(result.toolUseId);
+    });
+  }, [openDiffReview, permission.toolUseId, onOpenDiffOverlay]);
+
+  // Shown without being asked for, the way the IDE shows it. The file link below
+  // stays: it is how the review is reached again after being closed.
+  useAutoOpenDiffReview(permission.toolUseId, onOpenDiffOverlay);
 
   /**
-   * The file name links to the review diff, which the user may have closed
-   * while its question is still up. Plain text where no diff can be shown —
-   * an underlined name that does nothing is worse than none.
+   * The file name links to the review, which the user may have closed while its
+   * question is still up.
+   *
+   * Every host can show one now — the IDE's viewer or our own page — so the only
+   * reason to fall back to plain text is a prompt with no file in it. Before the
+   * built-in page existed this also checked for an IDE, and a browser got a name
+   * it could not click.
    */
   const title = useMemo(() => {
-    if (!parts.file || !diffAvailable) return t(parts.key, { ...parts.values, file: parts.file });
+    if (!parts.file) return t(parts.key, { ...parts.values, file: parts.file });
     // Translate a second time with a marker in the file's place, so the link
     // lands exactly where this language puts the name — rather than searching
     // the sentence for the name, which could also match the words around it.
@@ -150,7 +167,7 @@ export function PermissionBanner(props: Props) {
     return (
       <TitleWithFileLink template={marked} marker={FILE_MARKER} file={parts.file} onOpen={openDiff} />
     );
-  }, [t, parts, diffAvailable, openDiff]);
+  }, [t, parts, openDiff]);
 
   const isWorkflow = permission.toolName === 'Workflow';
   const subtitle = isWorkflow ? (permission.input.description as string | undefined) : undefined;
@@ -180,6 +197,18 @@ export function PermissionBanner(props: Props) {
     onDeny();
     stop();
   }, [onDeny, stop]);
+
+  /*
+   * No diff is drawn in this panel.
+   *
+   * It used to be, for hosts with no IDE: the change was shown inline, capped at
+   * a fixed height and dropped to a single column below 720px, because the chat
+   * column is not wide enough for two. Every one of those was a compromise
+   * forced by the container rather than a choice about reviewing.
+   *
+   * The review now gets a window of its own on every host — an IDE editor tab,
+   * a browser tab, or an overlay — and the file name above is the way in.
+   */
 
   return (
     <ApprovalPanel
