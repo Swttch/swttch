@@ -105,6 +105,13 @@ export enum SettingKey {
   // missing or unreadable value leaves the feature on rather than silently off.
   ATTACH_EDITOR_CONTEXT = 'attachEditorContext',
 
+  // Whether the review opens by itself when the permission prompt goes up, or
+  // waits for the user to click the file name in that prompt. Only about the
+  // UNPROMPTED open: the click always works, and the change is always stored for
+  // it to show. False leaves the prompt on its own, which is what people who
+  // read the prompt rather than the diff asked for (#349).
+  AUTO_OPEN_DIFF_ON_PERMISSION = 'autoOpenDiffOnPermission',
+
   // Where a proposed file edit is shown for review while the permission prompt
   // is up, so the user can see WHAT they are approving instead of just the file
   // name. See {@link DiffSurface} for what each value means.
@@ -329,6 +336,7 @@ export interface SettingsState {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
+  [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: boolean;
   [SettingKey.DIFF_SURFACE]: DiffSurface;
   [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation;
   [SettingKey.SHOW_DIFF_IN_IDE]: boolean | null;
@@ -364,6 +372,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
+  [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: true,
   [SettingKey.DIFF_SURFACE]: DiffSurface.IDE,
   [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.NEW_TAB,
   [SettingKey.SHOW_DIFF_IN_IDE]: null,

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { isJetBrains } from '@/config/environment';
-import { useResolvedDiffSurface } from './useIdeDiffAvailable';
+import { useResolvedDiffSurface, useAutoOpenDiffEnabled } from './useIdeDiffAvailable';
 import { useDiffOpensAsOverlay } from './useDiffOverlayAllowed';
 import { DiffSurface } from '@/types/settings';
 import { useOpenDiffReview, type OpenDiffResult } from './useOpenDiffReview';
@@ -48,6 +48,7 @@ export function useAutoOpenDiffReview(
   const openDiffReview = useOpenDiffReview();
   const surface = useResolvedDiffSurface();
   const asOverlay = useDiffOpensAsOverlay();
+  const autoOpen = useAutoOpenDiffEnabled();
 
   /*
    * Only where nobody else is already opening it.
@@ -75,6 +76,9 @@ export function useAutoOpenDiffReview(
 
   useEffect(() => {
     if (!toolUseId) return;
+    // Asked not to. The prompt still goes up; only this unprompted open stands
+    // down, leaving the file name in it as the way to reach the review (#349).
+    if (!autoOpen) return;
     if (backendOpensIt) return;
     if (openedRequests.has(toolUseId)) return;
 
@@ -102,5 +106,5 @@ export function useAutoOpenDiffReview(
     return () => {
       cancelled = true;
     };
-  }, [api, toolUseId, backendOpensIt]);
+  }, [api, toolUseId, backendOpensIt, autoOpen]);
 }

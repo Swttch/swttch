@@ -71,6 +71,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
+  autoOpenDiffOnPermission: true,
   diffSurface: DiffSurface.IDE,
   browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
   ultracode: null,
@@ -121,6 +122,7 @@ const COMMENT_MAP: Record<string, string> = {
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
+  autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
   diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
   browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
@@ -336,6 +338,7 @@ function validateSetting(key: string, value: unknown): string | null {
         return `browserDiffPresentation must be one of ${BROWSER_DIFF_PRESENTATIONS.map((p) => `"${p}"`).join(', ')}`;
       }
       break;
+    case 'autoOpenDiffOnPermission':
     case 'chatPagination':
     case 'includeNestedSessions':
     case 'softWrap':

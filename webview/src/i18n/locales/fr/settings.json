@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "Affichage des diffs",
+    "autoOpen": {
+      "label": "Ouvrir le diff automatiquement",
+      "description": "Ouvre la modification proposée dès que l'autorisation est demandée. Désactivé, seule l'invite d'approbation s'affiche et le diff s'ouvre en cliquant sur le nom du fichier qu'elle contient."
+    },
     "surface": {
       "label": "Examiner les modifications dans",
       "description": "L'endroit où s'ouvre une modification de fichier proposée, pour que vous la voyiez avant de décider.",

@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "Diff View",
+    "autoOpen": {
+      "label": "Open the diff automatically",
+      "description": "Opens the proposed change as soon as permission is asked. Turn this off to get just the approval prompt, and open the diff by clicking the file name in it."
+    },
     "surface": {
       "label": "Review edits in",
       "description": "Where a proposed file edit opens so you can see it while you decide.",

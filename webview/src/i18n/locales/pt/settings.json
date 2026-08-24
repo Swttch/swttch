@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "Visualização de diferenças",
+    "autoOpen": {
+      "label": "Abrir a diferença automaticamente",
+      "description": "Abre a alteração proposta assim que a permissão é solicitada. Desativado, aparece apenas o aviso de aprovação e a diferença abre ao clicar no nome do arquivo nele."
+    },
     "surface": {
       "label": "Revisar as alterações em",
       "description": "Onde uma alteração de arquivo proposta é aberta para você vê-la enquanto decide.",

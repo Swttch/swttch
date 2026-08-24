@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "差异视图",
+    "autoOpen": {
+      "label": "自动打开差异",
+      "description": "在请求权限时一并打开待确认的更改。关闭后只显示批准提示，点击其中的文件名才会打开差异。"
+    },
     "surface": {
       "label": "查看更改的位置",
       "description": "打开待确认的文件更改的位置，便于您在决定时查看内容。",

@@ -150,6 +150,48 @@ describe('preparePermissionReview', () => {
     });
   });
 
+  /*
+   * Asked not to open it unprompted (#349).
+   *
+   * Two surfaces to decline, because the setting is about the OPENING and not
+   * about where: the IDE's viewer and the editor tab both have to stand down.
+   * The entry must survive both — the file name in the prompt is now the only
+   * way in, and it reads exactly this.
+   */
+  describe('when the automatic open is turned off', () => {
+    it('opens no IDE viewer but still stores the change', async () => {
+      readMergedSettings.mockResolvedValue({
+        settings: { autoOpenDiffOnPermission: false, diffSurface: DiffSurface.IDE },
+      });
+      const bridge = fakeBridge();
+      await request(bridge);
+
+      expect(calls(bridge).openDiff).not.toHaveBeenCalled();
+      expect(peekPreview('toolu_1')).toBeDefined();
+    });
+
+    it('opens no editor tab but still stores the change', async () => {
+      readMergedSettings.mockResolvedValue({
+        settings: { autoOpenDiffOnPermission: false, diffSurface: DiffSurface.BUILT_IN },
+      });
+      const bridge = fakeBridge();
+      await request(bridge);
+
+      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
+      expect(peekPreview('toolu_1')).toBeDefined();
+    });
+
+    it('opens the review when the setting is absent', async () => {
+      // Absent must read as on, or upgrading would silently take the automatic
+      // review away from everyone who never opened this setting.
+      readMergedSettings.mockResolvedValue({ settings: { diffSurface: DiffSurface.IDE } });
+      const bridge = fakeBridge();
+      await request(bridge);
+
+      expect(calls(bridge).openDiff).toHaveBeenCalled();
+    });
+  });
+
   it('keeps the stored change faithful to what was proposed', async () => {
     await request(fakeBridge());
 
