@@ -188,47 +188,15 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.28.5 - Chat input text fixes and background task control</h3>
+            <h3>0.29.0 - Turn off the automatic diff, and edit what Claude proposes</h3>
             <ul>
-                <li>Fix highlighted text in the chat input being drawn one line off (#329, reported by @CraftedFury)</li>
-                <li>Fix Cmd/Ctrl+Left/Right moving past the current line in the chat input (#329, reported by @CraftedFury)</li>
-                <li>Fix pasted text not appearing in the chat input (#180, reported by @JaydenPeng)</li>
-                <li>Cancel a running background task from its ✕ (#330, reported by @CraftedFury)</li>
-                <li>Escape now stops only the foreground reply and leaves background tasks running (#330, reported by @CraftedFury)</li>
-                <li>Fix a global setting change showing as applied when the project overrides that key (#344)</li>
-            </ul>
-            <h3>0.28.4 - Windows text, keyboard, and tab restore fixes</h3>
-            <ul>
-                <li>Fix garbled console output on Windows (#338)</li>
-                <li>Fix Option/Alt+Arrow not reaching the chat input (#337)</li>
-                <li>Free up F12 for the IDE — DevTools moved into Settings (#333, reported by @EndiButler)</li>
-                <li>Fix chat tabs not being restored after an IDE restart (#312, reported by @i-kulbitski)</li>
-                <li>Fix a new chat tab's title showing a UUID (#335)</li>
-                <li>Keep the chat panel loadable on IDEs without JCEF (#321, reported by @maicol07)</li>
-                <li>Show IDE and OS versions in About (#320, reported by @CraftedFury)</li>
-            </ul>
-            <h3>0.28.3 - Folding pinned instruction, soft wrap, voice fixes</h3>
-            <ul>
-                <li>Fold a pinned instruction away as you scroll past it (#318)</li>
-                <li>Fix Ctrl-based voice shortcuts not working under non-Latin input methods (#324, reported by @hollandjake)</li>
-                <li>Fix dictation ignoring the spoken language you picked (#324, reported by @hollandjake)</li>
-                <li>Fix the voice input kit reporting a successful install while voice input stayed broken (#323, reported by @hollandjake)</li>
-                <li>Add a Soft Wrap setting for long lines in diffs and tool output (#322, requested by @deniskrizanovic)</li>
-                <li>Fix diff row colours stopping short of the end of long lines (#322, reported by @deniskrizanovic)</li>
-                <li>Fix empty message bubbles appearing during runs that use tools (#258, reported by @StarCode000)</li>
-            </ul>
-            <h3>0.28.2 - Sticky user message + scrollable model picker</h3>
-            <ul>
-                <li>Pin your sent message to the top of the chat while its reply is running (#313, requested by @deniskrizanovic)</li>
-                <li>Fix models past the 16th being unreachable in the model picker (#316, reported by @JairDavis)</li>
-            </ul>
-            <h3>0.28.0 - Nested project &amp; mergeable session list 🌳</h3>
-            <ul>
-                <li>Show every nested working directory in the dropdown, at any depth (#311, requested by @CraftedFury)</li>
-                <li>Add a toggle to list sessions from all nested directories together (#311, requested by @CraftedFury)</li>
-                <li>Add a refresh button to the working-directory dropdown (#311)</li>
-                <li>Fix nested working directories not appearing on Windows (#311)</li>
-                <li>Fix the usage-limit notice showing up without its resume button (#309)</li>
+                <li>Fix edit diff view force displaying problem, display or not setting option added (#349)</li>
+                <li>Make review diff editable (#305, requested by @AranKyun)</li>
+                <li>Add a built-in diff review for the browser (#342)</li>
+                <li>Add an agent transcript viewer to background tasks (#347)</li>
+                <li>Add a live output pane for background shell tasks (#347)</li>
+                <li>Fix soft wrap not reaching code blocks in answers (#179, reported by @deniskrizanovic)</li>
+                <li>Add a soft wrap toggle to every code block (#179, requested by @deniskrizanovic)</li>
             </ul>
         """.trimIndent()
     }
