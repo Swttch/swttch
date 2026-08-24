@@ -21,6 +21,15 @@ import type { StoredPreview } from './diffPreview';
 export interface PartialApproval {
   /** The amended input to hand back as `updatedInput`, in the tool's own shape. */
   input: Record<string, unknown>;
+  /**
+   * The whole file as it will end up, which the amended input only describes in
+   * part — an Edit carries the changed region, not the result.
+   *
+   * Carried out because what Claude has to be told about is the result, and
+   * re-deriving it from an `old_string`/`new_string` pair outside would be
+   * reconstructing what was already computed here.
+   */
+  content: string;
 }
 
 /**
@@ -31,19 +40,50 @@ export interface PartialApproval {
  * Claude's own input already says it. Rejecting everything is NOT expressed
  * here — that is a denial, and denying is the caller's job.
  *
- * [editedContent], when given, is the reviewer's own text for the whole file
- * and replaces the reassembly entirely (#305).
+ * [editedContent], when given, is the reviewer's own text for the proposed side
+ * (#305). It replaces the proposal, NOT the picking: the hunks the reviewer
+ * denied stay denied, and the ones they kept are taken from the edited text.
  */
 export function buildPartialApproval(
   preview: StoredPreview,
   accepted: readonly AcceptedRange[],
   editedContent?: string,
 ): PartialApproval | null {
-  // What the reviewer edited outranks what was proposed (#305). The viewer's
-  // text IS the answer: hunk ranges describe the proposal it started from, so
-  // reassembling from them would discard whatever was typed over it.
-  const content =
-    editedContent ?? applyAcceptedRanges(preview.oldContent, preview.newContent, accepted);
+  /*
+   * Both answers, not one of them.
+   *
+   * The reviewer's text supersedes the proposal, so it is what the accepted
+   * regions are read from — but which regions those are is still the picking's
+   * to say. Taking the edited text wholesale ignored every Deny: a reviewer who
+   * refused one hunk and corrected a typo in another got BOTH written, silently.
+   *
+   * The ranges address lines on the proposed side, so they only survive an edit
+   * that leaves the line count alone (a typo, a changed constant — what this
+   * feature is for). An edit that adds or removes lines shifts every range after
+   * it, and there is no honest way to re-derive where a hunk boundary moved to;
+   * there the text is the whole answer, which is what it was before ranges
+   * entered the picture.
+   */
+  const proposedSide = editedContent ?? preview.newContent;
+
+  /*
+   * Reassemble by range only when the ranges can still be trusted to say where
+   * the reviewer's text belongs. Two cases where they cannot:
+   *
+   *  - The edit changed the line count, so every range after the insertion
+   *    addresses a line that moved.
+   *  - Nothing was ticked at all, yet something was typed. Reassembling from an
+   *    empty list yields the file untouched and drops the edit silently; an
+   *    edit with no picking is a whole-file answer, which is what it was before
+   *    ranges entered the picture.
+   */
+  const rangesStillApply =
+    editedContent === undefined ||
+    (accepted.length > 0 && lineCount(editedContent) === lineCount(preview.newContent));
+
+  const content = rangesStillApply
+    ? applyAcceptedRanges(preview.oldContent, proposedSide, accepted)
+    : proposedSide;
   if (content === null) return null;
 
   // Keeping everything reproduces the proposal, so let the original call
@@ -53,7 +93,7 @@ export function buildPartialApproval(
 
   // Write already states the whole file, so the subset just replaces it.
   if (preview.toolName === 'Write') {
-    return { input: { ...preview.input, content } };
+    return { input: { ...preview.input, content }, content };
   }
 
   // Edit and MultiEdit must stay in Edit shape (see the module note). Narrow
@@ -70,6 +110,7 @@ export function buildPartialApproval(
       new_string: pair.newText,
       replace_all: false,
     },
+    content,
   };
 }
 
@@ -117,3 +158,10 @@ export function narrowToDifference(
   return { oldText, newText };
 }
 
+
+/** Lines in [text], counting the way AcceptedRange coordinates do. */
+function lineCount(text: string): number {
+  if (text === '') return 0;
+  const withoutTrailing = text.endsWith('\n') ? text.slice(0, -1) : text;
+  return withoutTrailing.split('\n').length;
+}

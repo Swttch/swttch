@@ -101,17 +101,28 @@ export function useHunkDecisions(hunks: readonly ChangeBlock[]): HunkDecisions {
     [kept],
   );
 
-  return {
-    decisionFor,
-    keep,
-    undo,
-    reset,
-    acceptAll,
-    resetAll,
-    allAccepted: hunks.length > 0 && hunks.every((h) => decisions.get(h.index) === 'keep'),
-    openCount,
-    keptCount: kept.length,
-    total: hunks.length,
-    acceptedRanges,
-  };
+  /*
+   * Memoized, because consumers key render decisions off this object.
+   *
+   * A literal here is a new object on every render, and the review diff passes
+   * values derived from it to a renderer that compares by identity and rebuilds
+   * on change — taking the reviewer's edit session down with it every time.
+   * Nothing here is cheap to rebuild, but identity is what actually matters.
+   */
+  return useMemo(
+    () => ({
+      decisionFor,
+      keep,
+      undo,
+      reset,
+      acceptAll,
+      resetAll,
+      allAccepted: hunks.length > 0 && hunks.every((h) => decisions.get(h.index) === 'keep'),
+      openCount,
+      keptCount: kept.length,
+      total: hunks.length,
+      acceptedRanges,
+    }),
+    [decisionFor, keep, undo, reset, acceptAll, resetAll, hunks, decisions, openCount, kept.length, acceptedRanges],
+  );
 }

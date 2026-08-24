@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FileDiff, EditProvider, type FileContents } from '@pierre/diffs/react';
 import type { DiffLineAnnotation, EditorChange, EditorChangeEvent } from '@pierre/diffs';
 import { parseDiffFromFile } from '@pierre/diffs';
@@ -94,8 +94,23 @@ export default function ReviewDiffSurface({
    * a hunk starts three lines of context earlier, and a control sitting beside
    * an unchanged line reads as deciding that line. See firstChangedLine.
    */
+  /*
+   * Keyed on whether there are controls at all, NOT on the decisions object.
+   *
+   * The renderer compares this array by identity and rebuilds the whole view
+   * when it changes — which restarts the edit session underneath, so the
+   * proposed side goes read-only again a frame after every render. `decisions`
+   * is a fresh object on every render (useHunkDecisions returns a literal), so
+   * depending on it handed the renderer a new array every time and the session
+   * never survived long enough to type into.
+   *
+   * Nothing inside these annotations reads the decisions: each carries a hunk
+   * index, and the control re-reads the current state when it draws. So the
+   * array only has to change when the diff does.
+   */
+  const hasDecisions = decisions !== undefined;
   const lineAnnotations = useMemo<DiffLineAnnotation<HunkAnnotation>[]>(() => {
-    if (!decisions) return [];
+    if (!hasDecisions) return EMPTY_ANNOTATIONS;
     // From the ORIGINAL diff, not the resolved one: an answered block collapses
     // to context there, and its control has to stay put so Back can reach it.
     return changeBlocksOf(originalDiff).map((block) => ({
@@ -103,7 +118,7 @@ export default function ReviewDiffSurface({
       lineNumber: blockAnchorLine(block),
       metadata: { hunkIndex: block.index },
     }));
-  }, [decisions, originalDiff]);
+  }, [hasDecisions, originalDiff]);
 
   // An answered hunk collapses to context, so what stays on screen is what is
   // left to decide. Replayed from the original every time — see useResolvedDiff.
@@ -116,6 +131,22 @@ export default function ReviewDiffSurface({
     (options: ConstructorParameters<typeof Editor>[0]) => new Editor(options),
     [],
   );
+
+  /*
+   * Turned on one commit AFTER mount, never with it.
+   *
+   * The renderer attaches the editor from an effect keyed on this flag alone,
+   * and only if its diff instance already exists — an instance built in a ref
+   * callback on the same commit. Passed `true` from the first render there is
+   * one attempt, and if it lands before the instance is ready nothing retries:
+   * the flag never changes again, so neither does the effect, and the proposed
+   * side stays read-only for the life of the review.
+   *
+   * Flipping it here gives the effect a second run with the instance in place.
+   * false → true is the only transition, so the editor is still attached once.
+   */
+  const [editable, setEditable] = useState(false);
+  useLayoutEffect(() => setEditable(true), []);
 
   const editorOptions = useMemo(
     () => ({
@@ -157,7 +188,7 @@ export default function ReviewDiffSurface({
         <FileDiff
           fileDiff={fileDiff}
           options={options}
-          edit
+          edit={editable}
           editorOptions={editorOptions}
           lineAnnotations={lineAnnotations}
           renderAnnotation={renderAnnotation}
@@ -169,3 +200,11 @@ export default function ReviewDiffSurface({
 
 /** Narrower than this and each side of a split view is too thin to read. */
 const SPLIT_MIN_WIDTH = 720;
+
+/**
+ * One array for "no controls", so that case keeps a stable identity too.
+ *
+ * A fresh `[]` each time is a change as far as the renderer is concerned, and a
+ * change costs the edit session — see lineAnnotations.
+ */
+const EMPTY_ANNOTATIONS: DiffLineAnnotation<HunkAnnotation>[] = [];

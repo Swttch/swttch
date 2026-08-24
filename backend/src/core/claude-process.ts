@@ -8,6 +8,7 @@ import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
+import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
 import {
   openDiffForPermission,
   openDiffTabForPermission,
@@ -493,6 +494,11 @@ export async function ensureClaudeProcess(
     try {
       console.error('[node-backend]', `Claude CLI process exited with code: ${code}`);
 
+      // Nothing held for this session will ever be delivered now — there is no
+      // turn left to end. Dropped rather than kept, so it cannot surface in
+      // whatever session reuses the id.
+      clearMessagesForSession(targetSessionId);
+
       // We killed this process ourselves to respawn it under a new permission mode.
       // The user asked to switch modes, not to end anything, and a replacement CLI is
       // already being spawned — so skip the failure reporting and the STREAM_END that
@@ -968,6 +974,39 @@ function handleStreamEvent(
     const errorData = event.error as { message?: string } | null;
     if (errorData?.message) {
       diagnoseAuthError(targetSessionId, errorData.message, connections).catch(() => {});
+    }
+
+    /*
+     * Anything that had to wait for this turn to end — see afterTurn.
+     *
+     * Sent here and nowhere earlier: the CLI clears its own pending-message
+     * queue as a turn finishes, so a message written to stdin while the turn
+     * was still running is discarded rather than delivered. This is the first
+     * moment at which an ordinary user message would survive.
+     */
+    for (const content of takeMessagesForFinishedTurn(targetSessionId)) {
+      const sent = sendMessageToProcess(connections, targetSessionId, content);
+      /*
+       * Told to the chat as well as to the CLI, the way an ordinary user
+       * message is (see sendMessage: it writes to stdin AND broadcasts).
+       *
+       * Writing to stdin alone puts the message in the transcript and in front
+       * of the model, but NOT in the chat's own list: the CLI does not echo
+       * user messages back on stdout — measured, only `tool_result` entries
+       * come back that way — so the webview never learns about anything it did
+       * not send itself. The reminder was reaching Claude and staying invisible
+       * to the session it belonged to.
+       */
+      if (sent) {
+        connections.broadcastToSession(targetSessionId, MessageType.USER_MESSAGE_BROADCAST, {
+          content,
+          sessionId: targetSessionId,
+        });
+      }
+      console.error(
+        '[node-backend]',
+        `Held message for ${targetSessionId} after turn: ${sent ? 'sent' : 'FAILED to send'}`,
+      );
     }
   }
 

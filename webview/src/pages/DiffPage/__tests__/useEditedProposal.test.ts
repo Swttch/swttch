@@ -118,3 +118,64 @@ describe('useEditedProposal', () => {
     });
   });
 });
+
+describe('resetting one hunk', () => {
+  it('puts that hunk back to what Claude proposed', () => {
+    // The whole point of Reset, and what it never actually did: it dropped the
+    // "this was typed into" mark and left the text alone, so the button was
+    // there, the reviewer pressed it, and nothing on screen changed.
+    const { result } = renderHook(() => useEditedProposal(PROPOSAL, HUNKS));
+
+    act(() => result.current.applyEdit('line 1\nTYPED\nline 3\n', [change(1, 1)]));
+    expect(result.current.contents).toBe('line 1\nTYPED\nline 3\n');
+
+    act(() => result.current.resetHunk(0));
+
+    expect(result.current.contents).toBe(PROPOSAL);
+  });
+
+  it('stops reporting that hunk as edited', () => {
+    const { result } = renderHook(() => useEditedProposal(PROPOSAL, HUNKS));
+    act(() => result.current.applyEdit('line 1\nTYPED\nline 3\n', [change(1, 1)]));
+    expect(result.current.isHunkEdited(0)).toBe(true);
+
+    act(() => result.current.resetHunk(0));
+
+    expect(result.current.isHunkEdited(0)).toBe(false);
+  });
+
+  it('leaves what was typed outside the hunk alone', () => {
+    // Resetting a hunk is not abandoning the review. Line 1 sits outside the
+    // hunk's span, so it survives.
+    const { result } = renderHook(() => useEditedProposal(PROPOSAL, HUNKS));
+
+    act(() => result.current.applyEdit('OUTSIDE\nTYPED\nline 3\n', [change(0, 1)]));
+    act(() => result.current.resetHunk(0));
+
+    expect(result.current.contents).toBe('OUTSIDE\nline 2\nline 3\n');
+  });
+
+  it('reports nothing edited once the only edit is reset', () => {
+    // `isEdited` decides whether the text is sent at all, so it has to agree
+    // with the text rather than with the hunk marks.
+    const { result } = renderHook(() => useEditedProposal(PROPOSAL, HUNKS));
+    act(() => result.current.applyEdit('line 1\nTYPED\nline 3\n', [change(1, 1)]));
+
+    act(() => result.current.resetHunk(0));
+
+    expect(result.current.isEdited).toBe(false);
+  });
+
+  it('leaves the text alone when an edit changed the line count', () => {
+    // A hunk's span is stated in proposal line numbers. Once a line has been
+    // added those numbers point somewhere else, and restoring by them would
+    // overwrite whatever the reviewer typed at the shifted position.
+    const { result } = renderHook(() => useEditedProposal(PROPOSAL, HUNKS));
+    const withExtraLine = 'line 1\nTYPED\nEXTRA\nline 3\n';
+    act(() => result.current.applyEdit(withExtraLine, [change(1, 1)]));
+
+    act(() => result.current.resetHunk(0));
+
+    expect(result.current.contents).toBe(withExtraLine);
+  });
+});

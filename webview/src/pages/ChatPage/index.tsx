@@ -304,9 +304,28 @@ export function ChatPage() {
   // 빈 영역 클릭 시 textarea로 포커스 이동
   // mousedown 시점에 확인해야 포커스 이동 전 activeElement를 비교할 수 있음
   const handleContainerMouseDown = useCallback((e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button, a, input, textarea, select, [role="button"], [contenteditable]')) {
-      return;
+    /*
+     * Read the composed path, not `e.target`.
+     *
+     * The review diff draws its editable side inside a shadow root, and the
+     * platform retargets `e.target` to the host element — `<diffs-container>`,
+     * which matches none of the selectors below. So a click meant to put the
+     * caret in a proposed edit read as a click on empty space: this handler
+     * called preventDefault and moved focus to the composer, and the proposed
+     * side could never be typed into. `closest()` cannot see past a shadow
+     * boundary; the path holds the real element.
+     *
+     * Same fix, same reason as isTypingTarget in useApprovalKeyboard — that one
+     * was for keystrokes leaking into the approval panel, this one for the click
+     * that should have focused the editor in the first place.
+     */
+    const path = typeof e.nativeEvent.composedPath === 'function'
+      ? e.nativeEvent.composedPath()
+      : [e.target];
+    const CONTROLS = 'button, a, input, textarea, select, [role="button"], [contenteditable]';
+    for (const node of path) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.matches(CONTROLS)) return;
     }
     if (document.activeElement === textareaRef.current) {
       // 이미 포커스 상태 → 브라우저가 포커스를 빼앗지 못하게 방지

@@ -182,3 +182,54 @@ describe('buildPartialApproval with an edited proposal', () => {
   });
 });
 
+
+describe('an edited proposal together with a hunk selection', () => {
+  const oldContent = 'a\nb\nc\nd\n';
+  const newContent = 'A\nb\nC\nd\n'; // two separate changes: line 1 and line 3
+
+  const preview = {
+    toolName: 'Write',
+    filePath: '/tmp/f.txt',
+    oldContent,
+    newContent,
+    input: { file_path: '/tmp/f.txt', content: newContent },
+  } as never;
+
+  /** Keep only the first change (line 1), deny the second (line 3). */
+  const firstOnly = [{ oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 }];
+
+  it('honours the denial while taking the edit', () => {
+    // The bug: the edited text was used wholesale, so a hunk the reviewer had
+    // denied got written anyway — silently, with nothing on screen to say so.
+    const editedContent = 'EDITED\nb\nC\nd\n';
+
+    const result = buildPartialApproval(preview, firstOnly, editedContent);
+
+    // Line 1 comes from the edit; line 3 stays as it is on disk.
+    expect(result?.content).toBe('EDITED\nb\nc\nd\n');
+  });
+
+  it('carries the resulting file, not just the amended input', () => {
+    // What Claude is told about is the result, and an Edit's input only carries
+    // the region that changed.
+    const result = buildPartialApproval(preview, firstOnly, 'EDITED\nb\nC\nd\n');
+
+    expect(result?.content).toBe('EDITED\nb\nc\nd\n');
+  });
+
+  it('falls back to the whole edited text when the line count changed', () => {
+    // Ranges address proposal line numbers; an added line moves every one of
+    // them, and guessing where a boundary went is worse than taking the text.
+    const withExtraLine = 'A\nEXTRA\nb\nC\nd\n';
+
+    const result = buildPartialApproval(preview, firstOnly, withExtraLine);
+
+    expect(result?.content).toBe(withExtraLine);
+  });
+
+  it('still applies the picking when nothing was typed', () => {
+    const result = buildPartialApproval(preview, firstOnly, undefined);
+
+    expect(result?.content).toBe('A\nb\nc\nd\n');
+  });
+});
