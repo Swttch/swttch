@@ -213,6 +213,7 @@
       "confirm": "全部停止"
     },
     "workflowLabel": "工作流程",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} 個代理程式",
     "agentsCount_one": "{{count}} 個代理程式",
     "agentsCount_other": "{{count}} 個代理程式",
@@ -223,6 +224,19 @@
       "tokens": "Token",
       "tools": "工具",
       "time": "時間"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "尚無代理程式。",
+      "loading": "正在載入記錄…",
+      "empty": "尚無訊息。",
+      "error": "載入記錄失敗。",
+      "truncated": "僅顯示最近 {{count}} 筆記錄。",
+      "starting": "正在啟動任務…",
+      "updating": "正在更新…",
+      "jumpToBottom": "跳至底部",
+      "copyCommand": "複製指令",
+      "resize": "拖曳以調整大小"
     }
   },
   "scheduledMessages": {

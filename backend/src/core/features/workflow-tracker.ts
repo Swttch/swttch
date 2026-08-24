@@ -108,11 +108,25 @@ function scriptPathName(scriptPath: string | undefined): string | undefined {
   return base.replace(/\.[cm]?[jt]s$/i, '');
 }
 
-/** Parse the immediate "launched in background" tool_result text. */
+/** Parse the immediate "launched in background" tool_result text for a Workflow run. */
 function parseImmediateResult(text: string): { taskId?: string; transcriptDir?: string } {
   const taskId = text.match(/Task ID:\s*(\S+)/)?.[1];
   const transcriptDir = text.match(/Transcript dir:\s*(.+)/)?.[1]?.trim();
   return { taskId, transcriptDir };
+}
+
+/**
+ * Parse the immediate "Command running in background" tool_result text for a
+ * plain Bash background task — a different shape from the Workflow tool's
+ * (e.g. "Command running in background with ID: b0i10sn6r. Output is being
+ * written to: /tmp/.../b0i10sn6r.output. …"). Read live rather than waiting for
+ * the terminal task_notification, so the output log is fetchable immediately —
+ * mirroring how transcriptDir is available before a workflow finishes (#347).
+ */
+function parseImmediateBashResult(text: string): { taskId?: string; outputFile?: string } {
+  const taskId = text.match(/Command running in background with ID:\s*(\S+?)\.?\s/)?.[1];
+  const outputFile = text.match(/Output is being written to:\s*(.+?)\.\s/)?.[1]?.trim();
+  return { taskId, outputFile };
 }
 
 function num(v: unknown): number {
@@ -369,11 +383,14 @@ export class WorkflowProgressTracker {
   /** Feed every CLI stream event here (side-effect only; never throws). */
   handleEvent(sessionId: string, event: Record<string, unknown>): void {
     try {
-      if (event['type'] !== 'system') return;
-      const subtype = event['subtype'];
-      if (subtype === 'task_started') this.onStarted(sessionId, event);
-      else if (subtype === 'task_progress' || subtype === 'task_updated') this.onProgress(sessionId, event);
-      else if (subtype === 'task_notification') this.onNotification(sessionId, event);
+      if (event['type'] === 'system') {
+        const subtype = event['subtype'];
+        if (subtype === 'task_started') this.onStarted(sessionId, event);
+        else if (subtype === 'task_progress' || subtype === 'task_updated') this.onProgress(sessionId, event);
+        else if (subtype === 'task_notification') this.onNotification(sessionId, event);
+      } else if (event['type'] === 'user') {
+        this.onImmediateResult(sessionId, event);
+      }
     } catch (err) {
       console.error('[node-backend]', 'workflow-tracker handleEvent failed:', err);
     }
@@ -404,9 +421,17 @@ export class WorkflowProgressTracker {
     const t = entry.task;
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
+    const taskType = event['task_type'];
+    if (taskType === 'local_workflow' || taskType === 'local_bash') t.taskType = taskType;
+    const description = typeof event['description'] === 'string' ? (event['description'] as string) : undefined;
+    if (description) t.description = description;
     const wfName = typeof event['workflow_name'] === 'string' ? (event['workflow_name'] as string) : '';
-    t.name = wfName || parseMetaName(prompt) || t.name;
-    if (typeof event['description'] === 'string') t.description = event['description'] as string;
+    // A plain background Bash command has no workflow_name/meta script to name
+    // itself with — fall back to its description rather than leaving the
+    // placeholder 'workflow' (issue #347: that placeholder is what made the
+    // panel mislabel bash tasks as "workflow" with a transcript modal that had
+    // nothing to show).
+    t.name = wfName || parseMetaName(prompt) || description || t.name;
     if (t.phases.length === 0) t.phases = parseMetaPhases(prompt);
     t.startedAt = Date.now();
     this.broadcast(entry);
@@ -481,9 +506,16 @@ export class WorkflowProgressTracker {
     const outputFile = typeof event['output_file'] === 'string' ? (event['output_file'] as string) : undefined;
     if (outputFile) {
       t.outputFile = outputFile;
-      const parsed = readOutputFile(outputFile);
-      if (parsed.summary && !event['summary']) t.summary = parsed.summary;
-      if (parsed.result !== undefined) t.result = parsed.result;
+      // Only a dynamic workflow's output file is the JSON envelope
+      // readOutputFile expects ({summary, result}); a plain background Bash
+      // task's output file is its raw stdout/stderr log (issue #347) — its
+      // summary/status already came from this event, and its "result" is the
+      // log itself, read separately by GET_BACKGROUND_TASK_OUTPUT on demand.
+      if (t.taskType !== 'local_bash') {
+        const parsed = readOutputFile(outputFile);
+        if (parsed.summary && !event['summary']) t.summary = parsed.summary;
+        if (parsed.result !== undefined) t.result = parsed.result;
+      }
     }
 
     const usage = event['usage'] as Record<string, unknown> | undefined;
@@ -495,6 +527,47 @@ export class WorkflowProgressTracker {
     };
     t.endedAt = Date.now();
     this.broadcast(entry);
+  }
+
+  /**
+   * The Workflow tool's immediate tool_result (not a `task_*` system event —
+   * an ordinary `type:'user'` message) carries `transcriptDir` in its text
+   * ("Transcript dir: …"). `task_progress` never repeats it, so without this
+   * the live task never learns its transcriptDir until a reload runs
+   * reconstructWorkflowTasks — leaving the agent-transcript modal unable to
+   * fetch anything for a workflow that is still running (issue #347).
+   */
+  private onImmediateResult(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_result') continue;
+      const toolUseId = block['tool_use_id'];
+      if (typeof toolUseId !== 'string') continue;
+      const entry = this.entries.get(this.key(sessionId, toolUseId));
+      if (!entry) continue;
+      const content = block['content'];
+      const text = typeof content === 'string' ? content : getEventText(event);
+
+      if (entry.task.taskType === 'local_bash') {
+        // A plain background Bash task has no transcriptDir/agents — its
+        // output log path is available immediately, same as a workflow's
+        // transcriptDir, well before the terminal task_notification (#347).
+        if (entry.task.outputFile) continue;
+        const { taskId, outputFile } = parseImmediateBashResult(text);
+        if (!outputFile) continue;
+        entry.task.taskId = taskId ?? entry.task.taskId;
+        entry.task.outputFile = outputFile;
+        this.broadcast(entry);
+        continue;
+      }
+
+      if (entry.task.transcriptDir) continue;
+      const { taskId, transcriptDir } = parseImmediateResult(text);
+      if (!transcriptDir) continue;
+      entry.task.taskId = taskId ?? entry.task.taskId;
+      entry.task.transcriptDir = transcriptDir;
+      entry.task.workflowId = transcriptDir.split(/[\\/]/).pop();
+      this.broadcast(entry);
+    }
   }
 
   private broadcast(entry: WatchEntry): void {

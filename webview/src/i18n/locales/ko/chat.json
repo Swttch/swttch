@@ -213,6 +213,7 @@
       "confirm": "전부 중지"
     },
     "workflowLabel": "워크플로",
+    "bashLabel": "Bash",
     "agentsCount": "에이전트 {{count}}명",
     "agentsCount_one": "에이전트 {{count}}명",
     "agentsCount_other": "에이전트 {{count}}명",
@@ -223,6 +224,19 @@
       "tokens": "토큰",
       "tools": "도구",
       "time": "시간"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "아직 에이전트가 없습니다.",
+      "loading": "transcript 불러오는 중…",
+      "empty": "아직 메시지가 없습니다.",
+      "error": "transcript를 불러오지 못했습니다.",
+      "truncated": "최근 {{count}}개 항목만 표시합니다.",
+      "starting": "작업 시작하는 중…",
+      "updating": "업데이트 중…",
+      "jumpToBottom": "맨 아래로 이동",
+      "copyCommand": "명령어 복사",
+      "resize": "드래그해서 크기 조절"
     }
   },
   "scheduledMessages": {

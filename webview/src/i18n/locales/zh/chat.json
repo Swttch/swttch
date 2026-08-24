@@ -213,6 +213,7 @@
       "confirm": "全部停止"
     },
     "workflowLabel": "工作流",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} 个智能体",
     "agentsCount_one": "{{count}} 个智能体",
     "agentsCount_other": "{{count}} 个智能体",
@@ -223,6 +224,19 @@
       "tokens": "Token",
       "tools": "工具",
       "time": "时间"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "暂无智能体。",
+      "loading": "正在加载记录…",
+      "empty": "暂无消息。",
+      "error": "加载记录失败。",
+      "truncated": "仅显示最近 {{count}} 条记录。",
+      "starting": "正在启动任务…",
+      "updating": "正在更新…",
+      "jumpToBottom": "跳转到底部",
+      "copyCommand": "复制命令",
+      "resize": "拖动以调整大小"
     }
   },
   "scheduledMessages": {

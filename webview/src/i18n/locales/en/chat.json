@@ -213,6 +213,7 @@
       "confirm": "Stop all"
     },
     "workflowLabel": "Workflow",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",
     "agentsCount_other": "{{count}} agents",
@@ -223,6 +224,19 @@
       "tokens": "Tokens",
       "tools": "Tools",
       "time": "Time"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "No agents yet.",
+      "loading": "Loading transcript…",
+      "empty": "No messages yet.",
+      "error": "Failed to load transcript.",
+      "truncated": "Showing the most recent {{count}} entries.",
+      "starting": "Starting task…",
+      "updating": "Updating…",
+      "jumpToBottom": "Jump to bottom",
+      "copyCommand": "Copy command",
+      "resize": "Drag to resize"
     }
   },
   "scheduledMessages": {

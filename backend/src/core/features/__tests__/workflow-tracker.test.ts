@@ -252,4 +252,169 @@ describe('WorkflowProgressTracker stop handling', () => {
     tracker.stopRunning('s1');
     expect(tracker.isRunning('s1', 'toolu_1')).toBe(false);
   });
+
+  // issue #347: the agent-transcript modal needs transcriptDir while the
+  // workflow is still running, not only after a reload. task_progress never
+  // carries it — only the Workflow tool's immediate tool_result does, as an
+  // ordinary type:'user' message rather than a task_* system event.
+  it('picks up transcriptDir from the Workflow tool_result while the workflow is live', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    expect(last().transcriptDir).toBeUndefined();
+
+    const launched =
+      `Workflow launched in background. Task ID: w1\n` +
+      `Transcript dir: /home/user/.claude/projects/p/s/subagents/workflows/wf_live123`;
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: launched }] },
+    });
+
+    const t = last();
+    expect(t.transcriptDir).toBe('/home/user/.claude/projects/p/s/subagents/workflows/wf_live123');
+    expect(t.workflowId).toBe('wf_live123');
+    expect(t.taskId).toBe('w1');
+  });
+
+  it('ignores a user tool_result for an unknown tool_use_id', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_unknown', content: 'Transcript dir: /x' }] },
+    });
+    expect(broadcasts).toHaveLength(0);
+  });
+
+  it('does not overwrite transcriptDir once set', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    const first = 'Workflow launched in background. Task ID: w1\nTranscript dir: /first';
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: first }] },
+    });
+    expect(last().transcriptDir).toBe('/first');
+
+    const second = 'Workflow launched in background. Task ID: w1\nTranscript dir: /second';
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: second }] },
+    });
+    expect(last().transcriptDir).toBe('/first');
+  });
+});
+
+// issue #347: a plain background Bash command (e.g. `run_in_background`) shares
+// the same task_started/task_updated/task_notification event channel as a
+// dynamic Workflow run, distinguished only by task_type. Before taskType was
+// tracked, WorkflowProgressTracker treated every one of these as a workflow —
+// naming it the placeholder "workflow" and later showing an empty "No agents
+// yet." detail modal for something that was never a workflow to begin with.
+describe('WorkflowProgressTracker local_bash background tasks', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  const bashStarted = {
+    type: 'system',
+    subtype: 'task_started',
+    tool_use_id: 'toolu_bash1',
+    task_id: 'b1vd4nw2o',
+    description: '1초마다 카운트 출력하는 60초 백그라운드 작업',
+    task_type: 'local_bash',
+  };
+
+  it('tags task_type and names the task from its description, not the "workflow" placeholder', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', bashStarted);
+    const t = last();
+    expect(t.taskType).toBe('local_bash');
+    expect(t.name).toBe('1초마다 카운트 출력하는 60초 백그라운드 작업');
+    expect(t.name).not.toBe('workflow');
+    expect(t.agents).toEqual([]);
+  });
+
+  it('does not try to JSON-parse a local_bash output file as a workflow envelope', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', bashStarted);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      tool_use_id: 'toolu_bash1',
+      task_id: 'b1vd4nw2o',
+      status: 'completed',
+      output_file: join(dir, 'does-not-exist-as-json.output'),
+      summary: 'Background command "1초마다 카운트 출력하는 60초 백그라운드 작업" completed (exit code 0)',
+    });
+    const t = last();
+    expect(t.status).toBe('completed');
+    expect(t.outputFile).toBe(join(dir, 'does-not-exist-as-json.output'));
+    // The plain-text log is read on demand by GET_BACKGROUND_TASK_OUTPUT, not
+    // parsed here as JSON — result must stay unset, and the event's own
+    // summary must survive (readOutputFile would silently return {} for a
+    // non-JSON file and overwrite nothing, but must not run at all here).
+    expect(t.result).toBeUndefined();
+    expect(t.summary).toBe('Background command "1초마다 카운트 출력하는 60초 백그라운드 작업" completed (exit code 0)');
+  });
+
+  it('leaves taskType unset for an ordinary workflow event (backward compatible)', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      tool_use_id: 'toolu_wf1',
+      task_id: 'w1',
+      workflow_name: 'demo-flow',
+      task_type: 'local_workflow',
+    });
+    expect(last().taskType).toBe('local_workflow');
+  });
+
+  it('picks up outputFile from a local_bash tool_result while the task is still running (before task_notification)', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', bashStarted);
+    expect(last().outputFile).toBeUndefined();
+
+    const toolResult =
+      'Command running in background with ID: b0i10sn6r. Output is being written to: ' +
+      '/private/tmp/claude-501/-private-tmp-ccg-demo/bf89560d/tasks/b0i10sn6r.output. ' +
+      'You will be notified when it completes. To check interim output, use Read on that file path.';
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_bash1', content: toolResult }] },
+    });
+
+    const t = last();
+    expect(t.outputFile).toBe('/private/tmp/claude-501/-private-tmp-ccg-demo/bf89560d/tasks/b0i10sn6r.output');
+    expect(t.taskId).toBe('b0i10sn6r');
+    // A bash task's tool_result must never be mistaken for a Workflow's
+    // "Transcript dir:" result — no transcriptDir/workflowId should appear.
+    expect(t.transcriptDir).toBeUndefined();
+    expect(t.workflowId).toBeUndefined();
+  });
+
+  it('does not overwrite outputFile once set from the immediate tool_result', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', bashStarted);
+    const first = 'Command running in background with ID: b0i10sn6r. Output is being written to: /first.output. more text.';
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_bash1', content: first }] },
+    });
+    expect(last().outputFile).toBe('/first.output');
+
+    const second = 'Command running in background with ID: b0i10sn6r. Output is being written to: /second.output. more text.';
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_bash1', content: second }] },
+    });
+    expect(last().outputFile).toBe('/first.output');
+  });
 });
