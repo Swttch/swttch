@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "Diff 보기",
+    "autoOpen": {
+      "label": "diff 자동으로 열기",
+      "description": "권한을 물어보는 순간 제안된 변경을 함께 엽니다. 끄면 승인 패널만 뜨고, 그 안의 파일 이름을 눌렀을 때 diff가 열립니다."
+    },
     "surface": {
       "label": "편집 검토 위치",
       "description": "제안된 파일 수정을 어디에서 열어 확인하면서 결정할지 정합니다.",

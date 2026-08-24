@@ -22,8 +22,12 @@ const isJetBrains = vi.fn();
 vi.mock('@/config/environment', () => ({ isJetBrains: () => isJetBrains() }));
 
 const resolvedSurface = vi.fn();
+// Whether the user wants the review to arrive uninvited at all. Separate from
+// where it opens, so every test states both.
+const autoOpenEnabled = vi.fn();
 vi.mock('../useIdeDiffAvailable', () => ({
   useResolvedDiffSurface: () => resolvedSurface(),
+  useAutoOpenDiffEnabled: () => autoOpenEnabled(),
 }));
 
 // Whether the review will be drawn over the chat rather than in a window. The
@@ -56,6 +60,7 @@ beforeEach(() => {
   isJetBrains.mockReturnValue(false);
   resolvedSurface.mockReturnValue(DiffSurface.BUILT_IN);
   opensAsOverlay.mockReturnValue(false);
+  autoOpenEnabled.mockReturnValue(true);
   // The guard outlives a mount by design, so it has to be cleared between cases
   // or the first test's id suppresses every later one.
   resetOpenedDiffReviews();
@@ -88,6 +93,38 @@ describe('useAutoOpenDiffReview', () => {
     renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
 
     await waitFor(() => expect(getDiffPreview).toHaveBeenCalled());
+    expect(openDiffReview).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Turned off, nothing arrives uninvited (#349).
+   *
+   * The surface is the built-in one in a browser tab — the case this hook is
+   * the only opener for — so an open here could not be anyone else standing in.
+   * It must not even ask for the preview: that request is what claims the id,
+   * and claiming it would block the click that is now the only way in.
+   */
+  it('opens nothing when the user turned the automatic open off', async () => {
+    autoOpenEnabled.mockReturnValue(false);
+
+    renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
+
+    await settle();
+    expect(openDiffReview).not.toHaveBeenCalled();
+    expect(getDiffPreview).not.toHaveBeenCalled();
+  });
+
+  // The overlay is the one surface the backend never opens, so if the setting
+  // failed to reach this hook it would keep appearing with nothing to stop it.
+  it('opens no overlay when the automatic open is off', async () => {
+    autoOpenEnabled.mockReturnValue(false);
+    opensAsOverlay.mockReturnValue(true);
+    const onOverlay = vi.fn();
+
+    renderHook(() => useAutoOpenDiffReview('toolu_1', onOverlay));
+
+    await settle();
+    expect(onOverlay).not.toHaveBeenCalled();
     expect(openDiffReview).not.toHaveBeenCalled();
   });
 

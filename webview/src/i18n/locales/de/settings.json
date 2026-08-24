@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "Diff-Ansicht",
+    "autoOpen": {
+      "label": "Diff automatisch öffnen",
+      "description": "Öffnet die vorgeschlagene Änderung, sobald nach der Berechtigung gefragt wird. Ausgeschaltet erscheint nur die Bestätigungsabfrage; das Diff öffnet sich beim Klick auf den Dateinamen darin."
+    },
     "surface": {
       "label": "Änderungen prüfen in",
       "description": "Wo eine vorgeschlagene Dateiänderung geöffnet wird, damit sie vor der Entscheidung sichtbar ist.",

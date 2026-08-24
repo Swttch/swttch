@@ -33,3 +33,20 @@ export function useResolvedDiffSurface(): DiffSurface {
 export function useIdeDiffAvailable(): boolean {
   return useResolvedDiffSurface() === DiffSurface.IDE;
 }
+
+/**
+ * Whether the review opens by itself when a permission prompt goes up.
+ *
+ * Off, the prompt stands alone and the review waits to be asked for by clicking
+ * the file name in it. That click is a different path and is never gated by
+ * this — the change is stored either way, so there is always something to show.
+ *
+ * Its own name because two sides must agree: this hook, and the backend's own
+ * check in preparePermissionReview. They open the review on mutually exclusive
+ * occasions, so a gate on one alone would just hand the job to the other (#349).
+ */
+export function useAutoOpenDiffEnabled(): boolean {
+  const { scopeSettings } = useSettings();
+  // Absent reads as on, which is the behaviour that shipped.
+  return scopeSettings[SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION] !== false;
+}

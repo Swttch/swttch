@@ -1,7 +1,8 @@
 import { SettingSection, SettingRow } from '../common';
 import { Select, type SelectOption } from '@/components/Select';
+import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
+import { useResolvedDiffSurface, useAutoOpenDiffEnabled } from '@/hooks/useIdeDiffAvailable';
 import { useDiffOverlayAllowed } from '@/hooks/useDiffOverlayAllowed';
 import { SettingKey, DiffSurface, BrowserDiffPresentation } from '@/types/settings';
 import { useTranslation } from '@/i18n';
@@ -29,6 +30,10 @@ export function DiffViewSection() {
   // Whether an overlay is even possible here. Same rule the code that opens the
   // review applies, so the setting cannot offer something that will be ignored.
   const overlayAllowed = useDiffOverlayAllowed();
+  // Whether the review opens unprompted. The two rows below say WHERE it opens,
+  // so turning this off leaves them describing something that now only happens
+  // on a click — true either way, which is why they stay enabled.
+  const autoOpen = useAutoOpenDiffEnabled();
   const presentation =
     (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
     BrowserDiffPresentation.NEW_TAB;
@@ -45,6 +50,25 @@ export function DiffViewSection() {
 
   return (
     <SettingSection title={t('diffView.sectionTitle')}>
+      {/*
+        First, because it decides whether the rows below describe something that
+        happens on its own or only when the file name is clicked. Off is not a
+        loss of the review — the change is still stored and the prompt still
+        links to it; it just stops arriving uninvited (#349).
+      */}
+      <SettingRow
+        label={t('diffView.autoOpen.label')}
+        description={t('diffView.autoOpen.description')}
+      >
+        <ToggleSwitch
+          checked={autoOpen}
+          onChange={(checked) =>
+            updateSetting(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION, checked)
+          }
+          ariaLabel={t('diffView.autoOpen.label')}
+        />
+      </SettingRow>
+
       <SettingRow
         label={t('diffView.surface.label')}
         description={

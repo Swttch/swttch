@@ -860,6 +860,18 @@ export async function preparePermissionReview(params: {
     });
   }
 
+  /*
+   * Opening it unprompted is a separate question from where it opens.
+   *
+   * Turned off, the prompt goes up alone and the review waits to be asked for —
+   * the file name in that prompt still opens it, from the entry just stored. So
+   * this returns AFTER remembering and before every opener: skipping the store
+   * instead would leave that click with nothing to show (#349).
+   *
+   * Absent reads as on, which is the behaviour that shipped.
+   */
+  if (settings.autoOpenDiffOnPermission === false) return;
+
   // Absent reads as the IDE, which is the default and the behaviour that shipped.
   const surface = settings.diffSurface ?? DiffSurface.IDE;
 

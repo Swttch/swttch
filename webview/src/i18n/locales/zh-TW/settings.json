@@ -129,6 +129,10 @@
   },
   "diffView": {
     "sectionTitle": "差異檢視",
+    "autoOpen": {
+      "label": "自動開啟差異",
+      "description": "在請求權限時一併開啟待確認的變更。關閉後只顯示核准提示，點擊其中的檔案名稱才會開啟差異。"
+    },
     "surface": {
       "label": "檢視變更的位置",
       "description": "開啟待確認檔案變更的位置，方便您在決定時檢視內容。",
