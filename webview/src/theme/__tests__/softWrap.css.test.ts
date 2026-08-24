@@ -9,14 +9,21 @@ import { describe, it, expect } from 'vitest';
 // `?raw` rather than node:fs — the webview tsconfig targets DOM only. Requires
 // index.css in `test.css.include` (vitest.config.ts).
 import css from '../../index.css?raw';
+// Markdown code blocks are styled in streaming.css, not index.css — the wrap
+// rule for them lives next to the rest of their styling.
+import streamingCss from '../../pages/ChatPage/streaming.css?raw';
 
 /** Extracts the body of the first CSS block whose selector matches. */
-function block(selectorStartsWith: string): string {
-  const start = css.indexOf(selectorStartsWith);
+function blockIn(source: string, selectorStartsWith: string): string {
+  const start = source.indexOf(selectorStartsWith);
   if (start === -1) throw new Error(`selector not found: ${selectorStartsWith}`);
-  const open = css.indexOf('{', start);
-  const close = css.indexOf('\n}', open);
-  return css.slice(open + 1, close);
+  const open = source.indexOf('{', start);
+  const close = source.indexOf('\n}', open);
+  return source.slice(open + 1, close);
+}
+
+function block(selectorStartsWith: string): string {
+  return blockIn(css, selectorStartsWith);
 }
 
 describe('soft wrap — stylesheet structure (#179)', () => {
@@ -38,5 +45,34 @@ describe('soft wrap — stylesheet structure (#179)', () => {
   it('wraps the diff viewer used by the diff card', () => {
     const rule = block('.soft-wrap .diff-viewer .diff-code {');
     expect(rule).toMatch(/white-space:\s*pre-wrap/);
+  });
+});
+
+/**
+ * The reporter turned the setting on and still hit a block that scrolled
+ * sideways: a fenced code block in an assistant message. Streamdown renders it
+ * as its own <pre data-streamdown="code-block-body">, which carries none of the
+ * classes the rules above select, so the setting never reached it.
+ */
+describe('soft wrap — markdown code blocks (#179 follow-up)', () => {
+  it('folds the fenced block Streamdown renders', () => {
+    const rule = blockIn(streamingCss, '.soft-wrap [data-streamdown="code-block-body"] {');
+    expect(rule).toMatch(/white-space:\s*pre-wrap/);
+    expect(rule).toMatch(/word-break:\s*break-all/);
+    // The <pre> is the scroll container; leaving it scrollable would keep a
+    // sideways scrollbar under text that no longer overflows.
+    expect(rule).toMatch(/overflow-x:\s*hidden/);
+  });
+
+  it('keeps a wrapped continuation clear of the line-number gutter', () => {
+    // Each line is a <span class="block"> whose line number sits in a ::before
+    // of `w-6 mr-4` (1.5rem + 1rem). Without the hanging indent the folded part
+    // of a line starts under those numbers.
+    const rule = blockIn(
+      streamingCss,
+      '.soft-wrap [data-streamdown="code-block-body"] > code > span {',
+    );
+    expect(rule).toMatch(/padding-left:\s*2\.5rem/);
+    expect(rule).toMatch(/text-indent:\s*-2\.5rem/);
   });
 });
