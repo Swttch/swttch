@@ -14,6 +14,8 @@ import { getSessionsHandler } from './getSessions';
 import { loadSessionHandler } from './loadSession';
 import { deleteSessionHandler } from './deleteSession';
 import { renameSessionHandler } from './renameSession';
+import { getAgentTranscriptHandler } from './getAgentTranscript';
+import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
 import { getSettingsHandler } from './getSettings';
 import { saveSettingsHandler } from './saveSettings';
 import { getClaudeConfigDirHandler } from './getClaudeConfigDir';
@@ -178,6 +180,15 @@ export async function handleMessage(
       break;
     case MessageType.RENAME_SESSION:
       await renameSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_AGENT_TRANSCRIPT:
+      await getAgentTranscriptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.WATCH_BACKGROUND_TASK_OUTPUT:
+      watchBackgroundTaskOutputHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UNWATCH_BACKGROUND_TASK_OUTPUT:
+      unwatchBackgroundTaskOutputHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SETTINGS:
       await getSettingsHandler(connectionId, message, connections, bridge, bridges);

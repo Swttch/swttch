@@ -3,20 +3,11 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
+import { useNow } from '@/hooks/useNow';
 import type { WorkflowTask } from '@/shared';
-import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
 import { useTranslation } from '@/i18n';
-
-/** Re-render every second while `active` so running timers tick. */
-function useNow(active: boolean): number {
-    const [now, setNow] = useState(() => Date.now());
-    useEffect(() => {
-        if (!active) return;
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, [active]);
-    return now;
-}
+import { AgentTranscriptModal } from '@/components/AgentTranscriptModal';
+import { WorkflowTaskSummary, WorkflowAgentsTable } from './WorkflowTaskSummary';
 
 function WorkflowTaskRow({
     task,
@@ -24,12 +15,14 @@ function WorkflowTaskRow({
     focused,
     onDismiss,
     onCancel,
+    onOpenTranscript,
 }: {
     task: WorkflowTask;
     now: number;
     focused: boolean;
     onDismiss: (toolUseId: string) => void;
     onCancel: (task: WorkflowTask) => void;
+    onOpenTranscript: (task: WorkflowTask) => void;
 }) {
     const ref = useRef<HTMLDivElement>(null);
     const { t } = useTranslation('chat');
@@ -38,20 +31,12 @@ function WorkflowTaskRow({
     }, [focused]);
 
     const isRunning = task.status === 'running';
-    const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
-    const agentCount = task.agents.length || task.usage?.agentCount;
-    const durationMs =
-        task.usage?.durationMs ?? (isRunning ? now - task.startedAt : undefined);
-    const duration = formatDuration(durationMs);
-    // Authoritative workflow-level total first; per-agent sum is only a fallback
-    // (see WorkflowRenderer) so the header stays consistent with the agent table.
-    const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
-    const tokens = formatTokens(task.usage?.subagentTokens || liveTokens);
 
     return (
         <div
             ref={ref}
-            className={`rounded-lg border bg-surface-base px-3 py-2.5 ${
+            onClick={() => onOpenTranscript(task)}
+            className={`rounded-lg border bg-surface-base px-3 py-2.5 cursor-pointer hover:border-border-focus transition-colors ${
                 focused ? 'border-border-focus' : 'border-border-subtle'
             }`}
         >
@@ -59,11 +44,14 @@ function WorkflowTaskRow({
                 <div className="min-w-0 flex-1 text-text-primary text-[0.9230rem] font-semibold truncate">
                     {task.name}
                 </div>
-                <span className={`text-[0.8461rem] shrink-0 ${statusColor}`}>{task.status}</span>
                 {/* Running: cancel the task (issue #330). Finished: it is over,
-                    so the same ✕ only takes the row out of the list. */}
+                    so the same ✕ only takes the row out of the list. stopPropagation
+                    keeps this from also opening the transcript modal (issue #347). */}
                 <button
-                    onClick={() => (isRunning ? onCancel(task) : onDismiss(task.toolUseId))}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        isRunning ? onCancel(task) : onDismiss(task.toolUseId);
+                    }}
                     className="shrink-0 p-0.5 rounded hover:bg-surface-hover transition-colors"
                     title={isRunning ? t('backgroundTasks.cancelRunning') : t('backgroundTasks.dismiss')}
                 >
@@ -71,85 +59,25 @@ function WorkflowTaskRow({
                 </button>
             </div>
 
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8461rem] text-text-primary/60">
-                <span>{t('backgroundTasks.workflowLabel')}</span>
-                {agentCount !== undefined && (
-                    <>
-                        <span className="text-text-tertiary">·</span>
-                        <span>{t('backgroundTasks.agentsCount', { count: agentCount })}</span>
-                    </>
-                )}
-                {tokens && (
-                    <>
-                        <span className="text-text-tertiary">·</span>
-                        <span>{t('backgroundTasks.tokensLabel', { tokens })}</span>
-                    </>
-                )}
-                {duration && (
-                    <>
-                        <span className="text-text-tertiary">·</span>
-                        <span>{duration}</span>
-                    </>
-                )}
+            <div className="mt-0.5">
+                <WorkflowTaskSummary task={task} now={now} />
             </div>
 
-            {task.description && (
-                <div className="mt-1 text-[0.8461rem] text-text-primary/50">{task.description}</div>
-            )}
-
-            {task.phases.length > 0 && (
-                <div className="mt-2">
-                    <div className="text-[0.7692rem] uppercase tracking-wide text-text-tertiary mb-1">{t('backgroundTasks.phasesLabel')}</div>
-                    <div className="space-y-0.5">
-                        {task.phases.map((p, i) => (
-                            <div key={i} className="flex items-center gap-2 text-[0.8461rem] text-text-primary/70">
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-text-tertiary" />
-                                <span className="truncate">{p.title}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {task.agents.length > 0 && (
-                <div className="mt-2 overflow-x-auto no-scrollbar">
-                    <table className="w-full text-[0.8461rem] font-mono">
-                        <thead>
-                            <tr className="text-text-tertiary text-start">
-                                <th className="font-normal pb-1 pe-2">{t('backgroundTasks.tableHeader.agent')}</th>
-                                <th className="font-normal pb-1 px-2 text-end">{t('backgroundTasks.tableHeader.tokens')}</th>
-                                <th className="font-normal pb-1 px-2 text-end">{t('backgroundTasks.tableHeader.tools')}</th>
-                                <th className="font-normal pb-1 ps-2 text-end">{t('backgroundTasks.tableHeader.time')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {task.agents.map((a) => (
-                                <tr key={a.agentId} className="text-text-primary/75">
-                                    <td className="py-0.5 pe-2 max-w-[10rem] truncate">
-                                        <span
-                                            className={`inline-block w-1.5 h-1.5 rounded-full me-1.5 align-middle ${agentDotClass(a.status)}`}
-                                        />
-                                        {a.label}
-                                    </td>
-                                    <td className="py-0.5 px-2 text-end">{formatTokens(a.tokens) ?? '0'}</td>
-                                    <td className="py-0.5 px-2 text-end">{a.tools}</td>
-                                    <td className="py-0.5 ps-2 text-end">{formatDuration(a.durationMs) ?? '—'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
+            <WorkflowAgentsTable task={task} />
         </div>
     );
 }
 
 export function BackgroundTasksPanel() {
     const { t } = useTranslation('chat');
-    const { panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId } =
+    const { panelOpen, closePanel, runningTasks, finishedTasks, clearFinished, dismissTask, focusedToolUseId, getByToolUseId } =
         useWorkflowState();
     const [showFinished, setShowFinished] = useState(true);
+    // Store only the id and re-look-up the task each render, so the modal keeps
+    // showing the live WorkflowTask (updated agents/stats) as the workflow
+    // progresses instead of a frozen snapshot taken at click time (issue #347).
+    const [transcriptToolUseId, setTranscriptToolUseId] = useState<string | null>(null);
+    const transcriptTask = transcriptToolUseId ? getByToolUseId(transcriptToolUseId) ?? null : null;
     const panelRef = useRef<HTMLDivElement>(null);
     const now = useNow(panelOpen && runningTasks.length > 0);
 
@@ -209,6 +137,7 @@ export function BackgroundTasksPanel() {
                                     focused={task.toolUseId === focusedToolUseId}
                                     onDismiss={dismissTask}
                                     onCancel={cancelTask}
+                                    onOpenTranscript={(t) => setTranscriptToolUseId(t.toolUseId)}
                                 />
                             ))}
                         </section>
@@ -239,12 +168,17 @@ export function BackgroundTasksPanel() {
                                         focused={task.toolUseId === focusedToolUseId}
                                         onDismiss={dismissTask}
                                     onCancel={cancelTask}
+                                    onOpenTranscript={(t) => setTranscriptToolUseId(t.toolUseId)}
                                     />
                                 ))}
                         </section>
                     )}
                 </div>
             </div>
+
+            {transcriptTask && (
+                <AgentTranscriptModal task={transcriptTask} onClose={() => setTranscriptToolUseId(null)} />
+            )}
         </Portal>
     );
 }

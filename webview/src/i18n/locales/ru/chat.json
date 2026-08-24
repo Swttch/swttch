@@ -213,6 +213,7 @@
       "confirm": "Остановить все"
     },
     "workflowLabel": "Рабочий процесс",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} агентов",
     "agentsCount_one": "{{count}} агент",
     "agentsCount_few": "{{count}} агента",
@@ -225,6 +226,19 @@
       "tokens": "Токены",
       "tools": "Инструменты",
       "time": "Время"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "Пока нет агентов.",
+      "loading": "Загрузка стенограммы…",
+      "empty": "Пока нет сообщений.",
+      "error": "Не удалось загрузить стенограмму.",
+      "truncated": "Показаны последние {{count}} записей.",
+      "starting": "Запуск задачи…",
+      "updating": "Обновление…",
+      "jumpToBottom": "Перейти вниз",
+      "copyCommand": "Копировать команду",
+      "resize": "Перетащите, чтобы изменить размер"
     }
   },
   "scheduledMessages": {

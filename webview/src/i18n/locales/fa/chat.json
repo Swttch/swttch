@@ -213,6 +213,7 @@
       "confirm": "توقف همه"
     },
     "workflowLabel": "جریان کاری",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} ایجنت",
     "agentsCount_one": "{{count}} ایجنت",
     "agentsCount_other": "{{count}} ایجنت",
@@ -223,6 +224,19 @@
       "tokens": "توکن‌ها",
       "tools": "ابزارها",
       "time": "زمان"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "هنوز ایجنتی وجود ندارد.",
+      "loading": "در حال بارگذاری رونوشت…",
+      "empty": "هنوز پیامی وجود ندارد.",
+      "error": "بارگذاری رونوشت ناموفق بود.",
+      "truncated": "نمایش {{count}} مورد اخیر.",
+      "starting": "در حال شروع وظیفه…",
+      "updating": "در حال به‌روزرسانی…",
+      "jumpToBottom": "پرش به پایین",
+      "copyCommand": "کپی دستور",
+      "resize": "برای تغییر اندازه بکشید"
     }
   },
   "scheduledMessages": {

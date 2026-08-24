@@ -13,7 +13,7 @@ function sanitizeProjectKey(workingDir: string): string {
   return workingDir.replace(/[^a-zA-Z0-9_-]/g, '-');
 }
 
-function getTmpBase(): string {
+export function getTmpBase(): string {
   const envVal = process.env.CLAUDE_CODE_TMPDIR;
   if (envVal && envVal.length > 0) return envVal;
   if (process.platform === 'win32') return process.env.TEMP ?? 'C:\\Temp';

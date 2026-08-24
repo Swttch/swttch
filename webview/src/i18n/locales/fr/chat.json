@@ -213,6 +213,7 @@
       "confirm": "Tout arrêter"
     },
     "workflowLabel": "Workflow",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",
     "agentsCount_other": "{{count}} agents",
@@ -223,6 +224,19 @@
       "tokens": "Tokens",
       "tools": "Outils",
       "time": "Temps"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "Aucun agent pour l'instant.",
+      "loading": "Chargement de la transcription…",
+      "empty": "Aucun message pour l'instant.",
+      "error": "Échec du chargement de la transcription.",
+      "truncated": "Affichage des {{count}} entrées les plus récentes.",
+      "starting": "Démarrage de la tâche…",
+      "updating": "Mise à jour…",
+      "jumpToBottom": "Aller en bas",
+      "copyCommand": "Copier la commande",
+      "resize": "Glisser pour redimensionner"
     }
   },
   "scheduledMessages": {

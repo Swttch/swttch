@@ -213,6 +213,7 @@
       "confirm": "すべて停止"
     },
     "workflowLabel": "ワークフロー",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} エージェント",
     "agentsCount_one": "{{count}} エージェント",
     "agentsCount_other": "{{count}} エージェント",
@@ -223,6 +224,19 @@
       "tokens": "トークン",
       "tools": "ツール",
       "time": "時間"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "まだエージェントがいません。",
+      "loading": "記録を読み込み中…",
+      "empty": "まだメッセージがありません。",
+      "error": "記録の読み込みに失敗しました。",
+      "truncated": "最新の{{count}}件を表示しています。",
+      "starting": "タスクを開始しています…",
+      "updating": "更新中…",
+      "jumpToBottom": "最新へ移動",
+      "copyCommand": "コマンドをコピー",
+      "resize": "ドラッグしてサイズ変更"
     }
   },
   "scheduledMessages": {

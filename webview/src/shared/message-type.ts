@@ -72,6 +72,16 @@ export enum MessageType {
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
 
+  // -- Workflow agent transcripts (Background tasks detail modal) --
+  /** Load one workflow agent's full transcript (agent-<id>.jsonl under transcriptDir). inbound webview→backend */
+  GET_AGENT_TRANSCRIPT = 'GET_AGENT_TRANSCRIPT',
+  /** Subscribe to a background Bash task's raw output log (task_type 'local_bash', which has no agents) — the backend watches the file and pushes BACKGROUND_TASK_OUTPUT_CHANGED on every change, sending the current content immediately on subscribe. inbound webview→backend */
+  WATCH_BACKGROUND_TASK_OUTPUT = 'WATCH_BACKGROUND_TASK_OUTPUT',
+  /** Unsubscribe from a background Bash task's output log (e.g. the detail modal closed). inbound webview→backend */
+  UNWATCH_BACKGROUND_TASK_OUTPUT = 'UNWATCH_BACKGROUND_TASK_OUTPUT',
+  /** A watched background Bash task's output log changed on disk — carries the full current text. outbound backend→webview */
+  BACKGROUND_TASK_OUTPUT_CHANGED = 'BACKGROUND_TASK_OUTPUT_CHANGED',
+
   // -- IDE settings (terminal/theme/etc., ~/.claude GUI settings) --
   /** Read merged or scope-specific GUI settings. */
   GET_SETTINGS = 'GET_SETTINGS',

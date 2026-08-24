@@ -213,6 +213,7 @@
       "confirm": "إيقاف الكل"
     },
     "workflowLabel": "مهمة سير العمل",
+    "bashLabel": "مهمة Bash",
     "agentsCount": "{{count}} وكلاء",
     "agentsCount_zero": "لا وكلاء",
     "agentsCount_one": "وكيل واحد",
@@ -227,6 +228,19 @@
       "tokens": "الرموز",
       "tools": "الأدوات",
       "time": "الوقت"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "لا يوجد وكلاء بعد.",
+      "loading": "جارٍ تحميل النص…",
+      "empty": "لا توجد رسائل بعد.",
+      "error": "فشل تحميل النص.",
+      "truncated": "عرض أحدث {{count}} إدخال.",
+      "starting": "جارٍ بدء المهمة…",
+      "updating": "جارٍ التحديث…",
+      "jumpToBottom": "الانتقال إلى الأسفل",
+      "copyCommand": "نسخ الأمر",
+      "resize": "اسحب لتغيير الحجم"
     }
   },
   "scheduledMessages": {

@@ -213,6 +213,7 @@
       "confirm": "Alle stoppen"
     },
     "workflowLabel": "Workflow",
+    "bashLabel": "Bash",
     "agentsCount": "{{count}} Agenten",
     "agentsCount_one": "{{count}} Agent",
     "agentsCount_other": "{{count}} Agenten",
@@ -223,6 +224,19 @@
       "tokens": "Tokens",
       "tools": "Tools",
       "time": "Zeit"
+    },
+    "transcriptModal": {
+      "title": "{{name}}",
+      "noAgents": "Noch keine Agenten.",
+      "loading": "Transkript wird geladen…",
+      "empty": "Noch keine Nachrichten.",
+      "error": "Transkript konnte nicht geladen werden.",
+      "truncated": "Zeigt die letzten {{count}} Einträge.",
+      "starting": "Aufgabe wird gestartet…",
+      "updating": "Wird aktualisiert…",
+      "jumpToBottom": "Nach unten springen",
+      "copyCommand": "Befehl kopieren",
+      "resize": "Zum Ändern der Größe ziehen"
     }
   },
   "scheduledMessages": {
