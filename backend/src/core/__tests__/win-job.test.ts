@@ -4,6 +4,14 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 // without depending on where the suite happens to run from.
 vi.mock('fs', () => ({ existsSync: vi.fn(() => true) }));
 
+// bashEnvScriptPath resolves import.meta.url through fileURLToPath, which yields
+// a POSIX path when the suite runs on mac/linux — the win32 branch it feeds needs
+// a drive-letter path to mean anything, so mock fileURLToPath to give it one
+// regardless of the host OS the suite happens to run on.
+vi.mock('url', () => ({
+  fileURLToPath: vi.fn(() => 'C:\\Users\\me\\ccg\\win-bash-env.sh'),
+}));
+
 import { existsSync } from 'fs';
 import { buildWin32CmdLine, toMsysPath, utf8BashEnv } from '../win-job';
 
