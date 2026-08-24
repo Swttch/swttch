@@ -6,6 +6,7 @@ import {cn} from "@/utils/cn.ts";
 import {useTranslation} from "@/i18n";
 import {ToolUseBlockDto} from "@/dto/message/ContentBlockDto";
 import {useToolStatus, type ToolStatus} from "./toolStatus";
+import {useSoftWrapToggle} from "@/pages/ChatPage/message-renderers/components/useSoftWrapToggle";
 
 /**
  * The tool_use block currently being rendered. ToolRenderer provides it so deep
@@ -148,10 +149,16 @@ export const LabelValue = (props: {
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const {label = '', children, className = '', maxHeight} = props;
+    const softWrap = useSoftWrapToggle();
 
+    // The row carries the class and hosts the button (#179 follow-up). It does
+    // not scroll, so the button stays put while the value box beside it is
+    // scrolled sideways — an absolutely positioned child of the box itself
+    // would slide away with the content.
     return (
-        <div className={`flex items-start p-2 ${className}`}>
+        <div className={cn('group/wrap relative flex items-start p-2', softWrap.blockClassName, className)}>
             {label && <Label name={label}/>}
+            {softWrap.button}
             <Value
                 isFocused={isFocused}
                 onClick={() => setIsFocused((v) => !v)}
@@ -174,7 +181,7 @@ export const Value = (props: {
     const {isFocused, onClick, children, maxHeight = 'max-h-[105px]'} = props;
 
     return (
-        <div dir="ltr" className={`monospace-block flex-1 text-text-primary/80 whitespace-pre font-mono overflow-y-hidden overflow-x-auto no-scrollbar cursor-pointer ${isFocused ? '' : maxHeight}`} onClick={onClick}>
+        <div dir="ltr" className={cn('monospace-block flex-1 min-w-0 text-text-primary/80 whitespace-pre font-mono overflow-y-hidden overflow-x-auto no-scrollbar cursor-pointer', isFocused ? '' : maxHeight)} onClick={onClick}>
             {children}
         </div>
     );

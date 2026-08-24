@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "Du hast dieses Tool abgelehnt.",
-    "declinedWithInstruction": "Du hast dieses Tool abgelehnt. Claude stattdessen gefragt: „{{instruction}}“"
+    "declinedWithInstruction": "Du hast dieses Tool abgelehnt. Claude stattdessen gefragt: „{{instruction}}“",
+    "softWrap": {
+      "wrap": "Lange Zeilen umbrechen",
+      "unwrap": "Umbruch aufheben"
+    }
   },
   "message": {
     "copyMessage": "Nachricht kopieren",

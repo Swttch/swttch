@@ -220,6 +220,42 @@
   border: none !important;
 }
 
+/* Soft wrap (#179) reaches the diff and tool blocks through `.soft-wrap` on
+   <html>, but those rules select `.monospace-block` / `.diff-body-line`, and a
+   fenced block in an assistant message is neither — Streamdown renders its own
+   <pre>, so the setting left markdown code blocks scrolling sideways.
+
+   `break-all` matches the other blocks: this is JSON, paths and code, which run
+   for long stretches with no space to break at.
+
+   Each line is a <span class="block"> carrying its line number in a `::before`
+   of `w-6 mr-4` (1.5rem + 1rem). Wrapping a line without accounting for that
+   marker would run the continuation underneath the numbers; the hanging indent
+   holds it in the code column, where the eye expects it. */
+.soft-wrap [data-streamdown="code-block-body"] {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: hidden;
+}
+
+.soft-wrap [data-streamdown="code-block-body"] > code > span {
+  padding-left: 2.5rem;
+  text-indent: -2.5rem;
+}
+
+/* Per-block override (#179 follow-up) — see the note in index.css. Last wins:
+   this class and `.soft-wrap` both sit on an ancestor and weigh the same. */
+.soft-wrap-off [data-streamdown="code-block-body"] {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+.soft-wrap-off [data-streamdown="code-block-body"] > code > span {
+  padding-left: 0;
+  text-indent: 0;
+}
+
 /* Shiki token spans. Colour is deliberately NOT set here: the highlighter
    (webview/src/utils/codePlugin.ts) writes each token's colour inline, and an
    `!important` rule at this level would repaint every token in one flat colour

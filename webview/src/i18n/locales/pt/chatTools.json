@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "Você recusou esta ferramenta.",
-    "declinedWithInstruction": "Você recusou esta ferramenta. Pediu ao Claude, em vez disso: “{{instruction}}”"
+    "declinedWithInstruction": "Você recusou esta ferramenta. Pediu ao Claude, em vez disso: “{{instruction}}”",
+    "softWrap": {
+      "wrap": "Quebrar linhas longas",
+      "unwrap": "Parar de quebrar"
+    }
   },
   "message": {
     "copyMessage": "Copiar mensagem",

@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "이 도구를 거부했습니다.",
-    "declinedWithInstruction": "이 도구를 거부했습니다. 대신 Claude에게 다음을 요청했습니다: “{{instruction}}”"
+    "declinedWithInstruction": "이 도구를 거부했습니다. 대신 Claude에게 다음을 요청했습니다: “{{instruction}}”",
+    "softWrap": {
+      "wrap": "긴 줄 접기",
+      "unwrap": "줄바꿈 해제"
+    }
   },
   "message": {
     "copyMessage": "메시지 복사",

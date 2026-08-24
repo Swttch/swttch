@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
@@ -11,6 +11,7 @@ import {useAnimatedThinkingTokens} from '../../hooks/useAnimatedThinkingTokens';
 import {useWorkingDirOrNull} from '@/contexts/WorkingDirContext';
 import {MARKDOWN_COMPONENTS} from '@/pages/ChatPage/message-renderers/components/MarkdownFileLink';
 import {prepareAssistantMarkdown} from '@/pages/ChatPage/message-renderers/utils/markdownFileLink';
+import {CodeBlockWrapControls} from '@/pages/ChatPage/message-renderers/components/CodeBlockWrapControls';
 
 interface ThinkingStreamingMessageProps {
     thinking: string;
@@ -33,6 +34,7 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
 }) => {
     const { t } = useTranslation('chat');
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
+    const markdownRef = useRef<HTMLDivElement>(null);
     const { isThinkingExpanded, toggleThinkingExpanded } = useChatStreamContext();
     // Null-safe: reasoning blocks may render without a WorkingDirProvider. Used to
     // resolve relative file-link URLs; absolute links work regardless.
@@ -76,6 +78,7 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                     </div>
 
                     <div
+                        ref={markdownRef}
                         className={`${isThinkingExpanded ? "" : "hidden"} thinking-message markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
                         <Streamdown
                             className="space-y-0"
@@ -91,6 +94,7 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                         >
                             {prepareAssistantMarkdown(thinking, workingDirectory)}
                         </Streamdown>
+                        <CodeBlockWrapControls containerRef={markdownRef} content={thinking} />
                     </div>
                 </div>
 

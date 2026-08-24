@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "このツールを拒否しました。",
-    "declinedWithInstruction": "このツールを拒否しました。代わりにClaudeへ指示: 「{{instruction}}」"
+    "declinedWithInstruction": "このツールを拒否しました。代わりにClaudeへ指示: 「{{instruction}}」",
+    "softWrap": {
+      "wrap": "長い行を折り返す",
+      "unwrap": "折り返しを解除"
+    }
   },
   "message": {
     "copyMessage": "メッセージをコピー",

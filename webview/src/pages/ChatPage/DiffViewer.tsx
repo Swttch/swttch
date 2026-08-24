@@ -1,6 +1,7 @@
 import { parseDiff, Diff, Hunk } from 'react-diff-view';
 import 'react-diff-view/style/index.css';
 import { useTranslation } from '@/i18n';
+import { useSoftWrapToggle } from '@/pages/ChatPage/message-renderers/components/useSoftWrapToggle';
 
 interface DiffViewerProps {
   filePath: string;
@@ -9,6 +10,9 @@ interface DiffViewerProps {
 
 export function DiffViewer({ diffText }: DiffViewerProps) {
   const { t } = useTranslation('chat');
+  // Above the try: the branches below return early, and a hook called inside
+  // one of them would run conditionally.
+  const softWrap = useSoftWrapToggle();
   try {
     const files = parseDiff(diffText);
     const file = files[0];
@@ -22,21 +26,26 @@ export function DiffViewer({ diffText }: DiffViewerProps) {
     }
 
     return (
-      <div className="diff-viewer overflow-x-auto">
-        <Diff
-          viewType="unified"
-          diffType={file.type}
-          hunks={file.hunks || []}
-        >
-          {(hunks) =>
-            hunks.map((hunk) => (
-              <Hunk
-                key={`${hunk.oldStart}-${hunk.newStart}-${hunk.content}`}
-                hunk={hunk}
-              />
-            ))
-          }
-        </Diff>
+      // The button sits outside `.diff-viewer`, which is the element that
+      // scrolls sideways.
+      <div className={`group/wrap relative ${softWrap.blockClassName}`}>
+        {softWrap.button}
+        <div className="diff-viewer overflow-x-auto">
+          <Diff
+            viewType="unified"
+            diffType={file.type}
+            hunks={file.hunks || []}
+          >
+            {(hunks) =>
+              hunks.map((hunk) => (
+                <Hunk
+                  key={`${hunk.oldStart}-${hunk.newStart}-${hunk.content}`}
+                  hunk={hunk}
+                />
+              ))
+            }
+          </Diff>
+        </div>
       </div>
     );
   } catch (error) {

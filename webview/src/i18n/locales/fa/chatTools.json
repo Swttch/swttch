@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "شما این ابزار را رد کردید.",
-    "declinedWithInstruction": "شما این ابزار را رد کردید. در عوض از Claude خواستید: «{{instruction}}»"
+    "declinedWithInstruction": "شما این ابزار را رد کردید. در عوض از Claude خواستید: «{{instruction}}»",
+    "softWrap": {
+      "wrap": "شکستن خطوط بلند",
+      "unwrap": "توقف شکستن خط"
+    }
   },
   "message": {
     "copyMessage": "کپی پیام",
