@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
@@ -7,6 +7,7 @@ import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/comm
 import {useWorkingDirOrNull} from '@/contexts/WorkingDirContext';
 import {MARKDOWN_COMPONENTS} from '@/pages/ChatPage/message-renderers/components/MarkdownFileLink';
 import {prepareAssistantMarkdown} from '@/pages/ChatPage/message-renderers/utils/markdownFileLink';
+import {CodeBlockWrapControls} from '@/pages/ChatPage/message-renderers/components/CodeBlockWrapControls';
 
 interface StreamingMessageProps {
     content: string;
@@ -22,6 +23,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     message,
 }) => {
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
+    const markdownRef = useRef<HTMLDivElement>(null);
 
     // useWorkingDirOrNull (not useWorkingDir): StreamingMessage is broadly reused
     // and rendered without a WorkingDirProvider in some places (and in tests),
@@ -43,7 +45,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     return (
         <ToolWrapper message={message} className="!mt-0">
             <div className={`streaming-message ${className}`}>
-                <div className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
+                <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
                     <Streamdown
                         className="space-y-0"
                         mode={isStreaming ? 'streaming' : 'static'}
@@ -58,6 +60,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
                     >
                         {prepareAssistantMarkdown(content, workingDirectory)}
                     </Streamdown>
+                    <CodeBlockWrapControls containerRef={markdownRef} content={content} />
                 </div>
             </div>
         </ToolWrapper>

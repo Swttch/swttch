@@ -673,9 +673,17 @@ body {
 /* Fold long lines to the block's width instead of scrolling them sideways.
    `break-all` because these are paths, JSON and code, which have no spaces to
    break at for long stretches — breaking only at spaces would leave the line
-   overflowing anyway. */
+   overflowing anyway.
+
+   Each block is selected two ways because the class arrives from two places:
+   the setting puts it on <html>, where the block is a descendant, while the
+   per-block toggle (#179 follow-up, useSoftWrapToggle) puts it on the block
+   itself — and an element is not its own descendant. One mechanism, two
+   carriers. */
 .soft-wrap .diff-body-line,
-.soft-wrap .monospace-block {
+.soft-wrap .monospace-block,
+.diff-body-line.soft-wrap,
+.monospace-block.soft-wrap {
   white-space: pre-wrap;
   word-break: break-all;
   overflow-x: hidden;
@@ -687,9 +695,36 @@ body {
   min-width: 0;
 }
 
-.soft-wrap .diff-viewer .diff-code {
+.soft-wrap .diff-viewer .diff-code,
+.diff-viewer.soft-wrap .diff-code {
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* The other direction (#179 follow-up): the setting is on and this block is the
+   one the user wants to scroll instead. `.soft-wrap-off` weighs the same as
+   `.soft-wrap`, so it comes last and wins on order. It restores the browser
+   defaults rather than a remembered value, because that is what the unwrapped
+   state is — `pre` and horizontal scrolling. */
+.soft-wrap-off .diff-body-line,
+.soft-wrap-off .monospace-block,
+.diff-body-line.soft-wrap-off,
+.monospace-block.soft-wrap-off {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+.soft-wrap-off .diff-viewer .diff-code,
+.diff-viewer.soft-wrap-off .diff-code {
+  white-space: pre;
+  word-break: normal;
+}
+
+/* Restores the floor that keeps every row as wide as the longest line, so a
+   row's tint does not stop mid-line once the block scrolls again. */
+.soft-wrap-off .diff-body {
+  min-width: max-content;
 }
 
 /* ============================================

@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "Rechazaste esta herramienta.",
-    "declinedWithInstruction": "Rechazaste esta herramienta. En su lugar, le pediste a Claude: “{{instruction}}”"
+    "declinedWithInstruction": "Rechazaste esta herramienta. En su lugar, le pediste a Claude: “{{instruction}}”",
+    "softWrap": {
+      "wrap": "Ajustar líneas largas",
+      "unwrap": "Dejar de ajustar"
+    }
   },
   "message": {
     "copyMessage": "Copiar mensaje",

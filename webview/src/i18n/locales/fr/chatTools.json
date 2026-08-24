@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "Vous avez refusé cet outil.",
-    "declinedWithInstruction": "Vous avez refusé cet outil. Demande envoyée à Claude à la place : « {{instruction}} »"
+    "declinedWithInstruction": "Vous avez refusé cet outil. Demande envoyée à Claude à la place : « {{instruction}} »",
+    "softWrap": {
+      "wrap": "Renvoyer les lignes longues",
+      "unwrap": "Arrêter le renvoi"
+    }
   },
   "message": {
     "copyMessage": "Copier le message",

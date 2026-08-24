@@ -3,7 +3,11 @@
     "in": "ВХОД",
     "out": "ВЫХОД",
     "declined": "Вы отклонили этот инструмент.",
-    "declinedWithInstruction": "Вы отклонили этот инструмент. Вместо этого попросили Claude: «{{instruction}}»"
+    "declinedWithInstruction": "Вы отклонили этот инструмент. Вместо этого попросили Claude: «{{instruction}}»",
+    "softWrap": {
+      "wrap": "Переносить длинные строки",
+      "unwrap": "Отключить перенос"
+    }
   },
   "message": {
     "copyMessage": "Скопировать сообщение",

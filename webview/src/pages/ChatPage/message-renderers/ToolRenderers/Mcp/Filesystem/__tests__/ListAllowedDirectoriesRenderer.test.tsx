@@ -55,6 +55,10 @@ describe('ListAllowedDirectoriesRenderer', () => {
         const { container } = render(
             <ListAllowedDirectoriesRenderer toolUse={makeToolUse()} toolResult={makeResult(text)} />
         );
-        expect(container.querySelectorAll('button')).toHaveLength(0);
+        // Every button except the block's own soft-wrap toggle (#179), which is
+        // chrome on the box rather than a rendering of the payload.
+        const chips = Array.from(container.querySelectorAll('button'))
+            .filter((b) => !b.getAttribute('aria-label')?.match(/wrap/i));
+        expect(chips).toHaveLength(0);
     });
 });

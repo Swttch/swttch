@@ -243,6 +243,19 @@
   text-indent: -2.5rem;
 }
 
+/* Per-block override (#179 follow-up) — see the note in index.css. Last wins:
+   this class and `.soft-wrap` both sit on an ancestor and weigh the same. */
+.soft-wrap-off [data-streamdown="code-block-body"] {
+  white-space: pre;
+  word-break: normal;
+  overflow-x: auto;
+}
+
+.soft-wrap-off [data-streamdown="code-block-body"] > code > span {
+  padding-left: 0;
+  text-indent: 0;
+}
+
 /* Shiki token spans. Colour is deliberately NOT set here: the highlighter
    (webview/src/utils/codePlugin.ts) writes each token's colour inline, and an
    `!important` rule at this level would repaint every token in one flat colour

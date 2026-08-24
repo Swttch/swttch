@@ -1,5 +1,6 @@
 import {ReactNode, useEffect, useRef, useState} from "react";
 import {cn} from "@/utils/cn";
+import {useSoftWrapToggle} from "@/pages/ChatPage/message-renderers/components/useSoftWrapToggle";
 
 /**
  * Convert an MCP tool's raw name into a human-readable label.
@@ -125,15 +126,20 @@ export const CollapsibleBox = (props: CollapsibleBoxProps) => {
 
 export const McpToolRow = (props: {label: string; children?: ReactNode}) => {
     const {label, children} = props;
+    const softWrap = useSoftWrapToggle();
 
+    // The row itself carries the class and hosts the button: it does not
+    // scroll, so the button stays put when the box beside it is scrolled
+    // sideways, and no wrapper is added around the content.
     return (
-        <div className="flex items-start gap-2 p-2 border-b border-border-subtle last:border-b-0">
+        <div className={cn('group/wrap relative flex items-start gap-2 p-2 border-b border-border-subtle last:border-b-0', softWrap.blockClassName)}>
             <span className="text-tool-label-fg uppercase text-[0.7692rem] min-w-[28px] pt-[1px]">
                 {label}
             </span>
+            {softWrap.button}
             <CollapsibleBox
                 collapsedMaxHeight={60}
-                className="monospace-block flex-1 text-text-primary/80 whitespace-pre overflow-x-auto no-scrollbar"
+                className="monospace-block flex-1 min-w-0 text-text-primary/80 whitespace-pre overflow-x-auto no-scrollbar"
             >
                 {children}
             </CollapsibleBox>

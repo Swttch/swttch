@@ -3,7 +3,11 @@
     "in": "دخل",
     "out": "خرج",
     "declined": "لقد رفضت هذه الأداة.",
-    "declinedWithInstruction": "لقد رفضت هذه الأداة. طلبت من Claude بدلًا من ذلك: “{{instruction}}”"
+    "declinedWithInstruction": "لقد رفضت هذه الأداة. طلبت من Claude بدلًا من ذلك: “{{instruction}}”",
+    "softWrap": {
+      "wrap": "التفاف الأسطر الطويلة",
+      "unwrap": "إيقاف الالتفاف"
+    }
   },
   "message": {
     "copyMessage": "نسخ الرسالة",

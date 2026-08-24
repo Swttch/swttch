@@ -43,8 +43,45 @@ describe('soft wrap — stylesheet structure (#179)', () => {
   });
 
   it('wraps the diff viewer used by the diff card', () => {
-    const rule = block('.soft-wrap .diff-viewer .diff-code {');
+    const rule = block('.soft-wrap .diff-viewer .diff-code,');
     expect(rule).toMatch(/white-space:\s*pre-wrap/);
+  });
+});
+
+/**
+ * The per-block toggle (#179 follow-up) puts the same classes on the block
+ * instead of on <html>, so every selector needs both forms. A rule written only
+ * as `.soft-wrap .x` silently does nothing when the class lands on `.x` itself
+ * — which is how the first attempt shipped a toggle that flipped its label and
+ * changed no layout.
+ */
+describe('soft wrap — the classes work on the block itself, not just as an ancestor', () => {
+  const carriers = [
+    ['.diff-body-line', 'soft-wrap'],
+    ['.monospace-block', 'soft-wrap'],
+    ['.diff-body-line', 'soft-wrap-off'],
+    ['.monospace-block', 'soft-wrap-off'],
+  ] as const;
+
+  it.each(carriers)('selects %s when it carries .%s itself', (target, cls) => {
+    expect(css).toContain(`${target}.${cls}`);
+  });
+
+  it('selects the diff viewer both ways', () => {
+    expect(css).toContain('.soft-wrap .diff-viewer .diff-code');
+    expect(css).toContain('.diff-viewer.soft-wrap .diff-code');
+  });
+
+  it('undoes the fold when a block opts out while the setting is on', () => {
+    const rule = block('.soft-wrap-off .diff-body-line,');
+    expect(rule).toMatch(/white-space:\s*pre\b/);
+    expect(rule).toMatch(/word-break:\s*normal/);
+    // Back to scrolling — the text no longer fits the box.
+    expect(rule).toMatch(/overflow-x:\s*auto/);
+  });
+
+  it('restores the diff body floor when a block opts out', () => {
+    expect(block('.soft-wrap-off .diff-body {')).toMatch(/min-width:\s*max-content/);
   });
 });
 
@@ -74,5 +111,18 @@ describe('soft wrap — markdown code blocks (#179 follow-up)', () => {
     );
     expect(rule).toMatch(/padding-left:\s*2\.5rem/);
     expect(rule).toMatch(/text-indent:\s*-2\.5rem/);
+  });
+
+  it('lets one code block opt back out while the setting is on', () => {
+    const rule = blockIn(streamingCss, '.soft-wrap-off [data-streamdown="code-block-body"] {');
+    expect(rule).toMatch(/white-space:\s*pre\b/);
+    expect(rule).toMatch(/overflow-x:\s*auto/);
+    // The hanging indent only makes sense while lines fold.
+    const lines = blockIn(
+      streamingCss,
+      '.soft-wrap-off [data-streamdown="code-block-body"] > code > span {',
+    );
+    expect(lines).toMatch(/padding-left:\s*0/);
+    expect(lines).toMatch(/text-indent:\s*0/);
   });
 });

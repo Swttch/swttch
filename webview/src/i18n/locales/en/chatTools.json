@@ -3,7 +3,11 @@
     "in": "IN",
     "out": "OUT",
     "declined": "You declined this tool.",
-    "declinedWithInstruction": "You declined this tool. Asked Claude instead: “{{instruction}}”"
+    "declinedWithInstruction": "You declined this tool. Asked Claude instead: “{{instruction}}”",
+    "softWrap": {
+      "wrap": "Wrap long lines",
+      "unwrap": "Stop wrapping"
+    }
   },
   "message": {
     "copyMessage": "Copy message",

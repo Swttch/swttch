@@ -3,6 +3,7 @@ import {ToolUseBlockDto} from "@/types";
 import {getAdapter} from "@/adapters";
 import {useTranslation} from "@/i18n";
 import {RendererProps, ResultCaption, ToolHeader, ToolWrapper} from "./common";
+import {useSoftWrapToggle} from "@/pages/ChatPage/message-renderers/components/useSoftWrapToggle";
 import {cn} from "@/utils/cn";
 // @ts-ignore
 import {diffAsText} from "unidiff";
@@ -78,6 +79,7 @@ export function EditRenderer(props: RendererProps) {
     const result = props.toolResult?.toolUseResult as EditToolUseResult | undefined;
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const softWrap = useSoftWrapToggle();
     const [containerWidth, setContainerWidth] = useState<number>(0);
 
     useEffect(() => {
@@ -121,7 +123,10 @@ export function EditRenderer(props: RendererProps) {
                 <ResultCaption>{t('edit.modified')}</ResultCaption>
 
                 {showDiff && (
-                    <div className="rounded overflow-hidden border border-border-default mt-2.5">
+                    // Class and button both on the border box, which does not
+                    // scroll — the <pre> inside it does.
+                    <div className={cn("group/wrap relative rounded overflow-hidden border border-border-default mt-2.5", softWrap.blockClassName)}>
+                        {softWrap.button}
                         <pre dir="ltr" className="text-[0.9230rem] leading-[1.5] font-mono overflow-x-auto m-0">
                             {/* Sized to the longest line rather than to the visible width, so the
                                 rows inside can fill it. A row is a block, so its width resolves

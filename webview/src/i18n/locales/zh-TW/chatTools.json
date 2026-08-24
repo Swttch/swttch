@@ -3,7 +3,11 @@
     "in": "輸入",
     "out": "輸出",
     "declined": "您拒絕了此工具。",
-    "declinedWithInstruction": "您拒絕了此工具，改為告訴 Claude：「{{instruction}}」"
+    "declinedWithInstruction": "您拒絕了此工具，改為告訴 Claude：「{{instruction}}」",
+    "softWrap": {
+      "wrap": "摺疊長行",
+      "unwrap": "取消換行"
+    }
   },
   "message": {
     "copyMessage": "複製訊息",
