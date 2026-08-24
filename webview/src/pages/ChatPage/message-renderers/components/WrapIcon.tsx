@@ -1,11 +1,15 @@
-import {cn} from '@/utils/cn.ts';
-
 /**
- * An arrow folding back onto the line below it — the editor convention for
- * wrapping. Inline rather than from an icon package: the webview ships none,
- * and every other icon here is written the same way.
+ * The wrap button's glyph (#179 follow-up).
+ *
+ * Three text lines, the second turning back on itself through an arrow — the
+ * editor convention for a wrapped line.
+ *
+ * One drawing for both states. What separates them is the chip behind it: the
+ * copy button's translucent backdrop while the block scrolls, the accent fill
+ * while it folds. A second glyph would say the same thing twice and make the
+ * pair read as two different controls.
  */
-export const WrapIcon = ({active}: {active: boolean}) => (
+export const WrapIcon = () => (
   <svg
     width="14"
     height="14"
@@ -16,11 +20,10 @@ export const WrapIcon = ({active}: {active: boolean}) => (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden="true"
-    className={cn(active && 'text-accent-fg')}
   >
     <path d="M2 4h12" />
-    <path d="M2 12h5" />
-    <path d="M2 8h9a2.5 2.5 0 0 1 0 5h-2" />
-    <path d="M6.5 11 4.5 13l2 2" />
+    <path d="M2 8h9a2.5 2.5 0 0 1 0 5H7" />
+    <path d="M9 11l-2 2 2 2" />
+    <path d="M2 12h2" />
   </svg>
 );

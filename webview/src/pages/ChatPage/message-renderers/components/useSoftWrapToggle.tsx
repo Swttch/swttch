@@ -65,12 +65,12 @@ export function useSoftWrapToggle(): {
           setOverride(!wrapped);
         }}
         className={cn(
-          'absolute end-1 top-1 z-10 rounded p-1 opacity-0 transition-opacity',
-          'text-text-tertiary hover:text-text-primary hover:bg-surface-hover',
+          // Same chip as the code block's copy button — see .wrap-toggle-button.
+          'wrap-toggle-button absolute end-1 top-1 z-10 opacity-0 transition-opacity',
           'group-hover/wrap:opacity-100 focus-visible:opacity-100',
         )}
       >
-        <WrapIcon active={wrapped} />
+        <WrapIcon />
       </button>
     </Tooltip>
   );

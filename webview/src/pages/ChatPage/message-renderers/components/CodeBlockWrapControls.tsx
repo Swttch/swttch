@@ -94,12 +94,12 @@ const CodeBlockWrapButton = ({header}: {header: HTMLElement}) => {
         aria-pressed={wrapped}
         onClick={() => setOverride(!wrapped)}
         className={cn(
-          'cursor-pointer rounded p-1 opacity-0 transition-all',
-          'text-muted-foreground hover:text-text-primary',
+          // Same chip as the copy button it sits beside — see .wrap-toggle-button.
+          'wrap-toggle-button opacity-0 transition-all',
           'group-hover:opacity-100 focus-visible:opacity-100',
         )}
       >
-        <WrapIcon active={wrapped} />
+        <WrapIcon />
       </button>
     </Tooltip>,
     slot,

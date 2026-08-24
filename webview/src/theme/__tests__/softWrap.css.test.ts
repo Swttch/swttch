@@ -86,6 +86,35 @@ describe('soft wrap — the classes work on the block itself, not just as an anc
 });
 
 /**
+ * The button first shipped with no backdrop, so the glyph floated over the code
+ * with nothing marking it as a control, and the two states looked identical.
+ */
+describe('soft wrap — the button reads as a control, and as on or off', () => {
+  it('takes the copy button\'s chip by variable, not by copied value', () => {
+    // Copying the values would let the two drift apart the next time either is
+    // retuned, and light/dark each define their own.
+    const rule = block('.wrap-toggle-button {');
+    expect(rule).toMatch(/background:\s*var\(--md-code-copy-btn-bg\)/);
+    expect(rule).toMatch(/color:\s*var\(--md-code-copy-btn-fg\)/);
+    expect(block('.wrap-toggle-button:hover {'))
+      .toMatch(/background:\s*var\(--md-code-copy-btn-bg-hover\)/);
+  });
+
+  it('washes the chip with the accent when wrapping is on', () => {
+    // One glyph, two backdrops — the state lives here, not in the drawing. Held
+    // under full strength: one chip sits on every block, and a saturated one
+    // pulls the eye off the code underneath.
+    const rule = block(".wrap-toggle-button[aria-pressed='true'] {");
+    const bg = rule.match(/background:\s*([^;]+);/)?.[1] ?? '';
+    expect(bg).toContain('var(--accent-primary-rgb)');
+    const alpha = Number(bg.match(/\/\s*([\d.]+)\s*\)/)?.[1]);
+    expect(alpha).toBeGreaterThan(0);
+    expect(alpha).toBeLessThan(1);
+    expect(rule).toMatch(/color:\s*var\(--accent-primary-fg\)/);
+  });
+});
+
+/**
  * The reporter turned the setting on and still hit a block that scrolled
  * sideways: a fenced code block in an assistant message. Streamdown renders it
  * as its own <pre data-streamdown="code-block-body">, which carries none of the

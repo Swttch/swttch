@@ -80,4 +80,29 @@ describe('useSoftWrapToggle (#179 follow-up)', () => {
     expect(folded).toBeTruthy();
     expect(folded).not.toBe(unfolded);
   });
+
+  it('keeps one glyph and lets the chip carry the state', () => {
+    // The drawing stays put; `aria-pressed` is what the stylesheet keys the
+    // accent fill off (see softWrap.css.test). Swapping the glyph too would
+    // make the two states read as two different controls.
+    const {container} = render(<Host />);
+    const paths = () =>
+      Array.from(btn(container).querySelectorAll('path'))
+        .map((p) => p.getAttribute('d'))
+        .join('|');
+
+    const off = paths();
+    act(() => btn(container).click());
+
+    expect(off).toBeTruthy();
+    expect(paths()).toBe(off);
+    expect(btn(container).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('wears the same chip as the copy button it sits beside', () => {
+    // `.wrap-toggle-button` pulls the copy button's own CSS variables. Without
+    // it the glyph floated over the code with no backdrop marking it a control.
+    const {container} = render(<Host />);
+    expect(btn(container).classList.contains('wrap-toggle-button')).toBe(true);
+  });
 });
