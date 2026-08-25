@@ -188,6 +188,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.1 - Fixes for v0.29.0</h3>
+            <ul>
+                <li>Fix the broken behaviour of the editable diff view (#353)</li>
+                <li>Fix Cmd+Left/Right not moving the caret (#353)</li>
+            </ul>
             <h3>0.29.0 - Turn off the automatic diff, and edit what Claude proposes</h3>
             <ul>
                 <li>Fix edit diff view force displaying problem, display or not setting option added (#349)</li>
