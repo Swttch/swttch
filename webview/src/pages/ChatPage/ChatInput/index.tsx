@@ -636,15 +636,11 @@ export function ChatInput() {
       return;
     }
 
-    // Cmd+Arrow is left to the browser. It moves by *visual* line — the same
-    // unit Up/Down and Cmd+Shift+Arrow already use — and scrolls the caret into
-    // view on its way. Handling it here once meant a <textarea> under JCEF
-    // ignored the native binding and emitted a ghost Arrow afterwards; with the
-    // composer now a contentEditable (RichInput) neither happens, and taking it
-    // over cost more than it bought: line start/end were computed by scanning
-    // for "\n", so a soft-wrapped paragraph jumped to the paragraph's edge
-    // rather than the visual line's, and moving the caret by hand left the
-    // scroll position behind.
+    // Cmd+Arrow is not handled here. useCaretBoundaryKeys claims it at the
+    // window in the capture phase, for every text field in the app at once —
+    // including this one, and including the history navigation below, which
+    // reads a bare ArrowUp and must not see a Cmd+ArrowUp meaning "go to the
+    // top of the text".
 
     // Mention interaction (must precede slash command handling)
     if (mention.isActive && mention.handleKeyDown(e)) return;

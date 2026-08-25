@@ -12,6 +12,7 @@ import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useZoomControls } from './hooks/useZoomControls';
+import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
@@ -24,6 +25,9 @@ function AppContent() {
   useKeyboardShortcuts();
   // CmdOrCtrl +/-/0 and CmdOrCtrl + wheel scale the whole UI (issue #169).
   useZoomControls();
+  // Cmd+Arrow moves the caret to the line's or text's edge in every text field.
+  // JCEF's off-screen rendering drops the macOS binding these keys rely on.
+  useCaretBoundaryKeys();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.

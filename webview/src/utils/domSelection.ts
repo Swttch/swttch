@@ -286,3 +286,68 @@ export function setSelectionRange(
     // Silently ignore if DOM is not attached or in an unexpected state
   }
 }
+
+/** How far one caret move reaches: to the visual line's edge, or the text's. */
+export enum CaretBoundary {
+  /** The edge of the *visual* row, which is where a soft wrap folded it. */
+  Line = 'lineboundary',
+  /** The start or end of the whole text. */
+  Document = 'documentboundary',
+}
+
+/** Which way the caret travels. */
+export enum CaretDirection {
+  Backward = 'backward',
+  Forward = 'forward',
+}
+
+/**
+ * Move (or extend the selection to) the line's or document's edge.
+ *
+ * macOS gives Cmd+Arrow to the composer everywhere else, but under off-screen
+ * rendering Chromium never performs it. Cmd+Arrow is not one of Chromium's own
+ * editing commands; on macOS it arrives as an NSResponder selector
+ * (`moveToBeginningOfLine:` and friends) that the OS sends to the native view.
+ * OSR has no such view, so the keystroke reaches the page — modifiers intact,
+ * nothing calling preventDefault — and then nothing happens. Option+Arrow keeps
+ * working through the same builds because word-wise movement *is* built into
+ * Chromium, which is the asymmetry that gives this away.
+ *
+ * That makes the composer, not the browser, responsible for these four keys
+ * whenever the IDE runs JCEF out of process — the default since 2025.1, and so
+ * what most users are on.
+ *
+ * `Selection.modify` is used rather than scanning the text for "\n". The two
+ * disagree exactly where it matters: a soft-wrapped paragraph is one run of
+ * text with no newline in it, so scanning sends the caret to the paragraph's
+ * edge while the user asked for the edge of the row they are looking at. An
+ * earlier hand-rolled implementation did scan, and was removed for that reason;
+ * reinstating it here would bring the same defect back. `modify` asks the
+ * engine that laid the text out, so it also matches what Up/Down already do.
+ *
+ * Non-standard but implemented by every engine we run on (it predates JCEF's
+ * Chromium by a decade). Absent — as in jsdom — this is a no-op, leaving the
+ * caret where it was rather than moving it somewhere wrong.
+ *
+ * @param extend Keep the selection's anchor and drag its end (Shift is held).
+ */
+export function moveCaretToBoundary(
+  root: HTMLElement,
+  direction: CaretDirection,
+  boundary: CaretBoundary,
+  extend: boolean,
+): void {
+  const selection = window.getSelection();
+  if (!selection?.modify) return;
+
+  try {
+    selection.modify(extend ? 'extend' : 'move', direction, boundary);
+
+    // `modify` moves the caret without scrolling to it, the same gap
+    // setCaretOffset covers for programmatic moves.
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    if (range) scrollCaretIntoView(root, range);
+  } catch {
+    // Silently ignore if the engine rejects the granularity
+  }
+}
