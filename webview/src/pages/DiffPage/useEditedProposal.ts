@@ -76,16 +76,40 @@ export function useEditedProposal(proposal: string, hunks: readonly Hunk[]): Edi
     [hunks, proposal],
   );
 
-  const resetHunk = useCallback((hunkIndex: number) => {
-    setEditedHunks((prev) => {
-      if (!prev.has(hunkIndex)) return prev;
-      const next = new Set(prev);
-      next.delete(hunkIndex);
-      return next;
-    });
-    // The text itself is restored by the caller, which owns the proposal this
-    // hunk should go back to — see DiffPage.
-  }, []);
+  /*
+   * Put one hunk's lines back to what Claude proposed, and forget it was typed
+   * into.
+   *
+   * The text half used to be left to the caller — the comment here said so, and
+   * no caller ever did it, so Reset dropped a flag and changed nothing anyone
+   * could see. It belongs here regardless: this is what holds the text and the
+   * proposal it came from, and a caller doing it would need both.
+   *
+   * Only the hunk's own lines are restored. Everything typed elsewhere in the
+   * file stays, which is the difference between resetting a hunk and abandoning
+   * the review.
+   */
+  const resetHunk = useCallback(
+    (hunkIndex: number) => {
+      setEditedHunks((prev) => {
+        if (!prev.has(hunkIndex)) return prev;
+        const next = new Set(prev);
+        next.delete(hunkIndex);
+        return next;
+      });
+
+      const hunk = hunks.find((h) => h.index === hunkIndex);
+      if (hunk === undefined) return;
+
+      setEdits((prev) => {
+        const current = prev.seededFrom === proposal ? prev.contents : proposal;
+        const restored = restoreHunkLines(current, proposal, hunk);
+        if (restored === null || restored === current) return prev;
+        return { seededFrom: proposal, contents: restored };
+      });
+    },
+    [hunks, proposal],
+  );
 
   const isHunkEdited = useCallback((hunkIndex: number) => editedHunks.has(hunkIndex), [editedHunks]);
 
@@ -118,4 +142,30 @@ function overlapsHunk(change: EditorChange, hunk: Hunk): boolean {
   const hunkStart = hunk.newStart - 1;
   const hunkEnd = hunkStart + hunk.newLines - 1;
   return changeStart <= hunkEnd && changeEnd >= hunkStart;
+}
+
+/**
+ * [current] with the lines [hunk] covers put back to what [proposal] has there,
+ * or null when that cannot be done safely.
+ *
+ * A hunk's span is stated in PROPOSAL line numbers, so it only addresses the
+ * same lines in `current` while the two have the same number of them. An edit
+ * that added or removed a line moves every hunk after it, and restoring by
+ * those stale coordinates would overwrite whatever the reviewer typed at the
+ * shifted position — worse than leaving Reset unable to act, which is what null
+ * means here.
+ */
+function restoreHunkLines(current: string, proposal: string, hunk: Hunk): string | null {
+  const currentLines = current.split('\n');
+  const proposalLines = proposal.split('\n');
+  if (currentLines.length !== proposalLines.length) return null;
+
+  // The hunk counts from one; the array counts from zero.
+  const start = hunk.newStart - 1;
+  const end = start + hunk.newLines;
+  if (start < 0 || end > proposalLines.length) return null;
+
+  const restored = [...currentLines];
+  for (let i = start; i < end; i++) restored[i] = proposalLines[i];
+  return restored.join('\n');
 }

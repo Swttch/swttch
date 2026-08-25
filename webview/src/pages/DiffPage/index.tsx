@@ -149,6 +149,26 @@ export function DiffPage(props: Props) {
   const decisions = useHunkDecisions(blocks);
 
   /*
+   * Reset puts one hunk back to untouched — both halves of that.
+   *
+   * The edit tracking is only half: dropping the "this hunk was typed into"
+   * mark leaves an ANSWERED hunk answered, so on a hunk that was accepted and
+   * never typed into (the ordinary case) Reset did nothing at all — the button
+   * was there, the reviewer pressed it, and the hunk stayed decided.
+   *
+   * Reopening the question is the other half, and it is what separates Reset
+   * from Back: Back keeps what was typed and only reopens, Reset discards the
+   * edit as well. Both have to reopen, or neither undoes anything visible.
+   */
+  const resetHunk = useCallback(
+    (index: number) => {
+      edited.resetHunk(index);
+      decisions.reset(index);
+    },
+    [edited, decisions],
+  );
+
+  /*
    * Whether the reviewer can pick parts of this change.
    *
    * They cannot when the change has no separable blocks — a whole-file rewrite
@@ -356,7 +376,7 @@ export function DiffPage(props: Props) {
             proposedContents={edited.contents}
             onEdit={edited.applyEdit}
             isHunkEdited={edited.isHunkEdited}
-            onResetHunk={edited.resetHunk}
+            onResetHunk={resetHunk}
             // Omitted when there is no split to pick from, which is what keeps
             // the per-hunk controls off that diff entirely.
             decisions={canPickHunks ? decisions : undefined}

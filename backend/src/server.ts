@@ -368,6 +368,13 @@ async function main() {
       console.error('[node-backend]', 'RESOLVE_DIFF ignored: malformed params');
       return;
     }
+    // Logged like the webview's own handler does. Without it the two answering
+    // paths are indistinguishable in the log, and "the IDE never sent it" reads
+    // the same as "the backend dropped it".
+    console.error(
+      '[node-backend]',
+      `Received: RESOLVE_DIFF from the IDE (session=${parsed.sessionId}, edited=${parsed.editedContent !== undefined})`,
+    );
     resolveDiffReview(connections, parsed, jetbrainsBridge);
   });
 

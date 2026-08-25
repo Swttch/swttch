@@ -14,7 +14,20 @@ vi.mock('../../claude-process', () => ({
 }));
 
 import { parseResolveDiffParams, resolveDiffReview } from '../resolveDiff';
+import { takeMessagesForFinishedTurn, clearAllPendingMessages } from '../afterTurn';
 import { rememberPreview, clearPreviews, takePreview } from '../diffPreview';
+
+/**
+ * What Claude was told, read from where it now waits.
+ *
+ * The notice is HELD until the turn ends rather than written to stdin straight
+ * away — the CLI discards user messages queued mid-turn (see afterTurn), and
+ * answering a permission request is always mid-turn. So the assertion is on
+ * what is waiting for that session, not on a stdin call.
+ */
+function noticesFor(sessionId: string): string[] {
+  return takeMessagesForFinishedTurn(sessionId);
+}
 import { computeHunks, type AcceptedRange } from '../hunks';
 import { USER_DECLINED_PREFIX } from '../../../shared';
 
@@ -45,6 +58,7 @@ function pending(toolUseId: string) {
 beforeEach(() => {
   sendControlResponseToProcess.mockClear();
   sendMessageToProcess.mockClear();
+  clearAllPendingMessages();
   clearPreviews();
 });
 
@@ -235,34 +249,39 @@ describe('resolveDiffReview', () => {
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
     });
 
-    expect(sendMessageToProcess).toHaveBeenCalledTimes(1);
-    const [, sessionId, text] = sendMessageToProcess.mock.calls[0];
+    const held = noticesFor('sess-1');
+    expect(held).toHaveLength(1);
+    const sessionId = 'sess-1';
+    const text = held[0];
     expect(sessionId).toBe('sess-1');
     // Hidden from the chat: our webview strips this tag before rendering.
     expect(text).toContain('<system-reminder>');
     expect(text).toContain('The user edited your proposed change');
     // Quotes the applied text rather than summarising it.
     expect(text).toContain('debug: MAYBE');
-    expect(text).toContain('I have taken your edits into account.');
+    // And sends the assistant back to what it said before the edit, rather than
+    // letting it acknowledge the notice and move on.
+    expect(text).toContain('review the actual edits');
   });
 
-  it('sends the reminder only after the request has been answered', () => {
-    // Arriving while the CLI waits on the control_response would read as an
-    // answer to a different question.
+  it('answers the request now and holds the reminder for later', () => {
+    // The control_response cannot wait — the CLI is blocked on it. The notice
+    // must, because a user message written while that turn finishes is enqueued
+    // by the CLI and then dropped as it clears the queue (measured).
     pending('t-order');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    const order: string[] = [];
-    sendControlResponseToProcess.mockImplementation(() => order.push('control_response'));
-    sendMessageToProcess.mockImplementation(() => order.push('reminder'));
 
     resolveDiffReview(connections(), {
       toolUseId: 't-order', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG], editedContent: typed,
     });
 
-    expect(order).toEqual(['control_response', 'reminder']);
-    sendControlResponseToProcess.mockReset();
-    sendMessageToProcess.mockReset();
+    // Answered immediately...
+    expect(sendControlResponseToProcess).toHaveBeenCalled();
+    // ...and nothing written to stdin as a user message in the same breath.
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    // The notice is waiting for the turn to end.
+    expect(noticesFor('sess-1')).toHaveLength(1);
   });
 
   it('reports only what the reviewer changed about the proposal', () => {
@@ -276,23 +295,24 @@ describe('resolveDiffReview', () => {
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
     });
 
-    const [, , text] = sendMessageToProcess.mock.calls[0];
+    const text = noticesFor('sess-1')[0];
     expect(text).toContain('debug: MAYBE');
     // The untouched lines of the proposal stay out of it.
     expect(text).not.toContain('pad-4');
     expect(text).not.toContain('timeout: 60');
   });
 
-  it('says nothing when the reviewer only picked hunks', () => {
-    // Picking hunks changes how much of the proposal lands, not what it says,
-    // so the model can still describe its own proposal truthfully.
+  it('reports a partial accept, where less landed than was proposed', () => {
+    // Silence here left Claude believing the whole change was written, and the
+    // next turn was built on a file that does not exist. Telling it is the rule;
+    // saying nothing is the exception, and the exception is a FULL accept.
     pending('t-quiet');
     resolveDiffReview(connections(), {
       toolUseId: 't-quiet', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
 
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(noticesFor('sess-1')).toHaveLength(1);
   });
 
   it('says nothing when an edit reproduced the proposal', () => {
@@ -303,7 +323,7 @@ describe('resolveDiffReview', () => {
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
     });
 
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(noticesFor('sess-1')).toHaveLength(0);
   });
 
   it('says nothing when the reviewer rejected the change', () => {
@@ -313,7 +333,7 @@ describe('resolveDiffReview', () => {
       acceptedRanges: [], editedContent: original,
     });
 
-    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(noticesFor('sess-1')).toHaveLength(0);
   });
 
   it('quotes the request id the CLI is waiting on', () => {

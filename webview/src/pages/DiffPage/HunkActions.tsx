@@ -37,6 +37,13 @@ interface Props {
  * Absolutely positioned rather than laid out in the flow: an element that took
  * a row of its own would push the two sides of the diff apart and add a line to
  * a file the reviewer is trying to read.
+ *
+ * `absolute` and not `sticky`, even though sticky would keep the controls in
+ * view when a hunk is wide enough to scroll sideways. Sticky occupies a row —
+ * the renderer's annotation element is `min-height: 0` precisely so an absolute
+ * child leaves it collapsed, and a sticky child inflates it back into a blank
+ * line wedged between the code and the hunk it belongs to. Losing the line is
+ * worse than losing the anchoring: every hunk pays for it, scrolling or not.
  */
 export function HunkActions({ decision, isEdited, onAccept, onDeny, onReset, onBack }: Props) {
   const { t } = useTranslation('chat');
@@ -72,10 +79,15 @@ export function HunkActions({ decision, isEdited, onAccept, onDeny, onReset, onB
           <button type="button" onClick={onDeny} className={SECONDARY_BUTTON}>
             {t('diffPage.hunk.deny')}
           </button>
+          {/* Opaque, unlike the other controls: `--state-success-bg` is a 15%
+              green in dark themes, and these buttons float over the addition
+              side of a diff — itself tinted green. Tint over tint left the one
+              affirmative control barely visible against the rows it decides.
+              Its own surface, so what it sits on cannot wash it out. */}
           <button
             type="button"
             onClick={onAccept}
-            className="pointer-events-auto rounded border border-state-success-fg/40 bg-state-success-bg px-2 py-0.5 text-xs text-state-success-fg shadow-sm transition-colors hover:brightness-110"
+            className="pointer-events-auto rounded border border-state-success-fg/40 bg-surface-overlay px-2 py-0.5 text-xs text-state-success-fg shadow-sm transition-colors hover:bg-surface-hover"
           >
             {t('diffPage.hunk.accept')}
           </button>

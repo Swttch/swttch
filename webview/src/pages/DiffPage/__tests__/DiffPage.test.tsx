@@ -45,6 +45,7 @@ vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
   default: ({
     onEdit,
     decisions,
+    onResetHunk,
   }: {
     onEdit: (contents: string, changes: readonly { range: unknown }[]) => void;
     decisions?: {
@@ -53,6 +54,7 @@ vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
       reset: (i: number) => void;
       total: number;
     };
+    onResetHunk?: (i: number) => void;
   }) => (
     <>
       {/* The editor reports the whole text plus the ranges it replaced; the
@@ -75,6 +77,9 @@ vi.mock('../../ChatPage/ReviewDiffSurface', () => ({
               <button type="button" onClick={() => decisions.keep(i)}>{`keep-${i}`}</button>
               <button type="button" onClick={() => decisions.undo(i)}>{`undo-${i}`}</button>
               <button type="button" onClick={() => decisions.reset(i)}>{`reset-${i}`}</button>
+              {/* What the Reset CONTROL calls, which is a different path from
+                  decisions.reset above — see the page's own resetHunk. */}
+              <button type="button" onClick={() => onResetHunk?.(i)}>{`reset-control-${i}`}</button>
             </span>
           ))
         : null}
@@ -269,6 +274,22 @@ describe('DiffPage', () => {
 
       fireEvent.click(confirm);
       expect(resolveDiff).not.toHaveBeenCalled();
+    });
+
+    it('reopens an answered hunk when the Reset control is used', async () => {
+      // Reset discards the edit AND reopens the question. Wired to the edit
+      // tracking alone it did neither on a hunk that was never typed into: the
+      // reviewer pressed it and the hunk stayed accepted, with no way back
+      // except Back — a different button with a different promise.
+      render(<DiffPage toolUseId="toolu_1" />);
+      fireEvent.click(await screen.findByText('undo-0'));
+      fireEvent.click(screen.getByText('undo-1'));
+      // Both undone, so there is nothing left to write and Confirm is off.
+      expect(screen.getByText('diffPage.confirm')).toBeDisabled();
+
+      fireEvent.click(screen.getByText('reset-control-0'));
+
+      expect(screen.getByText('diffPage.confirm')).toBeEnabled();
     });
 
     it('confirms again once an undone hunk is reset', async () => {

@@ -108,10 +108,16 @@ export function DiffOverlay({ toolUseId, onClose }: Props) {
           twice. The settings modal caps its width because a settings form stops
           improving past a certain measure; this does not.
 
-          Height is a ceiling rather than a size, so that collapsing the diff
-          shrinks this box to the header it leaves behind. Fixed at h-full it
-          stayed full-screen with nothing in it, which hid the conversation the
-          collapse was meant to uncover.
+          Expanded it takes the full height, short diff or not. Sized to its
+          content instead, a two-hunk review drew a stub of a box crouched at the
+          bottom of an empty screen — anchored low by the items-end below, which
+          is there for the collapsed bar. Empty room above the diff costs
+          nothing; a modal that changes size with the diff inside it reads as a
+          different component each time.
+
+          Collapsed it goes back to a ceiling, so the box shrinks to the header
+          it leaves behind. Held at h-full it stayed full-screen with nothing in
+          it, hiding the conversation the collapse was meant to uncover.
         */}
         {/* pointer-events-auto: the layer above gives up the mouse when
             collapsed, and this takes it back — otherwise the chevron that
@@ -129,8 +135,8 @@ export function DiffOverlay({ toolUseId, onClose }: Props) {
           prompt does not.
         */}
         <div
-          className={`pointer-events-auto flex max-h-full w-full flex-col overflow-hidden border border-border-default bg-surface-base shadow-2xl ${
-            collapsed ? 'rounded-lg' : 'rounded-xl'
+          className={`pointer-events-auto flex w-full flex-col overflow-hidden border border-border-default bg-surface-base shadow-2xl ${
+            collapsed ? 'max-h-full rounded-lg' : 'h-full rounded-xl'
           }`}
           style={collapsed ? { maxWidth: COLLAPSED_WIDTH } : undefined}
         >

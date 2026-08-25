@@ -22,7 +22,8 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
 import type { AcceptedRange } from './hunks';
-import { sendControlResponseToProcess, sendMessageToProcess } from '../claude-process';
+import { sendControlResponseToProcess } from '../claude-process';
+import { sendAfterTurn } from './afterTurn';
 
 export interface ResolveDiffParams {
   toolUseId: string;
@@ -115,6 +116,13 @@ export function resolveDiffReview(
   // answered). Let it through as an ordinary approval rather than inventing a
   // decision the user did not make.
   if (!preview) {
+    // Logged because everything downstream — the picking, the edit, the notice
+    // to Claude — depends on this being present, and its absence is silent
+    // otherwise: the write goes through as proposed and nothing says why.
+    console.error(
+      '[node-backend]',
+      `Diff resolved for ${params.toolUseId}: no stored preview, letting the original call through`,
+    );
     respond({ behavior: 'allow', updatedInput: {} });
     notifyResolved(connections, params);
     return;
@@ -145,35 +153,56 @@ export function resolveDiffReview(
 
   notifyResolved(connections, params);
 
-  // Only for an edit. A hunk selection changes how much of the proposal lands,
-  // not what it says, and the model can still describe its own proposal
-  // truthfully; typing over it makes that description wrong.
-  //
-  // Measured before this existed: the model went on reporting the value it had
-  // proposed (20000) after the reviewer applied 15000. With the reminder it
-  // reports 15000, which is what is on disk.
-  if (edited !== undefined) {
-    tellClaudeAboutTheEdit(connections, params.sessionId, preview, edited);
+  /*
+   * Told whenever what landed is not what was proposed — edited, picked, or
+   * both. Silence is the exception, and it has exactly one case: the whole
+   * proposal went in untouched, where Claude's own account of it is already
+   * true.
+   *
+   * `amended` is that test, and a precise one: buildPartialApproval returns
+   * null when the answer reproduces the proposal exactly, and an input to send
+   * in its place otherwise. So it is null on a full accept, and on an edit that
+   * was typed and then undone.
+   *
+   * Reporting only edits was too narrow. A reviewer who denies half a change
+   * leaves Claude believing all of it was written, and the next turn is built
+   * on a file that does not exist — measured with an edit before this existed:
+   * the model kept reporting the value it had proposed (20000) after the
+   * reviewer applied 15000, and a denied hunk is the same mistake in a form
+   * nothing corrected.
+   */
+  if (amended !== null) {
+    tellClaudeAboutTheEdit(connections, params.sessionId, preview, amended.content);
   }
 }
 
 /**
- * Send the reminder about a corrected proposal, once the request itself has
- * been answered.
+ * Report a corrected proposal to Claude, once the turn that proposed it is over.
  *
- * After, never before: the CLI is waiting on the control_response, and a user
- * message that arrives while it waits would be read as an answer to a different
- * question.
+ * Held rather than sent (see afterTurn). Answering a permission request happens
+ * mid-turn by definition — the CLI is blocked on the control_response — and the
+ * CLI clears its pending-message queue as that turn ends, so a notice written
+ * to stdin now is enqueued and then discarded. Measured: written at .477,
+ * enqueued at .586, removed at .769, while an ordinary user message in the same
+ * session went enqueue → dequeue. The model never read it, and went on
+ * describing the value it had proposed rather than the one the reviewer applied.
  */
 function tellClaudeAboutTheEdit(
-  connections: ConnectionManager,
+  _connections: ConnectionManager,
   sessionId: string,
   preview: StoredPreview,
   applied: string,
 ): void {
   const notice = buildEditedProposalNotice(describeCorrection(preview.newContent, applied));
-  if (!notice) return;
-  sendMessageToProcess(connections, sessionId, notice);
+  if (!notice) {
+    // Nothing to report means the applied text matched the proposal exactly.
+    // Logged because "the reminder never arrived" and "there was nothing to
+    // say" look identical from the chat, and only one of them is a bug.
+    console.error('[node-backend]', `Edit notice for ${sessionId}: nothing to report`);
+    return;
+  }
+  sendAfterTurn(sessionId, notice);
+  console.error('[node-backend]', `Edit notice for ${sessionId}: held until the turn ends`);
 }
 
 /**

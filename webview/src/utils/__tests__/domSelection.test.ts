@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   textOffsetToPoint,
   pointToTextOffset,
@@ -6,6 +6,9 @@ import {
   setCaretOffset,
   getSelectionRange,
   setSelectionRange,
+  moveCaretToBoundary,
+  CaretBoundary,
+  CaretDirection,
 } from '../domSelection';
 
 // jsdom is available via vitest's jsdom environment.
@@ -488,5 +491,64 @@ describe('caret scrolling on programmatic moves', () => {
 
     expect(root.scrollTop).toBe(17);
     document.body.removeChild(root);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// moveCaretToBoundary
+// ---------------------------------------------------------------------------
+
+/**
+ * These assert the granularity handed to `Selection.modify`, which is the whole
+ * of what this function decides. jsdom does not implement `modify` (nor any
+ * layout to observe a caret with), so it is stubbed and the call is read back.
+ *
+ * The granularity is the part worth pinning: 'lineboundary' follows a soft wrap
+ * to the edge of the visual row, while the implementation this replaced scanned
+ * for "\n" and so ran on to the end of the paragraph. A test that only checked
+ * "the caret moved" would pass for both.
+ */
+describe('moveCaretToBoundary', () => {
+  let modify: ReturnType<typeof vi.fn>;
+  let originalGetSelection: typeof window.getSelection;
+
+  beforeEach(() => {
+    modify = vi.fn();
+    originalGetSelection = window.getSelection;
+    window.getSelection = () => ({ modify, rangeCount: 0 }) as unknown as Selection;
+  });
+
+  afterEach(() => {
+    window.getSelection = originalGetSelection;
+  });
+
+  const root = () => document.createElement('div');
+
+  it('moves to the edge of the visual line, not of the paragraph', () => {
+    moveCaretToBoundary(root(), CaretDirection.Backward, CaretBoundary.Line, false);
+
+    expect(modify).toHaveBeenCalledWith('move', 'backward', 'lineboundary');
+  });
+
+  it('extends the selection instead of moving it when Shift is held', () => {
+    moveCaretToBoundary(root(), CaretDirection.Forward, CaretBoundary.Line, true);
+
+    expect(modify).toHaveBeenCalledWith('extend', 'forward', 'lineboundary');
+  });
+
+  it('reaches the whole text for the vertical arrows', () => {
+    moveCaretToBoundary(root(), CaretDirection.Forward, CaretBoundary.Document, false);
+
+    expect(modify).toHaveBeenCalledWith('move', 'forward', 'documentboundary');
+  });
+
+  it('does nothing where the engine has no modify()', () => {
+    window.getSelection = () => ({ rangeCount: 0 }) as unknown as Selection;
+
+    // The caret staying put is the wanted outcome: without `modify` there is no
+    // way to find a visual line's edge, and guessing one would move it wrongly.
+    expect(() =>
+      moveCaretToBoundary(root(), CaretDirection.Backward, CaretBoundary.Line, false),
+    ).not.toThrow();
   });
 });

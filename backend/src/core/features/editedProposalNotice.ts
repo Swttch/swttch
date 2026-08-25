@@ -53,11 +53,20 @@ export function buildEditedProposalNotice(change: EditedProposalChange | null): 
     '```',
     '',
     // Without this the assistant tends to narrate the correction back, which
-    // reads as a second answer to a question already settled. Given that a
-    // reply may come anyway, the wording steers it to one that is at least
-    // true and short.
-    'Do not explain or ask about this notice. If you must reply at all, say only',
-    '"I have taken your edits into account." — otherwise continue without comment.',
+    // reads as a second answer to a question already settled.
+    'Do not explain or ask about this notice.',
+    '',
+    // The previous wording stopped at "say only <one fixed English sentence>",
+    // which left two things wrong. It answered in English to a user writing in
+    // another language, and it treated the notice as something to acknowledge
+    // and move past — while the reply that PRECEDED it may now be describing an
+    // edit that was never applied. Acknowledging is not enough; the assistant
+    // has to go back and read what actually landed.
+    'If the user did not approve your proposal as-is but applied it with edits of',
+    'their own, then what you said in your previous response may not match the',
+    'change that was actually approved. In that case, send the message',
+    '"I will check the additional edits you made." in THE USER\'S OWN LANGUAGE,',
+    'and then review the actual edits where they differ from what you proposed.',
   ].join('\n');
 
   return `<system-reminder>\n${body}\n</system-reminder>`;

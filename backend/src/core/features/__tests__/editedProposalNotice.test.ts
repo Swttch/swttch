@@ -57,8 +57,13 @@ describe('buildEditedProposalNotice', () => {
   });
 
   it('stays far smaller than quoting the proposal twice', () => {
+    // Measured on the QUOTED CHANGE, not the whole notice. The instructions
+    // around it are a fixed cost that does not grow with the file, and folding
+    // them into this budget would make a two-line correction to a short file
+    // look like a regression in how much the diff quotes.
     const notice = buildEditedProposalNotice({ oldText: proposed, newText: applied })!;
-    expect(notice.length).toBeLessThan(proposed.length * 2);
+    const quoted = notice.split('```diff')[1].split('```')[0];
+    expect(quoted.length).toBeLessThan(proposed.length * 2);
   });
 
   it('is wrapped so the chat never shows it', () => {
@@ -67,10 +72,25 @@ describe('buildEditedProposalNotice', () => {
     expect(notice.trimEnd().endsWith('</system-reminder>')).toBe(true);
   });
 
-  it('asks for silence, and names the one reply worth making', () => {
+  it('asks for silence about the notice itself', () => {
     const notice = buildEditedProposalNotice({ oldText: 'a\n', newText: 'b\n' })!;
     expect(notice).toContain('Do not explain or ask about this notice.');
-    expect(notice).toContain('I have taken your edits into account.');
+  });
+
+  it('tells the assistant to revisit what it said before the edit', () => {
+    // Acknowledging is not enough: the reply that came BEFORE this notice may
+    // describe a change that was never applied, so the assistant is sent back
+    // to read what actually landed rather than moving on.
+    const notice = buildEditedProposalNotice({ oldText: 'a\n', newText: 'b\n' })!;
+    expect(notice).toContain('may not match');
+    expect(notice).toContain('review the actual edits');
+  });
+
+  it('asks for that acknowledgement in the user\'s own language', () => {
+    // A fixed English sentence answered a Korean user in English. The reply is
+    // the user's to read, so it follows their language, not the notice's.
+    const notice = buildEditedProposalNotice({ oldText: 'a\n', newText: 'b\n' })!;
+    expect(notice).toContain("THE USER'S OWN LANGUAGE");
   });
 
   it('still says something when the whole file was replaced', () => {
