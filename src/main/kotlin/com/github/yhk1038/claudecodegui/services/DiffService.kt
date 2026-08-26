@@ -83,6 +83,15 @@ class DiffService(private val project: Project) {
          * review (#359). Absent for an ordinary open.
          */
         banner: ReviewBaseBanner? = null,
+        /**
+         * Replace the tab already on screen rather than bringing it forward.
+         *
+         * Set when this call is the redraw itself — adding or dropping a
+         * banner, or rebuilding against the current file. Those are exactly the
+         * cases where what is on screen is the stale thing, so surfacing it
+         * would show the reviewer the very state that needs replacing (#359).
+         */
+        replaceExisting: Boolean = banner != null,
     ) {
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -92,12 +101,12 @@ class DiffService(private val project: Project) {
                 // would throw away the hunks the reviewer has already ticked.
                 val existing = pendingDiffFiles[toolUseId]
                 val fem = FileEditorManager.getInstance(project)
-                // Skipped when a banner is being added or the change was
-                // rebuilt: those are the cases where the tab on screen is the
-                // stale thing, so bringing it forward would show exactly what
-                // needs replacing.
-                if (banner == null && existing != null && fem.isFileOpen(existing)) {
-                    fem.openFile(existing, true)
+                if (shouldSurfaceExistingTab(
+                        replaceExisting = replaceExisting,
+                        hasExistingTab = existing != null && fem.isFileOpen(existing),
+                    )
+                ) {
+                    fem.openFile(existing!!, true)
                     return@invokeLater
                 }
 
@@ -410,7 +419,17 @@ class DiffService(private val project: Project) {
     fun redrawReview(toolUseId: String, filePath: String, oldContent: String, newContent: String) {
         val review = pendingReviews[toolUseId] ?: return
         review.banner = null
-        openDiffViewer(filePath, oldContent, newContent, toolUseId, review.onResolve, banner = null)
+        openDiffViewer(
+            filePath,
+            oldContent,
+            newContent,
+            toolUseId,
+            review.onResolve,
+            banner = null,
+            // The whole point of this call: the tab on screen is drawn against
+            // the file as it was, which is what the reviewer asked to be rid of.
+            replaceExisting = true,
+        )
     }
 
     /** Drop the banner, leaving the review itself as it was. */
@@ -442,10 +461,38 @@ class DiffService(private val project: Project) {
         } as? SimpleDiffRequest ?: return
         val oldContent = (request.contents.getOrNull(0) as? DocumentContent)?.document?.text ?: return
         val newContent = (request.contents.getOrNull(1) as? DocumentContent)?.document?.text ?: return
-        openDiffViewer(review.filePath, oldContent, newContent, toolUseId, review.onResolve, review.banner)
+        openDiffViewer(
+            review.filePath,
+            oldContent,
+            newContent,
+            toolUseId,
+            review.onResolve,
+            review.banner,
+            // Always a redraw, including when the banner is being dropped: the
+            // tab on screen still carries the banner that is going away, so
+            // surfacing it would leave the notice the reviewer just dismissed.
+            replaceExisting = true,
+        )
     }
 
     companion object {
+        /**
+         * Whether an open diff tab should simply be brought forward.
+         *
+         * Yes for an ordinary open: the approval prompt's file name can be
+         * clicked at any time, including while its diff is open, and rebuilding
+         * the tab there would throw away the hunks the reviewer has ticked.
+         *
+         * No for a redraw, which is the whole point of [replaceExisting] — in a
+         * redraw the open tab IS the stale thing, so surfacing it would show the
+         * reviewer exactly the state that needs replacing. Inferring this from
+         * whether a banner was passed is what silently killed the banner's
+         * Refresh and Dismiss: both redraw with the banner cleared, so both were
+         * read as ordinary opens and returned without doing anything (#359).
+         */
+        fun shouldSurfaceExistingTab(replaceExisting: Boolean, hasExistingTab: Boolean): Boolean =
+            !replaceExisting && hasExistingTab
+
         fun getInstance(project: Project): DiffService {
             return project.getService(DiffService::class.java)
         }

@@ -1,12 +1,14 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.ui.popup.IconButton
+import com.intellij.ui.InplaceButton
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.FlowLayout
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -77,21 +79,25 @@ class ReviewBaseBanner(
         label.foreground = WARNING_FOREGROUND
         row.add(label, BorderLayout.CENTER)
 
-        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0))
+        val actions = JPanel(FlowLayout(FlowLayout.RIGHT, 12, 0))
         actions.isOpaque = false
 
         // No rebuild offered once there is nothing left to rebuild. A button
         // that cannot act is worse than none.
         if (onRefresh != null && reason == ReviewBaseReason.CHANGED) {
-            val refresh = JButton("Refresh")
-            refresh.addActionListener { onRefresh() }
-            actions.add(refresh)
+            // A link rather than a button: this is the IDE's own idiom for an
+            // action offered inside a notification strip, and it keeps the
+            // banner reading as one strip. A stock JButton brings the panel
+            // background with it, which sat on the amber as a grey slab.
+            actions.add(ActionLink(REFRESH_LABEL) { onRefresh() })
         }
 
-        val dismiss = JButton("×")
-        dismiss.toolTipText = "Dismiss"
-        dismiss.preferredSize = Dimension(36, dismiss.preferredSize.height)
-        dismiss.addActionListener { onDismiss() }
+        // Icon rather than a typed "×", which renders at whatever weight the
+        // label font happens to have and never matches the close controls the
+        // rest of the IDE draws.
+        val dismiss = InplaceButton(
+            IconButton(DISMISS_TOOLTIP, AllIcons.Actions.Close, AllIcons.Actions.CloseHovered),
+        ) { onDismiss() }
         actions.add(dismiss)
 
         row.add(actions, BorderLayout.EAST)
@@ -115,6 +121,9 @@ class ReviewBaseBanner(
     }
 
     private companion object {
+        const val REFRESH_LABEL = "Refresh"
+        const val DISMISS_TOOLTIP = "Dismiss"
+
         /**
          * Themed rather than fixed: this sits inside the IDE's own diff window,
          * and a hard-coded amber reads as a foreign element in a light theme.
