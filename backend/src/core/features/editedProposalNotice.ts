@@ -40,12 +40,26 @@ export interface EditedProposalChange {
  * silently drops half of it would be worse than a long one: the model would
  * read a partial change as the complete one.
  */
-export function buildEditedProposalNotice(change: EditedProposalChange | null): string | null {
+export function buildEditedProposalNotice(
+  change: EditedProposalChange | null,
+  /**
+   * Whether parts of the proposal were turned down rather than rewritten.
+   *
+   * The two read identically in the diff — a hunk the reviewer declined is
+   * simply absent from what was written — but they mean opposite things. Told
+   * only "the user edited this", the assistant reads a declined hunk as work
+   * that went missing and proposes it again, which is the reviewer having to
+   * refuse the same change twice (#359).
+   */
+  declinedParts = false,
+): string | null {
   if (!change) return null;
   if (change.oldText === change.newText) return null;
 
   const body = [
-    'The user edited your proposed change before applying it.',
+    declinedParts
+      ? 'The user chose which parts of your proposed change to apply, and declined the rest.'
+      : 'The user edited your proposed change before applying it.',
     'This is what was actually written to the file:',
     '',
     '```diff',
@@ -62,11 +76,23 @@ export function buildEditedProposalNotice(change: EditedProposalChange | null): 
     // and move past — while the reply that PRECEDED it may now be describing an
     // edit that was never applied. Acknowledging is not enough; the assistant
     // has to go back and read what actually landed.
-    'If the user did not approve your proposal as-is but applied it with edits of',
-    'their own, then what you said in your previous response may not match the',
-    'change that was actually approved. In that case, send the message',
-    '"I will check the additional edits you made." in THE USER\'S OWN LANGUAGE,',
-    'and then review the actual edits where they differ from what you proposed.',
+    ...(declinedParts
+      ? [
+          // The decisive line. Absent it, the assistant reads its own missing
+          // hunk as an omission and offers it again -- making the reviewer
+          // decline the same change a second time.
+          'The parts that are missing were DECLINED on purpose. They are not an',
+          'omission, and you must not propose them again unless the user asks.',
+          'What you said in your previous response may describe changes that were',
+          'not applied. Do not restate them as done.',
+        ]
+      : [
+          'If the user did not approve your proposal as-is but applied it with edits of',
+          'their own, then what you said in your previous response may not match the',
+          'change that was actually approved. In that case, send the message',
+          '"I will check the additional edits you made." in THE USER\'S OWN LANGUAGE,',
+          'and then review the actual edits where they differ from what you proposed.',
+        ]),
   ].join('\n');
 
   return `<system-reminder>\n${body}\n</system-reminder>`;

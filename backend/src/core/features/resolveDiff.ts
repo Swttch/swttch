@@ -209,7 +209,23 @@ export async function resolveDiffReview(
    * nothing corrected.
    */
   if (amended !== null) {
-    tellClaudeAboutTheEdit(connections, params.sessionId, preview, amended.content);
+    /*
+     * Whether the reviewer turned parts down, as opposed to rewriting them.
+     *
+     * The hunks the preview offered against the ranges kept: fewer means some
+     * were declined. The diff alone cannot say -- a declined hunk and a hunk
+     * edited back to the original look the same in it -- and the assistant
+     * reads the first as an omission unless told (#359).
+     */
+    const declinedParts =
+      preview.hunks.length > 0 && params.acceptedRanges.length < preview.hunks.length;
+    tellClaudeAboutTheEdit(
+      connections,
+      params.sessionId,
+      preview,
+      amended.content,
+      declinedParts,
+    );
   }
 }
 
@@ -229,8 +245,12 @@ function tellClaudeAboutTheEdit(
   sessionId: string,
   preview: StoredPreview,
   applied: string,
+  declinedParts: boolean,
 ): void {
-  const notice = buildEditedProposalNotice(describeCorrection(preview.newContent, applied));
+  const notice = buildEditedProposalNotice(
+    describeCorrection(preview.newContent, applied),
+    declinedParts,
+  );
   if (!notice) {
     // Nothing to report means the applied text matched the proposal exactly.
     // Logged because "the reminder never arrived" and "there was nothing to

@@ -100,4 +100,48 @@ describe('buildEditedProposalNotice', () => {
     expect(notice).toContain('one');
     expect(notice).toContain('two');
   });
+
+  /*
+   * Declining part of a proposal is not editing it (#359).
+   *
+   * They look the same in the diff — a hunk the reviewer turned down is simply
+   * absent from what was written — but they mean opposite things. Measured in
+   * QA: the reviewer unticked one of two hunks, the file came out right, and
+   * the assistant read its own missing hunk as an omission and proposed it
+   * again. The reviewer had to decline the same change twice.
+   */
+  describe('when parts were declined rather than edited', () => {
+    const change = { oldText: 'a\n', newText: 'b\n' };
+
+    it('says they were declined, not edited', () => {
+      const notice = buildEditedProposalNotice(change, true)!;
+
+      expect(notice).toContain('declined the rest');
+      expect(notice).not.toContain('edited your proposed change');
+    });
+
+    it('tells the assistant not to propose the declined parts again', () => {
+      const notice = buildEditedProposalNotice(change, true)!;
+
+      expect(notice).toContain('DECLINED on purpose');
+      expect(notice).toContain('must not propose them again');
+    });
+
+    /**
+     * The edit wording asks the assistant to go and review what the reviewer
+     * wrote. There is nothing to review when they wrote nothing — they said no.
+     */
+    it('drops the review-the-edits instruction', () => {
+      const notice = buildEditedProposalNotice(change, true)!;
+
+      expect(notice).not.toContain("THE USER'S OWN LANGUAGE");
+    });
+
+    it('leaves the edit wording alone when nothing was declined', () => {
+      const notice = buildEditedProposalNotice(change, false)!;
+
+      expect(notice).toContain('edited your proposed change');
+      expect(notice).not.toContain('DECLINED on purpose');
+    });
+  });
 });
