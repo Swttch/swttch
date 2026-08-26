@@ -14,6 +14,7 @@ import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
+import { refreshReviewAgainstDisk } from './core/features/refreshReview';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -402,6 +403,41 @@ async function main() {
     void resolveDiffReview(connections, parsed, jetbrainsBridge).catch((err) => {
       console.error('[node-backend]', 'RESOLVE_DIFF from the IDE failed:', err);
     });
+  });
+
+  /*
+   * The IDE asking to rebuild a review its own diff is drawing (#359).
+   *
+   * A notification rather than a request because Kotlin can only notify — so
+   * the rebuilt change goes back the other way, as REDRAW_REVIEW. The webview's
+   * equivalent is a plain request/response; this is the same exchange split in
+   * two because of what the RPC channel allows.
+   */
+  jetbrainsBridge.onNotification(MessageType.REFRESH_DIFF_PREVIEW, (_method, params) => {
+    const toolUseId = typeof params?.toolUseId === 'string' ? params.toolUseId : undefined;
+    if (!toolUseId) {
+      console.error('[node-backend]', 'REFRESH_DIFF_PREVIEW from the IDE ignored: no toolUseId');
+      return;
+    }
+    void refreshReviewAgainstDisk(toolUseId)
+      .then((outcome) => {
+        console.error('[node-backend]', `IDE refresh for ${toolUseId}: ${outcome.status}`);
+        if (outcome.status !== 'refreshed') {
+          // Nothing to redraw. The banner already on screen keeps saying why,
+          // and replacing the diff with a stale one would be worse than leaving
+          // it. The reason is logged so a silent no-op is explicable.
+          return;
+        }
+        return jetbrainsBridge.redrawReview({
+          toolUseId,
+          filePath: outcome.preview.filePath,
+          oldContent: outcome.preview.oldContent,
+          newContent: outcome.preview.newContent,
+        });
+      })
+      .catch((err) => {
+        console.error('[node-backend]', 'IDE refresh failed:', err);
+      });
   });
 
   // The IDE reporting a save, so a review of that file can be told its base has

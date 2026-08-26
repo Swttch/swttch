@@ -130,6 +130,23 @@ export class BrowserBridge implements Bridge {
   }
 
   /**
+   * no-op: standalone has no host drawing a review of its own.
+   *
+   * A genuine no-op, unlike watchFile below. The review here is always drawn by
+   * the webview, which is told over its own WebSocket — there is no second
+   * surface to notify, so nothing is missing. The judgement is "would a user of
+   * this environment be worse off without it": they would not.
+   */
+  async notifyReviewBaseChanged(): Promise<void> {
+    // no-op
+  }
+
+  /** no-op, for the same reason: the webview redraws its own review. */
+  async redrawReview(): Promise<void> {
+    // no-op
+  }
+
+  /**
    * Watch the file ourselves, because standalone has no host to ask (#359).
    *
    * NOT a no-op like the rest of this class. The others are no-ops because the

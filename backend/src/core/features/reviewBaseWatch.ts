@@ -47,7 +47,7 @@ export async function watchReviewBase(
 
   try {
     const stop = await bridge.watchFile(filePath, () => {
-      void reportIfBaseMoved(connections, toolUseId);
+      void reportIfBaseMoved(connections, toolUseId, bridge);
     });
     watching.set(toolUseId, stop);
   } catch (err) {
@@ -81,6 +81,7 @@ export function stopAllReviewBaseWatches(): void {
 async function reportIfBaseMoved(
   connections: ConnectionManager,
   toolUseId: string,
+  bridge: Bridge,
 ): Promise<void> {
   const preview = peekPreview(toolUseId);
   if (!preview) {
@@ -114,6 +115,20 @@ async function reportIfBaseMoved(
       // while they still have time to act on it.
       blockedApproval: false,
     });
+    // The host too, for a review its own diff is drawing. Fire-and-forget: a
+    // warning we could not deliver must not take the watch down with it.
+    void bridge
+      .notifyReviewBaseChanged({
+        toolUseId,
+        filePath: preview.filePath,
+        reason: 'changed',
+        overlapsAccepted: comparison.overlapsAccepted,
+        blockedApproval: false,
+      })
+      .catch((err) => {
+        console.error('[node-backend]', 'Could not warn the host its review base moved:', err);
+      });
+
     console.error(
       '[node-backend]',
       `Review base changed for ${toolUseId} (${preview.filePath}); told the review surface`,

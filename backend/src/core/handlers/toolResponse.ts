@@ -55,6 +55,7 @@ export async function toolResponseHandler(
       sessionId,
       toolUseId,
       preview,
+      bridge,
       // No selection travels on this path — the chat's Yes means the whole
       // change — so every disk change is treated as touching it.
     });

@@ -35,6 +35,21 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun setTabName(panelId: String, name: String) {}
     override suspend fun openSettings(workingDir: String, path: String?) {}
     override suspend fun openTerminal(workingDir: String) {}
+    override suspend fun reviewBaseChanged(
+        toolUseId: String,
+        filePath: String,
+        reason: String,
+        overlapsAccepted: Boolean,
+        blockedApproval: Boolean,
+    ) {}
+
+    override suspend fun redrawReview(
+        toolUseId: String,
+        filePath: String,
+        oldContent: String,
+        newContent: String,
+    ) {}
+
     override suspend fun openDevTools() {}
     override suspend fun openUrl(url: String) {}
     override suspend fun pickFiles(mode: String, multiple: Boolean): List<String> = emptyList()

@@ -9,6 +9,7 @@ import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
+import com.github.yhk1038.claudecodegui.services.ReviewBaseReason
 import com.github.yhk1038.claudecodegui.services.DiffTabService
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
@@ -1589,6 +1590,50 @@ class ClaudeCodePanel(
             override suspend fun refreshFiles(paths: List<String>) {
                 diffService.refreshFiles(paths)
                 logger.info("Requested IDE refresh for ${paths.size} file(s)")
+            }
+
+            /**
+             * The file behind a review the IDE is drawing has moved (#359).
+             *
+             * A no-op for a review this IDE never opened — the backend tells
+             * both surfaces without knowing which one is showing it.
+             */
+            override suspend fun reviewBaseChanged(
+                toolUseId: String,
+                filePath: String,
+                reason: String,
+                overlapsAccepted: Boolean,
+                blockedApproval: Boolean,
+            ) {
+                diffService.showReviewBaseChanged(
+                    toolUseId = toolUseId,
+                    reason = when (reason) {
+                        "unreadable" -> ReviewBaseReason.UNREADABLE
+                        "no-longer-applies" -> ReviewBaseReason.NO_LONGER_APPLIES
+                        else -> ReviewBaseReason.CHANGED
+                    },
+                    overlapsAccepted = overlapsAccepted,
+                    blockedApproval = blockedApproval,
+                ) {
+                    // Kotlin can only notify, so the rebuilt change comes back
+                    // the other way as REDRAW_REVIEW rather than as a reply.
+                    backendService.sendNotification(
+                        project.basePath ?: "",
+                        "REFRESH_DIFF_PREVIEW",
+                        buildJsonObject { put("toolUseId", toolUseId) },
+                    )
+                }
+                logger.info("Review base changed for $toolUseId ($reason)")
+            }
+
+            override suspend fun redrawReview(
+                toolUseId: String,
+                filePath: String,
+                oldContent: String,
+                newContent: String,
+            ) {
+                diffService.redrawReview(toolUseId, filePath, oldContent, newContent)
+                logger.info("Redrew review $toolUseId against the current file")
             }
 
             override suspend fun createSession(workingDir: String) {

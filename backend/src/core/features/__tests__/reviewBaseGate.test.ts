@@ -202,7 +202,13 @@ describe('the chat prompt path (TOOL_RESPONSE)', () => {
       getClient: () => ({ subscribedSessionId: 'sess-1' }),
       sendTo: vi.fn(),
     };
-    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+    const bridge = {
+      closeDiff: vi.fn(async () => undefined),
+      closeDiffTab: vi.fn(async () => undefined),
+      // The gate tells the host too, so a review the IDE is drawing hears
+      // about it as well (#359).
+      notifyReviewBaseChanged: vi.fn(async () => undefined),
+    };
 
     await toolResponseHandler(
       'conn-1',
@@ -235,7 +241,13 @@ describe('the chat prompt path (TOOL_RESPONSE)', () => {
       getClient: () => ({ subscribedSessionId: 'sess-1' }),
       sendTo: vi.fn(),
     };
-    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+    const bridge = {
+      closeDiff: vi.fn(async () => undefined),
+      closeDiffTab: vi.fn(async () => undefined),
+      // The gate tells the host too, so a review the IDE is drawing hears
+      // about it as well (#359).
+      notifyReviewBaseChanged: vi.fn(async () => undefined),
+    };
 
     await toolResponseHandler(
       'conn-1',
@@ -265,7 +277,13 @@ describe('the chat prompt path (TOOL_RESPONSE)', () => {
       getClient: () => ({ subscribedSessionId: 'sess-1' }),
       sendTo: vi.fn(),
     };
-    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+    const bridge = {
+      closeDiff: vi.fn(async () => undefined),
+      closeDiffTab: vi.fn(async () => undefined),
+      // The gate tells the host too, so a review the IDE is drawing hears
+      // about it as well (#359).
+      notifyReviewBaseChanged: vi.fn(async () => undefined),
+    };
 
     await toolResponseHandler(
       'conn-1',

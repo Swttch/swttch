@@ -21,6 +21,7 @@ import { readFile } from 'fs/promises';
 import { computeHunks, type AcceptedRange } from './hunks';
 import { MessageType } from '../../shared';
 import type { StoredPreview } from './diffPreview';
+import type { Bridge } from '../../bridge/bridge-interface';
 
 /** How the file on disk now compares to the content a review was built from. */
 export type BaseComparison =
@@ -110,6 +111,12 @@ export async function holdApprovalIfBaseMoved(params: {
   preview: Pick<StoredPreview, 'filePath' | 'oldContent'>;
   /** The reviewer's selection, when the surface reported one. */
   accepted?: readonly AcceptedRange[];
+  /**
+   * The host, when there is one. Told alongside the webview because the review
+   * may be drawn by the IDE's own diff rather than ours — a webview-only
+   * message reaches nothing the reviewer is looking at there.
+   */
+  bridge?: Pick<Bridge, 'notifyReviewBaseChanged'>;
 }): Promise<boolean> {
   const base = await compareReviewBase(params.preview, params.accepted);
   if (base.status === 'unchanged') return false;
@@ -139,6 +146,20 @@ export async function holdApprovalIfBaseMoved(params: {
     // say the approval was held rather than only flagging a change.
     blockedApproval: true,
   });
+
+  // The host too, when one is attached. Fire-and-forget: a host that cannot
+  // show it must not hold up the hold itself, which is what protects the file.
+  void params.bridge
+    ?.notifyReviewBaseChanged({
+      toolUseId: params.toolUseId,
+      filePath: params.preview.filePath,
+      reason: base.status === 'unreadable' ? 'unreadable' : 'changed',
+      overlapsAccepted: base.status === 'changed' ? base.overlapsAccepted : true,
+      blockedApproval: true,
+    })
+    .catch((err) => {
+      console.error('[node-backend]', 'Could not tell the host its review base moved:', err);
+    });
 
   console.error(
     '[node-backend]',

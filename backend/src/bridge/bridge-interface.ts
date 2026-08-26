@@ -66,6 +66,44 @@ export interface Bridge {
    * never depends on this firing.
    */
   watchFile(filePath: string, onChanged: () => void): Promise<() => void>;
+
+  /**
+   * Tell the host that the file under a pending review has moved, so whatever
+   * surface is drawing that review can say so and offer to rebuild (#359).
+   *
+   * Sent to the BRIDGE as well as to the webview because the review may be
+   * drawn by the host itself: with the IDE viewer chosen, the diff on screen is
+   * the IDE's, and a webview-only message reaches nothing the reviewer is
+   * looking at. Approving there was already safe — the gate is shared — but the
+   * reviewer had no way to see why it stopped, or to get past it.
+   *
+   * Best-effort by contract, like the rest of this bridge: a host that cannot
+   * show it logs and carries on. Correctness lives in the gate, not here.
+   */
+  notifyReviewBaseChanged(params: {
+    toolUseId: string;
+    filePath: string;
+    /** 'unreadable' when the file is gone; 'changed' when it merely moved. */
+    reason: 'changed' | 'unreadable';
+    /** Whether the disk change lands under something the reviewer kept. */
+    overlapsAccepted: boolean;
+    /** True when an approval was refused, false when a save was merely noticed. */
+    blockedApproval: boolean;
+  }): Promise<void>;
+
+  /**
+   * Rebuild the host's own review against the file as it is now, and redraw it.
+   *
+   * The counterpart to the webview's Refresh button, for a review the host is
+   * drawing. Carries the rebuilt change so the host does not have to ask for it
+   * — it already has everything needed to reopen the diff.
+   */
+  redrawReview(params: {
+    toolUseId: string;
+    filePath: string;
+    oldContent: string;
+    newContent: string;
+  }): Promise<void>;
   createSession(workingDir?: string): Promise<void>;
   openNewTab(workingDir?: string): Promise<void>;
   openSession(sessionId: string, workingDir?: string): Promise<void>;

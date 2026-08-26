@@ -344,6 +344,25 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.REFRESH_FILES, { paths: params.paths });
   }
 
+  async notifyReviewBaseChanged(params: {
+    toolUseId: string;
+    filePath: string;
+    reason: 'changed' | 'unreadable';
+    overlapsAccepted: boolean;
+    blockedApproval: boolean;
+  }): Promise<void> {
+    await this.request(MessageType.REVIEW_BASE_CHANGED, { ...params });
+  }
+
+  async redrawReview(params: {
+    toolUseId: string;
+    filePath: string;
+    oldContent: string;
+    newContent: string;
+  }): Promise<void> {
+    await this.request(MessageType.REDRAW_REVIEW, { ...params });
+  }
+
   async createSession(workingDir?: string): Promise<void> {
     await this.request(MessageType.CREATE_SESSION, workingDir ? { workingDir } : {});
   }

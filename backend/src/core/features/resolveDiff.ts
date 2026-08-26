@@ -173,6 +173,9 @@ export async function resolveDiffReview(
     toolUseId: params.toolUseId,
     preview,
     accepted: params.acceptedRanges,
+    // Told as well as the webview: with the IDE viewer chosen, the review on
+    // screen is the host's, and a webview-only message reaches nothing.
+    bridge,
   });
   if (held) return;
 

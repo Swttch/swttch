@@ -281,6 +281,11 @@ export enum MessageType {
    * Approving as-is would write the stale snapshot over whatever landed in the
    * meantime, which is the data loss in #359. The review surface shows this and
    * offers to rebuild against the current file.
+   *
+   * Sent to BOTH surfaces, because either may be the one drawing the review:
+   * broadcast to every webview connection, and handed to the bridge for a host
+   * drawing its own diff. Each ignores what is not theirs — the payload names
+   * the tool_use_id it belongs to.
    */
   REVIEW_BASE_CHANGED = 'REVIEW_BASE_CHANGED',
   /**
@@ -291,6 +296,16 @@ export enum MessageType {
    * content and an approval afterwards is stated against what is really there.
    */
   REFRESH_DIFF_PREVIEW = 'REFRESH_DIFF_PREVIEW',
+  /**
+   * Node→Kotlin: redraw the IDE's own diff for a review that has been rebuilt
+   * against the current file.
+   *
+   * Carries the rebuilt change rather than only an id, because the IDE's viewer
+   * is opened with contents — it has no store of its own to re-read. The
+   * webview's equivalent is REFRESH_DIFF_PREVIEW, which it asks for itself; the
+   * IDE is told, because the button that asked lives on its side (#359).
+   */
+  REDRAW_REVIEW = 'REDRAW_REVIEW',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */
