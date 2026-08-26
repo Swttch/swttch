@@ -175,6 +175,37 @@ export class ToolsApi {
   }
 
   /**
+   * Rebuild a pending review against the file as it is on disk right now
+   * (#359).
+   *
+   * Used when the base has moved under an open review — either a save was
+   * reported while it was being read, or the approval gate refused to answer
+   * with stale content. The answer carries a fresh preview, so the surface
+   * redraws from what is really there and an approval afterwards is stated
+   * against it.
+   *
+   * `preview` is null when the proposal can no longer be stated against the
+   * current file; `outcome` says which case that was.
+   */
+  async refreshDiffPreview(toolUseId: string): Promise<{
+    outcome: 'refreshed' | 'unchanged' | 'unrebuildable' | 'unknown';
+    reason?: 'no-longer-applies' | 'unreadable';
+    preview: DiffPreview | null;
+  }> {
+    const response = await this.bridge.request(MessageType.REFRESH_DIFF_PREVIEW, { toolUseId });
+    const payload = response as unknown as {
+      outcome: 'refreshed' | 'unchanged' | 'unrebuildable' | 'unknown';
+      reason?: 'no-longer-applies' | 'unreadable';
+      preview: DiffPreview | null;
+    };
+    return {
+      outcome: payload?.outcome ?? 'unknown',
+      reason: payload?.reason,
+      preview: payload?.preview ?? null,
+    };
+  }
+
+  /**
    * Apply a diff (accept file changes)
    */
   async applyDiff(

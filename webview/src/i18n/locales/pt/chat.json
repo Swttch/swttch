@@ -519,6 +519,15 @@
       "backHint": "Reabrir esta seção mantendo suas edições",
       "remaining": "{{count}} restante(s) para revisar",
       "selectAll": "Select all"
+    },
+    "baseChanged": {
+      "conflict": "Este ficheiro mudou no disco, nas mesmas linhas da alteração que manteve. Atualize para ver o ficheiro atual e decidir de novo.",
+      "dismiss": "Fechar",
+      "held": "Aprovação retida.",
+      "outside": "Este ficheiro mudou no disco enquanto o revia. Atualize para rever com base no ficheiro atual.",
+      "refresh": "Atualizar",
+      "refreshing": "A atualizar…",
+      "unreadable": "Este ficheiro já não pode ser lido, por isso não há nada a que aplicar a alteração."
     }
   }
 }

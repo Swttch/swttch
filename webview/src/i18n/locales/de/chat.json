@@ -519,6 +519,15 @@
       "backHint": "Diesen Abschnitt erneut öffnen, Ihre Änderungen bleiben erhalten",
       "remaining": "Noch {{count}} zu prüfen",
       "selectAll": "Select all"
+    },
+    "baseChanged": {
+      "conflict": "Diese Datei wurde auf der Festplatte geändert, in denselben Zeilen wie die von Ihnen übernommene Änderung. Aktualisieren Sie, um die aktuelle Datei zu sehen und erneut zu entscheiden.",
+      "dismiss": "Schließen",
+      "held": "Freigabe angehalten.",
+      "outside": "Diese Datei wurde während der Prüfung auf der Festplatte geändert. Aktualisieren Sie, um gegen die aktuelle Datei zu prüfen.",
+      "refresh": "Aktualisieren",
+      "refreshing": "Wird aktualisiert…",
+      "unreadable": "Diese Datei kann nicht mehr gelesen werden, es gibt also nichts, worauf die Änderung angewendet werden könnte."
     }
   }
 }

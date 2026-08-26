@@ -14,6 +14,8 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
+import { useReviewBaseChanged } from './useReviewBaseChanged';
+import { BaseChangedBanner } from './BaseChangedBanner';
 import { CollapseToggle } from '../ChatPage/PromptPanelChrome/CollapseToggle';
 import { useCollapsiblePanel } from '../ChatPage/PromptPanelChrome/useCollapsiblePanel';
 
@@ -118,6 +120,16 @@ export function DiffPage(props: Props) {
       cancelled = true;
     };
   }, [api, toolUseId]);
+
+  /*
+   * The file under this review can move while it is being read (#359).
+   *
+   * Redrawing from the refreshed preview resets the reviewer's picks, and that
+   * is deliberate: their decisions address line numbers on a base that just
+   * changed, so carrying them over would point at moved lines — the same class
+   * of mistake as the bug this guards against.
+   */
+  const baseChanged = useReviewBaseChanged(toolUseId, setPreview);
 
   const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
   // The proposed side as the reviewer has it now, and which parts they typed
@@ -355,6 +367,20 @@ export function DiffPage(props: Props) {
           </button>
         </div>
       </header>
+
+      {/*
+        Shown even while collapsed. Folded away, the header still carries both
+        decisions, so a reviewer can approve from there — and an approval that
+        would be held is exactly what this has to say before they press it.
+      */}
+      {baseChanged.change && (
+        <BaseChangedBanner
+          change={baseChanged.change}
+          refreshing={baseChanged.refreshing}
+          onRefresh={() => void baseChanged.refresh()}
+          onDismiss={baseChanged.dismiss}
+        />
+      )}
 
       {/*
         The diff takes the rest of the window and scrolls on its own, so the
