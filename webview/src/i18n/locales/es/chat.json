@@ -524,6 +524,7 @@
       "conflict": "Este archivo cambió en el disco, en las mismas líneas que el cambio que conservaste. Actualiza para ver el archivo actual y decidir de nuevo.",
       "dismiss": "Cerrar",
       "held": "Aprobación en espera.",
+      "noLongerApplies": "El archivo cambió demasiado para que esta edición siga encajando. Claude necesita volver a mirarlo: pide el cambio otra vez.",
       "outside": "Este archivo cambió en el disco mientras lo revisabas. Actualiza para revisarlo con el archivo actual.",
       "refresh": "Actualizar",
       "refreshing": "Actualizando…",

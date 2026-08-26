@@ -524,6 +524,7 @@
       "conflict": "Este ficheiro mudou no disco, nas mesmas linhas da alteração que manteve. Atualize para ver o ficheiro atual e decidir de novo.",
       "dismiss": "Fechar",
       "held": "Aprovação retida.",
+      "noLongerApplies": "O ficheiro mudou demasiado para esta edição continuar a encaixar. O Claude precisa de o ver de novo — peça a alteração mais uma vez.",
       "outside": "Este ficheiro mudou no disco enquanto o revia. Atualize para rever com base no ficheiro atual.",
       "refresh": "Atualizar",
       "refreshing": "A atualizar…",

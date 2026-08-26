@@ -22,8 +22,18 @@ import type { DiffPreview } from '@/api/modules/ToolsApi';
 export interface ReviewBaseChange {
   /** Whether an approval was refused, as opposed to a save merely noticed. */
   blockedApproval: boolean;
-  /** 'unreadable' when the file is gone, rather than merely different. */
-  reason: 'changed' | 'unreadable';
+  /**
+   * Why the review cannot simply be approved as it stands.
+   *
+   * 'changed'          — the file moved; a refresh restates the proposal.
+   * 'unreadable'       — the file is gone; there is nothing to apply to.
+   * 'no-longer-applies' — the file is there, but the edit no longer fits it:
+   *                       the lines it meant to replace are not what it expected.
+   *                       Distinct from 'unreadable' because the file is fine and
+   *                       saying otherwise sends the reviewer looking for a
+   *                       problem that does not exist (measured in QA).
+   */
+  reason: 'changed' | 'unreadable' | 'no-longer-applies';
   /** Whether the disk change lands under something the reviewer kept. */
   overlapsAccepted: boolean;
 }
@@ -87,9 +97,12 @@ export function useReviewBaseChanged(
         setChange(null);
         return result.preview;
       }
-      // Unrebuildable. The banner stays, now carrying the reason, because there
-      // is nothing to approve and the reviewer needs to know why.
-      setChange((prev) => (prev ? { ...prev, reason: 'unreadable' } : prev));
+      // Unrebuildable. The banner stays, now carrying the backend's own reason,
+      // because there is nothing to approve and the reviewer needs to know why.
+      // The two reasons are NOT interchangeable: reporting a still-present file
+      // as unreadable is what QA caught.
+      const why = result.reason === 'unreadable' ? 'unreadable' : 'no-longer-applies';
+      setChange((prev) => (prev ? { ...prev, reason: why } : prev));
       return null;
     } finally {
       setRefreshing(false);

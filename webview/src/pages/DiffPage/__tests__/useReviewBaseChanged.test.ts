@@ -120,6 +120,25 @@ describe('useReviewBaseChanged', () => {
     });
 
     expect(result.current.change).not.toBeNull();
+    // NOT 'unreadable': the file is there, the edit just stopped fitting it.
+    // Reporting it as unreadable sent the reviewer looking for a problem with
+    // their file that did not exist (caught in QA).
+    expect(result.current.change?.reason).toBe('no-longer-applies');
+  });
+
+  it('reports an unreadable file as unreadable', async () => {
+    refreshDiffPreview.mockResolvedValue({
+      outcome: 'unrebuildable',
+      reason: 'unreadable',
+      preview: null,
+    });
+    const { result } = renderHook(() => useReviewBaseChanged('t-gone', vi.fn()));
+
+    act(() => emit({ toolUseId: 't-gone', reason: 'changed' }));
+    await act(async () => {
+      await result.current.refresh();
+    });
+
     expect(result.current.change?.reason).toBe('unreadable');
   });
 

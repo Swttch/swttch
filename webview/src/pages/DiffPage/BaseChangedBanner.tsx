@@ -28,11 +28,16 @@ interface Props {
 export function BaseChangedBanner({ change, refreshing, onRefresh, onDismiss }: Props) {
   const { t } = useTranslation('chat');
 
-  const message = change.reason === 'unreadable'
-    ? t('diffPage.baseChanged.unreadable')
-    : change.overlapsAccepted
-      ? t('diffPage.baseChanged.conflict')
-      : t('diffPage.baseChanged.outside');
+  const message =
+    change.reason === 'unreadable'
+      ? t('diffPage.baseChanged.unreadable')
+      : change.reason === 'no-longer-applies'
+        // The file is fine; the edit is what stopped fitting. Saying "cannot be
+        // read" here sends the reviewer hunting for a problem with their file.
+        ? t('diffPage.baseChanged.noLongerApplies')
+        : change.overlapsAccepted
+          ? t('diffPage.baseChanged.conflict')
+          : t('diffPage.baseChanged.outside');
 
   return (
     <div
@@ -52,9 +57,10 @@ export function BaseChangedBanner({ change, refreshing, onRefresh, onDismiss }: 
         {message}
       </span>
 
-      {/* No rebuild offered for a file that is not there: a button that cannot
-          act is worse than none. */}
-      {change.reason !== 'unreadable' && (
+      {/* No rebuild offered once there is nothing left to rebuild — whether the
+          file is gone or the edit no longer fits it. A button that cannot act is
+          worse than none. */}
+      {change.reason === 'changed' && (
         <button
           type="button"
           className="shrink-0 rounded bg-state-warning-fg/10 px-3 py-1 text-sm text-state-warning-fg disabled:opacity-50"
