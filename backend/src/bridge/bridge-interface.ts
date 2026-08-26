@@ -83,8 +83,18 @@ export interface Bridge {
   notifyReviewBaseChanged(params: {
     toolUseId: string;
     filePath: string;
-    /** 'unreadable' when the file is gone; 'changed' when it merely moved. */
-    reason: 'changed' | 'unreadable';
+    /**
+     * Why the review can no longer simply be approved.
+     *
+     * 'changed' — the file merely moved, so a refresh restates the proposal.
+     * 'unreadable' — the file is gone; there is nothing to apply it to.
+     * 'no-longer-applies' — the file is fine, but the edit no longer fits it,
+     * so a refresh cannot rebuild and the reviewer has to ask Claude again.
+     * The last two are NOT interchangeable: telling someone their file cannot
+     * be read when it is perfectly readable sends them hunting for a problem
+     * that does not exist.
+     */
+    reason: 'changed' | 'unreadable' | 'no-longer-applies';
     /** Whether the disk change lands under something the reviewer kept. */
     overlapsAccepted: boolean;
     /** True when an approval was refused, false when a save was merely noticed. */

@@ -17,6 +17,7 @@ import { parseResolveDiffParams, resolveDiffReview } from './core/features/resol
 import { refreshReviewAgainstDisk } from './core/features/refreshReview';
 import { peekPreview } from './core/features/diffPreview';
 import { carryEditAcrossRefresh } from './core/features/carryEditAcrossRefresh';
+import { refreshOutcomeNotice } from './core/features/refreshOutcomeNotice';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -432,12 +433,6 @@ async function main() {
     void refreshReviewAgainstDisk(toolUseId)
       .then((outcome) => {
         console.error('[node-backend]', `IDE refresh for ${toolUseId}: ${outcome.status}`);
-        if (outcome.status !== 'refreshed') {
-          // Nothing to redraw. The banner already on screen keeps saying why,
-          // and replacing the diff with a stale one would be worse than leaving
-          // it. The reason is logged so a silent no-op is explicable.
-          return;
-        }
         /*
          * Carry the reviewer's typing across, the same way the built-in surface
          * does (#359).
@@ -446,26 +441,50 @@ async function main() {
          * one. Different axes, so unless both changed the same line there is
          * nothing to choose between — and replacing the proposed side wholesale
          * threw the typing away with nothing said about it.
+         *
+         * Only meaningful when there is a rebuild to carry it onto; the other
+         * outcomes leave the diff as it is, typing included.
          */
-        const carried = carryEditAcrossRefresh(
-          proposalBeforeRefresh,
-          editedProposal,
-          outcome.preview.newContent,
-        );
-        if (carried.conflicts.length > 0) {
-          console.error(
-            '[node-backend]',
-            `IDE refresh for ${toolUseId}: kept the rebuilt proposal on line(s) ` +
-              `${carried.conflicts.join(', ')}, where both sides had changed it`,
+        let mergedProposal = '';
+        if (outcome.status === 'refreshed') {
+          const carried = carryEditAcrossRefresh(
+            proposalBeforeRefresh,
+            editedProposal,
+            outcome.preview.newContent,
           );
+          mergedProposal = carried.newContent;
+          if (carried.conflicts.length > 0) {
+            console.error(
+              '[node-backend]',
+              `IDE refresh for ${toolUseId}: kept the rebuilt proposal on line(s) ` +
+                `${carried.conflicts.join(', ')}, where both sides had changed it`,
+            );
+          }
         }
-        const newContent = carried.newContent;
-        return jetbrainsBridge.redrawReview({
-          toolUseId,
-          filePath: outcome.preview.filePath,
-          oldContent: outcome.preview.oldContent,
-          newContent,
-        });
+        const notice = refreshOutcomeNotice(outcome, mergedProposal);
+        if (notice.kind === 'redraw') {
+          return jetbrainsBridge.redrawReview({
+            toolUseId,
+            filePath: notice.filePath,
+            oldContent: notice.oldContent,
+            newContent: notice.newContent,
+          });
+        }
+        if (notice.kind === 'banner') {
+          const preview = peekPreview(toolUseId);
+          if (!preview) return;
+          return jetbrainsBridge.notifyReviewBaseChanged({
+            toolUseId,
+            filePath: preview.filePath,
+            reason: notice.reason,
+            // The disk change is what made it unrebuildable, so it is over the
+            // proposal by definition.
+            overlapsAccepted: true,
+            // Nothing was refused just now; this is the refresh answering.
+            blockedApproval: false,
+          });
+        }
+        return;
       })
       .catch((err) => {
         console.error('[node-backend]', 'IDE refresh failed:', err);
