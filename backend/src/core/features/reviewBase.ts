@@ -19,6 +19,7 @@
  */
 import { readFile } from 'fs/promises';
 import { computeHunks, type AcceptedRange } from './hunks';
+import { MessageType } from '../../shared';
 import type { StoredPreview } from './diffPreview';
 
 /** How the file on disk now compares to the content a review was built from. */
@@ -83,6 +84,53 @@ export async function compareReviewBase(
     currentContent: current,
     overlapsAccepted: overlapsAcceptedRegions(preview.oldContent, current, accepted),
   };
+}
+
+/**
+ * The one gate every approval passes through before it is answered (#359).
+ *
+ * Returns true when the answer must NOT go out, having already told the review
+ * surface why. Returns false when the file still matches and the caller may
+ * answer normally.
+ *
+ * Shared rather than copied because there are two approval paths — the review
+ * diff's own Confirm (RESOLVE_DIFF) and the chat prompt's Yes (TOOL_RESPONSE) —
+ * and the second was where the reporter actually pressed. A check written into
+ * one of them is not a fix; it is a fix for whichever button the next reporter
+ * happens not to press.
+ *
+ * The caller must NOT have consumed the preview before calling this: a held
+ * approval has to stay answerable, and an entry already taken leaves the
+ * buttons live with nothing behind them.
+ */
+export async function holdApprovalIfBaseMoved(params: {
+  connections: { broadcastToSession: (sessionId: string, type: string, payload: Record<string, unknown>) => void };
+  sessionId: string;
+  toolUseId: string;
+  preview: Pick<StoredPreview, 'filePath' | 'oldContent'>;
+  /** The reviewer's selection, when the surface reported one. */
+  accepted?: readonly AcceptedRange[];
+}): Promise<boolean> {
+  const base = await compareReviewBase(params.preview, params.accepted);
+  if (base.status === 'unchanged') return false;
+
+  params.connections.broadcastToSession(params.sessionId, MessageType.REVIEW_BASE_CHANGED, {
+    toolUseId: params.toolUseId,
+    filePath: params.preview.filePath,
+    // Told apart so the surface can say which one happened: a conflicting edit
+    // is a decision for the user, an unreadable file is not.
+    reason: base.status === 'unreadable' ? 'unreadable' : 'changed',
+    overlapsAccepted: base.status === 'changed' ? base.overlapsAccepted : true,
+    // Marks this as the gate rather than the early warning, so the surface can
+    // say the approval was held rather than only flagging a change.
+    blockedApproval: true,
+  });
+
+  console.error(
+    '[node-backend]',
+    `Approval for ${params.toolUseId} HELD: ${params.preview.filePath} changed since the review was built (${base.status})`,
+  );
+  return true;
 }
 
 /**

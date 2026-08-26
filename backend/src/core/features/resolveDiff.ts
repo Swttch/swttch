@@ -18,7 +18,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
 import { takePreview, peekPreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
-import { compareReviewBase } from './reviewBase';
+import { holdApprovalIfBaseMoved } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
@@ -165,27 +165,16 @@ export async function resolveDiffReview(
    * indefinitely (measured at over three minutes with no answer and no
    * timeout), so the request is still there when the user comes back to it.
    */
-  const base = await compareReviewBase(preview, params.acceptedRanges);
-  if (base.status !== 'unchanged') {
-    // Deliberately no `respond` here: the request stays open and the entry
-    // stays stored, so the review can be refreshed and answered again.
-    connections.broadcastToSession(params.sessionId, MessageType.REVIEW_BASE_CHANGED, {
-      toolUseId: params.toolUseId,
-      filePath: preview.filePath,
-      // Told apart so the surface can say which one happened: a conflicting
-      // edit is a decision for the user, an unreadable file is not.
-      reason: base.status === 'unreadable' ? 'unreadable' : 'changed',
-      overlapsAccepted: base.status === 'changed' ? base.overlapsAccepted : true,
-      // Marks this as the gate rather than the early warning, so the surface
-      // can say the approval was held rather than just flagging a change.
-      blockedApproval: true,
-    });
-    console.error(
-      '[node-backend]',
-      `Diff resolve for ${params.toolUseId} HELD: ${preview.filePath} changed since the review was built (${base.status})`,
-    );
-    return;
-  }
+  // Deliberately no `respond` when this holds: the request stays open and the
+  // entry stays stored, so the review can be refreshed and answered again.
+  const held = await holdApprovalIfBaseMoved({
+    connections,
+    sessionId: params.sessionId,
+    toolUseId: params.toolUseId,
+    preview,
+    accepted: params.acceptedRanges,
+  });
+  if (held) return;
 
   const amended = buildPartialApproval(preview, params.acceptedRanges, edited);
   respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });

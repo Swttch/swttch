@@ -168,7 +168,7 @@ export async function handleMessage(
       sessionChangeHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.TOOL_RESPONSE:
-      toolResponseHandler(connectionId, message, connections, bridge);
+      await toolResponseHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SEND_CONTROL_REQUEST:
       await sendControlRequestHandler(connectionId, message, connections, bridge);

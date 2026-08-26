@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { USER_DECLINED_PREFIX } from '../../../shared';
 
 // Capture what the handler forwards to the CLI process.
@@ -180,17 +183,31 @@ describe('toolResponseHandler — review surface cleanup', () => {
 });
 
 describe('toolResponseHandler — pending preview cleanup', () => {
-  beforeEach(() => clearPreviews());
+  let dir: string;
 
-  it('consumes the stored preview so it cannot outlive its question', () => {
+  beforeEach(async () => {
+    clearPreviews();
+    dir = await mkdtemp(join(tmpdir(), 'tool-response-'));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('consumes the stored preview so it cannot outlive its question', async () => {
     // Hunk selection happens in the IDE now, but a chat answer still ends the
     // request — leaving the preview behind would strand it until the cap sweeps.
+    //
+    // The file is written for real because the approval gate re-reads it before
+    // answering (#359): a preview pointing at a path that was never created is
+    // held rather than consumed, which is correct but not what this is about.
+    const filePath = join(dir, 'a.ts');
+    await writeFile(filePath, 'a', 'utf8');
     rememberPreview('t-chat', {
-      filePath: '/tmp/a.ts', oldContent: 'a', newContent: 'b',
+      filePath, oldContent: 'a', newContent: 'b',
       hunks: computeHunks('a', 'b')!, input: {}, toolName: 'Edit',
     });
 
-    toolResponseHandler(
+    await toolResponseHandler(
       'conn-1',
       { requestId: 'r1', payload: { toolUseId: 't-chat', approved: true, controlRequestId: 'ctrl-1' } } as any,
       makeConnections(),

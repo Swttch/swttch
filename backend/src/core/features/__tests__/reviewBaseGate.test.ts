@@ -181,6 +181,106 @@ describe('the approval gate', () => {
   });
 });
 
+describe('the chat prompt path (TOOL_RESPONSE)', () => {
+  /*
+   * The button the #359 reporter actually pressed.
+   *
+   * The gate first landed only on RESOLVE_DIFF — the review diff's own Confirm —
+   * so the reported case went straight through: measured live, the approval left
+   * as TOOL_RESPONSE and no HELD line was logged. The file survived only because
+   * the CLI noticed the change itself, which Write does not always do.
+   */
+  it('holds a chat approval whose file moved', async () => {
+    const { toolResponseHandler } = await import('../../handlers/toolResponse');
+    const base = lines(1090);
+    const path = join(dir, 'chat.php');
+    await writeFile(path, base.replace('line 900\n', 'line 900 USER WIP\n'), 'utf8');
+    remember('t-chat', path, base, 'ONLY THIS LINE\n');
+
+    const conn = {
+      ...connections(),
+      getClient: () => ({ subscribedSessionId: 'sess-1' }),
+      sendTo: vi.fn(),
+    };
+    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+
+    await toolResponseHandler(
+      'conn-1',
+      { type: 'TOOL_RESPONSE', requestId: 'r1', payload: {
+        toolUseId: 't-chat', approved: true, controlRequestId: 'ctrl-1',
+      } } as never,
+      conn as never,
+      bridge as never,
+    );
+
+    // Nothing answered, so the CLI writes nothing.
+    expect(sendControlResponseToProcess).not.toHaveBeenCalled();
+    // The surface is told it was the gate.
+    const [, type, payload] = conn.broadcastToSession.mock.calls[0];
+    expect(type).toBe(MessageType.REVIEW_BASE_CHANGED);
+    expect(payload).toMatchObject({ toolUseId: 't-chat', blockedApproval: true });
+    // Still answerable after the hold.
+    expect(peekPreview('t-chat')).toBeDefined();
+  });
+
+  it('answers a chat approval normally when the file has not moved', async () => {
+    const { toolResponseHandler } = await import('../../handlers/toolResponse');
+    const base = lines(20);
+    const path = join(dir, 'chat-ok.php');
+    await writeFile(path, base, 'utf8');
+    remember('t-chat-ok', path, base, 'ONE\n');
+
+    const conn = {
+      ...connections(),
+      getClient: () => ({ subscribedSessionId: 'sess-1' }),
+      sendTo: vi.fn(),
+    };
+    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+
+    await toolResponseHandler(
+      'conn-1',
+      { type: 'TOOL_RESPONSE', requestId: 'r1', payload: {
+        toolUseId: 't-chat-ok', approved: true, controlRequestId: 'ctrl-1',
+      } } as never,
+      conn as never,
+      bridge as never,
+    );
+
+    expect(sendControlResponseToProcess).toHaveBeenCalled();
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.behavior).toBe('allow');
+  });
+
+  it('lets a chat denial through even when the file moved', async () => {
+    // Denying writes nothing, and blocking it would strand the request with no
+    // way to say no.
+    const { toolResponseHandler } = await import('../../handlers/toolResponse');
+    const base = lines(20);
+    const path = join(dir, 'chat-deny.php');
+    await writeFile(path, 'completely different\n', 'utf8');
+    remember('t-chat-deny', path, base, 'ONE\n');
+
+    const conn = {
+      ...connections(),
+      getClient: () => ({ subscribedSessionId: 'sess-1' }),
+      sendTo: vi.fn(),
+    };
+    const bridge = { closeDiff: vi.fn(async () => undefined), closeDiffTab: vi.fn(async () => undefined) };
+
+    await toolResponseHandler(
+      'conn-1',
+      { type: 'TOOL_RESPONSE', requestId: 'r1', payload: {
+        toolUseId: 't-chat-deny', approved: false, controlRequestId: 'ctrl-1',
+      } } as never,
+      conn as never,
+      bridge as never,
+    );
+
+    const [, , response] = sendControlResponseToProcess.mock.calls[0];
+    expect(response.response.behavior).toBe('deny');
+  });
+});
+
 describe('refreshing a held review', () => {
   it('restates a Write against the current file', async () => {
     const base = lines(20);
