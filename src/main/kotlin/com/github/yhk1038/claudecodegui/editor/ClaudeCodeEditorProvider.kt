@@ -31,7 +31,7 @@ class ClaudeCodeEditorProvider : FileEditorProvider, DumbAware {
         ClaudeCodeVirtualFile.claim(project, chatTab.tabId)
 
         val state = EditorTabStateService.getInstance(project)
-        chatTab.seedRestoredState(state.getPath(chatTab.tabId), state.getTitle(chatTab.tabId))
+        chatTab.seedRestoredState(state.getPath(chatTab.tabId), state.getEffectiveTitle(chatTab.tabId))
 
         return ClaudeCodeFileEditor(project, chatTab)
     }

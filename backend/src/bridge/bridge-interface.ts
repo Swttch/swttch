@@ -46,6 +46,18 @@ export interface Bridge {
   createSession(workingDir?: string): Promise<void>;
   openNewTab(workingDir?: string): Promise<void>;
   openSession(sessionId: string, workingDir?: string): Promise<void>;
+  /**
+   * Name the tab identified by [panelId], or clear the name when [name] is
+   * empty so the tab goes back to following its conversation title.
+   *
+   * The IDE side owns this value rather than the webview, because it has to
+   * label a restored tab before that tab's webview has mounted — chat panels
+   * are built lazily, so after a restart nothing would know the names until
+   * each tab was clicked (issue #301).
+   *
+   * @param panelId the tab to name; the same id the IDE knows as its tab id.
+   */
+  setTabName(panelId: string, name: string): Promise<void>;
   /** @param path settings page to land on (e.g. '/settings/sponsor'); omit for the landing page. */
   openSettings(workingDir?: string, path?: string): Promise<void>;
   openTerminal(workingDir: string): Promise<void>;

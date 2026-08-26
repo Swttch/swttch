@@ -307,6 +307,10 @@ export class JetBrainsBridge implements Bridge {
     await this.request(MessageType.OPEN_SESSION, params);
   }
 
+  async setTabName(panelId: string, name: string): Promise<void> {
+    await this.request(MessageType.SET_TAB_NAME, { panelId, name });
+  }
+
   async openSettings(workingDir?: string, path?: string): Promise<void> {
     const params: Record<string, unknown> = {};
     if (workingDir) params.workingDir = workingDir;

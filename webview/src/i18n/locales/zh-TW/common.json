@@ -4,6 +4,11 @@
     "cancel": "取消",
     "close": "關閉"
   },
+  "renameTabDialog": {
+    "title": "重新命名分頁",
+    "placeholder": "為此分頁命名",
+    "hint": "留空則恢復使用對話標題。"
+  },
   "zoomIndicator": {
     "label": "縮放等級",
     "zoomOut": "縮小",

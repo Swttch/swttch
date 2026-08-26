@@ -482,6 +482,25 @@ export enum MessageType {
   FOLDER_SELECTED = 'FOLDER_SELECTED',
   /** Resolved entries from a native file/folder drop. */
   NATIVE_DROP_ENTRIES = 'NATIVE_DROP_ENTRIES',
+  /**
+   * outbound backend→webview. The user picked "Rename Session..." on this tab's
+   * IDE context menu, and the webview should open its own rename prompt. The IDE
+   * action deliberately does no renaming itself: the platform's in-place popup is
+   * a Swing balloon, and over a JCEF browser it takes neither clicks nor
+   * keystrokes, so the tab's own UI has to ask instead (issue #301). Carries
+   * { currentName }, the label the tab is showing: once a tab has a name of its
+   * own the webview's document.title is still the conversation's, so only the
+   * IDE can say what the field should open on.
+   */
+  TAB_RENAME_REQUESTED = 'TAB_RENAME_REQUESTED',
+  /**
+   * The webview reports the name the user confirmed for this tab, carrying
+   * { name }. An empty name clears the manual name, returning the tab to
+   * following its conversation title. The IDE side owns the value: it is what
+   * persists to disk and what labels a restored tab before any webview has
+   * mounted. inbound webview→backend, then Node↔Kotlin
+   */
+  SET_TAB_NAME = 'SET_TAB_NAME',
   /** The project list payload in response to GET_PROJECTS. */
   PROJECTS_LIST = 'PROJECTS_LIST',
 

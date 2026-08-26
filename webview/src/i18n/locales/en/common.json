@@ -4,6 +4,11 @@
     "cancel": "Cancel",
     "close": "Close"
   },
+  "renameTabDialog": {
+    "title": "Rename tab",
+    "placeholder": "Name this tab",
+    "hint": "Leave it empty to go back to using the conversation title."
+  },
   "zoomIndicator": {
     "label": "Zoom level",
     "zoomOut": "Zoom out",

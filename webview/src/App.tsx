@@ -6,6 +6,8 @@ import { I18nLocaleSync } from './i18n/I18nLocaleSync';
 import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage } from './pages';
 import { AccountUsageModal } from './components/AccountUsageModal';
 import { TunnelModal } from './components/TunnelModal';
+import { RenameTabDialog } from './components/RenameTabDialog';
+import { useTabRenamePrompt } from './hooks/useTabRenamePrompt';
 import { ForbiddenNotice } from './components/ForbiddenNotice';
 import { isLoopbackHostname, isRemoteBlocked } from './api/bridge/authToken';
 import { usePairingStatus } from './hooks/usePairingStatus';
@@ -32,6 +34,9 @@ function AppContent() {
   usePanelFocusReporter();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.
   useSettingsOverlayNavigation();
+  // The IDE's "Rename Session..." tab menu asks us to prompt; it cannot draw a
+  // usable field over the browser itself.
+  const tabRename = useTabRenamePrompt();
   const [isAccountUsageOpen, setIsAccountUsageOpen] = useState(false);
   // Owned here rather than by the dock icon: the same item can be triggered from
   // the ⋮ overflow menu, and that row unmounts the moment the menu closes.
@@ -83,6 +88,13 @@ function AppContent() {
       )}
 
       {isTunnelOpen && <TunnelModal onClose={() => setIsTunnelOpen(false)} />}
+      {tabRename.initialName !== null && (
+        <RenameTabDialog
+          initialName={tabRename.initialName}
+          onConfirm={tabRename.confirm}
+          onCancel={tabRename.cancel}
+        />
+      )}
 
       {/* Remote-device pairing failure (expired/locked/unreachable ?pair= code):
           shows "rescan the QR" instead of a silent 401 reconnect loop. Renders

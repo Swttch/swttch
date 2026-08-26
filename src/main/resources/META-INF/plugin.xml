@@ -184,5 +184,29 @@
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <keyboard-shortcut keymap="$default" first-keystroke="alt K"/>
         </action>
+
+        <!-- Rename a chat tab by hand, so its label stops following the
+             conversation title (issue #301). One action per host mode, because
+             a tool window tab and an editor tab are reached through different
+             context menus. ToolWindowContextMenu is the group that exists across
+             the whole supported platform range. -->
+        <action
+            id="ClaudeCode.RenameToolWindowTab"
+            class="com.github.yhk1038.claudecodegui.hosting.RenameChatTabAction"
+            text="Rename Session..."
+            description="Give this chat tab a name of your own">
+            <add-to-group group-id="ToolWindowContextMenu" anchor="last"/>
+        </action>
+
+        <!-- The same entry for EDITOR_TAB mode, which is the default. The two
+             menus are separate groups and hand over the clicked tab differently,
+             so each needs its own action; both end in the same request. -->
+        <action
+            id="ClaudeCode.RenameEditorTab"
+            class="com.github.yhk1038.claudecodegui.hosting.RenameChatEditorTabAction"
+            text="Rename Session..."
+            description="Give this chat tab a name of your own">
+            <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>

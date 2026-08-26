@@ -4,6 +4,11 @@
     "cancel": "Cancelar",
     "close": "Fechar"
   },
+  "renameTabDialog": {
+    "title": "Renomear aba",
+    "placeholder": "Nomeie esta aba",
+    "hint": "Deixe vazio para voltar a usar o título da conversa."
+  },
   "zoomIndicator": {
     "label": "Nível de zoom",
     "zoomOut": "Diminuir zoom",

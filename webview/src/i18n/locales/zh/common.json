@@ -4,6 +4,11 @@
     "cancel": "取消",
     "close": "关闭"
   },
+  "renameTabDialog": {
+    "title": "重命名标签页",
+    "placeholder": "为此标签页命名",
+    "hint": "留空则恢复使用对话标题。"
+  },
   "zoomIndicator": {
     "label": "缩放级别",
     "zoomOut": "缩小",

@@ -4,6 +4,11 @@
     "cancel": "Cancelar",
     "close": "Cerrar"
   },
+  "renameTabDialog": {
+    "title": "Cambiar el nombre de la pestaña",
+    "placeholder": "Nombra esta pestaña",
+    "hint": "Déjalo vacío para volver a usar el título de la conversación."
+  },
   "zoomIndicator": {
     "label": "Nivel de zoom",
     "zoomOut": "Alejar",

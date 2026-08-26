@@ -4,6 +4,11 @@
     "cancel": "Annuler",
     "close": "Fermer"
   },
+  "renameTabDialog": {
+    "title": "Renommer l'onglet",
+    "placeholder": "Nommer cet onglet",
+    "hint": "Laissez vide pour revenir au titre de la conversation."
+  },
   "zoomIndicator": {
     "label": "Niveau de zoom",
     "zoomOut": "Zoom arrière",

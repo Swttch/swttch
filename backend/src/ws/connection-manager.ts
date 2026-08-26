@@ -326,6 +326,18 @@ export class ConnectionManager {
   }
 
   /**
+   * The panel a connection belongs to, or null for a browser client that never
+   * carried one.
+   *
+   * The reverse of [getConnectionIdByPanelId], and the reason panel-scoped
+   * requests need not carry their own panelId: taking it from the connection
+   * means a webview can only ever act on the panel it is, not on one it names.
+   */
+  getPanelIdByConnectionId(connectionId: string): string | null {
+    return this.clientMap.get(connectionId)?.panelId ?? null;
+  }
+
+  /**
    * Choose the ONE tab that should deliver a due scheduled message, so the
    * message is sent exactly like a person sending it from that window (and only
    * once). Priority — closest to "the user is already there" first:
