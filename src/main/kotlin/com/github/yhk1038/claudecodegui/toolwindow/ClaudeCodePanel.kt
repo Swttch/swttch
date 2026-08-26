@@ -1617,10 +1617,20 @@ class ClaudeCodePanel(
                 ) {
                     // Kotlin can only notify, so the rebuilt change comes back
                     // the other way as REDRAW_REVIEW rather than as a reply.
+                    //
+                    // The proposed side goes with it. A refresh restates the
+                    // ORIGINAL side, but the reviewer may have typed into the
+                    // PROPOSED one, and that text exists nowhere but this diff
+                    // -- so unless it travels, the rebuild silently replaces it
+                    // (#359). The merge itself is the backend's, the same one
+                    // the built-in surface uses.
                     backendService.sendNotification(
                         project.basePath ?: "",
                         "REFRESH_DIFF_PREVIEW",
-                        buildJsonObject { put("toolUseId", toolUseId) },
+                        buildJsonObject {
+                            put("toolUseId", toolUseId)
+                            diffService.proposedOnScreen(toolUseId)?.let { put("editedProposal", it) }
+                        },
                     )
                 }
                 logger.info("Review base changed for $toolUseId ($reason)")

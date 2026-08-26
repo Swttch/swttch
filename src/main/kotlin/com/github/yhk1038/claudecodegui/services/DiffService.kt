@@ -480,16 +480,16 @@ class DiffService(private val project: Project) {
     }
 
     /**
-     * Reopen the review with the banner it has just been given.
+     * The two sides of the review as they are on screen right now, original
+     * first, or null when this IDE is not drawing it.
      *
-     * The IDE's diff takes its bottom panel when the tab is created, so putting
-     * a banner on an open review means opening it again. The contents are
-     * unchanged, which is why this is safe to do for a banner alone.
+     * The proposed side is read live rather than from what was opened with,
+     * because the reviewer can type into it (#305) — so this is where their
+     * edits are, and the only place they are.
      */
-    private fun reopenWithCurrentBanner(toolUseId: String) {
-        val review = reviewStillOnScreen(toolUseId) ?: return
-        val file = pendingDiffFiles[toolUseId] ?: return
-        val chain = (file as? ChainDiffVirtualFile) ?: return
+    private fun sidesOnScreen(toolUseId: String): Pair<String, String>? {
+        val file = pendingDiffFiles[toolUseId] ?: return null
+        val chain = (file as? ChainDiffVirtualFile) ?: return null
         // The chain does not hand back the request that was put in: it stores
         // each one wrapped in a producer, so asking for a SimpleDiffRequest
         // directly always misses (#359).
@@ -498,13 +498,37 @@ class DiffService(private val project: Project) {
                 is SimpleDiffRequestChain.DiffRequestProducerWrapper -> produced.request
                 else -> produced
             }
-        } as? SimpleDiffRequest ?: return
-        val oldContent = (request.contents.getOrNull(0) as? DocumentContent)?.document?.text ?: return
-        val newContent = (request.contents.getOrNull(1) as? DocumentContent)?.document?.text ?: return
+        } as? SimpleDiffRequest ?: return null
+        val oldContent = (request.contents.getOrNull(0) as? DocumentContent)?.document?.text ?: return null
+        val newContent = (request.contents.getOrNull(1) as? DocumentContent)?.document?.text ?: return null
+        return oldContent to newContent
+    }
+
+    /**
+     * What the reviewer currently has on the proposed side, or null when this
+     * IDE is not drawing this review.
+     *
+     * Sent with a refresh so the backend can carry it across the rebuilt
+     * proposal. Without it the rebuild replaces the proposed side wholesale and
+     * the reviewer's typing goes with it — which is what the built-in surface
+     * already solved, and the IDE's did not (#359).
+     */
+    fun proposedOnScreen(toolUseId: String): String? = sidesOnScreen(toolUseId)?.second
+
+    /**
+     * Reopen the review with the banner it has just been given.
+     *
+     * The IDE's diff takes its bottom panel when the tab is created, so putting
+     * a banner on an open review means opening it again. The contents are
+     * unchanged, which is why this is safe to do for a banner alone.
+     */
+    private fun reopenWithCurrentBanner(toolUseId: String) {
+        val review = reviewStillOnScreen(toolUseId) ?: return
+        val sides = sidesOnScreen(toolUseId) ?: return
         openDiffViewer(
             review.filePath,
-            oldContent,
-            newContent,
+            sides.first,
+            sides.second,
             toolUseId,
             review.onResolve,
             review.banner,

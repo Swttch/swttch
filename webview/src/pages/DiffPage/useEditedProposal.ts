@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EditorChange } from '@pierre/diffs';
 import type { Hunk } from '@/shared';
-import { mergeEdits } from './mergeEdits';
+import { mergeEdits } from '@/shared/mergeEdits';
 
 export interface EditedProposal {
   /**

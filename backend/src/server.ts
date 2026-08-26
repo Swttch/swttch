@@ -15,6 +15,8 @@ import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
 import { refreshReviewAgainstDisk } from './core/features/refreshReview';
+import { peekPreview } from './core/features/diffPreview';
+import { carryEditAcrossRefresh } from './core/features/carryEditAcrossRefresh';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -419,6 +421,14 @@ async function main() {
       console.error('[node-backend]', 'REFRESH_DIFF_PREVIEW from the IDE ignored: no toolUseId');
       return;
     }
+    // What the reviewer has on the proposed side, sent because it exists only
+    // in their diff. Absent when they never typed, or when the IDE could not
+    // read it back.
+    const editedProposal =
+      typeof params?.editedProposal === 'string' ? params.editedProposal : undefined;
+    // Read before the rebuild replaces it: the merge needs the proposal the
+    // typing was made against, not the one about to take its place.
+    const proposalBeforeRefresh = peekPreview(toolUseId)?.newContent;
     void refreshReviewAgainstDisk(toolUseId)
       .then((outcome) => {
         console.error('[node-backend]', `IDE refresh for ${toolUseId}: ${outcome.status}`);
@@ -428,11 +438,33 @@ async function main() {
           // it. The reason is logged so a silent no-op is explicable.
           return;
         }
+        /*
+         * Carry the reviewer's typing across, the same way the built-in surface
+         * does (#359).
+         *
+         * A refresh restates the ORIGINAL side; typing lives on the PROPOSED
+         * one. Different axes, so unless both changed the same line there is
+         * nothing to choose between — and replacing the proposed side wholesale
+         * threw the typing away with nothing said about it.
+         */
+        const carried = carryEditAcrossRefresh(
+          proposalBeforeRefresh,
+          editedProposal,
+          outcome.preview.newContent,
+        );
+        if (carried.conflicts.length > 0) {
+          console.error(
+            '[node-backend]',
+            `IDE refresh for ${toolUseId}: kept the rebuilt proposal on line(s) ` +
+              `${carried.conflicts.join(', ')}, where both sides had changed it`,
+          );
+        }
+        const newContent = carried.newContent;
         return jetbrainsBridge.redrawReview({
           toolUseId,
           filePath: outcome.preview.filePath,
           oldContent: outcome.preview.oldContent,
-          newContent: outcome.preview.newContent,
+          newContent,
         });
       })
       .catch((err) => {
