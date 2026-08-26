@@ -25,7 +25,9 @@ export type OpenDiffResult =
  */
 export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResult> {
   const api = useApi();
-  const { scopeSettings } = useSettings();
+  // Merged, not the scope the settings screen is showing — see
+  // useResolvedDiffSurface for what that difference cost (#359).
+  const { settings } = useSettings();
   const surface = useResolvedDiffSurface();
   const overlayAllowed = useDiffOverlayAllowed();
 
@@ -39,7 +41,7 @@ export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResu
       }
 
       const presentation =
-        (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
+        (settings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
         BrowserDiffPresentation.NEW_TAB;
 
       // Asked for and available. In an IDE that means the chat is in an editor
@@ -60,6 +62,6 @@ export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResu
       await getAdapter().openDiff(toolUseId);
       return { kind: 'opened' };
     },
-    [api, scopeSettings, surface, overlayAllowed],
+    [api, settings, surface, overlayAllowed],
   );
 }

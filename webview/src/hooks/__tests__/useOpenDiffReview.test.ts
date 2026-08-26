@@ -14,9 +14,11 @@ const openDiffTab = vi.fn();
 const api = { tools: { openDiffForRequest, openDiffTab } };
 vi.mock('@/contexts/ApiContext', () => ({ useApi: () => api }));
 
-const scopeSettings = vi.fn();
+// The effective values, not the scope the settings screen shows: what these
+// hooks decide with has to match what the backend decides with (#359).
+const settings = vi.fn();
 vi.mock('@/contexts/SettingsContext', () => ({
-  useSettings: () => ({ scopeSettings: scopeSettings() }),
+  useSettings: () => ({ settings: settings() }),
 }));
 
 const surface = vi.fn();
@@ -45,7 +47,7 @@ beforeEach(() => {
   openDiff.mockReset().mockResolvedValue(undefined);
   // A browser reviewing on the built-in surface, asking for a new tab.
   surface.mockReturnValue(DiffSurface.BUILT_IN);
-  scopeSettings.mockReturnValue({
+  settings.mockReturnValue({
     [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.NEW_TAB,
   });
   overlayAllowed.mockReturnValue(true);
@@ -67,7 +69,7 @@ describe('useOpenDiffReview', () => {
 
   it('reports an overlay back for the caller to mount', async () => {
     // The hook cannot mount it: the overlay covers a screen this does not own.
-    scopeSettings.mockReturnValue({
+    settings.mockReturnValue({
       [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.OVERLAY,
     });
 
@@ -89,7 +91,7 @@ describe('useOpenDiffReview', () => {
   it('opens a tab instead when an overlay has no room', async () => {
     isJetBrains.mockReturnValue(true);
     overlayAllowed.mockReturnValue(false);
-    scopeSettings.mockReturnValue({
+    settings.mockReturnValue({
       [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.OVERLAY,
     });
 
@@ -101,7 +103,7 @@ describe('useOpenDiffReview', () => {
     // The chat is in an editor panel, which has the width to be drawn over.
     isJetBrains.mockReturnValue(true);
     overlayAllowed.mockReturnValue(true);
-    scopeSettings.mockReturnValue({
+    settings.mockReturnValue({
       [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.OVERLAY,
     });
 

@@ -403,16 +403,20 @@ class DiffService(private val project: Project) {
         blockedApproval: Boolean,
         onRefresh: () -> Unit,
     ) {
-        val review = pendingReviews[toolUseId] ?: return
-        val banner = ReviewBaseBanner(
-            reason = reason,
-            overlapsAccepted = overlapsAccepted,
-            blockedApproval = blockedApproval,
-            // Offered only when there is something to rebuild against.
-            onRefresh = if (reason == ReviewBaseReason.CHANGED) onRefresh else null,
-        )
-        review.banner = banner
-        reopenWithCurrentBanner(toolUseId)
+        // On the EDT: this asks the editor what is open, and builds a Swing
+        // component. Arrives off it, from the bridge coroutine.
+        ApplicationManager.getApplication().invokeLater {
+            val review = reviewStillOnScreen(toolUseId) ?: return@invokeLater
+            val banner = ReviewBaseBanner(
+                reason = reason,
+                overlapsAccepted = overlapsAccepted,
+                blockedApproval = blockedApproval,
+                // Offered only when there is something to rebuild against.
+                onRefresh = if (reason == ReviewBaseReason.CHANGED) onRefresh else null,
+            )
+            review.banner = banner
+            reopenWithCurrentBanner(toolUseId)
+        }
     }
 
     /**
@@ -422,19 +426,57 @@ class DiffService(private val project: Project) {
      * and leaving it up would say the review is stale when it is current.
      */
     fun redrawReview(toolUseId: String, filePath: String, oldContent: String, newContent: String) {
-        val review = pendingReviews[toolUseId] ?: return
-        review.banner = null
-        openDiffViewer(
-            filePath,
-            oldContent,
-            newContent,
-            toolUseId,
-            review.onResolve,
-            banner = null,
-            // The whole point of this call: the tab on screen is drawn against
-            // the file as it was, which is what the reviewer asked to be rid of.
-            replaceExisting = true,
-        )
+        // On the EDT for the same reason as above; openDiffViewer hops again on
+        // its own, which is harmless.
+        ApplicationManager.getApplication().invokeLater {
+            val review = reviewStillOnScreen(toolUseId) ?: return@invokeLater
+            review.banner = null
+            openDiffViewer(
+                filePath,
+                oldContent,
+                newContent,
+                toolUseId,
+                review.onResolve,
+                banner = null,
+                // The whole point of this call: the tab on screen is drawn
+                // against the file as it was, which is what the reviewer asked
+                // to be rid of.
+                replaceExisting = true,
+            )
+        }
+    }
+
+    /**
+     * The review this IDE is drawing for [toolUseId], or null once its tab is
+     * gone from the screen.
+     *
+     * A review can leave the screen two ways, and only one of them ends it. The
+     * backend closes it when the request has been answered; the reviewer can
+     * also just close the tab, which settles nothing -- the prompt is still
+     * asking, and clicking the file name has to be able to bring the review
+     * back.
+     *
+     * What must not happen is the third thing: treating a tab the reviewer
+     * closed as still on screen. Everything below reopens what it finds, so a
+     * stale entry made the IDE diff reappear on its own moments after the
+     * reviewer had closed it and opened the built-in one instead -- two reviews
+     * of the same edit, on screen at once (#359).
+     *
+     * Asked of the editor rather than tracked, because the close is the
+     * reviewer's and arrives through no path of ours.
+     */
+    private fun reviewStillOnScreen(toolUseId: String): OpenReview? {
+        val review = pendingReviews[toolUseId] ?: return null
+        val file = pendingDiffFiles[toolUseId]
+        if (file == null || !FileEditorManager.getInstance(project).isFileOpen(file)) {
+            // Forget it rather than leave it to be asked about again: the tab is
+            // not coming back by itself, and the entry is what says the IDE owns
+            // this review.
+            pendingReviews.remove(toolUseId)
+            pendingDiffFiles.remove(toolUseId)
+            return null
+        }
+        return review
     }
 
     /**
@@ -445,7 +487,7 @@ class DiffService(private val project: Project) {
      * unchanged, which is why this is safe to do for a banner alone.
      */
     private fun reopenWithCurrentBanner(toolUseId: String) {
-        val review = pendingReviews[toolUseId] ?: return
+        val review = reviewStillOnScreen(toolUseId) ?: return
         val file = pendingDiffFiles[toolUseId] ?: return
         val chain = (file as? ChainDiffVirtualFile) ?: return
         // The chain does not hand back the request that was put in: it stores
