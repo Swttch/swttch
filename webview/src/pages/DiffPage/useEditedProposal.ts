@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EditorChange } from '@pierre/diffs';
 import type { Hunk } from '@/shared';
+import { mergeEdits } from './mergeEdits';
 
 export interface EditedProposal {
   /**
@@ -54,9 +55,41 @@ export function useEditedProposal(proposal: string, hunks: readonly Hunk[]): Edi
   }));
   const [editedHunks, setEditedHunks] = useState<ReadonlySet<number>>(() => new Set());
 
-  // A proposal we were not seeded from is a new review in the same component:
-  // its own text wins, and the edits recorded against the previous one are moot.
-  const contents = edits.seededFrom === proposal ? edits.contents : proposal;
+  /*
+   * A proposal we were not seeded from means the review was rebuilt underneath
+   * us — the file moved on disk and the change was restated against it (#359).
+   *
+   * The reviewer's typing is NOT discarded for that. A rebuild changes the
+   * original side; typing lives on the proposed side. Unless the two landed on
+   * the same line there is no reason to lose one to keep the other, and losing
+   * it silently is what QA caught: an edit from `CLAUDE` to `CLAUDE22`
+   * disappeared on Refresh with nothing said about it.
+   *
+   * Merged during render rather than in an effect, so the screen never shows a
+   * frame with the typing missing before it comes back.
+   */
+  const merged = useMemo(
+    () =>
+      edits.seededFrom === proposal
+        ? null
+        : mergeEdits(edits.seededFrom, edits.contents, proposal),
+    [edits.seededFrom, edits.contents, proposal],
+  );
+
+  const contents = merged ? merged.contents : edits.contents;
+
+  /*
+   * Settle the merge into state once the render that computed it has landed.
+   *
+   * Without this, `edits` still names the OLD proposal, so the next keystroke
+   * would merge against a base two rebuilds behind. Written in an effect rather
+   * than during render because it is a state write, and it is a no-op whenever
+   * nothing was rebuilt.
+   */
+  useEffect(() => {
+    if (!merged) return;
+    setEdits({ seededFrom: proposal, contents: merged.contents });
+  }, [merged, proposal]);
 
   const applyEdit = useCallback(
     (next: string, changes: readonly EditorChange[]) => {
