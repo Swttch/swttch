@@ -431,7 +431,15 @@ class DiffService(private val project: Project) {
         val review = pendingReviews[toolUseId] ?: return
         val file = pendingDiffFiles[toolUseId] ?: return
         val chain = (file as? ChainDiffVirtualFile) ?: return
-        val request = chain.chain.requests.firstOrNull() as? SimpleDiffRequest ?: return
+        // The chain does not hand back the request that was put in: it stores
+        // each one wrapped in a producer, so asking for a SimpleDiffRequest
+        // directly always misses (#359).
+        val request = chain.chain.requests.firstOrNull()?.let { produced ->
+            when (produced) {
+                is SimpleDiffRequestChain.DiffRequestProducerWrapper -> produced.request
+                else -> produced
+            }
+        } as? SimpleDiffRequest ?: return
         val oldContent = (request.contents.getOrNull(0) as? DocumentContent)?.document?.text ?: return
         val newContent = (request.contents.getOrNull(1) as? DocumentContent)?.document?.text ?: return
         openDiffViewer(review.filePath, oldContent, newContent, toolUseId, review.onResolve, review.banner)
