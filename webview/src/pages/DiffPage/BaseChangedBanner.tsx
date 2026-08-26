@@ -5,7 +5,6 @@ interface Props {
   change: ReviewBaseChange;
   refreshing: boolean;
   onRefresh: () => void;
-  onDismiss: () => void;
 }
 
 /**
@@ -25,7 +24,7 @@ interface Props {
  *    and nothing here can tell which the user meant — so it says that plainly
  *    rather than merging and hoping. This is where git itself stops too.
  */
-export function BaseChangedBanner({ change, refreshing, onRefresh, onDismiss }: Props) {
+export function BaseChangedBanner({ change, refreshing, onRefresh }: Props) {
   const { t } = useTranslation('chat');
 
   const message =
@@ -71,14 +70,11 @@ export function BaseChangedBanner({ change, refreshing, onRefresh, onDismiss }: 
         </button>
       )}
 
-      <button
-        type="button"
-        className="shrink-0 text-sm text-text-tertiary hover:text-text-primary"
-        onClick={onDismiss}
-        aria-label={t('diffPage.baseChanged.dismiss')}
-      >
-        ×
-      </button>
+      {/* No dismiss. This strip is not a notice that has been read and can be
+          put away — it is the visible half of a held approval, and the hold
+          outlives it. Closing it would restore exactly the state this issue is
+          about: approve does nothing, and the screen no longer says why. It
+          goes when the reason goes, which Refresh already does. */}
     </div>
   );
 }

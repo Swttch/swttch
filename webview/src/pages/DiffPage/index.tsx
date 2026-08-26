@@ -395,7 +395,6 @@ export function DiffPage(props: Props) {
           change={baseChanged.change}
           refreshing={baseChanged.refreshing}
           onRefresh={() => void baseChanged.refresh()}
-          onDismiss={baseChanged.dismiss}
         />
       )}
 

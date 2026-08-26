@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test
  * because in a redraw the open tab is precisely what is stale.
  *
  * That distinction used to be inferred from whether a banner was being passed,
- * which silently killed both banner actions. Refresh and Dismiss each redraw
- * with the banner cleared, so the guard read them as ordinary opens, surfaced
- * the old tab and returned. On screen the buttons looked dead — no error, no
- * log — while the backend had already rebuilt the change and reported success.
+ * which silently killed the banner's Refresh: it redraws with the banner
+ * cleared, so the guard read it as an ordinary open, surfaced the old tab and
+ * returned. On screen the button looked dead — no error, no log — while the
+ * backend had already rebuilt the change and reported success.
  */
 class ReviewRedrawGuardTest {
 
@@ -42,19 +42,17 @@ class ReviewRedrawGuardTest {
     }
 
     /**
-     * The banner is added and dropped through the same redraw path, so dropping
-     * it must not fall back to surfacing — that would leave the very notice the
-     * reviewer just dismissed.
+     * Refresh redraws with the banner cleared, which is the exact shape that
+     * used to be misread as an ordinary open. Pinned separately from the case
+     * above because it is the one a reviewer actually hits.
      */
     @Test
-    fun `dropping the banner still counts as a redraw`() {
-        // What dismissReviewBanner and redrawReview both produce: no banner,
-        // but still a redraw.
+    fun `a redraw that clears the banner is still a redraw`() {
         assertFalse(
             DiffService.shouldSurfaceExistingTab(replaceExisting = true, hasExistingTab = true),
         ) {
-            "Dismiss cleared the banner and was then treated as an ordinary open, so the tab " +
-                "carrying the dismissed banner was surfaced again (#359)."
+            "Refresh cleared the banner and was then treated as an ordinary open, so the stale " +
+                "tab was surfaced and the rebuilt change never reached the screen (#359)."
         }
     }
 

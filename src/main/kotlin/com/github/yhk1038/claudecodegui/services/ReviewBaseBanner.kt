@@ -1,8 +1,5 @@
 package com.github.yhk1038.claudecodegui.services
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.ui.popup.IconButton
-import com.intellij.ui.InplaceButton
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
@@ -53,17 +50,14 @@ class ReviewBaseBanner(
     blockedApproval: Boolean,
     /** Rebuild against the current file. Absent when there is nothing to rebuild. */
     onRefresh: (() -> Unit)?,
-    /** Dismiss without rebuilding. */
-    onDismiss: () -> Unit,
 ) {
-    val component: JComponent = build(reason, overlapsAccepted, blockedApproval, onRefresh, onDismiss)
+    val component: JComponent = build(reason, overlapsAccepted, blockedApproval, onRefresh)
 
     private fun build(
         reason: ReviewBaseReason,
         overlapsAccepted: Boolean,
         blockedApproval: Boolean,
         onRefresh: (() -> Unit)?,
-        onDismiss: () -> Unit,
     ): JComponent {
         val row = JPanel(BorderLayout())
         row.background = WARNING_BACKGROUND
@@ -92,13 +86,11 @@ class ReviewBaseBanner(
             actions.add(ActionLink(REFRESH_LABEL) { onRefresh() })
         }
 
-        // Icon rather than a typed "×", which renders at whatever weight the
-        // label font happens to have and never matches the close controls the
-        // rest of the IDE draws.
-        val dismiss = InplaceButton(
-            IconButton(DISMISS_TOOLTIP, AllIcons.Actions.Close, AllIcons.Actions.CloseHovered),
-        ) { onDismiss() }
-        actions.add(dismiss)
+        // No dismiss. This strip is not a notice that has been read and can be
+        // put away -- it is the visible half of a held approval, and the hold
+        // outlives it. Closing it would restore exactly the state this issue is
+        // about: Apply does nothing, and the screen no longer says why (#359).
+        // It goes when the reason goes, which Refresh already does.
 
         row.add(actions, BorderLayout.EAST)
         return row
@@ -122,7 +114,6 @@ class ReviewBaseBanner(
 
     private companion object {
         const val REFRESH_LABEL = "Refresh"
-        const val DISMISS_TOOLTIP = "Dismiss"
 
         /**
          * Themed rather than fixed: this sits inside the IDE's own diff window,

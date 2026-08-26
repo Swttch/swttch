@@ -404,7 +404,6 @@ class DiffService(private val project: Project) {
             blockedApproval = blockedApproval,
             // Offered only when there is something to rebuild against.
             onRefresh = if (reason == ReviewBaseReason.CHANGED) onRefresh else null,
-            onDismiss = { dismissReviewBanner(toolUseId) },
         )
         review.banner = banner
         reopenWithCurrentBanner(toolUseId)
@@ -432,19 +431,12 @@ class DiffService(private val project: Project) {
         )
     }
 
-    /** Drop the banner, leaving the review itself as it was. */
-    private fun dismissReviewBanner(toolUseId: String) {
-        val review = pendingReviews[toolUseId] ?: return
-        review.banner = null
-        reopenWithCurrentBanner(toolUseId)
-    }
-
     /**
-     * Reopen the review with whatever banner it currently has.
+     * Reopen the review with the banner it has just been given.
      *
-     * The IDE's diff takes its bottom panel when the tab is created, so adding
-     * or removing one means opening it again. The contents are unchanged, which
-     * is why this is safe to do for a banner alone.
+     * The IDE's diff takes its bottom panel when the tab is created, so putting
+     * a banner on an open review means opening it again. The contents are
+     * unchanged, which is why this is safe to do for a banner alone.
      */
     private fun reopenWithCurrentBanner(toolUseId: String) {
         val review = pendingReviews[toolUseId] ?: return
@@ -468,9 +460,8 @@ class DiffService(private val project: Project) {
             toolUseId,
             review.onResolve,
             review.banner,
-            // Always a redraw, including when the banner is being dropped: the
-            // tab on screen still carries the banner that is going away, so
-            // surfacing it would leave the notice the reviewer just dismissed.
+            // A redraw: the tab on screen is the one without the banner, so
+            // surfacing it would show the review still looking approvable.
             replaceExisting = true,
         )
     }

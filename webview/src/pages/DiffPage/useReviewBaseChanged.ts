@@ -52,8 +52,6 @@ export interface UseReviewBaseChangedResult {
    * guess a diff.
    */
   refresh: () => Promise<DiffPreview | null>;
-  /** Drop the banner without rebuilding, for a conflict the user dismissed. */
-  dismiss: () => void;
 }
 
 export function useReviewBaseChanged(
@@ -109,7 +107,5 @@ export function useReviewBaseChanged(
     }
   }, [api, toolUseId, onRefreshed]);
 
-  const dismiss = useCallback(() => setChange(null), []);
-
-  return { change, refreshing, refresh, dismiss };
+  return { change, refreshing, refresh };
 }

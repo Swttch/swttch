@@ -522,7 +522,6 @@
     },
     "baseChanged": {
       "conflict": "Ce fichier a changé sur le disque, aux mêmes lignes que la modification que vous avez conservée. Actualisez pour voir le fichier actuel et décider à nouveau.",
-      "dismiss": "Fermer",
       "held": "Approbation suspendue.",
       "noLongerApplies": "Le fichier a trop changé pour que cette modification s'applique encore. Claude doit le relire — redemandez la modification.",
       "outside": "Ce fichier a changé sur le disque pendant votre relecture. Actualisez pour relire par rapport au fichier actuel.",

@@ -142,12 +142,20 @@ describe('useReviewBaseChanged', () => {
     expect(result.current.change?.reason).toBe('unreadable');
   });
 
-  it('lets the reviewer dismiss the banner', () => {
+  /**
+   * The banner cannot be dismissed, and the hook must not offer a way to.
+   *
+   * It is the visible half of a held approval, not a notice that has been read:
+   * the hold outlives it, so closing it would leave approve doing nothing with
+   * nothing on screen saying why — the state #359 is about. It clears when the
+   * reason clears, which is what refresh does.
+   */
+  it('offers no way to drop the banner while its cause stands', () => {
     const { result } = renderHook(() => useReviewBaseChanged('t-6', vi.fn()));
 
     act(() => emit({ toolUseId: 't-6', reason: 'changed' }));
-    act(() => result.current.dismiss());
 
-    expect(result.current.change).toBeNull();
+    expect(result.current.change).not.toBeNull();
+    expect(result.current).not.toHaveProperty('dismiss');
   });
 });
