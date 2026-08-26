@@ -77,6 +77,54 @@ export function clearPreviews(): void {
   previews.clear();
 }
 
+/**
+ * Pending reviews of [filePath], as `[toolUseId, preview]` pairs.
+ *
+ * The IDE reports saves by path and knows nothing about tool_use_ids, so this
+ * is how a save is turned into "which reviews does that invalidate" (#359).
+ * Plural because two edits to the same file can be awaiting answers at once.
+ *
+ * Paths are compared after normalising separators, since a save reported by the
+ * IDE and a path taken from the CLI's tool input can spell the same file
+ * differently on Windows.
+ */
+export function previewsForFile(filePath: string): Array<[string, StoredPreview]> {
+  const wanted = normalisePath(filePath);
+  return [...previews.entries()].filter(([, p]) => normalisePath(p.filePath) === wanted);
+}
+
+/**
+ * Restate a pending review against [oldContent] as it is on disk now, keeping
+ * the same tool_use_id so the answer still lands on the same request.
+ *
+ * Replaces the entry rather than mutating it, so a caller holding the previous
+ * preview keeps reading the base it made its decisions against.
+ */
+export function updatePreviewBase(
+  toolUseId: string,
+  next: Pick<StoredPreview, 'oldContent' | 'newContent' | 'hunks'>,
+): StoredPreview | undefined {
+  const existing = previews.get(toolUseId);
+  if (!existing) return undefined;
+  const updated: StoredPreview = { ...existing, ...next };
+  previews.set(toolUseId, updated);
+  return updated;
+}
+
+/**
+ * Compare file paths the way the two sides spell them.
+ *
+ * Windows hands us backslashes from the IDE and, depending on the tool input,
+ * forward slashes from the CLI; case also differs there. Lowercasing is safe
+ * for the comparison we need on every platform we ship: the cost of treating
+ * two differently-cased paths as one file is a review being checked that did
+ * not need checking, and the cost of missing a match is the data loss this
+ * exists to stop.
+ */
+function normalisePath(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase();
+}
+
 /** Reads the file, or null when it does not exist yet (Write creating one). */
 async function readOriginal(filePath: string): Promise<string | null> {
   try {

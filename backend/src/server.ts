@@ -14,6 +14,7 @@ import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
+import { notifyReviewsOfFileChange } from './core/features/reviewBaseWatch';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -397,7 +398,25 @@ async function main() {
       '[node-backend]',
       `Received: RESOLVE_DIFF from the IDE (session=${parsed.sessionId}, edited=${parsed.editedContent !== undefined})`,
     );
-    resolveDiffReview(connections, parsed, jetbrainsBridge);
+    // A notification has nobody to answer, so failures are logged here rather
+    // than propagating into the RPC layer that delivered it.
+    void resolveDiffReview(connections, parsed, jetbrainsBridge).catch((err) => {
+      console.error('[node-backend]', 'RESOLVE_DIFF from the IDE failed:', err);
+    });
+  });
+
+  // The IDE reporting a save, so a review of that file can be told its base has
+  // moved before the user approves against content that is no longer there
+  // (#359). Sent for every save; whether any review cared is decided here.
+  jetbrainsBridge.onNotification(MessageType.FILE_SAVED, (_method, params) => {
+    const filePath = typeof params?.filePath === 'string' ? params.filePath : undefined;
+    if (!filePath) {
+      console.error('[node-backend]', 'FILE_SAVED ignored: no filePath');
+      return;
+    }
+    void notifyReviewsOfFileChange(connections, filePath).catch((err) => {
+      console.error('[node-backend]', 'FILE_SAVED handling failed:', err);
+    });
   });
 
   // 4. Logger에 LogWS 참조 설정

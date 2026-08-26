@@ -264,6 +264,33 @@ export enum MessageType {
    * instead of asking a question that is already settled.
    */
   PERMISSION_RESOLVED = 'PERMISSION_RESOLVED',
+  /**
+   * Kotlin→Node: a file was saved in the IDE. Sent for every save; the backend
+   * decides whether it matters by checking it against the files currently under
+   * review.
+   *
+   * The IDE is the only host that can see a save as it happens, which is why
+   * this comes from Kotlin rather than a watcher of ours (#359).
+   */
+  FILE_SAVED = 'FILE_SAVED',
+  /**
+   * outbound backend→webview: the file a pending review is about has changed on
+   * disk since the review was built, so the proposal is now stated against
+   * content that no longer exists.
+   *
+   * Approving as-is would write the stale snapshot over whatever landed in the
+   * meantime, which is the data loss in #359. The review surface shows this and
+   * offers to rebuild against the current file.
+   */
+  REVIEW_BASE_CHANGED = 'REVIEW_BASE_CHANGED',
+  /**
+   * inbound webview→backend: rebuild a pending review against the file as it is
+   * on disk right now, keeping the reviewer's decisions.
+   *
+   * The answer carries a fresh preview, so the surface redraws from current
+   * content and an approval afterwards is stated against what is really there.
+   */
+  REFRESH_DIFF_PREVIEW = 'REFRESH_DIFF_PREVIEW',
 
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */

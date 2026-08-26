@@ -4,7 +4,10 @@
  * IDE's diff and the webview's own, which is why the ranges below are written
  * as "the review surface reported them" rather than as anything IDE-specific.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 const sendControlResponseToProcess = vi.fn();
 const sendMessageToProcess = vi.fn();
@@ -42,24 +45,43 @@ function connections() {
 const R_DEBUG: AcceptedRange = { oldStart: 0, oldEnd: 1, newStart: 0, newEnd: 1 };
 const R_TIMEOUT: AcceptedRange = { oldStart: 9, oldEnd: 10, newStart: 9, newEnd: 10 };
 
+/*
+ * A real file on disk, holding exactly what the preview claims as its base.
+ *
+ * The approval gate re-reads the file before answering (#359), so a review
+ * whose path does not exist is held rather than answered. Pointing these
+ * fixtures at a path that was never created would make every test here exercise
+ * the gate instead of the behaviour it is about.
+ */
+let dir: string;
+let configPath: string;
+
 function pending(toolUseId: string) {
   const hunks = computeHunks(original, proposed)!;
   rememberPreview(toolUseId, {
-    filePath: '/tmp/config.txt',
+    filePath: configPath,
     oldContent: original,
     newContent: proposed,
     hunks,
-    input: { file_path: '/tmp/config.txt', old_string: 'x', new_string: 'y' },
+    input: { file_path: configPath, old_string: 'x', new_string: 'y' },
     toolName: 'Edit',
   });
   return hunks;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), 'resolve-diff-'));
+  configPath = join(dir, 'config.txt');
+  await writeFile(configPath, original, 'utf8');
+
   sendControlResponseToProcess.mockClear();
   sendMessageToProcess.mockClear();
   clearAllPendingMessages();
   clearPreviews();
+});
+
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true });
 });
 
 describe('parseResolveDiffParams', () => {
@@ -70,24 +92,24 @@ describe('parseResolveDiffParams', () => {
     acceptedRanges: [R_DEBUG, R_TIMEOUT],
   };
 
-  it('accepts a well-formed notification', () => {
+  it('accepts a well-formed notification', async () => {
     expect(parseResolveDiffParams(good)).toEqual(good);
   });
 
-  it('rejects one missing any id it must quote back', () => {
+  it('rejects one missing any id it must quote back', async () => {
     for (const key of ['toolUseId', 'controlRequestId', 'sessionId']) {
       const bad = { ...good, [key]: undefined };
       expect(parseResolveDiffParams(bad), key).toBeNull();
     }
   });
 
-  it('treats a missing selection as keeping nothing', () => {
+  it('treats a missing selection as keeping nothing', async () => {
     // Not as "keep everything": defaulting the other way would write a change
     // the user never confirmed.
     expect(parseResolveDiffParams({ ...good, acceptedRanges: undefined })?.acceptedRanges).toEqual([]);
   });
 
-  it('drops malformed ranges rather than trusting the wire', () => {
+  it('drops malformed ranges rather than trusting the wire', async () => {
     const parsed = parseResolveDiffParams({
       ...good,
       acceptedRanges: [R_DEBUG, { oldStart: 'x' }, null, { oldStart: 1 }, R_TIMEOUT],
@@ -95,26 +117,26 @@ describe('parseResolveDiffParams', () => {
     expect(parsed?.acceptedRanges).toEqual([R_DEBUG, R_TIMEOUT]);
   });
 
-  it('carries the edited proposal through (#305)', () => {
+  it('carries the edited proposal through (#305)', async () => {
     const parsed = parseResolveDiffParams({ ...good, editedContent: 'typed\n' });
     expect(parsed?.editedContent).toBe('typed\n');
   });
 
-  it('treats an empty edit as text, not as absent', () => {
+  it('treats an empty edit as text, not as absent', async () => {
     // Emptying the proposed side is a real answer — "write nothing" — and must
     // not fall back to rebuilding the proposal from ranges.
     expect(parseResolveDiffParams({ ...good, editedContent: '' })?.editedContent).toBe('');
   });
 
-  it('ignores a non-string edit rather than trusting the wire', () => {
+  it('ignores a non-string edit rather than trusting the wire', async () => {
     expect(parseResolveDiffParams({ ...good, editedContent: 42 })?.editedContent).toBeUndefined();
   });
 });
 
 describe('resolveDiffReview', () => {
-  it('keeping every hunk sends the request through unchanged', () => {
+  it('keeping every hunk sends the request through unchanged', async () => {
     pending('t-all');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-all', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT],
     });
@@ -126,9 +148,9 @@ describe('resolveDiffReview', () => {
     expect(response.response.updatedInput).toEqual({});
   });
 
-  it('keeping some rewrites the tool input to that subset', () => {
+  it('keeping some rewrites the tool input to that subset', async () => {
     pending('t-partial');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-partial', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
@@ -142,9 +164,9 @@ describe('resolveDiffReview', () => {
     expect(input.new_string).not.toContain('timeout: 60');
   });
 
-  it('keeping nothing is a denial, not a write of unchanged content', () => {
+  it('keeping nothing is a denial, not a write of unchanged content', async () => {
     pending('t-none');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [],
     });
@@ -154,10 +176,10 @@ describe('resolveDiffReview', () => {
     expect(response.response.message).toContain(USER_DECLINED_PREFIX);
   });
 
-  it('answers a request we never previewed as a plain approval', () => {
+  it('answers a request we never previewed as a plain approval', async () => {
     // No stored change means no basis to narrow it; inventing a decision the
     // user did not make would be worse than approving what they were shown.
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-unknown', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
@@ -167,20 +189,20 @@ describe('resolveDiffReview', () => {
     expect(response.response.updatedInput).toEqual({});
   });
 
-  it('consumes the preview so a second answer cannot re-apply it', () => {
+  it('consumes the preview so a second answer cannot re-apply it', async () => {
     pending('t-once');
     const params = {
       toolUseId: 't-once', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     };
-    resolveDiffReview(connections(), params);
+    await resolveDiffReview(connections(), params);
     expect(takePreview('t-once')).toBeUndefined();
   });
 
-  it('writes what the reviewer typed, not what was proposed (#305)', () => {
+  it('writes what the reviewer typed, not what was proposed (#305)', async () => {
     pending('t-edited');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-edited', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       // Ranges still say "keep everything"; the typed text overrides them.
       acceptedRanges: [R_DEBUG, R_TIMEOUT],
@@ -195,12 +217,12 @@ describe('resolveDiffReview', () => {
     expect(input.new_string).not.toContain('debug: true');
   });
 
-  it('applies an edit even when no hunk was ticked', () => {
+  it('applies an edit even when no hunk was ticked', async () => {
     // Unticking everything then typing is an answer, not a denial: the text on
     // screen differs from the file, so there is something to write.
     pending('t-edited-none');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-edited-none', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [], editedContent: typed,
     });
@@ -210,11 +232,11 @@ describe('resolveDiffReview', () => {
     expect(response.response.updatedInput.new_string).toContain('debug: MAYBE');
   });
 
-  it('denies when the reviewer edited the proposal back to the original', () => {
+  it('denies when the reviewer edited the proposal back to the original', async () => {
     // Leaving the proposed side identical to the file means nothing to write.
     // Approving it would report success for an edit that never happened.
     pending('t-edited-back');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-edited-back', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: original,
     });
@@ -224,11 +246,11 @@ describe('resolveDiffReview', () => {
     expect(response.response.message).toContain(USER_DECLINED_PREFIX);
   });
 
-  it('lets an untouched edit through unchanged', () => {
+  it('lets an untouched edit through unchanged', async () => {
     // Typing and undoing leaves the proposal exactly as Claude wrote it, so the
     // original call should still go through rather than be synthesised.
     pending('t-edited-noop');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-edited-noop', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
     });
@@ -238,13 +260,13 @@ describe('resolveDiffReview', () => {
     expect(response.response.updatedInput).toEqual({});
   });
 
-  it('tells Claude the proposal was edited, quoting what was applied (#305)', () => {
+  it('tells Claude the proposal was edited, quoting what was applied (#305)', async () => {
     // The permission protocol cannot carry this: the transcript keeps the
     // model's own tool_use, so without the reminder it goes on believing it
     // wrote the value it proposed.
     pending('t-notice');
     const typed = original.replace('debug: false', 'debug: MAYBE');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-notice', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
     });
@@ -264,14 +286,14 @@ describe('resolveDiffReview', () => {
     expect(text).toContain('review the actual edits');
   });
 
-  it('answers the request now and holds the reminder for later', () => {
+  it('answers the request now and holds the reminder for later', async () => {
     // The control_response cannot wait — the CLI is blocked on it. The notice
     // must, because a user message written while that turn finishes is enqueued
     // by the CLI and then dropped as it clears the queue (measured).
     pending('t-order');
     const typed = original.replace('debug: false', 'debug: MAYBE');
 
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-order', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG], editedContent: typed,
     });
@@ -284,13 +306,13 @@ describe('resolveDiffReview', () => {
     expect(noticesFor('sess-1')).toHaveLength(1);
   });
 
-  it('reports only what the reviewer changed about the proposal', () => {
+  it('reports only what the reviewer changed about the proposal', async () => {
     // Measured against the proposal, not the file: the model already knows
     // what it asked for, and a Write's amended input is the whole file — once
     // 3.7KB to say a single number had changed.
     pending('t-narrow');
     const typed = proposed.replace('debug: true', 'debug: MAYBE');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-narrow', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: typed,
     });
@@ -302,12 +324,12 @@ describe('resolveDiffReview', () => {
     expect(text).not.toContain('timeout: 60');
   });
 
-  it('reports a partial accept, where less landed than was proposed', () => {
+  it('reports a partial accept, where less landed than was proposed', async () => {
     // Silence here left Claude believing the whole change was written, and the
     // next turn was built on a file that does not exist. Telling it is the rule;
     // saying nothing is the exception, and the exception is a FULL accept.
     pending('t-quiet');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-quiet', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG],
     });
@@ -315,10 +337,10 @@ describe('resolveDiffReview', () => {
     expect(noticesFor('sess-1')).toHaveLength(1);
   });
 
-  it('says nothing when an edit reproduced the proposal', () => {
+  it('says nothing when an edit reproduced the proposal', async () => {
     // Typing and undoing leaves nothing to correct.
     pending('t-quiet-noop');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-quiet-noop', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [R_DEBUG, R_TIMEOUT], editedContent: proposed,
     });
@@ -326,9 +348,9 @@ describe('resolveDiffReview', () => {
     expect(noticesFor('sess-1')).toHaveLength(0);
   });
 
-  it('says nothing when the reviewer rejected the change', () => {
+  it('says nothing when the reviewer rejected the change', async () => {
     pending('t-quiet-deny');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-quiet-deny', controlRequestId: 'ctrl-1', sessionId: 'sess-1',
       acceptedRanges: [], editedContent: original,
     });
@@ -336,9 +358,9 @@ describe('resolveDiffReview', () => {
     expect(noticesFor('sess-1')).toHaveLength(0);
   });
 
-  it('quotes the request id the CLI is waiting on', () => {
+  it('quotes the request id the CLI is waiting on', async () => {
     pending('t-id');
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-id', controlRequestId: 'ctrl-42', sessionId: 'sess-9',
       acceptedRanges: [R_DEBUG],
     });
@@ -358,7 +380,18 @@ describe('several files under review at once', () => {
   const fileB = ['b: false', ...Array.from({ length: 8 }, (_, i) => `pad-${i}`), 'c: 30'].join('\n') + '\n';
   const fileBNew = fileB.replace('b: false', 'b: true').replace('c: 30', 'c: 60');
 
-  function remember(id: string, path: string, oldC: string, newC: string) {
+  /**
+   * Store a pending review AND put its base on disk, because the approval gate
+   * re-reads the file before answering (#359). A review pointing at a path that
+   * was never written is held by that gate, which is correct behaviour but not
+   * what these tests are about.
+   *
+   * Returns the real path, so callers assert against the file they created
+   * rather than a literal that only looks like one.
+   */
+  async function remember(id: string, name: string, oldC: string, newC: string): Promise<string> {
+    const path = join(dir, name);
+    await writeFile(path, oldC, 'utf8');
     rememberPreview(id, {
       filePath: path,
       oldContent: oldC,
@@ -367,34 +400,35 @@ describe('several files under review at once', () => {
       input: { file_path: path },
       toolName: 'Edit',
     });
+    return path;
   }
 
-  it('resolves each request against its own file', () => {
-    remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
-    remember('t-b', '/tmp/b.ts', fileB, fileBNew);
+  it('resolves each request against its own file', async () => {
+    const pathA = await remember('t-a', 'a.ts', fileA.old, fileA.new);
+    const pathB = await remember('t-b', 'b.ts', fileB, fileBNew);
 
     // Answer B first, keeping only its first hunk.
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-b', controlRequestId: 'ctrl-b', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const bInput = sendControlResponseToProcess.mock.calls[0][2].response.updatedInput;
-    expect(bInput.file_path).toBe('/tmp/b.ts');
+    expect(bInput.file_path).toBe(pathB);
     expect(bInput.new_string).toContain('b: true');
     expect(bInput.new_string).not.toContain('c: 60');
 
     // A is untouched by that, and still resolvable on its own terms.
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
     const aInput = sendControlResponseToProcess.mock.calls[1][2].response.updatedInput;
-    expect(aInput.file_path).toBe('/tmp/a.ts');
+    expect(aInput.file_path).toBe(pathA);
   });
 
-  it('answering one file does not consume another file\'s preview', () => {
-    remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
-    remember('t-b', '/tmp/b.ts', fileB, fileBNew);
+  it('answering one file does not consume another file\'s preview', async () => {
+    const pathA = await remember('t-a', 'a.ts', fileA.old, fileA.new);
+    const pathB = await remember('t-b', 'b.ts', fileB, fileBNew);
 
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 
@@ -402,11 +436,11 @@ describe('several files under review at once', () => {
     expect(takePreview('t-b')).toBeDefined();
   });
 
-  it('denying one file leaves the others pending', () => {
-    remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
-    remember('t-b', '/tmp/b.ts', fileB, fileBNew);
+  it('denying one file leaves the others pending', async () => {
+    const pathA = await remember('t-a', 'a.ts', fileA.old, fileA.new);
+    const pathB = await remember('t-b', 'b.ts', fileB, fileBNew);
 
-    resolveDiffReview(connections(), {
+    await resolveDiffReview(connections(), {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [],
     });
 
@@ -414,13 +448,13 @@ describe('several files under review at once', () => {
     expect(takePreview('t-b')).toBeDefined();
   });
 
-  it('tells the chat which request was settled, not just that one was', () => {
+  it('tells the chat which request was settled, not just that one was', async () => {
     // Two prompts can be queued; clearing the wrong one would leave the user
     // answering a question that is already gone.
-    remember('t-a', '/tmp/a.ts', fileA.old, fileA.new);
+    const pathA = await remember('t-a', 'a.ts', fileA.old, fileA.new);
     const conn = connections();
 
-    resolveDiffReview(conn, {
+    await resolveDiffReview(conn, {
       toolUseId: 't-a', controlRequestId: 'ctrl-a', sessionId: 'sess-1', acceptedRanges: [R_DEBUG],
     });
 

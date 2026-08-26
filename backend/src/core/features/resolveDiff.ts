@@ -17,7 +17,8 @@
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import { takePreview, peekPreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import { compareReviewBase } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
@@ -88,23 +89,27 @@ function isAcceptedRange(value: unknown): value is AcceptedRange {
  * subset. Keeping none is a denial — writing the file back unchanged would
  * report success for an edit that never happened.
  */
-export function resolveDiffReview(
+export async function resolveDiffReview(
   connections: ConnectionManager,
   params: ResolveDiffParams,
   bridge?: Bridge,
-): void {
-  const preview = takePreview(params.toolUseId);
-
-  // The question is settled however this ended, so the window that asked it goes
-  // too. Done here rather than in each caller because both of them — the IDE's
-  // own diff and our diff page — must close it on every branch below, and one
-  // that forgot would strand a tab on an answered request.
-  //
-  // Only the built-in surface has a tab of ours to close; the IDE's viewer
-  // closes itself, and an unknown id is a no-op there anyway.
-  if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
+): Promise<void> {
+  /*
+   * Peeked, not taken, until the answer is actually going out.
+   *
+   * The gate below can refuse to answer and hand the review back to the user,
+   * and a review whose entry had already been consumed could never be answered
+   * again — the approval buttons would be live with nothing behind them. So the
+   * entry is dropped only on the paths that really respond.
+   */
+  const preview = peekPreview(params.toolUseId);
 
   const respond = (response: Record<string, unknown>) => {
+    // Settled for real now, so the entry goes and the window with it.
+    takePreview(params.toolUseId);
+    // Only the built-in surface has a tab of ours to close; the IDE's viewer
+    // closes itself, and an unknown id is a no-op there anyway.
+    if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
     sendControlResponseToProcess(connections, params.sessionId, {
       subtype: 'success' as const,
       request_id: params.controlRequestId,
@@ -139,6 +144,46 @@ export function resolveDiffReview(
     respond({ behavior: 'deny', message: buildUserDeclinedContent() });
     console.error('[node-backend]', `Diff resolved for ${params.toolUseId}: kept nothing (denied)`);
     notifyResolved(connections, params);
+    return;
+  }
+
+  /*
+   * The gate (#359).
+   *
+   * Everything below builds what gets written from `preview.oldContent` — the
+   * file as it was when the request arrived. If disk has moved since, that
+   * content is a claim about a file that no longer exists, and writing from it
+   * silently discards whatever arrived in the meantime. That is the data loss:
+   * a 1090-line file came back as the one line that had been proposed.
+   *
+   * Checked here rather than trusting the save notifications, because those are
+   * an early warning that can miss — a host with no IDE, a save the IDE does
+   * not report, a write by another process. This is the last point before the
+   * answer goes out, so it is the only place the check is a guarantee.
+   *
+   * Refusing to answer is safe: the CLI holds a permission request open
+   * indefinitely (measured at over three minutes with no answer and no
+   * timeout), so the request is still there when the user comes back to it.
+   */
+  const base = await compareReviewBase(preview, params.acceptedRanges);
+  if (base.status !== 'unchanged') {
+    // Deliberately no `respond` here: the request stays open and the entry
+    // stays stored, so the review can be refreshed and answered again.
+    connections.broadcastToSession(params.sessionId, MessageType.REVIEW_BASE_CHANGED, {
+      toolUseId: params.toolUseId,
+      filePath: preview.filePath,
+      // Told apart so the surface can say which one happened: a conflicting
+      // edit is a decision for the user, an unreadable file is not.
+      reason: base.status === 'unreadable' ? 'unreadable' : 'changed',
+      overlapsAccepted: base.status === 'changed' ? base.overlapsAccepted : true,
+      // Marks this as the gate rather than the early warning, so the surface
+      // can say the approval was held rather than just flagging a change.
+      blockedApproval: true,
+    });
+    console.error(
+      '[node-backend]',
+      `Diff resolve for ${params.toolUseId} HELD: ${preview.filePath} changed since the review was built (${base.status})`,
+    );
     return;
   }
 

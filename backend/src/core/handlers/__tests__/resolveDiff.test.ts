@@ -6,7 +6,10 @@
  * Both land on one resolver on purpose — two decision paths would eventually
  * disagree about what "kept nothing" means, and that disagreement writes files.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, writeFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 const sendControlResponseToProcess = vi.fn();
 const sendMessageToProcess = vi.fn();
@@ -42,13 +45,22 @@ function fakeBridge() {
   return { closeDiffTab: vi.fn(async () => undefined) };
 }
 
+/*
+ * A real file holding the review's base, because the approval gate re-reads it
+ * before answering (#359). A fixture path that was never written would be held
+ * by that gate, and every test here would be measuring the gate instead of the
+ * handler.
+ */
+let dir: string;
+let configPath: string;
+
 function pending(toolUseId: string) {
   rememberPreview(toolUseId, {
-    filePath: '/tmp/config.txt',
+    filePath: configPath,
     oldContent: original,
     newContent: proposed,
     hunks: computeHunks(original, proposed) ?? [],
-    input: { file_path: '/tmp/config.txt', old_string: 'debug: false', new_string: 'debug: true' },
+    input: { file_path: configPath, old_string: 'debug: false', new_string: 'debug: true' },
     toolName: 'Edit',
   });
 }
@@ -57,10 +69,18 @@ function message(payload: Record<string, unknown>) {
   return { type: MessageType.RESOLVE_DIFF, requestId: 'r1', payload } as never;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), 'resolve-diff-handler-'));
+  configPath = join(dir, 'config.txt');
+  await writeFile(configPath, original, 'utf8');
+
   sendControlResponseToProcess.mockClear();
   sendMessageToProcess.mockClear();
   clearPreviews();
+});
+
+afterEach(async () => {
+  await rm(dir, { recursive: true, force: true });
 });
 
 describe('resolveDiffHandler', () => {
