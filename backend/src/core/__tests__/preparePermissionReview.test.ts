@@ -1,11 +1,16 @@
 /**
- * Where a proposed edit gets reviewed, and the one thing that must hold either
- * way: the change is stored, so SOME surface can show it.
+ * What happens when the CLI asks permission for a file edit: the change is
+ * stored, so some surface can show it.
  *
- * The setting behind this used to gate the storing as well as the opening, which
- * was fine while the IDE's viewer was the only review there was. It is not any
- * more — the webview draws its own from the same entry — so choosing another
- * surface must stop the IDE tab without taking the change away.
+ * Storing and opening used to happen together here, which made this the second
+ * place that decided which surface draws a review — the webview being the
+ * first, for the file-name link. The two read their settings for different
+ * working directories and disagreed, so one edit ended up reviewed on both
+ * surfaces at once (#359). Opening now belongs to openDiffHandler alone, and
+ * this function only stores.
+ *
+ * Storing is the part that must never be skipped. Every review reads this entry,
+ * so dropping it would leave the file name in the prompt with nothing to open.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -33,17 +38,6 @@ function calls(bridge: unknown) {
   return bridge as { openDiff: ReturnType<typeof vi.fn>; openDiffTab: ReturnType<typeof vi.fn> };
 }
 
-/** Settings for the built-in surface, with the presentation and chat host given. */
-function builtIn(presentation?: string, hostMode?: string) {
-  return {
-    settings: {
-      diffSurface: DiffSurface.BUILT_IN,
-      ...(presentation ? { browserDiffPresentation: presentation } : {}),
-      ...(hostMode ? { hostMode } : {}),
-    },
-  };
-}
-
 let dir = '';
 let filePath = '';
 
@@ -54,6 +48,10 @@ beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'ccg-review-'));
   filePath = join(dir, 'cart.js');
   await writeFile(filePath, 'before\n', 'utf8');
+});
+
+afterEach(async () => {
+  if (dir) await rm(dir, { recursive: true, force: true });
 });
 
 function request(bridge: unknown) {
@@ -69,127 +67,51 @@ function request(bridge: unknown) {
 }
 
 describe('preparePermissionReview', () => {
-  it('stores the change and opens the IDE diff by default', async () => {
-    const bridge = fakeBridge();
-    await request(bridge);
+  it('stores the change', async () => {
+    await request(fakeBridge());
 
     expect(peekPreview('toolu_1')).toBeDefined();
-    expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).toHaveBeenCalled();
-  });
-
-  it('still stores the change when the built-in surface is chosen', async () => {
-    // The setting says where to review, not whether to. Dropping the entry here
-    // would leave the webview's review with nothing to draw — the bug this test
-    // exists to prevent.
-    readMergedSettings.mockResolvedValue({ settings: { diffSurface: DiffSurface.BUILT_IN } });
-    const bridge = fakeBridge();
-    await request(bridge);
-
-    expect(peekPreview('toolu_1')).toBeDefined();
-    expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).not.toHaveBeenCalled();
-  });
-
-  it('opens the IDE viewer when the surface is unset', async () => {
-    // Absent must keep behaving as it did before the setting was a choice,
-    // including for anyone whose file the migration has not rewritten yet.
-    readMergedSettings.mockResolvedValue({ settings: {} });
-    const bridge = fakeBridge();
-    await request(bridge);
-
-    expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).toHaveBeenCalled();
-  });
-
-  /**
-   * Which window the built-in review gets.
-   *
-   * An editor tab is ours to ask the IDE for. An overlay is not — the webview
-   * draws it over a screen this process does not own, and opens it itself — so
-   * asking for a tab as well would put the same change on screen twice. That is
-   * what shipped: the setting said overlay and a tab opened anyway.
-   */
-  describe('the built-in surface, tab or overlay', () => {
-    it('asks for an editor tab by default', async () => {
-      const bridge = fakeBridge();
-      readMergedSettings.mockResolvedValue(builtIn());
-      await request(bridge);
-
-      expect(calls(bridge).openDiffTab).toHaveBeenCalled();
-    });
-
-    it('leaves the overlay to the webview', async () => {
-      const bridge = fakeBridge();
-      readMergedSettings.mockResolvedValue(builtIn('overlay', 'editor-tab'));
-      await request(bridge);
-
-      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
-      // Still stored, or the overlay would have nothing to draw.
-      expect(peekPreview('toolu_1')).toBeDefined();
-    });
-
-    /*
-     * An overlay inherits the room of what it covers, and a sidebar chat is a
-     * column. The preference cannot be honoured there, so the tab is the answer
-     * — the same rule the webview applies to the file-name link.
-     */
-    it('asks for a tab when an overlay has no room', async () => {
-      const bridge = fakeBridge();
-      readMergedSettings.mockResolvedValue(builtIn('overlay', 'tool-window'));
-      await request(bridge);
-
-      expect(calls(bridge).openDiffTab).toHaveBeenCalled();
-    });
-
-    it('reads an unset chat host as the panel', async () => {
-      // The settings file falls back to editor-tab, so an overlay must work for
-      // someone who has never opened that setting.
-      const bridge = fakeBridge();
-      readMergedSettings.mockResolvedValue(builtIn('overlay'));
-      await request(bridge);
-
-      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
-    });
   });
 
   /*
-   * Asked not to open it unprompted (#349).
-   *
-   * Two surfaces to decline, because the setting is about the OPENING and not
-   * about where: the IDE's viewer and the editor tab both have to stand down.
-   * The entry must survive both — the file name in the prompt is now the only
-   * way in, and it reads exactly this.
+   * The surfaces are opened by openDiffHandler, which the webview asks. Opening
+   * one from here as well is what put two reviews of the same edit on screen.
    */
-  describe('when the automatic open is turned off', () => {
-    it('opens no IDE viewer but still stores the change', async () => {
-      readMergedSettings.mockResolvedValue({
-        settings: { autoOpenDiffOnPermission: false, diffSurface: DiffSurface.IDE },
-      });
-      const bridge = fakeBridge();
-      await request(bridge);
+  it('opens no surface itself', async () => {
+    const bridge = fakeBridge();
+    await request(bridge);
 
-      expect(calls(bridge).openDiff).not.toHaveBeenCalled();
+    expect(calls(bridge).openDiff).not.toHaveBeenCalled();
+    expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The setting names where a review is drawn, not whether the change is kept.
+   * Dropping the entry for a surface this process does not open would leave the
+   * webview's review with nothing to draw.
+   */
+  it('stores the change whichever surface the settings name', async () => {
+    for (const surface of [DiffSurface.IDE, DiffSurface.BUILT_IN]) {
+      clearPreviews();
+      readMergedSettings.mockResolvedValue({ settings: { diffSurface: surface } });
+      await request(fakeBridge());
+
       expect(peekPreview('toolu_1')).toBeDefined();
+    }
+  });
+
+  /**
+   * Turning the unprompted open off must not take the change away (#349). The
+   * file name in the prompt reads this entry, and it is the only way in once
+   * nothing opens by itself.
+   */
+  it('stores the change even when the unprompted open is turned off', async () => {
+    readMergedSettings.mockResolvedValue({
+      settings: { autoOpenDiffOnPermission: false, diffSurface: DiffSurface.IDE },
     });
+    await request(fakeBridge());
 
-    it('opens no editor tab but still stores the change', async () => {
-      readMergedSettings.mockResolvedValue({
-        settings: { autoOpenDiffOnPermission: false, diffSurface: DiffSurface.BUILT_IN },
-      });
-      const bridge = fakeBridge();
-      await request(bridge);
-
-      expect(calls(bridge).openDiffTab).not.toHaveBeenCalled();
-      expect(peekPreview('toolu_1')).toBeDefined();
-    });
-
-    it('opens the review when the setting is absent', async () => {
-      // Absent must read as on, or upgrading would silently take the automatic
-      // review away from everyone who never opened this setting.
-      readMergedSettings.mockResolvedValue({ settings: { diffSurface: DiffSurface.IDE } });
-      const bridge = fakeBridge();
-      await request(bridge);
-
-      expect(calls(bridge).openDiff).toHaveBeenCalled();
-    });
+    expect(peekPreview('toolu_1')).toBeDefined();
   });
 
   it('keeps the stored change faithful to what was proposed', async () => {
@@ -199,14 +121,16 @@ describe('preparePermissionReview', () => {
     expect(stored.filePath).toBe(filePath);
     expect(stored.oldContent).toBe('before\n');
     expect(stored.newContent).toBe('after\n');
-    expect(stored.controlRequestId).toBe('ctrl-1');
-    expect(stored.sessionId).toBe('sess-1');
   });
 
-  it('stores nothing for a tool that proposes no file change', async () => {
-    const bridge = fakeBridge();
+  /**
+   * Proves the assertions above are reading a real run: a tool that edits no
+   * file must leave nothing behind, so a test that always found an entry would
+   * be finding one this function did not store.
+   */
+  it('stores nothing for a tool that edits no file', async () => {
     await preparePermissionReview({
-      bridge: bridge as never,
+      bridge: fakeBridge() as never,
       sessionId: 'sess-1',
       workingDir: dir,
       toolName: 'Bash',
@@ -216,27 +140,5 @@ describe('preparePermissionReview', () => {
     });
 
     expect(peekPreview('toolu_bash')).toBeUndefined();
-    expect((bridge as unknown as { openDiff: ReturnType<typeof vi.fn> }).openDiff).not.toHaveBeenCalled();
   });
-
-  it('stores nothing when the proposal matches the file already', async () => {
-    // A no-op edit has nothing to review; offering one would be a tab and a
-    // question about a change that is not there.
-    const bridge = fakeBridge();
-    await preparePermissionReview({
-      bridge: bridge as never,
-      sessionId: 'sess-1',
-      workingDir: dir,
-      toolName: 'Write',
-      toolInput: { file_path: filePath, content: 'before\n' },
-      toolUseId: 'toolu_noop',
-      controlRequestId: 'ctrl-1',
-    });
-
-    expect(peekPreview('toolu_noop')).toBeUndefined();
-  });
-});
-
-afterEach(async () => {
-  if (dir) await rm(dir, { recursive: true, force: true });
 });

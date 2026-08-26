@@ -11,23 +11,46 @@
  * reassembled from what the browser rendered.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+/*
+ * Stubbed so these tests do not read the developer's own settings file. The
+ * handler now merges settings to decide which surface a review opens on, and
+ * without this a machine whose global `diffSurface` is "built-in" would send
+ * every case down the built-in path and fail here for a reason that has
+ * nothing to do with reopening a diff.
+ */
+const mergedSettings = vi.fn(async () => ({ settings: {} as Record<string, unknown>, overrides: [] }));
+vi.mock('../../features/settings', () => ({
+  readMergedSettings: (...args: unknown[]) => mergedSettings(...(args as [])),
+}));
+
 import { openDiffHandler } from '../openDiff';
 import { rememberPreview, clearPreviews, takePreview } from '../../features/diffPreview';
 import { MessageType } from '../../../shared';
 
-function fakeConnections() {
+function fakeConnections(workingDir = '/tmp') {
   const sent: { type: string; payload: Record<string, unknown> }[] = [];
   return {
     sent,
     sendTo: (_id: string, type: string, payload: Record<string, unknown>) => {
       sent.push({ type, payload });
     },
+    // The handler asks the review's own session where it lives, so a project's
+    // setting is merged for the project the review is in (#359).
+    getSession: () => ({ workingDir }),
   };
 }
 
 function fakeBridge() {
   const opened: Record<string, unknown>[] = [];
-  return { opened, openDiff: vi.fn(async (p: Record<string, unknown>) => { opened.push(p); }) };
+  return {
+    opened,
+    openDiff: vi.fn(async (p: Record<string, unknown>) => { opened.push(p); }),
+    openDiffTab: vi.fn(async () => undefined),
+    // An attached IDE is what makes the IDE viewer available at all; without
+    // this the handler correctly falls back to the built-in surface.
+    isConnected: () => true,
+  };
 }
 
 const preview = {

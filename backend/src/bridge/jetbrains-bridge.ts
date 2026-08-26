@@ -347,7 +347,7 @@ export class JetBrainsBridge implements Bridge {
   async notifyReviewBaseChanged(params: {
     toolUseId: string;
     filePath: string;
-    reason: 'changed' | 'unreadable';
+    reason: 'changed' | 'unreadable' | 'no-longer-applies';
     overlapsAccepted: boolean;
     blockedApproval: boolean;
   }): Promise<void> {

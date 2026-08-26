@@ -17,6 +17,27 @@
  * Sent as its own message rather than folded into the reviewer's next one: a
  * conversation that ends right after the edit would otherwise never carry it,
  * and the correction is worth least when it arrives last.
+ *
+ * ★ Known limitation: this arrives at the END of the turn, and the assistant
+ * may act before then.
+ *
+ * Answering a permission request does not end the turn — the CLI hands the tool
+ * result back and the assistant carries on in the same one. Measured on a
+ * partial approval: it read the file, found the hunk it had proposed missing,
+ * called it a rejection and proposed the change again, all before the turn
+ * produced a `result` and this notice could be delivered. So on that path the
+ * reviewer still sees the change offered a second time.
+ *
+ * Delivering it any earlier is not currently possible. A permission response
+ * carries text back to the model only on the `deny` branch (documented, and
+ * checked against the CLI docs for allow: the fields are `updatedInput` and
+ * `updatedPermissions`, and "Claude sees the result but isn't told you changed
+ * anything"). Sending it mid-turn as a user message does not work either —
+ * see afterTurn for why the CLI discards those.
+ *
+ * So the wording below is the mitigation, not a fix: it tells the assistant
+ * plainly that missing parts were declined on purpose, which is worth having
+ * for every later turn even when it lands too late for the first one.
  */
 
 import { computeHunks } from './hunks';

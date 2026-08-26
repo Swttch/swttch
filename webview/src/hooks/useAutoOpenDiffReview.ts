@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
-import { isJetBrains } from '@/config/environment';
-import { useResolvedDiffSurface, useAutoOpenDiffEnabled } from './useIdeDiffAvailable';
-import { useDiffOpensAsOverlay } from './useDiffOverlayAllowed';
-import { DiffSurface } from '@/types/settings';
+import { useAutoOpenDiffEnabled } from './useIdeDiffAvailable';
 import { useOpenDiffReview, type OpenDiffResult } from './useOpenDiffReview';
 
 /*
@@ -46,24 +43,7 @@ export function useAutoOpenDiffReview(
 ): void {
   const api = useApi();
   const openDiffReview = useOpenDiffReview();
-  const surface = useResolvedDiffSurface();
-  const asOverlay = useDiffOpensAsOverlay();
   const autoOpen = useAutoOpenDiffEnabled();
-
-  /*
-   * Only where nobody else is already opening it.
-   *
-   * The backend opens the review itself when it goes to the IDE's own viewer or
-   * to an editor tab — both from preparePermissionReview, as the prompt goes up.
-   * Opening again from here would put the same change on screen twice.
-   *
-   * An overlay is the exception, in an IDE as much as in a browser: it is drawn
-   * over a screen the backend does not own, so it has to come from here. That is
-   * why this mirrors the backend's condition rather than checking the host — an
-   * IDE showing an overlay gets no tab from the backend, and without this it
-   * would get nothing at all.
-   */
-  const backendOpensIt = surface === DiffSurface.IDE || (isJetBrains() && !asOverlay);
 
   // Held in a ref so the effect below depends on the request alone. Both of
   // these change identity on renders that have nothing to do with a new
@@ -79,7 +59,6 @@ export function useAutoOpenDiffReview(
     // Asked not to. The prompt still goes up; only this unprompted open stands
     // down, leaving the file name in it as the way to reach the review (#349).
     if (!autoOpen) return;
-    if (backendOpensIt) return;
     if (openedRequests.has(toolUseId)) return;
 
     let cancelled = false;
@@ -106,5 +85,5 @@ export function useAutoOpenDiffReview(
     return () => {
       cancelled = true;
     };
-  }, [api, toolUseId, backendOpensIt, autoOpen]);
+  }, [api, toolUseId, autoOpen]);
 }

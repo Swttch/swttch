@@ -10,15 +10,10 @@ import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
-import {
-  openDiffForPermission,
-  openDiffTabForPermission,
-  rememberPreview,
-  resolveDiffPreview,
-} from './features/diffPreview';
+import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
-import { MessageType, DiffSurface, BrowserDiffPresentation } from '../shared';
+import { MessageType } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -887,49 +882,24 @@ export async function preparePermissionReview(params: {
   }
 
   /*
-   * Opening it unprompted is a separate question from where it opens.
+   * The review is not opened from here.
    *
-   * Turned off, the prompt goes up alone and the review waits to be asked for —
-   * the file name in that prompt still opens it, from the entry just stored. So
-   * this returns AFTER remembering and before every opener: skipping the store
-   * instead would leave that click with nothing to show (#349).
+   * Storing the change and putting it on screen used to happen together in this
+   * function, which made this the second place that decided which surface draws
+   * a review — the webview being the first, for the file-name link. The two read
+   * their settings for different working directories and disagreed, so a project
+   * that asked for the IDE's viewer got the IDE's viewer here and the built-in
+   * page from the link, both for the same edit (#359).
    *
-   * Absent reads as on, which is the behaviour that shipped.
+   * Now one side asks and one side decides. The webview asks for every review it
+   * wants on screen, unprompted ones included (useAutoOpenDiffReview), and
+   * openDiffHandler answers with the surface resolveReviewTarget names. This
+   * function only stores the change, which is what a review reads.
+   *
+   * `autoOpenDiffOnPermission` is read by the webview for the same reason: the
+   * setting governs whether a review opens without being asked for, and the
+   * asking now happens there.
    */
-  if (settings.autoOpenDiffOnPermission === false) return;
-
-  // Absent reads as the IDE, which is the default and the behaviour that shipped.
-  const surface = settings.diffSurface ?? DiffSurface.IDE;
-
-  if (surface === DiffSurface.IDE) {
-    await openDiffForPermission(params.bridge, preview, params.toolUseId, {
-      sessionId: params.sessionId,
-      controlRequestId: params.controlRequestId,
-    });
-    return;
-  }
-
-  /*
-   * The built-in page, in a window of its own or over the chat.
-   *
-   * An editor tab is ours to ask for — only the IDE side can open one — so that
-   * case goes across the bridge. An overlay is not: the webview draws it over a
-   * screen this process does not own, and it already opens one for itself when
-   * the prompt arrives. Asking for a tab as well would put the same change on
-   * screen twice.
-   *
-   * An overlay needs room to be drawn in, which a sidebar chat does not have.
-   * `hostMode` says where the chat lives; with it in the sidebar the preference
-   * cannot be honoured and the tab is the answer. Mirrors useDiffOverlayAllowed
-   * on the webview side, which decides the same thing for the file-name link.
-   */
-  const wantsOverlay = settings.browserDiffPresentation === BrowserDiffPresentation.OVERLAY;
-  // Absent reads as the default the settings file itself falls back to.
-  const inPanel = (settings.hostMode ?? 'editor-tab') === 'editor-tab';
-
-  if (params.toolUseId && !(wantsOverlay && inPanel)) {
-    await openDiffTabForPermission(params.bridge, params.toolUseId);
-  }
 }
 
 function handleStreamEvent(

@@ -1,13 +1,10 @@
 import { useCallback } from 'react';
 import { useApi } from '@/contexts/ApiContext';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
-import { useDiffOverlayAllowed } from '@/hooks/useDiffOverlayAllowed';
 import { getAdapter } from '@/adapters';
 import { isJetBrains } from '@/config/environment';
-import { SettingKey, DiffSurface, BrowserDiffPresentation } from '@/types/settings';
+import { ReviewTarget } from '@/shared';
 
-/** How a caller should present the built-in diff, once it has decided to open one. */
+/** How a caller should present the review, once the backend has chosen a surface. */
 export type OpenDiffResult =
   | { kind: 'opened' }
   | { kind: 'overlay'; toolUseId: string };
@@ -15,53 +12,43 @@ export type OpenDiffResult =
 /**
  * Open the review for a pending file-edit request, wherever it belongs.
  *
- * One place decides, because the same review is reached three ways — the
- * permission prompt's file link, the backend opening it unprompted, and a
- * reopen after the user closed it — and they must all land on the surface the
- * setting names. Splitting the decision is how two of them end up disagreeing.
+ * This hook no longer decides where the review goes. It asks the backend to
+ * open one and reports back what the caller still has to do.
  *
- * Returns what the caller still has to do. Only the overlay needs anything: it
- * is mounted by whoever owns the screen it covers, which this hook is not.
+ * Deciding here as well is what put two reviews of the same edit on screen at
+ * once: the backend chose from settings merged for the session's working
+ * directory while this hook chose from settings the webview had loaded without
+ * one, so a project asking for the IDE's viewer got the built-in page from the
+ * file-name link and the IDE's viewer from the unprompted open (#359). Reading
+ * the same setting in both places was tried and did not fix it, because the two
+ * sides were reading it for different directories. Only the backend knows which
+ * session a review belongs to, so only the backend can answer.
+ *
+ * Returns what the caller still has to do. Only the overlay needs anything: the
+ * webview owns the screen it covers, so the backend cannot mount it.
  */
 export function useOpenDiffReview(): (toolUseId: string) => Promise<OpenDiffResult> {
   const api = useApi();
-  // Merged, not the scope the settings screen is showing — see
-  // useResolvedDiffSurface for what that difference cost (#359).
-  const { settings } = useSettings();
-  const surface = useResolvedDiffSurface();
-  const overlayAllowed = useDiffOverlayAllowed();
 
   return useCallback(
     async (toolUseId: string): Promise<OpenDiffResult> => {
-      if (surface === DiffSurface.IDE) {
-        // The IDE draws it. Looking at the change is not answering the question:
-        // the request stays open and the turn keeps running.
-        await api.tools.openDiffForRequest(toolUseId);
-        return { kind: 'opened' };
-      }
+      const { target } = await api.tools.openReview(toolUseId);
 
-      const presentation =
-        (settings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
-        BrowserDiffPresentation.NEW_TAB;
-
-      // Asked for and available. In an IDE that means the chat is in an editor
-      // tab, which has the room to be drawn over; a sidebar chat does not, so
-      // overlayAllowed is false there and the request falls through to a tab.
-      if (presentation === BrowserDiffPresentation.OVERLAY && overlayAllowed) {
+      if (target === ReviewTarget.BUILT_IN_OVERLAY) {
         return { kind: 'overlay', toolUseId };
       }
 
-      // Inside an IDE the built-in page gets an editor tab, which only the IDE
-      // side can open — so it goes through the backend, the same way the
-      // unprompted open does.
-      if (isJetBrains()) {
-        await api.tools.openDiffTab(toolUseId);
-        return { kind: 'opened' };
+      /*
+       * A browser window is ours to open too: outside an IDE there is no host to
+       * ask, so the adapter opens the page itself. Inside one the backend has
+       * already opened whatever it chose, and there is nothing left to do.
+       */
+      if (target === ReviewTarget.BUILT_IN_WINDOW && !isJetBrains()) {
+        await getAdapter().openDiff(toolUseId);
       }
 
-      await getAdapter().openDiff(toolUseId);
       return { kind: 'opened' };
     },
-    [api, settings, surface, overlayAllowed],
+    [api],
   );
 }

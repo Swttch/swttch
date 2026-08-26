@@ -175,16 +175,19 @@ describe('useAutoOpenDiffReview', () => {
   });
 
   /*
-   * The backend opens the review itself for these two, when the prompt goes up.
-   * Opening from here as well is how the same change ends up on screen twice.
+   * Asking is this hook's whole job, whatever surface the review lands on.
+   *
+   * The hook used to work out where the review would go and stand down for the
+   * surfaces the backend opened by itself. Two places deciding the same thing
+   * is what put one edit under review on two surfaces at once (#359), so the
+   * backend stopped opening reviews unasked and this hook stopped guessing.
    */
-  it('leaves it to the backend when an IDE opens an editor tab', async () => {
+  it('asks for the review in an IDE, whatever surface it lands on', async () => {
     isJetBrains.mockReturnValue(true);
 
     renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
 
-    await settle();
-    expect(openDiffReview).not.toHaveBeenCalled();
+    await waitFor(() => expect(openDiffReview).toHaveBeenCalledWith('toolu_1'));
   });
 
   /*
@@ -202,13 +205,17 @@ describe('useAutoOpenDiffReview', () => {
     await waitFor(() => expect(openDiffReview).toHaveBeenCalledWith('toolu_1'));
   });
 
-  it("leaves it to the backend when the IDE's own viewer draws it", async () => {
+  /**
+   * The IDE's own viewer is opened by the backend, but only because this hook
+   * asked for a review and the backend answered with that surface. The hook
+   * does not know which surface it will get, and must not act as if it did.
+   */
+  it("asks for the review even when the IDE's own viewer will draw it", async () => {
     resolvedSurface.mockReturnValue(DiffSurface.IDE);
 
     renderHook(() => useAutoOpenDiffReview('toolu_1', undefined));
 
-    await settle();
-    expect(openDiffReview).not.toHaveBeenCalled();
+    await waitFor(() => expect(openDiffReview).toHaveBeenCalledWith('toolu_1'));
   });
 
   it('opens nothing before a request arrives', async () => {
