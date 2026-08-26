@@ -104,7 +104,7 @@ export async function compareReviewBase(
  * buttons live with nothing behind them.
  */
 export async function holdApprovalIfBaseMoved(params: {
-  connections: { broadcastToSession: (sessionId: string, type: string, payload: Record<string, unknown>) => void };
+  connections: { broadcastToAll: (type: string, payload: Record<string, unknown>) => void };
   sessionId: string;
   toolUseId: string;
   preview: Pick<StoredPreview, 'filePath' | 'oldContent'>;
@@ -114,7 +114,21 @@ export async function holdApprovalIfBaseMoved(params: {
   const base = await compareReviewBase(params.preview, params.accepted);
   if (base.status === 'unchanged') return false;
 
-  params.connections.broadcastToSession(params.sessionId, MessageType.REVIEW_BASE_CHANGED, {
+  /*
+   * Sent to every connection, not to the session's subscribers.
+   *
+   * The review can be drawn in a window that never subscribed to the session:
+   * our diff page opens as its own editor tab, fetches the change by
+   * tool_use_id and answers by it, and never sends SESSION_CHANGE. Addressing
+   * the session therefore reached the chat panel — which has no banner — and
+   * missed the tab actually showing the review. Measured: the backend logged
+   * "told the review surface" while nothing appeared on screen.
+   *
+   * Broadcasting is safe because the payload is addressed: every listener
+   * filters on its own tool_use_id, so a window with a different review (or
+   * none) ignores it.
+   */
+  params.connections.broadcastToAll(MessageType.REVIEW_BASE_CHANGED, {
     toolUseId: params.toolUseId,
     filePath: params.preview.filePath,
     // Told apart so the surface can say which one happened: a conflicting edit

@@ -31,7 +31,14 @@ export async function refreshDiffPreviewHandler(
   }
 
   const outcome = await refreshReviewAgainstDisk(toolUseId);
-  console.error('[node-backend]', `Refreshed review ${toolUseId}: ${outcome.status}`);
+  // Sizes, not contents: enough to tell "the surface got a new base" from "the
+  // surface got the same one back" when a refresh appears to do nothing, without
+  // putting file contents in a log.
+  const shape =
+    'preview' in outcome
+      ? ` old=${outcome.preview.oldContent.length}B new=${outcome.preview.newContent.length}B hunks=${outcome.preview.hunks.length}`
+      : '';
+  console.error('[node-backend]', `Refreshed review ${toolUseId}: ${outcome.status}${shape}`);
 
   // Sent whole, as GET_DIFF_PREVIEW does: the stored preview is the shape the
   // backend reasons about, and trimming it here is the edit the project's

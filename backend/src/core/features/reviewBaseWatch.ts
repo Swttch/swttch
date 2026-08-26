@@ -96,18 +96,16 @@ async function reportIfBaseMoved(
     const comparison = await compareReviewBase(preview);
     if (comparison.status !== 'changed') return;
 
-    if (!preview.sessionId) {
-      // Without a session there is nobody to tell. Logged rather than dropped
-      // silently, because it means this review is unguarded by the warning and
-      // only the gate will catch it.
-      console.error(
-        '[node-backend]',
-        `Review base changed for ${toolUseId} but it has no session; only the approval gate will catch this`,
-      );
-      return;
-    }
-
-    connections.broadcastToSession(preview.sessionId, MessageType.REVIEW_BASE_CHANGED, {
+    /*
+     * Sent to every connection, for the same reason the gate is (see
+     * holdApprovalIfBaseMoved): the window drawing the review may never have
+     * subscribed to the session. Our diff page opens as its own editor tab and
+     * addresses everything by tool_use_id, so a session-addressed message
+     * reached the chat panel and missed the tab that had the review on screen.
+     *
+     * The payload carries its own address, so every other window ignores it.
+     */
+    connections.broadcastToAll(MessageType.REVIEW_BASE_CHANGED, {
       toolUseId,
       filePath: preview.filePath,
       reason: 'changed',

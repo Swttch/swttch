@@ -30,7 +30,7 @@ const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i + 1}`
 let dir: string;
 
 function connections() {
-  return { broadcastToSession: vi.fn() };
+  return { broadcastToSession: vi.fn(), broadcastToAll: vi.fn() };
 }
 
 /** The reported file-edit request, with its base as of when it arrived. */
@@ -94,7 +94,7 @@ describe('the approval gate', () => {
     expect(sendControlResponseToProcess).not.toHaveBeenCalled();
 
     // The surface is told, and told that this was the gate.
-    const [, type, payload] = conn.broadcastToSession.mock.calls[0];
+    const [type, payload] = conn.broadcastToAll.mock.calls[0];
     expect(type).toBe(MessageType.REVIEW_BASE_CHANGED);
     expect(payload).toMatchObject({ toolUseId: 't-359', blockedApproval: true });
 
@@ -163,7 +163,7 @@ describe('the approval gate', () => {
     });
 
     expect(sendControlResponseToProcess).not.toHaveBeenCalled();
-    const [, , payload] = conn.broadcastToSession.mock.calls[0];
+    const [, payload] = conn.broadcastToAll.mock.calls[0];
     expect(payload).toMatchObject({ reason: 'unreadable' });
   });
 
@@ -216,7 +216,7 @@ describe('the chat prompt path (TOOL_RESPONSE)', () => {
     // Nothing answered, so the CLI writes nothing.
     expect(sendControlResponseToProcess).not.toHaveBeenCalled();
     // The surface is told it was the gate.
-    const [, type, payload] = conn.broadcastToSession.mock.calls[0];
+    const [type, payload] = conn.broadcastToAll.mock.calls[0];
     expect(type).toBe(MessageType.REVIEW_BASE_CHANGED);
     expect(payload).toMatchObject({ toolUseId: 't-chat', blockedApproval: true });
     // Still answerable after the hold.
@@ -400,7 +400,7 @@ describe('watching the review base', () => {
     bridge.fire(path);
     await new Promise((r) => setTimeout(r, 20));
 
-    const [, type, payload] = conn.broadcastToSession.mock.calls[0];
+    const [type, payload] = conn.broadcastToAll.mock.calls[0];
     expect(type).toBe(MessageType.REVIEW_BASE_CHANGED);
     // Not the gate: nothing was blocked, the reviewer is being warned early.
     expect(payload).toMatchObject({ toolUseId: 't-save', blockedApproval: false });
@@ -419,7 +419,7 @@ describe('watching the review base', () => {
     bridge.fire(path);
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(conn.broadcastToSession).not.toHaveBeenCalled();
+    expect(conn.broadcastToAll).not.toHaveBeenCalled();
   });
 
   it('stops watching once the review is answered', async () => {
