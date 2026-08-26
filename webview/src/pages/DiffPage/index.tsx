@@ -131,6 +131,23 @@ export function DiffPage(props: Props) {
    */
   const baseChanged = useReviewBaseChanged(toolUseId, setPreview);
 
+  /**
+   * A short digest of the base, identifying WHICH content the review stands on.
+   *
+   * Used to remount the renderer when the review is rebuilt (see the key on
+   * ReviewDiffSurface). Not a hash for any security purpose — it only has to
+   * change when the text does, cheaply, on files that can run to thousands of
+   * lines.
+   */
+  const baseKey = useMemo(() => {
+    const text = preview?.oldContent ?? '';
+    let h = 0;
+    for (let i = 0; i < text.length; i++) {
+      h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+    }
+    return `${text.length}:${h}`;
+  }, [preview?.oldContent]);
+
   const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
   // The proposed side as the reviewer has it now, and which parts they typed
   // into. The diff is rendered from this, so an edit survives resolving a block
@@ -398,6 +415,27 @@ export function DiffPage(props: Props) {
           }
         >
           <ReviewDiffSurface
+            /*
+             * Remounted when the review is rebuilt against a different base
+             * (#359).
+             *
+             * The renderer owns an edit session that outlives prop changes —
+             * deliberately, so typing survives answering a hunk elsewhere. That
+             * same persistence meant a refreshed base never reached the screen:
+             * measured, React re-rendered with the new content (setPreview and
+             * the following render both logged the new length) and the diff on
+             * screen did not change at all.
+             *
+             * Keyed on the base rather than reset from inside, because the
+             * session is the renderer's to own; a new base is a new review, and
+             * a new review deserves a fresh one. Cheap in practice: this only
+             * changes when the file actually moved under an open review.
+             *
+             * A digest rather than the length: replacing one character leaves
+             * the length identical, and "the reviewer edited a line in place"
+             * is the ordinary case here, not a corner one.
+             */
+            key={`${preview.filePath}:${baseKey}`}
             preview={preview}
             proposedContents={edited.contents}
             onEdit={edited.applyEdit}
