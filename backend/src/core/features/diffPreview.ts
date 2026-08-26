@@ -56,9 +56,35 @@ export function rememberPreview(toolUseId: string, preview: StoredPreview): void
   previews.set(toolUseId, preview);
 }
 
+/**
+ * Told whenever a preview is consumed, so whoever holds resources for that
+ * review can release them.
+ *
+ * A callback rather than a direct call into the watch module: this module is
+ * the one every review path already depends on, so importing the watcher here
+ * would close a cycle (watch → preview → watch). The dependency points one way
+ * and the watcher registers itself.
+ */
+const consumeListeners = new Set<(toolUseId: string) => void>();
+
+export function onPreviewConsumed(listener: (toolUseId: string) => void): void {
+  consumeListeners.add(listener);
+}
+
 export function takePreview(toolUseId: string): StoredPreview | undefined {
   const preview = previews.get(toolUseId);
   previews.delete(toolUseId);
+  // The question is settled, so anything held for it goes too — otherwise a
+  // long session accumulates one file watcher per answered review (#359).
+  if (preview) {
+    for (const listener of consumeListeners) {
+      try {
+        listener(toolUseId);
+      } catch (err) {
+        console.error('[node-backend]', 'A preview-consumed listener threw:', err);
+      }
+    }
+  }
   return preview;
 }
 

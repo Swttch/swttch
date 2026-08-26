@@ -3,6 +3,7 @@ import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
 import { diagnoseAuthError } from './features/auth-diagnosis';
+import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
 import { WorkflowProgressTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
@@ -821,6 +822,7 @@ function maybeOpenPermissionDiff(
     toolInput,
     toolUseId,
     controlRequestId: String(event.request_id ?? ''),
+    connections,
   }).catch((err) => {
     console.error('[node-backend]', 'Permission diff preview failed:', err);
   });
@@ -842,6 +844,12 @@ export async function preparePermissionReview(params: {
   toolInput: Record<string, unknown>;
   toolUseId: string | undefined;
   controlRequestId: string;
+  /**
+   * Who to tell when the reviewed file moves while the question is open (#359).
+   * Optional so the existing tests, which only assert what gets stored and
+   * opened, do not have to supply one.
+   */
+  connections?: ConnectionManager;
 }): Promise<void> {
   const { settings } = await readMergedSettings(params.workingDir);
 
@@ -864,6 +872,18 @@ export async function preparePermissionReview(params: {
       sessionId: params.sessionId,
       controlRequestId: params.controlRequestId,
     });
+
+    // Watch from the moment the review exists, so a change that lands while the
+    // user is still reading is reported rather than discovered at approval
+    // (#359). Not awaited: the permission prompt is what the user is waiting on.
+    if (params.connections) {
+      void watchReviewBase(
+        params.bridge,
+        params.connections,
+        params.toolUseId,
+        preview.filePath,
+      );
+    }
   }
 
   /*

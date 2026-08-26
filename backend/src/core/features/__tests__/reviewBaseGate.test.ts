@@ -20,7 +20,7 @@ vi.mock('../../claude-process', () => ({
 
 import { resolveDiffReview } from '../resolveDiff';
 import { refreshReviewAgainstDisk } from '../refreshReview';
-import { notifyReviewsOfFileChange } from '../reviewBaseWatch';
+import { watchReviewBase, stopAllReviewBaseWatches } from '../reviewBaseWatch';
 import { rememberPreview, clearPreviews, peekPreview } from '../diffPreview';
 import { computeHunks } from '../hunks';
 import { MessageType } from '../../../shared';
@@ -350,19 +350,60 @@ describe('refreshing a held review', () => {
   });
 });
 
-describe('the save notification', () => {
-  it('tells the review surface when a save moves its base', async () => {
+describe('watching the review base', () => {
+  /*
+   * The watch is asked for through the bridge, never opened here.
+   *
+   * That indirection is the point: an IDE relays saves it already sees, and a
+   * terminal-run backend watches the file itself. The first cut of #359 wired
+   * the IDE path straight through and standalone users got no warning at all,
+   * so these tests assert the bridge is ASKED rather than how it answers.
+   */
+  function fakeBridge() {
+    const watched = new Map<string, () => void>();
+    return {
+      watched,
+      watchFile: vi.fn(async (filePath: string, onChanged: () => void) => {
+        watched.set(filePath, onChanged);
+        return () => watched.delete(filePath);
+      }),
+      /** Stand in for the environment reporting a change. */
+      fire: (filePath: string) => watched.get(filePath)?.(),
+    };
+  }
+
+  afterEach(() => stopAllReviewBaseWatches());
+
+  it('asks the bridge to watch the file the review is about', async () => {
+    const path = join(dir, 'w.txt');
+    await writeFile(path, lines(10), 'utf8');
+    remember('t-watch', path, lines(10), 'ONE\n');
+
+    const bridge = fakeBridge();
+    await watchReviewBase(bridge as never, connections() as never, 't-watch', path);
+
+    expect(bridge.watchFile).toHaveBeenCalledWith(path, expect.any(Function));
+  });
+
+  it('tells the review surface when the watched file moved', async () => {
     const base = lines(10);
     const path = join(dir, 's.txt');
-    await writeFile(path, base.replace('line 2\n', 'line 2 SAVED\n'), 'utf8');
+    await writeFile(path, base, 'utf8');
     remember('t-save', path, base, 'ONE\n');
 
     const conn = connections();
-    await notifyReviewsOfFileChange(conn as never, path);
+    const bridge = fakeBridge();
+    await watchReviewBase(bridge as never, conn as never, 't-save', path);
+
+    // The environment notices a save, after the content really changed.
+    await writeFile(path, base.replace('line 2\n', 'line 2 SAVED\n'), 'utf8');
+    bridge.fire(path);
+    await new Promise((r) => setTimeout(r, 20));
 
     const [, type, payload] = conn.broadcastToSession.mock.calls[0];
     expect(type).toBe(MessageType.REVIEW_BASE_CHANGED);
-    expect(payload).toMatchObject({ toolUseId: 't-save' });
+    // Not the gate: nothing was blocked, the reviewer is being warned early.
+    expect(payload).toMatchObject({ toolUseId: 't-save', blockedApproval: false });
   });
 
   it('stays quiet when the save did not change the content', async () => {
@@ -372,33 +413,42 @@ describe('the save notification', () => {
     remember('t-quiet', path, base, 'ONE\n');
 
     const conn = connections();
-    await notifyReviewsOfFileChange(conn as never, path);
+    const bridge = fakeBridge();
+    await watchReviewBase(bridge as never, conn as never, 't-quiet', path);
+
+    bridge.fire(path);
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(conn.broadcastToSession).not.toHaveBeenCalled();
   });
 
-  it('ignores a save of a file no review is about', async () => {
-    const base = lines(10);
-    await writeFile(join(dir, 'other.txt'), 'anything\n', 'utf8');
-    remember('t-unrelated', join(dir, 'watched.txt'), base, 'ONE\n');
+  it('stops watching once the review is answered', async () => {
+    // Otherwise a long session accumulates one watcher per answered review.
+    const path = join(dir, 'stop.txt');
+    await writeFile(path, lines(10), 'utf8');
+    remember('t-stop', path, lines(10), 'ONE\n');
 
-    const conn = connections();
-    await notifyReviewsOfFileChange(conn as never, join(dir, 'other.txt'));
+    const bridge = fakeBridge();
+    await watchReviewBase(bridge as never, connections() as never, 't-stop', path);
+    expect(bridge.watched.has(path)).toBe(true);
 
-    expect(conn.broadcastToSession).not.toHaveBeenCalled();
+    const { takePreview } = await import('../diffPreview');
+    takePreview('t-stop');
+
+    expect(bridge.watched.has(path)).toBe(false);
   });
 
-  it('matches a path the IDE spells with backslashes', async () => {
-    // Windows reports saves with native separators while the CLI's tool input
-    // may carry forward slashes; a miss here is the data loss coming back.
-    const base = lines(10);
-    const path = join(dir, 'win.txt');
-    await writeFile(path, base.replace('line 3\n', 'line 3 SAVED\n'), 'utf8');
-    remember('t-win', path, base, 'ONE\n');
+  it('survives a bridge that cannot watch', async () => {
+    // Watching is best effort by contract — the gate is what protects the file
+    // — so a host that refuses must not take the permission prompt down.
+    const path = join(dir, 'nowatch.txt');
+    await writeFile(path, lines(10), 'utf8');
+    remember('t-nowatch', path, lines(10), 'ONE\n');
 
-    const conn = connections();
-    await notifyReviewsOfFileChange(conn as never, path.replace(/\//g, '\\'));
+    const bridge = { watchFile: vi.fn(async () => { throw new Error('unsupported'); }) };
 
-    expect(conn.broadcastToSession).toHaveBeenCalled();
+    await expect(
+      watchReviewBase(bridge as never, connections() as never, 't-nowatch', path),
+    ).resolves.toBeUndefined();
   });
 });

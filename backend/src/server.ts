@@ -14,7 +14,6 @@ import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
-import { notifyReviewsOfFileChange } from './core/features/reviewBaseWatch';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -414,9 +413,10 @@ async function main() {
       console.error('[node-backend]', 'FILE_SAVED ignored: no filePath');
       return;
     }
-    void notifyReviewsOfFileChange(connections, filePath).catch((err) => {
-      console.error('[node-backend]', 'FILE_SAVED handling failed:', err);
-    });
+    // Handed to the bridge, not acted on here. The IDE reporting a save is one
+    // environment's way of meeting `watchFile`; whoever asked to watch that file
+    // is told by the bridge, so the backend never learns which host it is on.
+    jetbrainsBridge.reportFileSaved(filePath);
   });
 
   // 4. Logger에 LogWS 참조 설정

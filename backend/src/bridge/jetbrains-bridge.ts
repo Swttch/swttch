@@ -52,6 +52,57 @@ export class JetBrainsBridge implements Bridge {
   private clientRoots = new Map<WebSocket, string[]>();
   private notificationHandlers = new Map<string, NotificationHandler>();
 
+  /**
+   * Files a review is waiting on, and who to tell when one moves.
+   *
+   * The IDE reports every save it sees (FILE_SAVED); this is what turns that
+   * firehose into "did anything we care about change". Kept here rather than in
+   * the backend because the backend must not know which host is reporting —
+   * that is the whole point of the bridge (#359).
+   */
+  private fileWatchers = new Map<string, Set<() => void>>();
+
+  /**
+   * Relay an IDE-reported save to whoever is watching that file.
+   *
+   * Called by the FILE_SAVED notification handler, which the server registers
+   * once at startup. Paths are normalised because the IDE spells them with the
+   * host's separators while the CLI's tool input may not.
+   */
+  reportFileSaved(filePath: string): void {
+    const listeners = this.fileWatchers.get(normaliseWatchPath(filePath));
+    if (!listeners) return;
+    for (const listener of listeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.error('[node-backend]', 'A file-change listener threw:', err);
+      }
+    }
+  }
+
+  /**
+   * Watch by subscribing to what the IDE already tells us, rather than opening
+   * a watcher of our own: the host maintains the VFS, and a second watcher on
+   * the same file would only duplicate what it already knows.
+   */
+  async watchFile(filePath: string, onChanged: () => void): Promise<() => void> {
+    const key = normaliseWatchPath(filePath);
+    let listeners = this.fileWatchers.get(key);
+    if (!listeners) {
+      listeners = new Set();
+      this.fileWatchers.set(key, listeners);
+    }
+    listeners.add(onChanged);
+
+    return () => {
+      const current = this.fileWatchers.get(key);
+      if (!current) return;
+      current.delete(onChanged);
+      if (current.size === 0) this.fileWatchers.delete(key);
+    };
+  }
+
   onNotification(method: string, handler: NotificationHandler): void {
     this.notificationHandlers.set(method, handler);
   }
@@ -377,4 +428,15 @@ export function parseProjectRoots(params: Record<string, unknown> | undefined): 
  */
 export function redactRpcLog(request: JsonRpcRequest): string {
   return JSON.stringify(request).replace(/([?&](?:pair|token)=)[^"&\\]+/gi, '$1<redacted>');
+}
+
+/**
+ * Compare file paths the way the two sides spell them.
+ *
+ * The IDE reports saves with the host's separators; a path taken from the CLI's
+ * tool input may use the other kind, and case differs on Windows and APFS. A
+ * miss here is a missed warning, so it errs toward matching.
+ */
+function normaliseWatchPath(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase();
 }

@@ -43,6 +43,29 @@ export interface Bridge {
    * the IDE's native filesystem watcher misses the change (e.g. on Windows).
    */
   refreshFiles(params: { paths: string[] }): Promise<void>;
+
+  /**
+   * Watch [filePath] for content changes and call [onChanged] when it moves.
+   * Returns a function that stops watching.
+   *
+   * A Bridge capability rather than a backend detail because HOW a change is
+   * noticed is exactly what differs per environment, and the backend must not
+   * care which one it is talking to (#359):
+   *
+   *   JetBrains:  the IDE already maintains a VFS and publishes save events, so
+   *               the bridge relays what the host knows.
+   *   Standalone: there is no host, so the bridge watches the file itself.
+   *
+   * Declared here so a new environment cannot quietly ship without it. The
+   * first cut of #359 wired the IDE path directly to the backend and skipped
+   * this interface — which is precisely why standalone users had no detection
+   * at all and nobody noticed until it was tried in a browser.
+   *
+   * Best-effort by contract: a watch that misses is a missed early warning, not
+   * a lost file. The approval gate re-reads the file itself, so correctness
+   * never depends on this firing.
+   */
+  watchFile(filePath: string, onChanged: () => void): Promise<() => void>;
   createSession(workingDir?: string): Promise<void>;
   openNewTab(workingDir?: string): Promise<void>;
   openSession(sessionId: string, workingDir?: string): Promise<void>;
