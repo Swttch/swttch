@@ -137,6 +137,11 @@
         <listener
             class="com.github.yhk1038.claudecodegui.startup.ResourceExtractionPrewarmActivity"
             topic="com.intellij.ide.AppLifecycleListener"/>
+        <!-- Tell a pending review when the file it is about changes on disk,
+             so an approval is never stated against content that is gone (#359) -->
+        <listener
+            class="com.github.yhk1038.claudecodegui.editor.FileSaveNotifier"
+            topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
 
     <!-- Clean up session state only on real tab close (not on tab move/split) -->
