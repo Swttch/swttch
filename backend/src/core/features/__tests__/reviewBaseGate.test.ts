@@ -263,6 +263,79 @@ describe('the chat prompt path (TOOL_RESPONSE)', () => {
     expect(response.response.behavior).toBe('allow');
   });
 
+  /**
+   * A held approval must leave the review on screen.
+   *
+   * The IDE's diff used to close itself the moment Apply was clicked, before
+   * anyone knew whether the answer would go out. So a held approval took the
+   * review away while its question was still open: the prompt stayed, the file
+   * was untouched, and the diff was simply gone. Reopening it from the prompt
+   * then drew the built-in diff instead, because closing had dropped the entry
+   * saying the IDE owned that review.
+   */
+  it('leaves the IDE diff open when it holds the approval', async () => {
+    const base = lines(1090);
+    const path = join(dir, 'held-open.php');
+    await writeFile(path, base.replace('line 20\n', 'line 20 USER WIP\n'), 'utf8');
+    remember('t-held-open', path, base, 'ONLY THIS LINE\n');
+
+    const bridge = {
+      closeDiff: vi.fn(async () => undefined),
+      closeDiffTab: vi.fn(async () => undefined),
+      notifyReviewBaseChanged: vi.fn(async () => undefined),
+    };
+
+    await resolveDiffReview(
+      connections() as never,
+      {
+        toolUseId: 't-held-open',
+        sessionId: 'sess-1',
+        controlRequestId: 'ctrl-1',
+        acceptedRanges: wholeFile(base, 'ONLY THIS LINE\n'),
+      } as never,
+      bridge as never,
+    );
+
+    expect(sendControlResponseToProcess).not.toHaveBeenCalled();
+    expect(bridge.closeDiff).not.toHaveBeenCalled();
+    expect(bridge.closeDiffTab).not.toHaveBeenCalled();
+    // Still answerable: the reviewer refreshes and decides again.
+    expect(peekPreview('t-held-open')).toBeDefined();
+  });
+
+  /**
+   * The other half of the same contract. Once the answer really goes out, the
+   * review has to come down — and from here, since the IDE no longer closes
+   * itself on the click.
+   */
+  it('closes both surfaces once the approval really goes out', async () => {
+    const base = lines(20);
+    const path = join(dir, 'answered.php');
+    await writeFile(path, base, 'utf8');
+    remember('t-answered', path, base, 'ONE\n');
+
+    const bridge = {
+      closeDiff: vi.fn(async () => undefined),
+      closeDiffTab: vi.fn(async () => undefined),
+      notifyReviewBaseChanged: vi.fn(async () => undefined),
+    };
+
+    await resolveDiffReview(
+      connections() as never,
+      {
+        toolUseId: 't-answered',
+        sessionId: 'sess-1',
+        controlRequestId: 'ctrl-1',
+        acceptedRanges: wholeFile(base, 'ONE\n'),
+      } as never,
+      bridge as never,
+    );
+
+    expect(sendControlResponseToProcess).toHaveBeenCalled();
+    expect(bridge.closeDiff).toHaveBeenCalledWith({ toolUseId: 't-answered' });
+    expect(bridge.closeDiffTab).toHaveBeenCalledWith({ toolUseId: 't-answered' });
+  });
+
   it('lets a chat denial through even when the file moved', async () => {
     // Denying writes nothing, and blocking it would strand the request with no
     // way to say no.

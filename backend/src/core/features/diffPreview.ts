@@ -240,11 +240,20 @@ export async function openDiffTabForPermission(
 }
 
 /**
- * Close the diff tab opened for [toolUseId], whichever way its request was
+ * Close the review opened for [toolUseId], whichever way its request was
  * answered — from that page, the chat prompt, or the CLI giving up.
  *
- * Same contract again: a tab we cannot close must not take the answer down with
- * it, since the decision itself has already been made and sent.
+ * Both surfaces are told, because which one drew the review depends on a setting
+ * read when the request arrived and it may have changed since; an unknown id is
+ * a no-op on either side, so telling both is cheaper than remembering.
+ *
+ * The IDE's viewer used to close itself, on the click, before anyone knew
+ * whether the answer would go out. That is why a held approval took the review
+ * off screen while its question was still open (#359) — so it is closed from
+ * here now, on the paths that really respond.
+ *
+ * Same contract again: a surface we cannot close must not take the answer down
+ * with it, since the decision itself has already been made and sent.
  */
 export async function closeDiffTabForPermission(
   bridge: Bridge,
@@ -254,5 +263,10 @@ export async function closeDiffTabForPermission(
     await bridge.closeDiffTab({ toolUseId });
   } catch (err) {
     console.error('[node-backend]', 'Failed to close diff tab:', err);
+  }
+  try {
+    await bridge.closeDiff({ toolUseId });
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to close IDE diff:', err);
   }
 }

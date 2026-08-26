@@ -163,7 +163,13 @@ class DiffService(private val project: Project) {
                         val edited =
                             if (keepEdits) rightContent.document.text.takeIf { it != newContent }
                             else null
-                        toolUseId?.let { closeDiffViewer(it) }
+                        // Not closed here. Whether this answer is actually going
+                        // out is the backend's to decide -- the base-changed gate
+                        // can hold it and hand the review back (#359). Closing on
+                        // the click took the review off screen while its question
+                        // was still open, and dropped the entry that says the IDE
+                        // owns it, so reopening fell through to the built-in diff.
+                        // The backend closes it once it has really answered.
                         onResolve(accepted, edited)
                     }
                     // Banner above, controls below: the warning has to be read

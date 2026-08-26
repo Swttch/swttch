@@ -107,8 +107,8 @@ export async function resolveDiffReview(
   const respond = (response: Record<string, unknown>) => {
     // Settled for real now, so the entry goes and the window with it.
     takePreview(params.toolUseId);
-    // Only the built-in surface has a tab of ours to close; the IDE's viewer
-    // closes itself, and an unknown id is a no-op there anyway.
+    // Both surfaces: whichever drew this review, it is settled now. An unknown
+    // id is a no-op on either side.
     if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
     sendControlResponseToProcess(connections, params.sessionId, {
       subtype: 'success' as const,
