@@ -55,8 +55,16 @@ class ClaudeCodeFileEditor(
         // 부트 placeholder 제거: index.html의 <title>이 빈 문자열이므로
         // ClaudeCodePanel의 isNotBlank 가드가 자동으로 차단함. 여기서 별도로 거르지 않음.
         panel.onTitleChanged = { title ->
-            virtualFile.setDisplayName(title)
-            EditorTabStateService.getInstance(project).updateTitle(virtualFile.tabId, title)
+            val state = EditorTabStateService.getInstance(project)
+            // Record the conversation title either way: it is what the tab falls
+            // back to if the user later clears their own name.
+            state.updateTitle(virtualFile.tabId, title)
+            // ...but a manually named tab keeps its label. Skipping only the
+            // relabel (not the store above) is what makes "rename" outlast every
+            // later title the conversation reports.
+            if (!state.hasCustomTitle(virtualFile.tabId)) {
+                virtualFile.setDisplayName(title)
+            }
         }
 
         // Navigation belongs to THIS pane: record it here so a split whose panes
@@ -69,7 +77,13 @@ class ClaudeCodeFileEditor(
         panel.onPathChanged = { path ->
             panePath = path
             virtualFile.currentPath = path
-            EditorTabStateService.getInstance(project).updatePath(virtualFile.tabId, path)
+            val state = EditorTabStateService.getInstance(project)
+            state.updatePath(virtualFile.tabId, path)
+            // Moving to another conversation moves to that conversation's name,
+            // so the label is re-resolved rather than left on the last one's.
+            // Nothing to do when the tab is unnamed: the conversation's own title
+            // arrives via onTitleChanged a moment later and labels it then.
+            state.getCustomTitle(virtualFile.tabId)?.let { virtualFile.setDisplayName(it) }
         }
 
         // Streaming state change: show unread badge when streaming ends on inactive tab

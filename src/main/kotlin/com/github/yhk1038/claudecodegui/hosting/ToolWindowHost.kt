@@ -12,6 +12,7 @@ import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
 import com.intellij.ui.content.Content
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManagerEvent
@@ -85,7 +86,7 @@ class ToolWindowHost(private val project: Project) : ChatHost {
 
             is ChatHostRouter.HydratePlan.Restore ->
                 for (tabId in plan.order) {
-                    openOrFocus(project, tabId, state.getRestorePath(tabId), state.getTitle(tabId))
+                    openOrFocus(project, tabId, state.getRestorePath(tabId), state.getEffectiveTitle(tabId))
                 }
         }
     }
@@ -111,16 +112,33 @@ class ToolWindowHost(private val project: Project) : ChatHost {
             // "Access is allowed from Event Dispatch Thread (EDT) only". Marshal
             // onto the EDT (runs immediately if already on it).
             ApplicationManager.getApplication().invokeLater {
-                virtualFile.setDisplayName(title)
+                // Record the conversation title either way: it is what the tab
+                // falls back to if the user later clears their own name.
                 state.updateTitle(tabId, title)
-                ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)?.let { tw ->
-                    findContent(tw, tabId)?.displayName = virtualFile.presentableName
+                // ...but a manually named tab keeps its label. Skipping only the
+                // relabel (not the store above) is what makes "rename" outlast
+                // every later title the conversation reports.
+                if (!state.hasCustomTitle(tabId)) {
+                    virtualFile.setDisplayName(title)
+                    ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)?.let { tw ->
+                        findContent(tw, tabId)?.displayName = virtualFile.presentableName
+                    }
                 }
             }
         }
         panel.onPathChanged = { path ->
             virtualFile.currentPath = path
             state.updatePath(tabId, path)
+            // Moving to another conversation moves to that conversation's name,
+            // so the label is re-resolved rather than left on the last one's.
+            // Nothing to do when the tab is unnamed: the conversation's own title
+            // arrives via onTitleChanged a moment later and labels it then.
+            state.getCustomTitle(tabId)?.let { named ->
+                ApplicationManager.getApplication().invokeLater {
+                    virtualFile.setDisplayName(named)
+                    relabelTab(project, tabId, named)
+                }
+            }
         }
         // Unread badge: when streaming ends on a tab that is NOT the selected one,
         // swap its content icon to the unread variant. The selection listener
@@ -153,9 +171,11 @@ class ToolWindowHost(private val project: Project) : ChatHost {
         closeListenerInstalled = true
 
         // Hide the redundant "Claude Code" id label in the tool-window header — the
-        // content tab already shows the chat title. Uses the string key directly to
-        // avoid referencing the internal ToolWindowContentUi.HIDE_ID_LABEL constant.
-        toolWindow.component.putClientProperty("HideIdLabel", "true")
+        // content tab already shows the chat title.
+        //
+        // The key is a String rather than a Key<Boolean>, so the value must be the
+        // string "true": ContentLayout#shouldShowId tests it with "true".equals.
+        toolWindow.component.putClientProperty(ToolWindowContentUi.HIDE_ID_LABEL, "true")
 
         toolWindow.contentManager.addContentManagerListener(object : ContentManagerListener {
             override fun selectionChanged(event: ContentManagerEvent) {
@@ -208,7 +228,9 @@ class ToolWindowHost(private val project: Project) : ChatHost {
 
     companion object {
         const val TOOL_WINDOW_ID = "Claude Code"
-        private val TAB_ID_KEY = Key.create<String>("ClaudeCode.ToolWindow.TabId")
+        // internal rather than private: RenameChatTabAction is handed a Content by
+        // the platform and has no other way back to the tab it represents.
+        internal val TAB_ID_KEY = Key.create<String>("ClaudeCode.ToolWindow.TabId")
 
         private val BASE_ICON: Icon =
             IconLoader.getIcon("/icons/claudeCode.svg", ToolWindowHost::class.java)
@@ -217,5 +239,29 @@ class ToolWindowHost(private val project: Project) : ChatHost {
 
         fun getInstance(project: Project): ToolWindowHost =
             project.getService(ToolWindowHost::class.java)
+
+        /**
+         * Relabel the tool-window tab for [tabId], if one is showing.
+         *
+         * A no-op in EDITOR_TAB mode, where there is no tool-window tab to
+         * relabel and the virtual file's display name is the whole story. Both
+         * are updated on rename because the host mode can be switched while
+         * tabs are open, and the one not currently showing must not be left
+         * holding a stale label.
+         *
+         * Must be called on the EDT: Content.displayName mutates UI state.
+         */
+        fun relabelTab(project: Project, tabId: String, label: String) {
+            val toolWindow = ToolWindowManager.getInstance(project)
+                .getToolWindow(TOOL_WINDOW_ID) ?: return
+            val contentManager = toolWindow.contentManagerIfCreated ?: return
+            for (i in 0 until contentManager.contentCount) {
+                val content = contentManager.getContent(i) ?: continue
+                if (content.getUserData(TAB_ID_KEY) == tabId) {
+                    content.displayName = label
+                    return
+                }
+            }
+        }
     }
 }

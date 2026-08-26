@@ -4,6 +4,11 @@
     "cancel": "취소",
     "close": "닫기"
   },
+  "renameTabDialog": {
+    "title": "탭 이름 변경",
+    "placeholder": "이 탭의 이름",
+    "hint": "비워 두면 대화 제목을 다시 따라갑니다."
+  },
   "zoomIndicator": {
     "label": "배율",
     "zoomOut": "축소",

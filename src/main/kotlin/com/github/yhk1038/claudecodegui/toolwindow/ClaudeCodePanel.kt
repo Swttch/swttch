@@ -4,6 +4,7 @@ import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
+import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
@@ -1608,6 +1609,22 @@ class ClaudeCodePanel(
                     // Always open the session in a fresh editor tab (new tabId).
                     OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), "/sessions/$sessionId")
                     logger.info("Opened session tab (sessionId=$sessionId, workingDir=$workingDir)")
+                }
+            }
+
+            override suspend fun setTabName(panelId: String, name: String) {
+                ApplicationManager.getApplication().invokeLater {
+                    val state = EditorTabStateService.getInstance(project)
+                    state.setCustomTitle(panelId, name)
+                    // Blank clears the name, so what the tab shows next is
+                    // whatever getEffectiveTitle now resolves to — the stored
+                    // conversation title, or the generic label for a tab that
+                    // never reported one.
+                    val resolved = state.getEffectiveTitle(panelId)
+                        ?: ClaudeCodeVirtualFile.DEFAULT_DISPLAY_NAME
+                    ClaudeCodeVirtualFile.findExisting(panelId)?.setDisplayName(resolved)
+                    ToolWindowHost.relabelTab(project, panelId, resolved)
+                    logger.info("Tab named (panelId=$panelId, name='$name')")
                 }
             }
 

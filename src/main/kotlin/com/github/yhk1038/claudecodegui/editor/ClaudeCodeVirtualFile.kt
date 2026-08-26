@@ -60,7 +60,9 @@ class ClaudeCodeVirtualFile(
         private const val MAX_DISPLAY_NAME_LENGTH = 20
 
         /** Label a tab wears until it knows the conversation it is showing. */
-        private const val DEFAULT_DISPLAY_NAME: String = "Claude Code"
+        // internal rather than private: the rename actions fall back to it when a
+        // tab has no conversation title to return to.
+        internal const val DEFAULT_DISPLAY_NAME: String = "Claude Code"
 
         /**
          * The registered [ClaudeCodeFileSystem] instance.

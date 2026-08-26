@@ -322,6 +322,14 @@ class RpcWebSocketClient(
                 rpcHandler.openSession(sessionId, workingDir)
                 buildJsonObject {}
             }
+            "SET_TAB_NAME" -> {
+                val panelId = params["panelId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'panelId' param")
+                // An absent name is the same as an empty one: both mean "clear it".
+                val name = params["name"]?.jsonPrimitive?.content ?: ""
+                rpcHandler.setTabName(panelId, name)
+                buildJsonObject {}
+            }
             "OPEN_SETTINGS" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
                 // Which settings page the tab should land on; absent → landing page.

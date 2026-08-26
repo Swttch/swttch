@@ -233,6 +233,16 @@ class NodeProcessManager(
         suspend fun createSession(workingDir: String)
         suspend fun openNewTab(workingDir: String)
         suspend fun openSession(sessionId: String, workingDir: String?)
+
+        /**
+         * Name the tab [panelId], or clear the name when [name] is blank so the
+         * tab goes back to following its conversation title.
+         *
+         * The name lives on this side rather than in the webview because a tab
+         * restored after a restart has to show its label before its panel is
+         * built — chat panels mount lazily (issue #301).
+         */
+        suspend fun setTabName(panelId: String, name: String)
         /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
         suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)

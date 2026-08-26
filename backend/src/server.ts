@@ -323,6 +323,28 @@ async function main() {
     }
   });
 
+  // "Rename Session..." on a chat tab's IDE context menu. Kotlin does not rename
+  // anything itself (a Swing popup over JCEF takes no input — see
+  // RenameChatTabAction), so it names the tab and the tab's own webview prompts.
+  // Not stashed when the panel is absent, unlike NATIVE_DROP: this is a menu
+  // click on a tab the user is looking at, so a missing connection means the
+  // panel died rather than that it has yet to connect — replaying later would
+  // pop a dialog nobody asked for.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.TAB_RENAME_REQUESTED, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    if (!panelId) return;
+    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    if (!connectionId) {
+      console.error('[node-backend]', `[TAB_RENAME_REQUESTED] no connection for panelId=${panelId}`);
+      return;
+    }
+    // currentName travels with the request because only the IDE knows it: once a
+    // tab carries a name of its own, the webview's document.title is still the
+    // conversation's and would seed the field with the wrong value.
+    const currentName = typeof params.currentName === 'string' ? params.currentName : '';
+    connections.sendTo(connectionId, MessageType.TAB_RENAME_REQUESTED, { currentName });
+  });
+
   // Parent-death watchdog. The parent (the process that spawned and owns this
   // backend) dying is the signal that the backend must give up — but what
   // "giving up" means differs by who the owner is:

@@ -141,6 +141,12 @@ export class BrowserBridge implements Bridge {
     // no-op: browser mode navigates to the session via URL
   }
 
+  async setTabName(_panelId: string, _name: string): Promise<void> {
+    // no-op: the name labels an IDE tab, and browser mode has none. A browser
+    // client can still be told to rename (the tunnel shares one session with
+    // the IDE), so this is silent rather than an error.
+  }
+
   async openSettings(_workingDir?: string, _path?: string): Promise<void> {
     // no-op: browser mode opens the settings tab client-side via window.open
   }

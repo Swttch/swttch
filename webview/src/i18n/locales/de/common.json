@@ -4,6 +4,11 @@
     "cancel": "Abbrechen",
     "close": "Schließen"
   },
+  "renameTabDialog": {
+    "title": "Tab umbenennen",
+    "placeholder": "Diesen Tab benennen",
+    "hint": "Leer lassen, um wieder den Unterhaltungstitel zu verwenden."
+  },
   "zoomIndicator": {
     "label": "Zoomstufe",
     "zoomOut": "Verkleinern",

@@ -54,6 +54,7 @@ import { rejectDiffHandler } from './rejectDiff';
 import { createSessionHandler } from './createSession';
 import { openNewTabHandler } from './openNewTab';
 import { openSessionHandler } from './openSession';
+import { setTabNameHandler } from './setTabName';
 import { openSettingsHandler } from './openSettings';
 import { restartBackendHandler } from './restartBackend';
 import { openTerminalHandler } from './openTerminal';
@@ -297,6 +298,9 @@ export async function handleMessage(
       break;
     case MessageType.OPEN_SESSION:
       await openSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_TAB_NAME:
+      await setTabNameHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.OPEN_SETTINGS:
       await openSettingsHandler(connectionId, message, connections, bridge);

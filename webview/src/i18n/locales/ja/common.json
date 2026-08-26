@@ -4,6 +4,11 @@
     "cancel": "キャンセル",
     "close": "閉じる"
   },
+  "renameTabDialog": {
+    "title": "タブ名を変更",
+    "placeholder": "このタブの名前",
+    "hint": "空にすると会話のタイトルに戻ります。"
+  },
   "zoomIndicator": {
     "label": "ズームレベル",
     "zoomOut": "縮小",

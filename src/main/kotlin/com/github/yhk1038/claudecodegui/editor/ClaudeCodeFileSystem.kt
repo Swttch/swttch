@@ -125,7 +125,7 @@ class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
             project,
             tabId,
             state.getRestorePath(tabId),
-            state.getTitle(tabId),
+            state.getEffectiveTitle(tabId),
         )
     }
 
