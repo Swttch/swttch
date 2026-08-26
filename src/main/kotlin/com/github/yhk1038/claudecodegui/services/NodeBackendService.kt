@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.PluginResourceExtractor
@@ -105,6 +106,13 @@ class NodeBackendService : Disposable {
     fun prewarmResources() {
         resourcesReady.start()
     }
+
+    /**
+     * Clears a leftover backend process and restarts through this service (issue #308).
+     * Held here because the IDE is the spawner of these backends, and the spawner is what must
+     * restart them — see [BackendRebooter].
+     */
+    private val rebooter = BackendRebooter()
 
     /**
      * One Node.js backend dedicated to a single IDE project root. Owns its
@@ -448,6 +456,13 @@ class NodeBackendService : Disposable {
         /** Current process lifecycle, or null when no manager exists (never started). */
         fun lifecycleOrNull(): NodeProcessManager.Lifecycle? = nodeProcessManager?.currentLifecycle
 
+        /**
+         * The last port this backend was known to bind, regardless of current lifecycle.
+         * Unlike [portOrNull] this survives the process dying — which is exactly the case where
+         * a leftover process may still be holding it (issue #308). 0 = never learned one.
+         */
+        fun lastKnownPort(): Int? = lastPort.takeIf { it != 0 }
+
         /** The bound port, or null while not RUNNING / not yet known. */
         fun portOrNull(): Int? {
             if (nodeProcessManager?.currentLifecycle != NodeProcessManager.Lifecycle.RUNNING) return null
@@ -620,6 +635,38 @@ class NodeBackendService : Disposable {
     fun restart(projectBasePath: String) {
         backends[projectBasePath]?.restart()
             ?: logger.warn("restart: no backend for project root $projectBasePath")
+    }
+
+    /**
+     * The port a leftover backend for [projectBasePath] would be holding, or null when we never
+     * learned one. Only a port this IDE actually saw in use is offered for reclaiming — guessing
+     * a default and killing whatever answers on it could terminate an unrelated process.
+     */
+    fun reclaimablePortOf(projectBasePath: String): Int? =
+        backends[projectBasePath]?.lastKnownPort()
+
+    /**
+     * True when something this IDE session does not own is holding [projectBasePath]'s backend
+     * port — the condition for offering the user a reboot (issue #308).
+     */
+    fun hasStaleBackend(projectBasePath: String): Boolean {
+        val port = reclaimablePortOf(projectBasePath) ?: return false
+        // A backend we own and that is running is not stale, however the port reads.
+        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) return false
+        return rebooter.hasStaleBackend(port)
+    }
+
+    /**
+     * Clear a leftover backend process holding [projectBasePath]'s port, then restart through
+     * this service — the IDE spawned this backend, so the IDE is what restarts it (issue #308).
+     *
+     * Blocking: it waits for the old process to actually exit before restarting. Callers on the
+     * EDT must move this off it.
+     */
+    fun rebootBackend(projectBasePath: String): BackendRebooter.Outcome {
+        val port = reclaimablePortOf(projectBasePath)
+            ?: return BackendRebooter.Outcome.CouldNotReclaim(emptyList())
+        return rebooter.reboot(port) { restart(projectBasePath) }
     }
 
     /** Send a JSON-RPC notification to the backend serving [projectBasePath]. */

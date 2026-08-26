@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import java.io.File
 import java.nio.channels.FileChannel
+import java.nio.channels.OverlappingFileLockException
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -72,6 +73,11 @@ class PluginResourceExtractor(
      * fails (returns false, dir remains) — the M4 lock-resilience path.
      */
     private val clearTarget: (File) -> Boolean = { it.deleteRecursively() },
+    /**
+     * How long to wait for the extraction lock before proceeding without it (issue #308).
+     * Injectable so tests can exercise the contended path without a real wait.
+     */
+    private val lockWaitTimeoutMs: Long = DEFAULT_LOCK_WAIT_TIMEOUT_MS,
 ) {
     private val logger = Logger.getInstance(PluginResourceExtractor::class.java)
 
@@ -107,7 +113,7 @@ class PluginResourceExtractor(
             // Re-check under the lock: another process may have completed the
             // extraction while we waited for the lock.
             if (isComplete(result)) result else extractVersion(versionDir)
-        }
+        } ?: extractWithoutLock(result)
         pruneOtherVersions()
         // Only reap leftover `.locked-*` dirs when THIS run serves canonically; if we are
         // serving from a fallback (`served` != the version dir), that fallback must survive.
@@ -265,15 +271,107 @@ class PluginResourceExtractor(
         }
     }
 
-    /** Serialize first-time extraction across processes via a lock file under [baseDir]. */
-    private fun <T> withBaseLock(block: () -> T): T {
+    /**
+     * Serialize first-time extraction across processes via a lock file under [baseDir].
+     * Returns null when the lock could not be acquired within [lockWaitTimeoutMs], leaving
+     * the caller to fall back to [extractWithoutLock].
+     *
+     * ## Why this is bounded (issue #308)
+     *
+     * This used to call the blocking `channel.lock()`, which waits **forever**. A leftover
+     * backend process that still owns the lock therefore stalled every new start: the only
+     * ceiling was NodeProcessManager's 30s resource-gate timeout, which surfaced as
+     * `Node.js backend failed to start / Plugin resources not ready`. On Windows the holder
+     * survives closing the IDE, so the user had to reboot the machine to get out of it.
+     *
+     * The lock is an optimization (it stops two processes doing the same unpack twice), not a
+     * correctness requirement — the extraction is already atomic via the temp-dir + rename and
+     * has a serve-from-fallback path. So failing to take it must degrade, never block.
+     */
+    private fun <T> withBaseLock(block: () -> T): T? {
         val lockFile = File(baseDir, LOCK_NAME)
-        FileChannel.open(
-            lockFile.toPath(),
-            StandardOpenOption.CREATE,
-            StandardOpenOption.WRITE,
-        ).use { channel ->
-            channel.lock().use { return block() }
+        try {
+            FileChannel.open(
+                lockFile.toPath(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE,
+            ).use { channel ->
+                val lock = tryLockUntilTimeout(channel) ?: run {
+                    logger.warn(
+                        "Could not acquire $lockFile within ${lockWaitTimeoutMs}ms (held by another " +
+                            "process?); proceeding without the lock"
+                    )
+                    return null
+                }
+                lock.use { return block() }
+            }
+        } catch (e: java.io.IOException) {
+            // An unusable lock file (permissions, a locked-open handle on Windows, a read-only
+            // dir) must not be fatal either — same reasoning as a timeout.
+            logger.warn("Could not use the extraction lock $lockFile; proceeding without it", e)
+            return null
+        }
+    }
+
+    /**
+     * Poll [FileChannel.tryLock] until it succeeds or [lockWaitTimeoutMs] elapses.
+     * `tryLock` returns null when another *process* holds the lock, so polling gives us a
+     * bounded wait that the blocking `lock()` cannot provide.
+     */
+    private fun tryLockUntilTimeout(channel: FileChannel): java.nio.channels.FileLock? {
+        val deadline = System.currentTimeMillis() + lockWaitTimeoutMs
+        while (true) {
+            try {
+                channel.tryLock()?.let { return it }
+            } catch (e: OverlappingFileLockException) {
+                // Another thread in THIS JVM holds it (two IDE projects extracting at once).
+                // Waiting it out is correct: that holder is doing the very work we want done.
+                logger.debug("Extraction lock held within this JVM; waiting: ${e.message}")
+            }
+            if (System.currentTimeMillis() >= deadline) return null
+            Thread.sleep(LOCK_POLL_INTERVAL_MS)
+        }
+    }
+
+    /**
+     * Extraction path used when the lock could not be taken (issue #308). Without the lock we
+     * cannot safely publish into the shared canonical version dir — a concurrent holder may be
+     * mid-rename there — so we re-check for a usable canonical bundle first, and otherwise
+     * unpack into a private `.locked-*` dir and serve from that.
+     *
+     * The result is a backend that starts anyway, at the cost of one extra copy on disk that a
+     * later clean run reaps via [pruneLockedFallbacks].
+     */
+    private fun extractWithoutLock(canonical: ExtractedResources): ExtractedResources {
+        // The holder may have finished publishing while we were waiting on the lock.
+        if (isComplete(canonical)) {
+            logger.info("Extraction lock unavailable, but the canonical version dir is complete; serving it")
+            return canonical
+        }
+        val tmp = File(baseDir, "$TMP_PREFIX${UUID.randomUUID()}")
+        var moved = false
+        try {
+            tmp.deleteRecursively()
+            val tmpWebview = File(tmp, WEBVIEW_SUBDIR)
+            val tmpBackendDir = File(tmp, BACKEND_SUBDIR)
+            tmpWebview.mkdirs()
+            tmpBackendDir.mkdirs()
+
+            (unpack ?: ::extractFromPluginJar).invoke(tmpWebview, tmpBackendDir)
+
+            val tmpResult = ExtractedResources(tmpWebview, File(tmpBackendDir, BACKEND_ENTRY))
+            if (!isComplete(tmpResult)) {
+                throw IllegalStateException(
+                    "Incomplete extraction (hashedBundle=${hasHashedBundle(tmpWebview)}, " +
+                        "backend=${tmpResult.backendFile.exists()}) into $tmp"
+                )
+            }
+            val served = serveFromFallback(tmp)
+            moved = true
+            logger.info("Extracted plugin resources without the lock → ${served.backendFile.parentFile?.parentFile}")
+            return served
+        } finally {
+            if (!moved) tmp.deleteRecursively()
         }
     }
 
@@ -446,6 +544,14 @@ class PluginResourceExtractor(
         private const val BACKEND_ENTRY = "backend.mjs"
         private const val WIN_JOB_WRAPPER = "win-job-wrapper.ps1"
         private const val LOCK_NAME = ".lock"
+
+        /**
+         * How long to wait for the extraction lock before giving up and extracting without it
+         * (issue #308). Deliberately well under NodeProcessManager's 30s resource-gate timeout,
+         * so a contended lock degrades to the no-lock path instead of failing backend start.
+         */
+        const val DEFAULT_LOCK_WAIT_TIMEOUT_MS = 5_000L
+        private const val LOCK_POLL_INTERVAL_MS = 50L
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"
         /** Prefix for a serve-in-place fallback dir used when a Windows lock blocks the rename (M4). */
