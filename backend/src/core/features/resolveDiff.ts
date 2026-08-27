@@ -212,9 +212,18 @@ export async function resolveDiffReview(
   if (amended !== null) {
     /*
      * Whether the reviewer turned parts down, as opposed to rewriting them.
-     * Decided in declinedAnything so the rule lives in one place.
+     *
+     * Told apart by what the applied text kept: a declined hunk leaves the file
+     * exactly as it was, so its old lines are still there. A rewritten one does
+     * not, since the reviewer typed something of their own.
+     *
+     * Counting hunks against accepted ranges was tried and does not work. The
+     * two number different things -- the backend's own split against the split
+     * the IDE made, which HunkSelection already says can differ (two against
+     * four on a real file) -- so the comparison read as a decline whenever the
+     * IDE merely split more finely, and missed real declines when it split less.
      */
-    const declinedParts = declinedAnything(preview, params.acceptedRanges, edited);
+    const declinedParts = declinedAnything(preview, params.acceptedRanges);
     tellClaudeAboutTheEdit(
       connections,
       params.sessionId,

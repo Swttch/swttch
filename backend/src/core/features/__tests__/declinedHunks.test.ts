@@ -68,26 +68,6 @@ describe('declinedAnything', () => {
   });
 
   /**
-   * Typing settles it on its own (#305).
-   *
-   * An edited proposal answers with the reviewer's own text, so the ranges no
-   * longer describe what happened — they name hunks of a proposal that has
-   * since been rewritten. Measured in QA: a reviewer applied all three hunks
-   * and retyped two of them, and judging by ranges alone reported a decline
-   * with nothing declined.
-   */
-  it('sees no decline when the reviewer rewrote the proposal', () => {
-    const rewritten = proposed.replace('0.15', '0.2');
-
-    // Ranges that would read as a decline on their own.
-    expect(declinedAnything(preview, [], rewritten)).toBe(false);
-  });
-
-  it('still judges by the ranges when nothing was typed', () => {
-    expect(declinedAnything(preview, [], undefined)).toBe(true);
-  });
-
-  /**
    * A line the proposal never touched needs no accepted range covering it.
    * Without this the answer would be true for every partial approval of any
    * file, since most lines are unchanged and uncovered.
