@@ -22,6 +22,7 @@ import { holdApprovalIfBaseMoved } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
+import { declinedAnything } from './declinedHunks';
 import type { AcceptedRange } from './hunks';
 import { sendControlResponseToProcess } from '../claude-process';
 import { sendAfterTurn } from './afterTurn';
@@ -212,13 +213,17 @@ export async function resolveDiffReview(
     /*
      * Whether the reviewer turned parts down, as opposed to rewriting them.
      *
-     * The hunks the preview offered against the ranges kept: fewer means some
-     * were declined. The diff alone cannot say -- a declined hunk and a hunk
-     * edited back to the original look the same in it -- and the assistant
-     * reads the first as an omission unless told (#359).
+     * Told apart by what the applied text kept: a declined hunk leaves the file
+     * exactly as it was, so its old lines are still there. A rewritten one does
+     * not, since the reviewer typed something of their own.
+     *
+     * Counting hunks against accepted ranges was tried and does not work. The
+     * two number different things -- the backend's own split against the split
+     * the IDE made, which HunkSelection already says can differ (two against
+     * four on a real file) -- so the comparison read as a decline whenever the
+     * IDE merely split more finely, and missed real declines when it split less.
      */
-    const declinedParts =
-      preview.hunks.length > 0 && params.acceptedRanges.length < preview.hunks.length;
+    const declinedParts = declinedAnything(preview, params.acceptedRanges);
     tellClaudeAboutTheEdit(
       connections,
       params.sessionId,
@@ -247,8 +252,22 @@ function tellClaudeAboutTheEdit(
   applied: string,
   declinedParts: boolean,
 ): void {
+  /*
+   * What the diff in the notice is measured against.
+   *
+   * A rewrite is measured against the PROPOSAL: the model knows what it asked
+   * for and needs to see where the result departs from it.
+   *
+   * A decline is measured against the FILE AS IT WAS. Measuring it against the
+   * proposal reverses the change on screen -- the reviewer declined lowering a
+   * threshold from 50000 to 30000, and the notice read "-30000 +50000", which
+   * says the reviewer WROTE 50000. They wrote nothing; 50000 was already there.
+   * Against the original the same decline renders as no change at all for that
+   * hunk, and only the parts that really landed appear.
+   */
+  const baseline = declinedParts ? preview.oldContent : preview.newContent;
   const notice = buildEditedProposalNotice(
-    describeCorrection(preview.newContent, applied),
+    describeCorrection(baseline, applied),
     declinedParts,
   );
   if (!notice) {

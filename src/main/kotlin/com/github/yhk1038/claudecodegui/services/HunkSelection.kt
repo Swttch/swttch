@@ -26,13 +26,31 @@ class HunkSelection {
     val total: Int get() = ranges.size
 
     /**
-     * Adopt the IDE's split. Everything starts kept, so a reviewer who touches
-     * nothing approves the whole change exactly as before.
+     * Regions the reviewer has turned down, remembered as the regions
+     * themselves rather than as positions among them.
+     *
+     * A re-diff renumbers everything: unticking the first of two hunks and then
+     * typing in the proposed side produced three hunks, and index 0 no longer
+     * named the region that had been declined. Holding the regions means a
+     * decision survives a renumbering, and a region that the edit dissolved is
+     * simply no longer among the ranges.
+     */
+    private val declined = mutableSetOf<AcceptedRange>()
+
+    /**
+     * Adopt the IDE's split, keeping decisions already made.
+     *
+     * Called again on every re-diff, which the IDE runs whenever the proposed
+     * side is edited. Clearing the decisions here is what put a declined hunk
+     * back under review the moment the reviewer typed anywhere else in the file
+     * (#359) — so what is kept is everything the reviewer has not declined.
      */
     fun setRanges(newRanges: List<AcceptedRange>) {
         ranges = newRanges
         accepted.clear()
-        accepted.addAll(newRanges.indices)
+        newRanges.forEachIndexed { index, range ->
+            if (range !in declined) accepted.add(index)
+        }
         listeners.forEach { it() }
     }
 
@@ -43,13 +61,23 @@ class HunkSelection {
     fun isAccepted(index: Int): Boolean = index in accepted
 
     fun toggle(index: Int) {
-        if (index in accepted) accepted.remove(index) else accepted.add(index)
+        val range = ranges.getOrNull(index)
+        if (index in accepted) {
+            accepted.remove(index)
+            // Recorded by region, so the next re-diff can find the decision
+            // again however it renumbers the hunks.
+            range?.let { declined.add(it) }
+        } else {
+            accepted.add(index)
+            range?.let { declined.remove(it) }
+        }
         listeners.forEach { it() }
     }
 
     fun setAll(value: Boolean) {
         accepted.clear()
-        if (value) accepted.addAll(ranges.indices)
+        declined.clear()
+        if (value) accepted.addAll(ranges.indices) else declined.addAll(ranges)
         listeners.forEach { it() }
     }
 

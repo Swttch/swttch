@@ -81,7 +81,11 @@ export function buildEditedProposalNotice(
     declinedParts
       ? 'The user chose which parts of your proposed change to apply, and declined the rest.'
       : 'The user edited your proposed change before applying it.',
-    'This is what was actually written to the file:',
+    declinedParts
+      // Against the file as it was, so a declined hunk shows as absent rather
+      // than as the reviewer having written the original value themselves.
+      ? 'This is what changed in the file, out of everything you proposed:'
+      : 'This is what was actually written to the file:',
     '',
     '```diff',
     ...renderDiff(change),
