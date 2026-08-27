@@ -188,6 +188,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.2 - Fix review overwrite bug &amp; editable session tab name</h3>
+            <ul>
+                <li>Fix approving a review overwriting work saved while the review was open (#361, reported by @kkoprivlenski)</li>
+                <li>Add renaming a chat tab yourself (#362, requested by @CraftedFury)</li>
+            </ul>
             <h3>0.29.1 - Fixes for v0.29.0</h3>
             <ul>
                 <li>Fix the broken behaviour of the editable diff view (#353)</li>
