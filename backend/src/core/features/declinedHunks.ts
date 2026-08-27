@@ -35,7 +35,19 @@ import type { AcceptedRange } from './hunks';
 export function declinedAnything(
   preview: Pick<StoredPreview, 'oldContent' | 'newContent'>,
   accepted: readonly AcceptedRange[],
+  /**
+   * The proposed side as the reviewer left it, when they typed in it (#305).
+   *
+   * Present means they rewrote the proposal, and the answer is their text
+   * rather than a selection of hunks — so the ranges no longer describe what
+   * happened. They name hunks of a proposal that has since been replaced.
+   * Measured: a reviewer applied all three hunks and retyped two of them, and
+   * judging by ranges alone reported that as a decline.
+   */
+  edited?: string,
 ): boolean {
+  if (edited !== undefined) return false;
+
   const original = splitLines(preview.oldContent);
   const proposed = splitLines(preview.newContent);
 
