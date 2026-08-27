@@ -3,7 +3,8 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview } from '../features/diffPreview';
+import { takePreview, peekPreview } from '../features/diffPreview';
+import { holdApprovalIfBaseMoved } from '../features/reviewBase';
 
 /** WebView -> Backend TOOL_RESPONSE payload */
 interface ToolResponsePayload {
@@ -15,12 +16,12 @@ interface ToolResponsePayload {
   result?: string;
 }
 
-export function toolResponseHandler(
+export async function toolResponseHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
   bridge: Bridge,
-): void {
+): Promise<void> {
   const client = connections.getClient(connectionId);
   const sessionId = client?.subscribedSessionId;
 
@@ -34,6 +35,37 @@ export function toolResponseHandler(
   const toolUseId = payload?.toolUseId ?? '';
   const approved = payload?.approved ?? true;
   const controlRequestId = payload?.controlRequestId;
+
+  /*
+   * The gate, on this path too (#359).
+   *
+   * This is the button the reporter actually pressed — the chat prompt's Yes,
+   * not the review diff's Confirm — so a check that lived only in the other
+   * handler left the reported case wide open. Approving here writes the tool
+   * call as proposed, and the proposal was built from the file as it was when
+   * the request arrived.
+   *
+   * Peeked, not taken, so a held approval stays answerable: the preview is
+   * consumed below only once an answer is really going out.
+   */
+  const preview = toolUseId ? peekPreview(toolUseId) : undefined;
+  if (approved && preview) {
+    const held = await holdApprovalIfBaseMoved({
+      connections,
+      sessionId,
+      toolUseId,
+      preview,
+      bridge,
+      // No selection travels on this path — the chat's Yes means the whole
+      // change — so every disk change is treated as touching it.
+    });
+    if (held) {
+      // Nothing sent to the CLI: the request stays open, and the surface has
+      // been told to offer a refresh. ACK so the webview stops waiting on us.
+      connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+      return;
+    }
+  }
 
   // The IDE's diff owns hunk selection now, so a plain approval from the chat
   // means the whole change. Still consume any stored preview: the request is

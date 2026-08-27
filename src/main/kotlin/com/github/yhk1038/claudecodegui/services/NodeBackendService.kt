@@ -217,6 +217,27 @@ class NodeBackendService : Disposable {
                 any()?.refreshFiles(paths) ?: warn("refreshFiles")
             }
 
+            override suspend fun reviewBaseChanged(
+                toolUseId: String,
+                filePath: String,
+                reason: String,
+                overlapsAccepted: Boolean,
+                blockedApproval: Boolean,
+            ) {
+                any()?.reviewBaseChanged(toolUseId, filePath, reason, overlapsAccepted, blockedApproval)
+                    ?: warn("reviewBaseChanged")
+            }
+
+            override suspend fun redrawReview(
+                toolUseId: String,
+                filePath: String,
+                oldContent: String,
+                newContent: String,
+            ) {
+                any()?.redrawReview(toolUseId, filePath, oldContent, newContent)
+                    ?: warn("redrawReview")
+            }
+
             override suspend fun createSession(workingDir: String) {
                 any()?.createSession(workingDir) ?: warn("createSession")
             }

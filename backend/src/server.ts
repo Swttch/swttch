@@ -14,6 +14,10 @@ import { restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
+import { refreshReviewAgainstDisk } from './core/features/refreshReview';
+import { peekPreview } from './core/features/diffPreview';
+import { carryEditAcrossRefresh } from './core/features/carryEditAcrossRefresh';
+import { refreshOutcomeNotice } from './core/features/refreshOutcomeNotice';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
@@ -397,7 +401,109 @@ async function main() {
       '[node-backend]',
       `Received: RESOLVE_DIFF from the IDE (session=${parsed.sessionId}, edited=${parsed.editedContent !== undefined})`,
     );
-    resolveDiffReview(connections, parsed, jetbrainsBridge);
+    // A notification has nobody to answer, so failures are logged here rather
+    // than propagating into the RPC layer that delivered it.
+    void resolveDiffReview(connections, parsed, jetbrainsBridge).catch((err) => {
+      console.error('[node-backend]', 'RESOLVE_DIFF from the IDE failed:', err);
+    });
+  });
+
+  /*
+   * The IDE asking to rebuild a review its own diff is drawing (#359).
+   *
+   * A notification rather than a request because Kotlin can only notify — so
+   * the rebuilt change goes back the other way, as REDRAW_REVIEW. The webview's
+   * equivalent is a plain request/response; this is the same exchange split in
+   * two because of what the RPC channel allows.
+   */
+  jetbrainsBridge.onNotification(MessageType.REFRESH_DIFF_PREVIEW, (_method, params) => {
+    const toolUseId = typeof params?.toolUseId === 'string' ? params.toolUseId : undefined;
+    if (!toolUseId) {
+      console.error('[node-backend]', 'REFRESH_DIFF_PREVIEW from the IDE ignored: no toolUseId');
+      return;
+    }
+    // What the reviewer has on the proposed side, sent because it exists only
+    // in their diff. Absent when they never typed, or when the IDE could not
+    // read it back.
+    const editedProposal =
+      typeof params?.editedProposal === 'string' ? params.editedProposal : undefined;
+    // Read before the rebuild replaces it: the merge needs the proposal the
+    // typing was made against, not the one about to take its place.
+    const proposalBeforeRefresh = peekPreview(toolUseId)?.newContent;
+    void refreshReviewAgainstDisk(toolUseId)
+      .then((outcome) => {
+        console.error('[node-backend]', `IDE refresh for ${toolUseId}: ${outcome.status}`);
+        /*
+         * Carry the reviewer's typing across, the same way the built-in surface
+         * does (#359).
+         *
+         * A refresh restates the ORIGINAL side; typing lives on the PROPOSED
+         * one. Different axes, so unless both changed the same line there is
+         * nothing to choose between — and replacing the proposed side wholesale
+         * threw the typing away with nothing said about it.
+         *
+         * Only meaningful when there is a rebuild to carry it onto; the other
+         * outcomes leave the diff as it is, typing included.
+         */
+        let mergedProposal = '';
+        if (outcome.status === 'refreshed') {
+          const carried = carryEditAcrossRefresh(
+            proposalBeforeRefresh,
+            editedProposal,
+            outcome.preview.newContent,
+          );
+          mergedProposal = carried.newContent;
+          if (carried.conflicts.length > 0) {
+            console.error(
+              '[node-backend]',
+              `IDE refresh for ${toolUseId}: kept the rebuilt proposal on line(s) ` +
+                `${carried.conflicts.join(', ')}, where both sides had changed it`,
+            );
+          }
+        }
+        const notice = refreshOutcomeNotice(outcome, mergedProposal);
+        if (notice.kind === 'redraw') {
+          return jetbrainsBridge.redrawReview({
+            toolUseId,
+            filePath: notice.filePath,
+            oldContent: notice.oldContent,
+            newContent: notice.newContent,
+          });
+        }
+        if (notice.kind === 'banner') {
+          const preview = peekPreview(toolUseId);
+          if (!preview) return;
+          return jetbrainsBridge.notifyReviewBaseChanged({
+            toolUseId,
+            filePath: preview.filePath,
+            reason: notice.reason,
+            // The disk change is what made it unrebuildable, so it is over the
+            // proposal by definition.
+            overlapsAccepted: true,
+            // Nothing was refused just now; this is the refresh answering.
+            blockedApproval: false,
+          });
+        }
+        return;
+      })
+      .catch((err) => {
+        console.error('[node-backend]', 'IDE refresh failed:', err);
+      });
+  });
+
+  // The IDE reporting a save, so a review of that file can be told its base has
+  // moved before the user approves against content that is no longer there
+  // (#359). Sent for every save; whether any review cared is decided here.
+  jetbrainsBridge.onNotification(MessageType.FILE_SAVED, (_method, params) => {
+    const filePath = typeof params?.filePath === 'string' ? params.filePath : undefined;
+    if (!filePath) {
+      console.error('[node-backend]', 'FILE_SAVED ignored: no filePath');
+      return;
+    }
+    // Handed to the bridge, not acted on here. The IDE reporting a save is one
+    // environment's way of meeting `watchFile`; whoever asked to watch that file
+    // is told by the bridge, so the backend never learns which host it is on.
+    jetbrainsBridge.reportFileSaved(filePath);
   });
 
   // 4. Logger에 LogWS 참조 설정

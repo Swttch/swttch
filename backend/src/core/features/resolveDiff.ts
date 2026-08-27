@@ -17,10 +17,12 @@
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
-import { takePreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import { takePreview, peekPreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
+import { holdApprovalIfBaseMoved } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
 import { buildPartialApproval, narrowToDifference } from './partialApproval';
 import { buildEditedProposalNotice, type EditedProposalChange } from './editedProposalNotice';
+import { declinedAnything } from './declinedHunks';
 import type { AcceptedRange } from './hunks';
 import { sendControlResponseToProcess } from '../claude-process';
 import { sendAfterTurn } from './afterTurn';
@@ -88,23 +90,27 @@ function isAcceptedRange(value: unknown): value is AcceptedRange {
  * subset. Keeping none is a denial — writing the file back unchanged would
  * report success for an edit that never happened.
  */
-export function resolveDiffReview(
+export async function resolveDiffReview(
   connections: ConnectionManager,
   params: ResolveDiffParams,
   bridge?: Bridge,
-): void {
-  const preview = takePreview(params.toolUseId);
-
-  // The question is settled however this ended, so the window that asked it goes
-  // too. Done here rather than in each caller because both of them — the IDE's
-  // own diff and our diff page — must close it on every branch below, and one
-  // that forgot would strand a tab on an answered request.
-  //
-  // Only the built-in surface has a tab of ours to close; the IDE's viewer
-  // closes itself, and an unknown id is a no-op there anyway.
-  if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
+): Promise<void> {
+  /*
+   * Peeked, not taken, until the answer is actually going out.
+   *
+   * The gate below can refuse to answer and hand the review back to the user,
+   * and a review whose entry had already been consumed could never be answered
+   * again — the approval buttons would be live with nothing behind them. So the
+   * entry is dropped only on the paths that really respond.
+   */
+  const preview = peekPreview(params.toolUseId);
 
   const respond = (response: Record<string, unknown>) => {
+    // Settled for real now, so the entry goes and the window with it.
+    takePreview(params.toolUseId);
+    // Both surfaces: whichever drew this review, it is settled now. An unknown
+    // id is a no-op on either side.
+    if (bridge) void closeDiffTabForPermission(bridge, params.toolUseId);
     sendControlResponseToProcess(connections, params.sessionId, {
       subtype: 'success' as const,
       request_id: params.controlRequestId,
@@ -142,6 +148,38 @@ export function resolveDiffReview(
     return;
   }
 
+  /*
+   * The gate (#359).
+   *
+   * Everything below builds what gets written from `preview.oldContent` — the
+   * file as it was when the request arrived. If disk has moved since, that
+   * content is a claim about a file that no longer exists, and writing from it
+   * silently discards whatever arrived in the meantime. That is the data loss:
+   * a 1090-line file came back as the one line that had been proposed.
+   *
+   * Checked here rather than trusting the save notifications, because those are
+   * an early warning that can miss — a host with no IDE, a save the IDE does
+   * not report, a write by another process. This is the last point before the
+   * answer goes out, so it is the only place the check is a guarantee.
+   *
+   * Refusing to answer is safe: the CLI holds a permission request open
+   * indefinitely (measured at over three minutes with no answer and no
+   * timeout), so the request is still there when the user comes back to it.
+   */
+  // Deliberately no `respond` when this holds: the request stays open and the
+  // entry stays stored, so the review can be refreshed and answered again.
+  const held = await holdApprovalIfBaseMoved({
+    connections,
+    sessionId: params.sessionId,
+    toolUseId: params.toolUseId,
+    preview,
+    accepted: params.acceptedRanges,
+    // Told as well as the webview: with the IDE viewer chosen, the review on
+    // screen is the host's, and a webview-only message reaches nothing.
+    bridge,
+  });
+  if (held) return;
+
   const amended = buildPartialApproval(preview, params.acceptedRanges, edited);
   respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });
   console.error(
@@ -172,7 +210,27 @@ export function resolveDiffReview(
    * nothing corrected.
    */
   if (amended !== null) {
-    tellClaudeAboutTheEdit(connections, params.sessionId, preview, amended.content);
+    /*
+     * Whether the reviewer turned parts down, as opposed to rewriting them.
+     *
+     * Told apart by what the applied text kept: a declined hunk leaves the file
+     * exactly as it was, so its old lines are still there. A rewritten one does
+     * not, since the reviewer typed something of their own.
+     *
+     * Counting hunks against accepted ranges was tried and does not work. The
+     * two number different things -- the backend's own split against the split
+     * the IDE made, which HunkSelection already says can differ (two against
+     * four on a real file) -- so the comparison read as a decline whenever the
+     * IDE merely split more finely, and missed real declines when it split less.
+     */
+    const declinedParts = declinedAnything(preview, params.acceptedRanges);
+    tellClaudeAboutTheEdit(
+      connections,
+      params.sessionId,
+      preview,
+      amended.content,
+      declinedParts,
+    );
   }
 }
 
@@ -192,8 +250,26 @@ function tellClaudeAboutTheEdit(
   sessionId: string,
   preview: StoredPreview,
   applied: string,
+  declinedParts: boolean,
 ): void {
-  const notice = buildEditedProposalNotice(describeCorrection(preview.newContent, applied));
+  /*
+   * What the diff in the notice is measured against.
+   *
+   * A rewrite is measured against the PROPOSAL: the model knows what it asked
+   * for and needs to see where the result departs from it.
+   *
+   * A decline is measured against the FILE AS IT WAS. Measuring it against the
+   * proposal reverses the change on screen -- the reviewer declined lowering a
+   * threshold from 50000 to 30000, and the notice read "-30000 +50000", which
+   * says the reviewer WROTE 50000. They wrote nothing; 50000 was already there.
+   * Against the original the same decline renders as no change at all for that
+   * hunk, and only the parts that really landed appear.
+   */
+  const baseline = declinedParts ? preview.oldContent : preview.newContent;
+  const notice = buildEditedProposalNotice(
+    describeCorrection(baseline, applied),
+    declinedParts,
+  );
   if (!notice) {
     // Nothing to report means the applied text matched the proposal exactly.
     // Logged because "the reminder never arrived" and "there was nothing to

@@ -129,6 +129,83 @@ export class BrowserBridge implements Bridge {
     // no-op: browser mode has no IDE editor tabs to reload
   }
 
+  /**
+   * no-op: standalone has no host drawing a review of its own.
+   *
+   * A genuine no-op, unlike watchFile below. The review here is always drawn by
+   * the webview, which is told over its own WebSocket — there is no second
+   * surface to notify, so nothing is missing. The judgement is "would a user of
+   * this environment be worse off without it": they would not.
+   */
+  async notifyReviewBaseChanged(): Promise<void> {
+    // no-op
+  }
+
+  /** no-op, for the same reason: the webview redraws its own review. */
+  async redrawReview(): Promise<void> {
+    // no-op
+  }
+
+  /**
+   * Watch the file ourselves, because standalone has no host to ask (#359).
+   *
+   * NOT a no-op like the rest of this class. The others are no-ops because the
+   * thing they do — open an editor tab, reload one — only exists inside an IDE.
+   * Noticing that a file changed is not like that: it matters just as much to
+   * someone running the backend from a terminal, and the first cut of #359
+   * shipped with only the IDE path wired up, so standalone users had no warning
+   * at all until an approval was already blocked.
+   *
+   * `fs.watch` fires more than once for a single save on some platforms, and
+   * fires for metadata changes too, so the content is compared before the
+   * caller is told. That keeps a save that rewrote identical bytes from
+   * interrupting a review that is still valid.
+   */
+  async watchFile(filePath: string, onChanged: () => void): Promise<() => void> {
+    const { watch } = await import('fs');
+    const { readFile } = await import('fs/promises');
+
+    let lastSeen: string | null = null;
+    try {
+      lastSeen = await readFile(filePath, 'utf8');
+    } catch {
+      // Unreadable now (a Write creating a new file): a later create still
+      // counts as a change, which is what leaving this null expresses.
+    }
+
+    let closed = false;
+    let watcher: import('fs').FSWatcher | undefined;
+
+    try {
+      watcher = watch(filePath, { persistent: false }, () => {
+        if (closed) return;
+        void readFile(filePath, 'utf8')
+          .then((current) => {
+            if (closed || current === lastSeen) return;
+            lastSeen = current;
+            onChanged();
+          })
+          .catch(() => {
+            // Deleted or briefly replaced mid-save. The approval gate reads the
+            // file itself and will report it properly; guessing here would fire
+            // on every editor that saves via rename.
+          });
+      });
+      watcher.on('error', (err) => {
+        console.error('[node-backend]', `Stopped watching ${filePath}:`, err);
+      });
+    } catch (err) {
+      // Watching is best effort by contract — the gate is what protects the
+      // file — so a platform that refuses gets no warning rather than an error.
+      console.error('[node-backend]', `Could not watch ${filePath}:`, err);
+    }
+
+    return () => {
+      closed = true;
+      watcher?.close();
+    };
+  }
+
   async createSession(_workingDir?: string): Promise<void> {
     // no-op: handled by session reset in browser mode
   }

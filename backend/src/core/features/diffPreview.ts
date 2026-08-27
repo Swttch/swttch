@@ -56,9 +56,35 @@ export function rememberPreview(toolUseId: string, preview: StoredPreview): void
   previews.set(toolUseId, preview);
 }
 
+/**
+ * Told whenever a preview is consumed, so whoever holds resources for that
+ * review can release them.
+ *
+ * A callback rather than a direct call into the watch module: this module is
+ * the one every review path already depends on, so importing the watcher here
+ * would close a cycle (watch → preview → watch). The dependency points one way
+ * and the watcher registers itself.
+ */
+const consumeListeners = new Set<(toolUseId: string) => void>();
+
+export function onPreviewConsumed(listener: (toolUseId: string) => void): void {
+  consumeListeners.add(listener);
+}
+
 export function takePreview(toolUseId: string): StoredPreview | undefined {
   const preview = previews.get(toolUseId);
   previews.delete(toolUseId);
+  // The question is settled, so anything held for it goes too — otherwise a
+  // long session accumulates one file watcher per answered review (#359).
+  if (preview) {
+    for (const listener of consumeListeners) {
+      try {
+        listener(toolUseId);
+      } catch (err) {
+        console.error('[node-backend]', 'A preview-consumed listener threw:', err);
+      }
+    }
+  }
   return preview;
 }
 
@@ -75,6 +101,54 @@ export function peekPreview(toolUseId: string): StoredPreview | undefined {
 /** Exposed for tests; production code drops entries via takePreview. */
 export function clearPreviews(): void {
   previews.clear();
+}
+
+/**
+ * Pending reviews of [filePath], as `[toolUseId, preview]` pairs.
+ *
+ * The IDE reports saves by path and knows nothing about tool_use_ids, so this
+ * is how a save is turned into "which reviews does that invalidate" (#359).
+ * Plural because two edits to the same file can be awaiting answers at once.
+ *
+ * Paths are compared after normalising separators, since a save reported by the
+ * IDE and a path taken from the CLI's tool input can spell the same file
+ * differently on Windows.
+ */
+export function previewsForFile(filePath: string): Array<[string, StoredPreview]> {
+  const wanted = normalisePath(filePath);
+  return [...previews.entries()].filter(([, p]) => normalisePath(p.filePath) === wanted);
+}
+
+/**
+ * Restate a pending review against [oldContent] as it is on disk now, keeping
+ * the same tool_use_id so the answer still lands on the same request.
+ *
+ * Replaces the entry rather than mutating it, so a caller holding the previous
+ * preview keeps reading the base it made its decisions against.
+ */
+export function updatePreviewBase(
+  toolUseId: string,
+  next: Pick<StoredPreview, 'oldContent' | 'newContent' | 'hunks'>,
+): StoredPreview | undefined {
+  const existing = previews.get(toolUseId);
+  if (!existing) return undefined;
+  const updated: StoredPreview = { ...existing, ...next };
+  previews.set(toolUseId, updated);
+  return updated;
+}
+
+/**
+ * Compare file paths the way the two sides spell them.
+ *
+ * Windows hands us backslashes from the IDE and, depending on the tool input,
+ * forward slashes from the CLI; case also differs there. Lowercasing is safe
+ * for the comparison we need on every platform we ship: the cost of treating
+ * two differently-cased paths as one file is a review being checked that did
+ * not need checking, and the cost of missing a match is the data loss this
+ * exists to stop.
+ */
+function normalisePath(p: string): string {
+  return p.replace(/\\/g, '/').toLowerCase();
 }
 
 /** Reads the file, or null when it does not exist yet (Write creating one). */
@@ -166,11 +240,20 @@ export async function openDiffTabForPermission(
 }
 
 /**
- * Close the diff tab opened for [toolUseId], whichever way its request was
+ * Close the review opened for [toolUseId], whichever way its request was
  * answered — from that page, the chat prompt, or the CLI giving up.
  *
- * Same contract again: a tab we cannot close must not take the answer down with
- * it, since the decision itself has already been made and sent.
+ * Both surfaces are told, because which one drew the review depends on a setting
+ * read when the request arrived and it may have changed since; an unknown id is
+ * a no-op on either side, so telling both is cheaper than remembering.
+ *
+ * The IDE's viewer used to close itself, on the click, before anyone knew
+ * whether the answer would go out. That is why a held approval took the review
+ * off screen while its question was still open (#359) — so it is closed from
+ * here now, on the paths that really respond.
+ *
+ * Same contract again: a surface we cannot close must not take the answer down
+ * with it, since the decision itself has already been made and sent.
  */
 export async function closeDiffTabForPermission(
   bridge: Bridge,
@@ -180,5 +263,10 @@ export async function closeDiffTabForPermission(
     await bridge.closeDiffTab({ toolUseId });
   } catch (err) {
     console.error('[node-backend]', 'Failed to close diff tab:', err);
+  }
+  try {
+    await bridge.closeDiff({ toolUseId });
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to close IDE diff:', err);
   }
 }

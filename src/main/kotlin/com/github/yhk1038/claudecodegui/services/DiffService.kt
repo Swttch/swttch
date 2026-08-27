@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
 import com.intellij.diff.DiffContentFactory
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.editor.ChainDiffVirtualFile
 import com.intellij.diff.requests.SimpleDiffRequest
@@ -16,7 +17,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import java.awt.BorderLayout
 import java.io.File
+import javax.swing.JPanel
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -34,6 +37,24 @@ class DiffService(private val project: Project) {
      * leave one tab per edit for the user to sweep up by hand.
      */
     private val pendingDiffFiles = ConcurrentHashMap<String, VirtualFile>()
+
+    /**
+     * What each open review was opened with, so it can be reopened against a
+     * rebuilt change (#359).
+     *
+     * The IDE's viewer takes contents, not a handle to something it can re-read,
+     * so redrawing means opening it again — and that needs the answer callback
+     * as well, or the reopened diff would have Apply buttons that answer nobody.
+     */
+    private val pendingReviews = ConcurrentHashMap<String, OpenReview>()
+
+    /** A review currently on screen, with everything needed to redraw it. */
+    private data class OpenReview(
+        val filePath: String,
+        val onResolve: ((List<AcceptedRange>, String?) -> Unit)?,
+        /** The banner shown above it, when its base has moved. */
+        var banner: ReviewBaseBanner? = null,
+    )
 
     /**
      * Open IDE diff viewer for file changes
@@ -57,6 +78,20 @@ class DiffService(private val project: Project) {
         newContent: String,
         toolUseId: String? = null,
         onResolve: ((List<AcceptedRange>, String?) -> Unit)? = null,
+        /**
+         * Drawn above the review controls when the file has moved under this
+         * review (#359). Absent for an ordinary open.
+         */
+        banner: ReviewBaseBanner? = null,
+        /**
+         * Replace the tab already on screen rather than bringing it forward.
+         *
+         * Set when this call is the redraw itself — adding or dropping a
+         * banner, or rebuilding against the current file. Those are exactly the
+         * cases where what is on screen is the stale thing, so surfacing it
+         * would show the reviewer the very state that needs replacing (#359).
+         */
+        replaceExisting: Boolean = banner != null,
     ) {
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -66,8 +101,12 @@ class DiffService(private val project: Project) {
                 // would throw away the hunks the reviewer has already ticked.
                 val existing = pendingDiffFiles[toolUseId]
                 val fem = FileEditorManager.getInstance(project)
-                if (existing != null && fem.isFileOpen(existing)) {
-                    fem.openFile(existing, true)
+                if (shouldSurfaceExistingTab(
+                        replaceExisting = replaceExisting,
+                        hasExistingTab = existing != null && fem.isFileOpen(existing),
+                    )
+                ) {
+                    fem.openFile(existing!!, true)
                     return@invokeLater
                 }
 
@@ -124,16 +163,35 @@ class DiffService(private val project: Project) {
                         val edited =
                             if (keepEdits) rightContent.document.text.takeIf { it != newContent }
                             else null
-                        toolUseId?.let { closeDiffViewer(it) }
+                        // Not closed here. Whether this answer is actually going
+                        // out is the backend's to decide -- the base-changed gate
+                        // can hold it and hand the review back (#359). Closing on
+                        // the click took the review off screen while its question
+                        // was still open, and dropped the entry that says the IDE
+                        // owns it, so reopening fell through to the built-in diff.
+                        // The backend closes it once it has really answered.
                         onResolve(accepted, edited)
                     }
-                    chain.putUserData(DiffUserDataKeysEx.BOTTOM_PANEL, panel.component)
+                    // Banner above, controls below: the warning has to be read
+                    // before the buttons it is about are pressed.
+                    val bottom = if (banner == null) {
+                        panel.component
+                    } else {
+                        JPanel(BorderLayout()).apply {
+                            add(banner.component, BorderLayout.NORTH)
+                            add(panel.component, BorderLayout.CENTER)
+                        }
+                    }
+                    chain.putUserData(DiffUserDataKeysEx.BOTTOM_PANEL, bottom)
                 }
 
                 val diffFile = ChainDiffVirtualFile(chain, "Diff: $fileName")
                 FileEditorManager.getInstance(project).openFile(diffFile, false)
                 if (toolUseId != null) {
                     pendingDiffFiles[toolUseId] = diffFile
+                    // Kept so a rebuilt change can reopen this same review with
+                    // an answer path intact.
+                    pendingReviews[toolUseId] = OpenReview(filePath, onResolve)
                 }
 
                 logger.info("Opened diff viewer for: $filePath (toolUseId=$toolUseId)")
@@ -152,6 +210,7 @@ class DiffService(private val project: Project) {
      * nothing to preview), so callers do not have to track which ones did.
      */
     fun closeDiffViewer(toolUseId: String) {
+        pendingReviews.remove(toolUseId)
         val file = pendingDiffFiles.remove(toolUseId) ?: return
         ApplicationManager.getApplication().invokeLater {
             try {
@@ -331,7 +390,172 @@ class DiffService(private val project: Project) {
         }
     }
 
+    /**
+     * Draw a banner over the review for [toolUseId] saying its file has moved.
+     *
+     * A no-op for a review this IDE is not drawing — the webview may own it, and
+     * the backend tells both without knowing which.
+     */
+    fun showReviewBaseChanged(
+        toolUseId: String,
+        reason: ReviewBaseReason,
+        overlapsAccepted: Boolean,
+        blockedApproval: Boolean,
+        onRefresh: () -> Unit,
+    ) {
+        // On the EDT: this asks the editor what is open, and builds a Swing
+        // component. Arrives off it, from the bridge coroutine.
+        ApplicationManager.getApplication().invokeLater {
+            val review = reviewStillOnScreen(toolUseId) ?: return@invokeLater
+            val banner = ReviewBaseBanner(
+                reason = reason,
+                overlapsAccepted = overlapsAccepted,
+                blockedApproval = blockedApproval,
+                // Offered only when there is something to rebuild against.
+                onRefresh = if (reason == ReviewBaseReason.CHANGED) onRefresh else null,
+            )
+            review.banner = banner
+            reopenWithCurrentBanner(toolUseId)
+        }
+    }
+
+    /**
+     * Redraw the review for [toolUseId] against a rebuilt change.
+     *
+     * The banner goes with it: the reason it was there has just been dealt with,
+     * and leaving it up would say the review is stale when it is current.
+     */
+    fun redrawReview(toolUseId: String, filePath: String, oldContent: String, newContent: String) {
+        // On the EDT for the same reason as above; openDiffViewer hops again on
+        // its own, which is harmless.
+        ApplicationManager.getApplication().invokeLater {
+            val review = reviewStillOnScreen(toolUseId) ?: return@invokeLater
+            review.banner = null
+            openDiffViewer(
+                filePath,
+                oldContent,
+                newContent,
+                toolUseId,
+                review.onResolve,
+                banner = null,
+                // The whole point of this call: the tab on screen is drawn
+                // against the file as it was, which is what the reviewer asked
+                // to be rid of.
+                replaceExisting = true,
+            )
+        }
+    }
+
+    /**
+     * The review this IDE is drawing for [toolUseId], or null once its tab is
+     * gone from the screen.
+     *
+     * A review can leave the screen two ways, and only one of them ends it. The
+     * backend closes it when the request has been answered; the reviewer can
+     * also just close the tab, which settles nothing -- the prompt is still
+     * asking, and clicking the file name has to be able to bring the review
+     * back.
+     *
+     * What must not happen is the third thing: treating a tab the reviewer
+     * closed as still on screen. Everything below reopens what it finds, so a
+     * stale entry made the IDE diff reappear on its own moments after the
+     * reviewer had closed it and opened the built-in one instead -- two reviews
+     * of the same edit, on screen at once (#359).
+     *
+     * Asked of the editor rather than tracked, because the close is the
+     * reviewer's and arrives through no path of ours.
+     */
+    private fun reviewStillOnScreen(toolUseId: String): OpenReview? {
+        val review = pendingReviews[toolUseId] ?: return null
+        val file = pendingDiffFiles[toolUseId]
+        if (file == null || !FileEditorManager.getInstance(project).isFileOpen(file)) {
+            // Forget it rather than leave it to be asked about again: the tab is
+            // not coming back by itself, and the entry is what says the IDE owns
+            // this review.
+            pendingReviews.remove(toolUseId)
+            pendingDiffFiles.remove(toolUseId)
+            return null
+        }
+        return review
+    }
+
+    /**
+     * The two sides of the review as they are on screen right now, original
+     * first, or null when this IDE is not drawing it.
+     *
+     * The proposed side is read live rather than from what was opened with,
+     * because the reviewer can type into it (#305) — so this is where their
+     * edits are, and the only place they are.
+     */
+    private fun sidesOnScreen(toolUseId: String): Pair<String, String>? {
+        val file = pendingDiffFiles[toolUseId] ?: return null
+        val chain = (file as? ChainDiffVirtualFile) ?: return null
+        // The chain does not hand back the request that was put in: it stores
+        // each one wrapped in a producer, so asking for a SimpleDiffRequest
+        // directly always misses (#359).
+        val request = chain.chain.requests.firstOrNull()?.let { produced ->
+            when (produced) {
+                is SimpleDiffRequestChain.DiffRequestProducerWrapper -> produced.request
+                else -> produced
+            }
+        } as? SimpleDiffRequest ?: return null
+        val oldContent = (request.contents.getOrNull(0) as? DocumentContent)?.document?.text ?: return null
+        val newContent = (request.contents.getOrNull(1) as? DocumentContent)?.document?.text ?: return null
+        return oldContent to newContent
+    }
+
+    /**
+     * What the reviewer currently has on the proposed side, or null when this
+     * IDE is not drawing this review.
+     *
+     * Sent with a refresh so the backend can carry it across the rebuilt
+     * proposal. Without it the rebuild replaces the proposed side wholesale and
+     * the reviewer's typing goes with it — which is what the built-in surface
+     * already solved, and the IDE's did not (#359).
+     */
+    fun proposedOnScreen(toolUseId: String): String? = sidesOnScreen(toolUseId)?.second
+
+    /**
+     * Reopen the review with the banner it has just been given.
+     *
+     * The IDE's diff takes its bottom panel when the tab is created, so putting
+     * a banner on an open review means opening it again. The contents are
+     * unchanged, which is why this is safe to do for a banner alone.
+     */
+    private fun reopenWithCurrentBanner(toolUseId: String) {
+        val review = reviewStillOnScreen(toolUseId) ?: return
+        val sides = sidesOnScreen(toolUseId) ?: return
+        openDiffViewer(
+            review.filePath,
+            sides.first,
+            sides.second,
+            toolUseId,
+            review.onResolve,
+            review.banner,
+            // A redraw: the tab on screen is the one without the banner, so
+            // surfacing it would show the review still looking approvable.
+            replaceExisting = true,
+        )
+    }
+
     companion object {
+        /**
+         * Whether an open diff tab should simply be brought forward.
+         *
+         * Yes for an ordinary open: the approval prompt's file name can be
+         * clicked at any time, including while its diff is open, and rebuilding
+         * the tab there would throw away the hunks the reviewer has ticked.
+         *
+         * No for a redraw, which is the whole point of [replaceExisting] — in a
+         * redraw the open tab IS the stale thing, so surfacing it would show the
+         * reviewer exactly the state that needs replacing. Inferring this from
+         * whether a banner was passed is what silently killed the banner's
+         * Refresh and Dismiss: both redraw with the banner cleared, so both were
+         * read as ordinary opens and returned without doing anything (#359).
+         */
+        fun shouldSurfaceExistingTab(replaceExisting: Boolean, hasExistingTab: Boolean): Boolean =
+            !replaceExisting && hasExistingTab
+
         fun getInstance(project: Project): DiffService {
             return project.getService(DiffService::class.java)
         }

@@ -1,11 +1,12 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { MessageType } from '../../shared';
-import { peekPreview } from '../features/diffPreview';
+import { MessageType, ReviewTarget, resolveReviewTarget } from '../../shared';
+import { peekPreview, openDiffTabForPermission } from '../features/diffPreview';
+import { readMergedSettings } from '../features/settings';
 
 /**
- * Open a diff in the IDE.
+ * Open a review, on whichever surface that review belongs on.
  *
  * Two callers, one message. Either the sender supplies the contents, or it
  * names a pending permission request by `toolUseId` and the contents are read
@@ -14,6 +15,14 @@ import { peekPreview } from '../features/diffPreview';
  * (Escape with the diff focused does that), and clicking the name brings it
  * back. Sending only the id keeps the file contents off the wire, so what is
  * shown is the text we diffed.
+ *
+ * The surface is decided here and not by the sender. The webview used to choose
+ * it too, from settings it had loaded without a working directory, so a project
+ * that asked for the IDE's viewer got the built-in page from the file-name link
+ * while the unprompted open had already put the IDE's viewer on screen — two
+ * reviews of one edit, side by side (#359). Only this process knows which
+ * session a review belongs to, and only that session knows the working
+ * directory that makes a project's setting apply.
  */
 export async function openDiffHandler(
   connectionId: string,
@@ -46,6 +55,33 @@ export async function openDiffHandler(
   }
 
   try {
+    const target = await targetForReview(sessionId, connections, bridge);
+
+    /*
+     * An overlay is the one surface this process cannot open: the webview draws
+     * it over a screen we do not own. Answered rather than acted on, so the
+     * sender mounts it — and told the same way for every surface, so the choice
+     * still lives in one place.
+     */
+    if (target === ReviewTarget.BUILT_IN_OVERLAY || target === ReviewTarget.BUILT_IN_WINDOW) {
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'ok',
+        target,
+      });
+      return;
+    }
+
+    if (target === ReviewTarget.BUILT_IN_TAB) {
+      if (toolUseId) await openDiffTabForPermission(bridge, toolUseId);
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'ok',
+        target,
+      });
+      return;
+    }
+
     await bridge.openDiff({
       filePath: filePath as string,
       oldContent: oldContent as string,
@@ -54,7 +90,11 @@ export async function openDiffHandler(
       sessionId,
       controlRequestId,
     });
-    connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
+    connections.sendTo(connectionId, MessageType.ACK, {
+      requestId: message.requestId,
+      status: 'ok',
+      target,
+    });
   } catch (err) {
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
@@ -62,4 +102,28 @@ export async function openDiffHandler(
       error: err instanceof Error ? err.message : String(err),
     });
   }
+}
+
+/**
+ * Which surface this review belongs on, from the settings that apply to it.
+ *
+ * The working directory comes from the review's own session, so a project's
+ * setting is honoured for the project the review is in — not for whichever
+ * directory a client happened to have loaded.
+ */
+async function targetForReview(
+  sessionId: string | undefined,
+  connections: ConnectionManager,
+  bridge: Bridge,
+): Promise<ReviewTarget> {
+  const workingDir = sessionId
+    ? connections.getSession(sessionId)?.workingDir || undefined
+    : undefined;
+  const { settings } = await readMergedSettings(workingDir);
+  return resolveReviewTarget({
+    diffSurface: settings.diffSurface as string | undefined,
+    browserDiffPresentation: settings.browserDiffPresentation as string | undefined,
+    hostMode: settings.hostMode as string | undefined,
+    ideAttached: bridge.isConnected?.() ?? false,
+  });
 }

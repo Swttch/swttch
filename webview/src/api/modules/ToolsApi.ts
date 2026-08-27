@@ -118,27 +118,28 @@ export class ToolsApi {
   }
 
   /**
-   * Reopen the review diff for a permission request still awaiting an answer.
+   * Reopen the review for a permission request still awaiting an answer, on
+   * whichever surface that review belongs on.
+   *
+   * The webview does not choose the surface. It sends the id and the backend
+   * decides, because only the backend knows which session the review belongs to
+   * and only that session knows the working directory a project's setting is
+   * merged for. Choosing here as well is what opened the IDE's viewer and the
+   * built-in page for the same edit at once (#359).
    *
    * Only the id travels: the contents are held backend-side for that request,
    * so what is shown is the text the backend diffed rather than something
    * reassembled here. A request already answered has no preview left, and the
    * backend treats that as nothing to do.
-   */
-  async openDiffForRequest(toolUseId: string): Promise<void> {
-    await this.bridge.request(MessageType.OPEN_DIFF, { toolUseId });
-  }
-
-  /**
-   * Open OUR diff page in an IDE editor tab, for the same request.
    *
-   * The counterpart to {@link openDiffForRequest} for the built-in surface.
-   * Routed through the backend because only the IDE side can open an editor
-   * tab; in a browser the webview opens its own tab or overlay instead and this
-   * is not used.
+   * The answer comes back so the caller can mount an overlay, which is the one
+   * surface the backend cannot open on its own — the webview owns that screen.
    */
-  async openDiffTab(toolUseId: string): Promise<void> {
-    await this.bridge.request(MessageType.OPEN_DIFF_TAB, { toolUseId });
+  async openReview(toolUseId: string): Promise<{ target?: string }> {
+    const response = await this.bridge.request<{ target?: string }>(MessageType.OPEN_DIFF, {
+      toolUseId,
+    });
+    return response ?? {};
   }
 
   /**
@@ -172,6 +173,37 @@ export class ToolsApi {
     editedContent?: string;
   }): Promise<void> {
     await this.bridge.request(MessageType.RESOLVE_DIFF, { ...params });
+  }
+
+  /**
+   * Rebuild a pending review against the file as it is on disk right now
+   * (#359).
+   *
+   * Used when the base has moved under an open review — either a save was
+   * reported while it was being read, or the approval gate refused to answer
+   * with stale content. The answer carries a fresh preview, so the surface
+   * redraws from what is really there and an approval afterwards is stated
+   * against it.
+   *
+   * `preview` is null when the proposal can no longer be stated against the
+   * current file; `outcome` says which case that was.
+   */
+  async refreshDiffPreview(toolUseId: string): Promise<{
+    outcome: 'refreshed' | 'unchanged' | 'unrebuildable' | 'unknown';
+    reason?: 'no-longer-applies' | 'unreadable';
+    preview: DiffPreview | null;
+  }> {
+    const response = await this.bridge.request(MessageType.REFRESH_DIFF_PREVIEW, { toolUseId });
+    const payload = response as unknown as {
+      outcome: 'refreshed' | 'unchanged' | 'unrebuildable' | 'unknown';
+      reason?: 'no-longer-applies' | 'unreadable';
+      preview: DiffPreview | null;
+    };
+    return {
+      outcome: payload?.outcome ?? 'unknown',
+      reason: payload?.reason,
+      preview: payload?.preview ?? null,
+    };
   }
 
   /**

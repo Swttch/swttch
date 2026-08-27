@@ -39,10 +39,12 @@ export function useDiffOverlayAllowed(): boolean {
  * the webview to draw the overlay itself.
  */
 export function useDiffOpensAsOverlay(): boolean {
-  const { scopeSettings } = useSettings();
+  // Merged, not the scope the settings screen is showing: the backend is one of
+  // the three that must agree here, and it merges (#359).
+  const { settings } = useSettings();
   const allowed = useDiffOverlayAllowed();
   const presentation =
-    (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
+    (settings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
     BrowserDiffPresentation.NEW_TAB;
   return allowed && presentation === BrowserDiffPresentation.OVERLAY;
 }

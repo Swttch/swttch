@@ -304,6 +304,32 @@ class RpcWebSocketClient(
                 rpcHandler.refreshFiles(parseRefreshFilePaths(params))
                 buildJsonObject {}
             }
+            "REVIEW_BASE_CHANGED" -> {
+                val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'toolUseId' param")
+                val filePath = params["filePath"]?.jsonPrimitive?.content ?: ""
+                rpcHandler.reviewBaseChanged(
+                    toolUseId,
+                    filePath,
+                    params["reason"]?.jsonPrimitive?.content ?: "changed",
+                    // Absent reads as overlapping: the honest default when the
+                    // backend did not say is that the change may matter.
+                    params["overlapsAccepted"]?.jsonPrimitive?.content != "false",
+                    params["blockedApproval"]?.jsonPrimitive?.content == "true",
+                )
+                buildJsonObject {}
+            }
+            "REDRAW_REVIEW" -> {
+                val toolUseId = params["toolUseId"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'toolUseId' param")
+                rpcHandler.redrawReview(
+                    toolUseId,
+                    params["filePath"]?.jsonPrimitive?.content ?: "",
+                    params["oldContent"]?.jsonPrimitive?.content ?: "",
+                    params["newContent"]?.jsonPrimitive?.content ?: "",
+                )
+                buildJsonObject {}
+            }
             "CREATE_SESSION" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
                 rpcHandler.createSession(workingDir)

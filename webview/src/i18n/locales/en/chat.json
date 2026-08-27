@@ -523,6 +523,15 @@
       "backHint": "Reopen this hunk, keeping your edits",
       "remaining": "{{count}} left to review",
       "selectAll": "Select all"
+    },
+    "baseChanged": {
+      "conflict": "This file changed on disk, in the same lines as the change you kept. Refresh to see the current file and decide again.",
+      "held": "Approval held.",
+      "noLongerApplies": "The file changed too much for this edit to still fit. Claude needs to look at it again — ask for the change once more.",
+      "outside": "This file changed on disk while you were reviewing. Refresh to review against the current file.",
+      "refresh": "Refresh",
+      "refreshing": "Refreshing…",
+      "unreadable": "This file can no longer be read, so there is nothing to apply the change to."
     }
   }
 }

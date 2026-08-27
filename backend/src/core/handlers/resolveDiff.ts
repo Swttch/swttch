@@ -30,7 +30,10 @@ export async function resolveDiffHandler(
     return;
   }
 
-  resolveDiffReview(connections, parsed, bridge);
+  // Awaited: the resolver now reads the file before answering (#359), and an
+  // ACK sent ahead of that would tell the surface the review was settled while
+  // the gate may still be holding it open.
+  await resolveDiffReview(connections, parsed, bridge);
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

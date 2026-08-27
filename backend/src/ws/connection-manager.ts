@@ -490,7 +490,16 @@ export class ConnectionManager {
 
   // ─── Subscription (Pub/Sub) ─────────────────────────────────────────────────
 
-  subscribe(connectionId: string, sessionId: string): void {
+  subscribe(
+    connectionId: string,
+    sessionId: string,
+    /**
+     * Where this session's CLI runs, when the caller knows it. Recorded on the
+     * session so anything asking "which project is this?" — per-project
+     * settings above all — can answer without threading it through separately.
+     */
+    workingDir?: string,
+  ): void {
     const client = this.clientMap.get(connectionId);
     // Already subscribed to the same session — no-op
     if (client?.subscribedSessionId === sessionId) {
@@ -500,8 +509,25 @@ export class ConnectionManager {
     // Unsubscribe from any DIFFERENT session first
     this.unsubscribe(connectionId);
 
-    const session = this.getOrCreateSession(sessionId);
+    const session = this.getOrCreateSession(sessionId, workingDir);
     session.subscribers.add(connectionId);
+    /*
+     * Recorded on every subscribe, not only on the first.
+     *
+     * The session record is created by whichever call reaches it first, and most
+     * of those have no working directory to give — so it was left empty and
+     * everything that later asked the session where it lives got nothing. That
+     * is how per-project settings stopped being read for permission reviews:
+     * `preparePermissionReview` looks the directory up here, got undefined, and
+     * merged global settings only. Measured: `workingDir=(none)` while the
+     * project had `diffSurface: "ide"` set, and the built-in diff opened anyway.
+     *
+     * Only ever set, never cleared: a later subscribe without one must not erase
+     * what an earlier one knew.
+     */
+    if (workingDir && !session.workingDir) {
+      session.workingDir = workingDir;
+    }
 
     // Cancel pending cleanup if reconnecting within grace period
     const pendingTimer = this.cleanupTimers.get(sessionId);

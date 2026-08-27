@@ -23,6 +23,10 @@ vi.mock('@/contexts/SettingsContext', () => ({
   useSettingsOrNull: () => null,
   useSettings: () => ({
     scopeSettings: mockScopeSettings,
+    // Rows that decide behaviour read the merged values, not the scope
+    // being edited (#359). Same object here: this suite is about what the
+    // screen writes, not about merging.
+    settings: mockScopeSettings,
     updateSetting: updateSettingMock,
     scope: mockScope,
     resetToGlobal: resetToGlobalMock,

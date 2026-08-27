@@ -519,6 +519,15 @@
       "backHint": "重新開啟這處變更，並保留你的編輯",
       "remaining": "還剩 {{count}} 項待審查",
       "selectAll": "Select all"
+    },
+    "baseChanged": {
+      "conflict": "這個檔案在磁碟上已變更，且與您保留的變更位於同一行。請重新整理查看目前檔案後再判斷。",
+      "held": "已暫停核准。",
+      "noLongerApplies": "檔案變動過大，這項編輯已無法直接套用。需要 Claude 重新查看，請再提出一次修改請求。",
+      "outside": "審閱期間這個檔案在磁碟上已變更。重新整理後可依目前檔案進行審閱。",
+      "refresh": "重新整理",
+      "refreshing": "重新整理中…",
+      "unreadable": "這個檔案已無法讀取，沒有可套用變更的對象。"
     }
   }
 }

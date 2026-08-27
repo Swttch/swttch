@@ -230,6 +230,36 @@ class NodeProcessManager(
         /** Close the tab opened by [openDiffTab], once its request is answered. */
         suspend fun closeDiffTab(toolUseId: String)
         suspend fun refreshFiles(paths: List<String>)
+
+        /**
+         * The file behind a pending review moved on disk, so the diff on screen
+         * describes content that is no longer there (#359).
+         *
+         * Told to the IDE as well as the webview because the review may be the
+         * IDE's own diff — a webview-only message reaches nothing the reviewer
+         * is looking at there. [blockedApproval] separates an approval that was
+         * refused from a save merely noticed while they read.
+         */
+        suspend fun reviewBaseChanged(
+            toolUseId: String,
+            filePath: String,
+            reason: String,
+            overlapsAccepted: Boolean,
+            blockedApproval: Boolean,
+        )
+
+        /**
+         * Redraw the IDE's review for [toolUseId] against the rebuilt change.
+         *
+         * Carries the contents because the IDE's viewer is opened with them and
+         * keeps no store of its own to re-read.
+         */
+        suspend fun redrawReview(
+            toolUseId: String,
+            filePath: String,
+            oldContent: String,
+            newContent: String,
+        )
         suspend fun createSession(workingDir: String)
         suspend fun openNewTab(workingDir: String)
         suspend fun openSession(sessionId: String, workingDir: String?)

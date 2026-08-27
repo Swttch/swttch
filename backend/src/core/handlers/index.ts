@@ -49,6 +49,7 @@ import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
 import { getDiffPreviewHandler } from './getDiffPreview';
 import { resolveDiffHandler } from './resolveDiff';
+import { refreshDiffPreviewHandler } from './refreshDiffPreview';
 import { applyDiffHandler } from './applyDiff';
 import { rejectDiffHandler } from './rejectDiff';
 import { createSessionHandler } from './createSession';
@@ -167,7 +168,7 @@ export async function handleMessage(
       sessionChangeHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.TOOL_RESPONSE:
-      toolResponseHandler(connectionId, message, connections, bridge);
+      await toolResponseHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SEND_CONTROL_REQUEST:
       await sendControlRequestHandler(connectionId, message, connections, bridge);
@@ -283,6 +284,9 @@ export async function handleMessage(
       break;
     case MessageType.RESOLVE_DIFF:
       await resolveDiffHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.REFRESH_DIFF_PREVIEW:
+      await refreshDiffPreviewHandler(connectionId, message, connections);
       break;
     case MessageType.APPLY_DIFF:
       await applyDiffHandler(connectionId, message, connections, bridge);

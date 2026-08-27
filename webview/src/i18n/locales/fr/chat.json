@@ -519,6 +519,15 @@
       "backHint": "Rouvrir cette section en conservant vos modifications",
       "remaining": "{{count}} restante(s) à examiner",
       "selectAll": "Select all"
+    },
+    "baseChanged": {
+      "conflict": "Ce fichier a changé sur le disque, aux mêmes lignes que la modification que vous avez conservée. Actualisez pour voir le fichier actuel et décider à nouveau.",
+      "held": "Approbation suspendue.",
+      "noLongerApplies": "Le fichier a trop changé pour que cette modification s'applique encore. Claude doit le relire — redemandez la modification.",
+      "outside": "Ce fichier a changé sur le disque pendant votre relecture. Actualisez pour relire par rapport au fichier actuel.",
+      "refresh": "Actualiser",
+      "refreshing": "Actualisation…",
+      "unreadable": "Ce fichier ne peut plus être lu, il n'y a donc rien auquel appliquer la modification."
     }
   }
 }

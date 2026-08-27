@@ -14,6 +14,8 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import type { DiffPreview } from '@/api/modules/ToolsApi';
 import { DiffUnavailable } from './DiffUnavailable';
 import { useCloseDiffWindow } from './useCloseDiffWindow';
+import { useReviewBaseChanged } from './useReviewBaseChanged';
+import { BaseChangedBanner } from './BaseChangedBanner';
 import { CollapseToggle } from '../ChatPage/PromptPanelChrome/CollapseToggle';
 import { useCollapsiblePanel } from '../ChatPage/PromptPanelChrome/useCollapsiblePanel';
 
@@ -118,6 +120,33 @@ export function DiffPage(props: Props) {
       cancelled = true;
     };
   }, [api, toolUseId]);
+
+  /*
+   * The file under this review can move while it is being read (#359).
+   *
+   * Redrawing from the refreshed preview resets the reviewer's picks, and that
+   * is deliberate: their decisions address line numbers on a base that just
+   * changed, so carrying them over would point at moved lines — the same class
+   * of mistake as the bug this guards against.
+   */
+  const baseChanged = useReviewBaseChanged(toolUseId, setPreview);
+
+  /**
+   * A short digest of the base, identifying WHICH content the review stands on.
+   *
+   * Used to remount the renderer when the review is rebuilt (see the key on
+   * ReviewDiffSurface). Not a hash for any security purpose — it only has to
+   * change when the text does, cheaply, on files that can run to thousands of
+   * lines.
+   */
+  const baseKey = useMemo(() => {
+    const text = preview?.oldContent ?? '';
+    let h = 0;
+    for (let i = 0; i < text.length; i++) {
+      h = (Math.imul(31, h) + text.charCodeAt(i)) | 0;
+    }
+    return `${text.length}:${h}`;
+  }, [preview?.oldContent]);
 
   const hunks = useMemo(() => preview?.hunks ?? [], [preview]);
   // The proposed side as the reviewer has it now, and which parts they typed
@@ -357,6 +386,19 @@ export function DiffPage(props: Props) {
       </header>
 
       {/*
+        Shown even while collapsed. Folded away, the header still carries both
+        decisions, so a reviewer can approve from there — and an approval that
+        would be held is exactly what this has to say before they press it.
+      */}
+      {baseChanged.change && (
+        <BaseChangedBanner
+          change={baseChanged.change}
+          refreshing={baseChanged.refreshing}
+          onRefresh={() => void baseChanged.refresh()}
+        />
+      )}
+
+      {/*
         The diff takes the rest of the window and scrolls on its own, so the
         header — the file name and the two decisions — stays put however long
         the change is.
@@ -372,6 +414,27 @@ export function DiffPage(props: Props) {
           }
         >
           <ReviewDiffSurface
+            /*
+             * Remounted when the review is rebuilt against a different base
+             * (#359).
+             *
+             * The renderer owns an edit session that outlives prop changes —
+             * deliberately, so typing survives answering a hunk elsewhere. That
+             * same persistence meant a refreshed base never reached the screen:
+             * measured, React re-rendered with the new content (setPreview and
+             * the following render both logged the new length) and the diff on
+             * screen did not change at all.
+             *
+             * Keyed on the base rather than reset from inside, because the
+             * session is the renderer's to own; a new base is a new review, and
+             * a new review deserves a fresh one. Cheap in practice: this only
+             * changes when the file actually moved under an open review.
+             *
+             * A digest rather than the length: replacing one character leaves
+             * the length identical, and "the reviewer edited a line in place"
+             * is the ordinary case here, not a corner one.
+             */
+            key={`${preview.filePath}:${baseKey}`}
             preview={preview}
             proposedContents={edited.contents}
             onEdit={edited.applyEdit}

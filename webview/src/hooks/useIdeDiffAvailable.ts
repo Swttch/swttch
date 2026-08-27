@@ -4,6 +4,14 @@ import { SettingKey, DiffSurface } from '@/types/settings';
 /**
  * Which surface will actually draw the next review diff.
  *
+ * Read from the merged settings, never from the scope the settings screen
+ * happens to be showing. Those are different questions: the scope view answers
+ * "what is written at this level", which is blank for a value the project sets
+ * and the user has not overridden globally. Reading it here made the file link
+ * open the built-in diff on a project configured for the IDE — while the
+ * backend, which merges properly, had opened the IDE one moments earlier, so
+ * the same edit ended up reviewed on both surfaces at once (#359).
+ *
  * The stored setting is a preference, not an answer: it can name the IDE on a
  * backend no IDE is hosting, where there is nothing to open. `ideAttached`
  * decides whether that preference can be honoured, and when it cannot the
@@ -18,9 +26,9 @@ import { SettingKey, DiffSurface } from '@/types/settings';
  * goes.
  */
 export function useResolvedDiffSurface(): DiffSurface {
-  const { scopeSettings, ideAttached } = useSettings();
+  const { settings, ideAttached } = useSettings();
   if (!ideAttached) return DiffSurface.BUILT_IN;
-  return (scopeSettings[SettingKey.DIFF_SURFACE] as DiffSurface | undefined) ?? DiffSurface.IDE;
+  return (settings[SettingKey.DIFF_SURFACE] as DiffSurface | undefined) ?? DiffSurface.IDE;
 }
 
 /**
@@ -46,7 +54,7 @@ export function useIdeDiffAvailable(): boolean {
  * occasions, so a gate on one alone would just hand the job to the other (#349).
  */
 export function useAutoOpenDiffEnabled(): boolean {
-  const { scopeSettings } = useSettings();
+  const { settings } = useSettings();
   // Absent reads as on, which is the behaviour that shipped.
-  return scopeSettings[SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION] !== false;
+  return settings[SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION] !== false;
 }

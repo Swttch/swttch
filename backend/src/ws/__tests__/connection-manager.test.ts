@@ -684,3 +684,62 @@ describe('ConnectionManager', () => {
     });
   });
 });
+
+describe('ConnectionManager — the session remembers its working directory', () => {
+  /*
+   * Whatever asks "which project is this session in?" reads it off the session
+   * record, and per-project settings are the main caller. It was never filled:
+   * getOrCreateSession only sets the directory when it CREATES the record, and
+   * plenty of callers reach it first with nothing to give — so the answer was
+   * always empty and only global settings were ever merged.
+   *
+   * Measured with `diffSurface: "ide"` set on a project: the backend logged
+   * `workingDir=(none)`, read the global `built-in`, and opened the wrong diff.
+   */
+  let cm: ConnectionManager;
+
+  beforeEach(() => {
+    cm = new ConnectionManager();
+  });
+
+  it('records the directory a subscribe supplies', () => {
+    const connId = cm.addConnection(createMockWs());
+
+    cm.subscribe(connId, 'sess-1', '/tmp/project');
+
+    expect(cm.getSession('sess-1')?.workingDir).toBe('/tmp/project');
+  });
+
+  it('fills in a directory on a session that was created without one', () => {
+    // The case that actually broke: something touches the session first with
+    // nothing to offer, and every later subscribe used to leave it empty.
+    const connId = cm.addConnection(createMockWs());
+
+    cm.getOrCreateSession('sess-early');
+    expect(cm.getSession('sess-early')?.workingDir).toBe('');
+
+    cm.subscribe(connId, 'sess-early', '/tmp/project');
+
+    expect(cm.getSession('sess-early')?.workingDir).toBe('/tmp/project');
+  });
+
+  it('leaves it empty when no subscribe has supplied one', () => {
+    const connId = cm.addConnection(createMockWs());
+
+    cm.subscribe(connId, 'sess-2');
+
+    expect(cm.getSession('sess-2')?.workingDir).toBe('');
+  });
+
+  it('does not let a later subscribe erase a directory already known', () => {
+    // Several calls subscribe to the same session and most have nothing to give;
+    // the one that knew must not be overwritten by one that does not.
+    const first = cm.addConnection(createMockWs());
+    const second = cm.addConnection(createMockWs());
+
+    cm.subscribe(first, 'sess-3', '/tmp/project');
+    cm.subscribe(second, 'sess-3');
+
+    expect(cm.getSession('sess-3')?.workingDir).toBe('/tmp/project');
+  });
+});

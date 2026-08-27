@@ -42,6 +42,9 @@ export interface HunkDecisions {
   acceptedRanges: AcceptedRange[];
 }
 
+/** Shared empty map, so "no decisions" is a stable reference across renders. */
+const EMPTY_DECISIONS: ReadonlyMap<number, HunkDecision> = new Map();
+
 /**
  * Which parts of a proposal the reviewer is taking.
  *
@@ -54,10 +57,48 @@ export interface HunkDecisions {
  * answered, so putting it back is just dropping its entry here.
  */
 export function useHunkDecisions(hunks: readonly ChangeBlock[]): HunkDecisions {
-  const [decisions, setDecisions] = useState<ReadonlyMap<number, HunkDecision>>(
-    () => new Map(),
+  /*
+   * Decisions belong to the blocks they were made against (#359).
+   *
+   * A review can be rebuilt underneath this hook: the file moved on disk, the
+   * reviewer refreshed, and the proposal is now stated against different
+   * content. Decisions taken against the old blocks address line numbers that
+   * no longer mean the same thing, so they are dropped rather than replayed.
+   *
+   * Keeping them was measured as worse than a stale screen: the refreshed diff
+   * was drawn, the old "keep everything" decision was replayed over it, and the
+   * screen looked unchanged — so Confirm went through on a base the reviewer
+   * had never actually looked at.
+   *
+   * Tracked as "which blocks were these seeded from" rather than reset from an
+   * effect, which would paint one frame with the old decisions still applied.
+   */
+  const [state, setState] = useState<{
+    seededFrom: readonly ChangeBlock[];
+    decisions: ReadonlyMap<number, HunkDecision>;
+  }>(() => ({ seededFrom: hunks, decisions: new Map() }));
+
+  const decisions = state.seededFrom === hunks ? state.decisions : EMPTY_DECISIONS;
+
+  const setDecisions = useCallback(
+    (update: ReadonlyMap<number, HunkDecision> | ((prev: ReadonlyMap<number, HunkDecision>) => ReadonlyMap<number, HunkDecision>)) => {
+      setState((prev) => {
+        // A decision taken after the blocks changed applies to the NEW blocks,
+        // so it re-seeds rather than merging into the previous set.
+        const base = prev.seededFrom === hunks ? prev.decisions : EMPTY_DECISIONS;
+        return {
+          seededFrom: hunks,
+          decisions: typeof update === 'function' ? update(base) : update,
+        };
+      });
+    },
+    [hunks],
   );
 
+  // Depends on setDecisions, which in turn depends on the current blocks. An
+  // empty dependency list here pinned the FIRST render's setter, so a decision
+  // taken after a rebuild was seeded against the old blocks and dropped on the
+  // spot — measured: the click registered and nothing happened.
   const set = useCallback((index: number, decision: HunkDecision | undefined) => {
     setDecisions((prev) => {
       const next = new Map(prev);
@@ -65,7 +106,7 @@ export function useHunkDecisions(hunks: readonly ChangeBlock[]): HunkDecisions {
       else next.set(index, decision);
       return next;
     });
-  }, []);
+  }, [setDecisions]);
 
   const keep = useCallback((index: number) => set(index, 'keep'), [set]);
   const undo = useCallback((index: number) => set(index, 'undo'), [set]);
@@ -73,11 +114,11 @@ export function useHunkDecisions(hunks: readonly ChangeBlock[]): HunkDecisions {
 
   const acceptAll = useCallback(() => {
     setDecisions(new Map(hunks.map((h) => [h.index, 'keep' as const])));
-  }, [hunks]);
+  }, [hunks, setDecisions]);
 
   // Back to undecided rather than to denied: clearing a selection should not
   // itself be a decision, and nothing typed is lost this way.
-  const resetAll = useCallback(() => setDecisions(new Map()), []);
+  const resetAll = useCallback(() => setDecisions(new Map()), [setDecisions]);
 
   const decisionFor = useCallback(
     (index: number) => decisions.get(index),

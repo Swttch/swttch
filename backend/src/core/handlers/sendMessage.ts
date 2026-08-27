@@ -40,7 +40,9 @@ export async function sendMessageHandler(
   try {
     if (content || (attachments && attachments.length > 0)) {
       // Subscribe and ensure process is running (waits for spawn)
-      connections.subscribe(connectionId, resolvedSessionId);
+      // The directory goes with it: the session is what later answers
+      // "which project is this?", and per-project settings depend on it.
+      connections.subscribe(connectionId, resolvedSessionId, workingDir);
       await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
 
       // Send content to process stdin

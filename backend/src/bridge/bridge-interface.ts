@@ -43,6 +43,77 @@ export interface Bridge {
    * the IDE's native filesystem watcher misses the change (e.g. on Windows).
    */
   refreshFiles(params: { paths: string[] }): Promise<void>;
+
+  /**
+   * Watch [filePath] for content changes and call [onChanged] when it moves.
+   * Returns a function that stops watching.
+   *
+   * A Bridge capability rather than a backend detail because HOW a change is
+   * noticed is exactly what differs per environment, and the backend must not
+   * care which one it is talking to (#359):
+   *
+   *   JetBrains:  the IDE already maintains a VFS and publishes save events, so
+   *               the bridge relays what the host knows.
+   *   Standalone: there is no host, so the bridge watches the file itself.
+   *
+   * Declared here so a new environment cannot quietly ship without it. The
+   * first cut of #359 wired the IDE path directly to the backend and skipped
+   * this interface — which is precisely why standalone users had no detection
+   * at all and nobody noticed until it was tried in a browser.
+   *
+   * Best-effort by contract: a watch that misses is a missed early warning, not
+   * a lost file. The approval gate re-reads the file itself, so correctness
+   * never depends on this firing.
+   */
+  watchFile(filePath: string, onChanged: () => void): Promise<() => void>;
+
+  /**
+   * Tell the host that the file under a pending review has moved, so whatever
+   * surface is drawing that review can say so and offer to rebuild (#359).
+   *
+   * Sent to the BRIDGE as well as to the webview because the review may be
+   * drawn by the host itself: with the IDE viewer chosen, the diff on screen is
+   * the IDE's, and a webview-only message reaches nothing the reviewer is
+   * looking at. Approving there was already safe — the gate is shared — but the
+   * reviewer had no way to see why it stopped, or to get past it.
+   *
+   * Best-effort by contract, like the rest of this bridge: a host that cannot
+   * show it logs and carries on. Correctness lives in the gate, not here.
+   */
+  notifyReviewBaseChanged(params: {
+    toolUseId: string;
+    filePath: string;
+    /**
+     * Why the review can no longer simply be approved.
+     *
+     * 'changed' — the file merely moved, so a refresh restates the proposal.
+     * 'unreadable' — the file is gone; there is nothing to apply it to.
+     * 'no-longer-applies' — the file is fine, but the edit no longer fits it,
+     * so a refresh cannot rebuild and the reviewer has to ask Claude again.
+     * The last two are NOT interchangeable: telling someone their file cannot
+     * be read when it is perfectly readable sends them hunting for a problem
+     * that does not exist.
+     */
+    reason: 'changed' | 'unreadable' | 'no-longer-applies';
+    /** Whether the disk change lands under something the reviewer kept. */
+    overlapsAccepted: boolean;
+    /** True when an approval was refused, false when a save was merely noticed. */
+    blockedApproval: boolean;
+  }): Promise<void>;
+
+  /**
+   * Rebuild the host's own review against the file as it is now, and redraw it.
+   *
+   * The counterpart to the webview's Refresh button, for a review the host is
+   * drawing. Carries the rebuilt change so the host does not have to ask for it
+   * — it already has everything needed to reopen the diff.
+   */
+  redrawReview(params: {
+    toolUseId: string;
+    filePath: string;
+    oldContent: string;
+    newContent: string;
+  }): Promise<void>;
   createSession(workingDir?: string): Promise<void>;
   openNewTab(workingDir?: string): Promise<void>;
   openSession(sessionId: string, workingDir?: string): Promise<void>;
