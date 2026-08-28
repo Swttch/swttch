@@ -67,6 +67,13 @@ function spawnedArgv(i: number): string {
   return process.platform === 'win32' ? args.slice(3).join(' ') : [file, ...args].join(' ');
 }
 
+/**
+ * npm's launcher, which is `npm.cmd` on Windows — the same name the installer
+ * resolves. Spelling it `npm` outright would assert a command that is never run
+ * there, and the same name reaches the user in the permission-failure message.
+ */
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 let execPathSpy: ReturnType<typeof vi.spyOn>;
 const mockResolveClaudePaths = vi.mocked(resolveClaudePaths);
 
@@ -102,7 +109,7 @@ describe('installCcbHandler', () => {
     // a successful install invisible: every later lookup still answers "not
     // installed", so the settings section stays locked after installing.
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
-    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
+    expect(spawnedArgv(0)).toContain(`${NPM} install -g --prefix `);
   });
 
   it.runIf(process.platform !== 'win32')(
@@ -149,7 +156,7 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
+    expect(spawnedArgv(0)).toContain(`${NPM} install -g --prefix `);
   });
 
   // #298. The installer used to read the manager off `process.execPath` ALONE,
@@ -239,9 +246,9 @@ describe('installCcbHandler', () => {
 
     await installCcbHandler('c1', msg, conns, bridge);
 
-    expect(spawnedArgv(0)).toContain('npm install -g --prefix ');
-    expect(spawnedArgv(1)).toContain('npm uninstall -g --prefix ');
-    expect(spawnedArgv(2)).toContain('npm install -g --prefix ');
+    expect(spawnedArgv(0)).toContain(`${NPM} install -g --prefix `);
+    expect(spawnedArgv(1)).toContain(`${NPM} uninstall -g --prefix `);
+    expect(spawnedArgv(2)).toContain(`${NPM} install -g --prefix `);
     expect(lastPayload(conns).status).toBe('ok');
     expect(mockResetExtendKitCache).toHaveBeenCalledTimes(1);
   });
@@ -274,7 +281,7 @@ describe('installCcbHandler', () => {
 
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
-    expect(String(p.error)).toContain('npm install -g --prefix ');
+    expect(String(p.error)).toContain(`${NPM} install -g --prefix `);
     expect(mockResetUsageCache).not.toHaveBeenCalled();
     expect(mockResetExtendKitCache).not.toHaveBeenCalled();
   });
