@@ -59,6 +59,9 @@ function allArgv(): string[] {
   });
 }
 
+/** npm's launcher, which is `npm.cmd` on Windows — the name the sweep resolves. */
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
 let execPathSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
@@ -95,7 +98,7 @@ describe('uninstallCcbHandler', () => {
 
     const argv = allArgv();
     expect(argv[0]).toContain('volta uninstall @swttch/extend-kit');
-    expect(argv.some((a) => a.includes('npm uninstall -g --prefix '))).toBe(true);
+    expect(argv.some((a) => a.includes(`${NPM} uninstall -g --prefix `))).toBe(true);
     expect(argv.some((a) => a.includes('pnpm remove -g @swttch/extend-kit'))).toBe(true);
     expect(argv.some((a) => a.includes('yarn global remove @swttch/extend-kit'))).toBe(true);
     expect(argv.some((a) => a.includes('bun remove -g @swttch/extend-kit'))).toBe(true);
@@ -144,7 +147,13 @@ describe('uninstallCcbHandler', () => {
     const p = lastPayload(conns);
     expect(p.status).toBe('error');
     expect(String(p.error)).toContain('uninstall');
-    expect(String(p.error)).toContain('sudo');
+    // The pasteable command is elevated only where elevation exists: `sudo` has
+    // no Windows counterpart, so there the command is handed over unprefixed.
+    if (process.platform === 'win32') {
+      expect(String(p.error)).not.toContain('sudo');
+    } else {
+      expect(String(p.error)).toContain('sudo ');
+    }
   });
 
   // The caches remember where the kit WAS, so the survivor check has to look at

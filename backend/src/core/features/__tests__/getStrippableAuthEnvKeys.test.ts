@@ -16,15 +16,19 @@ vi.mock('os', () => ({
 }));
 
 import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { getStrippableAuthEnvKeys } from '../claude-settings';
 
 const mockReadFile = vi.mocked(readFile);
 
-const HOME_SETTINGS = '/mock-home/.claude/settings.json';
-const HOME_SETTINGS_LOCAL = '/mock-home/.claude/settings.local.json';
+// The reader builds every settings path with join(), so the fixture keys have
+// to carry the host separator — spelled as POSIX literals they match nothing on
+// Windows, and each file reads as absent.
+const HOME_SETTINGS = join('/mock-home', '.claude', 'settings.json');
+const HOME_SETTINGS_LOCAL = join('/mock-home', '.claude', 'settings.local.json');
 const PROJECT_DIR = '/mock-project';
-const PROJECT_SETTINGS = `${PROJECT_DIR}/.claude/settings.json`;
-const PROJECT_SETTINGS_LOCAL = `${PROJECT_DIR}/.claude/settings.local.json`;
+const PROJECT_SETTINGS = join(PROJECT_DIR, '.claude', 'settings.json');
+const PROJECT_SETTINGS_LOCAL = join(PROJECT_DIR, '.claude', 'settings.local.json');
 
 function mockSettingsByPath(map: Record<string, unknown>): void {
   mockReadFile.mockImplementation((p: unknown) => {

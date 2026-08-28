@@ -29,12 +29,14 @@ vi.mock('../command', () => ({
     exec() {
       // Each manager is asked where it keeps global packages; an absent one
       // rejects, exactly as a missing command does.
+      // On Windows the lookup asks for `npm.cmd`, so the name is normalised —
+      // otherwise npmRoot answers nothing there and the fixture is ignored.
       const answer = {
         volta: voltaWhich,
         pnpm: pnpmRoot,
         yarn: yarnGlobalDir,
         npm: npmRoot,
-      }[this.command];
+      }[this.command.replace(/\.cmd$/, '')];
       void this.args;
       if (!answer) return Promise.reject(new Error(`${this.command}: command not found`));
       return Promise.resolve({ stdout: answer, stderr: '' });
@@ -61,11 +63,17 @@ describe('getExtendKitVersion', () => {
     // sees only what it sets up.
     execPathSpy = vi.spyOn(process, 'execPath', 'get');
     execPathSpy.mockReturnValue(join(dir, 'no-node', 'bin', 'node'));
+    // On Windows the lookup also offers %APPDATA%\npm\node_modules, npm's real
+    // global prefix there. Left alone it is a developer's actual install, which
+    // every test would find instead of its fixture — the same reason execPath
+    // is pointed at an empty prefix above.
+    vi.stubEnv('APPDATA', join(dir, 'no-appdata'));
     resetExtendKitCache();
   });
 
   afterEach(async () => {
     execPathSpy.mockRestore();
+    vi.unstubAllEnvs();
     await rm(dir, { recursive: true, force: true });
     resetExtendKitCache();
   });
