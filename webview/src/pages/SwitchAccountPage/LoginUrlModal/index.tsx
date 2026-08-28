@@ -65,7 +65,7 @@ export function LoginUrlModal(props: Props) {
 
             <button
               onClick={onOpenUrl}
-              className="w-full py-2.5 rounded-lg bg-accent-claude hover:bg-accent-claude-hover text-text-primary font-semibold text-sm transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-lg bg-accent-claude hover:bg-accent-claude-hover text-white font-semibold text-sm transition-colors flex items-center justify-center gap-1.5"
             >
               {t('urlModal.openButton')}
               <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />

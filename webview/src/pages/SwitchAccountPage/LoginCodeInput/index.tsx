@@ -41,7 +41,7 @@ export function LoginCodeInput(props: Props) {
       <button
         onClick={submit}
         disabled={disabled || code.trim() === ''}
-        className="w-full mt-3 py-2.5 rounded-lg bg-accent-claude hover:bg-accent-claude-hover disabled:opacity-60 disabled:cursor-not-allowed text-text-primary font-semibold text-sm transition-colors"
+        className="w-full mt-3 py-2.5 rounded-lg bg-accent-claude hover:bg-accent-claude-hover disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors"
       >
         {t('codeInput.submit')}
       </button>

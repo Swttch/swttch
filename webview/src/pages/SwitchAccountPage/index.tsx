@@ -156,7 +156,7 @@ export function SwitchAccountPage(props: Props) {
           <button
             onClick={() => { void handleLogin('claude-ai'); }}
             disabled={loadingMethod !== null}
-            className="w-full mt-6 py-3 rounded-lg bg-accent-claude hover:bg-accent-claude-hover disabled:opacity-60 disabled:cursor-not-allowed text-text-primary font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full mt-6 py-3 rounded-lg bg-accent-claude hover:bg-accent-claude-hover disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
           >
             {loadingMethod === 'claude-ai' && (
               <span className="w-4 h-4 border-2 border-border-strong border-t-text-primary rounded-full animate-spin" />
