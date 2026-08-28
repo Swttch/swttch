@@ -4,9 +4,9 @@ import { toModelAlias } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
 
 /**
- * The Default Model row of CLI settings showed an EMPTY dropdown for anyone who
- * had picked a model: the saved value was handed to the picker folded down to a
- * coarse family alias ("opus[1m]" -> "opus"), no option carries that folded
+ * The Default Model row of Settings > Model showed an EMPTY dropdown for anyone
+ * who had picked a model: the saved value was handed to the picker folded down
+ * to a coarse family alias ("opus[1m]" -> "opus"), no option carries that folded
  * value, and an unmatched Select renders nothing at all.
  *
  * These lock the round-trip: whatever the settings file holds must select the
@@ -20,7 +20,7 @@ let mockModels: ModelInfo[] = [];
 vi.mock('@/contexts/SettingsContext', () => ({
   // Rows read project-override info through this; null = nothing overridden.
   useSettingsOrNull: () => null,
-  useSettings: () => ({ settings: {}, updateSetting: vi.fn(), ideAttached: false, ideProduct: '' }),
+  useSettings: () => ({ settings: { syncModelToDefault: true }, updateSetting: vi.fn(), ideAttached: false, ideProduct: '' }),
 }));
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
   // Rows read project-override info through this; null = nothing overridden.
@@ -36,13 +36,8 @@ vi.mock('@/contexts/FableProbeContext', () => ({
   useFableProbe: () => ({ probedAvailable: null, probeFableAvailability: vi.fn() }),
   shouldProbeFable: () => false,
 }));
-// Resolve synchronously so the detection round-trips settle within render and
-// don't land as un-acted state updates after the assertions.
-vi.mock('@/hooks/useBridge', () => ({
-  useBridge: () => ({ send: () => ({ then: () => ({ catch: () => undefined }) }) }),
-}));
 
-import { CliSettings } from '../index';
+import { ModelSettings } from '../index';
 
 /** The catalog a real account serves, Fable row included. */
 const CATALOG: ModelInfo[] = [
@@ -74,18 +69,18 @@ beforeEach(() => {
   mockModels = CATALOG;
 });
 
-describe('CLI settings — Default Model dropdown', () => {
+describe('Settings > Model — Default Model dropdown', () => {
   it('displays the saved model, not an empty trigger', () => {
     // The regression: this exact value rendered a blank dropdown.
     mockClaudeSettings = { model: 'opus[1m]' };
-    render(<CliSettings />);
+    render(<ModelSettings />);
     expect(modelTriggerLabel()).toContain('Opus (1M context)');
   });
 
   it('displays every catalog row a user could have saved', () => {
     for (const row of CATALOG.filter((m) => m.value !== 'default')) {
       mockClaudeSettings = { model: row.value };
-      const { unmount } = render(<CliSettings />);
+      const { unmount } = render(<ModelSettings />);
       expect(modelTriggerLabel()).toContain(row.displayName);
       unmount();
     }
@@ -93,14 +88,14 @@ describe('CLI settings — Default Model dropdown', () => {
 
   it('shows the default row when no model is saved', () => {
     mockClaudeSettings = {};
-    render(<CliSettings />);
+    render(<ModelSettings />);
     expect(modelTriggerLabel()).toContain('Default (recommended)');
   });
 
   it('shows a default label before the CLI has served a catalog', () => {
     mockModels = [];
     mockClaudeSettings = {};
-    render(<CliSettings />);
+    render(<ModelSettings />);
     expect(modelTriggerLabel().trim()).not.toBe('');
   });
 

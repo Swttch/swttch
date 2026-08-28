@@ -14,6 +14,7 @@ import {
   LockClosedIcon,
   HeartIcon,
   CodeBracketSquareIcon,
+  CpuChipIcon,
 } from '@heroicons/react/24/outline';
 import type { ComponentType, SVGProps } from 'react';
 // Imported from the parameter module rather than WorkingDirContext: that
@@ -40,6 +41,7 @@ export enum IconName {
   LOCK_CLOSED = 'LockClosedIcon',
   HEART = 'HeartIcon',
   CODE_BRACKET_SQUARE = 'CodeBracketSquareIcon',
+  CPU_CHIP = 'CpuChipIcon',
 }
 
 /**
@@ -61,6 +63,7 @@ export enum Route {
   SETTINGS = 'settings',
   SETTINGS_GENERAL = 'settings/general',
   SETTINGS_APPEARANCE = 'settings/appearance',
+  SETTINGS_MODEL = 'settings/model',
   SETTINGS_PERMISSIONS = 'settings/permissions',
   SETTINGS_CLI = 'settings/cli',
   SETTINGS_ADVANCED = 'settings/advanced',
@@ -148,6 +151,13 @@ export const ROUTE_META: Record<Route, RouteMeta> = {
     label: 'Appearance',
     icon: IconName.SWATCH,
     description: 'Theme and display settings',
+    scopeSupport: 'both',
+  },
+  [Route.SETTINGS_MODEL]: {
+    path: '/settings/model',
+    label: 'Model',
+    icon: IconName.CPU_CHIP,
+    description: 'Default model and switching behavior',
     scopeSupport: 'both',
   },
   [Route.SETTINGS_PERMISSIONS]: {
@@ -255,6 +265,7 @@ export const ICON_COMPONENTS: Record<IconName, ComponentType<SVGProps<SVGSVGElem
   [IconName.LOCK_CLOSED]: LockClosedIcon,
   [IconName.HEART]: HeartIcon,
   [IconName.CODE_BRACKET_SQUARE]: CodeBracketSquareIcon,
+  [IconName.CPU_CHIP]: CpuChipIcon,
 };
 
 /**
@@ -407,6 +418,7 @@ export function isSwitchAccountRoute(route: Route): boolean {
 export const SETTINGS_SUB_ROUTES: Route[] = [
   Route.SETTINGS_GENERAL,
   Route.SETTINGS_APPEARANCE,
+  Route.SETTINGS_MODEL,
   Route.SETTINGS_PERMISSIONS,
   Route.SETTINGS_PRIVACY,
   Route.SETTINGS_CLI,

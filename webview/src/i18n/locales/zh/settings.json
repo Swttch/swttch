@@ -8,6 +8,7 @@
   "nav": {
     "general": "通用",
     "appearance": "外观",
+    "model": "模型",
     "permissions": "权限",
     "privacy": "隐私",
     "cli": "CLI",
@@ -360,7 +361,11 @@
       "title": "模型",
       "label": "默认模型",
       "description": "新会话使用的默认模型",
-      "defaultRecommended": "默认(推荐)"
+      "defaultRecommended": "默认(推荐)",
+      "syncToDefault": {
+        "label": "将模型更改同步到默认设置",
+        "description": "切换模型时同时更新 CLI 默认模型，使新会话继续使用该模型——与 CLI 的 /model 行为一致。关闭时更改仅应用于当前会话"
+      }
     },
     "path": {
       "title": "Claude CLI",

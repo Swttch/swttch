@@ -134,6 +134,13 @@ export enum SettingKey {
   // ⋮ button, and in what order. Global-only by product decision (the dock is
   // navigated by muscle memory, so it must not shift between projects).
   DOCK_LAYOUT = 'dockLayout',
+
+  // Whether switching the model (dropdown or the rotate shortcut) also writes
+  // the native `model` default (~/.claude/settings.json), matching how the CLI's
+  // `/model` has always worked (one global default, no per-session override).
+  // This ON/OFF switch is itself GUI-only — the CLI has no such toggle, since it
+  // has no concept of a session-only model change to gate. See issue #354.
+  SYNC_MODEL_TO_DEFAULT = 'syncModelToDefault',
 }
 
 /**
@@ -342,6 +349,7 @@ export interface SettingsState {
   [SettingKey.SHOW_DIFF_IN_IDE]: boolean | null;
   [SettingKey.ULTRACODE]: boolean | null;
   [SettingKey.DOCK_LAYOUT]: DockLayout;
+  [SettingKey.SYNC_MODEL_TO_DEFAULT]: boolean;
 }
 
 /**
@@ -378,4 +386,5 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.SHOW_DIFF_IN_IDE]: null,
   [SettingKey.ULTRACODE]: null,
   [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
+  [SettingKey.SYNC_MODEL_TO_DEFAULT]: true,
 };

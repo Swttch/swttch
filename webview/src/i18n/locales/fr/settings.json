@@ -8,6 +8,7 @@
   "nav": {
     "general": "Général",
     "appearance": "Apparence",
+    "model": "Modèle",
     "permissions": "Autorisations",
     "privacy": "Confidentialité",
     "cli": "CLI",
@@ -360,7 +361,11 @@
       "title": "Modèle",
       "label": "Modèle par défaut",
       "description": "Modèle par défaut pour les nouvelles sessions",
-      "defaultRecommended": "Par défaut (recommandé)"
+      "defaultRecommended": "Par défaut (recommandé)",
+      "syncToDefault": {
+        "label": "Synchroniser les changements de modèle avec le réglage par défaut",
+        "description": "Lors du changement de modèle, met aussi à jour le modèle par défaut du CLI afin que les nouvelles sessions continuent de l'utiliser — comme le fait /model dans le CLI. Désactivé, le changement ne s'applique qu'à la session actuelle"
+      }
     },
     "path": {
       "title": "Claude CLI",

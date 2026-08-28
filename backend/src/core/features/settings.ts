@@ -75,6 +75,10 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   diffSurface: DiffSurface.IDE,
   browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
   ultracode: null,
+  // Whether switching the model (dropdown or the rotate shortcut) also writes the
+  // native `model` default, matching the CLI's single global default. GUI-only:
+  // the CLI has no per-session override to gate. See issue #354.
+  syncModelToDefault: true,
   // Header dock arrangement: `order` is the row order in the ⋮ menu (and, once
   // filtered to `visible`, the dock's icon order too); `visible` names which of
   // those items are pulled out into the dock. Both empty means "not configured
@@ -126,6 +130,7 @@ const COMMENT_MAP: Record<string, string> = {
   diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
   browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
   ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
+  syncModelToDefault: '모델을 바꾸면(드롭다운·순환 단축키) 현재 세션뿐 아니라 CLI 기본 모델(네이티브 model 설정)도 함께 갱신. true가 CLI의 원래 동작과 동일',
   dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
   showDiffInIde: '[레거시] diffSurface로 대체됨. 마이그레이션이 값을 옮기고 비우는 용도로만 남김',
@@ -402,6 +407,7 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
     case 'attachEditorContext':
+    case 'syncModelToDefault':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
       }

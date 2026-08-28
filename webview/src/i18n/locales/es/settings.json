@@ -8,6 +8,7 @@
   "nav": {
     "general": "General",
     "appearance": "Apariencia",
+    "model": "Modelo",
     "permissions": "Permisos",
     "privacy": "Privacidad",
     "cli": "CLI",
@@ -360,7 +361,11 @@
       "title": "Modelo",
       "label": "Modelo predeterminado",
       "description": "Modelo predeterminado para nuevas sesiones",
-      "defaultRecommended": "Predeterminado (recomendado)"
+      "defaultRecommended": "Predeterminado (recomendado)",
+      "syncToDefault": {
+        "label": "Sincronizar los cambios de modelo con el valor predeterminado",
+        "description": "Al cambiar de modelo, también actualiza el modelo predeterminado de la CLI para que las nuevas sesiones sigan usándolo — igual que /model en la CLI. Desactivado, el cambio solo se aplica a la sesión actual"
+      }
     },
     "path": {
       "title": "Claude CLI",

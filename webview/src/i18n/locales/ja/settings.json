@@ -8,6 +8,7 @@
   "nav": {
     "general": "一般",
     "appearance": "外観",
+    "model": "モデル",
     "permissions": "権限",
     "privacy": "プライバシー",
     "cli": "CLI",
@@ -360,7 +361,11 @@
       "title": "モデル",
       "label": "デフォルトモデル",
       "description": "新しいセッションのデフォルトモデル",
-      "defaultRecommended": "デフォルト(推奨)"
+      "defaultRecommended": "デフォルト(推奨)",
+      "syncToDefault": {
+        "label": "モデルの変更をデフォルト設定にも反映",
+        "description": "モデルを切り替えたときにCLIのデフォルトモデルも更新し、新しいセッションにも引き継がれるようにする — CLIの/modelと同じ動作。オフの場合は現在のセッションのみに適用される"
+      }
     },
     "path": {
       "title": "Claude CLI",
