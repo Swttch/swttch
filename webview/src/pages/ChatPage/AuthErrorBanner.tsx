@@ -27,7 +27,7 @@ export function AuthErrorBanner() {
       <button
         type="button"
         onClick={navigateToLogin}
-        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-accent-claude text-text-primary hover:bg-accent-claude-hover transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-accent-claude text-white hover:bg-accent-claude-hover transition-colors"
       >
         <ArrowRightOnRectangleIcon className="w-3.5 h-3.5 rtl:-scale-x-100" />
         {t('authError.login')}

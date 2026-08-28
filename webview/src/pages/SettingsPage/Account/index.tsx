@@ -14,7 +14,7 @@ export function AccountSettings() {
         <h2 className="text-xl font-semibold text-text-primary">{t('account.heading')}</h2>
         <button
           onClick={() => navigate(Route.SWITCH_ACCOUNT)}
-          className="flex items-center gap-1.5 text-[0.8461rem] text-text-primary bg-accent-claude hover:bg-accent-claude-hover rounded px-3 py-1.5 transition-colors"
+          className="flex items-center gap-1.5 text-[0.8461rem] text-white bg-accent-claude hover:bg-accent-claude-hover rounded px-3 py-1.5 transition-colors"
         >
           <PlusIcon className="w-4 h-4" />
           {t('account.addAccount')}
