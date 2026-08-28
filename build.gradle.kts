@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.3 - Backend startup fix &amp; keep your model across Clear Conversation</h3>
+            <ul>
+                <li>Fix a leftover backend blocking startup with "Plugin resources not ready" until reboot (#360, reported by @i-kulbitski)</li>
+                <li>Add an option to keep the model you switched to across Clear Conversation (#370, requested by @CraftedFury)</li>
+                <li>Move the model settings to their own page in Settings (#370)</li>
+                <li>Fix the login button beside a 401 message (#367)</li>
+            </ul>
             <h3>0.29.2 - Fix review overwrite bug &amp; editable session tab name</h3>
             <ul>
                 <li>Fix approving a review overwriting work saved while the review was open (#361, reported by @kkoprivlenski)</li>
