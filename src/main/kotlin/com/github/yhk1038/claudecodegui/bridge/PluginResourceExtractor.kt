@@ -79,7 +79,7 @@ class PluginResourceExtractor(
      * holds `backend.mjs` open and the clear silently fails (returns false, dir remains) —
      * the M4 lock-resilience path.
      */
-    private val clearTarget: (File) -> Boolean = ::clearByRenamingAside,
+    private val clearTarget: (File) -> Boolean = { clearByRenamingAside(it) },
 ) {
     private val logger = Logger.getInstance(PluginResourceExtractor::class.java)
 
@@ -518,17 +518,28 @@ class PluginResourceExtractor(
          *
          * Returns false when the directory could not be moved (Windows holding a file open), so
          * the caller falls back to serving in place.
+         *
+         * [aside] is where the directory is moved to. Production always takes the default — a
+         * fresh name nothing can collide with — and it is a parameter only so a test can point
+         * it at an occupied path, which is the one way to make the rename fail on every
+         * platform. `setWritable(false)` cannot do that: Windows ignores the read-only attribute
+         * on directories, so a test relying on it renames successfully and asserts nothing.
          */
-        private fun clearByRenamingAside(versionDir: File): Boolean {
+        internal fun clearByRenamingAside(
+            versionDir: File,
+            aside: File = File(versionDir.parentFile, "$TMP_PREFIX${UUID.randomUUID()}"),
+        ): Boolean {
             if (!versionDir.exists()) return true
-            val aside = File(versionDir.parentFile, "$TMP_PREFIX${UUID.randomUUID()}")
+            // Anything already sitting at `aside` is not ours to delete; only clean up what the
+            // move itself may have left behind.
+            val occupied = aside.exists()
             return try {
                 Files.move(versionDir.toPath(), aside.toPath(), StandardCopyOption.ATOMIC_MOVE)
                 aside.deleteRecursively()
                 true
             } catch (e: java.io.IOException) {
                 // Locked (Windows) or a filesystem that refuses the rename — leave it in place.
-                aside.deleteRecursively()
+                if (!occupied) aside.deleteRecursively()
                 false
             }
         }

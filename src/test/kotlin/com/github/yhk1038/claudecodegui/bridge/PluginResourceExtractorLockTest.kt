@@ -32,11 +32,17 @@ class PluginResourceExtractorLockTest {
         lockHolder = null
     }
 
-    private fun completeUnpack(webviewTarget: File, backendDirTarget: File) {
+    /**
+     * Writes a complete bundle. [marker] is stamped into every file so a test can tell *whose*
+     * copy it is looking at afterwards — production bundles of the same version are
+     * byte-identical, which makes "the file is still there" unable to distinguish the winner's
+     * copy from a replacement written over it.
+     */
+    private fun completeUnpack(webviewTarget: File, backendDirTarget: File, marker: String = "shared") {
         File(webviewTarget, "assets").mkdirs()
-        File(webviewTarget, "assets/index-abc123.js").writeText("// bundle")
-        File(webviewTarget, "index.html").writeText("<html></html>")
-        File(backendDirTarget, "backend.mjs").writeText("// backend")
+        File(webviewTarget, "assets/index-abc123.js").writeText("// bundle $marker")
+        File(webviewTarget, "index.html").writeText("<html>$marker</html>")
+        File(backendDirTarget, "backend.mjs").writeText("// backend $marker")
     }
 
     private fun extractor(base: File, unpack: (File, File) -> Unit) =
@@ -203,39 +209,58 @@ class PluginResourceExtractorLockTest {
         // is gone serves HTTP 404 even if an identical dir reappears immediately afterwards.
         //
         // Checking that the files *exist* afterwards therefore proves nothing — deleting and
-        // re-creating them passes that check while reproducing the very bug. What has to hold
-        // is that the winner's files are never replaced, so the identity is asserted instead:
-        // fileKey is the inode on POSIX and the file id on Windows, and it changes when a file
-        // is deleted and written again.
+        // re-creating them passes that check while reproducing the very bug. What has to hold is
+        // that the winner's files are never replaced, so each racer stamps its own marker into
+        // the bundle it writes and the winner's marker must still be the one on disk at the end.
+        //
+        // The marker is what makes this observable on every platform. Filesystem identity would
+        // read more directly, but `BasicFileAttributes.fileKey()` is null on Windows — the JDK
+        // exposes no file id there — so an identity-only assertion cannot run on the very OS
+        // this issue was reported from. Where fileKey IS available it is asserted too, as a
+        // stronger check that catches a same-content rewrite.
         val winner = File(base, "1.2.3/backend/backend.mjs")
+        val winnerMark = "winner-${java.util.UUID.randomUUID()}"
+        val loserMark = "loser-${java.util.UUID.randomUUID()}"
 
         var identityWhilePublished: Any? = null
+        var published = false
         var publishWinner: (() -> Unit)? = {
             completeUnpack(
                 File(base, "1.2.3/webview"),
                 File(base, "1.2.3/backend").apply { mkdirs() },
+                marker = winnerMark,
             )
             identityWhilePublished = fileIdentityOf(winner)
+            published = true
         }
         PluginResourceExtractor(baseDir = base, version = "1.2.3", unpack = { wv, bd ->
             publishWinner?.invoke()
             publishWinner = null
-            completeUnpack(wv, bd)
+            completeUnpack(wv, bd, marker = loserMark)
         }).resolve()
 
-        assertNotNull(identityWhilePublished, "the winner never published — the race was not staged")
+        assertTrue(published, "the winner never published — the race was not staged")
         assertTrue(winner.isFile, "the winner's backend.mjs must survive")
         assertEquals(
-            identityWhilePublished, fileIdentityOf(winner),
+            "// backend $winnerMark", winner.readText(),
             "the winner's backend.mjs was replaced — a live backend would have served 404 (#149)",
         )
+        if (identityWhilePublished != null) {
+            assertEquals(
+                identityWhilePublished, fileIdentityOf(winner),
+                "the winner's backend.mjs was re-created in place — same content, different file (#149)",
+            )
+        }
     }
 
-    /** Filesystem identity of [file] (inode / file id), which changes if it is re-created. */
+    /**
+     * Filesystem identity of [file] (the inode on POSIX), which changes if it is re-created.
+     * Null on Windows, where the JDK's default provider exposes no file key — callers must
+     * treat identity as an optional, stronger check rather than the only one.
+     */
     private fun fileIdentityOf(file: File): Any? =
         java.nio.file.Files.readAttributes(file.toPath(), java.nio.file.attribute.BasicFileAttributes::class.java)
             .fileKey()
-            ?: java.nio.file.Files.getAttribute(file.toPath(), "unix:ino")
 
     @Test
     fun `clearing a version dir is atomic, never a file-by-file teardown`() {
@@ -247,8 +272,7 @@ class PluginResourceExtractorLockTest {
         // Timing this is not measurable: deleting a four-file bundle takes microseconds, so a
         // sampling thread reliably misses the window and reports success either way. What IS
         // observable is the structure: an atomic clear must never leave the directory present
-        // with its contents removed, so we hold a file open (a stand-in for the serving
-        // backend) and require the clear to either take the whole directory or nothing.
+        // with its contents removed, so the clear has to take the whole directory or nothing.
         val base = createTempDir("clear-atomicity")
         try {
             val versionDir = File(base, "1.2.3")
@@ -258,7 +282,7 @@ class PluginResourceExtractorLockTest {
             )
             val served = File(versionDir, "backend/backend.mjs")
 
-            val cleared = clearByRenamingAsideForTest(versionDir)
+            val cleared = PluginResourceExtractor.clearByRenamingAside(versionDir)
 
             if (cleared) {
                 assertFalse(
@@ -277,8 +301,16 @@ class PluginResourceExtractorLockTest {
     fun `a clear that cannot complete leaves the served bundle intact`() {
         // The Windows case: a running backend holds a file open, the rename fails, and the
         // clear must then be a no-op rather than a partial teardown of what is being served.
-        // Modelled by making the rename impossible — the destination parent is read-only — so
-        // the failure comes from the filesystem rather than from a stubbed return value.
+        //
+        // The failure is staged by pointing the move at a NON-EMPTY DIRECTORY, which is the one
+        // destination both platforms refuse: POSIX answers ENOTEMPTY, and Windows cannot replace
+        // a directory at all (`MOVEFILE_REPLACE_EXISTING` is documented as not applying when
+        // either path names a directory). An existing *file* does not work — Windows replaces it
+        // and the move succeeds — and neither does an empty directory, which POSIX allows.
+        //
+        // An earlier version used `base.setWritable(false)`, which does nothing on Windows: the
+        // rename succeeded there, the clear reported success, and the test asserted its way to a
+        // failure on the one OS this case is about.
         val base = createTempDir("clear-failure")
         try {
             val versionDir = File(base, "1.2.3")
@@ -288,42 +320,22 @@ class PluginResourceExtractorLockTest {
             )
             val bundle = File(versionDir, "webview/assets/index-abc123.js")
             val before = bundle.readText()
+            val occupied = File(base, ".tmp-occupied").apply { mkdirs() }
+            val occupant = File(occupied, "keeps-it-non-empty").apply { writeText("in the way") }
 
-            base.setWritable(false)
-            val cleared = try {
-                clearByRenamingAsideForTest(versionDir)
-            } finally {
-                base.setWritable(true)
-            }
+            val cleared = PluginResourceExtractor.clearByRenamingAside(versionDir, aside = occupied)
 
             assertFalse(cleared, "a clear that cannot rename must report failure")
             assertTrue(bundle.isFile, "the served bundle must survive a failed clear")
             assertEquals(before, bundle.readText(), "the served bundle must be unchanged")
+            assertTrue(occupant.isFile, "a failed clear must not delete what already sat at the destination")
         } finally {
-            base.setWritable(true)
             base.deleteRecursively()
         }
     }
 
     private fun createTempDir(prefix: String): File =
         java.nio.file.Files.createTempDirectory(prefix).toFile()
-
-    /** Mirrors the production clear: rename aside, then delete the renamed copy. */
-    private fun clearByRenamingAsideForTest(versionDir: File): Boolean {
-        if (!versionDir.exists()) return true
-        val aside = File(versionDir.parentFile, ".tmp-${java.util.UUID.randomUUID()}")
-        return try {
-            java.nio.file.Files.move(
-                versionDir.toPath(), aside.toPath(),
-                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-            )
-            aside.deleteRecursively()
-            true
-        } catch (e: java.io.IOException) {
-            aside.deleteRecursively()
-            false
-        }
-    }
 
     private fun seedPartialVersionDir(base: File) {
         File(base, "1.2.3/webview/assets").mkdirs()
