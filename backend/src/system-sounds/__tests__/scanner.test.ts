@@ -9,9 +9,18 @@ vi.mock('os', () => ({
 }));
 
 import { readdir } from 'fs/promises';
+import { join } from 'path';
 import { scanSystemSounds, clearScanCache } from '../scanner';
 
 const mockReaddir = vi.mocked(readdir);
+
+// The scanner builds the user directory and every sound path with join(), so
+// both are spelled with the host separator. Naming them here rather than typing
+// POSIX literals keeps the assertions true on Windows too.
+const SYSTEM_SOUNDS_DIR = '/System/Library/Sounds';
+const LIBRARY_SOUNDS_DIR = '/Library/Sounds';
+const USER_SOUNDS_DIR = join('/home/test', 'Library', 'Sounds');
+const FREEDESKTOP_DIR = '/usr/share/sounds/freedesktop/stereo';
 
 const originalPlatform = process.platform;
 
@@ -39,9 +48,9 @@ describe('scanSystemSounds', () => {
 
     it('scans all macOS sound directories and merges results', async () => {
       mockReaddir.mockImplementation(async (dir) => {
-        if (dir === '/System/Library/Sounds') return ['Glass.aiff', 'Ping.aiff'] as any;
-        if (dir === '/Library/Sounds') return ['Custom.aiff'] as any;
-        if (dir === '/home/test/Library/Sounds') return ['User.aiff'] as any;
+        if (dir === SYSTEM_SOUNDS_DIR) return ['Glass.aiff', 'Ping.aiff'] as any;
+        if (dir === LIBRARY_SOUNDS_DIR) return ['Custom.aiff'] as any;
+        if (dir === USER_SOUNDS_DIR) return ['User.aiff'] as any;
         return [] as any;
       });
 
@@ -49,8 +58,10 @@ describe('scanSystemSounds', () => {
 
       const ids = sounds.map((s) => s.id);
       expect(ids).toEqual(['Custom', 'Glass', 'Ping', 'User']);
-      expect(sounds.find((s) => s.id === 'Glass')?.path).toBe('/System/Library/Sounds/Glass.aiff');
-      expect(sounds.find((s) => s.id === 'User')?.path).toBe('/home/test/Library/Sounds/User.aiff');
+      expect(sounds.find((s) => s.id === 'Glass')?.path).toBe(
+        join(SYSTEM_SOUNDS_DIR, 'Glass.aiff'),
+      );
+      expect(sounds.find((s) => s.id === 'User')?.path).toBe(join(USER_SOUNDS_DIR, 'User.aiff'));
     });
 
     it('filters out non-aiff extensions on darwin', async () => {
@@ -74,7 +85,7 @@ describe('scanSystemSounds', () => {
       const sounds = await scanSystemSounds();
 
       expect(sounds).toHaveLength(1);
-      expect(sounds[0]?.path).toBe('/System/Library/Sounds/Glass.aiff');
+      expect(sounds[0]?.path).toBe(join(SYSTEM_SOUNDS_DIR, 'Glass.aiff'));
     });
 
     it('skips directories that fail to read', async () => {
@@ -100,7 +111,7 @@ describe('scanSystemSounds', () => {
       expect(sounds[0]).toEqual({
         id: 'Tink',
         label: 'Tink',
-        path: '/System/Library/Sounds/Tink.aiff',
+        path: join(SYSTEM_SOUNDS_DIR, 'Tink.aiff'),
       });
     });
   });
@@ -133,7 +144,10 @@ describe('scanSystemSounds', () => {
       const sounds = await scanSystemSounds();
 
       expect(sounds.map((s) => s.id)).toEqual(['bell', 'message']);
-      expect(sounds.every((s) => s.path.startsWith('/usr/share/sounds/freedesktop/stereo/'))).toBe(true);
+      expect(sounds.map((s) => s.path)).toEqual([
+        join(FREEDESKTOP_DIR, 'bell.oga'),
+        join(FREEDESKTOP_DIR, 'message.oga'),
+      ]);
     });
 
     it('falls back to next directory when first is empty', async () => {

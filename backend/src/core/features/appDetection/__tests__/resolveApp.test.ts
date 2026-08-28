@@ -43,7 +43,9 @@ function setupExecFile(opts: {
   vi.mocked(cpExecFile).mockImplementation(((cmd: string, args: string[]) => {
     if (cmd === 'defaults') {
       const infoPath = args[1];
-      const appPath = infoPath.replace(/\/Contents\/Info$/, '');
+      // The path was built with join(), so its separator is the host's — match
+      // either, or this strips nothing on Windows and every lookup misses.
+      const appPath = infoPath.replace(/[\\/]Contents[\\/]Info$/, '');
       const id = opts.bundleIdByAppPath?.[appPath];
       if (id) return Promise.resolve({ stdout: `${id}\n`, stderr: '' });
       return Promise.reject(new Error(`defaults read failed for ${appPath}`));
