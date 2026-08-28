@@ -23,6 +23,8 @@ export interface ParentWatchdogDeps {
   /** Signal-0 liveness probe — `(pid) => process.kill(pid, 0)` in production. */
   probe: (pid: number) => void;
   intervalMs: number;
+  /** The pid to watch; defaults to [resolveWatchedPid]. Injectable for tests. */
+  getWatchedPid?: () => number;
 }
 
 const defaultDeps: ParentWatchdogDeps = {
@@ -48,6 +50,30 @@ export function isParentDead(initialPpid: number, deps: Pick<ParentWatchdogDeps,
 }
 
 /**
+ * The pid this backend should actually watch: the host named in `CCG_HOST_PID`, falling back
+ * to our own parent.
+ *
+ * Watching `process.ppid` is wrong whenever the host launches node through a version-manager
+ * shim. Volta, nvm and fnm all put a shim process in between, so the tree is
+ * `host -> shim -> node`, and this watchdog runs in `node`. When the host dies it is the
+ * *shim* that is orphaned — the shim stays alive, so from node's side the parent still looks
+ * healthy and the watchdog never fires. Observed with Volta: the IDE was gone, the shim sat at
+ * ppid 1, and both processes were still running a minute later.
+ *
+ * The host knows its own pid, so it passes it in `CCG_HOST_PID` and we watch that instead.
+ * Then the number of shim layers in between stops mattering. Absent or unparseable → fall back
+ * to the old behaviour, which is still correct when nothing sits in the middle.
+ */
+export function resolveWatchedPid(
+  env: NodeJS.ProcessEnv = process.env,
+  getPpid: () => number = () => process.ppid,
+): number {
+  const declared = Number.parseInt(env.CCG_HOST_PID ?? '', 10);
+  if (Number.isFinite(declared) && declared > 0) return declared;
+  return getPpid();
+}
+
+/**
  * Arm the watchdog. Fires `onParentDeath` at most once, then disarms itself.
  * Returns a stop function. The interval is unref'd so it never blocks a
  * natural process exit.
@@ -56,18 +82,39 @@ export function startParentWatchdog(
   onParentDeath: () => void,
   deps: ParentWatchdogDeps = defaultDeps,
 ): () => void {
-  const initialPpid = deps.getPpid();
+  // Resolve through deps.getPpid, not process.ppid: the fallback must agree with whatever
+  // parent this watchdog was actually given, or `watchingOwnParent` below reads false and the
+  // reparent check silently stops working.
+  const watchedPid = deps.getWatchedPid
+    ? deps.getWatchedPid()
+    : resolveWatchedPid(process.env, deps.getPpid);
+  // Only the ppid can be reparented out from under us; a pid handed over by the host is
+  // watched by liveness probe alone.
+  const watchingOwnParent = watchedPid === deps.getPpid();
 
   const timer = setInterval(() => {
-    if (!isParentDead(initialPpid, deps)) return;
+    const dead = watchingOwnParent
+      ? isParentDead(watchedPid, deps)
+      : !isPidAlive(watchedPid, deps.probe);
+    if (!dead) return;
     clearInterval(timer);
     console.error(
       '[node-backend]',
-      `Parent process ${initialPpid} died — restoring the idle-shutdown regime (keep-alive clamp)`,
+      `Host process ${watchedPid} died — shutting down`,
     );
     onParentDeath();
   }, deps.intervalMs);
   timer.unref();
 
   return () => clearInterval(timer);
+}
+
+/** Signal-0 liveness check. EPERM means it exists but is not ours to signal — still alive. */
+export function isPidAlive(pid: number, probe: (pid: number) => void): boolean {
+  try {
+    probe(pid);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code !== 'ESRCH';
+  }
 }

@@ -386,6 +386,7 @@ class NodeProcessManager(
                         ?: backendFile.absolutePath
                     val wslEnv = buildMap {
                         put("JETBRAINS_MODE", "true")
+                        put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         put("PORT", requestedPort.toString())
                         webviewDir?.let { wv ->
@@ -425,6 +426,7 @@ class NodeProcessManager(
                     val env = buildMap {
                         putAll(EnvironmentUtil.getEnvironmentMap())
                         put("JETBRAINS_MODE", "true")
+                        put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         // Hand the backend the user's real shell PATH so anything it spawns
                         // (claude, npx, git) is found even when the IDE started from GUI (#59).
@@ -848,6 +850,19 @@ class NodeProcessManager(
         // the time a backend starts; this only guards a cold first start on a slow disk so
         // start() never hangs indefinitely (the #97 lesson). On timeout we fail-fast.
         private const val RESOURCE_READY_TIMEOUT_MS = 30_000L
+
+        /**
+         * This IDE's own pid, handed to the backend as `CCG_HOST_PID` so its parent-death
+         * watchdog can watch the host directly (issue #308).
+         *
+         * The backend cannot infer this from `process.ppid`: Volta, nvm and fnm all launch node
+         * through a shim, so the tree is `IDE -> shim -> node` and the watchdog lives in `node`.
+         * When the IDE dies it is the shim that is orphaned — the shim keeps running, node's
+         * parent still looks alive, and the watchdog never fires. Observed with Volta: the IDE
+         * was gone, the shim sat at ppid 1, and both survived indefinitely. Naming the host
+         * explicitly makes the number of shim layers irrelevant.
+         */
+        private fun hostPid(): String = ProcessHandle.current().pid().toString()
 
         /**
          * How long [killNow] lets the backend run its own shutdown before SIGKILL. Short
