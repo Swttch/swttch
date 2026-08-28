@@ -16,11 +16,16 @@ On Windows a file held open by a running process cannot be deleted or overwritte
 
 ## What changed
 
-**First, the lock is no longer waited on forever.**
+**First, the lock file is gone entirely.**
 
-If the lock cannot be taken within a set time, the plugin gives up on it and carries on. Files that are already unpacked and intact are used as they are; otherwise it unpacks somewhere else and runs from there.
+Rather than shortening the wait, the lock itself was removed.
 
-The lock only exists to avoid doing the same work twice — it is not something the plugin cannot run without, so failing to take it must not block startup.
+It was guarding exactly one thing: the waste of unpacking the same files twice when two IDEs are open.
+It was never what kept the result intact — unpacking into a temp folder, verifying it, and then moving the whole thing into place already does that.
+
+Saving one duplicate unpack is not worth pushing anyone into rebooting their machine.
+
+A lock file left behind by an older version is cleaned up on the next run.
 
 **Second, there is now a way out when you do get stuck.**
 
