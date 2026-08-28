@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, stat, readFile } from 'fs/promises';
+import { mkdtemp, rm, stat, readFile, writeFile, chmod } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+// Real fs throughout — only writeFile and chmod are wrapped, so the permission
+// the store asks for can be read back on a filesystem that does not keep it.
+vi.mock('fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs/promises')>();
+  return { ...actual, writeFile: vi.fn(actual.writeFile), chmod: vi.fn(actual.chmod) };
+});
 
 // account-store derives its base dir from os.homedir(). Point it at a throwaway
 // temp dir so the tests touch real files without hitting the user's home.
@@ -72,8 +79,22 @@ describe('account-store', () => {
     expect(snap?.oauthAccount).toEqual({ emailAddress: 'a@x.com' });
     expect(hasSnapshot(id)).toBe(true);
 
-    const mode = (await stat(join(tempHome, '.claude-code-gui', 'accounts', `${id}.json`))).mode & 0o777;
-    expect(mode).toBe(0o600);
+    // Owner-only is asked for on every platform: the file is created with the
+    // mode and the mode is reapplied to the destination after the rename.
+    const snapshotPath = join(tempHome, '.claude-code-gui', 'accounts', `${id}.json`);
+    expect(vi.mocked(writeFile)).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.objectContaining({ mode: 0o600 }),
+    );
+    expect(vi.mocked(chmod)).toHaveBeenCalledWith(snapshotPath, 0o600);
+
+    // Only a POSIX filesystem stores the bits; NTFS drops them and reports 0666,
+    // which is why the request above — not the result — is the portable check.
+    if (process.platform !== 'win32') {
+      const mode = (await stat(snapshotPath)).mode & 0o777;
+      expect(mode).toBe(0o600);
+    }
   });
 
   it('deleteAccountFiles removes both the registry entry and the snapshot, clearing current', async () => {
