@@ -1417,19 +1417,23 @@ class ClaudeCodePanel(
                 }
                 ?: ""
 
-            // Explains why plain Retry keeps failing, so the extra button is not a mystery.
-            val staleHtml = if (staleBackendDetected) {
-                "<br><br>A backend process from an earlier run is still holding the port.<br>" +
+            // Show ONE cause, not two. A detected leftover backend IS the cause, so the generic
+            // "is Node.js installed?" advice is dropped in that case — the two point at
+            // unrelated problems, and printing both leaves the reader unable to tell which one
+            // they have. Without a leftover, the generic advice is all we have to offer.
+            val causeHtml = if (staleBackendDetected) {
+                "A backend process from an earlier run is still holding the port.<br>" +
                     "Retry cannot get past it — reboot the backend to stop it and start fresh."
-            } else ""
+            } else {
+                "Ensure Node.js is installed and available on PATH.<br>" +
+                    "The backend file (backend.mjs) must be built before running."
+            }
 
             val messageLabel = javax.swing.JLabel(
                 "<html><div style='text-align:center;'>" +
                 "<b>Node.js backend failed to start</b><br><br>" +
                 "Error: ${escapeHtml(errorMessage)}<br><br>" +
-                "Ensure Node.js is installed and available on PATH.<br>" +
-                "The backend file (backend.mjs) must be built before running." +
-                staleHtml +
+                causeHtml +
                 diagnosticsHtml +
                 "</div></html>"
             ).apply {
