@@ -1434,13 +1434,16 @@ class ClaudeCodePanel(
                 "</div></html>"
             ).apply {
                 horizontalAlignment = javax.swing.SwingConstants.CENTER
+                alignmentX = java.awt.Component.CENTER_ALIGNMENT
             }
-            add(messageLabel, BorderLayout.CENTER)
 
             val retryButton = javax.swing.JButton("Retry").apply {
                 addActionListener { retryBackendStart() }
             }
-            val buttonPanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.CENTER))
+            val buttonPanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.CENTER)).apply {
+                isOpaque = false
+                alignmentX = java.awt.Component.CENTER_ALIGNMENT
+            }
             buttonPanel.add(retryButton)
             // A leftover backend from a previous run holds the port (and, on Windows, the plugin
             // files) — Retry alone cannot get past it, so offer the reclaim-then-restart path
@@ -1451,7 +1454,23 @@ class ClaudeCodePanel(
                     addActionListener { rebootBackend() }
                 })
             }
-            add(buttonPanel, BorderLayout.SOUTH)
+
+            // Message and buttons travel together in one vertically-centred block. Putting the
+            // buttons in BorderLayout.SOUTH pinned them to the bottom of a tall panel, leaving
+            // the text floating in the middle and the action the user has to take far away from
+            // the reason they are taking it.
+            val content = JPanel().apply {
+                isOpaque = false
+                layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS)
+                add(messageLabel)
+                add(javax.swing.Box.createVerticalStrut(20))
+                add(buttonPanel)
+            }
+            val centeringWrapper = JPanel(java.awt.GridBagLayout()).apply {
+                isOpaque = false
+                add(content)
+            }
+            add(centeringWrapper, BorderLayout.CENTER)
         }
         add(errorPanel!!, BorderLayout.CENTER)
         revalidate()

@@ -674,7 +674,20 @@ class NodeBackendService : Disposable {
      */
     fun rebootBackend(projectBasePath: String): BackendRebooter.Outcome {
         val port = reclaimablePortOf(projectBasePath)
-            ?: return BackendRebooter.Outcome.CouldNotReclaim(emptyList())
+        if (port == null) {
+            // No port was ever bound for this root — a start that failed before the backend
+            // announced one. Nothing can be holding it, so there is nothing to reclaim and the
+            // restart is the whole job. Reporting this as a failed reclaim would refuse to
+            // restart at all, which is the one case the button exists for.
+            logger.info("Rebooting backend for '$projectBasePath' with no known port; restarting only")
+            return try {
+                restart(projectBasePath)
+                BackendRebooter.Outcome.Restarted(emptyList())
+            } catch (e: Exception) {
+                logger.warn("Backend restart threw for '$projectBasePath'", e)
+                BackendRebooter.Outcome.RestartFailed(e)
+            }
+        }
         return rebooter.reboot(port) { restart(projectBasePath) }
     }
 
