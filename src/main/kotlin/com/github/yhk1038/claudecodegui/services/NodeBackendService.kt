@@ -519,12 +519,8 @@ class NodeBackendService : Disposable {
         }
 
         /**
-         * Kill the process immediately, without waiting for a graceful exit — used on IDE
-         * shutdown, where the IDE is on its way out and cannot wait on anything.
-         *
-         * Anything the backend would flush during a graceful stop is either already persisted
-         * (sessions live in the CLI's own JSONL files) or belongs to an IDE that is closing
-         * anyway, so the wait buys nothing and risks holding up the shutdown.
+         * Kill the process on IDE shutdown, allowing it only the brief window it needs to tear
+         * down its own CLI children (see [NodeProcessManager.killNow]).
          */
         fun kill() {
             rpcClient?.dispose(); rpcClient = null
