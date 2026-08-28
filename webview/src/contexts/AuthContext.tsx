@@ -6,6 +6,15 @@ import { useAccountQuery } from '@/hooks/queries/useAccountQuery';
 interface AuthContextValue {
   /** null = not yet determined; true/false = known login state. */
   loggedIn: boolean | null;
+  /**
+   * When `loggedIn` was last resolved, as epoch ms (0 while undetermined).
+   *
+   * Lets a consumer tell whether a login state was confirmed BEFORE or AFTER a
+   * given event. A transcript's 401 entry needs exactly that: `loggedIn === true`
+   * confirmed before the 401 is stale (the token was revoked since), while one
+   * confirmed after it means the user has genuinely re-authenticated.
+   */
+  checkedAt: number;
   /** Re-query the CLI auth status (e.g. after a login completes). Awaitable so
    * callers can show a spinner while the re-check is in flight. */
   refetch: () => Promise<void>;
@@ -38,6 +47,10 @@ export function AuthProvider(props: AuthProviderProps) {
   //   failure rejected with no prior success — never flip a known state on it.
   const loggedIn: boolean | null = accountQuery.data ? accountQuery.data.loggedIn : null;
 
+  // react-query already timestamps every resolved fetch, so the "when was this
+  // confirmed" question needs no extra state of our own.
+  const checkedAt = accountQuery.data ? accountQuery.dataUpdatedAt : 0;
+
   const refetch = useCallback(async () => {
     // Invalidate both the single live-account query (login state, header avatar)
     // and the saved-accounts list (active marker, switcher) so a login/switch made
@@ -68,7 +81,7 @@ export function AuthProvider(props: AuthProviderProps) {
   }, [refetch]);
 
   return (
-    <AuthContext.Provider value={{ loggedIn, refetch }}>
+    <AuthContext.Provider value={{ loggedIn, checkedAt, refetch }}>
       {children}
     </AuthContext.Provider>
   );
