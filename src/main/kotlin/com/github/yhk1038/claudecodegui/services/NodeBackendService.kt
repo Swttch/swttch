@@ -517,6 +517,19 @@ class NodeBackendService : Disposable {
             rpcClient?.dispose(); rpcClient = null
             nodeProcessManager?.detach(); nodeProcessManager = null
         }
+
+        /**
+         * Kill the process immediately, without waiting for a graceful exit — used on IDE
+         * shutdown, where the IDE is on its way out and cannot wait on anything.
+         *
+         * Anything the backend would flush during a graceful stop is either already persisted
+         * (sessions live in the CLI's own JSONL files) or belongs to an IDE that is closing
+         * anyway, so the wait buys nothing and risks holding up the shutdown.
+         */
+        fun kill() {
+            rpcClient?.dispose(); rpcClient = null
+            nodeProcessManager?.killNow(); nodeProcessManager = null
+        }
     }
 
     /**
@@ -723,12 +736,21 @@ class NodeBackendService : Disposable {
     }
 
     override fun dispose() {
-        // IDE shutting down — dispose RPC clients and detach from the processes.
-        // Browser clients may still be connected; Node.js self-exits on idle.
-        // Do NOT cancel scope — that would close stdout/stderr pipes and SIGPIPE Node.
-        backends.values.forEach { it.detach() }
+        // IDE shutting down — kill the backends it spawned. The host owns the lifetime, so a
+        // backend must not outlive the IDE that started it: once the IDE is gone there is no
+        // UI left to stop it with, and a surviving one keeps holding the port and (on Windows)
+        // the plugin files a newly installed version needs — the state that left #308 reporters
+        // rebooting their machine.
+        //
+        // This used to detach instead, so that a browser/tunnel client could keep working past
+        // the IDE. That exception is withdrawn; being reliably stoppable matters more.
+        //
+        // The backend's own parent-death watchdog is the backup for the paths that never reach
+        // this method (an IDE crash), but it only notices within a poll interval — killing here
+        // makes a clean exit immediate.
+        backends.values.forEach { it.kill() }
         backends.clear()
-        logger.info("NodeBackendService disposed (backends detached, not killed)")
+        logger.info("NodeBackendService disposed (backends killed)")
     }
 
     companion object {

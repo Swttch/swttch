@@ -16,11 +16,12 @@
  *      after the ~60 s idle grace (unchanged behavior).
  *   S2 gate — SET_KEEP_ALIVE(true) over /rpc, then /ws connect + disconnect →
  *      backend is still alive well past the grace.
- *   S3 clamp with client — keep-alive ON, SIGKILL the parent while a /ws
- *      client is attached → watchdog fires, backend stays up; after
- *      the client disconnects it exits within the grace.
- *   S4 clamp without clients — keep-alive ON, SIGKILL the parent with zero
- *      /ws clients → backend exits within watchdog poll + grace.
+ *   S3 parent death with a client — keep-alive ON, SIGKILL the parent while a
+ *      /ws client is attached → watchdog fires and the backend exits anyway,
+ *      without waiting for the client to leave or for the idle grace. The host
+ *      owns the lifetime (#308); a connected client does not extend it.
+ *   S4 parent death without clients — keep-alive ON, SIGKILL the parent with
+ *      zero /ws clients → backend exits within watchdog poll + grace.
  *   S5 prewarm-leak fix — backend that never receives any /ws client, /rpc
  *      pushes SET_KEEP_ALIVE(false) (what Kotlin does on every connect) →
  *      backend exits after the grace instead of lingering forever.
@@ -251,7 +252,11 @@ async function s2_gate(port) {
   report('S2 gate log present', ctx.err.includes('Keep-alive enabled'));
 }
 
-async function s3_clampWithClient(port) {
+async function s3_parentDeathKillsEvenWithClient(port) {
+  // The host owns the lifetime: parent death ends the backend regardless of who is
+  // still connected (issue #308). This scenario used to assert the opposite — that a
+  // /ws client kept an IDE-orphaned backend alive — which is exactly the state that
+  // left a leftover backend holding files nobody could release without a reboot.
   const ctx = await startContext('s3', port);
   await pushKeepAlive(port, true);
   const ws = await openWs(port);
@@ -264,12 +269,22 @@ async function s3_clampWithClient(port) {
     'S3 watchdog log',
   );
   report('S3 watchdog detected parent death', true);
-  await delay(SURVIVE_PROBE_MS);
-  report('S3 backend survives parent death while a /ws client is attached', pidAlive(ctx.backendPid));
 
-  ws.close();
-  await waitUntil(() => !pidAlive(ctx.backendPid), EXIT_ALLOWANCE_MS, 'S3 exit after client left');
-  report('S3 backend exits after the last client leaves', true);
+  // Exits on the watchdog alone — no idle grace, and no waiting for the client to leave.
+  const start = Date.now();
+  await waitUntil(() => !pidAlive(ctx.backendPid), EXIT_ALLOWANCE_MS, 'S3 exit despite attached client');
+  const elapsed = Date.now() - start;
+  report('S3 backend exits on parent death even with a /ws client attached', true, `${Math.round(elapsed / 1000)}s`);
+  report(
+    'S3 exit did not wait for the idle grace',
+    elapsed < IDLE_GRACE_MS,
+    `${Math.round(elapsed / 1000)}s < ${IDLE_GRACE_MS / 1000}s`,
+  );
+  try {
+    ws.close();
+  } catch {
+    // The server is already gone — closing is best-effort cleanup.
+  }
 }
 
 async function s4_clampWithoutClients(port) {
@@ -361,7 +376,7 @@ async function main() {
   rmSync(ROOT, { recursive: true, force: true });
   mkdirSync(ROOT, { recursive: true });
 
-  const scenarios = [s1_baseline, s2_gate, s3_clampWithClient, s4_clampWithoutClients, s5_prewarmLeakFix, s6_statusEndpoint, s7_standaloneParentDeath];
+  const scenarios = [s1_baseline, s2_gate, s3_parentDeathKillsEvenWithClient, s4_clampWithoutClients, s5_prewarmLeakFix, s6_statusEndpoint, s7_standaloneParentDeath];
   const outcomes = await Promise.allSettled(scenarios.map((fn, i) => fn(BASE_PORT + i)));
   for (const [i, outcome] of outcomes.entries()) {
     if (outcome.status === 'rejected') {

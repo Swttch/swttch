@@ -27,7 +27,17 @@ Saving one duplicate unpack is not worth pushing anyone into rebooting their mac
 
 A lock file left behind by an older version is cleaned up on the next run.
 
-**Second, there is now a way out when you do get stuck.**
+**Second, closing the IDE now shuts the backend down with it.**
+
+It used to stay running, so that a browser or tunnel client could keep working past the IDE.
+
+But a backend left behind that way has no IDE to stop it from either — and that is what this whole problem was made of.
+
+Now whatever started the backend also ends it: the IDE when you started it from the IDE, the terminal when you started it there.
+
+**Keeping a tunnel session going after closing the IDE no longer works.** In exchange, what runs on your machine is something you can reliably stop.
+
+**Third, there is now a way out when you do get stuck.**
 
 When a leftover backend is detected, the error screen adds a line explaining it and a **`Reboot plugin backend`** button appears next to `Retry`.
 

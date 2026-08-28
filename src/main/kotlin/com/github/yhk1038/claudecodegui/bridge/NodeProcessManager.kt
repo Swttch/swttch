@@ -754,6 +754,46 @@ class NodeProcessManager(
         logger.info("NodeProcessManager detached")
     }
 
+    /**
+     * Kill the backend immediately, with no graceful window — used when the IDE is shutting
+     * down and has nothing to wait for (issue #308).
+     *
+     * Kills descendants *before* the backend itself. Killing the parent first would reparent
+     * its children to init and lose the handles to them, leaving the CLI processes the backend
+     * spawned running with nothing left to stop them. Descendants are collected up front for
+     * the same reason.
+     */
+    fun killNow() {
+        logger.info("Killing NodeProcessManager (no graceful wait)")
+        // Set before destroying: the exit seen by proc.waitFor() in start() must know this was
+        // intentional, or the restart callback would respawn what we are killing.
+        disposed = true
+        setLifecycle(Lifecycle.DEAD)
+
+        stdoutJob?.cancel()
+        stderrJob?.cancel()
+
+        process?.let { proc ->
+            val descendants = try {
+                proc.toHandle().descendants().toList()
+            } catch (e: Exception) {
+                logger.warn("Could not enumerate backend descendants; killing the backend alone", e)
+                emptyList()
+            }
+            descendants.forEach { child ->
+                try {
+                    child.destroyForcibly()
+                } catch (e: Exception) {
+                    logger.debug("Could not kill descendant ${child.pid()}: ${e.message}")
+                }
+            }
+            proc.destroyForcibly()
+            logger.info("Backend killed (pid=${proc.pid()}, descendants=${descendants.size})")
+        }
+
+        process = null
+    }
+
     override fun dispose() {
         logger.info("Disposing NodeProcessManager")
         // Mark disposed BEFORE destroying the process: the exit observed by proc.waitFor()

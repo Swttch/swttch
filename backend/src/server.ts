@@ -349,31 +349,8 @@ async function main() {
     connections.sendTo(connectionId, MessageType.TAB_RENAME_REQUESTED, { currentName });
   });
 
-  // Parent-death watchdog. The parent (the process that spawned and owns this
-  // backend) dying is the signal that the backend must give up — but what
-  // "giving up" means differs by who the owner is:
-  //
-  //  - JetBrains: the owner is the IDE, and it is NOT the only surface that can
-  //    keep the backend useful — a browser/tunnel client may still be working.
-  //    So on IDE death the backend does NOT exit; it only flips the keep-alive
-  //    gate off, restoring the idle-shutdown regime. A live /ws client keeps it
-  //    alive; with none, setKeepAlive(false) arms the idle timer immediately, so
-  //    a truly orphaned client-less backend exits after the grace (this also
-  //    closes the prewarm-leak case).
-  //
-  //  - Standalone: the owner is the terminal shell that launched `ccg`, and it
-  //    OWNS the lifetime outright. When the shell is gone the backend must die
-  //    regardless of any browser/tunnel client — otherwise it is a literal
-  //    orphan nobody launched and nobody can stop. The clean path is SIGHUP
-  //    (handled below); this watchdog is the backup for the cases SIGHUP does
-  //    not cover (shell SIGKILLed, or the backend reparented away from the
-  //    terminal), detected within one poll interval.
-  //
-  // The standalone arm is installed after `shutdown` is defined (below), since
-  // its callback calls it.
-  if (isJetBrainsMode) {
-    startParentWatchdog(() => connections.setKeepAlive(false));
-  }
+  // Parent-death watchdog — installed after `shutdown` is defined (below), since
+  // its callback calls it. See the comment at that call site for the rule.
 
   // Idle-shutdown gate ("keep backend running"). Kotlin pushes the
   // desired state on every /rpc (re)connect and on user toggle; a `false` push
@@ -565,13 +542,27 @@ async function main() {
   // this handler the process-group isolation itself would mint a new orphan class.
   process.on('SIGHUP', () => shutdown('SIGHUP'));
 
-  // Standalone parent-death watchdog (see the JetBrains/standalone split above):
-  // the owning shell dying means the backend must exit outright — browser/tunnel
-  // clients do NOT keep a shell-orphaned backend alive. SIGHUP is the clean path;
-  // this is the backup for a shell SIGKILL or a reparent that delivers no SIGHUP.
-  if (!isJetBrainsMode) {
-    startParentWatchdog(() => shutdown('parent-death'));
-  }
+  // Parent-death watchdog: when the process that spawned this backend dies, the
+  // backend exits — in every mode, regardless of any browser/tunnel client.
+  //
+  // The host owns the lifetime. Whoever started the backend is the only party
+  // that can stop it, so once they are gone a surviving backend is an orphan
+  // nobody launched and nobody can reach: after the IDE window closes there is
+  // no UI left to shut it down with. That orphan is what forced reporters of
+  // #308 to reboot Windows — it kept holding the files a newly installed
+  // version needed, and closing the IDE did not clear it.
+  //
+  // JetBrains used to be the exception here: on IDE death the backend stayed up
+  // and only restored the idle-shutdown regime, so a remote client could keep
+  // working past the IDE. That exception is withdrawn. Outliving its host is
+  // worth less than being reliably stoppable, and it applies all the more once
+  // sessions can be shared with someone else — the machine's owner must not need
+  // a guest to disconnect before their own backend will stop.
+  //
+  // SIGHUP is still the clean path for a terminal host; this watchdog is the
+  // backup for what SIGHUP misses (host SIGKILLed, or a reparent that delivers
+  // no signal), detected within one poll interval.
+  startParentWatchdog(() => shutdown('parent-death'));
 }
 
 main().catch((err) => {
