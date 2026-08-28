@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.PluginResourceExtractor
@@ -105,6 +106,13 @@ class NodeBackendService : Disposable {
     fun prewarmResources() {
         resourcesReady.start()
     }
+
+    /**
+     * Clears a leftover backend process and restarts through this service (issue #308).
+     * Held here because the IDE is the spawner of these backends, and the spawner is what must
+     * restart them — see [BackendRebooter].
+     */
+    private val rebooter = BackendRebooter()
 
     /**
      * One Node.js backend dedicated to a single IDE project root. Owns its
@@ -448,6 +456,13 @@ class NodeBackendService : Disposable {
         /** Current process lifecycle, or null when no manager exists (never started). */
         fun lifecycleOrNull(): NodeProcessManager.Lifecycle? = nodeProcessManager?.currentLifecycle
 
+        /**
+         * The last port this backend was known to bind, regardless of current lifecycle.
+         * Unlike [portOrNull] this survives the process dying — which is exactly the case where
+         * a leftover process may still be holding it (issue #308). 0 = never learned one.
+         */
+        fun lastKnownPort(): Int? = lastPort.takeIf { it != 0 }
+
         /** The bound port, or null while not RUNNING / not yet known. */
         fun portOrNull(): Int? {
             if (nodeProcessManager?.currentLifecycle != NodeProcessManager.Lifecycle.RUNNING) return null
@@ -501,6 +516,15 @@ class NodeBackendService : Disposable {
         fun detach() {
             rpcClient?.dispose(); rpcClient = null
             nodeProcessManager?.detach(); nodeProcessManager = null
+        }
+
+        /**
+         * Kill the process on IDE shutdown, allowing it only the brief window it needs to tear
+         * down its own CLI children (see [NodeProcessManager.killNow]).
+         */
+        fun kill() {
+            rpcClient?.dispose(); rpcClient = null
+            nodeProcessManager?.killNow(); nodeProcessManager = null
         }
     }
 
@@ -622,6 +646,51 @@ class NodeBackendService : Disposable {
             ?: logger.warn("restart: no backend for project root $projectBasePath")
     }
 
+    /**
+     * The port a leftover backend for [projectBasePath] would be holding, or null when we never
+     * learned one. Only a port this IDE actually saw in use is offered for reclaiming — guessing
+     * a default and killing whatever answers on it could terminate an unrelated process.
+     */
+    fun reclaimablePortOf(projectBasePath: String): Int? =
+        backends[projectBasePath]?.lastKnownPort()
+
+    /**
+     * True when something this IDE session does not own is holding [projectBasePath]'s backend
+     * port — the condition for offering the user a reboot (issue #308).
+     */
+    fun hasStaleBackend(projectBasePath: String): Boolean {
+        val port = reclaimablePortOf(projectBasePath) ?: return false
+        // A backend we own and that is running is not stale, however the port reads.
+        if (backends[projectBasePath]?.lifecycleOrNull() == NodeProcessManager.Lifecycle.RUNNING) return false
+        return rebooter.hasStaleBackend(port)
+    }
+
+    /**
+     * Clear a leftover backend process holding [projectBasePath]'s port, then restart through
+     * this service — the IDE spawned this backend, so the IDE is what restarts it (issue #308).
+     *
+     * Blocking: it waits for the old process to actually exit before restarting. Callers on the
+     * EDT must move this off it.
+     */
+    fun rebootBackend(projectBasePath: String): BackendRebooter.Outcome {
+        val port = reclaimablePortOf(projectBasePath)
+        if (port == null) {
+            // No port was ever bound for this root — a start that failed before the backend
+            // announced one. Nothing can be holding it, so there is nothing to reclaim and the
+            // restart is the whole job. Reporting this as a failed reclaim would refuse to
+            // restart at all, which is the one case the button exists for.
+            logger.info("Rebooting backend for '$projectBasePath' with no known port; restarting only")
+            return try {
+                restart(projectBasePath)
+                BackendRebooter.Outcome.Restarted(emptyList())
+            } catch (e: Exception) {
+                logger.warn("Backend restart threw for '$projectBasePath'", e)
+                BackendRebooter.Outcome.RestartFailed(e)
+            }
+        }
+        return rebooter.reboot(port) { restart(projectBasePath) }
+    }
+
     /** Send a JSON-RPC notification to the backend serving [projectBasePath]. */
     fun sendNotification(projectBasePath: String, method: String, params: JsonObject) {
         backends[projectBasePath]?.sendNotification(method, params)
@@ -676,12 +745,21 @@ class NodeBackendService : Disposable {
     }
 
     override fun dispose() {
-        // IDE shutting down — dispose RPC clients and detach from the processes.
-        // Browser clients may still be connected; Node.js self-exits on idle.
-        // Do NOT cancel scope — that would close stdout/stderr pipes and SIGPIPE Node.
-        backends.values.forEach { it.detach() }
+        // IDE shutting down — kill the backends it spawned. The host owns the lifetime, so a
+        // backend must not outlive the IDE that started it: once the IDE is gone there is no
+        // UI left to stop it with, and a surviving one keeps holding the port and (on Windows)
+        // the plugin files a newly installed version needs — the state that left #308 reporters
+        // rebooting their machine.
+        //
+        // This used to detach instead, so that a browser/tunnel client could keep working past
+        // the IDE. That exception is withdrawn; being reliably stoppable matters more.
+        //
+        // The backend's own parent-death watchdog is the backup for the paths that never reach
+        // this method (an IDE crash), but it only notices within a poll interval — killing here
+        // makes a clean exit immediate.
+        backends.values.forEach { it.kill() }
         backends.clear()
-        logger.info("NodeBackendService disposed (backends detached, not killed)")
+        logger.info("NodeBackendService disposed (backends killed)")
     }
 
     companion object {

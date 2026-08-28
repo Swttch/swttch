@@ -138,7 +138,7 @@ Plugin (Gradle):
                    build/distributions/*.zip from a previous buildPlugin run.
   build-plugin   gradlew buildPlugin
   clean          gradlew clean
-  test           gradlew test
+  test           gradlew test (extra args go to gradle, e.g. --tests '*FooTest*')
   test-cov       gradlew koverHtmlReport (Kotlin coverage)
   verify-plugin  gradlew verifyPlugin (runs JetBrains Plugin Verifier across
                    the pluginVerification.ides matrix in build.gradle.kts)
@@ -308,7 +308,7 @@ EOF
     ;;
   build-plugin)   "$ROOT/gradlew" -p "$ROOT" buildPlugin ;;
   clean)          "$ROOT/gradlew" -p "$ROOT" clean ;;
-  test)           "$ROOT/gradlew" -p "$ROOT" test ;;
+  test)           "$ROOT/gradlew" -p "$ROOT" test "${@:2}" ;;
   test-cov)       "$ROOT/gradlew" -p "$ROOT" koverHtmlReport ;;
   verify-plugin)  "$ROOT/gradlew" -p "$ROOT" verifyPlugin ;;
 

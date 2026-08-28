@@ -173,4 +173,34 @@ class PluginResourceExtractorTest {
             "a stale .locked-* dir should be pruned on a canonical-serving run")
         assertTrue(result.backendFile.isFile, "still serves the canonical version dir")
     }
+
+    // ── Discarded dirs must not accumulate (issue #308 follow-up) ───────────
+
+    @Test
+    fun `reaps a discarded dir a previous run could not delete`(@TempDir base: File) {
+        // clearByRenamingAside moves the old version dir aside and deletes the copy. If that
+        // delete fails — a Windows lock — the dir stays behind, so a later run has to reap it.
+        // It must NOT be named `.tmp-*`: pruneOtherVersions skips that prefix on purpose,
+        // because a concurrent extraction may be unpacking into one.
+        val stranded = File(base, ".discard-abc/backend").apply { mkdirs() }
+        File(stranded, "backend.mjs").writeText("// superseded")
+
+        extractor(base) { wv, bd -> completeUnpack(wv, bd) }.resolve()
+
+        assertFalse(File(base, ".discard-abc").exists(), "a discarded dir should be reaped on a later run")
+    }
+
+    @Test
+    fun `still leaves a concurrent extraction's temp dir alone`(@TempDir base: File) {
+        // The reason `.tmp-*` is skipped: another process may be mid-unpack in one right now.
+        val inFlight = File(base, ".tmp-someone-else/webview").apply { mkdirs() }
+        File(inFlight, "index.html").writeText("<html></html>")
+
+        extractor(base) { wv, bd -> completeUnpack(wv, bd) }.resolve()
+
+        assertTrue(
+            File(base, ".tmp-someone-else").exists(),
+            "another process's in-flight temp dir must survive",
+        )
+    }
 }

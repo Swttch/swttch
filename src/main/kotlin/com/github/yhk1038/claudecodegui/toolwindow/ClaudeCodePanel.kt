@@ -46,6 +46,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
@@ -1403,6 +1404,8 @@ class ClaudeCodePanel(
     private fun showBackendError(errorMessage: String, diagnostics: String? = null) {
         remove(loadingLabel)
 
+        val staleBackendDetected = backendService.hasStaleBackend(project.basePath ?: "")
+
         errorPanel = JPanel(BorderLayout(0, 12)).apply {
             border = javax.swing.BorderFactory.createEmptyBorder(40, 40, 40, 40)
 
@@ -1414,29 +1417,142 @@ class ClaudeCodePanel(
                 }
                 ?: ""
 
+            // Show ONE cause, not two. A detected leftover backend IS the cause, so the generic
+            // "is Node.js installed?" advice is dropped in that case — the two point at
+            // unrelated problems, and printing both leaves the reader unable to tell which one
+            // they have. Without a leftover, the generic advice is all we have to offer.
+            val causeHtml = if (staleBackendDetected) {
+                "A backend process from an earlier run is still holding the port.<br>" +
+                    "Retry cannot get past it — reboot the backend to stop it and start fresh."
+            } else {
+                "Ensure Node.js is installed and available on PATH.<br>" +
+                    "The backend file (backend.mjs) must be built before running."
+            }
+
             val messageLabel = javax.swing.JLabel(
                 "<html><div style='text-align:center;'>" +
                 "<b>Node.js backend failed to start</b><br><br>" +
                 "Error: ${escapeHtml(errorMessage)}<br><br>" +
-                "Ensure Node.js is installed and available on PATH.<br>" +
-                "The backend file (backend.mjs) must be built before running." +
+                causeHtml +
                 diagnosticsHtml +
                 "</div></html>"
             ).apply {
                 horizontalAlignment = javax.swing.SwingConstants.CENTER
+                alignmentX = java.awt.Component.CENTER_ALIGNMENT
             }
-            add(messageLabel, BorderLayout.CENTER)
 
             val retryButton = javax.swing.JButton("Retry").apply {
                 addActionListener { retryBackendStart() }
             }
-            val buttonPanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.CENTER))
+            val buttonPanel = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.CENTER)).apply {
+                isOpaque = false
+                alignmentX = java.awt.Component.CENTER_ALIGNMENT
+            }
             buttonPanel.add(retryButton)
-            add(buttonPanel, BorderLayout.SOUTH)
+            // A leftover backend from a previous run holds the port (and, on Windows, the plugin
+            // files) — Retry alone cannot get past it, so offer the reclaim-then-restart path
+            // next to it (issue #308). Only shown when one is actually detected.
+            if (staleBackendDetected) {
+                buttonPanel.add(javax.swing.JButton("Reboot plugin backend").apply {
+                    toolTipText = "Stop the leftover backend process from a previous run, then start a new one"
+                    addActionListener { rebootBackend() }
+                })
+            }
+
+            // Message and buttons travel together in one vertically-centred block. Putting the
+            // buttons in BorderLayout.SOUTH pinned them to the bottom of a tall panel, leaving
+            // the text floating in the middle and the action the user has to take far away from
+            // the reason they are taking it.
+            val content = JPanel().apply {
+                isOpaque = false
+                layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS)
+                add(messageLabel)
+                add(javax.swing.Box.createVerticalStrut(20))
+                add(buttonPanel)
+            }
+            val centeringWrapper = JPanel(java.awt.GridBagLayout()).apply {
+                isOpaque = false
+                add(content)
+            }
+            add(centeringWrapper, BorderLayout.CENTER)
         }
         add(errorPanel!!, BorderLayout.CENTER)
         revalidate()
         repaint()
+    }
+
+    /**
+     * Clear a leftover backend process and start a fresh one (issue #308).
+     *
+     * The reclaim/restart itself lives in [com.github.yhk1038.claudecodegui.bridge.BackendRebooter]
+     * so it can be reused; this method is only the IDE-side trigger and its user feedback. Runs off
+     * the EDT because reclaiming waits for the old process to actually exit.
+     */
+    private fun rebootBackend() {
+        errorPanel?.let { remove(it) }
+        errorPanel = null
+        add(loadingLabel, BorderLayout.CENTER)
+        revalidate()
+        repaint()
+
+        val basePath = project.basePath ?: ""
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) { backendService.rebootBackend(basePath) }
+            when (outcome) {
+                is com.github.yhk1038.claudecodegui.bridge.BackendRebooter.Outcome.Restarted -> {
+                    logger.info("Backend rebooted (reclaimed pids=${outcome.reclaimedPids}); awaiting port")
+                    awaitBackendAfterManualStart()
+                }
+                is com.github.yhk1038.claudecodegui.bridge.BackendRebooter.Outcome.CouldNotReclaim -> {
+                    val pids = outcome.survivingPids
+                    logger.warn("Backend reboot could not reclaim the port; surviving pids=$pids")
+                    javax.swing.SwingUtilities.invokeLater {
+                        showBackendError(
+                            if (pids.isEmpty()) {
+                                "No leftover backend port is known for this project, so there is nothing to reclaim."
+                            } else {
+                                "A leftover backend process (pid ${pids.joinToString()}) could not be stopped. " +
+                                    "It may be running as another user or be protected by security software."
+                            }
+                        )
+                    }
+                }
+                is com.github.yhk1038.claudecodegui.bridge.BackendRebooter.Outcome.RestartFailed -> {
+                    logger.warn("Backend reboot cleared the port but the restart failed", outcome.cause)
+                    javax.swing.SwingUtilities.invokeLater {
+                        showBackendError(outcome.cause.message ?: "Restart failed after reclaiming the port")
+                    }
+                }
+            }
+        }
+    }
+
+    /** Wait for a manually-triggered backend start to bind a port, then load the webview. */
+    private suspend fun awaitBackendAfterManualStart() {
+        try {
+            val port = withTimeoutOrNull(BACKEND_START_TIMEOUT_MS) {
+                backendService.awaitPort(project.basePath ?: "")
+            }
+            if (port == null) {
+                val diag = backendService.recentBackendDiagnostics(project.basePath ?: "")
+                javax.swing.SwingUtilities.invokeLater {
+                    showBackendError(
+                        "Backend did not become ready within ${BACKEND_START_TIMEOUT_MS / 1000} seconds.",
+                        diag,
+                    )
+                }
+                return
+            }
+            loadWebView(port)
+        } catch (e: CancellationException) {
+            // Panel/tab closed mid-start — a normal shutdown, not a failure.
+            throw e
+        } catch (e: Exception) {
+            val diag = backendService.recentBackendDiagnostics(project.basePath ?: "")
+            javax.swing.SwingUtilities.invokeLater {
+                showBackendError(e.message ?: "Unknown error", diag)
+            }
+        }
     }
 
     /**
@@ -1450,31 +1566,7 @@ class ClaudeCodePanel(
         repaint()
 
         backendService.restart(project.basePath ?: "")
-        scope.launch {
-            try {
-                val port = withTimeoutOrNull(BACKEND_START_TIMEOUT_MS) {
-                    backendService.awaitPort(project.basePath ?: "")
-                }
-                if (port == null) {
-                    logger.warn("Retry: Node.js backend did not become ready within ${BACKEND_START_TIMEOUT_MS}ms")
-                    val diag = backendService.recentBackendDiagnostics(project.basePath ?: "")
-                    javax.swing.SwingUtilities.invokeLater {
-                        showBackendError("Backend did not become ready within ${BACKEND_START_TIMEOUT_MS / 1000} seconds.", diag)
-                    }
-                    return@launch
-                }
-                loadWebView(port)
-            } catch (e: CancellationException) {
-                // Panel/tab closed mid-retry — a normal shutdown, not a failure.
-                throw e
-            } catch (e: Exception) {
-                logger.error("Retry: Failed to start Node.js backend", e)
-                val diag = backendService.recentBackendDiagnostics(project.basePath ?: "")
-                javax.swing.SwingUtilities.invokeLater {
-                    showBackendError(e.message ?: "Unknown error", diag)
-                }
-            }
-        }
+        scope.launch { awaitBackendAfterManualStart() }
     }
 
     // ─── RPC Handler (IDE-native operations) ────────────────────────

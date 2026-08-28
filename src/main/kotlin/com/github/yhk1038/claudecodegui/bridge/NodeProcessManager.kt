@@ -386,6 +386,7 @@ class NodeProcessManager(
                         ?: backendFile.absolutePath
                     val wslEnv = buildMap {
                         put("JETBRAINS_MODE", "true")
+                        put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         put("PORT", requestedPort.toString())
                         webviewDir?.let { wv ->
@@ -425,6 +426,7 @@ class NodeProcessManager(
                     val env = buildMap {
                         putAll(EnvironmentUtil.getEnvironmentMap())
                         put("JETBRAINS_MODE", "true")
+                        put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         // Hand the backend the user's real shell PATH so anything it spawns
                         // (claude, npx, git) is found even when the IDE started from GUI (#59).
@@ -754,6 +756,54 @@ class NodeProcessManager(
         logger.info("NodeProcessManager detached")
     }
 
+    /**
+     * Kill the backend on IDE shutdown (issue #308), with only a brief window to clean up
+     * after itself.
+     *
+     * ## Why not SIGKILL outright
+     *
+     * The backend owns the teardown of the `claude` CLI processes it spawned, and it is the
+     * only party that can do it correctly: on POSIX those CLIs run in their own process groups
+     * and are reaped by signalling the group, and on win32 they live in a Job Object whose
+     * handle must be closed for the kernel to tear the tree down. `destroyForcibly` is SIGKILL,
+     * which runs none of that — the backend dies and its CLI processes keep running and
+     * billing. Killing descendants from here instead does not substitute for it either: a
+     * process-tree walk misses exactly the detached workers both mechanisms exist to catch.
+     *
+     * So: `destroy()` (SIGTERM) to let the backend run its own shutdown, then SIGKILL whatever
+     * is left. The window is deliberately short — the IDE is on its way out and must not be
+     * held up — but not zero, because zero leaks CLI processes.
+     */
+    fun killNow() {
+        logger.info("Killing NodeProcessManager (short graceful window)")
+        // Set before destroying: the exit seen by proc.waitFor() in start() must know this was
+        // intentional, or the restart callback would respawn what we are killing.
+        disposed = true
+        setLifecycle(Lifecycle.DEAD)
+
+        stdoutJob?.cancel()
+        stderrJob?.cancel()
+
+        process?.let { proc ->
+            if (proc.isAlive) {
+                proc.destroy()
+                val exited = try {
+                    proc.waitFor(SHUTDOWN_KILL_GRACE_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+                } catch (e: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    false
+                }
+                if (!exited) {
+                    logger.warn("Backend did not exit within ${SHUTDOWN_KILL_GRACE_MS}ms; forcing")
+                    proc.destroyForcibly()
+                }
+            }
+            logger.info("Backend killed (pid=${proc.pid()})")
+        }
+
+        process = null
+    }
+
     override fun dispose() {
         logger.info("Disposing NodeProcessManager")
         // Mark disposed BEFORE destroying the process: the exit observed by proc.waitFor()
@@ -800,6 +850,27 @@ class NodeProcessManager(
         // the time a backend starts; this only guards a cold first start on a slow disk so
         // start() never hangs indefinitely (the #97 lesson). On timeout we fail-fast.
         private const val RESOURCE_READY_TIMEOUT_MS = 30_000L
+
+        /**
+         * This IDE's own pid, handed to the backend as `CCG_HOST_PID` so its parent-death
+         * watchdog can watch the host directly (issue #308).
+         *
+         * The backend cannot infer this from `process.ppid`: Volta, nvm and fnm all launch node
+         * through a shim, so the tree is `IDE -> shim -> node` and the watchdog lives in `node`.
+         * When the IDE dies it is the shim that is orphaned — the shim keeps running, node's
+         * parent still looks alive, and the watchdog never fires. Observed with Volta: the IDE
+         * was gone, the shim sat at ppid 1, and both survived indefinitely. Naming the host
+         * explicitly makes the number of shim layers irrelevant.
+         */
+        private fun hostPid(): String = ProcessHandle.current().pid().toString()
+
+        /**
+         * How long [killNow] lets the backend run its own shutdown before SIGKILL. Short
+         * enough not to hold up an IDE exit, long enough for the backend to signal its CLI
+         * process groups / close its win32 Job Object — the step that stops those CLIs from
+         * outliving it (issue #308).
+         */
+        private const val SHUTDOWN_KILL_GRACE_MS = 1_500L
 
         /**
          * Unified "restart the plugin backend" exit code. The Node backend self-exits with

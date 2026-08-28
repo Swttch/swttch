@@ -5,11 +5,9 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import java.io.File
-import java.nio.channels.FileChannel
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.nio.file.StandardOpenOption
 import java.util.UUID
 
 /** Final on-disk locations the backend serves from. */
@@ -38,15 +36,25 @@ data class ExtractedResources(val webviewDir: File, val backendFile: File)
  *  - **Never delete on process exit**: nothing races a serving dir (#149). Stale *other
  *    version* dirs are pruned right after a successful extraction instead.
  *
- * ## Concurrency & atomicity
+ * ## Concurrency & atomicity — why there is no lock (issue #308)
  *
- * Two IDEs (or two instances) on the same [baseDir] can extract the same version
- * concurrently. A `.lock` file ([FileChannel.tryLock]) serializes the first extraction,
- * and the unpack happens into a sibling `.tmp-<uuid>` dir under the *same parent* as the
- * final dir (guaranteeing the same volume) before an atomic rename. The hashed-bundle
- * verification runs on the temp dir **before** the rename, so the final version dir only
- * ever appears complete. `ATOMIC_MOVE` falls back to a non-atomic replace when the
- * platform/filesystem rejects it (the extraction gate means no one reads mid-rename).
+ * Two IDE instances sharing a [baseDir] can extract the same version concurrently, and
+ * that is safe on its own: each unpacks into its own sibling `.tmp-<uuid>` dir under the
+ * *same parent* as the final dir (guaranteeing the same volume), verifies the hashed
+ * bundle **before** renaming, and then publishes by rename — so the version dir never
+ * appears half-written no matter how many processes race. `ATOMIC_MOVE` falls back to a
+ * non-atomic replace when the platform/filesystem rejects it, and to a `.locked-<uuid>`
+ * serve-in-place dir when even that fails (see [moveIntoPlace]).
+ *
+ * Earlier versions also took a `.lock` file here. It never guarded correctness — the
+ * rename above already does — it only avoided the *waste* of two processes unpacking the
+ * same bundle. That trade turned out to be a bad one: the wait was unbounded, so a
+ * leftover backend process still holding the lock stalled every new start until the 30s
+ * resource gate in [NodeProcessManager] gave up, surfacing as
+ * `Node.js backend failed to start / Plugin resources not ready`. On Windows that holder
+ * survives closing the IDE, which left rebooting the machine as the only way out. Paying
+ * a rare duplicate unpack is strictly cheaper than that, so the lock is gone; a leftover
+ * `.lock` file from an older version is deleted on sight by [pruneOtherVersions].
  *
  * Dev mode (running from the source tree) returns the source `webview/dist` and
  * `backend/dist/backend.mjs` directly and never extracts — the version-key scheme
@@ -67,11 +75,11 @@ class PluginResourceExtractor(
     private val unpack: ((webviewTarget: File, backendDirTarget: File) -> Unit)? = null,
     /**
      * Clears a stale partial version dir before the rename, returning whether the dir is
-     * now gone. Defaults to [File.deleteRecursively]. Injectable so a test can simulate the
-     * Windows case where a running backend holds `backend.mjs` open and the delete silently
-     * fails (returns false, dir remains) — the M4 lock-resilience path.
+     * now gone. Injectable so a test can simulate the Windows case where a running backend
+     * holds `backend.mjs` open and the clear silently fails (returns false, dir remains) —
+     * the M4 lock-resilience path.
      */
-    private val clearTarget: (File) -> Boolean = { it.deleteRecursively() },
+    private val clearTarget: (File) -> Boolean = { clearByRenamingAside(it) },
 ) {
     private val logger = Logger.getInstance(PluginResourceExtractor::class.java)
 
@@ -103,11 +111,7 @@ class PluginResourceExtractor(
         }
 
         baseDir.mkdirs()
-        val served = withBaseLock {
-            // Re-check under the lock: another process may have completed the
-            // extraction while we waited for the lock.
-            if (isComplete(result)) result else extractVersion(versionDir)
-        }
+        val served = extractVersion(versionDir)
         pruneOtherVersions()
         // Only reap leftover `.locked-*` dirs when THIS run serves canonically; if we are
         // serving from a fallback (`served` != the version dir), that fallback must survive.
@@ -162,8 +166,32 @@ class PluginResourceExtractor(
                 )
             }
 
+            // Another process may have finished publishing while we were unpacking. Its bundle
+            // is byte-identical to ours (same plugin version), so adopt it and — critically —
+            // do NOT fall through to clearTarget below, which would delete a directory a live
+            // backend is already serving. That deletion is exactly what caused the `Not found`
+            // blank panel in #149; the `.lock` file used to make this window unreachable, so
+            // removing the lock (#308) is what puts the check here instead.
+            val canonical = ExtractedResources(
+                webviewDir = File(versionDir, WEBVIEW_SUBDIR),
+                backendFile = File(File(versionDir, BACKEND_SUBDIR), BACKEND_ENTRY),
+            )
+            if (isComplete(canonical)) {
+                logger.info("Another process published $versionDir while we unpacked; serving its bundle")
+                return canonical
+            }
+
             // Try to remove any stale partial target. On Windows a locked backend.mjs
             // makes this a silent no-op; we don't rely on it succeeding.
+            //
+            // Deleting is done by RENAMING the partial dir aside first, then deleting the
+            // renamed copy. The isComplete check above narrows the race but cannot close it —
+            // a racer can publish in the instant between that check and this line, and a
+            // recursive delete would then eat the directory it is serving, file by file, which
+            // is the #149 `Not found` failure. A rename is a single atomic step: it either
+            // moves the whole directory or nothing, so the racer's published dir is never left
+            // half-deleted, and if we lose the race the rename simply takes their finished
+            // bundle aside and we can put it straight back.
             val cleared = clearTarget(versionDir)
             if (!cleared && versionDir.exists()) {
                 logger.warn(
@@ -177,7 +205,10 @@ class PluginResourceExtractor(
 
             versionDir.parentFile?.mkdirs()
             val served = moveIntoPlace(tmp, versionDir)
-            moved = true
+            // `tmp` was renamed away only if we are serving our own bundle. When we adopted a
+            // racer's already-published dir the rename failed, so tmp is still on disk and the
+            // finally below must still clean it up.
+            moved = !tmp.exists()
             logger.info("Extracted plugin resources for version $version → ${served.backendFile.parentFile?.parentFile}")
             return served
         } finally {
@@ -202,9 +233,20 @@ class PluginResourceExtractor(
     }
 
     /**
-     * Atomic rename with a non-atomic fallback for cross-filesystem / Windows edge cases,
-     * and a `.locked-<uuid>` serve-in-place fallback when even the non-atomic replace fails
-     * (target still locked). Returns the [ExtractedResources] to serve from.
+     * Publish the verified temp bundle as [dst], and return what to serve from.
+     *
+     * Three outcomes, in order of preference:
+     *  1. the rename succeeds → serve the canonical version dir;
+     *  2. **another process got there first** → serve *their* finished dir (identical bundle);
+     *  3. the target is unusable (a Windows lock) → serve in place from `.locked-<uuid>`.
+     *
+     * Losing the race is the normal concurrent case, not an error (issue #308). Renaming a
+     * directory onto a non-empty directory fails — POSIX with `Directory not empty`, Windows
+     * with an access error — so once a racer has published `dst`, everyone else lands here.
+     * Their bundle is byte-identical to ours (same plugin version), so adopting it is both
+     * correct and cheaper than keeping a private copy. This is what the `.lock` file used to
+     * hide by serializing extraction; without it, the case has to be handled rather than
+     * thrown, or a second IDE instance would fail to start.
      */
     private fun moveIntoPlace(src: File, dst: File): ExtractedResources {
         val canonical = ExtractedResources(
@@ -216,16 +258,35 @@ class PluginResourceExtractor(
             return canonical
         } catch (e: AtomicMoveNotSupportedException) {
             logger.warn("ATOMIC_MOVE unsupported ($src → $dst); falling back to non-atomic move", e)
-            // The extraction gate guarantees no backend reads $dst until resolve() returns,
-            // so a brief non-atomic window is safe here.
             return try {
                 Files.move(src.toPath(), dst.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 canonical
             } catch (io: java.io.IOException) {
-                logger.warn("Non-atomic move into $dst failed (locked target?); serving from fallback dir", io)
-                serveFromFallback(src)
+                adoptWinnerOrServeInPlace(src, dst, canonical, io)
             }
+        } catch (e: java.io.IOException) {
+            return adoptWinnerOrServeInPlace(src, dst, canonical, e)
         }
+    }
+
+    /**
+     * Fallback shared by both failed-move paths: take the winner's finished bundle when one is
+     * there, otherwise keep our own copy under `.locked-<uuid>` and serve that.
+     */
+    private fun adoptWinnerOrServeInPlace(
+        src: File,
+        dst: File,
+        canonical: ExtractedResources,
+        cause: java.io.IOException,
+    ): ExtractedResources {
+        if (isComplete(canonical)) {
+            // Leave `src` for the caller's finally to clean up — the move failed, so it still
+            // owns the temp dir and would otherwise be deleting a path we already removed.
+            logger.info("Another process published $dst first; serving its bundle")
+            return canonical
+        }
+        logger.warn("Could not publish into $dst (locked target?); serving from a fallback dir", cause)
+        return serveFromFallback(src)
     }
 
     /**
@@ -240,9 +301,22 @@ class PluginResourceExtractor(
     private fun pruneOtherVersions() {
         val siblings = baseDir.listFiles() ?: return
         for (dir in siblings) {
+            // A `.lock` file left by a version that still used one (see the class doc):
+            // dead weight now, and deleting it costs nothing since nobody opens it anymore.
+            if (dir.isFile && dir.name == LEGACY_LOCK_NAME) {
+                if (dir.delete()) logger.info("Removed the obsolete extraction lock file")
+                continue
+            }
             if (!dir.isDirectory) continue
             if (dir.name == version) continue
-            if (dir.name.startsWith(TMP_PREFIX) || dir.name.startsWith(LOCKED_PREFIX) || dir.name == LOCK_NAME) continue
+            // `.discard-*` is superseded content another run already moved aside, so reaping it
+            // is always safe — unlike `.tmp-*`, which a concurrent extraction may be filling in
+            // right now, and `.locked-*`, which someone may be serving from.
+            if (dir.name.startsWith(DISCARD_PREFIX)) {
+                if (dir.deleteRecursively()) logger.info("Reaped discarded dir: ${dir.name}")
+                continue
+            }
+            if (dir.name.startsWith(TMP_PREFIX) || dir.name.startsWith(LOCKED_PREFIX)) continue
             val ok = dir.deleteRecursively()
             if (ok) logger.info("Pruned stale plugin-resource version dir: ${dir.name}")
             else logger.debug("Could not prune ${dir.name} (in use?); leaving for next run")
@@ -262,18 +336,6 @@ class PluginResourceExtractor(
             val ok = dir.deleteRecursively()
             if (ok) logger.info("Pruned stale locked-fallback dir: ${dir.name}")
             else logger.debug("Could not prune locked-fallback ${dir.name} (in use?); leaving for next run")
-        }
-    }
-
-    /** Serialize first-time extraction across processes via a lock file under [baseDir]. */
-    private fun <T> withBaseLock(block: () -> T): T {
-        val lockFile = File(baseDir, LOCK_NAME)
-        FileChannel.open(
-            lockFile.toPath(),
-            StandardOpenOption.CREATE,
-            StandardOpenOption.WRITE,
-        ).use { channel ->
-            channel.lock().use { return block() }
         }
     }
 
@@ -445,9 +507,60 @@ class PluginResourceExtractor(
         private const val BACKEND_SUBDIR = "backend"
         private const val BACKEND_ENTRY = "backend.mjs"
         private const val WIN_JOB_WRAPPER = "win-job-wrapper.ps1"
-        private const val LOCK_NAME = ".lock"
+        /** Name of the `.lock` file older versions created; only ever deleted now (issue #308). */
+        private const val LEGACY_LOCK_NAME = ".lock"
+
+        /**
+         * Clear [versionDir] by renaming it aside and deleting the renamed copy.
+         *
+         * A plain `deleteRecursively()` walks the tree removing files one by one, so a process
+         * serving that directory sees it disintegrate mid-flight — the backend reads every HTTP
+         * request fresh from disk, which is how #149 produced its `Not found` blank panel. With
+         * no lock to serialise extraction (#308) a racer really can publish here between our
+         * completeness check and this call, so the delete has to be safe on its own.
+         *
+         * A rename is atomic: the directory is either fully ours to delete or untouched. If we
+         * lose the race we have merely taken the racer's finished bundle aside, and publishing
+         * our byte-identical copy in its place restores the same content.
+         *
+         * Returns false when the directory could not be moved (Windows holding a file open), so
+         * the caller falls back to serving in place.
+         *
+         * [aside] is where the directory is moved to. Production always takes the default — a
+         * fresh name nothing can collide with — and it is a parameter only so a test can point
+         * it at an occupied path, which is the one way to make the rename fail on every
+         * platform. `setWritable(false)` cannot do that: Windows ignores the read-only attribute
+         * on directories, so a test relying on it renames successfully and asserts nothing.
+         */
+        internal fun clearByRenamingAside(
+            versionDir: File,
+            aside: File = File(versionDir.parentFile, "$DISCARD_PREFIX${UUID.randomUUID()}"),
+        ): Boolean {
+            if (!versionDir.exists()) return true
+            // Anything already sitting at `aside` is not ours to delete; only clean up what the
+            // move itself may have left behind.
+            val occupied = aside.exists()
+            return try {
+                Files.move(versionDir.toPath(), aside.toPath(), StandardCopyOption.ATOMIC_MOVE)
+                aside.deleteRecursively()
+                true
+            } catch (e: java.io.IOException) {
+                // Locked (Windows) or a filesystem that refuses the rename — leave it in place.
+                if (!occupied) aside.deleteRecursively()
+                false
+            }
+        }
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"
+
+        /**
+         * Prefix for a dir [clearByRenamingAside] has moved out of the way and is about to
+         * delete. Distinct from [TMP_PREFIX] on purpose: [pruneOtherVersions] deliberately skips
+         * `.tmp-*` because another process may be unpacking into one right now, so a discard
+         * that fails its delete (a Windows lock) under that name would be left for nobody to
+         * clean up. Content here is already superseded, so a later run may always reap it.
+         */
+        private const val DISCARD_PREFIX = ".discard-"
         /** Prefix for a serve-in-place fallback dir used when a Windows lock blocks the rename (M4). */
         private const val LOCKED_PREFIX = ".locked-"
 
