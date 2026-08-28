@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckIcon } from '@heroicons/react/24/outline';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
-import { useBridge } from '@/hooks/useBridge';
-import { useSessionContext } from '@/contexts/SessionContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
+import { useModelSwitch } from '@/hooks/useModelSwitch';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { LoadedMessageType } from '@/types';
 import {
@@ -16,7 +15,6 @@ import {
   withFableFallback,
 } from '@/types/models';
 import type { ModelInfo } from '@/types/slashCommand';
-import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 export const SWITCH_MODEL_EVENT = 'switch-model';
@@ -46,9 +44,8 @@ interface ModelSwitchOverlayProps {
 
 export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOverlayProps) {
   const { t } = useTranslation('chat');
-  const { setSessionModel, appendMessage } = useChatStreamContext();
-  const { send } = useBridge();
-  const { currentSessionId } = useSessionContext();
+  const { appendMessage } = useChatStreamContext();
+  const switchModel = useModelSwitch();
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
@@ -98,8 +95,6 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   }, [onClose]);
 
   const handleSelect = useCallback(async (value: string) => {
-    setSessionModel(value);
-
     // Instant local feedback (same label & dedup behavior as the rotate path):
     // the CLI's `/model` echo only appears on the next send, so this shows the
     // change immediately; UserMessageRenderer dedupes the echo against it.
@@ -112,12 +107,10 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
       modelChangeValue: value,
     });
 
-    if (currentSessionId) {
-      await send(MessageType.SET_MODEL, { model: value });
-    }
+    await switchModel(value);
 
     onClose();
-  }, [setSessionModel, models, appendMessage, t, currentSessionId, send, onClose]);
+  }, [models, appendMessage, t, switchModel, onClose]);
 
   // "/model <name>": resolve the typed name to a model and switch immediately.
   // Guarded to fire once per open; on no match the picker stays open so the

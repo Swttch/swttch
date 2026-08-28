@@ -8,6 +8,7 @@
   "nav": {
     "general": "Allgemein",
     "appearance": "Erscheinungsbild",
+    "model": "Modell",
     "permissions": "Berechtigungen",
     "privacy": "Datenschutz",
     "cli": "CLI",
@@ -360,7 +361,11 @@
       "title": "Modell",
       "label": "Standardmodell",
       "description": "Standardmodell für neue Sitzungen",
-      "defaultRecommended": "Standard (empfohlen)"
+      "defaultRecommended": "Standard (empfohlen)",
+      "syncToDefault": {
+        "label": "Modelländerungen mit der Standardeinstellung synchronisieren",
+        "description": "Beim Wechseln des Modells wird auch das CLI-Standardmodell aktualisiert, damit neue Sitzungen es weiter verwenden — genau wie /model in der CLI. Ausgeschaltet gilt die Änderung nur für die aktuelle Sitzung"
+      }
     },
     "path": {
       "title": "Claude CLI",

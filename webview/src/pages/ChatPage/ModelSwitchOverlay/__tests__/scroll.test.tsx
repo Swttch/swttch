@@ -27,6 +27,9 @@ vi.mock('@/contexts/ChatStreamContext', () => ({
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
   useClaudeSettings: () => ({ settings: {}, updateSetting: vi.fn() }),
 }));
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { syncModelToDefault: true } }),
+}));
 vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: { response: { response: { models: mockModels } } } }),
 }));

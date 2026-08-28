@@ -4,6 +4,7 @@ import { useStaticDocumentTitle } from '@/hooks';
 import { SettingsLayout } from './SettingsLayout';
 import { GeneralSettings } from './General';
 import { AppearanceSettings } from './Appearance';
+import { ModelSettings } from './Model';
 import { PermissionsSettings } from './Permissions';
 import { CliSettings } from './Cli';
 import { AdvancedSettings } from './Advanced';
@@ -57,6 +58,8 @@ export function SettingsPage({ asOverlay = false }: SettingsPageProps = {}) {
         return <GeneralSettings />;
       case Route.SETTINGS_APPEARANCE:
         return <AppearanceSettings />;
+      case Route.SETTINGS_MODEL:
+        return <ModelSettings />;
       case Route.SETTINGS_PERMISSIONS:
         return <PermissionsSettings />;
       case Route.SETTINGS_PRIVACY:

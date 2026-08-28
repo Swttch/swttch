@@ -3,15 +3,13 @@ import { Tag } from '@/pages/ChatPage/ChatInput/Tag';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe } from '@/contexts/FableProbeContext';
-import { useSessionContext } from '@/contexts/SessionContext';
-import { useBridge } from '@/hooks/useBridge';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
 import { DEFAULT_MODEL_ALIAS, resolveModelInfo, resolveModelLabel, toModelAlias, withFableFallback } from '@/types/models';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
+import { useModelSwitch } from '@/hooks/useModelSwitch';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { LoadedMessageType } from '@/types';
 import type { ModelInfo } from '@/types/slashCommand';
-import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 /** Fired by the ⌘/Ctrl+Shift+. shortcut to rotate to the next model. */
@@ -44,10 +42,9 @@ function fallbackModelLabel(current: string): string {
  */
 export function ModelTag() {
   const { t } = useTranslation('chat');
-  const { setSessionModel, appendMessage } = useChatStreamContext();
+  const { appendMessage } = useChatStreamContext();
   const { controlResponse } = useCliConfig();
-  const { currentSessionId } = useSessionContext();
-  const { send } = useBridge();
+  const switchModel = useModelSwitch();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
   const { probedAvailable } = useFableProbe();
@@ -66,7 +63,6 @@ export function ModelTag() {
       const idx = info ? models.indexOf(info) : -1;
       const next = models[(idx + 1) % models.length];
 
-      setSessionModel(next.value);
       // Instant local feedback. The CLI's `/model` echo only appears once a
       // message is sent (and not at all if the process has exited), so this is
       // what makes the change visible immediately. The echo is deduped against
@@ -79,12 +75,12 @@ export function ModelTag() {
         summary: t('chatInput.modelTag.setModelNotification', { model: resolveModelLabel(next) }),
         modelChangeValue: next.value,
       });
-      if (currentSessionId) void send(MessageType.SET_MODEL, { model: next.value });
+      void switchModel(next.value);
     };
 
     window.addEventListener(ROTATE_MODEL_EVENT, handleRotate);
     return () => window.removeEventListener(ROTATE_MODEL_EVENT, handleRotate);
-  }, [models, currentModel, setSessionModel, appendMessage, currentSessionId, send]);
+  }, [models, currentModel, appendMessage, t, switchModel]);
 
   // Models not loaded yet — nothing meaningful to show. The CLI config arrives
   // shortly and fills this in; this is the ONLY case where the tag is hidden.
