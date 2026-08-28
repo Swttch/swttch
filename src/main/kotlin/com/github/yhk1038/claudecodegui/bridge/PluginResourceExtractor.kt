@@ -75,11 +75,11 @@ class PluginResourceExtractor(
     private val unpack: ((webviewTarget: File, backendDirTarget: File) -> Unit)? = null,
     /**
      * Clears a stale partial version dir before the rename, returning whether the dir is
-     * now gone. Defaults to [File.deleteRecursively]. Injectable so a test can simulate the
-     * Windows case where a running backend holds `backend.mjs` open and the delete silently
-     * fails (returns false, dir remains) — the M4 lock-resilience path.
+     * now gone. Injectable so a test can simulate the Windows case where a running backend
+     * holds `backend.mjs` open and the clear silently fails (returns false, dir remains) —
+     * the M4 lock-resilience path.
      */
-    private val clearTarget: (File) -> Boolean = { it.deleteRecursively() },
+    private val clearTarget: (File) -> Boolean = ::clearByRenamingAside,
 ) {
     private val logger = Logger.getInstance(PluginResourceExtractor::class.java)
 
@@ -183,6 +183,15 @@ class PluginResourceExtractor(
 
             // Try to remove any stale partial target. On Windows a locked backend.mjs
             // makes this a silent no-op; we don't rely on it succeeding.
+            //
+            // Deleting is done by RENAMING the partial dir aside first, then deleting the
+            // renamed copy. The isComplete check above narrows the race but cannot close it —
+            // a racer can publish in the instant between that check and this line, and a
+            // recursive delete would then eat the directory it is serving, file by file, which
+            // is the #149 `Not found` failure. A rename is a single atomic step: it either
+            // moves the whole directory or nothing, so the racer's published dir is never left
+            // half-deleted, and if we lose the race the rename simply takes their finished
+            // bundle aside and we can put it straight back.
             val cleared = clearTarget(versionDir)
             if (!cleared && versionDir.exists()) {
                 logger.warn(
@@ -493,6 +502,36 @@ class PluginResourceExtractor(
         private const val WIN_JOB_WRAPPER = "win-job-wrapper.ps1"
         /** Name of the `.lock` file older versions created; only ever deleted now (issue #308). */
         private const val LEGACY_LOCK_NAME = ".lock"
+
+        /**
+         * Clear [versionDir] by renaming it aside and deleting the renamed copy.
+         *
+         * A plain `deleteRecursively()` walks the tree removing files one by one, so a process
+         * serving that directory sees it disintegrate mid-flight — the backend reads every HTTP
+         * request fresh from disk, which is how #149 produced its `Not found` blank panel. With
+         * no lock to serialise extraction (#308) a racer really can publish here between our
+         * completeness check and this call, so the delete has to be safe on its own.
+         *
+         * A rename is atomic: the directory is either fully ours to delete or untouched. If we
+         * lose the race we have merely taken the racer's finished bundle aside, and publishing
+         * our byte-identical copy in its place restores the same content.
+         *
+         * Returns false when the directory could not be moved (Windows holding a file open), so
+         * the caller falls back to serving in place.
+         */
+        private fun clearByRenamingAside(versionDir: File): Boolean {
+            if (!versionDir.exists()) return true
+            val aside = File(versionDir.parentFile, "$TMP_PREFIX${UUID.randomUUID()}")
+            return try {
+                Files.move(versionDir.toPath(), aside.toPath(), StandardCopyOption.ATOMIC_MOVE)
+                aside.deleteRecursively()
+                true
+            } catch (e: java.io.IOException) {
+                // Locked (Windows) or a filesystem that refuses the rename — leave it in place.
+                aside.deleteRecursively()
+                false
+            }
+        }
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"
         /** Prefix for a serve-in-place fallback dir used when a Windows lock blocks the rename (M4). */

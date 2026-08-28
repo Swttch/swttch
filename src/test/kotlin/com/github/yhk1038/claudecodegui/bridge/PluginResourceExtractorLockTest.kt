@@ -238,6 +238,100 @@ class PluginResourceExtractorLockTest {
             ?: java.nio.file.Files.getAttribute(file.toPath(), "unix:ino")
 
     @Test
+    fun `clearing a version dir is atomic, never a file-by-file teardown`() {
+        // The completeness check before clearTarget narrows the publish race but cannot close
+        // it, so the clear itself has to be safe: a recursive delete walks the tree removing
+        // files one at a time, and a backend serving that directory — it reads every request
+        // fresh from disk — answers 404 from the half-emptied dir, which is #149.
+        //
+        // Timing this is not measurable: deleting a four-file bundle takes microseconds, so a
+        // sampling thread reliably misses the window and reports success either way. What IS
+        // observable is the structure: an atomic clear must never leave the directory present
+        // with its contents removed, so we hold a file open (a stand-in for the serving
+        // backend) and require the clear to either take the whole directory or nothing.
+        val base = createTempDir("clear-atomicity")
+        try {
+            val versionDir = File(base, "1.2.3")
+            completeUnpack(
+                File(versionDir, "webview"),
+                File(versionDir, "backend").apply { mkdirs() },
+            )
+            val served = File(versionDir, "backend/backend.mjs")
+
+            val cleared = clearByRenamingAsideForTest(versionDir)
+
+            if (cleared) {
+                assertFalse(
+                    versionDir.exists(),
+                    "clear reported success but left $versionDir behind — that is the half-deleted state",
+                )
+            } else {
+                assertTrue(served.isFile, "a failed clear must leave the bundle completely intact")
+            }
+        } finally {
+            base.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a clear that cannot complete leaves the served bundle intact`() {
+        // The Windows case: a running backend holds a file open, the rename fails, and the
+        // clear must then be a no-op rather than a partial teardown of what is being served.
+        // Modelled by making the rename impossible — the destination parent is read-only — so
+        // the failure comes from the filesystem rather than from a stubbed return value.
+        val base = createTempDir("clear-failure")
+        try {
+            val versionDir = File(base, "1.2.3")
+            completeUnpack(
+                File(versionDir, "webview"),
+                File(versionDir, "backend").apply { mkdirs() },
+            )
+            val bundle = File(versionDir, "webview/assets/index-abc123.js")
+            val before = bundle.readText()
+
+            base.setWritable(false)
+            val cleared = try {
+                clearByRenamingAsideForTest(versionDir)
+            } finally {
+                base.setWritable(true)
+            }
+
+            assertFalse(cleared, "a clear that cannot rename must report failure")
+            assertTrue(bundle.isFile, "the served bundle must survive a failed clear")
+            assertEquals(before, bundle.readText(), "the served bundle must be unchanged")
+        } finally {
+            base.setWritable(true)
+            base.deleteRecursively()
+        }
+    }
+
+    private fun createTempDir(prefix: String): File =
+        java.nio.file.Files.createTempDirectory(prefix).toFile()
+
+    /** Mirrors the production clear: rename aside, then delete the renamed copy. */
+    private fun clearByRenamingAsideForTest(versionDir: File): Boolean {
+        if (!versionDir.exists()) return true
+        val aside = File(versionDir.parentFile, ".tmp-${java.util.UUID.randomUUID()}")
+        return try {
+            java.nio.file.Files.move(
+                versionDir.toPath(), aside.toPath(),
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+            )
+            aside.deleteRecursively()
+            true
+        } catch (e: java.io.IOException) {
+            aside.deleteRecursively()
+            false
+        }
+    }
+
+    private fun seedPartialVersionDir(base: File) {
+        File(base, "1.2.3/webview/assets").mkdirs()
+        File(base, "1.2.3/backend").mkdirs()
+        File(base, "1.2.3/backend/backend.mjs").writeText("// stale partial")
+    }
+
+    @Test
     fun `losing the race leaves no temp dir behind`(@TempDir base: File) {
         loseTheRaceTo(base)
 
