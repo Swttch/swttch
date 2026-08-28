@@ -309,6 +309,13 @@ class PluginResourceExtractor(
             }
             if (!dir.isDirectory) continue
             if (dir.name == version) continue
+            // `.discard-*` is superseded content another run already moved aside, so reaping it
+            // is always safe — unlike `.tmp-*`, which a concurrent extraction may be filling in
+            // right now, and `.locked-*`, which someone may be serving from.
+            if (dir.name.startsWith(DISCARD_PREFIX)) {
+                if (dir.deleteRecursively()) logger.info("Reaped discarded dir: ${dir.name}")
+                continue
+            }
             if (dir.name.startsWith(TMP_PREFIX) || dir.name.startsWith(LOCKED_PREFIX)) continue
             val ok = dir.deleteRecursively()
             if (ok) logger.info("Pruned stale plugin-resource version dir: ${dir.name}")
@@ -527,7 +534,7 @@ class PluginResourceExtractor(
          */
         internal fun clearByRenamingAside(
             versionDir: File,
-            aside: File = File(versionDir.parentFile, "$TMP_PREFIX${UUID.randomUUID()}"),
+            aside: File = File(versionDir.parentFile, "$DISCARD_PREFIX${UUID.randomUUID()}"),
         ): Boolean {
             if (!versionDir.exists()) return true
             // Anything already sitting at `aside` is not ours to delete; only clean up what the
@@ -545,6 +552,15 @@ class PluginResourceExtractor(
         }
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"
+
+        /**
+         * Prefix for a dir [clearByRenamingAside] has moved out of the way and is about to
+         * delete. Distinct from [TMP_PREFIX] on purpose: [pruneOtherVersions] deliberately skips
+         * `.tmp-*` because another process may be unpacking into one right now, so a discard
+         * that fails its delete (a Windows lock) under that name would be left for nobody to
+         * clean up. Content here is already superseded, so a later run may always reap it.
+         */
+        private const val DISCARD_PREFIX = ".discard-"
         /** Prefix for a serve-in-place fallback dir used when a Windows lock blocks the rename (M4). */
         private const val LOCKED_PREFIX = ".locked-"
 
