@@ -466,6 +466,12 @@
     "loadOlderMessages": "이전 메시지 더 보기",
     "jumpToMessage": "이 메시지 위치로 이동"
   },
+  "sendActions": {
+    "collapseReply": "응답 접기",
+    "collapsedReply": "응답 접힘",
+    "expandReply": "응답 펼치기",
+    "menuLabel": "메시지 작업"
+  },
   "chatPage": {
     "scrollToBottom": "맨 아래로 스크롤"
   },

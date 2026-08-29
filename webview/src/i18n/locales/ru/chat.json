@@ -470,6 +470,12 @@
     "loadOlderMessages": "Загрузить более старые сообщения",
     "jumpToMessage": "Перейти к этому сообщению"
   },
+  "sendActions": {
+    "collapseReply": "Свернуть ответ",
+    "collapsedReply": "Ответ свёрнут",
+    "expandReply": "Развернуть ответ",
+    "menuLabel": "Действия с сообщением"
+  },
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз"
   },

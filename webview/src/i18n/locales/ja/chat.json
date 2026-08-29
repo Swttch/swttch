@@ -466,6 +466,12 @@
     "loadOlderMessages": "以前のメッセージを読み込む",
     "jumpToMessage": "このメッセージの位置へ移動"
   },
+  "sendActions": {
+    "collapseReply": "応答を折りたたむ",
+    "collapsedReply": "応答は折りたたみ済み",
+    "expandReply": "応答を展開する",
+    "menuLabel": "メッセージ操作"
+  },
   "chatPage": {
     "scrollToBottom": "一番下までスクロール"
   },

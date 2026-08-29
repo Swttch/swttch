@@ -466,6 +466,12 @@
     "loadOlderMessages": "بارگذاری پیام‌های قدیمی‌تر",
     "jumpToMessage": "رفتن به این پیام"
   },
+  "sendActions": {
+    "collapseReply": "جمع کردن پاسخ",
+    "collapsedReply": "پاسخ جمع شده است",
+    "expandReply": "باز کردن پاسخ",
+    "menuLabel": "عملیات پیام"
+  },
   "chatPage": {
     "scrollToBottom": "پیمایش به پایین"
   },

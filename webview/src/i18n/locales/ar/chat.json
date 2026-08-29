@@ -474,6 +474,12 @@
     "loadOlderMessages": "تحميل الرسائل الأقدم",
     "jumpToMessage": "الانتقال إلى هذه الرسالة"
   },
+  "sendActions": {
+    "collapseReply": "طيّ الرد",
+    "collapsedReply": "الرد مطوي",
+    "expandReply": "توسيع الرد",
+    "menuLabel": "إجراءات الرسالة"
+  },
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل"
   },
