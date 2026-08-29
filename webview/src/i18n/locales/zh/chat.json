@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "折叠到下一条消息为止的回复",
-    "collapsedReply": "已隐藏 {{count}} 条消息",
-    "collapsedReply_one": "已隐藏 {{count}} 条消息",
-    "collapsedReply_other": "已隐藏 {{count}} 条消息",
+    "collapsedReply": "回复已隐藏",
     "expandReply": "展开回复",
     "menuLabel": "消息操作"
   },

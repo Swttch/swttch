@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "摺疊到下一則訊息為止的回覆",
-    "collapsedReply": "已隱藏 {{count}} 則訊息",
-    "collapsedReply_one": "已隱藏 {{count}} 則訊息",
-    "collapsedReply_other": "已隱藏 {{count}} 則訊息",
+    "collapsedReply": "回覆已隱藏",
     "expandReply": "展開回覆",
     "menuLabel": "訊息操作"
   },

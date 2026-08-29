@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "Antwort bis zur nächsten Nachricht einklappen",
-    "collapsedReply": "{{count}} ausgeblendete Nachrichten",
-    "collapsedReply_one": "{{count}} ausgeblendete Nachricht",
-    "collapsedReply_other": "{{count}} ausgeblendete Nachrichten",
+    "collapsedReply": "Antwort ausgeblendet",
     "expandReply": "Antwort ausklappen",
     "menuLabel": "Nachrichtenaktionen"
   },

@@ -129,7 +129,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     expect(screen.getByText('second answer')).toBeInTheDocument();
   });
 
-  it('says how much is hidden rather than leaving a blank gap', async () => {
+  it('marks the gap rather than leaving it blank', async () => {
     const user = userEvent.setup();
     renderArea([
       send('u1', 'first prompt'),
@@ -141,7 +141,52 @@ describe('ChatMessageArea — collapsing a reply', () => {
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
 
-    expect(screen.getByRole('button', { name: '2 hidden messages' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reply hidden' })).toBeInTheDocument();
+  });
+
+  it('says the same thing however many entries the reply holds', async () => {
+    // The notice used to report `body.length`, which counts JSONL entries and
+    // not drawn bubbles, so the number disagreed with the screen — and
+    // disagreed by a different amount live vs. reloaded from disk.
+    //
+    // `attachment` entries are what drove the two apart on a real session:
+    // `MessageBubble` has no case for them and returns null, yet they sit in
+    // the section's body like anything else. Measured on the reporter's
+    // transcript, one section held 11 entries and drew 4 — the other 7 were
+    // attachments.
+    const user = userEvent.setup();
+    const attachment = (uuid: string): LoadedMessageDto => ({
+      uuid,
+      type: 'attachment' as LoadedMessageType,
+      message: { role: MessageRole.User, content: 'never drawn' },
+      timestamp: now,
+    });
+
+    const lean = [send('u1', 'p'), reply('a1', 'one visible answer')];
+    const padded = [
+      send('u1', 'p'),
+      reply('a1', 'one visible answer'),
+      attachment('at1'),
+      attachment('at2'),
+      attachment('at3'),
+    ];
+    // Guard the premise: if these ever hold the same number of entries, the
+    // test has stopped exercising the disagreement it was written for.
+    expect(padded.length).toBeGreaterThan(lean.length);
+
+    const { unmount } = renderArea(lean);
+    await openMenuOn(user, 'p');
+    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    const leanText = screen.getByRole('button', { name: /hidden/i }).textContent;
+    unmount();
+
+    renderArea(padded);
+    await openMenuOn(user, 'p');
+    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    const paddedText = screen.getByRole('button', { name: /hidden/i }).textContent;
+
+    // Same reply on screen either way, so the notice must read the same.
+    expect(paddedText).toBe(leanText);
   });
 
   it('brings the reply back from the notice left in its place', async () => {
@@ -150,7 +195,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
-    await user.click(screen.getByRole('button', { name: '1 hidden message' }));
+    await user.click(screen.getByRole('button', { name: 'Reply hidden' }));
 
     expect(screen.getByText('first answer')).toBeInTheDocument();
   });
@@ -176,7 +221,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
 
-    expect(screen.queryByRole('button', { name: /hidden message/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /hidden/i })).not.toBeInTheDocument();
     expect(screen.getByText('first prompt')).toBeInTheDocument();
   });
 

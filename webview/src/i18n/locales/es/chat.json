@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "Contraer la respuesta hasta el siguiente mensaje",
-    "collapsedReply": "{{count}} mensajes ocultos",
-    "collapsedReply_one": "{{count}} mensaje oculto",
-    "collapsedReply_other": "{{count}} mensajes ocultos",
+    "collapsedReply": "Respuesta oculta",
     "expandReply": "Expandir la respuesta",
     "menuLabel": "Acciones del mensaje"
   },

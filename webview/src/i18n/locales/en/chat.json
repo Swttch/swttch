@@ -472,9 +472,7 @@
   },
   "sendActions": {
     "collapseReply": "Collapse reply up to the next message",
-    "collapsedReply": "{{count}} hidden messages",
-    "collapsedReply_one": "{{count}} hidden message",
-    "collapsedReply_other": "{{count}} hidden messages",
+    "collapsedReply": "Reply hidden",
     "expandReply": "Expand reply",
     "menuLabel": "Message actions"
   },

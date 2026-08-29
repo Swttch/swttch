@@ -28,12 +28,14 @@ is the thing you were scrolling to find.
 
 ### Nothing disappears without saying so
 
-A folded reply leaves a line in its place: **"14 hidden messages."**
+A folded reply leaves a line in its place: **"Reply hidden."**
 
 That line is deliberate. A section with nothing in it looks the same as a
 session that failed to load, and you have to be able to tell "I hid this" from
-"this is broken." The count says the reply is still there and how much of it
-there is.
+"this is broken."
+
+It says that and nothing more — **no count of what is hidden.** The first
+version did give one and it was wrong: see below.
 
 The line is a button. Click it and the reply comes back, from the spot where
 you noticed the gap. The menu on the message offers the same thing the other
@@ -75,6 +77,30 @@ already offers, and they belong in this menu when they arrive rather than in a
 control redesigned around them.
 
 ## What we learned building it
+
+### Counting the entries is not counting the messages
+
+The notice first read "N hidden messages", and the number was wrong in two
+different ways at once. A reply showing **four** bubbles reported **2** while it
+was streaming, and **11** after the page was reloaded.
+
+The count came from the number of transcript entries in the folded section. But
+**an entry is not a bubble.** Plenty of them draw nothing at all: on the session
+where this was caught, one section held 11 entries and drew 4, the other 7 being
+attachments, which the renderer has no case for and skips. Live streaming and a
+transcript replayed from disk do not carry the same entries either, which is
+where the second number came from.
+
+The fix was not a better count. Counting the drawn bubbles is not possible at
+that moment — the check for "does this draw anything?" runs *after* rendering,
+by measuring what came out, so the number does not exist until the very thing
+being hidden has been rendered. Reproducing the rules some other way would mean
+re-implementing a decision that already leaked three times when it was made
+rule-by-rule.
+
+So the notice stopped counting. **A number that is confidently wrong is worse
+than no number**, and what the reader actually needs from that line is "a reply
+is here and you hid it".
 
 ### The grouping this needed already existed
 

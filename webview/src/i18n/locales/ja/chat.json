@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "次のメッセージまで応答を折りたたむ",
-    "collapsedReply": "非表示のメッセージ {{count}} 件",
-    "collapsedReply_one": "非表示のメッセージ {{count}} 件",
-    "collapsedReply_other": "非表示のメッセージ {{count}} 件",
+    "collapsedReply": "応答を非表示",
     "expandReply": "応答を展開",
     "menuLabel": "メッセージ操作"
   },

@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "Recolher a resposta até a próxima mensagem",
-    "collapsedReply": "{{count}} mensagens ocultas",
-    "collapsedReply_one": "{{count}} mensagem oculta",
-    "collapsedReply_other": "{{count}} mensagens ocultas",
+    "collapsedReply": "Resposta oculta",
     "expandReply": "Expandir a resposta",
     "menuLabel": "Ações da mensagem"
   },

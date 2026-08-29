@@ -142,12 +142,15 @@ export function ChatMessageArea(props: Props) {
             A section with no head is never collapsible: it has no send to hang
             the menu on, so its `isCollapsed` can only ever be false, and the
             body below renders as it always did.
+
+            `body.length` gates the notice but is deliberately NOT reported in
+            it. An empty body means there is certainly nothing to fold, which is
+            all this test claims. The converse does not hold — plenty of entries
+            draw nothing (see `CollapsedReplyNotice`) — so the number is fit for
+            a "is there anything at all" gate and unfit for a count.
           */}
           {fold.isCollapsed(section.key) && section.body.length > 0 ? (
-            <CollapsedReplyNotice
-              count={section.body.length}
-              onExpand={() => fold.toggle(section.key)}
-            />
+            <CollapsedReplyNotice onExpand={() => fold.toggle(section.key)} />
           ) : (
             section.body.map(message => (
               <div key={message.uuid} onClick={() => {

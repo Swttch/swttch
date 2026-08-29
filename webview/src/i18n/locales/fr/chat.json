@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "Réduire la réponse jusqu’au message suivant",
-    "collapsedReply": "{{count}} messages masqués",
-    "collapsedReply_one": "{{count}} message masqué",
-    "collapsedReply_other": "{{count}} messages masqués",
+    "collapsedReply": "Réponse masquée",
     "expandReply": "Développer la réponse",
     "menuLabel": "Actions du message"
   },

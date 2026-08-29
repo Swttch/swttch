@@ -468,9 +468,7 @@
   },
   "sendActions": {
     "collapseReply": "جمع کردن پاسخ تا پیام بعدی",
-    "collapsedReply": "{{count}} پیام پنهان",
-    "collapsedReply_one": "{{count}} پیام پنهان",
-    "collapsedReply_other": "{{count}} پیام پنهان",
+    "collapsedReply": "پاسخ پنهان است",
     "expandReply": "باز کردن پاسخ",
     "menuLabel": "عملیات پیام"
   },
