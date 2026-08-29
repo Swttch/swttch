@@ -25,6 +25,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { getTextContent, SessionState } from '@/types';
 import { LoadedMessageType } from '@/dto';
 import { useAttachments } from './hooks/useAttachments';
+import { clipboardCarriesImage } from './clipboardCarriesImage';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
 import { IdeSelectionTag } from './IdeSelectionTag';
@@ -61,7 +62,7 @@ import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import { useTelemetryConsent, ConsentStatus, ConsentSource } from '@/hooks/useTelemetryConsent';
-import { getCaretOffset, setCaretOffset, getSelectionRange } from '@/utils/domSelection';
+import { getCaretOffset, setCaretOffset } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
@@ -711,38 +712,27 @@ export function ChatInput() {
     }
   }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
 
-  // Wrap the attachment paste handler so that, when the clipboard carries no
-  // image, we insert the plain-text payload ourselves. contentEditable would
-  // otherwise paste rich HTML; plaintext-only strips formatting but we still
-  // route through onChange to keep `value` the single source of truth.
+  // Wrap the attachment paste handler so images keep their dedicated path while
+  // text goes through the browser's own editing pipeline.
+  //
+  // Text is deliberately NOT intercepted (issue #286). Cancelling the paste and
+  // writing the result through onChange used to strip formatting and keep
+  // `value` authoritative, but it also meant the browser never recorded the
+  // edit, so Cmd/Ctrl+Z could not undo a paste while text typed afterwards
+  // undid normally. The editor is `contentEditable="plaintext-only"`, which
+  // already drops rich markup on paste, so letting the default run costs us
+  // nothing on formatting and restores undo. The resulting `input` event feeds
+  // handleRichChange, which keeps `value` in sync and runs both detectors.
   const handleRichPaste = useCallback((e: ReactClipboardEvent<HTMLDivElement>) => {
-    const items = e.clipboardData?.items;
-    const hasImage = items
-      ? Array.from(items).some(item => item.kind === 'file' && item.type.startsWith('image/'))
-      : false;
-
-    if (hasImage) {
+    if (clipboardCarriesImage(e.clipboardData)) {
       // Delegate image handling (it calls preventDefault internally).
       handlePaste(e);
       return;
     }
 
-    const text = e.clipboardData.getData('text/plain');
-    if (!text) return;
-
-    e.preventDefault();
-    const el = textareaRef.current;
-    const { start, end } = el ? getSelectionRange(el) : { start: value.length, end: value.length };
-    const newValue = value.slice(0, start) + text + value.slice(end);
-    onChange(newValue);
-    const caret = start + text.length;
-    palette.detectSlashCommand(newValue, caret);
-    mention.detectMention(newValue, caret);
-    requestAnimationFrame(() => {
-      const target = textareaRef.current;
-      if (target) setCaretOffset(target, caret);
-    });
-  }, [handlePaste, value, onChange, palette, mention, textareaRef]);
+    // Text falls through untouched: the default paste inserts it, records the
+    // undo entry, and fires `input`, which handleRichChange picks up.
+  }, [handlePaste]);
 
   const hasValue = !!value.trim() || attachments.length > 0;
 
