@@ -27,18 +27,26 @@ which is the thing you were scrolling to find.
 
 ### Nothing disappears without saying so
 
-A collapsed reply leaves a line in its place: **"Reply collapsed."**
+A collapsed reply leaves a band across the column in its place, reading
+**"Reply collapsed."**
 
-That line is deliberate. A section with nothing in it looks the same as a
+That band is deliberate. A section with nothing in it looks the same as a
 session that failed to load, and you have to be able to tell "I collapsed
 this" from "this is broken."
 
-It says that and nothing more — **no count of what is inside.** The first
+It spans the full width and centres its label, like **"Load older messages"**
+at the top of the transcript. Both are breaks in the conversation rather than
+parts of any one message in it, and looking alike is what says so. A small chip
+at the left margin — which this was first — read as something clipped to the
+message above it, not as the reply's own vacated place.
+
+It says that much and nothing more — **no count of what is inside.** The first
 version did give one and it was wrong: see below.
 
-The line is a button. Click it and the reply comes back, from the spot where
-you noticed the gap. The menu on the message offers the same thing the other
-way round, reading **"Expand reply"** while the section is collapsed.
+The whole band is the button. Click anywhere on it and the reply comes back,
+from the spot where you noticed the gap. The menu on the message offers the
+same thing the other way round, reading **"Expand reply"** while the section is
+collapsed.
 
 ### It lasts as long as you are looking at it
 
