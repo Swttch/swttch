@@ -75,7 +75,7 @@ export function parseMcpGet(output: string): McpServer | null {
 
   // CLI does not provide a separate error field — use the status text as the error message
   // when the server is in a failed or auth-required state.
-  const statusText = statusRaw.replace(/^[✔✘]\s*/, '').trim();
+  const statusText = stripStatusIcon(statusRaw);
   const error =
     (status === McpServerStatus.FAILED || status === McpServerStatus.NEEDS_AUTH) && statusText
       ? statusText
@@ -93,9 +93,28 @@ export function parseMcpGet(output: string): McpServer | null {
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
+/**
+ * Drop the decorative icon the CLI prints in front of a status word.
+ *
+ * The icon is not a fixed character. `claude mcp list` prints U+2714 ✔ / U+2718 ✘ on a
+ * UTF-8 terminal, but a Windows console running a legacy code page substitutes them with
+ * whatever its own character set offers — U+221A √ and U+00D7 × have both been observed
+ * (issue #319). Matching against a list of known icons therefore breaks again on every new
+ * substitution, so this does the opposite: it keeps nothing but the status wording itself.
+ *
+ * Every status the CLI reports is ASCII wording ("Connected", "Failed to connect",
+ * "needs-auth", …), so everything before the first ASCII letter is decoration and is dropped.
+ * When the text carries no ASCII letter at all it is returned trimmed but otherwise intact,
+ * leaving the caller to treat it as an unknown status rather than silently emptying it.
+ */
+function stripStatusIcon(text: string): string {
+  const firstLetterIdx = text.search(/[A-Za-z]/);
+  if (firstLetterIdx === -1) return text.trim();
+  return text.slice(firstLetterIdx).trim();
+}
+
 function parseStatusText(text: string): McpServerStatus {
-  // Strip leading icon characters (✔, ✘) and normalise.
-  const t = text.replace(/^[✔✘]\s*/, '').toLowerCase();
+  const t = stripStatusIcon(text).toLowerCase();
   if (t.startsWith('connected')) return McpServerStatus.CONNECTED;
   if (t.startsWith('failed')) return McpServerStatus.FAILED;
   if (t.startsWith('needs-auth') || t.startsWith('needs auth')) return McpServerStatus.NEEDS_AUTH;
