@@ -470,6 +470,16 @@
     "loadOlderMessages": "Загрузить более старые сообщения",
     "jumpToMessage": "Перейти к этому сообщению"
   },
+  "sendActions": {
+    "collapseReply": "Свернуть ответ до следующего сообщения",
+    "collapsedReply": "{{count}} скрытых сообщения",
+    "collapsedReply_few": "{{count}} скрытых сообщения",
+    "collapsedReply_many": "{{count}} скрытых сообщений",
+    "collapsedReply_one": "{{count}} скрытое сообщение",
+    "collapsedReply_other": "{{count}} скрытых сообщения",
+    "expandReply": "Развернуть ответ",
+    "menuLabel": "Действия с сообщением"
+  },
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз"
   },

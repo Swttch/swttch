@@ -466,6 +466,14 @@
     "loadOlderMessages": "Carregar mensagens mais antigas",
     "jumpToMessage": "Ir para esta mensagem"
   },
+  "sendActions": {
+    "collapseReply": "Recolher a resposta até a próxima mensagem",
+    "collapsedReply": "{{count}} mensagens ocultas",
+    "collapsedReply_one": "{{count}} mensagem oculta",
+    "collapsedReply_other": "{{count}} mensagens ocultas",
+    "expandReply": "Expandir a resposta",
+    "menuLabel": "Ações da mensagem"
+  },
   "chatPage": {
     "scrollToBottom": "Rolar até o final"
   },

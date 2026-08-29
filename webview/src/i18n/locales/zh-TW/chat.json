@@ -466,6 +466,14 @@
     "loadOlderMessages": "載入較舊的訊息",
     "jumpToMessage": "跳至該訊息位置"
   },
+  "sendActions": {
+    "collapseReply": "摺疊到下一則訊息為止的回覆",
+    "collapsedReply": "已隱藏 {{count}} 則訊息",
+    "collapsedReply_one": "已隱藏 {{count}} 則訊息",
+    "collapsedReply_other": "已隱藏 {{count}} 則訊息",
+    "expandReply": "展開回覆",
+    "menuLabel": "訊息操作"
+  },
   "chatPage": {
     "scrollToBottom": "捲動到底部"
   },

@@ -6,6 +6,7 @@ import { useCopyToClipboard } from './hooks/useCopyToClipboard';
 import { ContextPills } from './components/ContextPills';
 import { ImageAttachments } from './components/ImageAttachments';
 import { MessageActions } from './components/MessageActions';
+import { SendActionMenu } from './components/SendActionMenu';
 import { parseUserContent } from './utils/parseUserContent';
 import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
 import { MessagePathChip } from './components/MessagePathChip';
@@ -121,6 +122,8 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               {allContexts.length > 0 && <ContextPills context={allContexts} />}
             </div>
             <MessageActions copied={copied} onCopy={handleCopy} />
+            {/* A slash command heads a section like any other send. */}
+            <SendActionMenu />
           </div>
         </div>
       </IfVisible>
@@ -192,6 +195,14 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
           </div>
 
           {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
+
+          {/*
+            Sits in the same slot the copy actions occupy elsewhere: the flex
+            row's trailing cell, aligned to the top by the row's
+            `items-start`. That puts it at the send's top-right corner, which
+            is where Cursor's extension puts the same control (issue #356).
+          */}
+          <SendActionMenu />
         </div>
 
         {imageBlocks.length > 0 && (

@@ -474,6 +474,18 @@
     "loadOlderMessages": "تحميل الرسائل الأقدم",
     "jumpToMessage": "الانتقال إلى هذه الرسالة"
   },
+  "sendActions": {
+    "collapseReply": "طيّ الرد حتى الرسالة التالية",
+    "collapsedReply": "{{count}} رسالة مخفية",
+    "collapsedReply_few": "{{count}} رسائل مخفية",
+    "collapsedReply_many": "{{count}} رسالة مخفية",
+    "collapsedReply_one": "رسالة مخفية واحدة",
+    "collapsedReply_other": "{{count}} رسالة مخفية",
+    "collapsedReply_two": "رسالتان مخفيتان",
+    "collapsedReply_zero": "لا رسائل مخفية",
+    "expandReply": "توسيع الرد",
+    "menuLabel": "إجراءات الرسالة"
+  },
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل"
   },

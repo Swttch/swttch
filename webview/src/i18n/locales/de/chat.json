@@ -466,6 +466,14 @@
     "loadOlderMessages": "Ältere Nachrichten laden",
     "jumpToMessage": "Zu dieser Nachricht springen"
   },
+  "sendActions": {
+    "collapseReply": "Antwort bis zur nächsten Nachricht einklappen",
+    "collapsedReply": "{{count}} ausgeblendete Nachrichten",
+    "collapsedReply_one": "{{count}} ausgeblendete Nachricht",
+    "collapsedReply_other": "{{count}} ausgeblendete Nachrichten",
+    "expandReply": "Antwort ausklappen",
+    "menuLabel": "Nachrichtenaktionen"
+  },
   "chatPage": {
     "scrollToBottom": "Nach unten scrollen"
   },

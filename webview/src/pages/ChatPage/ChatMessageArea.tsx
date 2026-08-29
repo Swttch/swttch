@@ -11,6 +11,9 @@ import { EmptyState } from './EmptyState';
 import { isJetBrains } from '@/config/environment';
 import { LoadedMessageDto } from '../../types';
 import { StickySendHeader } from './StickySendHeader';
+import { SectionFoldContext, SectionKeyContext } from './SectionFoldContext';
+import { useSectionFold } from './useSectionFold';
+import { CollapsedReplyNotice } from './CollapsedReplyNotice';
 import { useTranslation } from '@/i18n';
 
 interface Props {
@@ -33,6 +36,7 @@ export function ChatMessageArea(props: Props) {
 
   // Above the early returns below: hooks cannot run conditionally.
   const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
+  const fold = useSectionFold();
 
   const isEmpty = mergedMessages.length === 0;
 
@@ -84,6 +88,13 @@ export function ChatMessageArea(props: Props) {
 
         It is not debug residue. Do not remove it.
       */}
+      {/*
+        Collapsing a reply is per-section state, and the control that toggles it
+        sits inside the send's own bubble — several memoised layers below this
+        list. The provider is what lets the two find each other; see
+        `SectionFoldContext`.
+      */}
+      <SectionFoldContext.Provider value={fold}>
       {sections.map(section => (
         <div key={section.key}>
           {/*
@@ -111,18 +122,44 @@ export function ChatMessageArea(props: Props) {
                 console.log(section.head, mergedMessages.indexOf(section.head!), mergedMessages); // NEVER REMOVE THIS LINE
               }}
             >
-              <MessageBubble message={section.head} onRetry={onRetry} />
+              {/*
+                Only the head carries a section key, so only the head draws the
+                collapse menu. The body holds `type: "user"` entries too — every
+                unmerged tool result is one — and they reach the same renderer.
+              */}
+              <SectionKeyContext.Provider value={section.key}>
+                <MessageBubble message={section.head} onRetry={onRetry} />
+              </SectionKeyContext.Provider>
             </StickySendHeader>
           )}
-          {section.body.map(message => (
-            <div key={message.uuid} onClick={() => {
-              console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
-            }}>
-              <MessageBubble message={message} onRetry={onRetry} />
-            </div>
-          ))}
+          {/*
+            A collapsed section drops its reply from the tree rather than hiding
+            it with CSS. The entries carry tool cards and diff surfaces that keep
+            their own observers and measured layout, and `display: none` would
+            leave all of that mounted and measuring nothing — the cost this
+            feature exists to avoid on long sessions.
+
+            A section with no head is never collapsible: it has no send to hang
+            the menu on, so its `isCollapsed` can only ever be false, and the
+            body below renders as it always did.
+          */}
+          {fold.isCollapsed(section.key) && section.body.length > 0 ? (
+            <CollapsedReplyNotice
+              count={section.body.length}
+              onExpand={() => fold.toggle(section.key)}
+            />
+          ) : (
+            section.body.map(message => (
+              <div key={message.uuid} onClick={() => {
+                console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
+              }}>
+                <MessageBubble message={message} onRetry={onRetry} />
+              </div>
+            ))
+          )}
         </div>
       ))}
+      </SectionFoldContext.Provider>
       {isStreaming && <StreamingIndicator />}
       <StreamErrorBanner />
     </div>

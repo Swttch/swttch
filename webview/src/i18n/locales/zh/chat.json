@@ -466,6 +466,14 @@
     "loadOlderMessages": "加载更早的消息",
     "jumpToMessage": "跳转到该消息位置"
   },
+  "sendActions": {
+    "collapseReply": "折叠到下一条消息为止的回复",
+    "collapsedReply": "已隐藏 {{count}} 条消息",
+    "collapsedReply_one": "已隐藏 {{count}} 条消息",
+    "collapsedReply_other": "已隐藏 {{count}} 条消息",
+    "expandReply": "展开回复",
+    "menuLabel": "消息操作"
+  },
   "chatPage": {
     "scrollToBottom": "滚动到底部"
   },

@@ -466,6 +466,14 @@
     "loadOlderMessages": "Charger les messages plus anciens",
     "jumpToMessage": "Aller à ce message"
   },
+  "sendActions": {
+    "collapseReply": "Réduire la réponse jusqu’au message suivant",
+    "collapsedReply": "{{count}} messages masqués",
+    "collapsedReply_one": "{{count}} message masqué",
+    "collapsedReply_other": "{{count}} messages masqués",
+    "expandReply": "Développer la réponse",
+    "menuLabel": "Actions du message"
+  },
   "chatPage": {
     "scrollToBottom": "Défiler vers le bas"
   },

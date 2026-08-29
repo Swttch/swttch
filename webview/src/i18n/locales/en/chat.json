@@ -470,6 +470,14 @@
     "loadOlderMessages": "Load older messages",
     "jumpToMessage": "Jump to this message"
   },
+  "sendActions": {
+    "collapseReply": "Collapse reply up to the next message",
+    "collapsedReply": "{{count}} hidden messages",
+    "collapsedReply_one": "{{count}} hidden message",
+    "collapsedReply_other": "{{count}} hidden messages",
+    "expandReply": "Expand reply",
+    "menuLabel": "Message actions"
+  },
   "chatPage": {
     "scrollToBottom": "Scroll to bottom"
   },
