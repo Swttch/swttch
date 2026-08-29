@@ -427,6 +427,7 @@ export function ChatInput() {
     workingDirectory,
     value,
     onChange,
+    inputRef: textareaRef,
     // @-mention selection inserts an inline path token (same chip set as Alt+K
     // editor-context inserts), then restores the caret just past the token.
     onInsertMention: (token, caretOffset, nextValue) => {

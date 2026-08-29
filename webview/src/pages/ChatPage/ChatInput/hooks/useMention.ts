@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, type RefObject } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
+import { replaceRangeWithText } from '../RichInput/replaceRangeWithText';
 
 export enum MentionItemType {
   File = 'file',
@@ -59,6 +60,14 @@ interface UseMentionParams {
   onInsertMention: (token: string, caretOffset: number, nextValue: string) => void;
   value: string;
   onChange: (value: string) => void;
+  /**
+   * The composer's editable element. Mention inserts go through the browser's
+   * editing pipeline on this node so they land in its undo history (issue
+   * #286). Optional so the hook stays usable without a mounted editor; without
+   * it the insert falls back to writing the value directly, which works but is
+   * not undoable.
+   */
+  inputRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -89,7 +98,7 @@ interface UseMentionReturn {
 const DEBOUNCE_MS = 150;
 
 export function useMention(params: UseMentionParams): UseMentionReturn {
-  const { workingDirectory, onInsertMention, value, onChange } = params;
+  const { workingDirectory, onInsertMention, value, onChange, inputRef } = params;
   const bridge = useBridgeContext();
 
   const [state, setState] = useState<MentionState>({
@@ -223,17 +232,26 @@ export function useMention(params: UseMentionParams): UseMentionReturn {
       // resolved path token plus a trailing space, keeping surrounding text intact.
       const token = buildMentionToken(result);
       const currentValue = valueRef.current;
+      const spanEnd = triggerIndex + 1 + state.query.length;
       const before = currentValue.slice(0, triggerIndex);
-      const after = currentValue.slice(triggerIndex + 1 + state.query.length);
+      const after = currentValue.slice(spanEnd);
       const newValue = before + token + ' ' + after;
       const caretOffset = triggerIndex + token.length + 1;
 
-      onChange(newValue);
+      // Hand the edit to the browser so it lands in the undo history (issue
+      // #286); only report the value ourselves when it declines, since a
+      // browser-performed edit fires `input` and the composer syncs from that.
+      const el = inputRef?.current ?? null;
+      const handledByBrowser = el
+        ? replaceRangeWithText(el, triggerIndex, spanEnd, token + ' ')
+        : false;
+      if (!handledByBrowser) onChange(newValue);
+
       onInsertMention(token, caretOffset, newValue);
 
       close();
     },
-    [state, workingDirectory, onInsertMention, onChange, close],
+    [state, workingDirectory, onInsertMention, onChange, close, inputRef],
   );
 
   const handleKeyDown = useCallback(
@@ -268,10 +286,18 @@ export function useMention(params: UseMentionParams): UseMentionReturn {
           if (result) {
             const completedPath = result.relativePath + (result.type === MentionItemType.Directory ? '/' : '');
             const currentValue = valueRef.current;
-            const before = currentValue.slice(0, state.triggerIndex + 1);
-            const after = currentValue.slice(state.triggerIndex + 1 + state.query.length);
+            const queryStart = state.triggerIndex + 1;
+            const queryEnd = queryStart + state.query.length;
+            const before = currentValue.slice(0, queryStart);
+            const after = currentValue.slice(queryEnd);
             const newValue = before + completedPath + after;
-            onChange(newValue);
+            // Same reasoning as selectResult: let the browser make the edit so
+            // Tab-completion stays undoable (issue #286).
+            const el = inputRef?.current ?? null;
+            const handledByBrowser = el
+              ? replaceRangeWithText(el, queryStart, queryEnd, completedPath)
+              : false;
+            if (!handledByBrowser) onChange(newValue);
             setState(prev => ({
               ...prev,
               query: completedPath,
