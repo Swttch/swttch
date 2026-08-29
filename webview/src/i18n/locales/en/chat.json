@@ -471,8 +471,8 @@
     "jumpToMessage": "Jump to this message"
   },
   "sendActions": {
-    "collapseReply": "Collapse reply up to the next message",
-    "collapsedReply": "Reply hidden",
+    "collapseReply": "Collapse reply",
+    "collapsedReply": "Reply collapsed",
     "expandReply": "Expand reply",
     "menuLabel": "Message actions"
   },

@@ -467,9 +467,9 @@
     "jumpToMessage": "このメッセージの位置へ移動"
   },
   "sendActions": {
-    "collapseReply": "次のメッセージまで応答を折りたたむ",
-    "collapsedReply": "応答を非表示",
-    "expandReply": "応答を展開",
+    "collapseReply": "応答を折りたたむ",
+    "collapsedReply": "応答は折りたたみ済み",
+    "expandReply": "応答を展開する",
     "menuLabel": "メッセージ操作"
   },
   "chatPage": {

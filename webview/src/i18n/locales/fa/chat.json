@@ -467,8 +467,8 @@
     "jumpToMessage": "رفتن به این پیام"
   },
   "sendActions": {
-    "collapseReply": "جمع کردن پاسخ تا پیام بعدی",
-    "collapsedReply": "پاسخ پنهان است",
+    "collapseReply": "جمع کردن پاسخ",
+    "collapsedReply": "پاسخ جمع شده است",
     "expandReply": "باز کردن پاسخ",
     "menuLabel": "عملیات پیام"
   },

@@ -467,8 +467,8 @@
     "jumpToMessage": "Aller à ce message"
   },
   "sendActions": {
-    "collapseReply": "Réduire la réponse jusqu’au message suivant",
-    "collapsedReply": "Réponse masquée",
+    "collapseReply": "Réduire la réponse",
+    "collapsedReply": "Réponse réduite",
     "expandReply": "Développer la réponse",
     "menuLabel": "Actions du message"
   },

@@ -467,8 +467,8 @@
     "jumpToMessage": "Zu dieser Nachricht springen"
   },
   "sendActions": {
-    "collapseReply": "Antwort bis zur nächsten Nachricht einklappen",
-    "collapsedReply": "Antwort ausgeblendet",
+    "collapseReply": "Antwort einklappen",
+    "collapsedReply": "Antwort eingeklappt",
     "expandReply": "Antwort ausklappen",
     "menuLabel": "Nachrichtenaktionen"
   },

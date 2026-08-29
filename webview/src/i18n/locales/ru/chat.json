@@ -471,8 +471,8 @@
     "jumpToMessage": "Перейти к этому сообщению"
   },
   "sendActions": {
-    "collapseReply": "Свернуть ответ до следующего сообщения",
-    "collapsedReply": "Ответ скрыт",
+    "collapseReply": "Свернуть ответ",
+    "collapsedReply": "Ответ свёрнут",
     "expandReply": "Развернуть ответ",
     "menuLabel": "Действия с сообщением"
   },

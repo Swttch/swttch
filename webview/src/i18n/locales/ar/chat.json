@@ -475,8 +475,8 @@
     "jumpToMessage": "الانتقال إلى هذه الرسالة"
   },
   "sendActions": {
-    "collapseReply": "طيّ الرد حتى الرسالة التالية",
-    "collapsedReply": "الرد مخفي",
+    "collapseReply": "طيّ الرد",
+    "collapsedReply": "الرد مطوي",
     "expandReply": "توسيع الرد",
     "menuLabel": "إجراءات الرسالة"
   },

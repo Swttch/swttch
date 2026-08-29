@@ -467,9 +467,9 @@
     "jumpToMessage": "Ir para esta mensagem"
   },
   "sendActions": {
-    "collapseReply": "Recolher a resposta até a próxima mensagem",
-    "collapsedReply": "Resposta oculta",
-    "expandReply": "Expandir a resposta",
+    "collapseReply": "Recolher resposta",
+    "collapsedReply": "Resposta recolhida",
+    "expandReply": "Expandir resposta",
     "menuLabel": "Ações da mensagem"
   },
   "chatPage": {

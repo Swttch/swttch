@@ -4,7 +4,21 @@ import userEvent from '@testing-library/user-event';
 import { ChatMessageArea } from '../ChatMessageArea';
 import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType, MessageRole } from '../../../dto/common';
+import { i18n } from '@/i18n';
 import { _resetRuntimeCache } from '@/config/environment';
+
+/**
+ * Read from the same catalogue the component renders from, rather than repeated
+ * as literals here.
+ *
+ * These three are deliberately a matched set — one verb, one object, and the
+ * notice as that verb's past participle — and they have been reworded once
+ * already. Copying them in would mean a reword either breaks every assertion at
+ * once or, worse, quietly stops matching what the user sees.
+ */
+const COLLAPSE = i18n.t('sendActions.collapseReply', { ns: 'chat' });
+const EXPAND = i18n.t('sendActions.expandReply', { ns: 'chat' });
+const COLLAPSED = i18n.t('sendActions.collapsedReply', { ns: 'chat' });
 
 /**
  * Collapsing a reply, end to end through the real bubbles (issue #368).
@@ -91,6 +105,18 @@ afterEach(() => {
 });
 
 describe('ChatMessageArea — collapsing a reply', () => {
+  it('has three distinct strings to match on', () => {
+    // Guards every other test in the file. `i18n.t` returns the key itself when
+    // a lookup misses, so a renamed or deleted key would leave the constants
+    // holding "sendActions.collapseReply" — which matches no button, making
+    // `queryByRole(...)` assertions pass for the wrong reason.
+    for (const s of [COLLAPSE, EXPAND, COLLAPSED]) {
+      expect(s).toBeTruthy();
+      expect(s).not.toContain('sendActions.');
+    }
+    expect(new Set([COLLAPSE, EXPAND, COLLAPSED]).size).toBe(3);
+  });
+
   it('hides the reply below a send and leaves the send itself standing', async () => {
     const user = userEvent.setup();
     renderArea([
@@ -103,7 +129,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     expect(screen.getByText('first answer')).toBeInTheDocument();
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
     expect(screen.queryByText('first answer')).not.toBeInTheDocument();
     // The send stays: collapsing turns the transcript into a list of prompts.
@@ -120,7 +146,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     ]);
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
     // Asserted together with the first reply being gone, or this passes just as
     // well when nothing collapses at all.
@@ -139,9 +165,9 @@ describe('ChatMessageArea — collapsing a reply', () => {
     ]);
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
-    expect(screen.getByRole('button', { name: 'Reply hidden' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: COLLAPSED })).toBeInTheDocument();
   });
 
   it('says the same thing however many entries the reply holds', async () => {
@@ -176,14 +202,14 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     const { unmount } = renderArea(lean);
     await openMenuOn(user, 'p');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
-    const leanText = screen.getByRole('button', { name: /hidden/i }).textContent;
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
+    const leanText = screen.getByRole('button', { name: COLLAPSED }).textContent;
     unmount();
 
     renderArea(padded);
     await openMenuOn(user, 'p');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
-    const paddedText = screen.getByRole('button', { name: /hidden/i }).textContent;
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
+    const paddedText = screen.getByRole('button', { name: COLLAPSED }).textContent;
 
     // Same reply on screen either way, so the notice must read the same.
     expect(paddedText).toBe(leanText);
@@ -194,8 +220,8 @@ describe('ChatMessageArea — collapsing a reply', () => {
     renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
-    await user.click(screen.getByRole('button', { name: 'Reply hidden' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
+    await user.click(screen.getByRole('button', { name: COLLAPSED }));
 
     expect(screen.getByText('first answer')).toBeInTheDocument();
   });
@@ -205,11 +231,11 @@ describe('ChatMessageArea — collapsing a reply', () => {
     renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
     expect(screen.queryByText('first answer')).not.toBeInTheDocument();
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Expand reply' }));
+    await user.click(screen.getByRole('menuitem', { name: EXPAND }));
 
     expect(screen.getByText('first answer')).toBeInTheDocument();
   });
@@ -219,9 +245,9 @@ describe('ChatMessageArea — collapsing a reply', () => {
     renderArea([send('u1', 'first prompt')]);
 
     await openMenuOn(user, 'first prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
-    expect(screen.queryByRole('button', { name: /hidden/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: COLLAPSED })).not.toBeInTheDocument();
     expect(screen.getByText('first prompt')).toBeInTheDocument();
   });
 
@@ -234,7 +260,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     ]);
 
     await openMenuOn(user, 'second prompt');
-    await user.click(screen.getByRole('menuitem', { name: 'Collapse reply up to the next message' }));
+    await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
     expect(screen.queryByText('second answer')).not.toBeInTheDocument();
 
     rerender(
