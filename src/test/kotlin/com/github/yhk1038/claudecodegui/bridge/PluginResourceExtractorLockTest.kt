@@ -384,6 +384,61 @@ class PluginResourceExtractorLockTest {
         }
     }
 
+    /**
+     * Two runs reaping the same `.discard-*` tree must not blow up.
+     *
+     * `clearByRenamingAside` moves a superseded version dir to `.discard-<uuid>` and deletes it
+     * itself, while every concurrent `pruneOtherVersions` reaps any `.discard-*` it finds — so
+     * the same tree is routinely deleted twice at once. `deleteRecursively()` cannot take that:
+     * it walks the tree, and `FileTreeWalk` asserts a directory is still a directory at the
+     * moment it descends. When the other deleter removes that subdirectory in between, the walk
+     * dies with `AssertionError: rootDir must be verified to be directory beforehand.`
+     *
+     * This is what made `parallel extractors all end up serving a complete bundle` flaky. The
+     * tree is deliberately wide and deep here, because the failure window is the gap between
+     * "is a directory" and "descend into it" — a shallow tree usually finishes before the racer
+     * can widen it.
+     */
+    @Test
+    fun `reaping the same discard tree from two threads does not throw`(@TempDir base: File) {
+        val pool = Executors.newFixedThreadPool(2)
+        try {
+            repeat(40) { attempt ->
+                val discard = File(base, ".discard-attempt$attempt")
+                // Wide and deep: many chances for one walker to descend into what the other
+                // has just removed.
+                for (a in 1..12) {
+                    for (b in 1..12) {
+                        File(discard, "d$a/d$b").mkdirs()
+                        File(discard, "d$a/d$b/f.txt").writeText("x")
+                    }
+                }
+
+                val bothReady = java.util.concurrent.CountDownLatch(2)
+                val failure = java.util.concurrent.atomic.AtomicReference<Throwable>()
+                val futures = (1..2).map {
+                    pool.submit {
+                        bothReady.countDown()
+                        bothReady.await(10, TimeUnit.SECONDS)
+                        try {
+                            PluginResourceExtractor.reapDirTree(discard)
+                        } catch (t: Throwable) {
+                            failure.compareAndSet(null, t)
+                        }
+                    }
+                }
+                futures.forEach { it.get(60, TimeUnit.SECONDS) }
+
+                failure.get()?.let {
+                    fail<Unit>("concurrent reap of $discard threw ${it::class.java.name}: ${it.message}")
+                }
+                assertFalse(discard.exists(), "the discard tree must be gone: $discard")
+            }
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
     /** Takes an exclusive [java.nio.channels.FileChannel] lock and parks, holding it open. */
     object LockHolderMain {
         @JvmStatic

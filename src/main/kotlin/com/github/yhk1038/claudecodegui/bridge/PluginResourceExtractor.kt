@@ -6,8 +6,13 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.extensions.PluginId
 import java.io.File
 import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.UUID
 
 /** Final on-disk locations the backend serves from. */
@@ -149,7 +154,7 @@ class PluginResourceExtractor(
         val tmp = File(baseDir, "$TMP_PREFIX${UUID.randomUUID()}")
         var moved = false
         try {
-            tmp.deleteRecursively()
+            reapDirTree(tmp)
             val tmpWebview = File(tmp, WEBVIEW_SUBDIR)
             val tmpBackendDir = File(tmp, BACKEND_SUBDIR)
             tmpWebview.mkdirs()
@@ -213,7 +218,7 @@ class PluginResourceExtractor(
             return served
         } finally {
             // If the move/fallback succeeded, tmp was renamed away; otherwise clean the partial.
-            if (!moved) tmp.deleteRecursively()
+            if (!moved) reapDirTree(tmp)
         }
     }
 
@@ -313,11 +318,11 @@ class PluginResourceExtractor(
             // is always safe — unlike `.tmp-*`, which a concurrent extraction may be filling in
             // right now, and `.locked-*`, which someone may be serving from.
             if (dir.name.startsWith(DISCARD_PREFIX)) {
-                if (dir.deleteRecursively()) logger.info("Reaped discarded dir: ${dir.name}")
+                if (reapDirTree(dir)) logger.info("Reaped discarded dir: ${dir.name}")
                 continue
             }
             if (dir.name.startsWith(TMP_PREFIX) || dir.name.startsWith(LOCKED_PREFIX)) continue
-            val ok = dir.deleteRecursively()
+            val ok = reapDirTree(dir)
             if (ok) logger.info("Pruned stale plugin-resource version dir: ${dir.name}")
             else logger.debug("Could not prune ${dir.name} (in use?); leaving for next run")
         }
@@ -333,7 +338,7 @@ class PluginResourceExtractor(
         val siblings = baseDir.listFiles() ?: return
         for (dir in siblings) {
             if (!dir.isDirectory || !dir.name.startsWith(LOCKED_PREFIX)) continue
-            val ok = dir.deleteRecursively()
+            val ok = reapDirTree(dir)
             if (ok) logger.info("Pruned stale locked-fallback dir: ${dir.name}")
             else logger.debug("Could not prune locked-fallback ${dir.name} (in use?); leaving for next run")
         }
@@ -542,14 +547,86 @@ class PluginResourceExtractor(
             val occupied = aside.exists()
             return try {
                 Files.move(versionDir.toPath(), aside.toPath(), StandardCopyOption.ATOMIC_MOVE)
-                aside.deleteRecursively()
+                reapDirTree(aside)
                 true
             } catch (e: java.io.IOException) {
                 // Locked (Windows) or a filesystem that refuses the rename — leave it in place.
-                if (!occupied) aside.deleteRecursively()
+                if (!occupied) reapDirTree(aside)
                 false
             }
         }
+        /**
+         * Delete a directory tree, tolerating another thread or process deleting the same tree
+         * at the same time. Returns true when nothing of [dir] is left on disk afterwards —
+         * including the case where somebody else is the one who removed it.
+         *
+         * Kotlin's `File.deleteRecursively()` cannot be used here. It walks the tree with
+         * `FileTreeWalk`, which asserts a directory is still a directory at the moment it
+         * descends into it, so a racer removing that subdirectory in between crashes the walk
+         * with `AssertionError: rootDir must be verified to be directory beforehand.` Assertions
+         * are off in production and on under Gradle, so the same race showed up as an
+         * intermittently failing test rather than a visible defect.
+         *
+         * Concurrent deletion is not an edge case here but the normal shape of the work:
+         * [clearByRenamingAside] deletes the `.discard-*` dir it just created while every
+         * concurrent [pruneOtherVersions] reaps any `.discard-*` it finds. "Somebody else
+         * already deleted it" is therefore success, not failure — hence `NoSuchFileException`
+         * is swallowed while a real error (a Windows lock, a permission problem) still makes
+         * this return false so the caller leaves the dir for a later run.
+         */
+        internal fun reapDirTree(dir: File): Boolean {
+            if (!dir.exists()) return true
+            var allGone = true
+            try {
+                Files.walkFileTree(
+                    dir.toPath(),
+                    object : SimpleFileVisitor<Path>() {
+                        override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                            deleteIfRaceAllows(file)
+                            return FileVisitResult.CONTINUE
+                        }
+
+                        /**
+                         * Reached when a path cannot be read — most often because a racer deleted
+                         * it between the directory listing and our visit. That is the expected
+                         * interleaving, so it is not propagated; anything else is remembered and
+                         * surfaces through the return value.
+                         */
+                        override fun visitFileFailed(file: Path, exc: java.io.IOException): FileVisitResult {
+                            if (exc !is NoSuchFileException) allGone = false
+                            return FileVisitResult.CONTINUE
+                        }
+
+                        override fun postVisitDirectory(d: Path, exc: java.io.IOException?): FileVisitResult {
+                            if (exc != null && exc !is NoSuchFileException) allGone = false
+                            deleteIfRaceAllows(d)
+                            return FileVisitResult.CONTINUE
+                        }
+
+                        private fun deleteIfRaceAllows(path: Path) {
+                            try {
+                                Files.deleteIfExists(path)
+                            } catch (e: java.nio.file.DirectoryNotEmptyException) {
+                                // A racer added or restored an entry under us, or one of our own
+                                // deletes failed above. Either way this tree is not fully gone.
+                                allGone = false
+                            } catch (e: NoSuchFileException) {
+                                // Already reaped by the racer — exactly what we wanted.
+                            } catch (e: java.io.IOException) {
+                                allGone = false
+                            }
+                        }
+                    },
+                )
+            } catch (e: NoSuchFileException) {
+                // The whole tree vanished before the walk started. Nothing left to do.
+                return true
+            } catch (e: java.io.IOException) {
+                return false
+            }
+            return allGone && !dir.exists()
+        }
+
         /** Prefix for the sibling temp dir an extraction unpacks into before the atomic rename. */
         private const val TMP_PREFIX = ".tmp-"
 
