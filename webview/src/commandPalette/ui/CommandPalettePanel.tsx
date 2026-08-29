@@ -47,15 +47,30 @@ export const CommandPalettePanel: React.FC<CommandPalettePanelProps> = ({
     });
   }, [selectedSectionIndex, selectedItemIndex]);
 
-  // Click outside to close
+  // Click outside to close.
+  //
+  // The listener is attached a tick late on purpose. A mousedown elsewhere can
+  // be what opens this panel in the first place: picking a file from the mention
+  // dropdown settles the mention, which hands the shared slot back to the
+  // command panel (issue #236) and mounts this component while that very
+  // mousedown is still propagating. Attaching synchronously would let the panel
+  // catch the click that created it, see a target outside itself, and close
+  // immediately, so `/command @file ` lost its panel on a mouse pick while a
+  // keyboard pick kept it (issue #373). Deferring puts the listener in place
+  // only after the current event has finished dispatching.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [onClose]);
 
   if (sections.length === 0) {
