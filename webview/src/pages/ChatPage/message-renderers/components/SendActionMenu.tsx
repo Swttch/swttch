@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUturnLeftIcon } from '@heroicons/react/20/solid';
+import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useSectionFoldValue, useSectionKey } from '../../SectionFoldContext';
 
 /**
- * The round button at the top-right corner of a user send, and the menu it
- * opens.
+ * The button at the top-right corner of a user send, and the menu it opens.
  *
- * Placed and shaped after the Claude Code extension in Cursor, which puts the
- * same control in the same corner of the same bubble (issue #356's screenshot).
- * Matching it is the point: someone arriving from Cursor should find the
- * per-send actions where they already reach for them.
+ * The POSITION is taken from the Claude Code extension in Cursor, which puts
+ * the same control in the same corner of the same bubble (issue #356's
+ * screenshot): someone arriving from Cursor should find the per-send actions
+ * where they already reach for them.
+ *
+ * The GLYPH is not. Cursor draws a back-arrow there, which reads as "undo" —
+ * fair for a menu of fork and rewind, wrong for one whose entry folds a reply.
+ * A vertical ellipsis promises a menu and nothing more, and it is already what
+ * `OverflowMenu` uses for the same job in the session header, so the two menus
+ * in this UI look like the same kind of thing.
  *
  * Cursor's menu lists fork and rewind. Neither exists here yet — issue #356
  * tracks them — so today the menu carries the one action we do have, collapsing
@@ -54,7 +59,23 @@ export function SendActionMenu() {
   const swallow = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className="relative flex-shrink-0" ref={ref} onClick={swallow}>
+    /*
+      Straddles the bubble's top-right corner rather than sitting beside it.
+      The parent in `UserMessageRenderer` is `relative` and wraps the bubble
+      alone, so these offsets are measured from the corner itself.
+
+      --- tweak this ---
+        `-top-2 -end-2` pulls the button out by 6px each way, leaving about a
+        third of it past the corner (the classes read as 8px on Tailwind's
+        scale, but this app sets a 14px root font, so every rem-based utility
+        here lands smaller than its name suggests — measure, do not assume).
+        Nudge both together; moving one alone slides the button along an edge
+        instead of along the diagonal.
+
+      A send is never the first thing in the scroll container (the chat has
+      padding above it), so hanging 8px upward cannot clip.
+    */
+    <div className="absolute -top-2 -end-2 z-[2]" ref={ref} onClick={swallow}>
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -65,9 +86,14 @@ export function SendActionMenu() {
         // Hidden until the send is hovered, like MessageActions beside it, so a
         // long transcript is not a column of buttons. `focus-visible` keeps it
         // reachable by keyboard, where there is no hover to reveal it.
-        className="p-1 rounded-full border border-border-default bg-surface-raised text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 cursor-pointer"
+        //
+        // Sized to sit ON the corner: a button big enough to stand next to the
+        // bubble would cover the first line of it from here. It measures ~16px
+        // across with the icon at ~11px, which is the smallest that still reads
+        // as a menu rather than as a speck.
+        className="flex items-center justify-center w-5 h-5 rounded-full border border-border-default bg-surface-raised text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 cursor-pointer"
       >
-        <ArrowUturnLeftIcon className="w-3.5 h-3.5" />
+        <EllipsisVerticalIcon className="w-3.5 h-3.5" />
       </button>
 
       {open && (

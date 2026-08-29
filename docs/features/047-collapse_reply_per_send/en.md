@@ -15,8 +15,8 @@ There was no way to put a reply out of the way once you were done with it.
 
 ## What we did
 
-Every message you send now carries a **round button in its top-right corner.**
-Hover the message and it appears; click it and a menu opens.
+Every message you send now carries a small **⋮ button straddling its top-right
+corner.** Hover the message and it appears; click it and a menu opens.
 
 The menu's item is **"Collapse reply up to the next message."** Choose it and
 everything Claude produced in answer to that message folds away, up to the
@@ -50,12 +50,23 @@ would just look like a reply that went missing.**
 
 ## Where the button is, and why there
 
-The button sits in the top-right corner of your message, and it is a menu
-rather than a plain toggle.
+The button sits on the top-right corner of your message — half on the bubble,
+half off it — and it is a menu rather than a plain toggle.
 
 Both of those come from the Claude Code extension in Cursor, which puts its
 per-message actions in exactly that spot. Someone arriving from Cursor should
 find these where they already reach for them.
+
+Riding the corner is also what keeps the button small. Standing beside the
+message, it would need room of its own and would push the text in; sitting on
+the corner it needs none, so it can be **small enough to stay out of the way**
+and still be where you look for it.
+
+The glyph is not borrowed. Cursor draws a back-arrow, which reads as "undo" —
+right for a menu of fork and rewind, wrong for one whose entry folds a reply
+away. **⋮ promises a menu and nothing more**, and it is already what the
+session header uses for the same job, so the two menus look like the same kind
+of thing.
 
 The menu holds one item today. It is built as a list anyway, because
 **per-message actions are a category, not a single feature** — forking a

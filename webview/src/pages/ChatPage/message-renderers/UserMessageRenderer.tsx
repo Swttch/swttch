@@ -110,7 +110,8 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
       <IfVisible extra={allContexts.length > 0 || imageBlocks.length > 0} debugId={debugId}>
         <div className="group py-2 px-4">
           <div className="flex items-start gap-2">
-            <div className="min-w-0">
+            {/* `relative` anchors the corner menu to the bubble — see below. */}
+            <div className="relative min-w-0">
               <MessageBox>
                 <div className="text-text-primary/80 text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
                   <span className="text-text-primary/50">{'/'}</span>{parsedContent.commandName}
@@ -120,10 +121,11 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
                 </div>
               </MessageBox>
               {allContexts.length > 0 && <ContextPills context={allContexts} />}
+
+              {/* A slash command heads a section like any other send. */}
+              <SendActionMenu />
             </div>
             <MessageActions copied={copied} onCopy={handleCopy} />
-            {/* A slash command heads a section like any other send. */}
-            <SendActionMenu />
           </div>
         </div>
       </IfVisible>
@@ -179,8 +181,15 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   return (
     <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0} debugId={debugId}>
       <div className="group pt-2 pb-4 px-4 space-y-2.5">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0">
+        <div className="flex items-start">
+          {/*
+            `relative` so the menu can hang off the bubble's own top-right
+            corner. The menu is positioned against THIS box, not the row: the
+            row stretches the full width of the transcript, and anchoring there
+            would park the button at the far right of the window instead of on
+            the message (issue #356's screenshot has it sitting on the corner).
+          */}
+          <div className="relative min-w-0">
             <MessageBox>
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                 {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
@@ -192,17 +201,11 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
                 )}
               </div>
             </MessageBox>
+
+            {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
+
+            <SendActionMenu />
           </div>
-
-          {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
-
-          {/*
-            Sits in the same slot the copy actions occupy elsewhere: the flex
-            row's trailing cell, aligned to the top by the row's
-            `items-start`. That puts it at the send's top-right corner, which
-            is where Cursor's extension puts the same control (issue #356).
-          */}
-          <SendActionMenu />
         </div>
 
         {imageBlocks.length > 0 && (
