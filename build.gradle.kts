@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.4 - Fold long answers, and MCP servers no longer show as Failed</h3>
+            <ul>
+                <li>Add folding a long answer from the message that produced it (#368, requested by @mzbik)</li>
+                <li>Fix connected MCP servers being shown as Failed (#319, reported by @CraftedFury)</li>
+                <li>Fix Cmd/Ctrl+Z not undoing pasted text and inserted mentions (#286, reported by @VijitCoder)</li>
+                <li>Fix the slash command panel closing after picking a file mention with the mouse (#373)</li>
+            </ul>
             <h3>0.29.3 - Backend startup fix &amp; keep your model across Clear Conversation</h3>
             <ul>
                 <li>Fix a leftover backend blocking startup with "Plugin resources not ready" until reboot (#360, reported by @i-kulbitski)</li>
