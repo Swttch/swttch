@@ -74,7 +74,6 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   autoOpenDiffOnPermission: true,
   diffSurface: DiffSurface.IDE,
   browserDiffPresentation: BrowserDiffPresentation.NEW_TAB,
-  ultracode: null,
   // Whether switching the model (dropdown or the rotate shortcut) also writes the
   // native `model` default, matching the CLI's single global default. GUI-only:
   // the CLI has no per-session override to gate. See issue #354.
@@ -90,11 +89,13 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // the native `env` key. See settings-migration.ts.
   env: {},
   // ── Legacy keys kept ONLY so the migration can clear them ───────────────────
-  // They moved to the native file (language, respectGitignore). Removing them
-  // from this map would make validateSetting reject the write that empties them,
-  // stranding the old value here forever. Drop them once the migration retires.
+  // They moved to the native file (language, respectGitignore, ultracode).
+  // Removing them from this map would make validateSetting reject the write that
+  // empties them, stranding the old value here forever. Drop them once the
+  // migration retires.
   language: null,
   respectGitignoreForContext: false,
+  ultracode: null,
   // Unlike the two above, this one did not go native — it was replaced by our own
   // `diffSurface`, which names the surface instead of asking a yes/no about the
   // IDE. null is the default so a value here always means "not migrated yet".
@@ -129,7 +130,7 @@ const COMMENT_MAP: Record<string, string> = {
   autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
   diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
   browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
-  ultracode: 'Effort 슬라이더 최상단 단계(xhigh + workflows 묶음). null이면 off',
+  ultracode: '[레거시] 네이티브 settings.json으로 이관됨(CLI가 읽는 공식 키). 마이그레이션이 비우는 용도로만 남김',
   syncModelToDefault: '모델을 바꾸면(드롭다운·순환 단축키) 현재 세션뿐 아니라 CLI 기본 모델(네이티브 model 설정)도 함께 갱신. true가 CLI의 원래 동작과 동일',
   dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',

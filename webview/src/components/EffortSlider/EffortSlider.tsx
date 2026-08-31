@@ -2,13 +2,16 @@ import { useRef, type PointerEvent } from 'react';
 import { useEffort } from '@/hooks/useEffort';
 import { buildEffortLevels } from '@/types/effort';
 import { useTranslation } from '@/i18n';
+import { indexFromOffset } from './geometry';
 
 interface Props {
   className?: string;
 }
 
-// Track geometry shared by the thumb/fill/notch position math (mirrors the
-// CSS custom properties in index.css so the inline calc() stays in sync).
+// The thumb's travel, expressed for CSS calc(). This is `stepSpan()` from
+// ./geometry written in CSS: the layout below and the click math in geometry.ts
+// MUST describe the same track, or a notch ends up somewhere a click on it does
+// not select — which is exactly how ultracode became unreachable (#377).
 const SPAN = '(100% - var(--thumb-size) - 2 * var(--thumb-inset))';
 
 /**
@@ -56,11 +59,21 @@ export function EffortSlider(props: Props) {
   const notchLeft = (r: number) =>
     `calc(var(--thumb-inset) + ${r} * ${SPAN} + var(--thumb-size) / 2)`;
 
+  // Read the track box from the element rather than restating the CSS values
+  // here, so the click math cannot drift from what index.css actually renders.
   const indexFromEvent = (e: PointerEvent<HTMLButtonElement>) => {
     if (count <= 1) return 0;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const r = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    return Math.round(r * (count - 1));
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    const px = (name: string) => parseFloat(style.getPropertyValue(name)) || 0;
+    return indexFromOffset(
+      e.clientX - rect.left,
+      count,
+      rect.width,
+      px('--thumb-size'),
+      px('--thumb-inset'),
+    );
   };
 
   const applyIndex = (i: number) => {

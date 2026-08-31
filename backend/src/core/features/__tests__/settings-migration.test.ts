@@ -49,14 +49,20 @@ describe('migrateSettingsToCorrectStore', () => {
           'autoResumeOnLimit',
           'focusInputOnEditorContext',
           'uiLanguage',
-          'ultracode',
           'useCtrlEnterToSend',
         ].sort(),
       );
     });
 
     it('lists the official-schema keys that must return to the native file', () => {
-      expect([...RECLAIMED_NATIVE_KEYS].sort()).toEqual(['env', 'language'].sort());
+      expect([...RECLAIMED_NATIVE_KEYS].sort()).toEqual(['env', 'language', 'ultracode'].sort());
+    });
+
+    // #377: `ultracode` is a key the CLI itself reads from the settings file, so
+    // treating it as GUI-only made the migration delete a value the user had set
+    // from the terminal on every backend startup.
+    it('never treats ultracode as a GUI-only key, so it is not deleted from native', () => {
+      expect(MIGRATED_GUI_KEYS).not.toContain('ultracode');
     });
 
     it('maps the renamed app key onto its official native key name', () => {
@@ -67,7 +73,7 @@ describe('migrateSettingsToCorrectStore', () => {
   });
 
   describe('native → app (GUI-only keys)', () => {
-    it('copies each present GUI key into app settings then removes it from native', async () => {
+    it('adopts each present GUI key into app settings', async () => {
       mockReadClaudeSettings.mockResolvedValue({
         uiLanguage: 'korean',
         useCtrlEnterToSend: true,
@@ -80,37 +86,80 @@ describe('migrateSettingsToCorrectStore', () => {
 
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('useCtrlEnterToSend', true);
-
-      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('uiLanguage', null);
-      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('useCtrlEnterToSend', null);
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('model', null);
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('permissions', null);
     });
 
-    it('migrates falsy values too (false / empty are still values)', async () => {
+    // The native settings file belongs to the user, and a key sitting in it may
+    // have been put there by them or by another tool. Adopting the value is our
+    // business; deleting someone else's line out of their file is not.
+    it('never deletes anything from the native file', async () => {
       mockReadClaudeSettings.mockResolvedValue({
-        uiLanguage: 'english',
-        useCtrlEnterToSend: false,
+        uiLanguage: 'korean',
+        useCtrlEnterToSend: true,
         focusInputOnEditorContext: false,
         autoResumeOnLimit: false,
-        ultracode: true,
       });
 
       await migrateSettingsToCorrectStore();
 
       for (const key of MIGRATED_GUI_KEYS) {
-        expect(mockSaveClaudeSetting).toHaveBeenCalledWith(key, null);
+        expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith(key, null);
       }
     });
 
-    it('does NOT delete the native key when the app-settings copy fails', async () => {
+    it('adopts falsy values too (false / empty are still values)', async () => {
+      mockReadClaudeSettings.mockResolvedValue({
+        uiLanguage: 'english',
+        useCtrlEnterToSend: false,
+        focusInputOnEditorContext: false,
+        autoResumeOnLimit: false,
+      });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('useCtrlEnterToSend', false);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('focusInputOnEditorContext', false);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('autoResumeOnLimit', false);
+    });
+
+    // Because the native copy is left behind, this runs on every startup. It must
+    // therefore not undo what the user has since chosen in the GUI.
+    it('does not overwrite an app value the user has already set', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
+      mockReadSettingsFile.mockResolvedValue({ uiLanguage: 'english' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('uiLanguage', 'korean');
+    });
+
+    it('still adopts when the app value is explicitly unset', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
+      mockReadSettingsFile.mockResolvedValue({ uiLanguage: null });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
+    });
+
+    // #377: a user who set `ultracode` in ~/.claude/settings.json from the
+    // terminal used to lose it the next time the backend booted.
+    it('leaves a natively-set ultracode alone', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ ultracode: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('ultracode', null);
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('ultracode', true);
+    });
+
+    it('keeps the native key when the app-settings copy fails', async () => {
       mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
       mockSaveSettingToFile.mockResolvedValue({ status: 'error', error: 'disk full' });
 
       await migrateSettingsToCorrectStore();
 
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalled();
+      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('uiLanguage', null);
     });
   });
 
@@ -141,6 +190,18 @@ describe('migrateSettingsToCorrectStore', () => {
 
       expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('language', null);
       expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('language', expect.anything());
+    });
+
+    // #377: users who engaged the slider's top notch before this fix have the
+    // flag sitting in the app settings, where the CLI never sees it. Carry it
+    // over so the setting they already chose starts working.
+    it('carries an app-side ultracode over to the native file', async () => {
+      mockReadSettingsFile.mockResolvedValue({ ultracode: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('ultracode', true);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('ultracode', null);
     });
   });
 

@@ -1,8 +1,6 @@
 import { useCallback } from 'react';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
-import { useSettings } from '@/contexts/SettingsContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
-import { SettingKey } from '@/types/settings';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import {
   EFFORT_AUTO,
@@ -43,19 +41,18 @@ export interface UseEffortReturn {
  *   ultracode if it was on.
  * - `enableUltracode` engages ultracode = xhigh effort + the workflows flag.
  *
- * Note on persistence: the Cursor extension applies ultracode as a session-only
- * flag via a runtime control. Our CLI exposes no such control (only
- * set_model/set_permission_mode/set_max_thinking_tokens), so we persist
- * `ultracode` — it stays on until toggled off.
+ * Both values go to the same store, ~/.claude/settings.json, because both are
+ * official Claude settings keys that the CLI reads from there: `effortLevel`
+ * pins the effort, and `ultracode` turns on xhigh effort plus standing
+ * dynamic-workflow orchestration. Writing `ultracode` app-side instead left the
+ * workflow half of the top notch with no way to reach the CLI at all (#377).
  *
- * The two values deliberately live in different stores: `effortLevel` is an
- * official Claude settings key (the CLI reads it), while `ultracode` is our own
- * GUI-side flag bundle and is absent from the official schema, so it goes to the
- * app settings rather than polluting ~/.claude/settings.json.
+ * Note on persistence: the CLI describes `ultracode` as a per-session flag, but
+ * the settings file is a documented way to set it, so a value written here stays
+ * on until the slider clears it.
  */
 export function useEffort(): UseEffortReturn {
   const { settings, updateSetting } = useClaudeSettings();
-  const { settings: appSettings, updateSetting: updateAppSetting } = useSettings();
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
 
@@ -64,7 +61,7 @@ export function useEffort(): UseEffortReturn {
 
   const ultracodeAvailable =
     supportsEffort && isUltracodeAvailable(levels, settings.disableWorkflows);
-  const ultracodeEnabled = ultracodeAvailable && appSettings[SettingKey.ULTRACODE] === true;
+  const ultracodeEnabled = ultracodeAvailable && settings.ultracode === true;
 
   const def: EffortLevelDef = ultracodeEnabled
     ? { key: 'ultracode', label: ULTRACODE_LABEL, filledDots: levels.length, totalDots: levels.length }
@@ -75,22 +72,22 @@ export function useEffort(): UseEffortReturn {
     // Order mirrors Cursor: pin xhigh effort first, then raise the flag.
     void (async () => {
       await updateSetting('effortLevel', ULTRACODE_EFFORT);
-      await updateAppSetting(SettingKey.ULTRACODE, true);
+      await updateSetting('ultracode', true);
     })();
-  }, [ultracodeAvailable, updateSetting, updateAppSetting]);
+  }, [ultracodeAvailable, updateSetting]);
 
   const setLevel = useCallback((key: string) => {
     if (!supportsEffort) return;
     void (async () => {
       // Clear the ultracode flag first if it was engaged, mirroring Cursor's
       // setEffortLevel (which writes ultracode:null before the new level).
-      if (appSettings[SettingKey.ULTRACODE] === true) {
-        await updateAppSetting(SettingKey.ULTRACODE, null);
+      if (settings.ultracode === true) {
+        await updateSetting('ultracode', null);
       }
       // `auto` is the plugin-side sentinel — persist it as `null` (CLI default).
       await updateSetting('effortLevel', key === EFFORT_AUTO ? null : key);
     })();
-  }, [supportsEffort, appSettings, updateSetting, updateAppSetting]);
+  }, [supportsEffort, settings.ultracode, updateSetting]);
 
   const cycle = useCallback(() => {
     if (!supportsEffort) return;
