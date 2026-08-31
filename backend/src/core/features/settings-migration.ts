@@ -28,8 +28,6 @@ export const MIGRATED_GUI_KEYS = [
   'useCtrlEnterToSend',
   'focusInputOnEditorContext',
   'autoResumeOnLimit',
-  // Effort slider's top step. A GUI-side flag bundle, absent from the schema.
-  'ultracode',
 ] as const;
 
 /**
@@ -40,8 +38,13 @@ export const MIGRATED_GUI_KEYS = [
  *   CLI-transfer path at all, so the setting silently did nothing.
  * - `env`: environment variables for Claude sessions — minus the one exception
  *   below.
+ * - `ultracode`: the effort slider's top step (xhigh effort plus standing
+ *   dynamic-workflow orchestration). The CLI owns this key and reads it from the
+ *   settings file, so keeping it app-side left the workflow half of the slider's
+ *   top notch with no transfer path — and, worse, the migration used to DELETE a
+ *   value the user had set from the terminal. See issue #377.
  */
-export const RECLAIMED_NATIVE_KEYS = ['language', 'env'] as const;
+export const RECLAIMED_NATIVE_KEYS = ['language', 'env', 'ultracode'] as const;
 
 /**
  * The one env var that must NOT move to the native file: it decides WHERE that

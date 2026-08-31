@@ -126,10 +126,6 @@ export enum SettingKey {
   // (false meant "not in the IDE" = BUILT_IN) and then clear it.
   SHOW_DIFF_IN_IDE = 'showDiffInIde',
 
-  // Effort slider's top step (xhigh + workflows). null = off/cleared. Paired with
-  // the native `effortLevel`, but absent from the official schema, so it lives here.
-  ULTRACODE = 'ultracode',
-
   // Header dock arrangement: which overflow-menu items show as icons next to the
   // ⋮ button, and in what order. Global-only by product decision (the dock is
   // navigated by muscle memory, so it must not shift between projects).
@@ -347,7 +343,6 @@ export interface SettingsState {
   [SettingKey.DIFF_SURFACE]: DiffSurface;
   [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation;
   [SettingKey.SHOW_DIFF_IN_IDE]: boolean | null;
-  [SettingKey.ULTRACODE]: boolean | null;
   [SettingKey.DOCK_LAYOUT]: DockLayout;
   [SettingKey.SYNC_MODEL_TO_DEFAULT]: boolean;
 }
@@ -384,7 +379,6 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.DIFF_SURFACE]: DiffSurface.IDE,
   [SettingKey.BROWSER_DIFF_PRESENTATION]: BrowserDiffPresentation.NEW_TAB,
   [SettingKey.SHOW_DIFF_IN_IDE]: null,
-  [SettingKey.ULTRACODE]: null,
   [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
   [SettingKey.SYNC_MODEL_TO_DEFAULT]: true,
 };

@@ -49,14 +49,20 @@ describe('migrateSettingsToCorrectStore', () => {
           'autoResumeOnLimit',
           'focusInputOnEditorContext',
           'uiLanguage',
-          'ultracode',
           'useCtrlEnterToSend',
         ].sort(),
       );
     });
 
     it('lists the official-schema keys that must return to the native file', () => {
-      expect([...RECLAIMED_NATIVE_KEYS].sort()).toEqual(['env', 'language'].sort());
+      expect([...RECLAIMED_NATIVE_KEYS].sort()).toEqual(['env', 'language', 'ultracode'].sort());
+    });
+
+    // #377: `ultracode` is a key the CLI itself reads from the settings file, so
+    // treating it as GUI-only made the migration delete a value the user had set
+    // from the terminal on every backend startup.
+    it('never treats ultracode as a GUI-only key, so it is not deleted from native', () => {
+      expect(MIGRATED_GUI_KEYS).not.toContain('ultracode');
     });
 
     it('maps the renamed app key onto its official native key name', () => {
@@ -93,7 +99,6 @@ describe('migrateSettingsToCorrectStore', () => {
         useCtrlEnterToSend: false,
         focusInputOnEditorContext: false,
         autoResumeOnLimit: false,
-        ultracode: true,
       });
 
       await migrateSettingsToCorrectStore();
@@ -101,6 +106,17 @@ describe('migrateSettingsToCorrectStore', () => {
       for (const key of MIGRATED_GUI_KEYS) {
         expect(mockSaveClaudeSetting).toHaveBeenCalledWith(key, null);
       }
+    });
+
+    // #377: a user who set `ultracode` in ~/.claude/settings.json from the
+    // terminal used to lose it the next time the backend booted.
+    it('leaves a natively-set ultracode alone', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ ultracode: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('ultracode', null);
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('ultracode', true);
     });
 
     it('does NOT delete the native key when the app-settings copy fails', async () => {
@@ -141,6 +157,18 @@ describe('migrateSettingsToCorrectStore', () => {
 
       expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('language', null);
       expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('language', expect.anything());
+    });
+
+    // #377: users who engaged the slider's top notch before this fix have the
+    // flag sitting in the app settings, where the CLI never sees it. Carry it
+    // over so the setting they already chose starts working.
+    it('carries an app-side ultracode over to the native file', async () => {
+      mockReadSettingsFile.mockResolvedValue({ ultracode: true });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('ultracode', true);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('ultracode', null);
     });
   });
 

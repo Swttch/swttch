@@ -33,6 +33,7 @@ export interface FileSuggestionConfig {
 export interface ClaudeSettingsState {
   model: string | null; // full model ID like 'claude-opus-4-6' or null for default
   effortLevel: string | null; // CLI effort level — values sourced from ModelInfo.supportedEffortLevels; null = auto
+  ultracode?: boolean | null; // official key: xhigh effort plus standing dynamic-workflow orchestration; null = off
   disableWorkflows?: boolean; // CLI-owned: when true, the Workflows feature (and ultracode) is unavailable
   language?: string | null; // official key: Claude's preferred response language (e.g. 'korean')
   respectGitignore?: boolean; // official key: honour .gitignore when resolving file context

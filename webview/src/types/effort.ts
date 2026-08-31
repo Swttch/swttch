@@ -90,8 +90,9 @@ export function parseEffortLevel(
 
 // ─── Ultracode ───────────────────────────────────────────────────────────────
 // Ultracode is a synthetic step above the real effort levels: it means "xhigh
-// effort + standing workflow orchestration". It's not an effortLevel value — the
-// Cursor extension layers it as the slider's top notch, gated on the model
+// effort + standing workflow orchestration". It is not an effortLevel value but
+// a settings key of its own (`ultracode`), which the CLI reads alongside
+// `effortLevel`. The slider layers it as the top notch, gated on the model
 // supporting xhigh and the Workflows feature not being disabled.
 
 export const ULTRACODE_LABEL = 'Ultracode - xhigh + workflows';
