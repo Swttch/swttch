@@ -17,8 +17,16 @@ import { DiffSurface } from '../../shared';
  */
 
 /**
- * GUI-only keys that leaked into the native Claude settings file even though they
- * are NOT in the official schema. They belong in the app settings.
+ * GUI-only keys that an older build wrote into the native Claude settings file
+ * even though they are NOT in the official schema. The app settings are where
+ * they belong, so a value found in the native file is adopted from there once.
+ *
+ * We do NOT delete them from the native file. That file is the user's, not ours,
+ * and a key sitting in it may have been put there by them or by another tool; a
+ * settings file is a bad place to be destructive on a hunch. Leaving the key is
+ * free: the CLI reads a file containing these keys without complaint (no parse
+ * or validation errors, every real setting still applies), so the only thing
+ * deleting bought us was tidiness in someone else's file.
  *
  * NOT included: `preferFastMode` → `fastMode` is a legitimate native key (the CLI
  * reads it from settings.json), so it is renamed in place, not migrated here.
@@ -122,18 +130,31 @@ async function moveValue(params: {
   }
 }
 
-/** Native → app: GUI-only keys that do not belong in the native file. */
-async function moveGuiKeysOutOfNative(native: Record<string, unknown>): Promise<void> {
+/**
+ * Native → app: adopt a GUI-only key an older build left in the native file.
+ *
+ * The native copy is left in place (see MIGRATED_GUI_KEYS), which makes this run
+ * on every startup rather than once. So it must not clobber the app value: the
+ * adoption happens only while the app store has nothing of its own, otherwise a
+ * stale native value would overwrite the user's current choice on every boot.
+ */
+async function adoptGuiKeysFromNative(
+  native: Record<string, unknown>,
+  app: Record<string, unknown>,
+): Promise<void> {
   for (const key of MIGRATED_GUI_KEYS) {
     if (!(key in native)) continue;
-    const value = native[key];
-    await moveValue({
-      key,
-      value,
-      copy: () => saveSettingToFile(key, value),
-      clear: () => saveClaudeSetting(key, null),
-      direction: 'to app settings',
-    });
+    // An app value already present is the newer one — the GUI writes there now.
+    if (app[key] !== null && app[key] !== undefined) continue;
+
+    const result = await saveSettingToFile(key, native[key]);
+    if (result.status !== 'ok') {
+      console.error(
+        '[node-backend]',
+        `settings migration: failed to adopt "${key}" into app settings:`,
+        result.error,
+      );
+    }
   }
 }
 
@@ -291,8 +312,10 @@ async function migrateDiffSurface(app: Record<string, unknown>): Promise<void> {
  * One-time, idempotent migration run once at backend startup.
  *
  * Idempotency: "needs migration" is derived purely from where a key currently
- * sits. After a successful move the key is gone from the source, so the next run
- * finds nothing and does nothing.
+ * sits. Where the source key is cleared, the next run finds nothing and does
+ * nothing. GUI-only keys are the exception — they stay in the native file rather
+ * than being deleted out of it, so their adoption re-runs every startup and is
+ * instead made safe by only filling an app value that is still unset.
  *
  * Defensive: any failure is logged and swallowed so a migration error can never
  * block backend startup. Keys outside the three sets are never touched.
@@ -304,7 +327,7 @@ export async function migrateSettingsToCorrectStore(): Promise<void> {
     const native = await readClaudeSettings();
     const app = await readSettingsFile();
 
-    await moveGuiKeysOutOfNative(native);
+    await adoptGuiKeysFromNative(native, app);
     await reclaimNativeKeys(native, app);
     await migrateRenamedKeys(native, app);
     await migrateDiffSurface(app);

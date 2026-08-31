@@ -73,7 +73,7 @@ describe('migrateSettingsToCorrectStore', () => {
   });
 
   describe('native → app (GUI-only keys)', () => {
-    it('copies each present GUI key into app settings then removes it from native', async () => {
+    it('adopts each present GUI key into app settings', async () => {
       mockReadClaudeSettings.mockResolvedValue({
         uiLanguage: 'korean',
         useCtrlEnterToSend: true,
@@ -86,14 +86,27 @@ describe('migrateSettingsToCorrectStore', () => {
 
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('useCtrlEnterToSend', true);
-
-      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('uiLanguage', null);
-      expect(mockSaveClaudeSetting).toHaveBeenCalledWith('useCtrlEnterToSend', null);
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('model', null);
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('permissions', null);
     });
 
-    it('migrates falsy values too (false / empty are still values)', async () => {
+    // The native settings file belongs to the user, and a key sitting in it may
+    // have been put there by them or by another tool. Adopting the value is our
+    // business; deleting someone else's line out of their file is not.
+    it('never deletes anything from the native file', async () => {
+      mockReadClaudeSettings.mockResolvedValue({
+        uiLanguage: 'korean',
+        useCtrlEnterToSend: true,
+        focusInputOnEditorContext: false,
+        autoResumeOnLimit: false,
+      });
+
+      await migrateSettingsToCorrectStore();
+
+      for (const key of MIGRATED_GUI_KEYS) {
+        expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith(key, null);
+      }
+    });
+
+    it('adopts falsy values too (false / empty are still values)', async () => {
       mockReadClaudeSettings.mockResolvedValue({
         uiLanguage: 'english',
         useCtrlEnterToSend: false,
@@ -103,9 +116,29 @@ describe('migrateSettingsToCorrectStore', () => {
 
       await migrateSettingsToCorrectStore();
 
-      for (const key of MIGRATED_GUI_KEYS) {
-        expect(mockSaveClaudeSetting).toHaveBeenCalledWith(key, null);
-      }
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('useCtrlEnterToSend', false);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('focusInputOnEditorContext', false);
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('autoResumeOnLimit', false);
+    });
+
+    // Because the native copy is left behind, this runs on every startup. It must
+    // therefore not undo what the user has since chosen in the GUI.
+    it('does not overwrite an app value the user has already set', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
+      mockReadSettingsFile.mockResolvedValue({ uiLanguage: 'english' });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('uiLanguage', 'korean');
+    });
+
+    it('still adopts when the app value is explicitly unset', async () => {
+      mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
+      mockReadSettingsFile.mockResolvedValue({ uiLanguage: null });
+
+      await migrateSettingsToCorrectStore();
+
+      expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
     });
 
     // #377: a user who set `ultracode` in ~/.claude/settings.json from the
@@ -119,14 +152,14 @@ describe('migrateSettingsToCorrectStore', () => {
       expect(mockSaveSettingToFile).not.toHaveBeenCalledWith('ultracode', true);
     });
 
-    it('does NOT delete the native key when the app-settings copy fails', async () => {
+    it('keeps the native key when the app-settings copy fails', async () => {
       mockReadClaudeSettings.mockResolvedValue({ uiLanguage: 'korean' });
       mockSaveSettingToFile.mockResolvedValue({ status: 'error', error: 'disk full' });
 
       await migrateSettingsToCorrectStore();
 
       expect(mockSaveSettingToFile).toHaveBeenCalledWith('uiLanguage', 'korean');
-      expect(mockSaveClaudeSetting).not.toHaveBeenCalled();
+      expect(mockSaveClaudeSetting).not.toHaveBeenCalledWith('uiLanguage', null);
     });
   });
 
