@@ -22,6 +22,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { McpTransportType } from '../../shared';
 import type { McpServerTool, McpServerConfig } from '../../shared';
+import { expandMcpServerConfig } from './mcp-env-expansion';
 
 /** Hard ceiling for a connect + list round-trip, so a hung server can't wedge the UI. */
 const TOOLS_TIMEOUT_MS = 15_000;
@@ -55,7 +56,12 @@ export function mapMcpTool(tool: RawMcpTool): McpServerTool {
  * Build the SDK transport for a server config, or null when the transport can't
  * be probed directly (claudeai-proxy needs OAuth; ws is rare; missing url/cmd).
  */
-export async function buildTransport(config: McpServerConfig): Promise<Transport | null> {
+export async function buildTransport(rawConfig: McpServerConfig): Promise<Transport | null> {
+  // Resolve ${VAR} placeholders first, exactly as the CLI does before it spawns a
+  // server. Without this the server is handed the literal "${VAR}" text and, for
+  // servers that tolerate a malformed value, starts up unusable with nothing on
+  // screen pointing at the cause (#364).
+  const { config } = expandMcpServerConfig(rawConfig, process.env);
   switch (config.type) {
     case McpTransportType.STDIO: {
       if (!config.command) return null;
@@ -88,7 +94,11 @@ export async function buildTransport(config: McpServerConfig): Promise<Transport
   }
 }
 
-/** process.env with undefined values stripped, merged with per-server overrides. */
+/**
+ * process.env with undefined values stripped, merged with per-server overrides.
+ * The overrides arrive already expanded (see buildTransport), so what lands here
+ * is the resolved value rather than the `${VAR}` text the user wrote.
+ */
 function stdioEnv(overrides?: Record<string, string>): Record<string, string> {
   const base: Record<string, string> = {};
   for (const [key, val] of Object.entries(process.env)) {

@@ -21,6 +21,8 @@
  * the names back in `missingVars` so they can surface them instead of failing mutely.
  */
 
+import type { McpServerConfig } from '../../shared';
+
 /**
  * Where a placeholder's value may come from. Modelled as a parameter rather than
  * read from `process.env` inside, so the resolution order is decided by the caller
@@ -69,4 +71,51 @@ export function expandPlaceholders(value: string, source: EnvSource): ExpansionR
 export function hasPlaceholder(value: string): boolean {
   // A fresh regex avoids the shared `lastIndex` that a /g literal carries between calls.
   return new RegExp(PLACEHOLDER.source).test(value);
+}
+
+/** A server config with its placeholders resolved, plus what could not be resolved. */
+export interface ExpandedServerConfig {
+  config: McpServerConfig;
+  /** Names of placeholders left unresolved anywhere in the config, deduplicated. */
+  missingVars: string[];
+}
+
+/**
+ * Expand every placeholder-bearing field of a server config.
+ *
+ * The fields covered are the ones the CLI expands — `command`, `args`, `env`, `url`
+ * and `headers` — so a config that resolves in the terminal resolves here too. The
+ * transport-identifying fields (`type`, and the claude.ai connector's `id` /
+ * `displayName` / `iconUrl`) are not user-authored templates and are passed through.
+ *
+ * The input is never mutated: expansion happens on a copy, so the caller keeps the
+ * verbatim config it read from disk (the original-data-preservation rule) and can
+ * still show the user what they actually wrote.
+ */
+export function expandMcpServerConfig(
+  config: McpServerConfig,
+  source: EnvSource,
+): ExpandedServerConfig {
+  const missing: string[] = [];
+  const expand = (value: string): string => {
+    const { expanded, missingVars } = expandPlaceholders(value, source);
+    for (const name of missingVars) if (!missing.includes(name)) missing.push(name);
+    return expanded;
+  };
+  const expandRecord = (record: Record<string, string>): Record<string, string> => {
+    const out: Record<string, string> = {};
+    // Only values are expanded, never keys: a variable name is chosen by the user and
+    // resolving it would let a value silently rename the setting it is bound to.
+    for (const [key, value] of Object.entries(record)) out[key] = expand(value);
+    return out;
+  };
+
+  const expandedConfig: McpServerConfig = { ...config };
+  if (config.command !== undefined) expandedConfig.command = expand(config.command);
+  if (config.args !== undefined) expandedConfig.args = config.args.map(expand);
+  if (config.env !== undefined) expandedConfig.env = expandRecord(config.env);
+  if (config.url !== undefined) expandedConfig.url = expand(config.url);
+  if (config.headers !== undefined) expandedConfig.headers = expandRecord(config.headers);
+
+  return { config: expandedConfig, missingVars: missing };
 }
