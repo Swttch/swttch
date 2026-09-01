@@ -69,8 +69,12 @@ describe('toMcpServers', () => {
   });
 
   it('keeps an unrecognised scope verbatim so the list can still group by it', () => {
-    const [server] = toMcpServers([{ name: 'x', status: 'connected', scope: 'brand-new-scope' }]);
-    expect(server.scope).toBe('brand-new-scope');
+    // "dynamic" is not invented: the CLI reports it for servers supplied via
+    // `--mcp-config`, observed on Windows CLI 2.1.239. The CLI can name a scope
+    // this side has never heard of, so an unknown one is carried through rather
+    // than coerced — the list groups by whatever string arrives.
+    const [server] = toMcpServers([{ name: 'x', status: 'connected', scope: 'dynamic' }]);
+    expect(server.scope).toBe('dynamic');
   });
 
   it('gives an entry with no tool list an empty one, meaning asked and none', () => {
