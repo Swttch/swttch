@@ -22,7 +22,14 @@
  * `interrupt`, `set_model` and the whole `can_use_tool` permission flow. The
  * `mcp_status` subtype is not documented, so it is used strictly as the fast
  * path: every failure here returns null and the caller falls back to the official
- * `claude mcp list`, which stays the guaranteed route (CLAUDE.md).
+ * `claude mcp list`, which stays the guaranteed route.
+ *
+ * Using it at all is a DELIBERATE EXCEPTION to the "no dependence on unofficial
+ * support" principle in CLAUDE.md, which names this very case as forbidden. The
+ * principle stands; the exception, why it was granted and the conditions that
+ * withdraw it are recorded in
+ * `docs/principle-exceptions/363-mcp-status-control-request.md`. Read that before
+ * widening what this module relies on.
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { sendControlRequestToProcess } from '../claude-process';
