@@ -371,9 +371,19 @@ async function listContainerIds(servers: DockerMcpServer[]): Promise<Set<string>
  * their container is not ours to remove.
  */
 async function matchesConfiguredCommand(id: string, servers: DockerMcpServer[]): Promise<boolean> {
-  const { stdout } = await docker([
-    'inspect', id, '--format', '{{.Config.Image}}\t{{join .Config.Cmd " "}}',
-  ]);
+  let stdout: string;
+  try {
+    ({ stdout } = await docker([
+      'inspect', id, '--format', '{{.Config.Image}}\t{{join .Config.Cmd " "}}',
+    ]));
+  } catch {
+    // The container went away between listing it and inspecting it — a short-lived
+    // server exiting on its own is exactly that. Not a match, and specifically not
+    // a reason to abandon the other candidates: letting this throw aborted the whole
+    // reclaim for that CLI, so one vanished container stranded every other one.
+    // Observed once in real use (`docker inspect ... No such object`).
+    return false;
+  }
   const [image, command = ''] = stdout.trim().split('\t');
   return servers.some((s) => s.image === image && s.command === command.trim());
 }

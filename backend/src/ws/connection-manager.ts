@@ -721,6 +721,25 @@ export class ConnectionManager {
    * SIGKILL as the last-resort orphan guard, so it must stay synchronous —
    * 'exit' handlers cannot await.
    */
+  /**
+   * Wait for the session CLIs that were just signalled to actually exit.
+   *
+   * Their `close` handlers are what START the MCP container reclaim, so draining
+   * the reclaims before any close has fired drains an empty set and the process
+   * exits with the work never begun (#363). Bounded, because shutdown cannot hang
+   * on a CLI that refuses to die; whatever is missed is caught by the next
+   * backend's orphan sweep.
+   */
+  async awaitSessionProcessExits(timeoutMs: number): Promise<void> {
+    const pending = [...this.sessionRegistry.values()]
+      .map((session) => session.process)
+      .filter((proc): proc is ChildProcess => Boolean(proc) && proc!.exitCode === null)
+      .map((proc) => new Promise<void>((resolve) => proc.once('close', () => resolve())));
+    if (pending.length === 0) return;
+    const deadline = new Promise<void>((resolve) => setTimeout(resolve, timeoutMs).unref?.());
+    await Promise.race([Promise.all(pending).then(() => undefined), deadline]);
+  }
+
   killAllSessionProcesses(signal: NodeJS.Signals): number {
     let killed = 0;
     for (const session of this.sessionRegistry.values()) {

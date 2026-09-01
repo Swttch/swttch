@@ -534,10 +534,15 @@ async function main() {
     connections.shutdownAll();
     close();
 
-    // The CLIs were just signalled; give the MCP container cleanup their deaths
-    // triggered a chance to finish before this process exits out from under it.
-    // Otherwise closing the IDE leaks exactly the containers the last live
-    // session was holding (#363).
+    // Let the signalled CLIs actually exit, then let the reclaims their deaths
+    // triggered finish, before this process exits out from under them. The order
+    // matters: a reclaim only starts from a CLI's `close`, so draining first
+    // drains nothing and the containers the last live session held are stranded
+    // (#363, observed when the IDE went away and took the backend with it).
+    //
+    // Both waits are bounded — shutdown must not hang on a CLI that will not die,
+    // and anything missed here is still caught by the next backend's orphan sweep.
+    await connections.awaitSessionProcessExits(3_000);
     await drainMcpContainerReclaims();
 
     // 로그 스트림 flush 대기 (최대 5초)
