@@ -10,7 +10,7 @@ import {
   extractServerConfig,
   readClaudeJson,
   readProjectMcpJson,
-  writeClaudeJson,
+  updateClaudeJson,
 } from './mcp-config-files';
 import { McpServerStatus, McpServerScope } from '../../shared';
 import type { McpServer, McpServersResult, McpServerConfig } from '../../shared';
@@ -179,16 +179,24 @@ export async function reconnectMcpServer(name: string, cwd?: string): Promise<Mc
  * (No CLI command exists for this — CLI users also edit the file directly.)
  */
 export async function setMcpServerEnabled(name: string, enabled: boolean): Promise<void> {
-  const data = await readClaudeJson();
-  const current: string[] = Array.isArray(data.disabledMcpServers)
-    ? (data.disabledMcpServers as string[])
-    : [];
+  // ~/.claude.json holds far more than this one array — every project the user
+  // has opened, their history and their MCP config — and it is theirs, not ours.
+  // So the update is atomic and it refuses to write over a file it could not
+  // read, rather than replacing it with a one-key file (issue #386).
+  const result = await updateClaudeJson((data) => {
+    const current: string[] = Array.isArray(data.disabledMcpServers)
+      ? (data.disabledMcpServers as string[])
+      : [];
 
-  const updated = enabled
-    ? current.filter((n) => n !== name)
-    : current.includes(name) ? current : [...current, name];
+    data.disabledMcpServers = enabled
+      ? current.filter((n) => n !== name)
+      : current.includes(name) ? current : [...current, name];
+    return data;
+  });
 
-  await writeClaudeJson({ ...data, disabledMcpServers: updated });
+  if (result.status === 'error') {
+    throw new Error(`Failed to ${enabled ? 'enable' : 'disable'} MCP server "${name}": ${result.error}`);
+  }
 }
 
 /**

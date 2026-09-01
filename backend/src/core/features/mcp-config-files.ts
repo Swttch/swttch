@@ -12,10 +12,11 @@
  * home directory, local scope hiding under `projects[cwd]`, project scope in the
  * workspace's own `.mcp.json`. Two copies of that would drift.
  */
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
+import { updateJsonFile, type JsonMutate, type JsonUpdateResult } from './atomic-json';
 import type { McpServerConfig } from '../../shared';
 
 /** Path to the global claude config file that stores disabledMcpServers. */
@@ -44,10 +45,18 @@ export async function readClaudeJson(): Promise<Record<string, unknown>> {
   }
 }
 
-export async function writeClaudeJson(data: Record<string, unknown>): Promise<void> {
-  const p = claudeJsonPath();
-  await mkdir(dirname(p), { recursive: true });
-  await writeFile(p, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+/**
+ * Change `~/.claude.json` in place.
+ *
+ * Read-modify-write rather than a plain write, because that file holds far more
+ * than whatever the caller came to change: every project the user has opened,
+ * their history, their MCP config. Handing a caller the whole object to save
+ * back invites the wipe of issue #386, so the read and the write are one step
+ * here — atomic, serialized per path, and refused outright on a file that exists
+ * but cannot be parsed.
+ */
+export function updateClaudeJson(mutate: JsonMutate): Promise<JsonUpdateResult> {
+  return updateJsonFile(claudeJsonPath(), mutate);
 }
 
 /**

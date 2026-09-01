@@ -1,8 +1,9 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { randomUUID } from 'crypto';
+import { atomicWriteFile } from './atomic-json';
 
 // ─── User profile (global, telemetry-independent) ────────────────────────────
 // `~/.claude-code-gui/profile.json` holds a per-install pseudonymous uuid and the
@@ -121,7 +122,7 @@ export function normalizeVoicePrompt(value: unknown): VoicePrompt {
 
 async function writeProfile(profile: ProfileData): Promise<void> {
   await mkdir(PROFILE_DIR, { recursive: true });
-  await writeFile(PROFILE_FILE, JSON.stringify(profile, null, 2) + '\n', 'utf-8');
+  await atomicWriteFile(PROFILE_FILE, JSON.stringify(profile, null, 2) + '\n');
 }
 
 /**

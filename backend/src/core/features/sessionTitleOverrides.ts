@@ -1,5 +1,6 @@
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
+import { updateJsonFile } from './atomic-json';
 
 const OVERRIDES_FILE = '.claude-code-gui-session-titles.json';
 
@@ -23,23 +24,31 @@ export async function readSessionTitleOverrides(sessionsPath: string): Promise<T
   }
 }
 
+/**
+ * Every title the user typed lives in this one file, so renaming one session must
+ * not be able to take the others with it: the save is atomic, and a file that
+ * exists but cannot be parsed aborts the save instead of being replaced by a
+ * file holding only the title just entered (issue #386).
+ */
 export async function writeSessionTitleOverride(
   sessionsPath: string,
   sessionId: string,
   title: string,
 ): Promise<void> {
   await mkdir(sessionsPath, { recursive: true });
-  const overrides = await readSessionTitleOverrides(sessionsPath);
-  overrides[sessionId] = title;
-  await writeFile(getOverridesFile(sessionsPath), JSON.stringify(overrides, null, 2), 'utf-8');
+  await updateJsonFile(getOverridesFile(sessionsPath), (current) => {
+    current[sessionId] = title;
+    return current;
+  });
 }
 
 export async function removeSessionTitleOverride(
   sessionsPath: string,
   sessionId: string,
 ): Promise<void> {
-  const overrides = await readSessionTitleOverrides(sessionsPath);
-  if (!(sessionId in overrides)) return;
-  delete overrides[sessionId];
-  await writeFile(getOverridesFile(sessionsPath), JSON.stringify(overrides, null, 2), 'utf-8');
+  await updateJsonFile(getOverridesFile(sessionsPath), (current) => {
+    if (!(sessionId in current)) return null;
+    delete current[sessionId];
+    return current;
+  });
 }

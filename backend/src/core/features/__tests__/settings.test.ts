@@ -6,6 +6,11 @@ vi.mock('fs/promises', () => ({
   writeFile: vi.fn(),
   mkdir: vi.fn(),
   rename: vi.fn(),
+  // A failed rename deletes the temp file it left behind, and the bits of the
+  // file being replaced are carried over, so the mock has to cover those too.
+  stat: vi.fn(),
+  chmod: vi.fn(),
+  unlink: vi.fn(),
 }));
 
 vi.mock('fs', () => ({

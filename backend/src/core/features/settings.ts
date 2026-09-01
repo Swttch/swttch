@@ -1,7 +1,8 @@
-import { readFile, writeFile, mkdir, rename } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { atomicWriteFile, updateJsonFile } from './atomic-json';
 import {
   DiffSurface,
   BrowserDiffPresentation,
@@ -210,7 +211,7 @@ export async function readSettingsFile(): Promise<Record<string, unknown>> {
     if (!existsSync(SETTINGS_FILE)) {
       // Create with defaults
       await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
-      await writeFile(SETTINGS_FILE, generateSettingsContent(DEFAULT_SETTINGS), 'utf-8');
+      await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(DEFAULT_SETTINGS));
       return { ...DEFAULT_SETTINGS };
     }
 
@@ -581,20 +582,19 @@ export async function saveSettingToScope(
 
     try {
       const filePath = join(projectPath, '.claude-code-gui', 'settings.json');
-      let current: Record<string, unknown> = {};
-      try {
-        if (existsSync(filePath)) {
-          current = JSON.parse(await readFile(filePath, 'utf-8')) as Record<string, unknown>;
-        }
-      } catch { /* start fresh */ }
-      if (value === null) {
-        delete current[key];
-      } else {
-        current[key] = value;
-      }
       await mkdir(join(projectPath, '.claude-code-gui'), { recursive: true });
-      await writeFile(filePath, JSON.stringify(current, null, 2) + '\n', 'utf-8');
-      return { status: 'ok' };
+      // "start fresh" on a parse failure used to be the behaviour here, and that
+      // is exactly what wipes a file: the one key being saved becomes the whole
+      // file (issue #386). updateJsonFile aborts on a file it cannot read.
+      const result = await updateJsonFile(filePath, (current) => {
+        if (value === null) {
+          delete current[key];
+        } else {
+          current[key] = value;
+        }
+        return current;
+      });
+      return result.status === 'ok' ? { status: 'ok' } : { status: 'error', error: result.error };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { status: 'error', error: msg };
@@ -611,13 +611,6 @@ export async function saveSettingToScope(
  * read-modify-write completes before the next begins.
  */
 let settingsWriteChain: Promise<unknown> = Promise.resolve();
-
-/** Write via a temp file + atomic rename so a partial write can never be observed. */
-async function atomicWriteFile(filePath: string, content: string): Promise<void> {
-  const tmp = `${filePath}.tmp-${process.pid}`;
-  await writeFile(tmp, content, 'utf-8');
-  await rename(tmp, filePath);
-}
 
 export function saveSettingToFile(key: string, value: unknown): Promise<SaveResult> {
   const run = settingsWriteChain.then(() => doSaveSettingToFile(key, value));
