@@ -55,12 +55,12 @@ describe('buildTransport', () => {
   // Falling through to `default` returned no transport, so the panel showed a
   // connected server with an empty tool list and no error (verified in browser).
   it('treats a server with no explicit type as stdio when it has a command', async () => {
-    const config = { command: 'npx', args: ['some-mcp-server'] } as unknown as McpServerConfig;
+    const config: McpServerConfig = { command: 'npx', args: ['some-mcp-server'] };
     expect(await buildTransport(config, noEnv)).not.toBeNull();
   });
 
   it('still returns null when there is neither a type nor a command', async () => {
-    expect(await buildTransport({} as unknown as McpServerConfig, noEnv)).toBeNull();
+    expect(await buildTransport({}, noEnv)).toBeNull();
   });
 
   it('returns a transport for an http server with a url', async () => {

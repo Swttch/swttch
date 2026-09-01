@@ -43,7 +43,17 @@ export enum McpTransportType {
 }
 
 export interface McpServerConfig {
-  type: McpTransportType;
+  /**
+   * Transport kind, absent when the config does not spell it out.
+   *
+   * `.mcp.json` treats `type` as optional: an entry with a `command` is a stdio
+   * server, which is how the docs' own examples are written and how the CLI reads
+   * them (`case void 0: case "stdio":` in its transport switch). Declaring this
+   * required did not make it present — it only hid the case from the type checker,
+   * which is how a missing `type` came to yield no transport and an empty tool
+   * list with no error (#364).
+   */
+  type?: McpTransportType;
   /** stdio: the executable command. */
   command?: string;
   /** stdio: positional arguments to the command. */
