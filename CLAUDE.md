@@ -22,7 +22,13 @@ JetBrains IDE용 Claude Code GUI 플러그인. Cursor의 Claude Code 확장과 �
 
 ### 기록된 예외
 
-원칙은 원칙이지 거부할 수 없는 법칙이 아니다. 다른 대안이 없는 특수한 경우에 한해 위반할 수 있고, 그때는 **사용자의 직접적인 판단을 득하고 그 판단의 근거를 문서로 남긴다.** 절차는 [docs/principle-exceptions/README.md](./docs/principle-exceptions/README.md)에 있다.
+원칙은 원칙이지 거부할 수 없는 법칙이 아니다. 아래 중 하나에 해당하는 특수한 경우에 한해 위반할 수 있고, 그때는 **사용자의 직접적인 판단을 득하고 그 판단의 근거를 문서로 남긴다.**
+
+- 다른 대안이 없어 불가피한 경우
+- 원칙을 지키는 방법보다 예외의 방법이 지나치게 압도적으로 이득이 큰 경우 (그 판단은 사람이 한다)
+- 원칙을 지키는 방법보다 예외의 방법이 기능을 구현하는 가장 근본적으로 정확한 방법인 경우
+
+절차는 [docs/principle-exceptions/README.md](./docs/principle-exceptions/README.md)에 있다.
 
 지금까지 기록된 예외는 다음과 같다.
 
