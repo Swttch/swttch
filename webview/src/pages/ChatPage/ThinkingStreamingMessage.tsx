@@ -81,7 +81,6 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                         ref={markdownRef}
                         className={`${isThinkingExpanded ? "" : "hidden"} thinking-message markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
                         <Streamdown
-                            className="space-y-0"
                             mode={isStreaming ? 'streaming' : 'static'}
                             parseIncompleteMarkdown={isStreaming}
                             isAnimating={isStreaming}
