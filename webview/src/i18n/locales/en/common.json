@@ -134,6 +134,7 @@
       "disable": "Disable",
       "loadingTools": "Loading tools…",
       "loadToolsError": "Couldn't load tools",
+      "missingVars": "Missing environment variables: {{vars}}",
       "viewTools": "View tools ({{count}})",
       "readOnly": "read-only",
       "destructive": "destructive",

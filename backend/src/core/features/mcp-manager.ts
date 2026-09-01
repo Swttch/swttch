@@ -4,6 +4,8 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { Claude } from '../claude';
 import { parseMcpList, parseMcpGet } from './mcp-parser';
+import { expandMcpServerConfig } from './mcp-env-expansion';
+import { buildMcpEnvSource } from './env-sources';
 import { McpServerStatus, McpServerScope } from '../../shared';
 import type { McpServer, McpServersResult, McpServerConfig } from '../../shared';
 
@@ -104,6 +106,17 @@ export async function getMcpServers(cwd?: string): Promise<McpServersResult> {
   // it still reports those servers (and health-checks them), so their status must
   // be overridden to DISABLED here, plus synthetic entries for config-only ones.
   await mergeDisabledServers(servers, disabled, (name) => fetchServerDetails(name, cwd));
+
+  // Report `${VAR}` placeholders nothing defines, the same way the CLI does in
+  // its `claude mcp list` diagnostics. This runs on the list rather than when a
+  // server's tools are fetched because a server broken by a missing variable
+  // often does not connect at all, and the tool fetch only happens for connected
+  // servers — exactly the case where the user most needs to be told why (#364).
+  // One env map is built for the whole list; it does not vary per server.
+  const envSource = await buildMcpEnvSource(cwd);
+  for (const s of servers) {
+    s.missingVars = s.config ? expandMcpServerConfig(s.config, envSource).missingVars : [];
+  }
 
   servers.sort((a, b) => {
     const scopeDiff = scopeRank(a.scope) - scopeRank(b.scope);

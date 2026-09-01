@@ -87,6 +87,16 @@ export interface McpServer {
   tools: McpServerTool[];
   /** Human-readable error message, populated when status === FAILED or NEEDS_AUTH. */
   error: string | null;
+  /**
+   * Names of `${VAR}` placeholders in this server's config that no layer defines.
+   *
+   * Undefined means the check has not run; an empty array means it ran and found
+   * nothing. Unresolved placeholders are left in the config verbatim rather than
+   * blanked, so without this list the server starts with the literal `${VAR}`
+   * text as a setting and fails in whatever way that value happens to cause —
+   * silently, in the case that prompted #364.
+   */
+  missingVars?: string[];
 }
 
 /** Payload of GET_MCP_SERVERS ACK response. */

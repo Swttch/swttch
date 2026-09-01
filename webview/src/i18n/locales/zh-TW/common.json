@@ -124,6 +124,7 @@
       "disable": "停用",
       "loadingTools": "正在載入工具…",
       "loadToolsError": "無法載入工具",
+      "missingVars": "缺少環境變數：{{vars}}",
       "viewTools": "檢視工具({{count}})",
       "readOnly": "唯讀",
       "destructive": "破壞性",
