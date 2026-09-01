@@ -22,7 +22,8 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { McpTransportType } from '../../shared';
 import type { McpServerTool, McpServerConfig } from '../../shared';
-import { expandMcpServerConfig } from './mcp-env-expansion';
+import { expandMcpServerConfig, type EnvSource } from './mcp-env-expansion';
+import { buildMcpEnvSource } from './env-sources';
 
 /** Hard ceiling for a connect + list round-trip, so a hung server can't wedge the UI. */
 const TOOLS_TIMEOUT_MS = 15_000;
@@ -55,14 +56,30 @@ export function mapMcpTool(tool: RawMcpTool): McpServerTool {
 /**
  * Build the SDK transport for a server config, or null when the transport can't
  * be probed directly (claudeai-proxy needs OAuth; ws is rare; missing url/cmd).
+ *
+ * `envSource` is both what `${VAR}` resolves against and what a stdio server is
+ * spawned with, so the value a placeholder expands to is the same value the
+ * server sees under that name. Callers get it from `buildMcpEnvSource()`; it is
+ * passed in rather than read here so the resolution order stays one decision,
+ * made in one place, and remains testable without touching `process.env`.
  */
-export async function buildTransport(rawConfig: McpServerConfig): Promise<Transport | null> {
+export async function buildTransport(
+  rawConfig: McpServerConfig,
+  envSource: EnvSource,
+): Promise<Transport | null> {
   // Resolve ${VAR} placeholders first, exactly as the CLI does before it spawns a
   // server. Without this the server is handed the literal "${VAR}" text and, for
   // servers that tolerate a malformed value, starts up unusable with nothing on
   // screen pointing at the cause (#364).
-  const { config } = expandMcpServerConfig(rawConfig, process.env);
+  const { config } = expandMcpServerConfig(rawConfig, envSource);
   switch (config.type) {
+    // `type` is optional for a stdio server and routinely omitted: the docs'
+    // own .mcp.json examples list only command/args/env, and so does the report
+    // in #364. The CLI treats the missing case as stdio (`case void 0: case
+    // "stdio":` in its transport switch); falling through to `default` here
+    // would return no transport at all, and the panel would show a connected
+    // server with no tools and no error to explain why.
+    case undefined:
     case McpTransportType.STDIO: {
       if (!config.command) return null;
       const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
@@ -70,9 +87,9 @@ export async function buildTransport(rawConfig: McpServerConfig): Promise<Transp
         command: config.command,
         args: config.args ?? [],
         // stdio transports do NOT inherit env by default (SDK security choice);
-        // pass the backend's env so `npx`/`node` resolve via PATH, then layer
+        // pass the merged env so `npx`/`node` resolve via PATH, then layer
         // the server's own env overrides on top.
-        env: stdioEnv(config.env),
+        env: stdioEnv(envSource, config.env),
       });
     }
     case McpTransportType.HTTP: {
@@ -95,13 +112,20 @@ export async function buildTransport(rawConfig: McpServerConfig): Promise<Transp
 }
 
 /**
- * process.env with undefined values stripped, merged with per-server overrides.
+ * The merged env with undefined values stripped, plus per-server overrides.
  * The overrides arrive already expanded (see buildTransport), so what lands here
  * is the resolved value rather than the `${VAR}` text the user wrote.
+ *
+ * The base is the same map the placeholders resolved against, which is what the
+ * CLI hands a server it spawns: a variable a config referenced is also present
+ * under its own name in the server's environment.
  */
-function stdioEnv(overrides?: Record<string, string>): Record<string, string> {
+function stdioEnv(
+  envSource: EnvSource,
+  overrides?: Record<string, string>,
+): Record<string, string> {
   const base: Record<string, string> = {};
-  for (const [key, val] of Object.entries(process.env)) {
+  for (const [key, val] of Object.entries(envSource)) {
     if (val !== undefined) base[key] = val;
   }
   return { ...base, ...(overrides ?? {}) };
@@ -122,10 +146,19 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
  * an empty array for transports that can't be probed directly (e.g. claude.ai
  * connectors) or a null config. Throws on connection/protocol failure so the
  * caller can surface the reason.
+ *
+ * `workingDir` is the workspace the server belongs to. Its project-scope config
+ * files are part of the environment a `${VAR}` resolves against, so a secret
+ * kept in the project (which is where a shared `.mcp.json` is meant to point)
+ * resolves the same way it does when the CLI is run from that directory (#364).
  */
-export async function fetchServerTools(config: McpServerConfig | null): Promise<McpServerTool[]> {
+export async function fetchServerTools(
+  config: McpServerConfig | null,
+  workingDir?: string,
+): Promise<McpServerTool[]> {
   if (!config) return [];
-  const transport = await buildTransport(config);
+  const envSource = await buildMcpEnvSource(workingDir);
+  const transport = await buildTransport(config, envSource);
   if (!transport) return [];
 
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
