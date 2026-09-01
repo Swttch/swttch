@@ -92,6 +92,27 @@ Setups using a version manager (Volta, nvm, fnm) also behave exactly as before. 
 
 ## How it was verified
 
-All 1762 backend tests pass.
+**Reproduced, and then confirmed fixed, on WSL2 on a real Windows 11 machine.**
+
+The backend was handed the id of a live Windows process (`explorer.exe`) as its host, after first confirming that the id does not exist inside the distro. That is the same condition the reporters were in.
+
+| Elapsed | Before the fix (shipped 0.29.4) | After the fix |
+|---|---|---|
+| 5s | alive | alive |
+| 12s | **dead** | alive |
+| 18s | | alive |
+| 25s | | alive |
+
+The reason the old build died is in its own log.
+
+```
+[node-backend] Host process 9328 died — shutting down
+```
+
+Process 9328 was running the entire time.
+
+The fixed build stayed up past two poll intervals and was ended by a termination signal we sent ourselves.
+
+All 1774 backend tests pass as well.
 
 A test reproducing this specific problem was added, and **disabling the fix again makes exactly that test fail**. The passing result was checked to be meaningful before it was trusted.
