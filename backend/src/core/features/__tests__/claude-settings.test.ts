@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
   deepMergeSettings,
   readJsonFileSafe,
   readClaudeSettings,
+  saveClaudeSetting,
 } from '../claude-settings';
 
 // deepMergeSettings used to be re-implemented here because it was not exported.
@@ -197,6 +198,89 @@ describe('claude-settings', () => {
       write('settings.local.json', 'null');
 
       expect((await readClaudeSettings()).env).toEqual({ KEPT: '1' });
+    });
+  });
+
+  // ~/.claude/settings.json is the user's file, not ours: it holds their MCP
+  // servers, their status line, their plugin list and their CLI preferences, and
+  // none of it can be reconstructed from anything we write. A real file went from
+  // 20 keys to 3 (issue #386), so these pin down that saving one setting cannot
+  // take the rest with it.
+  describe('saveClaudeSetting()', () => {
+    let configDir: string;
+    let saved: string | undefined;
+
+    beforeEach(() => {
+      configDir = mkdtempSync(join(tmpdir(), 'ccg-save-'));
+      mkdirSync(configDir, { recursive: true });
+      saved = process.env.CLAUDE_CONFIG_DIR;
+      process.env.CLAUDE_CONFIG_DIR = configDir;
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = saved;
+      rmSync(configDir, { recursive: true, force: true });
+    });
+
+    const settingsPath = () => join(configDir, 'settings.json');
+    const write = (name: string, raw: string) =>
+      writeFileSync(join(configDir, name), raw, 'utf-8');
+    const readSettings = () => readFileSync(settingsPath(), 'utf-8');
+
+    it('keeps every other key when saving one', async () => {
+      write('settings.json', JSON.stringify({ env: { A: '1' }, statusLine: 'x', theme: 'dark' }));
+
+      expect(await saveClaudeSetting('model', 'claude-opus-5')).toEqual({ status: 'ok' });
+      expect(JSON.parse(readSettings())).toEqual({
+        env: { A: '1' },
+        statusLine: 'x',
+        theme: 'dark',
+        model: 'claude-opus-5',
+      });
+    });
+
+    // The wipe itself. A torn write leaves a file that does not parse; treating
+    // that as an empty object made the next save rewrite it as a one-key file.
+    it('refuses to save over a settings file it cannot parse', async () => {
+      // Exactly the shape a truncate-then-write tear leaves: a shorter payload
+      // with the tail of the longer one still behind it.
+      const torn = '{"model":"a"}\n"switchModelsOnFlag": true\n}\n';
+      write('settings.json', torn);
+
+      const result = await saveClaudeSetting('model', 'claude-opus-5');
+
+      expect(result.status).toBe('error');
+      expect(readSettings()).toBe(torn);
+    });
+
+    it('refuses to save when settings.local.json is the unreadable one', async () => {
+      write('settings.json', JSON.stringify({ theme: 'dark' }));
+      write('settings.local.json', '{"model":"a"}{"model":"a"}');
+
+      // Which file owns the key is decided by reading .local. Reading it as empty
+      // would write into settings.json while the stale .local copy kept winning
+      // the merge — the setting would look saved and do nothing.
+      const result = await saveClaudeSetting('model', 'claude-opus-5');
+
+      expect(result.status).toBe('error');
+      expect(JSON.parse(readSettings())).toEqual({ theme: 'dark' });
+    });
+
+    it('does not lose a key when many settings are saved at once', async () => {
+      write('settings.json', JSON.stringify({ statusLine: 'keep-me' }));
+
+      const keys = Array.from({ length: 12 }, (_, i) => `key${i}`);
+      const results = await Promise.all(keys.map((key) => saveClaudeSetting(key, key)));
+
+      expect(results.every((r) => r.status === 'ok')).toBe(true);
+      expect(Object.keys(JSON.parse(readSettings())).sort()).toEqual(
+        ['statusLine', ...keys].sort(),
+      );
+    });
+
+    it('creates the file when there is none yet', async () => {
+      expect(await saveClaudeSetting('theme', 'dark')).toEqual({ status: 'ok' });
+      expect(JSON.parse(readSettings())).toEqual({ theme: 'dark' });
     });
   });
 });

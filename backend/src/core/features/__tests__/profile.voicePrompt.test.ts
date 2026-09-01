@@ -6,6 +6,12 @@ vi.mock('fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
   mkdir: vi.fn(),
+  // The profile is saved atomically (temp file + rename), so the mock has to
+  // cover that whole path and not just writeFile.
+  rename: vi.fn(),
+  stat: vi.fn(),
+  chmod: vi.fn(),
+  unlink: vi.fn(),
 }));
 vi.mock('fs', () => ({
   existsSync: vi.fn(),

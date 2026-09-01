@@ -1,7 +1,8 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { existsSync, watch } from 'fs';
-import { join, dirname } from 'path';
+import { join } from 'path';
 import { getClaudeConfigDir } from './claudeConfigDir';
+import { readJsonForUpdate, updateJsonFile, type JsonUpdateResult } from './atomic-json';
 
 const claudeSettingsFile = () => join(getClaudeConfigDir(), 'settings.json');
 const claudeSettingsLocalFile = () => join(getClaudeConfigDir(), 'settings.local.json');
@@ -70,6 +71,11 @@ export function deepMergeSettings(
  * settings down with it, and spreading an array or string leaks index keys ("0",
  * "1", …) into the merged settings. Anything that is not a plain object is
  * treated as an unusable file, exactly like a parse failure.
+ *
+ * This is for READERS only. Collapsing "unreadable" into "empty" is what turned
+ * a torn write into a wipe of the user's settings (issue #386), so the read half
+ * of a read-modify-write uses {@link readJsonForUpdate} instead, which reports
+ * the two cases separately.
  */
 export async function readJsonFileSafe(filePath: string): Promise<Record<string, unknown>> {
   try {
@@ -107,28 +113,65 @@ export async function readClaudeSettings(): Promise<Record<string, unknown>> {
 /**
  * Write a key-value to a JSON file, preserving other keys.
  * If value is null/undefined, delete the key.
+ *
+ * The file belongs to the user, so the update is atomic and it aborts rather
+ * than overwriting a file it could not read (issue #386).
  */
-async function writeKeyToJsonFile(filePath: string, key: string, value: unknown): Promise<void> {
-  const current = await readJsonFileSafe(filePath);
-  if (value === null || value === undefined) {
-    delete current[key];
-  } else {
-    current[key] = value;
-  }
-  const dir = dirname(filePath);
-  await mkdir(dir, { recursive: true });
-  await writeFile(filePath, JSON.stringify(current, null, 2) + '\n', 'utf-8');
+function writeKeyToJsonFile(filePath: string, key: string, value: unknown): Promise<JsonUpdateResult> {
+  return updateJsonFile(filePath, (current) => {
+    if (value === null || value === undefined) {
+      delete current[key];
+    } else {
+      current[key] = value;
+    }
+    return current;
+  });
 }
 
 /**
  * Remove a key from a JSON file if it exists there.
  * No-op if file doesn't exist or key is absent.
  */
-async function removeKeyFromJsonFile(filePath: string, key: string): Promise<void> {
-  const current = await readJsonFileSafe(filePath);
-  if (!(key in current)) return;
-  delete current[key];
-  await writeFile(filePath, JSON.stringify(current, null, 2) + '\n', 'utf-8');
+function removeKeyFromJsonFile(filePath: string, key: string): Promise<JsonUpdateResult> {
+  return updateJsonFile(filePath, (current) => {
+    if (!(key in current)) return null;
+    delete current[key];
+    return current;
+  });
+}
+
+/**
+ * Save a key into whichever of the two files (base or `.local`) already holds it,
+ * with `.local` taking priority; deletion removes it from both.
+ *
+ * Which file owns the key is decided by reading `.local`, and that read has to
+ * distinguish "no such key" from "could not read the file". Treating an
+ * unreadable `.local` as empty would silently write the value into the base file
+ * while the stale `.local` copy kept winning the merge — the setting would look
+ * saved and do nothing.
+ */
+async function saveKeyIntoOwningFile(
+  baseFile: string,
+  localFile: string,
+  key: string,
+  value: unknown,
+): Promise<{ status: 'ok' | 'error'; error?: string }> {
+  if (value === null || value === undefined) {
+    const results = [
+      await removeKeyFromJsonFile(baseFile, key),
+      await removeKeyFromJsonFile(localFile, key),
+    ];
+    const failed = results.find((r) => r.status === 'error');
+    return failed ? { status: 'error', error: failed.error } : { status: 'ok' };
+  }
+
+  const local = await readJsonForUpdate(localFile);
+  if (local.status === 'unreadable') {
+    return { status: 'error', error: `${localFile} exists but could not be read (${local.reason})` };
+  }
+  const target = key in local.data ? localFile : baseFile;
+  const result = await writeKeyToJsonFile(target, key, value);
+  return result.status === 'ok' ? { status: 'ok' } : { status: 'error', error: result.error };
 }
 
 /**
@@ -142,21 +185,7 @@ export async function saveClaudeSetting(
 ): Promise<{ status: 'ok' | 'error'; error?: string }> {
   try {
     await mkdir(getClaudeConfigDir(), { recursive: true });
-
-    if (value === null || value === undefined) {
-      await removeKeyFromJsonFile(claudeSettingsFile(), key);
-      await removeKeyFromJsonFile(claudeSettingsLocalFile(), key);
-      return { status: 'ok' };
-    }
-
-    // Write to the file where the key currently lives (local takes priority)
-    const localSettings = await readJsonFileSafe(claudeSettingsLocalFile());
-    if (key in localSettings) {
-      await writeKeyToJsonFile(claudeSettingsLocalFile(), key, value);
-    } else {
-      await writeKeyToJsonFile(claudeSettingsFile(), key, value);
-    }
-    return { status: 'ok' };
+    return await saveKeyIntoOwningFile(claudeSettingsFile(), claudeSettingsLocalFile(), key, value);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[node-backend]', 'Failed to save Claude setting:', err);
@@ -210,21 +239,7 @@ export async function saveClaudeSettingToScope(
       const baseFile = join(projectPath, '.claude', 'settings.json');
       const localFile = join(projectPath, '.claude', 'settings.local.json');
       await mkdir(join(projectPath, '.claude'), { recursive: true });
-
-      if (value === null || value === undefined) {
-        await removeKeyFromJsonFile(baseFile, key);
-        await removeKeyFromJsonFile(localFile, key);
-        return { status: 'ok' };
-      }
-
-      // Write to the file where the key currently lives (local takes priority)
-      const localSettings = await readJsonFileSafe(localFile);
-      if (key in localSettings) {
-        await writeKeyToJsonFile(localFile, key, value);
-      } else {
-        await writeKeyToJsonFile(baseFile, key, value);
-      }
-      return { status: 'ok' };
+      return await saveKeyIntoOwningFile(baseFile, localFile, key, value);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { status: 'error', error: msg };

@@ -1,9 +1,10 @@
-import { readFile, writeFile, mkdir, rm } from 'fs/promises';
+import { readFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 import { readProfile } from './profile';
 import { readLiveOauthAccount } from './live-credentials';
 import { buildDeviceName } from './deviceName';
+import { atomicWriteFile } from './atomic-json';
 
 // Sponsor license storage + remote verification.
 //
@@ -239,7 +240,7 @@ export async function readLicense(): Promise<StoredLicense | null> {
 /** Persist a verified license. */
 export async function saveLicense(license: StoredLicense): Promise<void> {
   await mkdir(LICENSE_DIR, { recursive: true });
-  await writeFile(LICENSE_FILE, JSON.stringify(license, null, 2) + '\n', 'utf-8');
+  await atomicWriteFile(LICENSE_FILE, JSON.stringify(license, null, 2) + '\n');
 }
 
 /** Remove the stored license (deactivate sponsorship on this install). */
