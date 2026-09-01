@@ -21,12 +21,27 @@ const EXPAND = i18n.t('sendActions.expandReply', { ns: 'chat' });
 const COLLAPSED = i18n.t('sendActions.collapsedReply', { ns: 'chat' });
 
 /**
+ * What the notice reads once it has a number to report.
+ *
+ * The plain `COLLAPSED` above is the fallback for a reply that drew no bullet
+ * at all, so most of these assertions want this one.
+ */
+const collapsedCount = (count: number) =>
+  i18n.t('sendActions.collapsedReplyCount', { ns: 'chat', count });
+
+/**
  * Collapsing a reply, end to end through the real bubbles (issue #368).
  *
  * `ChatMessageArea.test.tsx` next door mocks `MessageBubble` away, which is the
- * right call for the list behaviour it covers but leaves no menu to click — the
- * control lives inside `UserMessageRenderer`. So these render the genuine
- * renderers and drive the menu the way a user would.
+ * right call for the list behaviour it covers but leaves no control to click —
+ * both of them live inside `UserMessageRenderer`. So these render the genuine
+ * renderers and drive the controls the way a user would.
+ *
+ * A collapsed reply is asserted with `toBeVisible`, not `toBeInTheDocument`.
+ * Folding hides the body with CSS and leaves it mounted, which is what keeps
+ * the notice's count able to follow a reply that is still streaming — so "the
+ * reply is collapsed" means it is on the page and not showing, and a presence
+ * check would now pass for a section that never folded at all.
  */
 
 const mockSessionContext = {
@@ -143,12 +158,12 @@ describe('ChatMessageArea — collapsing a reply', () => {
       reply('a2', 'second answer'),
     ]);
 
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('first answer')).toBeVisible();
 
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
     // The send stays: collapsing turns the transcript into a list of prompts.
     expect(screen.getByText('first prompt')).toBeInTheDocument();
   });
@@ -167,12 +182,12 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     // Asserted together with the first reply being gone, or this passes just as
     // well when nothing collapses at all.
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
     expect(screen.getByText('second prompt')).toBeInTheDocument();
-    expect(screen.getByText('second answer')).toBeInTheDocument();
+    expect(screen.getByText('second answer')).toBeVisible();
   });
 
-  it('marks the gap rather than leaving it blank', async () => {
+  it('marks the gap rather than leaving it blank, and says how big it is', async () => {
     const user = userEvent.setup();
     renderArea([
       send('u1', 'first prompt'),
@@ -184,19 +199,19 @@ describe('ChatMessageArea — collapsing a reply', () => {
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
-    expect(screen.getByRole('button', { name: COLLAPSED })).toBeInTheDocument();
+    // Two assistant turns, one bullet each — the number a reader would reach by
+    // counting the dots down the left of the reply that just disappeared.
+    expect(screen.getByRole('button', { name: collapsedCount(2) })).toBeInTheDocument();
   });
 
-  it('says the same thing however many entries the reply holds', async () => {
-    // The notice used to report `body.length`, which counts JSONL entries and
-    // not drawn bubbles, so the number disagreed with the screen — and
-    // disagreed by a different amount live vs. reloaded from disk.
+  it('counts what the reply drew, not the entries it is made of', async () => {
+    // The notice reported `body.length` once and the number disagreed with the
+    // screen: it counts JSONL entries, and an entry is not a bullet.
     //
     // `attachment` entries are what drove the two apart on a real session:
     // `MessageBubble` has no case for them and returns null, yet they sit in
     // the section's body like anything else. Measured on the reporter's
-    // transcript, one section held 11 entries and drew 4 — the other 7 were
-    // attachments.
+    // transcript, one section held 11 entries and drew 4.
     const user = userEvent.setup();
     const attachment = (uuid: string): LoadedMessageDto => ({
       uuid,
@@ -220,15 +235,16 @@ describe('ChatMessageArea — collapsing a reply', () => {
     const { unmount } = renderArea(lean);
     await openMenuOn(user, 'p');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
-    const leanText = screen.getByRole('button', { name: COLLAPSED }).textContent;
+    const leanText = screen.getByRole('button', { name: collapsedCount(1) }).textContent;
     unmount();
 
     renderArea(padded);
     await openMenuOn(user, 'p');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
-    const paddedText = screen.getByRole('button', { name: COLLAPSED }).textContent;
+    const paddedText = screen.getByRole('button', { name: collapsedCount(1) }).textContent;
 
-    // Same reply on screen either way, so the notice must read the same.
+    // Same reply on screen either way, so the notice must read the same — and
+    // must say one, not four.
     expect(paddedText).toBe(leanText);
   });
 
@@ -238,9 +254,9 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
-    await user.click(screen.getByRole('button', { name: COLLAPSED }));
+    await user.click(screen.getByRole('button', { name: collapsedCount(1) }));
 
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('first answer')).toBeVisible();
   });
 
   it('brings the reply back from the menu, which now offers the opposite action', async () => {
@@ -249,12 +265,12 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
 
     await openMenuOn(user, 'first prompt');
     await user.click(screen.getByRole('menuitem', { name: EXPAND }));
 
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('first answer')).toBeVisible();
   });
 
   it('draws no notice for a send that has no reply yet', async () => {
@@ -265,6 +281,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
 
     expect(screen.queryByRole('button', { name: COLLAPSED })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: collapsedCount(0) })).not.toBeInTheDocument();
     expect(screen.getByText('first prompt')).toBeInTheDocument();
   });
 
@@ -278,7 +295,7 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     await openMenuOn(user, 'second prompt');
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
-    expect(screen.queryByText('second answer')).not.toBeInTheDocument();
+    expect(screen.getByText('second answer')).not.toBeVisible();
 
     rerender(
       <ChatMessageArea
@@ -296,8 +313,8 @@ describe('ChatMessageArea — collapsing a reply', () => {
     );
 
     // Still the same send that is collapsed, and only that one.
-    expect(screen.queryByText('second answer')).not.toBeInTheDocument();
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('second answer')).not.toBeVisible();
+    expect(screen.getByText('first answer')).toBeVisible();
   });
 
   it('does not toggle the bubble expand underneath when the menu is used', async () => {
@@ -338,9 +355,9 @@ describe('ChatMessageArea — the fold arrow beside a send', () => {
 
     // No menu was ever on screen, which is the whole point of this control.
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
     // Asserted alongside, or this passes just as well when nothing collapses.
-    expect(screen.getByText('second answer')).toBeInTheDocument();
+    expect(screen.getByText('second answer')).toBeVisible();
   });
 
   it('brings the reply back on a second click', async () => {
@@ -348,10 +365,10 @@ describe('ChatMessageArea — the fold arrow beside a send', () => {
     renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
 
     await user.click(foldArrowOn('first prompt'));
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
 
     await user.click(foldArrowOn('first prompt'));
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('first answer')).toBeVisible();
   });
 
   it('reports the section state, so a collapsed reply reads as folded and not as broken', async () => {
@@ -380,7 +397,7 @@ describe('ChatMessageArea — the fold arrow beside a send', () => {
     expect(screen.getByRole('menuitem', { name: EXPAND })).toBeInTheDocument();
     await user.click(screen.getByRole('menuitem', { name: EXPAND }));
 
-    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(screen.getByText('first answer')).toBeVisible();
     expect(foldArrowOn('first prompt')).toHaveAttribute('aria-expanded', 'true');
   });
 
@@ -396,7 +413,7 @@ describe('ChatMessageArea — the fold arrow beside a send', () => {
 
     await user.click(foldArrowOn('compact'));
 
-    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    expect(screen.getByText('first answer')).not.toBeVisible();
   });
 
   it('does not toggle the bubble expand underneath', async () => {

@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "折叠回复",
     "collapsedReply": "回复已折叠",
+    "collapsedReplyCount": "已折叠 {{count}} 条回复",
+    "collapsedReplyCount_one": "已折叠 {{count}} 条回复",
+    "collapsedReplyCount_other": "已折叠 {{count}} 条回复",
     "expandReply": "展开回复",
     "menuLabel": "消息操作"
   },

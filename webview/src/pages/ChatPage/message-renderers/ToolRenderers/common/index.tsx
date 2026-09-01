@@ -64,8 +64,16 @@ export const ToolWrapper = (props: {
     return (
         <div className={cn(`group pt-2 pb-4 ps-6 pe-3`, groupClassName)}>
             <div className="flex items-start gap-3">
-                {/* Bullet indicator — colored by tool status (success/error/pending) */}
-                <span className={cn('mt-[3px] text-[0.6923rem]', bulletColor)}>●</span>
+                {/*
+                  Bullet indicator — colored by tool status (success/error/pending).
+
+                  `data-message-bullet` is what `useSectionFold` counts to report
+                  how much of a reply it is hiding. A bullet is what a reader
+                  takes for "one message", and this wrapper is the one place
+                  that draws one, so the attribute belongs here rather than on
+                  each of the ~190 renderers that mount it.
+                */}
+                <span data-message-bullet className={cn('mt-[3px] text-[0.6923rem]', bulletColor)}>●</span>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">

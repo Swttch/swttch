@@ -477,6 +477,13 @@
   "sendActions": {
     "collapseReply": "طيّ الرد",
     "collapsedReply": "الرد مطوي",
+    "collapsedReplyCount": "تم طي {{count}} رد",
+    "collapsedReplyCount_zero": "لم يتم طي أي رد",
+    "collapsedReplyCount_one": "تم طي رد واحد",
+    "collapsedReplyCount_two": "تم طي ردين",
+    "collapsedReplyCount_few": "تم طي {{count}} ردود",
+    "collapsedReplyCount_many": "تم طي {{count}} ردًا",
+    "collapsedReplyCount_other": "تم طي {{count}} رد",
     "expandReply": "توسيع الرد",
     "menuLabel": "إجراءات الرسالة"
   },

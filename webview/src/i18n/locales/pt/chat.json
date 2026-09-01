@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "Recolher resposta",
     "collapsedReply": "Resposta recolhida",
+    "collapsedReplyCount": "{{count}} respostas recolhidas",
+    "collapsedReplyCount_one": "{{count}} resposta recolhida",
+    "collapsedReplyCount_other": "{{count}} respostas recolhidas",
     "expandReply": "Expandir resposta",
     "menuLabel": "Ações da mensagem"
   },

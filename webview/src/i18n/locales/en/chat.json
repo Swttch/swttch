@@ -473,6 +473,9 @@
   "sendActions": {
     "collapseReply": "Collapse reply",
     "collapsedReply": "Reply collapsed",
+    "collapsedReplyCount": "{{count}} replies collapsed",
+    "collapsedReplyCount_one": "{{count}} reply collapsed",
+    "collapsedReplyCount_other": "{{count}} replies collapsed",
     "expandReply": "Expand reply",
     "menuLabel": "Message actions"
   },

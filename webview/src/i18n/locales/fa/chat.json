@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "جمع کردن پاسخ",
     "collapsedReply": "پاسخ جمع شده است",
+    "collapsedReplyCount": "{{count}} پاسخ جمع شده است",
+    "collapsedReplyCount_one": "{{count}} پاسخ جمع شده است",
+    "collapsedReplyCount_other": "{{count}} پاسخ جمع شده است",
     "expandReply": "باز کردن پاسخ",
     "menuLabel": "عملیات پیام"
   },

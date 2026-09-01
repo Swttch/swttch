@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "Réduire la réponse",
     "collapsedReply": "Réponse réduite",
+    "collapsedReplyCount": "{{count}} réponses réduites",
+    "collapsedReplyCount_one": "{{count}} réponse réduite",
+    "collapsedReplyCount_other": "{{count}} réponses réduites",
     "expandReply": "Développer la réponse",
     "menuLabel": "Actions du message"
   },

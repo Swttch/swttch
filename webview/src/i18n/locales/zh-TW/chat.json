@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "摺疊回覆",
     "collapsedReply": "回覆已摺疊",
+    "collapsedReplyCount": "已摺疊 {{count}} 則回覆",
+    "collapsedReplyCount_one": "已摺疊 {{count}} 則回覆",
+    "collapsedReplyCount_other": "已摺疊 {{count}} 則回覆",
     "expandReply": "展開回覆",
     "menuLabel": "訊息操作"
   },
