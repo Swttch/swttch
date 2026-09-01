@@ -24,6 +24,7 @@ import { McpTransportType } from '../../shared';
 import type { McpServerTool, McpServerConfig } from '../../shared';
 import { expandMcpServerConfig, type EnvSource } from './mcp-env-expansion';
 import { buildMcpEnvSource } from './env-sources';
+import { withMcpContainerReclaim } from '../mcp-container-reclaimer';
 
 /** Hard ceiling for a connect + list round-trip, so a hung server can't wedge the UI. */
 const TOOLS_TIMEOUT_MS = 15_000;
@@ -157,6 +158,16 @@ export async function fetchServerTools(
   workingDir?: string,
 ): Promise<McpServerTool[]> {
   if (!config) return [];
+  // This path spawns the server itself, and the SDK's shutdown (stdin EOF, then
+  // SIGTERM, then SIGKILL) reaches the `docker` client rather than the container,
+  // so a container that ignores both survives it (#363).
+  return withMcpContainerReclaim(workingDir, () => connectAndListTools(config, workingDir));
+}
+
+async function connectAndListTools(
+  config: McpServerConfig,
+  workingDir?: string,
+): Promise<McpServerTool[]> {
   const envSource = await buildMcpEnvSource(workingDir);
   const transport = await buildTransport(config, envSource);
   if (!transport) return [];

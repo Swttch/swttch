@@ -640,6 +640,26 @@ export class ConnectionManager {
     return this.sessionRegistry.get(sessionId);
   }
 
+  /**
+   * A session whose CLI is alive and writable for the given workspace, if any.
+   *
+   * Used to ask a running CLI something instead of spawning a new one for the
+   * answer. `workingDir` has to match because MCP configuration is per-project:
+   * a `.mcp.json` belongs to one workspace, so another workspace's CLI would
+   * report a different set of servers.
+   *
+   * Returns undefined when no CLI has been spawned yet, which is the ordinary
+   * state of a chat tab before its first message. Callers treat that as "ask the
+   * CLI the official way instead" rather than as an error.
+   */
+  findLiveSessionForWorkingDir(workingDir: string): SessionRecord | undefined {
+    for (const session of this.sessionRegistry.values()) {
+      if (session.workingDir !== workingDir) continue;
+      if (session.process?.stdin?.writable) return session;
+    }
+    return undefined;
+  }
+
   getOrCreateSession(sessionId: string, workingDir?: string): SessionRecord {
     let session = this.sessionRegistry.get(sessionId);
     if (!session) {

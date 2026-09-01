@@ -22,9 +22,11 @@ import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
+import { removeContainersById } from './core/mcp-container-reclaimer';
 import { startParentWatchdog } from './core/parent-watchdog';
 import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
+import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
 
 /**
  * JetBrains 모드: JETBRAINS_MODE=true 환경변수로 감지
@@ -255,7 +257,12 @@ async function main() {
   // JS-level guard from the process-group hard-binding) leaves its CLI children running
   // headless. The registry written at spawn time lets this fresh backend find
   // and kill them before it starts serving.
-  await sweepOrphanCliProcesses();
+  // Kill CLIs a previous backend left behind, then remove the MCP containers
+  // those CLIs were holding. A backend killed outright never ran its own reclaim,
+  // and by now nothing else can tell which containers were theirs — the ids come
+  // from the registry entries the sweep just retired (#363).
+  const { mcpContainers } = await sweepOrphanCliProcesses();
+  await removeContainersById(mcpContainers);
 
   const bridges: BridgeMap = {
     [ClientEnv.BROWSER]: new BrowserBridge(),
@@ -526,6 +533,12 @@ async function main() {
     stopSettingsWatcher();
     connections.shutdownAll();
     close();
+
+    // The CLIs were just signalled; give the MCP container cleanup their deaths
+    // triggered a chance to finish before this process exits out from under it.
+    // Otherwise closing the IDE leaks exactly the containers the last live
+    // session was holding (#363).
+    await drainMcpContainerReclaims();
 
     // 로그 스트림 flush 대기 (최대 5초)
     const timeoutPromise = new Promise<void>((resolve) => setTimeout(resolve, 5000));

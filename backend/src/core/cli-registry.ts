@@ -33,6 +33,19 @@ export interface CliRegistryEntry {
   startedAt: string;
   /** The backend that spawned the CLI; argv1 lets liveness checks survive pid reuse. */
   owner: { pid: number; argv1: string };
+  /**
+   * Ids of the MCP docker containers this CLI started, recorded shortly after
+   * the spawn (see mcp-container-reclaimer).
+   *
+   * Present so a container survives the same hole this registry exists for: the
+   * reclaim normally runs when the CLI exits, but a SIGKILLed backend never gets
+   * to run it, and the container then belongs to nobody (#363). Written here
+   * rather than derived at sweep time because by then there is no way to tell
+   * which containers were this CLI's — Docker records nothing about who started
+   * one, and a diff taken later would also catch containers a DIFFERENT live
+   * CLI is still using.
+   */
+  mcpContainers?: string[];
 }
 
 function registryDir(): string {
@@ -179,6 +192,29 @@ export function registerCliProcess(proc: ChildProcess, sessionId: string, workin
   }
 }
 
+/**
+ * Attach the ids of the MCP containers a registered CLI started.
+ *
+ * A no-op when the pid has no entry, which is how short-lived CLIs (`--version`,
+ * `auth status`, the `mcp` commands) opt out: they are not registered, and they
+ * finish long before a backend could be killed mid-flight.
+ *
+ * Merges rather than replaces, so a second observation can add a server that was
+ * slower to start without dropping the first.
+ */
+export function recordCliContainers(pid: number | undefined, ids: string[]): void {
+  if (!pid || ids.length === 0) return;
+  const file = join(registryDir(), `${pid}.json`);
+  try {
+    const entry = JSON.parse(readFileSync(file, 'utf-8')) as CliRegistryEntry;
+    const merged = [...new Set([...(entry.mcpContainers ?? []), ...ids])];
+    if (merged.length === (entry.mcpContainers?.length ?? 0)) return;
+    writeFileSync(file, JSON.stringify({ ...entry, mcpContainers: merged }, null, 2) + '\n');
+  } catch {
+    // No entry (unregistered CLI) or a racing removal — nothing to attach to.
+  }
+}
+
 export function unregisterCliProcess(pid: number | undefined): void {
   if (!pid) return;
   try {
@@ -301,12 +337,28 @@ export async function killRegisteredCli(entry: CliRegistryEntry, graceMs = 3_000
  * Entries owned by other LIVE backends are left alone (multi-backend setups are
  * legitimate); dead/reused entries are garbage-collected.
  */
-export async function sweepOrphanCliProcesses(): Promise<{ killed: number; skipped: number }> {
+export async function sweepOrphanCliProcesses(): Promise<{
+  killed: number;
+  skipped: number;
+  /**
+   * MCP containers belonging to CLIs that are gone by the end of this sweep.
+   *
+   * Returned rather than removed here so this module stays free of any docker
+   * knowledge; the caller hands them to the reclaimer. Entries owned by a LIVE
+   * backend are skipped, exactly as their processes are, so a container another
+   * backend's session is still using is never listed.
+   */
+  mcpContainers: string[];
+}> {
   let killed = 0;
   let skipped = 0;
+  const mcpContainers: string[] = [];
   for (const entry of readEntries()) {
     const state = cliState(entry);
     if (state === 'dead') {
+      // The CLI is gone, so whatever it started is unreachable — collect it even
+      // though nothing needs killing.
+      mcpContainers.push(...(entry.mcpContainers ?? []));
       unregisterCliProcess(entry.pid);
       continue;
     }
@@ -314,6 +366,7 @@ export async function sweepOrphanCliProcesses(): Promise<{ killed: number; skipp
       skipped++;
       continue;
     }
+    mcpContainers.push(...(entry.mcpContainers ?? []));
     console.error(
       '[node-backend]',
       `Orphan sweep: killing orphaned CLI ${entry.pid} (session ${entry.sessionId}, dead owner ${entry.owner.pid})`,
@@ -324,5 +377,5 @@ export async function sweepOrphanCliProcesses(): Promise<{ killed: number; skipp
   if (killed > 0 || skipped > 0) {
     console.error('[node-backend]', `Orphan sweep done: killed ${killed}, skipped ${skipped}`);
   }
-  return { killed, skipped };
+  return { killed, skipped, mcpContainers: [...new Set(mcpContainers)] };
 }

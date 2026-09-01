@@ -18,6 +18,7 @@ import {
   killRegisteredCli,
   sweepOrphanCliProcesses,
   isValidSessionId,
+  recordCliContainers,
   type CliRegistryEntry,
 } from '../cli-registry';
 
@@ -220,7 +221,7 @@ describe.skipIf(!isPosix)('cli-registry (POSIX, real processes)', () => {
     // readEntries rejects pid <= 1 up front, so the sweep never sees it, never
     // signals a group, and GCs the corrupt file.
     expect(groupSignals).toEqual([]);
-    expect(result).toEqual({ killed: 0, skipped: 0 });
+    expect(result).toEqual({ killed: 0, skipped: 0, mcpContainers: [] });
     expect(existsSync(bogus)).toBe(false);
   });
 
@@ -242,14 +243,45 @@ describe.skipIf(!isPosix)('cli-registry (POSIX, real processes)', () => {
     process.kill(-(gone.pid as number), 'SIGKILL');
     await waitUntil(() => !pidAlive(gone.pid as number));
 
+    // Containers on each entry, so the sweep's collection can be told apart from
+    // what it leaves alone (#363).
+    recordCliContainers(orphan.pid as number, ['cafe1']);
+    recordCliContainers(owned.pid as number, ['cafe2']);
+    recordCliContainers(gone.pid as number, ['cafe3']);
+
     const result = await sweepOrphanCliProcesses();
 
-    expect(result).toEqual({ killed: 1, skipped: 1 });
+    // The orphan's and the already-dead CLI's containers are collected; the one
+    // whose backend is still alive is NOT — that backend will reclaim it itself,
+    // and its session may still be using it.
+    expect(result).toEqual({ killed: 1, skipped: 1, mcpContainers: ['cafe1', 'cafe3'] });
     await waitUntil(() => !pidAlive(orphan.pid as number));
     expect(pidAlive(owned.pid as number)).toBe(true);
     expect(existsSync(entryPath(orphan.pid as number))).toBe(false);
     expect(existsSync(entryPath(gone.pid as number))).toBe(false);
     expect(existsSync(entryPath(owned.pid as number))).toBe(true);
+  });
+
+  it('records containers onto an entry, merging repeat observations', async () => {
+    const proc = spawnMarked('sess-containers');
+    spawned.push(proc);
+    const pid = proc.pid as number;
+    registerCliProcess(proc, 'sess-containers', '/tmp/proj');
+
+    recordCliContainers(pid, ['aaa']);
+    recordCliContainers(pid, ['aaa', 'bbb']);
+
+    const entry = JSON.parse(readFileSync(entryPath(pid), 'utf-8')) as CliRegistryEntry;
+    // Merged, not replaced: a server that was slower to start must not drop the
+    // one seen first.
+    expect(entry.mcpContainers).toEqual(['aaa', 'bbb']);
+  });
+
+  it('ignores container ids for a pid that was never registered', () => {
+    // Short-lived CLIs (`--version`, `auth status`) have no entry, and that is how
+    // they opt out of crash recovery rather than by a flag at every call site.
+    expect(() => recordCliContainers(999999, ['aaa'])).not.toThrow();
+    expect(existsSync(entryPath(999999))).toBe(false);
   });
 });
 
@@ -374,7 +406,7 @@ describe.skipIf(isPosix)('cli-registry (win32, real processes)', () => {
       const result = await sweepOrphanCliProcesses();
 
       // readEntries rejects pid <= 1 up front: never swept, GC'd instead.
-      expect(result).toEqual({ killed: 0, skipped: 0 });
+      expect(result).toEqual({ killed: 0, skipped: 0, mcpContainers: [] });
       expect(existsSync(bogus)).toBe(false);
     },
     WIN_TIMEOUT,

@@ -86,7 +86,8 @@ export function parseMcpGet(output: string): McpServer | null {
     status,
     scope,
     config,
-    tools: [],
+    // No `tools` key: `claude mcp get` reports no tool list at all, and an empty
+    // array would claim the server was asked and answered none.
     error,
   };
 }

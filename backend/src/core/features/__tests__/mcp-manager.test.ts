@@ -67,11 +67,13 @@ describe('mergeDisabledServers', () => {
         name: 'ghost',
         scope: McpServerScope.USER,
         config: null,
-        tools: [],
         status: McpServerStatus.DISABLED,
         error: null,
       },
     ]);
+    // Nothing asked this server for its tools, so the entry must not carry a
+    // tool list at all — an empty one would read as "asked, exposes none".
+    expect(servers[0].tools).toBeUndefined();
   });
 
   it('is a no-op when the disabled list is empty', async () => {

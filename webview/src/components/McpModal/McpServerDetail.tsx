@@ -42,13 +42,16 @@ export function McpServerDetail(props: Props) {
   const isFailed = server.status === McpServerStatus.FAILED;
   const needsAuth = server.status === McpServerStatus.NEEDS_AUTH;
 
-  // Tools are fetched live by connecting to the server (MCP tools/list); only
-  // attempt it for connected servers, where a connection actually succeeds.
-  const { data: tools = [], isFetching: toolsLoading, error: toolsError } = useMcpServerTools(
+  // The list already carries the tool list when it came from a running CLI, so
+  // asking again would open a second connection to a server whose answer is
+  // already on screen. Absent `tools` is the case that still needs asking; an
+  // empty array is an answer, not a gap (see McpServer.tools).
+  const { data: fetchedTools = [], isFetching: toolsLoading, error: toolsError } = useMcpServerTools(
     server.name,
     server.config,
-    isConnected,
+    isConnected && server.tools === undefined,
   );
+  const tools = server.tools ?? fetchedTools;
 
   async function wrap(action: string, fn: () => Promise<void>): Promise<void> {
     setBusyAction(action);
@@ -207,7 +210,8 @@ export function McpServerDetail(props: Props) {
           />
         </div>
 
-        {/* View tools — fetched live via MCP tools/list for connected servers */}
+        {/* View tools — from the list when a running CLI reported them, otherwise
+            fetched live via MCP tools/list for connected servers */}
         {isConnected && (
           <div>
             {toolsLoading && tools.length === 0 ? (

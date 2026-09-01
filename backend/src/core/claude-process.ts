@@ -13,6 +13,7 @@ import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
+import { settleControlResponse } from './control-response-waiter';
 import { MessageType } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
@@ -909,6 +910,11 @@ function handleStreamEvent(
   bridge: Bridge,
 ): void {
   const eventType = event.type as string;
+
+  // Hand a control_response to whichever backend caller is awaiting it (MCP
+  // status, for one). Read-only: the event is still forwarded below unchanged,
+  // so a WebView-issued request still matches its own reply exactly as before.
+  settleControlResponse(event);
 
   // Detect files Claude edited and, once each edit completes on disk, ask the
   // IDE to reload them (issue #72 — CLI writes bypass the IDE, and the native
