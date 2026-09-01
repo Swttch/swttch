@@ -87,6 +87,23 @@ async function openMenuOn(user: ReturnType<typeof userEvent.setup>, sendText: st
   await user.click(button!);
 }
 
+/**
+ * The fold arrow in the gutter beside the send whose text is `sendText`.
+ *
+ * Matched by what it is rather than by its label: the ⋮ button on the same
+ * bubble also carries `aria-expanded` (its menu's open state), and both
+ * controls answer to the same name while the menu is shut. `aria-haspopup` is
+ * what tells them apart, and it is the menu button's own defining attribute
+ * rather than a hook added for this test.
+ */
+function foldArrowOn(sendText: string): HTMLElement {
+  const bubble = screen.getByText(sendText).closest('.group');
+  expect(bubble).not.toBeNull();
+  const arrow = bubble!.querySelector<HTMLElement>('button[aria-expanded]:not([aria-haspopup])');
+  expect(arrow).not.toBeNull();
+  return arrow!;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   Element.prototype.scrollIntoView = vi.fn();
@@ -295,6 +312,106 @@ describe('ChatMessageArea — collapsing a reply', () => {
 
     // Opening the menu is not a click on the send, so the box must not have
     // switched into its expanded styling.
+    expect(box!.className).toBe(before);
+  });
+});
+
+/**
+ * The fold arrow in the gutter (issue #368, second round).
+ *
+ * The menu shipped first and the reporter counted its steps: open, cross the
+ * bubble, click the item. These cover the direct control that replaced that
+ * count with one click, and the arrow's own job of saying which state the
+ * section is in without anything being hovered.
+ */
+describe('ChatMessageArea — the fold arrow beside a send', () => {
+  it('hides the reply in a single click, with no menu opened', async () => {
+    const user = userEvent.setup();
+    renderArea([
+      send('u1', 'first prompt'),
+      reply('a1', 'first answer'),
+      send('u2', 'second prompt'),
+      reply('a2', 'second answer'),
+    ]);
+
+    await user.click(foldArrowOn('first prompt'));
+
+    // No menu was ever on screen, which is the whole point of this control.
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+    // Asserted alongside, or this passes just as well when nothing collapses.
+    expect(screen.getByText('second answer')).toBeInTheDocument();
+  });
+
+  it('brings the reply back on a second click', async () => {
+    const user = userEvent.setup();
+    renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
+
+    await user.click(foldArrowOn('first prompt'));
+    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+
+    await user.click(foldArrowOn('first prompt'));
+    expect(screen.getByText('first answer')).toBeInTheDocument();
+  });
+
+  it('reports the section state, so a collapsed reply reads as folded and not as broken', async () => {
+    const user = userEvent.setup();
+    renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
+
+    expect(foldArrowOn('first prompt')).toHaveAttribute('aria-expanded', 'true');
+    expect(foldArrowOn('first prompt')).toHaveAccessibleName(COLLAPSE);
+
+    await user.click(foldArrowOn('first prompt'));
+
+    expect(foldArrowOn('first prompt')).toHaveAttribute('aria-expanded', 'false');
+    expect(foldArrowOn('first prompt')).toHaveAccessibleName(EXPAND);
+  });
+
+  it('agrees with the menu, which still offers the same action', async () => {
+    // The two controls read one piece of state. Folding from the arrow has to
+    // leave the menu offering the opposite action, or the pair would drift into
+    // disagreeing about what is on screen.
+    const user = userEvent.setup();
+    renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
+
+    await user.click(foldArrowOn('first prompt'));
+
+    await openMenuOn(user, 'first prompt');
+    expect(screen.getByRole('menuitem', { name: EXPAND })).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: EXPAND }));
+
+    expect(screen.getByText('first answer')).toBeInTheDocument();
+    expect(foldArrowOn('first prompt')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('is drawn on a slash command too, which heads a section like any other send', async () => {
+    // The send bubble has two shapes and each builds its own row, so wiring one
+    // and not the other is the failure this catches: a `/compact` at the top of
+    // a long run of tool calls is exactly the reply worth folding.
+    const user = userEvent.setup();
+    renderArea([
+      send('u1', '<command-name>/compact</command-name>'),
+      reply('a1', 'first answer'),
+    ]);
+
+    await user.click(foldArrowOn('compact'));
+
+    expect(screen.queryByText('first answer')).not.toBeInTheDocument();
+  });
+
+  it('does not toggle the bubble expand underneath', async () => {
+    // The arrow sits inside the send's own row, and two ancestors act on
+    // clicks that reach them: `MessageBox` expands the bubble and
+    // `ChatMessageArea` logs the raw entry.
+    const user = userEvent.setup();
+    renderArea([send('u1', 'first prompt'), reply('a1', 'first answer')]);
+
+    const box = screen.getByText('first prompt').closest('[data-message-box]');
+    expect(box).not.toBeNull();
+    const before = box!.className;
+
+    await user.click(foldArrowOn('first prompt'));
+
     expect(box!.className).toBe(before);
   });
 });

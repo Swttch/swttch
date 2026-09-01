@@ -7,6 +7,7 @@ import { ContextPills } from './components/ContextPills';
 import { ImageAttachments } from './components/ImageAttachments';
 import { MessageActions } from './components/MessageActions';
 import { SendActionMenu } from './components/SendActionMenu';
+import { SendFoldToggle } from './components/SendFoldToggle';
 import { parseUserContent } from './utils/parseUserContent';
 import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
 import { MessagePathChip } from './components/MessagePathChip';
@@ -110,8 +111,10 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
       <IfVisible extra={allContexts.length > 0 || imageBlocks.length > 0} debugId={debugId}>
         <div className="group py-2 px-4">
           <div className="flex items-start gap-2">
-            {/* `relative` anchors the corner menu to the bubble — see below. */}
+            {/* `relative` anchors the corner menu and the fold arrow to the bubble — see below. */}
             <div className="relative min-w-0">
+              {/* Folds the reply below this send; see `SendFoldToggle`. */}
+              <SendFoldToggle />
               <MessageBox>
                 <div className="text-text-primary/80 text-[1rem] leading-relaxed whitespace-pre-wrap break-words">
                   <span className="text-text-primary/50">{'/'}</span>{parsedContent.commandName}
@@ -184,12 +187,15 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
         <div className="flex items-start">
           {/*
             `relative` so the menu can hang off the bubble's own top-right
-            corner. The menu is positioned against THIS box, not the row: the
-            row stretches the full width of the transcript, and anchoring there
-            would park the button at the far right of the window instead of on
-            the message (issue #356's screenshot has it sitting on the corner).
+            corner, and the fold arrow off its start edge. Both are positioned
+            against THIS box, not the row: the row stretches the full width of
+            the transcript, and anchoring there would park the button at the far
+            right of the window instead of on the message (issue #356's
+            screenshot has it sitting on the corner).
           */}
           <div className="relative min-w-0">
+            {/* Folds the reply below this send; see `SendFoldToggle`. */}
+            <SendFoldToggle />
             <MessageBox>
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                 {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
