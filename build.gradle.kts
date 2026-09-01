@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.5 - WSL2 reconnect loop, settings safety, and MCP fixes</h3>
+            <ul>
+                <li>Fix the backend disconnecting and reconnecting every ten seconds on WSL2 (#384, reported by @ideal-chris)</li>
+                <li>Fix a failed write wiping your Claude settings file (#386)</li>
+                <li>Fix MCP servers leaking a Docker container on every refresh (#363, reported by @EndiButler)</li>
+                <li>Fix environment variable placeholders in MCP config not being resolved (#364, reported by @EndiButler)</li>
+                <li>Add support for the Ultra plan's ultracode setting (#377, requested by @patpatpat123)</li>
+                <li>Add a fold arrow in the message gutter, with the hidden line count (#368, requested by @mzbik)</li>
+                <li>Fix extra spacing above quote blocks and headings in chat (#379, reported by @CraftedFury)</li>
+            </ul>
             <h3>0.29.4 - Fold long answers, and MCP servers no longer show as Failed</h3>
             <ul>
                 <li>Add folding a long answer from the message that produced it (#368, requested by @mzbik)</li>
