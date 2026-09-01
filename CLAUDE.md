@@ -20,6 +20,20 @@ JetBrains IDE용 Claude Code GUI 플러그인. Cursor의 Claude Code 확장과 �
 
 > 안정성 판단 기준: **사용자가 터미널에서 직접 쓰는 공식 명령의 출력 계약**(예: `claude mcp list`의 텍스트 출력) > **프로그램 간 미문서화 내부 프로토콜**. 후자가 더 "구조화"돼 있어 편해 보여도, 안정성과 우리 철학 양면에서 전자가 우선이다.
 
+### 기록된 예외
+
+원칙은 원칙이지 거부할 수 없는 법칙이 아니다. 아래 중 하나에 해당하는 특수한 경우에 한해 위반할 수 있고, 그때는 **사용자의 직접적인 판단을 득하고 그 판단의 근거를 문서로 남긴다.**
+
+- 다른 대안이 없어 불가피한 경우
+- 원칙을 지키는 방법보다 예외의 방법이 지나치게 압도적으로 이득이 큰 경우 (그 판단은 사람이 한다)
+- 원칙을 지키는 방법보다 예외의 방법이 기능을 구현하는 가장 근본적으로 정확한 방법인 경우
+
+절차는 [docs/principle-exceptions/README.md](./docs/principle-exceptions/README.md)에 있다.
+
+지금까지 기록된 예외는 다음과 같다.
+
+- [MCP 서버 목록 조회에 미문서화 `control_request{subtype:"mcp_status"}`를 쓴다](./docs/principle-exceptions/363-mcp-status-control-request.md) — 위 2번·3번 위반. 공식 `claude mcp list` 경로를 폴백으로 항상 살려두는 조건으로 채택했다 ([#363](https://github.com/Swttch/swttch/issues/363))
+
 ## 아키텍처
 
 3개 레이어로 구성:

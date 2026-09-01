@@ -1,4 +1,12 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from 'vitest';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+
+// Point Claude's config dir at an empty temp dir for the whole suite. Claude.exec
+// now consults the user's MCP configuration (to reclaim the docker containers a
+// CLI leaves behind), and reading the real ~/.claude.json would make these
+// assertions depend on which MCP servers the developer running them happens to
+// have installed.
 
 // We can't easily test Claude class directly because buildAugmentedPath runs
 // at class load time. Instead we test the observable behavior.
@@ -18,7 +26,9 @@ vi.mock('../features/settings', () => ({
 const FAKE_CLAUDE_CMD = 'C:\\Users\\me\\AppData\\npm\\claude.cmd';
 
 vi.mock('child_process', () => ({
-  spawn: vi.fn(() => ({ on: vi.fn() })),
+  // `once` as well as `on`: Claude.spawn hangs the MCP container reclaim off the
+  // process's `close` event, so a stand-in without it is not a ChildProcess.
+  spawn: vi.fn(() => ({ on: vi.fn(), once: vi.fn() })),
   execFile: vi.fn(
     (
       cmd: string,
@@ -29,13 +39,24 @@ vi.mock('child_process', () => ({
       // Emulate `where claude` returning the launcher's absolute path.
       const stdout = cmd === 'where' ? `${FAKE_CLAUDE_CMD}\r\n` : '{}';
       cb?.(null, stdout, '');
-      return { on: vi.fn() };
+      return { on: vi.fn(), once: vi.fn() };
     },
   ),
 }));
 
 import { spawn as cpSpawn, execFile as cpExecFile } from 'child_process';
 import { Claude } from '../claude';
+
+const ORIGINAL_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR;
+
+beforeAll(() => {
+  process.env.CLAUDE_CONFIG_DIR = mkdtempSync(`${tmpdir()}/ccg-claude-test-`);
+});
+
+afterAll(() => {
+  if (ORIGINAL_CONFIG_DIR === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = ORIGINAL_CONFIG_DIR;
+});
 
 describe('Claude', () => {
   describe('command', () => {
@@ -304,7 +325,8 @@ describe('console output decoding on win32 paths', () => {
       _opts: unknown,
       cb?: (e: unknown, o: Buffer, s: Buffer) => void,
     ) => {
-      cb?.(null, Buffer.from(`${FAKE_CLAUDE_CMD}
+      cb?.(null, Buffer.from(`${FAKE_CLAUDE_CMD}
+
 `, 'utf8'), Buffer.alloc(0));
       return { on: vi.fn() };
     }) as unknown as typeof cpExecFile);

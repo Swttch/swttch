@@ -45,5 +45,11 @@ export function candidateBinDirs(
     );
   }
 
+  // Docker Desktop keeps its CLI here and does not always add it to the PATH a
+  // GUI-launched process inherits. Needed since the backend started removing the
+  // containers an MCP server leaves behind (#363); last of the candidates so it
+  // cannot shadow a tool an earlier directory provides.
+  dirs.push(join(home, '.docker', 'bin'));
+
   return dirs;
 }

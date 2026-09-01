@@ -79,7 +79,25 @@ export interface McpServerTool {
     readOnly?: boolean;
     /** Tool can perform irreversible destructive operations. */
     destructive?: boolean;
+    /** Tool reaches outside the server's own data (network, third-party APIs). */
+    openWorld?: boolean;
   };
+}
+
+/**
+ * Identity a server reports about itself during the MCP handshake, as the CLI
+ * passes it on. Absent for a server that never completed a handshake.
+ *
+ * Only the fields observed so far are named. The object travels verbatim, so a
+ * server that reports more than this keeps it on the wire even though the type
+ * does not spell it out.
+ */
+export interface McpServerInfo {
+  name?: string;
+  version?: string;
+  description?: string;
+  websiteUrl?: string;
+  icons?: Array<{ src?: string; mimeType?: string }>;
 }
 
 export interface McpServer {
@@ -93,8 +111,20 @@ export interface McpServer {
    * WebView: filter out "Add transport" prompts for null-config servers.
    */
   config: McpServerConfig | null;
-  /** Available tools reported by the server. Empty array when not yet fetched. */
-  tools: McpServerTool[];
+  /**
+   * Tools the server exposes.
+   *
+   * Undefined and empty are different facts and the detail view acts on the
+   * difference. Undefined means nobody has asked yet, which is the case whenever
+   * the list came from `claude mcp list` — that command reports no tools at all.
+   * An empty array means a source that does report tools answered, and the answer
+   * was none. Only the undefined case is worth opening a connection to resolve;
+   * treating the two alike is what made the detail view reconnect to servers
+   * whose tool list it already had.
+   */
+  tools?: McpServerTool[];
+  /** What the server called itself during the handshake, when a source reported it. */
+  serverInfo?: McpServerInfo;
   /** Human-readable error message, populated when status === FAILED or NEEDS_AUTH. */
   error: string | null;
   /**

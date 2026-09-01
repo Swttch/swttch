@@ -331,14 +331,17 @@ To remove this server, run: claude mcp remove "plugin:toolsmith:toolsmith" -s us
       expect(parseMcpGet('not a server name\n  Scope: User')).toBeNull();
     });
 
-    it('initialises tools as empty array', () => {
+    it('leaves tools absent, because `claude mcp get` never reports any', () => {
       const FIXTURE = `playwright:
   Scope: User config (available in all your projects)
   Status: ✔ Connected
   Type: stdio
   Command: npx
   Args: some-pkg`;
-      expect(parseMcpGet(FIXTURE)?.tools).toEqual([]);
+      // Absent, not empty: an empty array would claim the server was asked what
+      // it exposes and answered "none". This command does not ask at all, and the
+      // detail view uses that difference to decide whether to go and ask.
+      expect(parseMcpGet(FIXTURE)?.tools).toBeUndefined();
     });
 
     it('initialises error as null', () => {

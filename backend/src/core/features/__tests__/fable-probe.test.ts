@@ -42,6 +42,18 @@ describe('probeFableAvailability', () => {
     expect(opts).toMatchObject({ cwd: '/work' });
   });
 
+  it('loads no MCP server, because the probe never calls a tool', async () => {
+    // Without this the probe starts every MCP server the workspace configures,
+    // and a `docker run` server leaves its container behind afterwards (#363).
+    execMock.mockResolvedValue({ stdout: successStdout(), stderr: '' });
+    await probeFableAvailability('/work');
+    const [args] = execMock.mock.calls[0];
+    expect(args).toContain('--strict-mcp-config');
+    // Restricting to `--mcp-config` only means "none" when no config is passed;
+    // passing one would put the servers back.
+    expect(args).not.toContain('--mcp-config');
+  });
+
   it('returns true only on a clean success result', async () => {
     execMock.mockResolvedValue({ stdout: successStdout(), stderr: '' });
     await expect(probeFableAvailability()).resolves.toBe(true);

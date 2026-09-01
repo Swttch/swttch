@@ -33,6 +33,13 @@ const PROBE_ARGS: readonly string[] = [
   '--no-session-persistence',
   '--output-format',
   'json',
+  // This probe asks one question of the model and reads the exit shape; it never
+  // calls a tool, so the workspace's MCP servers are pure cost to it. Without
+  // this the probe starts every one of them, and a server configured as
+  // `docker run` leaves its container behind (#363, measured: one per probe).
+  // `--strict-mcp-config` restricts the session to the servers named by
+  // `--mcp-config`, and none is passed, so it loads none at all.
+  '--strict-mcp-config',
 ];
 
 /** How long a probe result is trusted before we probe again. */

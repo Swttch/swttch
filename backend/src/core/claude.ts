@@ -10,6 +10,7 @@ import {
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
 import { getStrippableAuthEnvKeys } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
+import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
 import { resolveWslCwd } from './wsl-path';
 import { execViaCmdArgv } from './win-exec';
 import { pickWin32Launcher } from './which-launcher';
@@ -106,15 +107,30 @@ export class Claude {
     const cwd = resolveWslCwd(options?.cwd);
     const merged = { ...Claude.env, ...options?.env };
     const env = { ...merged, ...utf8BashEnv(merged) };
-    if (process.platform === 'win32' && win32JobSessionId) {
-      return spawnWin32JobCli(Claude.command, args, win32JobSessionId, { ...options, cwd, env });
-    }
-    return cpSpawn(Claude.command, args, {
-      ...options,
-      cwd,
-      shell: options?.shell ?? (process.platform === 'win32'),
-      env,
-    });
+    const proc =
+      process.platform === 'win32' && win32JobSessionId
+        ? spawnWin32JobCli(Claude.command, args, win32JobSessionId, { ...options, cwd, env })
+        : cpSpawn(Claude.command, args, {
+            ...options,
+            cwd,
+            shell: options?.shell ?? (process.platform === 'win32'),
+            env,
+          });
+    // A CLI that loads the workspace's MCP servers also starts them, and a server
+    // configured as `docker run` outlives that CLI unless its container is removed
+    // by id (#363).
+    //
+    // Attached at this one funnel rather than at the spawns known to load MCP,
+    // because which commands those are is not readable from the code and is not
+    // stable: it took isolated measurement to establish that `claude mcp list` and
+    // a chat session do while `auth status`, `--version`, `-p /usage` and the
+    // config probe do not, and a CLI release can move that line. Costs nothing
+    // when no `docker run` MCP server is configured — the reclaimer reads the
+    // configuration first and stops there.
+    // Only a string cwd is meaningful to the reclaimer, which resolves MCP
+    // configuration relative to a plain path. No caller passes the URL form.
+    attachMcpContainerReclaim(proc, typeof cwd === 'string' ? cwd : undefined);
+    return proc;
   }
 
   /**
@@ -211,6 +227,10 @@ export class Claude {
     // with the launcher as an argv element (see execViaCmd). macOS/Linux run the
     // launcher directly with shell:false and need none of this.
     if (process.platform === 'win32' && options?.shell === false) {
+      // No MCP container reclaim on this branch: execViaCmdArgv hands back no
+      // child to hang it off, and the only caller is `mcp add-json`, which was
+      // measured NOT to start any MCP server. Route a caller that does start one
+      // through runExecFile instead of widening this branch.
       return Claude.execViaCmd(args, options);
     }
     return Claude.runExecFile(Claude.command, args, options);
@@ -248,7 +268,7 @@ export class Claude {
           ...options?.env,
         },
       };
-      cpExecFile(command, args, execOptions, (err, stdout, stderr) => {
+      const child = cpExecFile(command, args, execOptions, (err, stdout, stderr) => {
         const out = decodeConsoleOutput(stdout ?? '');
         const errText = decodeConsoleOutput(stderr ?? '');
         if (err) {
@@ -265,6 +285,14 @@ export class Claude {
         }
         resolve({ stdout: out, stderr: errText });
       });
+      // Same reason as the spawn funnel, and by the same mechanism: `claude mcp
+      // list` and `claude mcp get` start the workspace's MCP servers to health-check
+      // them, so a short-lived command leaves a `docker run` container behind
+      // exactly as a chat session does (#363).
+      attachMcpContainerReclaim(
+        child,
+        typeof execOptions.cwd === 'string' ? execOptions.cwd : undefined,
+      );
     });
   }
 

@@ -640,6 +640,26 @@ export class ConnectionManager {
     return this.sessionRegistry.get(sessionId);
   }
 
+  /**
+   * A session whose CLI is alive and writable for the given workspace, if any.
+   *
+   * Used to ask a running CLI something instead of spawning a new one for the
+   * answer. `workingDir` has to match because MCP configuration is per-project:
+   * a `.mcp.json` belongs to one workspace, so another workspace's CLI would
+   * report a different set of servers.
+   *
+   * Returns undefined when no CLI has been spawned yet, which is the ordinary
+   * state of a chat tab before its first message. Callers treat that as "ask the
+   * CLI the official way instead" rather than as an error.
+   */
+  findLiveSessionForWorkingDir(workingDir: string): SessionRecord | undefined {
+    for (const session of this.sessionRegistry.values()) {
+      if (session.workingDir !== workingDir) continue;
+      if (session.process?.stdin?.writable) return session;
+    }
+    return undefined;
+  }
+
   getOrCreateSession(sessionId: string, workingDir?: string): SessionRecord {
     let session = this.sessionRegistry.get(sessionId);
     if (!session) {
@@ -701,6 +721,25 @@ export class ConnectionManager {
    * SIGKILL as the last-resort orphan guard, so it must stay synchronous —
    * 'exit' handlers cannot await.
    */
+  /**
+   * Wait for the session CLIs that were just signalled to actually exit.
+   *
+   * Their `close` handlers are what START the MCP container reclaim, so draining
+   * the reclaims before any close has fired drains an empty set and the process
+   * exits with the work never begun (#363). Bounded, because shutdown cannot hang
+   * on a CLI that refuses to die; whatever is missed is caught by the next
+   * backend's orphan sweep.
+   */
+  async awaitSessionProcessExits(timeoutMs: number): Promise<void> {
+    const pending = [...this.sessionRegistry.values()]
+      .map((session) => session.process)
+      .filter((proc): proc is ChildProcess => Boolean(proc) && proc!.exitCode === null)
+      .map((proc) => new Promise<void>((resolve) => proc.once('close', () => resolve())));
+    if (pending.length === 0) return;
+    const deadline = new Promise<void>((resolve) => setTimeout(resolve, timeoutMs).unref?.());
+    await Promise.race([Promise.all(pending).then(() => undefined), deadline]);
+  }
+
   killAllSessionProcesses(signal: NodeJS.Signals): number {
     let killed = 0;
     for (const session of this.sessionRegistry.values()) {

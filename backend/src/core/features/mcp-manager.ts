@@ -1,47 +1,24 @@
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { homedir } from 'os';
+import type { ConnectionManager } from '../../ws/connection-manager';
 import { Claude } from '../claude';
+import { fetchMcpStatus, toMcpServers } from './mcp-status';
 import { parseMcpList, parseMcpGet } from './mcp-parser';
 import { expandMcpServerConfig } from './mcp-env-expansion';
 import { buildMcpEnvSource } from './env-sources';
+import {
+  claudeJsonDisplayPath,
+  extractProjectEntry,
+  extractServerConfig,
+  readClaudeJson,
+  readProjectMcpJson,
+  writeClaudeJson,
+} from './mcp-config-files';
 import { McpServerStatus, McpServerScope } from '../../shared';
 import type { McpServer, McpServersResult, McpServerConfig } from '../../shared';
 
-// ─── Path helpers ─────────────────────────────────────────────────────────────
-
-/** Path to the global claude config file that stores disabledMcpServers. */
-function claudeJsonPath(): string {
-  return join(process.env.CLAUDE_CONFIG_DIR ?? homedir(), '.claude.json');
-}
-
-/**
- * Display form of the global config path, shown next to the user/local scope
- * groups in the UI. Resolves to `~/.claude.json` normally, or the absolute
- * `$CLAUDE_CONFIG_DIR/.claude.json` when that env var overrides the home dir —
- * so the displayed source path always matches where `claude mcp add` writes.
- */
-export function claudeJsonDisplayPath(): string {
-  const dir = process.env.CLAUDE_CONFIG_DIR;
-  return dir ? join(dir, '.claude.json') : '~/.claude.json';
-}
-
-async function readClaudeJson(): Promise<Record<string, unknown>> {
-  try {
-    const p = claudeJsonPath();
-    if (!existsSync(p)) return {};
-    return JSON.parse(await readFile(p, 'utf-8')) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-async function writeClaudeJson(data: Record<string, unknown>): Promise<void> {
-  const p = claudeJsonPath();
-  await mkdir(dirname(p), { recursive: true });
-  await writeFile(p, JSON.stringify(data, null, 2) + '\n', 'utf-8');
-}
+// Re-exported so the panel handlers and tests keep one import site for "MCP
+// server management", even though the file reading itself now lives in a leaf
+// module the CLI spawn path can also use.
+export { claudeJsonDisplayPath, extractProjectEntry, extractServerConfig };
 
 // ─── Scope ordering for stable list rendering ──────────────────────────────────
 
@@ -57,28 +34,42 @@ function scopeRank(scope: McpServerScope | string): number {
 /**
  * Fetch all MCP servers with status, scope, config, and disabled state.
  *
- * Strategy (CLI-first, per CLAUDE.md):
- *   1. `claude mcp list` → names + basic status (performs health check)
- *   2. `claude mcp get <name>` in parallel → full details per server
- *   3. Read disabledMcpServers from ~/.claude.json → mark DISABLED
+ * Two sources, in order:
  *
- * Servers are sorted by scope priority then name.
+ *   1. `mcp_status` asked of a CLI that is already running for this workspace.
+ *      Preferred because it reports the state of the process the user's chat is
+ *      actually talking to, carries status + scope + tools in one reply, and
+ *      starts nothing (see mcp-status.ts, and #363 for what the starting cost
+ *      was).
+ *   2. `claude mcp list` + `claude mcp get <name>`. The official commands, and
+ *      the guaranteed route: they need no live CLI, so this is what answers
+ *      before a chat has sent its first message, and what answers if the control
+ *      channel ever stops recognising `mcp_status`.
+ *
+ * Everything after the source is shared: config is re-read from the settings
+ * files, failures get a probe reason, `disabledMcpServers` is applied, `${VAR}`
+ * gaps are reported, and the list is sorted by scope then name.
  */
-export async function getMcpServers(cwd?: string): Promise<McpServersResult> {
-  const [listOut, disabled] = await Promise.all([runMcpList(cwd), readDisabledServers()]);
-  const names = parseMcpList(listOut).map((s) => s.name);
+export async function getMcpServers(
+  cwd?: string,
+  connections?: ConnectionManager,
+): Promise<McpServersResult> {
+  const disabled = await readDisabledServers();
+  const live = connections ? await fetchMcpStatus(connections, cwd) : null;
 
-  if (names.length === 0 && disabled.length === 0) {
+  // Only the CLI path can build an entry for a disabled server the source did not
+  // report, and only by spawning another CLI. On the live path that spawn is
+  // exactly what this change exists to avoid, so the entry is synthesised from
+  // the name alone instead.
+  const fetchDetails = live
+    ? async (): Promise<McpServer | null> => null
+    : (name: string): Promise<McpServer | null> => fetchServerDetails(name, cwd);
+
+  let servers: McpServer[] = live ? toMcpServers(live) : await listServersViaCli(cwd);
+
+  if (servers.length === 0 && disabled.length === 0) {
     return { servers: [], configPath: claudeJsonDisplayPath() };
   }
-
-  // Fetch details for all connected/failed servers in parallel.
-  const settled = await Promise.allSettled(names.map((name) => fetchServerDetails(name, cwd)));
-
-  const servers: McpServer[] = settled.flatMap((r) => {
-    if (r.status === 'fulfilled' && r.value !== null) return [r.value];
-    return [];
-  });
 
   // `claude mcp get` is an unreliable source for config: it omits transport
   // details for non-connected servers, and even when present it drops headers/
@@ -102,10 +93,18 @@ export async function getMcpServers(cwd?: string): Promise<McpServersResult> {
     if (fromFile) s.config = fromFile;
   }
 
-  // Apply disabled state. `claude mcp list` does NOT honour disabledMcpServers —
-  // it still reports those servers (and health-checks them), so their status must
-  // be overridden to DISABLED here, plus synthetic entries for config-only ones.
-  await mergeDisabledServers(servers, disabled, (name) => fetchServerDetails(name, cwd));
+  // Replace a bare failure with the reason for URL-backed servers (connection
+  // refused, HTTP 4xx/5xx, unknown host). Applied to the whole list here rather
+  // than inside either source, so a server reports the same way no matter which
+  // source produced it. It runs after the config overwrite because the URL it
+  // probes is the one the settings file holds.
+  servers = await Promise.all(servers.map(enrichWithProbeError));
+
+  // Apply disabled state. Neither source honours `disabledMcpServers` on its own
+  // — both still report those servers with a live status (usually FAILED, since a
+  // disabled server isn't running), so a disabled server would otherwise render
+  // as "Failed" and offer no way back. Config-only ones are added here too.
+  await mergeDisabledServers(servers, disabled, fetchDetails);
 
   // Report `${VAR}` placeholders nothing defines, the same way the CLI does in
   // its `claude mcp list` diagnostics. This runs on the list rather than when a
@@ -130,11 +129,11 @@ export async function getMcpServers(cwd?: string): Promise<McpServersResult> {
 /**
  * Override the status of servers in the `disabledMcpServers` list to DISABLED.
  *
- * `claude mcp list` ignores `disabledMcpServers` and still reports those servers
+ * Neither source honours `disabledMcpServers`: both still report those servers
  * with their live status (usually FAILED, since a disabled server isn't running),
  * so a disabled server would otherwise render as "Failed" and offer no way back.
- * For servers the CLI didn't report at all (config-only), a synthetic entry is
- * fetched and added. Mutates and returns `servers`.
+ * For servers the source didn't report at all (config-only), `fetchDetails`
+ * supplies an entry when it can. Mutates and returns `servers`.
  */
 export async function mergeDisabledServers(
   servers: McpServer[],
@@ -149,11 +148,12 @@ export async function mergeDisabledServers(
     } else {
       const details = await fetchDetails(disabledName).catch(() => null);
       servers.push({
+        // `tools` is deliberately absent rather than empty: nothing asked this
+        // server what it exposes, and empty would claim it was asked.
         ...(details ?? {
           name: disabledName,
           scope: McpServerScope.USER,
           config: null,
-          tools: [],
         }),
         status: McpServerStatus.DISABLED,
         error: null,
@@ -169,7 +169,8 @@ export async function mergeDisabledServers(
  * CLI-equivalent of a reconnect probe.
  */
 export async function reconnectMcpServer(name: string, cwd?: string): Promise<McpServer | null> {
-  return fetchServerDetails(name, cwd);
+  const server = await fetchServerDetails(name, cwd);
+  return server ? enrichWithProbeError(server) : null;
 }
 
 /**
@@ -239,6 +240,23 @@ export async function removeMcpServer(name: string, scope: string, cwd?: string)
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
+/**
+ * The official-command source: `claude mcp list` for the names, then
+ * `claude mcp get <name>` for each one's scope and transport details.
+ *
+ * Two commands rather than one because `mcp list` reports no scope and the panel
+ * groups by it. Both health-check every server they know about, and each spawns
+ * a CLI to do it, which is why this is the fallback rather than the first choice
+ * (#363). Returns an empty list when the CLI reports nothing, without spawning
+ * the per-server commands.
+ */
+async function listServersViaCli(cwd?: string): Promise<McpServer[]> {
+  const names = parseMcpList(await runMcpList(cwd)).map((s) => s.name);
+  if (names.length === 0) return [];
+  const settled = await Promise.allSettled(names.map((name) => fetchServerDetails(name, cwd)));
+  return settled.flatMap((r) => (r.status === 'fulfilled' && r.value !== null ? [r.value] : []));
+}
+
 async function runMcpList(cwd?: string): Promise<string> {
   try {
     const { stdout } = await Claude.exec(['mcp', 'list'], { timeout: 20000, cwd });
@@ -251,9 +269,7 @@ async function runMcpList(cwd?: string): Promise<string> {
 async function fetchServerDetails(name: string, cwd?: string): Promise<McpServer | null> {
   try {
     const { stdout } = await Claude.exec(['mcp', 'get', name], { timeout: 12000, cwd });
-    const server = parseMcpGet(stdout);
-    if (!server) return null;
-    return await enrichWithProbeError(server);
+    return parseMcpGet(stdout);
   } catch {
     return null;
   }
@@ -313,43 +329,6 @@ async function probeUrl(url: string): Promise<string | null> {
 async function readDisabledServers(): Promise<string[]> {
   const data = await readClaudeJson();
   return Array.isArray(data.disabledMcpServers) ? (data.disabledMcpServers as string[]) : [];
-}
-
-/**
- * Read and parse `{cwd}/.mcp.json` (project-scope server configs). Returns null
- * on absent/invalid file — config enrichment is best-effort.
- */
-async function readProjectMcpJson(cwd: string): Promise<unknown> {
-  try {
-    const p = join(cwd, '.mcp.json');
-    if (!existsSync(p)) return null;
-    return JSON.parse(await readFile(p, 'utf-8'));
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Pull the per-project entry (`projects[cwd]`) out of `~/.claude.json`, where
- * local-scope servers live under its `mcpServers`. Returns null when absent.
- */
-export function extractProjectEntry(data: unknown, cwd: string): unknown {
-  if (!data || typeof data !== 'object') return null;
-  const projects = (data as Record<string, unknown>).projects;
-  if (!projects || typeof projects !== 'object') return null;
-  return (projects as Record<string, unknown>)[cwd] ?? null;
-}
-
-/**
- * Pull one server's raw config out of an `mcpServers` map, verbatim (no key
- * renaming) per the original-data-preservation rule.
- */
-export function extractServerConfig(data: unknown, name: string): McpServerConfig | null {
-  if (!data || typeof data !== 'object') return null;
-  const servers = (data as Record<string, unknown>).mcpServers;
-  if (!servers || typeof servers !== 'object') return null;
-  const cfg = (servers as Record<string, unknown>)[name];
-  return cfg && typeof cfg === 'object' ? (cfg as McpServerConfig) : null;
 }
 
 /** Map our scope string to the -s flag value the CLI accepts. */
