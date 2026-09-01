@@ -92,6 +92,21 @@ export function startParentWatchdog(
   // watched by liveness probe alone.
   const watchingOwnParent = watchedPid === deps.getPpid();
 
+  // A pid that already probes as gone at arm time has NOT died — the host spawned this
+  // process moments ago, so it is alive by construction. ESRCH here means the pid is not
+  // observable from where we run: WSL2 keeps the IDE in Windows' pid namespace and this
+  // backend in the distro's, so probing a Windows pid from Linux always raises ESRCH.
+  // Polling it would declare the host dead on the very first tick and kill a healthy
+  // backend every interval, which is issue #384. Unobservable means "cannot answer this
+  // question", so the poller stays disarmed rather than answering it wrongly.
+  if (!isPidAlive(watchedPid, deps.probe)) {
+    console.error(
+      '[node-backend]',
+      `Host process ${watchedPid} is not observable from this process — parent-death polling disabled`,
+    );
+    return () => {};
+  }
+
   const timer = setInterval(() => {
     const dead = watchingOwnParent
       ? isParentDead(watchedPid, deps)
