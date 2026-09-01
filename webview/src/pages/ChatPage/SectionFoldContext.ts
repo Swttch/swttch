@@ -19,6 +19,13 @@ import { createContext, useContext } from 'react';
  * something months ago reopens the session to a reply that appears to be
  * missing, with no memory of having hidden it.
  *
+ * Collapsing hides the reply with CSS rather than dropping it from the tree.
+ * That is what keeps the notice's count honest: the bullets are still in the
+ * document, so they can be counted at any moment, including while the reply is
+ * still streaming into a section that is already folded. Unmounting the body
+ * would leave nothing to count, and a number captured at the moment of folding
+ * would drift away from the reply behind it. See `useHiddenBulletCount`.
+ *
  * This is a context rather than props threaded down because the menu that
  * toggles a section sits inside `UserMessageRenderer`, several memoised layers
  * below the list that has to react to the toggle.

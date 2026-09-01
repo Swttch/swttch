@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "응답 접기",
     "collapsedReply": "응답 접힘",
+    "collapsedReplyCount": "{{count}}개의 응답 접힘",
+    "collapsedReplyCount_one": "{{count}}개의 응답 접힘",
+    "collapsedReplyCount_other": "{{count}}개의 응답 접힘",
     "expandReply": "응답 펼치기",
     "menuLabel": "메시지 작업"
   },

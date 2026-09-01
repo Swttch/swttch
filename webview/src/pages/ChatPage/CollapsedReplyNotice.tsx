@@ -1,66 +1,88 @@
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
+import { useHiddenBulletCount } from './useHiddenBulletCount';
 
 interface Props {
+  /** Section whose reply is folded, used to count what it is hiding. */
+  sectionKey: string;
   onExpand: () => void;
 }
 
 /**
- * The band left in place of a reply the user collapsed.
+ * The line left in place of a reply the user collapsed.
  *
- * A collapsed section renders nothing of its reply, and nothing is exactly what
- * a session whose messages failed to load also renders. The two must not look
+ * A collapsed section shows nothing of its reply, and nothing is exactly what a
+ * session whose messages failed to load also shows. The two must not look
  * alike: a user scrolling back through a long transcript has to be able to tell
- * "I collapsed this" from "this is broken".
+ * "I collapsed this" from "this is broken". Saying that, and how much is
+ * hidden, is this line's whole job.
  *
- * It is a button, not a caption, so the reply can be brought back from the spot
- * where it is missing. Reaching for the send's own menu works too, but that
- * asks the user to look somewhere other than where they noticed the gap.
+ * It is drawn as an inline system notice — the same size, muted colour and
+ * italic as the "interrupted" line, aligned to the same start edge as the sends
+ * around it — because that is the family it belongs to: a remark the app makes
+ * about the conversation, not a message in it.
  *
- * It spans the column and centres its label, like "Load older messages" above
- * the transcript. Both interrupt the flow of the conversation rather than
- * belonging to any one message in it, and reading as the same kind of thing is
- * what makes that legible. A small chip sitting at the left margin — which this
- * was first — read as something attached to the send above it instead of as the
- * reply's own vacated place.
+ * ## Why it announces rather than invites
  *
- * ## Why there is no count here
+ * It is still a button, so the reply can be brought back from the spot where it
+ * was noticed missing. But it carries no chevron and no chrome, and it is not
+ * meant to be the way anyone expands a section: the fold arrow in the send's
+ * gutter is, and that arrow is always on screen and says which state the
+ * section is in.
  *
- * This said "N hidden messages" at first, and the number was wrong: a reply
- * drawing four bubbles reported "2" while streaming and "11" once reloaded from
- * disk.
+ * A chevron here read as an invitation the label could not honour — "N replies
+ * collapsed" is a statement, and a control that looks pressable has to say what
+ * pressing it does. Rewriting the label to carry both jobs at once was tried
+ * and no wording earned its place, so the notice keeps the plain statement and
+ * gives up advertising the click. Anyone who does press it still gets the reply
+ * back.
  *
- * It counted the section's transcript entries, but an entry is not a bubble.
- * Measured on the session where this was caught, one section held 11 entries
- * and drew 4 — the other 7 were `attachment` entries, a type `MessageBubble`
- * has no case for and returns null on. `IfVisible` drops others for having no
- * visible glyph. And a live stream and a transcript replayed from disk do not
- * carry the same entries even when they draw the same thing, which is where the
- * two different wrong numbers came from.
+ * ## Why it is not the full-width band it used to be
  *
- * Counting the rendered bubbles instead is not available at this point:
- * `IfVisible` decides after mount, by measuring what it drew, so the number
- * does not exist until the very thing being collapsed has been rendered.
+ * It spanned the column with a dashed rule above and below, centred like "Load
+ * older messages". Measured against what it stands for, the marker cost 55px
+ * where the send it belongs to is 30px — the thing pressed to save room taking
+ * nearly twice the room of the prompt whose reply it hides. It also read as the
+ * same kind of object as the "scroll to bottom" pill once both were on screen
+ * together.
  *
- * A count could be recovered by teaching this component every rule about which
- * entries draw nothing — which is precisely the approach `IfVisible` exists to
- * replace, having leaked three times as new kinds of invisible entry appeared.
- * So the notice states that a reply is collapsed and stops there: that is the
- * part the user needs, and it cannot go stale as renderers change.
+ * The earlier objection to a left-aligned marker was that it looked attached to
+ * the send above it rather than to the reply's vacated place. That objection no
+ * longer holds: the send now carries a fold arrow of its own, so being attached
+ * to that send is exactly right — it is that send's reply that is missing.
+ *
+ * ## Where the count comes from
+ *
+ * `useHiddenBulletCount` counts the bullets still in the document, which is why
+ * folding hides the body with CSS instead of unmounting it. An earlier attempt
+ * counted transcript entries instead and was wrong by construction; that
+ * history is in the hook.
+ *
+ * Zero falls back to the plain statement. A reply that draws no bullet at all
+ * has no number a reader would recognise, and "0 replies collapsed" beside a
+ * section that plainly hid something would be worse than silence.
  */
 export function CollapsedReplyNotice(props: Props) {
-  const { onExpand } = props;
+  const { sectionKey, onExpand } = props;
   const { t } = useTranslation('chat');
+  const hidden = useHiddenBulletCount(sectionKey);
+
+  // Two keys rather than one with a zero case: the plain statement is what the
+  // notice falls back to when there is no number, and it has to read as a
+  // finished sentence on its own rather than as the counted form with a hole
+  // where the number would be.
+  const label =
+    hidden > 0
+      ? t('sendActions.collapsedReplyCount', { count: hidden })
+      : t('sendActions.collapsedReply');
 
   return (
-    <div className="px-4 pb-4 flex justify-center">
+    <div className="px-4 pb-2 flex justify-start">
         <button
             type="button"
             onClick={onExpand}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 border-y border-border-default border-dashed bg-surface-raised text-sm text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+            className="py-2 text-[1rem] text-text-primary/60 italic hover:text-text-primary transition-colors cursor-pointer"
         >
-            <ChevronDownIcon className="w-4 h-4" />
-            {t('sendActions.collapsedReply')}
+            {label}
         </button>
     </div>
   );

@@ -29,7 +29,8 @@ export function AuthErrorRenderer(props: Props) {
   return (
     <div className="group pt-2 pb-4 px-6">
       <div className="flex items-center gap-3 flex-wrap text-text-primary text-[1rem] leading-relaxed">
-        <span className={`${resolved ? 'text-green-500' : 'text-red-500 animate animate-pulse'} mt-[1px] text-[0.6923rem]`}>●</span>
+        {/* Counted as a message like any other bullet — see `ToolWrapper`. */}
+        <span data-message-bullet className={`${resolved ? 'text-green-500' : 'text-red-500 animate animate-pulse'} mt-[1px] text-[0.6923rem]`}>●</span>
         <span className="opacity-75 mr-auto">{getTextContent(message)}</span>
         <LoginCta authFailedAt={authFailedAt} />
       </div>

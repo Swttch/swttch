@@ -473,6 +473,11 @@
   "sendActions": {
     "collapseReply": "Свернуть ответ",
     "collapsedReply": "Ответ свёрнут",
+    "collapsedReplyCount": "{{count}} ответов свёрнуто",
+    "collapsedReplyCount_one": "{{count}} ответ свёрнут",
+    "collapsedReplyCount_few": "{{count}} ответа свёрнуто",
+    "collapsedReplyCount_many": "{{count}} ответов свёрнуто",
+    "collapsedReplyCount_other": "{{count}} ответа свёрнуто",
     "expandReply": "Развернуть ответ",
     "menuLabel": "Действия с сообщением"
   },

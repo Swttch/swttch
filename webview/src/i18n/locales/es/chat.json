@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "Contraer respuesta",
     "collapsedReply": "Respuesta contraída",
+    "collapsedReplyCount": "{{count}} respuestas contraídas",
+    "collapsedReplyCount_one": "{{count}} respuesta contraída",
+    "collapsedReplyCount_other": "{{count}} respuestas contraídas",
     "expandReply": "Expandir respuesta",
     "menuLabel": "Acciones del mensaje"
   },

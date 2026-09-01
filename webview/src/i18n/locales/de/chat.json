@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "Antwort einklappen",
     "collapsedReply": "Antwort eingeklappt",
+    "collapsedReplyCount": "{{count}} Antworten eingeklappt",
+    "collapsedReplyCount_one": "{{count}} Antwort eingeklappt",
+    "collapsedReplyCount_other": "{{count}} Antworten eingeklappt",
     "expandReply": "Antwort ausklappen",
     "menuLabel": "Nachrichtenaktionen"
   },

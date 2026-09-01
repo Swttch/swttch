@@ -469,6 +469,9 @@
   "sendActions": {
     "collapseReply": "応答を折りたたむ",
     "collapsedReply": "応答は折りたたみ済み",
+    "collapsedReplyCount": "{{count}}件の応答を折りたたみ済み",
+    "collapsedReplyCount_one": "{{count}}件の応答を折りたたみ済み",
+    "collapsedReplyCount_other": "{{count}}件の応答を折りたたみ済み",
     "expandReply": "応答を展開する",
     "menuLabel": "メッセージ操作"
   },

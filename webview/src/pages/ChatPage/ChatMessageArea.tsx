@@ -96,7 +96,14 @@ export function ChatMessageArea(props: Props) {
       */}
       <SectionFoldContext.Provider value={fold}>
       {sections.map(section => (
-        <div key={section.key}>
+        /*
+          `data-send-section` is how the fold measures this section's reply
+          before dropping it — see `useSectionFold`. It has to be an attribute
+          rather than a ref because the two controls that collapse a section
+          (the gutter arrow and the ⋮ menu) sit several memoised layers below
+          this list and reach the fold only through context.
+        */
+        <div key={section.key} data-send-section={section.key}>
           {/*
             The send is pinned to the top of the viewport for as long as its
             own reply is on screen, so the instruction that produced a long
@@ -133,32 +140,41 @@ export function ChatMessageArea(props: Props) {
             </StickySendHeader>
           )}
           {/*
-            A collapsed section drops its reply from the tree rather than hiding
-            it with CSS. The entries carry tool cards and diff surfaces that keep
-            their own observers and measured layout, and `display: none` would
-            leave all of that mounted and measuring nothing — the cost this
-            feature exists to avoid on long sessions.
+            A collapsed section hides its reply with CSS and keeps it mounted.
 
-            A section with no head is never collapsible: it has no send to hang
-            the menu on, so its `isCollapsed` can only ever be false, and the
-            body below renders as it always did.
+            That is what lets the notice say how many messages are hidden and
+            stay right about it: the bullets are still in the document, so they
+            can be counted at any moment — including while the reply is still
+            streaming into a section that is already folded. Dropping the body
+            from the tree leaves nothing to count, and a number captured at the
+            moment of folding drifts away from the reply behind it.
 
-            `body.length` gates the notice but is deliberately NOT reported in
-            it. An empty body means there is certainly nothing to fold, which is
-            all this test claims. The converse does not hold — plenty of entries
-            draw nothing (see `CollapsedReplyNotice`) — so the number is fit for
-            a "is there anything at all" gate and unfit for a count.
+            `display: none` costs the layout and paint of the hidden subtree,
+            which is the part that makes scrolling a long session expensive.
+            What it keeps alive is React reconciliation over entries nobody is
+            looking at, and that is the price of the count being true.
+
+            A section with no head is never collapsible: it has no control to
+            fold it with, so its `isCollapsed` can only ever be false.
+
+            `body.length` gates the notice. An empty body has certainly nothing
+            to fold, which is all that test claims — the converse does not hold,
+            since plenty of entries draw nothing.
           */}
-          {fold.isCollapsed(section.key) && section.body.length > 0 ? (
-            <CollapsedReplyNotice onExpand={() => fold.toggle(section.key)} />
-          ) : (
-            section.body.map(message => (
+          <div data-section-body style={{ display: fold.isCollapsed(section.key) ? 'none' : undefined }}>
+            {section.body.map(message => (
               <div key={message.uuid} onClick={() => {
                 console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
               }}>
                 <MessageBubble message={message} onRetry={onRetry} />
               </div>
-            ))
+            ))}
+          </div>
+          {fold.isCollapsed(section.key) && section.body.length > 0 && (
+            <CollapsedReplyNotice
+              sectionKey={section.key}
+              onExpand={() => fold.toggle(section.key)}
+            />
           )}
         </div>
       ))}
