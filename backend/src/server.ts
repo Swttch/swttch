@@ -24,6 +24,7 @@ import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
 import { removeContainersById } from './core/mcp-container-reclaimer';
 import { startParentWatchdog } from './core/parent-watchdog';
+import { startHostLivenessWatchdog } from './core/host-liveness';
 import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
@@ -581,6 +582,20 @@ async function main() {
   // backup for what SIGHUP misses (host SIGKILLed, or a reparent that delivers
   // no signal), detected within one poll interval.
   startParentWatchdog(() => shutdown('parent-death'));
+
+  // The same rule for an IDE host, enforced over its /rpc socket instead of its pid.
+  //
+  // The pid poller above can only speak when it can see the host's pid, and an IDE host
+  // is exactly where that assumption breaks: under WSL2 the IDE lives in Windows' pid
+  // namespace while this backend lives inside the distro, so there is no pid here to
+  // probe (#384). The /rpc socket has no such gap — the IDE holds it open for its whole
+  // life and the kernel closes it when the IDE dies, however it dies and whatever sits
+  // between the two processes.
+  //
+  // This is not an exception to the rule stated above; it is that rule reaching the one
+  // host the pid probe cannot. A terminal host opens no /rpc socket and is untouched.
+  const hostLiveness = startHostLivenessWatchdog(() => shutdown('host-rpc-lost'));
+  jetbrainsBridge.setHostCountListener((count) => hostLiveness.report(count));
 }
 
 main().catch((err) => {

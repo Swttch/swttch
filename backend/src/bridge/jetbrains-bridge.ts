@@ -53,6 +53,15 @@ export class JetBrainsBridge implements Bridge {
   private notificationHandlers = new Map<string, NotificationHandler>();
 
   /**
+   * Told the live host count whenever a host connects or disconnects.
+   *
+   * The count is what says whether any IDE is still there, and the bridge is the only
+   * place that knows it. Reported rather than polled: a socket close is an event, and
+   * asking for it on a timer would only reintroduce the delay this replaces.
+   */
+  private hostCountListener?: (count: number) => void;
+
+  /**
    * Files a review is waiting on, and who to tell when one moves.
    *
    * The IDE reports every save it sees (FILE_SAVED); this is what turns that
@@ -107,8 +116,22 @@ export class JetBrainsBridge implements Bridge {
     this.notificationHandlers.set(method, handler);
   }
 
+  /**
+   * Register the listener that follows how many IDE hosts are attached. Set once at
+   * startup by the server, which turns the count into a host-liveness verdict.
+   */
+  setHostCountListener(listener: (count: number) => void): void {
+    this.hostCountListener = listener;
+    listener(this.rpcClients.size);
+  }
+
+  private reportHostCount(): void {
+    this.hostCountListener?.(this.rpcClients.size);
+  }
+
   addRpcClient(ws: WebSocket): void {
     this.rpcClients.add(ws);
+    this.reportHostCount();
     console.error('[node-backend]', 'RPC client connected');
 
     // Push the current hostMode to the freshly connected IDE. The backend is the
@@ -180,6 +203,7 @@ export class JetBrainsBridge implements Bridge {
     ws.on('close', () => {
       this.rpcClients.delete(ws);
       this.clientRoots.delete(ws);
+      this.reportHostCount();
       console.error('[node-backend]', 'RPC client disconnected');
     });
   }

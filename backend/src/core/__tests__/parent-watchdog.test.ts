@@ -148,6 +148,71 @@ describe('startParentWatchdog', () => {
     expect(onDeath).toHaveBeenCalledTimes(1);
   });
 
+  // ── Unobservable pid: WSL2 puts the host in another namespace (issue #384) ──
+
+  it('never fires for a host pid that is unobservable from the start', () => {
+    // WSL2: the IDE is a Windows process, this backend runs inside the distro, so
+    // probing the Windows pid from Linux raises ESRCH every time. Before the fix the
+    // first poll read that as death and killed a healthy backend ten seconds after
+    // every connect.
+    const onDeath = vi.fn();
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => 14056, // a Windows pid, meaningless inside the distro
+        getPpid: () => 100,
+        probe: () => {
+          throw errnoError('ESRCH');
+        },
+      }),
+    );
+
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(onDeath).not.toHaveBeenCalled();
+  });
+
+  it('still arms when the host pid is observable at arm time (Windows native)', () => {
+    // The same code path on Windows native, where host and backend do share a pid
+    // namespace: arming must be unaffected, including the shim case from #360.
+    const onDeath = vi.fn();
+    const HOST = 4242;
+    let hostAlive = true;
+
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => HOST,
+        getPpid: () => 100,
+        probe: (pid: number) => {
+          if (pid === HOST && !hostAlive) throw errnoError('ESRCH');
+        },
+      }),
+    );
+
+    hostAlive = false;
+    vi.advanceTimersByTime(10_000);
+    expect(onDeath).toHaveBeenCalledTimes(1);
+  });
+
+  it('arms when the arm-time probe fails with EPERM rather than ESRCH', () => {
+    // EPERM means the process exists but is not ours to signal — observable, so the
+    // poller must arm normally.
+    const onDeath = vi.fn();
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => 4242,
+        getPpid: () => 100,
+        probe: () => {
+          throw errnoError('EPERM');
+        },
+      }),
+    );
+
+    vi.advanceTimersByTime(30_000);
+    expect(onDeath).not.toHaveBeenCalled(); // EPERM is alive, so no death either
+  });
+
   it('does not mistake a live host for dead just because our own ppid changed', () => {
     // The shim exiting reparents us, but the host is what decides the backend's fate.
     const onDeath = vi.fn();
