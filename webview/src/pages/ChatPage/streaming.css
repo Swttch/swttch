@@ -323,6 +323,32 @@
   color: var(--ide-text-secondary, #71717a);
 }
 
+/* Collapse the outer spacing of the first and last block inside a quote (#379).
+   Every block-level child in here carries spacing of its own: a heading gets
+   Streamdown's `mt-6 mb-2` on top of our heading padding, lists and paragraphs
+   get padding. Padding never collapses against the quote's own padding, and
+   that padding also stops the children's margins from collapsing out, so a
+   quote opening with `#### heading` stacked 7px of quote padding, 21px of
+   heading margin and 7.9px of heading padding into a 38.9px gap above the
+   first line - the extra top padding reported in #379. GitHub's markdown
+   styles zero these same two edges; the quote's own padding is what sets the
+   inset.
+
+   A nested quote is excluded. Unlike a heading or a list, it draws a box of
+   its own - its own background and its own left rule - so zeroing its outer
+   margin lands that box flush against the enclosing quote's padding edge and
+   against whatever block follows. It keeps its margin and stays inset on both
+   sides. */
+[data-streamdown="blockquote"] > :first-child:not([data-streamdown="blockquote"]) {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+[data-streamdown="blockquote"] > :last-child:not([data-streamdown="blockquote"]) {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
 /* Lists */
 [data-streamdown="ordered-list"] {
   list-style-type: decimal;

@@ -32,7 +32,6 @@ export function ExitPlanModeRenderer(props: RendererProps) {
             {plan && (
                 <div className="markdown-content mb-2">
                     <Streamdown
-                        className="space-y-0"
                         mode="static"
                         controls={{ code: true, table: true }}
                         plugins={{ math, code }}

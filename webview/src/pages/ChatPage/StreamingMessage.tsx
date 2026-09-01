@@ -47,7 +47,6 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
             <div className={`streaming-message ${className}`}>
                 <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
                     <Streamdown
-                        className="space-y-0"
                         mode={isStreaming ? 'streaming' : 'static'}
                         parseIncompleteMarkdown={isStreaming}
                         isAnimating={isStreaming}
