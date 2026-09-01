@@ -124,6 +124,7 @@
       "disable": "غیرفعال‌سازی",
       "loadingTools": "در حال بارگذاری ابزارها…",
       "loadToolsError": "بارگذاری ابزارها ممکن نشد",
+      "missingVars": "متغیرهای محیطی تعریف‌نشده: {{vars}}",
       "viewTools": "مشاهده ابزارها ({{count}})",
       "readOnly": "فقط‌خواندنی",
       "destructive": "مخرب",

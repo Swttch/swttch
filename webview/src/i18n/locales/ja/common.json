@@ -124,6 +124,7 @@
       "disable": "無効化",
       "loadingTools": "ツールを読み込み中…",
       "loadToolsError": "ツールを読み込めませんでした",
+      "missingVars": "未定義の環境変数: {{vars}}",
       "viewTools": "ツールを表示 ({{count}})",
       "readOnly": "読み取り専用",
       "destructive": "破壊的",

@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mergeDisabledServers, addMcpServer, removeMcpServer, extractServerConfig } from '../mcp-manager';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { mergeDisabledServers, addMcpServer, removeMcpServer, extractServerConfig, getMcpServers } from '../mcp-manager';
 import { Claude } from '../../claude';
 import { McpServerStatus, McpServerScope, McpTransportType } from '../../../shared';
 import type { McpServer } from '../../../shared';
@@ -141,5 +144,86 @@ describe('extractServerConfig', () => {
     expect(extractServerConfig({}, 'srv')).toBeNull();
     expect(extractServerConfig(null, 'srv')).toBeNull();
     expect(extractServerConfig({ mcpServers: { srv: 'not-an-object' } }, 'srv')).toBeNull();
+  });
+});
+
+// A placeholder nothing defines is left in the config verbatim rather than
+// blanked, so the server starts with the literal text as a setting and fails in
+// whatever way that causes — silently, in the case #364 was filed for. The list
+// carries the unresolved names so the panel can say which ones they are.
+//
+// This is computed while listing rather than while fetching a server's tools
+// because a server broken this way often never connects, and tools are only
+// fetched for connected servers: losing the wiring here would drop the warning
+// exactly when it is needed most.
+describe('getMcpServers reports unresolved placeholder names', () => {
+  let configDir: string;
+  let projectDir: string;
+  let savedConfigDir: string | undefined;
+
+  const LIST_OUTPUT = [
+    'Checking MCP server health…',
+    '',
+    'probe: /bin/sh -c true - ✔ Connected',
+  ].join('\n');
+
+  const GET_OUTPUT = [
+    'probe:',
+    '  Scope: Project config (shared via .mcp.json)',
+    '  Status: ✔ Connected',
+    '  Type: stdio',
+    '  Command: /bin/sh',
+    '  Args: -c true',
+    '  Environment:',
+    '',
+    'To remove this server, run: claude mcp remove "probe" -s project',
+  ].join('\n');
+
+  beforeEach(() => {
+    configDir = mkdtempSync(join(tmpdir(), 'ccg-mm-home-'));
+    projectDir = mkdtempSync(join(tmpdir(), 'ccg-mm-proj-'));
+    mkdirSync(join(projectDir, '.claude'), { recursive: true });
+    savedConfigDir = process.env.CLAUDE_CONFIG_DIR;
+    process.env.CLAUDE_CONFIG_DIR = configDir;
+
+    writeFileSync(
+      join(projectDir, '.mcp.json'),
+      JSON.stringify({
+        mcpServers: {
+          probe: { command: '/bin/sh', args: ['-c', 'true'], env: { SECRET: '${NEEDED_VAR}' } },
+        },
+      }),
+      'utf-8',
+    );
+
+    vi.mocked(Claude.exec).mockImplementation((async (args: string[]) => {
+      if (args[1] === 'list') return { stdout: LIST_OUTPUT, stderr: '' };
+      if (args[1] === 'get') return { stdout: GET_OUTPUT, stderr: '' };
+      return { stdout: '', stderr: '' };
+    }) as unknown as typeof Claude.exec);
+  });
+
+  afterEach(() => {
+    if (savedConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = savedConfigDir;
+    rmSync(configDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('names the variable when no layer defines it', async () => {
+    const { servers } = await getMcpServers(projectDir);
+    expect(servers).toHaveLength(1);
+    expect(servers[0].missingVars).toEqual(['NEEDED_VAR']);
+  });
+
+  it('reports nothing once a layer defines the value', async () => {
+    writeFileSync(
+      join(projectDir, '.claude', 'settings.json'),
+      JSON.stringify({ env: { NEEDED_VAR: 'resolved' } }),
+      'utf-8',
+    );
+
+    const { servers } = await getMcpServers(projectDir);
+    expect(servers[0].missingVars).toEqual([]);
   });
 });

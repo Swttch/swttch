@@ -124,6 +124,7 @@
       "disable": "Désactiver",
       "loadingTools": "Chargement des outils…",
       "loadToolsError": "Impossible de charger les outils",
+      "missingVars": "Variables d'environnement manquantes : {{vars}}",
       "viewTools": "Voir les outils ({{count}})",
       "readOnly": "lecture seule",
       "destructive": "destructif",

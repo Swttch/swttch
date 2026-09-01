@@ -6,12 +6,40 @@ import { getClaudeConfigDir } from './claudeConfigDir';
 const claudeSettingsFile = () => join(getClaudeConfigDir(), 'settings.json');
 const claudeSettingsLocalFile = () => join(getClaudeConfigDir(), 'settings.local.json');
 
-function deepMergeSettings(
+/**
+ * Keys that must never be copied from a settings file.
+ *
+ * `JSON.parse` turns a literal `"__proto__"` into an own property, and assigning
+ * it swaps the prototype of the merged object: the key stays invisible to
+ * `Object.keys` while `'X' in settings` and `settings.X` start answering for it.
+ * Code that asks whether a setting exists (settings-migration does) would be
+ * answering about an attacker-supplied prototype instead of the file.
+ */
+const UNSAFE_MERGE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * Merge `override` onto `base`, recursing into plain objects so that a single
+ * key in the higher-priority file does not discard its siblings.
+ *
+ * Two behaviours below are decisions, not accidents. Both were reviewed and
+ * kept deliberately, so changing either is a product decision rather than a
+ * bug fix:
+ *
+ * - **Arrays replace; they are never concatenated.** A file that spells out
+ *   `permissions.allow` is stating the list it wants, not appending to whatever
+ *   a weaker layer happened to hold — and there would be no way to express
+ *   "drop the inherited entry" if the lists were merged. Only the same-named
+ *   array is replaced; sibling keys such as `permissions.deny` survive.
+ * - **`null` is a value, not a deletion.** `{"k": null}` sets `k` to null and
+ *   keeps the key. Removing a setting means removing the key from the file.
+ */
+export function deepMergeSettings(
   base: Record<string, unknown>,
   override: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...base };
   for (const key of Object.keys(override)) {
+    if (UNSAFE_MERGE_KEYS.has(key)) continue;
     const baseVal = base[key];
     const overVal = override[key];
     if (
@@ -35,12 +63,21 @@ function deepMergeSettings(
 
 /**
  * Read a JSON file safely, returning {} if the file doesn't exist or fails to parse.
+ *
+ * Valid JSON is not the same thing as a settings object: `null`, `[1,2,3]` and
+ * `"text"` all parse. Returning them as-is put a caller in the position of
+ * merging a non-object — `Object.keys(null)` throws and takes the other file's
+ * settings down with it, and spreading an array or string leaks index keys ("0",
+ * "1", …) into the merged settings. Anything that is not a plain object is
+ * treated as an unusable file, exactly like a parse failure.
  */
-async function readJsonFileSafe(filePath: string): Promise<Record<string, unknown>> {
+export async function readJsonFileSafe(filePath: string): Promise<Record<string, unknown>> {
   try {
     if (!existsSync(filePath)) return {};
     const raw = await readFile(filePath, 'utf-8');
-    return JSON.parse(raw) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as Record<string, unknown>;
   } catch {
     return {};
   }
@@ -50,12 +87,17 @@ async function readJsonFileSafe(filePath: string): Promise<Record<string, unknow
  * Read ~/.claude/settings.json and settings.local.json, merge them.
  * settings.local.json takes priority over settings.json.
  * Returns empty object if files don't exist.
+ *
+ * Merged deeply, matching `readProjectClaudeSettings` at the project level. A
+ * shallow merge replaces a nested block wholesale, so a single key under `env`
+ * in settings.local.json would drop every variable settings.json defines —
+ * which is exactly the layering `${VAR}` expansion depends on (#364).
  */
 export async function readClaudeSettings(): Promise<Record<string, unknown>> {
   try {
     const base = await readJsonFileSafe(claudeSettingsFile());
     const local = await readJsonFileSafe(claudeSettingsLocalFile());
-    return { ...base, ...local };
+    return deepMergeSettings(base, local);
   } catch (err) {
     console.error('[node-backend]', 'Failed to read Claude settings:', err);
     return {};

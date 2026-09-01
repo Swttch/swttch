@@ -43,7 +43,17 @@ export enum McpTransportType {
 }
 
 export interface McpServerConfig {
-  type: McpTransportType;
+  /**
+   * Transport kind, absent when the config does not spell it out.
+   *
+   * `.mcp.json` treats `type` as optional: an entry with a `command` is a stdio
+   * server, which is how the docs' own examples are written and how the CLI reads
+   * them (`case void 0: case "stdio":` in its transport switch). Declaring this
+   * required did not make it present — it only hid the case from the type checker,
+   * which is how a missing `type` came to yield no transport and an empty tool
+   * list with no error (#364).
+   */
+  type?: McpTransportType;
   /** stdio: the executable command. */
   command?: string;
   /** stdio: positional arguments to the command. */
@@ -87,6 +97,16 @@ export interface McpServer {
   tools: McpServerTool[];
   /** Human-readable error message, populated when status === FAILED or NEEDS_AUTH. */
   error: string | null;
+  /**
+   * Names of `${VAR}` placeholders in this server's config that no layer defines.
+   *
+   * Undefined means the check has not run; an empty array means it ran and found
+   * nothing. Unresolved placeholders are left in the config verbatim rather than
+   * blanked, so without this list the server starts with the literal `${VAR}`
+   * text as a setting and fails in whatever way that value happens to cause —
+   * silently, in the case that prompted #364.
+   */
+  missingVars?: string[];
 }
 
 /** Payload of GET_MCP_SERVERS ACK response. */

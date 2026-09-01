@@ -124,6 +124,7 @@
       "disable": "사용 안 함",
       "loadingTools": "도구 불러오는 중…",
       "loadToolsError": "도구를 불러오지 못했습니다",
+      "missingVars": "정의되지 않은 환경 변수: {{vars}}",
       "viewTools": "도구 보기 ({{count}}개)",
       "readOnly": "읽기 전용",
       "destructive": "파괴적",

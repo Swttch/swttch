@@ -108,6 +108,15 @@ export function McpServerDetail(props: Props) {
           </div>
         )}
 
+        {/* Unresolved ${VAR} placeholders. Warning rather than error: the server
+            may well be running, just configured with the literal placeholder text
+            instead of a value — the quiet failure #364 was filed for. */}
+        {server.missingVars && server.missingVars.length > 0 && (
+          <div className="p-3 rounded-lg border border-state-warning-fg/40 bg-state-warning-bg text-sm text-state-warning-fg">
+            {t('mcpModal.detail.missingVars', { vars: server.missingVars.join(', ') })}
+          </div>
+        )}
+
         {/* Server header */}
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-mono text-base font-semibold text-text-primary leading-none m-0">{server.name}</h3>

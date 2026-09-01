@@ -1,5 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useBridge } from './useBridge';
+import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { MessageType, McpServerConfig, McpServerTool } from '@/shared';
 
 /**
@@ -9,6 +10,10 @@ import { MessageType, McpServerConfig, McpServerTool } from '@/shared';
  * `tools/list` — there is no `claude` CLI command for this. We pass the server's
  * `config` (already known from the list) so the backend doesn't re-run
  * `claude mcp get`. Only enabled for connected, probeable servers.
+ *
+ * `workingDir` goes along because the backend spawns the server with the
+ * workspace's own config files layered in, so the same server can resolve a
+ * `${VAR}` differently per project. The query key carries it for that reason.
  */
 export function useMcpServerTools(
   name: string,
@@ -16,14 +21,16 @@ export function useMcpServerTools(
   enabled: boolean,
 ): UseQueryResult<McpServerTool[], Error> {
   const { send } = useBridge();
+  const { workingDirectory } = useWorkingDir();
+  const workingDir = workingDirectory ?? undefined;
 
   return useQuery({
-    queryKey: ['mcp-tools', name],
+    queryKey: ['mcp-tools', name, workingDirectory],
     enabled: enabled && config !== null,
     queryFn: async () => {
       const res = await send<{ status: string; tools?: McpServerTool[]; error?: string }>(
         MessageType.GET_MCP_SERVER_TOOLS,
-        { name, config },
+        { name, config, workingDir },
       );
       if (res.status === 'ok') return res.tools ?? [];
       throw new Error(res.error ?? 'Failed to load tools');
