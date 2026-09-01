@@ -25,6 +25,16 @@ export interface ParentWatchdogDeps {
   intervalMs: number;
   /** The pid to watch; defaults to [resolveWatchedPid]. Injectable for tests. */
   getWatchedPid?: () => number;
+  /**
+   * Whether a host is still holding its control connection open, if anyone can say.
+   *
+   * An open socket outranks the pid probe, because a process that is holding a socket
+   * open is observably running. Wired to the IDE's `/rpc` connection; absent for hosts
+   * that have no such channel, where the pid verdict stands on its own.
+   */
+  isHostAttached?: () => boolean;
+  /** Told when a death verdict was rejected, so the rejection is not silent. */
+  onVerdictRejected?: (watchedPid: number) => void;
 }
 
 const defaultDeps: ParentWatchdogDeps = {
@@ -80,8 +90,9 @@ export function resolveWatchedPid(
  */
 export function startParentWatchdog(
   onParentDeath: () => void,
-  deps: ParentWatchdogDeps = defaultDeps,
+  overrides: Partial<ParentWatchdogDeps> = {},
 ): () => void {
+  const deps: ParentWatchdogDeps = { ...defaultDeps, ...overrides };
   // Resolve through deps.getPpid, not process.ppid: the fallback must agree with whatever
   // parent this watchdog was actually given, or `watchingOwnParent` below reads false and the
   // reparent check silently stops working.
@@ -112,6 +123,22 @@ export function startParentWatchdog(
       ? isParentDead(watchedPid, deps)
       : !isPidAlive(watchedPid, deps.probe);
     if (!dead) return;
+
+    // A pid verdict of "dead" loses to a host that is still holding its socket open.
+    // Reading a pid is an inference about a process we cannot see; an open connection is
+    // that process doing something. When the two disagree the observation wins, and the
+    // poller keeps watching instead of acting on a claim already contradicted. This is
+    // what makes an unforeseen false positive survivable rather than fatal: #384 would
+    // have been caught here even without knowing anything about pid namespaces.
+    if (deps.isHostAttached?.()) {
+      deps.onVerdictRejected?.(watchedPid);
+      console.error(
+        '[node-backend]',
+        `Host process ${watchedPid} probed as gone, but its control connection is open — ignoring`,
+      );
+      return;
+    }
+
     clearInterval(timer);
     console.error(
       '[node-backend]',

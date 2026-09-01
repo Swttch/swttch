@@ -148,6 +148,86 @@ describe('startParentWatchdog', () => {
     expect(onDeath).toHaveBeenCalledTimes(1);
   });
 
+  // ── An open host connection outranks the pid probe ───────────────────────
+
+  it('refuses a death verdict while the host still holds its control connection', () => {
+    // Reading a pid is an inference; an open socket is the host observably running. When
+    // the two disagree the observation wins, so an unforeseen false positive costs a log
+    // line instead of the user's backend.
+    const onDeath = vi.fn();
+    const rejected = vi.fn();
+    // Observable when armed, so the arm-time guard passes and polling really runs; the
+    // pid only starts probing as gone afterwards, which is the disagreement under test.
+    let hostAlive = true;
+
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => 4242,
+        getPpid: () => 100,
+        probe: (pid: number) => {
+          if (pid === 4242 && !hostAlive) throw errnoError('ESRCH');
+        },
+        isHostAttached: () => true,
+        onVerdictRejected: rejected,
+      }),
+    );
+
+    hostAlive = false;
+    vi.advanceTimersByTime(60_000);
+    expect(onDeath).not.toHaveBeenCalled();
+    expect(rejected).toHaveBeenCalledWith(4242);
+  });
+
+  it('acts on the verdict once the host connection has gone too', () => {
+    // The guard defers the verdict, it does not cancel it: a host that is really gone
+    // must still be noticed on a later poll.
+    const onDeath = vi.fn();
+    let attached = true;
+    let hostAlive = true;
+
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => 4242,
+        getPpid: () => 100,
+        probe: (pid: number) => {
+          if (pid === 4242 && !hostAlive) throw errnoError('ESRCH');
+        },
+        isHostAttached: () => attached,
+      }),
+    );
+
+    hostAlive = false;
+    vi.advanceTimersByTime(30_000);
+    expect(onDeath).not.toHaveBeenCalled();
+
+    attached = false;
+    vi.advanceTimersByTime(10_000);
+    expect(onDeath).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the verdict alone when nothing can report a host connection', () => {
+    // Standalone hosts have no control socket, so the pid verdict stands on its own.
+    const onDeath = vi.fn();
+    let hostAlive = true;
+
+    startParentWatchdog(
+      onDeath,
+      deps({
+        getWatchedPid: () => 4242,
+        getPpid: () => 100,
+        probe: (pid: number) => {
+          if (pid === 4242 && !hostAlive) throw errnoError('ESRCH');
+        },
+      }),
+    );
+
+    hostAlive = false;
+    vi.advanceTimersByTime(10_000);
+    expect(onDeath).toHaveBeenCalledTimes(1);
+  });
+
   // ── Unobservable pid: WSL2 puts the host in another namespace (issue #384) ──
 
   it('never fires for a host pid that is unobservable from the start', () => {
