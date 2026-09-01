@@ -23,7 +23,9 @@ import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
 import { removeContainersById } from './core/mcp-container-reclaimer';
-import { startParentWatchdog } from './core/parent-watchdog';
+import { startParentWatchdog, resolveWatchedPid } from './core/parent-watchdog';
+import { startHostLivenessWatchdog } from './core/host-liveness';
+import { createLifecycleJournal } from './logging/lifecycle-journal';
 import { ClientEnv, MessageType } from './shared';
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
@@ -224,6 +226,12 @@ async function main() {
   const logger = initLogger();
   await logger.init();
   logger.interceptConsole();
+
+  // Lifecycle journal: opened here so a start is recorded even if the boot below throws.
+  // The pid is resolved now rather than at watchdog-arm time so the start line names the
+  // same host the shutdown line will, whether or not the watchdog ends up arming.
+  const journal = createLifecycleJournal();
+  const watchedHostPid = resolveWatchedPid();
 
   // 설치 단위 가명 식별자(uuid)를 동의 여부와 무관하게 보장한다.
   await ensureProfile();
@@ -505,6 +513,16 @@ async function main() {
     webviewDir ? `(webviewDir: ${webviewDir})` : '',
   );
 
+  // The start line the later shutdown line pairs with. Several backends write to this one
+  // file, so each event carries the pid and port that identify which one it was about.
+  journal.record('start', {
+    pid: process.pid,
+    mode: isJetBrainsMode ? 'JetBrains' : 'browser',
+    port,
+    hostPid: watchedHostPid,
+    webviewDir,
+  });
+
   // Seed the launcher-provided INITIAL LOCAL pairing code. The launcher (Kotlin
   // plugin / ccg CLI) owns the stable auth token and, on each launch, mints a
   // single-use pairing code that it (a) passes here via CCG_INITIAL_PAIR_CODE and
@@ -529,6 +547,19 @@ async function main() {
   settingsWatcher.startGlobalWatchers();
 
   async function shutdown(signal: string) {
+    // Written before any teardown runs. Whatever the reason turns out to be, the line
+    // that names it has to survive the exit that follows, and it carries the evidence the
+    // verdict was made on rather than the verdict alone: knowing a backend stopped for
+    // "parent-death" says nothing, while knowing a host was still attached when it did
+    // says the verdict was wrong.
+    journal.record('shutdown', {
+      reason: signal,
+      pid: process.pid,
+      uptimeSec: Math.round(process.uptime()),
+      hostPid: watchedHostPid,
+      hostAttached: jetbrainsBridge.isConnected(),
+      wsClients: connections.getConnectionCount(),
+    });
     console.error('[node-backend]', `${signal} received, shutting down...`);
     stopSettingsWatcher();
     connections.shutdownAll();
@@ -580,7 +611,38 @@ async function main() {
   // SIGHUP is still the clean path for a terminal host; this watchdog is the
   // backup for what SIGHUP misses (host SIGKILLed, or a reparent that delivers
   // no signal), detected within one poll interval.
-  startParentWatchdog(() => shutdown('parent-death'));
+  startParentWatchdog(() => shutdown('parent-death'), {
+    // An IDE holding its /rpc socket open is proof the host is running, and it outranks
+    // whatever the pid probe infers. Standalone hosts have no such socket, so this reads
+    // false there and the pid verdict stands unchanged.
+    isHostAttached: () => jetbrainsBridge.isConnected(),
+    onVerdictRejected: (pid) =>
+      journal.record('pid-verdict-rejected', { hostPid: pid, hostAttached: true }),
+  });
+
+  // The same rule for an IDE host, enforced over its /rpc socket instead of its pid.
+  //
+  // The pid poller above can only speak when it can see the host's pid, and an IDE host
+  // is exactly where that assumption breaks: under WSL2 the IDE lives in Windows' pid
+  // namespace while this backend lives inside the distro, so there is no pid here to
+  // probe (#384). The /rpc socket has no such gap — the IDE holds it open for its whole
+  // life and the kernel closes it when the IDE dies, however it dies and whatever sits
+  // between the two processes.
+  //
+  // This is not an exception to the rule stated above; it is that rule reaching the one
+  // host the pid probe cannot. A terminal host opens no /rpc socket and is untouched.
+  const hostLiveness = startHostLivenessWatchdog(() => shutdown('host-rpc-lost'));
+  let lastHostCount = -1;
+  jetbrainsBridge.setHostCountListener((count) => {
+    hostLiveness.report(count);
+    // Every change is journalled, not just the last one. A reconnect loop looks identical
+    // to a single disconnect if only the final state is kept, and telling the two apart is
+    // the whole question when someone reports the chat dropping over and over.
+    if (count !== lastHostCount) {
+      journal.record(count > 0 ? 'host-attached' : 'host-detached', { hosts: count });
+      lastHostCount = count;
+    }
+  });
 }
 
 main().catch((err) => {
