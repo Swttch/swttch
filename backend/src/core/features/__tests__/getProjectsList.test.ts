@@ -259,7 +259,13 @@ describe('getProjectsList', () => {
 
       const projects = await getProjectsList();
 
-      const firstBirthtime = statSync(first).birthtime.toISOString();
+      // Compare from birthtimeMs, not from the `birthtime` Date beside it. The
+      // two are different roundings of one instant: NTFS keeps 100ns precision,
+      // so on Windows birthtimeMs is fractional and the Date lands a
+      // millisecond later — measured 773 vs 774 on real Windows. Which
+      // rounding wins is not what this asserts; picking the earlier of the two
+      // files is.
+      const firstBirthtime = new Date(statSync(first).birthtimeMs).toISOString();
       expect(projects[0].createdAt).toBe(firstBirthtime);
     });
 
