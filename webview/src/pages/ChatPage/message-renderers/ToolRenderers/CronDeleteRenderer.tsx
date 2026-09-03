@@ -16,12 +16,15 @@ export function CronDeleteRenderer(props: RendererProps) {
 
     return (
         <ToolWrapper message={props.message}>
-            <ToolHeader
-                name="CronDelete"
-                description={id ? t('cron.id', {id}) : ''}
-                inProgress={!props.toolResult}
-                className="mb-2.5"
-            />
+            <ToolHeader name="CronDelete" inProgress={!props.toolResult} className="mb-2.5">
+                {/* dir="ltr": a job id is an opaque token, so it keeps its own
+                    order under `<html dir="rtl">` like every other code value. */}
+                {id ? (
+                    <div dir="ltr" className="text-text-primary/60 truncate font-mono">
+                        {t('cron.id', {id})}
+                    </div>
+                ) : undefined}
+            </ToolHeader>
 
             {output && (
                 <Container>

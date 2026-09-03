@@ -65,6 +65,17 @@ describe('ReportFindingsRenderer', () => {
         expect(screen.getByText('fixed')).toBeInTheDocument();
     });
 
+    // The outcome is written by the model, so a value outside the schema must not
+    // put a raw translation key (`reportFindings.outcome.…`) on screen.
+    it('shows an unrecognized outcome verbatim rather than its translation key', () => {
+        render(<ReportFindingsRenderer toolUse={makeToolUse({
+            findings: [{file: 'src/a.ts', short_summary: 'off-by-one', outcome: 'deferred'}],
+        })} />);
+
+        expect(screen.getByText('deferred')).toBeInTheDocument();
+        expect(screen.queryByText(/reportFindings\.outcome/)).not.toBeInTheDocument();
+    });
+
     it('renders without throwing when findings is missing', () => {
         render(<ReportFindingsRenderer toolUse={makeToolUse({})} />);
         expect(screen.getByText('ReportFindings')).toBeInTheDocument();

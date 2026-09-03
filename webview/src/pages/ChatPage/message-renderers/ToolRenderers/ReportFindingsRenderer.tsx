@@ -85,7 +85,11 @@ export function ReportFindingsRenderer(props: RendererProps) {
                                 </div>
                                 {finding.outcome && (
                                     <span className="shrink-0 text-text-tertiary">
-                                        {t(`reportFindings.outcome.${finding.outcome}`)}
+                                        {/* The outcome comes from the model, so a value
+                                            outside the schema would otherwise put the raw
+                                            translation key on screen. Fall back to what was
+                                            actually reported. */}
+                                        {t(`reportFindings.outcome.${finding.outcome}`, {defaultValue: finding.outcome})}
                                     </span>
                                 )}
                             </div>
