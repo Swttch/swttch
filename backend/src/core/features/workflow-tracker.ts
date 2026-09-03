@@ -142,6 +142,21 @@ function parseImmediateAgentResult(text: string): { outputFile?: string } {
   return { outputFile };
 }
 
+/**
+ * Parse a `<tool_use_error>No task found with ID: <id></tool_use_error>` —
+ * the CLI's answer when a tool (TaskStop, TaskGet, …) targets a task_id it no
+ * longer has any record of, e.g. a backgrounded agent whose owning CLI
+ * session already exited (issue #383). Unlike the absence of a terminal
+ * `task_notification` — which just as easily means "still running, hasn't
+ * finished" — this is definitive negative evidence: whatever the WORKFLOW
+ * tracker still believes about that task_id, the CLI does not. Not scoped to
+ * TaskStop specifically: any tool surfacing this for a task_id we are
+ * tracking as running is equally trustworthy evidence it no longer is.
+ */
+function parseTaskNotFoundId(text: string): string | undefined {
+  return text.match(/No task found with ID:\s*([a-zA-Z0-9_-]+)/)?.[1];
+}
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
@@ -403,6 +418,7 @@ export class WorkflowProgressTracker {
         else if (subtype === 'task_notification') this.onNotification(sessionId, event);
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
+        this.onTaskNotFound(sessionId, event);
       }
     } catch (err) {
       console.error('[node-backend]', 'workflow-tracker handleEvent failed:', err);
@@ -595,6 +611,29 @@ export class WorkflowProgressTracker {
       entry.task.transcriptDir = transcriptDir;
       entry.task.workflowId = transcriptDir.split(/[\\/]/).pop();
       this.broadcast(entry);
+    }
+  }
+
+  /**
+   * Settle any tracked task whose task_id the CLI just declared unknown (see
+   * {@link parseTaskNotFoundId}) — e.g. a cancel click that resolved into the
+   * TaskStop reminder fallback, which then found nothing to stop. Without
+   * this, such a task stays 'running' forever: no terminal task_notification
+   * is ever coming for a task the CLI itself has already forgotten, and the
+   * panel keeps ticking its token/duration counters on a corpse.
+   */
+  private onTaskNotFound(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_result') continue;
+      const content = block['content'];
+      const text = typeof content === 'string' ? content : getEventText(event);
+      const deadTaskId = parseTaskNotFoundId(text);
+      if (!deadTaskId) continue;
+      for (const entry of this.entries.values()) {
+        if (entry.sessionId === sessionId && entry.task.taskId === deadTaskId) {
+          this.settleStopped(entry);
+        }
+      }
     }
   }
 
