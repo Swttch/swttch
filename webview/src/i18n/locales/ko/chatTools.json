@@ -115,6 +115,43 @@
     "tokensUsageLabel": "토큰 {{value}}",
     "toolsUsageLabel": "도구 {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "{{delay}} 후",
+    "stopped": "루프 중단",
+    "noop": "변화 없음"
+  },
+  "reportFindings": {
+    "none": "발견된 문제 없음",
+    "count": "{{count}}건 발견",
+    "level": "레벨 {{level}}",
+    "outcome": {
+      "fixed": "수정됨",
+      "skipped": "건너뜀",
+      "no_change_needed": "수정 불필요"
+    }
+  },
+  "cron": {
+    "recurring": "반복",
+    "oneShot": "1회",
+    "durable": "영구",
+    "sessionOnly": "세션 한정",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "새 워크트리 {{name}}",
+    "enterPath": "기존 {{path}}",
+    "enterGenerated": "새 워크트리 (이름 자동 생성)",
+    "keep": "유지",
+    "remove": "삭제",
+    "discardChanges": "변경사항 버림"
+  },
+  "mcpResource": {
+    "allServers": "전체 서버"
+  },
+  "sendUserMessage": {
+    "proactive": "선제 발신",
+    "attachments": "첨부 {{count}}개"
+  },
   "mcp": {
     "common": {
       "out": "OUT"

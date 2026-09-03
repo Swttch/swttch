@@ -115,6 +115,43 @@
     "tokensUsageLabel": "トークン {{value}}",
     "toolsUsageLabel": "ツール {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "{{delay}}後",
+    "stopped": "ループ停止",
+    "noop": "変更なし"
+  },
+  "reportFindings": {
+    "none": "指摘なし",
+    "count": "{{count}} 件の指摘",
+    "level": "レベル {{level}}",
+    "outcome": {
+      "fixed": "修正済み",
+      "skipped": "スキップ",
+      "no_change_needed": "修正不要"
+    }
+  },
+  "cron": {
+    "recurring": "繰り返し",
+    "oneShot": "1回のみ",
+    "durable": "永続",
+    "sessionOnly": "セッション限定",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "新規ワークツリー {{name}}",
+    "enterPath": "既存 {{path}}",
+    "enterGenerated": "新規ワークツリー (自動命名)",
+    "keep": "保持",
+    "remove": "削除",
+    "discardChanges": "変更を破棄"
+  },
+  "mcpResource": {
+    "allServers": "全サーバー"
+  },
+  "sendUserMessage": {
+    "proactive": "自発送信",
+    "attachments": "添付 {{count}} 件"
+  },
   "mcp": {
     "common": {
       "out": "OUT"

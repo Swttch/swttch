@@ -123,6 +123,43 @@
     "tokensUsageLabel": "رموز {{value}}",
     "toolsUsageLabel": "أدوات {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "خلال {{delay}}",
+    "stopped": "تم إيقاف الحلقة",
+    "noop": "لا تغيير"
+  },
+  "reportFindings": {
+    "none": "لا توجد ملاحظات",
+    "count": "الملاحظات: {{count}}",
+    "level": "المستوى {{level}}",
+    "outcome": {
+      "fixed": "تم الإصلاح",
+      "skipped": "تم التخطي",
+      "no_change_needed": "لا حاجة للتغيير"
+    }
+  },
+  "cron": {
+    "recurring": "متكرر",
+    "oneShot": "مرة واحدة",
+    "durable": "دائم",
+    "sessionOnly": "الجلسة فقط",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "شجرة عمل جديدة {{name}}",
+    "enterPath": "موجودة {{path}}",
+    "enterGenerated": "شجرة عمل جديدة (تسمية تلقائية)",
+    "keep": "الاحتفاظ",
+    "remove": "الإزالة",
+    "discardChanges": "تجاهل التغييرات"
+  },
+  "mcpResource": {
+    "allServers": "كل الخوادم"
+  },
+  "sendUserMessage": {
+    "proactive": "استباقي",
+    "attachments": "المرفقات: {{count}}"
+  },
   "mcp": {
     "common": {
       "out": "خرج"

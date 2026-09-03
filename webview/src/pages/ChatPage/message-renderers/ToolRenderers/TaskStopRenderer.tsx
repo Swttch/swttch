@@ -24,7 +24,10 @@ export function TaskStopRenderer(props: RendererProps) {
 
     return (
         <ToolWrapper message={props.message}>
-            <ToolHeader name="TaskStop" inProgress={!props.toolResult} className="mb-2.5">
+            {/* The CLI still normalizes `KillShell` and `KillBash` onto TaskStop,
+                so the header echoes the name that was actually called rather
+                than the current one — otherwise an old session reads wrong. */}
+            <ToolHeader name={toolUse.name} inProgress={!props.toolResult} className="mb-2.5">
                 <div className="text-text-primary/60 truncate text-[0.9230rem]">{t('task.common.taskPrefix')} "{taskId}"</div>
             </ToolHeader>
 

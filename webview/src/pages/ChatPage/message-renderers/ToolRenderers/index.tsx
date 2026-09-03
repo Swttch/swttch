@@ -27,6 +27,16 @@ import {WorkflowRenderer} from "./WorkflowRenderer.tsx";
 import {SendMessageRenderer} from "./SendMessageRenderer.tsx";
 import {ListAgentsRenderer} from "./ListAgentsRenderer.tsx";
 import {StructuredOutputRenderer} from "./StructuredOutputRenderer.tsx";
+import {ScheduleWakeupRenderer} from "./ScheduleWakeupRenderer.tsx";
+import {ReportFindingsRenderer} from "./ReportFindingsRenderer.tsx";
+import {CronCreateRenderer} from "./CronCreateRenderer.tsx";
+import {CronDeleteRenderer} from "./CronDeleteRenderer.tsx";
+import {CronListRenderer} from "./CronListRenderer.tsx";
+import {RemoteTriggerRenderer} from "./RemoteTriggerRenderer.tsx";
+import {EnterWorktreeRenderer} from "./EnterWorktreeRenderer.tsx";
+import {ExitWorktreeRenderer} from "./ExitWorktreeRenderer.tsx";
+import {McpResourceRenderer} from "./McpResourceRenderer.tsx";
+import {SendUserMessageRenderer} from "./SendUserMessageRenderer.tsx";
 import {McpRenderers} from "./Mcp";
 
 interface ToolRendererProps {
@@ -64,5 +74,34 @@ export const ToolRendererMap = new Map<string, FC<ToolRendererProps>>([
     ['SendMessage', SendMessageRenderer],
     ['ListAgents', ListAgentsRenderer],
     ['StructuredOutput', StructuredOutputRenderer],
+    ['ScheduleWakeup', ScheduleWakeupRenderer],
+    ['ReportFindings', ReportFindingsRenderer],
+    ['CronCreate', CronCreateRenderer],
+    ['CronDelete', CronDeleteRenderer],
+    ['CronList', CronListRenderer],
+    ['RemoteTrigger', RemoteTriggerRenderer],
+    ['EnterWorktree', EnterWorktreeRenderer],
+    ['ExitWorktree', ExitWorktreeRenderer],
+    ['ListMcpResourcesTool', McpResourceRenderer],
+    ['ReadMcpResourceTool', McpResourceRenderer],
+    ['ReadMcpResourceDirTool', McpResourceRenderer],
+    ['SendUserMessage', SendUserMessageRenderer],
+
+    // Legacy tool names. The CLI keeps an alias table that normalizes these onto
+    // the current names, so a session recorded under an older CLI — or a user
+    // still on one — replays the old name verbatim and would otherwise render as
+    // an unknown tool. Read out of the CLI binary (2.1.170); `Task`/`Agent`
+    // above is the same pairing.
+    ['KillShell', TaskStopRenderer],
+    ['KillBash', TaskStopRenderer],
+    ['BashOutput', TaskOutputRenderer],
+    ['BashOutputTool', TaskOutputRenderer],
+    ['AgentOutput', TaskOutputRenderer],
+    ['AgentOutputTool', TaskOutputRenderer],
+    ['ListPeers', ListAgentsRenderer],
+    ['ListMcpResources', McpResourceRenderer],
+    ['ReadMcpResource', McpResourceRenderer],
+    ['Brief', SendUserMessageRenderer],
+
     ...McpRenderers,
 ]);

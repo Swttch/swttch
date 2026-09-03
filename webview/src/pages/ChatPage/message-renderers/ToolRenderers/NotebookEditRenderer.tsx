@@ -1,7 +1,7 @@
 import {ToolUseBlockDto} from "@/dto";
 import {getAdapter} from "@/adapters";
 import {useTranslation} from "@/i18n";
-import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper} from "./common";
+import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, isInputSettled} from "./common";
 import {cn} from "@/utils/cn";
 
 class NotebookEditToolUseDto extends ToolUseBlockDto {
@@ -51,7 +51,11 @@ export function NotebookEditRenderer(props: RendererProps) {
         statusLabel = isError ? error : (STATUS_LABEL_BY_MODE[editMode] ?? t('notebookEdit.status.success'));
     }
 
-    const displaySource = source.length > 0 ? source : t('notebookEdit.noContent');
+    // An empty cell is a real thing to report, but a cell whose source is still
+    // streaming in is not one — say nothing until the arguments have landed.
+    const displaySource = source.length > 0
+        ? source
+        : isInputSettled(props) ? t('notebookEdit.noContent') : '';
 
     return (
         <ToolWrapper message={props.message}>

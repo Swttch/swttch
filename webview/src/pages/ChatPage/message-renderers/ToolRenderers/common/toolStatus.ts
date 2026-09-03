@@ -68,6 +68,19 @@ export function toolStatus(toolResult?: LoadedMessageDto, isStreaming = false): 
 }
 
 /**
+ * True once the tool's `input` is final and can be read for meaning.
+ *
+ * While a message streams, `input` is rebuilt from partial JSON, so a field
+ * that has not arrived yet looks exactly like one the caller omitted. A
+ * renderer that reads meaning into an absent field — "no findings", "all
+ * servers", "auto-named" — states that as fact mid-stream and is simply wrong
+ * until the rest of the arguments land. Ask this before drawing such a label.
+ */
+export function isInputSettled(props: {toolResult?: LoadedMessageDto; message?: LoadedMessageDto}): boolean {
+    return props.toolResult !== undefined || !(props.message?.isStreaming ?? false);
+}
+
+/**
  * Carries the current tool's status down to ToolWrapper without threading a
  * prop through every renderer. ToolRenderer provides it; ToolWrapper consumes
  * it. Defaults to `pending` so ToolWrapper renders correctly with no provider.

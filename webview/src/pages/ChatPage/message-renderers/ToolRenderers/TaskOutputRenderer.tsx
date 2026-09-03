@@ -111,7 +111,10 @@ export function TaskOutputRenderer(props: RendererProps) {
 
     return (
         <ToolWrapper message={props.message}>
-            <ToolHeader name="TaskOutput" inProgress={!props.toolResult} className="mb-2.5">
+            {/* `BashOutput`, `BashOutputTool`, `AgentOutput` and `AgentOutputTool`
+                all normalize onto TaskOutput, so the header echoes the name the
+                session actually recorded. */}
+            <ToolHeader name={toolUse.name} inProgress={!props.toolResult} className="mb-2.5">
                 <div className="flex items-center gap-2 min-w-0">
                     <div
                         className="text-text-primary/60 truncate text-[0.9230rem] cursor-pointer hover:text-text-primary/90 transition-colors"

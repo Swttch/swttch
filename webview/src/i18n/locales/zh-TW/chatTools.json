@@ -115,6 +115,43 @@
     "tokensUsageLabel": "token {{value}}",
     "toolsUsageLabel": "工具 {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "{{delay}} 後",
+    "stopped": "迴圈已停止",
+    "noop": "無變化"
+  },
+  "reportFindings": {
+    "none": "未發現問題",
+    "count": "發現 {{count}} 個問題",
+    "level": "等級 {{level}}",
+    "outcome": {
+      "fixed": "已修正",
+      "skipped": "已略過",
+      "no_change_needed": "無需修改"
+    }
+  },
+  "cron": {
+    "recurring": "重複",
+    "oneShot": "一次性",
+    "durable": "持久",
+    "sessionOnly": "僅本工作階段",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "新工作樹 {{name}}",
+    "enterPath": "既有 {{path}}",
+    "enterGenerated": "新工作樹（自動命名）",
+    "keep": "保留",
+    "remove": "刪除",
+    "discardChanges": "捨棄變更"
+  },
+  "mcpResource": {
+    "allServers": "全部伺服器"
+  },
+  "sendUserMessage": {
+    "proactive": "主動傳送",
+    "attachments": "{{count}} 個附件"
+  },
   "mcp": {
     "common": {
       "out": "輸出"

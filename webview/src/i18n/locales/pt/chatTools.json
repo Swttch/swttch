@@ -115,6 +115,47 @@
     "tokensUsageLabel": "tokens {{value}}",
     "toolsUsageLabel": "ferramentas {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "em {{delay}}",
+    "stopped": "loop interrompido",
+    "noop": "sem alterações"
+  },
+  "reportFindings": {
+    "none": "Nenhuma constatação",
+    "count": "{{count}} constatações",
+    "count_one": "{{count}} constatação",
+    "count_other": "{{count}} constatações",
+    "level": "nível {{level}}",
+    "outcome": {
+      "fixed": "corrigido",
+      "skipped": "ignorado",
+      "no_change_needed": "sem alteração necessária"
+    }
+  },
+  "cron": {
+    "recurring": "recorrente",
+    "oneShot": "única vez",
+    "durable": "persistente",
+    "sessionOnly": "apenas sessão",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "novo worktree {{name}}",
+    "enterPath": "existente {{path}}",
+    "enterGenerated": "novo worktree (nome automático)",
+    "keep": "manter",
+    "remove": "remover",
+    "discardChanges": "descartar alterações"
+  },
+  "mcpResource": {
+    "allServers": "todos os servidores"
+  },
+  "sendUserMessage": {
+    "proactive": "proativo",
+    "attachments": "{{count}} anexos",
+    "attachments_one": "{{count}} anexo",
+    "attachments_other": "{{count}} anexos"
+  },
   "mcp": {
     "common": {
       "out": "OUT"

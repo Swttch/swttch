@@ -17,8 +17,10 @@ export function ListAgentsRenderer(props: RendererProps) {
 
     return (
         <ToolWrapper message={props.message}>
+            {/* `ListPeers` is the legacy name the CLI normalizes onto ListAgents;
+                the header echoes whichever one the session recorded. */}
             <ToolHeader
-                name="ListAgents"
+                name={toolUse.name}
                 description={filter}
                 inProgress={!props.toolResult}
                 className="mb-2.5"

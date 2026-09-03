@@ -119,6 +119,43 @@
     "tokensUsageLabel": "токены {{value}}",
     "toolsUsageLabel": "инструменты {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "через {{delay}}",
+    "stopped": "цикл остановлен",
+    "noop": "без изменений"
+  },
+  "reportFindings": {
+    "none": "Замечаний нет",
+    "count": "Замечаний: {{count}}",
+    "level": "уровень {{level}}",
+    "outcome": {
+      "fixed": "исправлено",
+      "skipped": "пропущено",
+      "no_change_needed": "изменения не нужны"
+    }
+  },
+  "cron": {
+    "recurring": "повторяющаяся",
+    "oneShot": "разовая",
+    "durable": "постоянная",
+    "sessionOnly": "только сессия",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "новое рабочее дерево {{name}}",
+    "enterPath": "существующее {{path}}",
+    "enterGenerated": "новое рабочее дерево (имя создано автоматически)",
+    "keep": "сохранить",
+    "remove": "удалить",
+    "discardChanges": "отбросить изменения"
+  },
+  "mcpResource": {
+    "allServers": "все серверы"
+  },
+  "sendUserMessage": {
+    "proactive": "по инициативе агента",
+    "attachments": "Вложений: {{count}}"
+  },
   "mcp": {
     "common": {
       "out": "ВЫХОД"

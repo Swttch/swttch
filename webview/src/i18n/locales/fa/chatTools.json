@@ -115,6 +115,43 @@
     "tokensUsageLabel": "توکن‌ها {{value}}",
     "toolsUsageLabel": "ابزارها {{count}}"
   },
+  "scheduleWakeup": {
+    "wakeIn": "تا {{delay}} دیگر",
+    "stopped": "حلقه متوقف شد",
+    "noop": "بدون تغییر"
+  },
+  "reportFindings": {
+    "none": "موردی یافت نشد",
+    "count": "{{count}} مورد",
+    "level": "سطح {{level}}",
+    "outcome": {
+      "fixed": "اصلاح شد",
+      "skipped": "رد شد",
+      "no_change_needed": "نیازی به تغییر نیست"
+    }
+  },
+  "cron": {
+    "recurring": "تکرارشونده",
+    "oneShot": "یک‌بار",
+    "durable": "ماندگار",
+    "sessionOnly": "فقط این نشست",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "ورک‌تری جدید {{name}}",
+    "enterPath": "موجود {{path}}",
+    "enterGenerated": "ورک‌تری جدید (نام خودکار)",
+    "keep": "نگه‌داشتن",
+    "remove": "حذف",
+    "discardChanges": "نادیده‌گرفتن تغییرات"
+  },
+  "mcpResource": {
+    "allServers": "همه سرورها"
+  },
+  "sendUserMessage": {
+    "proactive": "پیش‌دستانه",
+    "attachments": "{{count}} پیوست"
+  },
   "mcp": {
     "common": {
       "out": "OUT"
