@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
 import { MarqueeText } from './MarqueeText';
 import { projectBadgeStyle, projectInitials } from './projectBadge';
 import { abbreviateHomeDir } from '@/shared';
@@ -29,9 +29,23 @@ export function ProjectRow(props: Props) {
     if (isActive) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [isActive]);
 
+  const favoriteLabel = isFavorite ? t('removeFavorite') : t('addFavorite');
+
+  // Toggling the star must not also fire the row's onSelect, since the star
+  // sits INSIDE the open button (see the note below) and a click bubbles
+  // through it like any other descendant's would.
+  const handleStarClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onToggleFavorite();
+  };
+  const handleStarKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleFavorite();
+  };
+
   return (
-    // The star is its own control, so the row cannot be one button wrapping
-    // another — the open action and the pin action sit side by side instead.
     <div
       ref={ref}
       data-active={isActive || undefined}
@@ -53,8 +67,51 @@ export function ProjectRow(props: Props) {
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="flex items-baseline justify-between gap-3">
-            <span className="truncate text-sm font-medium text-text-primary">{name}</span>
+          <span className="flex items-center justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-1">
+              <span className="truncate text-sm font-medium text-text-primary">{name}</span>
+
+              {/*
+                A real <button> cannot contain another <button> — the parser
+                closes the outer one the moment it sees the inner tag — so the
+                star has to be a role="button" span instead. That is what lets
+                it sit right next to the name rather than pinned to the row's
+                far edge, matching SessionItem's inline rename/delete actions.
+              */}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleStarClick}
+                onKeyDown={handleStarKeyDown}
+                aria-pressed={isFavorite}
+                aria-label={favoriteLabel}
+                title={favoriteLabel}
+                // A pinned row keeps its star visible; the rest reveal one on
+                // hover or when the keyboard cursor lands, so an unpinned list
+                // stays quiet.
+                className={`flex flex-shrink-0 items-center justify-center rounded p-1 transition-opacity hover:text-text-primary ${
+                  isFavorite
+                    ? 'text-accent-primary opacity-100'
+                    : 'text-text-tertiary opacity-0 focus:opacity-100 group-hover:opacity-100 group-data-[active]:opacity-100'
+                }`}
+              >
+                <svg
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill={isFavorite ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M11.48 3.5a.56.56 0 011.04 0l2.13 4.98 5.4.46c.5.04.7.66.32.99l-4.1 3.56 1.23 5.28c.11.49-.42.87-.85.61L12 16.6l-4.65 2.78c-.43.26-.96-.12-.85-.61l1.23-5.28-4.1-3.56a.56.56 0 01.32-.99l5.4-.46 2.13-4.98z"
+                  />
+                </svg>
+              </span>
+            </span>
+
             {sessionCount > 0 && (
               <span className="flex-shrink-0 text-xs text-text-tertiary">
                 {t('sessionCount', { count: sessionCount })}
@@ -66,36 +123,6 @@ export function ProjectRow(props: Props) {
             className="text-[0.7692rem] text-text-tertiary group-hover:text-text-secondary"
           />
         </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={onToggleFavorite}
-        aria-pressed={isFavorite}
-        aria-label={isFavorite ? t('removeFavorite') : t('addFavorite')}
-        title={isFavorite ? t('removeFavorite') : t('addFavorite')}
-        // A pinned row keeps its star visible; the rest reveal one on hover or
-        // when the keyboard cursor lands, so an unpinned list stays quiet.
-        className={`mt-1 me-1 flex-shrink-0 rounded p-2 transition-opacity hover:text-text-primary ${
-          isFavorite
-            ? 'text-accent-primary opacity-100'
-            : 'text-text-tertiary opacity-0 focus:opacity-100 group-hover:opacity-100 group-data-[active]:opacity-100'
-        }`}
-      >
-        <svg
-          aria-hidden="true"
-          className="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill={isFavorite ? 'currentColor' : 'none'}
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M11.48 3.5a.56.56 0 011.04 0l2.13 4.98 5.4.46c.5.04.7.66.32.99l-4.1 3.56 1.23 5.28c.11.49-.42.87-.85.61L12 16.6l-4.65 2.78c-.43.26-.96-.12-.85-.61l1.23-5.28-4.1-3.56a.56.56 0 01.32-.99l5.4-.46 2.13-4.98z"
-          />
-        </svg>
       </button>
     </div>
   );
