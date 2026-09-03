@@ -12,6 +12,7 @@ import { sessionChangeHandler } from './sessionChange';
 import { toolResponseHandler } from './toolResponse';
 import { getSessionsHandler } from './getSessions';
 import { loadSessionHandler } from './loadSession';
+import { loadPromptHistoryHandler } from './loadPromptHistory';
 import { deleteSessionHandler } from './deleteSession';
 import { renameSessionHandler } from './renameSession';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
@@ -180,6 +181,9 @@ export async function handleMessage(
     case MessageType.LOAD_SESSION:
     case MessageType.LOAD_OLDER_MESSAGES:
       await loadSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.LOAD_PROMPT_HISTORY:
+      await loadPromptHistoryHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.DELETE_SESSION:
       await deleteSessionHandler(connectionId, message, connections, bridge);

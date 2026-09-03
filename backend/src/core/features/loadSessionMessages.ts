@@ -301,6 +301,30 @@ async function getActiveChain(
 }
 
 /**
+ * A session's complete active chain, served from the same fingerprinted cache the
+ * paged loader uses.
+ *
+ * Exposed for callers that need the whole transcript rather than a page — the
+ * prompt history is the first — so they reuse the parse + subagent-injection +
+ * active-chain work `loadSessionMessages` has already done for this session file
+ * instead of repeating it. Returns an empty array when the session file cannot be
+ * read, matching what `loadSessionMessages` reports for the same failure.
+ */
+export async function loadActiveChain(
+  workingDir: string,
+  targetSessionId: string,
+): Promise<SessionMessage[]> {
+  try {
+    const sessionsPath = await getProjectSessionsPath(workingDir);
+    const sessionFile = join(sessionsPath, `${targetSessionId}.jsonl`);
+    return await getActiveChain(sessionFile, sessionsPath, targetSessionId);
+  } catch (err) {
+    console.error('[node-backend]', 'Error loading active chain:', err);
+    return [];
+  }
+}
+
+/**
  * The permission mode the CLI was last running under, read from the newest page
  * of messages only — never by scanning further back into the session.
  *

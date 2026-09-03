@@ -67,6 +67,17 @@ export enum MessageType {
   LOAD_SESSION = 'LOAD_SESSION',
   /** Load older messages before a specific message cursor (paging). */
   LOAD_OLDER_MESSAGES = 'LOAD_OLDER_MESSAGES',
+  /**
+   * Load the prompts the user typed in one session, newest page first, for the
+   * composer's up/down-arrow history. Optional `beforeUuid` cursor pages further
+   * back exactly like LOAD_OLDER_MESSAGES does for the transcript.
+   *
+   * Separate from LOAD_SESSION because the transcript page the webview holds is
+   * a poor source for this: a page is 50 *entries*, and entries are dominated by
+   * tool_result plumbing, so a session's typed prompts are mostly outside it.
+   * inbound webview→backend
+   */
+  LOAD_PROMPT_HISTORY = 'LOAD_PROMPT_HISTORY',
   /** Delete a session and its on-disk history. */
   DELETE_SESSION = 'DELETE_SESSION',
   /** Rename a session's title. */

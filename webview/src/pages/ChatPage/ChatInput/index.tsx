@@ -22,8 +22,7 @@ import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
-import { getTextContent, SessionState } from '@/types';
-import { LoadedMessageType } from '@/dto';
+import { SessionState } from '@/types';
 import { useAttachments } from './hooks/useAttachments';
 import { clipboardCarriesImage } from './clipboardCarriesImage';
 import { AttachmentPreview } from './AttachmentPreview';
@@ -46,6 +45,7 @@ import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { isMobile, isBrowser } from '@/config/environment';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
+import { caretIsAtStart, caretIsAtEnd } from './caretAtEdge';
 import {
   decideVoiceGate,
   VoiceGateAction,
@@ -78,8 +78,8 @@ export function ChatInput() {
   const chatStream = useChatStreamContext();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop } = chatStream;
   const { input: value, setInput: onChange } = useChatInputState();
-  const inputHistory = useInputHistory();
-  const { initHistory, pushToHistory, navigateUp, navigateDown } = inputHistory;
+  const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
+  const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
   // Read the current text without making dictation depend on it — the callback
   // would otherwise be rebuilt on every keystroke, and re-subscribe the stream.
   const valueRef = useRef(value);
@@ -132,9 +132,6 @@ export function ChatInput() {
     }
   }, [installKit, dictation]);
 
-  // Read messages lazily via ref so ChatInput does not re-render every streaming token.
-  const messagesRef = useRef(chatStream.messages);
-  messagesRef.current = chatStream.messages;
   const bridge = useBridgeContext();
   const { subscribe } = bridge;
   const [isFocused, setIsFocused] = useState(false);
@@ -142,7 +139,6 @@ export function ChatInput() {
   // EDITOR_CONTEXT, highlighted as chips in the composer. Reset on submit and
   // session switch (where `value` returns to '').
   const [pathTokens, setPathTokens] = useState<string[]>([]);
-  const lastInitSessionRef = useRef<string | undefined>(undefined);
 
   const {
     attachments,
@@ -532,12 +528,12 @@ export function ChatInput() {
     if (prev !== null && prev !== currentSessionId) {
       clearAttachments();
       setPathTokens([]);
-      initHistory([]);
-      lastInitSessionRef.current = undefined;
+      // The prompt history resets itself on the session change — it owns its own
+      // fetch for the new session, so nothing to clear here.
       // 새 세션에서는 동의 배너를 다시 노출한다(미응답 상태인 경우).
       setConsentDismissed(false);
     }
-  }, [currentSessionId, clearAttachments, initHistory]);
+  }, [currentSessionId, clearAttachments]);
 
   const isActive = isStreaming
     || sessionState === SessionState.WaitingPermission
@@ -598,21 +594,17 @@ export function ChatInput() {
     return () => window.removeEventListener('keydown', handleEscKey);
   }, [isInterruptible, onStop, textareaRef, showSchedulePopover, confirmStopBackgroundTasks]);
 
-  // Populate input history from session messages on session change.
-  // Read messages via ref to avoid re-running this effect on every streaming token —
-  // we only care about the messages snapshot at session-switch time.
+  // The prompt history is no longer built from the loaded transcript. It cannot
+  // be: pagination hands the webview the newest 50 *entries*, and entries are
+  // dominated by tool_result plumbing, so a resumed session's typed prompts are
+  // almost entirely outside what `messages` holds. useInputHistory asks the
+  // backend, which has the whole active chain, instead.
+
+  // Abandon history navigation once the composer is empty again, so the next Up
+  // starts from the most recent prompt rather than resuming mid-walk.
   useEffect(() => {
-    if (!currentSessionId || currentSessionId === lastInitSessionRef.current) return;
-    if (messagesRef.current.length === 0) return;
-
-    lastInitSessionRef.current = currentSessionId;
-
-    const userTexts = messagesRef.current
-      .filter(m => m.type === LoadedMessageType.User)
-      .map(m => getTextContent(m))
-      .filter((t): t is string => Boolean(t));
-    initHistory(userTexts);
-  }, [currentSessionId, initHistory]);
+    if (value === '') resetHistory();
+  }, [value, resetHistory]);
 
   const handleRichChange = useCallback((newValue: string) => {
     onChange(newValue);
@@ -693,25 +685,41 @@ export function ChatInput() {
       }
       return;
     } else if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
-      // 복수행: 커서가 첫 번째 줄에 있을 때만 히스토리 탐색
-      const pos = getCaretOffset(e.currentTarget);
-      if (value.lastIndexOf('\n', pos - 1) !== -1) return;
+      // Moving comes first, and the history only gets the key once the caret has
+      // nowhere left to go: Up walks up the visual rows, then from the top row to
+      // the very first character, and only the press after that — one the
+      // composer would not act on at all — recalls the previous prompt.
+      //
+      // This used to scan the text for "\n" instead, which is the mistake
+      // utils/domSelection warns about: a soft-wrapped prompt is one run of text
+      // with no newline in it, so every visual row read as "the first line" and
+      // Up jumped to the previous prompt mid-paragraph.
+      if (!caretIsAtStart(e.currentTarget)) return;
 
       const historyValue = navigateUp(value);
       if (historyValue === null) return;
       e.preventDefault();
       onChange(historyValue);
+      // Land on the character the walk continues from, so holding Up keeps
+      // moving through prompts instead of re-crossing the one just recalled.
+      requestAnimationFrame(() => {
+        const target = textareaRef.current;
+        if (target) setCaretOffset(target, 0);
+      });
     } else if (e.key === 'ArrowDown' && !palette.showSlashCommands) {
-      // 복수행: 커서가 마지막 줄에 있을 때만 히스토리 탐색
-      const pos = getCaretOffset(e.currentTarget);
-      if (value.indexOf('\n', pos) !== -1) return;
+      // The mirror of Up: the last character, not the last row.
+      if (!caretIsAtEnd(e.currentTarget)) return;
 
       const historyValue = navigateDown();
       if (historyValue === null) return;
       e.preventDefault();
       onChange(historyValue);
+      requestAnimationFrame(() => {
+        const target = textareaRef.current;
+        if (target) setCaretOffset(target, historyValue.length);
+      });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
 
   // Wrap the attachment paste handler so images keep their dedicated path while
   // text goes through the browser's own editing pipeline.
