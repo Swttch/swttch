@@ -1,8 +1,8 @@
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ProjectRow } from './ProjectRow';
 import { useBridgeContext } from '../../contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts';
-import { MessageType, abbreviateHomeDir } from '@/shared';
+import { MessageType, abbreviateHomeDir, isSameWorkingDir } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 interface Project {
@@ -10,6 +10,24 @@ interface Project {
   path: string;
   sessionCount: number;
   lastModified: string;
+}
+
+/**
+ * [projects] with the pinned ones lifted to the top, each group otherwise
+ * keeping the order the backend sent.
+ *
+ * Membership is decided by isSameWorkingDir rather than string equality: a
+ * pinned path is stored as it was spelled when pinned, and the same directory
+ * can reach the list spelled differently (Windows case, or slash versus
+ * backslash). Comparing strings would leave a star that pins but never unpins.
+ */
+export function sortFavoritesFirst(projects: Project[], favoritePaths: string[]): Project[] {
+  const pinned = (project: Project) =>
+    favoritePaths.some((favorite) => isSameWorkingDir(favorite, project.path));
+
+  // Array.prototype.sort is stable, so the backend's recency order survives
+  // inside each group.
+  return [...projects].sort((a, b) => Number(pinned(b)) - Number(pinned(a)));
 }
 
 /**
@@ -32,6 +50,7 @@ export function filterProjects(projects: Project[], query: string, homeDir: stri
 export function ProjectSelectorPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [homeDir, setHomeDir] = useState<string | null>(null);
+  const [favoritePaths, setFavoritePaths] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -67,6 +86,7 @@ export function ProjectSelectorPage() {
           const projectsList = (message.payload?.projects as Project[]) || [];
           setProjects(projectsList);
           setHomeDir((message.payload?.homeDir as string | undefined) ?? null);
+          setFavoritePaths((message.payload?.favoritePaths as string[] | undefined) ?? []);
           setIsLoading(false);
           unsubscribe();
         });
@@ -83,9 +103,41 @@ export function ProjectSelectorPage() {
   }, [isConnected, send, subscribe]);
 
   const visible = useMemo(
-    () => filterProjects(projects, query, homeDir),
-    [projects, query, homeDir],
+    () => filterProjects(sortFavoritesFirst(projects, favoritePaths), query, homeDir),
+    [projects, favoritePaths, query, homeDir],
   );
+
+  const isFavorite = useCallback(
+    (path: string) => favoritePaths.some((favorite) => isSameWorkingDir(favorite, path)),
+    [favoritePaths],
+  );
+
+  /**
+   * Pin or unpin, showing the change at once and then settling on whatever the
+   * backend stored. The optimistic step keeps the star responsive; the reply is
+   * what the next load will render, so it wins.
+   */
+  const toggleFavorite = async (path: string) => {
+    const next = !isFavorite(path);
+    setFavoritePaths((paths) =>
+      next ? [...paths, path] : paths.filter((favorite) => !isSameWorkingDir(favorite, path)),
+    );
+
+    try {
+      const ack = await send<{ status?: string; favoritePaths?: string[] }>(
+        MessageType.SET_PROJECT_FAVORITE,
+        { path, favorite: next },
+      );
+      // The backend answers with the list as stored, on success and on a
+      // refused write alike, so taking it either way puts the screen back in
+      // step with the file rather than leaving it claiming an unsaved pin.
+      if (Array.isArray(ack?.favoritePaths)) setFavoritePaths(ack.favoritePaths);
+    } catch {
+      setFavoritePaths((paths) =>
+        next ? paths.filter((favorite) => !isSameWorkingDir(favorite, path)) : [...paths, path],
+      );
+    }
+  };
 
   // A narrowed list can be shorter than where the cursor was standing.
   useEffect(() => {
@@ -215,7 +267,9 @@ export function ProjectSelectorPage() {
                 sessionCount={project.sessionCount}
                 homeDir={homeDir}
                 isActive={index === activeIndex}
+                isFavorite={isFavorite(project.path)}
                 onSelect={() => setWorkingDirectory(project.path, { replace: false })}
+                onToggleFavorite={() => void toggleFavorite(project.path)}
               />
             ))
           )}

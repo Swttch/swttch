@@ -4,6 +4,8 @@
   "empty": "Aucun projet disponible",
   "noMatches": "Aucun projet correspondant",
   "addProject": "Ajouter un projet",
+  "addFavorite": "Épingler en haut",
+  "removeFavorite": "Détacher",
   "retry": "Réessayer",
   "sessionCount": "{{count}} sessions",
   "sessionCount_one": "{{count}} session",

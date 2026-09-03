@@ -4,6 +4,8 @@
   "empty": "利用可能なプロジェクトがありません",
   "noMatches": "一致するプロジェクトがありません",
   "addProject": "プロジェクトを追加",
+  "addFavorite": "上部に固定",
+  "removeFavorite": "固定を解除",
   "retry": "再試行",
   "sessionCount": "{{count}} セッション",
   "sessionCount_one": "{{count}} セッション",

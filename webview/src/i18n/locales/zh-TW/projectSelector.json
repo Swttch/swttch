@@ -4,6 +4,8 @@
   "empty": "沒有可用的專案",
   "noMatches": "沒有符合的專案",
   "addProject": "新增專案",
+  "addFavorite": "置頂",
+  "removeFavorite": "取消置頂",
   "retry": "重試",
   "sessionCount": "{{count}} 個工作階段",
   "sessionCount_one": "{{count}} 個工作階段",

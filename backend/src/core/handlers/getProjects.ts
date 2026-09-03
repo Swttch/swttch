@@ -3,6 +3,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getProjectsList } from '../features/getProjectsList';
+import { readFavoritePaths } from '../features/projects-store';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
@@ -25,6 +26,14 @@ export async function getProjectsHandler(
   // the backend, so its own home directory says nothing about these paths.
   const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
 
-  connections.sendTo(connectionId, MessageType.PROJECTS_LIST, { projects, homeDir });
+  // Pinned paths ride along for the same reason: which projects the user pinned
+  // is not a property of any one entry, and the picker needs both to sort.
+  const favoritePaths = await readFavoritePaths();
+
+  connections.sendTo(connectionId, MessageType.PROJECTS_LIST, {
+    projects,
+    homeDir,
+    favoritePaths,
+  });
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
 }

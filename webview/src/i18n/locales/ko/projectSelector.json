@@ -4,6 +4,8 @@
   "empty": "사용 가능한 프로젝트가 없습니다",
   "noMatches": "일치하는 프로젝트가 없습니다",
   "addProject": "프로젝트 추가",
+  "addFavorite": "상단에 고정",
+  "removeFavorite": "고정 해제",
   "retry": "재시도",
   "sessionCount": "세션 {{count}}개",
   "sessionCount_one": "세션 {{count}}개",

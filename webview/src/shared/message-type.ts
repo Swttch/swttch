@@ -345,6 +345,11 @@ export enum MessageType {
   PICK_FILES = 'PICK_FILES',
   /** List recent/known projects. */
   GET_PROJECTS = 'GET_PROJECTS',
+  /**
+   * Pin or unpin one project so it sorts to the top of the picker.
+   * inbound webview→backend; the updated path list comes back on the ACK.
+   */
+  SET_PROJECT_FAVORITE = 'SET_PROJECT_FAVORITE',
   /** Read the current working directory the backend resolved. */
   GET_WORKING_DIR = 'GET_WORKING_DIR',
   /** Resolve the IDE project root containing the working directory. */

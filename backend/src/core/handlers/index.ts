@@ -41,6 +41,7 @@ import {
   cancelSponsorSubscriptionHandler,
 } from './sponsorAccount';
 import { getProjectsHandler } from './getProjects';
+import { setProjectFavoriteHandler } from './projectFavorite';
 import { getUsageHandler } from './getUsage';
 import { getUsageReportHandler } from './getUsageReport';
 import { getAllUsageHandler } from './getAllUsage';
@@ -261,6 +262,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_PROJECTS:
       await getProjectsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_PROJECT_FAVORITE:
+      await setProjectFavoriteHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_USAGE:
       await getUsageHandler(connectionId, message, connections, bridge);

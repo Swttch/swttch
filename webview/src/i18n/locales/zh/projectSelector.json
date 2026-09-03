@@ -4,6 +4,8 @@
   "empty": "暂无可用项目",
   "noMatches": "没有匹配的项目",
   "addProject": "添加项目",
+  "addFavorite": "置顶",
+  "removeFavorite": "取消置顶",
   "retry": "重试",
   "sessionCount": "{{count}} 个会话",
   "sessionCount_one": "{{count}} 个会话",

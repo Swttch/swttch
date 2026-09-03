@@ -4,6 +4,8 @@
   "empty": "Нет доступных проектов",
   "noMatches": "Нет подходящих проектов",
   "addProject": "Добавить проект",
+  "addFavorite": "Закрепить сверху",
+  "removeFavorite": "Открепить",
   "retry": "Повторить",
   "sessionCount": "{{count}} сессий",
   "sessionCount_one": "{{count}} сессия",

@@ -4,6 +4,8 @@
   "empty": "هیچ پروژه‌ای در دسترس نیست",
   "noMatches": "هیچ پروژه‌ای مطابقت ندارد",
   "addProject": "افزودن پروژه",
+  "addFavorite": "سنجاق به بالا",
+  "removeFavorite": "برداشتن سنجاق",
   "retry": "تلاش مجدد",
   "sessionCount": "{{count}} نشست",
   "sessionCount_one": "{{count}} نشست",
