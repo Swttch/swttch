@@ -6,6 +6,7 @@
   "addProject": "إضافة مشروع",
   "addFavorite": "تثبيت في الأعلى",
   "removeFavorite": "إلغاء التثبيت",
+  "descriptionIconLabel": "عرض الوصف",
   "sortOrder": {
     "label": "الترتيب",
     "recent": "الأحدث استخدامًا",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "مزيد من الإجراءات",
+    "editProject": "تعديل المشروع",
     "copyPath": "نسخ المسار",
     "delete": "حذف"
   },
+  "editDialog": {
+    "title": "تعديل المشروع",
+    "nameLabel": "الاسم المعروض",
+    "nameHint": "اتركه فارغًا لاستخدام اسم المجلد الحقيقي.",
+    "descriptionLabel": "الوصف",
+    "descriptionPlaceholder": "أضف ملاحظة حول هذا المشروع (اختياري)",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "editDone": "تم تحديث المشروع",
+  "editFailed": "تعذر تحديث المشروع",
   "deleteConfirm": {
     "title": "حذف المشروع",
     "message": "سيؤدي هذا إلى حذف سجلات الجلسات لـ\"{{name}}\" ضمن ~/.claude/projects. لا يمكن التراجع عن ذلك.",

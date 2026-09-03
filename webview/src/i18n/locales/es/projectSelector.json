@@ -6,6 +6,7 @@
   "addProject": "Agregar proyecto",
   "addFavorite": "Fijar arriba",
   "removeFavorite": "Dejar de fijar",
+  "descriptionIconLabel": "Ver descripción",
   "sortOrder": {
     "label": "Orden",
     "recent": "Reciente",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "Más acciones",
+    "editProject": "Editar proyecto",
     "copyPath": "Copiar ruta",
     "delete": "Eliminar"
   },
+  "editDialog": {
+    "title": "Editar proyecto",
+    "nameLabel": "Nombre para mostrar",
+    "nameHint": "Déjalo en blanco para usar el nombre real de la carpeta.",
+    "descriptionLabel": "Descripción",
+    "descriptionPlaceholder": "Añade una nota sobre este proyecto (opcional)",
+    "cancel": "Cancelar",
+    "save": "Guardar"
+  },
+  "editDone": "Proyecto actualizado",
+  "editFailed": "No se pudo actualizar el proyecto",
   "deleteConfirm": {
     "title": "Eliminar proyecto",
     "message": "Esto elimina los registros de sesión de \"{{name}}\" en ~/.claude/projects. No se puede deshacer.",

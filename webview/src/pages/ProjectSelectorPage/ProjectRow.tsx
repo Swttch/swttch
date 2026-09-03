@@ -1,12 +1,18 @@
 import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
+import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import { MarqueeText } from './MarqueeText';
 import { ProjectRowMenu } from './ProjectRowMenu';
 import { projectBadgeStyle, projectInitials } from './projectBadge';
+import { Tooltip } from '@/components/Tooltip';
 import { abbreviateHomeDir } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 interface Props {
+  /** The real, unedited folder name. */
   name: string;
+  /** Display alias, if the user set one. Falls back to [name] when absent. */
+  alias?: string;
+  description?: string;
   path: string;
   sessionCount: number;
   /** Home directory of the machine the paths were recorded on, when known. */
@@ -18,11 +24,15 @@ interface Props {
   onToggleFavorite: () => void;
   /** Deletes the project's session records; resolves to whether it succeeded. */
   onDelete: () => Promise<boolean>;
+  /** Sets (or clears) the alias/description; resolves to whether it saved. */
+  onSaveMeta: (fields: { name: string; description: string }) => Promise<boolean>;
 }
 
 export function ProjectRow(props: Props) {
   const {
     name,
+    alias,
+    description,
     path,
     sessionCount,
     homeDir,
@@ -31,9 +41,14 @@ export function ProjectRow(props: Props) {
     onSelect,
     onToggleFavorite,
     onDelete,
+    onSaveMeta,
   } = props;
   const { t } = useTranslation('projectSelector');
   const ref = useRef<HTMLDivElement>(null);
+
+  // Wherever the real name would otherwise appear — the label, the badge
+  // letters — the alias takes its place instead, exactly as item 2 asked.
+  const shownName = alias || name;
 
   // Keep the keyboard cursor on screen. Arrow keys move it while focus stays in
   // the search box, so nothing else would scroll the row into view.
@@ -75,21 +90,34 @@ export function ProjectRow(props: Props) {
           style={projectBadgeStyle(path)}
           className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded text-xs font-semibold"
         >
-          {projectInitials(name)}
+          {projectInitials(shownName)}
         </span>
 
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-1">
-              <span className="truncate text-sm font-medium text-text-primary">{name}</span>
+              <span className="truncate text-sm font-medium text-text-primary">{shownName}</span>
 
               {/*
                 A real <button> cannot contain another <button> — the parser
-                closes the outer one the moment it sees the inner tag — so the
-                star has to be a role="button" span instead. That is what lets
-                it sit right next to the name rather than pinned to the row's
-                far edge, matching SessionItem's inline rename/delete actions.
+                closes the outer one the moment it sees the inner tag — so
+                inline controls next to the name use a role="button" span (the
+                star) or, here, a plain focusable span (the tooltip anchor)
+                instead. Same reasoning as SessionItem's inline rename/delete
+                actions.
               */}
+              {description && (
+                <Tooltip content={description}>
+                  <span
+                    tabIndex={0}
+                    aria-label={t('descriptionIconLabel')}
+                    className="flex flex-shrink-0 items-center justify-center rounded p-1 text-text-tertiary hover:text-text-primary"
+                  >
+                    <ChatBubbleLeftIcon className="h-3.5 w-3.5" />
+                  </span>
+                </Tooltip>
+              )}
+
               <span
                 role="button"
                 tabIndex={0}
@@ -137,7 +165,15 @@ export function ProjectRow(props: Props) {
         </span>
       </button>
 
-      <ProjectRowMenu name={name} path={path} onDelete={onDelete} />
+      <ProjectRowMenu
+        displayName={shownName}
+        realName={name}
+        currentName={alias ?? ''}
+        currentDescription={description ?? ''}
+        path={path}
+        onDelete={onDelete}
+        onSaveMeta={onSaveMeta}
+      />
     </div>
   );
 }

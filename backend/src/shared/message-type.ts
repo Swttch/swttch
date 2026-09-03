@@ -355,6 +355,12 @@ export enum MessageType {
    * whose working directory no longer exists on disk. inbound webview→backend.
    */
   DELETE_PROJECT = 'DELETE_PROJECT',
+  /**
+   * Set (or clear) a project's display alias and/or description, never
+   * touching the real folder or ~/.claude/projects. inbound webview→backend;
+   * the updated overlay comes back on the ACK.
+   */
+  SET_PROJECT_META = 'SET_PROJECT_META',
   /** Read the current working directory the backend resolved. */
   GET_WORKING_DIR = 'GET_WORKING_DIR',
   /** Resolve the IDE project root containing the working directory. */

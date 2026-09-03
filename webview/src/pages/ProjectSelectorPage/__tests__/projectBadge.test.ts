@@ -34,6 +34,24 @@ describe('projectInitials', () => {
     expect(projectInitials('---')).toBe('?');
     expect(projectInitials('')).toBe('?');
   });
+
+  // A project's display name is user-editable free text (ProjectMetaDialog),
+  // not a folder name, so it can be Korean, Japanese, Arabic, or anything
+  // else — this used to fall through to '?' because the old split regex
+  // treated every non-ASCII character as delimiter material.
+  describe('non-Latin names', () => {
+    it('takes the first character of a single Korean word', () => {
+      expect(projectInitials('테스트')).toBe('테');
+    });
+
+    it('takes the first character of the first and last Korean word', () => {
+      expect(projectInitials('테스트 프로젝트')).toBe('테프');
+    });
+
+    it('splits Korean words on the same separators as Latin ones', () => {
+      expect(projectInitials('테스트-프로젝트')).toBe('테프');
+    });
+  });
 });
 
 describe('projectBadgeHue', () => {

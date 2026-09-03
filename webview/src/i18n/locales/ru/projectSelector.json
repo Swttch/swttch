@@ -6,6 +6,7 @@
   "addProject": "Добавить проект",
   "addFavorite": "Закрепить сверху",
   "removeFavorite": "Открепить",
+  "descriptionIconLabel": "Показать описание",
   "sortOrder": {
     "label": "Порядок",
     "recent": "Недавние",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "Дополнительно",
+    "editProject": "Изменить проект",
     "copyPath": "Копировать путь",
     "delete": "Удалить"
   },
+  "editDialog": {
+    "title": "Изменить проект",
+    "nameLabel": "Отображаемое имя",
+    "nameHint": "Оставьте пустым, чтобы использовать настоящее имя папки.",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Добавьте заметку об этом проекте (необязательно)",
+    "cancel": "Отмена",
+    "save": "Сохранить"
+  },
+  "editDone": "Проект обновлён",
+  "editFailed": "Не удалось обновить проект",
   "deleteConfirm": {
     "title": "Удалить проект",
     "message": "Это удалит записи сессий «{{name}}» в ~/.claude/projects. Это действие нельзя отменить.",

@@ -1,25 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { ProjectMetaDialog } from './ProjectMetaDialog';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useTranslation } from '@/i18n';
 
 interface Props {
-  name: string;
+  /** What the row currently shows — the alias if one is set, else the real name. Used in the delete confirmation, since that is what the user is looking at when they click it. */
+  displayName: string;
+  /** The real, unedited folder name — shown as context in the edit dialog and used as its name field's placeholder. */
+  realName: string;
+  /** Current alias, or '' when none is set. */
+  currentName: string;
+  /** Current description, or '' when none is set. */
+  currentDescription: string;
   path: string;
   onDelete: () => Promise<boolean>;
+  onSaveMeta: (fields: { name: string; description: string }) => Promise<boolean>;
 }
 
 /**
  * The ⋮ trigger and its menu — a sibling of the row's open button, not a
- * descendant of it, since this is a full menu widget (its own popup, its own
+ * descendant of it, since this is a full menu widget (its own popups, its own
  * confirm dialog) rather than a single inline toggle like the favorite star.
  */
 export function ProjectRowMenu(props: Props) {
-  const { name, path, onDelete } = props;
+  const { displayName, realName, currentName, currentDescription, path, onDelete, onSaveMeta } =
+    props;
   const { t } = useTranslation('projectSelector');
   const { confirmDialog, confirm } = useConfirmDialog();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on outside click, matching every other menu in the app
@@ -49,7 +60,7 @@ export function ProjectRowMenu(props: Props) {
     setOpen(false);
     const ok = await confirm({
       title: t('deleteConfirm.title'),
-      message: t('deleteConfirm.message', { name }),
+      message: t('deleteConfirm.message', { name: displayName }),
       confirmLabel: t('deleteConfirm.confirmLabel'),
       variant: 'danger',
     });
@@ -57,6 +68,12 @@ export function ProjectRowMenu(props: Props) {
 
     const deleted = await onDelete();
     toast[deleted ? 'success' : 'error'](t(deleted ? 'deleteDone' : 'deleteFailed'));
+  };
+
+  const handleSaveMeta = async (name: string, description: string) => {
+    setEditing(false);
+    const ok = await onSaveMeta({ name, description });
+    toast[ok ? 'success' : 'error'](t(ok ? 'editDone' : 'editFailed'));
   };
 
   return (
@@ -99,6 +116,17 @@ export function ProjectRowMenu(props: Props) {
           <button
             type="button"
             role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              setEditing(true);
+            }}
+            className="block w-full px-3 py-2 text-start text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            {t('menu.editProject')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
             onClick={handleCopyPath}
             className="block w-full px-3 py-2 text-start text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
@@ -114,6 +142,16 @@ export function ProjectRowMenu(props: Props) {
             {t('menu.delete')}
           </button>
         </div>
+      )}
+
+      {editing && (
+        <ProjectMetaDialog
+          realName={realName}
+          initialName={currentName}
+          initialDescription={currentDescription}
+          onConfirm={(name, description) => void handleSaveMeta(name, description)}
+          onCancel={() => setEditing(false)}
+        />
       )}
 
       {confirmDialog}

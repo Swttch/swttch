@@ -15,6 +15,28 @@ interface Project {
   createdAt: string;
 }
 
+/** A display-only alias/note overlay for one project (never the real name). */
+interface ProjectMeta {
+  path: string;
+  name?: string;
+  description?: string;
+}
+
+/**
+ * The alias set for [path] if any, keyed by working directory rather than by
+ * string equality: an alias is stored as the path was spelled when set, and
+ * the same directory can arrive spelled differently later (Windows case, or
+ * the other separator).
+ */
+function metaFor(projectMeta: ProjectMeta[], path: string): ProjectMeta | undefined {
+  return projectMeta.find((entry) => isSameWorkingDir(entry.path, path));
+}
+
+/** What the picker shows for [project] — the alias when set, else the real folder name. */
+function displayNameOf(project: Project, projectMeta: ProjectMeta[]): string {
+  return metaFor(projectMeta, project.path)?.name || project.name;
+}
+
 /**
  * [projects] ordered by the chosen timestamp, newest first.
  *
@@ -49,18 +71,31 @@ export function sortFavoritesFirst(projects: Project[], favoritePaths: string[])
 }
 
 /**
- * Rows whose name or path contains [query], case-insensitively.
+ * Rows whose name, alias, or path contains [query], case-insensitively.
  *
  * The abbreviated path is matched as well as the recorded one, because that is
  * the spelling on screen: someone reading `~/Projects/app` and typing `~/Pro`
- * is searching for what they can see.
+ * is searching for what they can see. Same reasoning covers the alias: once a
+ * project shows as "My App" in place of its real name, searching "app" has to
+ * find it by what is actually on screen, not by a name the row no longer
+ * displays.
  */
-export function filterProjects(projects: Project[], query: string, homeDir: string | null): Project[] {
+export function filterProjects(
+  projects: Project[],
+  query: string,
+  homeDir: string | null,
+  projectMeta: ProjectMeta[] = [],
+): Project[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return projects;
 
   return projects.filter((project) => {
-    const haystacks = [project.name, project.path, abbreviateHomeDir(project.path, homeDir)];
+    const haystacks = [
+      project.name,
+      displayNameOf(project, projectMeta),
+      project.path,
+      abbreviateHomeDir(project.path, homeDir),
+    ];
     return haystacks.some((value) => value.toLowerCase().includes(needle));
   });
 }
@@ -69,6 +104,7 @@ export function ProjectSelectorPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [homeDir, setHomeDir] = useState<string | null>(null);
   const [favoritePaths, setFavoritePaths] = useState<string[]>([]);
+  const [projectMeta, setProjectMeta] = useState<ProjectMeta[]>([]);
   // Lazy initializer so localStorage is read once, not on every render.
   const [sortOrder, setSortOrder] = useState<ProjectSortOrder>(() => readSortOrder());
   const [isLoading, setIsLoading] = useState(true);
@@ -107,6 +143,7 @@ export function ProjectSelectorPage() {
           setProjects(projectsList);
           setHomeDir((message.payload?.homeDir as string | undefined) ?? null);
           setFavoritePaths((message.payload?.favoritePaths as string[] | undefined) ?? []);
+          setProjectMeta((message.payload?.projectMeta as ProjectMeta[] | undefined) ?? []);
           setIsLoading(false);
           unsubscribe();
         });
@@ -128,8 +165,9 @@ export function ProjectSelectorPage() {
         sortFavoritesFirst(sortProjects(projects, sortOrder), favoritePaths),
         query,
         homeDir,
+        projectMeta,
       ),
-    [projects, favoritePaths, sortOrder, query, homeDir],
+    [projects, favoritePaths, sortOrder, query, homeDir, projectMeta],
   );
 
   const handleSortOrderChange = (order: ProjectSortOrder) => {
@@ -180,6 +218,30 @@ export function ProjectSelectorPage() {
       const ack = await send<{ status?: string }>(MessageType.DELETE_PROJECT, { path });
       const ok = ack?.status !== 'error';
       if (ok) setProjects((current) => current.filter((p) => p.path !== path));
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
+  /**
+   * Sets (or clears) a project's alias/description. Unlike the star, there is
+   * no optimistic step here — the edit dialog already committed to a value
+   * when it called this, so there is nothing to roll forward to; only the
+   * backend's answer (success or the previous overlay on failure) is worth
+   * showing.
+   */
+  const saveProjectMeta = async (
+    path: string,
+    fields: { name: string; description: string },
+  ): Promise<boolean> => {
+    try {
+      const ack = await send<{ status?: string; projectMeta?: ProjectMeta[] }>(
+        MessageType.SET_PROJECT_META,
+        { path, ...fields },
+      );
+      const ok = ack?.status !== 'error';
+      if (Array.isArray(ack?.projectMeta)) setProjectMeta(ack.projectMeta);
       return ok;
     } catch {
       return false;
@@ -317,20 +379,26 @@ export function ProjectSelectorPage() {
           {visible.length === 0 ? (
             <p className="py-10 text-center text-sm text-text-tertiary">{t('noMatches')}</p>
           ) : (
-            visible.map((project, index) => (
-              <ProjectRow
-                key={project.path}
-                name={project.name}
-                path={project.path}
-                sessionCount={project.sessionCount}
-                homeDir={homeDir}
-                isActive={index === activeIndex}
-                isFavorite={isFavorite(project.path)}
-                onSelect={() => setWorkingDirectory(project.path, { replace: false })}
-                onToggleFavorite={() => void toggleFavorite(project.path)}
-                onDelete={() => deleteProject(project.path)}
-              />
-            ))
+            visible.map((project, index) => {
+              const meta = metaFor(projectMeta, project.path);
+              return (
+                <ProjectRow
+                  key={project.path}
+                  name={project.name}
+                  alias={meta?.name}
+                  description={meta?.description}
+                  path={project.path}
+                  sessionCount={project.sessionCount}
+                  homeDir={homeDir}
+                  isActive={index === activeIndex}
+                  isFavorite={isFavorite(project.path)}
+                  onSelect={() => setWorkingDirectory(project.path, { replace: false })}
+                  onToggleFavorite={() => void toggleFavorite(project.path)}
+                  onDelete={() => deleteProject(project.path)}
+                  onSaveMeta={(fields) => saveProjectMeta(project.path, fields)}
+                />
+              );
+            })
           )}
         </div>
       </div>

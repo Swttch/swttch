@@ -61,11 +61,14 @@ async function renderWithProjects(
   projects = PROJECTS,
   homeDir: string | null = '/Users/me',
   favoritePaths: string[] = [],
+  projectMeta: Array<{ path: string; name?: string; description?: string }> = [],
 ) {
   const result = render(<ProjectSelectorPage />);
   await waitFor(() => expect(listeners.has(MessageType.PROJECTS_LIST)).toBe(true));
   await act(async () => {
-    listeners.get(MessageType.PROJECTS_LIST)!({ payload: { projects, homeDir, favoritePaths } });
+    listeners.get(MessageType.PROJECTS_LIST)!({
+      payload: { projects, homeDir, favoritePaths, projectMeta },
+    });
   });
   await screen.findByPlaceholderText('searchPlaceholder');
   return result;
@@ -407,6 +410,60 @@ describe('ProjectSelectorPage', () => {
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(send).not.toHaveBeenCalledWith(MessageType.DELETE_PROJECT, expect.anything());
       expect(rowTexts()).toHaveLength(3);
+    });
+  });
+
+  describe('project alias and description', () => {
+    it('shows the alias in place of the real name', async () => {
+      await renderWithProjects(PROJECTS, '/Users/me', [], [
+        { path: '/private/tmp/ccg-demo', name: 'My Cool App' },
+      ]);
+
+      expect(screen.getByText('My Cool App')).toBeInTheDocument();
+      expect(screen.queryByText('ccg-demo')).not.toBeInTheDocument();
+    });
+
+    it('shows the real name when no alias is set', async () => {
+      await renderWithProjects();
+
+      expect(screen.getByText('ccg-demo')).toBeInTheDocument();
+    });
+
+    it('finds a project by its alias when the real name no longer matches the query', async () => {
+      await renderWithProjects(PROJECTS, '/Users/me', [], [
+        { path: '/private/tmp/ccg-demo', name: 'My Cool App' },
+      ]);
+
+      fireEvent.change(screen.getByPlaceholderText('searchPlaceholder'), {
+        target: { value: 'cool' },
+      });
+
+      expect(rowTexts()).toHaveLength(1);
+      expect(screen.getByText('My Cool App')).toBeInTheDocument();
+    });
+
+    it('sends the edited fields for the right project and applies the reply', async () => {
+      send.mockResolvedValue({
+        status: 'ok',
+        projectMeta: [{ path: '/Users/me/work/a/proj2', name: 'My App' }],
+      });
+      await renderWithProjects();
+
+      fireEvent.click(menuButtonFor(0));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'menu.editProject' }));
+      fireEvent.change(screen.getByLabelText('editDialog.nameLabel'), {
+        target: { value: 'My App' },
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'editDialog.save' }));
+      });
+
+      expect(send).toHaveBeenCalledWith(MessageType.SET_PROJECT_META, {
+        path: '/Users/me/work/a/proj2',
+        name: 'My App',
+        description: '',
+      });
+      await waitFor(() => expect(screen.getByText('My App')).toBeInTheDocument());
     });
   });
 });

@@ -3,7 +3,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getProjectsList } from '../features/getProjectsList';
-import { readFavoritePaths } from '../features/projects-store';
+import { readFavoritePaths, readProjectMeta } from '../features/projects-store';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
@@ -30,10 +30,15 @@ export async function getProjectsHandler(
   // is not a property of any one entry, and the picker needs both to sort.
   const favoritePaths = await readFavoritePaths();
 
+  // Aliases/descriptions travel the same way — a display-only overlay the
+  // picker applies on top of each entry's real, unedited name.
+  const projectMeta = await readProjectMeta();
+
   connections.sendTo(connectionId, MessageType.PROJECTS_LIST, {
     projects,
     homeDir,
     favoritePaths,
+    projectMeta,
   });
   connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
 }

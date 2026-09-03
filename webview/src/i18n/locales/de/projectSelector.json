@@ -6,6 +6,7 @@
   "addProject": "Projekt hinzufügen",
   "addFavorite": "Oben anheften",
   "removeFavorite": "Lösen",
+  "descriptionIconLabel": "Beschreibung anzeigen",
   "sortOrder": {
     "label": "Sortierung",
     "recent": "Zuletzt verwendet",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "Weitere Aktionen",
+    "editProject": "Projekt bearbeiten",
     "copyPath": "Pfad kopieren",
     "delete": "Löschen"
   },
+  "editDialog": {
+    "title": "Projekt bearbeiten",
+    "nameLabel": "Anzeigename",
+    "nameHint": "Leer lassen, um den echten Ordnernamen zu verwenden.",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Notiz zu diesem Projekt hinzufügen (optional)",
+    "cancel": "Abbrechen",
+    "save": "Speichern"
+  },
+  "editDone": "Projekt aktualisiert",
+  "editFailed": "Projekt konnte nicht aktualisiert werden",
   "deleteConfirm": {
     "title": "Projekt löschen",
     "message": "Dadurch werden die Sitzungsaufzeichnungen von „{{name}}“ unter ~/.claude/projects gelöscht. Dies kann nicht rückgängig gemacht werden.",

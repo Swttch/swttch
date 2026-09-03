@@ -6,6 +6,7 @@
   "addProject": "Ajouter un projet",
   "addFavorite": "Épingler en haut",
   "removeFavorite": "Détacher",
+  "descriptionIconLabel": "Voir la description",
   "sortOrder": {
     "label": "Tri",
     "recent": "Récent",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "Plus d’actions",
+    "editProject": "Modifier le projet",
     "copyPath": "Copier le chemin",
     "delete": "Supprimer"
   },
+  "editDialog": {
+    "title": "Modifier le projet",
+    "nameLabel": "Nom d'affichage",
+    "nameHint": "Laissez vide pour utiliser le nom réel du dossier.",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Ajouter une note sur ce projet (facultatif)",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "editDone": "Projet mis à jour",
+  "editFailed": "Impossible de mettre à jour le projet",
   "deleteConfirm": {
     "title": "Supprimer le projet",
     "message": "Ceci supprime les enregistrements de session de « {{name}} » sous ~/.claude/projects. Action irréversible.",

@@ -6,6 +6,7 @@
   "addProject": "新增專案",
   "addFavorite": "置頂",
   "removeFavorite": "取消置頂",
+  "descriptionIconLabel": "檢視描述",
   "sortOrder": {
     "label": "排序方式",
     "recent": "最近使用",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "更多操作",
+    "editProject": "編輯專案",
     "copyPath": "複製路徑",
     "delete": "刪除"
   },
+  "editDialog": {
+    "title": "編輯專案",
+    "nameLabel": "顯示名稱",
+    "nameHint": "留空則使用實際資料夾名稱。",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "為此專案新增備註（選填）",
+    "cancel": "取消",
+    "save": "儲存"
+  },
+  "editDone": "專案已更新",
+  "editFailed": "無法更新專案",
   "deleteConfirm": {
     "title": "刪除專案",
     "message": "這將刪除 ~/.claude/projects 下「{{name}}」的工作階段記錄，且無法復原。",

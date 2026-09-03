@@ -7,9 +7,20 @@
  * them apart in neither case.
  */
 
-/** Word-ish pieces of [name], splitting on anything that is not alphanumeric. */
+/**
+ * Word-ish pieces of [name], splitting on whitespace and the common
+ * folder-name separators (`-`, `_`, `.`).
+ *
+ * Anything else is kept as word content — including non-Latin scripts. This
+ * function used to split on "everything that is not ASCII alphanumeric",
+ * which treated Korean, Japanese, Arabic, or accented Latin text as pure
+ * delimiter material: an alias like "테스트 프로젝트" (a project's display name
+ * is user-editable free text, see ProjectMetaDialog) produced zero words and
+ * fell through to the '?' placeholder below, even though the name plainly has
+ * two.
+ */
 function words(name: string): string[] {
-  return name.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  return name.split(/[\s\-_.]+/).filter(Boolean);
 }
 
 /**

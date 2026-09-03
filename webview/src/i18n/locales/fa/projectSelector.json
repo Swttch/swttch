@@ -6,6 +6,7 @@
   "addProject": "افزودن پروژه",
   "addFavorite": "سنجاق به بالا",
   "removeFavorite": "برداشتن سنجاق",
+  "descriptionIconLabel": "نمایش توضیحات",
   "sortOrder": {
     "label": "ترتیب",
     "recent": "اخیراً استفاده‌شده",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "عملیات بیشتر",
+    "editProject": "ویرایش پروژه",
     "copyPath": "کپی مسیر",
     "delete": "حذف"
   },
+  "editDialog": {
+    "title": "ویرایش پروژه",
+    "nameLabel": "نام نمایشی",
+    "nameHint": "برای استفاده از نام واقعی پوشه، خالی بگذارید.",
+    "descriptionLabel": "توضیحات",
+    "descriptionPlaceholder": "یادداشتی درباره این پروژه اضافه کنید (اختیاری)",
+    "cancel": "انصراف",
+    "save": "ذخیره"
+  },
+  "editDone": "پروژه به‌روزرسانی شد",
+  "editFailed": "به‌روزرسانی پروژه انجام نشد",
   "deleteConfirm": {
     "title": "حذف پروژه",
     "message": "این کار سوابق جلسه \"{{name}}\" را در ~/.claude/projects حذف می‌کند. این عمل غیرقابل بازگشت است.",

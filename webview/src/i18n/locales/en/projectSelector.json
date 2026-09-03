@@ -6,6 +6,7 @@
   "addProject": "Add Project",
   "addFavorite": "Pin to top",
   "removeFavorite": "Unpin",
+  "descriptionIconLabel": "Show description",
   "sortOrder": {
     "label": "Sort order",
     "recent": "Recent",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "More actions",
+    "editProject": "Edit project",
     "copyPath": "Copy path",
     "delete": "Delete"
   },
+  "editDialog": {
+    "title": "Edit project",
+    "nameLabel": "Display name",
+    "nameHint": "Leave blank to use the real folder name.",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Add a note about this project (optional)",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "editDone": "Project updated",
+  "editFailed": "Could not update the project",
   "deleteConfirm": {
     "title": "Delete project",
     "message": "This deletes the session records for \"{{name}}\" under ~/.claude/projects. This cannot be undone.",

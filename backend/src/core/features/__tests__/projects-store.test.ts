@@ -14,8 +14,11 @@ vi.mock('os', async (importOriginal) => {
 
 import {
   normalizeFavoritePaths,
+  normalizeProjectMeta,
   readFavoritePaths,
+  readProjectMeta,
   setProjectFavorite,
+  setProjectMeta,
 } from '../projects-store';
 
 const storeFile = join(home, '.claude-code-gui', 'projects.json');
@@ -27,6 +30,10 @@ function writeStore(contents: string): void {
 
 function storedPaths(): unknown {
   return JSON.parse(readFileSync(storeFile, 'utf-8')).favoritePaths;
+}
+
+function storedMeta(): unknown {
+  return JSON.parse(readFileSync(storeFile, 'utf-8')).projectMeta;
 }
 
 describe('projects-store', () => {
@@ -180,6 +187,184 @@ describe('projects-store', () => {
     // Unpinning removes matches once, so a duplicate would need two clicks.
     it('collapses duplicates, including two spellings of one directory', () => {
       expect(normalizeFavoritePaths(['/a', '/a', '/a/'])).toEqual(['/a']);
+    });
+  });
+
+  describe('setProjectMeta', () => {
+    it('creates an entry with just a name', async () => {
+      const result = await setProjectMeta('/Users/me/app', { name: 'My App' });
+
+      expect(result).toEqual({
+        ok: true,
+        projectMeta: [{ path: '/Users/me/app', name: 'My App' }],
+      });
+      expect(storedMeta()).toEqual([{ path: '/Users/me/app', name: 'My App' }]);
+    });
+
+    it('creates an entry with just a description', async () => {
+      const result = await setProjectMeta('/Users/me/app', { description: 'The internal tool' });
+
+      expect(result.projectMeta).toEqual([
+        { path: '/Users/me/app', description: 'The internal tool' },
+      ]);
+    });
+
+    it('stores both fields together', async () => {
+      const result = await setProjectMeta('/Users/me/app', {
+        name: 'My App',
+        description: 'The internal tool',
+      });
+
+      expect(result.projectMeta).toEqual([
+        { path: '/Users/me/app', name: 'My App', description: 'The internal tool' },
+      ]);
+    });
+
+    it('trims surrounding whitespace on both fields', async () => {
+      const result = await setProjectMeta('/Users/me/app', {
+        name: '  My App  ',
+        description: '  notes  ',
+      });
+
+      expect(result.projectMeta).toEqual([
+        { path: '/Users/me/app', name: 'My App', description: 'notes' },
+      ]);
+    });
+
+    it('updates an existing entry rather than duplicating it', async () => {
+      writeStore(JSON.stringify({ projectMeta: [{ path: '/Users/me/app', name: 'Old Name' }] }));
+
+      const result = await setProjectMeta('/Users/me/app', { name: 'New Name' });
+
+      expect(result.projectMeta).toEqual([{ path: '/Users/me/app', name: 'New Name' }]);
+    });
+
+    // Clearing both fields removes the entry rather than leaving an empty
+    // shell — there is nothing left worth remembering about that path.
+    it('removes the entry once both fields are cleared', async () => {
+      writeStore(
+        JSON.stringify({
+          projectMeta: [{ path: '/Users/me/app', name: 'My App', description: 'notes' }],
+        }),
+      );
+
+      const result = await setProjectMeta('/Users/me/app', { name: '', description: '' });
+
+      expect(result.projectMeta).toEqual([]);
+      expect(storedMeta()).toEqual([]);
+    });
+
+    // A blank name with a kept description is a real, partial edit — clearing
+    // the alias while keeping the note, not an all-or-nothing reset.
+    it('clears just the name while keeping the description', async () => {
+      writeStore(
+        JSON.stringify({
+          projectMeta: [{ path: '/Users/me/app', name: 'My App', description: 'notes' }],
+        }),
+      );
+
+      const result = await setProjectMeta('/Users/me/app', { name: '', description: 'notes' });
+
+      expect(result.projectMeta).toEqual([{ path: '/Users/me/app', description: 'notes' }]);
+    });
+
+    it('leaves other projects untouched', async () => {
+      writeStore(
+        JSON.stringify({
+          projectMeta: [{ path: '/Users/me/other', name: 'Other' }],
+        }),
+      );
+
+      const result = await setProjectMeta('/Users/me/app', { name: 'My App' });
+
+      expect(result.projectMeta).toEqual([
+        { path: '/Users/me/other', name: 'Other' },
+        { path: '/Users/me/app', name: 'My App' },
+      ]);
+    });
+
+    it('does not rewrite the file when nothing actually changed', async () => {
+      writeStore(
+        JSON.stringify({ projectMeta: [{ path: '/Users/me/app', name: 'My App' }] }),
+      );
+      const before = readFileSync(storeFile, 'utf-8');
+
+      await setProjectMeta('/Users/me/app', { name: 'My App' });
+
+      expect(readFileSync(storeFile, 'utf-8')).toBe(before);
+    });
+
+    it('does not create a file for a no-op clear on a project with no entry', async () => {
+      const result = await setProjectMeta('/Users/me/app', { name: '', description: '' });
+
+      expect(result.projectMeta).toEqual([]);
+    });
+
+    // Same reasoning as setProjectFavorite: this replaces the whole array, so
+    // treating an unreadable file as empty would wipe every alias on a read
+    // failure (issue #386).
+    it('refuses to write over a file it could not read', async () => {
+      writeStore('{ not json');
+
+      const result = await setProjectMeta('/Users/me/app', { name: 'My App' });
+
+      expect(result.ok).toBe(false);
+      expect(readFileSync(storeFile, 'utf-8')).toBe('{ not json');
+    });
+
+    it('matches an existing entry across a different path spelling', async () => {
+      writeStore(
+        JSON.stringify({ projectMeta: [{ path: 'C:\\Users\\Me\\app', name: 'My App' }] }),
+      );
+
+      const result = await setProjectMeta('c:\\users\\me\\app', { name: '', description: '' });
+
+      expect(result.projectMeta).toEqual([]);
+    });
+  });
+
+  describe('readProjectMeta', () => {
+    it('reports nothing when the file has never been written', async () => {
+      expect(await readProjectMeta()).toEqual([]);
+    });
+
+    it('shows an empty overlay rather than failing on a damaged file', async () => {
+      writeStore('{ not json');
+
+      expect(await readProjectMeta()).toEqual([]);
+    });
+  });
+
+  describe('normalizeProjectMeta', () => {
+    it.each([
+      ['a missing field', undefined],
+      ['an object', { a: 1 }],
+      ['a string', 'not an array'],
+    ])('treats %s as no overlay', (_label, value) => {
+      expect(normalizeProjectMeta(value)).toEqual([]);
+    });
+
+    it('drops entries missing a usable path', () => {
+      expect(normalizeProjectMeta([{ name: 'No path' }, 42, null])).toEqual([]);
+    });
+
+    it('drops entries with neither name nor description', () => {
+      expect(normalizeProjectMeta([{ path: '/a' }])).toEqual([]);
+    });
+
+    it('trims whitespace-only fields down to nothing', () => {
+      expect(normalizeProjectMeta([{ path: '/a', name: '   ', description: '   ' }])).toEqual([]);
+    });
+
+    // The first occurrence wins so a damaged file cannot show two different
+    // aliases for the same directory.
+    it('keeps only the first entry for a duplicated path', () => {
+      expect(
+        normalizeProjectMeta([
+          { path: '/a', name: 'First' },
+          { path: '/a', name: 'Second' },
+        ]),
+      ).toEqual([{ path: '/a', name: 'First' }]);
     });
   });
 });

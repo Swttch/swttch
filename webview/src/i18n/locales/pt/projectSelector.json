@@ -6,6 +6,7 @@
   "addProject": "Adicionar Projeto",
   "addFavorite": "Fixar no topo",
   "removeFavorite": "Desafixar",
+  "descriptionIconLabel": "Ver descrição",
   "sortOrder": {
     "label": "Ordenar por",
     "recent": "Recente",
@@ -13,9 +14,21 @@
   },
   "menu": {
     "label": "Mais ações",
+    "editProject": "Editar projeto",
     "copyPath": "Copiar caminho",
     "delete": "Excluir"
   },
+  "editDialog": {
+    "title": "Editar projeto",
+    "nameLabel": "Nome de exibição",
+    "nameHint": "Deixe em branco para usar o nome real da pasta.",
+    "descriptionLabel": "Descrição",
+    "descriptionPlaceholder": "Adicione uma nota sobre este projeto (opcional)",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
+  "editDone": "Projeto atualizado",
+  "editFailed": "Não foi possível atualizar o projeto",
   "deleteConfirm": {
     "title": "Excluir projeto",
     "message": "Isso exclui os registros de sessão de \"{{name}}\" em ~/.claude/projects. Não pode ser desfeito.",
