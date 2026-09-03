@@ -9,7 +9,13 @@ import { useTranslation, i18n } from '@/i18n';
 
 class TaskOutputToolUseDto extends ToolUseBlockDto {
     declare input: {
-        task_id: string;
+        task_id?: string;
+        /**
+         * What the legacy names carry instead: `BashOutput`/`BashOutputTool`
+         * name the task `bash_id`. The CLI reads whichever is present, so a row
+         * that only looked at `task_id` showed an empty id for those calls.
+         */
+        bash_id?: string;
         block?: boolean;
         timeout?: number;
     };
@@ -50,7 +56,7 @@ function taskStatusColor(status: string): string {
 export function TaskOutputRenderer(props: RendererProps) {
     const { t } = useTranslation('chatTools');
     const toolUse = props.toolUse as unknown as TaskOutputToolUseDto;
-    const taskId = toolUse.input?.task_id ?? '';
+    const taskId = toolUse.input?.task_id ?? toolUse.input?.bash_id ?? '';
 
     const { workingDirectory } = useWorkingDir();
     const { send } = useBridgeContext();

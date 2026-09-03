@@ -4,14 +4,20 @@ import {useTranslation} from "@/i18n";
 
 class TaskStopToolUseDto extends ToolUseBlockDto {
     declare input: {
-        task_id: string;
+        task_id?: string;
+        /**
+         * Still in the current TaskStop schema, marked "Deprecated: use task_id
+         * instead", and it is what the legacy names `KillShell`/`KillBash`
+         * carry. The CLI resolves `task_id ?? shell_id`; so does this row.
+         */
+        shell_id?: string;
     };
 }
 
 export function TaskStopRenderer(props: RendererProps) {
     const { t } = useTranslation('chatTools');
     const toolUse = props.toolUse as unknown as TaskStopToolUseDto;
-    const taskId = toolUse.input?.task_id ?? '';
+    const taskId = toolUse.input?.task_id ?? toolUse.input?.shell_id ?? '';
 
     const toolResult = props.toolResult as {
         message?: { content?: Array<{ content?: string | Array<{ type?: string; content?: string }> }> }

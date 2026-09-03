@@ -38,6 +38,14 @@ A third problem only appeared once the cards existed. **A tool's arguments arriv
 
 **A value the model invents is shown as itself.** If a finding reports an outcome the schema does not define, the card prints what was reported rather than an untranslated key.
 
+**The older names carry their id in an older field, and that is read too.** `KillShell` and `KillBash` name the task `shell_id`, `BashOutput` and `BashOutputTool` name it `bash_id`. Registering the names alone left those rows showing an empty id; they now read whichever field is present, as the CLI itself does.
+
+## How this was checked
+
+Every card was verified on screen, not only in tests.
+
+The current CLI translates the older names into their current ones before they reach us, so no live call can produce them. Those cards were checked by replaying a transcript in the shape an older CLI recorded — which is how the empty-id defect above surfaced, since no test had thought to send the older field.
+
 ## Limits
 
-`SendUserMessage` and the ten legacy names are covered by tests but were never seen on screen, because the current CLI cannot produce them: the legacy names are translated away before they reach us, and `SendUserMessage` is not present in this CLI build at all. Every other card in this change was verified by making the real call and reading the result.
+The replayed transcript was written by hand to match the recorded shape; it is not a capture from an actual older CLI. If an older build wrote something structurally different, this change would not know.
