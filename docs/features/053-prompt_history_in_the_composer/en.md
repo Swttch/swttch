@@ -36,6 +36,8 @@ And on a long prompt, Up did not move the caret up a line. It jumped straight to
 
 **Emptying the composer starts the walk over**, so the next Up begins at the most recent prompt instead of resuming where you left off.
 
+**Holding Shift selects, and never recalls.** Shift with an arrow is a selection gesture, so the history does not take the key at all — including from the very first character, where a recalled prompt leaves the caret and where pressing Shift used to replace the prompt rather than select it.
+
 ## Limits
 
 The history covers the conversation you are in. Prompts from your other conversations in the same project are not offered, even though the CLI's own terminal history reaches across them: recalling a line from a conversation you are not looking at is more surprise than help.
