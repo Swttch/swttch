@@ -1,5 +1,7 @@
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ProjectRow } from './ProjectRow';
+import { ProjectSortToggle } from './ProjectSortToggle';
+import { type ProjectSortOrder, persistSortOrder, readSortOrder } from './sortOrderStorage';
 import { useBridgeContext } from '../../contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts';
 import { MessageType, abbreviateHomeDir, isSameWorkingDir } from '@/shared';
@@ -10,6 +12,22 @@ interface Project {
   path: string;
   sessionCount: number;
   lastModified: string;
+  createdAt: string;
+}
+
+/**
+ * [projects] ordered by the chosen timestamp, newest first.
+ *
+ * 'recent' reads lastModified — the newest session's last write, so it answers
+ * "what did I touch last". 'created' reads createdAt — the earliest known
+ * session, so it answers "what did I start most recently" instead. The two
+ * disagree exactly for a project someone opened long ago and is still actively
+ * using, which is the case this toggle exists to separate.
+ */
+export function sortProjects(projects: Project[], order: ProjectSortOrder): Project[] {
+  const key: keyof Pick<Project, 'lastModified' | 'createdAt'> =
+    order === 'created' ? 'createdAt' : 'lastModified';
+  return [...projects].sort((a, b) => new Date(b[key]).getTime() - new Date(a[key]).getTime());
 }
 
 /**
@@ -51,6 +69,8 @@ export function ProjectSelectorPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [homeDir, setHomeDir] = useState<string | null>(null);
   const [favoritePaths, setFavoritePaths] = useState<string[]>([]);
+  // Lazy initializer so localStorage is read once, not on every render.
+  const [sortOrder, setSortOrder] = useState<ProjectSortOrder>(() => readSortOrder());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -103,9 +123,19 @@ export function ProjectSelectorPage() {
   }, [isConnected, send, subscribe]);
 
   const visible = useMemo(
-    () => filterProjects(sortFavoritesFirst(projects, favoritePaths), query, homeDir),
-    [projects, favoritePaths, query, homeDir],
+    () =>
+      filterProjects(
+        sortFavoritesFirst(sortProjects(projects, sortOrder), favoritePaths),
+        query,
+        homeDir,
+      ),
+    [projects, favoritePaths, sortOrder, query, homeDir],
   );
+
+  const handleSortOrderChange = (order: ProjectSortOrder) => {
+    setSortOrder(order);
+    persistSortOrder(order);
+  };
 
   const isFavorite = useCallback(
     (path: string) => favoritePaths.some((favorite) => isSameWorkingDir(favorite, path)),
@@ -244,6 +274,7 @@ export function ProjectSelectorPage() {
               className="w-full rounded bg-transparent py-2 ps-9 pe-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary"
             />
           </div>
+          <ProjectSortToggle order={sortOrder} onChange={handleSortOrderChange} />
           <button
             onClick={handleOpenFolderDialog}
             className="flex-shrink-0 rounded border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"

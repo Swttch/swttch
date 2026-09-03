@@ -30,12 +30,30 @@ vi.mock('../../../contexts/BridgeContext', () => ({
   useBridgeContext: () => ({ send, isConnected: true, subscribe }),
 }));
 
-import { ProjectSelectorPage, filterProjects, sortFavoritesFirst } from '../index';
+import { ProjectSelectorPage, filterProjects, sortFavoritesFirst, sortProjects } from '../index';
 
 const PROJECTS = [
-  { name: 'proj2', path: '/Users/me/work/a/proj2', sessionCount: 4, lastModified: '2026-09-03T00:00:00.000Z' },
-  { name: 'proj2', path: '/Users/me/work/b/proj2', sessionCount: 2, lastModified: '2026-09-02T00:00:00.000Z' },
-  { name: 'ccg-demo', path: '/private/tmp/ccg-demo', sessionCount: 145, lastModified: '2026-09-01T00:00:00.000Z' },
+  {
+    name: 'proj2',
+    path: '/Users/me/work/a/proj2',
+    sessionCount: 4,
+    lastModified: '2026-09-03T00:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    name: 'proj2',
+    path: '/Users/me/work/b/proj2',
+    sessionCount: 2,
+    lastModified: '2026-09-02T00:00:00.000Z',
+    createdAt: '2026-06-01T00:00:00.000Z',
+  },
+  {
+    name: 'ccg-demo',
+    path: '/private/tmp/ccg-demo',
+    sessionCount: 145,
+    lastModified: '2026-09-01T00:00:00.000Z',
+    createdAt: '2026-08-01T00:00:00.000Z',
+  },
 ];
 
 /** Render, then deliver the PROJECTS_LIST the backend would have sent. */
@@ -44,12 +62,13 @@ async function renderWithProjects(
   homeDir: string | null = '/Users/me',
   favoritePaths: string[] = [],
 ) {
-  render(<ProjectSelectorPage />);
+  const result = render(<ProjectSelectorPage />);
   await waitFor(() => expect(listeners.has(MessageType.PROJECTS_LIST)).toBe(true));
   await act(async () => {
     listeners.get(MessageType.PROJECTS_LIST)!({ payload: { projects, homeDir, favoritePaths } });
   });
   await screen.findByPlaceholderText('searchPlaceholder');
+  return result;
 }
 
 function starFor(index: number): HTMLElement {
@@ -71,6 +90,10 @@ describe('ProjectSelectorPage', () => {
     send.mockReset();
     send.mockResolvedValue({});
     setWorkingDirectory.mockClear();
+    // The sort toggle persists to real localStorage (jsdom's stub in
+    // setup.ts), which outlives one `it` — clear it so a choice made in one
+    // test does not become the next test's starting order.
+    localStorage.clear();
   });
 
   it('lists every project, not a windowful', async () => {
@@ -289,6 +312,38 @@ describe('ProjectSelectorPage', () => {
       expect(starFor(1).getAttribute('aria-pressed')).toBe('false');
     });
   });
+
+  describe('sort order', () => {
+    it('defaults to recent', async () => {
+      await renderWithProjects();
+
+      expect(screen.getByRole('button', { name: 'sortOrder.recent' }).getAttribute(
+        'aria-pressed',
+      )).toBe('true');
+    });
+
+    it('re-sorts the list when switched to created', async () => {
+      await renderWithProjects();
+
+      fireEvent.click(screen.getByRole('button', { name: 'sortOrder.created' }));
+
+      // a/proj2 is newest by lastModified but oldest by createdAt.
+      expect(rowTexts()[0]).toContain('ccg-demo');
+    });
+
+    it('remembers the choice for the next time the picker opens', async () => {
+      const first = await renderWithProjects();
+      fireEvent.click(screen.getByRole('button', { name: 'sortOrder.created' }));
+      first.unmount();
+
+      listeners.clear();
+      await renderWithProjects();
+
+      expect(screen.getByRole('button', { name: 'sortOrder.created' }).getAttribute(
+        'aria-pressed',
+      )).toBe('true');
+    });
+  });
 });
 
 describe('sortFavoritesFirst', () => {
@@ -302,8 +357,8 @@ describe('sortFavoritesFirst', () => {
   // spelled differently for the same directory.
   it('matches a pin spelled with the other separator', () => {
     const projects = [
-      { name: 'a', path: '/Users/me/a', sessionCount: 1, lastModified: '' },
-      { name: 'b', path: 'C:\\Users\\me\\b', sessionCount: 1, lastModified: '' },
+      { name: 'a', path: '/Users/me/a', sessionCount: 1, lastModified: '', createdAt: '' },
+      { name: 'b', path: 'C:\\Users\\me\\b', sessionCount: 1, lastModified: '', createdAt: '' },
     ];
 
     expect(sortFavoritesFirst(projects, ['C:/Users/me/b']).map((p) => p.name)).toEqual(['b', 'a']);
@@ -323,5 +378,25 @@ describe('filterProjects', () => {
 
   it('ignores case', () => {
     expect(filterProjects(PROJECTS, 'CCG-DEMO', '/Users/me')).toHaveLength(1);
+  });
+});
+
+describe('sortProjects', () => {
+  it('orders by lastModified, newest first, for "recent"', () => {
+    expect(sortProjects(PROJECTS, 'recent').map((p) => p.path)).toEqual([
+      '/Users/me/work/a/proj2',
+      '/Users/me/work/b/proj2',
+      '/private/tmp/ccg-demo',
+    ]);
+  });
+
+  // "recent" ranks a/proj2 first (newest lastModified); "created" ranks it
+  // last (oldest createdAt) — the exact disagreement this order exists for.
+  it('orders by createdAt, newest first, for "created"', () => {
+    expect(sortProjects(PROJECTS, 'created').map((p) => p.path)).toEqual([
+      '/private/tmp/ccg-demo',
+      '/Users/me/work/b/proj2',
+      '/Users/me/work/a/proj2',
+    ]);
   });
 });

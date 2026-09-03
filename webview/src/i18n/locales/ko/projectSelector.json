@@ -6,6 +6,11 @@
   "addProject": "프로젝트 추가",
   "addFavorite": "상단에 고정",
   "removeFavorite": "고정 해제",
+  "sortOrder": {
+    "label": "정렬 순서",
+    "recent": "최근 사용순",
+    "created": "생성순"
+  },
   "retry": "재시도",
   "sessionCount": "세션 {{count}}개",
   "sessionCount_one": "세션 {{count}}개",

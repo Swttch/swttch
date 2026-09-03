@@ -6,6 +6,11 @@
   "addProject": "Добавить проект",
   "addFavorite": "Закрепить сверху",
   "removeFavorite": "Открепить",
+  "sortOrder": {
+    "label": "Порядок",
+    "recent": "Недавние",
+    "created": "По созданию"
+  },
   "retry": "Повторить",
   "sessionCount": "{{count}} сессий",
   "sessionCount_one": "{{count}} сессия",

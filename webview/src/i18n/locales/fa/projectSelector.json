@@ -6,6 +6,11 @@
   "addProject": "افزودن پروژه",
   "addFavorite": "سنجاق به بالا",
   "removeFavorite": "برداشتن سنجاق",
+  "sortOrder": {
+    "label": "ترتیب",
+    "recent": "اخیراً استفاده‌شده",
+    "created": "تاریخ ایجاد"
+  },
   "retry": "تلاش مجدد",
   "sessionCount": "{{count}} نشست",
   "sessionCount_one": "{{count}} نشست",

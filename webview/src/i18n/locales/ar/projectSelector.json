@@ -6,6 +6,11 @@
   "addProject": "إضافة مشروع",
   "addFavorite": "تثبيت في الأعلى",
   "removeFavorite": "إلغاء التثبيت",
+  "sortOrder": {
+    "label": "الترتيب",
+    "recent": "الأحدث استخدامًا",
+    "created": "تاريخ الإنشاء"
+  },
   "retry": "إعادة المحاولة",
   "sessionCount": "{{count}} جلسات",
   "sessionCount_one": "جلسة واحدة",

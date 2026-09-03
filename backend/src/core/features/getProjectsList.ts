@@ -8,7 +8,10 @@ interface ProjectEntry {
   name: string;       // 폴더 이름 (프로젝트 이름)
   path: string;       // 전체 경로 (워킹 디렉토리)
   sessionCount: number;
+  /** Most recent activity — the newest session's last write. Drives "recent" order. */
   lastModified: string;
+  /** Earliest known session for this project. Drives "created" order (#392). */
+  createdAt: string;
 }
 
 interface SessionsIndexEntry {
@@ -99,22 +102,29 @@ async function buildEntriesFromJsonl(folderPath: string): Promise<ProjectEntry[]
 
   if (files.length === 0) return [];
 
+  // birthtimeMs rides along on the same stat() call already needed for
+  // mtimeMs, so tracking "created" costs nothing extra here. Some filesystems
+  // report 0 for it (birthtime unsupported); mtime is the fallback for those,
+  // since a missing creation time is a worse answer than an approximate one.
   const stated = (
     await Promise.all(
       files.map(async (file) => {
         try {
-          const { mtimeMs } = await stat(join(folderPath, file));
-          return { file, mtimeMs };
+          const { mtimeMs, birthtimeMs } = await stat(join(folderPath, file));
+          return { file, mtimeMs, birthtimeMs: birthtimeMs || mtimeMs };
         } catch {
           return null;
         }
       }),
     )
-  ).filter((entry): entry is { file: string; mtimeMs: number } => entry !== null);
+  ).filter(
+    (entry): entry is { file: string; mtimeMs: number; birthtimeMs: number } => entry !== null,
+  );
 
   if (stated.length === 0) return [];
 
   stated.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const createdAtMs = Math.min(...stated.map((entry) => entry.birthtimeMs));
 
   let projectPath: string | undefined;
   for (const { file } of stated) {
@@ -134,6 +144,7 @@ async function buildEntriesFromJsonl(folderPath: string): Promise<ProjectEntry[]
       path: projectPath,
       sessionCount: stated.length,
       lastModified: new Date(stated[0].mtimeMs).toISOString(),
+      createdAt: new Date(createdAtMs).toISOString(),
     },
   ];
 }
@@ -171,23 +182,29 @@ export async function getProjectsList(): Promise<ProjectEntry[]> {
           continue;
         }
 
-        // projectPath → { count, lastModified } 집계
-        const grouped = new Map<string, { count: number; lastModified: number }>();
+        // projectPath → { count, lastModified, createdAt } 집계.
+        // modified와 created는 서로 다른 질문에 답한다 — 최근순은 최댓값(modified),
+        // 생성순은 최솟값(created)이 필요하다. 어느 한쪽이 없는 엔트리는
+        // 있는 값으로 대체한다.
+        const grouped = new Map<string, { count: number; lastModified: number; createdAt: number }>();
         for (const e of validEntries) {
           const projectPath = e.projectPath;
           if (!projectPath) continue;
 
-          const ts =
-            e.modified || e.created
-              ? new Date(e.modified ?? e.created ?? '').getTime()
+          const modifiedTs = e.modified
+            ? new Date(e.modified).getTime()
+            : e.created
+              ? new Date(e.created).getTime()
               : Date.now();
+          const createdTs = e.created ? new Date(e.created).getTime() : modifiedTs;
 
           const existing = grouped.get(projectPath);
           if (existing) {
             existing.count += 1;
-            if (ts > existing.lastModified) existing.lastModified = ts;
+            if (modifiedTs > existing.lastModified) existing.lastModified = modifiedTs;
+            if (createdTs < existing.createdAt) existing.createdAt = createdTs;
           } else {
-            grouped.set(projectPath, { count: 1, lastModified: ts });
+            grouped.set(projectPath, { count: 1, lastModified: modifiedTs, createdAt: createdTs });
           }
         }
 
@@ -198,12 +215,13 @@ export async function getProjectsList(): Promise<ProjectEntry[]> {
           continue;
         }
 
-        for (const [projectPath, { count, lastModified }] of grouped.entries()) {
+        for (const [projectPath, { count, lastModified, createdAt }] of grouped.entries()) {
           projects.push({
             name: projectPath.split('/').pop() || projectPath,
             path: projectPath,
             sessionCount: count,
             lastModified: new Date(lastModified).toISOString(),
+            createdAt: new Date(createdAt).toISOString(),
           });
         }
       } else {

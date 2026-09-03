@@ -6,6 +6,11 @@
   "addProject": "Adicionar Projeto",
   "addFavorite": "Fixar no topo",
   "removeFavorite": "Desafixar",
+  "sortOrder": {
+    "label": "Ordenar por",
+    "recent": "Recente",
+    "created": "Criação"
+  },
   "retry": "Tentar novamente",
   "sessionCount": "{{count}} sessões",
   "sessionCount_one": "{{count}} sessão",

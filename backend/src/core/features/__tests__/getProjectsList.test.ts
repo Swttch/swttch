@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { getProjectsList } from '../getProjectsList';
@@ -194,5 +194,110 @@ describe('getProjectsList', () => {
     expect(projects[0].path).toBe('/home/user/indexed');
     expect(projects[0].sessionCount).toBe(2);
     expect(projects[0].lastModified).toBe('2026-01-03T00:00:00.000Z');
+  });
+
+  // "Recent" and "created" order (#392) need genuinely different timestamps:
+  // recent is the newest activity, created is the earliest.
+  describe('createdAt', () => {
+    it('takes the earliest transcript file birthtime in the JSONL-fallback path', async () => {
+      // birthtime cannot be forced via utimesSync (it only sets atime/mtime),
+      // so this asserts against the real on-disk birthtime rather than a value
+      // chosen by the test — the point being verified is "the minimum of the
+      // actual filesystem birthtimes", not a specific number.
+      const first = writeTranscript(
+        '-home-user-app',
+        'a.jsonl',
+        [{ type: 'user', cwd: '/home/user/app' }],
+        1_700_000_000,
+      );
+      writeTranscript(
+        '-home-user-app',
+        'b.jsonl',
+        [{ type: 'user', cwd: '/home/user/app' }],
+        1_800_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      const firstBirthtime = statSync(first).birthtime.toISOString();
+      expect(projects[0].createdAt).toBe(firstBirthtime);
+    });
+
+    it('differs from lastModified, so the two sort orders can disagree', async () => {
+      writeTranscript(
+        '-home-user-app',
+        'old.jsonl',
+        [{ type: 'user', cwd: '/home/user/app' }],
+        1_700_000_000,
+      );
+      writeTranscript(
+        '-home-user-app',
+        'new.jsonl',
+        [{ type: 'user', cwd: '/home/user/app' }],
+        1_900_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects[0].lastModified).toBe(new Date(1_900_000_000 * 1000).toISOString());
+      expect(projects[0].createdAt).not.toBe(projects[0].lastModified);
+    });
+
+    it('takes the minimum created and the maximum modified across sessions-index entries', async () => {
+      const folderPath = join(projectsDir, '-home-user-indexed');
+      mkdirSync(folderPath, { recursive: true });
+      writeFileSync(
+        join(folderPath, 'sessions-index.json'),
+        JSON.stringify({
+          entries: [
+            {
+              projectPath: '/home/user/indexed',
+              created: '2026-01-05T00:00:00.000Z',
+              modified: '2026-01-06T00:00:00.000Z',
+            },
+            {
+              projectPath: '/home/user/indexed',
+              created: '2026-01-01T00:00:00.000Z',
+              modified: '2026-01-02T00:00:00.000Z',
+            },
+          ],
+        }),
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects[0].createdAt).toBe('2026-01-01T00:00:00.000Z');
+      expect(projects[0].lastModified).toBe('2026-01-06T00:00:00.000Z');
+    });
+
+    it('falls back to modified when an index entry has no created field', async () => {
+      const folderPath = join(projectsDir, '-home-user-indexed');
+      mkdirSync(folderPath, { recursive: true });
+      writeFileSync(
+        join(folderPath, 'sessions-index.json'),
+        JSON.stringify({
+          entries: [{ projectPath: '/home/user/indexed', modified: '2026-01-02T00:00:00.000Z' }],
+        }),
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects[0].createdAt).toBe('2026-01-02T00:00:00.000Z');
+    });
+
+    it('falls back to created when an index entry has no modified field', async () => {
+      const folderPath = join(projectsDir, '-home-user-indexed');
+      mkdirSync(folderPath, { recursive: true });
+      writeFileSync(
+        join(folderPath, 'sessions-index.json'),
+        JSON.stringify({
+          entries: [{ projectPath: '/home/user/indexed', created: '2026-01-01T00:00:00.000Z' }],
+        }),
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects[0].lastModified).toBe('2026-01-01T00:00:00.000Z');
+    });
   });
 });

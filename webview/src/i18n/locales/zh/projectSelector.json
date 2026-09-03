@@ -6,6 +6,11 @@
   "addProject": "添加项目",
   "addFavorite": "置顶",
   "removeFavorite": "取消置顶",
+  "sortOrder": {
+    "label": "排序方式",
+    "recent": "最近使用",
+    "created": "创建时间"
+  },
   "retry": "重试",
   "sessionCount": "{{count}} 个会话",
   "sessionCount_one": "{{count}} 个会话",
