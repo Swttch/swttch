@@ -165,6 +165,19 @@ if (typeof globalThis.PointerEvent === 'undefined') {
   }
 }
 
+// jsdom lays nothing out, so it implements no scrolling at all and
+// `scrollIntoView` is simply absent. Any component that keeps a keyboard cursor
+// on screen (the project picker's list does) would otherwise throw during the
+// effect that follows the cursor, failing tests that never touched scrolling.
+// A no-op is the honest stand-in: there is no viewport here to scroll.
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+}
+
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   const matchMediaStub = (query: string): MediaQueryList => ({
     matches: false,

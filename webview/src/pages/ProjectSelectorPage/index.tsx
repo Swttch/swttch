@@ -1,8 +1,8 @@
-import {useEffect, useState} from 'react';
-import {MarqueeText} from './MarqueeText';
-import {useBridgeContext} from '../../contexts/BridgeContext';
-import {useWorkingDir} from "@/contexts";
-import { MessageType } from '@/shared';
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ProjectRow } from './ProjectRow';
+import { useBridgeContext } from '../../contexts/BridgeContext';
+import { useWorkingDir } from '@/contexts';
+import { MessageType, abbreviateHomeDir } from '@/shared';
 import { useTranslation } from '@/i18n';
 
 interface Project {
@@ -12,13 +12,34 @@ interface Project {
   lastModified: string;
 }
 
+/**
+ * Rows whose name or path contains [query], case-insensitively.
+ *
+ * The abbreviated path is matched as well as the recorded one, because that is
+ * the spelling on screen: someone reading `~/Projects/app` and typing `~/Pro`
+ * is searching for what they can see.
+ */
+export function filterProjects(projects: Project[], query: string, homeDir: string | null): Project[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return projects;
+
+  return projects.filter((project) => {
+    const haystacks = [project.name, project.path, abbreviateHomeDir(project.path, homeDir)];
+    return haystacks.some((value) => value.toLowerCase().includes(needle));
+  });
+}
+
 export function ProjectSelectorPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [homeDir, setHomeDir] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
   const { send, isConnected, subscribe } = useBridgeContext();
   const { setWorkingDirectory } = useWorkingDir();
   const { t } = useTranslation('projectSelector');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const handleOpenFolderDialog = () => {
     const unsubscribe = subscribe(MessageType.FOLDER_SELECTED, (message) => {
@@ -43,8 +64,9 @@ export function ProjectSelectorPage() {
 
         // Subscribe to PROJECTS_LIST response
         const unsubscribe = subscribe(MessageType.PROJECTS_LIST, (message) => {
-          const projectsList = message.payload?.projects as Project[] || [];
+          const projectsList = (message.payload?.projects as Project[]) || [];
           setProjects(projectsList);
+          setHomeDir((message.payload?.homeDir as string | undefined) ?? null);
           setIsLoading(false);
           unsubscribe();
         });
@@ -59,6 +81,42 @@ export function ProjectSelectorPage() {
 
     fetchProjects();
   }, [isConnected, send, subscribe]);
+
+  const visible = useMemo(
+    () => filterProjects(projects, query, homeDir),
+    [projects, query, homeDir],
+  );
+
+  // A narrowed list can be shorter than where the cursor was standing.
+  useEffect(() => {
+    setActiveIndex((index) => (index < visible.length ? index : 0));
+  }, [visible.length]);
+
+  // Focus starts in the search box so typing filters straight away, with the
+  // arrow keys driving the list from there rather than moving focus into it.
+  useEffect(() => {
+    if (!isLoading && !error && projects.length > 0) searchRef.current?.focus();
+  }, [isLoading, error, projects.length]);
+
+  const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (visible.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((index) => (index + 1) % visible.length);
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((index) => (index - 1 + visible.length) % visible.length);
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const project = visible[activeIndex];
+      if (project) setWorkingDirectory(project.path, { replace: false });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -109,54 +167,59 @@ export function ProjectSelectorPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-surface-base">
-      <div className="w-full max-w-md px-4">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-surface-overlay flex items-center justify-center">
-            <svg className="w-6 h-6 text-text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            </svg>
-          </div>
-          <h2 className="text-text-primary text-lg font-medium mb-1">{t('select.title')}</h2>
-          <p className="text-text-tertiary text-sm">{t('select.subtitle')}</p>
-        </div>
-
-        {/* Project List */}
-        <div className="bg-surface-raised border border-border-default rounded-lg overflow-hidden max-h-80 overflow-y-auto">
-          {projects.map((project) => (
-            <button
-              key={project.path}
-              onClick={() => setWorkingDirectory(project.path, { replace: false })}
-              className="w-full px-4 py-3 text-start hover:bg-surface-hover transition-colors border-b border-border-default last:border-b-0 group"
+    <div className="fixed inset-0 z-40 flex flex-col bg-surface-base">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pt-6 min-h-0">
+        {/* Search on the left, the one action we have on the right */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <svg
+              aria-hidden="true"
+              className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-text-primary text-sm font-medium truncate">
-                  {project.name}
-                </span>
-                {project.sessionCount > 0 && (
-                  <span className="text-text-tertiary text-xs flex-shrink-0">
-                    {t('sessionCount', { count: project.sessionCount })}
-                  </span>
-                )}
-              </div>
-              <div className="mt-0.5">
-                <MarqueeText
-                  text={project.path}
-                  className="text-[0.7692rem] text-text-tertiary group-hover:text-text-secondary"
-                />
-              </div>
-            </button>
-          ))}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+            </svg>
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              placeholder={t('searchPlaceholder')}
+              aria-label={t('searchPlaceholder')}
+              className="w-full rounded bg-transparent py-2 ps-9 pe-3 text-sm text-text-primary outline-none placeholder:text-text-tertiary"
+            />
+          </div>
+          <button
+            onClick={handleOpenFolderDialog}
+            className="flex-shrink-0 rounded border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary"
+          >
+            {t('addProject')}
+          </button>
         </div>
 
-        {/* Add Project */}
-        <button
-          onClick={handleOpenFolderDialog}
-          className="w-full mt-3 border border-dashed border-border-default hover:border-border-strong rounded-lg py-2.5 text-text-disabled hover:text-text-secondary text-sm transition-colors"
-        >
-          + {t('addProject')}
-        </button>
+        <div className="mt-3 border-t border-border-default" />
+
+        {/* The list takes the window, not a 448px column */}
+        <div className="min-h-0 flex-1 overflow-y-auto py-3">
+          {visible.length === 0 ? (
+            <p className="py-10 text-center text-sm text-text-tertiary">{t('noMatches')}</p>
+          ) : (
+            visible.map((project, index) => (
+              <ProjectRow
+                key={project.path}
+                name={project.name}
+                path={project.path}
+                sessionCount={project.sessionCount}
+                homeDir={homeDir}
+                isActive={index === activeIndex}
+                onSelect={() => setWorkingDirectory(project.path, { replace: false })}
+              />
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

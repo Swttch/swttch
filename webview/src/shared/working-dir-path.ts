@@ -102,3 +102,30 @@ export function relativeWorkingDir(child: string, ancestor: string): string | nu
   const prefixLength = normalizeWorkingDirPath(ancestor).length;
   return trimmed.slice(prefixLength + 1);
 }
+
+/**
+ * [path] with the home directory shortened to `~`, for display only.
+ *
+ * In a list of working directories the home prefix is the part every row
+ * shares, so it is the least informative run of characters on screen while
+ * taking the most room — and it is the tail, the part that actually tells two
+ * `proj2` entries apart, that gets dropped when a row runs out of width.
+ *
+ * [homeDir] has to be supplied by whoever knows it. The webview cannot read it:
+ * in a tunnel session the browser and the backend are different machines, so
+ * the home directory of the machine rendering this is not the one these paths
+ * were recorded on.
+ *
+ * Returns [path] untouched when it does not sit under [homeDir], and keeps the
+ * input's separator style so a Windows path stays backslash-separated.
+ */
+export function abbreviateHomeDir(path: string, homeDir: string | null | undefined): string {
+  if (!homeDir) return path;
+  if (isSameWorkingDir(path, homeDir)) return '~';
+
+  const relative = relativeWorkingDir(path, homeDir);
+  if (relative === null) return path;
+
+  const separator = path.includes('\\') && !path.includes('/') ? '\\' : '/';
+  return `~${separator}${relative.split('/').join(separator)}`;
+}

@@ -1,10 +1,8 @@
 {
   "loading": "正在載入專案...",
-  "select": {
-    "title": "選擇專案",
-    "subtitle": "選擇要處理的專案"
-  },
+  "searchPlaceholder": "搜尋專案",
   "empty": "沒有可用的專案",
+  "noMatches": "沒有符合的專案",
   "addProject": "新增專案",
   "retry": "重試",
   "sessionCount": "{{count}} 個工作階段",

@@ -1,10 +1,8 @@
 {
   "loading": "プロジェクトを読み込み中…",
-  "select": {
-    "title": "プロジェクトを選択",
-    "subtitle": "作業するプロジェクトを選んでください"
-  },
+  "searchPlaceholder": "プロジェクトを検索",
   "empty": "利用可能なプロジェクトがありません",
+  "noMatches": "一致するプロジェクトがありません",
   "addProject": "プロジェクトを追加",
   "retry": "再試行",
   "sessionCount": "{{count}} セッション",

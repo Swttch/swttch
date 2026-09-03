@@ -1,10 +1,8 @@
 {
   "loading": "正在加载项目...",
-  "select": {
-    "title": "选择项目",
-    "subtitle": "选择要处理的项目"
-  },
+  "searchPlaceholder": "搜索项目",
   "empty": "暂无可用项目",
+  "noMatches": "没有匹配的项目",
   "addProject": "添加项目",
   "retry": "重试",
   "sessionCount": "{{count}} 个会话",

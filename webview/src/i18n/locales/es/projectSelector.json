@@ -1,10 +1,8 @@
 {
   "loading": "Cargando proyectos...",
-  "select": {
-    "title": "Seleccionar proyecto",
-    "subtitle": "Elige un proyecto para trabajar"
-  },
+  "searchPlaceholder": "Buscar proyectos",
   "empty": "No hay proyectos disponibles",
+  "noMatches": "No hay proyectos coincidentes",
   "addProject": "Agregar proyecto",
   "retry": "Reintentar",
   "sessionCount": "{{count}} sesiones",

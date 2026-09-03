@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  abbreviateHomeDir,
   isInsideWorkingDir,
   isSameWorkingDir,
   normalizeWorkingDirPath,
@@ -125,5 +126,43 @@ describe('relativeWorkingDir', () => {
 
   it('returns null when the path is not nested under the anchor', () => {
     expect(relativeWorkingDir('/elsewhere/ui', '/repo')).toBeNull();
+  });
+});
+
+describe('abbreviateHomeDir', () => {
+  it('shortens the home prefix on a posix path', () => {
+    expect(abbreviateHomeDir('/Users/me/Projects/app', '/Users/me')).toBe('~/Projects/app');
+  });
+
+  it('renders the home directory itself as a bare tilde', () => {
+    expect(abbreviateHomeDir('/Users/me', '/Users/me')).toBe('~');
+  });
+
+  it('leaves a path outside the home directory alone', () => {
+    expect(abbreviateHomeDir('/private/tmp/demo', '/Users/me')).toBe('/private/tmp/demo');
+  });
+
+  // A shared name prefix is not containment: /Users/me-backup is a different
+  // directory from /Users/me and must keep its full path.
+  it('does not shorten a sibling that merely shares the name prefix', () => {
+    expect(abbreviateHomeDir('/Users/me-backup/app', '/Users/me')).toBe('/Users/me-backup/app');
+  });
+
+  it('keeps the backslash separator style on a Windows path', () => {
+    expect(abbreviateHomeDir('C:\\Users\\me\\Projects\\app', 'C:\\Users\\me')).toBe(
+      '~\\Projects\\app',
+    );
+  });
+
+  it('matches a Windows home directory case-insensitively', () => {
+    expect(abbreviateHomeDir('C:\\Users\\Me\\app', 'c:\\users\\me')).toBe('~\\app');
+  });
+
+  // The webview asks the backend for the home directory, and the answer can be
+  // missing — during a tunnel handshake, or on an older backend. Showing the
+  // full path is right; showing "~/..." against an unknown home would be a lie.
+  it('leaves the path alone when no home directory is known', () => {
+    expect(abbreviateHomeDir('/Users/me/Projects/app', null)).toBe('/Users/me/Projects/app');
+    expect(abbreviateHomeDir('/Users/me/Projects/app', '')).toBe('/Users/me/Projects/app');
   });
 });

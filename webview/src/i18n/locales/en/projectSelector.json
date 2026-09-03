@@ -1,10 +1,8 @@
 {
   "loading": "Loading projects...",
-  "select": {
-    "title": "Select Project",
-    "subtitle": "Choose a project to work on"
-  },
+  "searchPlaceholder": "Search projects",
   "empty": "No projects available",
+  "noMatches": "No matching projects",
   "addProject": "Add Project",
   "retry": "Retry",
   "sessionCount": "{{count}} sessions",
