@@ -18,6 +18,12 @@
     "default": "중단됨",
     "toolInterrupted": "도구 중단됨"
   },
+  "peerAgentMessage": {
+    "title": "다른 에이전트가 보낸 메시지"
+  },
+  "sendMessage": {
+    "to": "받는 대상: {{to}}"
+  },
   "attachments": {
     "imageAlt": "이미지 {{index}}",
     "fullSizeAlt": "원본 크기"

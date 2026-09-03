@@ -1178,6 +1178,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             isSynthetic: (cliEvent as any).isSynthetic === true ? true : undefined,
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,
             isVisibleInTranscriptOnly: (cliEvent as any).isVisibleInTranscriptOnly === true ? true : undefined,
+            origin: (cliEvent as any).origin,
           };
           // Anything the CLI stamped belongs where its clock says, not where it
           // happened to arrive. The compact summary was the first case we hit

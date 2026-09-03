@@ -18,6 +18,12 @@
     "default": "已中断",
     "toolInterrupted": "工具已中断"
   },
+  "peerAgentMessage": {
+    "title": "来自其他智能体的消息"
+  },
+  "sendMessage": {
+    "to": "收件人: {{to}}"
+  },
   "attachments": {
     "imageAlt": "图片 {{index}}",
     "fullSizeAlt": "原始大小"

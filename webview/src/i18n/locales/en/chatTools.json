@@ -18,6 +18,12 @@
     "default": "interrupted",
     "toolInterrupted": "Tool interrupted"
   },
+  "peerAgentMessage": {
+    "title": "Message from another agent"
+  },
+  "sendMessage": {
+    "to": "To: {{to}}"
+  },
   "attachments": {
     "imageAlt": "Image {{index}}",
     "fullSizeAlt": "Full size"

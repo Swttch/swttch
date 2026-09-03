@@ -18,6 +18,12 @@
     "default": "中断されました",
     "toolInterrupted": "ツールが中断されました"
   },
+  "peerAgentMessage": {
+    "title": "他のエージェントからのメッセージ"
+  },
+  "sendMessage": {
+    "to": "宛先: {{to}}"
+  },
   "attachments": {
     "imageAlt": "画像 {{index}}",
     "fullSizeAlt": "原寸大"
