@@ -188,6 +188,15 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.7 - A better project picker, background task view, and message history</h3>
+            <ul>
+                <li>Rework the project picker page, with search, favorites, sorting, rename and delete (#398)</li>
+                <li>Speed up loading the project list (#398)</li>
+                <li>Fix a project showing its full path instead of its folder name on Windows (#398)</li>
+                <li>Fix a background agent's output rendering as raw text and unknown tools (#397, reported by @CraftedFury)</li>
+                <li>Fix a cancelled background task never settling (#397, reported by @CraftedFury)</li>
+                <li>Improve moving through message history (#399, reported by @VijitCoder)</li>
+            </ul>
             <h3>0.29.6 - Stop being asked for every single edit</h3>
             <ul>
                 <li>Fix picking auto-accept or "allow all edits" not actually stopping the prompts (#394, reported by @Ninili)</li>
