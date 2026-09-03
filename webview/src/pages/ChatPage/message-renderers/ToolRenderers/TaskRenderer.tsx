@@ -80,13 +80,17 @@ export function TaskRenderer(props: RendererProps) {
                 </Container>
             </ToolWrapper>
 
-            {/* Sub-agent tool calls (expandable) */}
+            {/* Sub-agent tool calls, nested under a connecting line so a
+                background agent's ongoing activity — which keeps appending
+                here after this Task's own turn has already finished (#383) —
+                reads as a side thread rather than a continuation of the main
+                conversation. */}
             {hasSubAgentMessages && (
-                <>
+                <div className="ms-6 ps-4 border-s border-border-subtle">
                     {Array.from(subAgentToolUseMap.values()).map((tu) => (
                         <ToolRenderer key={tu.id} toolUse={tu} message={props.message} />
                     ))}
-                </>
+                </div>
             )}
         </>
     );

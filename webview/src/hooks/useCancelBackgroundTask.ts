@@ -30,6 +30,29 @@ export function buildCancelTaskReminder(task: { taskId?: string; name: string })
   );
 }
 
+/**
+ * Told to the model right after `stop_task` has been dispatched (not the
+ * reminder above — that ASKS the model to stop it via TaskStop; this TELLS
+ * the model it already happened).
+ *
+ * `stop_task` is a stdin control_request the CLI process acts on directly —
+ * it never surfaces to the model's own context, so without this the model
+ * has no way to learn its background task was cancelled at all. It learns a
+ * normal finish from a `<task-notification>`, but issue #383 found the CLI
+ * never injects one of those for a `stop_task` cancellation, live or on
+ * reload. Sent immediately, at the moment of cancelling, rather than
+ * deferred until the user's next message — the model should not go on
+ * thinking the task is still running for however long that takes.
+ */
+export function buildCancelTaskNotice(task: { taskId?: string; name: string }): string {
+  const target = task.taskId ? `with task_id ${task.taskId}` : `named "${task.name}"`;
+  return (
+    `<system-reminder>The user just cancelled the background task ${target}. ` +
+    `It has been stopped and will not produce any further output or a completion ` +
+    `notification. Do not wait on it or treat it as still running.</system-reminder>`
+  );
+}
+
 /** How a cancel was delivered, so callers (and tests) can tell the paths apart. */
 export type CancelBackgroundTaskRoute = 'control_request' | 'reminder';
 
@@ -49,7 +72,10 @@ export interface CancelBackgroundTaskContext {
  *
  * 1. `control_request{subtype:'stop_task', task_id}` — what the CLI itself
  *    accepts, over the stdin channel the backend already owns. Deterministic and
- *    immediate.
+ *    immediate. Followed by an immediate `buildCancelTaskNotice` reminder,
+ *    since the control_request itself never reaches the model's own context
+ *    (issue #383) — without it the model has no way to learn the task is
+ *    gone until, at best, its own next unrelated turn.
  * 2. A `<system-reminder>` user message asking the model to call `TaskStop`.
  *    Slower (it costs a model turn) but it needs nothing beyond "a model that
  *    can call a stop tool", so it is the route that survives being pointed at a
@@ -86,7 +112,10 @@ export function useCancelBackgroundTask(bridge: ControlRequestSender) {
           inputMode: context.inputMode,
           model: context.model,
         });
-        if (ack?.sent === true) return 'control_request';
+        if (ack?.sent === true) {
+          context.sendMessage(buildCancelTaskNotice(task), context.inputMode);
+          return 'control_request';
+        }
       } catch (error) {
         console.error('[useCancelBackgroundTask] stop_task dispatch failed:', error);
       }

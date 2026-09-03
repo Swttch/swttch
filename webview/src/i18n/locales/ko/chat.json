@@ -214,6 +214,7 @@
     },
     "workflowLabel": "워크플로",
     "bashLabel": "Bash",
+    "agentLabel": "에이전트",
     "agentsCount": "에이전트 {{count}}명",
     "agentsCount_one": "에이전트 {{count}}명",
     "agentsCount_other": "에이전트 {{count}}명",

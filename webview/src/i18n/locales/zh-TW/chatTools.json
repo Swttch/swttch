@@ -18,6 +18,12 @@
     "default": "已中斷",
     "toolInterrupted": "工具已中斷"
   },
+  "peerAgentMessage": {
+    "title": "來自其他代理程式的訊息"
+  },
+  "sendMessage": {
+    "to": "收件者: {{to}}"
+  },
   "attachments": {
     "imageAlt": "圖片 {{index}}",
     "fullSizeAlt": "原始大小"

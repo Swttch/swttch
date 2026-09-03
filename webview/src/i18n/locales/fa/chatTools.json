@@ -18,6 +18,12 @@
     "default": "متوقف شد",
     "toolInterrupted": "ابزار متوقف شد"
   },
+  "peerAgentMessage": {
+    "title": "پیام از ایجنت دیگر"
+  },
+  "sendMessage": {
+    "to": "به: {{to}}"
+  },
   "attachments": {
     "imageAlt": "تصویر {{index}}",
     "fullSizeAlt": "اندازه کامل"

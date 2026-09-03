@@ -18,6 +18,12 @@
     "default": "прервано",
     "toolInterrupted": "Инструмент прерван"
   },
+  "peerAgentMessage": {
+    "title": "Сообщение от другого агента"
+  },
+  "sendMessage": {
+    "to": "Кому: {{to}}"
+  },
   "attachments": {
     "imageAlt": "Изображение {{index}}",
     "fullSizeAlt": "Полный размер"

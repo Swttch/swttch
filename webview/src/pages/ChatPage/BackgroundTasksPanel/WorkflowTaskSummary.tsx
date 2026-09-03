@@ -41,7 +41,9 @@ export function WorkflowTaskSummary(props: Props) {
                 </span>
                 <span className="text-text-tertiary">·</span>
                 <span className="text-text-primary/60">
-                    {task.taskType === 'local_bash' ? t('backgroundTasks.bashLabel') : t('backgroundTasks.workflowLabel')}
+                    {task.taskType === 'local_bash' ? t('backgroundTasks.bashLabel')
+                        : task.taskType === 'local_agent' ? t('backgroundTasks.agentLabel')
+                        : t('backgroundTasks.workflowLabel')}
                 </span>
                 {agentCount !== undefined && (
                     <>

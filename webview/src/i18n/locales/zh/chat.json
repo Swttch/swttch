@@ -214,6 +214,7 @@
     },
     "workflowLabel": "工作流",
     "bashLabel": "Bash",
+    "agentLabel": "智能体",
     "agentsCount": "{{count}} 个智能体",
     "agentsCount_one": "{{count}} 个智能体",
     "agentsCount_other": "{{count}} 个智能体",

@@ -12,6 +12,7 @@ import { parseUserContent } from './utils/parseUserContent';
 import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
 import { MessagePathChip } from './components/MessagePathChip';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
+import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
 import { IfVisible, hasVisibleGlyph } from './components/IfVisible';
@@ -33,6 +34,13 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   const { controlResponse } = useCliConfig();
   const { t } = useTranslation('chatTools');
   const parsedContent = parseUserContent(getTextContent(message));
+
+  // A peer Claude session's report, injected mid-turn — not something the
+  // user typed. Route it before any of the plain-text paths below, which
+  // would otherwise show its raw wrapped text verbatim (issue #383).
+  if (message.origin?.kind === 'peer') {
+    return <PeerAgentMessageRenderer message={message} />;
+  }
 
   const imageBlocks = useMemo(() => {
     const content = message.message?.content;

@@ -18,6 +18,12 @@
     "default": "تمت المقاطعة",
     "toolInterrupted": "تمت مقاطعة الأداة"
   },
+  "peerAgentMessage": {
+    "title": "رسالة من وكيل آخر"
+  },
+  "sendMessage": {
+    "to": "إلى: {{to}}"
+  },
   "attachments": {
     "imageAlt": "صورة {{index}}",
     "fullSizeAlt": "الحجم الكامل"

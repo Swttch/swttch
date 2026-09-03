@@ -214,6 +214,7 @@
     },
     "workflowLabel": "工作流程",
     "bashLabel": "Bash",
+    "agentLabel": "代理程式",
     "agentsCount": "{{count}} 個代理程式",
     "agentsCount_one": "{{count}} 個代理程式",
     "agentsCount_other": "{{count}} 個代理程式",

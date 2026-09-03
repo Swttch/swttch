@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
+import { mkdtemp, mkdir, writeFile, rm, symlink } from 'fs/promises';
 import { join } from 'path';
 import { realpathSync } from 'fs';
 import * as os from 'os';
@@ -57,6 +57,29 @@ describe('loadBackgroundTaskOutput', () => {
       expect(result).toEqual({ text: '', truncated: false });
     } finally {
       await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('follows a symlink whose target resolves under the Claude config dir\'s projects root (a backgrounded Agent/Task\'s advertised output path, issue #383)', async () => {
+    vi.stubEnv('CLAUDE_CODE_TMPDIR', tmpDir);
+    const configDir = realpathSync(await mkdtemp(join(os.tmpdir(), 'lbto-config-')));
+    vi.stubEnv('CLAUDE_CONFIG_DIR', configDir);
+    try {
+      const realTranscriptDir = join(configDir, 'projects', '-private-tmp-demo', 'sess1', 'subagents');
+      await mkdir(realTranscriptDir, { recursive: true });
+      const realTranscript = join(realTranscriptDir, 'agent-a1.jsonl');
+      await writeFile(realTranscript, '{"type":"user","uuid":"u1"}\n');
+
+      const outputFile = join(tmpDir, 'tasks', 'a1.output');
+      await mkdir(join(tmpDir, 'tasks'), { recursive: true });
+      await symlink(realTranscript, outputFile);
+
+      const { loadBackgroundTaskOutput } = await import('../loadBackgroundTaskOutput');
+      const result = await loadBackgroundTaskOutput({ outputFile });
+
+      expect(result).toEqual({ text: '{"type":"user","uuid":"u1"}\n', truncated: false });
+    } finally {
+      await rm(configDir, { recursive: true, force: true });
     }
   });
 

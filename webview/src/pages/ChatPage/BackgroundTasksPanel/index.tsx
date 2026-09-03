@@ -93,6 +93,26 @@ export function BackgroundTasksPanel() {
         return () => prevFocus?.focus?.();
     }, [panelOpen]);
 
+    // Click anywhere outside the panel closes it, matching the transcript
+    // modal's own outside-click behavior below. Skipped while that modal is
+    // open: it renders as a sibling (via the same Portal), so a click inside
+    // it — e.g. its "Cancel this task" button — is technically "outside
+    // panelRef" too, and would otherwise close the panel (unmounting the
+    // modal along with it, since it's this component's own child). The modal
+    // already owns outside-click-to-close for itself while it's up.
+    // `mousedown`, not `click`: a drag that starts inside the panel and ends
+    // outside — e.g. selecting a row's prompt text — must not count.
+    useEffect(() => {
+        if (!panelOpen || transcriptToolUseId) return;
+        const handleMouseDown = (e: MouseEvent) => {
+            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+                closePanel();
+            }
+        };
+        document.addEventListener('mousedown', handleMouseDown);
+        return () => document.removeEventListener('mousedown', handleMouseDown);
+    }, [panelOpen, transcriptToolUseId, closePanel]);
+
     if (!panelOpen) return null;
 
     return (

@@ -129,6 +129,34 @@ function parseImmediateBashResult(text: string): { taskId?: string; outputFile?:
   return { taskId, outputFile };
 }
 
+/**
+ * Parse the immediate "Async agent launched successfully" tool_result text for
+ * a backgrounded Agent/Task call — a third shape, distinct from both the
+ * Workflow tool's ("Task ID:"/"Transcript dir:") and plain Bash's ("Command
+ * running in background with ID:"/"Output is being written to:"). Its
+ * `output_file` is the agent's own JSONL transcript, available immediately
+ * rather than only at the terminal task_notification (issue #383).
+ */
+function parseImmediateAgentResult(text: string): { outputFile?: string } {
+  const outputFile = text.match(/output_file:\s*(.+)/)?.[1]?.trim();
+  return { outputFile };
+}
+
+/**
+ * Parse a `<tool_use_error>No task found with ID: <id></tool_use_error>` —
+ * the CLI's answer when a tool (TaskStop, TaskGet, …) targets a task_id it no
+ * longer has any record of, e.g. a backgrounded agent whose owning CLI
+ * session already exited (issue #383). Unlike the absence of a terminal
+ * `task_notification` — which just as easily means "still running, hasn't
+ * finished" — this is definitive negative evidence: whatever the WORKFLOW
+ * tracker still believes about that task_id, the CLI does not. Not scoped to
+ * TaskStop specifically: any tool surfacing this for a task_id we are
+ * tracking as running is equally trustworthy evidence it no longer is.
+ */
+function parseTaskNotFoundId(text: string): string | undefined {
+  return text.match(/No task found with ID:\s*([a-zA-Z0-9_-]+)/)?.[1];
+}
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
@@ -390,6 +418,7 @@ export class WorkflowProgressTracker {
         else if (subtype === 'task_notification') this.onNotification(sessionId, event);
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
+        this.onTaskNotFound(sessionId, event);
       }
     } catch (err) {
       console.error('[node-backend]', 'workflow-tracker handleEvent failed:', err);
@@ -422,7 +451,7 @@ export class WorkflowProgressTracker {
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
     const taskType = event['task_type'];
-    if (taskType === 'local_workflow' || taskType === 'local_bash') t.taskType = taskType;
+    if (taskType === 'local_workflow' || taskType === 'local_bash' || taskType === 'local_agent') t.taskType = taskType;
     const description = typeof event['description'] === 'string' ? (event['description'] as string) : undefined;
     if (description) t.description = description;
     const wfName = typeof event['workflow_name'] === 'string' ? (event['workflow_name'] as string) : '';
@@ -507,11 +536,13 @@ export class WorkflowProgressTracker {
     if (outputFile) {
       t.outputFile = outputFile;
       // Only a dynamic workflow's output file is the JSON envelope
-      // readOutputFile expects ({summary, result}); a plain background Bash
-      // task's output file is its raw stdout/stderr log (issue #347) — its
-      // summary/status already came from this event, and its "result" is the
-      // log itself, read separately by GET_BACKGROUND_TASK_OUTPUT on demand.
-      if (t.taskType !== 'local_bash') {
+      // readOutputFile expects ({summary, result}). A plain background Bash
+      // task's output file is its raw stdout/stderr log (issue #347), and a
+      // backgrounded Agent/Task's is its own JSONL transcript (issue #383) —
+      // neither is that envelope. Both already got summary/status from this
+      // event, and their "result" is the file itself, read separately by
+      // GET_BACKGROUND_TASK_OUTPUT on demand.
+      if (t.taskType === 'local_workflow') {
         const parsed = readOutputFile(outputFile);
         if (parsed.summary && !event['summary']) t.summary = parsed.summary;
         if (parsed.result !== undefined) t.result = parsed.result;
@@ -560,6 +591,19 @@ export class WorkflowProgressTracker {
         continue;
       }
 
+      if (entry.task.taskType === 'local_agent') {
+        // A backgrounded Agent/Task call has no transcriptDir/agents either —
+        // it is one agent, not a workflow of many. Its taskId already arrived
+        // on task_started; only the output file (its own JSONL transcript) is
+        // new here (#383).
+        if (entry.task.outputFile) continue;
+        const { outputFile } = parseImmediateAgentResult(text);
+        if (!outputFile) continue;
+        entry.task.outputFile = outputFile;
+        this.broadcast(entry);
+        continue;
+      }
+
       if (entry.task.transcriptDir) continue;
       const { taskId, transcriptDir } = parseImmediateResult(text);
       if (!transcriptDir) continue;
@@ -567,6 +611,29 @@ export class WorkflowProgressTracker {
       entry.task.transcriptDir = transcriptDir;
       entry.task.workflowId = transcriptDir.split(/[\\/]/).pop();
       this.broadcast(entry);
+    }
+  }
+
+  /**
+   * Settle any tracked task whose task_id the CLI just declared unknown (see
+   * {@link parseTaskNotFoundId}) — e.g. a cancel click that resolved into the
+   * TaskStop reminder fallback, which then found nothing to stop. Without
+   * this, such a task stays 'running' forever: no terminal task_notification
+   * is ever coming for a task the CLI itself has already forgotten, and the
+   * panel keeps ticking its token/duration counters on a corpse.
+   */
+  private onTaskNotFound(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_result') continue;
+      const content = block['content'];
+      const text = typeof content === 'string' ? content : getEventText(event);
+      const deadTaskId = parseTaskNotFoundId(text);
+      if (!deadTaskId) continue;
+      for (const entry of this.entries.values()) {
+        if (entry.sessionId === sessionId && entry.task.taskId === deadTaskId) {
+          this.settleStopped(entry);
+        }
+      }
     }
   }
 

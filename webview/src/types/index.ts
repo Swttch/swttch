@@ -116,6 +116,21 @@ export class LoadedMessageDto {
   // stable value so the CLI's `/model` echo can be deduped against it across
   // locales (the summary text itself is localized). Not in JSONL.
   modelChangeValue?: string;
+
+  // Set on a `user` entry the CLI injects mid-turn when a peer Claude session
+  // (a subagent or teammate, reached via the SendMessage tool) messages this
+  // one — the entry's own `message.content` is a plain string wrapping that
+  // report in an `<agent-message>` tag plus boilerplate explaining it did not
+  // come from the actual user (issue #383). `origin.body` is the same report
+  // already unwrapped, so renderers can show it directly instead of
+  // re-parsing the tag out of the wrapped text.
+  origin?: {
+    kind: string;
+    from?: string;
+    senderTaskId?: string;
+    name?: string;
+    body?: string;
+  };
 }
 
 /**

@@ -10,6 +10,11 @@ import { Context, ContextType } from '../../../../types';
  *
  * 제거만 하는 태그:
  * - <system-reminder>...</system-reminder>
+ * - <task-notification>...</task-notification> → 백그라운드 워크플로 완료 신호. tool-use-id로
+ *   매칭되는 Workflow 카드가 있으면 mergeToolResults가 이미 그 카드에 붙이고 이 엔트리 자체를
+ *   숨기므로 여기까지 오지 않는다. 여기 도달하는 것은 매칭이 안 된 경우(예: 백그라운드
+ *   Agent/Task 알림 — tool-use-id가 메인 스레드 tool_use와 매칭되지 않음, 이슈 #383)이고,
+ *   모델이 이미 자기 말로 완료를 알리므로 원문 XML은 사용자에게 새 정보가 없다.
  * - <local-command-caveat>...</local-command-caveat> → hasLocalCommandCaveat: true
  * - <command-message>...</command-message>
  * - <command-args>...</command-args>
@@ -44,6 +49,10 @@ export function parseUserContent(content: string): {
   // Step C: <system-reminder> 태그 제거 (추출 없이)
   const systemReminderPattern = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
   cleanText = cleanText.replace(systemReminderPattern, '');
+
+  // Step D: <task-notification> 태그 제거 (추출 없이) — 상단 docstring 참고
+  const taskNotificationPattern = /<task-notification>[\s\S]*?<\/task-notification>/g;
+  cleanText = cleanText.replace(taskNotificationPattern, '');
 
   // Step E: <command-name> 태그에서 명령어 이름 추출 (선행 / 제거)
   let commandName: string | undefined;

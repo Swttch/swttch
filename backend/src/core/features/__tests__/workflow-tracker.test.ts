@@ -418,3 +418,92 @@ describe('WorkflowProgressTracker local_bash background tasks', () => {
     expect(last().outputFile).toBe('/first.output');
   });
 });
+
+// issue #383: a Cancel click resolves through the TaskStop reminder fallback
+// (see useCancelBackgroundTask), which sometimes lands on a task_id the CLI
+// itself has no record of — e.g. a backgrounded agent whose owning CLI
+// session already exited. Without settling on this signal, no terminal
+// task_notification is ever coming for such a task, and the panel is left
+// ticking a 'running' card's token/duration counters forever.
+describe('WorkflowProgressTracker "No task found" settling', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  const agentStarted = {
+    type: 'system',
+    subtype: 'task_started',
+    tool_use_id: 'toolu_agent1',
+    task_id: 'ac1d41ea660ea28e4',
+    description: 'Investigate the repo',
+    task_type: 'local_agent',
+  };
+
+  function taskStopErrorEvent(taskId: string) {
+    return {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [{
+          type: 'tool_result',
+          tool_use_id: 'toolu_taskstop1',
+          content: `<tool_use_error>No task found with ID: ${taskId}</tool_use_error>`,
+        }],
+      },
+    };
+  }
+
+  it('settles a running task to stopped when the CLI reports it unknown', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    expect(last().status).toBe('running');
+
+    tracker.handleEvent('s1', taskStopErrorEvent('ac1d41ea660ea28e4'));
+
+    const t = last();
+    expect(t.status).toBe('stopped');
+    expect(t.endedAt).toBeGreaterThan(0);
+  });
+
+  it('does not settle a task in a different session', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    tracker.handleEvent('s2', taskStopErrorEvent('ac1d41ea660ea28e4'));
+
+    const s1Broadcasts = broadcasts.filter((b) => b.toolUseId === 'toolu_agent1');
+    expect(s1Broadcasts.every((b) => b.status === 'running')).toBe(true);
+  });
+
+  it('does not overwrite an already-completed task', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      tool_use_id: 'toolu_agent1',
+      task_id: 'ac1d41ea660ea28e4',
+      status: 'completed',
+    });
+    expect(last().status).toBe('completed');
+
+    tracker.handleEvent('s1', taskStopErrorEvent('ac1d41ea660ea28e4'));
+    expect(last().status).toBe('completed');
+  });
+
+  it('ignores a "No task found" for a task_id nothing is tracking', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    const before = broadcasts.length;
+
+    tracker.handleEvent('s1', taskStopErrorEvent('some-other-id'));
+
+    expect(broadcasts).toHaveLength(before);
+  });
+});

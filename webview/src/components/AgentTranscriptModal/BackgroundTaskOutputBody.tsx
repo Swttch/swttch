@@ -6,6 +6,7 @@ import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
 
 interface Props {
   task: WorkflowTask;
+  outputFile: string | undefined;
 }
 
 /** How close to the bottom (px) counts as "already at the bottom" for auto-scroll. */
@@ -52,15 +53,17 @@ function CommandLine(props: { outputFile: string; isRunning: boolean }) {
 
 /**
  * Detail body for a plain background Bash task (task_type 'local_bash') —
- * shown instead of AgentTranscriptBody, since these have no agents to pick a
- * transcript from, only a raw stdout/stderr log (issue #347).
+ * shown instead of AgentTranscriptBody, since it has no agents to pick a
+ * transcript from, only a raw stdout/stderr log (issue #347). `outputFile` is
+ * resolved by the caller (useResolvedTaskOutputFile), not read off `task`
+ * directly — see that hook for why the two can differ.
  */
 export function BackgroundTaskOutputBody(props: Props) {
-  const { task } = props;
+  const { task, outputFile } = props;
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
 
-  const { text, truncated, loading } = useBackgroundTaskOutput(task.outputFile);
+  const { text, truncated, loading } = useBackgroundTaskOutput(outputFile);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether the user was already at (or near) the bottom right before this
@@ -97,7 +100,7 @@ export function BackgroundTaskOutputBody(props: Props) {
     setShowJumpToBottom(false);
   };
 
-  if (!task.outputFile) {
+  if (!outputFile) {
     // The command just started — its immediate tool_result (which carries the
     // output file path) hasn't landed yet. Distinct from "loading" below: this
     // is "nothing to fetch yet", not "fetching and waiting".
@@ -116,7 +119,7 @@ export function BackgroundTaskOutputBody(props: Props) {
     // supposed to hide the very thing it's showing detail about.
     <div className="flex-1 min-h-0 px-4 py-3 flex flex-col">
       <div className="shrink-0">
-        <CommandLine outputFile={task.outputFile} isRunning={isRunning} />
+        <CommandLine outputFile={outputFile} isRunning={isRunning} />
       </div>
 
       <div className="relative mt-3 h-[60vh] shrink-0">

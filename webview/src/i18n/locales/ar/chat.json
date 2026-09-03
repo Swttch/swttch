@@ -214,6 +214,7 @@
     },
     "workflowLabel": "مهمة سير العمل",
     "bashLabel": "مهمة Bash",
+    "agentLabel": "الوكيل",
     "agentsCount": "{{count}} وكلاء",
     "agentsCount_zero": "لا وكلاء",
     "agentsCount_one": "وكيل واحد",

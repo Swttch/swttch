@@ -214,6 +214,7 @@
     },
     "workflowLabel": "Fluxo de trabalho",
     "bashLabel": "Bash",
+    "agentLabel": "Agente",
     "agentsCount": "{{count}} agentes",
     "agentsCount_one": "{{count}} agente",
     "agentsCount_other": "{{count}} agentes",

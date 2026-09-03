@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowPathIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
-import type { WorkflowAgent } from '@/shared';
-import { useAgentTranscript } from '@/hooks/useAgentTranscript';
+import type { WorkflowTask } from '@/shared';
+import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
 import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
 import { mergeToolResults } from '@/pages/ChatPage/mergeToolResults';
@@ -10,33 +10,58 @@ import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
 import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
 
 interface Props {
-  transcriptDir: string | undefined;
-  agent: WorkflowAgent | undefined;
+  task: WorkflowTask;
+  outputFile: string | undefined;
 }
 
 /** How close to the bottom (px) counts as "already at the bottom" for auto-scroll. */
 const BOTTOM_THRESHOLD_PX = 24;
 
-export function AgentTranscriptBody(props: Props) {
-  const { transcriptDir, agent } = props;
+/**
+ * Detail body for a single backgrounded Agent/Task call (task_type
+ * 'local_agent'). Its output file is its own JSONL transcript — the same
+ * shape as a workflow agent's `agent-<id>.jsonl` — so this parses it the same
+ * way AgentTranscriptBody does, rather than dumping it as raw text the way
+ * BackgroundTaskOutputBody does for a plain Bash task's actual shell log
+ * (issue #383).
+ *
+ * Sourced from the push-based live-watch text (`useBackgroundTaskOutput`,
+ * already built for the Bash case) rather than a poll-based structured-entry
+ * fetch: the backend has no notion of "this file is JSONL", it just watches
+ * bytes, so parsing the pushed text into entries is a frontend-only concern.
+ */
+export function AgentOutputTranscriptBody(props: Props) {
+  const { task, outputFile } = props;
   const { t } = useTranslation('chat');
+  const isRunning = task.status === 'running';
 
-  // Changes whenever the agent's live stats change, so a running agent's
-  // transcript refetches as WORKFLOW_PROGRESS updates arrive (see useAgentTranscript).
-  const fingerprint = agent ? `${agent.tokens}:${agent.tools}:${Math.floor(agent.durationMs / 2000)}` : undefined;
-
-  const { data, isPending, isError } = useAgentTranscript(transcriptDir, agent?.agentId, fingerprint);
+  const { text, loading } = useBackgroundTaskOutput(outputFile);
 
   const messages = useMemo(() => {
-    if (!data) return [];
-    const converted = data.entries.map((entry) => toInstance(LoadedMessageDto, entry));
+    if (!text) return [];
+    const entries = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as Record<string, unknown>;
+        } catch {
+          // A truncated leading line (the backend caps by character count,
+          // which can cut a JSON line mid-way) or a stray non-JSON line —
+          // skip it rather than let one bad line blank the whole transcript.
+          return null;
+        }
+      })
+      .filter((entry): entry is Record<string, unknown> => entry !== null);
+    const converted = entries.map((entry) => toInstance(LoadedMessageDto, entry));
     return mergeToolResults(converted);
-  }, [data]);
+  }, [text]);
 
-  // Same auto-scroll contract as the main chat and AgentOutputTranscriptBody:
+  // Same auto-scroll contract as the main chat and BackgroundTaskOutputBody:
   // follow new content while already at the bottom, stop the instant the
   // reader scrolls up to read something, and resume once they scroll back
-  // down themselves (never yanked there by a refetch landing mid-read).
+  // down themselves (never yanked there by a push arriving mid-read).
   const scrollRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
@@ -50,7 +75,7 @@ export function AgentTranscriptBody(props: Props) {
     } else {
       setShowJumpToBottom(true);
     }
-  }, [messages]);
+  }, [text]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -68,21 +93,13 @@ export function AgentTranscriptBody(props: Props) {
     setShowJumpToBottom(false);
   };
 
-  if (!agent) {
-    return <div className="flex-1 flex items-center justify-center text-text-primary/50 text-[0.9230rem]">{t('backgroundTasks.transcriptModal.noAgents')}</div>;
-  }
-
-  if (isPending) {
+  if (!outputFile || loading) {
     return (
       <div className="flex-1 flex items-center justify-center gap-2 text-text-primary/50 text-[0.9230rem]">
         <ArrowPathIcon className="w-4 h-4 animate-spin" />
-        {t('backgroundTasks.transcriptModal.loading')}
+        {t('backgroundTasks.transcriptModal.starting')}
       </div>
     );
-  }
-
-  if (isError) {
-    return <div className="flex-1 flex items-center justify-center text-red-500 text-[0.9230rem]">{t('backgroundTasks.transcriptModal.error')}</div>;
   }
 
   if (messages.length === 0) {
@@ -92,17 +109,13 @@ export function AgentTranscriptBody(props: Props) {
   return (
     <div className="relative flex-1 min-h-0">
       <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-3 space-y-3">
-        {data?.truncated && (
-          <div className="text-[0.8461rem] text-text-primary/50 text-center pb-2">
-            {t('backgroundTasks.transcriptModal.truncated', { count: messages.length })}
-          </div>
-        )}
         {messages.map((message) => (
           <MessageBubble key={message.uuid ?? `${message.type}-${message.timestamp}`} message={message} />
         ))}
         {/* Same cue the main chat shows below the latest bubble for the whole
-            span of a turn — here, the whole span of this agent still running. */}
-        {agent.status === 'running' && <StreamingIndicator />}
+            span of a turn — here, the whole span of the agent still running,
+            regardless of whether its last parsed message already has text. */}
+        {isRunning && <StreamingIndicator />}
       </div>
 
       {showJumpToBottom && (
