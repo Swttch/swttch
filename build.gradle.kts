@@ -188,6 +188,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.29.6 - Stop being asked for every single edit</h3>
+            <ul>
+                <li>Fix picking auto-accept or "allow all edits" not actually stopping the prompts (#394, reported by @Ninili)</li>
+                <li>Add an "Allow all edits" button to both diff reviews (#394, reported by @Ninili)</li>
+            </ul>
             <h3>0.29.5 - WSL2 reconnect loop, settings safety, and MCP fixes</h3>
             <ul>
                 <li>Fix the backend disconnecting and reconnecting every ten seconds on WSL2 (#384, reported by @ideal-chris)</li>
