@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react';
 import {
   useCancelBackgroundTask,
   buildCancelTaskReminder,
+  buildCancelTaskNotice,
   type CancelBackgroundTaskContext,
 } from '../useCancelBackgroundTask';
 import { MessageType } from '@/shared';
@@ -26,7 +27,7 @@ function setup(ack: { sent?: boolean } | Error) {
 const TASK = { taskId: 'bgmhz6u1e', name: 'demo-flow' };
 
 describe('useCancelBackgroundTask', () => {
-  it('asks the CLI to stop the task over control_request', async () => {
+  it('asks the CLI to stop the task over control_request, then tells the model immediately', async () => {
     const { cancel, send, sendMessage, context } = setup({ sent: true });
 
     const route = await cancel(TASK, context);
@@ -36,8 +37,14 @@ describe('useCancelBackgroundTask', () => {
     const [type, payload] = send.mock.calls[0];
     expect(type).toBe(MessageType.SEND_CONTROL_REQUEST);
     expect(payload?.request).toEqual({ subtype: 'stop_task', task_id: TASK.taskId });
-    // The control_request did the work, so no message is put in the transcript.
-    expect(sendMessage).not.toHaveBeenCalled();
+    // The control_request itself never reaches the model's own context (issue
+    // #383: no <task-notification> is ever injected for a stop_task
+    // cancellation), so a notice must still be sent — right away, not
+    // deferred to whenever the user next types something.
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    const [text] = sendMessage.mock.calls[0];
+    expect(text).toContain(TASK.taskId);
+    expect(text).toBe(buildCancelTaskNotice(TASK));
   });
 
   // The fallback is what keeps `stop_task` an optimisation rather than a
@@ -78,5 +85,23 @@ describe('buildCancelTaskReminder', () => {
     expect(text.startsWith('<system-reminder>')).toBe(true);
     expect(text.endsWith('</system-reminder>')).toBe(true);
     expect(text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim()).toBe('');
+  });
+});
+
+describe('buildCancelTaskNotice', () => {
+  it('wraps the notice so the chat does not render it', () => {
+    const text = buildCancelTaskNotice(TASK);
+    expect(text.startsWith('<system-reminder>')).toBe(true);
+    expect(text.endsWith('</system-reminder>')).toBe(true);
+    expect(text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '').trim()).toBe('');
+  });
+
+  it('names the task by id when one is known', () => {
+    expect(buildCancelTaskNotice(TASK)).toContain(TASK.taskId);
+  });
+
+  it('falls back to the task name when there is no id', () => {
+    const text = buildCancelTaskNotice({ name: 'demo-flow' });
+    expect(text).toContain('demo-flow');
   });
 });
