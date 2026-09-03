@@ -226,7 +226,7 @@ export function DiffPage(props: Props) {
   }, [preview, canPickHunks, decisions.acceptedRanges]);
 
   const resolve = useCallback(
-    async (keepEdits: boolean) => {
+    async (keepEdits: boolean, allowAllEditsThisSession = false) => {
       if (!preview?.sessionId || !preview.controlRequestId) return;
       setResolving(true);
       try {
@@ -240,6 +240,11 @@ export function DiffPage(props: Props) {
           // Reject discards any edit: refusing a change is not a way to write
           // a different one.
           editedContent: keepEdits && edited.isEdited ? edited.contents : undefined,
+          // "Allow all edits": answers this request as Confirm does, and stops
+          // the following ones being asked at all (#393). Offered here for the
+          // same reason it is offered in the IDE's review — a reviewer looking
+          // at a diff should not have to find the chat prompt to escape.
+          allowAllEditsThisSession,
         });
         // Answered, so the window has done its job. In an IDE the backend closes
         // the tab; elsewhere this is what dismisses it.
@@ -364,6 +369,25 @@ export function DiffPage(props: Props) {
               <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
             </>
           )}
+          {/*
+            The way out of answering every single edit (#393).
+
+            Plain, not coloured like the two decisions beside it: it is an offer
+            rather than the answer this screen is asking for. Disabled on the
+            same condition as Confirm, because it answers this request the same
+            way and additionally installs the session rule — offering it while
+            nothing is ticked would read as "allow everything" and send a
+            refusal.
+          */}
+          <button
+            type="button"
+            className="rounded border border-border-default px-3 py-1.5 text-sm text-text-secondary hover:bg-surface-hover disabled:opacity-50"
+            disabled={resolving || (canPickHunks && decisions.keptCount === 0)}
+            onClick={() => void resolve(true, true)}
+          >
+            {t('diffPage.allowAllEdits')}
+          </button>
+          <span className="mx-1 h-4 w-px bg-border-default" aria-hidden />
           <button
             type="button"
             className="rounded bg-state-success-bg px-3 py-1.5 text-sm text-state-success-fg disabled:opacity-50"

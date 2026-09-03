@@ -1615,9 +1615,9 @@ class ClaudeCodePanel(
                 // the backend holds the change and rewrites the tool call
                 // (#109) -- unless the reviewer edited the proposed side, in
                 // which case their text goes with them and wins (#305).
-                val onResolve: ((List<AcceptedRange>, String?) -> Unit)? =
+                val onResolve: ((List<AcceptedRange>, String?, Boolean) -> Unit)? =
                     if (sessionId != null && controlRequestId != null && toolUseId != null) {
-                        { accepted, editedContent ->
+                        { accepted, editedContent, allowAllEditsThisSession ->
                             val params = buildJsonObject {
                                 put("toolUseId", toolUseId)
                                 put("controlRequestId", controlRequestId)
@@ -1636,6 +1636,12 @@ class ClaudeCodePanel(
                                 // proposed side; the backend then writes this
                                 // instead of rebuilding from the ranges (#305).
                                 editedContent?.let { put("editedContent", it) }
+                                // "Allow all edits" was pressed: answer this
+                                // request AND install the session rule, so the
+                                // edits after it are not asked about (#393).
+                                if (allowAllEditsThisSession) {
+                                    put("allowAllEditsThisSession", true)
+                                }
                             }
                             backendService.sendNotification(project.basePath ?: "", "RESOLVE_DIFF", params)
                         }

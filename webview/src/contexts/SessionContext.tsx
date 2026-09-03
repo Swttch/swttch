@@ -76,7 +76,7 @@ interface SessionProviderProps {
 }
 
 export function SessionProvider({ children }: SessionProviderProps) {
-  const { subscribe, isConnected } = useBridgeContext();
+  const { subscribe, isConnected, send } = useBridgeContext();
   const { workingDirectory, setWorkingDirectory, rootDir } = useWorkingDir();
   // Reading the setting only widens the listing scope; without a provider the
   // default (off) is the correct answer, so this must not hard-require one.
@@ -129,9 +129,34 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // 자기 설정 파일을 직접 읽어 GUI와 같은 값으로 돈다.
   const requestedInputMode = sessionInputMode ?? configuredInputMode;
 
-  const setInputMode = useCallback((newMode: InputMode) => {
+  /**
+   * A mode the USER just picked: show it, and tell the running CLI about it.
+   *
+   * Both halves are needed and they are not the same thing. Setting the state
+   * alone changed the label and nothing else, because `--permission-mode` is a
+   * spawn-time flag and the mode reached the CLI only when the next message
+   * respawned it. So a mode picked while Claude was working did nothing at all
+   * for the rest of that turn — the reported "auto-accept keeps asking" (#393).
+   *
+   * Deliberately NOT used by syncEffectiveMode: that one carries a mode the CLI
+   * itself reported, and sending it back would tell the CLI what it just told
+   * us. The distinction is the whole point of keeping this separate.
+   *
+   * Fire-and-forget. A CLI that is not running, or that refuses, leaves the
+   * spawn-time path to carry the mode on the next message exactly as before, so
+   * a failure here costs nothing that was not already the old behaviour.
+   */
+  const applyUserPickedMode = useCallback((newMode: InputMode) => {
     setSessionInputMode(newMode);
-  }, []);
+    if (!currentSessionId) return;
+    void send(MessageType.SET_PERMISSION_MODE, { inputMode: newMode }).catch(() => {
+      // Nothing to recover: the next message respawns under the new flag.
+    });
+  }, [currentSessionId, send]);
+
+  const setInputMode = useCallback((newMode: InputMode) => {
+    applyUserPickedMode(newMode);
+  }, [applyUserPickedMode]);
 
   // 현재 가용한 모드 목록(순환·선택 패널이 공유한다).
   const availableModes = useMemo(
@@ -142,8 +167,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const cycleInputMode = useCallback(() => {
     const currentIndex = availableModes.indexOf(inputMode);
     const nextIndex = (currentIndex + 1) % availableModes.length;
-    setSessionInputMode(availableModes[nextIndex]);
-  }, [availableModes, inputMode]);
+    // Same path as picking from the menu: the user chose this one too.
+    applyUserPickedMode(availableModes[nextIndex]);
+  }, [availableModes, inputMode, applyUserPickedMode]);
 
   // CLI가 통보한 실제 적용 모드를 반영한다(진실원). 사용자가 플랜 모드를 요청하지
   // 않았는데 CLI가 스스로 플랜 모드로 실행했거나, 스스로 플랜 모드를 벗어난 경우가

@@ -99,6 +99,12 @@ export enum MessageType {
   SAVE_CLAUDE_CONFIG_DIR = 'SAVE_CLAUDE_CONFIG_DIR',
   /** Set the active model for the session/CLI. */
   SET_MODEL = 'SET_MODEL',
+  /** Ask a LIVE CLI to switch its permission mode right now, so a mode picked
+   *  while Claude is already working takes effect for the rest of that turn
+   *  instead of only on the next spawn (#393). Best-effort: a CLI that is not
+   *  running, or that refuses, leaves the spawn-time `--permission-mode` path
+   *  to carry the change on the next message. inbound webview→backend */
+  SET_PERMISSION_MODE = 'SET_PERMISSION_MODE',
   /** Probe whether the current account can select Fable via a real (cached)
    *  `--model fable` call. Surfaces Fable in the picker when the per-account
    *  catalog omits it but the model still works. inbound webview→backend */

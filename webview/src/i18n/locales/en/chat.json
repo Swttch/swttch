@@ -283,7 +283,6 @@
     "allowTool": "Allow {{tool}}?",
     "sessionLabel": {
       "edit": "Yes, allow all edits this session",
-      "write": "Yes, allow all writes this session",
       "bash": "Yes, allow all commands this session",
       "delete": "Yes, allow all deletions this session",
       "read": "Yes, allow all reads this session",
@@ -541,6 +540,7 @@
       "refresh": "Refresh",
       "refreshing": "Refreshing…",
       "unreadable": "This file can no longer be read, so there is nothing to apply the change to."
-    }
+    },
+    "allowAllEdits": "Allow all edits"
   }
 }

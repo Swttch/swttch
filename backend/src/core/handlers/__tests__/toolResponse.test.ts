@@ -217,3 +217,90 @@ describe('toolResponseHandler — pending preview cleanup', () => {
     expect(takePreview('t-chat')).toBeUndefined();
   });
 });
+
+/**
+ * "Yes, allow all edits this session" only means anything if the rule actually
+ * reaches the CLI. Before #393 it never left the webview: a React ref
+ * auto-answered later prompts, so the CLI kept asking and the memory died with
+ * the render.
+ */
+describe('toolResponseHandler — session permission rules (#393)', () => {
+  it('carries updatedPermissions to the CLI on an approval', () => {
+    toolResponseHandler(
+      'conn-1',
+      {
+        requestId: 'r1',
+        payload: {
+          toolUseId: 't1',
+          approved: true,
+          controlRequestId: 'ctrl-1',
+          updatedPermissions: [
+            { type: 'addRules', rules: [{ toolName: 'Edit' }], behavior: 'allow', destination: 'session' },
+          ],
+        },
+      } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    const [, , sent] = sendControlResponseToProcess.mock.calls[0];
+    expect(sent.response.behavior).toBe('allow');
+    expect(sent.response.updatedPermissions).toEqual([
+      { type: 'addRules', rules: [{ toolName: 'Edit' }], behavior: 'allow', destination: 'session' },
+    ]);
+  });
+
+  it('omits the field entirely on a plain approval', () => {
+    // Saying nothing and saying "add no rules" are different statements, and
+    // the CLI has no reason to read an empty array.
+    toolResponseHandler(
+      'conn-1',
+      { requestId: 'r1', payload: { toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1' } } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    const [, , sent] = sendControlResponseToProcess.mock.calls[0];
+    expect(sent.response).not.toHaveProperty('updatedPermissions');
+  });
+
+  it('omits the field when an empty array is passed', () => {
+    toolResponseHandler(
+      'conn-1',
+      {
+        requestId: 'r1',
+        payload: { toolUseId: 't1', approved: true, controlRequestId: 'ctrl-1', updatedPermissions: [] },
+      } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    const [, , sent] = sendControlResponseToProcess.mock.calls[0];
+    expect(sent.response).not.toHaveProperty('updatedPermissions');
+  });
+
+  it('never attaches rules to a denial', () => {
+    // A denial carries a message, not a grant. Installing a rule while refusing
+    // would allow everything that follows the refusal.
+    toolResponseHandler(
+      'conn-1',
+      {
+        requestId: 'r1',
+        payload: {
+          toolUseId: 't1',
+          approved: false,
+          controlRequestId: 'ctrl-1',
+          updatedPermissions: [
+            { type: 'addRules', rules: [{ toolName: 'Edit' }], behavior: 'allow', destination: 'session' },
+          ],
+        },
+      } as any,
+      makeConnections(),
+      bridge,
+    );
+
+    const [, , sent] = sendControlResponseToProcess.mock.calls[0];
+    expect(sent.response.behavior).toBe('deny');
+    expect(sent.response).not.toHaveProperty('updatedPermissions');
+  });
+});

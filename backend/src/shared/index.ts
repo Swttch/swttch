@@ -13,3 +13,4 @@ export * from './error-code';
 export * from './hunk';
 export * from './working-dir-path';
 export * from './mergeEdits';
+export * from './permission-rules';

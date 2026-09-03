@@ -16,7 +16,7 @@
  * proposal can describe what is now on screen — so the screen wins.
  */
 import type { ConnectionManager } from '../../ws/connection-manager';
-import { MessageType, buildUserDeclinedContent } from '../../shared';
+import { MessageType, buildUserDeclinedContent, buildSessionPermissionUpdate } from '../../shared';
 import { takePreview, peekPreview, closeDiffTabForPermission, type StoredPreview } from './diffPreview';
 import { holdApprovalIfBaseMoved } from './reviewBase';
 import type { Bridge } from '../../bridge/bridge-interface';
@@ -44,6 +44,14 @@ export interface ResolveDiffParams {
    * result of every checkbox they unticked before typing.
    */
   editedContent?: string;
+  /**
+   * The reviewer pressed "Allow all edits" rather than plain Apply (#393).
+   *
+   * Answers this request exactly as Apply does, and installs the session rule
+   * alongside it so the edits that follow are not asked about at all. Only
+   * meaningful on an approval: a refusal grants nothing.
+   */
+  allowAllEditsThisSession?: boolean;
 }
 
 /**
@@ -70,7 +78,18 @@ export function parseResolveDiffParams(
   const edited = params.editedContent;
   const editedContent = typeof edited === 'string' ? edited : undefined;
 
-  return { toolUseId, controlRequestId, sessionId, acceptedRanges, editedContent };
+  // Strictly `=== true`: this grants standing permission, so anything other
+  // than the flag being sent on purpose has to read as "not asked for".
+  const allowAllEditsThisSession = params.allowAllEditsThisSession === true;
+
+  return {
+    toolUseId,
+    controlRequestId,
+    sessionId,
+    acceptedRanges,
+    editedContent,
+    allowAllEditsThisSession,
+  };
 }
 
 /** Whether a wire value is a usable line range; anything else is dropped. */
@@ -181,7 +200,15 @@ export async function resolveDiffReview(
   if (held) return;
 
   const amended = buildPartialApproval(preview, params.acceptedRanges, edited);
-  respond({ behavior: 'allow', updatedInput: amended ? amended.input : {} });
+  respond({
+    behavior: 'allow',
+    updatedInput: amended ? amended.input : {},
+    // Built from the tool that asked, so the IDE's button and the chat's
+    // "yes, allow all edits this session" install the very same rule.
+    ...(params.allowAllEditsThisSession
+      ? { updatedPermissions: buildSessionPermissionUpdate(preview.toolName) }
+      : {}),
+  });
   console.error(
     '[node-backend]',
     edited !== undefined
