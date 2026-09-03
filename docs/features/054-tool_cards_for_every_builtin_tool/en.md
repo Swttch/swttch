@@ -34,6 +34,10 @@ A third problem only appeared once the cards existed. **A tool's arguments arriv
 
 **A card no longer states something it cannot know yet.** While arguments are still arriving, the review card says nothing rather than "No findings", the MCP card does not claim "all servers", the worktree card does not claim the name was generated, and the cron card holds its defaults back. The same fix applied to a notebook card that had been calling a cell empty while its contents were still on the way.
 
+**Code values keep their own order in a right-to-left interface.** Cron expressions, job ids, resource addresses, `file:line` locations, worktree paths and attachment paths all read left-to-right however the rest of the screen is mirrored.
+
+**A value the model invents is shown as itself.** If a finding reports an outcome the schema does not define, the card prints what was reported rather than an untranslated key.
+
 ## Limits
 
 `SendUserMessage` and the ten legacy names are covered by tests but were never seen on screen, because the current CLI cannot produce them: the legacy names are translated away before they reach us, and `SendUserMessage` is not present in this CLI build at all. Every other card in this change was verified by making the real call and reading the result.
