@@ -1,4 +1,4 @@
-import { getSelectionRange } from '@/utils/domSelection';
+import { getSelectionRange, CaretDirection } from '@/utils/domSelection';
 
 /**
  * Whether the caret has nowhere left to go in a direction, which is what makes an
@@ -28,4 +28,30 @@ export function caretIsAtEnd(root: HTMLElement): boolean {
   const length = (root.textContent ?? '').length;
   const { start, end } = getSelectionRange(root);
   return start === length && end === length;
+}
+
+/**
+ * Whether an arrow key press is the composer asking for a prompt out of the
+ * history, rather than asking to move.
+ *
+ * Two things have to hold, and the caret is only the second of them.
+ *
+ * **Shift means select, never recall.** In every text field there is, holding
+ * Shift turns an arrow into a selection gesture, so the history has no claim on
+ * the key at all. Leaving this out does not merely lose a selection — the recall
+ * replaces what is in the composer, so pressing Shift+Up to start selecting a
+ * prompt threw the prompt away instead ([#396](https://github.com/Swttch/swttch/issues/396)).
+ *
+ * The caret test alone hid this: from the middle of a line the selection grows
+ * and stays non-collapsed, so nothing fires and Shift looks safe. It only bites
+ * where the caret already sits on the edge with nothing selected — which is
+ * exactly where a recalled prompt lands, so it bit while walking the history.
+ */
+export function arrowRecallsHistory(
+  event: { shiftKey: boolean },
+  root: HTMLElement,
+  direction: CaretDirection,
+): boolean {
+  if (event.shiftKey) return false;
+  return direction === CaretDirection.Backward ? caretIsAtStart(root) : caretIsAtEnd(root);
 }

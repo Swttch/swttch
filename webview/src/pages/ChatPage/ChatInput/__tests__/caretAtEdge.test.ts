@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { caretIsAtStart, caretIsAtEnd } from '../caretAtEdge';
+import { caretIsAtStart, caretIsAtEnd, arrowRecallsHistory } from '../caretAtEdge';
+import { CaretDirection } from '@/utils/domSelection';
 
 let root: HTMLElement;
 
@@ -134,5 +135,50 @@ describe('a prompt with real line breaks', () => {
     expect(caretIsAtStart(root)).toBe(true);
     putCaret(root, hard.length);
     expect(caretIsAtEnd(root)).toBe(true);
+  });
+});
+
+describe('arrowRecallsHistory', () => {
+  const draft = 'first line of my draft\nsecond line of my draft\nthird line of my draft';
+  const plain = { shiftKey: false };
+  const shifted = { shiftKey: true };
+
+  beforeEach(() => {
+    root = mount(draft);
+  });
+
+  it('recalls at the character edges, and only there', () => {
+    putCaret(root, 0);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Backward)).toBe(true);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Forward)).toBe(false);
+
+    putCaret(root, draft.length);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Forward)).toBe(true);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Backward)).toBe(false);
+
+    putCaret(root, draft.indexOf('second'));
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Backward)).toBe(false);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Forward)).toBe(false);
+  });
+
+  it('never recalls while Shift is held, even sitting on the edge', () => {
+    // Measured in a browser on the merged code: a recalled prompt arrives with
+    // the caret at 0 and nothing selected, so one Shift+Up while walking the
+    // history replaced a 210-character prompt with a 206-character one instead
+    // of selecting anything (#396).
+    putCaret(root, 0);
+    expect(arrowRecallsHistory(shifted, root, CaretDirection.Backward)).toBe(false);
+
+    putCaret(root, draft.length);
+    expect(arrowRecallsHistory(shifted, root, CaretDirection.Forward)).toBe(false);
+  });
+
+  it('leaves a Shift-selection alone once it has grown', () => {
+    // This half already held: a selection is not collapsed, so no edge counts as
+    // reached. It is why Shift+Up from mid-line looked safe and the defect only
+    // showed up from the very first character.
+    select(root, 0, draft.indexOf('second'));
+    expect(arrowRecallsHistory(shifted, root, CaretDirection.Backward)).toBe(false);
+    expect(arrowRecallsHistory(plain, root, CaretDirection.Backward)).toBe(false);
   });
 });

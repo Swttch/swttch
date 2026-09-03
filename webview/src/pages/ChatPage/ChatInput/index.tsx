@@ -45,7 +45,7 @@ import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { isMobile, isBrowser } from '@/config/environment';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
-import { caretIsAtStart, caretIsAtEnd } from './caretAtEdge';
+import { arrowRecallsHistory } from './caretAtEdge';
 import {
   decideVoiceGate,
   VoiceGateAction,
@@ -62,7 +62,7 @@ import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import { useTelemetryConsent, ConsentStatus, ConsentSource } from '@/hooks/useTelemetryConsent';
-import { getCaretOffset, setCaretOffset } from '@/utils/domSelection';
+import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
 
@@ -694,7 +694,7 @@ export function ChatInput() {
       // utils/domSelection warns about: a soft-wrapped prompt is one run of text
       // with no newline in it, so every visual row read as "the first line" and
       // Up jumped to the previous prompt mid-paragraph.
-      if (!caretIsAtStart(e.currentTarget)) return;
+      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Backward)) return;
 
       const historyValue = navigateUp(value);
       if (historyValue === null) return;
@@ -708,7 +708,7 @@ export function ChatInput() {
       });
     } else if (e.key === 'ArrowDown' && !palette.showSlashCommands) {
       // The mirror of Up: the last character, not the last row.
-      if (!caretIsAtEnd(e.currentTarget)) return;
+      if (!arrowRecallsHistory(e, e.currentTarget, CaretDirection.Forward)) return;
 
       const historyValue = navigateDown();
       if (historyValue === null) return;
