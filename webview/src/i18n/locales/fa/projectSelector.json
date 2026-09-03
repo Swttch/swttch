@@ -1,11 +1,41 @@
 {
   "loading": "در حال بارگذاری پروژه‌ها...",
-  "select": {
-    "title": "انتخاب پروژه",
-    "subtitle": "پروژه‌ای برای کار انتخاب کنید"
-  },
+  "searchPlaceholder": "جستجوی پروژه‌ها",
   "empty": "هیچ پروژه‌ای در دسترس نیست",
+  "noMatches": "هیچ پروژه‌ای مطابقت ندارد",
   "addProject": "افزودن پروژه",
+  "addFavorite": "سنجاق به بالا",
+  "removeFavorite": "برداشتن سنجاق",
+  "descriptionIconLabel": "نمایش توضیحات",
+  "sortOrder": {
+    "label": "ترتیب",
+    "recent": "اخیراً استفاده‌شده",
+    "created": "تاریخ ایجاد"
+  },
+  "menu": {
+    "label": "عملیات بیشتر",
+    "editProject": "ویرایش پروژه",
+    "copyPath": "کپی مسیر",
+    "delete": "حذف"
+  },
+  "editDialog": {
+    "title": "ویرایش پروژه",
+    "nameLabel": "نام نمایشی",
+    "nameHint": "برای استفاده از نام واقعی پوشه، خالی بگذارید.",
+    "descriptionLabel": "توضیحات",
+    "descriptionPlaceholder": "یادداشتی درباره این پروژه اضافه کنید (اختیاری)",
+    "cancel": "انصراف",
+    "save": "ذخیره"
+  },
+  "editDone": "پروژه به‌روزرسانی شد",
+  "editFailed": "به‌روزرسانی پروژه انجام نشد",
+  "deleteConfirm": {
+    "title": "حذف پروژه",
+    "message": "این کار سوابق جلسه \"{{name}}\" را در ~/.claude/projects حذف می‌کند. این عمل غیرقابل بازگشت است.",
+    "confirmLabel": "حذف"
+  },
+  "deleteDone": "پروژه حذف شد",
+  "deleteFailed": "حذف پروژه انجام نشد",
   "retry": "تلاش مجدد",
   "sessionCount": "{{count}} نشست",
   "sessionCount_one": "{{count}} نشست",

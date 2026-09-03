@@ -18,7 +18,13 @@ const mockSessions = vi.mocked(getSessionsList);
 const ROOT = '/repo';
 
 function project(path: string) {
-  return { name: path.split('/').pop() ?? path, path, sessionCount: 1, lastModified: '' };
+  return {
+    name: path.split('/').pop() ?? path,
+    path,
+    sessionCount: 1,
+    lastModified: '',
+    createdAt: '',
+  };
 }
 
 function session(sessionId: string, lastTimestamp: string) {

@@ -1,18 +1,44 @@
 {
   "loading": "جارٍ تحميل المشاريع...",
-  "select": {
-    "title": "اختر مشروعًا",
-    "subtitle": "اختر مشروعًا للعمل عليه"
-  },
+  "searchPlaceholder": "البحث عن المشاريع",
   "empty": "لا توجد مشاريع متاحة",
+  "noMatches": "لا توجد مشاريع مطابقة",
   "addProject": "إضافة مشروع",
+  "addFavorite": "تثبيت في الأعلى",
+  "removeFavorite": "إلغاء التثبيت",
+  "descriptionIconLabel": "عرض الوصف",
+  "sortOrder": {
+    "label": "الترتيب",
+    "recent": "الأحدث استخدامًا",
+    "created": "تاريخ الإنشاء"
+  },
+  "menu": {
+    "label": "مزيد من الإجراءات",
+    "editProject": "تعديل المشروع",
+    "copyPath": "نسخ المسار",
+    "delete": "حذف"
+  },
+  "editDialog": {
+    "title": "تعديل المشروع",
+    "nameLabel": "الاسم المعروض",
+    "nameHint": "اتركه فارغًا لاستخدام اسم المجلد الحقيقي.",
+    "descriptionLabel": "الوصف",
+    "descriptionPlaceholder": "أضف ملاحظة حول هذا المشروع (اختياري)",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "editDone": "تم تحديث المشروع",
+  "editFailed": "تعذر تحديث المشروع",
+  "deleteConfirm": {
+    "title": "حذف المشروع",
+    "message": "سيؤدي هذا إلى حذف سجلات الجلسات لـ\"{{name}}\" ضمن ~/.claude/projects. لا يمكن التراجع عن ذلك.",
+    "confirmLabel": "حذف"
+  },
+  "deleteDone": "تم حذف المشروع",
+  "deleteFailed": "تعذر حذف المشروع",
   "retry": "إعادة المحاولة",
   "sessionCount": "{{count}} جلسات",
-  "sessionCount_zero": "لا جلسات",
   "sessionCount_one": "جلسة واحدة",
-  "sessionCount_two": "جلستان",
-  "sessionCount_few": "{{count}} جلسات",
-  "sessionCount_many": "{{count}} جلسة",
   "sessionCount_other": "{{count}} جلسة",
   "errors": {
     "loadFailed": "فشل تحميل المشاريع"

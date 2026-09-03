@@ -1,11 +1,41 @@
 {
   "loading": "プロジェクトを読み込み中…",
-  "select": {
-    "title": "プロジェクトを選択",
-    "subtitle": "作業するプロジェクトを選んでください"
-  },
+  "searchPlaceholder": "プロジェクトを検索",
   "empty": "利用可能なプロジェクトがありません",
+  "noMatches": "一致するプロジェクトがありません",
   "addProject": "プロジェクトを追加",
+  "addFavorite": "上部に固定",
+  "removeFavorite": "固定を解除",
+  "descriptionIconLabel": "説明を表示",
+  "sortOrder": {
+    "label": "並び順",
+    "recent": "最近使用順",
+    "created": "作成順"
+  },
+  "menu": {
+    "label": "その他の操作",
+    "editProject": "プロジェクトを編集",
+    "copyPath": "パスをコピー",
+    "delete": "削除"
+  },
+  "editDialog": {
+    "title": "プロジェクトを編集",
+    "nameLabel": "表示名",
+    "nameHint": "空欄にすると実際のフォルダ名がそのまま使われます。",
+    "descriptionLabel": "説明",
+    "descriptionPlaceholder": "このプロジェクトについてのメモ（任意）",
+    "cancel": "キャンセル",
+    "save": "保存"
+  },
+  "editDone": "プロジェクトを更新しました",
+  "editFailed": "プロジェクトを更新できませんでした",
+  "deleteConfirm": {
+    "title": "プロジェクトを削除",
+    "message": "\"{{name}}\" のセッション記録を ~/.claude/projects から削除します。元に戻せません。",
+    "confirmLabel": "削除"
+  },
+  "deleteDone": "プロジェクトを削除しました",
+  "deleteFailed": "プロジェクトを削除できませんでした",
   "retry": "再試行",
   "sessionCount": "{{count}} セッション",
   "sessionCount_one": "{{count}} セッション",

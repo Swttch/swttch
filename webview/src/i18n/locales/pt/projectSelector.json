@@ -1,11 +1,41 @@
 {
   "loading": "Carregando projetos...",
-  "select": {
-    "title": "Selecionar Projeto",
-    "subtitle": "Escolha um projeto para trabalhar"
-  },
+  "searchPlaceholder": "Pesquisar projetos",
   "empty": "Nenhum projeto disponível",
+  "noMatches": "Nenhum projeto correspondente",
   "addProject": "Adicionar Projeto",
+  "addFavorite": "Fixar no topo",
+  "removeFavorite": "Desafixar",
+  "descriptionIconLabel": "Ver descrição",
+  "sortOrder": {
+    "label": "Ordenar por",
+    "recent": "Recente",
+    "created": "Criação"
+  },
+  "menu": {
+    "label": "Mais ações",
+    "editProject": "Editar projeto",
+    "copyPath": "Copiar caminho",
+    "delete": "Excluir"
+  },
+  "editDialog": {
+    "title": "Editar projeto",
+    "nameLabel": "Nome de exibição",
+    "nameHint": "Deixe em branco para usar o nome real da pasta.",
+    "descriptionLabel": "Descrição",
+    "descriptionPlaceholder": "Adicione uma nota sobre este projeto (opcional)",
+    "cancel": "Cancelar",
+    "save": "Salvar"
+  },
+  "editDone": "Projeto atualizado",
+  "editFailed": "Não foi possível atualizar o projeto",
+  "deleteConfirm": {
+    "title": "Excluir projeto",
+    "message": "Isso exclui os registros de sessão de \"{{name}}\" em ~/.claude/projects. Não pode ser desfeito.",
+    "confirmLabel": "Excluir"
+  },
+  "deleteDone": "Projeto excluído",
+  "deleteFailed": "Não foi possível excluir o projeto",
   "retry": "Tentar novamente",
   "sessionCount": "{{count}} sessões",
   "sessionCount_one": "{{count}} sessão",

@@ -1,11 +1,41 @@
 {
   "loading": "Projekte werden geladen...",
-  "select": {
-    "title": "Projekt auswählen",
-    "subtitle": "Wähle ein Projekt aus, an dem du arbeiten möchtest"
-  },
+  "searchPlaceholder": "Projekte suchen",
   "empty": "Keine Projekte verfügbar",
+  "noMatches": "Keine passenden Projekte",
   "addProject": "Projekt hinzufügen",
+  "addFavorite": "Oben anheften",
+  "removeFavorite": "Lösen",
+  "descriptionIconLabel": "Beschreibung anzeigen",
+  "sortOrder": {
+    "label": "Sortierung",
+    "recent": "Zuletzt verwendet",
+    "created": "Erstellt"
+  },
+  "menu": {
+    "label": "Weitere Aktionen",
+    "editProject": "Projekt bearbeiten",
+    "copyPath": "Pfad kopieren",
+    "delete": "Löschen"
+  },
+  "editDialog": {
+    "title": "Projekt bearbeiten",
+    "nameLabel": "Anzeigename",
+    "nameHint": "Leer lassen, um den echten Ordnernamen zu verwenden.",
+    "descriptionLabel": "Beschreibung",
+    "descriptionPlaceholder": "Notiz zu diesem Projekt hinzufügen (optional)",
+    "cancel": "Abbrechen",
+    "save": "Speichern"
+  },
+  "editDone": "Projekt aktualisiert",
+  "editFailed": "Projekt konnte nicht aktualisiert werden",
+  "deleteConfirm": {
+    "title": "Projekt löschen",
+    "message": "Dadurch werden die Sitzungsaufzeichnungen von „{{name}}“ unter ~/.claude/projects gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "confirmLabel": "Löschen"
+  },
+  "deleteDone": "Projekt gelöscht",
+  "deleteFailed": "Projekt konnte nicht gelöscht werden",
   "retry": "Erneut versuchen",
   "sessionCount": "{{count}} Sitzungen",
   "sessionCount_one": "{{count}} Sitzung",

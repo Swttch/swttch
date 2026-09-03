@@ -1,16 +1,44 @@
 {
   "loading": "Загрузка проектов...",
-  "select": {
-    "title": "Выберите проект",
-    "subtitle": "Выберите проект для работы"
-  },
+  "searchPlaceholder": "Поиск проектов",
   "empty": "Нет доступных проектов",
+  "noMatches": "Нет подходящих проектов",
   "addProject": "Добавить проект",
+  "addFavorite": "Закрепить сверху",
+  "removeFavorite": "Открепить",
+  "descriptionIconLabel": "Показать описание",
+  "sortOrder": {
+    "label": "Порядок",
+    "recent": "Недавние",
+    "created": "По созданию"
+  },
+  "menu": {
+    "label": "Дополнительно",
+    "editProject": "Изменить проект",
+    "copyPath": "Копировать путь",
+    "delete": "Удалить"
+  },
+  "editDialog": {
+    "title": "Изменить проект",
+    "nameLabel": "Отображаемое имя",
+    "nameHint": "Оставьте пустым, чтобы использовать настоящее имя папки.",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Добавьте заметку об этом проекте (необязательно)",
+    "cancel": "Отмена",
+    "save": "Сохранить"
+  },
+  "editDone": "Проект обновлён",
+  "editFailed": "Не удалось обновить проект",
+  "deleteConfirm": {
+    "title": "Удалить проект",
+    "message": "Это удалит записи сессий «{{name}}» в ~/.claude/projects. Это действие нельзя отменить.",
+    "confirmLabel": "Удалить"
+  },
+  "deleteDone": "Проект удалён",
+  "deleteFailed": "Не удалось удалить проект",
   "retry": "Повторить",
   "sessionCount": "{{count}} сессий",
   "sessionCount_one": "{{count}} сессия",
-  "sessionCount_few": "{{count}} сессии",
-  "sessionCount_many": "{{count}} сессий",
   "sessionCount_other": "{{count}} сессии",
   "errors": {
     "loadFailed": "Не удалось загрузить проекты"
