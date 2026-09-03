@@ -26,6 +26,7 @@ import {NotebookEditRenderer} from "./NotebookEditRenderer.tsx";
 import {WorkflowRenderer} from "./WorkflowRenderer.tsx";
 import {SendMessageRenderer} from "./SendMessageRenderer.tsx";
 import {ListAgentsRenderer} from "./ListAgentsRenderer.tsx";
+import {StructuredOutputRenderer} from "./StructuredOutputRenderer.tsx";
 import {McpRenderers} from "./Mcp";
 
 interface ToolRendererProps {
@@ -62,5 +63,6 @@ export const ToolRendererMap = new Map<string, FC<ToolRendererProps>>([
     ['Workflow', WorkflowRenderer],
     ['SendMessage', SendMessageRenderer],
     ['ListAgents', ListAgentsRenderer],
+    ['StructuredOutput', StructuredOutputRenderer],
     ...McpRenderers,
 ]);
