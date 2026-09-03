@@ -1712,6 +1712,46 @@ describe('useChatStream — one assistant entry per CLI message id (issue #232)'
     expect(toolUseIdsIn(result.current.messages)).toEqual(['toolu_first', 'toolu_second']);
   });
 
+  it('keeps a direct usage-limit assistant event separate from the previous tool turn', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emitToolTurn(emit, 'msg_tool', 'toolu_before_limit');
+      emit(MessageType.CLI_EVENT, {
+        type: 'assistant',
+        uuid: 'limit-entry',
+        timestamp: '2026-09-03T19:03:20.766Z',
+        session_id: 'session-with-limit',
+        parent_tool_use_id: null,
+        is_api_error_message: true,
+        api_error_status: 429,
+        error: 'rate_limit',
+        message: {
+          id: 'synthetic-limit-message',
+          role: 'assistant',
+          model: '<synthetic>',
+          type: 'message',
+          stop_reason: 'stop_sequence',
+          content: [
+            { type: 'text', text: "You've hit your session limit · resets 5:50am (Asia/Seoul)" },
+          ],
+        },
+      });
+      flushRAF();
+    });
+
+    const assistantEntries = result.current.messages.filter(
+      m => m.type === LoadedMessageType.Assistant,
+    );
+    expect(assistantEntries).toHaveLength(2);
+    expect(toolUseIdsIn(result.current.messages)).toEqual(['toolu_before_limit']);
+
+    const limit = assistantEntries[1] as LoadedMessageDto;
+    expect(getTextContent(limit)).toBe("You've hit your session limit · resets 5:50am (Asia/Seoul)");
+    expect(isLimitErrorMessage(limit)).toBe(true);
+  });
+
   it('gives each CLI message id its own entry, so a tool_result finds its call', () => {
     const { bridge, emit } = createMockBridge();
     const { result } = renderHook(() => useChatStream({ bridge }));

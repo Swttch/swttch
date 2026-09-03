@@ -993,6 +993,17 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         //
         // So a new `message.id` seals the placeholder and starts a fresh entry:
         // the same shape the reload path produces, arrived at live.
+        if (
+          messageId
+          && streamingMessageIdRef.current
+          && streamingApiMessageIdRef.current
+          && messageId !== streamingApiMessageIdRef.current
+        ) {
+          sealStreamingAssistant();
+          ensureStreamingPlaceholder();
+          streamingApiMessageIdRef.current = messageId;
+        }
+
         const streamingId = streamingMessageIdRef.current;
         if (streamingId) {
           // Flush any pending deltas before replacing
