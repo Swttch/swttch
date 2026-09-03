@@ -196,6 +196,46 @@ describe('getProjectsList', () => {
     expect(projects[0].lastModified).toBe('2026-01-03T00:00:00.000Z');
   });
 
+  // A working directory reaches us as the CLI recorded it, so on Windows it is
+  // backslash-separated — `shared/working-dir-path` says so about these exact
+  // two fields. Splitting such a path on `/` yields the whole string, which put
+  // `C:\Users\me\my-app` in the project list where the folder name belongs.
+  describe('a Windows working directory', () => {
+    it('takes its name from the last segment in the JSONL-fallback path', async () => {
+      writeTranscript(
+        'C--Users-me-my-app',
+        'a.jsonl',
+        [{ type: 'user', cwd: 'C:\\Users\\me\\my-app' }],
+        1_700_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('C:\\Users\\me\\my-app');
+      expect(projects[0].name).toBe('my-app');
+    });
+
+    it('takes its name from the last segment in the sessions-index path', async () => {
+      const folderPath = join(projectsDir, 'C--Users-me-indexed-app');
+      mkdirSync(folderPath, { recursive: true });
+      writeFileSync(
+        join(folderPath, 'sessions-index.json'),
+        JSON.stringify({
+          entries: [
+            { projectPath: 'C:\\Users\\me\\indexed-app', modified: '2026-01-02T00:00:00.000Z' },
+          ],
+        }),
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('C:\\Users\\me\\indexed-app');
+      expect(projects[0].name).toBe('indexed-app');
+    });
+  });
+
   // "Recent" and "created" order (#392) need genuinely different timestamps:
   // recent is the newest activity, created is the earliest.
   describe('createdAt', () => {

@@ -2,6 +2,7 @@ import { createReadStream } from 'fs';
 import { readFile, readdir, stat } from 'fs/promises';
 import { join } from 'path';
 import { createInterface } from 'readline';
+import { workingDirName } from '../../shared';
 import { getClaudeConfigDir } from './claudeConfigDir';
 
 interface ProjectEntry {
@@ -140,7 +141,7 @@ async function buildEntriesFromJsonl(folderPath: string): Promise<ProjectEntry[]
 
   return [
     {
-      name: projectPath.split('/').pop() || projectPath,
+      name: workingDirName(projectPath),
       path: projectPath,
       sessionCount: stated.length,
       lastModified: new Date(stated[0].mtimeMs).toISOString(),
@@ -217,7 +218,7 @@ export async function getProjectsList(): Promise<ProjectEntry[]> {
 
         for (const [projectPath, { count, lastModified, createdAt }] of grouped.entries()) {
           projects.push({
-            name: projectPath.split('/').pop() || projectPath,
+            name: workingDirName(projectPath),
             path: projectPath,
             sessionCount: count,
             lastModified: new Date(lastModified).toISOString(),
