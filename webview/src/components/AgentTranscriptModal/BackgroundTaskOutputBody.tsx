@@ -51,9 +51,12 @@ function CommandLine(props: { outputFile: string; isRunning: boolean }) {
 }
 
 /**
- * Detail body for a plain background Bash task (task_type 'local_bash') —
- * shown instead of AgentTranscriptBody, since these have no agents to pick a
- * transcript from, only a raw stdout/stderr log (issue #347).
+ * Detail body for a plain background Bash task (task_type 'local_bash') or a
+ * single backgrounded Agent/Task call (task_type 'local_agent') — shown
+ * instead of AgentTranscriptBody, since neither has agents to pick a
+ * transcript from: just a raw output file (a stdout/stderr log for Bash, the
+ * agent's own JSONL transcript for an Agent call) (issue #347, extended for
+ * #383).
  */
 export function BackgroundTaskOutputBody(props: Props) {
   const { task } = props;

@@ -90,10 +90,12 @@ export function AgentTranscriptModal(props: Props) {
   }, [onClose]);
 
   const selectedAgent = task.agents.find((a) => a.agentId === selectedAgentId);
-  // A plain background Bash task (task_type 'local_bash') has no agents — it
-  // is a single process, not a workflow of subagents — so its detail is the
-  // raw output log instead of a transcript picker (issue #347).
-  const isBashTask = task.taskType === 'local_bash';
+  // A plain background Bash task (task_type 'local_bash') or a single
+  // backgrounded Agent/Task call (task_type 'local_agent') has no agents
+  // array — each is one process/agent, not a workflow of many — so its
+  // detail is the raw output file instead of a transcript picker (issue
+  // #347, extended for #383).
+  const hasRawOutputOnly = task.taskType === 'local_bash' || task.taskType === 'local_agent';
 
   return (
     <Portal>
@@ -131,7 +133,7 @@ export function AgentTranscriptModal(props: Props) {
                 detail view, so it must never carry less information than the
                 summary card it was opened from. */}
             <div className="px-4 pb-3 flex-shrink-0 border-b border-border-subtle">
-              <WorkflowTaskSummary task={task} now={now} showPhases={isBashTask ? false : true} />
+              <WorkflowTaskSummary task={task} now={now} showPhases={hasRawOutputOnly ? false : true} />
               {isRunning && (
                 <button
                   onClick={() => cancelTask(task)}
@@ -143,7 +145,7 @@ export function AgentTranscriptModal(props: Props) {
               )}
             </div>
 
-            {isBashTask ? (
+            {hasRawOutputOnly ? (
               <BackgroundTaskOutputBody task={task} />
             ) : (
               <>

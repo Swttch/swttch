@@ -14,11 +14,13 @@ export interface BackgroundTaskOutput {
 }
 
 /**
- * Read a background Bash task's raw stdout/stderr log (issue #347: the
- * Background tasks detail modal shows this for task_type 'local_bash', which
- * has no agents to render a transcript for). `outputFile` is server-issued
- * (WorkflowTask.outputFile) but round-tripped through the client, so it is
- * revalidated against the tmp root here rather than trusted.
+ * Read a background task's raw output file: a plain Bash task's stdout/stderr
+ * log (issue #347), or a backgrounded Agent/Task's own JSONL transcript
+ * (issue #383) — either way task_type 'local_bash'/'local_agent' has no
+ * agents array to render a transcript picker for, so the detail modal shows
+ * this file directly. `outputFile` is server-issued (WorkflowTask.outputFile)
+ * but round-tripped through the client, so it is revalidated against the tmp
+ * root here rather than trusted.
  */
 export async function loadBackgroundTaskOutput(payload: { outputFile: string }): Promise<BackgroundTaskOutput> {
   const { outputFile } = payload;

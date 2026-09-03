@@ -214,6 +214,7 @@
     },
     "workflowLabel": "Рабочий процесс",
     "bashLabel": "Bash",
+    "agentLabel": "Агент",
     "agentsCount": "{{count}} агентов",
     "agentsCount_one": "{{count}} агент",
     "agentsCount_few": "{{count}} агента",

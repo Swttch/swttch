@@ -129,6 +129,19 @@ function parseImmediateBashResult(text: string): { taskId?: string; outputFile?:
   return { taskId, outputFile };
 }
 
+/**
+ * Parse the immediate "Async agent launched successfully" tool_result text for
+ * a backgrounded Agent/Task call — a third shape, distinct from both the
+ * Workflow tool's ("Task ID:"/"Transcript dir:") and plain Bash's ("Command
+ * running in background with ID:"/"Output is being written to:"). Its
+ * `output_file` is the agent's own JSONL transcript, available immediately
+ * rather than only at the terminal task_notification (issue #383).
+ */
+function parseImmediateAgentResult(text: string): { outputFile?: string } {
+  const outputFile = text.match(/output_file:\s*(.+)/)?.[1]?.trim();
+  return { outputFile };
+}
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
@@ -422,7 +435,7 @@ export class WorkflowProgressTracker {
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
     const taskType = event['task_type'];
-    if (taskType === 'local_workflow' || taskType === 'local_bash') t.taskType = taskType;
+    if (taskType === 'local_workflow' || taskType === 'local_bash' || taskType === 'local_agent') t.taskType = taskType;
     const description = typeof event['description'] === 'string' ? (event['description'] as string) : undefined;
     if (description) t.description = description;
     const wfName = typeof event['workflow_name'] === 'string' ? (event['workflow_name'] as string) : '';
@@ -507,11 +520,13 @@ export class WorkflowProgressTracker {
     if (outputFile) {
       t.outputFile = outputFile;
       // Only a dynamic workflow's output file is the JSON envelope
-      // readOutputFile expects ({summary, result}); a plain background Bash
-      // task's output file is its raw stdout/stderr log (issue #347) — its
-      // summary/status already came from this event, and its "result" is the
-      // log itself, read separately by GET_BACKGROUND_TASK_OUTPUT on demand.
-      if (t.taskType !== 'local_bash') {
+      // readOutputFile expects ({summary, result}). A plain background Bash
+      // task's output file is its raw stdout/stderr log (issue #347), and a
+      // backgrounded Agent/Task's is its own JSONL transcript (issue #383) —
+      // neither is that envelope. Both already got summary/status from this
+      // event, and their "result" is the file itself, read separately by
+      // GET_BACKGROUND_TASK_OUTPUT on demand.
+      if (t.taskType === 'local_workflow') {
         const parsed = readOutputFile(outputFile);
         if (parsed.summary && !event['summary']) t.summary = parsed.summary;
         if (parsed.result !== undefined) t.result = parsed.result;
@@ -555,6 +570,19 @@ export class WorkflowProgressTracker {
         const { taskId, outputFile } = parseImmediateBashResult(text);
         if (!outputFile) continue;
         entry.task.taskId = taskId ?? entry.task.taskId;
+        entry.task.outputFile = outputFile;
+        this.broadcast(entry);
+        continue;
+      }
+
+      if (entry.task.taskType === 'local_agent') {
+        // A backgrounded Agent/Task call has no transcriptDir/agents either —
+        // it is one agent, not a workflow of many. Its taskId already arrived
+        // on task_started; only the output file (its own JSONL transcript) is
+        // new here (#383).
+        if (entry.task.outputFile) continue;
+        const { outputFile } = parseImmediateAgentResult(text);
+        if (!outputFile) continue;
         entry.task.outputFile = outputFile;
         this.broadcast(entry);
         continue;

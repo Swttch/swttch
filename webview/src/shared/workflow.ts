@@ -35,12 +35,15 @@ export interface WorkflowUsage {
 
 /**
  * CLI's `task_type` for a background task: a dynamic Workflow-tool run
- * (`local_workflow`, has agents/phases/transcriptDir) or a plain background
- * Bash command (`local_bash`, has only an output log — no agents). The
- * Background tasks panel shows both under one list; the detail view branches
- * on this to show agent transcripts vs. the raw output log (issue #347).
+ * (`local_workflow`, has agents/phases/transcriptDir), a plain background
+ * Bash command (`local_bash`, has only an output log — no agents), or a
+ * single backgrounded Agent/Task call (`local_agent`, has an output file
+ * that is its own JSONL transcript — also no agents array, since it is one
+ * agent rather than a workflow of many). The Background tasks panel shows
+ * all three under one list; the detail view branches on this to show agent
+ * transcripts vs. the raw output log (issue #347, extended for #383).
  */
-export type BackgroundTaskType = 'local_workflow' | 'local_bash';
+export type BackgroundTaskType = 'local_workflow' | 'local_bash' | 'local_agent';
 
 /** Live + final state of a single background task (dynamic workflow or plain Bash). */
 export interface WorkflowTask {

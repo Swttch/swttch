@@ -214,6 +214,7 @@
     },
     "workflowLabel": "Workflow",
     "bashLabel": "Bash",
+    "agentLabel": "Agent",
     "agentsCount": "{{count}} agents",
     "agentsCount_one": "{{count}} agent",
     "agentsCount_other": "{{count}} agents",

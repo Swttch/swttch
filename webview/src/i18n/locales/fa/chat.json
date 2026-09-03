@@ -214,6 +214,7 @@
     },
     "workflowLabel": "جریان کاری",
     "bashLabel": "Bash",
+    "agentLabel": "ایجنت",
     "agentsCount": "{{count}} ایجنت",
     "agentsCount_one": "{{count}} ایجنت",
     "agentsCount_other": "{{count}} ایجنت",

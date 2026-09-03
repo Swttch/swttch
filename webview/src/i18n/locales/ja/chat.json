@@ -214,6 +214,7 @@
     },
     "workflowLabel": "ワークフロー",
     "bashLabel": "Bash",
+    "agentLabel": "エージェント",
     "agentsCount": "{{count}} エージェント",
     "agentsCount_one": "{{count}} エージェント",
     "agentsCount_other": "{{count}} エージェント",
