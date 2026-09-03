@@ -302,8 +302,18 @@ export function ProjectSelectorPage() {
 
         <div className="mt-3 border-t border-border-default" />
 
-        {/* The list takes the window, not a 448px column */}
-        <div className="min-h-0 flex-1 overflow-y-auto py-3">
+        {/*
+          The list takes the window, not a 448px column.
+
+          pe-3 + project-picker-list: without either, a row's kebab trigger
+          sits right against the scrollbar track — this app runs on JCEF/
+          Chromium's classic, space-taking scrollbar (no macOS-style overlay),
+          so that gap is real screen space, not a rendering quirk. pe-3 pulls
+          the row content away from the edge; project-picker-list shrinks the
+          scrollbar itself from Chromium's ~15px default to 6px, matching the
+          thin scrollbar this app already uses for the slash-command panel.
+        */}
+        <div className="project-picker-list min-h-0 flex-1 overflow-y-auto py-3 pe-3">
           {visible.length === 0 ? (
             <p className="py-10 text-center text-sm text-text-tertiary">{t('noMatches')}</p>
           ) : (

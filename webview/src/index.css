@@ -832,6 +832,30 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
+/* Custom scrollbar for the project picker (#392). A separate class rather than
+   reusing .slash-command-panel: that one doubles as a functional selector
+   (CommandPalettePanel.clickOutside.test.tsx queries it by name), so renaming
+   it to something generic would risk that unrelated feature to save four
+   lines here. Same --scrollbar-* variables as the block above, since both are
+   the same "classic scrollbar is too heavy on Windows/Linux JCEF & Chromium"
+   complaint (see the scrollbar-gutter note near the top of this file). */
+.project-picker-list ::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+}
+
+.project-picker-list ::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.project-picker-list ::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+.project-picker-list ::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
 /* Effort slider — ported from the Claude Code (Cursor) extension's effort
    toggle. A horizontal track with evenly spaced notches and a draggable
    thumb; clicking/dragging selects a level by position. The dynamic
