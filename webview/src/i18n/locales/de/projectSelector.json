@@ -11,6 +11,18 @@
     "recent": "Zuletzt verwendet",
     "created": "Erstellt"
   },
+  "menu": {
+    "label": "Weitere Aktionen",
+    "copyPath": "Pfad kopieren",
+    "delete": "Löschen"
+  },
+  "deleteConfirm": {
+    "title": "Projekt löschen",
+    "message": "Dadurch werden die Sitzungsaufzeichnungen von „{{name}}“ unter ~/.claude/projects gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "confirmLabel": "Löschen"
+  },
+  "deleteDone": "Projekt gelöscht",
+  "deleteFailed": "Projekt konnte nicht gelöscht werden",
   "retry": "Erneut versuchen",
   "sessionCount": "{{count}} Sitzungen",
   "sessionCount_one": "{{count}} Sitzung",

@@ -11,6 +11,18 @@
     "recent": "Récent",
     "created": "Création"
   },
+  "menu": {
+    "label": "Plus d’actions",
+    "copyPath": "Copier le chemin",
+    "delete": "Supprimer"
+  },
+  "deleteConfirm": {
+    "title": "Supprimer le projet",
+    "message": "Ceci supprime les enregistrements de session de « {{name}} » sous ~/.claude/projects. Action irréversible.",
+    "confirmLabel": "Supprimer"
+  },
+  "deleteDone": "Projet supprimé",
+  "deleteFailed": "Impossible de supprimer le projet",
   "retry": "Réessayer",
   "sessionCount": "{{count}} sessions",
   "sessionCount_one": "{{count}} session",

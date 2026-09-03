@@ -11,6 +11,18 @@
     "recent": "最近使用",
     "created": "创建时间"
   },
+  "menu": {
+    "label": "更多操作",
+    "copyPath": "复制路径",
+    "delete": "删除"
+  },
+  "deleteConfirm": {
+    "title": "删除项目",
+    "message": "这将删除 ~/.claude/projects 下 \"{{name}}\" 的会话记录，且无法撤销。",
+    "confirmLabel": "删除"
+  },
+  "deleteDone": "项目已删除",
+  "deleteFailed": "无法删除项目",
   "retry": "重试",
   "sessionCount": "{{count}} 个会话",
   "sessionCount_one": "{{count}} 个会话",

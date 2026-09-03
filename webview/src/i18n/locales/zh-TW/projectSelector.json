@@ -11,6 +11,18 @@
     "recent": "最近使用",
     "created": "建立時間"
   },
+  "menu": {
+    "label": "更多操作",
+    "copyPath": "複製路徑",
+    "delete": "刪除"
+  },
+  "deleteConfirm": {
+    "title": "刪除專案",
+    "message": "這將刪除 ~/.claude/projects 下「{{name}}」的工作階段記錄，且無法復原。",
+    "confirmLabel": "刪除"
+  },
+  "deleteDone": "專案已刪除",
+  "deleteFailed": "無法刪除專案",
   "retry": "重試",
   "sessionCount": "{{count}} 個工作階段",
   "sessionCount_one": "{{count}} 個工作階段",

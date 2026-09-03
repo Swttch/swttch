@@ -11,6 +11,18 @@
     "recent": "最近使用順",
     "created": "作成順"
   },
+  "menu": {
+    "label": "その他の操作",
+    "copyPath": "パスをコピー",
+    "delete": "削除"
+  },
+  "deleteConfirm": {
+    "title": "プロジェクトを削除",
+    "message": "\"{{name}}\" のセッション記録を ~/.claude/projects から削除します。元に戻せません。",
+    "confirmLabel": "削除"
+  },
+  "deleteDone": "プロジェクトを削除しました",
+  "deleteFailed": "プロジェクトを削除できませんでした",
   "retry": "再試行",
   "sessionCount": "{{count}} セッション",
   "sessionCount_one": "{{count}} セッション",

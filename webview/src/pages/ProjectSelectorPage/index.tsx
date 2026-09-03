@@ -169,6 +169,23 @@ export function ProjectSelectorPage() {
     }
   };
 
+  /**
+   * Deletes a project's session records. The row's menu already ran the
+   * confirmation and shows the success/failure toast; this only talks to the
+   * backend and, on success, drops the row so a second visit to the folder
+   * (there is nothing left to open) does not remain possible from this list.
+   */
+  const deleteProject = async (path: string): Promise<boolean> => {
+    try {
+      const ack = await send<{ status?: string }>(MessageType.DELETE_PROJECT, { path });
+      const ok = ack?.status !== 'error';
+      if (ok) setProjects((current) => current.filter((p) => p.path !== path));
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   // A narrowed list can be shorter than where the cursor was standing.
   useEffect(() => {
     setActiveIndex((index) => (index < visible.length ? index : 0));
@@ -301,6 +318,7 @@ export function ProjectSelectorPage() {
                 isFavorite={isFavorite(project.path)}
                 onSelect={() => setWorkingDirectory(project.path, { replace: false })}
                 onToggleFavorite={() => void toggleFavorite(project.path)}
+                onDelete={() => deleteProject(project.path)}
               />
             ))
           )}

@@ -11,6 +11,18 @@
     "recent": "Reciente",
     "created": "Creación"
   },
+  "menu": {
+    "label": "Más acciones",
+    "copyPath": "Copiar ruta",
+    "delete": "Eliminar"
+  },
+  "deleteConfirm": {
+    "title": "Eliminar proyecto",
+    "message": "Esto elimina los registros de sesión de \"{{name}}\" en ~/.claude/projects. No se puede deshacer.",
+    "confirmLabel": "Eliminar"
+  },
+  "deleteDone": "Proyecto eliminado",
+  "deleteFailed": "No se pudo eliminar el proyecto",
   "retry": "Reintentar",
   "sessionCount": "{{count}} sesiones",
   "sessionCount_one": "{{count}} sesión",

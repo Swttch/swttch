@@ -11,6 +11,18 @@
     "recent": "اخیراً استفاده‌شده",
     "created": "تاریخ ایجاد"
   },
+  "menu": {
+    "label": "عملیات بیشتر",
+    "copyPath": "کپی مسیر",
+    "delete": "حذف"
+  },
+  "deleteConfirm": {
+    "title": "حذف پروژه",
+    "message": "این کار سوابق جلسه \"{{name}}\" را در ~/.claude/projects حذف می‌کند. این عمل غیرقابل بازگشت است.",
+    "confirmLabel": "حذف"
+  },
+  "deleteDone": "پروژه حذف شد",
+  "deleteFailed": "حذف پروژه انجام نشد",
   "retry": "تلاش مجدد",
   "sessionCount": "{{count}} نشست",
   "sessionCount_one": "{{count}} نشست",

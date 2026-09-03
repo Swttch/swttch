@@ -75,6 +75,10 @@ function starFor(index: number): HTMLElement {
   return screen.getAllByRole('button', { name: /Favorite$/ })[index];
 }
 
+function menuButtonFor(index: number): HTMLElement {
+  return screen.getAllByRole('button', { name: 'menu.label' })[index];
+}
+
 function rowTexts(): string[] {
   return screen
     .getAllByRole('button')
@@ -342,6 +346,67 @@ describe('ProjectSelectorPage', () => {
       expect(screen.getByRole('button', { name: 'sortOrder.created' }).getAttribute(
         'aria-pressed',
       )).toBe('true');
+    });
+  });
+
+  describe('delete', () => {
+    it('sends the project path once the confirmation is accepted', async () => {
+      send.mockResolvedValue({ status: 'ok' });
+      await renderWithProjects();
+
+      fireEvent.click(menuButtonFor(0));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'menu.delete' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'deleteConfirm.confirmLabel' }));
+      });
+
+      await waitFor(() =>
+        expect(send).toHaveBeenCalledWith(MessageType.DELETE_PROJECT, {
+          path: '/Users/me/work/a/proj2',
+        }),
+      );
+    });
+
+    it('drops the row from the list once the backend confirms', async () => {
+      send.mockResolvedValue({ status: 'ok' });
+      await renderWithProjects();
+      expect(rowTexts()).toHaveLength(3);
+
+      fireEvent.click(menuButtonFor(0));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'menu.delete' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'deleteConfirm.confirmLabel' }));
+      });
+
+      await waitFor(() => expect(rowTexts()).toHaveLength(2));
+      expect(rowTexts().some((text) => text.includes('~/work/a/proj2'))).toBe(false);
+    });
+
+    // A refused delete must not make the row disappear while claiming success.
+    it('keeps the row when the backend refuses the delete', async () => {
+      send.mockResolvedValue({ status: 'error' });
+      await renderWithProjects();
+
+      fireEvent.click(menuButtonFor(0));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'menu.delete' }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'deleteConfirm.confirmLabel' }));
+      });
+
+      await waitFor(() => expect(send).toHaveBeenCalledWith(MessageType.DELETE_PROJECT, expect.anything()));
+      expect(rowTexts()).toHaveLength(3);
+    });
+
+    it('deletes nothing when the confirmation is cancelled', async () => {
+      await renderWithProjects();
+
+      fireEvent.click(menuButtonFor(0));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'menu.delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'confirmDialog.cancel' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(send).not.toHaveBeenCalledWith(MessageType.DELETE_PROJECT, expect.anything());
+      expect(rowTexts()).toHaveLength(3);
     });
   });
 });

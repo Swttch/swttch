@@ -11,6 +11,18 @@
     "recent": "최근 사용순",
     "created": "생성순"
   },
+  "menu": {
+    "label": "더보기",
+    "copyPath": "경로 복사",
+    "delete": "삭제"
+  },
+  "deleteConfirm": {
+    "title": "프로젝트 삭제",
+    "message": "\"{{name}}\" 프로젝트의 세션 기록을 ~/.claude/projects에서 삭제합니다. 되돌릴 수 없습니다.",
+    "confirmLabel": "삭제"
+  },
+  "deleteDone": "프로젝트를 삭제했습니다",
+  "deleteFailed": "프로젝트를 삭제하지 못했습니다",
   "retry": "재시도",
   "sessionCount": "세션 {{count}}개",
   "sessionCount_one": "세션 {{count}}개",

@@ -11,6 +11,18 @@
     "recent": "Recente",
     "created": "Criação"
   },
+  "menu": {
+    "label": "Mais ações",
+    "copyPath": "Copiar caminho",
+    "delete": "Excluir"
+  },
+  "deleteConfirm": {
+    "title": "Excluir projeto",
+    "message": "Isso exclui os registros de sessão de \"{{name}}\" em ~/.claude/projects. Não pode ser desfeito.",
+    "confirmLabel": "Excluir"
+  },
+  "deleteDone": "Projeto excluído",
+  "deleteFailed": "Não foi possível excluir o projeto",
   "retry": "Tentar novamente",
   "sessionCount": "{{count}} sessões",
   "sessionCount_one": "{{count}} sessão",

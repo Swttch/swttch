@@ -11,6 +11,18 @@
     "recent": "الأحدث استخدامًا",
     "created": "تاريخ الإنشاء"
   },
+  "menu": {
+    "label": "مزيد من الإجراءات",
+    "copyPath": "نسخ المسار",
+    "delete": "حذف"
+  },
+  "deleteConfirm": {
+    "title": "حذف المشروع",
+    "message": "سيؤدي هذا إلى حذف سجلات الجلسات لـ\"{{name}}\" ضمن ~/.claude/projects. لا يمكن التراجع عن ذلك.",
+    "confirmLabel": "حذف"
+  },
+  "deleteDone": "تم حذف المشروع",
+  "deleteFailed": "تعذر حذف المشروع",
   "retry": "إعادة المحاولة",
   "sessionCount": "{{count}} جلسات",
   "sessionCount_one": "جلسة واحدة",

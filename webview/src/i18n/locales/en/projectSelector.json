@@ -11,6 +11,18 @@
     "recent": "Recent",
     "created": "Created"
   },
+  "menu": {
+    "label": "More actions",
+    "copyPath": "Copy path",
+    "delete": "Delete"
+  },
+  "deleteConfirm": {
+    "title": "Delete project",
+    "message": "This deletes the session records for \"{{name}}\" under ~/.claude/projects. This cannot be undone.",
+    "confirmLabel": "Delete"
+  },
+  "deleteDone": "Project deleted",
+  "deleteFailed": "Could not delete the project",
   "retry": "Retry",
   "sessionCount": "{{count}} sessions",
   "sessionCount_one": "{{count}} session",

@@ -1,5 +1,6 @@
 import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
 import { MarqueeText } from './MarqueeText';
+import { ProjectRowMenu } from './ProjectRowMenu';
 import { projectBadgeStyle, projectInitials } from './projectBadge';
 import { abbreviateHomeDir } from '@/shared';
 import { useTranslation } from '@/i18n';
@@ -15,11 +16,22 @@ interface Props {
   isFavorite: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
+  /** Deletes the project's session records; resolves to whether it succeeded. */
+  onDelete: () => Promise<boolean>;
 }
 
 export function ProjectRow(props: Props) {
-  const { name, path, sessionCount, homeDir, isActive, isFavorite, onSelect, onToggleFavorite } =
-    props;
+  const {
+    name,
+    path,
+    sessionCount,
+    homeDir,
+    isActive,
+    isFavorite,
+    onSelect,
+    onToggleFavorite,
+    onDelete,
+  } = props;
   const { t } = useTranslation('projectSelector');
   const ref = useRef<HTMLDivElement>(null);
 
@@ -124,6 +136,8 @@ export function ProjectRow(props: Props) {
           />
         </span>
       </button>
+
+      <ProjectRowMenu name={name} path={path} onDelete={onDelete} />
     </div>
   );
 }

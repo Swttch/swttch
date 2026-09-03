@@ -11,6 +11,18 @@
     "recent": "Недавние",
     "created": "По созданию"
   },
+  "menu": {
+    "label": "Дополнительно",
+    "copyPath": "Копировать путь",
+    "delete": "Удалить"
+  },
+  "deleteConfirm": {
+    "title": "Удалить проект",
+    "message": "Это удалит записи сессий «{{name}}» в ~/.claude/projects. Это действие нельзя отменить.",
+    "confirmLabel": "Удалить"
+  },
+  "deleteDone": "Проект удалён",
+  "deleteFailed": "Не удалось удалить проект",
   "retry": "Повторить",
   "sessionCount": "{{count}} сессий",
   "sessionCount_one": "{{count}} сессия",

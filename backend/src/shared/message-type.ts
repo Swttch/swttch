@@ -350,6 +350,11 @@ export enum MessageType {
    * inbound webview→backend; the updated path list comes back on the ACK.
    */
   SET_PROJECT_FAVORITE = 'SET_PROJECT_FAVORITE',
+  /**
+   * Delete a project's session records under ~/.claude/projects, including one
+   * whose working directory no longer exists on disk. inbound webview→backend.
+   */
+  DELETE_PROJECT = 'DELETE_PROJECT',
   /** Read the current working directory the backend resolved. */
   GET_WORKING_DIR = 'GET_WORKING_DIR',
   /** Resolve the IDE project root containing the working directory. */
