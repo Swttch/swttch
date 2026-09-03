@@ -712,6 +712,69 @@ export function sendSetModelToProcess(
 }
 
 /**
+ * Ask a LIVE CLI to switch its permission mode right now.
+ *
+ * Why this exists: `--permission-mode` is a spawn-time flag, so a mode the user
+ * picks WHILE Claude is working reached the CLI only on the next message, via
+ * the respawn in [ensureClaudeProcess]. The reported case is exactly that gap —
+ * a plan approved with "auto-accept" kept asking for every edit of the very turn
+ * it was approved for, and re-picking the mode by hand changed the label on
+ * screen and nothing else (#393).
+ *
+ * Measured against CLI 2.1.170 before this was written, with a control group in
+ * the same run: the CLI asked for the first edit, took `set_permission_mode`
+ * mid-turn with `{"subtype":"success"}`, announced the new mode on
+ * `system/status`, and made the remaining two edits without asking again.
+ *
+ * `set_permission_mode` is an undocumented subtype, so this is a BEST-EFFORT
+ * optimization and never the only path (CLAUDE.md principle 4). The official
+ * fallback needs no extra code and cannot be forgotten:
+ *
+ * - accepted → the CLI announces the mode on `system/status`, [readReportedMode]
+ *   adopts it, and the next message finds `liveMode` already equal, so no
+ *   respawn happens.
+ * - refused / no live process → `liveMode` stays as it was, so the next message
+ *   goes through [needsRestartForMode] and respawns under the new flag exactly
+ *   as before.
+ *
+ * Takes our InputMode vocabulary rather than the CLI's flag, so callers never
+ * translate on their own and the mapping stays in the one place that spawns.
+ */
+export function sendSetPermissionModeToProcess(
+  connections: ConnectionManager,
+  sessionId: string,
+  inputMode: string,
+): boolean {
+  const cliFlag = INPUT_MODE_TO_CLI_FLAG[inputMode];
+  if (!cliFlag) {
+    console.error('[node-backend]', `Unknown input mode "${inputMode}"; not sending to CLI`);
+    return false;
+  }
+
+  const session = connections.getSession(sessionId);
+  if (!session?.process?.stdin?.writable) {
+    // Not an error: with no live CLI there is nothing to switch, and the mode
+    // the webview holds will be passed as `--permission-mode` on the next spawn.
+    console.error(
+      '[node-backend]',
+      `No live CLI for session ${sessionId}; "${inputMode}" applies at next spawn`,
+    );
+    return false;
+  }
+
+  const stdinMessage =
+    JSON.stringify({
+      type: 'control_request',
+      request_id: `set_permission_mode_${Date.now()}`,
+      request: { subtype: 'set_permission_mode', mode: cliFlag },
+    }) + '\n';
+
+  console.error('[node-backend]', `Sending set_permission_mode "${cliFlag}" to stdin`);
+  session.process.stdin.write(stdinMessage);
+  return true;
+}
+
+/**
  * 임의의 control_request를 CLI stdin에 전송한다.
  *
  * 비대화형(stream-json) 세션에서 CLI가 거부하는 슬래시 커맨드

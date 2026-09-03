@@ -7,7 +7,10 @@ import { MessageType } from '@/shared';
 
 // Mock contexts
 const mockSubscribe = vi.fn(() => vi.fn());
-const mockSend = vi.fn();
+// Resolves, because the real `send` returns a Promise (useBridge) and callers
+// chain onto it. A bare vi.fn() returning undefined let a caller that awaits or
+// catches blow up here while working in the app.
+const mockSend = vi.fn().mockResolvedValue(undefined);
 let mockIsConnected = true;
 
 vi.mock('../BridgeContext', () => ({
@@ -767,6 +770,93 @@ describe('SessionContext', () => {
       });
 
       expect(mockSetWorkingDirectory).toHaveBeenCalledWith('/new/project');
+    });
+  });
+
+  /**
+   * A mode the user picks has to reach the RUNNING CLI, not just the label
+   * (#393). `--permission-mode` is a spawn-time flag, so before this the choice
+   * did nothing until the next message respawned the CLI — which is why a plan
+   * approved with auto-accept kept asking for every edit of that same turn.
+   */
+  describe('inputMode - 사용자가 고른 모드를 CLI에 전달 (#393)', () => {
+    function modeMessages() {
+      return mockSend.mock.calls.filter(([type]) => type === MessageType.SET_PERMISSION_MODE);
+    }
+
+    it('setInputMode는 실행 중인 CLI에 모드를 보낸다', async () => {
+      mockPathname = '/sessions/session-1';
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        capturedCtx?.setInputMode('auto_edit');
+      });
+
+      expect(modeMessages()).toEqual([
+        [MessageType.SET_PERMISSION_MODE, { inputMode: 'auto_edit' }],
+      ]);
+    });
+
+    it('cycleInputMode도 같은 경로로 보낸다', async () => {
+      // 메뉴에서 고르든 순환으로 넘기든 사용자가 고른 것은 마찬가지다.
+      mockPathname = '/sessions/session-1';
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        capturedCtx?.cycleInputMode();
+      });
+
+      expect(modeMessages()).toHaveLength(1);
+    });
+
+    it('syncEffectiveMode는 보내지 않는다', async () => {
+      // CLI가 스스로 통보한 모드다. 되돌려 보내면 CLI에게 방금 CLI가 한 말을
+      // 도로 알려주는 셈이고, 플랜 승인 직후처럼 CLI가 막 바꾼 모드를 우리가
+      // 다시 밀어넣는 왕복이 생긴다.
+      mockPathname = '/sessions/session-1';
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        capturedCtx?.syncEffectiveMode('plan');
+      });
+
+      expect(modeMessages()).toEqual([]);
+    });
+
+    it('세션이 없으면 보내지 않는다', async () => {
+      // 보낼 대상이 없다. 이 모드는 다음 spawn 때 플래그로 실린다.
+      mockPathname = '/';
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        capturedCtx?.setInputMode('auto_edit');
+      });
+
+      expect(modeMessages()).toEqual([]);
     });
   });
 });

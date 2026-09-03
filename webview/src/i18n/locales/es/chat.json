@@ -279,7 +279,6 @@
     "allowTool": "¿Permitir {{tool}}?",
     "sessionLabel": {
       "edit": "Sí, permitir todas las ediciones en esta sesión",
-      "write": "Sí, permitir todas las escrituras en esta sesión",
       "bash": "Sí, permitir todos los comandos en esta sesión",
       "delete": "Sí, permitir todas las eliminaciones en esta sesión",
       "read": "Sí, permitir todas las lecturas en esta sesión",
@@ -537,6 +536,7 @@
       "refresh": "Actualizar",
       "refreshing": "Actualizando…",
       "unreadable": "Este archivo ya no se puede leer, así que no hay nada a lo que aplicar el cambio."
-    }
+    },
+    "allowAllEdits": "Permitir todas las ediciones"
   }
 }

@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
 import { MessageType, buildUserDeclinedContent } from '../../shared';
+import type { PermissionUpdate } from '../../shared';
 import { takePreview, peekPreview } from '../features/diffPreview';
 import { holdApprovalIfBaseMoved } from '../features/reviewBase';
 
@@ -14,6 +15,12 @@ interface ToolResponsePayload {
   updatedInput?: Record<string, unknown>;
   reason?: string;
   result?: string;
+  /**
+   * Permission rules to install alongside this approval — how "yes, and stop
+   * asking this session" is said to the CLI (#393). Passed through untouched:
+   * the shape is the CLI's, and the webview builds it from the shared helper.
+   */
+  updatedPermissions?: PermissionUpdate[];
 }
 
 export async function toolResponseHandler(
@@ -99,7 +106,16 @@ export async function toolResponseHandler(
       subtype: 'success' as const,
       request_id: controlRequestId,
       response: approved
-        ? { behavior: 'allow', updatedInput: payload?.updatedInput ?? {} }
+        ? {
+            behavior: 'allow',
+            updatedInput: payload?.updatedInput ?? {},
+            // Only when there is something to install: an empty array is a
+            // different statement from saying nothing, and the CLI has no
+            // reason to read one.
+            ...(payload?.updatedPermissions?.length
+              ? { updatedPermissions: payload.updatedPermissions }
+              : {}),
+          }
         : { behavior: 'deny', message: buildUserDeclinedContent(payload?.reason) },
     };
     sendControlResponseToProcess(connections, sessionId, response);

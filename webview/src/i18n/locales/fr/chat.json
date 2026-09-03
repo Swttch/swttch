@@ -279,7 +279,6 @@
     "allowTool": "Autoriser {{tool}} ?",
     "sessionLabel": {
       "edit": "Oui, autoriser toutes les modifications pour cette session",
-      "write": "Oui, autoriser toutes les écritures pour cette session",
       "bash": "Oui, autoriser toutes les commandes pour cette session",
       "delete": "Oui, autoriser toutes les suppressions pour cette session",
       "read": "Oui, autoriser toutes les lectures pour cette session",
@@ -537,6 +536,7 @@
       "refresh": "Actualiser",
       "refreshing": "Actualisation…",
       "unreadable": "Ce fichier ne peut plus être lu, il n'y a donc rien auquel appliquer la modification."
-    }
+    },
+    "allowAllEdits": "Autoriser toutes les modifications"
   }
 }

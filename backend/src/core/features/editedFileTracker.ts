@@ -16,8 +16,16 @@
  * `tool_result` arrives (= the write has actually happened on disk).
  */
 
-/** Tools that mutate a file on disk and therefore require an IDE reload. */
-const FILE_EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+import { FILE_EDIT_TOOLS } from '../../shared';
+
+/**
+ * Tools that mutate a file on disk and therefore require an IDE reload.
+ *
+ * Built from the shared list rather than spelled out again: the session
+ * permission rule reasons about the same set, and a tool present in one copy
+ * and missing from the other is invisible until a user hits exactly that tool.
+ */
+const EDIT_TOOLS = new Set<string>(FILE_EDIT_TOOLS);
 
 export interface EditTarget {
   toolUseId: string;
@@ -41,7 +49,7 @@ export function extractEditTargets(event: Record<string, unknown>): EditTarget[]
   for (const block of getContentBlocks(event)) {
     if (block['type'] !== 'tool_use') continue;
     const name = block['name'];
-    if (typeof name !== 'string' || !FILE_EDIT_TOOLS.has(name)) continue;
+    if (typeof name !== 'string' || !EDIT_TOOLS.has(name)) continue;
 
     const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
     // Edit/Write/MultiEdit use `file_path`; NotebookEdit uses `notebook_path`.

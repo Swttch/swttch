@@ -1,6 +1,6 @@
 import { BridgeClient } from '../bridge/BridgeClient';
 import { PermissionType, RiskLevel, FileOperation } from '../../dto/common';
-import { MessageType, type Hunk, type AcceptedRange } from '@/shared';
+import { MessageType, buildSessionPermissionUpdate, type Hunk, type AcceptedRange } from '@/shared';
 
 interface DiffAvailablePayload {
   toolUseId: string;
@@ -56,6 +56,31 @@ export class ToolsApi {
     await this.bridge.request(MessageType.TOOL_RESPONSE, {
       toolUseId,
       approved: true,
+      ...(controlRequestId && { controlRequestId }),
+      ...(updatedInput && { updatedInput }),
+    });
+  }
+
+  /**
+   * Approve this request AND tell the CLI to stop asking about the tool for the
+   * rest of the session (#393).
+   *
+   * Separate from {@link approve} because it is a different answer, not an
+   * option on the same one: it changes what the CLI will do next, so a caller
+   * has to mean it. The rules come from the shared builder rather than being
+   * assembled here, so the chat prompt and the IDE's review panel install the
+   * same thing when the user picks the same option.
+   */
+  async approveForSession(
+    toolUseId: string,
+    toolName: string,
+    controlRequestId?: string,
+    updatedInput?: Record<string, unknown>,
+  ): Promise<void> {
+    await this.bridge.request(MessageType.TOOL_RESPONSE, {
+      toolUseId,
+      approved: true,
+      updatedPermissions: buildSessionPermissionUpdate(toolName),
       ...(controlRequestId && { controlRequestId }),
       ...(updatedInput && { updatedInput }),
     });
@@ -171,6 +196,8 @@ export class ToolsApi {
     sessionId: string;
     acceptedRanges: AcceptedRange[];
     editedContent?: string;
+    /** Install the session rule alongside this approval (#393). */
+    allowAllEditsThisSession?: boolean;
   }): Promise<void> {
     await this.bridge.request(MessageType.RESOLVE_DIFF, { ...params });
   }

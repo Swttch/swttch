@@ -51,7 +51,7 @@ class DiffService(private val project: Project) {
     /** A review currently on screen, with everything needed to redraw it. */
     private data class OpenReview(
         val filePath: String,
-        val onResolve: ((List<AcceptedRange>, String?) -> Unit)?,
+        val onResolve: ((List<AcceptedRange>, String?, Boolean) -> Unit)?,
         /** The banner shown above it, when its base has moved. */
         var banner: ReviewBaseBanner? = null,
     )
@@ -77,7 +77,7 @@ class DiffService(private val project: Project) {
         oldContent: String,
         newContent: String,
         toolUseId: String? = null,
-        onResolve: ((List<AcceptedRange>, String?) -> Unit)? = null,
+        onResolve: ((List<AcceptedRange>, String?, Boolean) -> Unit)? = null,
         /**
          * Drawn above the review controls when the file has moved under this
          * review (#359). Absent for an ordinary open.
@@ -153,7 +153,7 @@ class DiffService(private val project: Project) {
                 if (onResolve != null) {
                     val selection = HunkSelection()
                     request.putUserData(HunkSelection.KEY, selection)
-                    val panel = DiffReviewPanel(selection) { accepted, keepEdits ->
+                    val panel = DiffReviewPanel(selection) { accepted, keepEdits, allowAllEdits ->
                         // Read the proposed side before the tab closes, and only
                         // report it when it actually differs from what was
                         // proposed: an untouched review must keep answering with
@@ -170,7 +170,7 @@ class DiffService(private val project: Project) {
                         // was still open, and dropped the entry that says the IDE
                         // owns it, so reopening fell through to the built-in diff.
                         // The backend closes it once it has really answered.
-                        onResolve(accepted, edited)
+                        onResolve(accepted, edited, allowAllEdits)
                     }
                     // Banner above, controls below: the warning has to be read
                     // before the buttons it is about are pressed.

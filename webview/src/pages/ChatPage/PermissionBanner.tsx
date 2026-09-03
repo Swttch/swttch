@@ -10,6 +10,7 @@ import { PendingPermission } from '../../hooks/usePendingPermissions';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
 import { useTranslation } from '@/i18n';
+import { FILE_EDIT_TOOLS } from '@/shared';
 
 interface Props {
   permission: PendingPermission;
@@ -50,12 +51,24 @@ interface TitleParts {
   file: string;
 }
 
+/**
+ * The wording for "yes, and stop asking this session".
+ *
+ * Every file-editing tool reads the SAME label, because answering it grants the
+ * whole edit family rather than the one tool that happened to ask
+ * (buildSessionPermissionUpdate). A label naming only Write while the rule also
+ * covers Edit would promise less than it does.
+ *
+ * It also has to stay one fixed phrase because other surfaces point at it by
+ * name: the IDE's diff review says where "allow all edits this session" lives,
+ * and a reader who then finds "allow all writes this session" on screen has
+ * been sent to something they cannot recognise.
+ */
 function getSessionLabel(t: TFunction, toolName: string): string {
+  if ((FILE_EDIT_TOOLS as readonly string[]).includes(toolName)) {
+    return t('permissionBanner.sessionLabel.edit');
+  }
   switch (toolName) {
-    case 'Edit':
-      return t('permissionBanner.sessionLabel.edit');
-    case 'Write':
-      return t('permissionBanner.sessionLabel.write');
     case 'Bash':
       return t('permissionBanner.sessionLabel.bash');
     case 'Delete':

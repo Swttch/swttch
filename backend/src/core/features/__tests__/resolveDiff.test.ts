@@ -93,7 +93,24 @@ describe('parseResolveDiffParams', () => {
   };
 
   it('accepts a well-formed notification', async () => {
-    expect(parseResolveDiffParams(good)).toEqual(good);
+    // The session grant is absent here, so it comes back off. Stated rather
+    // than left to `toEqual` ignoring it: a parser that defaulted this to true
+    // would hand out standing permission nobody asked for (#393).
+    expect(parseResolveDiffParams(good)).toEqual({
+      ...good,
+      allowAllEditsThisSession: false,
+    });
+  });
+
+  it('only grants the session rule when the flag is literally true (#393)', async () => {
+    // Anything other than the flag being sent on purpose reads as "not asked
+    // for" — a truthy string off the wire must not grant standing permission.
+    for (const value of [undefined, false, 'true', 1, {}, null]) {
+      const parsed = parseResolveDiffParams({ ...good, allowAllEditsThisSession: value });
+      expect(parsed?.allowAllEditsThisSession).toBe(false);
+    }
+    const granted = parseResolveDiffParams({ ...good, allowAllEditsThisSession: true });
+    expect(granted?.allowAllEditsThisSession).toBe(true);
   });
 
   it('rejects one missing any id it must quote back', async () => {

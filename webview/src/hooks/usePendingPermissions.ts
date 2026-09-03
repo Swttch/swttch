@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApi } from '@/contexts/ApiContext';
 import { getBridgeClient } from '@/api/bridge/BridgeClient';
-import { useSessionContext } from '@/contexts/SessionContext';
 import type { CliControlRequestEvent } from '@/types';
 import { MessageType } from '@/shared';
 
@@ -66,17 +65,22 @@ interface UsePendingPermissionsReturn {
 
 export function usePendingPermissions(): UsePendingPermissionsReturn {
   const api = useApi();
-  const { currentSessionId } = useSessionContext();
   const [requests, setRequests] = useState<PendingPermission[]>([]);
   const processedIdsRef = useRef<Set<string>>(new Set());
-  const sessionPermissionsRef = useRef<Set<string>>(new Set());
-  const apiRef = useRef(api);
-  apiRef.current = api;
 
-  // 세션 전환 시 세션 권한 캐시 클리어
-  useEffect(() => {
-    sessionPermissionsRef.current.clear();
-  }, [currentSessionId]);
+  /*
+   * There is no session-permission cache here any more.
+   *
+   * "Yes, allow all edits this session" used to add the tool name to a ref, and
+   * every later request for that name was auto-answered from this hook. That
+   * hid the question rather than answering it: the CLI still asked every time,
+   * the memory died with the render, and it covered the one tool name that
+   * happened to ask while Claude edits through several (#393).
+   *
+   * The rule now goes to the CLI on the approval itself (approveForSession), so
+   * the CLI stops asking on its own and there is no state on this side to keep
+   * in step, clear on session change, or lose on a remount.
+   */
 
   // Subscribe to CLI_EVENT for control_request (non-AskUserQuestion tools)
   useEffect(() => {
@@ -99,13 +103,6 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
       const input = (request.input || {}) as Record<string, unknown>;
 
       if (!controlRequestId || processedIdsRef.current.has(controlRequestId)) return;
-
-      // 세션 허용된 툴이면 자동 승인
-      if (sessionPermissionsRef.current.has(toolName)) {
-        processedIdsRef.current.add(controlRequestId);
-        apiRef.current.tools.approve(toolUseId, controlRequestId, input);
-        return;
-      }
 
       setRequests(prev => [...prev, {
         controlRequestId,
@@ -145,11 +142,10 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
     const req = requests.find(r => r.controlRequestId === controlRequestId);
     if (!req) return;
 
-    // 세션 권한 캐시에 등록
-    sessionPermissionsRef.current.add(req.toolName);
-
     processedIdsRef.current.add(controlRequestId);
-    api.tools.approve(req.toolUseId, controlRequestId, req.input);
+    // The rule travels with the approval, so the CLI is the one that stops
+    // asking. Nothing is remembered here.
+    api.tools.approveForSession(req.toolUseId, req.toolName, controlRequestId, req.input);
     setRequests(prev => prev.filter(r => r.controlRequestId !== controlRequestId));
   }, [requests, api.tools]);
 

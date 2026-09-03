@@ -5,6 +5,7 @@ import com.intellij.openapi.ui.Splitter
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Container
 import java.awt.Dimension
@@ -62,6 +63,27 @@ private const val PROPORTION_LISTENER_INSTALLED = "ccg.diffReview.proportionList
 private val ACCEPT_COLOR = Color(0x3A, 0x8A, 0x4F)
 private val REJECT_COLOR = Color(0xA8, 0x3E, 0x3E)
 
+/**
+ * The way out of answering every single edit (#393).
+ *
+ * This bar answers ONE request. A reporter pressing Apply for the hundredth
+ * time looked for a way out here, found "Clear all", and read it as one —
+ * it drops every tick instead, which is the opposite of what they wanted.
+ *
+ * Sits on the LEFT while everything else is right-aligned, because it is not
+ * one more way to answer this diff: it answers this one and stops the next
+ * ones being asked at all. Same answer as the chat prompt's "yes, allow all
+ * edits this session", reached from the surface the reviewer is actually
+ * looking at.
+ */
+private const val ALLOW_ALL_LABEL = "Allow all edits"
+
+/**
+ * Below this the left-hand button is dropped. Apply and Reject answer the
+ * request that is open and must survive any width; this one is an offer.
+ */
+private const val ALLOW_ALL_MIN_WIDTH = 520
+
 class DiffReviewPanel(
     private val selection: HunkSelection,
     /**
@@ -70,9 +92,16 @@ class DiffReviewPanel(
      * text, while Reject refuses outright and must not smuggle it through
      * (#305).
      */
-    private val onResolve: (accepted: List<AcceptedRange>, keepEdits: Boolean) -> Unit,
+    private val onResolve: (
+        accepted: List<AcceptedRange>,
+        keepEdits: Boolean,
+        allowAllEditsThisSession: Boolean,
+    ) -> Unit,
 ) {
     private lateinit var root: JPanel
+    private lateinit var actions: JPanel
+    /** Left-aligned: answers this request AND stops the next ones (#393). */
+    private val allowAllButton = JButton(ALLOW_ALL_LABEL)
     private val summary = JBLabel()
     /** Wide: the "Clear all" / "Select all" button. Narrow: a bare tick box. */
     private val selectAllButton = JButton()
@@ -83,8 +112,12 @@ class DiffReviewPanel(
     val component: JComponent = build()
 
     private fun build(): JComponent {
-        applyButton.addActionListener { onResolve(selection.acceptedRanges(), true) }
-        rejectButton.addActionListener { onResolve(emptyList(), false) }
+        applyButton.addActionListener { onResolve(selection.acceptedRanges(), true, false) }
+        rejectButton.addActionListener { onResolve(emptyList(), false, false) }
+        // Answers this request exactly as Apply does — with whatever is ticked —
+        // and installs the session rule alongside it, so the edits that follow
+        // are not asked about at all.
+        allowAllButton.addActionListener { onResolve(selection.acceptedRanges(), true, true) }
         // Green for accept, red for refuse. Set through the LaF's own colour
         // property so it renders the same on every OS (macOS ignores the Swing
         // "JButton.buttonType" hint entirely).
@@ -94,7 +127,13 @@ class DiffReviewPanel(
         selectAllButton.addActionListener { selection.setAll(selection.keptCount() != selection.total) }
         selectAllBox.addActionListener { selection.setAll(selectAllBox.isSelected) }
 
-        root = object : JPanel(FlowLayout(FlowLayout.RIGHT, 8, 2)) {
+        // Two groups, not one row: "Allow all edits" is offered on the left and
+        // everything that answers THIS diff stays together on the right, so the
+        // offer never sits among the answers and gets pressed by reflex.
+        actions = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 2))
+        actions.isOpaque = false
+
+        root = object : JPanel(BorderLayout()) {
             /**
              * One row of buttons, stated outright.
              *
@@ -126,11 +165,19 @@ class DiffReviewPanel(
         }
         root.border = JBUI.Borders.empty(TOP_PADDING, 8, BOTTOM_PADDING, 8)
 
-        root.add(summary)
-        root.add(selectAllButton)
-        root.add(selectAllBox)
-        root.add(applyButton)
-        root.add(rejectButton)
+        actions.add(summary)
+        actions.add(selectAllButton)
+        actions.add(selectAllBox)
+        actions.add(applyButton)
+        actions.add(rejectButton)
+
+        // WEST/EAST rather than one flow: the left button keeps its own edge no
+        // matter how wide the diff gets, instead of drifting toward the answers.
+        val leading = JPanel(FlowLayout(FlowLayout.LEFT, 8, 2))
+        leading.isOpaque = false
+        leading.add(allowAllButton)
+        root.add(leading, BorderLayout.WEST)
+        root.add(actions, BorderLayout.EAST)
 
         // The diff hands BOTTOM_PANEL to a Splitter as its second component
         // (measured in DiffRequestProcessor). A Splitter divides by fraction,
@@ -280,6 +327,11 @@ class DiffReviewPanel(
         summary.isVisible = total > 1
         selectAllButton.isVisible = total > 1 && !compact
         selectAllBox.isVisible = total > 1 && compact
+
+        // First to go when space runs short: it is an offer, while Apply and
+        // Reject answer the request that is open and must survive any width.
+        // Width 0 means "not laid out yet", which is not narrow.
+        allowAllButton.isVisible = width == 0 || width >= JBUI.scale(ALLOW_ALL_MIN_WIDTH)
 
         // A button keeps the size it last worked out, and its horizontal margin
         // is sized for text — so dropping the label alone leaves it as wide as
