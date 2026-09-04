@@ -2,7 +2,17 @@ import React from 'react';
 import {LoadedMessageDto} from '../../../types';
 import {ToolUseBlockDto} from '../../../dto/message/ContentBlockDto';
 import {ToolRendererMap} from "./ToolRenderers";
-import {ToolHeader, ToolWrapper, ToolStatusContext, ToolUseContext, toolStatus} from "./ToolRenderers/common";
+import {
+    ToolHeader,
+    ToolWrapper,
+    ToolStatusContext,
+    ToolDeclinedContext,
+    ToolUseContext,
+    toolStatus,
+    toolResultRawText,
+    isUserDeclined,
+} from "./ToolRenderers/common";
+import {declineDisplayText} from "@/shared";
 import {GenericMcpRenderer} from "./ToolRenderers/Mcp/Generic";
 import {isMcpToolName} from "./ToolRenderers/Mcp/Generic/cursorMcp";
 import {StreamSafeErrorBoundary} from "@/components/StreamSafeErrorBoundary";
@@ -49,9 +59,20 @@ export const ToolRenderer: React.FC<ToolRendererProps> = ({toolUse, message}) =>
     // A result-less call under a streaming message reads as in-progress.
     return (
         <ToolStatusContext.Provider value={toolStatus(toolResult, message?.isStreaming ?? false)}>
-            <ToolUseContext.Provider value={toolUse}>
-                {body}
-            </ToolUseContext.Provider>
+            {/* The MCP cards (JetBrains, Gmail, the generic fallback) already draw
+                a decline in their own badge style, so they are left to it —
+                otherwise every one of them would show it twice. */}
+            <ToolDeclinedContext.Provider
+                value={
+                    isMcpToolName(toolUse.name) || !isUserDeclined(toolResult)
+                        ? null
+                        : declineDisplayText(toolResultRawText(toolResult))
+                }
+            >
+                <ToolUseContext.Provider value={toolUse}>
+                    {body}
+                </ToolUseContext.Provider>
+            </ToolDeclinedContext.Provider>
         </ToolStatusContext.Provider>
     );
 };

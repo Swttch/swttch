@@ -25,11 +25,14 @@ function firstToolResultBlock(toolResult?: LoadedMessageDto): ToolResultBlockDto
 }
 
 /**
- * Extract displayable text from a tool_result (OUT) message. tool_result content
- * can be a plain string or a content-block array (e.g. [{type:'text',text}]);
- * both are normalized to a single string. Never throws.
+ * The tool_result content exactly as it was recorded, including the decline
+ * marker. tool_result content can be a plain string or a content-block array
+ * (e.g. [{type:'text',text}]); both are normalized to a single string.
+ *
+ * Use this only to decide WHAT a result is. To show it, use `toolResultText`.
+ * Never throws.
  */
-export function toolResultText(toolResult?: LoadedMessageDto): string {
+export function toolResultRawText(toolResult?: LoadedMessageDto): string {
     const value = firstToolResultBlock(toolResult)?.content;
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) {
@@ -38,6 +41,19 @@ export function toolResultText(toolResult?: LoadedMessageDto): string {
             .join('');
     }
     return '';
+}
+
+/**
+ * The tool's output, for showing in a result row.
+ *
+ * A decline is not output — it is the user's answer to a permission prompt, and
+ * `ToolWrapper` renders it as its own note. Returning it here as well would
+ * print it twice, and the second copy would sit in a result box that reads
+ * exactly like a tool that ran and succeeded. Callers therefore get an empty
+ * string for a declined tool and skip their result row.
+ */
+export function toolResultText(toolResult?: LoadedMessageDto): string {
+    return isUserDeclined(toolResult) ? '' : toolResultRawText(toolResult);
 }
 
 /** True when the tool_result block is flagged is_error. Never throws. */
@@ -52,7 +68,7 @@ export function toolResultIsError(toolResult?: LoadedMessageDto): boolean {
  * re-serializes the content as a text-block array rather than a bare string.
  */
 export function isUserDeclined(toolResult?: LoadedMessageDto): boolean {
-    return toolResultText(toolResult).startsWith(USER_DECLINED_PREFIX);
+    return toolResultRawText(toolResult).startsWith(USER_DECLINED_PREFIX);
 }
 
 /**
@@ -89,4 +105,16 @@ export const ToolStatusContext = createContext<ToolStatus>('pending');
 
 export function useToolStatus(): ToolStatus {
     return useContext(ToolStatusContext);
+}
+
+/**
+ * The recorded decline text (sentinel stripped) when the user declined this
+ * tool, or null otherwise. Provided by ToolRenderer alongside the status so
+ * ToolWrapper can draw the note itself — every card gets the same treatment
+ * without each renderer remembering to ask.
+ */
+export const ToolDeclinedContext = createContext<string | null>(null);
+
+export function useToolDeclined(): string | null {
+    return useContext(ToolDeclinedContext);
 }

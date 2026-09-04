@@ -2,7 +2,7 @@ import {ReactNode} from "react";
 import type {LoadedMessageDto} from "@/types";
 import {parseUserDeclined} from "@/shared";
 import {useTranslation} from "@/i18n";
-import {toolResultIsError, toolResultText} from "../../../../common";
+import {toolResultIsError, toolResultText, toolResultRawText} from "../../../../common";
 import {type DebuggerOutcome} from "../helpers";
 import {sensitiveFields, surprisingFields} from "../tool-params";
 import {Badge} from "./Badge";
@@ -158,7 +158,9 @@ interface JetBrainsResultErrorProps {
  * a renderer show its normal body only on success.
  */
 export const JetBrainsResultError = (props: JetBrainsResultErrorProps) => {
-    const declined = parseUserDeclined(toolResultText(props.toolResult));
+    // Raw, not display text: this row decides WHAT the result is, and the display
+    // form deliberately hides the decline marker so result boxes stay empty.
+    const declined = parseUserDeclined(toolResultRawText(props.toolResult));
     if (declined) return <JetBrainsDeclinedNote instruction={declined.instruction} />;
     if (!toolResultIsError(props.toolResult)) return null;
     return <JetBrainsErrorRow>{toolResultText(props.toolResult)}</JetBrainsErrorRow>;
