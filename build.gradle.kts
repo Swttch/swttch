@@ -188,63 +188,10 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.29.7 - A better project picker, background task view, and message history</h3>
+            <h3>0.30.0 - Tool cards for every built-in tool, and a Windows IME fix</h3>
             <ul>
-                <li>Rework the project picker page, with search, favorites, sorting, rename and delete (#398)</li>
-                <li>Speed up loading the project list (#398)</li>
-                <li>Fix a project showing its full path instead of its folder name on Windows (#398)</li>
-                <li>Fix a background agent's output rendering as raw text and unknown tools (#397, reported by @CraftedFury)</li>
-                <li>Fix a cancelled background task never settling (#397, reported by @CraftedFury)</li>
-                <li>Improve moving through message history (#399, reported by @VijitCoder)</li>
-            </ul>
-            <h3>0.29.6 - Stop being asked for every single edit</h3>
-            <ul>
-                <li>Fix picking auto-accept or "allow all edits" not actually stopping the prompts (#394, reported by @Ninili)</li>
-                <li>Add an "Allow all edits" button to both diff reviews (#394, reported by @Ninili)</li>
-            </ul>
-            <h3>0.29.5 - WSL2 reconnect loop, settings safety, and MCP fixes</h3>
-            <ul>
-                <li>Fix the backend disconnecting and reconnecting every ten seconds on WSL2 (#384, reported by @ideal-chris)</li>
-                <li>Fix a failed write wiping your Claude settings file (#386)</li>
-                <li>Fix MCP servers leaking a Docker container on every refresh (#363, reported by @EndiButler)</li>
-                <li>Fix environment variable placeholders in MCP config not being resolved (#364, reported by @EndiButler)</li>
-                <li>Add support for the Ultra plan's ultracode setting (#377, requested by @patpatpat123)</li>
-                <li>Add a fold arrow in the message gutter, with the hidden line count (#368, requested by @mzbik)</li>
-                <li>Fix extra spacing above quote blocks and headings in chat (#379, reported by @CraftedFury)</li>
-            </ul>
-            <h3>0.29.4 - Fold long answers, and MCP servers no longer show as Failed</h3>
-            <ul>
-                <li>Add folding a long answer from the message that produced it (#368, requested by @mzbik)</li>
-                <li>Fix connected MCP servers being shown as Failed (#319, reported by @CraftedFury)</li>
-                <li>Fix Cmd/Ctrl+Z not undoing pasted text and inserted mentions (#286, reported by @VijitCoder)</li>
-                <li>Fix the slash command panel closing after picking a file mention with the mouse (#373)</li>
-            </ul>
-            <h3>0.29.3 - Backend startup fix &amp; keep your model across Clear Conversation</h3>
-            <ul>
-                <li>Fix a leftover backend blocking startup with "Plugin resources not ready" until reboot (#360, reported by @i-kulbitski)</li>
-                <li>Add an option to keep the model you switched to across Clear Conversation (#370, requested by @CraftedFury)</li>
-                <li>Move the model settings to their own page in Settings (#370)</li>
-                <li>Fix the login button beside a 401 message (#367)</li>
-            </ul>
-            <h3>0.29.2 - Fix review overwrite bug &amp; editable session tab name</h3>
-            <ul>
-                <li>Fix approving a review overwriting work saved while the review was open (#361, reported by @kkoprivlenski)</li>
-                <li>Add renaming a chat tab yourself (#362, requested by @CraftedFury)</li>
-            </ul>
-            <h3>0.29.1 - Fixes for v0.29.0</h3>
-            <ul>
-                <li>Fix the broken behaviour of the editable diff view (#353)</li>
-                <li>Fix Cmd+Left/Right not moving the caret (#353)</li>
-            </ul>
-            <h3>0.29.0 - Turn off the automatic diff, and edit what Claude proposes</h3>
-            <ul>
-                <li>Fix edit diff view force displaying problem, display or not setting option added (#349)</li>
-                <li>Make review diff editable (#305, requested by @AranKyun)</li>
-                <li>Add a built-in diff review for the browser (#342)</li>
-                <li>Add an agent transcript viewer to background tasks (#347)</li>
-                <li>Add a live output pane for background shell tasks (#347)</li>
-                <li>Fix soft wrap not reaching code blocks in answers (#179, reported by @deniskrizanovic)</li>
-                <li>Add a soft wrap toggle to every code block (#179, requested by @deniskrizanovic)</li>
+                <li>Add dedicated card renderers for the built-in tools and legacy aliases that used to fall back to "unknown" (#402)</li>
+                <li>Fix the composer becoming unresponsive after a Hangul IME composition ends without a compositionend event on Windows (#405, reported by @ygkim-vway)</li>
             </ul>
         """.trimIndent()
     }
