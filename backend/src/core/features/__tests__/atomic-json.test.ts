@@ -140,7 +140,12 @@ describe('atomic-json', () => {
 
     // The rename replaces the file itself, so the target's bits have to be
     // carried over or a file the user locked down comes back world-readable.
-    it('preserves the permission bits of the file it replaces', async () => {
+    // Skipped on win32: Windows has no Unix permission bits, so chmod(0o600)
+    // never takes and this assertion cannot hold there regardless of the code
+    // under test. This also means the credential files this protection exists
+    // for are not protected by mode bits at all on Windows, which is a separate
+    // concern from this test.
+    it.skipIf(process.platform === 'win32')('preserves the permission bits of the file it replaces', async () => {
       write('{"a":1}');
       chmodSync(file(), 0o600);
       await atomicWriteFile(file(), '{"b":2}\n');

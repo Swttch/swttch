@@ -434,7 +434,7 @@ describe.skipIf(isPosix)('cli-registry (win32, real processes)', () => {
 
       const result = await sweepOrphanCliProcesses();
 
-      expect(result).toEqual({ killed: 1, skipped: 1 });
+      expect(result).toEqual({ killed: 1, skipped: 1, mcpContainers: [] });
       await waitUntil(() => !pidAlive(orphan.pid as number), 10_000);
       expect(pidAlive(owned.pid as number)).toBe(true);
       expect(existsSync(entryPath(orphan.pid as number))).toBe(false);
