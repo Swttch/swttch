@@ -128,7 +128,8 @@
       "fixed": "修正済み",
       "skipped": "スキップ",
       "no_change_needed": "修正不要"
-    }
+    },
+    "failureScenario": "→ {{scenario}}"
   },
   "cron": {
     "recurring": "繰り返し",

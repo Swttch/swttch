@@ -132,7 +132,8 @@
       "fixed": "исправлено",
       "skipped": "пропущено",
       "no_change_needed": "изменения не нужны"
-    }
+    },
+    "failureScenario": "→ {{scenario}}"
   },
   "cron": {
     "recurring": "повторяющаяся",

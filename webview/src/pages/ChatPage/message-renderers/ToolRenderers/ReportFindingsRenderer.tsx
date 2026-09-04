@@ -1,7 +1,11 @@
+import {Fragment} from "react";
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {RendererProps, ToolHeader, ToolWrapper, isInputSettled} from "./common";
 import {cn} from "@/utils/cn.ts";
+import {getAdapter} from "@/adapters";
+import {useSessionContext} from "@/contexts/SessionContext";
+import {resolveFilePath} from "../utils/tokenizeMessagePaths";
 
 interface FindingDto {
     file?: string;
@@ -29,6 +33,7 @@ function findingLocation(finding: FindingDto): string {
 
 export function ReportFindingsRenderer(props: RendererProps) {
     const {t} = useTranslation('chatTools');
+    const {workingDirectory} = useSessionContext();
     const toolUse = props.toolUse as unknown as ReportFindingsToolUseDto;
     const rawFindings = toolUse.input?.findings;
     const findings = Array.isArray(rawFindings) ? rawFindings : [];
@@ -57,42 +62,86 @@ export function ReportFindingsRenderer(props: RendererProps) {
             </ToolHeader>
 
             {findings.length > 0 && (
-                <div className="flex flex-col gap-1.5">
+                /*
+                 * A grid, not a row per finding: `verdict` is only set when a
+                 * verify pass ran, so a review can hand back a list where some
+                 * findings carry one and some do not. Laid out per row, the ones
+                 * without a verdict slide left and the column stops lining up.
+                 * The `auto` tracks collapse to nothing when no finding has a
+                 * verdict at all, so an inline-only review costs no empty gutter.
+                 */
+                <div className="grid grid-cols-[auto_1fr_auto] gap-x-2 gap-y-3 text-[0.8461rem]">
                     {findings.map((finding, index) => {
                         const location = findingLocation(finding);
-                        const text = finding.short_summary || finding.summary || '';
+                        // `summary` is the full sentence; `short_summary` is its
+                        // compressed label for a narrow UI. The chat column is not
+                        // narrow, so prefer the sentence and fall back to the label.
+                        const statement = finding.summary || finding.short_summary || '';
+                        const openAt = finding.file
+                            ? () => getAdapter().openFile(
+                                resolveFilePath(finding.file as string, workingDirectory),
+                                finding.line,
+                            )
+                            : undefined;
+
                         return (
-                            <div key={index} className="flex items-start gap-2 text-[0.8461rem] min-w-0">
-                                {finding.verdict && (
-                                    <span
-                                        className={cn(
-                                            'shrink-0 mt-[1px] uppercase tracking-wide text-[0.7692rem]',
-                                            finding.verdict === 'CONFIRMED'
-                                                ? 'text-state-error-fg'
-                                                : 'text-text-tertiary',
+                            <Fragment key={index}>
+                                <span
+                                    className={cn(
+                                        'mt-[1px] uppercase tracking-wide text-[0.7692rem]',
+                                        finding.verdict === 'CONFIRMED'
+                                            ? 'text-state-error-fg'
+                                            : 'text-text-tertiary',
+                                    )}
+                                >
+                                    {finding.verdict ?? ''}
+                                </span>
+
+                                <div className="min-w-0">
+                                    {/* Not truncated: a finding the reader cannot finish
+                                        reading sends them to the raw payload instead. */}
+                                    {statement && (
+                                        <div className="text-text-primary/80 whitespace-pre-wrap">{statement}</div>
+                                    )}
+
+                                    <div className="flex items-baseline gap-2 min-w-0">
+                                        {location && (
+                                            <span
+                                                dir="ltr"
+                                                className={cn(
+                                                    'font-mono text-text-tertiary truncate',
+                                                    openAt && 'cursor-pointer hover:underline',
+                                                )}
+                                                onClick={openAt}
+                                            >
+                                                {location}
+                                            </span>
                                         )}
-                                    >
-                                        {finding.verdict}
-                                    </span>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                    {text && <div className="text-text-primary/80 truncate">{text}</div>}
-                                    {location && (
-                                        <div dir="ltr" className="font-mono text-text-tertiary truncate">
-                                            {location}
+                                        {finding.category && (
+                                            <span className="shrink-0 text-text-tertiary">{finding.category}</span>
+                                        )}
+                                    </div>
+
+                                    {/* The concrete inputs-to-wrong-output line is the
+                                        evidence for the finding — without it the card
+                                        states a verdict the reader cannot check. */}
+                                    {finding.failure_scenario && (
+                                        <div className="mt-0.5 text-text-primary/50 whitespace-pre-wrap">
+                                            {t('reportFindings.failureScenario', {scenario: finding.failure_scenario})}
                                         </div>
                                     )}
                                 </div>
-                                {finding.outcome && (
-                                    <span className="shrink-0 text-text-tertiary">
-                                        {/* The outcome comes from the model, so a value
-                                            outside the schema would otherwise put the raw
-                                            translation key on screen. Fall back to what was
-                                            actually reported. */}
-                                        {t(`reportFindings.outcome.${finding.outcome}`, {defaultValue: finding.outcome})}
-                                    </span>
-                                )}
-                            </div>
+
+                                <span className="text-text-tertiary">
+                                    {/* The outcome comes from the model, so a value
+                                        outside the schema would otherwise put the raw
+                                        translation key on screen. Fall back to what was
+                                        actually reported. */}
+                                    {finding.outcome
+                                        ? t(`reportFindings.outcome.${finding.outcome}`, {defaultValue: finding.outcome})
+                                        : ''}
+                                </span>
+                            </Fragment>
                         );
                     })}
                 </div>

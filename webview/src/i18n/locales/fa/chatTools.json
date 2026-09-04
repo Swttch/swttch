@@ -128,7 +128,8 @@
       "fixed": "اصلاح شد",
       "skipped": "رد شد",
       "no_change_needed": "نیازی به تغییر نیست"
-    }
+    },
+    "failureScenario": "← {{scenario}}"
   },
   "cron": {
     "recurring": "تکرارشونده",

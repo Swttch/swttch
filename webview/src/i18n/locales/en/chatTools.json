@@ -130,7 +130,8 @@
       "fixed": "fixed",
       "skipped": "skipped",
       "no_change_needed": "no change needed"
-    }
+    },
+    "failureScenario": "→ {{scenario}}"
   },
   "cron": {
     "recurring": "recurring",

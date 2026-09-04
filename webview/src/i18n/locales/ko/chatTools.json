@@ -128,7 +128,8 @@
       "fixed": "수정됨",
       "skipped": "건너뜀",
       "no_change_needed": "수정 불필요"
-    }
+    },
+    "failureScenario": "→ {{scenario}}"
   },
   "cron": {
     "recurring": "반복",

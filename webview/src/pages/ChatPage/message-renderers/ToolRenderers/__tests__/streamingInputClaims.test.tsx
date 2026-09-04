@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest';
+import {describe, it, expect, vi} from 'vitest';
 import {render, screen} from '@testing-library/react';
 import {ReportFindingsRenderer} from '../ReportFindingsRenderer';
 import {McpResourceRenderer} from '../McpResourceRenderer';
@@ -7,6 +7,13 @@ import {CronCreateRenderer} from '../CronCreateRenderer';
 import {NotebookEditRenderer} from '../NotebookEditRenderer';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
+
+// ReportFindings resolves a finding's repo-relative path against the working
+// directory so the location can be opened; neither is what these tests measure.
+vi.mock('@/adapters', () => ({getAdapter: () => ({openFile: vi.fn()})}));
+vi.mock('@/contexts/SessionContext', () => ({
+    useSessionContext: () => ({workingDirectory: '/repo'}),
+}));
 
 /**
  * While a message streams, `input` is rebuilt from partial JSON, so a field

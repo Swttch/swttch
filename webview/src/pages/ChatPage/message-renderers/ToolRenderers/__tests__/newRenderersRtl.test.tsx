@@ -1,4 +1,4 @@
-import {describe, it, expect} from 'vitest';
+import {describe, it, expect, vi} from 'vitest';
 import {render, screen} from '@testing-library/react';
 import {ScheduleWakeupRenderer} from '../ScheduleWakeupRenderer';
 import {ReportFindingsRenderer} from '../ReportFindingsRenderer';
@@ -9,6 +9,13 @@ import {EnterWorktreeRenderer} from '../EnterWorktreeRenderer';
 import {McpResourceRenderer} from '../McpResourceRenderer';
 import {SendUserMessageRenderer} from '../SendUserMessageRenderer';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
+
+// ReportFindings resolves a finding's repo-relative path against the working
+// directory so the location can be opened; neither is what these tests measure.
+vi.mock('@/adapters', () => ({getAdapter: () => ({openFile: vi.fn()})}));
+vi.mock('@/contexts/SessionContext', () => ({
+    useSessionContext: () => ({workingDirectory: '/repo'}),
+}));
 
 /**
  * RTL exception: cron expressions, resource URIs, `file:line` locations,

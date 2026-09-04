@@ -136,7 +136,8 @@
       "fixed": "تم الإصلاح",
       "skipped": "تم التخطي",
       "no_change_needed": "لا حاجة للتغيير"
-    }
+    },
+    "failureScenario": "← {{scenario}}"
   },
   "cron": {
     "recurring": "متكرر",
