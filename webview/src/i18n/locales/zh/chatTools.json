@@ -2,8 +2,6 @@
   "tool": {
     "in": "输入",
     "out": "输出",
-    "declined": "您拒绝了此工具。",
-    "declinedWithInstruction": "您拒绝了此工具,转而告诉 Claude:“{{instruction}}”",
     "softWrap": {
       "wrap": "折叠长行",
       "unwrap": "取消折行"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "已完成",
       "retrievalTimedOut": "已超时",
       "retrievalError": "错误"
+    },
+    "stop": {
+      "command": "命令"
     }
   },
   "workflow": {
@@ -121,9 +122,9 @@
     "noop": "无变化"
   },
   "reportFindings": {
+    "title": "代码审查",
     "none": "未发现问题",
     "count": "发现 {{count}} 个问题",
-    "level": "级别 {{level}}",
     "outcome": {
       "fixed": "已修复",
       "skipped": "已跳过",

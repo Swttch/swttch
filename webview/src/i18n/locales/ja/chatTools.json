@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "このツールを拒否しました。",
-    "declinedWithInstruction": "このツールを拒否しました。代わりにClaudeへ指示: 「{{instruction}}」",
     "softWrap": {
       "wrap": "長い行を折り返す",
       "unwrap": "折り返しを解除"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "完了",
       "retrievalTimedOut": "タイムアウト",
       "retrievalError": "エラー"
+    },
+    "stop": {
+      "command": "コマンド"
     }
   },
   "workflow": {
@@ -121,9 +122,9 @@
     "noop": "変更なし"
   },
   "reportFindings": {
+    "title": "コードレビュー",
     "none": "指摘なし",
     "count": "{{count}} 件の指摘",
-    "level": "レベル {{level}}",
     "outcome": {
       "fixed": "修正済み",
       "skipped": "スキップ",

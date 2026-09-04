@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "شما این ابزار را رد کردید.",
-    "declinedWithInstruction": "شما این ابزار را رد کردید. در عوض از Claude خواستید: «{{instruction}}»",
     "softWrap": {
       "wrap": "شکستن خطوط بلند",
       "unwrap": "توقف شکستن خط"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "تکمیل شد",
       "retrievalTimedOut": "زمان به پایان رسید",
       "retrievalError": "خطا"
+    },
+    "stop": {
+      "command": "فرمان"
     }
   },
   "workflow": {
@@ -121,9 +122,9 @@
     "noop": "بدون تغییر"
   },
   "reportFindings": {
+    "title": "بازبینی کد",
     "none": "موردی یافت نشد",
     "count": "{{count}} مورد",
-    "level": "سطح {{level}}",
     "outcome": {
       "fixed": "اصلاح شد",
       "skipped": "رد شد",

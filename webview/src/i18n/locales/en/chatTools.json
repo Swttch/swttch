@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "You declined this tool.",
-    "declinedWithInstruction": "You declined this tool. Asked Claude instead: “{{instruction}}”",
     "softWrap": {
       "wrap": "Wrap long lines",
       "unwrap": "Stop wrapping"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "completed",
       "retrievalTimedOut": "timed out",
       "retrievalError": "error"
+    },
+    "stop": {
+      "command": "command"
     }
   },
   "workflow": {
@@ -121,11 +122,11 @@
     "noop": "no change"
   },
   "reportFindings": {
+    "title": "Code review",
     "none": "No findings",
     "count": "{{count}} findings",
     "count_one": "{{count}} finding",
     "count_other": "{{count}} findings",
-    "level": "level {{level}}",
     "outcome": {
       "fixed": "fixed",
       "skipped": "skipped",

@@ -40,6 +40,14 @@ A third problem only appeared once the cards existed. **A tool's arguments arriv
 
 **The older names carry their id in an older field, and that is read too.** `KillShell` and `KillBash` name the task `shell_id`, `BashOutput` and `BashOutputTool` name it `bash_id`. Registering the names alone left those rows showing an empty id; they now read whichever field is present, as the CLI itself does.
 
+**The review card is titled after what happened.** It reads **Code review**, followed by the effort and the count the way the CLI reads them — `high · 1 finding` — rather than the name of the tool that submits the payload.
+
+**A tool you declined no longer looks like one that ran.** The refusal used to be printed into an ordinary result box, in the same place and style a successful tool prints its output. It now appears in the error colour, with the bullet marked as an error, the way the CLI shows it.
+
+It also appears **in the CLI's own words**, not translated: we are relaying that message rather than writing it, so which language it is in is not ours to answer for — and a reader comparing this against the same session in their terminal should not find two different sentences for one event.
+
+**Stopping a task reads as a sentence rather than as JSON.** `TaskStop` returned an object that was printed raw; it is now split into the task type and command, with the status message underneath, matching the shape `TaskOutput` already had. Anything that is not that object — a plain-text error, a truncated payload — is still shown exactly as it arrived.
+
 ## How this was checked
 
 Every card was verified on screen, not only in tests.

@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "Du hast dieses Tool abgelehnt.",
-    "declinedWithInstruction": "Du hast dieses Tool abgelehnt. Claude stattdessen gefragt: „{{instruction}}“",
     "softWrap": {
       "wrap": "Lange Zeilen umbrechen",
       "unwrap": "Umbruch aufheben"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "abgeschlossen",
       "retrievalTimedOut": "Zeitüberschreitung",
       "retrievalError": "Fehler"
+    },
+    "stop": {
+      "command": "Befehl"
     }
   },
   "workflow": {
@@ -121,11 +122,11 @@
     "noop": "keine Änderung"
   },
   "reportFindings": {
+    "title": "Code-Review",
     "none": "Keine Befunde",
     "count": "{{count}} Befunde",
     "count_one": "{{count}} Befund",
     "count_other": "{{count}} Befunde",
-    "level": "Stufe {{level}}",
     "outcome": {
       "fixed": "behoben",
       "skipped": "übersprungen",

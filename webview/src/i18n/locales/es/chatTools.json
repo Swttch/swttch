@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "Rechazaste esta herramienta.",
-    "declinedWithInstruction": "Rechazaste esta herramienta. En su lugar, le pediste a Claude: “{{instruction}}”",
     "softWrap": {
       "wrap": "Ajustar líneas largas",
       "unwrap": "Dejar de ajustar"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "completado",
       "retrievalTimedOut": "tiempo agotado",
       "retrievalError": "error"
+    },
+    "stop": {
+      "command": "comando"
     }
   },
   "workflow": {
@@ -121,11 +122,11 @@
     "noop": "sin cambios"
   },
   "reportFindings": {
+    "title": "Revisión de código",
     "none": "Sin hallazgos",
     "count": "{{count}} hallazgos",
     "count_one": "{{count}} hallazgo",
     "count_other": "{{count}} hallazgos",
-    "level": "nivel {{level}}",
     "outcome": {
       "fixed": "corregido",
       "skipped": "omitido",

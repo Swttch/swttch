@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "이 도구를 거부했습니다.",
-    "declinedWithInstruction": "이 도구를 거부했습니다. 대신 Claude에게 다음을 요청했습니다: “{{instruction}}”",
     "softWrap": {
       "wrap": "긴 줄 접기",
       "unwrap": "줄바꿈 해제"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "완료",
       "retrievalTimedOut": "시간 초과",
       "retrievalError": "오류"
+    },
+    "stop": {
+      "command": "명령"
     }
   },
   "workflow": {
@@ -121,9 +122,9 @@
     "noop": "변화 없음"
   },
   "reportFindings": {
+    "title": "코드 리뷰",
     "none": "발견된 문제 없음",
     "count": "{{count}}건 발견",
-    "level": "레벨 {{level}}",
     "outcome": {
       "fixed": "수정됨",
       "skipped": "건너뜀",

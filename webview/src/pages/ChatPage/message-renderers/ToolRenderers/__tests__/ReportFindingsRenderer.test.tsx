@@ -169,8 +169,27 @@ describe('ReportFindingsRenderer', () => {
         expect(screen.getByText(/add\('1','2'\) returns '12'/)).toBeInTheDocument();
     });
 
+    // The tool is named for the payload it submits; the row is read by someone
+    // who asked for a review, so it is titled after what happened — as the CLI
+    // titles it.
+    it('titles the row "Code review", not the tool name', () => {
+        render(<ReportFindingsRenderer toolUse={makeToolUse({findings: []})} />);
+        expect(screen.getByText('Code review')).toBeInTheDocument();
+        expect(screen.queryByText('ReportFindings')).not.toBeInTheDocument();
+    });
+
+    // The CLI reads "high · 1 finding": effort first, then the count.
+    it('shows the effort before the count', () => {
+        const {container} = render(<ReportFindingsRenderer toolUse={makeToolUse({
+            level: 'high',
+            findings: [{file: 'a.ts', summary: 'one'}],
+        })} />);
+
+        expect(container.textContent).toMatch(/high\s*·\s*1 finding/);
+    });
+
     it('renders without throwing when findings is missing', () => {
         render(<ReportFindingsRenderer toolUse={makeToolUse({})} />);
-        expect(screen.getByText('ReportFindings')).toBeInTheDocument();
+        expect(screen.getByText('Code review')).toBeInTheDocument();
     });
 });

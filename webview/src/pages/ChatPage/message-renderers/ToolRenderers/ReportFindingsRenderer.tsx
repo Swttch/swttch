@@ -39,25 +39,23 @@ export function ReportFindingsRenderer(props: RendererProps) {
     const findings = Array.isArray(rawFindings) ? rawFindings : [];
     const level = toolUse.input?.level ?? '';
 
+    // "No findings" is a claim about a finished review. Mid-stream the array is
+    // simply not here yet, so say nothing until the arguments have landed.
+    const countLabel = findings.length > 0
+        ? t('reportFindings.count', {count: findings.length})
+        : isInputSettled(props) ? t('reportFindings.none') : '';
+
     return (
         <ToolWrapper message={props.message}>
-            <ToolHeader name="ReportFindings" inProgress={!props.toolResult} className="mb-2.5">
+            {/* The tool is named for the payload it submits, but the row is read by
+                someone who asked for a review — so it is titled the way the CLI
+                titles it, after the thing that happened. */}
+            <ToolHeader name={t('reportFindings.title')} inProgress={!props.toolResult} className="mb-2.5">
                 <div className="flex items-center gap-1.5 min-w-0 text-text-primary/60">
-                    {/* "No findings" is a claim about a finished review. Mid-stream
-                        the array is simply not here yet, so say nothing until the
-                        arguments have landed. */}
-                    {(findings.length > 0 || isInputSettled(props)) && (
-                        <span className="shrink-0">
-                            {findings.length === 0
-                                ? t('reportFindings.none')
-                                : t('reportFindings.count', {count: findings.length})}
-                        </span>
-                    )}
-                    {level && (
-                        <span className="shrink-0 text-text-tertiary">
-                            {t('reportFindings.level', {level})}
-                        </span>
-                    )}
+                    {/* Effort first, then the count: the CLI reads "high · 1 finding". */}
+                    {level && <span className="shrink-0">{level}</span>}
+                    {level && countLabel && <span className="shrink-0 text-text-tertiary">·</span>}
+                    {countLabel && <span className="shrink-0">{countLabel}</span>}
                 </div>
             </ToolHeader>
 

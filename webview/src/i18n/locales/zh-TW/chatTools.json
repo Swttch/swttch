@@ -2,8 +2,6 @@
   "tool": {
     "in": "輸入",
     "out": "輸出",
-    "declined": "您拒絕了此工具。",
-    "declinedWithInstruction": "您拒絕了此工具，改為告訴 Claude：「{{instruction}}」",
     "softWrap": {
       "wrap": "摺疊長行",
       "unwrap": "取消換行"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "已完成",
       "retrievalTimedOut": "已逾時",
       "retrievalError": "錯誤"
+    },
+    "stop": {
+      "command": "命令"
     }
   },
   "workflow": {
@@ -121,9 +122,9 @@
     "noop": "無變化"
   },
   "reportFindings": {
+    "title": "程式碼審查",
     "none": "未發現問題",
     "count": "發現 {{count}} 個問題",
-    "level": "等級 {{level}}",
     "outcome": {
       "fixed": "已修正",
       "skipped": "已略過",

@@ -2,8 +2,6 @@
   "tool": {
     "in": "ВХОД",
     "out": "ВЫХОД",
-    "declined": "Вы отклонили этот инструмент.",
-    "declinedWithInstruction": "Вы отклонили этот инструмент. Вместо этого попросили Claude: «{{instruction}}»",
     "softWrap": {
       "wrap": "Переносить длинные строки",
       "unwrap": "Отключить перенос"
@@ -103,6 +101,9 @@
       "retrievalCompleted": "завершено",
       "retrievalTimedOut": "истекло время ожидания",
       "retrievalError": "ошибка"
+    },
+    "stop": {
+      "command": "команда"
     }
   },
   "workflow": {
@@ -125,9 +126,9 @@
     "noop": "без изменений"
   },
   "reportFindings": {
+    "title": "Ревью кода",
     "none": "Замечаний нет",
     "count": "Замечаний: {{count}}",
-    "level": "уровень {{level}}",
     "outcome": {
       "fixed": "исправлено",
       "skipped": "пропущено",
