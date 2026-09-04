@@ -76,10 +76,43 @@ describe('useIMEComposition', () => {
     const { result } = renderHook(() => useIMEComposition());
     result.current.noteKeyDown(229); // composing + schedules fallback
     result.current.handleCompositionStart(); // real composition confirmed
-    result.current.notifyInput(); // committed input arrives
+    // The input belongs to the composition, so the flag must stay up.
+    result.current.notifyInput({ isComposing: true, inputType: 'insertCompositionText' });
     vi.advanceTimersByTime(100);
     // Still composing because compositionEnd has not fired; the fallback was
     // cancelled by the committed input rather than wrongly resetting state.
+    expect(result.current.isComposing()).toBe(true);
+  });
+
+  /**
+   * Issue #403. Measured on Windows 11 + JCEF: a Hangul IME ends its last
+   * composition WITHOUT firing compositionend — pressing Backspace to erase the
+   * in-progress syllable, and even switching to the English layout, produce no
+   * trailing composition event. Every later keystroke then arrived as a plain
+   * input while the flag was still up, so the composer silently dropped all of
+   * them and kept submitting the text from before the composition.
+   *
+   * The browser still tells the truth on the input event itself: those inputs
+   * carry `isComposing: false` and a non-composition inputType. That is the
+   * signal the flag must come down on.
+   */
+  it('clears a flag left stuck by a missing compositionend when a plain input arrives (#403)', () => {
+    const { result } = renderHook(() => useIMEComposition());
+    result.current.handleCompositionStart();
+    expect(result.current.isComposing()).toBe(true);
+    // Backspace erases the composing syllable; no compositionend ever fires.
+    result.current.notifyInput({ isComposing: false, inputType: 'deleteContentBackward' });
+    expect(result.current.isComposing()).toBe(false);
+  });
+
+  it('keeps the flag up while inputs still belong to the composition (#403)', () => {
+    const { result } = renderHook(() => useIMEComposition());
+    result.current.handleCompositionStart();
+    result.current.notifyInput({ isComposing: true, inputType: 'insertCompositionText' });
+    expect(result.current.isComposing()).toBe(true);
+    // Some IMEs report isComposing false on the composition edit itself; the
+    // inputType alone must still hold the flag up.
+    result.current.notifyInput({ isComposing: false, inputType: 'insertCompositionText' });
     expect(result.current.isComposing()).toBe(true);
   });
 });
