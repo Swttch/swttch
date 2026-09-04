@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { join } from 'path';
 import { createLifecycleJournal, formatJournalLine } from '../lifecycle-journal';
 
 describe('formatJournalLine', () => {
@@ -47,14 +48,16 @@ describe('createLifecycleJournal', () => {
 
     journal.record('start', { pid: 7 });
 
+    // path.join uses the platform separator, so this must match production's
+    // join('/logs', 'lifecycle.log') rather than a hardcoded posix path.
     expect(written).toEqual([
-      { path: '/logs/lifecycle.log', line: '2026-09-02T04:00:00.000Z start pid=7\n' },
+      { path: join('/logs', 'lifecycle.log'), line: '2026-09-02T04:00:00.000Z start pid=7\n' },
     ]);
   });
 
   it('reports the path it writes to', () => {
     const { journal } = harness();
-    expect(journal.path()).toBe('/logs/lifecycle.log');
+    expect(journal.path()).toBe(join('/logs', 'lifecycle.log'));
   });
 
   it('swallows a write failure instead of taking the process down', () => {
