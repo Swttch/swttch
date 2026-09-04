@@ -3,9 +3,8 @@ import {ContextPills} from "@/pages/ChatPage/message-renderers";
 import type {LoadedMessageDto} from "@/types";
 import {Tooltip} from "@/components";
 import {cn} from "@/utils/cn.ts";
-import {useTranslation} from "@/i18n";
 import {ToolUseBlockDto} from "@/dto/message/ContentBlockDto";
-import {useToolStatus, type ToolStatus} from "./toolStatus";
+import {useToolStatus, useToolDeclined, type ToolStatus} from "./toolStatus";
 import {useSoftWrapToggle} from "@/pages/ChatPage/message-renderers/components/useSoftWrapToggle";
 
 /**
@@ -23,18 +22,26 @@ export * from './RendererProps';
 export * from './toolStatus';
 
 /**
- * Neutral note for a user's denial decision — deliberately NOT styled as an
- * error, so a declined tool never reads as a failure. Shared by the generic MCP
- * fallback and any renderer that wants the plain form (the JetBrains cards use
- * their own badge-styled variant). Shows the instruction the user gave, if any.
+ * A user's denial decision, shown in the error colour the way the CLI shows it,
+ * so a declined tool cannot be mistaken for one that ran.
+ *
+ * This was styled neutrally before, on the reasoning that a decline is a
+ * decision rather than a failure. On screen that backfired: the decline text
+ * landed in an ordinary result box, in the exact place and style a successful
+ * tool prints its output, so the distinction the styling meant to protect was
+ * the one being lost. ToolWrapper now draws this for every card.
+ *
+ * `text` is what was recorded, sentinel stripped and otherwise untouched — it
+ * already carries the instruction the user gave instead. It stays in the CLI's
+ * own words even when the interface is in another language: this row relays the
+ * CLI's output rather than authoring it, so which language the message is in is
+ * not ours to answer for. The JetBrains cards keep their own badge-styled
+ * variant.
  */
-export const DeclinedNote = (props: {instruction?: string}) => {
-    const {t} = useTranslation('chatTools');
+export const DeclinedNote = (props: {text: string}) => {
     return (
-        <div className="mt-1 text-[0.8461rem] text-text-tertiary italic whitespace-pre-wrap">
-            {props.instruction
-                ? t('tool.declinedWithInstruction', {instruction: props.instruction})
-                : t('tool.declined')}
+        <div className="mt-1 text-[0.8461rem] text-state-error-fg whitespace-pre-wrap">
+            {props.text}
         </div>
     );
 };
@@ -55,9 +62,13 @@ export const ToolWrapper = (props: {
     const {message, groupClassName = '', className = '', onClick, forceStatus, children} = props;
     const contextStatus = useToolStatus();
     const status = forceStatus ?? contextStatus;
+    const declined = useToolDeclined();
+    // A decline reads as an error, the way it does in the CLI. It is a decision
+    // rather than a fault, but a muted bullet put it in the same visual class as
+    // a tool that ran and returned nothing interesting.
     const bulletColor =
         status === 'success' ? 'text-state-success-fg'
-        : status === 'error' ? 'text-state-error-fg'
+        : status === 'error' || status === 'declined' ? 'text-state-error-fg'
         : status === 'progress' ? 'text-text-secondary animate-pulse'
         : 'text-text-tertiary';
 
@@ -80,6 +91,11 @@ export const ToolWrapper = (props: {
                     <div className={cn(`mt-0.5`, className)} onClick={onClick}>
                         {children}
                     </div>
+                    {/* Drawn here, once, rather than in each of the ~190 renderers —
+                        a card that forgets would silently print the raw marker in a
+                        result box instead. ToolRenderer withholds this from the MCP
+                        cards, which draw their own in their badge style. */}
+                    {declined && <DeclinedNote text={declined} />}
                 </div>
 
                 {message?.context && <ContextPills context={message.context} />}

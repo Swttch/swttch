@@ -24,6 +24,23 @@ export function buildUserDeclinedContent(reason?: string): string {
 }
 
 /**
+ * The decline content as it was recorded, minus the invisible sentinel.
+ *
+ * The sentinel exists to make the marker unmistakable in code; it is not part of
+ * what the decision says. Everything after it is the CLI's own wording and is
+ * shown verbatim — deliberately NOT swapped for a translated sentence of ours,
+ * even when the interface is running in another language.
+ *
+ * We are relaying the CLI's output, not authoring it, so which language that
+ * message is in is not ours to answer for. Translating it would also mean a
+ * reader comparing this against the same session in their terminal finds two
+ * different sentences for one event.
+ */
+export function declineDisplayText(content: string): string {
+    return content.startsWith(DECLINE_SENTINEL) ? content.slice(DECLINE_SENTINEL.length) : content;
+}
+
+/**
  * If `content` is a user-decline marker, return the user's instruction (or '' when
  * they declined without one); otherwise null. Used by the webview to render the
  * decision distinctly from a real error.

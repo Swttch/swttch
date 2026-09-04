@@ -1,7 +1,7 @@
 import {ReactNode} from "react";
 import {useTranslation} from "@/i18n";
-import {parseUserDeclined} from "@/shared";
-import {RendererProps, ToolHeader, ToolWrapper, DeclinedNote, toolResultText} from "../../common";
+import {parseUserDeclined, declineDisplayText} from "@/shared";
+import {RendererProps, ToolHeader, ToolWrapper, DeclinedNote, toolResultText, toolResultRawText} from "../../common";
 import {McpToolBody, McpToolRow} from "../_common";
 import {mcpHeaderLabel, mcpInputPreview} from "./cursorMcp";
 
@@ -51,15 +51,17 @@ export function GenericMcpRenderer(props: RendererProps) {
     const {toolUse, toolResult, message} = props;
     const input = toolUse.input as Record<string, unknown> | undefined;
     const outputText = toolResultText(toolResult);
-    // A denied permission is the user's decision, not a tool failure — render it as
-    // a neutral note instead of dumping the raw marker string into the OUT row.
-    const declined = parseUserDeclined(outputText);
+    // Raw, not display text: the display form deliberately drops the decline
+    // marker so result rows stay empty, so the decision has to be read from what
+    // was actually recorded — and is then shown as recorded.
+    const rawText = toolResultRawText(toolResult);
+    const declined = parseUserDeclined(rawText);
 
     return (
         <ToolWrapper message={message} groupClassName="pb-2.5">
             <McpToolHeader name={toolUse.name} input={input} />
             {declined
-                ? <DeclinedNote instruction={declined.instruction} />
+                ? <DeclinedNote text={declineDisplayText(rawText)} />
                 : <McpToolOutput>{outputText}</McpToolOutput>}
         </ToolWrapper>
     );

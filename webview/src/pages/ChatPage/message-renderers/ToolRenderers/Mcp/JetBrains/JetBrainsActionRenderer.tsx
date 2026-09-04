@@ -90,7 +90,7 @@ function PatchView(props: PatchViewProps) {
                 <div key={fi}>
                     <div className="flex items-center gap-1.5 mb-1 text-[0.8461rem]">
                         <Badge tone={f.op === 'add' ? 'success' : f.op === 'delete' ? 'error' : 'default'}>
-                            {t(`jetbrains.action.patchOp.${f.op}`)}
+                            {t(`jetbrains.action.patchOp.${f.op}`, {defaultValue: f.op})}
                         </Badge>
                         <JetBrainsFileLink
                             path={f.file}

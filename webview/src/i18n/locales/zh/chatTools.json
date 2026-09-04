@@ -2,8 +2,6 @@
   "tool": {
     "in": "输入",
     "out": "输出",
-    "declined": "您拒绝了此工具。",
-    "declinedWithInstruction": "您拒绝了此工具,转而告诉 Claude:“{{instruction}}”",
     "softWrap": {
       "wrap": "折叠长行",
       "unwrap": "取消折行"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "已完成",
       "retrievalTimedOut": "已超时",
       "retrievalError": "错误"
+    },
+    "stop": {
+      "command": "命令"
     }
   },
   "workflow": {
@@ -114,6 +115,44 @@
     "agentsUsageLabel": "智能体 {{count}}",
     "tokensUsageLabel": "token {{value}}",
     "toolsUsageLabel": "工具 {{count}}"
+  },
+  "scheduleWakeup": {
+    "wakeIn": "{{delay}} 后",
+    "stopped": "循环已停止",
+    "noop": "无变化"
+  },
+  "reportFindings": {
+    "title": "代码审查",
+    "none": "未发现问题",
+    "count": "发现 {{count}} 个问题",
+    "outcome": {
+      "fixed": "已修复",
+      "skipped": "已跳过",
+      "no_change_needed": "无需修改"
+    },
+    "failureScenario": "→ {{scenario}}"
+  },
+  "cron": {
+    "recurring": "重复",
+    "oneShot": "一次性",
+    "durable": "持久",
+    "sessionOnly": "仅本会话",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "新工作树 {{name}}",
+    "enterPath": "已有 {{path}}",
+    "enterGenerated": "新工作树（自动命名）",
+    "keep": "保留",
+    "remove": "删除",
+    "discardChanges": "丢弃更改"
+  },
+  "mcpResource": {
+    "allServers": "全部服务器"
+  },
+  "sendUserMessage": {
+    "proactive": "主动发送",
+    "attachments": "{{count}} 个附件"
   },
   "mcp": {
     "common": {

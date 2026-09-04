@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "شما این ابزار را رد کردید.",
-    "declinedWithInstruction": "شما این ابزار را رد کردید. در عوض از Claude خواستید: «{{instruction}}»",
     "softWrap": {
       "wrap": "شکستن خطوط بلند",
       "unwrap": "توقف شکستن خط"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "تکمیل شد",
       "retrievalTimedOut": "زمان به پایان رسید",
       "retrievalError": "خطا"
+    },
+    "stop": {
+      "command": "فرمان"
     }
   },
   "workflow": {
@@ -114,6 +115,44 @@
     "agentsUsageLabel": "ایجنت‌ها {{count}}",
     "tokensUsageLabel": "توکن‌ها {{value}}",
     "toolsUsageLabel": "ابزارها {{count}}"
+  },
+  "scheduleWakeup": {
+    "wakeIn": "تا {{delay}} دیگر",
+    "stopped": "حلقه متوقف شد",
+    "noop": "بدون تغییر"
+  },
+  "reportFindings": {
+    "title": "بازبینی کد",
+    "none": "موردی یافت نشد",
+    "count": "{{count}} مورد",
+    "outcome": {
+      "fixed": "اصلاح شد",
+      "skipped": "رد شد",
+      "no_change_needed": "نیازی به تغییر نیست"
+    },
+    "failureScenario": "← {{scenario}}"
+  },
+  "cron": {
+    "recurring": "تکرارشونده",
+    "oneShot": "یک‌بار",
+    "durable": "ماندگار",
+    "sessionOnly": "فقط این نشست",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "ورک‌تری جدید {{name}}",
+    "enterPath": "موجود {{path}}",
+    "enterGenerated": "ورک‌تری جدید (نام خودکار)",
+    "keep": "نگه‌داشتن",
+    "remove": "حذف",
+    "discardChanges": "نادیده‌گرفتن تغییرات"
+  },
+  "mcpResource": {
+    "allServers": "همه سرورها"
+  },
+  "sendUserMessage": {
+    "proactive": "پیش‌دستانه",
+    "attachments": "{{count}} پیوست"
   },
   "mcp": {
     "common": {

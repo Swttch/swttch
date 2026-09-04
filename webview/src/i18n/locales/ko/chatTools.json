@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "이 도구를 거부했습니다.",
-    "declinedWithInstruction": "이 도구를 거부했습니다. 대신 Claude에게 다음을 요청했습니다: “{{instruction}}”",
     "softWrap": {
       "wrap": "긴 줄 접기",
       "unwrap": "줄바꿈 해제"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "완료",
       "retrievalTimedOut": "시간 초과",
       "retrievalError": "오류"
+    },
+    "stop": {
+      "command": "명령"
     }
   },
   "workflow": {
@@ -114,6 +115,44 @@
     "agentsUsageLabel": "에이전트 {{count}}",
     "tokensUsageLabel": "토큰 {{value}}",
     "toolsUsageLabel": "도구 {{count}}"
+  },
+  "scheduleWakeup": {
+    "wakeIn": "{{delay}} 후",
+    "stopped": "루프 중단",
+    "noop": "변화 없음"
+  },
+  "reportFindings": {
+    "title": "코드 리뷰",
+    "none": "발견된 문제 없음",
+    "count": "{{count}}건 발견",
+    "outcome": {
+      "fixed": "수정됨",
+      "skipped": "건너뜀",
+      "no_change_needed": "수정 불필요"
+    },
+    "failureScenario": "→ {{scenario}}"
+  },
+  "cron": {
+    "recurring": "반복",
+    "oneShot": "1회",
+    "durable": "영구",
+    "sessionOnly": "세션 한정",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "새 워크트리 {{name}}",
+    "enterPath": "기존 {{path}}",
+    "enterGenerated": "새 워크트리 (이름 자동 생성)",
+    "keep": "유지",
+    "remove": "삭제",
+    "discardChanges": "변경사항 버림"
+  },
+  "mcpResource": {
+    "allServers": "전체 서버"
+  },
+  "sendUserMessage": {
+    "proactive": "선제 발신",
+    "attachments": "첨부 {{count}}개"
   },
   "mcp": {
     "common": {

@@ -2,8 +2,6 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
-    "declined": "Du hast dieses Tool abgelehnt.",
-    "declinedWithInstruction": "Du hast dieses Tool abgelehnt. Claude stattdessen gefragt: „{{instruction}}“",
     "softWrap": {
       "wrap": "Lange Zeilen umbrechen",
       "unwrap": "Umbruch aufheben"
@@ -101,6 +99,9 @@
       "retrievalCompleted": "abgeschlossen",
       "retrievalTimedOut": "Zeitüberschreitung",
       "retrievalError": "Fehler"
+    },
+    "stop": {
+      "command": "Befehl"
     }
   },
   "workflow": {
@@ -114,6 +115,48 @@
     "agentsUsageLabel": "Agenten {{count}}",
     "tokensUsageLabel": "Tokens {{value}}",
     "toolsUsageLabel": "Tools {{count}}"
+  },
+  "scheduleWakeup": {
+    "wakeIn": "in {{delay}}",
+    "stopped": "Schleife gestoppt",
+    "noop": "keine Änderung"
+  },
+  "reportFindings": {
+    "title": "Code-Review",
+    "none": "Keine Befunde",
+    "count": "{{count}} Befunde",
+    "count_one": "{{count}} Befund",
+    "count_other": "{{count}} Befunde",
+    "outcome": {
+      "fixed": "behoben",
+      "skipped": "übersprungen",
+      "no_change_needed": "keine Änderung nötig"
+    },
+    "failureScenario": "→ {{scenario}}"
+  },
+  "cron": {
+    "recurring": "wiederkehrend",
+    "oneShot": "einmalig",
+    "durable": "dauerhaft",
+    "sessionOnly": "nur Sitzung",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "neuer Worktree {{name}}",
+    "enterPath": "vorhandener {{path}}",
+    "enterGenerated": "neuer Worktree (automatisch benannt)",
+    "keep": "behalten",
+    "remove": "entfernen",
+    "discardChanges": "Änderungen verwerfen"
+  },
+  "mcpResource": {
+    "allServers": "alle Server"
+  },
+  "sendUserMessage": {
+    "proactive": "proaktiv",
+    "attachments": "{{count}} Anhänge",
+    "attachments_one": "{{count}} Anhang",
+    "attachments_other": "{{count}} Anhänge"
   },
   "mcp": {
     "common": {

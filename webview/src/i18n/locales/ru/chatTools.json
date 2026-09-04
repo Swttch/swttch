@@ -2,8 +2,6 @@
   "tool": {
     "in": "ВХОД",
     "out": "ВЫХОД",
-    "declined": "Вы отклонили этот инструмент.",
-    "declinedWithInstruction": "Вы отклонили этот инструмент. Вместо этого попросили Claude: «{{instruction}}»",
     "softWrap": {
       "wrap": "Переносить длинные строки",
       "unwrap": "Отключить перенос"
@@ -103,6 +101,9 @@
       "retrievalCompleted": "завершено",
       "retrievalTimedOut": "истекло время ожидания",
       "retrievalError": "ошибка"
+    },
+    "stop": {
+      "command": "команда"
     }
   },
   "workflow": {
@@ -118,6 +119,44 @@
     "agentsUsageLabel": "агенты {{count}}",
     "tokensUsageLabel": "токены {{value}}",
     "toolsUsageLabel": "инструменты {{count}}"
+  },
+  "scheduleWakeup": {
+    "wakeIn": "через {{delay}}",
+    "stopped": "цикл остановлен",
+    "noop": "без изменений"
+  },
+  "reportFindings": {
+    "title": "Ревью кода",
+    "none": "Замечаний нет",
+    "count": "Замечаний: {{count}}",
+    "outcome": {
+      "fixed": "исправлено",
+      "skipped": "пропущено",
+      "no_change_needed": "изменения не нужны"
+    },
+    "failureScenario": "→ {{scenario}}"
+  },
+  "cron": {
+    "recurring": "повторяющаяся",
+    "oneShot": "разовая",
+    "durable": "постоянная",
+    "sessionOnly": "только сессия",
+    "id": "id {{id}}"
+  },
+  "worktree": {
+    "enterName": "новое рабочее дерево {{name}}",
+    "enterPath": "существующее {{path}}",
+    "enterGenerated": "новое рабочее дерево (имя создано автоматически)",
+    "keep": "сохранить",
+    "remove": "удалить",
+    "discardChanges": "отбросить изменения"
+  },
+  "mcpResource": {
+    "allServers": "все серверы"
+  },
+  "sendUserMessage": {
+    "proactive": "по инициативе агента",
+    "attachments": "Вложений: {{count}}"
   },
   "mcp": {
     "common": {
