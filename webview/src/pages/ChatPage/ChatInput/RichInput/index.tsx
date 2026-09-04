@@ -172,12 +172,19 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
       const text = e.currentTarget.textContent ?? '';
       // Always repaint the mirror in real time, including mid-composition.
       setDisplayText(text);
+      // Report the input BEFORE the composing guard below reads the flag: an
+      // edit that belongs to no composition is what lowers a flag an IME left
+      // stuck by never firing compositionend (issue #403). Reporting after the
+      // guard would keep the composer deaf to every later keystroke.
+      const native = e.nativeEvent as InputEvent;
+      ime.notifyInput({
+        isComposing: native.isComposing === true,
+        inputType: native.inputType ?? '',
+      });
       // During composition the intermediate text is not yet committed; defer
       // reporting to the parent until compositionend to avoid emitting partial
       // glyphs. The mirror still updates above so the user sees live feedback.
       if (isComposingRef.current) return;
-      // A committed input cancels the IME safety fallback (see useIMEComposition).
-      ime.notifyInput();
       onChange(text);
     },
     [onChange, ime, isComposingRef],

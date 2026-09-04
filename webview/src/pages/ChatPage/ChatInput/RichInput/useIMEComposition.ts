@@ -9,6 +9,31 @@ const FALLBACK_RESET_MS = 100;
 /** keyCode reported by browsers while an IME is still processing a keystroke. */
 const IME_PROCESS_KEYCODE = 229;
 
+/**
+ * inputTypes the browser uses for edits that belong to an in-flight IME
+ * composition. An input carrying any other inputType happened outside a
+ * composition, which is what lets us detect a composition that ended without
+ * announcing itself (see {@link IMEComposition.notifyInput}).
+ */
+const COMPOSITION_INPUT_TYPES = new Set([
+  'insertCompositionText',
+  'deleteCompositionText',
+  'insertFromComposition',
+  'deleteByComposition',
+]);
+
+/**
+ * The subset of an `InputEvent` the composition tracker needs. Taking a plain
+ * object (rather than the DOM event) keeps the decision unit-testable, matching
+ * how `shouldSubmitOnEnter` takes its keyboard-event subset.
+ */
+export interface InputSignal {
+  /** `InputEvent.isComposing` — true while the edit is part of a composition. */
+  isComposing: boolean;
+  /** `InputEvent.inputType` — e.g. `insertText`, `insertCompositionText`. */
+  inputType: string;
+}
+
 export interface IMEComposition {
   /** Live truth for "an IME composition is in flight" (ref, never state). */
   isComposingRef: RefObject<boolean>;
@@ -18,8 +43,11 @@ export interface IMEComposition {
   handleCompositionEnd: () => void;
   /** keydown hook: keyCode 229 is treated as a composing signal. */
   noteKeyDown: (keyCode: number) => void;
-  /** input hook: a committed input cancels the pending safety fallback. */
-  notifyInput: () => void;
+  /**
+   * input hook: cancels the pending safety fallback, and lowers the composing
+   * flag when the input did not belong to a composition (issue #403).
+   */
+  notifyInput: (signal: InputSignal) => void;
   /** Query: is a composition currently in flight? */
   isComposing: () => boolean;
 }
@@ -86,11 +114,30 @@ export function useIMEComposition(): IMEComposition {
     scheduleFallback();
   }, [scheduleFallback]);
 
-  const notifyInput = useCallback(() => {
-    // A committed input means the composition lifecycle is driving state; the
-    // safety fallback is no longer needed and must not fire mid-composition.
-    clearFallback();
-  }, [clearFallback]);
+  const notifyInput = useCallback(
+    (signal: InputSignal) => {
+      // A committed input means the composition lifecycle is driving state; the
+      // safety fallback is no longer needed and must not fire mid-composition.
+      clearFallback();
+
+      // Does this edit belong to a composition? The browser answers on the
+      // event itself, and the two channels disagree across IMEs: some report
+      // `isComposing` reliably, others only distinguish the composition through
+      // `inputType`. Either one saying "composition" keeps the flag up.
+      const belongsToComposition =
+        signal.isComposing || COMPOSITION_INPUT_TYPES.has(signal.inputType);
+      if (belongsToComposition) return;
+
+      // The edit happened outside any composition, so no composition is in
+      // flight — whatever the flag currently says. This is the only way out for
+      // issue #403: Windows Hangul IMEs abandon a composition (Backspace over
+      // the in-progress syllable, or a HangulMode layout switch) without ever
+      // firing compositionend, which used to leave the flag stuck true and made
+      // the composer drop every later keystroke while still painting it.
+      isComposingRef.current = false;
+    },
+    [clearFallback],
+  );
 
   const isComposing = useCallback(() => isComposingRef.current, []);
 

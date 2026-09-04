@@ -262,9 +262,11 @@ describe('RichInput — IME composition guard', () => {
     const el = getByRole('textbox');
 
     fireEvent.compositionStart(el);
-    // In-progress glyph: input fires but onChange must stay silent.
+    // In-progress glyph: input fires but onChange must stay silent. The event
+    // carries the shape a real browser emits mid-composition (measured on
+    // Windows 11 + JCEF): insertCompositionText with isComposing true.
     el.textContent = 'ㅎ';
-    fireEvent.input(el);
+    fireEvent.input(el, { inputType: 'insertCompositionText', isComposing: true });
     fireEvent.compositionUpdate(el);
     expect(onChange).not.toHaveBeenCalled();
 
@@ -272,6 +274,42 @@ describe('RichInput — IME composition guard', () => {
     fireEvent.compositionEnd(el);
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('한');
+  });
+
+  /**
+   * Issue #403. On Windows 11 the Hangul IME abandons its last composition
+   * without firing compositionend: Backspace erases the in-progress syllable
+   * and the HangulMode key switches layout, but no trailing composition event
+   * arrives. Before the fix the composing flag stayed up forever, so every
+   * later keystroke reached the mirror but never the parent — the composer
+   * showed "/clear" while still holding the text from before the composition,
+   * which is why the slash palette never filtered and the send button
+   * submitted the stale text.
+   */
+  it('keeps reporting typed text after an IME abandons a composition without compositionend (#403)', () => {
+    const onChange = vi.fn();
+    const { getByRole } = render(<RichInput value="" onChange={onChange} />);
+    const el = getByRole('textbox');
+
+    // A composition starts and never ends.
+    fireEvent.compositionStart(el);
+    el.textContent = '/ㄱ';
+    fireEvent.input(el, { inputType: 'insertCompositionText', isComposing: true });
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Backspace erases the composing syllable — no compositionend fires.
+    el.textContent = '/';
+    fireEvent.input(el, { inputType: 'deleteContentBackward', isComposing: false });
+    expect(onChange).toHaveBeenLastCalledWith('/');
+
+    // Typing in the English layout must keep reaching the parent.
+    el.textContent = '/c';
+    fireEvent.input(el, { inputType: 'insertText', isComposing: false });
+    expect(onChange).toHaveBeenLastCalledWith('/c');
+
+    el.textContent = '/clear';
+    fireEvent.input(el, { inputType: 'insertText', isComposing: false });
+    expect(onChange).toHaveBeenLastCalledWith('/clear');
   });
 });
 
@@ -301,7 +339,10 @@ describe('RichInput — mirror real-time display (IME)', () => {
 
     fireEvent.compositionStart(el);
     el.textContent = '가';
-    fireEvent.input(el);
+    // Mid-composition inputs carry insertCompositionText / isComposing true
+    // (measured on Windows 11 + JCEF); without that shape the editor would
+    // rightly treat this edit as living outside the composition.
+    fireEvent.input(el, { inputType: 'insertCompositionText', isComposing: true });
 
     expect(mirror?.textContent).toBe('가');
   });
