@@ -473,7 +473,12 @@
     "collapsedReplyCount_one": "已摺疊 {{count}} 則回覆",
     "collapsedReplyCount_other": "已摺疊 {{count}} 則回覆",
     "expandReply": "展開回覆",
-    "menuLabel": "訊息操作"
+    "forkAndRewind": "分岔對話並回溯程式碼",
+    "forkConversation": "從此處分岔對話",
+    "menuLabel": "訊息操作",
+    "rewindCode": "將程式碼回溯到此處",
+    "rewindDone": "程式碼已還原到此時間點",
+    "rewindFailed": "無法回溯程式碼"
   },
   "chatPage": {
     "scrollToBottom": "捲動到底部"

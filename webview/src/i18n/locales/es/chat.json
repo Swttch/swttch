@@ -473,7 +473,12 @@
     "collapsedReplyCount_one": "{{count}} respuesta contraída",
     "collapsedReplyCount_other": "{{count}} respuestas contraídas",
     "expandReply": "Expandir respuesta",
-    "menuLabel": "Acciones del mensaje"
+    "forkAndRewind": "Bifurcar la conversación y retroceder el código",
+    "forkConversation": "Bifurcar la conversación desde aquí",
+    "menuLabel": "Acciones del mensaje",
+    "rewindCode": "Retroceder el código hasta aquí",
+    "rewindDone": "Código restaurado a este punto",
+    "rewindFailed": "No se pudo retroceder el código"
   },
   "chatPage": {
     "scrollToBottom": "Desplazarse al final"

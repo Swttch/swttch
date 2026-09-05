@@ -473,7 +473,12 @@
     "collapsedReplyCount_one": "{{count}}件の応答を折りたたみ済み",
     "collapsedReplyCount_other": "{{count}}件の応答を折りたたみ済み",
     "expandReply": "応答を展開する",
-    "menuLabel": "メッセージ操作"
+    "forkAndRewind": "会話をフォークしてコードを巻き戻す",
+    "forkConversation": "ここから会話をフォーク",
+    "menuLabel": "メッセージ操作",
+    "rewindCode": "ここまでコードを巻き戻す",
+    "rewindDone": "コードをこの時点に戻しました",
+    "rewindFailed": "コードを巻き戻せませんでした"
   },
   "chatPage": {
     "scrollToBottom": "一番下までスクロール"

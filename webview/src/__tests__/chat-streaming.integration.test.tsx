@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import React from 'react';
@@ -86,11 +87,16 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
     setInputCallbackRef.current(value);
   }, []);
   return (
-    <ChatStreamProvider setInput={setInput} inputRef={inputRef}>
-      <ChatInputStateProvider inputRef={inputRef} setInputCallbackRef={setInputCallbackRef}>
-        {children}
-      </ChatInputStateProvider>
-    </ChatStreamProvider>
+    // ChatStreamProvider reads the router: a session opened by forking carries the
+    // origin on the navigation, and the provider spends it on the first send
+    // (issue #356). In the app there is always a router above it.
+    <MemoryRouter>
+      <ChatStreamProvider setInput={setInput} inputRef={inputRef}>
+        <ChatInputStateProvider inputRef={inputRef} setInputCallbackRef={setInputCallbackRef}>
+          {children}
+        </ChatInputStateProvider>
+      </ChatStreamProvider>
+    </MemoryRouter>
   );
 }
 

@@ -478,14 +478,19 @@
     "collapseReply": "طيّ الرد",
     "collapsedReply": "الرد مطوي",
     "collapsedReplyCount": "تم طي {{count}} رد",
-    "collapsedReplyCount_zero": "لم يتم طي أي رد",
-    "collapsedReplyCount_one": "تم طي رد واحد",
-    "collapsedReplyCount_two": "تم طي ردين",
     "collapsedReplyCount_few": "تم طي {{count}} ردود",
     "collapsedReplyCount_many": "تم طي {{count}} ردًا",
+    "collapsedReplyCount_one": "تم طي رد واحد",
     "collapsedReplyCount_other": "تم طي {{count}} رد",
+    "collapsedReplyCount_two": "تم طي ردين",
+    "collapsedReplyCount_zero": "لم يتم طي أي رد",
     "expandReply": "توسيع الرد",
-    "menuLabel": "إجراءات الرسالة"
+    "forkAndRewind": "تفريع المحادثة وإرجاع الكود",
+    "forkConversation": "تفريع المحادثة من هنا",
+    "menuLabel": "إجراءات الرسالة",
+    "rewindCode": "إرجاع الكود إلى هنا",
+    "rewindDone": "تمت استعادة الكود إلى هذه النقطة",
+    "rewindFailed": "تعذّر إرجاع الكود"
   },
   "chatPage": {
     "scrollToBottom": "التمرير إلى الأسفل"

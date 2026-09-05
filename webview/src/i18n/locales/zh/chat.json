@@ -473,7 +473,12 @@
     "collapsedReplyCount_one": "已折叠 {{count}} 条回复",
     "collapsedReplyCount_other": "已折叠 {{count}} 条回复",
     "expandReply": "展开回复",
-    "menuLabel": "消息操作"
+    "forkAndRewind": "分叉对话并回退代码",
+    "forkConversation": "从此处分叉对话",
+    "menuLabel": "消息操作",
+    "rewindCode": "将代码回退到此处",
+    "rewindDone": "代码已恢复到此时间点",
+    "rewindFailed": "无法回退代码"
   },
   "chatPage": {
     "scrollToBottom": "滚动到底部"

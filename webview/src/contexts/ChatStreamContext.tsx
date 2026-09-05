@@ -1,4 +1,5 @@
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
@@ -252,6 +253,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     }
   }, [chatStream.systemInit, controlResponse, session.syncEffectiveMode, session.notifyAutoFallback]);
 
+  // The fork note a send action left on the navigation to this new session
+  // (issue #356). Read through a ref so `sendMessage` does not have to list the
+  // location among its dependencies and be rebuilt on every navigation.
+  const location = useLocation();
+  const forkHandoff = location.state as
+    | { forkFrom?: { sessionId: string; resumeSessionAt: string }; promptText?: string }
+    | null;
+  const forkFromRef = useRef<{ sessionId: string; resumeSessionAt: string } | undefined>(undefined);
+  forkFromRef.current = forkHandoff?.forkFrom;
+
   // 모든 세션별 상태를 한 번에 리셋하는 통합 함수
   const resetForSessionSwitch = useCallback(() => {
     chatStreamClearMessages();
@@ -265,7 +276,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     } catch {
       // localStorage may be unavailable in some environments (e.g., tests)
     }
-    setInput(draft ?? '');
+    // A fork excludes the send it branched from, so that text is handed over and
+    // put back in the composer — otherwise the user would have to retype from
+    // memory the message they opened the fork to reword. It wins over a stored
+    // draft: they asked for this text a moment ago, and a session that does not
+    // exist yet has no draft of its own.
+    setInput(forkHandoff?.promptText || draft || '');
     setIsThinkingExpanded(false);
     setSessionModel(null);
     tools.clearToolUses();
@@ -273,7 +289,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     prePlanModeRef.current = null;
     setHasMoreOlder(false);
     setOldestLoadedUuid(null);
-  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId]);
+  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId, forkHandoff?.promptText]);
 
   // resetForSessionSwitch is called directly by SessionLoader
   // when currentSessionId changes (URL-driven reactive pattern)
@@ -348,6 +364,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         sessionId,
         isNewSession,
         content,
+        // Only on the send that creates a forked session (issue #356). The
+        // backend turns it into `--resume <origin> --resume-session-at <entry>
+        // --fork-session --session-id <sessionId>`, which is why the id minted
+        // just above is the one the fork ends up under. Carried on the router
+        // location rather than held in state: the note dies with the navigation
+        // if the user never sends, and there is nothing to reset.
+        ...(isNewSession && forkFromRef.current ? { forkFrom: forkFromRef.current } : {}),
         attachments: attachments?.map(a => ({ ...a.toPayload() })),
         context: context || [],
         workingDir: session.workingDirectory ?? '',

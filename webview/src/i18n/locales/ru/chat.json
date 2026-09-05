@@ -474,12 +474,17 @@
     "collapseReply": "Свернуть ответ",
     "collapsedReply": "Ответ свёрнут",
     "collapsedReplyCount": "{{count}} ответов свёрнуто",
-    "collapsedReplyCount_one": "{{count}} ответ свёрнут",
     "collapsedReplyCount_few": "{{count}} ответа свёрнуто",
     "collapsedReplyCount_many": "{{count}} ответов свёрнуто",
+    "collapsedReplyCount_one": "{{count}} ответ свёрнут",
     "collapsedReplyCount_other": "{{count}} ответа свёрнуто",
     "expandReply": "Развернуть ответ",
-    "menuLabel": "Действия с сообщением"
+    "forkAndRewind": "Ответвить разговор и откатить код",
+    "forkConversation": "Ответвить разговор отсюда",
+    "menuLabel": "Действия с сообщением",
+    "rewindCode": "Откатить код до этого места",
+    "rewindDone": "Код восстановлен до этого момента",
+    "rewindFailed": "Не удалось откатить код"
   },
   "chatPage": {
     "scrollToBottom": "Прокрутить вниз"

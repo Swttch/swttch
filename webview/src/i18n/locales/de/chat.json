@@ -473,7 +473,12 @@
     "collapsedReplyCount_one": "{{count}} Antwort eingeklappt",
     "collapsedReplyCount_other": "{{count}} Antworten eingeklappt",
     "expandReply": "Antwort ausklappen",
-    "menuLabel": "Nachrichtenaktionen"
+    "forkAndRewind": "Unterhaltung abzweigen und Code zurücksetzen",
+    "forkConversation": "Unterhaltung ab hier abzweigen",
+    "menuLabel": "Nachrichtenaktionen",
+    "rewindCode": "Code bis hierher zurücksetzen",
+    "rewindDone": "Code auf diesen Stand zurückgesetzt",
+    "rewindFailed": "Code konnte nicht zurückgesetzt werden"
   },
   "chatPage": {
     "scrollToBottom": "Nach unten scrollen"
