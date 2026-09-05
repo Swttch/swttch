@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "Limpar a chave de apoiador?",
         "clearKeyConfirmMessage": "Este dispositivo deixa de usar os recursos de apoiador. Seu apoio e sua cobrança continuam iguais, e esta tela vai oferecer religá-lo quando quiser.",
         "clearKeyDone": "Chave limpa neste dispositivo.",
-        "cancel": "Cancelar apoio recorrente",
-        "cancelConfirmTitle": "Cancelar seu apoio recorrente?",
+        "cancel": "Cancelar apoio",
+        "cancelConfirmTitle": "Cancelar seu apoio?",
         "cancelConfirmMessage": "A cobrança para no fim do período já pago, e até lá tudo continua funcionando.",
-        "cancelDone": "Apoio recorrente cancelado.",
+        "cancelDone": "Apoio cancelado.",
         "cancelFailed": "Não foi possível cancelar. Tente novamente em instantes."
       },
       "thanksBefore": "Obrigado por apoiar ",
@@ -564,7 +564,7 @@
       "billingNote": "Isso não cancelou nada. Se você tem um apoio recorrente, a cobrança continua.",
       "reactivate": "Ligar de novo",
       "reactivating": "Ligando…",
-      "cancelHint": "Para parar a cobrança recorrente, ligue este dispositivo de novo e use Gerenciar → Cancelar apoio recorrente."
+      "cancelHint": "Para parar a cobrança recorrente, ligue este dispositivo de novo e use Gerenciar → Cancelar apoio."
     }
   },
   "badges": {

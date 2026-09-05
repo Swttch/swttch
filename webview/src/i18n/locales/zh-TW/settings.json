@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "要清除贊助金鑰嗎？",
         "clearKeyConfirmMessage": "本裝置將停用贊助功能。你的贊助與付款不受影響，本頁面隨時可以重新開啟。",
         "clearKeyDone": "已清除本裝置的贊助金鑰。",
-        "cancel": "取消定期贊助",
-        "cancelConfirmTitle": "要取消定期贊助嗎？",
+        "cancel": "取消贊助",
+        "cancelConfirmTitle": "要取消贊助嗎？",
         "cancelConfirmMessage": "將在你已付費的週期結束時停止扣款，在此之前贊助功能照常可用。",
-        "cancelDone": "已取消定期贊助。",
+        "cancelDone": "已取消贊助。",
         "cancelFailed": "取消失敗，請稍後再試。"
       },
       "thanksBefore": "感謝你支持",
@@ -564,7 +564,7 @@
       "billingNote": "這並沒有取消任何東西。如果你有定期贊助，仍會繼續扣款。",
       "reactivate": "重新開啟",
       "reactivating": "正在開啟…",
-      "cancelHint": "要停止定期扣款，請先重新開啟本裝置，然後使用 管理 → 取消定期贊助。"
+      "cancelHint": "要停止定期扣款，請先重新開啟本裝置，然後使用 管理 → 取消贊助。"
     }
   },
   "badges": {

@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "Förderer-Schlüssel entfernen?",
         "clearKeyConfirmMessage": "Auf diesem Gerät werden die Förderer-Funktionen abgeschaltet. Deine Förderung und Abrechnung bleiben unberührt, und dieser Bildschirm bietet dir jederzeit an, sie wieder einzuschalten.",
         "clearKeyDone": "Schlüssel auf diesem Gerät entfernt.",
-        "cancel": "Regelmäßige Förderung kündigen",
-        "cancelConfirmTitle": "Regelmäßige Förderung kündigen?",
+        "cancel": "Förderung kündigen",
+        "cancelConfirmTitle": "Förderung kündigen?",
         "cancelConfirmMessage": "Die Abrechnung endet mit dem bereits bezahlten Zeitraum; bis dahin bleibt alles nutzbar.",
-        "cancelDone": "Regelmäßige Förderung gekündigt.",
+        "cancelDone": "Förderung gekündigt.",
         "cancelFailed": "Kündigung fehlgeschlagen. Bitte gleich noch einmal versuchen."
       },
       "thanksBefore": "Danke, dass du ",
@@ -564,7 +564,7 @@
       "billingNote": "Damit wurde nichts gekündigt. Wenn du eine regelmäßige Förderung hast, wird sie weiter abgebucht.",
       "reactivate": "Wieder einschalten",
       "reactivating": "Wird eingeschaltet…",
-      "cancelHint": "Um die regelmäßige Zahlung zu beenden, schalte dieses Gerät wieder ein und nutze Verwalten → Regelmäßige Förderung kündigen."
+      "cancelHint": "Um die regelmäßige Zahlung zu beenden, schalte dieses Gerät wieder ein und nutze Verwalten → Förderung kündigen."
     }
   },
   "badges": {

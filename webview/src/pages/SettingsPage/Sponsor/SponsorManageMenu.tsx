@@ -17,7 +17,7 @@ interface Props {
  *
  * "Clear sponsor key" is local and reversible: this install stops treating the
  * user as a sponsor, billing is untouched, and pasting the key back restores it.
- * "Cancel recurring sponsorship" ends the payment itself. One button for both —
+ * "Cancel sponsorship" ends the payment itself. One button for both —
  * as the old single "Deactivate" was — invites someone who meant to stop paying
  * to merely hide the key, and keep being charged.
  *

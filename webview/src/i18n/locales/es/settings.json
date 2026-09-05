@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "¿Borrar la clave de patrocinador?",
         "clearKeyConfirmMessage": "Este dispositivo dejará de usar las funciones de patrocinador. Tu patrocinio y tus pagos no cambian, y esta pantalla te ofrecerá volver a activarlo cuando quieras.",
         "clearKeyDone": "Clave borrada en este dispositivo.",
-        "cancel": "Cancelar el patrocinio recurrente",
-        "cancelConfirmTitle": "¿Cancelar tu patrocinio recurrente?",
+        "cancel": "Cancelar el patrocinio",
+        "cancelConfirmTitle": "¿Cancelar tu patrocinio?",
         "cancelConfirmMessage": "Los cobros se detienen al final del periodo que ya pagaste, y hasta entonces conservas las funciones.",
-        "cancelDone": "Patrocinio recurrente cancelado.",
+        "cancelDone": "Patrocinio cancelado.",
         "cancelFailed": "No se pudo cancelar. Inténtalo de nuevo en un momento."
       },
       "thanksBefore": "Gracias por apoyar ",
@@ -564,7 +564,7 @@
       "billingNote": "Esto no canceló nada. Si tienes un patrocinio recurrente, se te sigue cobrando.",
       "reactivate": "Volver a activarlo",
       "reactivating": "Activando…",
-      "cancelHint": "Para detener el pago recurrente, vuelve a activar este dispositivo y usa Gestionar → Cancelar el patrocinio recurrente."
+      "cancelHint": "Para detener el pago recurrente, vuelve a activar este dispositivo y usa Gestionar → Cancelar el patrocinio."
     }
   },
   "badges": {

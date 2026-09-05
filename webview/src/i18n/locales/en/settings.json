@@ -489,10 +489,10 @@
         "clearKeyConfirmTitle": "Clear the sponsor key?",
         "clearKeyConfirmMessage": "This device stops using sponsor features. Your sponsorship and billing are untouched, and this screen will offer to switch it back on any time.",
         "clearKeyDone": "Sponsor key cleared on this device.",
-        "cancel": "Cancel recurring sponsorship",
-        "cancelConfirmTitle": "Cancel your recurring sponsorship?",
+        "cancel": "Cancel sponsorship",
+        "cancelConfirmTitle": "Cancel your sponsorship?",
         "cancelConfirmMessage": "Billing stops at the end of the period you already paid for, and sponsor features keep working until then.",
-        "cancelDone": "Recurring sponsorship cancelled.",
+        "cancelDone": "Sponsorship cancelled.",
         "cancelFailed": "Could not cancel. Please try again in a moment."
       },
       "thanksBefore": "Thank you for backing ",
@@ -566,7 +566,7 @@
       "billingNote": "This did not cancel anything. If you have a recurring sponsorship, it is still being charged.",
       "reactivate": "Switch it back on",
       "reactivating": "Switching on…",
-      "cancelHint": "To stop the recurring payment, switch this device back on and use Manage → Cancel recurring sponsorship."
+      "cancelHint": "To stop the recurring payment, switch this device back on and use Manage → Cancel sponsorship."
     }
   },
   "badges": {

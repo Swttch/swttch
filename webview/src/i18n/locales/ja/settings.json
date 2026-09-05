@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "スポンサーキーを消去しますか？",
         "clearKeyConfirmMessage": "このデバイスでスポンサー機能が無効になります。スポンサーシップと支払いはそのままで、この画面からいつでも戻せます。",
         "clearKeyDone": "このデバイスのスポンサーキーを消去しました。",
-        "cancel": "定期支援を解約",
-        "cancelConfirmTitle": "定期支援を解約しますか？",
+        "cancel": "支援を解約",
+        "cancelConfirmTitle": "支援を解約しますか？",
         "cancelConfirmMessage": "すでに支払った期間の終わりで請求が止まり、それまではスポンサー機能を利用できます。",
-        "cancelDone": "定期支援を解約しました。",
+        "cancelDone": "支援を解約しました。",
         "cancelFailed": "解約できませんでした。しばらくしてからお試しください。"
       },
       "thanksBefore": "",
@@ -564,7 +564,7 @@
       "billingNote": "これで解約されたものはありません。定期支援をしている場合、支払いは続いています。",
       "reactivate": "もう一度オンにする",
       "reactivating": "オンにしています…",
-      "cancelHint": "定期支払いを止めるには、このデバイスをもう一度オンにしてから 管理 → 定期支援を解約 を使ってください。"
+      "cancelHint": "定期支払いを止めるには、このデバイスをもう一度オンにしてから 管理 → 支援を解約 を使ってください。"
     }
   },
   "badges": {

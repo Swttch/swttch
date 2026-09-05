@@ -86,7 +86,7 @@ describe('SponsorSettings — a device the user switched off', () => {
 
     render(<SponsorSettings />, { wrapper });
 
-    expect(screen.getByText(/Cancel recurring sponsorship/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cancel sponsorship/i)).toBeInTheDocument();
   });
 
   it('offers a way back on, and takes it', async () => {

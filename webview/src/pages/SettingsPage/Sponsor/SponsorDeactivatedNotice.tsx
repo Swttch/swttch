@@ -14,9 +14,9 @@ interface Props {
  *
  * Without it their screen is the one a first-time visitor sees: an invitation to
  * sponsor. That is wrong twice over — their subscription may still be charging
- * them, and the menu holding "Cancel recurring sponsorship" only renders for an
- * active sponsor, so the screen that pitches sponsorship is also the screen with
- * no way to stop paying for it.
+ * them, and the menu holding "Cancel sponsorship" only renders for an active
+ * sponsor, so the screen that pitches sponsorship is also the screen with no way
+ * to stop paying for it.
  *
  * So this says what happened, warns that billing is a separate thing, and offers
  * the one action that leads anywhere: switch back on. Doing that restores the

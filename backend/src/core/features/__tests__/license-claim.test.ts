@@ -83,7 +83,7 @@ describe('claimSponsorByInstall', () => {
   });
 
   // by-install answers only "here is the key". Storing that alone leaves
-  // `cancellable` empty, which hides "Cancel recurring sponsorship" from the
+  // `cancellable` empty, which hides "Cancel sponsorship" from the
   // menu — so someone switched on automatically could not find the way to stop
   // paying. Ask what the key grants before storing it.
   it('stores what the key grants, not just the key', async () => {

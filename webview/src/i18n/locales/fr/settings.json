@@ -487,10 +487,10 @@
         "clearKeyConfirmTitle": "Effacer la clé de mécène ?",
         "clearKeyConfirmMessage": "Cet appareil cessera d’utiliser les fonctionnalités de mécène. Votre soutien et vos paiements restent inchangés, et cet écran vous proposera de le réactiver à tout moment.",
         "clearKeyDone": "Clé effacée sur cet appareil.",
-        "cancel": "Annuler le soutien récurrent",
-        "cancelConfirmTitle": "Annuler votre soutien récurrent ?",
+        "cancel": "Annuler le soutien",
+        "cancelConfirmTitle": "Annuler votre soutien ?",
         "cancelConfirmMessage": "Les prélèvements s’arrêtent à la fin de la période déjà payée ; d’ici là, tout continue de fonctionner.",
-        "cancelDone": "Soutien récurrent annulé.",
+        "cancelDone": "Soutien annulé.",
         "cancelFailed": "Annulation impossible. Réessayez dans un instant."
       },
       "thanksBefore": "Merci de soutenir ",
@@ -564,7 +564,7 @@
       "billingNote": "Cela n’a rien annulé. Si vous avez un soutien récurrent, il continue d’être prélevé.",
       "reactivate": "Réactiver",
       "reactivating": "Activation…",
-      "cancelHint": "Pour arrêter le prélèvement récurrent, réactivez cet appareil puis utilisez Gérer → Annuler le soutien récurrent."
+      "cancelHint": "Pour arrêter le prélèvement récurrent, réactivez cet appareil puis utilisez Gérer → Annuler le soutien."
     }
   },
   "badges": {
