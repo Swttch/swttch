@@ -19,6 +19,23 @@ export interface SessionServiceError {
 export interface SessionListResult {
   sessions: SessionMetaDto[];
   serviceError?: SessionServiceError;
+  /**
+   * Sessions exist past the ones returned. False for an unpaged request, which
+   * always carries the whole list.
+   */
+  hasMore: boolean;
+  /**
+   * The offset that continues from this result. Not the same as the number of
+   * sessions returned: sessions the list does not show still advance the
+   * backend's position, so counting rows here would re-read them.
+   */
+  nextOffset: number;
+}
+
+/** How much of the list to fetch. Omitting `limit` asks for all of it. */
+export interface SessionListRange {
+  offset?: number;
+  limit?: number;
 }
 
 interface GetSessionsResponse {
@@ -37,6 +54,9 @@ interface GetSessionsResponse {
     gitBranch?: string;
   }[];
   serviceError?: SessionServiceError;
+  total?: number;
+  hasMore?: boolean;
+  nextOffset?: number;
 }
 
 /**
@@ -56,21 +76,36 @@ export class SessionsApi {
    * List all sessions
    * GET /sessions
    */
-  async index(workingDir?: string, includeNested?: boolean): Promise<SessionListResult> {
+  async index(
+    workingDir?: string,
+    includeNested?: boolean,
+    range?: SessionListRange,
+  ): Promise<SessionListResult> {
     const dir = workingDir ?? this.getConfig().workingDir;
     const response = await this.bridge.request<GetSessionsResponse>(
       MessageType.GET_SESSIONS,
-      { workingDir: dir, includeNested: includeNested ?? false }
+      {
+        workingDir: dir,
+        includeNested: includeNested ?? false,
+        // Left off entirely when unpaged, so the backend keeps returning the
+        // whole list exactly as it did before paging existed.
+        ...(range?.offset !== undefined ? { offset: range.offset } : {}),
+        ...(range?.limit !== undefined ? { limit: range.limit } : {}),
+      }
     );
 
     if (!response?.sessions || !Array.isArray(response.sessions)) {
-      return { sessions: [] };
+      return { sessions: [], hasMore: false, nextOffset: 0 };
     }
 
     const sessions = plainToInstance(SessionMetaDto, response.sessions);
+    const hasMore = response.hasMore === true;
+    // A backend that does not report a position cannot be paged past, so the
+    // only safe continuation is the range that was just asked for.
+    const nextOffset = response.nextOffset ?? (range?.offset ?? 0) + sessions.length;
     return response.serviceError
-      ? { sessions, serviceError: response.serviceError }
-      : { sessions };
+      ? { sessions, hasMore, nextOffset, serviceError: response.serviceError }
+      : { sessions, hasMore, nextOffset };
   }
 
   /**

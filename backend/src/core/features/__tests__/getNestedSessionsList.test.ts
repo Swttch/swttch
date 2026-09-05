@@ -49,7 +49,7 @@ describe('getNestedSessionsList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCollect.mockResolvedValue([]);
-    mockResolve.mockResolvedValue({ sessions: [], total: 0, hasMore: false });
+    mockResolve.mockResolvedValue({ sessions: [], total: 0, hasMore: false, nextOffset: 0 });
   });
 
   it('reads the root and every working directory nested under it', async () => {

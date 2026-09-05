@@ -26,6 +26,10 @@ interface Props {
    * yet" — an answer the app did not have yet.
    */
   isLoading?: boolean;
+  /** Fetch the next page of sessions when the scroll nears the end. */
+  onLoadMore?: () => void;
+  /** Sessions exist past the ones loaded. */
+  hasMore?: boolean;
 }
 
 export function DropdownMenu(props: Props) {
@@ -43,6 +47,8 @@ export function DropdownMenu(props: Props) {
     onRenameSession,
     sessionsServiceError = null,
     isLoading = false,
+    onLoadMore,
+    hasMore = false,
   } = props;
 
   return (
@@ -57,6 +63,8 @@ export function DropdownMenu(props: Props) {
           onSelectSession={onSelectSession}
           onDeleteSession={onDeleteSession}
           onRenameSession={onRenameSession}
+          onLoadMore={onLoadMore}
+          hasMore={hasMore}
         />
       ) : (
         <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">

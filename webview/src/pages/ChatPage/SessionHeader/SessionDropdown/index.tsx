@@ -23,6 +23,8 @@ export function SessionDropdown() {
     handleDeleteSession,
     renameSession,
     confirmDialog,
+    loadMoreSessions,
+    hasMoreSessions,
   } = useSessionList();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -97,6 +99,8 @@ export function SessionDropdown() {
           onRenameSession={renameSession}
           sessionsServiceError={sessionsServiceError}
           isLoading={isLoading}
+          onLoadMore={loadMoreSessions}
+          hasMore={hasMoreSessions}
         />
       )}
 

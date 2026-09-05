@@ -64,7 +64,11 @@ export async function getSessionsHandler(
 
   console.error(
     '[getSessions]',
-    'returning sessions:',
+    'requested offset:',
+    offset,
+    'limit:',
+    limit,
+    '-> returning sessions:',
     page.sessions.length,
     'of',
     page.total,
@@ -72,6 +76,8 @@ export async function getSessionsHandler(
     includeNested,
     'hasMore:',
     page.hasMore,
+    'nextOffset:',
+    page.nextOffset,
   );
 
   connections.sendTo(connectionId, MessageType.ACK, {
@@ -79,5 +85,6 @@ export async function getSessionsHandler(
     sessions: page.sessions,
     total: page.total,
     hasMore: page.hasMore,
+    nextOffset: page.nextOffset,
   });
 }

@@ -85,7 +85,7 @@ describe('getSessionsList', () => {
   it('should return empty result when sessions dir does not exist', async () => {
     mockExistsSync.mockReturnValue(false);
     const result = await getSessionsList('/test');
-    expect(result).toEqual({ sessions: [], total: 0, hasMore: false });
+    expect(result).toEqual({ sessions: [], total: 0, hasMore: false, nextOffset: 0 });
   });
 
   it('should return sessions sorted by lastTimestamp descending', async () => {
@@ -207,6 +207,20 @@ describe('getSessionsList', () => {
 
       expect(result.sessions.map((s) => s.sessionId)).toEqual(['a', 'c']);
       expect(result.hasMore).toBe(true);
+    });
+
+    // Counting returned rows would overlap the skipped ones, re-reading them on
+    // the next page. The walk's own position is the only correct continuation.
+    it('continues from where the walk stopped, not from the number of rows returned', async () => {
+      headInfo({ a: {}, b: { isSidechain: true }, c: {}, d: {}, e: {} });
+
+      const first = await getSessionsList('/test', { limit: 2 });
+      expect(first.sessions.map((s) => s.sessionId)).toEqual(['a', 'c']);
+      expect(first.nextOffset).toBe(3);
+
+      const second = await getSessionsList('/test', { offset: first.nextOffset, limit: 2 });
+      expect(second.sessions.map((s) => s.sessionId)).toEqual(['d', 'e']);
+      expect(second.hasMore).toBe(false);
     });
 
     // The whole point of paging is that the files past the page stay closed.

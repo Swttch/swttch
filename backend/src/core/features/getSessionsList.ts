@@ -23,6 +23,14 @@ export interface SessionListPage {
   sessions: SessionListEntry[];
   total: number;
   hasMore: boolean;
+  /**
+   * The `offset` that continues from this page.
+   *
+   * NOT the same as offset + sessions.length: skipped sessions advance the walk
+   * without filling the page, so counting returned rows would ask for a range
+   * that overlaps what was already read.
+   */
+  nextOffset: number;
 }
 
 export interface SessionListOptions {
@@ -197,7 +205,12 @@ export async function resolvePage(
     }
   }
 
-  return { sessions, total: sortedKeys.length, hasMore: cursor < sortedKeys.length };
+  return {
+    sessions,
+    total: sortedKeys.length,
+    hasMore: cursor < sortedKeys.length,
+    nextOffset: cursor,
+  };
 }
 
 export async function getSessionsList(
@@ -221,6 +234,6 @@ export async function getSessionsList(
     return page;
   } catch (err) {
     console.error('[node-backend]', 'Error reading sessions:', err);
-    return { sessions: [], total: 0, hasMore: false };
+    return { sessions: [], total: 0, hasMore: false, nextOffset: 0 };
   }
 }

@@ -30,6 +30,8 @@ export function SessionPanelPage() {
     handleDeleteSession,
     renameSession,
     confirmDialog,
+    loadMoreSessions,
+    hasMoreSessions,
   } = useSessionList();
   const [scope, setScope] = useState<SessionScope>(SessionScope.Local);
 
@@ -83,6 +85,8 @@ export function SessionPanelPage() {
               onSelectSession={handleSelectSession}
               onDeleteSession={handleDeleteSession}
               onRenameSession={renameSession}
+              onLoadMore={loadMoreSessions}
+              hasMore={hasMoreSessions}
             />
           ) : (
             <div className="flex-1 px-3 py-3 text-sm text-text-tertiary text-center">
