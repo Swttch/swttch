@@ -11,7 +11,8 @@ import { useTranslation } from '@/i18n';
 
 export function SessionDropdown() {
   const { t } = useTranslation('chat');
-  const { currentSession, switchSession, loadSessions, sessionsServiceError } = useSessionContext();
+  const { currentSession, switchSession, loadSessions, sessionsServiceError, isLoading } =
+    useSessionContext();
   const { focus: focusComposer } = useChatInputFocus();
   const {
     currentSessionId,
@@ -22,6 +23,8 @@ export function SessionDropdown() {
     handleDeleteSession,
     renameSession,
     confirmDialog,
+    loadMoreSessions,
+    hasMoreSessions,
   } = useSessionList();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -95,6 +98,9 @@ export function SessionDropdown() {
           onDeleteSession={handleDeleteSession}
           onRenameSession={renameSession}
           sessionsServiceError={sessionsServiceError}
+          isLoading={isLoading}
+          onLoadMore={loadMoreSessions}
+          hasMore={hasMoreSessions}
         />
       )}
 

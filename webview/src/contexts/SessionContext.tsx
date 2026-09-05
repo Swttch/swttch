@@ -57,6 +57,19 @@ interface SessionContextValue {
   navigateToSession: (sessionId: string) => void;
   navigateToNewSession: () => void;
   loadSessions: () => Promise<void>;
+  /**
+   * Append the next page of sessions. No-op while one is already in flight or
+   * when the list is complete, so a scroll handler can call it freely.
+   */
+  loadMoreSessions: () => Promise<void>;
+  /**
+   * Fetch every remaining session at once. Searching needs this: a title the
+   * user is typing towards may sit in a page that was never fetched, and the
+   * filter runs on what the client holds.
+   */
+  loadAllSessions: () => Promise<void>;
+  /** Sessions exist beyond the ones loaded. */
+  hasMoreSessions: boolean;
   resetToNewSession: () => void;
   openNewTab: () => void;
   switchSession: (sessionId: string) => void;
@@ -67,6 +80,34 @@ interface SessionContextValue {
   setWorkingDirectory: (dir: string | null) => void;
   /** Returns true if the session was just created locally (not restored from URL) */
   isNewlyCreatedSession: (sessionId: string) => boolean;
+}
+
+/**
+ * Sessions fetched per request.
+ *
+ * Settling a title means reading a transcript, so this is the number of files
+ * opened to draw a screen. Comfortably more than the dropdown shows at once, so
+ * scrolling has somewhere to go before the next request lands, and far short of
+ * the hundreds a project accumulates.
+ */
+export const SESSION_PAGE_SIZE = 30;
+
+/**
+ * Newest first, with rows the list does not show removed.
+ *
+ * The backend already filters and orders, but pages arrive separately and are
+ * concatenated here, so the merged array has to be put back in order. The
+ * sidechain filter is kept as well: it costs nothing and means a backend that
+ * has not been updated cannot put a row on screen that does not belong there.
+ */
+function sortSessions(sessions: SessionMetaDto[]): SessionMetaDto[] {
+  return sessions
+    .filter(s => !s.isSidechain)
+    .sort((a, b) => {
+      const aTime = a.updatedAt?.getTime() ?? 0;
+      const bTime = b.updatedAt?.getTime() ?? 0;
+      return bTime - aTime;
+    });
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -80,8 +121,18 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const { workingDirectory, setWorkingDirectory, rootDir } = useWorkingDir();
   // Reading the setting only widens the listing scope; without a provider the
   // default (off) is the correct answer, so this must not hard-require one.
+  const settingsContext = useSettingsOrNull();
   const includeNested =
-    useSettingsOrNull()?.settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
+    settingsContext?.settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
+  // This setting decides WHICH directories get listed, so listing before it
+  // arrives spends a whole scan on an answer that is thrown away the moment the
+  // real value lands. Measured here: the discarded narrow scan cost 2273ms and
+  // the widened one that replaced it 3242ms, for one screen. Waiting is not a
+  // delay — the narrow result was never going to be shown.
+  //
+  // Absent provider means nobody will ever send a value, so there is nothing to
+  // wait for and the default stands.
+  const settingsPending = settingsContext?.isLoading ?? false;
   const { settings: claudeSettings } = useClaudeSettings();
   const api = useApi();
   const navigate = useNavigate();
@@ -94,6 +145,18 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const currentSessionId = parseSessionIdFromPath(bg?.pathname ?? location.pathname);
 
   const [sessions, setSessions] = useState<SessionMetaDto[]>([]);
+  /**
+   * Where the next page continues from, or null when the list is complete.
+   *
+   * One value answers both "is there more" and "where from", so the two cannot
+   * drift apart. It is the backend's own walk position rather than a count of
+   * rows held here: sessions the list does not show still advance that walk.
+   */
+  const [nextSessionOffset, setNextSessionOffset] = useState<number | null>(null);
+  // Guards against a scroll handler firing a second fetch for the same page
+  // before the first lands. A ref, not state, because nothing renders from it
+  // and a re-render would defeat the point.
+  const loadingMoreRef = useRef(false);
   const [sessionsServiceError, setSessionsServiceError] = useState<SessionServiceError | null>(null);
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.Idle);
   const [isLoading, setIsLoading] = useState(false);
@@ -242,21 +305,24 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return;
     }
 
+    // Scope is not known yet; loading now would list the wrong set of
+    // directories and be redone. This effect re-runs when the setting lands.
+    if (settingsPending) {
+      console.log('[SessionContext] Settings not loaded yet, deferring session load');
+      return;
+    }
+
     try {
       setIsLoading(true);
       console.log('[SessionContext] Loading sessions from:', rootDir, 'nested:', includeNested);
 
-      const result = await api.sessions.index(rootDir, includeNested);
-      const sessions = result.sessions
-        .filter(s => !s.isSidechain)
-        .sort((a, b) => {
-          const aTime = a.updatedAt?.getTime() ?? 0;
-          const bTime = b.updatedAt?.getTime() ?? 0;
-          return bTime - aTime;
-        });
-      setSessions(sessions);
+      const result = await api.sessions.index(rootDir, includeNested, {
+        limit: SESSION_PAGE_SIZE,
+      });
+      setSessions(sortSessions(result.sessions));
+      setNextSessionOffset(result.hasMore ? result.nextOffset : null);
       setSessionsServiceError(result.serviceError ?? null);
-      console.log('[SessionContext] Loaded CLI sessions:', sessions);
+      console.log('[SessionContext] Loaded CLI sessions:', result.sessions.length, 'hasMore:', result.hasMore);
     } catch (error) {
       console.error('[SessionContext] Failed to load sessions:', error);
       // A transient failure must not keep showing a serviceError from a
@@ -266,7 +332,44 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [isConnected, api.sessions, rootDir, includeNested]);
+  }, [isConnected, api.sessions, rootDir, includeNested, settingsPending]);
+
+  /**
+   * Fetch a further range and append it.
+   *
+   * Shared by "scrolled to the bottom" and "started searching"; they differ
+   * only in how much they ask for. Both are no-ops once the list is complete.
+   */
+  const appendSessions = useCallback(async (limit?: number) => {
+    if (!isConnected || !rootDir || settingsPending) return;
+    if (nextSessionOffset === null || loadingMoreRef.current) return;
+
+    loadingMoreRef.current = true;
+    try {
+      setIsLoading(true);
+      const result = await api.sessions.index(rootDir, includeNested, {
+        offset: nextSessionOffset,
+        limit,
+      });
+      // Concatenate before sorting: a page is newest-first within itself but
+      // the ranges only line up once they are merged.
+      setSessions(prev => sortSessions([...prev, ...result.sessions]));
+      setNextSessionOffset(result.hasMore ? result.nextOffset : null);
+    } catch (error) {
+      console.error('[SessionContext] Failed to load more sessions:', error);
+    } finally {
+      loadingMoreRef.current = false;
+      setIsLoading(false);
+    }
+  }, [isConnected, api.sessions, rootDir, includeNested, settingsPending, nextSessionOffset]);
+
+  const loadMoreSessions = useCallback(
+    () => appendSessions(SESSION_PAGE_SIZE),
+    [appendSessions],
+  );
+
+  // No limit: ask for everything that is left, in one request.
+  const loadAllSessions = useCallback(() => appendSessions(undefined), [appendSessions]);
 
   // Listen for state changes from Kotlin
   useEffect(() => {
@@ -424,6 +527,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
     navigateToSession,
     navigateToNewSession,
     loadSessions,
+    loadMoreSessions,
+    loadAllSessions,
+    hasMoreSessions: nextSessionOffset !== null,
     resetToNewSession,
     openNewTab,
     switchSession,

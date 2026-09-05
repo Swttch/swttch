@@ -61,6 +61,96 @@ describe('getProjectsList', () => {
     expect(projects[0].name).toBe('deep-project');
   });
 
+  /**
+   * The lookup reads `cwd` by scanning the line for the field rather than
+   * turning a multi-megabyte line into an object. These fix the cases where
+   * scanning and parsing could disagree — the scan is only allowed to answer
+   * when it cannot be wrong.
+   */
+  describe('reading cwd out of a line', () => {
+    it('ignores an escaped field name in conversation text', async () => {
+      // Text that talks ABOUT the field is serialised as \"cwd\", which is not
+      // the field. A scan that matched it would report whatever path the
+      // conversation happened to quote — and a conversation about this very
+      // function is exactly where that would happen.
+      writeTranscript(
+        '-home-user-real',
+        'a.jsonl',
+        [
+          { type: 'assistant', text: 'the entry carries "cwd": "/quoted/from/chat" as a field' },
+          { type: 'user', cwd: '/home/user/real' },
+        ],
+        1_700_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('/home/user/real');
+    });
+
+    it('takes the entry’s own cwd when a nested object carries one too', async () => {
+      // A tool that takes a working directory would put a real, unescaped cwd
+      // field inside the entry. Only the top-level one describes the session,
+      // and the scan cannot tell them apart — so this must fall back to parsing.
+      const line = {
+        type: 'user',
+        toolUse: { name: 'Bash', input: { command: 'ls', cwd: '/tmp/tool-scratch' } },
+        cwd: '/home/user/real',
+      };
+      writeTranscript('-home-user-real', 'a.jsonl', [line], 1_700_000_000);
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('/home/user/real');
+    });
+
+    it('keeps looking when a nested cwd appears on a line that has no top-level one', async () => {
+      writeTranscript(
+        '-home-user-real',
+        'a.jsonl',
+        [
+          { type: 'assistant', toolUse: { input: { cwd: '/tmp/tool-scratch' } } },
+          { type: 'user', cwd: '/home/user/real' },
+        ],
+        1_700_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('/home/user/real');
+    });
+
+    it('keeps looking past a line that names the field but assigns nothing', async () => {
+      writeTranscript(
+        '-home-user-real',
+        'a.jsonl',
+        [
+          { type: 'meta', note: 'cwd is recorded per entry', cwd: null },
+          { type: 'user', cwd: '/home/user/real' },
+        ],
+        1_700_000_000,
+      );
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe('/home/user/real');
+    });
+
+    it('reads a path whose characters need escaping', async () => {
+      const weird = '/home/user/a "quoted" \\ dir';
+      writeTranscript('-home-user-weird', 'a.jsonl', [{ type: 'user', cwd: weird }], 1_700_000_000);
+
+      const projects = await getProjectsList();
+
+      expect(projects).toHaveLength(1);
+      expect(projects[0].path).toBe(weird);
+    });
+  });
+
   it('reads only the newest transcript, leaving the rest unopened', async () => {
     // Every transcript in a folder records the same working directory, so the
     // older ones hold no new information. Giving them a different cwd here is

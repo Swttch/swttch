@@ -20,7 +20,7 @@ import { ScopeTabs, SessionScope } from './ScopeTabs';
  */
 export function SessionPanelPage() {
   const { t } = useTranslation('sessionPanel');
-  const { openNewTab, loadSessions, sessionsServiceError } = useSessionContext();
+  const { openNewTab, loadSessions, sessionsServiceError, isLoading } = useSessionContext();
   const {
     currentSessionId,
     searchQuery,
@@ -30,6 +30,8 @@ export function SessionPanelPage() {
     handleDeleteSession,
     renameSession,
     confirmDialog,
+    loadMoreSessions,
+    hasMoreSessions,
   } = useSessionList();
   const [scope, setScope] = useState<SessionScope>(SessionScope.Local);
 
@@ -83,14 +85,21 @@ export function SessionPanelPage() {
               onSelectSession={handleSelectSession}
               onDeleteSession={handleDeleteSession}
               onRenameSession={renameSession}
+              onLoadMore={loadMoreSessions}
+              hasMore={hasMoreSessions}
             />
           ) : (
             <div className="flex-1 px-3 py-3 text-sm text-text-tertiary text-center">
-              {sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
-                ? t('empty.wslHostMismatch')
-                : searchQuery.trim()
-                  ? t('empty.noMatches')
-                  : t('empty.noSessions')}
+              {/* Same reasoning as the session dropdown: until a list arrives,
+                  neither "no sessions" nor "no matches" is something the panel
+                  knows to be true. */}
+              {isLoading
+                ? t('common:sessionList.loadingSessions')
+                : sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
+                  ? t('empty.wslHostMismatch')
+                  : searchQuery.trim()
+                    ? t('empty.noMatches')
+                    : t('empty.noSessions')}
             </div>
           )
         ) : (

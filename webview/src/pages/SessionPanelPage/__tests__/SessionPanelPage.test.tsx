@@ -124,4 +124,22 @@ describe('SessionPanelPage', () => {
     expect(screen.getByText(/WSL/)).toBeDefined();
     expect(screen.queryByText('No sessions yet')).toBeNull();
   });
+
+  // The panel reads a list the app fetches once on connect, so an empty list
+  // means either "there are none" or "they have not arrived". Saying the first
+  // while the second is true tells the user something untrue.
+  it('says the sessions are loading rather than "No sessions yet" while the list is being fetched', () => {
+    mockUseSessionContext.mockReturnValue({
+      openNewTab: mockOpenNewTab,
+      loadSessions: mockLoadSessions,
+      sessionsServiceError: null,
+      isLoading: true,
+    });
+    mockUseSessionList.mockReturnValue(listResult({ filteredSessions: [], groupedSessions: emptyGroups }));
+
+    render(<SessionPanelPage />);
+
+    expect(screen.getByText('Loading sessions...')).toBeDefined();
+    expect(screen.queryByText('No sessions yet')).toBeNull();
+  });
 });

@@ -18,7 +18,13 @@ export class SessionMetaDto {
   })
   updatedAt: Date;
 
-  messageCount: number = 0;
+  /**
+   * How many entries the session holds, or null when the backend did not count
+   * them. Listing a session settles its title from the opening entries and
+   * stops there, so only a short session arrives with a count. Nothing renders
+   * this today; it stays on the DTO so a later change can fill it in.
+   */
+  messageCount: number | null = null;
   isSidechain: boolean = false;
   projectPath?: string;
   gitBranch?: string;
