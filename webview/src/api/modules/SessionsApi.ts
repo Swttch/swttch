@@ -27,7 +27,11 @@ interface GetSessionsResponse {
     title: string;
     createdAt: string;
     lastTimestamp: string | null;
-    messageCount: number;
+    /**
+     * null when the backend settled the session's title without reading the
+     * file to the end, which is what it does for anything but a short session.
+     */
+    messageCount: number | null;
     isSidechain: boolean;
     projectPath?: string;
     gitBranch?: string;

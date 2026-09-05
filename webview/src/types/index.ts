@@ -226,7 +226,8 @@ export interface SessionMeta {
   title: string;
   createdAt: string;
   updatedAt: string;
-  messageCount: number;
+  /** null when the backend listed this session without counting its entries. */
+  messageCount: number | null;
 }
 
 export enum SessionState {

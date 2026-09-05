@@ -20,6 +20,12 @@ interface Props {
   onRenameSession: (sessionId: string, title: string) => void;
   /** Non-fatal reason the backend couldn't list sessions (e.g. WSL host mismatch on win32). */
   sessionsServiceError?: SessionServiceError | null;
+  /**
+   * The session list is being fetched. The list loads once on connect rather
+   * than when this menu opens, so opening it early used to show "no sessions
+   * yet" — an answer the app did not have yet.
+   */
+  isLoading?: boolean;
 }
 
 export function DropdownMenu(props: Props) {
@@ -36,6 +42,7 @@ export function DropdownMenu(props: Props) {
     onDeleteSession,
     onRenameSession,
     sessionsServiceError = null,
+    isLoading = false,
   } = props;
 
   return (
@@ -53,11 +60,16 @@ export function DropdownMenu(props: Props) {
         />
       ) : (
         <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">
-          {searchQuery.trim()
-            ? t('sessionHeader.sessionDropdown.noMatchingSessions')
-            : sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
-              ? t('sessionHeader.sessionDropdown.wslHostMismatch')
-              : t('sessionHeader.sessionDropdown.noSessionsYet')}
+          {/* Loading outranks every other message here. With nothing loaded yet
+              the app cannot tell "you have no sessions" from "no session matches
+              this search" — both claims need a list it does not have. */}
+          {isLoading
+            ? t('common:sessionList.loadingSessions')
+            : searchQuery.trim()
+              ? t('sessionHeader.sessionDropdown.noMatchingSessions')
+              : sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
+                ? t('sessionHeader.sessionDropdown.wslHostMismatch')
+                : t('sessionHeader.sessionDropdown.noSessionsYet')}
         </div>
       )}
     </div>

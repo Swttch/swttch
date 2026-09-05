@@ -43,7 +43,10 @@ describe('DTO Transformation', () => {
         createdAt: '2025-01-01T00:00:00Z',
       };
       const instance = plainToInstance(SessionMetaDto, plain);
-      expect(instance.messageCount).toBe(0);
+      // Absent means "the backend did not count", which is null rather than 0 —
+      // a session with zero entries and a session nobody counted are different
+      // facts and must not collapse onto the same value.
+      expect(instance.messageCount).toBeNull();
       expect(instance.isSidechain).toBe(false);
     });
   });

@@ -48,7 +48,9 @@ describe('extractSessionInfo', () => {
       const result = await extractSessionInfo(filePath);
 
       expect(result.title).toBe('Greeting conversation');
-      expect(result.messageCount).toBe(2);
+      // The first prompt settles the title on line 1, so the scan stops there
+      // and never counts the rest. The summary is still found, from the tail.
+      expect(result.messageCount).toBeNull();
       expect(result.isSidechain).toBe(false);
       expect(result.createdAt).toBe('2025-01-01T00:00:00Z');
     });
@@ -181,7 +183,8 @@ describe('extractSessionInfo', () => {
       const result = await extractSessionInfo(filePath);
 
       expect(result.title).toBe('Hello');
-      expect(result.messageCount).toBe(2); // only valid lines counted
+      // Stopped at the prompt, so nothing was counted past it.
+      expect(result.messageCount).toBeNull();
     });
 
     it('should handle string content in messages', async () => {
@@ -418,7 +421,7 @@ describe('extractSessionInfo', () => {
       const result = await extractSessionInfo(filePath);
 
       expect(result.title).toBe('Hi');
-      expect(result.messageCount).toBe(2);
+      expect(result.messageCount).toBeNull();
     });
 
     it('should use last text block from content array for title', async () => {
@@ -490,8 +493,13 @@ describe('extractSessionInfo', () => {
       const result = await extractSessionInfo(filePath);
 
       expect(result.title).toBe('Start');
-      expect(result.messageCount).toBe(10_002);
+      // Counting would mean parsing all ~10MB, which is exactly what the early
+      // stop exists to avoid, so a session this size reports no count at all
+      // rather than a number that would be wrong.
+      expect(result.messageCount).toBeNull();
       expect(result.createdAt).toBe('2025-01-01T00:00:00Z');
+      // Comes from the tail window, not the forward scan: the scan stopped on
+      // line 1 and never saw this entry.
       expect(result.lastTimestamp).toBe('2025-12-31T23:59:59Z');
       expect(result.isSidechain).toBe(false);
     }, 15_000);
@@ -518,6 +526,126 @@ describe('extractSessionInfo', () => {
 
       expect(result.title).toBe('Sidechain Session');
       expect(result.isSidechain).toBe(true);
+    });
+
+    it('counts every entry when the file is read to the end', async () => {
+      // No real user prompt means nothing settles the title early, so the scan
+      // runs to the end and the count it produces covers the whole file.
+      const filePath = await writeJsonl([
+        JSON.stringify({
+          uuid: 'u1',
+          parentUuid: null,
+          type: 'assistant',
+          timestamp: '2025-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: 'One' }] },
+        }),
+        JSON.stringify({
+          uuid: 'u2',
+          parentUuid: 'u1',
+          type: 'assistant',
+          timestamp: '2025-01-01T00:01:00Z',
+          message: { content: [{ type: 'text', text: 'Two' }] },
+        }),
+      ]);
+
+      const result = await extractSessionInfo(filePath);
+
+      expect(result.title).toBe('No title');
+      expect(result.messageCount).toBe(2);
+      expect(result.lastTimestamp).toBe('2025-01-01T00:01:00Z');
+    });
+
+    it('takes a summary parked at the end of a large file as the title', async () => {
+      // The forward scan stops on line 1, far from the summary. Losing the
+      // summary would silently downgrade the title to the raw first prompt.
+      const bulk = 'B'.repeat(2000);
+      const lines: string[] = [
+        JSON.stringify({
+          uuid: 'u0',
+          parentUuid: null,
+          type: 'user',
+          timestamp: '2025-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: 'Raw first prompt' }] },
+        }),
+      ];
+      for (let i = 1; i <= 200; i++) {
+        lines.push(
+          JSON.stringify({
+            uuid: `u${i}`,
+            parentUuid: `u${i - 1}`,
+            type: 'assistant',
+            timestamp: '2025-02-01T00:00:00Z',
+            message: { content: [{ type: 'text', text: bulk }] },
+          }),
+        );
+      }
+      lines.push(JSON.stringify({ type: 'summary', leafUuid: 'u200', summary: 'Summarised topic' }));
+
+      const filePath = await writeJsonl(lines);
+      const result = await extractSessionInfo(filePath);
+
+      expect(result.title).toBe('Summarised topic');
+    });
+
+    it('widens the tail window when the final entries exceed the smallest one', async () => {
+      // Both trailing entries are larger than the first window, so that window
+      // holds no complete entry at all. Without widening, lastTimestamp would
+      // fall back to the top of the file and the session would sort as old.
+      const huge = 'C'.repeat(200_000);
+      const filePath = await writeJsonl([
+        JSON.stringify({
+          uuid: 'u1',
+          parentUuid: null,
+          type: 'user',
+          timestamp: '2025-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: 'Start' }] },
+        }),
+        JSON.stringify({
+          uuid: 'u2',
+          parentUuid: 'u1',
+          type: 'assistant',
+          timestamp: '2025-06-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: huge }] },
+        }),
+        JSON.stringify({
+          uuid: 'u3',
+          parentUuid: 'u2',
+          type: 'assistant',
+          timestamp: '2025-12-31T23:59:59Z',
+          message: { content: [{ type: 'text', text: huge }] },
+        }),
+      ]);
+
+      const result = await extractSessionInfo(filePath);
+
+      expect(result.title).toBe('Start');
+      expect(result.lastTimestamp).toBe('2025-12-31T23:59:59Z');
+    });
+
+    it('ignores a non-counted trailing entry when deciding lastTimestamp', async () => {
+      // The forward scan only lets a counted entry move the clock; the tail
+      // window has to apply the same rule or the two disagree.
+      const filePath = await writeJsonl([
+        JSON.stringify({
+          uuid: 'u1',
+          parentUuid: null,
+          type: 'user',
+          timestamp: '2025-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: 'Start' }] },
+        }),
+        JSON.stringify({
+          uuid: 'u2',
+          parentUuid: 'u1',
+          type: 'assistant',
+          timestamp: '2025-06-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: 'Reply' }] },
+        }),
+        JSON.stringify({ type: 'file-history-snapshot', timestamp: '2025-12-31T23:59:59Z' }),
+      ]);
+
+      const result = await extractSessionInfo(filePath);
+
+      expect(result.lastTimestamp).toBe('2025-06-01T00:00:00Z');
     });
   });
 });

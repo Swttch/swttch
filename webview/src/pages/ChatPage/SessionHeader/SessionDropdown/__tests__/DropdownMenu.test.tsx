@@ -64,4 +64,36 @@ describe('DropdownMenu', () => {
       screen.queryByText('This project is in WSL. Open it from your WSL shell (run `ccg`) to see past conversations.')
     ).toBeNull();
   });
+
+  // The list is fetched once when the bridge connects, not when this menu
+  // opens, so a user who opens it early sees an empty list. Claiming there are
+  // no sessions at that moment states something the app has not found out yet.
+  it('says the sessions are loading rather than "no sessions yet" while the list is being fetched', () => {
+    render(<DropdownMenu {...baseProps} isLoading sessionsServiceError={null} />);
+
+    expect(screen.getByText('Loading sessions...')).toBeDefined();
+    expect(screen.queryByText('No sessions yet')).toBeNull();
+  });
+
+  it('keeps saying loading rather than "no matching sessions" when a search runs before the list arrives', () => {
+    render(<DropdownMenu {...baseProps} isLoading searchQuery="foo" />);
+
+    expect(screen.getByText('Loading sessions...')).toBeDefined();
+    expect(screen.queryByText('No matching sessions')).toBeNull();
+  });
+
+  it('states the WSL guidance once loading has finished', () => {
+    render(
+      <DropdownMenu
+        {...baseProps}
+        isLoading={false}
+        sessionsServiceError={{ type: MessageType.WSL_HOST_MISMATCH, reason: 'inside WSL' }}
+      />
+    );
+
+    expect(screen.queryByText('Loading sessions...')).toBeNull();
+    expect(
+      screen.getByText('This project is in WSL. Open it from your WSL shell (run `ccg`) to see past conversations.')
+    ).toBeDefined();
+  });
 });
