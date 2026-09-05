@@ -82,6 +82,14 @@ vi.mock('../ClaudeSettingsContext', () => ({
   }),
 }));
 
+// What SettingsContext has delivered so far. null reproduces "no provider",
+// which is what the rest of this file renders and what every test other than
+// the deferral ones relies on.
+let mockSettings: { settings: Record<string, unknown>; isLoading: boolean } | null = null;
+vi.mock('../SettingsContext', () => ({
+  useSettingsOrNull: () => mockSettings,
+}));
+
 // Mock react-router-dom
 let mockPathname = '/';
 const mockNavigate = vi.fn((path: string, _options?: unknown) => {
@@ -134,6 +142,7 @@ describe('SessionContext', () => {
     vi.clearAllMocks();
     mockPathname = '/';
     mockIsConnected = true;
+    mockSettings = null;
     mockClaudeSettings = { permissions: {} };
     mockWorkingDirectory = '/test/workspace';
     mockSessionsIndex.mockResolvedValue({ sessions: [] });
@@ -163,6 +172,67 @@ describe('SessionContext', () => {
       expect(capturedCtx?.sessions[0].id).toBe('session-1');
       expect(capturedCtx?.sessions[0].title).toBe('Chat 1');
       expect(capturedCtx?.sessions[1].id).toBe('session-2');
+    });
+  });
+
+  // The "include nested sessions" setting decides WHICH directories are listed,
+  // so listing before it arrives spends a whole scan producing a list that is
+  // discarded when the real value lands. Measured on this project: the wasted
+  // narrow scan was 2273ms and the widened one that replaced it 3242ms.
+  describe('loadSessions - waiting for the listing scope', () => {
+    it('does not list while the settings that decide the scope are still loading', async () => {
+      mockSettings = { settings: {}, isLoading: true };
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+
+      expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
+
+    it('lists once the settings arrive, using the scope they carry', async () => {
+      mockSettings = { settings: { includeNestedSessions: true }, isLoading: false };
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+
+      expect(mockSessionsIndex).toHaveBeenCalledTimes(1);
+      expect(mockSessionsIndex).toHaveBeenCalledWith('/test/workspace', true);
+    });
+
+    it('lists immediately when no settings provider will ever answer', async () => {
+      // Absent provider is not "pending" — nothing is coming, so the default
+      // scope stands and waiting would hang the list forever.
+      mockSettings = null;
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+
+      expect(mockSessionsIndex).toHaveBeenCalledTimes(1);
+      expect(mockSessionsIndex).toHaveBeenCalledWith('/test/workspace', false);
     });
   });
 

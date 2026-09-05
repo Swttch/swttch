@@ -80,8 +80,18 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const { workingDirectory, setWorkingDirectory, rootDir } = useWorkingDir();
   // Reading the setting only widens the listing scope; without a provider the
   // default (off) is the correct answer, so this must not hard-require one.
+  const settingsContext = useSettingsOrNull();
   const includeNested =
-    useSettingsOrNull()?.settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
+    settingsContext?.settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
+  // This setting decides WHICH directories get listed, so listing before it
+  // arrives spends a whole scan on an answer that is thrown away the moment the
+  // real value lands. Measured here: the discarded narrow scan cost 2273ms and
+  // the widened one that replaced it 3242ms, for one screen. Waiting is not a
+  // delay — the narrow result was never going to be shown.
+  //
+  // Absent provider means nobody will ever send a value, so there is nothing to
+  // wait for and the default stands.
+  const settingsPending = settingsContext?.isLoading ?? false;
   const { settings: claudeSettings } = useClaudeSettings();
   const api = useApi();
   const navigate = useNavigate();
@@ -242,6 +252,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
       return;
     }
 
+    // Scope is not known yet; loading now would list the wrong set of
+    // directories and be redone. This effect re-runs when the setting lands.
+    if (settingsPending) {
+      console.log('[SessionContext] Settings not loaded yet, deferring session load');
+      return;
+    }
+
     try {
       setIsLoading(true);
       console.log('[SessionContext] Loading sessions from:', rootDir, 'nested:', includeNested);
@@ -266,7 +283,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [isConnected, api.sessions, rootDir, includeNested]);
+  }, [isConnected, api.sessions, rootDir, includeNested, settingsPending]);
 
   // Listen for state changes from Kotlin
   useEffect(() => {
