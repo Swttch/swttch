@@ -1,4 +1,11 @@
-import { readLicense, wasDeactivatedHere, saveLicense, findSponsorByInstall, reportActivation } from './license';
+import {
+  readLicense,
+  wasDeactivatedHere,
+  saveLicense,
+  findSponsorByInstall,
+  reportActivation,
+  verifyLicenseRemote,
+} from './license';
 import { readProfile } from './profile';
 
 /**
@@ -75,10 +82,21 @@ export async function claimSponsorByInstall({ throttled }: ClaimOptions): Promis
     const sponsorKey = await findSponsorByInstall(profile.uuid);
     if (sponsorKey === null) return false;
 
+    // Ask what the key actually grants before storing it. by-install answers
+    // only "here is the key", so storing that alone leaves tier, interval, price
+    // and `cancellable` empty — and an empty `cancellable` hides "Cancel
+    // recurring sponsorship" from the menu, so a sponsor who was just switched
+    // on automatically could not find the way to stop paying. Re-validation
+    // would fill it in later; "later" is not good enough for that one.
+    const plan = await verifyLicenseRemote(sponsorKey).catch(() => null);
     await saveLicense({
       licenseKey: sponsorKey,
-      status: 'active',
+      status: plan?.status ?? 'active',
       verifiedAt: new Date().toISOString(),
+      tier: plan?.tier ?? null,
+      interval: plan?.interval ?? null,
+      price: plan?.price ?? null,
+      cancellable: plan?.cancellable ?? null,
     });
     // Fire-and-forget: www learns where the key is in use, but a sponsor must
     // not be held up by our bookkeeping.

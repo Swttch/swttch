@@ -485,7 +485,7 @@
         "menu": "Verwalten",
         "clearKey": "Schlüssel entfernen",
         "clearKeyConfirmTitle": "Förderer-Schlüssel entfernen?",
-        "clearKeyConfirmMessage": "Auf diesem Gerät werden die Förderer-Funktionen abgeschaltet. Deine Förderung und Abrechnung bleiben unberührt — füge den Schlüssel jederzeit wieder ein.",
+        "clearKeyConfirmMessage": "Auf diesem Gerät werden die Förderer-Funktionen abgeschaltet. Deine Förderung und Abrechnung bleiben unberührt, und dieser Bildschirm bietet dir jederzeit an, sie wieder einzuschalten.",
         "clearKeyDone": "Schlüssel auf diesem Gerät entfernt.",
         "cancel": "Regelmäßige Förderung kündigen",
         "cancelConfirmTitle": "Regelmäßige Förderung kündigen?",
@@ -556,7 +556,16 @@
       ]
     ],
     "letterSignature": "— @yonghyun",
-    "openSourceNote": "Der Kern dieses Projekts bleibt Open Source, und alle Community-Funktionen bleiben allen zugänglich — ob mit Förderung oder ohne."
+    "openSourceNote": "Der Kern dieses Projekts bleibt Open Source, und alle Community-Funktionen bleiben allen zugänglich — ob mit Förderung oder ohne.",
+    "deactivated": {
+      "title": "Auf diesem Gerät ist die Förderung abgeschaltet",
+      "description": "Du hast den Schlüssel hier entfernt, deshalb sind die Förderer-Funktionen auf diesem Gerät aus.",
+      "descriptionOn": "Du hast den Schlüssel hier am {{date}} entfernt, deshalb sind die Förderer-Funktionen auf diesem Gerät aus.",
+      "billingNote": "Damit wurde nichts gekündigt. Wenn du eine regelmäßige Förderung hast, wird sie weiter abgebucht.",
+      "reactivate": "Wieder einschalten",
+      "reactivating": "Wird eingeschaltet…",
+      "cancelHint": "Um die regelmäßige Zahlung zu beenden, schalte dieses Gerät wieder ein und nutze Verwalten → Regelmäßige Förderung kündigen."
+    }
   },
   "badges": {
     "sponsor": "Nur für Sponsoren",

@@ -12,6 +12,7 @@ const {
   mockFindSponsorByInstall,
   mockReportActivation,
   mockReadProfile,
+  mockVerifyLicenseRemote,
 } = vi.hoisted(() => ({
   mockReadLicense: vi.fn(),
   mockWasDeactivatedHere: vi.fn(),
@@ -19,6 +20,7 @@ const {
   mockFindSponsorByInstall: vi.fn(),
   mockReportActivation: vi.fn(),
   mockReadProfile: vi.fn(),
+  mockVerifyLicenseRemote: vi.fn(),
 }));
 
 vi.mock('../license', () => ({
@@ -27,6 +29,7 @@ vi.mock('../license', () => ({
   saveLicense: mockSaveLicense,
   findSponsorByInstall: mockFindSponsorByInstall,
   reportActivation: mockReportActivation,
+  verifyLicenseRemote: mockVerifyLicenseRemote,
 }));
 vi.mock('../profile', () => ({ readProfile: mockReadProfile }));
 
@@ -51,6 +54,14 @@ describe('claimSponsorByInstall', () => {
     mockFindSponsorByInstall.mockReset().mockResolvedValue('CCG-minted');
     mockReportActivation.mockReset().mockResolvedValue(undefined);
     mockReadProfile.mockReset().mockResolvedValue({ uuid: 'install-uuid' });
+    mockVerifyLicenseRemote.mockReset().mockResolvedValue({
+      valid: true,
+      status: 'active',
+      tier: 'allround',
+      interval: 'monthly',
+      price: { amount: 9, currency: 'USD' },
+      cancellable: true,
+    });
   });
 
   afterEach(() => {
@@ -62,11 +73,43 @@ describe('claimSponsorByInstall', () => {
 
     expect(claimed).toBe(true);
     expect(mockFindSponsorByInstall).toHaveBeenCalledWith('install-uuid');
-    expect(mockSaveLicense).toHaveBeenCalledWith({
-      licenseKey: 'CCG-minted',
-      status: 'active',
-      verifiedAt: NOW.toISOString(),
-    });
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({
+        licenseKey: 'CCG-minted',
+        status: 'active',
+        verifiedAt: NOW.toISOString(),
+      }),
+    );
+  });
+
+  // by-install answers only "here is the key". Storing that alone leaves
+  // `cancellable` empty, which hides "Cancel recurring sponsorship" from the
+  // menu — so someone switched on automatically could not find the way to stop
+  // paying. Ask what the key grants before storing it.
+  it('stores what the key grants, not just the key', async () => {
+    await claimSponsorByInstall({ throttled: true });
+
+    expect(mockVerifyLicenseRemote).toHaveBeenCalledWith('CCG-minted');
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tier: 'allround',
+        interval: 'monthly',
+        price: { amount: 9, currency: 'USD' },
+        cancellable: true,
+      }),
+    );
+  });
+
+  // The key is already in hand; failing to describe it must not throw it away.
+  it('still stores the key when the plan lookup fails', async () => {
+    mockVerifyLicenseRemote.mockRejectedValue(new Error('network down'));
+
+    const claimed = await claimSponsorByInstall({ throttled: true });
+
+    expect(claimed).toBe(true);
+    expect(mockSaveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({ licenseKey: 'CCG-minted', status: 'active', cancellable: null }),
+    );
   });
 
   it('tells www where the key is now in use', async () => {

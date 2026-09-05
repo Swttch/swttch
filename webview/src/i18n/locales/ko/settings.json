@@ -485,7 +485,7 @@
         "menu": "관리",
         "clearKey": "후원자 키 비우기",
         "clearKeyConfirmTitle": "후원자 키를 비울까요?",
-        "clearKeyConfirmMessage": "이 기기에서 후원자 기능이 꺼집니다. 후원과 결제는 그대로이며, 키를 다시 붙여넣으면 언제든 복구됩니다.",
+        "clearKeyConfirmMessage": "이 기기에서 후원자 기능이 꺼집니다. 후원과 결제는 그대로이며, 이 화면에서 언제든 다시 켤 수 있습니다.",
         "clearKeyDone": "이 기기에서 후원자 키를 비웠습니다.",
         "cancel": "정기후원 취소",
         "cancelConfirmTitle": "정기후원을 취소할까요?",
@@ -556,7 +556,16 @@
       ]
     ],
     "letterSignature": "— @yonghyun",
-    "openSourceNote": "이 프로젝트의 핵심은 여전히 오픈소스이며, 커뮤니티 기반의 모든 기능은 앞으로도 후원과 관계없이 누릴 수 있음을 명확히 합니다."
+    "openSourceNote": "이 프로젝트의 핵심은 여전히 오픈소스이며, 커뮤니티 기반의 모든 기능은 앞으로도 후원과 관계없이 누릴 수 있음을 명확히 합니다.",
+    "deactivated": {
+      "title": "이 기기에서 후원자 기능이 꺼져 있습니다",
+      "description": "이 기기에서 후원자 키를 비워서 후원자 기능이 꺼져 있습니다.",
+      "descriptionOn": "{{date}}에 이 기기에서 후원자 키를 비워서 후원자 기능이 꺼져 있습니다.",
+      "billingNote": "이것으로 해지된 것은 없습니다. 정기후원 중이라면 결제는 계속 나갑니다.",
+      "reactivate": "다시 켜기",
+      "reactivating": "켜는 중…",
+      "cancelHint": "정기결제를 멈추려면 이 기기를 다시 켠 다음 관리 → 정기후원 취소를 쓰세요."
+    }
   },
   "badges": {
     "sponsor": "후원자 전용 기능",

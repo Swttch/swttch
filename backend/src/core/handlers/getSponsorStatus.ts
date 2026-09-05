@@ -24,5 +24,9 @@ export async function getSponsorStatusHandler(
     interval: sponsor.interval,
     price: sponsor.price,
     cancellable: sponsor.cancellable,
+    // Set only when this device switched sponsorship off. Distinguishes that
+    // person from someone who never sponsored, whose screen looks identical
+    // otherwise — while their subscription may still be charging them.
+    deactivatedAt: sponsor.deactivatedAt,
   });
 }

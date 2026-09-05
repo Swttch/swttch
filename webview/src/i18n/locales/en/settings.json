@@ -487,7 +487,7 @@
         "menu": "Manage",
         "clearKey": "Clear sponsor key",
         "clearKeyConfirmTitle": "Clear the sponsor key?",
-        "clearKeyConfirmMessage": "This device stops using sponsor features. Your sponsorship and billing are untouched — paste the key back any time to restore it.",
+        "clearKeyConfirmMessage": "This device stops using sponsor features. Your sponsorship and billing are untouched, and this screen will offer to switch it back on any time.",
         "clearKeyDone": "Sponsor key cleared on this device.",
         "cancel": "Cancel recurring sponsorship",
         "cancelConfirmTitle": "Cancel your recurring sponsorship?",
@@ -558,7 +558,16 @@
       ]
     ],
     "letterSignature": "— @yonghyun",
-    "openSourceNote": "The core of this project remains open source, and every community feature stays available to everyone, sponsor or not."
+    "openSourceNote": "The core of this project remains open source, and every community feature stays available to everyone, sponsor or not.",
+    "deactivated": {
+      "title": "Sponsorship is switched off on this device",
+      "description": "You cleared the sponsor key here, so sponsor features are off on this device.",
+      "descriptionOn": "You cleared the sponsor key here on {{date}}, so sponsor features are off on this device.",
+      "billingNote": "This did not cancel anything. If you have a recurring sponsorship, it is still being charged.",
+      "reactivate": "Switch it back on",
+      "reactivating": "Switching on…",
+      "cancelHint": "To stop the recurring payment, switch this device back on and use Manage → Cancel recurring sponsorship."
+    }
   },
   "badges": {
     "sponsor": "Sponsor-only feature",

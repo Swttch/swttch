@@ -1,4 +1,4 @@
-import { readFile, mkdir } from 'fs/promises';
+import { readFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 import { readProfile } from './profile';
@@ -120,6 +120,14 @@ export interface SponsorStatus {
   interval?: string;
   price?: SponsorPrice;
   cancellable?: boolean;
+  /**
+   * When this install turned sponsorship off, if it did. Present only while
+   * there is no key here, and it is the only thing that tells a device the user
+   * switched off apart from one that never sponsored — without it the screen
+   * pitches sponsorship at someone whose card is still being charged, and hides
+   * the way to stop that.
+   */
+  deactivatedAt?: string;
 }
 
 // Ask www for a sponsor key's status. The key here is OUR bearer key (minted on
@@ -282,11 +290,57 @@ export async function deactivateLicense(): Promise<void> {
  */
 export async function wasDeactivatedHere(): Promise<boolean> {
   try {
+    return (await readDeactivatedAt()) !== null;
+  } catch {
+    // Unreadable (permissions, I/O, corrupt JSON) means we cannot tell, and
+    // claiming a key on a guess would silently undo a decision we merely failed
+    // to read. Not claiming costs a sponsor one retry; claiming wrongly
+    // overrules them.
+    return true;
+  }
+}
+
+/**
+ * When the user turned sponsorship off on this install, or null if they did not.
+ *
+ * Unlike `wasDeactivatedHere()`, this cannot express "unreadable" — it answers
+ * null for both "never happened" and "could not tell". Use it to SHOW the date,
+ * never to decide whether pick-up may run.
+ */
+export async function readDeactivatedAt(): Promise<string | null> {
+  try {
     const raw = await readFile(LICENSE_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as { deactivatedAt?: unknown };
-    return typeof parsed.deactivatedAt === 'string' && parsed.deactivatedAt !== '';
+    return typeof parsed.deactivatedAt === 'string' && parsed.deactivatedAt !== ''
+      ? parsed.deactivatedAt
+      : null;
   } catch (e) {
-    return (e as NodeJS.ErrnoException | null)?.code !== 'ENOENT';
+    // Unreadable is not "never happened" for the gate: see wasDeactivatedHere.
+    if ((e as NodeJS.ErrnoException | null)?.code === 'ENOENT') return null;
+    throw e;
+  }
+}
+
+/**
+ * Undo a deactivation, because the user just asked to sponsor on this install
+ * again. Turning it off is a standing decision, so only an equally explicit act
+ * lifts it — pressing "Sponsor" (which opens checkout and starts the pick-up
+ * poll) or entering a key by hand, never a background claim.
+ *
+ * Deliberately narrow: it removes the file only when the file is nothing but a
+ * marker. A stored key means there is no deactivation to lift, and an unreadable
+ * file means we cannot tell — deleting either would destroy a real license over
+ * a guess.
+ */
+export async function clearDeactivation(): Promise<void> {
+  try {
+    const raw = await readFile(LICENSE_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as { deactivatedAt?: unknown; licenseKey?: unknown };
+    if (typeof parsed.licenseKey === 'string' && parsed.licenseKey !== '') return;
+    if (typeof parsed.deactivatedAt !== 'string' || parsed.deactivatedAt === '') return;
+    await rm(LICENSE_FILE, { force: true });
+  } catch {
+    // Missing (nothing to lift) or unreadable (not ours to delete on a guess).
   }
 }
 
@@ -327,7 +381,13 @@ export async function getSponsorStatus(): Promise<SponsorStatus> {
   await claimSponsorByInstall({ throttled: true });
 
   const license = await readLicense();
-  if (license === null) return { isSponsor: false };
+  if (license === null) {
+    // No key. Say whether that is because the user switched off here, so the
+    // screen can offer to switch back on instead of pitching a sponsorship they
+    // may already be paying for.
+    const deactivatedAt = await readDeactivatedAt().catch(() => null);
+    return deactivatedAt !== null ? { isSponsor: false, deactivatedAt } : { isSponsor: false };
+  }
   return {
     isSponsor: license.status === null || license.status === LICENSE_STATUS_ACTIVE,
     licenseKey: license.licenseKey,

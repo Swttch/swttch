@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { HeartIcon } from '@heroicons/react/24/solid';
 import { SponsorSummary } from './SponsorSummary';
 import { SponsorLetter } from './SponsorLetter';
+import { SponsorDeactivatedNotice } from './SponsorDeactivatedNotice';
 import { SponsorManageMenu } from './SponsorManageMenu';
 import { SponsorTabs, SponsorTab } from './SponsorTabs';
 import { SponsorBenefitsSection } from './SponsorBenefitsSection';
@@ -55,6 +56,7 @@ export function SponsorSettings() {
     deactivate,
     cancelSubscription,
     checkByInstall,
+    deactivatedAt,
   } = useSponsorStatus();
 
   /**
@@ -72,6 +74,14 @@ export function SponsorSettings() {
    * this install has been activated at some point.
    */
   const isPastSponsor = !isSponsor && licenseKey !== null;
+
+  /**
+   * When this device switched sponsorship off, or null if it did not. Only
+   * meaningful while there is no entitlement — an active sponsor is not looking
+   * at a device they turned off.
+   */
+  const switchedOffHere =
+    !isSponsor && typeof deactivatedAt === 'string' && deactivatedAt !== '' ? deactivatedAt : null;
 
   // Copy/paste-free activation: after the user opens the checkout page, poll www
   // for a key minted for this install so a completed payment flips this screen to
@@ -161,6 +171,13 @@ export function SponsorSettings() {
           {isSponsor ? t('sponsor.active.greeting') : t('sponsor.title')}
         </h2>
       </div>
+
+      {/* Someone who switched this device off is not deciding whether to
+          sponsor — they already did, and may still be paying. Tell them that
+          before the pitch, and give them the way back to the cancel menu. */}
+      {switchedOffHere !== null && (
+        <SponsorDeactivatedNotice deactivatedAt={switchedOffHere} onReactivate={checkByInstall} />
+      )}
 
       {/* Intro + pricing entry point. Hidden for sponsors: the pitch (what you
           get, "Learn more", "Cancel anytime") is aimed at people deciding, and
