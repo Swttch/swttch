@@ -27,6 +27,46 @@ export function canRewindTo(messages: LoadedMessageDto[], sendUuid: string): boo
 }
 
 /**
+ * The entry a fork of this send should resume from, or undefined when the send
+ * opens the conversation and there is nothing before it (issue #356).
+ *
+ * Forking excludes the send itself: `--resume-session-at` copies the transcript
+ * up to and including the entry it is given, so pointing it at the entry BEFORE
+ * the send produces a session that stops where the user was about to type. That
+ * is what "fork conversation from here" means — the send is retyped on the new
+ * branch, not replayed on it.
+ *
+ * Only `assistant` and `user` entries qualify. Attachments sit between a send
+ * and its predecessor in the transcript, and the CLI rejects one outright:
+ * measured, `--resume-session-at <attachment uuid>` exits 1 with "No message
+ * found with message.uuid of: ...". `system` entries are skipped as well, which
+ * matches how the Cursor extension picks the same point.
+ *
+ * An undefined result is not a failure. It means the send is the first thing in
+ * the conversation, so there is no shared history to branch from and the caller
+ * should open a new session carrying this prompt instead of forking.
+ */
+export function forkPointFor(
+  messages: LoadedMessageDto[],
+  sendUuid: string,
+): string | undefined {
+  const index = messages.findIndex((message) => message.uuid === sendUuid);
+  if (index < 0) return undefined;
+
+  for (let i = index - 1; i >= 0; i--) {
+    const candidate = messages[i];
+    if (!candidate.uuid) continue;
+    if (
+      candidate.type === LoadedMessageType.Assistant ||
+      candidate.type === LoadedMessageType.User
+    ) {
+      return candidate.uuid;
+    }
+  }
+  return undefined;
+}
+
+/**
  * The uuids of every send the code can be rewound to, for callers that ask about
  * a whole transcript rather than one send.
  *

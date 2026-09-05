@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canRewindTo, rewindableSendUuids } from '../rewindTargets';
+import { canRewindTo, forkPointFor, rewindableSendUuids } from '../rewindTargets';
 import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType } from '@/dto/common';
 
@@ -57,6 +57,59 @@ describe('canRewindTo', () => {
 
     expect(entry.uuid).toBeUndefined();
     expect(canRewindTo([entry], 'u1')).toBe(true);
+  });
+});
+
+describe('forkPointFor', () => {
+  function assistant(uuid: string): LoadedMessageDto {
+    return { type: LoadedMessageType.Assistant, uuid } as LoadedMessageDto;
+  }
+  // Attachments sit between a send and the entry before it in a real transcript.
+  function attachment(uuid: string): LoadedMessageDto {
+    return { type: 'attachment', uuid } as unknown as LoadedMessageDto;
+  }
+  function system(uuid: string): LoadedMessageDto {
+    return { type: LoadedMessageType.System, uuid } as LoadedMessageDto;
+  }
+
+  it('points at the assistant entry before the send', () => {
+    const messages = [send('u1'), assistant('a1'), send('u2')];
+
+    expect(forkPointFor(messages, 'u2')).toBe('a1');
+  });
+
+  // The CLI rejects an attachment uuid outright ("No message found with
+  // message.uuid of: ..."), so walking back has to step over them.
+  it('skips attachments between the send and its predecessor', () => {
+    const messages = [send('u1'), assistant('a1'), attachment('att1'), attachment('att2'), send('u2')];
+
+    expect(forkPointFor(messages, 'u2')).toBe('a1');
+  });
+
+  it('skips system entries', () => {
+    const messages = [send('u1'), assistant('a1'), system('s1'), send('u2')];
+
+    expect(forkPointFor(messages, 'u2')).toBe('a1');
+  });
+
+  // A tool result is a `user` entry too, and it is a legitimate point to resume
+  // from — the walk asks what the entry is, not who wrote it.
+  it('accepts a user entry as the point', () => {
+    const messages = [send('u1'), send('toolresult'), send('u2')];
+
+    expect(forkPointFor(messages, 'u2')).toBe('toolresult');
+  });
+
+  // Not a failure: the send opens the conversation, so there is no shared
+  // history to branch from and the caller opens a new session instead.
+  it('is undefined for the first send in a conversation', () => {
+    const messages = [attachment('att1'), send('u1'), assistant('a1')];
+
+    expect(forkPointFor(messages, 'u1')).toBeUndefined();
+  });
+
+  it('is undefined for a uuid that is not in the transcript', () => {
+    expect(forkPointFor([send('u1')], 'nope')).toBeUndefined();
   });
 });
 
