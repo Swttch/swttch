@@ -253,7 +253,13 @@
       "dropToGroup": "放到此处以分组",
       "next": "下一个",
       "removeFromPool": "移出账户池",
-      "delete": "删除账户池"
+      "delete": "删除账户池",
+      "nudge": {
+        "title": "账户达到上限也不中断对话",
+        "description": "把账户编成一个池，达到上限时同一池中的下一个账户会接手，回答继续进行。",
+        "howTo": "创建方法：将一个账户拖到另一个账户的中间位置并停留片刻。",
+        "learnMore": "了解详情"
+      }
     },
     "lastActive": {
       "today": "今天",

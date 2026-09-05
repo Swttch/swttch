@@ -504,9 +504,11 @@
       "proceeding": "Wird fortgesetzt…"
     },
     "accountPool": {
-      "switching": "Konto wird gewechselt…",
+      "switching": "Kontowechsel ({{seconds}} s)",
       "continuing": "Weiter mit dem nächsten Konto…",
-      "failed": "Kontowechsel fehlgeschlagen"
+      "failed": "Kontowechsel fehlgeschlagen",
+      "timedOut": "Die Prüfung des Kontowechsels hat das Zeitlimit überschritten. Senden Sie die Nachricht in Kürze erneut.",
+      "failedWithReason": "Prüfung des Kontowechsels beendet: {{reason}}"
     },
     "error": {
       "network": "Netzwerkverbindungsfehler",

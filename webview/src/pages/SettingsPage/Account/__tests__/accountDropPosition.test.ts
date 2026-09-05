@@ -5,6 +5,7 @@ import {
   accountRowHalf,
   applyAccountDrop,
   createOrderedAccountPool,
+  moveAccountInOrder,
 } from '../accountPoolLayout';
 
 /**
@@ -62,5 +63,37 @@ describe('applyAccountDrop honours the side the preview showed', () => {
 
     const after = applyAccountDrop([pool], 'acc-a', onto('acc-c'), createPool, 2, AccountDropPosition.AFTER);
     expect(after[0].accountIds).toEqual(['acc-b', 'acc-c', 'acc-a']);
+  });
+});
+
+/**
+ * Reordering outside pools. The list is otherwise sorted by registration time, so
+ * this arrangement is the only record of what the user dragged — the backend
+ * stores the id list this produces.
+ */
+describe('moveAccountInOrder', () => {
+  const order = ['acc-a', 'acc-b', 'acc-c'];
+
+  it('moves an account before the target', () => {
+    expect(moveAccountInOrder(order, 'acc-c', 'acc-a', AccountDropPosition.BEFORE))
+      .toEqual(['acc-c', 'acc-a', 'acc-b']);
+  });
+
+  it('moves an account after the target', () => {
+    expect(moveAccountInOrder(order, 'acc-a', 'acc-c', AccountDropPosition.AFTER))
+      .toEqual(['acc-b', 'acc-c', 'acc-a']);
+  });
+
+  it('moves an account that was not in the list yet', () => {
+    expect(moveAccountInOrder(order, 'acc-new', 'acc-b', AccountDropPosition.BEFORE))
+      .toEqual(['acc-a', 'acc-new', 'acc-b', 'acc-c']);
+  });
+
+  it('leaves the order alone when the account is dropped on itself', () => {
+    expect(moveAccountInOrder(order, 'acc-b', 'acc-b', AccountDropPosition.AFTER)).toEqual(order);
+  });
+
+  it('leaves the order alone when the target is unknown', () => {
+    expect(moveAccountInOrder(order, 'acc-a', 'acc-missing', AccountDropPosition.AFTER)).toEqual(order);
   });
 });

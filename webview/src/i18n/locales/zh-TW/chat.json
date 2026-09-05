@@ -504,9 +504,11 @@
       "proceeding": "正在恢復…"
     },
     "accountPool": {
-      "switching": "正在切換帳戶…",
+      "switching": "正在切換帳戶（{{seconds}}秒）",
       "continuing": "正在使用下一個帳戶繼續…",
-      "failed": "帳戶切換失敗"
+      "failed": "帳戶切換失敗",
+      "timedOut": "帳戶切換驗證逾時。請稍後重新傳送訊息。",
+      "failedWithReason": "帳戶切換驗證已停止：{{reason}}"
     },
     "error": {
       "network": "網路連線錯誤",

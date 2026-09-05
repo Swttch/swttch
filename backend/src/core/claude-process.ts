@@ -178,15 +178,14 @@ export function buildCheckpointingEnv(
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
-// Sessions whose CLI we are killing on purpose to respawn it under a different
-// permission mode. The exit is ours, not a failure, so the close handler must not
-// surface it as an error or as STREAM_END — the user only asked to switch modes and
-// a new process is already on its way. Cleared as soon as that close is observed.
-const sessionsRestartingForMode = new Set<string>();
+// Sessions whose CLI we are killing on purpose so the next message respawns it.
+// The exit is ours, not a failure, so the close handler must not surface it as an
+// error or as STREAM_END. Used for spawn-time setting changes and account changes.
+const sessionsRestarting = new Set<string>();
 
-// How long to wait for a CLI to exit on SIGTERM during a mode-change restart before
+// How long to wait for a CLI to exit on SIGTERM during a deliberate restart before
 // escalating to SIGKILL. The user is waiting on their message, so this stays short.
-const MODE_RESTART_KILL_TIMEOUT_MS = 3000;
+const SESSION_RESTART_KILL_TIMEOUT_MS = 3000;
 
 // 한 번이라도 spawn된 세션 추적 (재시작 시 --resume 사용 판단용)
 // --session-id: 새 세션 전용 (JSONL 이미 존재하면 "already in use" 에러)
@@ -234,8 +233,8 @@ export function needsRestartForMode(
 }
 
 /**
- * Terminate a session's live CLI so it can be respawned under a different
- * permission mode, and wait until it is really gone.
+ * Terminate a session's live CLI so the next message respawns it with current
+ * spawn-time settings and credentials, and wait until it is really gone.
  *
  * Waiting matters: the respawn uses `--resume` on the same session, and two CLIs
  * writing one JSONL branches the history. The CLI's own 'close' handler does the
@@ -243,12 +242,12 @@ export function needsRestartForMode(
  * for that to run. The timeout is a liveness guard — a CLI ignoring SIGTERM gets
  * SIGKILL rather than hanging the user's message forever.
  */
-async function restartForModeChange(
+export async function restartClaudeSessionProcess(
   connections: ConnectionManager,
   sessionId: string,
   proc: ChildProcess,
 ): Promise<void> {
-  sessionsRestartingForMode.add(sessionId);
+  sessionsRestarting.add(sessionId);
 
   const exited = new Promise<void>((resolve) => {
     if (proc.exitCode !== null || proc.signalCode !== null) {
@@ -269,16 +268,16 @@ async function restartForModeChange(
       );
       Claude.killTree(proc, 'SIGKILL');
       resolve();
-    }, MODE_RESTART_KILL_TIMEOUT_MS);
+    }, SESSION_RESTART_KILL_TIMEOUT_MS);
   });
 
   await Promise.race([exited, escalated]);
   if (escalation) clearTimeout(escalation);
   // After a SIGKILL escalation the close handler may still be pending; give it the
   // same bounded wait so the respawn never races the teardown it depends on.
-  await Promise.race([exited, new Promise<void>((r) => setTimeout(r, MODE_RESTART_KILL_TIMEOUT_MS))]);
+  await Promise.race([exited, new Promise<void>((r) => setTimeout(r, SESSION_RESTART_KILL_TIMEOUT_MS))]);
 
-  sessionsRestartingForMode.delete(sessionId);
+  sessionsRestarting.delete(sessionId);
 
   // The close handler clears these, but a hard-killed process that never ran it
   // would otherwise leave the respawn reusing a dead reference and a stale buffer.
@@ -348,7 +347,7 @@ export async function ensureClaudeProcess(
       `Permission mode changed (${liveMode} -> ${inputMode}) for session ${targetSessionId}; ` +
         `restarting CLI (PID: ${existingSession.process.pid})`,
     );
-    await restartForModeChange(connections, targetSessionId, existingSession.process);
+    await restartClaudeSessionProcess(connections, targetSessionId, existingSession.process);
   }
 
   // Liveness guard before spawning: a live, identity-checked CLI may
@@ -536,11 +535,10 @@ export async function ensureClaudeProcess(
       // whatever session reuses the id.
       clearMessagesForSession(targetSessionId);
 
-      // We killed this process ourselves to respawn it under a new permission mode.
-      // The user asked to switch modes, not to end anything, and a replacement CLI is
-      // already being spawned — so skip the failure reporting and the STREAM_END that
-      // would otherwise flash an error and a dead stream in the middle of a mode change.
-      const restartingForMode = sessionsRestartingForMode.has(targetSessionId);
+      // We killed this process ourselves so the next message can respawn it with new
+      // spawn-time settings or credentials. Skip failure reporting and STREAM_END,
+      // which would otherwise flash an error between the old and replacement CLIs.
+      const restarting = sessionsRestarting.has(targetSessionId);
 
       // 남은 버퍼 처리
       const remainingBuffer = connections.getBuffer(targetSessionId);
@@ -561,7 +559,7 @@ export async function ensureClaudeProcess(
       }
 
       // 비정상 종료 + result 미수신 → 에러 전파
-      if (code !== 0 && !sessionsWithResult.has(targetSessionId) && !restartingForMode) {
+      if (code !== 0 && !sessionsWithResult.has(targetSessionId) && !restarting) {
         const errorMessage = stderrBuffer.trim() || `Claude CLI exited with code ${code}`;
         connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
           type: MessageType.CLI_EXIT_ERROR,
@@ -576,11 +574,11 @@ export async function ensureClaudeProcess(
       // 추적 정리
       sessionsWithResult.delete(targetSessionId);
 
-      // On a mode-change restart the session continues in the replacement process, so
+      // On a deliberate restart the session continues in the replacement process, so
       // neither of these applies: tearing down the workflow tracker would drop progress
       // the new CLI still reports on, and STREAM_END would end a stream the user never
       // stopped. The respawn emits its own STREAM_START.
-      if (!restartingForMode) {
+      if (!restarting) {
         workflowTracker?.stopSession(targetSessionId);
         connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
       }

@@ -6,6 +6,7 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components';
 import { AccountRow } from './AccountRow';
 import {
+  AccountDropIntent,
   AccountDropPosition,
   AccountRowZone,
   POOL_SPRING_LOAD_MS,
@@ -100,7 +101,7 @@ export interface AccountItemProps {
    * reads it at drop time so a pool is only created for a preview the user
    * actually saw.
    */
-  onSpringLoadChange: (accountId: string | null, position: AccountDropPosition) => void;
+  onSpringLoadChange: (accountId: string | null, position: AccountDropPosition, intent: AccountDropIntent) => void;
 }
 
 /**
@@ -144,6 +145,11 @@ export function AccountItem(props: AccountItemProps) {
   // library reports no target, which is what "outside the pool card" looks like.
   const { source, target } = useDragOperation();
   const willLeavePool = isDragging && isLeavingPool(poolId, readDragTarget(target?.data));
+  // Both "this row is lifted" and "some other row is previewing a slot for it"
+  // read from the same signal. `isDragging` and `source` do not end together —
+  // the operation outlives the flag by the length of the drop animation — and
+  // keying the two off different signals showed the account twice for that gap.
+  const isLifted = findDraggedAccount([account], source?.data) !== null;
 
   // ── Spring-loaded pool preview ──────────────────────────────────────────────
   // Hold a dragged account over a standalone account's middle band and, after a
@@ -159,11 +165,12 @@ export function AccountItem(props: AccountItemProps) {
   const anchorRef = useRef<{ top: number; height: number } | null>(null);
   const [springLoaded, setSpringLoaded] = useState(false);
   const [dropPosition, setDropPosition] = useState(AccountDropPosition.AFTER);
+  const [intent, setIntent] = useState(AccountDropIntent.PAIR);
 
   // A drag this row could receive. `isDropTarget` is only asked about while
   // arming: once open, the preview holds until the pointer leaves the card, so
   // the row shifting out from under the pointer cannot close what it just opened.
-  const dragInFlight = !isDragging && Boolean(source) && !willLeavePool;
+  const dragInFlight = !isLifted && Boolean(source) && !willLeavePool;
   const canArm = dragInFlight && isDropTarget;
   // A row already in a pool opens the moment it is the target. The wait exists to
   // separate "passing over" from "pair these two", and inside a pool there is
@@ -194,41 +201,60 @@ export function AccountItem(props: AccountItemProps) {
         // status — the card is bigger than the row and stays under the pointer.
         if (card && (event.clientY < card.top || event.clientY > card.bottom
           || event.clientX < card.left || event.clientX > card.right)) {
+          clear();
           setSpringLoaded(false);
           anchorRef.current = null;
           return;
         }
-        const anchor = anchorRef.current;
-        if (anchor) setDropPosition(accountRowHalf(event.clientY, anchor.top, anchor.height));
+      }
+
+      // Every band decision is measured against where this row sat when the drag
+      // first reached it. Opening a preview inserts a slot and moves the row, so
+      // re-measuring would read the pointer against a box that the preview itself
+      // just shifted — the row would keep sliding out from under the pointer.
+      if (!anchorRef.current) {
+        const rect = elementRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        anchorRef.current = { top: rect.top, height: rect.height };
+      }
+      const { top, height } = anchorRef.current;
+
+      // An open pool preview has already answered "pair these two"; from here the
+      // row is only two halves and the pointer picks a side. The thirds below are
+      // for deciding what to open, which is settled.
+      if (springLoaded && intent === AccountDropIntent.PAIR) {
+        setDropPosition(accountRowHalf(event.clientY, top, height));
         return;
       }
 
-      const rect = elementRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
+      // Inside a pool there is nothing to pair, so the row splits in two and
+      // opens at once; the drag is only choosing an order.
       if (opensWithoutWaiting) {
-        anchorRef.current = { top: rect.top, height: rect.height };
-        setDropPosition(accountRowHalf(event.clientY, rect.top, rect.height));
+        setDropPosition(accountRowHalf(event.clientY, top, height));
+        setIntent(AccountDropIntent.REORDER);
         setSpringLoaded(true);
         return;
       }
 
-      const zone = accountRowZone(event.clientY, rect.top, rect.height);
+      const zone = accountRowZone(event.clientY, top, height);
       if (zone !== AccountRowZone.MIDDLE) {
-        // Left the band: the countdown starts over next time it is entered.
+        // The outer bands mean "put me above/below this one" — no pairing, and
+        // no waiting, because there is nothing ambiguous to disambiguate.
         clear();
+        setDropPosition(zone === AccountRowZone.TOP ? AccountDropPosition.BEFORE : AccountDropPosition.AFTER);
+        setIntent(AccountDropIntent.REORDER);
+        setSpringLoaded(true);
         return;
       }
+
+      // Back in the middle band: a pool is what a pause here would make, so the
+      // reorder preview steps aside and the countdown starts again.
       if (armedZone === AccountRowZone.MIDDLE) return;
       armedZone = AccountRowZone.MIDDLE;
+      setSpringLoaded(false);
       timer = setTimeout(() => {
-        // Freeze the box before the preview moves this row, and seed the side
-        // from where the pointer already is so the first frame is not a guess.
-        const box = elementRef.current?.getBoundingClientRect();
-        if (box) {
-          anchorRef.current = { top: box.top, height: box.height };
-          setDropPosition(accountRowHalf(event.clientY, box.top, box.height));
-        }
+        setDropPosition(accountRowHalf(event.clientY, top, height));
+        setIntent(AccountDropIntent.PAIR);
         setSpringLoaded(true);
       }, POOL_SPRING_LOAD_MS);
     };
@@ -241,11 +267,11 @@ export function AccountItem(props: AccountItemProps) {
       window.removeEventListener('pointermove', onPointerMove, true);
       clear();
     };
-  }, [dragInFlight, canArm, springLoaded, opensWithoutWaiting]);
+  }, [dragInFlight, canArm, springLoaded, intent, opensWithoutWaiting]);
 
   useEffect(() => {
-    onSpringLoadChange(springLoaded ? account.id : null, dropPosition);
-  }, [springLoaded, dropPosition, account.id, onSpringLoadChange]);
+    onSpringLoadChange(springLoaded ? account.id : null, dropPosition, intent);
+  }, [springLoaded, dropPosition, intent, account.id, onSpringLoadChange]);
 
   // Resolved for the whole drag, not just while the preview is open, so both
   // ghost slots can already be mounted (at zero height) and have something to
@@ -327,7 +353,12 @@ export function AccountItem(props: AccountItemProps) {
     <div
       ref={cardRef}
       className={`rounded-lg border border-dashed transition-all duration-200 ease-out ${
-        springLoaded && poolId === null
+        // While this account is the one being dragged, `DragOverlay` is showing
+        // it under the cursor, so its slot here folds away and the rest of the
+        // list closes the gap — the account is in one place at a time.
+        isLifted ? 'max-h-0 opacity-0 overflow-hidden border-transparent' : ''
+      } ${
+        springLoaded && intent === AccountDropIntent.PAIR && poolId === null
           ? 'border-accent-primary/60 bg-border-default px-2.5 py-1.5 space-y-1.5 shadow-sm'
           : 'border-transparent'
       }`}
@@ -343,7 +374,7 @@ export function AccountItem(props: AccountItemProps) {
       )}
       <div
         ref={setElement}
-        className={`relative rounded-md transition-colors ${isDragging ? 'z-10 opacity-80' : ''} ${
+        className={`relative rounded-md transition-colors ${
           springLoaded ? 'bg-surface-base' : surfaceClass
         }`}
       >
@@ -386,6 +417,29 @@ export function AccountGhostRow(props: { account: AccountListItem; open?: boolea
     >
       <AccountRow
         account={account}
+        busy
+        onSwitch={() => undefined}
+        onDelete={() => undefined}
+        leading={<GhostDragHandle />}
+        className="flex items-center gap-3 py-3"
+      />
+    </div>
+  );
+}
+
+/**
+ * The row that follows the cursor during a drag.
+ *
+ * Rendered into `DragOverlay` so the account being dragged is a separate,
+ * lifted copy. That is what lets the row's own slot in the list collapse: while
+ * the list moved the real element around, the account was on screen twice at
+ * once — once floating and once still sitting in the pool it was leaving.
+ */
+export function AccountDragPreview(props: { account: AccountListItem }) {
+  return (
+    <div className="rounded-md bg-surface-base px-2.5 shadow-lg ring-1 ring-accent-primary/40 cursor-grabbing">
+      <AccountRow
+        account={props.account}
         busy
         onSwitch={() => undefined}
         onDelete={() => undefined}

@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { AccountPoolStrategy, MessageType, ScheduledMessageKind, AutoResumeStatusPhase } from '@/shared';
+import {
+  AccountPoolStrategy,
+  AccountSwitchPreflightOutcome,
+  MessageType,
+  ScheduledMessageKind,
+  AutoResumeStatusPhase,
+} from '@/shared';
 
 // ---------------------------------------------------------------------------
 // Mutable test context read by the mocked hooks/contexts. The limit notice is
@@ -91,7 +97,11 @@ vi.mock('@/contexts/BridgeContext', () => ({
   useBridgeContext: () => ({ isConnected: true, send: sendMock, subscribe: subscribeMock, lastError: null }),
 }));
 vi.mock('@/contexts/SessionContext', () => ({
-  useSessionContext: () => ({ currentSessionId: ctx.sessionId, inputMode: ctx.inputMode }),
+  useSessionContext: () => ({
+    currentSessionId: ctx.sessionId,
+    inputMode: ctx.inputMode,
+    workingDirectory: '/work',
+  }),
 }));
 vi.mock('@/contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => ({ sendMessage: sendMessageMock, messages: ctx.messages }),
@@ -167,6 +177,11 @@ function userMsg(uuid: string): Msg {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  sendMock.mockImplementation((type: string) => Promise.resolve(
+    type === MessageType.VERIFY_ACCOUNT_SWITCH
+      ? { outcome: AccountSwitchPreflightOutcome.SUCCESS }
+      : {},
+  ));
   handlers.clear();
   ctx.sessionId = 'sess-a';
   ctx.inputMode = 'ask_before_edit';
@@ -311,10 +326,18 @@ describe('useAutoResume', () => {
     expect(result.current.action).toBeNull();
     await act(async () => {
       await Promise.resolve();
+      await Promise.resolve();
     });
 
     expect(switchToMock).toHaveBeenCalledWith('acc-2');
-    expect(sendMessageMock).toHaveBeenCalledWith('continue', 'ask_before_edit');
+    expect(sendMock).toHaveBeenCalledWith(MessageType.VERIFY_ACCOUNT_SWITCH, {
+      workingDir: '/work',
+      sessionId: 'sess-a',
+    }, { timeout: 70_000 });
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^<system-reminder>.*Continue.*<\/system-reminder>$/),
+      'ask_before_edit',
+    );
     expect(ensureSponsorMock).not.toHaveBeenCalled();
     expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
   });
@@ -337,7 +360,7 @@ describe('useAutoResume', () => {
     expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
   });
 
-  it('falls back to sponsor auto-resume scheduling when account pool switching fails', async () => {
+  it('stops and surfaces the reason when switching the credential slot fails', async () => {
     switchToMock.mockRejectedValueOnce(new Error('keychain locked'));
     ctx.autoResumeOnLimit = true;
     ctx.messages = [limitMsg('lim1', FUTURE)];
@@ -347,7 +370,7 @@ describe('useAutoResume', () => {
     ];
     ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
 
-    renderHook(() => useAutoResume());
+    const { result } = renderHook(() => useAutoResume());
     await act(async () => {
       await Promise.resolve();
     });
@@ -356,7 +379,50 @@ describe('useAutoResume', () => {
     });
 
     expect(switchToMock).toHaveBeenCalledWith('acc-2');
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(true);
+    expect(result.current.accountPoolError).toBe('keychain locked');
+    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.VERIFY_ACCOUNT_SWITCH)).toBe(false);
+    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it('stops without sending a reminder when account verification times out', async () => {
+    sendMock.mockImplementation((type: string) => Promise.resolve(
+      type === MessageType.VERIFY_ACCOUNT_SWITCH
+        ? { outcome: AccountSwitchPreflightOutcome.TIMEOUT }
+        : {},
+    ));
+    ctx.messages = [limitMsg('lim-timeout', FUTURE)];
+    ctx.accounts = [account('acc-1', 'a@example.com', true), account('acc-2', 'b@example.com', false)];
+    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
+
+    const { result } = renderHook(() => useAutoResume());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.accountPoolStatusKey).toBe('autoResume.accountPool.timedOut');
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a non-limit verification error and does not continue', async () => {
+    sendMock.mockImplementation((type: string) => Promise.resolve(
+      type === MessageType.VERIFY_ACCOUNT_SWITCH
+        ? { outcome: AccountSwitchPreflightOutcome.ERROR, error: 'Authentication failed' }
+        : {},
+    ));
+    ctx.messages = [limitMsg('lim-error', FUTURE)];
+    ctx.accounts = [account('acc-1', 'a@example.com', true), account('acc-2', 'b@example.com', false)];
+    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
+
+    const { result } = renderHook(() => useAutoResume());
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.accountPoolError).toBe('Authentication failed');
+    expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
   it('fires the countdown notification once when the reset is reached', () => {

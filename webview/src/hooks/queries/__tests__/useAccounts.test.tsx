@@ -33,8 +33,9 @@ function Probe() {
 function renderHook() {
   const client = createTestQueryClient();
   const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+  const refetchSpy = vi.spyOn(client, 'refetchQueries');
   render(<Probe />, { wrapper: makeQueryWrapper(client) });
-  return { invalidateSpy };
+  return { invalidateSpy, refetchSpy };
 }
 
 describe('useAccounts', () => {
@@ -62,18 +63,43 @@ describe('useAccounts', () => {
     expect(mockSend.mock.calls.filter((c) => c[0] === MessageType.GET_ACCOUNTS).length).toBe(1);
   });
 
-  it('switchTo sends SWITCH_ACCOUNT with the id and invalidates both account queries', async () => {
+  it('switchTo waits until refreshed account state confirms the target is active', async () => {
     mockSend.mockResolvedValue(sample);
-    const { invalidateSpy } = renderHook();
-    await waitFor(() => expect(current).not.toBeNull());
+    const { refetchSpy } = renderHook();
+    await waitFor(() => expect(current?.accounts.length).toBe(1));
 
-    mockSend.mockResolvedValueOnce({ status: 'ok' });
+    const switched = {
+      ...sample,
+      accounts: [
+        { ...sample.accounts[0], active: false },
+        { ...sample.accounts[0], id: 'acc-2', emailAddress: 'b@x.com', active: true },
+      ],
+      activeEmail: 'b@x.com',
+    };
+    mockSend
+      .mockResolvedValueOnce({ status: 'ok' })
+      .mockResolvedValueOnce(switched);
     await act(async () => { await current!.switchTo('acc-2'); });
 
     expect(mockSend).toHaveBeenCalledWith(MessageType.SWITCH_ACCOUNT, { id: 'acc-2' });
-    const keys = invalidateSpy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0]);
+    await waitFor(() => {
+      expect(current?.accounts.find((account) => account.id === 'acc-2')?.active).toBe(true);
+    });
+    const keys = refetchSpy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0]);
     expect(keys).toContain(MessageType.GET_ACCOUNTS);
     expect(keys).toContain(MessageType.GET_ACCOUNT);
+  });
+
+  it('switchTo rejects before follow-up work when refreshed state does not activate the target', async () => {
+    mockSend.mockResolvedValue(sample);
+    renderHook();
+    await waitFor(() => expect(current?.accounts.length).toBe(1));
+
+    mockSend
+      .mockResolvedValueOnce({ status: 'ok' })
+      .mockResolvedValueOnce(sample);
+
+    await expect(current!.switchTo('acc-2')).rejects.toThrow(/did not become active/);
   });
 
   it('save sends SAVE_ACCOUNT, remove sends DELETE_ACCOUNT, and savePools sends UPDATE_ACCOUNT_POOLS', async () => {

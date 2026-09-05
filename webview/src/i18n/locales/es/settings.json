@@ -257,7 +257,13 @@
       "dropToGroup": "Suelta para agrupar",
       "next": "Siguiente",
       "removeFromPool": "Quitar del grupo",
-      "delete": "Eliminar grupo"
+      "delete": "Eliminar grupo",
+      "nudge": {
+        "title": "Sigue cuando una cuenta llega a su límite",
+        "description": "Agrupa cuentas en un grupo y el límite de uso deja de cortar la conversación: la siguiente cuenta del grupo toma el relevo y la respuesta continúa.",
+        "howTo": "Para crear uno, arrastra una cuenta al centro de otra y mantenla un momento.",
+        "learnMore": "Más información"
+      }
     },
     "lastActive": {
       "today": "Hoy",

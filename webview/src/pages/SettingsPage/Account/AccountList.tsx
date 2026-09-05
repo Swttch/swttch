@@ -1,22 +1,26 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
-import { DragDropProvider, useDroppable, useDragOperation, type DragEndEvent } from '@dnd-kit/react';
+import { DragDropProvider, DragOverlay, useDroppable, useDragOperation, type DragEndEvent } from '@dnd-kit/react';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import type { AccountListItem, AccountPool } from '@/shared';
 import { useTranslation } from '@/i18n';
 import {
   AccountItem,
+  AccountDragPreview,
   AccountGhostRow,
   AccountDragKind,
+  findDraggedAccount,
   isLeavingPool,
   readDragTarget,
   type AccountDragData,
   type AccountPoolDropData,
 } from './AccountItem';
 import {
+  AccountDropIntent,
   AccountDropPosition,
   AccountPoolDropTargetKind,
   applyAccountDrop,
   createOrderedAccountPool,
+  moveAccountInOrder,
   nextAccountId,
   poolAccounts,
   removeAccountFromPool,
@@ -35,7 +39,7 @@ interface DragEntity {
  */
 export function AccountList() {
   const { t } = useTranslation('settings');
-  const { accounts, accountPools, activeEmail, isLoading, error, save, switchTo, remove, savePools } = useAccounts();
+  const { accounts, accountPools, activeEmail, isLoading, error, save, switchTo, remove, savePools, saveOrder } = useAccounts();
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   // The live account email we last auto-saved for. Keyed by email (not a one-shot
@@ -74,14 +78,19 @@ export function AccountList() {
   // rows show the preview themselves; the list only needs the answer at drop.
   const springLoadedAccountRef = useRef<string | null>(null);
   const dropPositionRef = useRef(AccountDropPosition.AFTER);
-  const handleSpringLoadChange = useCallback((accountId: string | null, position: AccountDropPosition) => {
-    if (accountId) {
-      springLoadedAccountRef.current = accountId;
-      dropPositionRef.current = position;
-    } else if (springLoadedAccountRef.current) {
-      springLoadedAccountRef.current = null;
-    }
-  }, []);
+  const dropIntentRef = useRef(AccountDropIntent.PAIR);
+  const handleSpringLoadChange = useCallback(
+    (accountId: string | null, position: AccountDropPosition, intent: AccountDropIntent) => {
+      if (accountId) {
+        springLoadedAccountRef.current = accountId;
+        dropPositionRef.current = position;
+        dropIntentRef.current = intent;
+      } else if (springLoadedAccountRef.current) {
+        springLoadedAccountRef.current = null;
+      }
+    },
+    [],
+  );
 
   const handleDelete = (account: AccountListItem) => {
     void run(() => remove(account.id));
@@ -115,14 +124,38 @@ export function AccountList() {
     // one that has to be kept.
     const previewTargetId = springLoadedAccountRef.current;
     if (previewTargetId && previewTargetId !== source.accountId) {
-      handleSavePools(applyAccountDrop(
-        accountPools,
-        source.accountId,
-        { kind: AccountPoolDropTargetKind.ACCOUNT, accountId: previewTargetId },
-        createPool,
-        Date.now(),
-        dropPositionRef.current,
-      ));
+      const targetPool = accountPools.find((pool) => pool.accountIds.includes(previewTargetId)) ?? null;
+      const pairing = dropIntentRef.current === AccountDropIntent.PAIR;
+
+      // Anything landing beside an account that is in a pool is a pool change:
+      // pairing is impossible there (it is already paired) and ordering there
+      // means ordering that pool's members.
+      if (pairing || targetPool) {
+        handleSavePools(applyAccountDrop(
+          accountPools,
+          source.accountId,
+          { kind: AccountPoolDropTargetKind.ACCOUNT, accountId: previewTargetId },
+          createPool,
+          Date.now(),
+          dropPositionRef.current,
+        ));
+        return;
+      }
+
+      // Landing beside a standalone account: the drag only chose a place in the
+      // list. If it came out of a pool it leaves that pool to stand there, which
+      // is what dropping next to a standalone row looks like.
+      void run(async () => {
+        if (source.poolId) {
+          await savePools(removeAccountFromPool(accountPools, source.poolId, source.accountId, Date.now()));
+        }
+        await saveOrder(moveAccountInOrder(
+          accounts.map((account) => account.id),
+          source.accountId,
+          previewTargetId,
+          dropPositionRef.current,
+        ));
+      });
       return;
     }
 
@@ -225,6 +258,18 @@ export function AccountList() {
               <LeavingPoolSlot accounts={accounts} />
             </div>
           </section>
+
+          {/* The copy that follows the cursor. With it, the row's own slot in the
+              list can fold away, so the account is never on screen twice. */}
+          {/* No drop animation: the list has already been updated optimistically
+              by the time the drop lands, so flying the copy back to where the row
+              used to be would animate towards a slot that no longer exists. */}
+          <DragOverlay dropAnimation={null}>
+            {(source) => {
+              const dragged = findDraggedAccount(accounts, (source as DragEntity | null)?.data);
+              return dragged ? <AccountDragPreview account={dragged} /> : null;
+            }}
+          </DragOverlay>
         </DragDropProvider>
       )}
     </div>

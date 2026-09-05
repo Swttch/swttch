@@ -253,7 +253,13 @@
       "dropToGroup": "여기에 놓아 묶기",
       "next": "다음",
       "removeFromPool": "풀에서 제거",
-      "delete": "풀 삭제"
+      "delete": "풀 삭제",
+      "nudge": {
+        "title": "한도에 걸려도 대화가 멈추지 않게",
+        "description": "계정을 하나의 풀로 묶어두면, 한도에 도달했을 때 같은 풀의 다음 계정이 이어받아 대화를 그대로 계속합니다.",
+        "howTo": "만들려면 계정을 다른 계정의 가운데로 끌어서 잠시 멈추세요.",
+        "learnMore": "알아보기"
+      }
     },
     "lastActive": {
       "today": "오늘",

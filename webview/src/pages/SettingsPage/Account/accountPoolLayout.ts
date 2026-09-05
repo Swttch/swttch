@@ -44,6 +44,29 @@ export enum AccountDropPosition {
   AFTER = 'after',
 }
 
+/** What dropping right now would do. */
+export enum AccountDropIntent {
+  /** Put the two accounts in one pool. */
+  PAIR = 'pair',
+  /** Leave pools alone and change the order accounts are listed in. */
+  REORDER = 'reorder',
+}
+
+/** Move `accountId` to the given side of `targetId` within `orderedIds`. */
+export function moveAccountInOrder(
+  orderedIds: string[],
+  accountId: string,
+  targetId: string,
+  position: AccountDropPosition,
+): string[] {
+  if (accountId === targetId) return orderedIds;
+  const without = orderedIds.filter((id) => id !== accountId);
+  const targetIndex = without.indexOf(targetId);
+  if (targetIndex < 0) return orderedIds;
+  const at = position === AccountDropPosition.BEFORE ? targetIndex : targetIndex + 1;
+  return [...without.slice(0, at), accountId, ...without.slice(at)];
+}
+
 /**
  * Which half of a row the pointer is in.
  *

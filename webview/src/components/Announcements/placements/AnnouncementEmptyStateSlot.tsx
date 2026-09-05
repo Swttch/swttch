@@ -2,6 +2,7 @@ import { useAnnouncements } from '@/hooks/useAnnouncements';
 import { AnnouncementPlacement } from '@/shared';
 import { AnnouncementView } from '@/vendor/announcement-ui';
 import { useAnnouncementActionDispatch } from '../useAnnouncementActionDispatch';
+import { useInlineAnnouncements } from '../inline/useInlineAnnouncements';
 
 /**
  * EMPTY_STATE 플레이스먼트 공지 슬롯.
@@ -17,9 +18,18 @@ import { useAnnouncementActionDispatch } from '../useAnnouncementActionDispatch'
  */
 export function AnnouncementEmptyStateSlot() {
   const { announcements, dismiss } = useAnnouncements(AnnouncementPlacement.EMPTY_STATE);
+  const inline = useInlineAnnouncements(AnnouncementPlacement.EMPTY_STATE);
   const dispatch = useAnnouncementActionDispatch();
   const announcement = announcements[0];
-  if (!announcement) return null;
+
+  // 서버 공지를 먼저 두고 앱에 내장된 인라인 공지를 뒤에 잇는다. 그래서 알릴 일이
+  // 있어 발행한 공지가 항상 이 자리를 가져가고, 그런 공지가 없을 때만 내장 안내가
+  // 그 자리를 채운다. 자리를 두고 다투지 않으므로 어느 쪽도 상대를 알 필요가 없다.
+  if (!announcement) {
+    const builtIn = inline[0];
+    if (!builtIn) return null;
+    return <div className="w-full max-w-[22rem]">{builtIn.render()}</div>;
+  }
 
   return (
     <div className="announcement-scope w-full max-w-[22rem]">

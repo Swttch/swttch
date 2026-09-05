@@ -72,7 +72,7 @@ function acc(id: string, email: string, extra: Partial<StoredAccount> = {}): Sto
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [] });
+  mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
   mockReadOauth.mockResolvedValue(null);
 });
 
@@ -107,6 +107,7 @@ describe('saveCurrentAccount', () => {
       current: 'acc-old',
       accounts: { 'acc-old': acc('acc-old', 'a@x.com', { createdAt: 111 }) },
       accountPools: [],
+      accountOrder: [],
     });
 
     const result = await saveCurrentAccount();
@@ -119,18 +120,18 @@ describe('saveCurrentAccount', () => {
 
 describe('switchToAccount', () => {
   it('throws for an unknown account id', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [] });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
     await expect(switchToAccount('acc-x')).rejects.toThrow(/Unknown account/);
   });
 
   it('throws when the saved snapshot is missing', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [] });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue(null);
     await expect(switchToAccount('acc-x')).rejects.toThrow(/credentials are unavailable/);
   });
 
   it('swaps the live credentials + oauthAccount and updates the current hint', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [] });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{"t":1}}', oauthAccount: { emailAddress: 'b@x.com' } });
     mockReadLive.mockResolvedValue('{"claudeAiOauth":{"old":1}}');
 
@@ -142,7 +143,7 @@ describe('switchToAccount', () => {
   });
 
   it('rolls the live credentials back when applying the new account fails', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [] });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{"t":1}}', oauthAccount: { emailAddress: 'b@x.com' } });
     mockReadLive.mockResolvedValue('{"claudeAiOauth":{"old":1}}');
     mockReadOauth.mockResolvedValue({ emailAddress: 'old@x.com' });
@@ -164,6 +165,7 @@ describe('listAccounts', () => {
       current: 'acc-1',
       accounts: { 'acc-1': acc('acc-1', 'a@x.com', { createdAt: 5, updatedAt: 10 }), 'acc-2': acc('acc-2', 'b@x.com', { createdAt: 15, updatedAt: 20 }) },
       accountPools: [],
+      accountOrder: [],
     });
     authStatus({ email: 'b@x.com' });
 
@@ -196,7 +198,7 @@ describe('updateAccountPools', () => {
       createdAt: 1,
       updatedAt: 1,
     }];
-    mockReadRegistry.mockResolvedValueOnce({ current: null, accounts: {}, accountPools });
+    mockReadRegistry.mockResolvedValueOnce({ current: null, accounts: {}, accountPools, accountOrder: [] });
 
     await expect(updateAccountPools(accountPools)).resolves.toEqual(accountPools);
     expect(mockWritePools).toHaveBeenCalledWith(accountPools);

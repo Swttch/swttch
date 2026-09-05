@@ -257,7 +257,13 @@
       "dropToGroup": "Déposer pour grouper",
       "next": "Suivant",
       "removeFromPool": "Retirer du groupe",
-      "delete": "Supprimer le groupe"
+      "delete": "Supprimer le groupe",
+      "nudge": {
+        "title": "Continuer quand un compte atteint sa limite",
+        "description": "Regroupez des comptes et une limite d'usage n'arrête plus la conversation : le compte suivant du groupe prend le relais et la réponse se poursuit.",
+        "howTo": "Pour en créer un, faites glisser un compte au centre d'un autre et maintenez un instant.",
+        "learnMore": "En savoir plus"
+      }
     },
     "lastActive": {
       "today": "Aujourd'hui",

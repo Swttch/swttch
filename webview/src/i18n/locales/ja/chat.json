@@ -504,9 +504,11 @@
       "proceeding": "再開中…"
     },
     "accountPool": {
-      "switching": "アカウントを切り替えています…",
+      "switching": "アカウント切り替え中（{{seconds}}秒）",
       "continuing": "次のアカウントで続行しています…",
-      "failed": "アカウントの切り替えに失敗しました"
+      "failed": "アカウントの切り替えに失敗しました",
+      "timedOut": "アカウント切り替えの確認がタイムアウトしました。しばらくしてからメッセージを再送してください。",
+      "failedWithReason": "アカウント切り替えの確認を中止しました：{{reason}}"
     },
     "error": {
       "network": "ネットワーク接続エラー",

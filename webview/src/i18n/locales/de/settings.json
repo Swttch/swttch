@@ -257,7 +257,13 @@
       "dropToGroup": "Zum Gruppieren ablegen",
       "next": "Nächstes",
       "removeFromPool": "Aus Pool entfernen",
-      "delete": "Pool löschen"
+      "delete": "Pool löschen",
+      "nudge": {
+        "title": "Weitermachen, wenn ein Konto sein Limit erreicht",
+        "description": "Konten zu einem Pool zusammenfassen: Ist ein Limit erreicht, übernimmt das nächste Konto im Pool und die Antwort läuft weiter.",
+        "howTo": "Zum Erstellen ein Konto auf die Mitte eines anderen ziehen und einen Moment halten.",
+        "learnMore": "Mehr erfahren"
+      }
     },
     "lastActive": {
       "today": "Heute",

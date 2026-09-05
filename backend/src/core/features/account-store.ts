@@ -31,6 +31,12 @@ export interface AccountsRegistry {
   current: string | null;
   accounts: Record<string, StoredAccount>;
   accountPools: AccountPool[];
+  /**
+   * The order the user arranged accounts in, most recently dragged first-class.
+   * Ids missing from this list fall back to registration order behind the ones
+   * that are in it, so an untouched registry reads exactly as it always did.
+   */
+  accountOrder: string[];
 }
 
 // Account ids are filesystem-safe (no colon — illegal on Windows) so they can be
@@ -86,20 +92,24 @@ async function writeAtomic0600(target: string, content: string): Promise<void> {
 /** Read the registry, returning an empty one when absent or unparseable. */
 export async function readRegistry(): Promise<AccountsRegistry> {
   const path = registryPath();
-  if (!existsSync(path)) return { current: null, accounts: {}, accountPools: [] };
+  if (!existsSync(path)) return { current: null, accounts: {}, accountPools: [], accountOrder: [] };
   try {
     const raw = JSON.parse(await readFile(path, 'utf-8')) as Partial<AccountsRegistry>;
     const accounts = raw.accounts && typeof raw.accounts === 'object' ? raw.accounts : {};
     const accountPools = Array.isArray(raw.accountPools)
       ? raw.accountPools.filter(isValidAccountPool)
       : [];
+    const accountOrder = Array.isArray(raw.accountOrder)
+      ? raw.accountOrder.filter((id): id is string => typeof id === 'string' && ACCOUNT_ID_PATTERN.test(id))
+      : [];
     return {
       current: typeof raw.current === 'string' ? raw.current : null,
       accounts: accounts as Record<string, StoredAccount>,
       accountPools,
+      accountOrder,
     };
   } catch {
-    return { current: null, accounts: {}, accountPools: [] };
+    return { current: null, accounts: {}, accountPools: [], accountOrder: [] };
   }
 }
 
@@ -125,6 +135,13 @@ export async function setCurrentAccount(id: string | null): Promise<void> {
 export async function writeAccountPools(accountPools: AccountPool[]): Promise<void> {
   const registry = await readRegistry();
   registry.accountPools = normalizeAccountPools(accountPools, registry.accounts);
+  await writeRegistry(registry);
+}
+
+/** Persist the order the user arranged accounts in, dropping ids we do not know. */
+export async function writeAccountOrder(accountOrder: string[]): Promise<void> {
+  const registry = await readRegistry();
+  registry.accountOrder = normalizeAccountOrder(accountOrder, registry.accounts);
   await writeRegistry(registry);
 }
 
@@ -166,6 +183,7 @@ export async function deleteAccountFiles(id: string): Promise<void> {
       })),
       registry.accounts,
     );
+    registry.accountOrder = registry.accountOrder.filter((accountId) => accountId !== id);
     if (registry.current === id) registry.current = null;
     await writeRegistry(registry);
   }
@@ -207,6 +225,16 @@ function isValidAccountPool(value: AccountPool): boolean {
     typeof value.createdAt === 'number' &&
     typeof value.updatedAt === 'number'
   );
+}
+
+/** Keep only known ids, and only once each, preserving the given order. */
+function normalizeAccountOrder(accountOrder: string[], accounts: Record<string, StoredAccount>): string[] {
+  const seen = new Set<string>();
+  return accountOrder.filter((id) => {
+    if (typeof id !== 'string' || !accounts[id] || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
 }
 
 function normalizeAccountPools(

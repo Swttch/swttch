@@ -504,9 +504,11 @@
       "proceeding": "Reprise en cours…"
     },
     "accountPool": {
-      "switching": "Changement de compte…",
+      "switching": "Changement de compte ({{seconds}} s)",
       "continuing": "Poursuite avec le compte suivant…",
-      "failed": "Échec du changement de compte"
+      "failed": "Échec du changement de compte",
+      "timedOut": "La vérification du changement de compte a expiré. Renvoyez le message dans quelques instants.",
+      "failedWithReason": "Vérification du changement de compte interrompue : {{reason}}"
     },
     "error": {
       "network": "Erreur de connexion réseau",

@@ -15,6 +15,7 @@ import {
   setCurrentAccount,
   deleteAccountFiles,
   writeAccountPools,
+  writeAccountOrder,
   newAccountId,
 } from './account-store';
 
@@ -80,10 +81,24 @@ export async function listAccounts(): Promise<AccountsResult> {
     ...meta,
     active: activeEmail !== null && meta.emailAddress === activeEmail,
   }));
-  // Stable order: registration order (oldest first).
-  accounts.sort((a, b) => a.createdAt - b.createdAt);
+  // The order the user arranged, then registration order (oldest first) for any
+  // account they have never moved — so an untouched registry reads as it always
+  // did, and a rearranged one keeps the arrangement across restarts.
+  const arranged = new Map(registry.accountOrder.map((id, index) => [id, index]));
+  accounts.sort((a, b) => {
+    const rankA = arranged.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const rankB = arranged.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    return rankA === rankB ? a.createdAt - b.createdAt : rankA - rankB;
+  });
 
   return { accounts, accountPools: registry.accountPools, activeEmail };
+}
+
+/** Replace the saved account order and hand back what was stored. */
+export async function updateAccountOrder(accountOrder: string[]): Promise<string[]> {
+  await writeAccountOrder(accountOrder);
+  const registry = await readRegistry();
+  return registry.accountOrder;
 }
 
 export async function updateAccountPools(accountPools: AccountPool[]): Promise<AccountPool[]> {

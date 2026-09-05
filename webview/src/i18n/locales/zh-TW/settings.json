@@ -253,7 +253,13 @@
       "dropToGroup": "放開以分組",
       "next": "下一個",
       "removeFromPool": "從帳戶池移除",
-      "delete": "刪除帳戶池"
+      "delete": "刪除帳戶池",
+      "nudge": {
+        "title": "帳戶達到上限也不中斷對話",
+        "description": "將帳戶編成一個池，達到上限時同一池中的下一個帳戶會接手，回答繼續進行。",
+        "howTo": "建立方式：將一個帳戶拖曳到另一個帳戶的中間位置並停留片刻。",
+        "learnMore": "了解詳情"
+      }
     },
     "lastActive": {
       "today": "今天",

@@ -37,8 +37,18 @@ import { mergeToolResults } from './mergeToolResults';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
 import { isOlderPagePrepend, findNewestUserUuid } from './paging';
 import { useTranslation } from '@/i18n';
+import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
+import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
 
 export function ChatPage() {
+  return (
+    <AutoResumeProvider>
+      <ChatPageContent />
+    </AutoResumeProvider>
+  );
+}
+
+function ChatPageContent() {
   const { t } = useTranslation('chat');
   // NOTE: no auth "gate" here. A failed/undetermined `auth status` must NOT bounce
   // the user to login (that caused #178's repeated reauth). A definitive logout
@@ -356,6 +366,7 @@ export function ChatPage() {
         <ConnectionLostBanner />
         <AuthErrorBanner />
         <BrowserPermissionBanner />
+        <AccountSwitchErrorBanner />
         <AnnouncementTopBannerSlot />
       </BannerArea>
 

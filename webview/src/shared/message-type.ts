@@ -195,10 +195,14 @@ export enum MessageType {
   SAVE_ACCOUNT = 'SAVE_ACCOUNT',
   /** Switch the live CLI credentials to a saved account by id. inbound webview→backend */
   SWITCH_ACCOUNT = 'SWITCH_ACCOUNT',
+  /** Verify the live account with an isolated, non-persistent CLI call. inbound webview→backend */
+  VERIFY_ACCOUNT_SWITCH = 'VERIFY_ACCOUNT_SWITCH',
   /** Remove a saved account (snapshot + registry entry) by id. inbound webview→backend */
   DELETE_ACCOUNT = 'DELETE_ACCOUNT',
   /** Replace the saved Claude account pools. inbound webview→backend */
   UPDATE_ACCOUNT_POOLS = 'UPDATE_ACCOUNT_POOLS',
+  /** Replace the order saved accounts are listed in. inbound webview→backend */
+  UPDATE_ACCOUNT_ORDER = 'UPDATE_ACCOUNT_ORDER',
   /** Read usage/quota information. */
   GET_USAGE = 'GET_USAGE',
   /** Run `claude -p "/usage"` and return its raw report text for the usage modal. inbound webview→backend */
