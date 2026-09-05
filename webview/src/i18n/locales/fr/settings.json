@@ -485,12 +485,12 @@
         "menu": "Gérer",
         "clearKey": "Effacer la clé",
         "clearKeyConfirmTitle": "Effacer la clé de mécène ?",
-        "clearKeyConfirmMessage": "Cet appareil cessera d’utiliser les fonctionnalités de mécène. Votre soutien et vos paiements restent inchangés : recollez la clé quand vous voulez.",
+        "clearKeyConfirmMessage": "Cet appareil cessera d’utiliser les fonctionnalités de mécène. Votre soutien et vos paiements restent inchangés, et cet écran vous proposera de le réactiver à tout moment.",
         "clearKeyDone": "Clé effacée sur cet appareil.",
-        "cancel": "Annuler le soutien récurrent",
-        "cancelConfirmTitle": "Annuler votre soutien récurrent ?",
+        "cancel": "Annuler le soutien",
+        "cancelConfirmTitle": "Annuler votre soutien ?",
         "cancelConfirmMessage": "Les prélèvements s’arrêtent à la fin de la période déjà payée ; d’ici là, tout continue de fonctionner.",
-        "cancelDone": "Soutien récurrent annulé.",
+        "cancelDone": "Soutien annulé.",
         "cancelFailed": "Annulation impossible. Réessayez dans un instant."
       },
       "thanksBefore": "Merci de soutenir ",
@@ -556,7 +556,16 @@
       ]
     ],
     "letterSignature": "— @yonghyun",
-    "openSourceNote": "Le cœur de ce projet reste open source, et toutes les fonctionnalités communautaires resteront accessibles à tous, avec ou sans parrainage."
+    "openSourceNote": "Le cœur de ce projet reste open source, et toutes les fonctionnalités communautaires resteront accessibles à tous, avec ou sans parrainage.",
+    "deactivated": {
+      "title": "Le soutien est désactivé sur cet appareil",
+      "description": "Vous avez effacé la clé ici, les fonctionnalités de mécène sont donc désactivées sur cet appareil.",
+      "descriptionOn": "Vous avez effacé la clé ici le {{date}}, les fonctionnalités de mécène sont donc désactivées sur cet appareil.",
+      "billingNote": "Cela n’a rien annulé. Si vous avez un soutien récurrent, il continue d’être prélevé.",
+      "reactivate": "Réactiver",
+      "reactivating": "Activation…",
+      "cancelHint": "Pour arrêter le prélèvement récurrent, réactivez cet appareil puis utilisez Gérer → Annuler le soutien."
+    }
   },
   "badges": {
     "sponsor": "Fonctionnalité réservée aux sponsors",

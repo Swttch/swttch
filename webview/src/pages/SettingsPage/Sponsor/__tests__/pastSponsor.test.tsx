@@ -21,6 +21,7 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
     interval: mockLicenseKey !== null ? 'monthly' : null,
     price: mockLicenseKey !== null ? { amount: 5, currency: 'USD' } : null,
     cancellable: false,
+    deactivatedAt: null,
     cancelSubscription: vi.fn(),
     isLoading: false,
     verify: vi.fn(),

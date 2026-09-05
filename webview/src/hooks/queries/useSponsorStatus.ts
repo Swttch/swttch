@@ -16,6 +16,8 @@ interface SponsorStatusResponse {
   price?: SponsorPrice;
   /** Whether a recurring payment exists that could be cancelled. */
   cancellable?: boolean;
+  /** Set only when this device switched sponsorship off; ISO 8601. */
+  deactivatedAt?: string;
   error?: string;
 }
 
@@ -43,6 +45,7 @@ interface SponsorState {
   interval: string | null;
   price: SponsorPrice | null;
   cancellable: boolean;
+  deactivatedAt: string | null;
 }
 
 export interface VerifyResult {
@@ -67,13 +70,23 @@ export interface UseSponsorStatusResult {
   price: SponsorPrice | null;
   /** Whether there is a recurring payment that can be cancelled. */
   cancellable: boolean;
+  /**
+   * When this device switched sponsorship off, or null if it never did. Tells a
+   * past sponsor apart from a first-time visitor — their screens are otherwise
+   * identical, while the first one may still be paying.
+   */
+  deactivatedAt: string | null;
   /** End the recurring payment (not the same as clearing the local key). */
   cancelSubscription: () => Promise<boolean>;
   isLoading: boolean;
   verify: (licenseKey: string) => Promise<VerifyResult>;
   deactivate: () => Promise<void>;
-  /** Poll www for a sponsor key minted for this install and auto-activate it. */
-  checkByInstall: () => Promise<void>;
+  /**
+   * Ask www for a sponsor key minted for this install and activate it here.
+   * Also lifts an earlier deactivation, because it only runs when the user asked
+   * for sponsorship on this device. Resolves to whether a key is now active.
+   */
+  checkByInstall: () => Promise<boolean>;
 }
 
 function useSponsorStatusQuery(): UseQueryResult<SponsorState, Error> {
@@ -92,6 +105,7 @@ function useSponsorStatusQuery(): UseQueryResult<SponsorState, Error> {
           interval: res.interval ?? null,
           price: res.price ?? null,
           cancellable: res.cancellable === true,
+          deactivatedAt: res.deactivatedAt ?? null,
         };
       }
       throw new Error(res?.error ?? 'Failed to load sponsor status');
@@ -146,9 +160,13 @@ export function useSponsorStatus(): UseSponsorStatusResult {
     return res?.ok === true;
   }, [send, invalidate]);
 
-  const checkByInstall = useCallback(async () => {
+  const checkByInstall = useCallback(async (): Promise<boolean> => {
     const res = (await send(MessageType.CHECK_SPONSOR)) as { isSponsor?: boolean } | null;
-    if (res?.isSponsor === true) invalidate();
+    // Always refetch, not only on success: this call also lifts an earlier
+    // deactivation, so even when no key comes back the screen has changed from
+    // "you switched this off" to "not sponsoring yet" and must be redrawn.
+    invalidate();
+    return res?.isSponsor === true;
   }, [send, invalidate]);
 
   return {
@@ -159,6 +177,7 @@ export function useSponsorStatus(): UseSponsorStatusResult {
     interval: query.data?.interval ?? null,
     price: query.data?.price ?? null,
     cancellable: query.data?.cancellable ?? false,
+    deactivatedAt: query.data?.deactivatedAt ?? null,
     cancelSubscription,
     isLoading: query.isLoading,
     verify,

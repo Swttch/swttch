@@ -485,12 +485,12 @@
         "menu": "管理",
         "clearKey": "清除赞助密钥",
         "clearKeyConfirmTitle": "要清除赞助密钥吗？",
-        "clearKeyConfirmMessage": "本设备将停用赞助功能。你的赞助与付款不受影响，随时重新粘贴密钥即可恢复。",
+        "clearKeyConfirmMessage": "本设备将停用赞助功能。你的赞助与付款不受影响，本页面随时可以重新开启。",
         "clearKeyDone": "已清除本设备的赞助密钥。",
-        "cancel": "取消定期赞助",
-        "cancelConfirmTitle": "要取消定期赞助吗？",
+        "cancel": "取消赞助",
+        "cancelConfirmTitle": "要取消赞助吗？",
         "cancelConfirmMessage": "将在你已付费的周期结束时停止扣款，在此之前赞助功能照常可用。",
-        "cancelDone": "已取消定期赞助。",
+        "cancelDone": "已取消赞助。",
         "cancelFailed": "取消失败，请稍后再试。"
       },
       "thanksBefore": "感谢你支持",
@@ -556,7 +556,16 @@
       ]
     ],
     "letterSignature": "— @yonghyun",
-    "openSourceNote": "这个项目的核心依然是开源的，所有社区功能无论是否赞助，今后都可以继续使用。"
+    "openSourceNote": "这个项目的核心依然是开源的，所有社区功能无论是否赞助，今后都可以继续使用。",
+    "deactivated": {
+      "title": "本设备已关闭赞助功能",
+      "description": "你在本设备清除了赞助密钥，因此赞助功能已关闭。",
+      "descriptionOn": "你在 {{date}} 于本设备清除了赞助密钥，因此赞助功能已关闭。",
+      "billingNote": "这并没有取消任何东西。如果你有定期赞助，仍会继续扣款。",
+      "reactivate": "重新开启",
+      "reactivating": "正在开启…",
+      "cancelHint": "要停止定期扣款，请先重新开启本设备，然后使用 管理 → 取消赞助。"
+    }
   },
   "badges": {
     "sponsor": "赞助者专属功能",

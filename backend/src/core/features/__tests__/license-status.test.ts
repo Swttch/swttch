@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // getSponsorStatus reads the license file and re-validates through www. Both are
 // stubbed at the boundary so these tests assert one thing only: how a stored
 // license turns into an entitlement decision.
-const { mockReadFile } = vi.hoisted(() => ({ mockReadFile: vi.fn() }));
+const { mockReadFile, mockClaimSponsorByInstall } = vi.hoisted(() => ({
+  mockReadFile: vi.fn(),
+  mockClaimSponsorByInstall: vi.fn(),
+}));
 
 vi.mock('fs/promises', () => ({
   readFile: mockReadFile,
@@ -13,6 +16,9 @@ vi.mock('fs/promises', () => ({
 }));
 vi.mock('../license-revalidation', () => ({
   revalidateStoredLicense: vi.fn(() => Promise.resolve()),
+}));
+vi.mock('../license-claim', () => ({
+  claimSponsorByInstall: mockClaimSponsorByInstall,
 }));
 
 import { getSponsorStatus } from '../license';
@@ -28,6 +34,7 @@ function stored(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   mockReadFile.mockReset();
+  mockClaimSponsorByInstall.mockReset().mockResolvedValue(false);
 });
 
 describe('getSponsorStatus', () => {
@@ -92,5 +99,55 @@ describe('getSponsorStatus', () => {
     expect(status.isSponsor).toBe(false);
     expect(status.tier).toBe('jetbrains');
     expect(status.price).toEqual({ amount: 5, currency: 'USD' });
+  });
+
+  // A sponsor whose key never reached this install has nothing on disk to
+  // revalidate, so asking here is their only way back in — and this is the wiring
+  // that makes it happen anywhere the sponsor state is read, rather than only in
+  // the ten-minute window after checkout (#256).
+  describe('picking up a key that never arrived', () => {
+    it('asks www for a minted key when nothing is stored', async () => {
+      mockReadFile.mockRejectedValue(new Error('ENOENT'));
+
+      await getSponsorStatus();
+
+      expect(mockClaimSponsorByInstall).toHaveBeenCalledWith({ throttled: true });
+    });
+
+    // Without this the screen cannot tell a past sponsor from a first-time
+    // visitor, so it pitches sponsorship at someone whose card is still being
+    // charged — and hides the menu that would stop the charge.
+    it('says the device was switched off, rather than just "not a sponsor"', async () => {
+      mockReadFile.mockResolvedValue(JSON.stringify({ deactivatedAt: '2026-09-01T00:00:00.000Z' }));
+
+      const status = await getSponsorStatus();
+
+      expect(status.isSponsor).toBe(false);
+      expect(status.licenseKey).toBeUndefined();
+      expect(status.deactivatedAt).toBe('2026-09-01T00:00:00.000Z');
+    });
+
+    it('leaves deactivatedAt unset for someone who never sponsored', async () => {
+      mockReadFile.mockRejectedValue(new Error('ENOENT'));
+
+      expect((await getSponsorStatus()).deactivatedAt).toBeUndefined();
+    });
+
+    // Ordering, not just wiring: the claim writes the key, so reading the license
+    // before it would report "not a sponsor" to someone who just got one. The
+    // stub only makes the file appear once the claim has run, so a read that
+    // happens first fails this test.
+    it('reports the entitlement the pick-up just granted', async () => {
+      mockReadFile.mockRejectedValue(new Error('ENOENT'));
+      mockClaimSponsorByInstall.mockImplementation(async () => {
+        mockReadFile.mockResolvedValue(stored({ licenseKey: 'CCG-minted' }));
+        return true;
+      });
+
+      const status = await getSponsorStatus();
+
+      expect(status.isSponsor).toBe(true);
+      expect(status.licenseKey).toBe('CCG-minted');
+    });
   });
 });

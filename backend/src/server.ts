@@ -7,6 +7,7 @@ import { handleMessage } from './core/handlers/index';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
 import { migrateSettingsToCorrectStore } from './core/features/settings-migration';
 import { ensureProfile } from './core/features/profile';
+import { claimSponsorByInstall } from './core/features/license-claim';
 import { trackEvent, reportBackendError } from './core/features/telemetry';
 import { restoreTunnelState } from './core/features/tunnel-manager';
 import { tunnelPairing } from './core/features/tunnel-pairing';
@@ -235,6 +236,18 @@ async function main() {
 
   // 설치 단위 가명 식별자(uuid)를 동의 여부와 무관하게 보장한다.
   await ensureProfile();
+
+  // A sponsor whose key never reached this install gets it back here, on the
+  // one event they are guaranteed to trigger: opening the app. Everything else
+  // that picks the key up hangs off a screen they have no reason to visit —
+  // they already paid, so nothing tells them the Sponsor screen is where the
+  // repair lives, and #256 sat unfixed for a month for exactly that reason.
+  //
+  // Fire-and-forget after ensureProfile (which mints the install id this needs):
+  // it reaches the network, and no sponsor should wait on a boot step for it.
+  // Skips itself when a key is already stored or the user turned sponsorship
+  // off here, so this costs one request per launch at most.
+  void claimSponsorByInstall({ throttled: true });
 
   // 각 설정 키를 공식 스키마 기준의 올바른 저장소로 1회 이관한다(양방향).
   // 멱등(이미 이관됐으면 no-op)하고, 실패해도 시작을 막지 않도록 내부에서 방어한다.
