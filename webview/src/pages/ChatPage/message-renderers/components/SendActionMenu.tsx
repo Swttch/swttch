@@ -4,6 +4,11 @@ import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useSectionFoldValue, useSectionKey } from '../../SectionFoldContext';
+import { useSendActionsValue } from '../../SendActionsContext';
+
+/** One row of the menu. Shared so the entries cannot drift apart visually. */
+const itemClass =
+  'w-full text-start px-3 py-2 text-xs text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
 
 /**
  * The button at the top-right corner of a user send, and the menu it opens.
@@ -19,11 +24,11 @@ import { useSectionFoldValue, useSectionKey } from '../../SectionFoldContext';
  * `OverflowMenu` uses for the same job in the session header, so the two menus
  * in this UI look like the same kind of thing.
  *
- * Cursor's menu lists fork and rewind. Neither exists here yet — issue #356
- * tracks them — so today the menu carries the one action we do have, collapsing
- * the reply below this send (issue #368). The menu is built as a list from the
- * start rather than as a lone button so those entries can join it without the
- * control being redesigned around them.
+ * The menu carries collapsing the reply below this send (issue #368) together
+ * with the fork and rewind entries it was built as a list to make room for
+ * (issue #356). The rewind pair is drawn only for a send the code can actually
+ * be restored to; forking is always offered, since a send with no history
+ * before it can still open a new session carrying its prompt.
  *
  * The control renders only for a send that actually heads a section, inside a
  * transcript that groups them. Anywhere else there is no reply to collapse, and
@@ -46,12 +51,20 @@ export function SendActionMenu() {
   const { t } = useTranslation('chat');
   const fold = useSectionFoldValue();
   const sectionKey = useSectionKey();
+  const actions = useSendActionsValue();
   const [open, setOpen] = useState(false);
 
   if (!fold || sectionKey === null) return null;
 
   const collapsed = fold.isCollapsed(sectionKey);
   const label = t('sendActions.menuLabel');
+  // A send with no checkpoint behind it cannot be rewound to, so the two rewind
+  // entries are not drawn for it at all.
+  const canRewind = actions?.canRewind(sectionKey) ?? false;
+  // Nothing to offer while the CLI has not recorded this send yet: its id is
+  // still the webview's own, and every one of these actions names the send on a
+  // command line.
+  const canFork = actions?.canFork(sectionKey) ?? false;
 
   return (
     /*
@@ -105,10 +118,64 @@ export function SendActionMenu() {
                 fold.toggle(sectionKey);
                 setOpen(false);
               }}
-              className="w-full text-start px-3 py-2 text-xs text-text-primary hover:bg-surface-hover transition-colors cursor-pointer"
+              className={itemClass}
             >
               {collapsed ? t('sendActions.expandReply') : t('sendActions.collapseReply')}
             </button>
+            {actions && canFork && (
+              <>
+                <div className="border-t border-border-default" />
+                {/*
+                  Always offered. A send with nothing before it cannot branch
+                  from shared history, but it can still open a new session
+                  carrying this prompt, which is what the action does then.
+                */}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    actions.forkConversation(sectionKey);
+                    setOpen(false);
+                  }}
+                  className={itemClass}
+                >
+                  {t('sendActions.forkConversation')}
+                </button>
+                {/*
+                  Hidden rather than disabled when there is no checkpoint for
+                  this send, matching the Cursor extension. A greyed-out row
+                  invites the user to work out why it is greyed out; the reason
+                  here is that backups were never taken, which no amount of
+                  clicking can change.
+                */}
+                {canRewind && (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        actions.rewindCode(sectionKey);
+                        setOpen(false);
+                      }}
+                      className={itemClass}
+                    >
+                      {t('sendActions.rewindCode')}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        actions.forkAndRewind(sectionKey);
+                        setOpen(false);
+                      }}
+                      className={itemClass}
+                    >
+                      {t('sendActions.forkAndRewind')}
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
       >

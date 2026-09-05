@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageArea } from '../ChatMessageArea';
@@ -47,6 +48,11 @@ const collapsedCount = (count: number) =>
 const mockSessionContext = {
   workingDirectory: '/test/path' as string | null,
   setWorkingDirectory: vi.fn(),
+  // The send menu's fork entry names the branch after the session it came from,
+  // so it reads the list (issue #356).
+  sessions: [] as Array<{ id: string; title: string }>,
+  currentSessionId: null as string | null,
+  addNewSession: vi.fn(),
 };
 
 const mockChatStreamContext = {
@@ -66,6 +72,17 @@ vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: null }),
 }));
 
+// The send menu's rewind entry talks to the backend through the bridge, and its
+// fork entry asks the api layer to load the branch it opens (issue #356). These
+// tests only render the menu, so stubs are enough.
+vi.mock('@/contexts/BridgeContext', () => ({
+  useBridgeContext: () => ({ send: vi.fn().mockResolvedValue({ status: 'ok' }) }),
+}));
+
+vi.mock('@/contexts/ApiContext', () => ({
+  useApi: () => ({ sessions: { load: vi.fn() } }),
+}));
+
 const now = new Date().toISOString();
 
 const send = (uuid: string, text: string): LoadedMessageDto => ({
@@ -82,15 +99,19 @@ const reply = (uuid: string, text: string): LoadedMessageDto => ({
   timestamp: now,
 });
 
+// The menu these tests open now also carries fork and rewind, and the fork entry
+// reads the router to hand itself to the session it opens (issue #356).
 const renderArea = (messages: LoadedMessageDto[]) =>
   render(
-    <ChatMessageArea
-      isStreaming={false}
-      mergedMessages={messages}
-      hasMore={false}
-      isLoadingMore={false}
-      onLoadMore={vi.fn()}
-    />,
+    <MemoryRouter>
+      <ChatMessageArea
+        isStreaming={false}
+        mergedMessages={messages}
+        hasMore={false}
+        isLoadingMore={false}
+        onLoadMore={vi.fn()}
+      />
+    </MemoryRouter>,
   );
 
 /** Opens the menu on the send whose text is `sendText`. */
@@ -298,18 +319,20 @@ describe('ChatMessageArea — collapsing a reply', () => {
     expect(screen.getByText('second answer')).not.toBeVisible();
 
     rerender(
-      <ChatMessageArea
-        isStreaming={false}
-        mergedMessages={[
-          send('u1', 'first prompt'),
-          reply('a1', 'first answer'),
-          send('u2', 'second prompt'),
-          reply('a2', 'second answer'),
-        ]}
-        hasMore={false}
-        isLoadingMore={false}
-        onLoadMore={vi.fn()}
-      />,
+      <MemoryRouter>
+        <ChatMessageArea
+          isStreaming={false}
+          mergedMessages={[
+            send('u1', 'first prompt'),
+            reply('a1', 'first answer'),
+            send('u2', 'second prompt'),
+            reply('a2', 'second answer'),
+          ]}
+          hasMore={false}
+          isLoadingMore={false}
+          onLoadMore={vi.fn()}
+        />
+      </MemoryRouter>,
     );
 
     // Still the same send that is collapsed, and only that one.

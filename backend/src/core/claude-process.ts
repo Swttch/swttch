@@ -12,6 +12,8 @@ import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
+import { readMergedClaudeSettings } from './features/claude-settings';
+import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { MessageType } from '../shared';
@@ -116,9 +118,9 @@ export function buildClaudeArgs(
     '--include-partial-messages',
     '--permission-prompt-tool',
     'stdio',
-    sessionFlag,
-    targetSessionId,
   ];
+
+  args.push(sessionFlag, targetSessionId);
 
   // No requested mode means nothing has established one for this session yet, so
   // the CLI is left to read its own `permissions.defaultMode`. Passing a flag here
@@ -139,6 +141,38 @@ export function buildClaudeArgs(
   }
 
   return args;
+}
+
+/**
+ * The env that decides whether the CLI snapshots a file before editing it, which
+ * is what a code rewind restores from (issue #356).
+ *
+ * The CLI gates this on the mode it is running in. Its interactive REPL reads the
+ * `fileCheckpointingEnabled` setting, which defaults to true, so someone typing
+ * `claude` in a terminal can rewind without configuring anything. A headless
+ * caller like us reaches a different branch, where the same feature is off unless
+ * CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING says otherwise. Measured: without the
+ * variable no backup file is written and no `file-history-snapshot` entry appears
+ * in the transcript, and `--rewind-files` then exits with "File rewinding is not
+ * enabled."
+ *
+ * So spawning without it is us taking away something the CLI gives a terminal
+ * user, and passing it restores the parity rather than adding a feature of ours.
+ * The official Agent SDK injects the same variable at the same point.
+ *
+ * The user's answer is the official setting, not one of ours, so that turning
+ * checkpointing off in a terminal turns it off here too. Absent means Claude's
+ * default, which is on.
+ *
+ * CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING is deliberately not handled here: the
+ * CLI honours it on this branch as well, so a user who exports it gets the same
+ * answer from the CLI itself.
+ */
+export function buildCheckpointingEnv(
+  settings: Record<string, unknown>,
+): { CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING?: string } {
+  if (settings.fileCheckpointingEnabled === false) return {};
+  return { CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true' };
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
@@ -351,6 +385,7 @@ export async function ensureClaudeProcess(
   const useResume = spawnedSessions.has(targetSessionId);
   const sessionFlag = useResume ? '--resume' : '--session-id';
 
+
   console.error('[node-backend]', `Starting Claude CLI process (-p interactive)...`);
   console.error('[node-backend]', `Working directory: ${workingDir}`);
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
@@ -362,6 +397,10 @@ export async function ensureClaudeProcess(
   // Load this project's CLAUDE_CONFIG_DIR (project > global) onto process.env before
   // spawning, so the CLI resolves the right Claude data dir for THIS workingDir. (#123)
   await Claude.applyConfigDir(workingDir);
+
+  // Read after applyConfigDir: the merge resolves against the config dir this
+  // project uses, so reading earlier could answer from a different one.
+  const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
 
   // spawnAuthed strips inherited OAuth tokens (e.g. from Claude Desktop spawning the IDE) so
   // the CLI falls through to its refreshable keychain auth. Centralized in Claude so chat and
@@ -380,6 +419,7 @@ export async function ensureClaudeProcess(
       TERM: 'dumb',
       CI: 'true',
       CLAUDECODE: undefined,
+      ...buildCheckpointingEnv(claudeSettings),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with
@@ -465,7 +505,7 @@ export async function ensureClaudeProcess(
         try {
           const event = JSON.parse(line) as Record<string, unknown>;
           console.error('[node-backend]', `JSON event type: ${event.type}`);
-          handleStreamEvent(targetSessionId, event, connections, bridge);
+          handleStreamEvent(targetSessionId, event, connections, bridge, workingDir);
         } catch {
           // Non-JSON line is expected noise (not an error) in stream-json mode — only log.
           console.error('[node-backend]', `Non-JSON output (unexpected in stream-json mode): ${line}`);
@@ -507,7 +547,7 @@ export async function ensureClaudeProcess(
       if (remainingBuffer.trim()) {
         try {
           const event = JSON.parse(remainingBuffer) as Record<string, unknown>;
-          handleStreamEvent(targetSessionId, event, connections, bridge);
+          handleStreamEvent(targetSessionId, event, connections, bridge, workingDir);
         } catch {
           console.error('[node-backend]', `Remaining buffer (non-JSON): ${remainingBuffer}`);
         }
@@ -971,6 +1011,8 @@ function handleStreamEvent(
   event: Record<string, unknown>,
   connections: ConnectionManager,
   bridge: Bridge,
+  // Needed to find this session's transcript on disk when a turn ends (#356).
+  workingDir: string,
 ): void {
   const eventType = event.type as string;
 
@@ -1027,6 +1069,29 @@ function handleStreamEvent(
       session: {
         sessionId: event.session_id ?? targetSessionId,
       },
+    });
+
+    /*
+     * Hand the webview the uuid the CLI just recorded for this send (#356).
+     *
+     * The CLI does not echo user messages back on stdout, so up to this moment
+     * the webview only has the id it minted itself — and no CLI command accepts
+     * that id. Without this, rewinding the edit you just watched go wrong would
+     * mean reopening the session first, which is a strange thing to ask of
+     * someone looking straight at it.
+     *
+     * Read after `result` because that is when the entries are on disk. Failure
+     * is silent by design: the actions stay hidden, which is exactly where they
+     * were before, and no turn should fail over a menu.
+     */
+    void readLastRecordedSend(targetSessionId, workingDir).then((recorded) => {
+      if (!recorded) return;
+      connections.broadcastToSession(targetSessionId, MessageType.SEND_RECORDED, {
+        sessionId: targetSessionId,
+        uuid: recorded.uuid,
+        canRewind: recorded.canRewind,
+        text: recorded.text,
+      });
     });
 
     // 인증 에러 진단 (비동기, 실패해도 무시)

@@ -97,6 +97,10 @@
       "label": "エディタコンテキストで.gitignoreを尊重",
       "description": "有効にすると、.gitignoreの対象ファイルの内容はエディタコンテキストから除外され、ファイルパスのみが送信されます。"
     },
+    "fileCheckpointing": {
+      "label": "ファイルチェックポイント",
+      "description": "Claude がファイルを編集する前にスナップショットを保存し、コードの巻き戻しで復元できるようにします。"
+    },
     "hostMode": {
       "label": "優先表示場所",
       "description": "Claudeがデフォルトで開く場所。",

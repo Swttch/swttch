@@ -473,7 +473,14 @@
     "collapsedReplyCount_one": "{{count}} پاسخ جمع شده است",
     "collapsedReplyCount_other": "{{count}} پاسخ جمع شده است",
     "expandReply": "باز کردن پاسخ",
-    "menuLabel": "عملیات پیام"
+    "forkAndRewind": "انشعاب گفت‌وگو و بازگرداندن کد",
+    "forkConversation": "انشعاب گفت‌وگو از اینجا",
+    "forkDone": "به یک نشست تازه منشعب شد",
+    "forkFailed": "انشعاب گفت‌وگو ممکن نشد",
+    "menuLabel": "عملیات پیام",
+    "rewindCode": "بازگرداندن کد تا اینجا",
+    "rewindDone": "کد به این نقطه بازگردانده شد",
+    "rewindFailed": "بازگرداندن کد ممکن نشد"
   },
   "chatPage": {
     "scrollToBottom": "پیمایش به پایین"

@@ -1,9 +1,10 @@
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
 import { useBridgeContext } from './BridgeContext';
-import { useSessionContext } from './SessionContext';
+import { useSessionContext, type SessionHandoff } from './SessionContext';
 import { useCliConfig } from './CliConfigContext';
 import { useClaudeSettings } from './ClaudeSettingsContext';
 import { LoadedMessageDto, Context, Attachment, SessionState } from '../types';
@@ -252,6 +253,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     }
   }, [chatStream.systemInit, controlResponse, session.syncEffectiveMode, session.notifyAutoFallback]);
 
+  // The fork note a send action left on the navigation to this new session
+  // (issue #356). Read through a ref so `sendMessage` does not have to list the
+  // location among its dependencies and be rebuilt on every navigation.
+  const location = useLocation();
+  const forkHandoff = location.state as SessionHandoff | null;
+
   // 모든 세션별 상태를 한 번에 리셋하는 통합 함수
   const resetForSessionSwitch = useCallback(() => {
     chatStreamClearMessages();
@@ -265,7 +272,12 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     } catch {
       // localStorage may be unavailable in some environments (e.g., tests)
     }
-    setInput(draft ?? '');
+    // A fork excludes the send it branched from, so that text is handed over and
+    // put back in the composer — otherwise the user would have to retype from
+    // memory the message they opened the fork to reword. It wins over a stored
+    // draft: they asked for this text a moment ago, and a session that does not
+    // exist yet has no draft of its own.
+    setInput(forkHandoff?.promptText || draft || '');
     setIsThinkingExpanded(false);
     setSessionModel(null);
     tools.clearToolUses();
@@ -273,7 +285,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     prePlanModeRef.current = null;
     setHasMoreOlder(false);
     setOldestLoadedUuid(null);
-  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId]);
+  }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId, forkHandoff?.promptText]);
 
   // resetForSessionSwitch is called directly by SessionLoader
   // when currentSessionId changes (URL-driven reactive pattern)
@@ -310,6 +322,18 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [bridge.isConnected, bridge.subscribe]);
 
   // sendMessage: add to local state + send to backend (or queue if streaming)
+  /*
+   * Put the forked send back in the composer.
+   *
+   * Separate from the session-switch reset even though that also seeds the
+   * composer: the reset runs off `currentSessionId`, and a fork changes the id
+   * and the navigation state in the same commit, so which of the two the reset
+   * sees is a race. This runs off the state alone and wins it either way.
+   */
+  useEffect(() => {
+    if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
+  }, [forkHandoff?.promptText, setInput]);
+
   const sendMessage = useCallback(
     (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[]) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on

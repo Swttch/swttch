@@ -12,6 +12,8 @@ import { isJetBrains } from '@/config/environment';
 import { LoadedMessageDto } from '../../types';
 import { StickySendHeader } from './StickySendHeader';
 import { SectionFoldContext, SectionKeyContext } from './SectionFoldContext';
+import { SendActionsContext } from './SendActionsContext';
+import { useSendActions } from './useSendActions';
 import { useSectionFold } from './useSectionFold';
 import { CollapsedReplyNotice } from './CollapsedReplyNotice';
 import { useTranslation } from '@/i18n';
@@ -37,6 +39,9 @@ export function ChatMessageArea(props: Props) {
   // Above the early returns below: hooks cannot run conditionally.
   const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
   const fold = useSectionFold();
+  // Rewind and fork are answered from the whole transcript, so they are worked
+  // out here and handed down rather than recomputed inside each send's menu.
+  const sendActions = useSendActions(mergedMessages);
 
   const isEmpty = mergedMessages.length === 0;
 
@@ -95,6 +100,7 @@ export function ChatMessageArea(props: Props) {
         `SectionFoldContext`.
       */}
       <SectionFoldContext.Provider value={fold}>
+      <SendActionsContext.Provider value={sendActions}>
       {sections.map(section => (
         /*
           `data-send-section` is how the fold measures this section's reply
@@ -178,6 +184,7 @@ export function ChatMessageArea(props: Props) {
           )}
         </div>
       ))}
+      </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
       {isStreaming && <StreamingIndicator />}
       <StreamErrorBanner />

@@ -1261,6 +1261,52 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       }
     });
 
+    /*
+     * The uuid the CLI recorded for the send whose turn just ended (#356).
+     *
+     * The CLI never echoes user messages back, so a send shown from this app's
+     * own copy carries an id it minted here — and no CLI command accepts that
+     * id. Attaching the real one lets the per-send actions work on the message
+     * the user is looking at, instead of only after the session is reopened.
+     *
+     * Attached rather than substituted: replacing `uuid` would change the React
+     * key and the section identity mid-session, which would reset things like a
+     * collapsed reply under the user for no visible reason.
+     */
+    const unsubscribeSendRecorded = bridge.subscribe(MessageType.SEND_RECORDED, (message: IPCMessage) => {
+      const payload = message.payload as
+        | { uuid?: string; canRewind?: boolean; text?: string }
+        | undefined;
+      if (!payload?.uuid) return;
+      setMessages(prev => {
+        /*
+         * Matched on the prompt text, not on position.
+         *
+         * "The last send" is not the send this turn belongs to: a `/model`
+         * switch during the turn writes three more entries that read as sends,
+         * and matching by position attached the uuid to one of those, leaving
+         * the actual message without one — its menu then showed only "collapse".
+         *
+         * Only messages the webview is still holding under a locally minted id
+         * are candidates: anything read from the transcript already carries the
+         * CLI's own uuid and must not be relabelled.
+         */
+        const wanted = (payload.text ?? '').trim();
+        if (!wanted) return prev;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const candidate = prev[i];
+          if (candidate.type !== LoadedMessageType.User) continue;
+          if (candidate.cliUuid) continue;
+          if (!candidate.uuid?.startsWith('msg-')) continue;
+          if (getTextContent(candidate).trim() !== wanted) continue;
+          const updated = [...prev];
+          updated[i] = { ...candidate, cliUuid: payload.uuid, canRewind: payload.canRewind };
+          return updated;
+        }
+        return prev;
+      });
+    });
+
     // Cleanup
     return () => {
       unsubscribeCliEvent();
@@ -1268,6 +1314,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       unsubscribeAuthDiagnosis();
       unsubscribeUserBroadcast();
       unsubscribeStreamEnd();
+      unsubscribeSendRecorded();
     };
   // bridge.subscribe는 useBridge의 useCallback([], [])이므로 안정적.
   // 나머지 콜백들은 ref로 안정화했으므로 의존성에서 제외.

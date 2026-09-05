@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import { ChatMessageArea } from '../ChatMessageArea';
 import type { LoadedMessageDto } from '../../../types';
@@ -11,6 +12,11 @@ import { mergeToolResults } from '../mergeToolResults';
 const mockSessionContext = {
   workingDirectory: null as string | null,
   setWorkingDirectory: vi.fn(),
+  // The send menu's fork entry names the branch after the session it came from,
+  // so it reads the list (issue #356).
+  sessions: [] as Array<{ id: string; title: string }>,
+  currentSessionId: null as string | null,
+  addNewSession: vi.fn(),
 };
 
 const mockChatStreamContext = {
@@ -21,6 +27,18 @@ const mockChatStreamContext = {
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => mockSessionContext,
 }));
+
+// The send menu's rewind entry talks to the backend through the bridge, and its
+// fork entry asks the api layer to load the branch it opens (issue #356). These
+// tests only render the menu, so stubs are enough.
+vi.mock('@/contexts/BridgeContext', () => ({
+  useBridgeContext: () => ({ send: vi.fn().mockResolvedValue({ status: 'ok' }) }),
+}));
+
+vi.mock('@/contexts/ApiContext', () => ({
+  useApi: () => ({ sessions: { load: vi.fn() } }),
+}));
+
 
 vi.mock('../../../contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => mockChatStreamContext,
@@ -45,11 +63,15 @@ vi.mock('../EmptyState', () => ({
 
 const scrollContainerRef = React.createRef<HTMLDivElement>() as React.RefObject<HTMLDivElement | null>;
 
+// The send menu reads the router to hand a fork off to the new session it opens
+// (issue #356), so the area needs a router above it the way it has one in the app.
 const renderWithScrollContainer = (ui: React.ReactElement) => {
   return render(
-    <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>}>
-      {ui}
-    </div>
+    <MemoryRouter>
+      <div ref={scrollContainerRef as React.RefObject<HTMLDivElement>}>
+        {ui}
+      </div>
+    </MemoryRouter>
   );
 };
 

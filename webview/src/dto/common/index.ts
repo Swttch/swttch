@@ -74,4 +74,13 @@ export enum LoadedMessageType {
   Progress = 'progress',
   Summary = 'summary',
   Notification = 'notification',
+  /**
+   * Records the file backups a rewind can restore from. The CLI writes one per
+   * user send, and its presence for a given uuid is how it answers "can the code
+   * be rewound to this message" (issue #356).
+   *
+   * This entry is not drawn — `MessageBubble` returns null for it — so it exists
+   * in the transcript purely as that answer.
+   */
+  FileHistorySnapshot = 'file-history-snapshot',
 }

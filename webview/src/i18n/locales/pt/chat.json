@@ -473,7 +473,14 @@
     "collapsedReplyCount_one": "{{count}} resposta recolhida",
     "collapsedReplyCount_other": "{{count}} respostas recolhidas",
     "expandReply": "Expandir resposta",
-    "menuLabel": "Ações da mensagem"
+    "forkAndRewind": "Bifurcar a conversa e retroceder o código",
+    "forkConversation": "Bifurcar a conversa a partir daqui",
+    "forkDone": "Bifurcado para uma nova sessão",
+    "forkFailed": "Não foi possível bifurcar a conversa",
+    "menuLabel": "Ações da mensagem",
+    "rewindCode": "Retroceder o código até aqui",
+    "rewindDone": "Código restaurado para este ponto",
+    "rewindFailed": "Não foi possível retroceder o código"
   },
   "chatPage": {
     "scrollToBottom": "Rolar até o final"

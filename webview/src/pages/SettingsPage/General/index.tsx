@@ -68,6 +68,9 @@ export function GeneralSettings() {
   // The handler accepts both (ctrlKey || metaKey); only the label needs to differ.
   const sendModifier = isMac() ? 'Cmd' : 'Ctrl';
   const respectGitignore = (claudeScopeSettings.respectGitignore as boolean | undefined) ?? false;
+  // Claude's schema defaults this one to `true`, unlike the toggles around it —
+  // an absent value means the feature is ON, so the fallback has to say so.
+  const fileCheckpointingEnabled = (claudeScopeSettings.fileCheckpointingEnabled as boolean | undefined) ?? true;
   // Auto-resume default (sponsor-only): the global default a session inherits.
   const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
 
@@ -169,6 +172,24 @@ export function GeneralSettings() {
             checked={respectGitignore}
             onChange={(checked) => void updateClaudeSetting('respectGitignore', checked)}
             ariaLabel={t('general.respectGitignore.label')}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label={t('general.fileCheckpointing.label')}
+          description={t('general.fileCheckpointing.description')}
+          isOverridden={isOverridden('fileCheckpointingEnabled')}
+          badge={
+            <SettingBadge
+              variant={SettingBadgeVariant.ClaudeNative}
+              docHref="https://code.claude.com/docs/en/checkpointing"
+            />
+          }
+        >
+          <ToggleSwitch
+            checked={fileCheckpointingEnabled}
+            onChange={(checked) => void updateClaudeSetting('fileCheckpointingEnabled', checked)}
+            ariaLabel={t('general.fileCheckpointing.label')}
           />
         </SettingRow>
 

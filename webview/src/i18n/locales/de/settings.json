@@ -97,6 +97,10 @@
       "label": ".gitignore für Editor-Kontext beachten",
       "description": "Wenn aktiviert, wird der Inhalt von durch .gitignore ausgeschlossenen Dateien nicht in den Editor-Kontext aufgenommen — es wird nur der Dateipfad gesendet."
     },
+    "fileCheckpointing": {
+      "label": "Datei-Checkpoints",
+      "description": "Erstellt einen Snapshot der Dateien, bevor Claude sie bearbeitet, damit ein Code-Rücksprung sie wiederherstellen kann."
+    },
     "hostMode": {
       "label": "Bevorzugter Ort",
       "description": "Wo Claude standardmäßig geöffnet wird.",

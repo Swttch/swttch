@@ -97,6 +97,10 @@
       "label": "Respetar .gitignore en el contexto del editor",
       "description": "Cuando está activado, el contenido de los archivos excluidos por .gitignore no se incluye en el contexto del editor — solo se envía la ruta del archivo."
     },
+    "fileCheckpointing": {
+      "label": "Puntos de control de archivos",
+      "description": "Guarda una instantánea de los archivos antes de que Claude los edite, para que el retroceso de código pueda restaurarlos."
+    },
     "hostMode": {
       "label": "Ubicación preferida",
       "description": "Dónde se abre Claude de forma predeterminada.",

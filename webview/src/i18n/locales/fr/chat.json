@@ -473,7 +473,14 @@
     "collapsedReplyCount_one": "{{count}} réponse réduite",
     "collapsedReplyCount_other": "{{count}} réponses réduites",
     "expandReply": "Développer la réponse",
-    "menuLabel": "Actions du message"
+    "forkAndRewind": "Bifurquer la conversation et restaurer le code",
+    "forkConversation": "Bifurquer la conversation à partir d'ici",
+    "forkDone": "Bifurqué vers une nouvelle session",
+    "forkFailed": "Impossible de bifurquer la conversation",
+    "menuLabel": "Actions du message",
+    "rewindCode": "Restaurer le code jusqu'ici",
+    "rewindDone": "Code restauré à ce point",
+    "rewindFailed": "Impossible de restaurer le code"
   },
   "chatPage": {
     "scrollToBottom": "Défiler vers le bas"

@@ -473,7 +473,14 @@
     "collapsedReplyCount_one": "{{count}}개의 응답 접힘",
     "collapsedReplyCount_other": "{{count}}개의 응답 접힘",
     "expandReply": "응답 펼치기",
-    "menuLabel": "메시지 작업"
+    "forkAndRewind": "대화 포크하고 코드 되감기",
+    "forkConversation": "여기서 대화 포크",
+    "forkDone": "새 세션으로 갈라졌습니다",
+    "forkFailed": "대화를 포크하지 못했습니다",
+    "menuLabel": "메시지 작업",
+    "rewindCode": "여기로 코드 되감기",
+    "rewindDone": "코드를 이 시점으로 되돌렸습니다",
+    "rewindFailed": "코드를 되감지 못했습니다"
   },
   "chatPage": {
     "scrollToBottom": "맨 아래로 스크롤"

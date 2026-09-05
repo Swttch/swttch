@@ -82,6 +82,27 @@ export enum MessageType {
   DELETE_SESSION = 'DELETE_SESSION',
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
+  /**
+   * Tells the webview the uuid the CLI recorded for the send whose turn just
+   * ended, and whether the code can be rewound to it (issue #356).
+   *
+   * The CLI never echoes user messages back, so until this arrives the webview
+   * only has the id it minted itself, which no CLI command accepts. Sent once
+   * per turn on `result`. outbound backend→webview
+   */
+  SEND_RECORDED = 'SEND_RECORDED',
+  /**
+   * Restore the files a send edited back to their state at that send, using the
+   * CLI's own file checkpoints (issue #356). Standalone: it changes files on
+   * disk and does not continue the conversation. inbound webview→backend
+   */
+  REWIND_CODE = 'REWIND_CODE',
+  /**
+   * Create a branch of a session up to a given send, and answer with the new
+   * session id (issue #356). The branch exists on disk by the time this answers,
+   * so the webview can open it straight away. inbound webview→backend
+   */
+  FORK_SESSION = 'FORK_SESSION',
 
   // -- Workflow agent transcripts (Background tasks detail modal) --
   /** Load one workflow agent's full transcript (agent-<id>.jsonl under transcriptDir). inbound webview→backend */
