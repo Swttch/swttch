@@ -12,6 +12,7 @@ import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
+import { readMergedClaudeSettings } from './features/claude-settings';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { MessageType } from '../shared';
@@ -139,6 +140,38 @@ export function buildClaudeArgs(
   }
 
   return args;
+}
+
+/**
+ * The env that decides whether the CLI snapshots a file before editing it, which
+ * is what a code rewind restores from (issue #356).
+ *
+ * The CLI gates this on the mode it is running in. Its interactive REPL reads the
+ * `fileCheckpointingEnabled` setting, which defaults to true, so someone typing
+ * `claude` in a terminal can rewind without configuring anything. A headless
+ * caller like us reaches a different branch, where the same feature is off unless
+ * CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING says otherwise. Measured: without the
+ * variable no backup file is written and no `file-history-snapshot` entry appears
+ * in the transcript, and `--rewind-files` then exits with "File rewinding is not
+ * enabled."
+ *
+ * So spawning without it is us taking away something the CLI gives a terminal
+ * user, and passing it restores the parity rather than adding a feature of ours.
+ * The official Agent SDK injects the same variable at the same point.
+ *
+ * The user's answer is the official setting, not one of ours, so that turning
+ * checkpointing off in a terminal turns it off here too. Absent means Claude's
+ * default, which is on.
+ *
+ * CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING is deliberately not handled here: the
+ * CLI honours it on this branch as well, so a user who exports it gets the same
+ * answer from the CLI itself.
+ */
+export function buildCheckpointingEnv(
+  settings: Record<string, unknown>,
+): { CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING?: string } {
+  if (settings.fileCheckpointingEnabled === false) return {};
+  return { CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true' };
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
@@ -363,6 +396,10 @@ export async function ensureClaudeProcess(
   // spawning, so the CLI resolves the right Claude data dir for THIS workingDir. (#123)
   await Claude.applyConfigDir(workingDir);
 
+  // Read after applyConfigDir: the merge resolves against the config dir this
+  // project uses, so reading earlier could answer from a different one.
+  const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
+
   // spawnAuthed strips inherited OAuth tokens (e.g. from Claude Desktop spawning the IDE) so
   // the CLI falls through to its refreshable keychain auth. Centralized in Claude so chat and
   // `auth status` strip identically; user-pinned / ANTHROPIC_API_KEY env is preserved there.
@@ -380,6 +417,7 @@ export async function ensureClaudeProcess(
       TERM: 'dumb',
       CI: 'true',
       CLAUDECODE: undefined,
+      ...buildCheckpointingEnv(claudeSettings),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with

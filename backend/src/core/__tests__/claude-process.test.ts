@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { buildClaudeArgs, needsRestartForMode, readReportedMode } from '../claude-process';
+import {
+  buildCheckpointingEnv,
+  buildClaudeArgs,
+  needsRestartForMode,
+  readReportedMode,
+} from '../claude-process';
 
 describe('buildClaudeArgs', () => {
   it('includes the core stream-json print-mode flags and the session flag', () => {
@@ -63,6 +68,37 @@ describe('buildClaudeArgs', () => {
 
   it('omits --model for the "default" alias (redundant with the CLI default)', () => {
     expect(buildClaudeArgs('--resume', 's', 'ask_before_edit', 'default')).not.toContain('--model');
+  });
+});
+
+describe('buildCheckpointingEnv', () => {
+  // A headless spawn gets no file backups unless this variable is set, so an
+  // unanswered setting has to resolve to ON — that is what a terminal user gets
+  // from the CLI's own default, and matching it is the whole point (#356).
+  it('turns checkpointing on when the setting is absent', () => {
+    expect(buildCheckpointingEnv({})).toEqual({ CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true' });
+  });
+
+  it('turns checkpointing on when the setting says true', () => {
+    expect(buildCheckpointingEnv({ fileCheckpointingEnabled: true })).toEqual({
+      CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true',
+    });
+  });
+
+  // Turning the official setting off in a terminal has to turn it off here too.
+  it('passes nothing when the setting says false', () => {
+    expect(buildCheckpointingEnv({ fileCheckpointingEnabled: false })).toEqual({});
+  });
+
+  // Only an explicit false is an answer. Anything else is a value we cannot read,
+  // and reading it as "off" would silently cost the user their rewinds.
+  it('keeps checkpointing on for a non-boolean value', () => {
+    expect(buildCheckpointingEnv({ fileCheckpointingEnabled: 'no' })).toEqual({
+      CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true',
+    });
+    expect(buildCheckpointingEnv({ fileCheckpointingEnabled: null })).toEqual({
+      CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true',
+    });
   });
 });
 
