@@ -475,6 +475,8 @@
     "expandReply": "Développer la réponse",
     "forkAndRewind": "Bifurquer la conversation et restaurer le code",
     "forkConversation": "Bifurquer la conversation à partir d'ici",
+    "forkDone": "Bifurqué vers une nouvelle session",
+    "forkFailed": "Impossible de bifurquer la conversation",
     "menuLabel": "Actions du message",
     "rewindCode": "Restaurer le code jusqu'ici",
     "rewindDone": "Code restauré à ce point",

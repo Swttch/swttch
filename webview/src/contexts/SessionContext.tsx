@@ -54,7 +54,7 @@ interface SessionContextValue {
   dismissAutoFallback: () => void;
 
   // Actions
-  navigateToSession: (sessionId: string) => void;
+  navigateToSession: (sessionId: string, sessionDir?: string, handoff?: SessionHandoff) => void;
   navigateToNewSession: () => void;
   loadSessions: () => Promise<void>;
   /**
@@ -75,7 +75,7 @@ interface SessionContextValue {
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   renameSession: (sessionId: string, title: string) => Promise<void>;
-  addNewSession: (sessionId: string, firstPrompt: string) => void;
+  addNewSession: (sessionId: string, firstPrompt: string, handoff?: SessionHandoff) => void;
   setSessionState: (state: SessionState) => void;
   setWorkingDirectory: (dir: string | null) => void;
   /** Returns true if the session was just created locally (not restored from URL) */
@@ -108,6 +108,22 @@ function sortSessions(sessions: SessionMetaDto[]): SessionMetaDto[] {
       const bTime = b.updatedAt?.getTime() ?? 0;
       return bTime - aTime;
     });
+}
+
+/**
+ * What the screen being opened is handed, carried as router state.
+ *
+ * Lives on the navigation rather than in a context field because it describes
+ * one arrival and nothing after it: there is no stale value to reset if the user
+ * turns back, and no second place that has to be kept in step with the URL.
+ */
+export interface SessionHandoff {
+  /**
+   * Text to put in the composer on arrival. A fork sends the message it branched
+   * from, which the branch deliberately excludes — without it the user would
+   * have to retype from memory the message they were reworking.
+   */
+  promptText?: string;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -274,10 +290,14 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // anchor. [sessionDir] carries that per-session directory; the anchor rides
   // along in `rootDir` so the list keeps its scope after the jump instead of
   // silently narrowing to wherever the opened session happens to live.
-  const navigateToSession = useCallback((sessionId: string, sessionDir?: string) => {
+  const navigateToSession = useCallback((
+    sessionId: string,
+    sessionDir?: string,
+    handoff?: SessionHandoff,
+  ) => {
     const dir = sessionDir ?? workingDirectory;
     const path = withWorkingDir(sessionToPath(sessionId), dir);
-    navigate(withRootDir(path, rootDir, dir), { replace: isJetBrains() });
+    navigate(withRootDir(path, rootDir, dir), { replace: isJetBrains(), state: handoff });
   }, [navigate, workingDirectory, rootDir]);
 
   // Clearing the conversation starts a new session in the SAME place the user
@@ -472,7 +492,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
     }
   }, [api.sessions, workingDirectory]);
 
-  const addNewSession = useCallback((sessionId: string, firstPrompt: string) => {
+  const addNewSession = useCallback((
+    sessionId: string,
+    firstPrompt: string,
+    handoff?: SessionHandoff,
+  ) => {
     const now = new Date();
     const newSession = Object.assign(new SessionMetaDto(), {
       id: sessionId,
@@ -489,7 +513,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     // URL 변경으로 인한 모드 리셋을 건너뜀
     skipNextModeReset.current = true;
     // URL change is the SSOT — navigating IS the session creation
-    navigateToSession(sessionId);
+    navigateToSession(sessionId, undefined, handoff);
   }, [navigateToSession]);
 
   const isNewlyCreatedSession = useCallback((sessionId: string) => {

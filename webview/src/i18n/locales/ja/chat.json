@@ -475,6 +475,8 @@
     "expandReply": "応答を展開する",
     "forkAndRewind": "会話をフォークしてコードを巻き戻す",
     "forkConversation": "ここから会話をフォーク",
+    "forkDone": "新しいセッションに分岐しました",
+    "forkFailed": "会話をフォークできませんでした",
     "menuLabel": "メッセージ操作",
     "rewindCode": "ここまでコードを巻き戻す",
     "rewindDone": "コードをこの時点に戻しました",

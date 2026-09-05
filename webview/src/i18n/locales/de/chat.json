@@ -475,6 +475,8 @@
     "expandReply": "Antwort ausklappen",
     "forkAndRewind": "Unterhaltung abzweigen und Code zurücksetzen",
     "forkConversation": "Unterhaltung ab hier abzweigen",
+    "forkDone": "In eine neue Sitzung abgezweigt",
+    "forkFailed": "Unterhaltung konnte nicht abgezweigt werden",
     "menuLabel": "Nachrichtenaktionen",
     "rewindCode": "Code bis hierher zurücksetzen",
     "rewindDone": "Code auf diesen Stand zurückgesetzt",

@@ -97,6 +97,12 @@ export enum MessageType {
    * disk and does not continue the conversation. inbound webview→backend
    */
   REWIND_CODE = 'REWIND_CODE',
+  /**
+   * Create a branch of a session up to a given send, and answer with the new
+   * session id (issue #356). The branch exists on disk by the time this answers,
+   * so the webview can open it straight away. inbound webview→backend
+   */
+  FORK_SESSION = 'FORK_SESSION',
 
   // -- Workflow agent transcripts (Background tasks detail modal) --
   /** Load one workflow agent's full transcript (agent-<id>.jsonl under transcriptDir). inbound webview→backend */

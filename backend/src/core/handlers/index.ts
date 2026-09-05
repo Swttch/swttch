@@ -15,6 +15,7 @@ import { loadSessionHandler } from './loadSession';
 import { loadPromptHistoryHandler } from './loadPromptHistory';
 import { deleteSessionHandler } from './deleteSession';
 import { rewindCodeHandler } from './rewindCode';
+import { forkSessionHandler } from './forkSession';
 import { renameSessionHandler } from './renameSession';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
 import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
@@ -194,6 +195,9 @@ export async function handleMessage(
       break;
     case MessageType.REWIND_CODE:
       await rewindCodeHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.FORK_SESSION:
+      await forkSessionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RENAME_SESSION:
       await renameSessionHandler(connectionId, message, connections, bridge);

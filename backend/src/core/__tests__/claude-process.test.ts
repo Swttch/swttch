@@ -71,48 +71,6 @@ describe('buildClaudeArgs', () => {
   });
 });
 
-describe('buildClaudeArgs with a fork origin', () => {
-  const FORK = { sessionId: 'origin-session', resumeSessionAt: 'entry-uuid' };
-
-  // Measured: the CLI accepts --session-id alongside --fork-session, which is what
-  // lets the caller navigate to the new session before the CLI has written it.
-  it('branches the original and writes the result under the given id', () => {
-    const args = buildClaudeArgs('--session-id', 'new-session', 'bypass', undefined, FORK);
-
-    const i = args.indexOf('--resume');
-    expect(args[i + 1]).toBe('origin-session');
-    const j = args.indexOf('--resume-session-at');
-    expect(args[j + 1]).toBe('entry-uuid');
-    expect(args).toContain('--fork-session');
-    const k = args.indexOf('--session-id');
-    expect(args[k + 1]).toBe('new-session');
-  });
-
-  // The new id must not also be passed as the session being resumed, or the CLI
-  // would open the fork target instead of the session being forked.
-  it('does not resume the new session id', () => {
-    const args = buildClaudeArgs('--session-id', 'new-session', 'bypass', undefined, FORK);
-
-    expect(args.indexOf('--resume')).toBeGreaterThanOrEqual(0);
-    expect(args[args.indexOf('--resume') + 1]).not.toBe('new-session');
-  });
-
-  it('still honours the permission mode and pinned model', () => {
-    const args = buildClaudeArgs('--session-id', 'new-session', 'plan', 'claude-opus-4-6', FORK);
-
-    expect(args).toEqual(expect.arrayContaining(['--permission-mode', 'plan']));
-    expect(args).toEqual(expect.arrayContaining(['--model', 'claude-opus-4-6']));
-  });
-
-  it('falls back to the plain session flag when there is no fork', () => {
-    const args = buildClaudeArgs('--resume', 'sid', 'bypass');
-
-    expect(args).not.toContain('--fork-session');
-    expect(args).not.toContain('--resume-session-at');
-    expect(args[args.indexOf('--resume') + 1]).toBe('sid');
-  });
-});
-
 describe('buildCheckpointingEnv', () => {
   // A headless spawn gets no file backups unless this variable is set, so an
   // unanswered setting has to resolve to ON — that is what a terminal user gets

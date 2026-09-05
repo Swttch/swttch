@@ -31,16 +31,6 @@ export async function sendMessageHandler(
   // 미리 생성해 보내므로(ChatStreamContext), 백엔드에서 sessionId 유무로는 판정할 수 없다.
   const isNewSession = message.payload?.isNewSession === true;
   const resolvedSessionId = msgSessionId || generateSessionId();
-  // Set only on the first send of a session the user forked from another one
-  // (issue #356). It shapes the spawn that creates this session and is ignored
-  // afterwards, so a later send carrying it by mistake cannot re-fork.
-  const forkFrom = message.payload?.forkFrom as
-    | { sessionId: string; resumeSessionAt: string }
-    | undefined;
-  const fork =
-    forkFrom?.sessionId && forkFrom?.resumeSessionAt
-      ? { sessionId: forkFrom.sessionId, resumeSessionAt: forkFrom.resumeSessionAt }
-      : undefined;
   const attachments = message.payload?.attachments as Array<
     | { type: 'image'; fileName: string; mimeType: string; base64: string }
     | { type: 'file'; fileName: string; absolutePath: string }
@@ -53,7 +43,7 @@ export async function sendMessageHandler(
       // The directory goes with it: the session is what later answers
       // "which project is this?", and per-project settings depend on it.
       connections.subscribe(connectionId, resolvedSessionId, workingDir);
-      await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model, fork);
+      await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
 
       // Send content to process stdin
       sendMessageToProcess(connections, resolvedSessionId, content, attachments);

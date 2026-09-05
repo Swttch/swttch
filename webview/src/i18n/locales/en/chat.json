@@ -479,6 +479,8 @@
     "expandReply": "Expand reply",
     "forkAndRewind": "Fork conversation and rewind code",
     "forkConversation": "Fork conversation from here",
+    "forkDone": "Branched into a new session",
+    "forkFailed": "Could not fork the conversation",
     "menuLabel": "Message actions",
     "rewindCode": "Rewind code to here",
     "rewindDone": "Code restored to this point",

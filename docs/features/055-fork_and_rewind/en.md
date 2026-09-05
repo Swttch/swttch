@@ -76,15 +76,25 @@ not show the rewind entries. Forking works on them normally.
 
 ## Under the hood
 
-Both actions are the official CLI doing the work:
+Rewinding is the official CLI doing the work:
 
 ```
 claude --resume <session> --rewind-files <message>
-claude --resume <session> --resume-session-at <entry> --fork-session --session-id <new>
 ```
 
-Nothing about your session files is rewritten by the plugin. The fork is produced
-by Claude itself, which is why the copied messages keep their original
-identities and the original file is left byte-for-byte alone.
+Forking is the plugin copying the conversation into a new file, up to the point
+you branched at. The lines are moved across untouched, so the messages keep their
+original identities and the session you branched from is left byte-for-byte
+alone.
+
+The CLI has a fork option too, and we did not use it. It creates a session
+together with its first message, so forking through it means inventing a message
+you never sent. Built that way, every branch opened with a line you had not
+written and a reply to it sitting at the top, and each fork took about ten
+seconds. Now it opens immediately and the branch reads exactly like the
+conversation it came from.
+
+The reasoning is recorded in the
+[exception note](../../principle-exceptions/356-rewind-and-fork-hidden-cli-flags.md).
 
 Requested in [#356](https://github.com/Swttch/swttch/issues/356).

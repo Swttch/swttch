@@ -48,6 +48,11 @@ const collapsedCount = (count: number) =>
 const mockSessionContext = {
   workingDirectory: '/test/path' as string | null,
   setWorkingDirectory: vi.fn(),
+  // The send menu's fork entry names the branch after the session it came from,
+  // so it reads the list (issue #356).
+  sessions: [] as Array<{ id: string; title: string }>,
+  currentSessionId: null as string | null,
+  addNewSession: vi.fn(),
 };
 
 const mockChatStreamContext = {
@@ -67,10 +72,15 @@ vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: null }),
 }));
 
-// The send menu's rewind entry talks to the backend through the bridge
-// (issue #356). These tests only render the menu, so a stub is enough.
+// The send menu's rewind entry talks to the backend through the bridge, and its
+// fork entry asks the api layer to load the branch it opens (issue #356). These
+// tests only render the menu, so stubs are enough.
 vi.mock('@/contexts/BridgeContext', () => ({
   useBridgeContext: () => ({ send: vi.fn().mockResolvedValue({ status: 'ok' }) }),
+}));
+
+vi.mock('@/contexts/ApiContext', () => ({
+  useApi: () => ({ sessions: { load: vi.fn() } }),
 }));
 
 const now = new Date().toISOString();

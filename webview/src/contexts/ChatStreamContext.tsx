@@ -4,7 +4,7 @@ import { useChatStream } from '../hooks/useChatStream';
 import { useDiffs } from '../hooks/useDiffs';
 import { useTools } from '../hooks/useTools';
 import { useBridgeContext } from './BridgeContext';
-import { useSessionContext } from './SessionContext';
+import { useSessionContext, type SessionHandoff } from './SessionContext';
 import { useCliConfig } from './CliConfigContext';
 import { useClaudeSettings } from './ClaudeSettingsContext';
 import { LoadedMessageDto, Context, Attachment, SessionState } from '../types';
@@ -257,11 +257,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // (issue #356). Read through a ref so `sendMessage` does not have to list the
   // location among its dependencies and be rebuilt on every navigation.
   const location = useLocation();
-  const forkHandoff = location.state as
-    | { forkFrom?: { sessionId: string; resumeSessionAt: string }; promptText?: string }
-    | null;
-  const forkFromRef = useRef<{ sessionId: string; resumeSessionAt: string } | undefined>(undefined);
-  forkFromRef.current = forkHandoff?.forkFrom;
+  const forkHandoff = location.state as SessionHandoff | null;
 
   // 모든 세션별 상태를 한 번에 리셋하는 통합 함수
   const resetForSessionSwitch = useCallback(() => {
@@ -326,6 +322,18 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [bridge.isConnected, bridge.subscribe]);
 
   // sendMessage: add to local state + send to backend (or queue if streaming)
+  /*
+   * Put the forked send back in the composer.
+   *
+   * Separate from the session-switch reset even though that also seeds the
+   * composer: the reset runs off `currentSessionId`, and a fork changes the id
+   * and the navigation state in the same commit, so which of the two the reset
+   * sees is a race. This runs off the state alone and wins it either way.
+   */
+  useEffect(() => {
+    if (forkHandoff?.promptText) setInput(forkHandoff.promptText);
+  }, [forkHandoff?.promptText, setInput]);
+
   const sendMessage = useCallback(
     (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[]) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
@@ -364,13 +372,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         sessionId,
         isNewSession,
         content,
-        // Only on the send that creates a forked session (issue #356). The
-        // backend turns it into `--resume <origin> --resume-session-at <entry>
-        // --fork-session --session-id <sessionId>`, which is why the id minted
-        // just above is the one the fork ends up under. Carried on the router
-        // location rather than held in state: the note dies with the navigation
-        // if the user never sends, and there is nothing to reset.
-        ...(isNewSession && forkFromRef.current ? { forkFrom: forkFromRef.current } : {}),
         attachments: attachments?.map(a => ({ ...a.toPayload() })),
         context: context || [],
         workingDir: session.workingDirectory ?? '',

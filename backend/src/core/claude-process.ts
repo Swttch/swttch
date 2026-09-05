@@ -98,30 +98,15 @@ export function readReportedMode(event: Record<string, unknown>): string | null 
 }
 
 /**
- * Where a forked session branches from: the session being forked, and the entry
- * its transcript is cut after (issue #356).
- *
- * `resumeSessionAt` names an entry, not a send — `--resume-session-at` copies up
- * to and INCLUDING it, so it is the entry before the send being forked from.
- * `forkPointFor` in the webview works it out.
- */
-export interface ForkOrigin {
-  sessionId: string;
-  resumeSessionAt: string;
-}
-
-/**
  * Build the argv for spawning the Claude CLI in interactive print mode.
  * Extracted as a pure function so the flag composition (session flag,
- * permission mode, pinned model, fork origin) is unit-testable without spawning
- * a process.
+ * permission mode, pinned model) is unit-testable without spawning a process.
  */
 export function buildClaudeArgs(
   sessionFlag: string,
   targetSessionId: string,
   inputMode: string | undefined,
   model?: string,
-  fork?: ForkOrigin,
 ): string[] {
   const args: string[] = [
     '-p',
@@ -135,30 +120,7 @@ export function buildClaudeArgs(
     'stdio',
   ];
 
-  // A fork does not open `targetSessionId`, it branches it off another session:
-  // resume the original, cut the transcript at the chosen entry, and let
-  // --fork-session write the result under the id we picked. Naming the new id up
-  // front is what lets the caller navigate to it before the CLI has run — the
-  // CLI honours --session-id here precisely because --fork-session is present
-  // ("--session-id can only be used with --continue or --resume if
-  // --fork-session is also specified").
-  //
-  // Measured: the original file is left byte-for-byte alone, and the copied
-  // entries keep their original uuids while the new send attaches to the entry
-  // named here.
-  if (fork) {
-    args.push(
-      '--resume',
-      fork.sessionId,
-      '--resume-session-at',
-      fork.resumeSessionAt,
-      '--fork-session',
-      '--session-id',
-      targetSessionId,
-    );
-  } else {
-    args.push(sessionFlag, targetSessionId);
-  }
+  args.push(sessionFlag, targetSessionId);
 
   // No requested mode means nothing has established one for this session yet, so
   // the CLI is left to read its own `permissions.defaultMode`. Passing a flag here
@@ -344,7 +306,6 @@ export async function ensureClaudeProcess(
   inputMode: string | undefined,
   bridge: Bridge,
   model?: string,
-  fork?: ForkOrigin,
 ): Promise<void> {
   // Standalone mode on Windows can't reach a WSL project's tooling: cmd.exe rejects
   // the UNC cwd and the CLI would use PowerShell instead of bash. Guide the user to
@@ -424,16 +385,12 @@ export async function ensureClaudeProcess(
   const useResume = spawnedSessions.has(targetSessionId);
   const sessionFlag = useResume ? '--resume' : '--session-id';
 
-  // A fork only shapes the spawn that CREATES the session. Once it exists it is
-  // an ordinary session, and re-applying the fork flags would branch the
-  // original a second time under an id that is already taken.
-  const forkOrigin = useResume ? undefined : fork;
 
   console.error('[node-backend]', `Starting Claude CLI process (-p interactive)...`);
   console.error('[node-backend]', `Working directory: ${workingDir}`);
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
-  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, forkOrigin);
+  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model);
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 
