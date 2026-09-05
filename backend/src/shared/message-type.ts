@@ -82,6 +82,12 @@ export enum MessageType {
   DELETE_SESSION = 'DELETE_SESSION',
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
+  /**
+   * Restore the files a send edited back to their state at that send, using the
+   * CLI's own file checkpoints (issue #356). Standalone: it changes files on
+   * disk and does not continue the conversation. inbound webview→backend
+   */
+  REWIND_CODE = 'REWIND_CODE',
 
   // -- Workflow agent transcripts (Background tasks detail modal) --
   /** Load one workflow agent's full transcript (agent-<id>.jsonl under transcriptDir). inbound webview→backend */
