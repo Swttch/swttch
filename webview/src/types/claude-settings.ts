@@ -37,6 +37,16 @@ export interface ClaudeSettingsState {
   disableWorkflows?: boolean; // CLI-owned: when true, the Workflows feature (and ultracode) is unavailable
   language?: string | null; // official key: Claude's preferred response language (e.g. 'korean')
   respectGitignore?: boolean; // official key: honour .gitignore when resolving file context
+  /**
+   * Official key: snapshot edited files so a code rewind can restore them.
+   * Defaults to `true` in Claude's own schema, so an absent value reads as ON —
+   * writing `?? false` here would show a terminal user's working setup as off.
+   *
+   * The CLI only honours this by itself in its interactive REPL. We spawn it
+   * headless, where the same feature is gated on an env var instead, so the
+   * backend reads this key to decide whether to inject it (issue #356).
+   */
+  fileCheckpointingEnabled?: boolean;
   env?: Record<string, string>; // official key: environment variables for Claude sessions
   alwaysThinkingEnabled: boolean; // extended thinking always on
   fastMode: boolean; // official Claude settings key: fast output mode (Opus models only). CLI reads it from settings.json directly

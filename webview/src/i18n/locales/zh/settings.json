@@ -97,6 +97,10 @@
       "label": "编辑器上下文遵循 .gitignore",
       "description": "启用后,被 .gitignore 忽略的文件内容将不包含在编辑器上下文中——仅发送文件路径。"
     },
+    "fileCheckpointing": {
+      "label": "文件检查点",
+      "description": "在 Claude 编辑文件之前保存快照，以便代码回退时能够恢复。"
+    },
     "hostMode": {
       "label": "首选位置",
       "description": "Claude 默认打开的位置。",

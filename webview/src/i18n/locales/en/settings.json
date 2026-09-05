@@ -97,6 +97,10 @@
       "label": "Respect .gitignore for editor context",
       "description": "When on, contents of .gitignore'd files are excluded from the editor context — only the file path is sent."
     },
+    "fileCheckpointing": {
+      "label": "File checkpointing",
+      "description": "Snapshot files before Claude edits them, so a code rewind can restore them."
+    },
     "hostMode": {
       "label": "Preferred Location",
       "description": "Where Claude opens by default.",

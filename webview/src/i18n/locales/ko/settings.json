@@ -97,6 +97,10 @@
       "label": ".gitignore를 에디터 컨텍스트에 반영",
       "description": "켜면 .gitignore에 포함된 파일의 내용은 에디터 컨텍스트에서 제외되고 파일 경로만 전송됩니다."
     },
+    "fileCheckpointing": {
+      "label": "파일 체크포인트",
+      "description": "Claude가 파일을 편집하기 전에 스냅샷을 남겨, 코드 되감기가 복원할 수 있게 합니다."
+    },
     "hostMode": {
       "label": "기본 위치",
       "description": "Claude가 기본으로 열리는 위치입니다.",
