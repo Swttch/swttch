@@ -45,17 +45,24 @@ export function filterActiveChain(messages: Record<string, any>[]): Record<strin
 
   // Filter: keep messages in any active chain.
   //
-  // progress, summary and queue-operation entries are always kept: they carry no
-  // uuid, so they are not part of the parent-child chain walked above and the
-  // uuid test below would drop them. queue-operation is how the CLI records a
-  // message typed while a turn was still running — it writes `enqueue` on
-  // receipt and `remove` on consumption, and never writes a `user` entry for it.
-  // Dropping the pair loses that message outright once a session is re-read from
-  // disk (issue #220).
+  // An entry without a uuid is not a member of the parent-child chain walked
+  // above, so this filter has nothing to say about it and keeps it. Deciding by
+  // type instead meant every type nobody had thought to list was dropped on the
+  // way to the webview, which is the information loss CLAUDE.md's original-data
+  // rule forbids: a range filter may send fewer entries, it may not edit what an
+  // entry is. Measured across 120 session files, seven such types existed and
+  // only three were listed — `last-prompt` (1967), `atis-latch` (1041), `mode`
+  // (608), `pr-link` (321), `ai-title` (49), `file-history-snapshot` (6) and
+  // `permission-mode` (2) never reached the frontend at all.
+  //
+  // Two of those are load-bearing. `queue-operation` is how the CLI records a
+  // message typed while a turn was still running: it writes `enqueue` on receipt
+  // and `remove` on consumption and never writes a `user` entry, so dropping the
+  // pair loses that message outright once a session is re-read from disk (#220).
+  // `file-history-snapshot` is what says a message can be rewound to (#356).
   return messages.filter(msg => {
-    const type = msg.type as string | undefined;
-    if (type === 'progress' || type === 'summary' || type === 'queue-operation') return true;
     const uuid = msg.uuid as string | undefined;
-    return uuid ? activeUuids.has(uuid) : false;
+    if (!uuid) return true;
+    return activeUuids.has(uuid);
   });
 }

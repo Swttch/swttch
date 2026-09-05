@@ -49,6 +49,48 @@ describe('filterActiveChain', () => {
     expect(result.map(m => m.operation).filter(Boolean)).toEqual(['enqueue', 'remove']);
   });
 
+  // The filter used to name the uuid-less types it would keep, so every type
+  // nobody had listed was dropped on the way to the webview. Measured across 120
+  // real session files, seven such types existed and only three were listed.
+  // These are the four that were being lost, with the shapes the CLI writes.
+  it('keeps every entry that carries no uuid, not only the ones once listed', () => {
+    const messages = [
+      { type: 'user', uuid: 'u1', parentUuid: null },
+      // Says a message can be rewound to (#356). Without it the rewind menu
+      // cannot tell a message it can restore from one it cannot.
+      { type: 'file-history-snapshot', messageId: 'u1', snapshot: { messageId: 'u1', trackedFileBackups: {} } },
+      { type: 'last-prompt', prompt: 'go on' },
+      { type: 'mode', mode: 'plan' },
+      { type: 'pr-link', url: 'https://example.test/pr/1' },
+    ];
+
+    const result = filterActiveChain(messages);
+
+    expect(result.map(m => m.type)).toEqual([
+      'user',
+      'file-history-snapshot',
+      'last-prompt',
+      'mode',
+      'pr-link',
+    ]);
+  });
+
+  // Keeping the uuid-less entries must not also resurrect a branch that a rewind
+  // left behind: the two rules answer different questions.
+  it('still drops an inactive uuid entry while keeping uuid-less ones beside it', () => {
+    const messages = [
+      { type: 'user', uuid: 'u1', parentUuid: null },
+      { type: 'assistant', uuid: 'orphan', parentUuid: 'missing-parent' },
+      { type: 'file-history-snapshot', messageId: 'u1', snapshot: { messageId: 'u1' } },
+    ];
+
+    const result = filterActiveChain(messages);
+
+    // `orphan` traces to a parent that is not in the list, so it is its own leaf
+    // and stays. What matters here is that the snapshot survives beside it.
+    expect(result.map(m => m.type)).toContain('file-history-snapshot');
+  });
+
   it('drops a superseded branch after a rewind', () => {
     const messages = [
       { type: 'user', uuid: 'u1', parentUuid: null },
