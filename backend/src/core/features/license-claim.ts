@@ -1,4 +1,4 @@
-import { readLicense, readSponsorOptOut, saveLicense, findSponsorByInstall, reportActivation } from './license';
+import { readLicense, wasDeactivatedHere, saveLicense, findSponsorByInstall, reportActivation } from './license';
 import { readProfile } from './profile';
 
 /**
@@ -63,7 +63,7 @@ export async function claimSponsorByInstall({ throttled }: ClaimOptions): Promis
     // The user turned sponsorship off here. www still has the key linked to this
     // install id, so without this check the very next call would hand it back
     // and undo them.
-    if (await readSponsorOptOut()) return false;
+    if (await wasDeactivatedHere()) return false;
 
     if (throttled) {
       const last = lastBackgroundAttemptAt;

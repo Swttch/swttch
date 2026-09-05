@@ -7,14 +7,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // the spies must come from vi.hoisted for the factory to see them.
 const {
   mockReadLicense,
-  mockReadSponsorOptOut,
+  mockWasDeactivatedHere,
   mockSaveLicense,
   mockFindSponsorByInstall,
   mockReportActivation,
   mockReadProfile,
 } = vi.hoisted(() => ({
   mockReadLicense: vi.fn(),
-  mockReadSponsorOptOut: vi.fn(),
+  mockWasDeactivatedHere: vi.fn(),
   mockSaveLicense: vi.fn(),
   mockFindSponsorByInstall: vi.fn(),
   mockReportActivation: vi.fn(),
@@ -23,7 +23,7 @@ const {
 
 vi.mock('../license', () => ({
   readLicense: mockReadLicense,
-  readSponsorOptOut: mockReadSponsorOptOut,
+  wasDeactivatedHere: mockWasDeactivatedHere,
   saveLicense: mockSaveLicense,
   findSponsorByInstall: mockFindSponsorByInstall,
   reportActivation: mockReportActivation,
@@ -46,7 +46,7 @@ describe('claimSponsorByInstall', () => {
     // The default world: no key here yet, the user never turned sponsorship off,
     // and www has one waiting.
     mockReadLicense.mockReset().mockResolvedValue(null);
-    mockReadSponsorOptOut.mockReset().mockResolvedValue(false);
+    mockWasDeactivatedHere.mockReset().mockResolvedValue(false);
     mockSaveLicense.mockReset().mockResolvedValue(undefined);
     mockFindSponsorByInstall.mockReset().mockResolvedValue('CCG-minted');
     mockReportActivation.mockReset().mockResolvedValue(undefined);
@@ -92,7 +92,7 @@ describe('claimSponsorByInstall', () => {
   // the key linked to this install id forever, so an unconditional claim would
   // hand it straight back to someone who just chose to turn sponsorship off.
   it('leaves an install alone once the user turned sponsorship off there', async () => {
-    mockReadSponsorOptOut.mockResolvedValue(true);
+    mockWasDeactivatedHere.mockResolvedValue(true);
 
     const claimed = await claimSponsorByInstall({ throttled: true });
 

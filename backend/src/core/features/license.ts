@@ -258,22 +258,33 @@ export async function saveLicense(license: StoredLicense): Promise<void> {
  */
 export async function deactivateLicense(): Promise<void> {
   await mkdir(LICENSE_DIR, { recursive: true });
-  await atomicWriteFile(LICENSE_FILE, JSON.stringify({ optedOut: true }, null, 2) + '\n');
+  // A timestamp rather than a flag: the same cost to check (the field is either
+  // there or not), the same shape as `verifiedAt` beside it, and it answers
+  // "when did this install stop?" for support without another lookup. Note this
+  // is when the key was turned off HERE, which is not when a subscription was
+  // cancelled — that is a separate action, and www stamps its own `ended_at`.
+  const record = { deactivatedAt: new Date().toISOString() };
+  await atomicWriteFile(LICENSE_FILE, JSON.stringify(record, null, 2) + '\n');
 }
 
 /**
  * Whether the user turned sponsorship off on this install.
  *
- * Unreadable counts as opted out. A missing file genuinely means "nothing was
- * ever turned off here", but any other read failure means we cannot tell — and
- * claiming a key on a guess would silently undo an opt-out we merely failed to
+ * Answers with a boolean rather than the timestamp on purpose: a value would
+ * have to use `null` for "never happened", leaving nothing to say "the file is
+ * unreadable, so we cannot tell". That third case matters more than the date
+ * here — see below. Whoever needs the date can read it separately.
+ *
+ * Unreadable counts as deactivated. A missing file genuinely means nothing was
+ * ever turned off here, but any other read failure means we cannot tell — and
+ * claiming a key on a guess would silently undo a decision we merely failed to
  * read. Not claiming costs a sponsor one retry; claiming wrongly overrules them.
  */
-export async function readSponsorOptOut(): Promise<boolean> {
+export async function wasDeactivatedHere(): Promise<boolean> {
   try {
     const raw = await readFile(LICENSE_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as { optedOut?: unknown };
-    return parsed.optedOut === true;
+    const parsed = JSON.parse(raw) as { deactivatedAt?: unknown };
+    return typeof parsed.deactivatedAt === 'string' && parsed.deactivatedAt !== '';
   } catch (e) {
     return (e as NodeJS.ErrnoException | null)?.code !== 'ENOENT';
   }

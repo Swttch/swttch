@@ -16,7 +16,7 @@ vi.mock('fs/promises', () => ({
 }));
 vi.mock('../atomic-json', () => ({ atomicWriteFile: mockAtomicWriteFile }));
 
-import { deactivateLicense, readSponsorOptOut, readLicense } from '../license';
+import { deactivateLicense, wasDeactivatedHere, readLicense } from '../license';
 
 /** An fs error the way Node actually raises it: the code, not the message. */
 function fsError(code: string): NodeJS.ErrnoException {
@@ -25,21 +25,27 @@ function fsError(code: string): NodeJS.ErrnoException {
   return e;
 }
 
+const NOW = new Date('2026-09-05T12:00:00.000Z');
+
 beforeEach(() => {
   mockReadFile.mockReset();
   mockAtomicWriteFile.mockReset().mockResolvedValue(undefined);
 });
 
 describe('deactivateLicense', () => {
-  it('drops the key and records that the user asked for it', async () => {
+  it('drops the key and records when the user asked for it', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+
     await deactivateLicense();
 
     expect(mockAtomicWriteFile).toHaveBeenCalledTimes(1);
     const [, contents] = mockAtomicWriteFile.mock.calls[0] as [string, string];
-    const written = JSON.parse(contents) as Record<string, unknown>;
-    expect(written).toEqual({ optedOut: true });
+    expect(JSON.parse(contents)).toEqual({ deactivatedAt: NOW.toISOString() });
     // The whole point of deactivating: the key must really be gone.
     expect(contents).not.toContain('licenseKey');
+
+    vi.useRealTimers();
   });
 
   it('leaves nothing a later read could mistake for a license', async () => {
@@ -51,26 +57,43 @@ describe('deactivateLicense', () => {
   });
 });
 
-describe('readSponsorOptOut', () => {
-  it('reports the opt-out written by deactivating', async () => {
-    mockReadFile.mockResolvedValue(JSON.stringify({ optedOut: true }));
+describe('wasDeactivatedHere', () => {
+  it('reports the deactivation written by deactivating', async () => {
+    mockReadFile.mockResolvedValue(JSON.stringify({ deactivatedAt: NOW.toISOString() }));
 
-    expect(await readSponsorOptOut()).toBe(true);
+    expect(await wasDeactivatedHere()).toBe(true);
   });
 
-  it('reports no opt-out when a real license is stored', async () => {
+  // Presence is the answer, so an unparseable date still counts as "they turned
+  // it off" rather than quietly reopening pick-up.
+  it('counts any non-empty stamp, even an unparseable one', async () => {
+    mockReadFile.mockResolvedValue(JSON.stringify({ deactivatedAt: 'not-a-date' }));
+
+    expect(await wasDeactivatedHere()).toBe(true);
+  });
+
+  it.each([
+    ['an empty stamp', { deactivatedAt: '' }],
+    ['a non-string stamp', { deactivatedAt: true }],
+  ])('ignores %s', async (_label, stored) => {
+    mockReadFile.mockResolvedValue(JSON.stringify(stored));
+
+    expect(await wasDeactivatedHere()).toBe(false);
+  });
+
+  it('reports no deactivation when a real license is stored', async () => {
     mockReadFile.mockResolvedValue(
       JSON.stringify({ licenseKey: 'CCG-abc', status: 'active', verifiedAt: '' }),
     );
 
-    expect(await readSponsorOptOut()).toBe(false);
+    expect(await wasDeactivatedHere()).toBe(false);
   });
 
   // Nothing was ever turned off here, so pick-up is free to run.
-  it('reports no opt-out when the file does not exist', async () => {
+  it('reports no deactivation when the file does not exist', async () => {
     mockReadFile.mockRejectedValue(fsError('ENOENT'));
 
-    expect(await readSponsorOptOut()).toBe(false);
+    expect(await wasDeactivatedHere()).toBe(false);
   });
 
   // "Cannot tell" must not become "go ahead". Claiming on a guess would hand the
@@ -82,12 +105,12 @@ describe('readSponsorOptOut', () => {
   ])('holds off when the file is unreadable — %s', async (_label, error) => {
     mockReadFile.mockRejectedValue(error);
 
-    expect(await readSponsorOptOut()).toBe(true);
+    expect(await wasDeactivatedHere()).toBe(true);
   });
 
   it('holds off when the file is corrupt', async () => {
     mockReadFile.mockResolvedValue('{ not json');
 
-    expect(await readSponsorOptOut()).toBe(true);
+    expect(await wasDeactivatedHere()).toBe(true);
   });
 });
