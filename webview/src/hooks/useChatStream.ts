@@ -7,6 +7,7 @@ import { parsePartialJson } from '../utils/parsePartialJson';
 import { MessageType } from '@/shared';
 import { parseControlRequestResult } from './controlRequestResult';
 import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
+import { isUserSend } from '@/pages/ChatPage/paging';
 
 /** Re-export for backwards compatibility */
 export type { LoadedMessageDto as LoadedMessage } from '../types';
@@ -1261,6 +1262,36 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       }
     });
 
+    /*
+     * The uuid the CLI recorded for the send whose turn just ended (#356).
+     *
+     * The CLI never echoes user messages back, so a send shown from this app's
+     * own copy carries an id it minted here — and no CLI command accepts that
+     * id. Attaching the real one lets the per-send actions work on the message
+     * the user is looking at, instead of only after the session is reopened.
+     *
+     * Attached rather than substituted: replacing `uuid` would change the React
+     * key and the section identity mid-session, which would reset things like a
+     * collapsed reply under the user for no visible reason.
+     */
+    const unsubscribeSendRecorded = bridge.subscribe(MessageType.SEND_RECORDED, (message: IPCMessage) => {
+      const payload = message.payload as { uuid?: string; canRewind?: boolean } | undefined;
+      if (!payload?.uuid) return;
+      setMessages(prev => {
+        // The send this turn belongs to is the last one in the list. Anything
+        // earlier already has its recorded uuid from the transcript.
+        for (let i = prev.length - 1; i >= 0; i--) {
+          const candidate = prev[i];
+          if (!isUserSend(candidate)) continue;
+          if (candidate.cliUuid === payload.uuid) return prev;
+          const updated = [...prev];
+          updated[i] = { ...candidate, cliUuid: payload.uuid, canRewind: payload.canRewind };
+          return updated;
+        }
+        return prev;
+      });
+    });
+
     // Cleanup
     return () => {
       unsubscribeCliEvent();
@@ -1268,6 +1299,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       unsubscribeAuthDiagnosis();
       unsubscribeUserBroadcast();
       unsubscribeStreamEnd();
+      unsubscribeSendRecorded();
     };
   // bridge.subscribe는 useBridge의 useCallback([], [])이므로 안정적.
   // 나머지 콜백들은 ref로 안정화했으므로 의존성에서 제외.

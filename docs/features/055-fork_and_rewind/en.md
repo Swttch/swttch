@@ -63,11 +63,11 @@ it only needs the conversation, which is always recorded.
 
 ## Two things worth knowing
 
-**The entries appear once Claude has recorded your message.** While a reply is
-still streaming, the message on screen is the copy the plugin is holding, and
-Claude has not yet written its own record of it. Both actions have to name that
-record, so the menu waits until it exists rather than showing you buttons that
-would fail. Reopening the session brings them back for every message.
+**The entries appear as soon as the reply finishes.** While one is still
+streaming they are not there yet: the message on screen is the copy the plugin is
+holding, and Claude has not written its own record of it. Both actions have to
+name that record, so the menu waits for it rather than showing buttons that would
+fail. The wait ends with the reply, not when you reopen the session.
 
 **Conversations from before this release cannot have their code rewound.** The
 file copies are taken as edits happen, so a session recorded before checkpointing

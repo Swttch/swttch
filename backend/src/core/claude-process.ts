@@ -13,6 +13,7 @@ import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { readMergedClaudeSettings } from './features/claude-settings';
+import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { MessageType } from '../shared';
@@ -547,7 +548,7 @@ export async function ensureClaudeProcess(
         try {
           const event = JSON.parse(line) as Record<string, unknown>;
           console.error('[node-backend]', `JSON event type: ${event.type}`);
-          handleStreamEvent(targetSessionId, event, connections, bridge);
+          handleStreamEvent(targetSessionId, event, connections, bridge, workingDir);
         } catch {
           // Non-JSON line is expected noise (not an error) in stream-json mode — only log.
           console.error('[node-backend]', `Non-JSON output (unexpected in stream-json mode): ${line}`);
@@ -589,7 +590,7 @@ export async function ensureClaudeProcess(
       if (remainingBuffer.trim()) {
         try {
           const event = JSON.parse(remainingBuffer) as Record<string, unknown>;
-          handleStreamEvent(targetSessionId, event, connections, bridge);
+          handleStreamEvent(targetSessionId, event, connections, bridge, workingDir);
         } catch {
           console.error('[node-backend]', `Remaining buffer (non-JSON): ${remainingBuffer}`);
         }
@@ -1053,6 +1054,8 @@ function handleStreamEvent(
   event: Record<string, unknown>,
   connections: ConnectionManager,
   bridge: Bridge,
+  // Needed to find this session's transcript on disk when a turn ends (#356).
+  workingDir: string,
 ): void {
   const eventType = event.type as string;
 
@@ -1109,6 +1112,28 @@ function handleStreamEvent(
       session: {
         sessionId: event.session_id ?? targetSessionId,
       },
+    });
+
+    /*
+     * Hand the webview the uuid the CLI just recorded for this send (#356).
+     *
+     * The CLI does not echo user messages back on stdout, so up to this moment
+     * the webview only has the id it minted itself — and no CLI command accepts
+     * that id. Without this, rewinding the edit you just watched go wrong would
+     * mean reopening the session first, which is a strange thing to ask of
+     * someone looking straight at it.
+     *
+     * Read after `result` because that is when the entries are on disk. Failure
+     * is silent by design: the actions stay hidden, which is exactly where they
+     * were before, and no turn should fail over a menu.
+     */
+    void readLastRecordedSend(targetSessionId, workingDir).then((recorded) => {
+      if (!recorded) return;
+      connections.broadcastToSession(targetSessionId, MessageType.SEND_RECORDED, {
+        sessionId: targetSessionId,
+        uuid: recorded.uuid,
+        canRewind: recorded.canRewind,
+      });
     });
 
     // 인증 에러 진단 (비동기, 실패해도 무시)

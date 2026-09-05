@@ -83,6 +83,15 @@ export enum MessageType {
   /** Rename a session's title. */
   RENAME_SESSION = 'RENAME_SESSION',
   /**
+   * Tells the webview the uuid the CLI recorded for the send whose turn just
+   * ended, and whether the code can be rewound to it (issue #356).
+   *
+   * The CLI never echoes user messages back, so until this arrives the webview
+   * only has the id it minted itself, which no CLI command accepts. Sent once
+   * per turn on `result`. outbound backend→webview
+   */
+  SEND_RECORDED = 'SEND_RECORDED',
+  /**
    * Restore the files a send edited back to their state at that send, using the
    * CLI's own file checkpoints (issue #356). Standalone: it changes files on
    * disk and does not continue the conversation. inbound webview→backend

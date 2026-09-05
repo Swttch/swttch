@@ -2,20 +2,28 @@ import type { LoadedMessageDto } from '../../types';
 import { LoadedMessageType } from '@/dto/common';
 
 /**
- * Whether the CLI can be asked about this send at all (issue #356).
+ * The uuid the CLI knows this send by, or undefined while it knows none.
  *
- * While a turn streams, the webview shows the send from its own copy and gives
- * it a locally minted id (`msg-<time>-<random>`, see `useChatStream`), because
- * the CLI does not echo user messages back — the uuid it wrote in the transcript
- * only arrives when the session is read from disk.
+ * A send read from the transcript already carries it as `uuid`. A send the
+ * webview is showing from its own copy carries a locally minted id there instead
+ * (`msg-<time>-<random>`, see `useChatStream`), because the CLI never echoes user
+ * messages back — for those the real uuid arrives on SEND_RECORDED when the turn
+ * ends and is attached as `cliUuid`.
  *
  * Both fork and rewind name a send on a command line, and the CLI answers a
- * locally minted id with "not a user message in this session". So neither can
- * act on a send until its real uuid is known, and offering them would be
- * offering a button that cannot work.
+ * locally minted id with "not a user message in this session", so every caller
+ * has to ask through here rather than reading `uuid` directly.
  */
-export function isRecordedSend(sendUuid: string): boolean {
-  return !sendUuid.startsWith('msg-');
+export function recordedUuidOf(send: LoadedMessageDto | undefined): string | undefined {
+  if (!send) return undefined;
+  if (send.cliUuid) return send.cliUuid;
+  if (send.uuid && !send.uuid.startsWith('msg-')) return send.uuid;
+  return undefined;
+}
+
+/** Whether the CLI can be asked about this send at all — see [recordedUuidOf]. */
+export function isRecordedSend(send: LoadedMessageDto | undefined): boolean {
+  return recordedUuidOf(send) !== undefined;
 }
 
 /**
@@ -36,10 +44,15 @@ export function isRecordedSend(sendUuid: string): boolean {
  * entry at all, which is exactly the case the menu has to grey out: the backups
  * were never taken and no command can bring them back.
  */
-export function canRewindTo(messages: LoadedMessageDto[], sendUuid: string): boolean {
+export function canRewindTo(messages: LoadedMessageDto[], send: LoadedMessageDto | undefined): boolean {
+  const uuid = recordedUuidOf(send);
+  if (!uuid) return false;
+  // A send whose turn just ended has no snapshot entry in this list yet — the CLI
+  // wrote one to the transcript, and SEND_RECORDED reports it directly.
+  if (send?.canRewind !== undefined) return send.canRewind;
   return messages.some(
     (message) =>
-      message.type === LoadedMessageType.FileHistorySnapshot && message.messageId === sendUuid,
+      message.type === LoadedMessageType.FileHistorySnapshot && message.messageId === uuid,
   );
 }
 
@@ -72,29 +85,16 @@ export function forkPointFor(
 
   for (let i = index - 1; i >= 0; i--) {
     const candidate = messages[i];
-    if (!candidate.uuid) continue;
     if (
-      candidate.type === LoadedMessageType.Assistant ||
-      candidate.type === LoadedMessageType.User
+      candidate.type !== LoadedMessageType.Assistant &&
+      candidate.type !== LoadedMessageType.User
     ) {
-      return candidate.uuid;
+      continue;
     }
+    // Through `recordedUuidOf` for the same reason the send is: an entry the
+    // webview drew from its own copy carries an id the CLI would reject.
+    const uuid = recordedUuidOf(candidate);
+    if (uuid) return uuid;
   }
   return undefined;
-}
-
-/**
- * The uuids of every send the code can be rewound to, for callers that ask about
- * a whole transcript rather than one send.
- *
- * Built once and shared, so a long transcript does not rescan the message list
- * per rendered send.
- */
-export function rewindableSendUuids(messages: LoadedMessageDto[]): Set<string> {
-  const uuids = new Set<string>();
-  for (const message of messages) {
-    if (message.type !== LoadedMessageType.FileHistorySnapshot) continue;
-    if (message.messageId) uuids.add(message.messageId);
-  }
-  return uuids;
 }

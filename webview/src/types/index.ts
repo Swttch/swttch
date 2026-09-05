@@ -100,6 +100,18 @@ export class LoadedMessageDto {
   // entry's own identity — a snapshot entry carries no `uuid` of its own.
   messageId?: string;
 
+  // UI-only: the uuid the CLI recorded for a send the webview is showing from its
+  // own copy (issue #356). While a turn streams, `uuid` above is an id this app
+  // minted, and no CLI command accepts it; this arrives on SEND_RECORDED when the
+  // turn ends. Kept beside `uuid` rather than replacing it so the React key and
+  // the section identity do not change under the user mid-session.
+  cliUuid?: string;
+
+  // UI-only: whether the CLI wrote a file-history snapshot for this send, so the
+  // code can be rewound to it. Arrives with `cliUuid` on SEND_RECORDED; for a
+  // send read from the transcript the snapshot entry itself answers this instead.
+  canRewind?: boolean;
+
   // metadata
   slug?: string;
   sessionId?: string;

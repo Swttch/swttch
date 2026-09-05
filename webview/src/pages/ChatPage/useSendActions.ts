@@ -7,7 +7,7 @@ import { useTranslation } from '@/i18n';
 import { MessageType } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '../../types';
 import { Route, routeToPath, withWorkingDir } from '@/router/routes';
-import { forkPointFor, isRecordedSend, rewindableSendUuids } from './rewindTargets';
+import { canRewindTo, forkPointFor, isRecordedSend, recordedUuidOf } from './rewindTargets';
 import type { SendActionsValue } from './SendActionsContext';
 
 /** What a forked session needs to know before its first send goes out. */
@@ -49,21 +49,26 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   const { currentSessionId, workingDirectory } = useSessionContext();
   const navigate = useNavigate();
 
-  // One pass over the transcript instead of one per rendered send.
-  const rewindable = useMemo(() => rewindableSendUuids(messages), [messages]);
+  // The menu identifies a send by the key the transcript is grouped on, which is
+  // whatever `uuid` the entry carries — so every answer starts by finding it.
+  const sendByKey = useCallback(
+    (sendUuid: string) => messages.find((message) => message.uuid === sendUuid),
+    [messages],
+  );
 
-  const canFork = useCallback((sendUuid: string) => isRecordedSend(sendUuid), []);
+  const canFork = useCallback(
+    (sendUuid: string) => isRecordedSend(sendByKey(sendUuid)),
+    [sendByKey],
+  );
 
-  // Both conditions, not just the snapshot: a send from the turn still streaming
-  // has no CLI uuid to hand to `--rewind-files` even once its snapshot exists.
   const canRewind = useCallback(
-    (sendUuid: string) => isRecordedSend(sendUuid) && rewindable.has(sendUuid),
-    [rewindable],
+    (sendUuid: string) => canRewindTo(messages, sendByKey(sendUuid)),
+    [messages, sendByKey],
   );
 
   const openFork = useCallback(
     (sendUuid: string) => {
-      const send = messages.find((message) => message.uuid === sendUuid);
+      const send = sendByKey(sendUuid);
       const resumeSessionAt = forkPointFor(messages, sendUuid);
       const handoff: ForkHandoff = {
         forkFrom:
@@ -76,19 +81,20 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         state: handoff,
       });
     },
-    [messages, currentSessionId, workingDirectory, navigate],
+    [messages, sendByKey, currentSessionId, workingDirectory, navigate],
   );
 
   const runRewind = useCallback(
     async (sendUuid: string): Promise<boolean> => {
-      if (!currentSessionId || !workingDirectory) {
+      const recorded = recordedUuidOf(sendByKey(sendUuid));
+      if (!recorded || !currentSessionId || !workingDirectory) {
         toast.error(t('sendActions.rewindFailed'));
         return false;
       }
       try {
         const response = await bridge.send<{ status?: string; error?: string; message?: string }>(
           MessageType.REWIND_CODE,
-          { sessionId: currentSessionId, sendUuid, workingDir: workingDirectory },
+          { sessionId: currentSessionId, sendUuid: recorded, workingDir: workingDirectory },
         );
         if (response?.status === 'error') {
           // The CLI's own sentence, relayed. It explains its refusals better than
@@ -103,7 +109,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
         return false;
       }
     },
-    [bridge, currentSessionId, workingDirectory, t],
+    [bridge, sendByKey, currentSessionId, workingDirectory, t],
   );
 
   const rewindCode = useCallback(

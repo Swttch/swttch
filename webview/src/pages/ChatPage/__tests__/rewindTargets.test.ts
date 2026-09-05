@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canRewindTo, forkPointFor, isRecordedSend, rewindableSendUuids } from '../rewindTargets';
+import { canRewindTo, forkPointFor, isRecordedSend, recordedUuidOf } from '../rewindTargets';
 import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType } from '@/dto/common';
 
@@ -16,15 +16,62 @@ function snapshot(messageId: string, backups: Record<string, unknown> = {}): Loa
   } as unknown as LoadedMessageDto;
 }
 
+/** A send read back from the transcript: its uuid is the CLI's own. */
 function send(uuid: string): LoadedMessageDto {
   return { type: LoadedMessageType.User, uuid } as LoadedMessageDto;
 }
+
+/** A send the webview is showing from its own copy, before SEND_RECORDED. */
+function inFlight(localId = 'msg-1757049600000-ab12cd34e'): LoadedMessageDto {
+  return { type: LoadedMessageType.User, uuid: localId } as LoadedMessageDto;
+}
+
+/** The same send once the turn ended and the CLI's uuid was attached. */
+function recorded(localId: string, cliUuid: string, canRewind?: boolean): LoadedMessageDto {
+  return { type: LoadedMessageType.User, uuid: localId, cliUuid, canRewind } as LoadedMessageDto;
+}
+
+describe('recordedUuidOf', () => {
+  it('uses the uuid of a send read from the transcript', () => {
+    expect(recordedUuidOf(send('65653f1e-09ff-4570-a371-ea968d39c2d0'))).toBe(
+      '65653f1e-09ff-4570-a371-ea968d39c2d0',
+    );
+  });
+
+  // `useChatStream` mints this shape while a turn streams, because the CLI does
+  // not echo user messages back.
+  it('has no answer for a send still carrying a locally minted id', () => {
+    expect(recordedUuidOf(inFlight())).toBeUndefined();
+  });
+
+  // SEND_RECORDED attaches the real uuid without replacing the React key.
+  it('prefers the uuid SEND_RECORDED attached', () => {
+    expect(recordedUuidOf(recorded('msg-1-abc', '65653f1e-09ff-4570-a371-ea968d39c2d0'))).toBe(
+      '65653f1e-09ff-4570-a371-ea968d39c2d0',
+    );
+  });
+
+  it('has no answer for a send that is not there', () => {
+    expect(recordedUuidOf(undefined)).toBeUndefined();
+  });
+});
+
+describe('isRecordedSend', () => {
+  it('is false while the send carries only a locally minted id', () => {
+    expect(isRecordedSend(inFlight())).toBe(false);
+  });
+
+  it('is true once the CLI uuid is known', () => {
+    expect(isRecordedSend(recorded('msg-1-abc', '65653f1e-09ff-4570-a371-ea968d39c2d0'))).toBe(true);
+    expect(isRecordedSend(send('65653f1e-09ff-4570-a371-ea968d39c2d0'))).toBe(true);
+  });
+});
 
 describe('canRewindTo', () => {
   it('is true for a send that has a snapshot entry', () => {
     const messages = [send('u1'), snapshot('u1')];
 
-    expect(canRewindTo(messages, 'u1')).toBe(true);
+    expect(canRewindTo(messages, send('u1'))).toBe(true);
   });
 
   it('is false for a send with no snapshot entry', () => {
@@ -32,7 +79,7 @@ describe('canRewindTo', () => {
     // the sends are there, the snapshots never were.
     const messages = [send('u1'), send('u2')];
 
-    expect(canRewindTo(messages, 'u1')).toBe(false);
+    expect(canRewindTo(messages, send('u1'))).toBe(false);
   });
 
   // 2.1.261 leaves `trackedFileBackups` empty and still rewinds correctly, so a
@@ -40,35 +87,33 @@ describe('canRewindTo', () => {
   it('is true even when the snapshot lists no backups', () => {
     const messages = [send('u1'), snapshot('u1', {})];
 
-    expect(canRewindTo(messages, 'u1')).toBe(true);
+    expect(canRewindTo(messages, send('u1'))).toBe(true);
   });
 
   it('does not match a snapshot belonging to a different send', () => {
     const messages = [send('u1'), send('u2'), snapshot('u2')];
 
-    expect(canRewindTo(messages, 'u1')).toBe(false);
-    expect(canRewindTo(messages, 'u2')).toBe(true);
+    expect(canRewindTo(messages, send('u1'))).toBe(false);
+    expect(canRewindTo(messages, send('u2'))).toBe(true);
   });
 
-  // A snapshot has no uuid of its own, so a check written against `uuid` instead
-  // of `messageId` would find nothing at all.
-  it('reads messageId, not the entry uuid', () => {
-    const entry = snapshot('u1');
+  // The turn that just ended has no snapshot entry in this list yet — the CLI
+  // wrote one to the transcript and SEND_RECORDED reports it directly. Without
+  // this the rewind would be hidden on the very edit the user is looking at.
+  it('takes the answer SEND_RECORDED brought over the missing entry', () => {
+    const justEnded = recorded('msg-1-abc', 'u9', true);
 
-    expect(entry.uuid).toBeUndefined();
-    expect(canRewindTo([entry], 'u1')).toBe(true);
-  });
-});
-
-describe('isRecordedSend', () => {
-  // `useChatStream` mints this shape while a turn streams, because the CLI does
-  // not echo user messages back and its uuid only arrives from disk.
-  it('rejects the id the webview mints for a send in flight', () => {
-    expect(isRecordedSend('msg-1757049600000-ab12cd34e')).toBe(false);
+    expect(canRewindTo([justEnded], justEnded)).toBe(true);
   });
 
-  it('accepts a uuid the CLI recorded', () => {
-    expect(isRecordedSend('65653f1e-09ff-4570-a371-ea968d39c2d0')).toBe(true);
+  it('honours a negative answer from SEND_RECORDED even if an entry exists', () => {
+    const justEnded = recorded('msg-1-abc', 'u9', false);
+
+    expect(canRewindTo([justEnded, snapshot('u9')], justEnded)).toBe(false);
+  });
+
+  it('is false while the send has no uuid the CLI would accept', () => {
+    expect(canRewindTo([inFlight()], inFlight())).toBe(false);
   });
 });
 
@@ -112,6 +157,14 @@ describe('forkPointFor', () => {
     expect(forkPointFor(messages, 'u2')).toBe('toolresult');
   });
 
+  // An entry the webview drew from its own copy carries an id the CLI rejects,
+  // so it cannot serve as the point either.
+  it('skips an entry that still carries a locally minted id', () => {
+    const messages = [assistant('a1'), inFlight('msg-2-def'), send('u2')];
+
+    expect(forkPointFor(messages, 'u2')).toBe('a1');
+  });
+
   // Not a failure: the send opens the conversation, so there is no shared
   // history to branch from and the caller opens a new session instead.
   it('is undefined for the first send in a conversation', () => {
@@ -122,17 +175,5 @@ describe('forkPointFor', () => {
 
   it('is undefined for a uuid that is not in the transcript', () => {
     expect(forkPointFor([send('u1')], 'nope')).toBeUndefined();
-  });
-});
-
-describe('rewindableSendUuids', () => {
-  it('collects every send that has a snapshot', () => {
-    const messages = [send('u1'), snapshot('u1'), send('u2'), snapshot('u2'), send('u3')];
-
-    expect(rewindableSendUuids(messages)).toEqual(new Set(['u1', 'u2']));
-  });
-
-  it('is empty for a transcript with no snapshots', () => {
-    expect(rewindableSendUuids([send('u1')])).toEqual(new Set());
   });
 });
