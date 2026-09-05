@@ -33,6 +33,7 @@ JetBrains IDE용 Claude Code GUI 플러그인. Cursor의 Claude Code 확장과 �
 지금까지 기록된 예외는 다음과 같다.
 
 - [MCP 서버 목록 조회에 미문서화 `control_request{subtype:"mcp_status"}`를 쓴다](./docs/principle-exceptions/363-mcp-status-control-request.md) — 위 2번·3번 위반. 공식 `claude mcp list` 경로를 폴백으로 항상 살려두는 조건으로 채택했다 ([#363](https://github.com/Swttch/swttch/issues/363))
+- [리와인드와 포크를 `--help`에 없는 CLI 플래그로 구현한다](./docs/principle-exceptions/356-rewind-and-fork-hidden-cli-flags.md) — 위 2번 위반. `/rewind`가 비대화형을 지원하지 않아 대안이 없다. 폴백이 없으므로 플래그가 사라지면 기능을 되살리려 하지 말고 메뉴를 감춘다 ([#356](https://github.com/Swttch/swttch/issues/356))
 
 ## 아키텍처
 
