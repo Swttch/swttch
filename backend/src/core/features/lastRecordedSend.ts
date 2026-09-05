@@ -2,6 +2,8 @@ import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { join } from 'path';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
+import { chainStampsPermissionMode, isTypedPrompt } from './loadPromptHistory';
+import type { SessionMessage } from './loadSessionMessages';
 
 /**
  * What the CLI recorded for the send that just finished (issue #356).
@@ -14,6 +16,13 @@ import { getProjectSessionsPath } from './getProjectSessionsPath';
 export interface RecordedSend {
   uuid: string;
   canRewind: boolean;
+  /**
+   * The prompt text, so the webview can find which of its own messages this is
+   * rather than assuming it is the last one. A turn can be followed by entries
+   * that look like sends (a `/model` switch writes three of them), and matching
+   * by position attached the uuid to the wrong message.
+   */
+  text: string;
 }
 
 /**
@@ -34,18 +43,17 @@ async function readTail(path: string): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-/**
- * True for an entry that is a message the user actually sent, as opposed to the
- * tool results that arrive as `type: "user"` entries too.
- *
- * A genuine send carries its text as a plain string; a tool result carries an
- * array of content blocks. That is the same distinction `isUserSend` draws in the
- * webview, kept here rather than imported because this reads raw JSONL.
- */
-function isUserSend(entry: Record<string, unknown>): boolean {
-  if (entry.type !== 'user' || typeof entry.uuid !== 'string') return false;
+/** The prompt text of an entry, flattened the way the webview shows it. */
+function promptTextOf(entry: SessionMessage): string {
   const message = entry.message as { content?: unknown } | undefined;
-  return typeof message?.content === 'string';
+  const content = message?.content;
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .filter((b): b is Record<string, unknown> => !!b && typeof b === 'object')
+    .filter((b) => b.type === 'text')
+    .map((b) => (typeof b.text === 'string' ? b.text : ''))
+    .join('\n');
 }
 
 /**
@@ -70,28 +78,53 @@ export async function readLastRecordedSend(
     const sessionsDir = await getProjectSessionsPath(workingDir);
     const text = await readTail(join(sessionsDir, `${sessionId}.jsonl`));
 
-    let send: string | null = null;
+    const entries: SessionMessage[] = [];
     const snapshotFor = new Set<string>();
 
     for (const line of text.split('\n')) {
       if (!line.trim()) continue;
-      let entry: Record<string, unknown>;
+      let entry: SessionMessage;
       try {
-        entry = JSON.parse(line) as Record<string, unknown>;
+        entry = JSON.parse(line) as SessionMessage;
       } catch {
         // The first line of a mid-file tail is usually a partial entry. Skipping
         // it is right for every later line too: a line we cannot read tells us
         // nothing, and there is nothing to repair.
         continue;
       }
-      if (isUserSend(entry)) send = entry.uuid as string;
-      else if (entry.type === 'file-history-snapshot' && typeof entry.messageId === 'string') {
+      entries.push(entry);
+      if (entry.type === 'file-history-snapshot' && typeof entry.messageId === 'string') {
         snapshotFor.add(entry.messageId);
       }
     }
 
-    if (!send) return null;
-    return { uuid: send, canRewind: snapshotFor.has(send) };
+    /*
+     * `isTypedPrompt` rather than "is a user entry with string content".
+     *
+     * Most `user` entries are not prompts, and the ones that fool a naive test
+     * are exactly the ones that follow a turn: a `/model` switch writes
+     * `<local-command-caveat>`, `<command-name>` and `<local-command-stdout>`
+     * entries, all `type: "user"` with plain string content. Taking the last of
+     * those as "the send that just finished" reported a uuid the user never
+     * typed, and the actions went missing on the message they belonged to.
+     *
+     * That test already exists with the measurements behind it (#396), so it is
+     * reused rather than approximated. The stamping question is answered from
+     * the tail, which is where any recent entry is; a tail with none degrades to
+     * the other nets rather than rejecting everything.
+     */
+    const stamped = chainStampsPermissionMode(entries);
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      if (typeof entry.uuid !== 'string') continue;
+      if (!isTypedPrompt(entry, stamped)) continue;
+      return {
+        uuid: entry.uuid,
+        canRewind: snapshotFor.has(entry.uuid),
+        text: promptTextOf(entry),
+      };
+    }
+    return null;
   } catch {
     // Nothing here is worth failing a turn over. The actions stay hidden until
     // the session is reopened, which is where they were before this existed.

@@ -7,7 +7,6 @@ import { parsePartialJson } from '../utils/parsePartialJson';
 import { MessageType } from '@/shared';
 import { parseControlRequestResult } from './controlRequestResult';
 import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
-import { isUserSend } from '@/pages/ChatPage/paging';
 
 /** Re-export for backwards compatibility */
 export type { LoadedMessageDto as LoadedMessage } from '../types';
@@ -1275,15 +1274,31 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
      * collapsed reply under the user for no visible reason.
      */
     const unsubscribeSendRecorded = bridge.subscribe(MessageType.SEND_RECORDED, (message: IPCMessage) => {
-      const payload = message.payload as { uuid?: string; canRewind?: boolean } | undefined;
+      const payload = message.payload as
+        | { uuid?: string; canRewind?: boolean; text?: string }
+        | undefined;
       if (!payload?.uuid) return;
       setMessages(prev => {
-        // The send this turn belongs to is the last one in the list. Anything
-        // earlier already has its recorded uuid from the transcript.
+        /*
+         * Matched on the prompt text, not on position.
+         *
+         * "The last send" is not the send this turn belongs to: a `/model`
+         * switch during the turn writes three more entries that read as sends,
+         * and matching by position attached the uuid to one of those, leaving
+         * the actual message without one — its menu then showed only "collapse".
+         *
+         * Only messages the webview is still holding under a locally minted id
+         * are candidates: anything read from the transcript already carries the
+         * CLI's own uuid and must not be relabelled.
+         */
+        const wanted = (payload.text ?? '').trim();
+        if (!wanted) return prev;
         for (let i = prev.length - 1; i >= 0; i--) {
           const candidate = prev[i];
-          if (!isUserSend(candidate)) continue;
-          if (candidate.cliUuid === payload.uuid) return prev;
+          if (candidate.type !== LoadedMessageType.User) continue;
+          if (candidate.cliUuid) continue;
+          if (!candidate.uuid?.startsWith('msg-')) continue;
+          if (getTextContent(candidate).trim() !== wanted) continue;
           const updated = [...prev];
           updated[i] = { ...candidate, cliUuid: payload.uuid, canRewind: payload.canRewind };
           return updated;

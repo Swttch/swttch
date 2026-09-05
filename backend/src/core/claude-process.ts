@@ -1133,6 +1133,7 @@ function handleStreamEvent(
         sessionId: targetSessionId,
         uuid: recorded.uuid,
         canRewind: recorded.canRewind,
+        text: recorded.text,
       });
     });
 
