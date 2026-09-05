@@ -84,16 +84,21 @@ describe('getSessionsHandler', () => {
 
   it('on win32 with a normal Windows path, lists sessions as usual (no serviceError)', async () => {
     setPlatform('win32');
-    mockGetSessionsList.mockResolvedValue([
-      {
-        sessionId: 's1',
-        title: 'T',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        lastTimestamp: null,
-        messageCount: 1,
-        isSidechain: false,
-      },
-    ] as never);
+    mockGetSessionsList.mockResolvedValue({
+      sessions: [
+        {
+          sessionId: 's1',
+          sessionDir: 'C:\\Users\\yhk\\proj',
+          title: 'T',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          lastTimestamp: null,
+          messageCount: 1,
+          isSidechain: false,
+        },
+      ],
+      total: 1,
+      hasMore: false,
+    } as never);
     const conns = mockConns();
     await getSessionsHandler('c1', msg('C:\\Users\\yhk\\proj'), conns, bridge);
 
@@ -101,12 +106,16 @@ describe('getSessionsHandler', () => {
     expect(type).toBe(MessageType.ACK);
     expect(payload.sessions).toHaveLength(1);
     expect(payload.serviceError).toBeUndefined();
-    expect(mockGetSessionsList).toHaveBeenCalledWith('C:\\Users\\yhk\\proj');
+    // Paging is opt-in: a request that names no limit still asks for everything.
+    expect(mockGetSessionsList).toHaveBeenCalledWith('C:\\Users\\yhk\\proj', {
+      offset: undefined,
+      limit: undefined,
+    });
   });
 
   it('on linux (JetBrains in-distro backend) the win32 UNC guard does not trip — lists normally', async () => {
     setPlatform('linux');
-    mockGetSessionsList.mockResolvedValue([] as never);
+    mockGetSessionsList.mockResolvedValue({ sessions: [], total: 0, hasMore: false } as never);
     const conns = mockConns();
     await getSessionsHandler('c1', msg('//wsl.localhost/Ubuntu/home/yhk/ccg-test'), conns, bridge);
 

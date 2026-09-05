@@ -51,11 +51,33 @@ export async function getSessionsHandler(
   // request produced a row: every session states the directory it belongs to.
   // Without nesting that is always the requested directory itself.
   const includeNested = message.payload?.includeNested === true;
-  const sessions = includeNested
-    ? await getNestedSessionsList(workingDir)
-    : (await getSessionsList(workingDir)).map((s) => ({ ...s, sessionDir: workingDir }));
 
-  console.error('[getSessions]', 'returning sessions:', sessions.length, 'nested:', includeNested);
+  // Paging is opt-in. A request without a limit still gets the whole list, so
+  // any caller that has not been taught to page keeps working unchanged.
+  const offset = typeof message.payload?.offset === 'number' ? message.payload.offset : undefined;
+  const limit = typeof message.payload?.limit === 'number' ? message.payload.limit : undefined;
+  const options = { offset, limit };
 
-  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, sessions });
+  const page = includeNested
+    ? await getNestedSessionsList(workingDir, options)
+    : await getSessionsList(workingDir, options);
+
+  console.error(
+    '[getSessions]',
+    'returning sessions:',
+    page.sessions.length,
+    'of',
+    page.total,
+    'nested:',
+    includeNested,
+    'hasMore:',
+    page.hasMore,
+  );
+
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    sessions: page.sessions,
+    total: page.total,
+    hasMore: page.hasMore,
+  });
 }

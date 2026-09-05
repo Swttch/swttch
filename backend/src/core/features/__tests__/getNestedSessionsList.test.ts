@@ -5,15 +5,17 @@ vi.mock('../getProjectsList', () => ({
 }));
 
 vi.mock('../getSessionsList', () => ({
-  getSessionsList: vi.fn(),
+  collectSortKeys: vi.fn(),
+  resolvePage: vi.fn(),
 }));
 
 import { getNestedSessionsList } from '../getNestedSessionsList';
 import { getProjectsList } from '../getProjectsList';
-import { getSessionsList } from '../getSessionsList';
+import { collectSortKeys, resolvePage, type SessionSortKey } from '../getSessionsList';
 
 const mockProjects = vi.mocked(getProjectsList);
-const mockSessions = vi.mocked(getSessionsList);
+const mockCollect = vi.mocked(collectSortKeys);
+const mockResolve = vi.mocked(resolvePage);
 
 const ROOT = '/repo';
 
@@ -27,21 +29,27 @@ function project(path: string) {
   };
 }
 
-function session(sessionId: string, lastTimestamp: string) {
+function key(sessionId: string, sessionDir: string, isoTime: string): SessionSortKey {
   return {
     sessionId,
-    title: sessionId,
-    lastTimestamp,
-    createdAt: lastTimestamp,
-    messageCount: 1,
-    isSidechain: false,
+    fullPath: `${sessionDir}/${sessionId}.jsonl`,
+    sessionsPath: sessionDir,
+    sessionDir,
+    sortedAt: Date.parse(isoTime),
   };
+}
+
+/** The order resolvePage was handed, which is what the merge is judged on. */
+function orderPassedToResolve(): string[] {
+  const [keys] = mockResolve.mock.calls[0] ?? [[]];
+  return (keys as SessionSortKey[]).map((k) => k.sessionId);
 }
 
 describe('getNestedSessionsList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSessions.mockResolvedValue([]);
+    mockCollect.mockResolvedValue([]);
+    mockResolve.mockResolvedValue({ sessions: [], total: 0, hasMore: false });
   });
 
   it('reads the root and every working directory nested under it', async () => {
@@ -54,7 +62,7 @@ describe('getNestedSessionsList', () => {
 
     await getNestedSessionsList(ROOT);
 
-    const scanned = mockSessions.mock.calls.map(([dir]) => dir);
+    const scanned = mockCollect.mock.calls.map(([dir]) => dir);
     expect(scanned).toEqual([ROOT, `${ROOT}/packages/battery`, `${ROOT}/webview`]);
   });
 
@@ -65,7 +73,7 @@ describe('getNestedSessionsList', () => {
 
     await getNestedSessionsList(ROOT);
 
-    expect(mockSessions.mock.calls.map(([dir]) => dir)).toEqual([ROOT]);
+    expect(mockCollect.mock.calls.map(([dir]) => dir)).toEqual([ROOT]);
   });
 
   it('scans the root once even when it is also in the projects list', async () => {
@@ -73,35 +81,45 @@ describe('getNestedSessionsList', () => {
 
     await getNestedSessionsList(ROOT);
 
-    expect(mockSessions.mock.calls.filter(([dir]) => dir === ROOT)).toHaveLength(1);
-  });
-
-  it('tags every session with the directory it came from', async () => {
-    mockProjects.mockResolvedValue([project(ROOT), project(`${ROOT}/webview`)]);
-    mockSessions.mockImplementation(async (dir: string) =>
-      dir === ROOT ? [session('root-a', '2026-01-01T00:00:00Z')] : [session('wv-a', '2026-01-02T00:00:00Z')],
-    );
-
-    const result = await getNestedSessionsList(ROOT);
-
-    expect(result.map((s) => [s.sessionId, s.sessionDir])).toEqual([
-      ['wv-a', `${ROOT}/webview`],
-      ['root-a', ROOT],
-    ]);
+    expect(mockCollect.mock.calls.filter(([dir]) => dir === ROOT)).toHaveLength(1);
   });
 
   it('orders sessions across directories by recency, not by directory', async () => {
-    // Each getSessionsList sorts only its own slice, so merging without a
-    // re-sort would group by directory and bury the newest session.
+    // Each directory is collected separately, so merging without a re-sort would
+    // group by directory and bury the newest session.
     mockProjects.mockResolvedValue([project(ROOT), project(`${ROOT}/webview`)]);
-    mockSessions.mockImplementation(async (dir: string) =>
+    mockCollect.mockImplementation(async (dir: string) =>
       dir === ROOT
-        ? [session('root-old', '2026-01-01T00:00:00Z'), session('root-new', '2026-01-05T00:00:00Z')]
-        : [session('wv-mid', '2026-01-03T00:00:00Z')],
+        ? [key('root-old', ROOT, '2026-01-01T00:00:00Z'), key('root-new', ROOT, '2026-01-05T00:00:00Z')]
+        : [key('wv-mid', `${ROOT}/webview`, '2026-01-03T00:00:00Z')],
     );
 
-    const result = await getNestedSessionsList(ROOT);
+    await getNestedSessionsList(ROOT);
 
-    expect(result.map((s) => s.sessionId)).toEqual(['root-new', 'wv-mid', 'root-old']);
+    expect(orderPassedToResolve()).toEqual(['root-new', 'wv-mid', 'root-old']);
+  });
+
+  // The page has to be cut from the merged order. Cutting per directory first
+  // would return each directory's newest few rather than the newest overall.
+  it('orders every directory before the page is cut', async () => {
+    mockProjects.mockResolvedValue([project(ROOT), project(`${ROOT}/webview`)]);
+    mockCollect.mockImplementation(async (dir: string) =>
+      dir === ROOT
+        ? [key('root-a', ROOT, '2026-01-01T00:00:00Z')]
+        : [key('wv-a', `${ROOT}/webview`, '2026-01-02T00:00:00Z')],
+    );
+
+    await getNestedSessionsList(ROOT, { limit: 1 });
+
+    expect(orderPassedToResolve()).toEqual(['wv-a', 'root-a']);
+    expect(mockResolve.mock.calls[0][1]).toEqual({ limit: 1 });
+  });
+
+  it('passes the paging options straight through', async () => {
+    mockProjects.mockResolvedValue([project(ROOT)]);
+
+    await getNestedSessionsList(ROOT, { offset: 20, limit: 20 });
+
+    expect(mockResolve.mock.calls[0][1]).toEqual({ offset: 20, limit: 20 });
   });
 });

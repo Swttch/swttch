@@ -1,17 +1,11 @@
 import { isInsideWorkingDir, isSameWorkingDir } from '../../shared';
 import { getProjectsList } from './getProjectsList';
-import { getSessionsList, type SessionListEntry } from './getSessionsList';
-
-/** A session plus the working directory it actually belongs to. */
-export type NestedSessionListEntry = SessionListEntry & {
-  /**
-   * The working directory this session was recorded under. Equal to the
-   * requested root for the root's own sessions; a nested path for the rest.
-   * The panel uses it both to label the row and to run the session in the
-   * directory it came from rather than the one being browsed.
-   */
-  sessionDir: string;
-};
+import {
+  collectSortKeys,
+  resolvePage,
+  type SessionListOptions,
+  type SessionListPage,
+} from './getSessionsList';
 
 /**
  * Sessions for [rootDir] plus every working directory nested under it.
@@ -21,8 +15,15 @@ export type NestedSessionListEntry = SessionListEntry & {
  * "include nested sessions" setting on. The scans run concurrently but the
  * number of them is bounded by how many directories the user has actually
  * used, not by the size of the tree on disk.
+ *
+ * Ordering is settled across ALL directories before any transcript is opened,
+ * which is what lets a page be the globally newest N rather than the newest N
+ * of whichever directory happened to be read first.
  */
-export async function getNestedSessionsList(rootDir: string): Promise<NestedSessionListEntry[]> {
+export async function getNestedSessionsList(
+  rootDir: string,
+  options: SessionListOptions = {},
+): Promise<SessionListPage> {
   const projects = await getProjectsList();
   const nested = projects.map((p) => p.path).filter((p) => isInsideWorkingDir(p, rootDir));
 
@@ -35,21 +36,12 @@ export async function getNestedSessionsList(rootDir: string): Promise<NestedSess
     if (!uniqueDirs.some((seen) => isSameWorkingDir(seen, dir))) uniqueDirs.push(dir);
   }
 
-  const perDir = await Promise.all(
-    uniqueDirs.map(async (dir) => {
-      const sessions = await getSessionsList(dir);
-      return sessions.map((s) => ({ ...s, sessionDir: dir }));
-    }),
-  );
+  const perDir = await Promise.all(uniqueDirs.map((dir) => collectSortKeys(dir, dir)));
+  const allKeys = perDir.flat();
+  allKeys.sort((a, b) => b.sortedAt - a.sortedAt);
 
-  const all = perDir.flat();
-
-  // Re-sort across directories; each getSessionsList only sorted its own slice.
-  all.sort((a, b) => {
-    const aTime = new Date(a.lastTimestamp ?? a.createdAt).getTime();
-    const bTime = new Date(b.lastTimestamp ?? b.createdAt).getTime();
-    return bTime - aTime;
-  });
-
-  return all;
+  // Every row already states the directory it belongs to: resolvePage carries
+  // it over from the sort key, so nothing here has to match rows back to the
+  // request that produced them.
+  return resolvePage(allKeys, options);
 }

@@ -253,7 +253,7 @@ function scanHead(file: string): Promise<HeadScan> {
   });
 }
 
-interface TailScan {
+export interface TailScan {
   lastTimestamp: string | null;
   summary: string | null;
 }
@@ -265,7 +265,7 @@ interface TailScan {
  * title and the CLI appends it, so stopping the forward scan early must not be
  * able to lose one that sits at the end of the file.
  */
-async function scanTail(file: string): Promise<TailScan> {
+export async function scanTail(file: string): Promise<TailScan> {
   const handle = await open(file, 'r');
   try {
     const { size } = await handle.stat();
