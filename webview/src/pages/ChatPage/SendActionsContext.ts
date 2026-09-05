@@ -14,6 +14,12 @@ import { createContext, useContext } from 'react';
  * belonging to that send), which the menu does not hold.
  */
 export interface SendActionsValue {
+  /**
+   * Whether any of these actions can name this send yet. False while a turn is
+   * streaming, since the send still carries a locally minted id rather than the
+   * uuid the CLI recorded — see `isRecordedSend`.
+   */
+  canFork: (sendUuid: string) => boolean;
   /** Whether the code can be restored to the state it had at this send. */
   canRewind: (sendUuid: string) => boolean;
   /** Restore the files this send edited, leaving the conversation alone. */

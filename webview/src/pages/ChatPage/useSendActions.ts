@@ -7,7 +7,7 @@ import { useTranslation } from '@/i18n';
 import { MessageType } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '../../types';
 import { Route, routeToPath, withWorkingDir } from '@/router/routes';
-import { forkPointFor, rewindableSendUuids } from './rewindTargets';
+import { forkPointFor, isRecordedSend, rewindableSendUuids } from './rewindTargets';
 import type { SendActionsValue } from './SendActionsContext';
 
 /** What a forked session needs to know before its first send goes out. */
@@ -52,7 +52,14 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   // One pass over the transcript instead of one per rendered send.
   const rewindable = useMemo(() => rewindableSendUuids(messages), [messages]);
 
-  const canRewind = useCallback((sendUuid: string) => rewindable.has(sendUuid), [rewindable]);
+  const canFork = useCallback((sendUuid: string) => isRecordedSend(sendUuid), []);
+
+  // Both conditions, not just the snapshot: a send from the turn still streaming
+  // has no CLI uuid to hand to `--rewind-files` even once its snapshot exists.
+  const canRewind = useCallback(
+    (sendUuid: string) => isRecordedSend(sendUuid) && rewindable.has(sendUuid),
+    [rewindable],
+  );
 
   const openFork = useCallback(
     (sendUuid: string) => {
@@ -119,7 +126,7 @@ export function useSendActions(messages: LoadedMessageDto[]): SendActionsValue {
   );
 
   return useMemo(
-    () => ({ canRewind, rewindCode, forkConversation: openFork, forkAndRewind }),
-    [canRewind, rewindCode, openFork, forkAndRewind],
+    () => ({ canFork, canRewind, rewindCode, forkConversation: openFork, forkAndRewind }),
+    [canFork, canRewind, rewindCode, openFork, forkAndRewind],
   );
 }

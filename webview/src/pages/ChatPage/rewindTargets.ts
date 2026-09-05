@@ -2,6 +2,23 @@ import type { LoadedMessageDto } from '../../types';
 import { LoadedMessageType } from '@/dto/common';
 
 /**
+ * Whether the CLI can be asked about this send at all (issue #356).
+ *
+ * While a turn streams, the webview shows the send from its own copy and gives
+ * it a locally minted id (`msg-<time>-<random>`, see `useChatStream`), because
+ * the CLI does not echo user messages back — the uuid it wrote in the transcript
+ * only arrives when the session is read from disk.
+ *
+ * Both fork and rewind name a send on a command line, and the CLI answers a
+ * locally minted id with "not a user message in this session". So neither can
+ * act on a send until its real uuid is known, and offering them would be
+ * offering a button that cannot work.
+ */
+export function isRecordedSend(sendUuid: string): boolean {
+  return !sendUuid.startsWith('msg-');
+}
+
+/**
  * Whether the code can be rewound to a given user send (issue #356).
  *
  * The CLI answers this from the transcript itself: it writes a

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canRewindTo, forkPointFor, rewindableSendUuids } from '../rewindTargets';
+import { canRewindTo, forkPointFor, isRecordedSend, rewindableSendUuids } from '../rewindTargets';
 import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType } from '@/dto/common';
 
@@ -57,6 +57,18 @@ describe('canRewindTo', () => {
 
     expect(entry.uuid).toBeUndefined();
     expect(canRewindTo([entry], 'u1')).toBe(true);
+  });
+});
+
+describe('isRecordedSend', () => {
+  // `useChatStream` mints this shape while a turn streams, because the CLI does
+  // not echo user messages back and its uuid only arrives from disk.
+  it('rejects the id the webview mints for a send in flight', () => {
+    expect(isRecordedSend('msg-1757049600000-ab12cd34e')).toBe(false);
+  });
+
+  it('accepts a uuid the CLI recorded', () => {
+    expect(isRecordedSend('65653f1e-09ff-4570-a371-ea968d39c2d0')).toBe(true);
   });
 });
 

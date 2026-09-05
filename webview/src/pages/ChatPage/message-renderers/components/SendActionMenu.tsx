@@ -61,6 +61,10 @@ export function SendActionMenu() {
   // A send with no checkpoint behind it cannot be rewound to, so the two rewind
   // entries are not drawn for it at all.
   const canRewind = actions?.canRewind(sectionKey) ?? false;
+  // Nothing to offer while the CLI has not recorded this send yet: its id is
+  // still the webview's own, and every one of these actions names the send on a
+  // command line.
+  const canFork = actions?.canFork(sectionKey) ?? false;
 
   return (
     /*
@@ -118,7 +122,7 @@ export function SendActionMenu() {
             >
               {collapsed ? t('sendActions.expandReply') : t('sendActions.collapseReply')}
             </button>
-            {actions && (
+            {actions && canFork && (
               <>
                 <div className="border-t border-border-default" />
                 {/*
