@@ -503,6 +503,11 @@
       "retrying": "En attente de la réinitialisation du quota…",
       "proceeding": "Reprise en cours…"
     },
+    "accountPool": {
+      "switching": "Changement de compte…",
+      "continuing": "Poursuite avec le compte suivant…",
+      "failed": "Échec du changement de compte"
+    },
     "error": {
       "network": "Erreur de connexion réseau",
       "timeout": "Délai dépassé",

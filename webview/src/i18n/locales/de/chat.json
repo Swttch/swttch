@@ -503,6 +503,11 @@
       "retrying": "Warte auf Kontingent-Reset…",
       "proceeding": "Wird fortgesetzt…"
     },
+    "accountPool": {
+      "switching": "Konto wird gewechselt…",
+      "continuing": "Weiter mit dem nächsten Konto…",
+      "failed": "Kontowechsel fehlgeschlagen"
+    },
     "error": {
       "network": "Netzwerkverbindungsfehler",
       "timeout": "Zeitüberschreitung",

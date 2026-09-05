@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "Navegador",
     "ide": "IDE",
-    "account": "Cuenta",
+    "account": "Cuenta y grupos",
     "usage": "Uso",
     "tunnel": "Túnel",
     "releases": "Versiones",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "Cuenta",
+    "heading": "Cuenta y grupos",
     "addAccount": "Agregar cuenta",
     "actionFailed": "La acción falló",
     "loading": "Cargando cuentas…",
@@ -239,6 +239,26 @@
     "inUse": "En uso",
     "switch": "Cambiar",
     "removeAccount": "Eliminar cuenta",
+    "pool": {
+      "sectionTitle": "Grupos de cuentas",
+      "accountsSectionTitle": "Cuentas",
+      "defaultName": "Grupo de cuentas {{value}}",
+      "ordered": "En orden",
+      "poolCount": "{{count}} grupos",
+      "poolCount_one": "{{count}} grupo",
+      "poolCount_other": "{{count}} grupos",
+      "accountCount": "{{count}} cuentas",
+      "accountCount_one": "{{count}} cuenta",
+      "accountCount_other": "{{count}} cuentas",
+      "empty": "Aún no hay grupos. Arrastra una cuenta sobre otra para crear un grupo.",
+      "noStandaloneAccounts": "Todas las cuentas están asignadas a grupos.",
+      "switchOrder": "Orden de cambio automático",
+      "dragAccount": "Arrastra para agrupar o reordenar",
+      "dropToGroup": "Suelta para agrupar",
+      "next": "Siguiente",
+      "removeFromPool": "Quitar del grupo",
+      "delete": "Eliminar grupo"
+    },
     "lastActive": {
       "today": "Hoy",
       "yesterday": "Ayer",
@@ -326,7 +346,9 @@
       },
       "installingProgress": "Instalando cloudflared… ({{seconds}}s)",
       "establishingProgress": "Estableciendo conexión de túnel… ({{seconds}}s)",
-      "estimatedTime": "Esto suele tardar ~1 min (si se requiere instalación, toma unos 3 min)."
+      "estimatedTime": "Esto suele tardar ~1 min (si se requiere instalación, toma unos 3 min).",
+      "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
+      "regeneratePairing": "Volver a generar el código"
     },
     "sleepPrevention": {
       "title": "Prevención de suspensión",

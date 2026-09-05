@@ -1,5 +1,5 @@
 import { Claude } from '../claude';
-import type { AccountListItem, AccountsResult, StoredAccount } from '../../shared';
+import type { AccountListItem, AccountPool, AccountsResult, StoredAccount } from '../../shared';
 import {
   readLiveCredentials,
   writeLiveCredentials,
@@ -14,6 +14,7 @@ import {
   upsertAccount,
   setCurrentAccount,
   deleteAccountFiles,
+  writeAccountPools,
   newAccountId,
 } from './account-store';
 
@@ -82,7 +83,13 @@ export async function listAccounts(): Promise<AccountsResult> {
   // Stable order: registration order (oldest first).
   accounts.sort((a, b) => a.createdAt - b.createdAt);
 
-  return { accounts, activeEmail };
+  return { accounts, accountPools: registry.accountPools, activeEmail };
+}
+
+export async function updateAccountPools(accountPools: AccountPool[]): Promise<AccountPool[]> {
+  await writeAccountPools(accountPools);
+  const registry = await readRegistry();
+  return registry.accountPools;
 }
 
 // ─── Save current ──────────────────────────────────────────────────────────────

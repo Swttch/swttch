@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { AutoResumeStatusPhase } from '@/shared';
+import { AccountPoolStrategy, AutoResumeStatusPhase, type AccountListItem, type AccountPool } from '@/shared';
 import {
   computeSendAt,
   computeCountdownSeconds,
   resolveAutoResumeStatusKey,
+  findNextAccountPoolAccount,
   SEND_AT_DELAY_MS,
 } from '../autoResumeMath';
 import { isLimitErrorMessage } from '@/types';
@@ -79,6 +80,28 @@ describe('computeSendAt', () => {
   });
 });
 
+describe('findNextAccountPoolAccount', () => {
+  it('returns the next account after the active account in pool order', () => {
+    const accounts = [
+      account('acc-1', true),
+      account('acc-2', false),
+      account('acc-3', false),
+    ];
+
+    expect(findNextAccountPoolAccount(accounts, [pool(['acc-3', 'acc-1', 'acc-2'])])?.id).toBe('acc-2');
+  });
+
+  it('wraps around and ignores disabled pools', () => {
+    const accounts = [
+      account('acc-1', false),
+      account('acc-2', true),
+    ];
+
+    expect(findNextAccountPoolAccount(accounts, [pool(['acc-1', 'acc-2'], false)])).toBeNull();
+    expect(findNextAccountPoolAccount(accounts, [pool(['acc-1', 'acc-2'])])?.id).toBe('acc-1');
+  });
+});
+
 describe('computeCountdownSeconds', () => {
   const resetsAt = Date.parse('2026-03-30T10:00:00.000Z');
 
@@ -107,6 +130,35 @@ describe('computeCountdownSeconds', () => {
     expect(computeCountdownSeconds(NaN, Date.now())).toBeNull();
   });
 });
+
+function account(id: string, active: boolean): AccountListItem {
+  return {
+    id,
+    emailAddress: `${id}@example.com`,
+    displayName: null,
+    organizationName: null,
+    subscriptionType: 'max',
+    authMethod: 'claudeai',
+    createdAt: 1,
+    updatedAt: 1,
+    usageCached: null,
+    usageCachedAt: 0,
+    active,
+  };
+}
+
+function pool(accountIds: string[], enabled = true): AccountPool {
+  return {
+    id: 'pool-1',
+    name: 'Pool',
+    provider: 'claude',
+    enabled,
+    strategy: AccountPoolStrategy.ORDERED,
+    accountIds,
+    createdAt: 1,
+    updatedAt: 1,
+  };
+}
 
 describe('resolveAutoResumeStatusKey', () => {
   it('returns null when there is no status', () => {

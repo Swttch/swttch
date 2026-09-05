@@ -1,4 +1,5 @@
 import { AutoResumeStatusPhase } from '@/shared';
+import type { AccountListItem, AccountPool } from '@/shared';
 
 /**
  * Pure helpers for the "auto-resume on limit reset" feature. Kept free of React
@@ -19,6 +20,25 @@ export const SEND_AT_DELAY_MS = 30_000;
 
 /** The countdown length in whole seconds (30 → 0). */
 export const COUNTDOWN_SECONDS = SEND_AT_DELAY_MS / 1000;
+
+export function findNextAccountPoolAccount(
+  accounts: AccountListItem[],
+  accountPools: AccountPool[],
+): AccountListItem | null {
+  const active = accounts.find((account) => account.active) ?? null;
+  if (!active) return null;
+  const pool = accountPools.find((candidate) => candidate.enabled && candidate.accountIds.includes(active.id));
+  if (!pool || pool.accountIds.length < 2) return null;
+
+  const activeIndex = pool.accountIds.indexOf(active.id);
+  for (let offset = 1; offset < pool.accountIds.length; offset += 1) {
+    const accountId = pool.accountIds[(activeIndex + offset) % pool.accountIds.length];
+    const account = accounts.find((candidate) => candidate.id === accountId) ?? null;
+    if (account && !account.active) return account;
+  }
+
+  return null;
+}
 
 /**
  * Compute the reservation `sendAt` (ISO 8601) from a quota `resetsAt` (ISO

@@ -15,6 +15,16 @@
     "zoomIn": "확대",
     "reset": "초기화"
   },
+  "pairing": {
+    "title": "페어링 만료",
+    "expiredDetail": "이 일회용 링크는 만료되었거나 이미 사용되었습니다. 호스트에서 QR 코드를 다시 스캔해 이 기기를 연결해주세요.",
+    "lockedDetail": "시도 횟수가 너무 많습니다. 잠시 기다린 뒤 호스트에서 새 QR 코드를 다시 스캔해주세요.",
+    "networkDetail": "페어링을 마치기 위해 호스트에 연결하지 못했습니다. 네트워크를 확인한 뒤 호스트에서 QR 코드를 다시 스캔해주세요."
+  },
+  "forbidden": {
+    "title": "403 · 접근 거부",
+    "detail": "이 기기는 아직 연결되지 않았습니다. 호스트에서 Remote Control 패널을 열고 QR 코드를 스캔해 연결해주세요."
+  },
   "contextChip": {
     "removeContext": "컨텍스트 제거"
   },
@@ -149,7 +159,9 @@
     "connecting": "연결 중…",
     "typicalTime": "보통 약 1분 (설치 시: 약 3분)",
     "preventSleep": "절전 방지",
-    "keepAwake": "터널이 활성화된 동안 절전 방지"
+    "keepAwake": "터널이 활성화된 동안 절전 방지",
+    "pairingHint": "스캔하면 기기가 연결됩니다. QR에는 곧 만료되는 일회용 코드가 들어 있으니, 동작하지 않으면 다시 생성해주세요.",
+    "regeneratePairing": "코드 다시 생성"
   },
   "tunnelStatusNotice": {
     "tryAgain": "다시 시도",

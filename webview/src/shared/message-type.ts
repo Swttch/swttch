@@ -197,6 +197,8 @@ export enum MessageType {
   SWITCH_ACCOUNT = 'SWITCH_ACCOUNT',
   /** Remove a saved account (snapshot + registry entry) by id. inbound webview→backend */
   DELETE_ACCOUNT = 'DELETE_ACCOUNT',
+  /** Replace the saved Claude account pools. inbound webview→backend */
+  UPDATE_ACCOUNT_POOLS = 'UPDATE_ACCOUNT_POOLS',
   /** Read usage/quota information. */
   GET_USAGE = 'GET_USAGE',
   /** Run `claude -p "/usage"` and return its raw report text for the usage modal. inbound webview→backend */

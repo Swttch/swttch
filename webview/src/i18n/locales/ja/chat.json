@@ -503,6 +503,11 @@
       "retrying": "上限リセットを待機中…",
       "proceeding": "再開中…"
     },
+    "accountPool": {
+      "switching": "アカウントを切り替えています…",
+      "continuing": "次のアカウントで続行しています…",
+      "failed": "アカウントの切り替えに失敗しました"
+    },
     "error": {
       "network": "ネットワーク接続エラー",
       "timeout": "タイムアウト",

@@ -84,6 +84,7 @@ import { getAccountsHandler } from './getAccounts';
 import { saveAccountHandler } from './saveAccount';
 import { switchAccountHandler } from './switchAccount';
 import { deleteAccountHandler } from './deleteAccount';
+import { updateAccountPoolsHandler } from './updateAccountPools';
 import { reclaimSessionHandler } from './reclaimSession';
 import {
   scheduleMessageHandler,
@@ -398,6 +399,9 @@ export async function handleMessage(
       break;
     case MessageType.DELETE_ACCOUNT:
       await deleteAccountHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_ACCOUNT_POOLS:
+      await updateAccountPoolsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RECLAIM_SESSION:
       await reclaimSessionHandler(connectionId, message, connections, bridge);

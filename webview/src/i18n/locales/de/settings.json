@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "Browser",
     "ide": "IDE",
-    "account": "Konto",
+    "account": "Konto & Pool",
     "usage": "Nutzung",
     "tunnel": "Tunnel",
     "releases": "Releases",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "Konto",
+    "heading": "Konto & Pool",
     "addAccount": "Konto hinzufügen",
     "actionFailed": "Aktion fehlgeschlagen",
     "loading": "Konten werden geladen…",
@@ -239,6 +239,26 @@
     "inUse": "In Verwendung",
     "switch": "Wechseln",
     "removeAccount": "Konto entfernen",
+    "pool": {
+      "sectionTitle": "Konto-Pools",
+      "accountsSectionTitle": "Konten",
+      "defaultName": "Konto-Pool {{value}}",
+      "ordered": "Der Reihe nach",
+      "poolCount": "{{count}} Pools",
+      "poolCount_one": "{{count}} Pool",
+      "poolCount_other": "{{count}} Pools",
+      "accountCount": "{{count}} Konten",
+      "accountCount_one": "{{count}} Konto",
+      "accountCount_other": "{{count}} Konten",
+      "empty": "Noch keine Pools. Ein Konto auf ein anderes ziehen, um einen Pool zu erstellen.",
+      "noStandaloneAccounts": "Alle Konten sind einem Pool zugeordnet.",
+      "switchOrder": "Automatische Wechselreihenfolge",
+      "dragAccount": "Ziehen zum Gruppieren oder Umsortieren",
+      "dropToGroup": "Zum Gruppieren ablegen",
+      "next": "Nächstes",
+      "removeFromPool": "Aus Pool entfernen",
+      "delete": "Pool löschen"
+    },
     "lastActive": {
       "today": "Heute",
       "yesterday": "Gestern",
@@ -326,7 +346,9 @@
       },
       "installingProgress": "cloudflared wird installiert… ({{seconds}} s)",
       "establishingProgress": "Tunnelverbindung wird hergestellt… ({{seconds}} s)",
-      "estimatedTime": "Dies dauert normalerweise ca. 1 Minute (falls eine Installation erforderlich ist, ca. 3 Minuten)."
+      "estimatedTime": "Dies dauert normalerweise ca. 1 Minute (falls eine Installation erforderlich ist, ca. 3 Minuten).",
+      "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
+      "regeneratePairing": "Code neu erzeugen"
     },
     "sleepPrevention": {
       "title": "Ruhezustand verhindern",

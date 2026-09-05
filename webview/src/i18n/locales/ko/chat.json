@@ -503,6 +503,11 @@
       "retrying": "재개 대기 중…",
       "proceeding": "재개하는 중…"
     },
+    "accountPool": {
+      "switching": "계정 전환 중…",
+      "continuing": "다음 계정으로 이어가는 중…",
+      "failed": "계정 전환 실패"
+    },
     "error": {
       "network": "네트워크 연결 에러",
       "timeout": "시간 초과",

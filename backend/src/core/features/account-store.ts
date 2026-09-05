@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { randomUUID } from 'crypto';
-import type { StoredAccount } from '../../shared';
+import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../shared';
 
 /**
  * Persistence for saved Claude accounts (the multi-account registry).
@@ -30,12 +30,14 @@ export interface AccountSnapshot {
 export interface AccountsRegistry {
   current: string | null;
   accounts: Record<string, StoredAccount>;
+  accountPools: AccountPool[];
 }
 
 // Account ids are filesystem-safe (no colon — illegal on Windows) so they can be
 // used directly as snapshot filenames. Validated before any path join to block
 // traversal from a tampered registry.
 const ACCOUNT_ID_PATTERN = /^acc-[a-f0-9-]+$/;
+const ACCOUNT_POOL_ID_PATTERN = /^pool-[a-f0-9-]+$/;
 
 function baseDir(): string {
   return join(homedir(), '.claude-code-gui');
@@ -56,6 +58,11 @@ function snapshotPath(id: string): string {
 /** Generate a fresh filesystem-safe account id. */
 export function newAccountId(): string {
   return `acc-${randomUUID()}`;
+}
+
+/** Generate a fresh filesystem-safe account pool id. */
+export function newAccountPoolId(): string {
+  return `pool-${randomUUID()}`;
 }
 
 async function writeAtomic0600(target: string, content: string): Promise<void> {
@@ -79,16 +86,20 @@ async function writeAtomic0600(target: string, content: string): Promise<void> {
 /** Read the registry, returning an empty one when absent or unparseable. */
 export async function readRegistry(): Promise<AccountsRegistry> {
   const path = registryPath();
-  if (!existsSync(path)) return { current: null, accounts: {} };
+  if (!existsSync(path)) return { current: null, accounts: {}, accountPools: [] };
   try {
     const raw = JSON.parse(await readFile(path, 'utf-8')) as Partial<AccountsRegistry>;
     const accounts = raw.accounts && typeof raw.accounts === 'object' ? raw.accounts : {};
+    const accountPools = Array.isArray(raw.accountPools)
+      ? raw.accountPools.filter(isValidAccountPool)
+      : [];
     return {
       current: typeof raw.current === 'string' ? raw.current : null,
       accounts: accounts as Record<string, StoredAccount>,
+      accountPools,
     };
   } catch {
-    return { current: null, accounts: {} };
+    return { current: null, accounts: {}, accountPools: [] };
   }
 }
 
@@ -108,6 +119,12 @@ export async function upsertAccount(meta: StoredAccount): Promise<void> {
 export async function setCurrentAccount(id: string | null): Promise<void> {
   const registry = await readRegistry();
   registry.current = id;
+  await writeRegistry(registry);
+}
+
+export async function writeAccountPools(accountPools: AccountPool[]): Promise<void> {
+  const registry = await readRegistry();
+  registry.accountPools = normalizeAccountPools(accountPools, registry.accounts);
   await writeRegistry(registry);
 }
 
@@ -142,6 +159,13 @@ export async function deleteAccountFiles(id: string): Promise<void> {
   const registry = await readRegistry();
   if (registry.accounts[id]) {
     delete registry.accounts[id];
+    registry.accountPools = normalizeAccountPools(
+      registry.accountPools.map((pool) => ({
+        ...pool,
+        accountIds: pool.accountIds.filter((accountId) => accountId !== id),
+      })),
+      registry.accounts,
+    );
     if (registry.current === id) registry.current = null;
     await writeRegistry(registry);
   }
@@ -167,4 +191,41 @@ export async function listSnapshotIds(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+function isValidAccountPool(value: AccountPool): boolean {
+  return (
+    value &&
+    typeof value.id === 'string' &&
+    ACCOUNT_POOL_ID_PATTERN.test(value.id) &&
+    typeof value.name === 'string' &&
+    value.provider === 'claude' &&
+    typeof value.enabled === 'boolean' &&
+    value.strategy === AccountPoolStrategy.ORDERED &&
+    Array.isArray(value.accountIds) &&
+    value.accountIds.every((id) => typeof id === 'string' && ACCOUNT_ID_PATTERN.test(id)) &&
+    typeof value.createdAt === 'number' &&
+    typeof value.updatedAt === 'number'
+  );
+}
+
+function normalizeAccountPools(
+  accountPools: AccountPool[],
+  accounts: Record<string, StoredAccount>,
+): AccountPool[] {
+  const assigned = new Set<string>();
+  const normalized: AccountPool[] = [];
+
+  for (const pool of accountPools) {
+    if (!isValidAccountPool(pool)) continue;
+    const accountIds = pool.accountIds.filter((id) => {
+      if (!accounts[id] || assigned.has(id)) return false;
+      assigned.add(id);
+      return true;
+    });
+    if (accountIds.length < 2) continue;
+    normalized.push({ ...pool, accountIds });
+  }
+
+  return normalized;
 }

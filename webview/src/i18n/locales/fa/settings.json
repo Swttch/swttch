@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "مرورگر",
     "ide": "IDE",
-    "account": "حساب کاربری",
+    "account": "حساب و گروه",
     "usage": "مصرف",
     "tunnel": "تونل",
     "releases": "نسخه‌ها",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "حساب کاربری",
+    "heading": "حساب و گروه",
     "addAccount": "افزودن حساب",
     "actionFailed": "عملیات ناموفق بود",
     "loading": "در حال بارگذاری حساب‌ها…",
@@ -239,6 +239,22 @@
     "inUse": "در حال استفاده",
     "switch": "تغییر",
     "removeAccount": "حذف حساب",
+    "pool": {
+      "sectionTitle": "گروه‌های حساب",
+      "accountsSectionTitle": "حساب‌ها",
+      "defaultName": "گروه حساب {{value}}",
+      "ordered": "به ترتیب",
+      "poolCount": "{{count}} گروه",
+      "accountCount": "{{count}} حساب",
+      "empty": "هنوز گروهی وجود ندارد. یک حساب را روی حساب دیگر بکشید تا گروه ساخته شود.",
+      "noStandaloneAccounts": "همهٔ حساب‌ها به گروه‌ها اختصاص یافته‌اند.",
+      "switchOrder": "ترتیب تغییر خودکار",
+      "dragAccount": "برای گروه‌بندی یا تغییر ترتیب بکشید",
+      "dropToGroup": "برای گروه‌بندی رها کنید",
+      "next": "بعدی",
+      "removeFromPool": "حذف از گروه",
+      "delete": "حذف گروه"
+    },
     "lastActive": {
       "today": "امروز",
       "yesterday": "دیروز",
@@ -326,7 +342,9 @@
       },
       "installingProgress": "در حال نصب cloudflared… ({{seconds}} ثانیه)",
       "establishingProgress": "در حال برقراری اتصال تونل… ({{seconds}} ثانیه)",
-      "estimatedTime": "این کار معمولاً حدود 1 دقیقه طول می‌کشد (اگر نصب لازم باشد، حدود 3 دقیقه طول می‌کشد.)"
+      "estimatedTime": "این کار معمولاً حدود 1 دقیقه طول می‌کشد (اگر نصب لازم باشد، حدود 3 دقیقه طول می‌کشد.)",
+      "pairingHint": "برای اتصال یک دستگاه اسکن کنید. کد QR شامل یک کد یک‌بارمصرف است که به‌زودی منقضی می‌شود؛ اگر کار نکرد دوباره بسازید.",
+      "regeneratePairing": "ساخت دوبارهٔ کد"
     },
     "sleepPrevention": {
       "title": "جلوگیری از خواب سیستم",

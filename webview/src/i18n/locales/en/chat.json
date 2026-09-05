@@ -507,6 +507,11 @@
       "retrying": "Waiting for quota reset…",
       "proceeding": "Resuming…"
     },
+    "accountPool": {
+      "switching": "Switching account…",
+      "continuing": "Continuing with next account…",
+      "failed": "Account switch failed"
+    },
     "error": {
       "network": "Network connection error",
       "timeout": "Timed out",

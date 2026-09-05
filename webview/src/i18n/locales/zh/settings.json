@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "浏览器",
     "ide": "IDE",
-    "account": "账户",
+    "account": "账户与账户池",
     "usage": "用量",
     "tunnel": "隧道",
     "releases": "版本发布",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "账户",
+    "heading": "账户与账户池",
     "addAccount": "添加账户",
     "actionFailed": "操作失败",
     "loading": "正在加载账户…",
@@ -239,6 +239,22 @@
     "inUse": "使用中",
     "switch": "切换",
     "removeAccount": "移除账户",
+    "pool": {
+      "sectionTitle": "账户池",
+      "accountsSectionTitle": "账户",
+      "defaultName": "账户池 {{value}}",
+      "ordered": "按顺序",
+      "poolCount": "{{count}} 个池",
+      "accountCount": "{{count}} 个账户",
+      "empty": "尚无账户池。将一个账户拖到另一个账户上即可创建账户池。",
+      "noStandaloneAccounts": "所有账户都已加入账户池。",
+      "switchOrder": "自动切换顺序",
+      "dragAccount": "拖动以分组或重新排序",
+      "dropToGroup": "放到此处以分组",
+      "next": "下一个",
+      "removeFromPool": "移出账户池",
+      "delete": "删除账户池"
+    },
     "lastActive": {
       "today": "今天",
       "yesterday": "昨天",
@@ -326,7 +342,9 @@
       },
       "installingProgress": "正在安装 cloudflared…({{seconds}} 秒)",
       "establishingProgress": "正在建立隧道连接…({{seconds}} 秒)",
-      "estimatedTime": "通常大约需要 1 分钟(如需安装,大约需要 3 分钟)。"
+      "estimatedTime": "通常大约需要 1 分钟(如需安装,大约需要 3 分钟)。",
+      "pairingHint": "扫描即可连接设备。二维码包含很快过期的一次性代码，若失效请重新生成。",
+      "regeneratePairing": "重新生成代码"
     },
     "sleepPrevention": {
       "title": "防止休眠",

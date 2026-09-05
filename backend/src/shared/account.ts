@@ -32,6 +32,21 @@ export interface StoredAccount {
   usageCachedAt: number;
 }
 
+export enum AccountPoolStrategy {
+  ORDERED = 'ordered',
+}
+
+export interface AccountPool {
+  id: string;
+  name: string;
+  provider: 'claude';
+  enabled: boolean;
+  strategy: AccountPoolStrategy;
+  accountIds: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** A StoredAccount plus whether it is the account currently live in the CLI. */
 export interface AccountListItem extends StoredAccount {
   /** True when this account's email matches the live `claude auth status` email. */
@@ -41,6 +56,7 @@ export interface AccountListItem extends StoredAccount {
 /** Payload of GET_ACCOUNTS: the saved accounts plus who is live right now. */
 export interface AccountsResult {
   accounts: AccountListItem[];
+  accountPools: AccountPool[];
   /** Email of the live CLI account, or null when not logged in / unknown. */
   activeEmail: string | null;
 }
@@ -61,4 +77,3 @@ export interface AccountUsage {
   errorKind: string | null;
 }
 export interface AllUsageResult { accounts: AccountUsage[]; }
-

@@ -13,6 +13,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
+import { useAccounts } from '@/hooks/queries/useAccounts';
 import { notify } from '@/notifications';
 import { NotificationKind, SOUND_OFF } from '@/notifications/types';
 import toast from 'react-hot-toast';
@@ -24,6 +25,7 @@ import {
   computeCountdownSeconds,
   resolveAutoResumeStatusKey,
   parseResetsAtFromText,
+  findNextAccountPoolAccount,
   type AutoResumeStatusView,
 } from './autoResumeMath';
 
@@ -52,6 +54,8 @@ export interface UseAutoResumeResult {
   scheduled: ScheduledMessage | null;
   /** i18n key (relative to the `chat` namespace) for the live status line, or null. */
   statusKey: string | null;
+  /** i18n key for account-pool switching status, or null when no pool switch is active. */
+  accountPoolStatusKey: string | null;
   /** Seconds left in the post-reset countdown (30…0), or null when not counting. */
   countdownSeconds: number | null;
   /** The button to show, or null when the banner should not render. */
@@ -117,6 +121,7 @@ export function useAutoResume(): UseAutoResumeResult {
   const { sendMessage, messages } = useChatStreamContext();
   const { settings } = useSettings();
   const { getOverride } = useAutoResumeOverride();
+  const { accounts, accountPools, switchTo } = useAccounts();
 
   // Effective preference = session override ?? global default (app setting).
   // Modeled on Cursor's thinking/fast-mode: the global setting seeds each
@@ -131,6 +136,8 @@ export function useAutoResume(): UseAutoResumeResult {
   // auto-resume creates is, by construction, the reservation the panel lists.
   const { reservations } = useScheduledMessages();
   const [status, setStatus] = useState<AutoResumeStatusView | null>(null);
+  const [accountPoolStatusKey, setAccountPoolStatusKey] = useState<string | null>(null);
+  const [failedAccountSwitchKey, setFailedAccountSwitchKey] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   // The active limit notice, derived from the persisted message list.
@@ -154,6 +161,8 @@ export function useAutoResume(): UseAutoResumeResult {
   // The reservation list resets itself in ScheduledMessagesContext.
   useEffect(() => {
     setStatus(null);
+    setAccountPoolStatusKey(null);
+    setFailedAccountSwitchKey(null);
     setResolvedUuid(null);
   }, [currentSessionId]);
 
@@ -224,6 +233,36 @@ export function useAutoResume(): UseAutoResumeResult {
     sendMessage(AUTO_RESUME_MESSAGE, inputMode);
   }, [sendMessage, inputMode]);
 
+  const accountPoolCandidate = useMemo(
+    () => {
+      const candidate = findNextAccountPoolAccount(accounts, accountPools);
+      if (!limit || !candidate) return candidate;
+      const guardKey = `${limit.messageUuid}:${candidate.id}`;
+      return failedAccountSwitchKey === guardKey ? null : candidate;
+    },
+    [accounts, accountPools, limit, failedAccountSwitchKey],
+  );
+  const autoSwitchedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!limit || !currentSessionId || !accountPoolCandidate || scheduled) return;
+    const guardKey = `${limit.messageUuid}:${accountPoolCandidate.id}`;
+    if (autoSwitchedForRef.current === guardKey) return;
+    autoSwitchedForRef.current = guardKey;
+    setAccountPoolStatusKey('autoResume.accountPool.switching');
+    void switchTo(accountPoolCandidate.id)
+      .then(() => {
+        setStatus(null);
+        setAccountPoolStatusKey('autoResume.accountPool.continuing');
+        setFailedAccountSwitchKey(null);
+        setResolvedUuid(limit.messageUuid);
+        sendMessage(AUTO_RESUME_MESSAGE, inputMode);
+      })
+      .catch(() => {
+        setFailedAccountSwitchKey(guardKey);
+        setAccountPoolStatusKey('autoResume.accountPool.failed');
+      });
+  }, [limit, currentSessionId, accountPoolCandidate, scheduled, switchTo, sendMessage, inputMode]);
+
   // ── Auto-cancel a reservation when the limit is no longer active ─────────────
   // deriveLimit already drops `limit` once the user types again; when that
   // happens with a reservation still pending, cancel it (spec 4).
@@ -266,10 +305,17 @@ export function useAutoResume(): UseAutoResumeResult {
     // is delivering the resume (PROCEEDING) so it never lingers as "재개하기".
     if (!limit) return null;
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
+    if (accountPoolCandidate) return null;
+    if (
+      accountPoolStatusKey === 'autoResume.accountPool.switching' ||
+      accountPoolStatusKey === 'autoResume.accountPool.continuing'
+    ) {
+      return null;
+    }
     if (scheduled) return 'cancel';
     if (limit.resetsAt && Date.parse(limit.resetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
-  }, [limit, scheduled, status, nowMs]);
+  }, [limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs]);
 
   // ── Auto-resume = "press the button for the user" ────────────────────────────
   // Turning the preference on does NOT switch to a second, parallel feature: the
@@ -292,6 +338,7 @@ export function useAutoResume(): UseAutoResumeResult {
   const autoActedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!limit || !autoResumeEnabled) return;
+    if (accountPoolCandidate) return;
     if (action !== 'schedule' && action !== 'resumeNow') return;
     // One automatic press per (limit notice, action). Keyed by action too, so a
     // banner that ticks past its reset from 'schedule' to 'resumeNow' still gets
@@ -301,7 +348,7 @@ export function useAutoResume(): UseAutoResumeResult {
     autoActedForRef.current = guardKey;
     if (action === 'schedule') schedule();
     else void resumeNow();
-  }, [limit, autoResumeEnabled, action, schedule, resumeNow]);
+  }, [limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 
@@ -310,6 +357,7 @@ export function useAutoResume(): UseAutoResumeResult {
     limit,
     scheduled,
     statusKey,
+    accountPoolStatusKey,
     countdownSeconds,
     action,
     schedule,

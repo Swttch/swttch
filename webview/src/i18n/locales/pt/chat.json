@@ -503,6 +503,11 @@
       "retrying": "Aguardando a redefinição da cota…",
       "proceeding": "Retomando…"
     },
+    "accountPool": {
+      "switching": "Trocando de conta…",
+      "continuing": "Continuando com a próxima conta…",
+      "failed": "Falha ao trocar de conta"
+    },
     "error": {
       "network": "Erro de conexão de rede",
       "timeout": "Tempo esgotado",

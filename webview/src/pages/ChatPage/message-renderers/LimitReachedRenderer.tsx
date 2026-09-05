@@ -98,7 +98,9 @@ export function LimitReachedRenderer(props: Props) {
   const onClick =
     ar.action === 'schedule' ? ar.schedule : ar.action === 'cancel' ? ar.cancel : ar.resumeNow;
 
-  const statusText = isActive && ar.statusKey ? t(ar.statusKey) : null;
+  const statusText = isActive && (ar.accountPoolStatusKey || ar.statusKey)
+    ? t(ar.accountPoolStatusKey ?? ar.statusKey ?? '')
+    : null;
   const countdownText =
     isActive && ar.countdownSeconds !== null
       ? t('autoResume.countdown', { seconds: ar.countdownSeconds })

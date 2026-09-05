@@ -503,6 +503,11 @@
       "retrying": "Esperando el reinicio del límite…",
       "proceeding": "Reanudando…"
     },
+    "accountPool": {
+      "switching": "Cambiando de cuenta…",
+      "continuing": "Continuando con la siguiente cuenta…",
+      "failed": "Error al cambiar de cuenta"
+    },
     "error": {
       "network": "Error de conexión de red",
       "timeout": "Tiempo agotado",

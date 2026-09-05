@@ -15,6 +15,16 @@
     "zoomIn": "Vergrößern",
     "reset": "Zurücksetzen"
   },
+  "pairing": {
+    "title": "Kopplung abgelaufen",
+    "expiredDetail": "Dieser Einmal-Link ist abgelaufen oder wurde bereits verwendet. Den QR-Code auf dem Host erneut scannen, um dieses Gerät wieder zu koppeln.",
+    "lockedDetail": "Zu viele Versuche. Kurz warten und dann einen neuen QR-Code auf dem Host scannen.",
+    "networkDetail": "Der Host war für die Kopplung nicht erreichbar. Die Verbindung prüfen und den QR-Code auf dem Host erneut scannen."
+  },
+  "forbidden": {
+    "title": "403 · Zugriff verweigert",
+    "detail": "Dieses Gerät ist nicht gekoppelt. Das Remote-Control-Panel auf dem Host öffnen und dessen QR-Code scannen, um zu verbinden."
+  },
   "contextChip": {
     "removeContext": "Kontext entfernen"
   },
@@ -149,7 +159,9 @@
     "connecting": "Wird verbunden…",
     "typicalTime": "Typischerweise ~1 Min. (Installation: ~3 Min.)",
     "preventSleep": "Ruhezustand verhindern",
-    "keepAwake": "Wachbleiben, solange der Tunnel aktiv ist"
+    "keepAwake": "Wachbleiben, solange der Tunnel aktiv ist",
+    "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
+    "regeneratePairing": "Code neu erzeugen"
   },
   "tunnelStatusNotice": {
     "tryAgain": "Erneut versuchen",

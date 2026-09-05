@@ -15,6 +15,16 @@
     "zoomIn": "Acercar",
     "reset": "Restablecer"
   },
+  "pairing": {
+    "title": "Vinculación caducada",
+    "expiredDetail": "Este enlace de un solo uso ha caducado o ya se usó. Vuelve a escanear el código QR del host para vincular este dispositivo.",
+    "lockedDetail": "Demasiados intentos. Espera un momento y vuelve a escanear un código QR nuevo del host.",
+    "networkDetail": "No se pudo contactar con el host para completar la vinculación. Comprueba tu conexión y vuelve a escanear el código QR del host."
+  },
+  "forbidden": {
+    "title": "403 · Acceso denegado",
+    "detail": "Este dispositivo no está vinculado. Abre el panel de Remote Control en el host y escanea su código QR para conectarte."
+  },
   "contextChip": {
     "removeContext": "Quitar contexto"
   },
@@ -149,7 +159,9 @@
     "connecting": "Conectando…",
     "typicalTime": "Normalmente ~1 min (instalación: ~3 min)",
     "preventSleep": "Evitar suspensión",
-    "keepAwake": "Mantener activo mientras el túnel esté en uso"
+    "keepAwake": "Mantener activo mientras el túnel esté en uso",
+    "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
+    "regeneratePairing": "Volver a generar el código"
   },
   "tunnelStatusNotice": {
     "tryAgain": "Reintentar",

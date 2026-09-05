@@ -19,6 +19,7 @@ export async function getAccountsHandler(
       requestId: message.requestId,
       status: 'ok',
       accounts: result.accounts,
+      accountPools: result.accountPools,
       activeEmail: result.activeEmail,
     });
   } catch (err) {
