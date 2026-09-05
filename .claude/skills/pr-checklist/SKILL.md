@@ -62,6 +62,31 @@ Marketplace Plugin Verifier가 오류로 잡아 배포가 거부된다. **Deprec
 grep -rn "@ApiStatus.Internal\|StartupManager\|PluginManagerConfigurable" src/main/kotlin --include="*.kt"
 ```
 
+### 3.5. 커밋 제목 72자 (필수, 커밋할 때마다)
+
+**이 항목은 PR 직전이 아니라 커밋할 때 지킨다.** 여기까지 와서 발견하면 이미 push된 뒤라
+메시지를 다시 쓰고 force-push해야 하는데, 그 재작성이 실제로 사고를 냈다(브랜치가 main 위로
+리셋되어 백업에서 복구). **커밋 전에 재면 비용이 0이다.**
+
+```bash
+# 커밋 직전 — 제목만 재본다
+printf '%s' "<제목>" | wc -c
+
+# 이미 쌓인 커밋 점검
+git log origin/main..HEAD --format='%s' | awk '{ print length($0)"자  "$0 }'
+```
+
+로컬에는 `commit-msg` 훅이 걸려 있어 73자 이상이면 커밋 자체가 거부된다
+(`.git/hooks/commit-msg`, 워크트리 전체 공유). **훅은 추적되지 않으므로 새로 클론한 환경에는
+없다** — 그런 환경에서는 위 명령으로 직접 확인한다. 훅 설치:
+
+```bash
+ls .git/hooks/commit-msg 2>/dev/null || echo "훅 없음 — 새 클론이면 직접 만들어 둘 것"
+```
+
+제목이 길어지는 원인은 대개 **한 줄에 두 가지를 담으려는 것**이다(`A, and B`). 그럴 땐 줄이지
+말고 **본문으로 내리거나 커밋을 쪼갠다.**
+
 ### 4. 3레이어 테스트 + lint + build 통과 (필수)
 
 "테스트"는 별도 명시가 없으면 **WebView / Backend / Kotlin 3개 레이어 전부**를 의미한다.
@@ -96,7 +121,7 @@ OS와 맞닿을 확률이 조금이라도 있는 코드는 **Windows·macOS·Lin
 ### 7. PR 본문 / 커밋 메시지 (필수)
 
 - **PR 본문은 영어**로 작성한다. (한국어 본문 금지)
-- 커밋 메시지는 영어 + conventional 스타일(`fix:`, `feat:`, `refactor:`, `docs:`, `chore:` …), 첫 줄 72자 이내.
+- 커밋 메시지는 영어 + conventional 스타일(`fix:`, `feat:`, `refactor:`, `docs:`, `chore:` …). 첫 줄 72자 제한은 **항목 3.5**에서 다룬다 — 여기서 처음 발견하면 이미 늦다.
 - PR 본문은 **무엇을**, **왜** 바꿨는지 명확히 설명한다.
 - 이슈를 해결하는 변경이면 **종료 플래그 필수** — `Closes #N` / `Fixes #N`.
   `(#N)` 참조만으로는 이슈가 자동으로 닫히지 않는다. push 전에 빠졌으면 `git commit --amend`로 보강한다.
