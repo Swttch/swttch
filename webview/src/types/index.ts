@@ -95,6 +95,11 @@ export class LoadedMessageDto {
   isCompactSummary?: boolean;
   isVisibleInTranscriptOnly?: boolean;
 
+  // `file-history-snapshot` only: the uuid of the user send this snapshot belongs
+  // to. Named as the CLI names it, per the original-data rule. Note it is NOT the
+  // entry's own identity — a snapshot entry carries no `uuid` of its own.
+  messageId?: string;
+
   // metadata
   slug?: string;
   sessionId?: string;
