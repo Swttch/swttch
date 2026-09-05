@@ -5,20 +5,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // against www and WHETHER a given answer is allowed to revoke sponsorship.
 // vi.mock is hoisted above these declarations, so the spies must be created by
 // vi.hoisted for the factory to see them.
-const { mockReadLicense, mockSaveLicense, mockClearLicense, mockReportActivation } = vi.hoisted(
-  () => ({
+const { mockReadLicense, mockSaveLicense, mockDeactivateLicense, mockReportActivation } =
+  vi.hoisted(() => ({
     mockReadLicense: vi.fn(),
     mockSaveLicense: vi.fn(),
-    mockClearLicense: vi.fn(),
+    mockDeactivateLicense: vi.fn(),
     mockReportActivation: vi.fn(),
-  }),
-);
+  }));
 const mockVerifyRemote = vi.fn();
 
 vi.mock('../license', () => ({
   readLicense: mockReadLicense,
   saveLicense: mockSaveLicense,
-  clearLicense: mockClearLicense,
+  deactivateLicense: mockDeactivateLicense,
   reportActivation: mockReportActivation,
 }));
 
@@ -50,7 +49,7 @@ describe('revalidateStoredLicense', () => {
     vi.setSystemTime(NOW);
     mockReadLicense.mockReset();
     mockSaveLicense.mockReset().mockResolvedValue(undefined);
-    mockClearLicense.mockReset().mockResolvedValue(undefined);
+    mockDeactivateLicense.mockReset().mockResolvedValue(undefined);
     mockReportActivation.mockReset().mockResolvedValue(undefined);
     mockVerifyRemote.mockReset();
   });
@@ -64,7 +63,7 @@ describe('revalidateStoredLicense', () => {
     await revalidateStoredLicense(mockVerifyRemote);
 
     expect(mockVerifyRemote).not.toHaveBeenCalled();
-    expect(mockClearLicense).not.toHaveBeenCalled();
+    expect(mockDeactivateLicense).not.toHaveBeenCalled();
   });
 
   it('skips the network call while the last check is still fresh', async () => {
@@ -101,7 +100,7 @@ describe('revalidateStoredLicense', () => {
       price: null,
       cancellable: null,
     });
-    expect(mockClearLicense).not.toHaveBeenCalled();
+    expect(mockDeactivateLicense).not.toHaveBeenCalled();
   });
 
   it('picks up a plan change (tier/interval) reported by the re-check', async () => {
@@ -174,7 +173,7 @@ describe('revalidateStoredLicense', () => {
 
       await revalidateStoredLicense(mockVerifyRemote);
 
-      expect(mockClearLicense).not.toHaveBeenCalled();
+      expect(mockDeactivateLicense).not.toHaveBeenCalled();
       expect(mockSaveLicense).toHaveBeenCalledWith(
         expect.objectContaining({ licenseKey: 'CCG-abc', status }),
       );
@@ -190,7 +189,7 @@ describe('revalidateStoredLicense', () => {
 
     await revalidateStoredLicense(mockVerifyRemote);
 
-    expect(mockClearLicense).not.toHaveBeenCalled();
+    expect(mockDeactivateLicense).not.toHaveBeenCalled();
     const saved = mockSaveLicense.mock.calls[0]?.[0] as { status?: string };
     expect(saved.status).not.toBe('active');
   });
@@ -203,7 +202,7 @@ describe('revalidateStoredLicense', () => {
 
     await revalidateStoredLicense(mockVerifyRemote);
 
-    expect(mockClearLicense).not.toHaveBeenCalled();
+    expect(mockDeactivateLicense).not.toHaveBeenCalled();
   });
 
   it('does NOT revoke sponsorship when the verifier throws', async () => {
@@ -211,7 +210,7 @@ describe('revalidateStoredLicense', () => {
     mockVerifyRemote.mockRejectedValue(new Error('boom'));
 
     await expect(revalidateStoredLicense(mockVerifyRemote)).resolves.toBeUndefined();
-    expect(mockClearLicense).not.toHaveBeenCalled();
+    expect(mockDeactivateLicense).not.toHaveBeenCalled();
   });
 
   it('re-checks immediately when the plan details have never been cached', async () => {

@@ -1,4 +1,4 @@
-import { readFile, mkdir, rm } from 'fs/promises';
+import { readFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 import { readProfile } from './profile';
@@ -243,9 +243,40 @@ export async function saveLicense(license: StoredLicense): Promise<void> {
   await atomicWriteFile(LICENSE_FILE, JSON.stringify(license, null, 2) + '\n');
 }
 
-/** Remove the stored license (deactivate sponsorship on this install). */
-export async function clearLicense(): Promise<void> {
-  await rm(LICENSE_FILE, { force: true });
+/**
+ * Turn sponsorship off on this install: drop the key, and record that the user
+ * asked for it.
+ *
+ * The record is the point. Deleting the key alone leaves "no key yet" and "the
+ * user turned this off" looking identical on disk, and the only way to keep them
+ * apart was to make key pick-up so narrow it could never run on its own — which
+ * stranded sponsors who paid but never received their key (#256). Keeping the
+ * opt-out lets pick-up run wherever and whenever while still obeying the user.
+ *
+ * The file stays (holding only the flag) rather than being removed: the key must
+ * really be gone, but the answer to "did the user turn this off here?" must not.
+ */
+export async function deactivateLicense(): Promise<void> {
+  await mkdir(LICENSE_DIR, { recursive: true });
+  await atomicWriteFile(LICENSE_FILE, JSON.stringify({ optedOut: true }, null, 2) + '\n');
+}
+
+/**
+ * Whether the user turned sponsorship off on this install.
+ *
+ * Unreadable counts as opted out. A missing file genuinely means "nothing was
+ * ever turned off here", but any other read failure means we cannot tell — and
+ * claiming a key on a guess would silently undo an opt-out we merely failed to
+ * read. Not claiming costs a sponsor one retry; claiming wrongly overrules them.
+ */
+export async function readSponsorOptOut(): Promise<boolean> {
+  try {
+    const raw = await readFile(LICENSE_FILE, 'utf-8');
+    const parsed = JSON.parse(raw) as { optedOut?: unknown };
+    return parsed.optedOut === true;
+  } catch (e) {
+    return (e as NodeJS.ErrnoException | null)?.code !== 'ENOENT';
+  }
 }
 
 /**
@@ -273,6 +304,16 @@ export async function getSponsorStatus(): Promise<SponsorStatus> {
   // module, so a top-level import would make the two files circular.
   const { revalidateStoredLicense } = await import('./license-revalidation');
   await revalidateStoredLicense(verifyLicenseRemote);
+
+  // The mirror case: a sponsor whose key never reached this install. Paying
+  // happens in a browser, so the key is minted on www and has to travel back
+  // here — and when that hand-off is missed, nothing on disk says "you paid".
+  // Asking here means every sponsor screen, every sponsor-gated action, every
+  // restart is another chance to pick it up, instead of the single ten-minute
+  // window right after checkout that left the sponsor in #256 paying month
+  // after month with nothing switched on.
+  const { claimSponsorByInstall } = await import('./license-claim');
+  await claimSponsorByInstall({ throttled: true });
 
   const license = await readLicense();
   if (license === null) return { isSponsor: false };
