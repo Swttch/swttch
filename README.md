@@ -60,6 +60,12 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 
 - Attach files and images to chat via drag-and-drop or file picker
 
+### Editor Context
+
+- `Alt+K` (`⌥K` on macOS), or right-click in the editor and pick **Send to Claude Code** — inserts the file you are looking at into the composer as `@src/file.ts`
+- With code selected, the line range comes along: `@src/file.ts#L10-L25`
+- Selecting code also attaches it as a context chip on its own — click the chip to drop it, or change the default under Settings > IDE
+
 ### Slash Commands
 
 - `/clear` — Reset session
@@ -130,6 +136,7 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
 
 - `Ctrl+Shift+C` — Open Claude Code panel
 - `Cmd+N` / `Ctrl+N` (panel focused) — New session tab
+- `Alt+K` / `⌥K` (editor focused) — Send the current file and selected lines to the chat input
 
 ### Terminal Launcher (`ccg`)
 
