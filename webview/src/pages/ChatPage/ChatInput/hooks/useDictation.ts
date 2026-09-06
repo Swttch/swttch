@@ -9,7 +9,7 @@ import {
   clampVoiceSilenceTimeout,
 } from '@/types/settings';
 import { resolveDictationLanguage } from '@/i18n/dictationLanguage';
-import { MessageType } from '@/shared';
+import { MessageType, DictationErrorKind } from '@/shared';
 import {
   startMicrophone,
   MicrophoneError,
@@ -52,12 +52,20 @@ export interface DictationError {
   micDenied?: boolean;
   /** The kit itself is missing, so the UI can offer to install it. */
   kitMissing?: boolean;
+  /**
+   * There is no Claude account login on this machine for dictation to
+   * authorize with, so the UI can offer to sign in. Reached by anyone
+   * authenticated with an API key alone. See
+   * {@link DictationErrorKind.NOT_LOGGED_IN} for why an API key is not sent
+   * instead.
+   */
+  notLoggedIn?: boolean;
 }
 
 interface StartAck {
   status?: string;
   error?: string;
-  errorKind?: string;
+  errorKind?: DictationErrorKind;
 }
 
 interface DictationTarget {
@@ -230,7 +238,8 @@ export function useDictation(getTarget: () => DictationTarget) {
         setError({
           message: ack?.error ?? 'Could not start dictation',
           fatal: true,
-          kitMissing: ack?.errorKind === 'kit_missing',
+          kitMissing: ack?.errorKind === DictationErrorKind.KIT_MISSING,
+          notLoggedIn: ack?.errorKind === DictationErrorKind.NOT_LOGGED_IN,
         });
         finish();
         return;

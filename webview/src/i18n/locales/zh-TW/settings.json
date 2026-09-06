@@ -84,6 +84,9 @@
         "refresh": "重新檢查",
         "refreshing": "檢查中…",
         "dismiss": "關閉"
+      },
+      "login": {
+        "required": "語音輸入需要登入 Claude 帳號。僅使用 API 金鑰無法使用聽寫功能。"
       }
     },
     "uiDirection": {

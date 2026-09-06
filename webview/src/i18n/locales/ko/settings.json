@@ -84,6 +84,9 @@
         "refresh": "다시 확인",
         "refreshing": "확인 중…",
         "dismiss": "닫기"
+      },
+      "login": {
+        "required": "음성 입력은 Claude 계정 로그인이 필요합니다. API 키만으로는 받아쓰기를 이용할 수 없습니다."
       }
     },
     "uiDirection": {

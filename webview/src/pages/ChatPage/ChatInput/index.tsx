@@ -12,6 +12,8 @@ import { useDictation } from './hooks/useDictation';
 import { useGlobalShortcut } from './hooks/useGlobalShortcut';
 import toast from 'react-hot-toast';
 import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
+import { useDictationAvailability } from '@/hooks/queries/useDictationAvailability';
+import { useNavigateToLogin } from '@/hooks';
 import { useVoicePrompt } from '@/hooks/useVoicePrompt';
 import { useConfirmDialog, ConfirmResult } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
@@ -114,6 +116,9 @@ export function ChatInput() {
   // the usage panel already runs, so it reuses that mutation rather than adding
   // a second path that installs the same package.
   const { install: installKit, installing: installingKit } = useInstallCcb();
+  // Dictation can fail for want of a Claude account login, and the way to get
+  // one is the login page the top auth banner already leads to.
+  const navigateToLogin = useNavigateToLogin();
   const { shouldAsk: shouldAskVoice, markAsked, decide } = useVoicePrompt();
   const { confirmDialog, ask, confirm } = useConfirmDialog();
 
@@ -174,6 +179,18 @@ export function ChatInput() {
   // hide the feature from everyone who never opened a terminal.
   const voiceEnabled =
     (claudeSettings.voice as { enabled?: boolean } | undefined)?.enabled !== false;
+
+  // Asked before anything is pressed, so the microphone can say "not now" at a
+  // glance instead of looking ready and refusing on the first press.
+  //
+  // Only dims the button. Whether a start is actually allowed stays the
+  // backend's call in START_DICTATION, so there is one decider and this cannot
+  // drift from it: both read the same probe. Asked only while voice input is on,
+  // since a hidden microphone has nothing to dim.
+  const { availability: dictationAvailability } = useDictationAvailability({
+    enabled: voiceEnabled,
+  });
+  const dictationUnavailable = dictationAvailability?.available === false;
 
   // The one-time question, asked on the first attempt to dictate rather than on
   // arrival: at that moment the user has just reached for the feature, so the
@@ -774,7 +791,13 @@ export function ChatInput() {
           message={
             dictation.error.kitMissing
               ? t('chatInput.dictation.kitMissing')
-              : dictation.error.message === 'micDenied'
+              : // Said in full rather than as "signed out", because the user
+                // reaching this is usually NOT signed out: an API key
+                // authenticates everything else here and only dictation refuses
+                // it, so a banner that just says "sign in" reads as a bug (#355).
+                dictation.error.notLoggedIn
+                ? t('chatInput.dictation.notLoggedIn')
+                : dictation.error.message === 'micDenied'
                 ? // Where the block lives differs by environment, and pointing at
                   // the wrong place leaves the user hunting. In a browser the
                   // refusal is remembered per site and only the address-bar
@@ -798,6 +821,18 @@ export function ChatInput() {
                 {installingKit
                   ? t('chatInput.dictation.installing')
                   : t('chatInput.dictation.install')}
+              </button>
+            ) : dictation.error.notLoggedIn ? (
+              // The same login page AuthErrorBanner sends people to, rather
+              // than a second way in: naming the problem without offering the
+              // one action that fixes it is what the kit-missing branch above
+              // already refuses to do.
+              <button
+                type="button"
+                onClick={navigateToLogin}
+                className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors"
+              >
+                {t('authError.login')}
               </button>
             ) : undefined
           }
@@ -898,6 +933,7 @@ export function ChatInput() {
               state={dictation.state}
               level={dictation.level}
               micDenied={dictation.error?.micDenied}
+              unavailable={dictationUnavailable}
               disabled={disabled}
               shortcut={displayShortcut(voiceShortcut)}
               onStart={() => void startDictation()}

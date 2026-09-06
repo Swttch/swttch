@@ -84,6 +84,9 @@
         "refresh": "Check again",
         "refreshing": "Checking…",
         "dismiss": "Dismiss"
+      },
+      "login": {
+        "required": "Voice input needs a signed-in Claude account. An API key on its own cannot reach dictation."
       }
     },
     "uiDirection": {

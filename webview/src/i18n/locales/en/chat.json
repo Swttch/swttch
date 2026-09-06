@@ -98,6 +98,7 @@
       "micDeniedBrowser": "Microphone blocked — allow it from the lock icon in the address bar, then reload",
       "noMic": "No microphone was found",
       "kitMissing": "Voice input needs @swttch/extend-kit",
+      "notLoggedIn": "Voice input needs a signed-in Claude account. An API key on its own cannot reach dictation.",
       "install": "Install",
       "installing": "Installing…",
       "firstUse": {
