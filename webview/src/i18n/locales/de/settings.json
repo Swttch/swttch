@@ -263,7 +263,10 @@
         "description": "Konten zu einem Pool zusammenfassen: Ist ein Limit erreicht, übernimmt das nächste Konto im Pool und die Antwort läuft weiter.",
         "howTo": "Zum Erstellen ein Konto auf die Mitte eines anderen ziehen und einen Moment halten.",
         "learnMore": "Mehr erfahren"
-      }
+      },
+      "switchOrderHint": "Ist ein Konto aufgebraucht, übernimmt automatisch das nächste in dieser Reihenfolge.",
+      "reorderHint": "Zum Ändern der Reihenfolge ziehen.",
+      "cardTitle": "Konto-Pool #{{index}} eingerichtet"
     },
     "lastActive": {
       "today": "Heute",

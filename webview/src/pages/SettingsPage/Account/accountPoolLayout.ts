@@ -208,6 +208,32 @@ export function deleteAccountPool(accountPools: AccountPool[], poolId: string): 
   return accountPools.filter((pool) => pool.id !== poolId);
 }
 
+/**
+ * The listing order that keeps a dissolved pool's members where they were.
+ *
+ * A pool card lists its members in the pool's own order, which is not the order
+ * the accounts sit in globally. Dropping the pool without this would scatter
+ * them back into registration order — the arrangement the user built inside the
+ * card would be lost at the moment the card went away.
+ *
+ * The slots the members already occupy in the list are kept and refilled in the
+ * pool's order, so every other account stays exactly where it was.
+ */
+export function orderAfterDissolvingPool(orderedIds: string[], pool: AccountPool): string[] {
+  const members = pool.accountIds.filter((id) => orderedIds.includes(id));
+  if (members.length === 0) return orderedIds;
+
+  const memberSlots = orderedIds
+    .map((id, index) => (members.includes(id) ? index : -1))
+    .filter((index) => index >= 0);
+
+  const next = [...orderedIds];
+  memberSlots.forEach((slot, i) => {
+    next[slot] = members[i];
+  });
+  return next;
+}
+
 function compactPools(accountPools: AccountPool[]): AccountPool[] {
   return accountPools.filter((pool) => pool.accountIds.length >= 2);
 }

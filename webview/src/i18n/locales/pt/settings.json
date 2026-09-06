@@ -263,7 +263,10 @@
         "description": "Agrupe contas e o limite de uso deixa de encerrar a conversa: a próxima conta do grupo assume e a resposta continua.",
         "howTo": "Para criar um, arraste uma conta até o centro de outra e segure por um instante.",
         "learnMore": "Saiba mais"
-      }
+      },
+      "switchOrderHint": "Quando uma conta se esgota, a próxima desta ordem assume automaticamente.",
+      "reorderHint": "Arraste para mudar a ordem.",
+      "cardTitle": "Grupo de contas #{{index}} configurado"
     },
     "lastActive": {
       "today": "Hoje",

@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { DragDropProvider, DragOverlay, useDroppable, useDragOperation, type DragEndEvent } from '@dnd-kit/react';
+import { QuestionMarkCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAccounts } from '@/hooks/queries/useAccounts';
 import type { AccountListItem, AccountPool } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { Tooltip } from '@/components';
+import { useAccountPoolNudgeRelevant } from '@/components/Announcements/inline/accountPoolNudge';
 import {
   AccountItem,
   AccountDragPreview,
@@ -20,6 +23,8 @@ import {
   AccountPoolDropTargetKind,
   applyAccountDrop,
   createOrderedAccountPool,
+  deleteAccountPool,
+  orderAfterDissolvingPool,
   moveAccountInOrder,
   nextAccountId,
   poolAccounts,
@@ -46,6 +51,8 @@ export function AccountList() {
   // boolean) so a NEW account logged in elsewhere (e.g. a terminal `claude` login)
   // is captured too — not just the very first one seen on mount.
   const autoSavedEmailRef = useRef<string | null>(null);
+  // The same answer the banner above uses, so the two never both explain pools.
+  const nudgeShown = useAccountPoolNudgeRelevant();
 
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -91,6 +98,16 @@ export function AccountList() {
     },
     [],
   );
+
+  // Dissolving a pool keeps the arrangement the user built inside it: the order
+  // is written to the account list first, so the members stay in the same
+  // sequence once the card that was holding them is gone.
+  const handleDissolvePool = (pool: AccountPool) => {
+    void run(async () => {
+      await saveOrder(orderAfterDissolvingPool(accounts.map((account) => account.id), pool));
+      await savePools(deleteAccountPool(accountPools, pool.id));
+    });
+  };
 
   const handleDelete = (account: AccountListItem) => {
     void run(() => remove(account.id));
@@ -209,17 +226,42 @@ export function AccountList() {
               <h3 className="text-[0.8461rem] font-medium text-text-secondary">
                 {t('account.pool.accountsSectionTitle')}
               </h3>
-              <span className="text-[0.7307rem] text-text-tertiary">
-                {t('account.pool.accountCount', { count: accounts.length })}
-              </span>
+              <div className="flex items-center gap-1.5 text-[0.7307rem] text-text-tertiary">
+                <span>{t('account.pool.accountCount', { count: accounts.length })}</span>
+                <span aria-hidden className="text-text-tertiary/50">·</span>
+                <span>{t('account.pool.poolCount', { count: accountPools.length })}</span>
+                {/* Only when the banner above is gone. It says the same thing, and
+                    offering to explain something the reader is already looking at
+                    reads as noise. */}
+                {!nudgeShown && (
+                  <Tooltip
+                    content={(
+                      <span className="block leading-relaxed">
+                        <strong className="font-semibold">{t('account.pool.nudge.title')}</strong>
+                        <br />
+                        {t('account.pool.nudge.description')}
+                        <br />
+                        {t('account.pool.nudge.howTo')}
+                      </span>
+                    )}
+                  >
+                    <span
+                      data-testid="account-pool-help"
+                      className="cursor-help transition-colors hover:text-text-primary"
+                    >
+                      <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
+                    </span>
+                  </Tooltip>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3">
-              {accountPools.map((pool) => {
+              {accountPools.map((pool, idx) => {
                 const nextId = nextAccountId(pool, activeAccountId);
                 const accountsInPool = poolAccounts(accounts, pool);
                 return (
-                  <AccountPoolCard key={pool.id} pool={pool}>
+                  <AccountPoolCard key={pool.id} pool={pool} idx={idx} busy={busy} onDissolve={handleDissolvePool}>
                     {accountsInPool.map((account) => (
                       <AccountItem
                         key={account.id}
@@ -338,8 +380,15 @@ function readDropTarget(
  * card can be told apart from dropping it onto another account — leaving the
  * card is what removes an account from the pool.
  */
-function AccountPoolCard(props: { pool: AccountPool; children: ReactNode }) {
-  const { pool, children } = props;
+function AccountPoolCard(props: {
+  pool: AccountPool;
+  idx: number;
+  busy: boolean;
+  onDissolve: (pool: AccountPool) => void;
+  children: ReactNode;
+}) {
+  const { pool, idx, busy, onDissolve, children } = props;
+  const { t } = useTranslation('settings');
   const { ref } = useDroppable<AccountPoolDropData>({
     id: pool.id,
     type: AccountDragKind.POOL,
@@ -352,6 +401,39 @@ function AccountPoolCard(props: { pool: AccountPool; children: ReactNode }) {
       ref={ref}
       className="border border-border-default bg-border-default rounded-lg overflow-hidden shadow-sm py-1.5 px-2.5"
     >
+      {/* One line, because the card's job is to show the order — the explanation
+          of what that order does sits behind the question mark rather than
+          taking two rows away from the accounts every time. */}
+      <div className="flex items-center justify-between gap-2 px-1 pb-1.5 pt-0.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h4 className="truncate text-[0.8461rem] font-medium text-text-secondary">
+            {t('account.pool.cardTitle', { index: idx + 1 })}
+          </h4>
+          <Tooltip
+            content={(
+              <span className="block leading-relaxed">
+                {t('account.pool.switchOrderHint')}
+                <br />
+                {t('account.pool.reorderHint')}
+              </span>
+            )}
+          >
+            <span className="shrink-0 cursor-help text-text-tertiary transition-colors hover:text-text-primary">
+              <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
+            </span>
+          </Tooltip>
+        </div>
+        <Tooltip content={t('account.pool.delete')}>
+          <button
+            type="button"
+            onClick={() => onDissolve(pool)}
+            disabled={busy}
+            className="shrink-0 rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+          >
+            <XMarkIcon className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
+      </div>
       <div className="space-y-1.5">{children}</div>
     </div>
   );

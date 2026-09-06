@@ -259,7 +259,10 @@
         "description": "將帳戶編成一個池，達到上限時同一池中的下一個帳戶會接手，回答繼續進行。",
         "howTo": "建立方式：將一個帳戶拖曳到另一個帳戶的中間位置並停留片刻。",
         "learnMore": "了解詳情"
-      }
+      },
+      "switchOrderHint": "用盡後會依下方順序自動切換到下一個帳戶。",
+      "reorderHint": "拖曳即可調整順序。",
+      "cardTitle": "已設定帳戶池 #{{index}}"
     },
     "lastActive": {
       "today": "今天",

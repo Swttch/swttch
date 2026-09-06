@@ -263,7 +263,10 @@
         "description": "Regroupez des comptes et une limite d'usage n'arrête plus la conversation : le compte suivant du groupe prend le relais et la réponse se poursuit.",
         "howTo": "Pour en créer un, faites glisser un compte au centre d'un autre et maintenez un instant.",
         "learnMore": "En savoir plus"
-      }
+      },
+      "switchOrderHint": "Quand un compte est épuisé, le suivant dans cet ordre prend le relais automatiquement.",
+      "reorderHint": "Faites glisser pour changer l'ordre.",
+      "cardTitle": "Groupe de comptes #{{index}} configuré"
     },
     "lastActive": {
       "today": "Aujourd'hui",

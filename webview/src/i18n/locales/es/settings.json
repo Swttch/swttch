@@ -263,7 +263,10 @@
         "description": "Agrupa cuentas en un grupo y el límite de uso deja de cortar la conversación: la siguiente cuenta del grupo toma el relevo y la respuesta continúa.",
         "howTo": "Para crear uno, arrastra una cuenta al centro de otra y mantenla un momento.",
         "learnMore": "Más información"
-      }
+      },
+      "switchOrderHint": "Cuando una cuenta se agota, la siguiente de esta lista toma el relevo automáticamente.",
+      "reorderHint": "Arrastra para cambiar el orden.",
+      "cardTitle": "Grupo de cuentas #{{index}} configurado"
     },
     "lastActive": {
       "today": "Hoy",

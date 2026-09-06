@@ -259,7 +259,10 @@
         "description": "把账户编成一个池，达到上限时同一池中的下一个账户会接手，回答继续进行。",
         "howTo": "创建方法：将一个账户拖到另一个账户的中间位置并停留片刻。",
         "learnMore": "了解详情"
-      }
+      },
+      "switchOrderHint": "用尽后会按下面的顺序自动切换到下一个账户。",
+      "reorderHint": "拖动即可调整顺序。",
+      "cardTitle": "已设置账户池 #{{index}}"
     },
     "lastActive": {
       "today": "今天",

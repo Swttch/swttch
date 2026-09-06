@@ -6,6 +6,7 @@ import {
   applyAccountDrop,
   createOrderedAccountPool,
   moveAccountInOrder,
+  orderAfterDissolvingPool,
 } from '../accountPoolLayout';
 
 /**
@@ -95,5 +96,48 @@ describe('moveAccountInOrder', () => {
 
   it('leaves the order alone when the target is unknown', () => {
     expect(moveAccountInOrder(order, 'acc-a', 'acc-missing', AccountDropPosition.AFTER)).toEqual(order);
+  });
+});
+
+/**
+ * Dissolving a pool without this would scatter its members back into
+ * registration order: a pool card lists members in the pool's own order, which
+ * is not the order they sit in globally. The arrangement the user built inside
+ * the card has to survive the card going away.
+ */
+describe('orderAfterDissolvingPool', () => {
+  const pool = (accountIds: string[]) => ({
+    ...createOrderedAccountPool('pool-1', 'Pool', 1),
+    accountIds,
+  });
+
+  it('refills the slots the members held, in the pool order', () => {
+    // Globally b sits before a, but the pool lists a first.
+    expect(orderAfterDissolvingPool(['acc-x', 'acc-b', 'acc-y', 'acc-a'], pool(['acc-a', 'acc-b'])))
+      .toEqual(['acc-x', 'acc-a', 'acc-y', 'acc-b']);
+  });
+
+  it('leaves every account that was not in the pool exactly where it was', () => {
+    const result = orderAfterDissolvingPool(
+      ['acc-1', 'acc-a', 'acc-2', 'acc-b', 'acc-3'],
+      pool(['acc-b', 'acc-a']),
+    );
+    expect(result[0]).toBe('acc-1');
+    expect(result[2]).toBe('acc-2');
+    expect(result[4]).toBe('acc-3');
+  });
+
+  it('keeps an order that already matches the pool', () => {
+    expect(orderAfterDissolvingPool(['acc-a', 'acc-b'], pool(['acc-a', 'acc-b'])))
+      .toEqual(['acc-a', 'acc-b']);
+  });
+
+  it('ignores pool members the list does not know about', () => {
+    expect(orderAfterDissolvingPool(['acc-a'], pool(['acc-a', 'acc-gone'])))
+      .toEqual(['acc-a']);
+  });
+
+  it('leaves the order alone when none of the members are listed', () => {
+    expect(orderAfterDissolvingPool(['acc-x'], pool(['acc-a', 'acc-b']))).toEqual(['acc-x']);
   });
 });
