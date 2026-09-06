@@ -188,6 +188,13 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.30.1 - Add conversation fork, rewind, and account pools</h3>
+            <ul>
+                <li>Add account pools (#410)</li>
+                <li>Add conversation fork and rewind from a message (#407, reported by @M1s4k1)</li>
+                <li>Improve session dropdown loading speed (#408)</li>
+                <li>Improve the message shown when voice input is unavailable (#411, reported by @deniskrizanovic)</li>
+            </ul>
             <h3>0.30.0 - Tool cards for every built-in tool, and a Windows IME fix</h3>
             <ul>
                 <li>Add dedicated card renderers for the built-in tools and legacy aliases that used to fall back to "unknown" (#402)</li>
