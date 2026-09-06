@@ -507,6 +507,13 @@
       "retrying": "Waiting for quota reset…",
       "proceeding": "Resuming…"
     },
+    "accountPool": {
+      "switching": "Account switching ({{seconds}}s)",
+      "continuing": "Continuing with next account…",
+      "failed": "Account switch failed",
+      "timedOut": "Account switching timed out. Please send a message again shortly.",
+      "failedWithReason": "Account switching stopped: {{reason}}"
+    },
     "error": {
       "network": "Network connection error",
       "timeout": "Timed out",

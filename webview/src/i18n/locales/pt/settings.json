@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "Navegador",
     "ide": "IDE",
-    "account": "Conta",
+    "account": "Conta e grupos",
     "usage": "Uso",
     "tunnel": "Túnel",
     "releases": "Lançamentos",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "Conta",
+    "heading": "Conta e grupos",
     "addAccount": "Adicionar conta",
     "actionFailed": "Ação falhou",
     "loading": "Carregando contas…",
@@ -239,6 +239,35 @@
     "inUse": "Em uso",
     "switch": "Trocar",
     "removeAccount": "Remover conta",
+    "pool": {
+      "sectionTitle": "Grupos de contas",
+      "accountsSectionTitle": "Contas",
+      "defaultName": "Grupo de contas {{value}}",
+      "ordered": "Em ordem",
+      "poolCount": "{{count}} grupos",
+      "poolCount_one": "{{count}} grupo",
+      "poolCount_other": "{{count}} grupos",
+      "accountCount": "{{count}} contas",
+      "accountCount_one": "{{count}} conta",
+      "accountCount_other": "{{count}} contas",
+      "empty": "Ainda não há grupos. Arraste uma conta sobre outra para criar um grupo.",
+      "noStandaloneAccounts": "Todas as contas estão atribuídas a grupos.",
+      "switchOrder": "Ordem de troca automática",
+      "dragAccount": "Arraste para agrupar ou reordenar",
+      "dropToGroup": "Solte para agrupar",
+      "next": "Próxima",
+      "removeFromPool": "Remover do grupo",
+      "delete": "Excluir grupo",
+      "nudge": {
+        "title": "Continue quando uma conta atinge o limite",
+        "description": "Agrupe contas e o limite de uso deixa de encerrar a conversa: a próxima conta do grupo assume e a resposta continua.",
+        "howTo": "Para criar um, arraste uma conta até o centro de outra e segure por um instante.",
+        "learnMore": "Saiba mais"
+      },
+      "switchOrderHint": "Quando uma conta se esgota, a próxima desta ordem assume automaticamente.",
+      "reorderHint": "Arraste para mudar a ordem.",
+      "cardTitle": "Grupo de contas #{{index}} configurado"
+    },
     "lastActive": {
       "today": "Hoje",
       "yesterday": "Ontem",
@@ -326,7 +355,9 @@
       },
       "installingProgress": "Instalando cloudflared… ({{seconds}}s)",
       "establishingProgress": "Estabelecendo conexão do túnel… ({{seconds}}s)",
-      "estimatedTime": "Isso geralmente leva ~1 min (se a instalação for necessária, leva cerca de 3 min)."
+      "estimatedTime": "Isso geralmente leva ~1 min (se a instalação for necessária, leva cerca de 3 min).",
+      "pairingHint": "Escaneie para parear um dispositivo. O QR traz um código de uso único que expira em breve. Gere outro se parar de funcionar.",
+      "regeneratePairing": "Gerar novo código"
     },
     "sleepPrevention": {
       "title": "Prevenção de Suspensão",

@@ -83,7 +83,10 @@ import { getAccountHandler } from './getAccount';
 import { getAccountsHandler } from './getAccounts';
 import { saveAccountHandler } from './saveAccount';
 import { switchAccountHandler } from './switchAccount';
+import { verifyAccountSwitchHandler } from './verifyAccountSwitch';
 import { deleteAccountHandler } from './deleteAccount';
+import { updateAccountPoolsHandler } from './updateAccountPools';
+import { updateAccountOrderHandler } from './updateAccountOrder';
 import { reclaimSessionHandler } from './reclaimSession';
 import {
   scheduleMessageHandler,
@@ -396,8 +399,18 @@ export async function handleMessage(
     case MessageType.SWITCH_ACCOUNT:
       await switchAccountHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.VERIFY_ACCOUNT_SWITCH:
+      await verifyAccountSwitchHandler(connectionId, message, connections, bridge);
+      break;
     case MessageType.DELETE_ACCOUNT:
       await deleteAccountHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_ACCOUNT_POOLS:
+      await updateAccountPoolsHandler(connectionId, message, connections, bridge);
+      break;
+
+    case MessageType.UPDATE_ACCOUNT_ORDER:
+      await updateAccountOrderHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RECLAIM_SESSION:
       await reclaimSessionHandler(connectionId, message, connections, bridge);

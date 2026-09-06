@@ -15,6 +15,16 @@
     "zoomIn": "Aumentar zoom",
     "reset": "Redefinir"
   },
+  "pairing": {
+    "title": "Pareamento expirado",
+    "expiredDetail": "Este link de uso único expirou ou já foi usado. Escaneie o código QR do host novamente para parear este dispositivo.",
+    "lockedDetail": "Tentativas em excesso. Aguarde um momento e escaneie um novo código QR do host.",
+    "networkDetail": "Não foi possível alcançar o host para concluir o pareamento. Verifique sua conexão e escaneie o código QR do host novamente."
+  },
+  "forbidden": {
+    "title": "403 · Acesso negado",
+    "detail": "Este dispositivo não está pareado. Abra o painel Remote Control no host e escaneie o código QR para conectar."
+  },
   "contextChip": {
     "removeContext": "Remover contexto"
   },
@@ -149,7 +159,9 @@
     "connecting": "Conectando…",
     "typicalTime": "Normalmente ~1 min (instalação: ~3 min)",
     "preventSleep": "Impedir Suspensão",
-    "keepAwake": "Manter ativo enquanto o túnel estiver em uso"
+    "keepAwake": "Manter ativo enquanto o túnel estiver em uso",
+    "pairingHint": "Escaneie para parear um dispositivo. O QR traz um código de uso único que expira em breve. Gere outro se parar de funcionar.",
+    "regeneratePairing": "Gerar novo código"
   },
   "tunnelStatusNotice": {
     "tryAgain": "Tentar novamente",

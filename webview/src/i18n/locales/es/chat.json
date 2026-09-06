@@ -503,6 +503,13 @@
       "retrying": "Esperando el reinicio del límite…",
       "proceeding": "Reanudando…"
     },
+    "accountPool": {
+      "switching": "Cambiando de cuenta ({{seconds}} s)",
+      "continuing": "Continuando con la siguiente cuenta…",
+      "failed": "Error al cambiar de cuenta",
+      "timedOut": "La comprobación del cambio de cuenta agotó el tiempo. Vuelve a enviar el mensaje en unos instantes.",
+      "failedWithReason": "Se detuvo la comprobación del cambio de cuenta: {{reason}}"
+    },
     "error": {
       "network": "Error de conexión de red",
       "timeout": "Tiempo agotado",

@@ -15,6 +15,16 @@
     "zoomIn": "放大",
     "reset": "重設"
   },
+  "pairing": {
+    "title": "配對已過期",
+    "expiredDetail": "此一次性連結已過期或已被使用。請重新掃描主機上的 QR 碼，以再次連結此裝置。",
+    "lockedDetail": "嘗試次數過多。請稍候片刻，然後在主機上掃描新的 QR 碼。",
+    "networkDetail": "無法連線到主機以完成配對。請檢查網路連線，然後重新掃描主機上的 QR 碼。"
+  },
+  "forbidden": {
+    "title": "403 · 存取遭拒",
+    "detail": "此裝置尚未配對。請在主機上開啟 Remote Control 面板並掃描其 QR 碼以建立連線。"
+  },
   "contextChip": {
     "removeContext": "移除上下文"
   },
@@ -149,7 +159,9 @@
     "connecting": "正在連線…",
     "typicalTime": "通常約 1 分鐘(安裝:約 3 分鐘)",
     "preventSleep": "防止休眠",
-    "keepAwake": "隧道啟用時保持喚醒"
+    "keepAwake": "隧道啟用時保持喚醒",
+    "pairingHint": "掃描即可連結裝置。QR 碼包含很快過期的一次性代碼，若失效請重新產生。",
+    "regeneratePairing": "重新產生代碼"
   },
   "tunnelStatusNotice": {
     "tryAgain": "重試",

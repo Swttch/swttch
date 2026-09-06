@@ -3,6 +3,7 @@ import { useRouter } from '@/router/useRouter';
 import { Route } from '@/router/routes';
 import { useTranslation } from '@/i18n';
 import { AccountList } from './AccountList';
+import { AccountPoolNudge } from './AccountPoolNudge';
 
 export function AccountSettings() {
   const { t } = useTranslation('settings');
@@ -20,6 +21,8 @@ export function AccountSettings() {
           {t('account.addAccount')}
         </button>
       </div>
+
+      <AccountPoolNudge />
 
       <AccountList />
     </div>

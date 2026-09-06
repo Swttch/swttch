@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { TFunction } from 'i18next';
 import { TrashIcon, CheckBadgeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import type { AccountListItem } from '@/shared';
@@ -11,6 +12,9 @@ interface AccountRowProps {
   busy: boolean;
   onSwitch: (id: string) => void;
   onDelete: (account: AccountListItem) => void;
+  className?: string;
+  leading?: ReactNode;
+  statusBadge?: ReactNode;
 }
 
 // Calendar-day difference (midnight-based), so "Yesterday" means the previous
@@ -60,14 +64,16 @@ function TooltipBadge({ tooltip, value }: { tooltip: string; value: string }) {
 
 export function AccountRow(props: AccountRowProps) {
   const { t } = useTranslation('settings');
-  const { account, busy, onSwitch, onDelete } = props;
+  const { account, busy, onSwitch, onDelete, className, leading, statusBadge } = props;
   const plan = formatPlan(account.subscriptionType);
   const authMethod = formatAuthMethod(account.authMethod);
   const title = account.displayName ?? account.emailAddress;
   const subtitle = account.displayName ? account.emailAddress : account.organizationName;
 
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-border-default last:border-b-0">
+    <div className={className ?? 'flex items-center gap-3 py-3 border-b border-border-default last:border-b-0'}>
+      {leading}
+
       {/* Avatar */}
       <AccountAvatar account={account} className="w-8 h-8 text-[0.7692rem] shrink-0 self-start mt-0.5" />
 
@@ -96,6 +102,7 @@ export function AccountRow(props: AccountRowProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {statusBadge}
         {account.active ? (
           <span className="flex items-center gap-1 text-[0.8461rem] text-state-success-fg pe-4">
             <CheckBadgeIcon className="w-4 h-4" />

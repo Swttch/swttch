@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "Browser",
     "ide": "IDE",
-    "account": "Account",
+    "account": "Account & Pool",
     "usage": "Usage",
     "tunnel": "Tunnel",
     "releases": "Releases",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "Account",
+    "heading": "Account & Pool",
     "addAccount": "Add account",
     "actionFailed": "Action failed",
     "loading": "Loading accounts…",
@@ -239,6 +239,35 @@
     "inUse": "In use",
     "switch": "Switch",
     "removeAccount": "Remove account",
+    "pool": {
+      "sectionTitle": "Account Pools",
+      "accountsSectionTitle": "Accounts",
+      "defaultName": "Account Pool {{value}}",
+      "ordered": "Ordered",
+      "poolCount": "{{count}} pools",
+      "poolCount_one": "{{count}} pool",
+      "poolCount_other": "{{count}} pools",
+      "accountCount": "{{count}} accounts",
+      "accountCount_one": "{{count}} account",
+      "accountCount_other": "{{count}} accounts",
+      "empty": "No pools yet. Drag one account onto another to create a pool.",
+      "noStandaloneAccounts": "All accounts are assigned to pools.",
+      "switchOrder": "Automatic switch order",
+      "dragAccount": "Drag to group or rearrange",
+      "dropToGroup": "Drop to group",
+      "next": "Next",
+      "removeFromPool": "Remove from pool",
+      "delete": "Delete pool",
+      "nudge": {
+        "title": "Keep going when an account hits its limit",
+        "description": "Group accounts into a pool and a usage limit stops ending the conversation: the next account in the pool takes over and the answer carries on.",
+        "howTo": "To make one, drag an account onto the middle of another and hold for a moment.",
+        "learnMore": "Learn more"
+      },
+      "switchOrderHint": "When an account runs out, the next one below takes over automatically.",
+      "reorderHint": "Drag to change the order.",
+      "cardTitle": "Account pool #{{index}} is set up"
+    },
     "lastActive": {
       "today": "Today",
       "yesterday": "Yesterday",

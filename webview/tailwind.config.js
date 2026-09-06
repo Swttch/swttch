@@ -137,6 +137,13 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.85' },
         },
+        // Grows from nothing to a row's height, so the rows below it slide down
+        // rather than jumping. The cap is generous enough for the tallest row;
+        // once the animation ends the element falls back to its natural height.
+        slotOpen: {
+          '0%': { maxHeight: '0', opacity: '0' },
+          '100%': { maxHeight: '8rem', opacity: '1' },
+        },
       },
     }
   },

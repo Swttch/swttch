@@ -3,7 +3,9 @@ import type { ComponentType, SVGProps } from 'react';
 import { useTranslation } from '@/i18n';
 import { getTextContent, type LoadedMessageDto } from '../../../types';
 import { ToolWrapper } from './ToolRenderers/common';
-import { useAutoResume, type AutoResumeAction } from '@/hooks/useAutoResume';
+import { type AutoResumeAction } from '@/hooks/useAutoResume';
+import { useAutoResumeContext } from '@/contexts/AutoResumeContext';
+import { NotificationLine } from './NotificationMessageRenderer';
 
 interface Props {
   message: LoadedMessageDto;
@@ -89,7 +91,7 @@ function ActionButton(props: { action: AutoResumeAction; onClick: () => void }) 
 export function LimitReachedRenderer(props: Props) {
   const { message } = props;
   const { t } = useTranslation('chat');
-  const ar = useAutoResume();
+  const ar = useAutoResumeContext();
   const text = getTextContent(message);
 
   const isActive = ar.limit?.messageUuid === message.uuid;
@@ -98,14 +100,20 @@ export function LimitReachedRenderer(props: Props) {
   const onClick =
     ar.action === 'schedule' ? ar.schedule : ar.action === 'cancel' ? ar.cancel : ar.resumeNow;
 
-  const statusText = isActive && ar.statusKey ? t(ar.statusKey) : null;
+  const statusText = isActive && ar.statusKey
+    ? t(ar.statusKey)
+    : null;
+  const accountPoolStatusText = isActive && ar.accountPoolStatusKey
+    ? t(ar.accountPoolStatusKey, { seconds: ar.accountPoolElapsedSeconds ?? 0 })
+    : null;
   const countdownText =
     isActive && ar.countdownSeconds !== null
       ? t('autoResume.countdown', { seconds: ar.countdownSeconds })
       : null;
 
   return (
-    <ToolWrapper message={message} className="!mt-0">
+    <>
+      <ToolWrapper message={message} className="!mt-0">
       <span className="text-text-primary text-[1rem] leading-relaxed">
         <span>{text}</span>
         {(countdownText || statusText || showAction) && (
@@ -121,6 +129,15 @@ export function LimitReachedRenderer(props: Props) {
           <ActionButton action={ar.action} onClick={onClick} />
         )}
       </span>
-    </ToolWrapper>
+      </ToolWrapper>
+      {accountPoolStatusText && (
+        <NotificationLine
+          text={accountPoolStatusText}
+          leading={ar.accountPoolStatusKey === 'autoResume.accountPool.switching' ? (
+            <span className="w-3.5 h-3.5 border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
+          ) : undefined}
+        />
+      )}
+    </>
   );
 }

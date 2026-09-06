@@ -503,6 +503,13 @@
       "retrying": "Aguardando a redefinição da cota…",
       "proceeding": "Retomando…"
     },
+    "accountPool": {
+      "switching": "Trocando de conta ({{seconds}} s)",
+      "continuing": "Continuando com a próxima conta…",
+      "failed": "Falha ao trocar de conta",
+      "timedOut": "A verificação da troca de conta expirou. Envie a mensagem novamente em instantes.",
+      "failedWithReason": "Verificação da troca de conta interrompida: {{reason}}"
+    },
     "error": {
       "network": "Erro de conexão de rede",
       "timeout": "Tempo esgotado",

@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "ブラウザ",
     "ide": "IDE",
-    "account": "アカウント",
+    "account": "アカウントとプール",
     "usage": "使用状況",
     "tunnel": "トンネル",
     "releases": "リリース",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "アカウント",
+    "heading": "アカウントとプール",
     "addAccount": "アカウントを追加",
     "actionFailed": "操作に失敗しました",
     "loading": "アカウントを読み込み中…",
@@ -239,6 +239,31 @@
     "inUse": "使用中",
     "switch": "切り替え",
     "removeAccount": "アカウントを削除",
+    "pool": {
+      "sectionTitle": "アカウントプール",
+      "accountsSectionTitle": "アカウント",
+      "defaultName": "アカウントプール {{value}}",
+      "ordered": "順番どおり",
+      "poolCount": "プール {{count}} 個",
+      "accountCount": "アカウント {{count}} 件",
+      "empty": "プールはまだありません。アカウントを別のアカウントにドラッグするとプールが作成されます。",
+      "noStandaloneAccounts": "すべてのアカウントがプールに割り当てられています。",
+      "switchOrder": "自動切り替えの順序",
+      "dragAccount": "ドラッグしてグループ化または並べ替え",
+      "dropToGroup": "ドロップしてグループ化",
+      "next": "次",
+      "removeFromPool": "プールから削除",
+      "delete": "プールを削除",
+      "nudge": {
+        "title": "上限に達しても会話を止めない",
+        "description": "アカウントをプールにまとめておくと、上限に達したときに同じプールの次のアカウントが引き継ぎ、会話がそのまま続きます。",
+        "howTo": "作成するには、アカウントを別のアカウントの中央にドラッグしてしばらく止めてください。",
+        "learnMore": "詳しく見る"
+      },
+      "switchOrderHint": "使い切ると、この順番で次のアカウントに自動で切り替わります。",
+      "reorderHint": "ドラッグして順番を変えられます。",
+      "cardTitle": "アカウントプール #{{index}} 設定済み"
+    },
     "lastActive": {
       "today": "今日",
       "yesterday": "昨日",
@@ -326,7 +351,9 @@
       },
       "installingProgress": "cloudflaredをインストール中…({{seconds}}秒)",
       "establishingProgress": "トンネル接続を確立中…({{seconds}}秒)",
-      "estimatedTime": "通常は約1分で完了します(インストールが必要な場合は約3分かかります)。"
+      "estimatedTime": "通常は約1分で完了します(インストールが必要な場合は約3分かかります)。",
+      "pairingHint": "スキャンするとデバイスを接続できます。QR にはまもなく期限切れになるワンタイムコードが含まれます。動作しない場合は再生成してください。",
+      "regeneratePairing": "コードを再生成"
     },
     "sleepPrevention": {
       "title": "スリープ防止",

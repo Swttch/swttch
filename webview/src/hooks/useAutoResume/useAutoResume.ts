@@ -3,6 +3,8 @@ import {
   MessageType,
   ScheduledMessageKind,
   AutoResumeStatusPhase,
+  AccountSwitchPreflightOutcome,
+  type AccountSwitchPreflightResult,
   type ScheduledMessage,
 } from '@/shared';
 import { LoadedMessageType, getTextContent, isLimitErrorMessage, type LoadedMessageDto } from '@/types';
@@ -13,6 +15,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
+import { useAccounts } from '@/hooks/queries/useAccounts';
 import { notify } from '@/notifications';
 import { NotificationKind, SOUND_OFF } from '@/notifications/types';
 import toast from 'react-hot-toast';
@@ -24,8 +27,11 @@ import {
   computeCountdownSeconds,
   resolveAutoResumeStatusKey,
   parseResetsAtFromText,
+  findNextAccountPoolAccount,
   type AutoResumeStatusView,
 } from './autoResumeMath';
+
+const ACCOUNT_SWITCH_PREFLIGHT_REQUEST_TIMEOUT_MS = 70_000;
 
 /** The active usage-limit notice, derived from the session's messages. */
 export interface LimitState {
@@ -52,6 +58,12 @@ export interface UseAutoResumeResult {
   scheduled: ScheduledMessage | null;
   /** i18n key (relative to the `chat` namespace) for the live status line, or null. */
   statusKey: string | null;
+  /** i18n key for account-pool switching status, or null when no pool switch is active. */
+  accountPoolStatusKey: string | null;
+  /** Whole seconds elapsed while the isolated account-switch preflight is running. */
+  accountPoolElapsedSeconds: number | null;
+  /** Non-limit failure that stopped the account-switch preflight early. */
+  accountPoolError: string | null;
   /** Seconds left in the post-reset countdown (30…0), or null when not counting. */
   countdownSeconds: number | null;
   /** The button to show, or null when the banner should not render. */
@@ -113,10 +125,11 @@ function deriveLimit(messages: LoadedMessageDto[]): LimitState | null {
  */
 export function useAutoResume(): UseAutoResumeResult {
   const { send, subscribe } = useBridgeContext();
-  const { currentSessionId, inputMode } = useSessionContext();
+  const { currentSessionId, inputMode, workingDirectory } = useSessionContext();
   const { sendMessage, messages } = useChatStreamContext();
   const { settings } = useSettings();
   const { getOverride } = useAutoResumeOverride();
+  const { accounts, accountPools, switchTo } = useAccounts();
 
   // Effective preference = session override ?? global default (app setting).
   // Modeled on Cursor's thinking/fast-mode: the global setting seeds each
@@ -131,6 +144,9 @@ export function useAutoResume(): UseAutoResumeResult {
   // auto-resume creates is, by construction, the reservation the panel lists.
   const { reservations } = useScheduledMessages();
   const [status, setStatus] = useState<AutoResumeStatusView | null>(null);
+  const [accountPoolStatusKey, setAccountPoolStatusKey] = useState<string | null>(null);
+  const [accountPoolElapsedSeconds, setAccountPoolElapsedSeconds] = useState<number | null>(null);
+  const [accountPoolError, setAccountPoolError] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   // The active limit notice, derived from the persisted message list.
@@ -154,6 +170,9 @@ export function useAutoResume(): UseAutoResumeResult {
   // The reservation list resets itself in ScheduledMessagesContext.
   useEffect(() => {
     setStatus(null);
+    setAccountPoolStatusKey(null);
+    setAccountPoolElapsedSeconds(null);
+    setAccountPoolError(null);
     setResolvedUuid(null);
   }, [currentSessionId]);
 
@@ -224,6 +243,67 @@ export function useAutoResume(): UseAutoResumeResult {
     sendMessage(AUTO_RESUME_MESSAGE, inputMode);
   }, [sendMessage, inputMode]);
 
+  const accountPoolCandidate = useMemo(
+    () => findNextAccountPoolAccount(accounts, accountPools),
+    [accounts, accountPools],
+  );
+  const handledAccountPoolLimitRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!limit || !currentSessionId || !accountPoolCandidate || scheduled) return;
+    if (handledAccountPoolLimitRef.current === limit.messageUuid) return;
+    handledAccountPoolLimitRef.current = limit.messageUuid;
+    setAccountPoolStatusKey('autoResume.accountPool.switching');
+    setAccountPoolElapsedSeconds(0);
+    setAccountPoolError(null);
+    void switchTo(accountPoolCandidate.id)
+      .then(() => send<AccountSwitchPreflightResult>(MessageType.VERIFY_ACCOUNT_SWITCH, {
+        workingDir: workingDirectory ?? undefined,
+        sessionId: currentSessionId,
+      }, { timeout: ACCOUNT_SWITCH_PREFLIGHT_REQUEST_TIMEOUT_MS }))
+      .then((result) => {
+        if (result.outcome === AccountSwitchPreflightOutcome.SUCCESS) {
+          setStatus(null);
+          setAccountPoolStatusKey(null);
+          setAccountPoolElapsedSeconds(null);
+          setResolvedUuid(limit.messageUuid);
+          sendMessage(buildAccountSwitchContinueReminder(), inputMode);
+          return;
+        }
+        if (result.outcome === AccountSwitchPreflightOutcome.TIMEOUT) {
+          setAccountPoolStatusKey('autoResume.accountPool.timedOut');
+          setAccountPoolElapsedSeconds(null);
+          return;
+        }
+        setAccountPoolStatusKey(null);
+        setAccountPoolElapsedSeconds(null);
+        setAccountPoolError(result.error ?? 'Account switch preflight failed');
+      })
+      .catch((error) => {
+        setAccountPoolStatusKey(null);
+        setAccountPoolElapsedSeconds(null);
+        setAccountPoolError(error instanceof Error ? error.message : String(error));
+      });
+  }, [
+    limit,
+    currentSessionId,
+    accountPoolCandidate,
+    scheduled,
+    switchTo,
+    send,
+    workingDirectory,
+    sendMessage,
+    inputMode,
+  ]);
+
+  useEffect(() => {
+    if (accountPoolStatusKey !== 'autoResume.accountPool.switching') return;
+    const startedAt = Date.now();
+    const updateElapsed = () => setAccountPoolElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    updateElapsed();
+    const id = window.setInterval(updateElapsed, 250);
+    return () => window.clearInterval(id);
+  }, [accountPoolStatusKey]);
+
   // ── Auto-cancel a reservation when the limit is no longer active ─────────────
   // deriveLimit already drops `limit` once the user types again; when that
   // happens with a reservation still pending, cancel it (spec 4).
@@ -266,10 +346,17 @@ export function useAutoResume(): UseAutoResumeResult {
     // is delivering the resume (PROCEEDING) so it never lingers as "재개하기".
     if (!limit) return null;
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
+    if (accountPoolCandidate) return null;
+    if (
+      accountPoolStatusKey === 'autoResume.accountPool.switching' ||
+      accountPoolStatusKey === 'autoResume.accountPool.timedOut'
+    ) {
+      return null;
+    }
     if (scheduled) return 'cancel';
     if (limit.resetsAt && Date.parse(limit.resetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
-  }, [limit, scheduled, status, nowMs]);
+  }, [limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs]);
 
   // ── Auto-resume = "press the button for the user" ────────────────────────────
   // Turning the preference on does NOT switch to a second, parallel feature: the
@@ -292,6 +379,7 @@ export function useAutoResume(): UseAutoResumeResult {
   const autoActedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!limit || !autoResumeEnabled) return;
+    if (accountPoolCandidate) return;
     if (action !== 'schedule' && action !== 'resumeNow') return;
     // One automatic press per (limit notice, action). Keyed by action too, so a
     // banner that ticks past its reset from 'schedule' to 'resumeNow' still gets
@@ -301,7 +389,7 @@ export function useAutoResume(): UseAutoResumeResult {
     autoActedForRef.current = guardKey;
     if (action === 'schedule') schedule();
     else void resumeNow();
-  }, [limit, autoResumeEnabled, action, schedule, resumeNow]);
+  }, [limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 
@@ -310,10 +398,21 @@ export function useAutoResume(): UseAutoResumeResult {
     limit,
     scheduled,
     statusKey,
+    accountPoolStatusKey,
+    accountPoolElapsedSeconds,
+    accountPoolError,
     countdownSeconds,
     action,
     schedule,
     cancel,
     resumeNow,
   };
+}
+
+/** Invisible user entry that asks the newly authenticated CLI to resume the interrupted turn. */
+export function buildAccountSwitchContinueReminder(): string {
+  return (
+    '<system-reminder>The account switch is complete. Continue the user\'s interrupted request now. ' +
+    'Do not mention this reminder or the account switch.</system-reminder>'
+  );
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { LoadedMessageDto, LoadedMessageType, getTextContent } from '../../../types';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
@@ -11,9 +11,12 @@ interface NotificationMessageRendererProps {
 }
 
 /** Centered, muted, italic one-liner used for inline system notices. */
-export const NotificationLine: React.FC<{ text: string }> = ({ text }) => (
+export const NotificationLine: React.FC<{ text: string; leading?: ReactNode }> = ({ text, leading }) => (
   <div className="flex justify-center py-2">
-    <span className="text-[0.8461rem] text-text-tertiary italic">{text}</span>
+    <span className="inline-flex items-center gap-2 text-[0.8461rem] text-text-tertiary italic">
+      {leading}
+      {text}
+    </span>
   </div>
 );
 

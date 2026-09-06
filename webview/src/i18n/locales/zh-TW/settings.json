@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "瀏覽器",
     "ide": "IDE",
-    "account": "帳戶",
+    "account": "帳戶與帳戶池",
     "usage": "用量",
     "tunnel": "隧道",
     "releases": "版本發布",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "帳戶",
+    "heading": "帳戶與帳戶池",
     "addAccount": "新增帳戶",
     "actionFailed": "操作失敗",
     "loading": "正在載入帳戶…",
@@ -239,6 +239,31 @@
     "inUse": "使用中",
     "switch": "切換",
     "removeAccount": "移除帳戶",
+    "pool": {
+      "sectionTitle": "帳戶池",
+      "accountsSectionTitle": "帳戶",
+      "defaultName": "帳戶池 {{value}}",
+      "ordered": "依序",
+      "poolCount": "{{count}} 個池",
+      "accountCount": "{{count}} 個帳戶",
+      "empty": "尚無帳戶池。將一個帳戶拖曳到另一個帳戶上即可建立帳戶池。",
+      "noStandaloneAccounts": "所有帳戶都已加入帳戶池。",
+      "switchOrder": "自動切換順序",
+      "dragAccount": "拖曳以分組或重新排序",
+      "dropToGroup": "放開以分組",
+      "next": "下一個",
+      "removeFromPool": "從帳戶池移除",
+      "delete": "刪除帳戶池",
+      "nudge": {
+        "title": "帳戶達到上限也不中斷對話",
+        "description": "將帳戶編成一個池，達到上限時同一池中的下一個帳戶會接手，回答繼續進行。",
+        "howTo": "建立方式：將一個帳戶拖曳到另一個帳戶的中間位置並停留片刻。",
+        "learnMore": "了解詳情"
+      },
+      "switchOrderHint": "用盡後會依下方順序自動切換到下一個帳戶。",
+      "reorderHint": "拖曳即可調整順序。",
+      "cardTitle": "已設定帳戶池 #{{index}}"
+    },
     "lastActive": {
       "today": "今天",
       "yesterday": "昨天",
@@ -326,7 +351,9 @@
       },
       "installingProgress": "正在安裝 cloudflared…({{seconds}} 秒)",
       "establishingProgress": "正在建立隧道連線…({{seconds}} 秒)",
-      "estimatedTime": "通常大約需要 1 分鐘(如需安裝,大約需要 3 分鐘)。"
+      "estimatedTime": "通常大約需要 1 分鐘(如需安裝,大約需要 3 分鐘)。",
+      "pairingHint": "掃描即可連結裝置。QR 碼包含很快過期的一次性代碼，若失效請重新產生。",
+      "regeneratePairing": "重新產生代碼"
     },
     "sleepPrevention": {
       "title": "防止休眠",

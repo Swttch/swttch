@@ -24,14 +24,16 @@ import {
   upsertAccount,
   setCurrentAccount,
   writeSnapshot,
+  writeAccountOrder,
   readSnapshot,
   deleteAccountFiles,
   hasSnapshot,
   newAccountId,
+  newAccountPoolId,
   listSnapshotIds,
   type AccountsRegistry,
 } from '../account-store';
-import type { StoredAccount } from '../../../shared';
+import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../../shared';
 
 function meta(id: string, email: string): StoredAccount {
   return {
@@ -48,6 +50,19 @@ function meta(id: string, email: string): StoredAccount {
   };
 }
 
+function pool(id: string, accountIds: string[]): AccountPool {
+  return {
+    id,
+    name: id,
+    provider: 'claude',
+    enabled: true,
+    strategy: AccountPoolStrategy.ORDERED,
+    accountIds,
+    createdAt: 1,
+    updatedAt: 1,
+  };
+}
+
 describe('account-store', () => {
   beforeEach(async () => {
     tempHome = await mkdtemp(join(tmpdir(), 'acc-store-'));
@@ -57,7 +72,7 @@ describe('account-store', () => {
   });
 
   it('returns an empty registry when nothing is saved', async () => {
-    expect(await readRegistry()).toEqual({ current: null, accounts: {} });
+    expect(await readRegistry()).toEqual({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
   });
 
   it('round-trips the registry and the current hint', async () => {
@@ -108,8 +123,34 @@ describe('account-store', () => {
     const reg = await readRegistry();
     expect(reg.accounts[id]).toBeUndefined();
     expect(reg.current).toBeNull();
+    expect(reg.accountPools).toEqual([]);
     expect(hasSnapshot(id)).toBe(false);
     expect(await readSnapshot(id)).toBeNull();
+  });
+
+  it('round-trips account pools and prunes deleted accounts from them', async () => {
+    const id1 = newAccountId();
+    const id2 = newAccountId();
+    const id3 = newAccountId();
+    await upsertAccount(meta(id1, 'a@x.com'));
+    await upsertAccount(meta(id2, 'b@x.com'));
+    await upsertAccount(meta(id3, 'c@x.com'));
+    await writeRegistry({
+      current: null,
+      accounts: {
+        [id1]: meta(id1, 'a@x.com'),
+        [id2]: meta(id2, 'b@x.com'),
+        [id3]: meta(id3, 'c@x.com'),
+      },
+      accountPools: [pool(newAccountPoolId(), [id1, id2, id3])],
+      accountOrder: [id1, id2, id3],
+    });
+
+    await deleteAccountFiles(id2);
+
+    const reg = await readRegistry();
+    expect(reg.accountPools).toHaveLength(1);
+    expect(reg.accountPools[0].accountIds).toEqual([id1, id3]);
   });
 
   it('lists only valid snapshot ids present on disk', async () => {
@@ -129,6 +170,42 @@ describe('account-store', () => {
     expect(hasSnapshot('../evil')).toBe(false);
   });
 
+  // The order the user drags accounts into has nowhere else to live: the list is
+  // otherwise sorted by registration time, so without this the arrangement would
+  // be gone on the next read and the drag would have promised something it did
+  // not keep.
+  describe('writeAccountOrder', () => {
+    it('stores the arrangement and reads it back', async () => {
+      const [id1, id2] = [newAccountId(), newAccountId()];
+      await upsertAccount(meta(id1, 'a@x.com'));
+      await upsertAccount(meta(id2, 'b@x.com'));
+
+      await writeAccountOrder([id2, id1]);
+
+      expect((await readRegistry()).accountOrder).toEqual([id2, id1]);
+    });
+
+    it('drops ids that are not saved accounts, and duplicates', async () => {
+      const id = newAccountId();
+      await upsertAccount(meta(id, 'a@x.com'));
+
+      await writeAccountOrder([id, 'acc-does-not-exist', id]);
+
+      expect((await readRegistry()).accountOrder).toEqual([id]);
+    });
+
+    it('forgets a deleted account so its id cannot linger in the order', async () => {
+      const [id1, id2] = [newAccountId(), newAccountId()];
+      await upsertAccount(meta(id1, 'a@x.com'));
+      await upsertAccount(meta(id2, 'b@x.com'));
+      await writeAccountOrder([id2, id1]);
+
+      await deleteAccountFiles(id2);
+
+      expect((await readRegistry()).accountOrder).toEqual([id1]);
+    });
+  });
+
   it('newAccountId produces colon-free, filesystem-safe ids', () => {
     const id = newAccountId();
     expect(id.startsWith('acc-')).toBe(true);
@@ -142,7 +219,7 @@ describe('account-store', () => {
     const registryFile = join(tempHome, '.claude-code-gui', 'accounts.json');
     await writeRegistry({ current: null, accounts: {} } as AccountsRegistry);
     await (await import('fs/promises')).writeFile(registryFile, '{not json', 'utf-8');
-    expect(await readRegistry()).toEqual({ current: null, accounts: {} });
+    expect(await readRegistry()).toEqual({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
     // sanity: the snapshot path helper still reads a previously good file
     expect(await readFile(registryFile, 'utf-8')).toContain('{not json');
   });

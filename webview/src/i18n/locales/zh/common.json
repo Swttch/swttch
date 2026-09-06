@@ -15,6 +15,16 @@
     "zoomIn": "放大",
     "reset": "重置"
   },
+  "pairing": {
+    "title": "配对已过期",
+    "expiredDetail": "此一次性链接已过期或已被使用。请重新扫描主机上的二维码，以再次连接此设备。",
+    "lockedDetail": "尝试次数过多。请稍候片刻，然后在主机上扫描新的二维码。",
+    "networkDetail": "无法连接到主机以完成配对。请检查网络连接，然后重新扫描主机上的二维码。"
+  },
+  "forbidden": {
+    "title": "403 · 访问被拒绝",
+    "detail": "此设备尚未配对。请在主机上打开 Remote Control 面板并扫描其二维码以建立连接。"
+  },
   "contextChip": {
     "removeContext": "移除上下文"
   },
@@ -149,7 +159,9 @@
     "connecting": "正在连接…",
     "typicalTime": "通常约 1 分钟(如需安装,约 3 分钟)",
     "preventSleep": "防止休眠",
-    "keepAwake": "隧道处于活动状态时保持唤醒"
+    "keepAwake": "隧道处于活动状态时保持唤醒",
+    "pairingHint": "扫描即可连接设备。二维码包含很快过期的一次性代码，若失效请重新生成。",
+    "regeneratePairing": "重新生成代码"
   },
   "tunnelStatusNotice": {
     "tryAgain": "重试",

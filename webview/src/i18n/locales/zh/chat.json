@@ -503,6 +503,13 @@
       "retrying": "等待额度重置…",
       "proceeding": "正在恢复…"
     },
+    "accountPool": {
+      "switching": "正在切换账户（{{seconds}}秒）",
+      "continuing": "正在使用下一个账户继续…",
+      "failed": "账户切换失败",
+      "timedOut": "账户切换验证超时。请稍后重新发送消息。",
+      "failedWithReason": "账户切换验证已停止：{{reason}}"
+    },
     "error": {
       "network": "网络连接错误",
       "timeout": "超时",

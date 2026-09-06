@@ -16,6 +16,7 @@ vi.mock('../account-store', () => ({
   upsertAccount: vi.fn(),
   setCurrentAccount: vi.fn(),
   deleteAccountFiles: vi.fn(),
+  writeAccountPools: vi.fn(),
   newAccountId: vi.fn(() => 'acc-new'),
 }));
 vi.mock('../../claude', () => ({ Claude: { execAuthed: vi.fn() } }));
@@ -33,10 +34,17 @@ import {
   upsertAccount,
   setCurrentAccount,
   deleteAccountFiles,
+  writeAccountPools,
 } from '../account-store';
 import { Claude } from '../../claude';
-import { listAccounts, saveCurrentAccount, switchToAccount, deleteAccount } from '../account-manager';
-import type { StoredAccount } from '../../../shared';
+import {
+  deleteAccount,
+  listAccounts,
+  saveCurrentAccount,
+  switchToAccount,
+  updateAccountPools,
+} from '../account-manager';
+import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../../shared';
 
 const mockReadLive = vi.mocked(readLiveCredentials);
 const mockWriteLive = vi.mocked(writeLiveCredentials);
@@ -48,6 +56,7 @@ const mockReadSnapshot = vi.mocked(readSnapshot);
 const mockUpsert = vi.mocked(upsertAccount);
 const mockSetCurrent = vi.mocked(setCurrentAccount);
 const mockDeleteFiles = vi.mocked(deleteAccountFiles);
+const mockWritePools = vi.mocked(writeAccountPools);
 const mockExec = vi.mocked(Claude.execAuthed);
 
 function authStatus(obj: Record<string, unknown>): void {
@@ -63,7 +72,7 @@ function acc(id: string, email: string, extra: Partial<StoredAccount> = {}): Sto
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockReadRegistry.mockResolvedValue({ current: null, accounts: {} });
+  mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
   mockReadOauth.mockResolvedValue(null);
 });
 
@@ -97,6 +106,8 @@ describe('saveCurrentAccount', () => {
     mockReadRegistry.mockResolvedValue({
       current: 'acc-old',
       accounts: { 'acc-old': acc('acc-old', 'a@x.com', { createdAt: 111 }) },
+      accountPools: [],
+      accountOrder: [],
     });
 
     const result = await saveCurrentAccount();
@@ -109,18 +120,18 @@ describe('saveCurrentAccount', () => {
 
 describe('switchToAccount', () => {
   it('throws for an unknown account id', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: {} });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: {}, accountPools: [], accountOrder: [] });
     await expect(switchToAccount('acc-x')).rejects.toThrow(/Unknown account/);
   });
 
   it('throws when the saved snapshot is missing', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') } });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue(null);
     await expect(switchToAccount('acc-x')).rejects.toThrow(/credentials are unavailable/);
   });
 
   it('swaps the live credentials + oauthAccount and updates the current hint', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') } });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{"t":1}}', oauthAccount: { emailAddress: 'b@x.com' } });
     mockReadLive.mockResolvedValue('{"claudeAiOauth":{"old":1}}');
 
@@ -132,7 +143,7 @@ describe('switchToAccount', () => {
   });
 
   it('rolls the live credentials back when applying the new account fails', async () => {
-    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') } });
+    mockReadRegistry.mockResolvedValue({ current: null, accounts: { 'acc-x': acc('acc-x', 'b@x.com') }, accountPools: [], accountOrder: [] });
     mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{"t":1}}', oauthAccount: { emailAddress: 'b@x.com' } });
     mockReadLive.mockResolvedValue('{"claudeAiOauth":{"old":1}}');
     mockReadOauth.mockResolvedValue({ emailAddress: 'old@x.com' });
@@ -153,6 +164,8 @@ describe('listAccounts', () => {
     mockReadRegistry.mockResolvedValue({
       current: 'acc-1',
       accounts: { 'acc-1': acc('acc-1', 'a@x.com', { createdAt: 5, updatedAt: 10 }), 'acc-2': acc('acc-2', 'b@x.com', { createdAt: 15, updatedAt: 20 }) },
+      accountPools: [],
+      accountOrder: [],
     });
     authStatus({ email: 'b@x.com' });
 
@@ -170,5 +183,24 @@ describe('deleteAccount', () => {
   it('delegates to the store', async () => {
     await deleteAccount('acc-1');
     expect(mockDeleteFiles).toHaveBeenCalledWith('acc-1');
+  });
+});
+
+describe('updateAccountPools', () => {
+  it('persists account pools and returns the normalized registry pools', async () => {
+    const accountPools: AccountPool[] = [{
+      id: 'pool-1',
+      name: 'Pool',
+      provider: 'claude',
+      enabled: true,
+      strategy: AccountPoolStrategy.ORDERED,
+      accountIds: ['acc-1', 'acc-2'],
+      createdAt: 1,
+      updatedAt: 1,
+    }];
+    mockReadRegistry.mockResolvedValueOnce({ current: null, accounts: {}, accountPools, accountOrder: [] });
+
+    await expect(updateAccountPools(accountPools)).resolves.toEqual(accountPools);
+    expect(mockWritePools).toHaveBeenCalledWith(accountPools);
   });
 });

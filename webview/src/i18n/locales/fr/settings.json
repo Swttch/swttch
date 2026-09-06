@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "Navigateur",
     "ide": "IDE",
-    "account": "Compte",
+    "account": "Compte et groupes",
     "usage": "Utilisation",
     "tunnel": "Tunnel",
     "releases": "Versions",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "Compte",
+    "heading": "Compte et groupes",
     "addAccount": "Ajouter un compte",
     "actionFailed": "Échec de l'action",
     "loading": "Chargement des comptes…",
@@ -239,6 +239,35 @@
     "inUse": "En cours d'utilisation",
     "switch": "Changer",
     "removeAccount": "Supprimer le compte",
+    "pool": {
+      "sectionTitle": "Groupes de comptes",
+      "accountsSectionTitle": "Comptes",
+      "defaultName": "Groupe de comptes {{value}}",
+      "ordered": "Dans l'ordre",
+      "poolCount": "{{count}} groupes",
+      "poolCount_one": "{{count}} groupe",
+      "poolCount_other": "{{count}} groupes",
+      "accountCount": "{{count}} comptes",
+      "accountCount_one": "{{count}} compte",
+      "accountCount_other": "{{count}} comptes",
+      "empty": "Aucun groupe pour le moment. Faites glisser un compte sur un autre pour créer un groupe.",
+      "noStandaloneAccounts": "Tous les comptes sont affectés à un groupe.",
+      "switchOrder": "Ordre de changement automatique",
+      "dragAccount": "Faire glisser pour grouper ou réorganiser",
+      "dropToGroup": "Déposer pour grouper",
+      "next": "Suivant",
+      "removeFromPool": "Retirer du groupe",
+      "delete": "Supprimer le groupe",
+      "nudge": {
+        "title": "Continuer quand un compte atteint sa limite",
+        "description": "Regroupez des comptes et une limite d'usage n'arrête plus la conversation : le compte suivant du groupe prend le relais et la réponse se poursuit.",
+        "howTo": "Pour en créer un, faites glisser un compte au centre d'un autre et maintenez un instant.",
+        "learnMore": "En savoir plus"
+      },
+      "switchOrderHint": "Quand un compte est épuisé, le suivant dans cet ordre prend le relais automatiquement.",
+      "reorderHint": "Faites glisser pour changer l'ordre.",
+      "cardTitle": "Groupe de comptes #{{index}} configuré"
+    },
     "lastActive": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",
@@ -326,7 +355,9 @@
       },
       "installingProgress": "Installation de cloudflared… ({{seconds}} s)",
       "establishingProgress": "Établissement de la connexion du tunnel… ({{seconds}} s)",
-      "estimatedTime": "Cela prend généralement ~1 min (si une installation est requise, environ 3 min)."
+      "estimatedTime": "Cela prend généralement ~1 min (si une installation est requise, environ 3 min).",
+      "pairingHint": "Scannez pour appairer un appareil. Le QR contient un code à usage unique qui expire rapidement. Régénérez-le s'il cesse de fonctionner.",
+      "regeneratePairing": "Régénérer le code"
     },
     "sleepPrevention": {
       "title": "Prévention de la mise en veille",

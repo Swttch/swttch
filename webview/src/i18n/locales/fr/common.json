@@ -15,6 +15,16 @@
     "zoomIn": "Zoom avant",
     "reset": "Réinitialiser"
   },
+  "pairing": {
+    "title": "Appairage expiré",
+    "expiredDetail": "Ce lien à usage unique a expiré ou a déjà été utilisé. Scannez à nouveau le code QR de l'hôte pour réappairer cet appareil.",
+    "lockedDetail": "Trop de tentatives. Patientez un instant, puis scannez un nouveau code QR depuis l'hôte.",
+    "networkDetail": "Impossible de joindre l'hôte pour terminer l'appairage. Vérifiez votre connexion, puis scannez à nouveau le code QR de l'hôte."
+  },
+  "forbidden": {
+    "title": "403 · Accès refusé",
+    "detail": "Cet appareil n'est pas appairé. Ouvrez le panneau Remote Control sur l'hôte et scannez son code QR pour vous connecter."
+  },
   "contextChip": {
     "removeContext": "Supprimer le contexte"
   },
@@ -149,7 +159,9 @@
     "connecting": "Connexion…",
     "typicalTime": "Généralement ~1 min (installation : ~3 min)",
     "preventSleep": "Empêcher la mise en veille",
-    "keepAwake": "Rester éveillé tant que le tunnel est actif"
+    "keepAwake": "Rester éveillé tant que le tunnel est actif",
+    "pairingHint": "Scannez pour appairer un appareil. Le QR contient un code à usage unique qui expire rapidement. Régénérez-le s'il cesse de fonctionner.",
+    "regeneratePairing": "Régénérer le code"
   },
   "tunnelStatusNotice": {
     "tryAgain": "Réessayer",

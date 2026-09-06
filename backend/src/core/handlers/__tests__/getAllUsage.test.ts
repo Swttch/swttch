@@ -92,6 +92,8 @@ describe('getAllUsageHandler', () => {
           usageCachedAt: 1000,
         },
       },
+      accountPools: [],
+      accountOrder: [],
     });
 
     mockRunCcbUsage.mockResolvedValue({
@@ -177,6 +179,8 @@ describe('getAllUsageHandler', () => {
           usageCachedAt: 0,
         },
       },
+      accountPools: [],
+      accountOrder: [],
     });
 
     mockRunCcbUsage.mockResolvedValue({
@@ -227,6 +231,8 @@ describe('getAllUsageHandler', () => {
     mockReadRegistry.mockResolvedValue({
       current: null,
       accounts: {},
+      accountPools: [],
+      accountOrder: [],
     });
 
     mockRunCcbUsage.mockResolvedValue({
@@ -292,6 +298,8 @@ describe('getAllUsageHandler', () => {
           usageCachedAt: 0,
         },
       },
+      accountPools: [],
+      accountOrder: [],
     });
 
     mockRunCcbUsage.mockRejectedValue(new Error('ccb error'));

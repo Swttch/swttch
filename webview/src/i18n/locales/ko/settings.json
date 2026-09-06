@@ -14,7 +14,7 @@
     "cli": "CLI",
     "browser": "브라우저",
     "ide": "IDE",
-    "account": "계정",
+    "account": "계정 및 풀",
     "usage": "사용량",
     "tunnel": "터널",
     "releases": "릴리스",
@@ -228,7 +228,7 @@
     }
   },
   "account": {
-    "heading": "계정",
+    "heading": "계정 및 풀",
     "addAccount": "계정 추가",
     "actionFailed": "작업 실패",
     "loading": "계정 불러오는 중…",
@@ -239,6 +239,31 @@
     "inUse": "사용 중",
     "switch": "전환",
     "removeAccount": "계정 제거",
+    "pool": {
+      "sectionTitle": "계정 풀",
+      "accountsSectionTitle": "계정",
+      "defaultName": "계정 풀 {{value}}",
+      "ordered": "순서대로",
+      "poolCount": "풀 {{count}}개",
+      "accountCount": "계정 {{count}}개",
+      "empty": "아직 계정 풀이 없습니다. 계정을 다른 계정 위로 드래그하면 풀이 만들어집니다.",
+      "noStandaloneAccounts": "모든 계정이 풀에 포함되어 있습니다.",
+      "switchOrder": "자동 전환 순서",
+      "dragAccount": "드래그해서 묶기 또는 순서 변경",
+      "dropToGroup": "여기에 놓아 묶기",
+      "next": "다음",
+      "removeFromPool": "풀에서 제거",
+      "delete": "풀 삭제",
+      "nudge": {
+        "title": "한도에 걸려도 대화가 멈추지 않게",
+        "description": "계정을 하나의 풀로 묶어두면, 한도에 도달했을 때 같은 풀의 다음 계정이 이어받아 대화를 그대로 계속합니다.",
+        "howTo": "만들려면 계정을 다른 계정의 가운데로 끌어서 잠시 멈추세요.",
+        "learnMore": "알아보기"
+      },
+      "switchOrderHint": "사용량 소진 시 아래 순서대로 계정이 자동 전환됩니다.",
+      "reorderHint": "드래그하여 순서를 변경할 수 있습니다.",
+      "cardTitle": "계정 풀 #{{index}} 설정됨"
+    },
     "lastActive": {
       "today": "오늘",
       "yesterday": "어제",
@@ -326,7 +351,9 @@
       },
       "installingProgress": "cloudflared 설치 중… ({{seconds}}초)",
       "establishingProgress": "터널 연결 수립 중… ({{seconds}}초)",
-      "estimatedTime": "보통 약 1분이 걸립니다. (설치가 필요한 경우 약 3분이 걸립니다.)"
+      "estimatedTime": "보통 약 1분이 걸립니다. (설치가 필요한 경우 약 3분이 걸립니다.)",
+      "pairingHint": "스캔하면 기기가 연결됩니다. QR에는 곧 만료되는 일회용 코드가 들어 있으니, 동작하지 않으면 다시 생성해주세요.",
+      "regeneratePairing": "코드 다시 생성"
     },
     "sleepPrevention": {
       "title": "절전 방지",
