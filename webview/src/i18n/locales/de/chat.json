@@ -98,6 +98,7 @@
       "micDeniedBrowser": "Mikrofon blockiert – über das Schloss in der Adressleiste erlauben und neu laden",
       "noMic": "Kein Mikrofon gefunden",
       "kitMissing": "Für die Spracheingabe wird @swttch/extend-kit benötigt",
+      "notLoggedIn": "Die Spracheingabe erfordert ein angemeldetes Claude-Konto. Ein API-Schlüssel allein erreicht die Diktierfunktion nicht.",
       "install": "Installieren",
       "installing": "Wird installiert…",
       "firstUse": {

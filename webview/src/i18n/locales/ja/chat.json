@@ -98,6 +98,7 @@
       "micDeniedBrowser": "マイクがブロックされています — アドレスバーの鍵アイコンから許可して再読み込みしてください",
       "noMic": "マイクが見つかりません",
       "kitMissing": "音声入力には @swttch/extend-kit が必要です",
+      "notLoggedIn": "音声入力には Claude アカウントへのログインが必要です。API キーだけでは音声認識を利用できません。",
       "install": "インストール",
       "installing": "インストール中…",
       "firstUse": {

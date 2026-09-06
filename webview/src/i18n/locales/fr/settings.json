@@ -84,6 +84,9 @@
         "refresh": "Vérifier à nouveau",
         "refreshing": "Vérification…",
         "dismiss": "Fermer"
+      },
+      "login": {
+        "required": "La saisie vocale nécessite un compte Claude connecté. Une clé API seule ne permet pas d’accéder à la dictée."
       }
     },
     "uiDirection": {

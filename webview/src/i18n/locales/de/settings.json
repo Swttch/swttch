@@ -84,6 +84,9 @@
         "refresh": "Erneut prüfen",
         "refreshing": "Wird geprüft…",
         "dismiss": "Schließen"
+      },
+      "login": {
+        "required": "Die Spracheingabe erfordert ein angemeldetes Claude-Konto. Ein API-Schlüssel allein erreicht die Diktierfunktion nicht."
       }
     },
     "uiDirection": {

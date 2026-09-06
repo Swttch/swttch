@@ -32,6 +32,15 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => ({
   useClaudeSettings: () => ({ scopeSettings: {} }),
 }));
 
+// Dictation also needs a Claude account login, asked for separately from the
+// kit. These tests are about the kit, so the login is simply there.
+vi.mock('@/hooks/queries/useDictationAvailability', () => ({
+  useDictationAvailability: () => ({
+    availability: { available: true, reason: null },
+    loading: false,
+  }),
+}));
+
 vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));

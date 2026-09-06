@@ -10,6 +10,12 @@ interface Props {
   level: number;
   /** Set when the OS or browser refused the microphone. */
   micDenied?: boolean;
+  /**
+   * Dictation cannot run on this machine as it is set up, so far as we know
+   * before anything is pressed. Dimmed but still pressable: see the note on
+   * the button.
+   */
+  unavailable?: boolean;
   /** The keystroke that toggles recording, already formatted for display. */
   shortcut: string;
   disabled?: boolean;
@@ -29,7 +35,7 @@ interface Props {
  * pill, so the microphone's state and what it is hearing read as one control.
  */
 export function MicButton(props: Props) {
-  const { state, level, micDenied, disabled, shortcut, onStart, onStop } = props;
+  const { state, level, micDenied, unavailable, disabled, shortcut, onStart, onStop } = props;
   const { t } = useTranslation('chat');
 
   // The same tap/hold rule the keyboard shortcut uses, so the two controls
@@ -58,7 +64,9 @@ export function MicButton(props: Props) {
     ? t('chatInput.dictation.micDenied')
     : isRecording
       ? t('chatInput.dictation.stop')
-      : t('chatInput.dictation.tapOrHold');
+      : unavailable
+        ? t('chatInput.dictation.notLoggedIn')
+        : t('chatInput.dictation.tapOrHold');
 
   return (
     // z-20 must beat the editable layer's z-10. That layer covers the whole box
@@ -68,15 +76,26 @@ export function MicButton(props: Props) {
     // end-2 rather than end-0: the input's own horizontal padding is 12px, so
     // pinning to the container edge would sit the button on the border.
     <div className="absolute top-[5px] end-2 z-20 group/mic">
+      {/* Dimmed but NOT disabled when dictation is unavailable, which is the
+          one case here that is neither "works" nor "give up".
+
+          Hiding it would take the feature off the screen for the very users who
+          need to be told why they cannot have it, and a disabled button cannot
+          be pressed, so the reason would live only in a hover tooltip. Dimming
+          says "not now" at a glance; pressing puts the reason and the way out
+          (sign in) in the banner, where an instruction belongs (#355). */}
       <button
         type="button"
         disabled={disabled || micDenied}
         aria-label={tooltip}
         aria-pressed={isRecording}
+        aria-disabled={unavailable || undefined}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         className={`flex items-center justify-center gap-1 h-[26px] rounded-[5px] border-none cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          unavailable && !isRecording ? 'opacity-50' : ''
+        } ${
           isRecording
             ? 'ps-2 bg-surface-overlay text-accent-primary'
             : 'bg-transparent text-text-tertiary hover:text-text-secondary'

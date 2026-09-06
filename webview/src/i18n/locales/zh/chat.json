@@ -98,6 +98,7 @@
       "micDeniedBrowser": "麦克风已被阻止 — 请从地址栏的锁形图标中允许，然后刷新",
       "noMic": "未找到麦克风",
       "kitMissing": "语音输入需要 @swttch/extend-kit",
+      "notLoggedIn": "语音输入需要登录 Claude 账号。仅使用 API 密钥无法使用听写功能。",
       "install": "安装",
       "installing": "正在安装…",
       "firstUse": {

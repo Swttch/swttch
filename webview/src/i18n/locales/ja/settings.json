@@ -84,6 +84,9 @@
         "refresh": "再確認",
         "refreshing": "確認中…",
         "dismiss": "閉じる"
+      },
+      "login": {
+        "required": "音声入力には Claude アカウントへのログインが必要です。API キーだけでは音声認識を利用できません。"
       }
     },
     "uiDirection": {

@@ -98,6 +98,7 @@
       "micDeniedBrowser": "Microfone bloqueado — permita pelo cadeado na barra de endereço e recarregue",
       "noMic": "Nenhum microfone encontrado",
       "kitMissing": "A entrada de voz precisa do @swttch/extend-kit",
+      "notLoggedIn": "A entrada de voz precisa de uma conta Claude com sessão iniciada. Uma chave de API sozinha não consegue acessar o ditado.",
       "install": "Instalar",
       "installing": "A instalar…",
       "firstUse": {

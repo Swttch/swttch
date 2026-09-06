@@ -98,6 +98,7 @@
       "micDeniedBrowser": "Micro bloqué — autorisez-le via le cadenas dans la barre d'adresse, puis rechargez",
       "noMic": "Aucun microphone détecté",
       "kitMissing": "La saisie vocale nécessite @swttch/extend-kit",
+      "notLoggedIn": "La saisie vocale nécessite un compte Claude connecté. Une clé API seule ne permet pas d’accéder à la dictée.",
       "install": "Installer",
       "installing": "Installation…",
       "firstUse": {

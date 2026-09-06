@@ -84,6 +84,9 @@
         "refresh": "重新检查",
         "refreshing": "检查中…",
         "dismiss": "关闭"
+      },
+      "login": {
+        "required": "语音输入需要登录 Claude 账号。仅使用 API 密钥无法使用听写功能。"
       }
     },
     "uiDirection": {

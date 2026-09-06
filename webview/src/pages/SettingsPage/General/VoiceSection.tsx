@@ -4,6 +4,8 @@ import { Select, type SelectOption } from '@/components/Select';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
+import { useDictationAvailability } from '@/hooks/queries/useDictationAvailability';
+import { DictationErrorKind } from '@/shared';
 import { ExtendKitControl } from './ExtendKitControl';
 import { ShortcutInput } from './ShortcutInput';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -91,11 +93,30 @@ export function VoiceSection() {
   const { info } = useExtendKit();
   const kitMissing = Boolean(info) && !info?.installed;
 
+  // An installed kit is not enough. Dictation authorizes with the OAuth token a
+  // Claude account login leaves behind, so a machine running on an API key alone
+  // has everything installed and still cannot record (#355). See
+  // DictationErrorKind.NOT_LOGGED_IN for why we do not send the API key
+  // instead. Saying so here is the difference between reading why and finding
+  // out by pressing a microphone that answers with a failure.
+  const { availability } = useDictationAvailability();
+  const notLoggedIn = availability?.reason === DictationErrorKind.NOT_LOGGED_IN;
+
+  // Only one of the two is ever true: a machine with no kit is reported as
+  // kit_missing by both lookups, never as a missing login.
+  const blocked = kitMissing || notLoggedIn;
+
   return (
     <SettingSection
       title={t('general.voice.title')}
       titleAction={<ExtendKitControl />}
-      description={kitMissing ? t('general.voice.kit.required') : undefined}
+      description={
+        kitMissing
+          ? t('general.voice.kit.required')
+          : notLoggedIn
+            ? t('general.voice.login.required')
+            : undefined
+      }
     >
       <SettingRow
         label={t('general.voice.enabled.label')}
@@ -127,8 +148,8 @@ export function VoiceSection() {
           user who turned voice input off must not need the kit installed to turn
           it on again. */}
       <div
-        className={voiceEnabled && !kitMissing ? '' : 'opacity-50 pointer-events-none select-none'}
-        aria-disabled={!voiceEnabled || kitMissing || undefined}
+        className={voiceEnabled && !blocked ? '' : 'opacity-50 pointer-events-none select-none'}
+        aria-disabled={!voiceEnabled || blocked || undefined}
       >
       <SettingRow
         label={t('general.voice.speechLanguage.label')}

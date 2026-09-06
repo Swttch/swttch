@@ -98,6 +98,7 @@
       "micDeniedBrowser": "麥克風已被封鎖 — 請從網址列的鎖頭圖示允許，然後重新整理",
       "noMic": "找不到麥克風",
       "kitMissing": "語音輸入需要 @swttch/extend-kit",
+      "notLoggedIn": "語音輸入需要登入 Claude 帳號。僅使用 API 金鑰無法使用聽寫功能。",
       "install": "安裝",
       "installing": "正在安裝…",
       "firstUse": {

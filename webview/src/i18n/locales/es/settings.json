@@ -84,6 +84,9 @@
         "refresh": "Comprobar de nuevo",
         "refreshing": "Comprobando…",
         "dismiss": "Cerrar"
+      },
+      "login": {
+        "required": "La entrada de voz necesita una cuenta de Claude con la sesión iniciada. Una clave de API por sí sola no puede acceder al dictado."
       }
     },
     "uiDirection": {

@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { MessageType } from '../../shared';
+import { MessageType, DictationErrorKind } from '../../shared';
 import {
   loadSpeechToText,
   getExtendKitVersion,
@@ -27,6 +27,29 @@ import { isNewerVersion } from '../cli-update';
  */
 const streams = new Map<string, SpeechToTextStream>();
 
+/**
+ * Whether this machine can authorize a dictation stream.
+ *
+ * The stream is opened with the OAuth token a Claude account login leaves
+ * behind, and every official Claude Code client declines rather than reaching
+ * for an API key instead. See {@link DictationErrorKind.NOT_LOGGED_IN} for the
+ * evidence, and for what about that is measured and what is not.
+ *
+ * Wrapped rather than called directly because the kit's own probe does not
+ * answer false for every "no": it returns false only for the failures its error
+ * type covers, and a credential store that exists but holds no Claude account
+ * login throws straight out of the property read instead. Both are the same
+ * answer here. Any other failure to read credentials lands here too, and being
+ * told to sign in is still the right next step when we cannot see a login.
+ */
+async function isDictationAuthorized(probe: () => Promise<boolean>): Promise<boolean> {
+  try {
+    return await probe();
+  } catch {
+    return false;
+  }
+}
+
 /** Tear down a connection's stream without waiting on it. */
 async function endStream(connectionId: string): Promise<void> {
   const stream = streams.get(connectionId);
@@ -46,6 +69,11 @@ async function endStream(connectionId: string): Promise<void> {
  * Any stream already open on the connection is closed first, so a user who
  * starts a new recording without a clean stop does not end up with two sockets
  * both writing into the same input.
+ *
+ * Authorization is checked before anything is opened. Left to fail on its own
+ * the kit dies inside its credential read, and the message that reaches the
+ * banner is the exception text ("Cannot read properties of undefined (reading
+ * 'accessToken')") rather than anything the user can act on (#355).
  */
 export async function startDictationHandler(
   connectionId: string,
@@ -58,7 +86,18 @@ export async function startDictationHandler(
   await endStream(connectionId);
 
   try {
-    const { openSpeechToTextStream } = await loadSpeechToText();
+    const { openSpeechToTextStream, isSpeechToTextAvailable } = await loadSpeechToText();
+
+    if (!(await isDictationAuthorized(isSpeechToTextAvailable))) {
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'error',
+        errorKind: DictationErrorKind.NOT_LOGGED_IN,
+        error: 'No Claude account login is available for dictation',
+      });
+      return;
+    }
+
     const stream = await openSpeechToTextStream(
       {
         onTranscript: (text, isFinal) => {
@@ -81,13 +120,13 @@ export async function startDictationHandler(
     });
   } catch (err) {
     // A missing kit is a setup problem the UI can offer to fix, not a failure
-    // to report as noise — so it gets its own code rather than a message the
+    // to report as noise, so it gets its own code rather than a message the
     // webview would have to pattern-match.
     const missing = err instanceof ExtendKitMissingError;
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
-      errorKind: missing ? 'kit_missing' : 'unknown',
+      errorKind: missing ? DictationErrorKind.KIT_MISSING : DictationErrorKind.UNKNOWN,
       error: missing
         ? '@swttch/extend-kit is not installed'
         : err instanceof Error
@@ -147,9 +186,14 @@ export async function stopDictationHandler(
  * GET_DICTATION_AVAILABILITY — can this machine dictate at all?
  *
  * Two different "no" answers, because they need different UI: the kit is not
- * installed (offer to install it), or it is installed but Claude Code is not
- * logged in here (tell them to log in). Never throws — an unavailable feature
- * is an answer, not an error.
+ * installed (offer to install it), or it is installed but this machine has no
+ * Claude account login (tell them to sign in). Never throws, since an
+ * unavailable feature is an answer rather than an error.
+ *
+ * Only a missing kit may be reported as a missing kit. Catching everything and
+ * calling all of it `kit_missing` is what this handler used to do, which named
+ * the wrong problem for the case that actually happens: an installed kit with no
+ * login behind it (#355).
  */
 export async function getDictationAvailabilityHandler(
   connectionId: string,
@@ -157,23 +201,26 @@ export async function getDictationAvailabilityHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+  let probe: () => Promise<boolean>;
   try {
-    const { isSpeechToTextAvailable } = await loadSpeechToText();
-    const loggedIn = await isSpeechToTextAvailable();
-    connections.sendTo(connectionId, MessageType.ACK, {
-      requestId: message.requestId,
-      status: 'ok',
-      available: loggedIn,
-      reason: loggedIn ? null : 'not_logged_in',
-    });
+    ({ isSpeechToTextAvailable: probe } = await loadSpeechToText());
   } catch {
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'ok',
       available: false,
-      reason: 'kit_missing',
+      reason: DictationErrorKind.KIT_MISSING,
     });
+    return;
   }
+
+  const authorized = await isDictationAuthorized(probe);
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    status: 'ok',
+    available: authorized,
+    reason: authorized ? null : DictationErrorKind.NOT_LOGGED_IN,
+  });
 }
 
 /**
