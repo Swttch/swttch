@@ -10,6 +10,16 @@ import { collectSessionAssets } from '../features/collectSessionAssets';
  * Exists because the chat transcript is paged: the webview only holds the newest
  * slice, so an image attached earlier in a long session is simply not there to
  * step to. This answers for the whole session at once, without the base64.
+ *
+ * No sponsor gate here, deliberately. What sponsorship unlocks is stepping ACROSS
+ * the session in the viewer — not seeing the images, which everyone does on the
+ * Assets screen, thumbnails and all. Gating this would blank that screen for
+ * non-sponsors and move the line the product actually drew.
+ *
+ * That makes it ensureSponsor's "pattern B": the gated effect happens in the
+ * frontend and there is no backend request that could carry it. SCHEDULE_MESSAGE
+ * is gated (pattern A) because the backend is what creates the reservation;
+ * here the backend only reads what the user already owns.
  */
 export async function getSessionAssetsHandler(
   connectionId: string,

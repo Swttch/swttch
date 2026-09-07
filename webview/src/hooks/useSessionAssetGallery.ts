@@ -22,6 +22,14 @@ export interface SessionAssetGallery {
   lockedCount: number;
   /** Hand to the viewer so a pending slot is fetched when it comes on screen. */
   onIndexChange: (index: number) => void;
+  /**
+   * Whether the session holds images outside this message at all.
+   *
+   * True for a sponsor too, where `lockedCount` is zero: the Assets screen is
+   * still the way to see the session laid out, and without this the only route
+   * to it is a dock icon that ships hidden.
+   */
+  hasMoreInSession: boolean;
 }
 
 /**
@@ -98,6 +106,8 @@ export function useSessionAssetGallery(params: {
     return Math.max(assets.length - localSrcs.length, 0);
   }, [sessionWide, assets, localSrcs.length]);
 
+  const hasMoreInSession = (assets?.length ?? 0) > localSrcs.length;
+
   const onIndexChange = useCallback(
     (index: number) => {
       if (!sessionWide || !assets) return;
@@ -129,5 +139,5 @@ export function useSessionAssetGallery(params: {
     [sessionWide, assets, fetched, srcs, send, workingDir, sessionId],
   );
 
-  return { srcs, initialIndex, lockedCount, onIndexChange };
+  return { srcs, initialIndex, lockedCount, onIndexChange, hasMoreInSession };
 }

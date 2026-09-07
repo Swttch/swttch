@@ -5,6 +5,7 @@ import { ImageLightbox } from '@/components/ImageLightbox';
 import { useSessionAssetGallery } from '@/hooks/useSessionAssetGallery';
 import { openSettingsAt } from '@/utils/openSettingsAt';
 import { Route } from '@/router';
+import { openAssetsModal } from '@/pages/ChatPage/SessionHeader/dock/actions';
 
 interface ImageAttachmentsProps {
   images: ImageBlockDto[];
@@ -25,26 +26,44 @@ const getImageSrc = (image: ImageBlockDto): string => {
 };
 
 /**
- * Invitation shown at the edge of a non-sponsor's viewer.
+ * What sits at the edge of the viewer when the session holds more images.
  *
- * States the number that is out of reach, because "there is more" persuades far
- * less than "there are 24 more". Follows showSponsorGatedToast's tone: this
- * reads as an offer, not as a wall.
+ * Two jobs at once. For anyone it offers the Assets screen, which is otherwise
+ * reachable only through a dock icon that ships hidden — so without this a
+ * sponsor can pay for the feature and never find it.
+ *
+ * For a non-sponsor it also states the number out of reach, because "there is
+ * more" persuades far less than "there are 24 more". Following
+ * showSponsorGatedToast's tone, it reads as an offer rather than a wall, and it
+ * says where everything IS visible instead of only what is not.
  */
-const MoreInSessionNotice: React.FC<{ count: number }> = ({ count }) => {
+const SessionAssetsNotice: React.FC<{ lockedCount: number; onOpenAssets: () => void }> = ({
+  lockedCount,
+  onOpenAssets,
+}) => {
   const { t } = useTranslation('chatTools');
+  const { t: tChat } = useTranslation('chat');
   const { t: tc } = useTranslation('common');
 
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs">
-      <span>{t('attachments.lightbox.moreInSession', { count })}</span>
+      {lockedCount > 0 && <span>{t('attachments.lightbox.moreInSession', { count: lockedCount })}</span>}
       <button
         type="button"
-        onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
-        className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
+        onClick={onOpenAssets}
+        className="whitespace-nowrap font-medium text-text-link transition-opacity hover:opacity-80"
       >
-        {tc('sponsorGated.learnMore')}
+        {tChat('assets.openScreen')}
       </button>
+      {lockedCount > 0 && (
+        <button
+          type="button"
+          onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
+          className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
+        >
+          {tc('sponsorGated.learnMore')}
+        </button>
+      )}
     </div>
   );
 };
@@ -57,7 +76,7 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
 
   const localSrcs = React.useMemo(() => images.map(getImageSrc), [images]);
 
-  const { srcs, initialIndex, lockedCount, onIndexChange } = useSessionAssetGallery({
+  const { srcs, initialIndex, lockedCount, onIndexChange, hasMoreInSession } = useSessionAssetGallery({
     entryUuid,
     localSrcs,
     openedLocalIndex: openedIndex,
@@ -89,7 +108,19 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
           initialIndex={initialIndex}
           onClose={() => setOpenedIndex(null)}
           onIndexChange={onIndexChange}
-          notice={lockedCount > 0 ? <MoreInSessionNotice count={lockedCount} /> : undefined}
+          notice={
+            hasMoreInSession ? (
+              <SessionAssetsNotice
+                lockedCount={lockedCount}
+                onOpenAssets={() => {
+                  // Close first: the viewer sits above the Assets screen, so
+                  // leaving it up would hide the very screen just asked for.
+                  setOpenedIndex(null);
+                  openAssetsModal();
+                }}
+              />
+            ) : undefined
+          }
         />
       )}
     </>

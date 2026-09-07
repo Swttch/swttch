@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "閉じる",
     "openImage": "画像を開く",
-    "moreInSession": "このセッションにあと{{count}}枚あります"
+    "moreInSession": "このセッションにあと{{count}}枚あります",
+    "openScreen": "このセッションのアセットを見る",
+    "sponsorHint": "セッション全体を送るのはスポンサー機能です"
   }
 }

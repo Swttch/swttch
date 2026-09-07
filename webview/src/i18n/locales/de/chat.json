@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "Schließen",
     "openImage": "Bild öffnen",
-    "moreInSession": "{{count}} weitere in dieser Sitzung"
+    "moreInSession": "{{count}} weitere in dieser Sitzung",
+    "openScreen": "Assets dieser Sitzung ansehen",
+    "sponsorHint": "Das Durchblättern der ganzen Sitzung ist eine Sponsor-Funktion"
   }
 }

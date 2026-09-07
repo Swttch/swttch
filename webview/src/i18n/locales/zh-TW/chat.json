@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "關閉",
     "openImage": "開啟圖片",
-    "moreInSession": "此工作階段中還有 {{count}} 張"
+    "moreInSession": "此工作階段中還有 {{count}} 張",
+    "openScreen": "檢視此工作階段的資源",
+    "sponsorHint": "跨整個工作階段瀏覽是贊助者功能"
   }
 }

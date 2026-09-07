@@ -133,6 +133,34 @@ describe('AssetsModal', () => {
     expect(screen.queryByText(/more in this session/)).toBeNull();
   });
 
+  it('tells a non-sponsor what sponsorship adds, without blocking the screen', () => {
+    // Someone who opens this screen and closes it without clicking an image
+    // would otherwise never learn the feature exists.
+    assets.mockReturnValue([asset('u1', 1)]);
+
+    render(<AssetsModal onClose={vi.fn()} />);
+
+    expect(screen.getByText('Stepping across the session is a sponsor feature')).toBeInTheDocument();
+    expect(screen.getByLabelText('Open image')).toBeInTheDocument();
+  });
+
+  it('does not nag a sponsor about sponsoring', () => {
+    assets.mockReturnValue([asset('u1', 1)]);
+    isSponsor.mockReturnValue(true);
+
+    render(<AssetsModal onClose={vi.fn()} />);
+
+    expect(screen.queryByText('Stepping across the session is a sponsor feature')).toBeNull();
+  });
+
+  it('says nothing about sponsorship when there are no images to speak of', () => {
+    assets.mockReturnValue([]);
+
+    render(<AssetsModal onClose={vi.fn()} />);
+
+    expect(screen.queryByText('Stepping across the session is a sponsor feature')).toBeNull();
+  });
+
   it('closes on Escape while the viewer is not up', () => {
     const onClose = vi.fn();
     assets.mockReturnValue([asset('u1', 1)]);

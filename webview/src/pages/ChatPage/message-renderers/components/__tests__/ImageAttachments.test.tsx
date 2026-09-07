@@ -24,11 +24,12 @@ function image(data: string): ImageBlockDto {
 const IMAGES = [image('AAA'), image('BBB'), image('CCC')];
 
 /** Default stub: the ungated case, where the viewer shows just this message. */
-function localOnlyGallery(lockedCount = 0) {
+function localOnlyGallery(lockedCount = 0, hasMoreInSession = lockedCount > 0) {
   return (params: { localSrcs: string[]; openedLocalIndex: number | null }) => ({
     srcs: params.localSrcs,
     initialIndex: params.openedLocalIndex ?? 0,
     lockedCount,
+    hasMoreInSession,
     onIndexChange: vi.fn(),
   });
 }
@@ -99,13 +100,49 @@ describe('ImageAttachments', () => {
     expect(screen.getByText('Learn more')).toBeInTheDocument();
   });
 
-  it('shows no invitation when this message already holds every image', () => {
-    gallery.mockImplementation(localOnlyGallery(0));
+  it('shows nothing at the edge when this message already holds every image', () => {
+    gallery.mockImplementation(localOnlyGallery(0, false));
     render(<ImageAttachments images={IMAGES} />);
 
     fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(screen.queryByText(/more in this session/)).toBeNull();
+    expect(screen.queryByText('View this session’s assets')).toBeNull();
+  });
+
+  it('offers the Assets screen to a sponsor too, who has nothing locked', () => {
+    // Otherwise the only route to that screen is a dock icon that ships hidden,
+    // so someone can pay for the feature and never find it.
+    gallery.mockImplementation(localOnlyGallery(0, true));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(screen.getByText('View this session’s assets')).toBeInTheDocument();
+    expect(screen.queryByText(/more in this session/)).toBeNull();
+    expect(screen.queryByText('Learn more')).toBeNull();
+  });
+
+  it('points at where the images ARE visible, not only at what is locked', () => {
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(screen.getByText('24 more in this session')).toBeInTheDocument();
+    expect(screen.getByText('View this session’s assets')).toBeInTheDocument();
+  });
+
+  it('closes the viewer when handing over to the Assets screen', () => {
+    // The viewer sits above that screen, so leaving it up would hide the very
+    // thing the user just asked for.
+    gallery.mockImplementation(localOnlyGallery(0, true));
+    render(<ImageAttachments images={IMAGES} />);
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    fireEvent.click(screen.getByText('View this session’s assets'));
+
+    expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
   it('passes the entry uuid through so the gallery can locate this message', () => {

@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "Fechar",
     "openImage": "Abrir imagem",
-    "moreInSession": "Mais {{count}} nesta sessão"
+    "moreInSession": "Mais {{count}} nesta sessão",
+    "openScreen": "Ver os recursos desta sessão",
+    "sponsorHint": "Percorrer toda a sessão é um recurso para patrocinadores"
   }
 }

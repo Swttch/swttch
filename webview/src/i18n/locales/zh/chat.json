@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "关闭",
     "openImage": "打开图片",
-    "moreInSession": "此会话中还有 {{count}} 张"
+    "moreInSession": "此会话中还有 {{count}} 张",
+    "openScreen": "查看此会话的资源",
+    "sponsorHint": "跨整个会话浏览是赞助者功能"
   }
 }

@@ -561,6 +561,8 @@
     "loading": "…",
     "close": "بستن",
     "openImage": "باز کردن تصویر",
-    "moreInSession": "{{count}} مورد دیگر در این نشست"
+    "moreInSession": "{{count}} مورد دیگر در این نشست",
+    "openScreen": "دیدن دارایی‌های این نشست",
+    "sponsorHint": "پیمایش کل نشست یک ویژگی حامیان است"
   }
 }

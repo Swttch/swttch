@@ -573,6 +573,8 @@
     "loading": "…",
     "close": "إغلاق",
     "openImage": "فتح الصورة",
-    "moreInSession": "{{count}} أخرى في هذه الجلسة"
+    "moreInSession": "{{count}} أخرى في هذه الجلسة",
+    "openScreen": "عرض أصول هذه الجلسة",
+    "sponsorHint": "التنقل عبر الجلسة كاملة ميزة للداعمين"
   }
 }

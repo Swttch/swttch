@@ -6,6 +6,8 @@ import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSe
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
 import type { SessionAsset } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { openSettingsAt } from '@/utils/openSettingsAt';
+import { Route } from '@/router';
 import { AssetThumbnail } from './AssetThumbnail';
 
 interface Props {
@@ -62,6 +64,7 @@ function formatTime(timestamp: string | null): string {
 export function AssetsModal(props: Props) {
   const { onClose } = props;
   const { t } = useTranslation('chat');
+  const { t: tc } = useTranslation('common');
   const assets = useSessionAssets(true);
   const { loaded, ensure } = useSessionAssetLoader();
   const { isSponsor } = useSponsorStatus();
@@ -128,6 +131,26 @@ export function AssetsModal(props: Props) {
               <XMarkIcon className="w-4 h-4" />
             </button>
           </div>
+
+          {/*
+            Said once here, quietly, because a non-sponsor who opens this screen
+            and closes it without clicking an image would otherwise never learn
+            the feature exists — the gate only speaks at the end of a viewer they
+            may never open. Phrased as what sponsorship adds, not as a wall: this
+            screen and every thumbnail on it are open to everyone.
+          */}
+          {!isSponsor && (assets?.length ?? 0) > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-border-default text-xs text-text-tertiary">
+              <span>{t('assets.sponsorHint')}</span>
+              <button
+                type="button"
+                onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
+                className="font-medium text-accent-claude transition-opacity hover:opacity-80"
+              >
+                {tc('sponsorGated.learnMore')}
+              </button>
+            </div>
+          )}
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
             {assets && assets.length === 0 && (
