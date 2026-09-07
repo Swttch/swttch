@@ -28,7 +28,9 @@
     "lightbox": {
       "close": "بستن",
       "previous": "تصویر قبلی",
-      "next": "تصویر بعدی"
+      "next": "تصویر بعدی",
+      "loading": "در حال بارگذاری…",
+      "moreInSession": "{{count}} مورد دیگر در این نشست"
     }
   },
   "edit": {

@@ -2,9 +2,19 @@ import React, { useState } from 'react';
 import type { ImageBlockDto } from '../../../../dto/message/ContentBlockDto';
 import { useTranslation } from '@/i18n';
 import { ImageLightbox } from '@/components/ImageLightbox';
+import { useSessionAssetGallery } from '@/hooks/useSessionAssetGallery';
+import { openSettingsAt } from '@/utils/openSettingsAt';
+import { Route } from '@/router';
 
 interface ImageAttachmentsProps {
   images: ImageBlockDto[];
+  /**
+   * The transcript entry these images belong to.
+   *
+   * Absent while a turn is still streaming — the entry is not on disk yet, so
+   * the session index cannot point at it and the viewer stays inside the message.
+   */
+  entryUuid?: string;
 }
 
 const getImageSrc = (image: ImageBlockDto): string => {
@@ -14,11 +24,44 @@ const getImageSrc = (image: ImageBlockDto): string => {
   return image.source.data; // URL type
 };
 
-export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images }) => {
+/**
+ * Invitation shown at the edge of a non-sponsor's viewer.
+ *
+ * States the number that is out of reach, because "there is more" persuades far
+ * less than "there are 24 more". Follows showSponsorGatedToast's tone: this
+ * reads as an offer, not as a wall.
+ */
+const MoreInSessionNotice: React.FC<{ count: number }> = ({ count }) => {
+  const { t } = useTranslation('chatTools');
+  const { t: tc } = useTranslation('common');
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs">
+      <span>{t('attachments.lightbox.moreInSession', { count })}</span>
+      <button
+        type="button"
+        onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
+        className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
+      >
+        {tc('sponsorGated.learnMore')}
+      </button>
+    </div>
+  );
+};
+
+export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entryUuid }) => {
   // The clicked position, not its src: the viewer steps through neighbours, and
   // a src alone cannot say which image comes next.
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
   const { t } = useTranslation('chatTools');
+
+  const localSrcs = React.useMemo(() => images.map(getImageSrc), [images]);
+
+  const { srcs, initialIndex, lockedCount, onIndexChange } = useSessionAssetGallery({
+    entryUuid,
+    localSrcs,
+    openedLocalIndex: openedIndex,
+  });
 
   return (
     <>
@@ -42,9 +85,11 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images }) =>
 
       {openedIndex !== null && (
         <ImageLightbox
-          srcs={images.map(getImageSrc)}
-          initialIndex={openedIndex}
+          srcs={srcs}
+          initialIndex={initialIndex}
           onClose={() => setOpenedIndex(null)}
+          onIndexChange={onIndexChange}
+          notice={lockedCount > 0 ? <MoreInSessionNotice count={lockedCount} /> : undefined}
         />
       )}
     </>

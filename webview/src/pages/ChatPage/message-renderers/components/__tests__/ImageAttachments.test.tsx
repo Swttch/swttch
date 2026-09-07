@@ -1,7 +1,20 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { ImageAttachments } from '../ImageAttachments';
 import type { ImageBlockDto } from '../../../../../dto/message/ContentBlockDto';
+
+// The session/working-dir contexts and the gallery hook are exercised by
+// useSessionAssetGallery's own tests. Here the concern is only the thumbnail
+// grid and which position it opens the viewer on, so the surroundings are
+// stubbed rather than mounted.
+const gallery = vi.fn();
+vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ currentSessionId: 's1' }) }));
+vi.mock('@/contexts/WorkingDirContext', () => ({ useWorkingDir: () => ({ workingDirectory: '/w' }) }));
+vi.mock('@/hooks/useSessionAssetGallery', () => ({
+  useSessionAssetGallery: (params: { localSrcs: string[]; openedLocalIndex: number | null }) =>
+    gallery(params),
+}));
+
+import { ImageAttachments } from '../ImageAttachments';
 
 /** Minimal stand-in for the wire shape; only `source` is read for rendering. */
 function image(data: string): ImageBlockDto {
@@ -10,7 +23,21 @@ function image(data: string): ImageBlockDto {
 
 const IMAGES = [image('AAA'), image('BBB'), image('CCC')];
 
-beforeEach(() => cleanup());
+/** Default stub: the ungated case, where the viewer shows just this message. */
+function localOnlyGallery(lockedCount = 0) {
+  return (params: { localSrcs: string[]; openedLocalIndex: number | null }) => ({
+    srcs: params.localSrcs,
+    initialIndex: params.openedLocalIndex ?? 0,
+    lockedCount,
+    onIndexChange: vi.fn(),
+  });
+}
+
+beforeEach(() => {
+  cleanup();
+  gallery.mockReset();
+  gallery.mockImplementation(localOnlyGallery());
+});
 
 describe('ImageAttachments', () => {
   it('renders one thumbnail per attached image', () => {
@@ -58,5 +85,32 @@ describe('ImageAttachments', () => {
 
     expect(screen.queryByAltText('Full size')).toBeNull();
     expect(screen.getAllByAltText(/^Image \d+$/)).toHaveLength(3);
+  });
+
+  it('offers the rest of the session, by number, when images are out of reach', () => {
+    // Naming the count is the point: "there is more" persuades far less than
+    // "there are 24 more".
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(screen.getByText('24 more in this session')).toBeInTheDocument();
+    expect(screen.getByText('Learn more')).toBeInTheDocument();
+  });
+
+  it('shows no invitation when this message already holds every image', () => {
+    gallery.mockImplementation(localOnlyGallery(0));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(screen.queryByText(/more in this session/)).toBeNull();
+  });
+
+  it('passes the entry uuid through so the gallery can locate this message', () => {
+    render(<ImageAttachments images={IMAGES} entryUuid="entry-1" />);
+
+    expect(gallery).toHaveBeenCalledWith(expect.objectContaining({ entryUuid: 'entry-1' }));
   });
 });

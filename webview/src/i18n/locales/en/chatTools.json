@@ -28,7 +28,9 @@
     "lightbox": {
       "close": "Close",
       "previous": "Previous image",
-      "next": "Next image"
+      "next": "Next image",
+      "loading": "Loading…",
+      "moreInSession": "{{count}} more in this session"
     }
   },
   "edit": {
