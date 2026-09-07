@@ -131,6 +131,7 @@ import { playSystemSoundHandler } from './playSystemSound';
 import { clientInfoHandler } from './clientInfo';
 import { clientErrorHandler } from './clientError';
 import { panelFocusedHandler } from './panelFocused';
+import { imageAttachedHandler } from './imageAttached';
 import { getMcpServersHandler } from './getMcpServersHandler';
 import { getMcpServerToolsHandler } from './getMcpServerToolsHandler';
 import {
@@ -537,6 +538,9 @@ export async function handleMessage(
       break;
     case MessageType.PANEL_FOCUSED:
       panelFocusedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.IMAGE_ATTACHED:
+      imageAttachedHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_MCP_SERVERS:
       await getMcpServersHandler(connectionId, message, connections, bridge);

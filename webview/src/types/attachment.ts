@@ -4,6 +4,22 @@ export enum AttachmentType {
   Folder = 'folder',
 }
 
+/**
+ * Which of the three entry points the user attached an image through.
+ *
+ * Reported with {@link MessageType.IMAGE_ATTACHED} so telemetry can tell the
+ * paths apart. All three converge on `addImageAttachment`, so without this the
+ * backend would only ever learn that *an* image was attached.
+ */
+export enum ImageAttachSource {
+  /** The paperclip menu's "Image" item, via a hidden file input. */
+  Button = 'button',
+  /** Cmd/Ctrl+V with an image on the clipboard. */
+  Paste = 'paste',
+  /** An image file dropped onto the chat input. */
+  Drop = 'drop',
+}
+
 export abstract class Attachment {
   readonly id: string;
   abstract readonly type: AttachmentType;

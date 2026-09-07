@@ -1,10 +1,36 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Attachment, ImageAttachment, FileAttachment, FolderAttachment, ATTACHMENT_LIMITS } from '../../../../types';
+import { Attachment, ImageAttachment, FileAttachment, FolderAttachment, ATTACHMENT_LIMITS, ImageAttachSource } from '../../../../types';
 import { useTranslation } from '@/i18n';
+import { getBridge } from '@/api/bridge/Bridge';
+import { MessageType } from '@/shared';
+
+/**
+ * Tell the backend an image was attached, purely so telemetry can see it.
+ *
+ * The three attach paths all live in the webview, so before this the backend
+ * never learned that attaching happened at all and the feature was invisible in
+ * usage data. Fire-and-forget over `sendRaw` like PANEL_FOCUSED: nothing ACKs
+ * it, and losing one ping matters far less than delaying the attachment.
+ *
+ * Sends the mime type and byte size but NEVER the file name, which routinely
+ * carries personal information (paths, project names, screenshot titles).
+ */
+function reportImageAttached(source: ImageAttachSource, file: File): void {
+  try {
+    getBridge().sendRaw({
+      type: MessageType.IMAGE_ATTACHED,
+      payload: { source, mimeType: file.type, size: file.size },
+      timestamp: Date.now(),
+    });
+  } catch {
+    // Socket not open yet. The attachment itself already succeeded, so a lost
+    // telemetry ping must never surface to the user.
+  }
+}
 
 export interface UseAttachmentsReturn {
   attachments: Attachment[];
-  addImageAttachment: (file: File) => Promise<void>;
+  addImageAttachment: (file: File, source: ImageAttachSource) => Promise<void>;
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
   addFolderAttachment: (absolutePath: string, folderName: string) => void;
   removeAttachment: (id: string) => void;
@@ -22,7 +48,7 @@ export function useAttachments(): UseAttachmentsReturn {
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const addImageAttachment = useCallback(async (file: File) => {
+  const addImageAttachment = useCallback(async (file: File, source: ImageAttachSource) => {
     // Clear previous error
     setError(null);
 
@@ -63,6 +89,10 @@ export function useAttachments(): UseAttachmentsReturn {
     });
 
     setAttachments((prev) => [...prev, attachment]);
+
+    // Only after the attachment actually lands: a rejected type or an oversize
+    // file returned above, so those never count as an attach.
+    reportImageAttached(source, file);
   }, []);
 
   const addFileAttachment = useCallback((absolutePath: string, fileName: string, size?: number) => {
@@ -110,7 +140,7 @@ export function useAttachments(): UseAttachmentsReturn {
 
     e.preventDefault(); // 이미지가 있을 때만 기본 동작 차단
     for (const file of imageFiles) {
-      await addImageAttachment(file);
+      await addImageAttachment(file, ImageAttachSource.Paste);
     }
   }, [addImageAttachment]);
 
@@ -127,7 +157,7 @@ export function useAttachments(): UseAttachmentsReturn {
     const files = e.dataTransfer.files;
     for (const file of Array.from(files)) {
       if (file.type.startsWith('image/')) {
-        await addImageAttachment(file);
+        await addImageAttachment(file, ImageAttachSource.Drop);
       }
     }
   }, [addImageAttachment, setIsDragOver]);
