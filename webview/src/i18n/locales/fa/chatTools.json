@@ -8,8 +8,6 @@
     }
   },
   "message": {
-    "copyMessage": "کپی پیام",
-    "retry": "تلاش مجدد",
     "unknownTool": "ناشناخته"
   },
   "interrupted": {

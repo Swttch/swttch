@@ -8,8 +8,6 @@
     }
   },
   "message": {
-    "copyMessage": "メッセージをコピー",
-    "retry": "再試行",
     "unknownTool": "unknown"
   },
   "interrupted": {

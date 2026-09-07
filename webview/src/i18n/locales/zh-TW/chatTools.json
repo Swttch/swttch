@@ -8,8 +8,6 @@
     }
   },
   "message": {
-    "copyMessage": "複製訊息",
-    "retry": "重試",
     "unknownTool": "未知"
   },
   "interrupted": {

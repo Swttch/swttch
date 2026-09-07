@@ -8,8 +8,6 @@
     }
   },
   "message": {
-    "copyMessage": "نسخ الرسالة",
-    "retry": "إعادة المحاولة",
     "unknownTool": "غير معروف"
   },
   "interrupted": {
