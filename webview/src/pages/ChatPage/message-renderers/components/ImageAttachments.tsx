@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { ImageBlockDto } from '../../../../dto/message/ContentBlockDto';
 import { useTranslation } from '@/i18n';
-import { ImageLightbox } from './ImageLightbox';
+import { ImageLightbox } from '@/components/ImageLightbox';
 
 interface ImageAttachmentsProps {
   images: ImageBlockDto[];

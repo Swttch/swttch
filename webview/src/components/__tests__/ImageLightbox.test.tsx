@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { ImageLightbox } from '../ImageLightbox';
+import { ImageLightbox } from '@/components/ImageLightbox';
 
 const SRCS = ['data:image/png;base64,AAA', 'data:image/png;base64,BBB', 'data:image/png;base64,CCC'];
 
@@ -142,5 +142,25 @@ describe('ImageLightbox', () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(screen.queryByAltText('Full size')).toBeNull();
+  });
+
+  it('pulls back to the last image when the list shrinks under it', () => {
+    // The composer lets an attachment be removed while the viewer is open. An
+    // index left past the end would render a blank frame.
+    const { rerender } = render(<ImageLightbox srcs={SRCS} initialIndex={2} onClose={vi.fn()} />);
+    expect(shownSrc()).toBe(SRCS[2]);
+
+    rerender(<ImageLightbox srcs={SRCS.slice(0, 2)} initialIndex={2} onClose={vi.fn()} />);
+
+    expect(shownSrc()).toBe(SRCS[1]);
+  });
+
+  it('closes itself when the last image is removed', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<ImageLightbox srcs={[SRCS[0]]} initialIndex={0} onClose={onClose} />);
+
+    rerender(<ImageLightbox srcs={[]} initialIndex={0} onClose={onClose} />);
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

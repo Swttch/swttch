@@ -33,6 +33,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({ srcs, initialIndex
   const goPrevious = useCallback(() => setIndex((i) => (i > 0 ? i - 1 : i)), []);
   const goNext = useCallback(() => setIndex((i) => (i < lastIndex ? i + 1 : i)), [lastIndex]);
 
+  // The list can shrink while the viewer is open — the composer lets the user
+  // remove an attachment. Without this the index would point past the end and
+  // the viewer would render a blank frame; an emptied list closes outright.
+  useEffect(() => {
+    if (srcs.length === 0) {
+      onClose();
+      return;
+    }
+    setIndex((i) => Math.min(i, srcs.length - 1));
+  }, [srcs.length, onClose]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') goPrevious();
