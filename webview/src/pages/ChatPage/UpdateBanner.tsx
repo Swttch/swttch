@@ -3,15 +3,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { isBrowser } from '@/config/environment';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-
-function extractTitle(latestVersion: string | null, notes: string): string {
-  const match = notes.match(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/i);
-  const title = match ? match[1] : null;
-  if (title && latestVersion) {
-    return title.replace(`${latestVersion} - `, '');
-  }
-  return '';
-}
+import { parseLatestReleaseNotes } from './parseReleaseNotes';
 
 export function UpdateBanner() {
   const { hasUpdate, latestVersion, latestNotes, requiresRestart, skip } = useUpdateAvailable();
@@ -24,15 +16,26 @@ export function UpdateBanner() {
     send(MessageType.UPDATE_PLUGIN, {});
   };
 
-  const title = latestNotes ? extractTitle(latestVersion, latestNotes) : '';
+  // The marketplace changelog concatenates several releases; only the newest
+  // section belongs in this banner (see parseReleaseNotes.ts).
+  const { title, items } = parseLatestReleaseNotes(latestNotes, latestVersion);
   const showActions = !isBrowser();
 
   return (
-      <div className="w-full z-20 border-t border-b border-state-info-border bg-state-info-bg px-4 py-1.5 flex items-center gap-2">
-        <span className="text-text-primary text-[0.8461rem] flex-1 min-w-0 truncate sm:whitespace-normal sm:overflow-visible">
-          <strong>{t('updateBanner.released', { version: latestVersion })}</strong>
-          {title && <span className="ms-2 text-text-link text-[0.7692rem]">{title}</span>}
-        </span>
+      <div className="w-full z-20 border-t border-b border-banner-info-border bg-banner-info-bg px-4 py-1.5 flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <span className="text-text-primary text-[0.8461rem]">
+            <strong>{t('updateBanner.released', { version: latestVersion })}</strong>
+            {title && <span className="ms-2 text-text-link text-[0.7692rem]">{title}</span>}
+          </span>
+          {items.length > 0 && (
+            <ul className="mt-1 list-disc ps-5 space-y-0.5 text-text-secondary text-[0.7692rem]">
+              {items.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {showActions && (
           <div className="ms-auto flex items-center gap-2 flex-shrink-0">

@@ -221,6 +221,19 @@
   --state-info-fg:     rgb(var(--state-info-fg-rgb));
   --state-info-border: #90CAF9;
 
+  /* Full-width banners (UpdateBanner and its BannerArea siblings).
+     `--state-info-bg` is deliberately translucent in the dark theme so it can
+     tint hover states and inline badges over any surface. A full-width banner
+     is different: it spans the whole viewport and stays on screen, so the
+     see-through tint reads as a rendering artifact rather than a highlight.
+     These tokens are the SAME color the translucent token composites to over
+     `--surface-base`, baked to an opaque value (measured, not guessed):
+       dark  = rgba(59,130,246,0.15) over rgb(26,26,26)    -> #1F2A3B
+       light = #E3F2FD               over rgb(255,255,255) -> #E3F2FD (unchanged)
+     Keep them in sync if `--state-info-bg` or `--surface-base` ever changes. */
+  --banner-info-bg:     #E3F2FD;
+  --banner-info-border: #90CAF9;
+
   /* State — Pending */
   --state-pending-bg:     #FFF3E0;
   --state-pending-fg-rgb: 230 81 0;
@@ -375,6 +388,14 @@
   --state-info-fg-rgb: 96 165 250;
   --state-info-fg:     rgb(var(--state-info-fg-rgb));
   --state-info-border: rgba(59, 130, 246, 0.40);
+
+  /* Opaque bake of the translucent info tokens for full-width banners. See the
+     `--banner-info-*` comment under `:root`. Measured in the browser, not
+     guessed: bg is rgba(59,130,246,0.15) over rgb(26,26,26); border is
+     rgba(59,130,246,0.40) over that resulting bg (a border paints on top of the
+     element's own background). */
+  --banner-info-bg:     #1F2A3B;
+  --banner-info-border: #2A4D86;
 
   --state-pending-bg:     rgba(245, 158, 11, 0.15);
   --state-pending-fg-rgb: 251 191 36;
