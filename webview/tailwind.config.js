@@ -96,6 +96,15 @@ export default {
           'pending-border': 'var(--state-pending-border)',
         },
 
+        // Full-width banners (usage: bg-banner-info-bg, border-banner-info-border)
+        // Opaque bakes of the `state-info-*` tokens, for bars that span the
+        // viewport and stay on screen — see the `--banner-info-*` comment in
+        // index.css for why those must not be translucent.
+        banner: {
+          'info-bg':     'var(--banner-info-bg)',
+          'info-border': 'var(--banner-info-border)',
+        },
+
         // Overlay (usage: bg-overlay-scrim)
         overlay: {
           scrim: 'var(--overlay-scrim)',
