@@ -1,13 +1,20 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { ImageLightbox } from '@/components/ImageLightbox';
+import {
+  MoreInSessionNotice,
+  EdgeSponsorHint,
+  LearnMoreButton,
+} from '@/components/ImageLightbox/SponsorGateNotice';
 import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSessionAssets';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
-import type { SessionAsset } from '@/shared';
+import { AssetActivityKind, type SessionAsset } from '@/shared';
+import { reportAssetActivity } from '@/utils/reportAssetActivity';
 import { useTranslation } from '@/i18n';
-import { openSettingsAt } from '@/utils/openSettingsAt';
-import { Route } from '@/router';
+import { useDockLayout } from '@/pages/ChatPage/SessionHeader/dock/useDockLayout';
+import { toggleDockVisible } from '@/pages/ChatPage/SessionHeader/dock/toggleDockVisible';
+import { DockItemId } from '@/types/settings';
 import { AssetThumbnail } from './AssetThumbnail';
 
 interface Props {
@@ -64,7 +71,6 @@ function formatTime(timestamp: string | null): string {
 export function AssetsModal(props: Props) {
   const { onClose } = props;
   const { t } = useTranslation('chat');
-  const { t: tc } = useTranslation('common');
   const assets = useSessionAssets(true);
   const { loaded, ensure } = useSessionAssetLoader();
   const { isSponsor } = useSponsorStatus();
@@ -105,6 +111,32 @@ export function AssetsModal(props: Props) {
 
   const lockedCount = opened && !isSponsor ? (assets?.length ?? 0) - scope.length : 0;
 
+  /*
+    Counted once per viewer, exactly as the transcript does it. This screen used
+    to report nothing at all, which quietly made the funnel unmeasurable from the
+    very surface the gate is designed around: someone here has already seen every
+    thumbnail, so this is where "saw the gate" means the most.
+  */
+  const gateReported = useRef(false);
+  useEffect(() => {
+    if (!openedKey) {
+      gateReported.current = false;
+      return;
+    }
+    if (lockedCount > 0 && !gateReported.current) {
+      gateReported.current = true;
+      reportAssetActivity(AssetActivityKind.GateSeen, { lockedCount });
+    }
+  }, [openedKey, lockedCount]);
+
+  // Whether this screen is pulled out into the header dock.
+  const { layout, save } = useDockLayout();
+  const pinned = layout.visible.includes(DockItemId.ASSETS);
+  const togglePinned = useCallback(
+    () => save(toggleDockVisible(layout, DockItemId.ASSETS)),
+    [layout, save],
+  );
+
   return (
     <Portal>
       <div
@@ -115,21 +147,45 @@ export function AssetsModal(props: Props) {
       >
         <div className="w-full max-w-2xl h-[80vh] flex flex-col bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border-default">
-            <h2 className="text-md font-semibold text-text-primary">
+            {/* The dock icon, so the row in the dock and this title are visibly
+                the same thing — the pin control below only teaches that if the
+                user can recognise what it would pin. */}
+            <h2 className="flex items-center gap-2 text-md font-semibold text-text-primary">
+              {/* Bigger than the em box, not equal to it: an outline glyph
+                  leaves padding inside its own square, so an icon sized to the
+                  text reads as smaller than the text beside it. */}
+              <PhotoIcon className="w-5 h-5 text-text-secondary" />
               {t('assets.title')}
               {assets && assets.length > 0 && (
-                <span className="ms-2 text-xs font-normal text-text-tertiary tabular-nums">
+                <span className="text-xs font-normal text-text-tertiary tabular-nums">
                   {assets.length}
                 </span>
               )}
             </h2>
-            <button
-              onClick={onClose}
-              className="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors"
-              aria-label={t('assets.close')}
-            >
-              <XMarkIcon className="w-4 h-4" />
-            </button>
+
+            <div className="flex items-center gap-3">
+              {/*
+                Teaches that the dock exists, and that this screen can live in
+                it. A new dock item is added hidden, so without a control like
+                this the dock's only advert is the ⋮ menu nobody opens. Worded as
+                the action it performs, not as a state, so it reads the same way
+                the "Learn more" beside it does.
+              */}
+              <button
+                type="button"
+                onClick={togglePinned}
+                className="text-xs font-medium text-accent-claude transition-opacity hover:opacity-80"
+              >
+                {pinned ? t('assets.unpinFromDock') : t('assets.pinToDock')}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors"
+                aria-label={t('assets.close')}
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/*
@@ -142,13 +198,9 @@ export function AssetsModal(props: Props) {
           {!isSponsor && (assets?.length ?? 0) > 0 && (
             <div className="flex items-center gap-2 px-4 py-2 border-b border-border-default text-xs text-text-tertiary">
               <span>{t('assets.sponsorHint')}</span>
-              <button
-                type="button"
-                onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
-                className="font-medium text-accent-claude transition-opacity hover:opacity-80"
-              >
-                {tc('sponsorGated.learnMore')}
-              </button>
+              {/* The shared button, so this door to the sponsor page is counted
+                  like the others. Hand-rolled here, it reported nothing. */}
+              <LearnMoreButton />
             </div>
           )}
 
@@ -192,13 +244,24 @@ export function AssetsModal(props: Props) {
             const asset = scope[i];
             if (asset) ensure(asset);
           }}
+          // The same notice the transcript shows, from the same component. Built
+          // separately, the two drifted: this one lost its link and its report.
+          //
+          // "Show all" means "back to the grid" from in here, which is what
+          // closing the viewer already does — the screen is still behind it.
           notice={
             lockedCount > 0 ? (
-              <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs">
-                <span>{t('assets.moreInSession', { count: lockedCount })}</span>
-              </div>
+              <MoreInSessionNotice count={lockedCount} onShowAll={() => setOpenedKey(null)} />
             ) : undefined
           }
+          // Only when something really is out of reach. At the true end of the
+          // session there is nothing to explain, and a sponsor line there would
+          // be selling something the user already has.
+          edgeHint={lockedCount > 0 ? <EdgeSponsorHint /> : undefined}
+          // Kept so the bottom panel is the same panel in both places. Opened
+          // from here it steps back to the grid, which is where "view this
+          // session's assets" already leads.
+          onOpenAssets={() => setOpenedKey(null)}
         />
       )}
     </Portal>

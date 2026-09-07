@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "資源",
-    "empty": "此工作階段中尚未附加圖片",
+    "empty": "此工作階段中尚未附加資源",
     "loading": "…",
     "close": "關閉",
-    "openImage": "開啟圖片",
+    "openAsset": "開啟資源",
     "moreInSession": "此工作階段中還有 {{count}} 張",
     "openScreen": "檢視此工作階段的資源",
-    "sponsorHint": "跨整個工作階段瀏覽是贊助者功能"
+    "showAll": "檢視全部",
+    "sponsorHint": "跨訊息瀏覽資源，是我們為贊助者準備的一點小心意，還請見諒",
+    "pinToDock": "釘選到工具列",
+    "unpinFromDock": "取消釘選"
   }
 }

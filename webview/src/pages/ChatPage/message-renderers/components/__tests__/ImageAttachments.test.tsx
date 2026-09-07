@@ -13,6 +13,10 @@ vi.mock('@/utils/reportAssetActivity', () => ({
 }));
 vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ currentSessionId: 's1' }) }));
 vi.mock('@/contexts/WorkingDirContext', () => ({ useWorkingDir: () => ({ workingDirectory: '/w' }) }));
+const openAssetsModal = vi.fn();
+vi.mock('@/pages/ChatPage/SessionHeader/dock/actions', () => ({
+  openAssetsModal: (...a: unknown[]) => openAssetsModal(...a),
+}));
 vi.mock('@/hooks/useSessionAssetGallery', () => ({
   useSessionAssetGallery: (params: { localSrcs: string[]; openedLocalIndex: number | null }) =>
     gallery(params),
@@ -42,6 +46,7 @@ beforeEach(() => {
   cleanup();
   gallery.mockReset();
   reportAssetActivity.mockReset();
+  openAssetsModal.mockReset();
   gallery.mockImplementation(localOnlyGallery());
 });
 
@@ -102,7 +107,22 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(screen.getByText('24 more in this session')).toBeInTheDocument();
-    expect(screen.getByText('Learn more')).toBeInTheDocument();
+    expect(screen.getByText('Show all')).toBeInTheDocument();
+  });
+
+  it('answers "where are the other 24?" with the Assets screen, not a payment page', () => {
+    // The line exists because the counter below it says "1 / 1" while the
+    // session holds 25. Someone reading it wants to SEE the rest, and the rest
+    // is already theirs to look at.
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+    fireEvent.click(screen.getByText('Show all'));
+
+    expect(openAssetsModal).toHaveBeenCalledWith('viewer');
+    expect(reportAssetActivity).not.toHaveBeenCalledWith('gate_clicked');
+    expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
   it('shows nothing at the edge when this message already holds every image', () => {
@@ -204,17 +224,6 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(0);
-  });
-
-  it('records the invitation being followed', () => {
-    // The numerator: without this the denominator alone says nothing.
-    gallery.mockImplementation(localOnlyGallery(24));
-    render(<ImageAttachments images={IMAGES} />);
-
-    fireEvent.click(screen.getByAltText('Image 1'));
-    fireEvent.click(screen.getByText('Learn more'));
-
-    expect(reportAssetActivity).toHaveBeenCalledWith('gate_clicked');
   });
 
   it('passes the entry uuid through so the gallery can locate this message', () => {

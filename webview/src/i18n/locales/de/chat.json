@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "Assets",
-    "empty": "In dieser Sitzung wurden noch keine Bilder angehängt",
+    "empty": "In dieser Sitzung wurden noch keine Assets angehängt",
     "loading": "…",
     "close": "Schließen",
-    "openImage": "Bild öffnen",
+    "openAsset": "Asset öffnen",
     "moreInSession": "{{count}} weitere in dieser Sitzung",
     "openScreen": "Assets dieser Sitzung ansehen",
-    "sponsorHint": "Das Durchblättern der ganzen Sitzung ist eine Sponsor-Funktion"
+    "showAll": "Alle anzeigen",
+    "sponsorHint": "Das Wechseln zu Assets aus anderen Nachrichten ist leider ein kleines Dankeschön, das wir unseren Sponsoren vorbehalten",
+    "pinToDock": "Am Dock anheften",
+    "unpinFromDock": "Vom Dock lösen"
   }
 }

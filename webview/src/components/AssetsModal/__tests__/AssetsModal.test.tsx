@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import type { SessionAsset } from '@/shared';
 
 const assets = vi.fn<() => SessionAsset[] | undefined>(() => []);
@@ -21,11 +21,27 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
   useSponsorStatus: () => ({ isSponsor: isSponsor() }),
 }));
 
+// The pin control reads and writes the real dock layout, which lives in
+// settings. The app always renders this inside SettingsProvider; the test does
+// not, so the layout is stood in for here.
+const dockVisible = vi.fn<() => DockItemId[]>(() => []);
+const saveDock = vi.fn();
+vi.mock('@/pages/ChatPage/SessionHeader/dock/useDockLayout', () => ({
+  useDockLayout: () => ({
+    layout: { order: [], visible: dockVisible() },
+    save: saveDock,
+  }),
+}));
+
+import { DockItemId } from '@/types/settings';
 import { AssetsModal, groupByMessage } from '../index';
 
 function asset(entryUuid: string, blockIndex: number, preview = '', timestamp = '2026-09-06T01:00:00.000Z'): SessionAsset {
   return { entryUuid, blockIndex, mediaType: 'image/png', timestamp, byteSize: 3, messagePreview: preview };
 }
+
+/** The gate line, kept in one place so a copy change is one edit here. */
+const SPONSOR_HINT = 'Moving to other messages’ assets is a little perk I keep for sponsors';
 
 beforeEach(() => {
   cleanup();
@@ -33,6 +49,7 @@ beforeEach(() => {
   assets.mockReturnValue([]);
   loaded.mockReturnValue({});
   isSponsor.mockReturnValue(false);
+  dockVisible.mockReturnValue([]);
 });
 
 describe('groupByMessage', () => {
@@ -66,7 +83,7 @@ describe('AssetsModal', () => {
   it('says so when the session has no attachments', () => {
     render(<AssetsModal onClose={vi.fn()} />);
 
-    expect(screen.getByText('No images attached in this session yet')).toBeInTheDocument();
+    expect(screen.getByText('No assets attached in this session yet')).toBeInTheDocument();
   });
 
   it('lays the session out as one block per message, captioned by the prompt', () => {
@@ -115,7 +132,7 @@ describe('AssetsModal', () => {
     loaded.mockReturnValue({ 'u1:1': 'A', 'u2:0': 'B', 'u2:1': 'C' });
 
     render(<AssetsModal onClose={vi.fn()} />);
-    fireEvent.click(screen.getAllByLabelText('Open image')[1]);
+    fireEvent.click(screen.getAllByLabelText('Open asset')[1]);
 
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
     expect(screen.getByText('1 more in this session')).toBeInTheDocument();
@@ -127,7 +144,7 @@ describe('AssetsModal', () => {
     isSponsor.mockReturnValue(true);
 
     render(<AssetsModal onClose={vi.fn()} />);
-    fireEvent.click(screen.getAllByLabelText('Open image')[1]);
+    fireEvent.click(screen.getAllByLabelText('Open asset')[1]);
 
     expect(screen.getByText('2 / 3')).toBeInTheDocument();
     expect(screen.queryByText(/more in this session/)).toBeNull();
@@ -140,8 +157,8 @@ describe('AssetsModal', () => {
 
     render(<AssetsModal onClose={vi.fn()} />);
 
-    expect(screen.getByText('Stepping across the session is a sponsor feature')).toBeInTheDocument();
-    expect(screen.getByLabelText('Open image')).toBeInTheDocument();
+    expect(screen.getByText(SPONSOR_HINT)).toBeInTheDocument();
+    expect(screen.getByLabelText('Open asset')).toBeInTheDocument();
   });
 
   it('does not nag a sponsor about sponsoring', () => {
@@ -150,7 +167,7 @@ describe('AssetsModal', () => {
 
     render(<AssetsModal onClose={vi.fn()} />);
 
-    expect(screen.queryByText('Stepping across the session is a sponsor feature')).toBeNull();
+    expect(screen.queryByText(SPONSOR_HINT)).toBeNull();
   });
 
   it('says nothing about sponsorship when there are no images to speak of', () => {
@@ -158,7 +175,61 @@ describe('AssetsModal', () => {
 
     render(<AssetsModal onClose={vi.fn()} />);
 
-    expect(screen.queryByText('Stepping across the session is a sponsor feature')).toBeNull();
+    expect(screen.queryByText(SPONSOR_HINT)).toBeNull();
+  });
+
+  it('offers to pin itself into the dock, and says so as an action', () => {
+    // A newly shipped dock item starts hidden, so without this the dock's only
+    // advertisement is a ⋮ menu most people never open.
+    assets.mockReturnValue([asset('u1', 1)]);
+
+    render(<AssetsModal onClose={vi.fn()} />);
+    fireEvent.click(screen.getByText('Pin to dock'));
+
+    expect(saveDock).toHaveBeenCalledWith(
+      expect.objectContaining({ visible: [DockItemId.ASSETS] }),
+    );
+  });
+
+  it('offers to unpin once it is already in the dock', () => {
+    assets.mockReturnValue([asset('u1', 1)]);
+    dockVisible.mockReturnValue([DockItemId.ASSETS]);
+
+    render(<AssetsModal onClose={vi.fn()} />);
+    fireEvent.click(screen.getByText('Unpin from dock'));
+
+    expect(saveDock).toHaveBeenCalledWith(expect.objectContaining({ visible: [] }));
+  });
+
+  it('offers a non-sponsor the same way out of the viewer as the transcript does', () => {
+    // Built separately, the two notices drifted: this one had no link to follow
+    // and reported nothing, on the very screen the gate is designed around.
+    assets.mockReturnValue([asset('u1', 1), asset('u2', 0)]);
+    loaded.mockReturnValue({ 'u1:1': 'A', 'u2:0': 'B' });
+
+    render(<AssetsModal onClose={vi.fn()} />);
+    fireEvent.click(screen.getAllByLabelText('Open asset')[0]);
+
+    // Scoped to the notice itself: the screen header carries its own link, and
+    // finding that one would prove nothing about the viewer.
+    const notice = screen.getByText('1 more in this session').parentElement;
+    expect(notice).not.toBeNull();
+    expect(within(notice as HTMLElement).getByText('Show all')).toBeInTheDocument();
+  });
+
+  it('sends "Show all" back to the grid rather than to the sponsor page', () => {
+    // The grid is already open behind the viewer, and every thumbnail on it is
+    // this user's to look at. Answering "where are the rest?" with a payment
+    // page would be selling at a question.
+    assets.mockReturnValue([asset('u1', 1), asset('u2', 0)]);
+    loaded.mockReturnValue({ 'u1:1': 'A', 'u2:0': 'B' });
+
+    render(<AssetsModal onClose={vi.fn()} />);
+    fireEvent.click(screen.getAllByLabelText('Open asset')[0]);
+    fireEvent.click(screen.getByText('Show all'));
+
+    expect(screen.queryByAltText('Full size')).toBeNull();
+    expect(screen.getAllByLabelText('Open asset')).toHaveLength(2);
   });
 
   it('closes on Escape while the viewer is not up', () => {
@@ -179,7 +250,7 @@ describe('AssetsModal', () => {
     loaded.mockReturnValue({ 'u1:1': 'A' });
     render(<AssetsModal onClose={onClose} />);
 
-    fireEvent.click(screen.getByLabelText('Open image'));
+    fireEvent.click(screen.getByLabelText('Open asset'));
     fireEvent.keyDown(window, { key: 'Escape' });
 
     expect(onClose).not.toHaveBeenCalled();

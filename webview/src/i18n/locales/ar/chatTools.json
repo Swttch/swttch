@@ -25,18 +25,18 @@
     "fullSizeAlt": "الحجم الكامل",
     "lightbox": {
       "close": "إغلاق",
-      "previous": "الصورة السابقة",
-      "next": "الصورة التالية",
+      "previous": "الأصل السابق",
+      "next": "الأصل التالي",
       "loading": "جارٍ التحميل…",
       "moreInSession": "{{count}} أخرى في هذه الجلسة",
       "zoomIn": "تكبير",
       "zoomOut": "تصغير",
       "openInNewTab": "فتح في علامة تبويب جديدة",
-      "copy": "نسخ الصورة",
-      "download": "تنزيل الصورة",
-      "copied": "تم نسخ الصورة",
-      "copyFailed": "تعذّر نسخ الصورة",
-      "downloadFailed": "تعذّر حفظ الصورة"
+      "copy": "نسخ الأصل",
+      "download": "تنزيل الأصل",
+      "copied": "تم نسخ الأصل",
+      "copyFailed": "تعذّر نسخ الأصل",
+      "downloadFailed": "تعذّر حفظ الأصل"
     }
   },
   "edit": {

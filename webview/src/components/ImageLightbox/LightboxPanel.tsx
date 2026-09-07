@@ -8,6 +8,7 @@ import {
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { Tooltip } from '@/components/Tooltip';
 import { useTranslation } from '@/i18n';
 import { isBrowser } from '@/config/environment';
 import { copyImage, downloadImage, openImageInNewTab } from './imageActions';
@@ -28,6 +29,14 @@ interface LightboxPanelProps {
   onOpenAssets?: () => void;
 }
 
+/**
+ * One icon action in the bar.
+ *
+ * The name is shown through {@link Tooltip}, not the native `title` attribute:
+ * native tooltips do not render in the JCEF WebView the plugin embeds in
+ * JetBrains IDEs, so a `title` here would label these buttons in the browser and
+ * leave them as bare icons for every IDE user.
+ */
 function PanelButton(props: {
   onClick: () => void;
   label: string;
@@ -35,19 +44,20 @@ function PanelButton(props: {
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        props.onClick();
-      }}
-      disabled={props.disabled}
-      title={props.label}
-      aria-label={props.label}
-      className="w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
-    >
-      {props.children}
-    </button>
+    <Tooltip content={props.label}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          props.onClick();
+        }}
+        disabled={props.disabled}
+        aria-label={props.label}
+        className="w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-default disabled:hover:bg-transparent"
+      >
+        {props.children}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -118,15 +128,14 @@ export function LightboxPanel(props: LightboxPanelProps) {
       )}
 
       {/*
-        A lone image has no position worth stating — "1 / 1" is noise. The rest
-        of the panel stays, because copying and saving one image is as useful as
-        copying one of twenty.
+        Always shown, "1 / 1" included. Dropping it for a lone asset made the
+        panel change shape between one asset and two, which read as a different
+        viewer; and "1 / 1" is itself the answer to "is there more?", which is
+        the question someone looks down here to settle.
       */}
-      {total > 1 && (
-        <span className="px-3 text-xs text-text-secondary tabular-nums select-none">
-          {index + 1} / {total}
-        </span>
-      )}
+      <span className="px-3 text-xs text-text-secondary tabular-nums select-none">
+        {index + 1} / {total}
+      </span>
 
       <PanelButton onClick={handleCopy} label={t('attachments.lightbox.copy')} disabled={!src}>
         <DocumentDuplicateIcon className="w-4 h-4" />

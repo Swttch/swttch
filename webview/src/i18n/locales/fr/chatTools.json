@@ -25,18 +25,18 @@
     "fullSizeAlt": "Taille réelle",
     "lightbox": {
       "close": "Fermer",
-      "previous": "Image précédente",
-      "next": "Image suivante",
+      "previous": "Ressource précédente",
+      "next": "Ressource suivante",
       "loading": "Chargement…",
       "moreInSession": "{{count}} de plus dans cette session",
       "zoomIn": "Zoom avant",
       "zoomOut": "Zoom arrière",
       "openInNewTab": "Ouvrir dans un nouvel onglet",
-      "copy": "Copier l’image",
-      "download": "Télécharger l’image",
-      "copied": "Image copiée",
-      "copyFailed": "Impossible de copier l’image",
-      "downloadFailed": "Impossible d’enregistrer l’image"
+      "copy": "Copier la ressource",
+      "download": "Télécharger la ressource",
+      "copied": "Ressource copiée",
+      "copyFailed": "Impossible de copier la ressource",
+      "downloadFailed": "Impossible d’enregistrer la ressource"
     }
   },
   "edit": {

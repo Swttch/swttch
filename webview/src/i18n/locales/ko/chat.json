@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "에셋",
-    "empty": "이 세션에 첨부된 이미지가 아직 없습니다",
+    "empty": "이 세션에 첨부된 에셋이 아직 없습니다",
     "loading": "…",
     "close": "닫기",
-    "openImage": "이미지 열기",
+    "openAsset": "에셋 열기",
     "moreInSession": "이 세션에 {{count}}장이 더 있습니다",
     "openScreen": "이 세션의 에셋 보기",
-    "sponsorHint": "세션 전체를 넘겨보는 것은 후원자 기능입니다"
+    "showAll": "전체 보기",
+    "sponsorHint": "아쉽게도 다른 메시지의 에셋까지\n이어서 넘겨보는 것은\n후원자 분들을 위한 작은 혜택으로\n제공하고 있습니다",
+    "pinToDock": "도크에 고정",
+    "unpinFromDock": "도크 고정 해제"
   }
 }

@@ -49,7 +49,7 @@ export function AssetThumbnail(props: Props) {
       type="button"
       onClick={onOpen}
       className="w-20 h-20 rounded-md overflow-hidden border border-border-default bg-surface-hover hover:border-border-strong transition-colors"
-      aria-label={t('assets.openImage')}
+      aria-label={t('assets.openAsset')}
     >
       {src ? (
         <img src={src} alt="" className="w-full h-full object-cover" />

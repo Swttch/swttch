@@ -60,8 +60,9 @@ describe('AttachmentPreview viewer', () => {
     fireEvent.click(screen.getByAltText('AAA.png'));
     fireEvent.keyDown(window, { key: 'ArrowRight' });
 
-    // A lone image offers no navigation at all.
-    expect(screen.queryByLabelText('Next image')).toBeNull();
+    // The arrow is present but has nowhere to go: a file attachment is not an
+    // image, so it never joins the list the viewer steps through.
+    expect(screen.getByLabelText('Next asset')).toBeDisabled();
     expect(shownSrc()).toBe('data:image/png;base64,AAA');
   });
 

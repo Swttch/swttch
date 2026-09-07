@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "资源",
-    "empty": "此会话中还没有附加图片",
+    "empty": "此会话中还没有附加资源",
     "loading": "…",
     "close": "关闭",
-    "openImage": "打开图片",
+    "openAsset": "打开资源",
     "moreInSession": "此会话中还有 {{count}} 张",
     "openScreen": "查看此会话的资源",
-    "sponsorHint": "跨整个会话浏览是赞助者功能"
+    "showAll": "查看全部",
+    "sponsorHint": "跨消息浏览资源，是我们为赞助者准备的一点小心意，还请见谅",
+    "pinToDock": "固定到工具坞",
+    "unpinFromDock": "取消固定"
   }
 }

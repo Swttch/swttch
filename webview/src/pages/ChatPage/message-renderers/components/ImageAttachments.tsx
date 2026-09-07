@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ImageBlockDto } from '../../../../dto/message/ContentBlockDto';
 import { useTranslation } from '@/i18n';
 import { ImageLightbox } from '@/components/ImageLightbox';
+import {
+  MoreInSessionNotice,
+  EdgeSponsorHint,
+} from '@/components/ImageLightbox/SponsorGateNotice';
 import { useSessionAssetGallery } from '@/hooks/useSessionAssetGallery';
-import { openSettingsAt } from '@/utils/openSettingsAt';
-import { Route } from '@/router';
 import { openAssetsModal } from '@/pages/ChatPage/SessionHeader/dock/actions';
 import { AssetActivityKind, AssetScreenSource } from '@/shared';
 import { reportAssetActivity } from '@/utils/reportAssetActivity';
@@ -25,35 +27,6 @@ const getImageSrc = (image: ImageBlockDto): string => {
     return `data:${image.source.media_type};base64,${image.source.data}`;
   }
   return image.source.data; // URL type
-};
-
-/**
- * The sponsor invitation shown at the end of a non-sponsor's list.
- *
- * States the number out of reach, because "there is more" persuades far less
- * than "there are 24 more". Follows showSponsorGatedToast's tone: an offer, not
- * a wall. Getting to the Assets screen is the panel's job, and that button is
- * there for sponsors too.
- */
-const MoreInSessionNotice: React.FC<{ count: number }> = ({ count }) => {
-  const { t } = useTranslation('chatTools');
-  const { t: tc } = useTranslation('common');
-
-  return (
-    <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs">
-      <span>{t('attachments.lightbox.moreInSession', { count })}</span>
-      <button
-        type="button"
-        onClick={() => {
-          reportAssetActivity(AssetActivityKind.GateClicked);
-          void openSettingsAt(Route.SETTINGS_SPONSOR);
-        }}
-        className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
-      >
-        {tc('sponsorGated.learnMore')}
-      </button>
-    </div>
-  );
 };
 
 export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entryUuid }) => {
@@ -91,6 +64,13 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
     }
   }, [openedIndex, lockedCount]);
 
+  // Close the viewer first: it sits above the Assets screen, so leaving it up
+  // would hide the very screen just asked for.
+  const showAllAssets = useCallback(() => {
+    setOpenedIndex(null);
+    openAssetsModal(AssetScreenSource.Viewer);
+  }, []);
+
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -117,17 +97,18 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
           initialIndex={initialIndex}
           onClose={() => setOpenedIndex(null)}
           onIndexChange={onIndexChange}
-          notice={lockedCount > 0 ? <MoreInSessionNotice count={lockedCount} /> : undefined}
-          onOpenAssets={
-            hasMoreInSession
-              ? () => {
-                  // Close first: the viewer sits above the Assets screen, so
-                  // leaving it up would hide the very screen just asked for.
-                  setOpenedIndex(null);
-                  openAssetsModal(AssetScreenSource.Viewer);
-                }
-              : undefined
+          // "Show all" and the panel's grid button are the same request asked
+          // two ways, so they run the same code.
+          notice={
+            lockedCount > 0 ? (
+              <MoreInSessionNotice count={lockedCount} onShowAll={showAllAssets} />
+            ) : undefined
           }
+          // Only when something really is out of reach. At the true end of the
+          // session there is nothing to explain, and a sponsor line there would
+          // be selling something the user already has.
+          edgeHint={lockedCount > 0 ? <EdgeSponsorHint /> : undefined}
+          onOpenAssets={hasMoreInSession ? showAllAssets : undefined}
         />
       )}
     </>

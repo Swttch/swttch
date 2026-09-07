@@ -25,18 +25,18 @@
     "fullSizeAlt": "Tamanho completo",
     "lightbox": {
       "close": "Fechar",
-      "previous": "Imagem anterior",
-      "next": "Próxima imagem",
+      "previous": "Recurso anterior",
+      "next": "Próximo recurso",
       "loading": "Carregando…",
       "moreInSession": "Mais {{count}} nesta sessão",
       "zoomIn": "Ampliar",
       "zoomOut": "Reduzir",
       "openInNewTab": "Abrir em nova aba",
-      "copy": "Copiar imagem",
-      "download": "Baixar imagem",
-      "copied": "Imagem copiada",
-      "copyFailed": "Não foi possível copiar a imagem",
-      "downloadFailed": "Não foi possível salvar a imagem"
+      "copy": "Copiar recurso",
+      "download": "Baixar recurso",
+      "copied": "Recurso copiado",
+      "copyFailed": "Não foi possível copiar o recurso",
+      "downloadFailed": "Não foi possível salvar o recurso"
     }
   },
   "edit": {

@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "Recursos",
-    "empty": "Ainda não há imagens anexadas nesta sessão",
+    "empty": "Ainda não há recursos anexados nesta sessão",
     "loading": "…",
     "close": "Fechar",
-    "openImage": "Abrir imagem",
+    "openAsset": "Abrir recurso",
     "moreInSession": "Mais {{count}} nesta sessão",
     "openScreen": "Ver os recursos desta sessão",
-    "sponsorHint": "Percorrer toda a sessão é um recurso para patrocinadores"
+    "showAll": "Ver todos",
+    "sponsorHint": "Passar para os recursos de outras mensagens é um pequeno agrado reservado a quem nos apoia",
+    "pinToDock": "Fixar no dock",
+    "unpinFromDock": "Desafixar do dock"
   }
 }

@@ -1,8 +1,61 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
+import { Tooltip } from '@/components/Tooltip';
 import { useTranslation } from '@/i18n';
 import { LightboxPanel } from './LightboxPanel';
+
+/**
+ * One of the two step arrows, with its explanation for when it cannot move.
+ *
+ * The tooltip hangs on the wrapping span, NOT on the button. A disabled button
+ * emits no pointer events in a browser, so a tooltip bound to it would never
+ * open — and "cannot move" is the only moment this arrow has anything to say.
+ * Testing that in jsdom would not catch it either: jsdom happily dispatches a
+ * mouseenter at a disabled element, so this has to be right by construction.
+ *
+ * The wrapper also takes over the positioning, so the button keeps its own size
+ * and the hover target stays exactly the arrow.
+ *
+ * The tooltip is interactive because the hint carries a link to the sponsor
+ * page: the pointer has to be able to travel onto the tooltip without it
+ * closing on the way.
+ */
+function ArrowButton({
+  side,
+  label,
+  enabled,
+  hint,
+  onActivate,
+  children,
+}: {
+  side: 'start' | 'end';
+  label: string;
+  enabled: boolean;
+  hint?: React.ReactNode;
+  onActivate: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip content={enabled ? undefined : hint} interactive>
+      <span
+        className={`absolute ${side === 'start' ? 'start-4' : 'end-4'} top-1/2 -translate-y-1/2`}
+      >
+        <button
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-hover/90 hover:bg-surface-tooltip/80 border border-border-default text-text-primary transition-colors disabled:opacity-30 disabled:cursor-default"
+          onClick={(e) => {
+            e.stopPropagation();
+            onActivate();
+          }}
+          disabled={!enabled}
+          aria-label={label}
+        >
+          {children}
+        </button>
+      </span>
+    </Tooltip>
+  );
+}
 
 /** Keeps a position inside the list, so an out-of-range value still shows something. */
 function clampIndex(index: number, length: number): number {
@@ -43,6 +96,19 @@ interface ImageLightboxProps {
    * already is.
    */
   onOpenAssets?: () => void;
+  /**
+   * Tooltip for an arrow that cannot move, when the reason is worth explaining.
+   *
+   * Only reaches a DISABLED arrow. A working arrow gets no tooltip at all: the
+   * chevron already says which way it goes, and labelling the obvious is noise.
+   * A stopped one is the opposite — nothing on screen says why it stopped.
+   *
+   * Passed in rather than decided here, because the viewer does not know what a
+   * sponsor is and must not learn. Owners hand this over only when something is
+   * genuinely out of reach; when the list simply ended, they hand over nothing
+   * and the arrow stays quiet.
+   */
+  edgeHint?: React.ReactNode;
 }
 
 /**
@@ -64,6 +130,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onIndexChange,
   notice,
   onOpenAssets,
+  edgeHint,
 }) => {
   const { t } = useTranslation('chatTools');
   const lastIndex = srcs.length - 1;
@@ -191,35 +258,34 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           small attachment (an icon, a cropped snippet), because the image box
           shrinks to the image while the buttons keep their fixed size.
 
-          A single image has nowhere to go, so it gets no arrows and no counter.
-        */}
-        {srcs.length > 1 && (
-          <>
-            <button
-              className="absolute start-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-surface-hover/90 hover:bg-surface-tooltip/80 border border-border-default text-text-primary transition-colors disabled:opacity-30 disabled:cursor-default"
-              onClick={(e) => {
-                e.stopPropagation();
-                goPrevious();
-              }}
-              disabled={!hasPrevious}
-              aria-label={t('attachments.lightbox.previous')}
-            >
-              <ChevronLeftIcon className="w-5 h-5" />
-            </button>
+          The arrows are always here, disabled when there is nowhere to go.
+          Hiding them instead made the same viewer look like two different ones:
+          a message holding one image opened without them, and the controls the
+          user had just learned were simply gone. A greyed-out arrow says "not
+          from here"; a missing one says nothing at all.
 
-            <button
-              className="absolute end-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-surface-hover/90 hover:bg-surface-tooltip/80 border border-border-default text-text-primary transition-colors disabled:opacity-30 disabled:cursor-default"
-              onClick={(e) => {
-                e.stopPropagation();
-                goNext();
-              }}
-              disabled={!hasNext}
-              aria-label={t('attachments.lightbox.next')}
-            >
-              <ChevronRightIcon className="w-5 h-5" />
-            </button>
-          </>
-        )}
+          The counter is the exception and lives in the panel, because "1 / 1"
+          states a position that carries no information.
+        */}
+        <ArrowButton
+          side="start"
+          label={t('attachments.lightbox.previous')}
+          enabled={hasPrevious}
+          hint={edgeHint}
+          onActivate={goPrevious}
+        >
+          <ChevronLeftIcon className="w-5 h-5" />
+        </ArrowButton>
+
+        <ArrowButton
+          side="end"
+          label={t('attachments.lightbox.next')}
+          enabled={hasNext}
+          hint={edgeHint}
+          onActivate={goNext}
+        >
+          <ChevronRightIcon className="w-5 h-5" />
+        </ArrowButton>
 
         {/*
           Above the panel, and shown whatever the list length: a message holding a

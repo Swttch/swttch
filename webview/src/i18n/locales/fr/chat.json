@@ -560,12 +560,15 @@
   },
   "assets": {
     "title": "Ressources",
-    "empty": "Aucune image jointe dans cette session",
+    "empty": "Aucune ressource jointe dans cette session",
     "loading": "…",
     "close": "Fermer",
-    "openImage": "Ouvrir l’image",
+    "openAsset": "Ouvrir la ressource",
     "moreInSession": "{{count}} de plus dans cette session",
     "openScreen": "Voir les ressources de cette session",
-    "sponsorHint": "Parcourir toute la session est une fonction pour les sponsors"
+    "showAll": "Tout afficher",
+    "sponsorHint": "Passer aux ressources d’autres messages est une petite attention réservée à nos sponsors",
+    "pinToDock": "Épingler au dock",
+    "unpinFromDock": "Détacher du dock"
   }
 }

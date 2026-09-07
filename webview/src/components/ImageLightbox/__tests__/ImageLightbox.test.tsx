@@ -94,14 +94,14 @@ describe('ImageLightbox', () => {
   it('disables the arrow buttons at each end', () => {
     render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
 
-    expect(screen.getByLabelText('Previous image')).toBeDisabled();
-    expect(screen.getByLabelText('Next image')).not.toBeDisabled();
+    expect(screen.getByLabelText('Previous asset')).toBeDisabled();
+    expect(screen.getByLabelText('Next asset')).not.toBeDisabled();
 
-    fireEvent.click(screen.getByLabelText('Next image'));
-    fireEvent.click(screen.getByLabelText('Next image'));
+    fireEvent.click(screen.getByLabelText('Next asset'));
+    fireEvent.click(screen.getByLabelText('Next asset'));
 
-    expect(screen.getByLabelText('Previous image')).not.toBeDisabled();
-    expect(screen.getByLabelText('Next image')).toBeDisabled();
+    expect(screen.getByLabelText('Previous asset')).not.toBeDisabled();
+    expect(screen.getByLabelText('Next asset')).toBeDisabled();
   });
 
   it('shows the position so the user knows how many are left', () => {
@@ -110,15 +110,24 @@ describe('ImageLightbox', () => {
     expect(screen.getByText('2 / 3')).toBeInTheDocument();
   });
 
-  it('offers no arrows and no counter for a lone image', () => {
-    // "1 / 1" is noise, and there is nowhere to step. The rest of the panel
-    // stays: copying or saving one image is as useful as one of twenty.
+  it('keeps both arrows for a lone image, disabled rather than absent', () => {
+    // The viewer must not look like two different viewers depending on which
+    // image opened it. A greyed-out arrow says "not from here"; a missing one
+    // says nothing, and the control the user just learned is simply gone.
     render(<ImageLightbox srcs={[SRCS[0]]} initialIndex={0} onClose={vi.fn()} />);
 
-    expect(screen.queryByLabelText('Previous image')).toBeNull();
-    expect(screen.queryByLabelText('Next image')).toBeNull();
-    expect(screen.queryByText('1 / 1')).toBeNull();
-    expect(screen.getByLabelText('Download image')).toBeInTheDocument();
+    expect(screen.getByLabelText('Previous asset')).toBeDisabled();
+    expect(screen.getByLabelText('Next asset')).toBeDisabled();
+  });
+
+  it('shows the counter for a lone asset too, as "1 / 1"', () => {
+    // Dropping it made the panel change shape between one asset and two, which
+    // reads as a different viewer. "1 / 1" is also the answer to "is there
+    // more?", which is the question someone looks down here to settle.
+    render(<ImageLightbox srcs={[SRCS[0]]} initialIndex={0} onClose={vi.fn()} />);
+
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Download asset')).toBeInTheDocument();
   });
 
   it('offers zoom, copy and download for the image on screen', () => {
@@ -126,8 +135,8 @@ describe('ImageLightbox', () => {
 
     expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
-    expect(screen.getByLabelText('Copy image')).toBeInTheDocument();
-    expect(screen.getByLabelText('Download image')).toBeInTheDocument();
+    expect(screen.getByLabelText('Copy asset')).toBeInTheDocument();
+    expect(screen.getByLabelText('Download asset')).toBeInTheDocument();
   });
 
   it('resets zoom when stepping to another image', () => {
@@ -170,8 +179,8 @@ describe('ImageLightbox', () => {
     // A pending slot has no bytes to copy, save or open.
     render(<ImageLightbox srcs={[null, SRCS[1]]} initialIndex={0} onClose={vi.fn()} />);
 
-    expect(screen.getByLabelText('Copy image')).toBeDisabled();
-    expect(screen.getByLabelText('Download image')).toBeDisabled();
+    expect(screen.getByLabelText('Copy asset')).toBeDisabled();
+    expect(screen.getByLabelText('Download asset')).toBeDisabled();
   });
 
   it('closes on Escape', () => {
@@ -217,7 +226,7 @@ describe('ImageLightbox', () => {
     const onClose = vi.fn();
     render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={onClose} />);
 
-    fireEvent.click(screen.getByLabelText('Next image'));
+    fireEvent.click(screen.getByLabelText('Next asset'));
 
     expect(onClose).not.toHaveBeenCalled();
     expect(shownSrc()).toBe(SRCS[1]);

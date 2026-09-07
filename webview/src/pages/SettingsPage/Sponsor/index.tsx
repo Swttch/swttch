@@ -228,6 +228,21 @@ export function SponsorSettings() {
         <p className="mt-2 text-xs text-text-tertiary leading-relaxed break-keep">
           {t('sponsor.openSourceNote')}
         </p>
+
+        {/* What sponsorship actually unlocks, named. The promises above say what
+            kind of deal it is ("everything, forever, no higher tier") but never
+            what any of it does, so someone arriving from a gate could not tell
+            whether the thing they just hit was even on the list.
+
+            Below the ask, not above it: this is the detail for whoever is still
+            reading, and putting a link list between the promises and the button
+            interrupted the one path the screen exists to offer.
+
+            The sponsor's own benefits list, reused rather than restated: two
+            copies would be two places to forget when a feature ships. */}
+        <div className="mt-5 border-t border-border-default">
+          <SponsorBenefitsSection />
+        </div>
       </div>
       )}
 
