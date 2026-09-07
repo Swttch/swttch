@@ -24,7 +24,12 @@
   },
   "attachments": {
     "imageAlt": "Bild {{index}}",
-    "fullSizeAlt": "Vollbild"
+    "fullSizeAlt": "Vollbild",
+    "lightbox": {
+      "close": "Schließen",
+      "previous": "Vorheriges Bild",
+      "next": "Nächstes Bild"
+    }
   },
   "edit": {
     "modified": "Geändert"

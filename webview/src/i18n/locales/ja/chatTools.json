@@ -24,7 +24,12 @@
   },
   "attachments": {
     "imageAlt": "画像 {{index}}",
-    "fullSizeAlt": "原寸大"
+    "fullSizeAlt": "原寸大",
+    "lightbox": {
+      "close": "閉じる",
+      "previous": "前の画像",
+      "next": "次の画像"
+    }
   },
   "edit": {
     "modified": "変更済み"

@@ -24,7 +24,12 @@
   },
   "attachments": {
     "imageAlt": "이미지 {{index}}",
-    "fullSizeAlt": "원본 크기"
+    "fullSizeAlt": "원본 크기",
+    "lightbox": {
+      "close": "닫기",
+      "previous": "이전 이미지",
+      "next": "다음 이미지"
+    }
   },
   "edit": {
     "modified": "수정됨"

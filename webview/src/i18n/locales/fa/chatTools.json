@@ -24,7 +24,12 @@
   },
   "attachments": {
     "imageAlt": "تصویر {{index}}",
-    "fullSizeAlt": "اندازه کامل"
+    "fullSizeAlt": "اندازه کامل",
+    "lightbox": {
+      "close": "بستن",
+      "previous": "تصویر قبلی",
+      "next": "تصویر بعدی"
+    }
   },
   "edit": {
     "modified": "تغییر یافت"

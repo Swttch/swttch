@@ -24,7 +24,12 @@
   },
   "attachments": {
     "imageAlt": "صورة {{index}}",
-    "fullSizeAlt": "الحجم الكامل"
+    "fullSizeAlt": "الحجم الكامل",
+    "lightbox": {
+      "close": "إغلاق",
+      "previous": "الصورة السابقة",
+      "next": "الصورة التالية"
+    }
   },
   "edit": {
     "modified": "معدَّل"
