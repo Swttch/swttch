@@ -24,7 +24,22 @@
   },
   "attachments": {
     "imageAlt": "Image {{index}}",
-    "fullSizeAlt": "Taille réelle"
+    "fullSizeAlt": "Taille réelle",
+    "lightbox": {
+      "close": "Fermer",
+      "previous": "Image précédente",
+      "next": "Image suivante",
+      "loading": "Chargement…",
+      "moreInSession": "{{count}} de plus dans cette session",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "openInNewTab": "Ouvrir dans un nouvel onglet",
+      "copy": "Copier l’image",
+      "download": "Télécharger l’image",
+      "copied": "Image copiée",
+      "copyFailed": "Impossible de copier l’image",
+      "downloadFailed": "Impossible d’enregistrer l’image"
+    }
   },
   "edit": {
     "modified": "Modifié"

@@ -24,7 +24,22 @@
   },
   "attachments": {
     "imageAlt": "تصویر {{index}}",
-    "fullSizeAlt": "اندازه کامل"
+    "fullSizeAlt": "اندازه کامل",
+    "lightbox": {
+      "close": "بستن",
+      "previous": "تصویر قبلی",
+      "next": "تصویر بعدی",
+      "loading": "در حال بارگذاری…",
+      "moreInSession": "{{count}} مورد دیگر در این نشست",
+      "zoomIn": "بزرگ‌نمایی",
+      "zoomOut": "کوچک‌نمایی",
+      "openInNewTab": "باز کردن در زبانه جدید",
+      "copy": "کپی تصویر",
+      "download": "دانلود تصویر",
+      "copied": "تصویر کپی شد",
+      "copyFailed": "کپی تصویر ممکن نشد",
+      "downloadFailed": "ذخیره تصویر ممکن نشد"
+    }
   },
   "edit": {
     "modified": "تغییر یافت"

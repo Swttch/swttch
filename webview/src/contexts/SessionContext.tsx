@@ -579,3 +579,14 @@ export function useSessionContext() {
   }
   return context;
 }
+
+/**
+ * Like {@link useSessionContext} but returns null instead of throwing when there
+ * is no provider. For deeply-nested, broadly-reused components (a message
+ * renderer, a tool card) that want the current session when available but must
+ * not hard-depend on the provider being mounted — mirrors
+ * {@link useWorkingDirOrNull}.
+ */
+export function useSessionContextOrNull() {
+  return useContext(SessionContext);
+}

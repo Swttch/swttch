@@ -554,5 +554,15 @@
       "unreadable": "该文件已无法读取，没有可应用更改的对象。"
     },
     "allowAllEdits": "允许所有编辑"
+  },
+  "assets": {
+    "title": "资源",
+    "empty": "此会话中还没有附加图片",
+    "loading": "…",
+    "close": "关闭",
+    "openImage": "打开图片",
+    "moreInSession": "此会话中还有 {{count}} 张",
+    "openScreen": "查看此会话的资源",
+    "sponsorHint": "跨整个会话浏览是赞助者功能"
   }
 }

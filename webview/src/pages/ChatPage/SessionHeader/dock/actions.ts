@@ -1,3 +1,6 @@
+import { AssetActivityKind, AssetScreenSource } from '@/shared';
+import { reportAssetActivity } from '@/utils/reportAssetActivity';
+
 /**
  * Window events that open header-owned surfaces from anywhere.
  *
@@ -14,3 +17,23 @@
 
 /** Ask the app shell to open the remote-tunnel modal. */
 export const OPEN_TUNNEL_EVENT = 'open-tunnel-modal';
+
+/** Ask the app shell to open the session Assets modal. */
+export const OPEN_ASSETS_EVENT = 'open-assets-modal';
+
+/**
+ * Raise {@link OPEN_ASSETS_EVENT}, recording which door was used.
+ *
+ * Exported so the dock icon and the ⋮ menu row dispatch the identical thing;
+ * a second `dispatchEvent` written out in a view is exactly how the two
+ * triggers drift apart. Reporting here rather than at each call site keeps that
+ * property true for the measurement as well.
+ *
+ * `from` is required because the whole point of measuring it is to tell the
+ * three entry points apart — one of them ships hidden, and "nobody uses the
+ * dock" and "nobody can find the dock" must not look the same in the data.
+ */
+export function openAssetsModal(from: AssetScreenSource): void {
+  reportAssetActivity(AssetActivityKind.ScreenOpened, { from });
+  window.dispatchEvent(new Event(OPEN_ASSETS_EVENT));
+}

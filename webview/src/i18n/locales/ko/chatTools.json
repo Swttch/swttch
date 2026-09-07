@@ -24,7 +24,22 @@
   },
   "attachments": {
     "imageAlt": "이미지 {{index}}",
-    "fullSizeAlt": "원본 크기"
+    "fullSizeAlt": "원본 크기",
+    "lightbox": {
+      "close": "닫기",
+      "previous": "이전 이미지",
+      "next": "다음 이미지",
+      "loading": "불러오는 중…",
+      "moreInSession": "이 세션에 {{count}}장이 더 있습니다",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "openInNewTab": "새 탭에서 열기",
+      "copy": "이미지 복사",
+      "download": "이미지 다운로드",
+      "copied": "이미지를 복사했습니다",
+      "copyFailed": "이미지를 복사하지 못했습니다",
+      "downloadFailed": "이미지를 저장하지 못했습니다"
+    }
   },
   "edit": {
     "modified": "수정됨"

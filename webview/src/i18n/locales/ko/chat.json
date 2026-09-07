@@ -554,5 +554,15 @@
       "unreadable": "이 파일을 더 이상 읽을 수 없어서 변경을 적용할 대상이 없습니다."
     },
     "allowAllEdits": "모든 편집 허용"
+  },
+  "assets": {
+    "title": "에셋",
+    "empty": "이 세션에 첨부된 이미지가 아직 없습니다",
+    "loading": "…",
+    "close": "닫기",
+    "openImage": "이미지 열기",
+    "moreInSession": "이 세션에 {{count}}장이 더 있습니다",
+    "openScreen": "이 세션의 에셋 보기",
+    "sponsorHint": "세션 전체를 넘겨보는 것은 후원자 기능입니다"
   }
 }

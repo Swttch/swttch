@@ -5,6 +5,18 @@ import { LoadedMessageType, toInstance } from '../../../../dto/common';
 
 // The renderer reads the CLI config to localize a `/model` echo; no provider is
 // mounted here, so stub it with an empty response.
+// The image viewer reaches for the bridge and the session index, neither of
+// which this test mounts: the concern here is whether an image-only message is
+// shown at all, not what the viewer does once one is clicked.
+vi.mock('@/hooks/useSessionAssetGallery', () => ({
+  useSessionAssetGallery: (p: { localSrcs: string[]; openedLocalIndex: number | null }) => ({
+    srcs: p.localSrcs,
+    initialIndex: p.openedLocalIndex ?? 0,
+    lockedCount: 0,
+    onIndexChange: () => {},
+  }),
+}));
+
 vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: null }),
 }));

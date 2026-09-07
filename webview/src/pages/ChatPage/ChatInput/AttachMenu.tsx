@@ -3,9 +3,10 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { basename } from './basename';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+import { ImageAttachSource } from '@/types';
 
 interface Props {
-  addImageAttachment: (file: File) => Promise<void>;
+  addImageAttachment: (file: File, source: ImageAttachSource) => Promise<void>;
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
   addFolderAttachment: (absolutePath: string, folderName: string) => void;
   isOpen: boolean;
@@ -66,7 +67,7 @@ export function AttachMenu(props: Props) {
     const files = e.target.files;
     if (!files) return;
     for (const file of Array.from(files)) {
-      await addImageAttachment(file);
+      await addImageAttachment(file, ImageAttachSource.Button);
     }
     e.target.value = ''; // reset for re-selection
   }, [addImageAttachment]);

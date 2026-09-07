@@ -131,6 +131,10 @@ import { playSystemSoundHandler } from './playSystemSound';
 import { clientInfoHandler } from './clientInfo';
 import { clientErrorHandler } from './clientError';
 import { panelFocusedHandler } from './panelFocused';
+import { imageAttachedHandler } from './imageAttached';
+import { getSessionAssetsHandler } from './getSessionAssets';
+import { getSessionAssetDataHandler } from './getSessionAssetData';
+import { assetActivityHandler } from './assetActivity';
 import { getMcpServersHandler } from './getMcpServersHandler';
 import { getMcpServerToolsHandler } from './getMcpServerToolsHandler';
 import {
@@ -537,6 +541,18 @@ export async function handleMessage(
       break;
     case MessageType.PANEL_FOCUSED:
       panelFocusedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.IMAGE_ATTACHED:
+      imageAttachedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_ASSETS:
+      await getSessionAssetsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_ASSET_DATA:
+      await getSessionAssetDataHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.ASSET_ACTIVITY:
+      assetActivityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_MCP_SERVERS:
       await getMcpServersHandler(connectionId, message, connections, bridge);

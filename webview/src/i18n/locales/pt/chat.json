@@ -554,5 +554,15 @@
       "unreadable": "Este ficheiro já não pode ser lido, por isso não há nada a que aplicar a alteração."
     },
     "allowAllEdits": "Permitir todas as edições"
+  },
+  "assets": {
+    "title": "Recursos",
+    "empty": "Ainda não há imagens anexadas nesta sessão",
+    "loading": "…",
+    "close": "Fechar",
+    "openImage": "Abrir imagem",
+    "moreInSession": "Mais {{count}} nesta sessão",
+    "openScreen": "Ver os recursos desta sessão",
+    "sponsorHint": "Percorrer toda a sessão é um recurso para patrocinadores"
   }
 }

@@ -554,5 +554,15 @@
       "unreadable": "Ce fichier ne peut plus être lu, il n'y a donc rien auquel appliquer la modification."
     },
     "allowAllEdits": "Autoriser toutes les modifications"
+  },
+  "assets": {
+    "title": "Ressources",
+    "empty": "Aucune image jointe dans cette session",
+    "loading": "…",
+    "close": "Fermer",
+    "openImage": "Ouvrir l’image",
+    "moreInSession": "{{count}} de plus dans cette session",
+    "openScreen": "Voir les ressources de cette session",
+    "sponsorHint": "Parcourir toute la session est une fonction pour les sponsors"
   }
 }

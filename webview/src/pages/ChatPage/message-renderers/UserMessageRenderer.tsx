@@ -223,7 +223,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
         </div>
 
         {imageBlocks.length > 0 && (
-            <ImageAttachments images={imageBlocks} />
+            <ImageAttachments images={imageBlocks} entryUuid={message.uuid} />
         )}
 
         {allContexts.length > 0 && <ContextPills context={allContexts} />}

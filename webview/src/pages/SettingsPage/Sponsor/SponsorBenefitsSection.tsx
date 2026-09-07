@@ -16,6 +16,7 @@ import { useTranslation } from '@/i18n';
 const BENEFITS: Array<{ folder: string; label: string }> = [
   { folder: '018-scheduled_messages', label: 'Scheduled messages' },
   { folder: '019-auto_resume_on_limit', label: 'Auto-resume on usage limit' },
+  { folder: '059-assets', label: 'Step across a session’s images' },
 ];
 
 export function SponsorBenefitsSection() {
