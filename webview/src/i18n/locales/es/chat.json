@@ -94,6 +94,7 @@
       "tapOrHold": "Pulsa o mantén para grabar",
       "stop": "Detener grabación",
       "error": "Error de dictado: {{message}}",
+      "errorFatal": "Error de dictado: {{message}} Reintentar no servirá de nada.",
       "micDenied": "Micrófono bloqueado: permite que el IDE lo use en la configuración de privacidad del sistema",
       "micDeniedBrowser": "Micrófono bloqueado: permítelo desde el candado en la barra de direcciones y recarga",
       "noMic": "No se encontró ningún micrófono",
@@ -101,6 +102,10 @@
       "notLoggedIn": "La entrada de voz necesita una cuenta de Claude con la sesión iniciada. Una clave de API por sí sola no puede acceder al dictado.",
       "install": "Instalar",
       "installing": "Instalando…",
+      "stillListening": "Sigue escuchando. Lo que digas se guarda en el campo de texto.",
+      "stoppedBySilence": "La grabación se detuvo tras un silencio.",
+      "resume": "Reanudar grabación",
+      "dismissNotice": "Cerrar",
       "firstUse": {
         "title": "¿Quieres hablar en vez de escribir?",
         "message": "Habla y se escribe en el campo de texto. Requiere instalar @swttch/extend-kit una vez.\n\nSi no lo usas, se oculta el botón del micrófono. Puedes reactivarlo cuando quieras en Ajustes → General → Entrada de voz.",
@@ -108,7 +113,8 @@
         "decline": "No usar",
         "installed": "Pulsa el micrófono y empieza a hablar.",
         "installFailed": "No se pudo instalar la herramienta de entrada de voz"
-      }
+      },
+      "help": "Ayuda"
     }
   },
   "sessionHeader": {

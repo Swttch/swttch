@@ -45,11 +45,24 @@ git rebase origin/main
 ### 2. 기능 PR엔 기능 문서 (필수)
 
 사용자 대면 기능은 `docs/features/NNN-feature_name/` 폴더에 언어별 문서(`en.md` / `ko.md` …)를
-작성하고, `docs/features/CLAUDE.md` 색인에 한 줄 추가해야 한다. 포맷은 그 색인 문서를 따른다.
+작성하고, `docs/features/CLAUDE.md` 색인에 한 줄 추가해야 한다. 작성 규칙은
+[docs/CLAUDE.md](../../../docs/CLAUDE.md)를 따른다.
+
+기능 문서는 **공식 기능 문서이자 동시에 공식 블로그**다. 온보딩·완전한 스펙·고객 서비스 세 가지가
+이 문서 하나로 끝나야 하므로, 릴리즈 노트를 옮겨 적는 것으로는 부족하다.
+
+**UI가 아주 사소하게라도 관여되면 스크린샷이 필수다.** 화면에 아무것도 드러나지 않는 기능만 예외다.
+이미지는 기능 폴더 안 `assets/`에 두고, 언어별 문서가 같은 파일을 공유하며 `alt` 텍스트만 각 언어로 쓴다.
 
 ```bash
-ls docs/features/          # 다음 번호(NNN) 확인
+ls docs/features/                                   # 다음 번호(NNN) 확인
+
+# 스크린샷이 실제로 들어갔는지 (UI가 관여되는 기능이라면 0이면 안 된다)
+find docs/features/<NNN-이름>/assets -type f | wc -l
+grep -c '!\[' docs/features/<NNN-이름>/*.md
 ```
+
+**검수하며 띄운 화면을 그 자리에서 찍어둔다.** 나중에 쓰려고 미루면 같은 상태를 다시 만들어야 한다.
 
 ### 3. 마켓플레이스 금지 API 미사용 (필수)
 

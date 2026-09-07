@@ -94,6 +94,7 @@
       "tapOrHold": "Tap or hold to record",
       "stop": "Stop recording",
       "error": "Dictation error: {{message}}",
+      "errorFatal": "Dictation error: {{message}} Retrying will not help.",
       "micDenied": "Microphone blocked — allow the IDE to use it in your system's privacy settings",
       "micDeniedBrowser": "Microphone blocked — allow it from the lock icon in the address bar, then reload",
       "noMic": "No microphone was found",
@@ -101,6 +102,10 @@
       "notLoggedIn": "Voice input needs a signed-in Claude account. An API key on its own cannot reach dictation.",
       "install": "Install",
       "installing": "Installing…",
+      "stillListening": "Still listening. What you say is kept in the composer.",
+      "stoppedBySilence": "Recording stopped after a silence.",
+      "resume": "Resume recording",
+      "dismissNotice": "Dismiss",
       "firstUse": {
         "title": "Try speaking instead of typing?",
         "message": "Speak and it is written into the composer. Takes a one-time install of @swttch/extend-kit.\n\nDecline and the microphone button is hidden. Turn it back on any time in Settings → General → Voice input.",
@@ -108,7 +113,8 @@
         "decline": "Don't use",
         "installed": "Press the microphone and start speaking.",
         "installFailed": "Could not install the voice input tool"
-      }
+      },
+      "help": "Help"
     }
   },
   "sessionHeader": {

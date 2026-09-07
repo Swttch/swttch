@@ -94,6 +94,7 @@
       "tapOrHold": "Appuyer ou maintenir pour enregistrer",
       "stop": "Arrêter l'enregistrement",
       "error": "Erreur de dictée : {{message}}",
+      "errorFatal": "Erreur de dictée : {{message}} Réessayer n'y changera rien.",
       "micDenied": "Micro bloqué — autorisez l'IDE à l'utiliser dans les réglages de confidentialité du système",
       "micDeniedBrowser": "Micro bloqué — autorisez-le via le cadenas dans la barre d'adresse, puis rechargez",
       "noMic": "Aucun microphone détecté",
@@ -101,6 +102,10 @@
       "notLoggedIn": "La saisie vocale nécessite un compte Claude connecté. Une clé API seule ne permet pas d’accéder à la dictée.",
       "install": "Installer",
       "installing": "Installation…",
+      "stillListening": "Écoute toujours. Ce que vous dites est conservé dans le champ de saisie.",
+      "stoppedBySilence": "Enregistrement arrêté après un silence.",
+      "resume": "Reprendre l'enregistrement",
+      "dismissNotice": "Fermer",
       "firstUse": {
         "title": "Envie de parler plutôt que de taper ?",
         "message": "Parlez et le texte est écrit dans le champ. Nécessite d’installer @swttch/extend-kit une fois.\n\nSi vous refusez, le bouton du micro est masqué. Réactivez-le à tout moment dans Réglages → Général → Saisie vocale.",
@@ -108,7 +113,8 @@
         "decline": "Ne pas utiliser",
         "installed": "Appuyez sur le micro et parlez.",
         "installFailed": "Impossible d'installer l'outil de saisie vocale"
-      }
+      },
+      "help": "Aide"
     }
   },
   "sessionHeader": {

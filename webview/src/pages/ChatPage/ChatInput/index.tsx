@@ -8,14 +8,9 @@ import { ModeSelectPanel } from './ModeSelectPanel';
 import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
 import { MicButton } from './MicButton';
-import { useDictation } from './hooks/useDictation';
-import { useGlobalShortcut } from './hooks/useGlobalShortcut';
-import toast from 'react-hot-toast';
-import { useInstallCcb } from '@/hooks/queries/useInstallCcb';
-import { useDictationAvailability } from '@/hooks/queries/useDictationAvailability';
+import { useDictationContext } from './DictationProvider';
 import { useNavigateToLogin } from '@/hooks';
-import { useVoicePrompt } from '@/hooks/useVoicePrompt';
-import { useConfirmDialog, ConfirmResult } from '@/components/ConfirmDialog/useConfirmDialog';
+import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
 import { useSessionContext } from '@/contexts/SessionContext';
@@ -39,23 +34,15 @@ import { THINKING_TOGGLE_EVENT } from '@/commandPalette/sections/model/ThinkingI
 import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/commandPalette/sections/context/items';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
-import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
 import { displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { isMobile, isBrowser } from '@/config/environment';
+import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
 import { arrowRecallsHistory } from './caretAtEdge';
-import {
-  decideVoiceGate,
-  VoiceGateAction,
-  effectOfVoiceAnswer,
-  VoiceAnswerEffect,
-  voiceSettingsAfterDecline,
-  isAnswer,
-} from './firstUseVoiceGate';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
 import { useIMEComposition } from './RichInput/useIMEComposition';
@@ -82,60 +69,24 @@ export function ChatInput() {
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
-  // Read the current text without making dictation depend on it — the callback
-  // would otherwise be rebuilt on every keystroke, and re-subscribe the stream.
-  const valueRef = useRef(value);
-  valueRef.current = value;
-  const dictation = useDictation(
-    useCallback(
-      () => ({
-        value: valueRef.current,
-        // Dictate at the caret, so speaking mid-sentence inserts there rather
-        // than appending to the end of what was already typed.
-        caret: textareaRef.current
-          ? getCaretOffset(textareaRef.current)
-          : valueRef.current.length,
-        // Move the caret to the end of what was just written, the way paste
-        // does. The editable layer resets the caret to the start whenever its
-        // content is replaced wholesale, so without this every recording ended
-        // with the caret back at 0 — and the next one dictated in front of the
-        // last, running consecutive phrases backwards.
-        setValue: (next: string, caret?: number) => {
-          onChange(next);
-          if (caret === undefined) return;
-          requestAnimationFrame(() => {
-            const target = textareaRef.current;
-            if (target) setCaretOffset(target, caret);
-          });
-        },
-      }),
-      [onChange, textareaRef],
-    ),
-  );
-  // Installing the kit for dictation is the same `npm i -g @swttch/extend-kit`
-  // the usage panel already runs, so it reuses that mutation rather than adding
-  // a second path that installs the same package.
-  const { install: installKit, installing: installingKit } = useInstallCcb();
+  // The recording itself belongs to DictationProvider, which sits above this
+  // component: a recording has to outlive the composer, because an approval
+  // prompt takes this slot and unmounts it mid-sentence (issue #409). What is
+  // left here is drawing the session — the button, the level, the interim text,
+  // and the failure banner.
+  const {
+    dictation,
+    startDictation,
+    voiceEnabled,
+    voiceShortcut,
+    unavailable: dictationUnavailable,
+    installKit,
+    installingKit,
+  } = useDictationContext();
   // Dictation can fail for want of a Claude account login, and the way to get
   // one is the login page the top auth banner already leads to.
   const navigateToLogin = useNavigateToLogin();
-  const { shouldAsk: shouldAskVoice, markAsked, decide } = useVoicePrompt();
-  const { confirmDialog, ask, confirm } = useConfirmDialog();
-
-  // Reachable even with the first-use question answered: someone who accepted
-  // and later removed the kit (in a terminal, or from Settings) is not asked
-  // again, so dictation fails here instead. Without this the banner would name
-  // the problem and offer no way out of it.
-  const handleInstallKit = useCallback(async () => {
-    try {
-      await installKit();
-      // The backend caches where it found (or failed to find) the kit; clear the
-      // error so the next press retries instead of showing a stale failure.
-      dictation.dismissError();
-    } catch {
-      // The mutation surfaces its own failure through the same banner.
-    }
-  }, [installKit, dictation]);
+  const { confirmDialog, confirm } = useConfirmDialog();
 
   const bridge = useBridgeContext();
   const { subscribe } = bridge;
@@ -162,110 +113,10 @@ export function ChatInput() {
   const {
     settings: claudeSettings,
     updateSetting: updateClaudeSetting,
-    updateSettingWithScope: updateClaudeSettingWithScope,
   } = useClaudeSettings();
   // useCtrlEnterToSend + focusInputOnEditorContext migrated to the app settings.
   const { settings: appSettings } = useSettings();
-  // The user can rebind this; the default lives with the other voice defaults.
-  const voiceShortcut =
-    (appSettings[SettingKey.VOICE] as VoiceSettings | undefined)?.shortcut ?? VOICE_SHORTCUT_DEFAULT;
-  // `/voice off` in the CLI writes voice.enabled=false, and that decision
-  // should hold here too — one machine, one answer.
-  //
-  // Only an explicit false hides it. Claude Code treats a missing key as off
-  // because its dictation has to be switched on with /voice, but we have no
-  // such command: the microphone button is visible, so there is nothing to
-  // discover and nothing to turn on first. Inheriting "absent means off" would
-  // hide the feature from everyone who never opened a terminal.
-  const voiceEnabled =
-    (claudeSettings.voice as { enabled?: boolean } | undefined)?.enabled !== false;
 
-  // Asked before anything is pressed, so the microphone can say "not now" at a
-  // glance instead of looking ready and refusing on the first press.
-  //
-  // Only dims the button. Whether a start is actually allowed stays the
-  // backend's call in START_DICTATION, so there is one decider and this cannot
-  // drift from it: both read the same probe. Asked only while voice input is on,
-  // since a hidden microphone has nothing to dim.
-  const { availability: dictationAvailability } = useDictationAvailability({
-    enabled: voiceEnabled,
-  });
-  const dictationUnavailable = dictationAvailability?.available === false;
-
-  // The one-time question, asked on the first attempt to dictate rather than on
-  // arrival: at that moment the user has just reached for the feature, so the
-  // question is about something they want, and the answer means something.
-  //
-  // Every way of starting dictation goes through here, so the button and the
-  // shortcut cannot answer it differently — or skip it.
-  const startDictation = useCallback(async () => {
-    if (decideVoiceGate(shouldAskVoice) === VoiceGateAction.Record) {
-      void dictation.start();
-      return;
-    }
-
-    // Written before the dialog is awaited: closing the app on an unanswered
-    // question must leave "we asked" behind, not look like we never did.
-    void markAsked();
-
-    // ask(), not confirm(): closing this is not the same as saying no. "No"
-    // turns voice input off for good, so Escape, the backdrop and the close
-    // button leave the question unanswered — it comes back on the next press.
-    const answer = await ask({
-      title: t('chatInput.dictation.firstUse.title'),
-      message: t('chatInput.dictation.firstUse.message'),
-      confirmLabel: t('chatInput.dictation.firstUse.accept'),
-      cancelLabel: t('chatInput.dictation.firstUse.decline'),
-    });
-    if (!isAnswer(answer)) return;
-
-    const accepted = answer === ConfirmResult.Confirmed;
-    await decide(accepted);
-
-    if (effectOfVoiceAnswer(accepted) === VoiceAnswerEffect.DisableVoice) {
-      // The same write the settings screen's own toggle makes, so there is one
-      // way to turn voice input off and one place it is stored. Global scope:
-      // this is a decision about the machine, not about the open project.
-      await updateClaudeSettingWithScope(
-        'voice',
-        voiceSettingsAfterDecline(claudeSettings.voice as Record<string, unknown> | undefined),
-        'global',
-      );
-      return;
-    }
-
-    try {
-      await installKit();
-      toast.success(t('chatInput.dictation.firstUse.installed'));
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t('chatInput.dictation.firstUse.installFailed'),
-      );
-    }
-    // Recording deliberately does not start here. The install was a detour the
-    // user did not ask for; dropping them straight into a live microphone they
-    // did not expect is worse than letting them press again when ready.
-  }, [
-    shouldAskVoice,
-    dictation,
-    markAsked,
-    ask,
-    decide,
-    claudeSettings.voice,
-    updateClaudeSettingWithScope,
-    installKit,
-    t,
-  ]);
-
-  // Bound globally rather than on the composer: the point of the shortcut is to
-  // start talking without reaching for the mouse, which is exactly the moment
-  // the composer does not have focus. Tap/hold is the same rule the microphone
-  // button uses, so the two controls behave alike.
-  useGlobalShortcut(voiceEnabled ? voiceShortcut : null, {
-    isRecording: () => dictation.isRecording,
-    onStart: () => void startDictation(),
-    onStop: () => void dictation.stop(),
-  });
   const { cycle: cycleEffort } = useEffort();
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showModelSwitch, setShowModelSwitch] = useState(false);
@@ -808,13 +659,28 @@ export function ChatInput() {
                   : t('chatInput.dictation.micDenied')
                 : dictation.error.message === 'noMic'
                   ? t('chatInput.dictation.noMic')
-                  : t('chatInput.dictation.error', { message: dictation.error.message })
+                  : // Anything else is relayed VERBATIM. We do not know what
+                    // else the stream can refuse with, and a message of our own
+                    // would have to guess: a 401 handshake rejection can be an
+                    // expired token or an account without access, and the next
+                    // failure may be neither. Replacing the text with a summary
+                    // that covers both would be a summary that is wrong as soon
+                    // as a third cause appears, and it throws away the one
+                    // string the user can search for (#418).
+                    //
+                    // What IS ours to add is what the stream told us alongside
+                    // it: `fatal` means retrying cannot help, so pressing the
+                    // microphone again is not the next step. That is relayed
+                    // fact, not our diagnosis.
+                    dictation.error.fatal
+                    ? t('chatInput.dictation.errorFatal', { message: dictation.error.message })
+                    : t('chatInput.dictation.error', { message: dictation.error.message })
           }
           actions={
             dictation.error.kitMissing ? (
               <button
                 type="button"
-                onClick={() => void handleInstallKit()}
+                onClick={installKit}
                 disabled={installingKit}
                 className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors disabled:opacity-50"
               >
@@ -834,7 +700,22 @@ export function ChatInput() {
               >
                 {t('authError.login')}
               </button>
-            ) : undefined
+            ) : (
+              // The complaint in #418 was not the wording, it was that the
+              // wording was all there was: "There is no additional information,
+              // manuals, docs. Nothing." The message above stays exactly as the
+              // stream sent it; this is the way out of it. The branches that
+              // already offer an action keep theirs, since a doc link is a
+              // poorer answer than the button that fixes the problem.
+              <a
+                href={featureDocUrl('029-voice_to_text')}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors"
+              >
+                {t('chatInput.dictation.help')}
+              </a>
+            )
           }
           onClose={dictation.dismissError}
         />

@@ -94,6 +94,7 @@
       "tapOrHold": "눌러서 또는 누른 채로 녹음",
       "stop": "녹음 중지",
       "error": "받아쓰기 오류: {{message}}",
+      "errorFatal": "받아쓰기 오류: {{message}} 다시 시도해도 같은 결과입니다.",
       "micDenied": "마이크가 차단되어 있습니다 — 시스템 설정에서 IDE에 마이크를 허용해 주세요",
       "micDeniedBrowser": "마이크가 차단되어 있습니다 — 주소창의 자물쇠를 눌러 허용한 뒤 새로고침해 주세요",
       "noMic": "마이크를 찾을 수 없습니다",
@@ -101,6 +102,10 @@
       "notLoggedIn": "음성 입력은 Claude 계정 로그인이 필요합니다. API 키만으로는 받아쓰기를 이용할 수 없습니다.",
       "install": "설치",
       "installing": "설치 중…",
+      "stillListening": "계속 듣고 있습니다. 말한 내용은 입력창에 담깁니다.",
+      "stoppedBySilence": "조용해서 녹음을 멈췄습니다.",
+      "resume": "이어서 녹음",
+      "dismissNotice": "닫기",
       "firstUse": {
         "title": "음성으로 입력해 보시겠어요?",
         "message": "말하면 입력창에 받아쓰기 됩니다. @swttch/extend-kit을 한 번 설치해야 해요.\n\n사용하지 않으면 마이크 버튼을 숨깁니다. 설정 → 일반 → 음성 입력에서 언제든 다시 켤 수 있어요.",
@@ -108,7 +113,8 @@
         "decline": "사용 안 함",
         "installed": "이제 마이크를 눌러 말해 보세요.",
         "installFailed": "음성 입력 도구를 설치하지 못했습니다"
-      }
+      },
+      "help": "도움말"
     }
   },
   "sessionHeader": {

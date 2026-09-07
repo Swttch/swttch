@@ -44,6 +44,20 @@ export enum DictationState {
   Finishing = 'finishing',
 }
 
+/**
+ * Why a recording ended.
+ *
+ * Carried because the two are not the same event to the user: they know they
+ * pressed stop, and they do not know the silence timer ran out. Only the second
+ * has to be explained.
+ */
+export enum DictationStopReason {
+  /** The user pressed the button, released a held key, or typed over the text. */
+  User = 'user',
+  /** Nothing was heard for {@link VOICE_SILENCE_TIMEOUT_DEFAULT} seconds. */
+  Silence = 'silence',
+}
+
 export interface DictationError {
   message: string;
   /** Retrying will not help — a denied microphone, or a rejected account. */
@@ -119,6 +133,15 @@ export function useDictation(getTarget: () => DictationTarget) {
   const [interimRange, setInterimRange] = useState<{ start: number; end: number } | null>(null);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<DictationError | null>(null);
+  /**
+   * The last recording ended on its own, and nobody has been told yet.
+   *
+   * Not an error — nothing failed, and dressing it as one would send the user
+   * looking for a fault. It is a fact about the microphone they have to be told
+   * because they did not cause it and cannot see it: the composer may not even
+   * be on screen when it happens (an approval prompt takes its place).
+   */
+  const [stoppedBySilence, setStoppedBySilence] = useState(false);
 
   const captureRef = useRef<MicrophoneCapture | null>(null);
   const anchorRef = useRef<DictationAnchor | null>(null);
@@ -130,7 +153,7 @@ export function useDictation(getTarget: () => DictationTarget) {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // stop() is defined below but the silence timer is armed from inside the
   // microphone callback, which is created before it. The ref breaks the cycle.
-  const stopRef = useRef<() => void>(() => {});
+  const stopRef = useRef<(reason?: DictationStopReason) => void>(() => {});
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current !== null) {
@@ -144,7 +167,7 @@ export function useDictation(getTarget: () => DictationTarget) {
     clearSilenceTimer();
     silenceTimerRef.current = setTimeout(() => {
       silenceTimerRef.current = null;
-      stopRef.current();
+      stopRef.current(DictationStopReason.Silence);
     }, silenceTimeoutMs);
   }, [clearSilenceTimer, silenceTimeoutMs]);
 
@@ -222,6 +245,9 @@ export function useDictation(getTarget: () => DictationTarget) {
   const start = useCallback(async () => {
     if (stateRef.current !== DictationState.Idle) return;
     setError(null);
+    // Starting again is the answer to the notice, so it clears itself rather
+    // than waiting to be dismissed.
+    setStoppedBySilence(false);
     setState(DictationState.Starting);
 
     const target = getTargetRef.current();
@@ -293,12 +319,16 @@ export function useDictation(getTarget: () => DictationTarget) {
     }
   }, [send, sendRaw, finish, armSilenceTimer, spokenLanguage]);
 
-  const stop = useCallback(async () => {
+  const stop = useCallback(async (reason: DictationStopReason = DictationStopReason.User) => {
     if (stateRef.current === DictationState.Idle) return;
     // Stop capturing first: anything recorded past this point is the user
     // having already stopped speaking.
     releaseMicrophone();
     setState(DictationState.Finishing);
+    // Raised before the round trip rather than after it: the microphone is
+    // already closed, so the explanation is due now, and the last words coming
+    // back must not hold it up.
+    if (reason === DictationStopReason.Silence) setStoppedBySilence(true);
     try {
       await send(MessageType.STOP_DICTATION, {});
     } finally {
@@ -307,7 +337,7 @@ export function useDictation(getTarget: () => DictationTarget) {
   }, [send, releaseMicrophone, finish]);
 
   // The silence timer fires a stop that was not yet defined when it was armed.
-  stopRef.current = () => void stop();
+  stopRef.current = (reason) => void stop(reason);
 
   const toggle = useCallback(() => {
     if (stateRef.current === DictationState.Idle) void start();
@@ -320,9 +350,14 @@ export function useDictation(getTarget: () => DictationTarget) {
     interimRange,
     level,
     error,
+    stoppedBySilence,
     start,
     stop,
     toggle,
     dismissError: useCallback(() => setError(null), []),
+    dismissSilenceNotice: useCallback(() => setStoppedBySilence(false), []),
   };
 }
+
+/** What {@link useDictation} hands back, for the context that now owns it. */
+export type Dictation = ReturnType<typeof useDictation>;
