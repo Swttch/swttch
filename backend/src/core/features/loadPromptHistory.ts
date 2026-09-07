@@ -41,7 +41,7 @@ export interface PromptHistoryPage {
 }
 
 /**
- * CLI-authored text that occupies a `user` entry without a human having typed it.
+ * CLI-authored text that occupies a prompt slot without a human having typed it.
  *
  * Content is the only signal for these. Measured across every project on this
  * machine, no field distinguishes them from a real prompt — not even
@@ -59,6 +59,11 @@ const CLI_AUTHORED_TEXT = new RegExp(
   + '|\\[Request interrupted by user'
   + ')',
 );
+
+/** Whether the CLI wrote this prompt text itself, in whichever slot it landed. */
+function isCliAuthored(text: string): boolean {
+  return CLI_AUTHORED_TEXT.test(text);
+}
 
 /** The text a `user` entry carries, ignoring non-text blocks. */
 function textOf(entry: SessionMessage): string {
@@ -111,7 +116,7 @@ export function isTypedPrompt(entry: SessionMessage, chainStampsPermissionMode: 
 
   const text = textOf(entry);
   if (!text.trim()) return false;
-  if (CLI_AUTHORED_TEXT.test(text)) return false;
+  if (isCliAuthored(text)) return false;
 
   if (chainStampsPermissionMode && entry.permissionMode === undefined) return false;
 
@@ -138,6 +143,13 @@ export function chainStampsPermissionMode(chain: SessionMessage[]): boolean {
  * (The transcript instead renders it at the `remove`, where the CLI consumed it,
  * because that is where the bubble belongs in the reply flow. Both orderings agree
  * on the order of the prompts themselves, which is all the history walks.)
+ *
+ * Recovering a queue entry says only "no `user` entry exists for this", not "a
+ * human typed this", so the recovered text still has to pass the same
+ * CLI-authored test as a `user` entry. The transcript keeps those notifications
+ * instead of dropping them, because a Workflow card is built from one; it renders
+ * nothing for them because the renderer strips the tag. The history has no
+ * renderer to strip anything, so it filters here.
  */
 export function collectPrompts(chain: SessionMessage[]): SessionMessage[] {
   const stamped = chainStampsPermissionMode(chain);
@@ -148,6 +160,13 @@ export function collectPrompts(chain: SessionMessage[]): SessionMessage[] {
   for (const entry of chain) {
     if (isQueueOperation(entry)) {
       if (entry.operation !== 'enqueue' || typeof entry.content !== 'string') continue;
+      // The queue is not a human-only channel: a background task that finishes
+      // mid-turn is enqueued exactly like a typed message, with no `user` entry
+      // either, so the recovery above takes it and the walk hits it. Measured in
+      // one session here, 22 of the 25 recovered queued prompts were
+      // `<task-notification>`. So the same content test the `user` path applies
+      // runs here too, rather than only where the CLI happens to write entries.
+      if (isCliAuthored(entry.content)) continue;
       const taken = (takenSoFar.get(entry.content) ?? 0) + 1;
       takenSoFar.set(entry.content, taken);
       if (taken <= (queuedMidTurn.get(entry.content) ?? 0)) prompts.push(entry);

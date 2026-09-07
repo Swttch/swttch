@@ -242,6 +242,38 @@ describe('loadPromptHistory', () => {
     ]);
   });
 
+  it('rejects a CLI-authored prompt that reached the queue instead of a user entry', async () => {
+    // A background task that finishes mid-turn is queued exactly like a message
+    // the user typed: enqueue → remove, no `user` entry, so the recovery above
+    // picks it up. The content test that rejects these for `user` entries has to
+    // run on queue bookkeeping too, or the walk hits them. Measured in one
+    // session of this repo: 22 of its 25 recovered queued prompts were
+    // task-notifications.
+    const notification = '<task-notification>\n<task-id>bb1lmoo7a</task-id>\n<status>completed</status>\n</task-notification>';
+    vi.mocked(loadActiveChain).mockResolvedValue([
+      prompt('u1', 'before'),
+      { type: 'queue-operation', operation: 'enqueue', content: notification },
+      { type: 'queue-operation', operation: 'remove', content: notification },
+      prompt('u2', 'after'),
+    ]);
+
+    const page = await loadPromptHistory('/w', 's1');
+
+    expect(page.entries.map(e => (e.content as string) ?? textOf(e))).toEqual(['before', 'after']);
+  });
+
+  it('keeps a queued prompt that merely opens with markup the user typed', async () => {
+    // Same by-name list as the `user` entry path: typing about markup is typing.
+    vi.mocked(loadActiveChain).mockResolvedValue([
+      { type: 'queue-operation', operation: 'enqueue', content: '<div> is not closing, why?' },
+      { type: 'queue-operation', operation: 'remove', content: '<div> is not closing, why?' },
+    ]);
+
+    const page = await loadPromptHistory('/w', 's1');
+
+    expect(page.entries.map(e => e.content as string)).toEqual(['<div> is not closing, why?']);
+  });
+
   it('does not double-count a message the CLI also wrote a user entry for', async () => {
     // enqueue → dequeue means it was accepted while idle and a real `user` entry
     // exists; taking the queue entry too would show it twice in a row.
