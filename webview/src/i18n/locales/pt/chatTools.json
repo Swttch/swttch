@@ -8,8 +8,6 @@
     }
   },
   "message": {
-    "copyMessage": "Copiar mensagem",
-    "retry": "Tentar novamente",
     "unknownTool": "desconhecida"
   },
   "interrupted": {

@@ -2,10 +2,8 @@ import React, { useMemo } from 'react';
 import { LoadedMessageDto, getTextContent, isContentBlockArray } from '../../../types';
 import type { ImageBlockDto, ToolResultBlockDto } from '../../../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
-import { useCopyToClipboard } from './hooks/useCopyToClipboard';
 import { ContextPills } from './components/ContextPills';
 import { ImageAttachments } from './components/ImageAttachments';
-import { MessageActions } from './components/MessageActions';
 import { SendActionMenu } from './components/SendActionMenu';
 import { SendFoldToggle } from './components/SendFoldToggle';
 import { parseUserContent } from './utils/parseUserContent';
@@ -29,8 +27,24 @@ interface UserMessageRendererProps {
 const INTERRUPTED_TEXT = '[Request interrupted by user]';
 const INTERRUPTED_FOR_TOOL_USE_TEXT = '[Request interrupted by user for tool use]';
 
+/**
+ * What a slash-command send reads as, as one plain string.
+ *
+ * The bubble cannot draw it as one — it dims the leading `/` and the arguments
+ * in spans of their own — so the rule for assembling the two parts lives here
+ * and the copy entry is built from it. Copying has to produce what the user is
+ * looking at, and for a slash command `parsedContent.text` alone is not that:
+ * `parseUserContent` strips `<command-name>`, `<command-message>` and
+ * `<command-args>`, which for every such entry the CLI writes leaves the empty
+ * string. That empty string is what the old hover copy button put on the
+ * clipboard for a bubble that plainly reads `/clear` (issue #412).
+ */
+function commandSendText(commandName: string | undefined, args: string): string {
+  const command = `/${commandName ?? ''}`;
+  return args ? `${command} ${args}` : command;
+}
+
 export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ message }) => {
-  const { copied, copy } = useCopyToClipboard();
   const { controlResponse } = useCliConfig();
   const { t } = useTranslation('chatTools');
   const parsedContent = parseUserContent(getTextContent(message));
@@ -59,10 +73,6 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
     const block = content.find(b => b.type === ContentBlockType.ToolResult);
     return block ? (block as ToolResultBlockDto).tool_use_id : undefined;
   }, [message.message?.content]);
-
-  const handleCopy = () => {
-    copy(parsedContent.text);
-  };
 
   const allContexts = [
     ...(parsedContent.contexts || []),
@@ -134,9 +144,10 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               {allContexts.length > 0 && <ContextPills context={allContexts} />}
 
               {/* A slash command heads a section like any other send. */}
-              <SendActionMenu />
+              <SendActionMenu
+                copyText={commandSendText(parsedContent.commandName, parsedContent.text)}
+              />
             </div>
-            <MessageActions copied={copied} onCopy={handleCopy} />
           </div>
         </div>
       </IfVisible>
@@ -216,9 +227,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               </div>
             </MessageBox>
 
-            {/*<MessageActions copied={copied} onCopy={handleCopy} />*/}
-
-            <SendActionMenu />
+            <SendActionMenu copyText={parsedContent.text} />
           </div>
         </div>
 

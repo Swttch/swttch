@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Tippy from '@tippyjs/react/headless';
 import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
+import toast from 'react-hot-toast';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { useSectionFoldValue, useSectionKey } from '../../SectionFoldContext';
@@ -26,9 +27,16 @@ const itemClass =
  *
  * The menu carries collapsing the reply below this send (issue #368) together
  * with the fork and rewind entries it was built as a list to make room for
- * (issue #356). The rewind pair is drawn only for a send the code can actually
- * be restored to; forking is always offered, since a send with no history
- * before it can still open a new session carrying its prompt.
+ * (issue #356), and copying the send's own text (issue #412). The rewind pair is
+ * drawn only for a send the code can actually be restored to; forking is always
+ * offered, since a send with no history before it can still open a new session
+ * carrying its prompt.
+ *
+ * Copying is drawn unconditionally, because unlike the other entries it needs
+ * nothing from the CLI: every send has text on screen, and `copyText` is that
+ * text. It is what the hover button beside the bubble used to do before this
+ * menu existed, and the reason that button is gone — one copy control, in the
+ * place the other per-send actions already live.
  *
  * The control renders only for a send that actually heads a section, inside a
  * transcript that groups them. Anywhere else there is no reply to collapse, and
@@ -47,7 +55,21 @@ const itemClass =
  * the menu is not clipped by the chat's own scroll container the way an
  * in-flow absolute box would be.
  */
-export function SendActionMenu() {
+interface SendActionMenuProps {
+  /**
+   * The send's own text, exactly as the bubble renders it — a slash command
+   * arrives here as `/clear`, not as the empty string left over once
+   * `parseUserContent` has stripped its tags.
+   *
+   * Passed as a prop rather than read from a context, because the renderer
+   * above already holds the value and is the only thing that knows which of its
+   * branches drew the bubble. The other per-send values are contexts because
+   * they come from the whole transcript, which the renderer does not hold.
+   */
+  copyText: string;
+}
+
+export function SendActionMenu({ copyText }: SendActionMenuProps) {
   const { t } = useTranslation('chat');
   const fold = useSectionFoldValue();
   const sectionKey = useSectionKey();
@@ -58,6 +80,24 @@ export function SendActionMenu() {
 
   const collapsed = fold.isCollapsed(sectionKey);
   const label = t('sendActions.menuLabel');
+
+  /*
+    The menu closes on the click, so the copied state cannot be shown on the
+    entry the way the old hover button showed it on itself. A toast says it
+    instead, which is also how the fork and rewind entries in this same menu
+    report what they did.
+
+    Clipboard writes do fail — a WebView without permission, a page that lost
+    focus mid-click — and a silent failure here is worse than most, since the
+    user walks away believing they have the text and pastes something else.
+  */
+  const handleCopy = () => {
+    setOpen(false);
+    navigator.clipboard.writeText(copyText).then(
+      () => toast.success(t('sendActions.copyDone')),
+      () => toast.error(t('sendActions.copyFailed')),
+    );
+  };
   // A send with no checkpoint behind it cannot be rewound to, so the two rewind
   // entries are not drawn for it at all.
   const canRewind = actions?.canRewind(sectionKey) ?? false;
@@ -111,6 +151,20 @@ export function SendActionMenu() {
             className="w-max max-w-[16rem] bg-surface-raised border border-border-default rounded-md shadow-xl overflow-hidden z-50"
             {...attrs}
           >
+            {/*
+              First, and above the fold entry, because it is the one action here
+              that every send can always perform and the one asked for most
+              often. The two below it act on the transcript; this one only reads
+              from it.
+            */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCopy}
+              className={itemClass}
+            >
+              {t('sendActions.copyMessage')}
+            </button>
             <button
               type="button"
               role="menuitem"
