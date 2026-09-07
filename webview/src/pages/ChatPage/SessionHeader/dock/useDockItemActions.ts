@@ -8,6 +8,7 @@ import { OPEN_ACCOUNT_USAGE_EVENT } from '@/commandPalette/sections/model/Accoun
 import { DockItemId } from '@/types/settings';
 import { useTunnelAction } from '../useTunnelAction';
 import { openAssetsModal } from './actions';
+import { AssetScreenSource } from '@/shared';
 
 /**
  * One `activate` per dock item, so the dock icon and the ⋮ menu row trigger the
@@ -35,6 +36,8 @@ export function useDockItemActions(): DockItemActions {
     window.dispatchEvent(new CustomEvent(OPEN_ACCOUNT_USAGE_EVENT));
   }, []);
 
+  const openAssetsFromMenu = useCallback(() => openAssetsModal(AssetScreenSource.Overflow), []);
+
   const openSettings = useCallback(() => {
     // Honours the user's "Open Settings as" preference (overlay vs dedicated tab)
     // — the same helper every other entry point into settings uses.
@@ -58,9 +61,9 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.BACKGROUND_TASKS]: toggleWorkflows,
       [DockItemId.TUNNEL]: tunnel.activate,
       [DockItemId.SETTINGS]: openSettings,
-      [DockItemId.ASSETS]: openAssetsModal,
+      [DockItemId.ASSETS]: openAssetsFromMenu,
       [DockItemId.NEW_TAB]: openNewTab,
     }),
-    [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab],
+    [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab, openAssetsFromMenu],
   );
 }

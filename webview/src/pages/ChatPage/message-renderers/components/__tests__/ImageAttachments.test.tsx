@@ -7,6 +7,10 @@ import type { ImageBlockDto } from '../../../../../dto/message/ContentBlockDto';
 // grid and which position it opens the viewer on, so the surroundings are
 // stubbed rather than mounted.
 const gallery = vi.fn();
+const reportAssetActivity = vi.fn();
+vi.mock('@/utils/reportAssetActivity', () => ({
+  reportAssetActivity: (...a: unknown[]) => reportAssetActivity(...a),
+}));
 vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ currentSessionId: 's1' }) }));
 vi.mock('@/contexts/WorkingDirContext', () => ({ useWorkingDir: () => ({ workingDirectory: '/w' }) }));
 vi.mock('@/hooks/useSessionAssetGallery', () => ({
@@ -37,6 +41,7 @@ function localOnlyGallery(lockedCount = 0, hasMoreInSession = lockedCount > 0) {
 beforeEach(() => {
   cleanup();
   gallery.mockReset();
+  reportAssetActivity.mockReset();
   gallery.mockImplementation(localOnlyGallery());
 });
 
@@ -152,6 +157,64 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByLabelText('View this session’s assets'));
 
     expect(screen.queryByAltText('Full size')).toBeNull();
+  });
+
+  it('records the gate being shown, with how much is out of reach', () => {
+    // The denominator of this feature's conversion rate.
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(reportAssetActivity).toHaveBeenCalledWith('gate_seen', { lockedCount: 24 });
+  });
+
+  it('counts the gate once per opened viewer, even as the locked count settles', () => {
+    // The count is not final when the viewer opens: it starts at zero and lands
+    // on its real value once the session index arrives, and can change again if
+    // the index is refetched. Each change re-runs the report, so without a guard
+    // one person is filed several times and the conversion rate is meaningless.
+    gallery.mockImplementation(localOnlyGallery(0, true));
+    const { rerender } = render(<ImageAttachments images={IMAGES} />);
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    gallery.mockImplementation(localOnlyGallery(24));
+    rerender(<ImageAttachments images={IMAGES} />);
+    gallery.mockImplementation(localOnlyGallery(25));
+    rerender(<ImageAttachments images={IMAGES} />);
+
+    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(1);
+  });
+
+  it('counts the gate again for a fresh open', () => {
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(2);
+  });
+
+  it('does not report a gate to someone with nothing locked', () => {
+    gallery.mockImplementation(localOnlyGallery(0, true));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(0);
+  });
+
+  it('records the invitation being followed', () => {
+    // The numerator: without this the denominator alone says nothing.
+    gallery.mockImplementation(localOnlyGallery(24));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+    fireEvent.click(screen.getByText('Learn more'));
+
+    expect(reportAssetActivity).toHaveBeenCalledWith('gate_clicked');
   });
 
   it('passes the entry uuid through so the gallery can locate this message', () => {

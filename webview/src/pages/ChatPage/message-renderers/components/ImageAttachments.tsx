@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ImageBlockDto } from '../../../../dto/message/ContentBlockDto';
 import { useTranslation } from '@/i18n';
 import { ImageLightbox } from '@/components/ImageLightbox';
@@ -6,6 +6,8 @@ import { useSessionAssetGallery } from '@/hooks/useSessionAssetGallery';
 import { openSettingsAt } from '@/utils/openSettingsAt';
 import { Route } from '@/router';
 import { openAssetsModal } from '@/pages/ChatPage/SessionHeader/dock/actions';
+import { AssetActivityKind, AssetScreenSource } from '@/shared';
+import { reportAssetActivity } from '@/utils/reportAssetActivity';
 
 interface ImageAttachmentsProps {
   images: ImageBlockDto[];
@@ -42,7 +44,10 @@ const MoreInSessionNotice: React.FC<{ count: number }> = ({ count }) => {
       <span>{t('attachments.lightbox.moreInSession', { count })}</span>
       <button
         type="button"
-        onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
+        onClick={() => {
+          reportAssetActivity(AssetActivityKind.GateClicked);
+          void openSettingsAt(Route.SETTINGS_SPONSOR);
+        }}
         className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
       >
         {tc('sponsorGated.learnMore')}
@@ -64,6 +69,27 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
     localSrcs,
     openedLocalIndex: openedIndex,
   });
+
+  /*
+    The denominator of this feature's conversion rate: how many people were shown
+    that some of the session is out of reach.
+
+    Reported once per opened viewer, not per render. The notice is on screen the
+    whole time the viewer is, and `lockedCount` only settles once the session
+    index arrives, so counting renders would file the same person dozens of times
+    and leave the rate meaningless.
+  */
+  const gateReported = useRef(false);
+  useEffect(() => {
+    if (openedIndex === null) {
+      gateReported.current = false;
+      return;
+    }
+    if (lockedCount > 0 && !gateReported.current) {
+      gateReported.current = true;
+      reportAssetActivity(AssetActivityKind.GateSeen, { lockedCount });
+    }
+  }, [openedIndex, lockedCount]);
 
   return (
     <>
@@ -98,7 +124,7 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
                   // Close first: the viewer sits above the Assets screen, so
                   // leaving it up would hide the very screen just asked for.
                   setOpenedIndex(null);
-                  openAssetsModal();
+                  openAssetsModal(AssetScreenSource.Viewer);
                 }
               : undefined
           }

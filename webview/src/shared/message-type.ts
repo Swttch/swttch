@@ -501,6 +501,10 @@ export enum MessageType {
   /** Ask for one attached image's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex}. The reply is the block's own `source` object, passed through unedited. inbound webview→backend */
   GET_SESSION_ASSET_DATA = 'GET_SESSION_ASSET_DATA',
 
+  // -- Assets telemetry --
+  /** The webview reports something that happened on the Assets surfaces, as {kind, ...}. Purely a measurement signal: everything it describes (a gate shown, an invitation followed, the screen opened) happens in the webview and reaches the backend no other way. The kind — and, for a screen open, the entry point — become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a conversion rate needs people. Never carries text the user typed. inbound webview→backend */
+  ASSET_ACTIVITY = 'ASSET_ACTIVITY',
+
   // -- Attachments --
   /** The webview reports that the user attached an image, carrying { source, mimeType, size }. Purely a telemetry signal: the image itself still travels inline with SEND_MESSAGE, so the backend does nothing but record it. All three attach paths (button / paste / drop) are handled in the webview and never reach the backend otherwise, which is why attaching was invisible to telemetry until this. Never carries the file NAME. inbound webview→backend */
   IMAGE_ATTACHED = 'IMAGE_ATTACHED',

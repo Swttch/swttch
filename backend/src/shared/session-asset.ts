@@ -44,3 +44,36 @@ export interface SessionAsset extends SessionAssetRef {
    */
   messagePreview: string;
 }
+
+/**
+ * What happened, for the Assets telemetry. Sent as `ASSET_ACTIVITY`'s `kind`.
+ *
+ * These become part of the EVENT NAME rather than a property, because Rybbit
+ * counts unique users per event name but (as far as we could measure) cannot
+ * filter users by a custom property. A conversion rate needs people, not hits,
+ * so anything a rate is computed from has to be its own event.
+ */
+export enum AssetActivityKind {
+  /** A non-sponsor opened a viewer that had images out of reach. Once per open. */
+  GateSeen = 'gate_seen',
+  /** They followed that invitation to the sponsor page. */
+  GateClicked = 'gate_clicked',
+  /** The Assets screen was opened. Carries which entry point did it. */
+  ScreenOpened = 'screen_opened',
+}
+
+/**
+ * Which of the three doors into the Assets screen was used.
+ *
+ * Appended to the event name for the same reason as {@link AssetActivityKind}:
+ * "how many PEOPLE came through the dock" is the question, and one person
+ * opening it twenty times must not read like twenty people.
+ */
+export enum AssetScreenSource {
+  /** The header dock icon — hidden by default, which is what makes this worth measuring. */
+  Dock = 'dock',
+  /** The ⋮ overflow menu row. */
+  Overflow = 'overflow',
+  /** The grid button in the image viewer's bottom panel. */
+  Viewer = 'viewer',
+}

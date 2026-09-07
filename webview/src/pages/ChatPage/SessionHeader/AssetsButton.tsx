@@ -1,6 +1,7 @@
 import { PhotoIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { openAssetsModal } from './dock/actions';
+import { AssetScreenSource } from '@/shared';
 
 /**
  * Dock icon for the session's Assets screen.
@@ -14,7 +15,7 @@ export function AssetsButton() {
 
   return (
     <button
-      onClick={openAssetsModal}
+      onClick={() => openAssetsModal(AssetScreenSource.Dock)}
       className="p-1 rounded transition-colors hover:bg-surface-hover"
       title={t('assets.title')}
     >
