@@ -554,5 +554,13 @@
       "unreadable": "このファイルは読み取れなくなったため、変更を適用する対象がありません。"
     },
     "allowAllEdits": "すべての編集を許可"
+  },
+  "assets": {
+    "title": "アセット",
+    "empty": "このセッションにはまだ画像が添付されていません",
+    "loading": "…",
+    "close": "閉じる",
+    "openImage": "画像を開く",
+    "moreInSession": "このセッションにあと{{count}}枚あります"
   }
 }

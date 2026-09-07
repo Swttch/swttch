@@ -14,3 +14,6 @@
 
 /** Ask the app shell to open the remote-tunnel modal. */
 export const OPEN_TUNNEL_EVENT = 'open-tunnel-modal';
+
+/** Ask the app shell to open the session Assets modal. */
+export const OPEN_ASSETS_EVENT = 'open-assets-modal';

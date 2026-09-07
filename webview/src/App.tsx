@@ -6,6 +6,7 @@ import { I18nLocaleSync } from './i18n/I18nLocaleSync';
 import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage } from './pages';
 import { AccountUsageModal } from './components/AccountUsageModal';
 import { TunnelModal } from './components/TunnelModal';
+import { AssetsModal } from './components/AssetsModal';
 import { RenameTabDialog } from './components/RenameTabDialog';
 import { useTabRenamePrompt } from './hooks/useTabRenamePrompt';
 import { ForbiddenNotice } from './components/ForbiddenNotice';
@@ -19,7 +20,7 @@ import { ZoomIndicator } from './components/ZoomIndicator';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
-import { OPEN_TUNNEL_EVENT } from './pages/ChatPage/SessionHeader/dock/actions';
+import { OPEN_TUNNEL_EVENT, OPEN_ASSETS_EVENT } from './pages/ChatPage/SessionHeader/dock/actions';
 import { isDev } from './config/environment';
 import 'katex/dist/katex.min.css';
 
@@ -41,6 +42,7 @@ function AppContent() {
   // Owned here rather than by the dock icon: the same item can be triggered from
   // the ⋮ overflow menu, and that row unmounts the moment the menu closes.
   const [isTunnelOpen, setIsTunnelOpen] = useState(false);
+  const [isAssetsOpen, setIsAssetsOpen] = useState(false);
   const location = useLocation();
   const backgroundLocation = location.state?.backgroundLocation;
 
@@ -54,6 +56,12 @@ function AppContent() {
     const handler = () => setIsTunnelOpen(true);
     window.addEventListener(OPEN_TUNNEL_EVENT, handler);
     return () => window.removeEventListener(OPEN_TUNNEL_EVENT, handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsAssetsOpen(true);
+    window.addEventListener(OPEN_ASSETS_EVENT, handler);
+    return () => window.removeEventListener(OPEN_ASSETS_EVENT, handler);
   }, []);
 
   return (
@@ -88,6 +96,7 @@ function AppContent() {
       )}
 
       {isTunnelOpen && <TunnelModal onClose={() => setIsTunnelOpen(false)} />}
+      {isAssetsOpen && <AssetsModal onClose={() => setIsAssetsOpen(false)} />}
       {tabRename.initialName !== null && (
         <RenameTabDialog
           initialName={tabRename.initialName}

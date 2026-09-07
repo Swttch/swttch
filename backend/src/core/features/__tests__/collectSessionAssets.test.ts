@@ -5,7 +5,7 @@ vi.mock('../loadSessionMessages', () => ({
   loadActiveChain: (...args: unknown[]) => loadActiveChain(...args),
 }));
 
-const { collectSessionAssets, readSessionAsset, base64ByteLength } = await import(
+const { collectSessionAssets, readSessionAsset, base64ByteLength, messagePreviewOf } = await import(
   '../collectSessionAssets'
 );
 
@@ -31,6 +31,47 @@ describe('base64ByteLength', () => {
   });
 });
 
+describe('messagePreviewOf', () => {
+  it('captions the group with what the user typed', () => {
+    expect(messagePreviewOf(userEntry('u1', [{ type: 'text', text: 'compare these two' }]))).toBe(
+      'compare these two',
+    );
+  });
+
+  it('drops the wrapped tags the CLI injects', () => {
+    // A caption made of plumbing the user never typed says nothing about the
+    // images it labels.
+    const entry = userEntry('u1', [
+      { type: 'text', text: '<system-reminder>be brief</system-reminder> look at this' },
+    ]);
+
+    expect(messagePreviewOf(entry)).toBe('look at this');
+  });
+
+  it('reads a plain string content, which the CLI also writes', () => {
+    expect(messagePreviewOf({ type: 'user', uuid: 'u1', message: { content: 'hello' } })).toBe('hello');
+  });
+
+  it('collapses whitespace so a multi-line prompt stays one line', () => {
+    const entry = userEntry('u1', [{ type: 'text', text: 'one\n\n  two\t three' }]);
+
+    expect(messagePreviewOf(entry)).toBe('one two three');
+  });
+
+  it('truncates a long prompt, since this is a caption in an index', () => {
+    const entry = userEntry('u1', [{ type: 'text', text: 'x'.repeat(300) }]);
+
+    const preview = messagePreviewOf(entry);
+
+    expect(preview.length).toBeLessThan(300);
+    expect(preview.endsWith('…')).toBe(true);
+  });
+
+  it('is empty for an image-only message rather than inventing a caption', () => {
+    expect(messagePreviewOf(userEntry('u1', [imageBlock()]))).toBe('');
+  });
+});
+
 describe('collectSessionAssets', () => {
   it('indexes each attached image with the coordinate needed to fetch it back', () => {
     loadActiveChain.mockResolvedValue([
@@ -39,8 +80,8 @@ describe('collectSessionAssets', () => {
 
     return collectSessionAssets('/w', 's').then((assets) => {
       expect(assets).toEqual([
-        { entryUuid: 'u1', blockIndex: 1, mediaType: 'image/png', timestamp: '2026-09-06T00:00:00.000Z', byteSize: 3 },
-        { entryUuid: 'u1', blockIndex: 2, mediaType: 'image/webp', timestamp: '2026-09-06T00:00:00.000Z', byteSize: 3 },
+        { entryUuid: 'u1', blockIndex: 1, mediaType: 'image/png', timestamp: '2026-09-06T00:00:00.000Z', byteSize: 3, messagePreview: 'look' },
+        { entryUuid: 'u1', blockIndex: 2, mediaType: 'image/webp', timestamp: '2026-09-06T00:00:00.000Z', byteSize: 3, messagePreview: 'look' },
       ]);
     });
   });

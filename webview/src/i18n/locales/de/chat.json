@@ -554,5 +554,13 @@
       "unreadable": "Diese Datei kann nicht mehr gelesen werden, es gibt also nichts, worauf die Änderung angewendet werden könnte."
     },
     "allowAllEdits": "Alle Änderungen erlauben"
+  },
+  "assets": {
+    "title": "Assets",
+    "empty": "In dieser Sitzung wurden noch keine Bilder angehängt",
+    "loading": "…",
+    "close": "Schließen",
+    "openImage": "Bild öffnen",
+    "moreInSession": "{{count}} weitere in dieser Sitzung"
   }
 }

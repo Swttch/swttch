@@ -20,6 +20,42 @@ export function base64ByteLength(base64: string): number {
   return Math.floor(base64.length / 4) * 3 - padding;
 }
 
+/** How much of the user's prompt the timeline caption keeps. */
+const PREVIEW_LIMIT = 160;
+
+/**
+ * A short caption for the entry: what the user typed alongside the images.
+ *
+ * Wrapped tags the CLI injects (`<command-name>`, `<system-reminder>`, the
+ * local-command envelopes) are dropped — they are plumbing the user never typed,
+ * and a caption made of them says nothing about the images it labels.
+ */
+export function messagePreviewOf(entry: SessionMessage): string {
+  const message = entry.message as Record<string, unknown> | undefined;
+  const content = message?.content;
+
+  const raw =
+    typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+        ? content
+            .filter(
+              (b): b is { type: string; text: string } =>
+                Boolean(b) && typeof b === 'object' && (b as { type?: string }).type === 'text',
+            )
+            .map((b) => b.text ?? '')
+            .join(' ')
+        : '';
+
+  const cleaned = raw
+    .replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleaned.length > PREVIEW_LIMIT ? `${cleaned.slice(0, PREVIEW_LIMIT)}…` : cleaned;
+}
+
 /**
  * The image blocks a USER attached, in the order they appear in the entry.
  *
@@ -70,15 +106,22 @@ export async function collectSessionAssets(
     // would be listed and then unreachable.
     if (typeof entryUuid !== 'string' || !entryUuid) continue;
 
-    const timestamp = typeof entry.timestamp === 'string' ? entry.timestamp : null;
+    const images = userAttachedImages(entry);
+    if (images.length === 0) continue;
 
-    for (const { blockIndex, source } of userAttachedImages(entry)) {
+    const timestamp = typeof entry.timestamp === 'string' ? entry.timestamp : null;
+    // Computed once per entry, not per image: every image in one message shares
+    // the same caption.
+    const messagePreview = messagePreviewOf(entry);
+
+    for (const { blockIndex, source } of images) {
       assets.push({
         entryUuid,
         blockIndex,
         mediaType: typeof source.media_type === 'string' ? source.media_type : 'image/png',
         timestamp,
         byteSize: source.type === 'base64' ? base64ByteLength(source.data ?? '') : 0,
+        messagePreview,
       });
     }
   }

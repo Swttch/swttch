@@ -33,4 +33,14 @@ export interface SessionAsset extends SessionAssetRef {
   timestamp: string | null;
   /** Decoded size in bytes, derived from the base64 length. */
   byteSize: number;
+  /**
+   * A short slice of what the user typed alongside the image, for the Assets
+   * timeline to label the group with.
+   *
+   * Truncated rather than complete: this is a caption in an index, and a long
+   * prompt would bloat a reply whose whole purpose is to stay small. The full
+   * text is always available over the normal session-load path, so nothing is
+   * lost — only this copy is short.
+   */
+  messagePreview: string;
 }

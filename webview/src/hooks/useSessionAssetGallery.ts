@@ -1,24 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
-import { MessageType, type SessionAsset } from '@/shared';
+import { MessageType } from '@/shared';
 import { useSponsorStatus } from './queries/useSponsorStatus';
-import { useSessionContextOrNull } from '@/contexts/SessionContext';
-import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
-
-interface AssetsResponse {
-  status?: string;
-  assets?: SessionAsset[];
-}
+import { assetKey, useSessionAssets, useSessionScope } from './useSessionAssets';
 
 interface AssetDataResponse {
   status?: string;
   source?: { type?: string; data?: string; media_type?: string };
-}
-
-/** Identity of one indexed image, used as the cache key for its bytes. */
-function keyOf(asset: SessionAsset): string {
-  return `${asset.entryUuid}:${asset.blockIndex}`;
 }
 
 export interface SessionAssetGallery {
@@ -62,33 +50,17 @@ export function useSessionAssetGallery(params: {
   const { send } = useBridgeContext();
   const { isSponsor } = useSponsorStatus();
 
-  // Read here, and tolerantly: a message renderer is reused in places where the
-  // session providers are not mounted (isolated render tests, future embeds).
-  // Without a session there is simply nothing session-wide to offer, which is
-  // the same outcome as a closed viewer.
-  const sessionId = useSessionContextOrNull()?.currentSessionId ?? undefined;
-  const workingDir = useWorkingDirOrNull()?.workingDirectory ?? undefined;
+  // Read tolerantly: a message renderer is reused in places where the session
+  // providers are not mounted. Without a session there is simply nothing
+  // session-wide to offer, the same outcome as a closed viewer.
+  const { workingDir, sessionId } = useSessionScope();
 
   const isOpen = openedLocalIndex !== null;
   // Bytes fetched so far, keyed by coordinate. Kept beside the query rather than
   // inside it because slots are filled one at a time as the user moves.
   const [fetched, setFetched] = useState<Record<string, string>>({});
 
-  // Only asked for once the viewer is open: a transcript can hold dozens of
-  // messages, and indexing the session for each of them on render would be
-  // dozens of full-session walks nobody asked for.
-  const { data: assets } = useQuery({
-    queryKey: ['session-assets', workingDir, sessionId],
-    enabled: isOpen && Boolean(workingDir && sessionId),
-    staleTime: 30_000,
-    queryFn: async (): Promise<SessionAsset[]> => {
-      const res = await send<AssetsResponse>(MessageType.GET_SESSION_ASSETS, {
-        workingDir,
-        sessionId,
-      });
-      return res?.status === 'ok' && Array.isArray(res.assets) ? res.assets : [];
-    },
-  });
+  const assets = useSessionAssets(isOpen);
 
   // Where this message's images sit inside the session-wide index. Matching by
   // entry uuid is what lets the already-decoded transcript copies be reused
@@ -115,7 +87,7 @@ export function useSessionAssetGallery(params: {
       if (local >= 0 && local < localSrcs.length && asset.entryUuid === entryUuid) {
         return localSrcs[local];
       }
-      return fetched[keyOf(asset)] ?? null;
+      return fetched[assetKey(asset)] ?? null;
     });
   }, [sessionWide, assets, localSrcs, localOffset, entryUuid, fetched]);
 
@@ -131,7 +103,7 @@ export function useSessionAssetGallery(params: {
       if (!sessionWide || !assets) return;
       const asset = assets[index];
       if (!asset) return;
-      const key = keyOf(asset);
+      const key = assetKey(asset);
       if (fetched[key] || srcs[index]) return;
 
       void send<AssetDataResponse>(MessageType.GET_SESSION_ASSET_DATA, {

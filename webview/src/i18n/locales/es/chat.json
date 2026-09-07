@@ -554,5 +554,13 @@
       "unreadable": "Este archivo ya no se puede leer, así que no hay nada a lo que aplicar el cambio."
     },
     "allowAllEdits": "Permitir todas las ediciones"
+  },
+  "assets": {
+    "title": "Recursos",
+    "empty": "Aún no hay imágenes adjuntas en esta sesión",
+    "loading": "…",
+    "close": "Cerrar",
+    "openImage": "Abrir imagen",
+    "moreInSession": "{{count}} más en esta sesión"
   }
 }

@@ -10,13 +10,13 @@ const sessionContext = vi.fn<() => { currentSessionId: string | null } | null>((
   currentSessionId: 's1',
 }));
 
-vi.mock('@/contexts/BridgeContext', () => ({ useBridgeContext: () => ({ send }) }));
 vi.mock('@/contexts/SessionContext', () => ({
   useSessionContextOrNull: () => sessionContext(),
 }));
 vi.mock('@/contexts/WorkingDirContext', () => ({
   useWorkingDirOrNull: () => ({ workingDirectory: '/w' }),
 }));
+vi.mock('@/contexts/BridgeContext', () => ({ useBridgeContext: () => ({ send }) }));
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({
   useSponsorStatus: () => ({ isSponsor: isSponsor() }),
 }));
@@ -24,7 +24,7 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
 import { useSessionAssetGallery } from '../useSessionAssetGallery';
 
 function asset(entryUuid: string, blockIndex: number): SessionAsset {
-  return { entryUuid, blockIndex, mediaType: 'image/png', timestamp: null, byteSize: 3 };
+  return { entryUuid, blockIndex, mediaType: 'image/png', timestamp: null, byteSize: 3, messagePreview: '' };
 }
 
 /** Three entries, one image each; the middle one is "this message". */

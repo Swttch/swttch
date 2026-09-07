@@ -155,6 +155,7 @@ export enum DockItemId {
   BACKGROUND_TASKS = 'backgroundTasks',
   TUNNEL = 'tunnel',
   SETTINGS = 'settings',
+  ASSETS = 'assets',
   NEW_TAB = 'newTab',
   // Accounts are NOT a dock item: the switcher is a picker (a list of saved
   // accounts), not a single action, and always sits as its own icon to the

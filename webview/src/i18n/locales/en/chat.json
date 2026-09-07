@@ -558,5 +558,13 @@
       "unreadable": "This file can no longer be read, so there is nothing to apply the change to."
     },
     "allowAllEdits": "Allow all edits"
+  },
+  "assets": {
+    "title": "Assets",
+    "empty": "No images attached in this session yet",
+    "loading": "…",
+    "close": "Close",
+    "openImage": "Open image",
+    "moreInSession": "{{count}} more in this session"
   }
 }
