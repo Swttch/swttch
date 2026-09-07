@@ -25,7 +25,7 @@ vi.mock('../sessionTitleOverrides', () => ({
 
 import { readdir, stat } from 'fs/promises';
 import { existsSync } from 'fs';
-import { getSessionsList } from '../getSessionsList';
+import { getSessionsList, resolvePage } from '../getSessionsList';
 import { getProjectSessionsPath } from '../getProjectSessionsPath';
 import { extractSessionInfo, scanTail } from '../extractSessionInfo';
 import { readSessionTitleOverrides } from '../sessionTitleOverrides';
@@ -85,7 +85,13 @@ describe('getSessionsList', () => {
   it('should return empty result when sessions dir does not exist', async () => {
     mockExistsSync.mockReturnValue(false);
     const result = await getSessionsList('/test');
-    expect(result).toEqual({ sessions: [], total: 0, hasMore: false, nextOffset: 0 });
+    expect(result).toEqual({
+      sessions: [],
+      total: 0,
+      hasMore: false,
+      nextOffset: 0,
+      scopeDirCount: 0,
+    });
   });
 
   it('should return sessions sorted by lastTimestamp descending', async () => {
@@ -238,5 +244,75 @@ describe('getSessionsList', () => {
       await getSessionsList('/test', { limit: 1 });
       expect(mockScanTail.mock.calls.length).toBe(five.length);
     });
+  });
+
+  it('reports a single directory for a listing that came from one', async () => {
+    mockReaddir.mockResolvedValue(['sess-1.jsonl'] as unknown as Awaited<ReturnType<typeof readdir>>);
+    tailTimestamps({ 'sess-1.jsonl': '2025-01-01T00:00:00Z' });
+    headInfo({ 'sess-1': {} });
+
+    const result = await getSessionsList('/test');
+    expect(result.scopeDirCount).toBe(1);
+  });
+});
+
+/**
+ * How many directories the rows came from is a property of the SCOPE, so it has
+ * to be answered from every key in the order rather than from the page's rows.
+ *
+ * The webview labels each row with the project it came from, and it decides
+ * whether to do that at all from this count. Working it out from the rows
+ * instead is what broke: sessions are served newest-first, so a first page can
+ * be entirely the anchor's own while every sub-project sits further down. The
+ * list then rendered with no labels and looked exactly like an unmerged one.
+ */
+describe('resolvePage scope', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockReadOverrides.mockResolvedValue({});
+    mockExtractInfo.mockImplementation(async () => info());
+  });
+
+  function key(sessionId: string, sessionDir: string, isoTime: string) {
+    return {
+      sessionId,
+      fullPath: `${sessionDir}/${sessionId}.jsonl`,
+      sessionsPath: sessionDir,
+      sessionDir,
+      sortedAt: Date.parse(isoTime),
+    };
+  }
+
+  it('counts every directory in scope even when the page holds only one', async () => {
+    // The anchor owns both newest sessions; the sub-project's is older and
+    // falls outside a page of two. The page is single-directory, the scope is
+    // not, and the count has to state the scope.
+    const keys = [
+      key('root-new', '/repo', '2026-01-05T00:00:00Z'),
+      key('root-old', '/repo', '2026-01-04T00:00:00Z'),
+      key('pkg-a', '/repo/packages/a', '2026-01-01T00:00:00Z'),
+    ];
+
+    const page = await resolvePage(keys, { limit: 2 });
+
+    expect(page.sessions.map((s) => s.sessionDir)).toEqual(['/repo', '/repo']);
+    expect(page.scopeDirCount).toBe(2);
+  });
+
+  it('counts a directory once however many sessions it holds', async () => {
+    const keys = [
+      key('a', '/repo', '2026-01-03T00:00:00Z'),
+      key('b', '/repo', '2026-01-02T00:00:00Z'),
+      key('c', '/repo/webview', '2026-01-01T00:00:00Z'),
+    ];
+
+    const page = await resolvePage(keys);
+
+    expect(page.scopeDirCount).toBe(2);
+  });
+
+  it('reports no directories for an empty scope', async () => {
+    const page = await resolvePage([]);
+    expect(page.scopeDirCount).toBe(0);
   });
 });

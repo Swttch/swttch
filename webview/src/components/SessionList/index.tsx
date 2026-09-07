@@ -4,6 +4,7 @@ import { SessionItem } from './SessionItem';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
+import { useSessionContextOrNull } from '@/contexts/SessionContext';
 
 interface Props {
   groupedSessions: GroupedSessions;
@@ -39,18 +40,32 @@ export function SessionList(props: Props) {
   // there — without an anchor there is simply nothing to compare against.
   const rootDir = useWorkingDirOrNull()?.rootDir ?? null;
 
-  // Derived from the rows themselves rather than read from the setting: if a
-  // session sits somewhere other than the anchor, directories are merged. This
-  // keeps the list honest about what it is actually showing — the setting can
-  // be on while the anchor has no sub-projects, and then there is nothing to
-  // disambiguate and no reason to spend a second line on every row.
-  const isMerged = useMemo(
-    () =>
-      GROUP_ORDER.flatMap((key) => groupedSessions[key]).some(
-        (s) => s.sessionDir && s.sessionDir !== rootDir,
-      ),
-    [groupedSessions, rootDir],
-  );
+  // Taken from the side that walked the directories, not guessed from the rows.
+  //
+  // The rows cannot answer this once the list is paged. A page holds the newest
+  // N sessions, and those can all belong to the anchor while every other
+  // directory sits further down — so "no foreign row here" means "not yet",
+  // never "not merged". Guessing from the rows made a merged list render with
+  // no origin labels at all until the user scrolled far enough to reach a
+  // session from a sub-project, at which point labels appeared on every row
+  // that was already on screen and pushed the list down.
+  //
+  // Reading the SETTING instead would be wrong in the other direction: it can
+  // be on while the anchor has no sub-projects with sessions in them, and then
+  // there is nothing to disambiguate and no reason to spend a second line on
+  // every row. The count answers both, because the backend only counts
+  // directories that actually contributed a session.
+  const scopeDirCount = useSessionContextOrNull()?.scopeDirCount ?? null;
+  const isMerged = useMemo(() => {
+    // A backend that reported a count has settled it; nothing here overrides.
+    if (scopeDirCount !== null) return scopeDirCount > 1;
+    // Nobody said, so fall back on the only evidence available locally. Right
+    // whenever a foreign row is already loaded, and no worse than the guess
+    // this replaced when one is not.
+    return GROUP_ORDER.flatMap((key) => groupedSessions[key]).some(
+      (s) => s.sessionDir && s.sessionDir !== rootDir,
+    );
+  }, [scopeDirCount, groupedSessions, rootDir]);
 
   const requestMoreIfNeeded = useCallback(() => {
     if (!hasMore || !onLoadMore) return;

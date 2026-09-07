@@ -27,6 +27,7 @@ const { session, groupedOne, emptyGroups, mockOpenNewTab, mockOpenSession, mockL
 
 vi.mock('@/contexts/SessionContext', () => ({
   useSessionContext: mockUseSessionContext,
+  useSessionContextOrNull: mockUseSessionContext,
 }));
 
 vi.mock('@/adapters', () => ({

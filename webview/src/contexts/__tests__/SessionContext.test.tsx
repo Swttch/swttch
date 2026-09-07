@@ -373,6 +373,43 @@ describe('SessionContext', () => {
         limit: undefined,
       });
     });
+
+    // Paging is what made this necessary: the rows on hand stopped being able to
+    // say how many directories the list spans, because a first page can hold
+    // only the anchor's own sessions while sub-projects sit further down. The
+    // list renders origin labels off this, so the count has to survive the trip
+    // from the backend to the consumer.
+    it('carries the directory count the backend reported through to consumers', async () => {
+      mockSessionsIndex.mockResolvedValue({ ...page(['a'], false, 1), scopeDirCount: 3 });
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+
+      await waitFor(() => expect(capturedCtx?.scopeDirCount).toBe(3));
+    });
+
+    it('reports no directory count when the backend did not send one', async () => {
+      mockSessionsIndex.mockResolvedValue({ ...page(['a'], false, 1), scopeDirCount: null });
+      let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+        </SessionProvider>
+      );
+      await act(async () => {
+        await capturedCtx?.loadSessions();
+      });
+
+      await waitFor(() => expect(capturedCtx?.scopeDirCount).toBeNull());
+    });
   });
 
   it('loadSessions - exposes serviceError as sessionsServiceError state', async () => {

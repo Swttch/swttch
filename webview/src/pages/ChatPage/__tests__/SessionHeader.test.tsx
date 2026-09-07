@@ -40,6 +40,7 @@ let mockSettingsValue: any;
 // Mock SessionContext
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => mockSessionCtxValue,
+  useSessionContextOrNull: () => mockSessionCtxValue,
 }));
 
 // Mock SettingsContext (other header widgets read it)

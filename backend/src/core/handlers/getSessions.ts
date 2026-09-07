@@ -40,6 +40,7 @@ export async function getSessionsHandler(
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       sessions: [],
+      scopeDirCount: 0,
       serviceError: { type: MessageType.WSL_HOST_MISMATCH, reason },
     });
     return;
@@ -86,5 +87,6 @@ export async function getSessionsHandler(
     total: page.total,
     hasMore: page.hasMore,
     nextOffset: page.nextOffset,
+    scopeDirCount: page.scopeDirCount,
   });
 }

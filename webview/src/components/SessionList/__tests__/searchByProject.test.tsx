@@ -23,13 +23,16 @@ const SESSIONS = [
   session('33333333-cccc-4000-8000-000000000003', 'tune the webview', `${ROOT}/webview`),
 ];
 
+const SESSION_CTX = {
+  sessions: SESSIONS,
+  currentSessionId: null,
+  deleteSession: vi.fn(),
+  renameSession: vi.fn(),
+};
+
 vi.mock('@/contexts/SessionContext', () => ({
-  useSessionContext: () => ({
-    sessions: SESSIONS,
-    currentSessionId: null,
-    deleteSession: vi.fn(),
-    renameSession: vi.fn(),
-  }),
+  useSessionContext: () => SESSION_CTX,
+  useSessionContextOrNull: () => SESSION_CTX,
 }));
 
 vi.mock('@/components/ConfirmDialog/useConfirmDialog', () => ({

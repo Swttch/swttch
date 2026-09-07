@@ -31,6 +31,17 @@ export interface SessionListPage {
    * that overlaps what was already read.
    */
   nextOffset: number;
+  /**
+   * How many working directories the list was drawn from. One for a flat
+   * listing; more once nested directories are merged.
+   *
+   * A property of the SCOPE, not of the page. A caller cannot work it out from
+   * the rows it holds: the newest sessions can all belong to the same directory
+   * while further pages hold others, so a page of rows that happen to share a
+   * directory says nothing about whether directories were merged. Only the side
+   * that walked the directories knows, so it states it.
+   */
+  scopeDirCount: number;
 }
 
 export interface SessionListOptions {
@@ -205,11 +216,21 @@ export async function resolvePage(
     }
   }
 
+  // Counted over EVERY key in scope rather than the page's rows, which is the
+  // whole point: a first page can be entirely one directory while the scope
+  // spans several, and that page still has to be labelled as merged.
+  //
+  // Directories that hold no session do not count. The question a caller asks
+  // this is "do these rows come from more than one place", and a directory that
+  // contributed nothing cannot make two rows ambiguous.
+  const scopeDirCount = new Set(sortedKeys.map((k) => k.sessionDir)).size;
+
   return {
     sessions,
     total: sortedKeys.length,
     hasMore: cursor < sortedKeys.length,
     nextOffset: cursor,
+    scopeDirCount,
   };
 }
 
@@ -234,6 +255,6 @@ export async function getSessionsList(
     return page;
   } catch (err) {
     console.error('[node-backend]', 'Error reading sessions:', err);
-    return { sessions: [], total: 0, hasMore: false, nextOffset: 0 };
+    return { sessions: [], total: 0, hasMore: false, nextOffset: 0, scopeDirCount: 0 };
   }
 }

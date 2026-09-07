@@ -30,6 +30,16 @@ export interface SessionListResult {
    * backend's position, so counting rows here would re-read them.
    */
   nextOffset: number;
+  /**
+   * How many working directories these sessions were drawn from, or null when
+   * the backend did not say.
+   *
+   * The list cannot answer this from the rows it holds. The newest sessions can
+   * all belong to one directory while the rest of the list holds others, so a
+   * page that looks single-directory is not evidence of anything — which is
+   * exactly what made a merged list look unmerged until it was scrolled.
+   */
+  scopeDirCount: number | null;
 }
 
 /** How much of the list to fetch. Omitting `limit` asks for all of it. */
@@ -57,6 +67,7 @@ interface GetSessionsResponse {
   total?: number;
   hasMore?: boolean;
   nextOffset?: number;
+  scopeDirCount?: number;
 }
 
 /**
@@ -95,7 +106,7 @@ export class SessionsApi {
     );
 
     if (!response?.sessions || !Array.isArray(response.sessions)) {
-      return { sessions: [], hasMore: false, nextOffset: 0 };
+      return { sessions: [], hasMore: false, nextOffset: 0, scopeDirCount: null };
     }
 
     const sessions = plainToInstance(SessionMetaDto, response.sessions);
@@ -103,9 +114,13 @@ export class SessionsApi {
     // A backend that does not report a position cannot be paged past, so the
     // only safe continuation is the range that was just asked for.
     const nextOffset = response.nextOffset ?? (range?.offset ?? 0) + sessions.length;
+    // Null rather than a guess: a backend that did not say leaves the list to
+    // fall back on what it can see for itself, and pretending it said "one"
+    // would state the opposite of what a merged list needs.
+    const scopeDirCount = typeof response.scopeDirCount === 'number' ? response.scopeDirCount : null;
     return response.serviceError
-      ? { sessions, hasMore, nextOffset, serviceError: response.serviceError }
-      : { sessions, hasMore, nextOffset };
+      ? { sessions, hasMore, nextOffset, scopeDirCount, serviceError: response.serviceError }
+      : { sessions, hasMore, nextOffset, scopeDirCount };
   }
 
   /**

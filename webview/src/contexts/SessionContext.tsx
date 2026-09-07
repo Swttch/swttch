@@ -70,6 +70,12 @@ interface SessionContextValue {
   loadAllSessions: () => Promise<void>;
   /** Sessions exist beyond the ones loaded. */
   hasMoreSessions: boolean;
+  /**
+   * How many working directories the loaded sessions were drawn from, or null
+   * when the backend did not say. More than one means the list is merged and
+   * every row needs to name where it came from.
+   */
+  scopeDirCount: number | null;
   resetToNewSession: () => void;
   openNewTab: () => void;
   switchSession: (sessionId: string) => void;
@@ -173,6 +179,16 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // before the first lands. A ref, not state, because nothing renders from it
   // and a re-render would defeat the point.
   const loadingMoreRef = useRef(false);
+  /**
+   * How many directories the current list spans, as reported by the backend.
+   *
+   * Held here rather than worked out from `sessions` because the rows cannot
+   * answer it. Paging means the list holds the newest N, and those can all sit
+   * in one directory while the scope spans several — which is what made a
+   * merged list look unmerged until the user scrolled far enough to hit a row
+   * from somewhere else.
+   */
+  const [scopeDirCount, setScopeDirCount] = useState<number | null>(null);
   const [sessionsServiceError, setSessionsServiceError] = useState<SessionServiceError | null>(null);
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.Idle);
   const [isLoading, setIsLoading] = useState(false);
@@ -341,6 +357,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       });
       setSessions(sortSessions(result.sessions));
       setNextSessionOffset(result.hasMore ? result.nextOffset : null);
+      setScopeDirCount(result.scopeDirCount);
       setSessionsServiceError(result.serviceError ?? null);
       console.log('[SessionContext] Loaded CLI sessions:', result.sessions.length, 'hasMore:', result.hasMore);
     } catch (error) {
@@ -554,6 +571,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     loadMoreSessions,
     loadAllSessions,
     hasMoreSessions: nextSessionOffset !== null,
+    scopeDirCount,
     resetToNewSession,
     openNewTab,
     switchSession,
