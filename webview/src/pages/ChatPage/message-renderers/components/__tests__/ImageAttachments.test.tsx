@@ -107,7 +107,6 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(screen.queryByText(/more in this session/)).toBeNull();
-    expect(screen.queryByText('View this session’s assets')).toBeNull();
   });
 
   it('offers the Assets screen to a sponsor too, who has nothing locked', () => {
@@ -118,7 +117,7 @@ describe('ImageAttachments', () => {
 
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(screen.getByText('View this session’s assets')).toBeInTheDocument();
+    expect(screen.getByLabelText('View this session’s assets')).toBeInTheDocument();
     expect(screen.queryByText(/more in this session/)).toBeNull();
     expect(screen.queryByText('Learn more')).toBeNull();
   });
@@ -130,7 +129,17 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(screen.getByText('24 more in this session')).toBeInTheDocument();
-    expect(screen.getByText('View this session’s assets')).toBeInTheDocument();
+    expect(screen.getByLabelText('View this session’s assets')).toBeInTheDocument();
+  });
+
+  it('hides the Assets button when this message holds the whole session', () => {
+    // It would only lead to a screen showing exactly what is already on view.
+    gallery.mockImplementation(localOnlyGallery(0, false));
+    render(<ImageAttachments images={IMAGES} />);
+
+    fireEvent.click(screen.getByAltText('Image 1'));
+
+    expect(screen.queryByLabelText('View this session’s assets')).toBeNull();
   });
 
   it('closes the viewer when handing over to the Assets screen', () => {
@@ -140,7 +149,7 @@ describe('ImageAttachments', () => {
     render(<ImageAttachments images={IMAGES} />);
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    fireEvent.click(screen.getByText('View this session’s assets'));
+    fireEvent.click(screen.getByLabelText('View this session’s assets'));
 
     expect(screen.queryByAltText('Full size')).toBeNull();
   });

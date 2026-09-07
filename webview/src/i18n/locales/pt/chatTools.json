@@ -30,7 +30,15 @@
       "previous": "Imagem anterior",
       "next": "Próxima imagem",
       "loading": "Carregando…",
-      "moreInSession": "Mais {{count}} nesta sessão"
+      "moreInSession": "Mais {{count}} nesta sessão",
+      "zoomIn": "Ampliar",
+      "zoomOut": "Reduzir",
+      "openInNewTab": "Abrir em nova aba",
+      "copy": "Copiar imagem",
+      "download": "Baixar imagem",
+      "copied": "Imagem copiada",
+      "copyFailed": "Não foi possível copiar a imagem",
+      "downloadFailed": "Não foi possível salvar a imagem"
     }
   },
   "edit": {

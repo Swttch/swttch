@@ -75,11 +75,67 @@ describe('ImageLightbox', () => {
   });
 
   it('offers no arrows and no counter for a lone image', () => {
+    // "1 / 1" is noise, and there is nowhere to step. The rest of the panel
+    // stays: copying or saving one image is as useful as one of twenty.
     render(<ImageLightbox srcs={[SRCS[0]]} initialIndex={0} onClose={vi.fn()} />);
 
     expect(screen.queryByLabelText('Previous image')).toBeNull();
     expect(screen.queryByLabelText('Next image')).toBeNull();
     expect(screen.queryByText('1 / 1')).toBeNull();
+    expect(screen.getByLabelText('Download image')).toBeInTheDocument();
+  });
+
+  it('offers zoom, copy and download for the image on screen', () => {
+    render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+
+    expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
+    expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
+    expect(screen.getByLabelText('Copy image')).toBeInTheDocument();
+    expect(screen.getByLabelText('Download image')).toBeInTheDocument();
+  });
+
+  it('resets zoom when stepping to another image', () => {
+    // Magnification chosen for one picture says nothing about the next; arriving
+    // mid-zoom would show a crop of an image the user has not seen whole.
+    render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+    const image = () => screen.getByAltText('Full size');
+
+    fireEvent.click(screen.getByLabelText('Zoom in'));
+    expect(image().style.transform).toBe('scale(1.25)');
+
+    press('ArrowRight');
+
+    expect(image().style.transform).toBe('scale(1)');
+  });
+
+  it('stops zooming out at the lower bound', () => {
+    render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+
+    for (let i = 0; i < 8; i++) fireEvent.click(screen.getByLabelText('Zoom out'));
+
+    expect(screen.getByAltText('Full size').style.transform).toBe('scale(0.5)');
+    expect(screen.getByLabelText('Zoom out')).toBeDisabled();
+  });
+
+  it('shows the Assets button only when the owner offers one', () => {
+    const onOpenAssets = vi.fn();
+    const { rerender } = render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+    expect(screen.queryByLabelText('View this session’s assets')).toBeNull();
+
+    rerender(
+      <ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} onOpenAssets={onOpenAssets} />,
+    );
+    fireEvent.click(screen.getByLabelText('View this session’s assets'));
+
+    expect(onOpenAssets).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the panel actions while the image is still on its way', () => {
+    // A pending slot has no bytes to copy, save or open.
+    render(<ImageLightbox srcs={[null, SRCS[1]]} initialIndex={0} onClose={vi.fn()} />);
+
+    expect(screen.getByLabelText('Copy image')).toBeDisabled();
+    expect(screen.getByLabelText('Download image')).toBeDisabled();
   });
 
   it('closes on Escape', () => {

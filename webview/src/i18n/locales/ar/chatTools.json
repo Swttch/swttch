@@ -30,7 +30,15 @@
       "previous": "الصورة السابقة",
       "next": "الصورة التالية",
       "loading": "جارٍ التحميل…",
-      "moreInSession": "{{count}} أخرى في هذه الجلسة"
+      "moreInSession": "{{count}} أخرى في هذه الجلسة",
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "openInNewTab": "فتح في علامة تبويب جديدة",
+      "copy": "نسخ الصورة",
+      "download": "تنزيل الصورة",
+      "copied": "تم نسخ الصورة",
+      "copyFailed": "تعذّر نسخ الصورة",
+      "downloadFailed": "تعذّر حفظ الصورة"
     }
   },
   "edit": {

@@ -30,7 +30,15 @@
       "previous": "Previous image",
       "next": "Next image",
       "loading": "Loading…",
-      "moreInSession": "{{count}} more in this session"
+      "moreInSession": "{{count}} more in this session",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "openInNewTab": "Open in new tab",
+      "copy": "Copy image",
+      "download": "Download image",
+      "copied": "Image copied",
+      "copyFailed": "Could not copy the image",
+      "downloadFailed": "Could not save the image"
     }
   },
   "edit": {

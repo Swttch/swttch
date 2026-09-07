@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { useTranslation } from '@/i18n';
+import { LightboxPanel } from './LightboxPanel';
+
+/** Zoom bounds, in multiples of the fitted size. */
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 4;
+const ZOOM_STEP = 0.25;
 
 interface ImageLightboxProps {
   /**
@@ -26,6 +32,12 @@ interface ImageLightboxProps {
    * its owner hands it.
    */
   notice?: React.ReactNode;
+  /**
+   * Opens the Assets screen from the bottom panel. Absent when the viewer was
+   * opened FROM that screen, where the button would lead back to where the user
+   * already is.
+   */
+  onOpenAssets?: () => void;
 }
 
 /**
@@ -46,6 +58,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onClose,
   onIndexChange,
   notice,
+  onOpenAssets,
 }) => {
   const { t } = useTranslation('chatTools');
   const lastIndex = srcs.length - 1;
@@ -56,6 +69,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   const goPrevious = useCallback(() => setIndex((i) => (i > 0 ? i - 1 : i)), []);
   const goNext = useCallback(() => setIndex((i) => (i < lastIndex ? i + 1 : i)), [lastIndex]);
+
+  // Zoom is per-image: arriving at a new one should show it whole, not inherit
+  // a magnification chosen for the previous picture.
+  const [zoom, setZoom] = useState(1);
+  useEffect(() => setZoom(1), [index]);
+  const zoomIn = useCallback(() => setZoom((z) => Math.min(z + ZOOM_STEP, ZOOM_MAX)), []);
+  const zoomOut = useCallback(() => setZoom((z) => Math.max(z - ZOOM_STEP, ZOOM_MIN)), []);
 
   // Report the position, including the one it opened on, so an owner fetching
   // lazily learns about the first image too and not only about moves.
@@ -102,7 +122,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             <img
               src={srcs[index] as string}
               alt={t('attachments.fullSizeAlt')}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg transition-transform"
+              style={{ transform: `scale(${zoom})` }}
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
@@ -166,29 +187,33 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             >
               <ChevronRightIcon className="w-5 h-5" />
             </button>
-
-            <div
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs tabular-nums"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {index + 1} / {srcs.length}
-            </div>
           </>
         )}
 
         {/*
-          Sits below the counter and is shown whatever the list length, because
-          a message holding a single image is exactly the case where the rest of
-          the session is most worth offering.
+          Above the panel, and shown whatever the list length: a message holding a
+          single image is exactly the case where the rest of the session is most
+          worth offering.
         */}
         {notice && (
           <div
-            className="absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[80vw]"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-[80vw]"
             onClick={(e) => e.stopPropagation()}
           >
             {notice}
           </div>
         )}
+
+        <LightboxPanel
+          src={srcs[index]}
+          index={index}
+          total={srcs.length}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          canZoomIn={zoom < ZOOM_MAX}
+          canZoomOut={zoom > ZOOM_MIN}
+          onOpenAssets={onOpenAssets}
+        />
       </div>
     </Portal>
   );

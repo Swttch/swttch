@@ -30,7 +30,15 @@
       "previous": "Vorheriges Bild",
       "next": "Nächstes Bild",
       "loading": "Wird geladen…",
-      "moreInSession": "{{count}} weitere in dieser Sitzung"
+      "moreInSession": "{{count}} weitere in dieser Sitzung",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "openInNewTab": "In neuem Tab öffnen",
+      "copy": "Bild kopieren",
+      "download": "Bild herunterladen",
+      "copied": "Bild kopiert",
+      "copyFailed": "Bild konnte nicht kopiert werden",
+      "downloadFailed": "Bild konnte nicht gespeichert werden"
     }
   },
   "edit": {

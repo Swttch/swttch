@@ -26,44 +26,27 @@ const getImageSrc = (image: ImageBlockDto): string => {
 };
 
 /**
- * What sits at the edge of the viewer when the session holds more images.
+ * The sponsor invitation shown at the end of a non-sponsor's list.
  *
- * Two jobs at once. For anyone it offers the Assets screen, which is otherwise
- * reachable only through a dock icon that ships hidden — so without this a
- * sponsor can pay for the feature and never find it.
- *
- * For a non-sponsor it also states the number out of reach, because "there is
- * more" persuades far less than "there are 24 more". Following
- * showSponsorGatedToast's tone, it reads as an offer rather than a wall, and it
- * says where everything IS visible instead of only what is not.
+ * States the number out of reach, because "there is more" persuades far less
+ * than "there are 24 more". Follows showSponsorGatedToast's tone: an offer, not
+ * a wall. Getting to the Assets screen is the panel's job, and that button is
+ * there for sponsors too.
  */
-const SessionAssetsNotice: React.FC<{ lockedCount: number; onOpenAssets: () => void }> = ({
-  lockedCount,
-  onOpenAssets,
-}) => {
+const MoreInSessionNotice: React.FC<{ count: number }> = ({ count }) => {
   const { t } = useTranslation('chatTools');
-  const { t: tChat } = useTranslation('chat');
   const { t: tc } = useTranslation('common');
 
   return (
     <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-surface-hover/90 border border-border-default text-text-secondary text-xs">
-      {lockedCount > 0 && <span>{t('attachments.lightbox.moreInSession', { count: lockedCount })}</span>}
+      <span>{t('attachments.lightbox.moreInSession', { count })}</span>
       <button
         type="button"
-        onClick={onOpenAssets}
-        className="whitespace-nowrap font-medium text-text-link transition-opacity hover:opacity-80"
+        onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
+        className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
       >
-        {tChat('assets.openScreen')}
+        {tc('sponsorGated.learnMore')}
       </button>
-      {lockedCount > 0 && (
-        <button
-          type="button"
-          onClick={() => void openSettingsAt(Route.SETTINGS_SPONSOR)}
-          className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"
-        >
-          {tc('sponsorGated.learnMore')}
-        </button>
-      )}
     </div>
   );
 };
@@ -108,18 +91,16 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
           initialIndex={initialIndex}
           onClose={() => setOpenedIndex(null)}
           onIndexChange={onIndexChange}
-          notice={
-            hasMoreInSession ? (
-              <SessionAssetsNotice
-                lockedCount={lockedCount}
-                onOpenAssets={() => {
+          notice={lockedCount > 0 ? <MoreInSessionNotice count={lockedCount} /> : undefined}
+          onOpenAssets={
+            hasMoreInSession
+              ? () => {
                   // Close first: the viewer sits above the Assets screen, so
                   // leaving it up would hide the very screen just asked for.
                   setOpenedIndex(null);
                   openAssetsModal();
-                }}
-              />
-            ) : undefined
+                }
+              : undefined
           }
         />
       )}

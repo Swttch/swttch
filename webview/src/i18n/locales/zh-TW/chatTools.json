@@ -30,7 +30,15 @@
       "previous": "上一張圖片",
       "next": "下一張圖片",
       "loading": "載入中…",
-      "moreInSession": "此工作階段中還有 {{count}} 張"
+      "moreInSession": "此工作階段中還有 {{count}} 張",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "openInNewTab": "在新分頁中開啟",
+      "copy": "複製圖片",
+      "download": "下載圖片",
+      "copied": "已複製圖片",
+      "copyFailed": "無法複製圖片",
+      "downloadFailed": "無法儲存圖片"
     }
   },
   "edit": {
