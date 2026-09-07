@@ -14,13 +14,28 @@ Enlarging an image was a dead end too. To see the one attached beside it you had
 
 ### 1. Arrow keys move between images
 
-With an image open, **←** and **→** step to the previous and next one.
+With an image open, **←** and **→** step to the previous and next one. **↑** and **↓** do the same: up for previous, down for next.
 
-The arrows at the edges of the screen do the same, and a counter at the bottom shows your position, e.g. `2 / 5`.
-
-**Esc** closes the view.
+The arrows at the edges of the screen work too, and **Esc** closes the view.
 
 A lone image gets no arrows and no counter, since there is nowhere to go.
+
+### 1-1. The toolbar underneath
+
+A toolbar sits below the enlarged image.
+
+| Button | What it does |
+|---|---|
+| Grid | Goes to this session's Assets screen |
+| Zoom in · out | Makes the image larger or smaller |
+| Open in new tab | Opens the image in a browser tab (shown in the browser only) |
+| The number | Where you are, e.g. `2 / 5` |
+| Copy | Puts the image on the clipboard |
+| Download | Saves the image as a file |
+
+**Zoom resets when you step to the next image**, so a magnification chosen for one picture never leaves the next one cropped.
+
+Right-clicking the image still gives you **the menu your browser or IDE always gave you.** The toolbar does not replace that menu; it puts the same actions somewhere you can see them.
 
 ### 2. Attachments you have not sent yet move too
 
