@@ -17,3 +17,14 @@ export const OPEN_TUNNEL_EVENT = 'open-tunnel-modal';
 
 /** Ask the app shell to open the session Assets modal. */
 export const OPEN_ASSETS_EVENT = 'open-assets-modal';
+
+/**
+ * Raise {@link OPEN_ASSETS_EVENT}.
+ *
+ * Exported so the dock icon and the ⋮ menu row dispatch the identical thing;
+ * a second `dispatchEvent` written out in a view is exactly how the two
+ * triggers drift apart.
+ */
+export function openAssetsModal(): void {
+  window.dispatchEvent(new Event(OPEN_ASSETS_EVENT));
+}

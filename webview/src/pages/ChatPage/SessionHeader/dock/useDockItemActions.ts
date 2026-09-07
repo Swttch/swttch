@@ -7,6 +7,7 @@ import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { OPEN_ACCOUNT_USAGE_EVENT } from '@/commandPalette/sections/model/AccountUsageItem';
 import { DockItemId } from '@/types/settings';
 import { useTunnelAction } from '../useTunnelAction';
+import { openAssetsModal } from './actions';
 
 /**
  * One `activate` per dock item, so the dock icon and the ⋮ menu row trigger the
@@ -57,6 +58,7 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.BACKGROUND_TASKS]: toggleWorkflows,
       [DockItemId.TUNNEL]: tunnel.activate,
       [DockItemId.SETTINGS]: openSettings,
+      [DockItemId.ASSETS]: openAssetsModal,
       [DockItemId.NEW_TAB]: openNewTab,
     }),
     [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab],
