@@ -94,6 +94,7 @@
       "tapOrHold": "Toque ou mantenha para gravar",
       "stop": "Parar gravação",
       "error": "Erro de ditado: {{message}}",
+      "errorFatal": "Erro de ditado: {{message}} Tentar de novo não vai ajudar.",
       "micDenied": "Microfone bloqueado — permita que o IDE o use nas configurações de privacidade do sistema",
       "micDeniedBrowser": "Microfone bloqueado — permita pelo cadeado na barra de endereço e recarregue",
       "noMic": "Nenhum microfone encontrado",
@@ -112,7 +113,8 @@
         "decline": "Não usar",
         "installed": "Prima o microfone e comece a falar.",
         "installFailed": "Não foi possível instalar a ferramenta de entrada de voz"
-      }
+      },
+      "help": "Ajuda"
     }
   },
   "sessionHeader": {

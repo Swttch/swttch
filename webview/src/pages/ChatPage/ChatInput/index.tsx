@@ -40,6 +40,7 @@ import { useMention } from './hooks/useMention';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { isMobile, isBrowser } from '@/config/environment';
+import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
@@ -658,7 +659,22 @@ export function ChatInput() {
                   : t('chatInput.dictation.micDenied')
                 : dictation.error.message === 'noMic'
                   ? t('chatInput.dictation.noMic')
-                  : t('chatInput.dictation.error', { message: dictation.error.message })
+                  : // Anything else is relayed VERBATIM. We do not know what
+                    // else the stream can refuse with, and a message of our own
+                    // would have to guess: a 401 handshake rejection can be an
+                    // expired token or an account without access, and the next
+                    // failure may be neither. Replacing the text with a summary
+                    // that covers both would be a summary that is wrong as soon
+                    // as a third cause appears, and it throws away the one
+                    // string the user can search for (#418).
+                    //
+                    // What IS ours to add is what the stream told us alongside
+                    // it: `fatal` means retrying cannot help, so pressing the
+                    // microphone again is not the next step. That is relayed
+                    // fact, not our diagnosis.
+                    dictation.error.fatal
+                    ? t('chatInput.dictation.errorFatal', { message: dictation.error.message })
+                    : t('chatInput.dictation.error', { message: dictation.error.message })
           }
           actions={
             dictation.error.kitMissing ? (
@@ -684,7 +700,22 @@ export function ChatInput() {
               >
                 {t('authError.login')}
               </button>
-            ) : undefined
+            ) : (
+              // The complaint in #418 was not the wording, it was that the
+              // wording was all there was: "There is no additional information,
+              // manuals, docs. Nothing." The message above stays exactly as the
+              // stream sent it; this is the way out of it. The branches that
+              // already offer an action keep theirs, since a doc link is a
+              // poorer answer than the button that fixes the problem.
+              <a
+                href={featureDocUrl('029-voice_to_text')}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded px-2 py-1 text-[0.7692rem] font-medium text-text-link hover:bg-state-info-bg transition-colors"
+              >
+                {t('chatInput.dictation.help')}
+              </a>
+            )
           }
           onClose={dictation.dismissError}
         />

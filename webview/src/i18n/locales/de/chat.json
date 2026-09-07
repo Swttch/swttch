@@ -94,6 +94,7 @@
       "tapOrHold": "Tippen oder halten zum Aufnehmen",
       "stop": "Aufnahme beenden",
       "error": "Diktatfehler: {{message}}",
+      "errorFatal": "Diktierfehler: {{message}} Ein erneuter Versuch hilft nicht.",
       "micDenied": "Mikrofon blockiert – erlauben Sie der IDE den Zugriff in den Datenschutzeinstellungen des Systems",
       "micDeniedBrowser": "Mikrofon blockiert – über das Schloss in der Adressleiste erlauben und neu laden",
       "noMic": "Kein Mikrofon gefunden",
@@ -112,7 +113,8 @@
         "decline": "Nicht nutzen",
         "installed": "Drücken Sie das Mikrofon und sprechen Sie.",
         "installFailed": "Das Spracheingabe-Werkzeug konnte nicht installiert werden"
-      }
+      },
+      "help": "Hilfe"
     }
   },
   "sessionHeader": {

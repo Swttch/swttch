@@ -317,6 +317,42 @@ A block there came from the OS, and system settings is where the IDE gets microp
 If Claude Code is not logged in on this machine, dictation is unavailable for the same reason the
 usage panel is — there is no account to authenticate as.
 
+### When the banner shows something that is not one of those three
+
+Sometimes the banner carries a sentence that is not in the table above. Like this one:
+
+```
+Dictation error: WebSocket error: Unexpected server response: 401
+```
+
+![A banner above the composer reading "Dictation error: WebSocket error: Unexpected server response: 401 Retrying will not help." with a Help button and an X to dismiss it on the right](./assets/unrecognised-error-banner.png)
+
+**That sentence is not ours. It is what the dictation connection returned, relayed word for word.**
+There is a reason we do not replace it with wording of our own.
+
+`401` means the connection was refused, but it does not say why. The login token may have expired,
+the account may not have access to dictation, or it may be something we have not run into yet.
+Rewriting that as "your login expired" would be wrong for two of those three, and it would throw
+away the one string you can actually search for.
+
+So **we show you what we were given, and add only what came with it.**
+
+If the sentence ends with **"Retrying will not help"**, that is not our guess either. The connection
+reported it alongside the error. When you see it, pressing the microphone again will not change the
+outcome, so it is faster to go looking for the cause.
+
+**If you hit a 401, check these in order.**
+
+1. **Run `claude` in a terminal and check that you are still logged in.** If the login has lapsed or
+   expired, signing in again fixes it.
+2. If the terminal login is fine and 401 keeps coming back, **that account may not be able to use
+   dictation.**
+3. If neither applies, **this is a case we do not know about.** Please open an issue and we will look
+   into it. Pasting the exact sentence from the banner helps most.
+
+Number 3 stays "we will look into it" because which refusals arrive under which conditions is not
+something we can decide for you in code. As we learn about cases, they get added to this document.
+
 ## A note on stability
 
 This uses an endpoint Anthropic has not documented, the same one the other clients use. It could

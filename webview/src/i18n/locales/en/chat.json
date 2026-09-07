@@ -94,6 +94,7 @@
       "tapOrHold": "Tap or hold to record",
       "stop": "Stop recording",
       "error": "Dictation error: {{message}}",
+      "errorFatal": "Dictation error: {{message}} Retrying will not help.",
       "micDenied": "Microphone blocked — allow the IDE to use it in your system's privacy settings",
       "micDeniedBrowser": "Microphone blocked — allow it from the lock icon in the address bar, then reload",
       "noMic": "No microphone was found",
@@ -112,7 +113,8 @@
         "decline": "Don't use",
         "installed": "Press the microphone and start speaking.",
         "installFailed": "Could not install the voice input tool"
-      }
+      },
+      "help": "Help"
     }
   },
   "sessionHeader": {

@@ -94,6 +94,7 @@
       "tapOrHold": "눌러서 또는 누른 채로 녹음",
       "stop": "녹음 중지",
       "error": "받아쓰기 오류: {{message}}",
+      "errorFatal": "받아쓰기 오류: {{message}} 다시 시도해도 같은 결과입니다.",
       "micDenied": "마이크가 차단되어 있습니다 — 시스템 설정에서 IDE에 마이크를 허용해 주세요",
       "micDeniedBrowser": "마이크가 차단되어 있습니다 — 주소창의 자물쇠를 눌러 허용한 뒤 새로고침해 주세요",
       "noMic": "마이크를 찾을 수 없습니다",
@@ -112,7 +113,8 @@
         "decline": "사용 안 함",
         "installed": "이제 마이크를 눌러 말해 보세요.",
         "installFailed": "음성 입력 도구를 설치하지 못했습니다"
-      }
+      },
+      "help": "도움말"
     }
   },
   "sessionHeader": {

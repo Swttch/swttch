@@ -94,6 +94,7 @@
       "tapOrHold": "Appuyer ou maintenir pour enregistrer",
       "stop": "Arrêter l'enregistrement",
       "error": "Erreur de dictée : {{message}}",
+      "errorFatal": "Erreur de dictée : {{message}} Réessayer n'y changera rien.",
       "micDenied": "Micro bloqué — autorisez l'IDE à l'utiliser dans les réglages de confidentialité du système",
       "micDeniedBrowser": "Micro bloqué — autorisez-le via le cadenas dans la barre d'adresse, puis rechargez",
       "noMic": "Aucun microphone détecté",
@@ -112,7 +113,8 @@
         "decline": "Ne pas utiliser",
         "installed": "Appuyez sur le micro et parlez.",
         "installFailed": "Impossible d'installer l'outil de saisie vocale"
-      }
+      },
+      "help": "Aide"
     }
   },
   "sessionHeader": {

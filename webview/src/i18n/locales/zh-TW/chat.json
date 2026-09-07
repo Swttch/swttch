@@ -94,6 +94,7 @@
       "tapOrHold": "點擊或按住錄音",
       "stop": "停止錄音",
       "error": "語音輸入錯誤：{{message}}",
+      "errorFatal": "聽寫錯誤：{{message}} 重試也不會有變化。",
       "micDenied": "麥克風已被封鎖 — 請在系統隱私設定中允許 IDE 使用麥克風",
       "micDeniedBrowser": "麥克風已被封鎖 — 請從網址列的鎖頭圖示允許，然後重新整理",
       "noMic": "找不到麥克風",
@@ -112,7 +113,8 @@
         "decline": "不使用",
         "installed": "按下麥克風開始說話。",
         "installFailed": "無法安裝語音輸入工具"
-      }
+      },
+      "help": "說明"
     }
   },
   "sessionHeader": {
