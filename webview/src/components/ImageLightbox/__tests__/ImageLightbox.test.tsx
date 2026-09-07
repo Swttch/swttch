@@ -35,6 +35,42 @@ describe('ImageLightbox', () => {
     expect(shownSrc()).toBe(SRCS[1]);
   });
 
+  it('moves with the up and down keys as well', () => {
+    // The list is one dimensional, so the vertical pair has nothing else to
+    // mean; pressing it and getting nothing reads as a broken viewer.
+    render(<ImageLightbox srcs={SRCS} initialIndex={1} onClose={vi.fn()} />);
+
+    press('ArrowDown');
+    expect(shownSrc()).toBe(SRCS[2]);
+
+    press('ArrowUp');
+    expect(shownSrc()).toBe(SRCS[1]);
+  });
+
+  it('stops at both ends for the vertical keys too', () => {
+    render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+
+    press('ArrowUp');
+    expect(shownSrc()).toBe(SRCS[0]);
+
+    press('ArrowDown');
+    press('ArrowDown');
+    press('ArrowDown');
+    expect(shownSrc()).toBe(SRCS[2]);
+  });
+
+  it('counts a vertical press as a deliberate move, like a horizontal one', () => {
+    // Otherwise a late-arriving list would yank the user back after they stepped
+    // with the up/down keys but not with left/right.
+    const FIVE = [...SRCS, 'data:image/png;base64,DDD', 'data:image/png;base64,EEE'];
+    const { rerender } = render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+
+    press('ArrowDown');
+    rerender(<ImageLightbox srcs={FIVE} initialIndex={3} onClose={vi.fn()} />);
+
+    expect(shownSrc()).toBe(SRCS[1]);
+  });
+
   it('stops at the last image instead of wrapping to the first', () => {
     // Wrapping would make "am I at the end?" unanswerable, and the end of the
     // list is exactly where the sponsor gate will offer the rest of the session.

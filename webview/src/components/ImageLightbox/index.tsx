@@ -124,8 +124,11 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') goPrevious();
-      else if (e.key === 'ArrowRight') goNext();
+      // Up/Down mirror Left/Right. The list is one dimensional, so the vertical
+      // pair has no separate meaning to claim — and pressing it expecting to
+      // move and getting nothing reads as a broken viewer.
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') goPrevious();
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goNext();
       else if (e.key === 'Escape') onClose();
       else return;
       // The chat input and the command palette also listen for these keys; the
