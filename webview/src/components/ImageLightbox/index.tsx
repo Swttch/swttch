@@ -1,8 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { Portal } from '@/components/Portal';
 import { useTranslation } from '@/i18n';
 import { LightboxPanel } from './LightboxPanel';
+
+/** Keeps a position inside the list, so an out-of-range value still shows something. */
+function clampIndex(index: number, length: number): number {
+  return Math.min(Math.max(index, 0), Math.max(length - 1, 0));
+}
 
 /** Zoom bounds, in multiples of the fitted size. */
 const ZOOM_MIN = 0.5;
@@ -62,13 +67,23 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 }) => {
   const { t } = useTranslation('chatTools');
   const lastIndex = srcs.length - 1;
-  const [index, setIndex] = useState(() => Math.min(Math.max(initialIndex, 0), Math.max(lastIndex, 0)));
+  const [index, setIndex] = useState(() => clampIndex(initialIndex, srcs.length));
+
+  // Whether the user has stepped since opening. Until they do, a corrected
+  // `initialIndex` is still the position they asked for; afterwards it is stale.
+  const hasMoved = useRef(false);
 
   const hasPrevious = index > 0;
   const hasNext = index < lastIndex;
 
-  const goPrevious = useCallback(() => setIndex((i) => (i > 0 ? i - 1 : i)), []);
-  const goNext = useCallback(() => setIndex((i) => (i < lastIndex ? i + 1 : i)), [lastIndex]);
+  const goPrevious = useCallback(() => {
+    hasMoved.current = true;
+    setIndex((i) => (i > 0 ? i - 1 : i));
+  }, []);
+  const goNext = useCallback(() => {
+    hasMoved.current = true;
+    setIndex((i) => (i < lastIndex ? i + 1 : i));
+  }, [lastIndex]);
 
   // Zoom is per-image: arriving at a new one should show it whole, not inherit
   // a magnification chosen for the previous picture.
@@ -83,16 +98,29 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     onIndexChange?.(index);
   }, [index, onIndexChange]);
 
-  // The list can shrink while the viewer is open — the composer lets the user
-  // remove an attachment. Without this the index would point past the end and
-  // the viewer would render a blank frame; an emptied list closes outright.
+  /*
+    Keeps the position honest while the list changes underneath the viewer, which
+    happens two ways.
+
+    It GROWS: the session index is fetched only once the viewer opens, so the
+    first render sees just this message's images and a position within them. The
+    corrected `initialIndex` that arrives with the full list is still the image
+    the user clicked, so it is adopted — without this, clicking the last of five
+    opened the third (reported 2026-09-07).
+
+    It SHRINKS: the composer lets an attachment be removed. The index is clamped
+    so the viewer never renders a blank frame, and an emptied list closes it.
+
+    Once the user has stepped, their position wins over any later `initialIndex`:
+    a slow fetch must not undo a deliberate move.
+  */
   useEffect(() => {
     if (srcs.length === 0) {
       onClose();
       return;
     }
-    setIndex((i) => Math.min(i, srcs.length - 1));
-  }, [srcs.length, onClose]);
+    setIndex((i) => clampIndex(hasMoved.current ? i : initialIndex, srcs.length));
+  }, [srcs.length, initialIndex, onClose]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

@@ -200,6 +200,32 @@ describe('ImageLightbox', () => {
     expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
+  it('lands on the clicked image when the fuller list arrives after opening', () => {
+    // The session index is fetched when the viewer opens, so the first render
+    // gets only this message's images and a position within them. Ignoring the
+    // corrected position left the viewer showing a different picture than the
+    // one clicked — 3/5 for a click on the 5th (reported 2026-09-07).
+    const FIVE = [...SRCS, 'data:image/png;base64,DDD', 'data:image/png;base64,EEE'];
+    const { rerender } = render(<ImageLightbox srcs={SRCS} initialIndex={2} onClose={vi.fn()} />);
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+
+    rerender(<ImageLightbox srcs={FIVE} initialIndex={4} onClose={vi.fn()} />);
+
+    expect(screen.getByText('5 / 5')).toBeInTheDocument();
+    expect(shownSrc()).toBe(FIVE[4]);
+  });
+
+  it('does not yank the user back if they already moved before the list arrived', () => {
+    // A slow fetch must not undo a deliberate step.
+    const FIVE = [...SRCS, 'data:image/png;base64,DDD', 'data:image/png;base64,EEE'];
+    const { rerender } = render(<ImageLightbox srcs={SRCS} initialIndex={0} onClose={vi.fn()} />);
+
+    press('ArrowRight');
+    rerender(<ImageLightbox srcs={FIVE} initialIndex={3} onClose={vi.fn()} />);
+
+    expect(shownSrc()).toBe(SRCS[1]);
+  });
+
   it('pulls back to the last image when the list shrinks under it', () => {
     // The composer lets an attachment be removed while the viewer is open. An
     // index left past the end would render a blank frame.
