@@ -78,9 +78,11 @@ It used to end silently. With the composer off screen there was no microphone bu
 
 Now it tells you why it stopped.
 
-![The notice above the approval prompt reads "Recording stopped after a silence." with a "Record again" button and an X to dismiss it](./assets/stopped-by-silence.png)
+![The notice above the approval prompt reads "Recording stopped after a silence." with a "Resume recording" button and an X to dismiss it](./assets/stopped-by-silence.png)
 
-**Record again** starts a new recording on the spot, so you do not have to answer the prompt first just to reach the microphone button. The **X** dismisses the notice without starting anything.
+**Resume recording** starts again on the spot, so you do not have to answer the prompt first just to reach the microphone button. The **X** dismisses the notice without starting anything.
+
+**Nothing you already said is discarded.** New speech is appended to the end of the draft, so you can simply carry on. The microphone and the connection are opened fresh; the text stays.
 
 ### The timeout cannot be made longer
 

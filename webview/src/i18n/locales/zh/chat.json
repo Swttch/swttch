@@ -104,7 +104,7 @@
       "installing": "正在安装…",
       "stillListening": "仍在聆听。你说的内容会保存到输入框。",
       "stoppedBySilence": "静音一段时间后已停止录音。",
-      "resume": "重新录音",
+      "resume": "继续录音",
       "dismissNotice": "关闭",
       "firstUse": {
         "title": "要试试语音输入吗？",

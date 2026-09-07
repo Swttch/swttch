@@ -104,7 +104,7 @@
       "installing": "Installing…",
       "stillListening": "Still listening. What you say is kept in the composer.",
       "stoppedBySilence": "Recording stopped after a silence.",
-      "resume": "Record again",
+      "resume": "Resume recording",
       "dismissNotice": "Dismiss",
       "firstUse": {
         "title": "Try speaking instead of typing?",

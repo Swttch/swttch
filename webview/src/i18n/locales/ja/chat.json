@@ -104,7 +104,7 @@
       "installing": "インストール中…",
       "stillListening": "録音を続けています。話した内容は入力欄に保存されます。",
       "stoppedBySilence": "無音が続いたため録音を停止しました。",
-      "resume": "もう一度録音",
+      "resume": "録音を再開",
       "dismissNotice": "閉じる",
       "firstUse": {
         "title": "音声で入力してみませんか？",

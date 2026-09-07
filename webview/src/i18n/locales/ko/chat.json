@@ -104,7 +104,7 @@
       "installing": "설치 중…",
       "stillListening": "계속 듣고 있습니다. 말한 내용은 입력창에 담깁니다.",
       "stoppedBySilence": "조용해서 녹음을 멈췄습니다.",
-      "resume": "다시 녹음",
+      "resume": "이어서 녹음",
       "dismissNotice": "닫기",
       "firstUse": {
         "title": "음성으로 입력해 보시겠어요?",
