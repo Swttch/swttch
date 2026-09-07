@@ -34,7 +34,7 @@ WebStorm에서 플러그인을 쓰던 사용자가 이런 상황을 적어 보�
 
 그래서 입력창이 물러나 있는 동안에는 **승인 창 바로 위에 알림줄**이 뜹니다.
 
-![승인 창 위에 얇은 알림줄이 있고, 왼쪽에 목소리 크기 막대와 "계속 듣고 있습니다. 말한 내용은 입력창에 담깁니다."라는 문구가, 오른쪽에 "녹음 중지" 버튼이 있다](./assets/listening-during-approval.png)
+![승인 창 위에 얇은 알림줄이 있고, 왼쪽에 목소리 크기 막대와 "Still listening. What you say is kept in the composer."라는 문구가, 오른쪽에 "Stop recording" 버튼이 있다](./assets/listening-during-approval.png)
 
 알림줄은 세 가지를 담고 있습니다.
 
@@ -78,7 +78,7 @@ WebStorm에서 플러그인을 쓰던 사용자가 이런 상황을 적어 보�
 
 이제는 **왜 멈췄는지 알려줍니다.**
 
-![승인 창 위 알림줄에 "조용해서 녹음을 멈췄습니다."라는 문구와 "다시 녹음" 버튼, 그리고 알림을 닫는 X 버튼이 있다](./assets/stopped-by-silence.png)
+![승인 창 위 알림줄에 "Recording stopped after a silence."라는 문구와 "Record again" 버튼, 그리고 알림을 닫는 X 버튼이 있다](./assets/stopped-by-silence.png)
 
 **다시 녹음**을 누르면 그 자리에서 다시 시작합니다. 마이크 버튼을 찾으러 승인을 먼저 처리할 필요가 없습니다. 오른쪽 **X**를 누르면 알림만 닫힙니다.
 

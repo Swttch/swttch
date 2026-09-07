@@ -219,7 +219,7 @@ IDE 안에서는 플러그인이 마이크 요청을 직접 허용하므로 그 
 Dictation error: WebSocket error: Unexpected server response: 401
 ```
 
-![입력창 위 배너에 "받아쓰기 오류: WebSocket error: Unexpected server response: 401 다시 시도해도 같은 결과입니다."라는 문구가 있고, 오른쪽에 도움말 버튼과 배너를 닫는 X가 있다](./assets/unrecognised-error-banner.png)
+![입력창 위 배너에 "Dictation error: WebSocket error: Unexpected server response: 401 Retrying will not help."라는 문구가 있고, 오른쪽에 Help 버튼과 배너를 닫는 X가 있다](./assets/unrecognised-error-banner.png)
 
 **이 문장은 우리가 쓴 것이 아니라 받아쓰기 연결이 돌려준 내용을 그대로 옮긴 것입니다.** 저희 문장으로 바꿔 쓰지 않는 이유가 있습니다.
 
