@@ -17,3 +17,4 @@ export * from './working-dir-path';
 export * from './mergeEdits';
 export * from './permission-rules';
 export * from './queued-prompts';
+export * from './session-asset';
