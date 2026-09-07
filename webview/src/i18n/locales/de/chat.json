@@ -101,6 +101,10 @@
       "notLoggedIn": "Die Spracheingabe erfordert ein angemeldetes Claude-Konto. Ein API-Schlüssel allein erreicht die Diktierfunktion nicht.",
       "install": "Installieren",
       "installing": "Wird installiert…",
+      "stillListening": "Nimmt weiter auf. Das Gesagte landet im Eingabefeld.",
+      "stoppedBySilence": "Aufnahme nach einer Pause beendet.",
+      "resume": "Erneut aufnehmen",
+      "dismissNotice": "Schließen",
       "firstUse": {
         "title": "Möchten Sie sprechen statt tippen?",
         "message": "Sprechen Sie, und es wird ins Eingabefeld geschrieben. Erfordert eine einmalige Installation von @swttch/extend-kit.\n\nBei Ablehnung wird die Mikrofonschaltfläche ausgeblendet. Sie können sie jederzeit unter Einstellungen → Allgemein → Spracheingabe wieder einschalten.",

@@ -101,6 +101,10 @@
       "notLoggedIn": "Voice input needs a signed-in Claude account. An API key on its own cannot reach dictation.",
       "install": "Install",
       "installing": "Installing…",
+      "stillListening": "Still listening. What you say is kept in the composer.",
+      "stoppedBySilence": "Recording stopped after a silence.",
+      "resume": "Record again",
+      "dismissNotice": "Dismiss",
       "firstUse": {
         "title": "Try speaking instead of typing?",
         "message": "Speak and it is written into the composer. Takes a one-time install of @swttch/extend-kit.\n\nDecline and the microphone button is hidden. Turn it back on any time in Settings → General → Voice input.",

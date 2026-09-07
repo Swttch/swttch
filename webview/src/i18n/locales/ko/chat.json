@@ -101,6 +101,10 @@
       "notLoggedIn": "음성 입력은 Claude 계정 로그인이 필요합니다. API 키만으로는 받아쓰기를 이용할 수 없습니다.",
       "install": "설치",
       "installing": "설치 중…",
+      "stillListening": "계속 듣고 있습니다. 말한 내용은 입력창에 담깁니다.",
+      "stoppedBySilence": "조용해서 녹음을 멈췄습니다.",
+      "resume": "다시 녹음",
+      "dismissNotice": "닫기",
       "firstUse": {
         "title": "음성으로 입력해 보시겠어요?",
         "message": "말하면 입력창에 받아쓰기 됩니다. @swttch/extend-kit을 한 번 설치해야 해요.\n\n사용하지 않으면 마이크 버튼을 숨깁니다. 설정 → 일반 → 음성 입력에서 언제든 다시 켤 수 있어요.",

@@ -101,6 +101,10 @@
       "notLoggedIn": "語音輸入需要登入 Claude 帳號。僅使用 API 金鑰無法使用聽寫功能。",
       "install": "安裝",
       "installing": "正在安裝…",
+      "stillListening": "仍在聆聽。你說的內容會保存到輸入框。",
+      "stoppedBySilence": "靜音一段時間後已停止錄音。",
+      "resume": "重新錄音",
+      "dismissNotice": "關閉",
       "firstUse": {
         "title": "要試試語音輸入嗎？",
         "message": "說話即可轉寫到輸入框。需要一次性安裝 @swttch/extend-kit。\n\n不使用則隱藏麥克風按鈕。可隨時在設定 → 一般 → 語音輸入中重新開啟。",

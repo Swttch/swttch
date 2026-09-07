@@ -227,3 +227,78 @@ describe('useDictation — silence auto-stop', () => {
     expect(sendMock).not.toHaveBeenCalledWith(MessageType.STOP_DICTATION, {});
   });
 });
+
+/**
+ * The timeout cannot be lengthened — the transcription service stops listening
+ * after the same silence whatever we set — so the only thing left to do about
+ * it is say that it happened. That matters most where it is least visible: an
+ * approval prompt can be holding the composer's slot, so neither the microphone
+ * button nor the text is on screen when the recording ends (issue #409).
+ */
+describe('useDictation — why the recording ended', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    emitLevel = null;
+    silenceTimeout = undefined;
+    sendMock.mockClear();
+    sendRawMock.mockClear();
+    micStop.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reports a stop the user did not ask for', async () => {
+    const { hook } = renderDictation();
+    await startListening(hook);
+    expect(hook.result.current.stoppedBySilence).toBe(false);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
+    });
+
+    expect(hook.result.current.stoppedBySilence).toBe(true);
+  });
+
+  it('says nothing when the user stopped it themselves', async () => {
+    const { hook } = renderDictation();
+    await startListening(hook);
+
+    await act(async () => {
+      await hook.result.current.stop();
+    });
+
+    // They pressed stop; being told the microphone is off is noise.
+    expect(hook.result.current.stoppedBySilence).toBe(false);
+  });
+
+  it('clears the notice when recording starts again', async () => {
+    const { hook } = renderDictation();
+    await startListening(hook);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
+    });
+    expect(hook.result.current.stoppedBySilence).toBe(true);
+
+    await startListening(hook);
+
+    // Starting again answers the notice, so it must not outlive the recording
+    // it described and sit over a live microphone.
+    expect(hook.result.current.stoppedBySilence).toBe(false);
+  });
+
+  it('clears the notice when dismissed', async () => {
+    const { hook } = renderDictation();
+    await startListening(hook);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EFFECTIVE_TIMEOUT_MS);
+    });
+
+    act(() => {
+      hook.result.current.dismissSilenceNotice();
+    });
+
+    expect(hook.result.current.stoppedBySilence).toBe(false);
+  });
+});

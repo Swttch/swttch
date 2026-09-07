@@ -101,6 +101,10 @@
       "notLoggedIn": "音声入力には Claude アカウントへのログインが必要です。API キーだけでは音声認識を利用できません。",
       "install": "インストール",
       "installing": "インストール中…",
+      "stillListening": "録音を続けています。話した内容は入力欄に保存されます。",
+      "stoppedBySilence": "無音が続いたため録音を停止しました。",
+      "resume": "もう一度録音",
+      "dismissNotice": "閉じる",
       "firstUse": {
         "title": "音声で入力してみませんか？",
         "message": "話すと入力欄に書き起こされます。@swttch/extend-kit を一度インストールします。\n\n使わない場合はマイクボタンを非表示にします。設定 → 一般 → 音声入力からいつでも再開できます。",

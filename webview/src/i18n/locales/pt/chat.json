@@ -101,6 +101,10 @@
       "notLoggedIn": "A entrada de voz precisa de uma conta Claude com sessão iniciada. Uma chave de API sozinha não consegue acessar o ditado.",
       "install": "Instalar",
       "installing": "A instalar…",
+      "stillListening": "Ainda ouvindo. O que você disser fica no campo de texto.",
+      "stoppedBySilence": "A gravação parou após um silêncio.",
+      "resume": "Gravar de novo",
+      "dismissNotice": "Fechar",
       "firstUse": {
         "title": "Quer falar em vez de escrever?",
         "message": "Fale e o texto é escrito no campo. Requer instalar o @swttch/extend-kit uma vez.\n\nSe não usar, o botão do microfone fica oculto. Pode reativá-lo quando quiser em Definições → Geral → Entrada de voz.",

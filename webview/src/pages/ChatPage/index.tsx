@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { ChatInput } from './ChatInput';
+import { DictationProvider } from './ChatInput/DictationProvider';
+import { ListeningNotice } from './ListeningNotice';
 import { SessionHeader } from './SessionHeader';
 import { ChatMessageArea } from './ChatMessageArea';
 import { PermissionBanner } from './PermissionBanner';
@@ -43,7 +45,11 @@ import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
 export function ChatPage() {
   return (
     <AutoResumeProvider>
-      <ChatPageContent />
+      {/* Outside ChatPageContent so a recording survives the composer being
+          swapped out for an approval prompt — see the note on the provider. */}
+      <DictationProvider>
+        <ChatPageContent />
+      </DictationProvider>
     </AutoResumeProvider>
   );
 }
@@ -86,6 +92,15 @@ function ChatPageContent() {
   const { pending: pendingUserAnswer, dismiss } = usePendingAskUserQuestion(messages, isStreaming);
   const { pending: pendingPermission, approve: approvePermission, approveForSession, deny: denyPermission } = usePendingPermissions();
   const { pending: pendingPlan, approve: approvePlan, deny: denyPlan } = usePendingPlanApproval();
+  /**
+   * An approval prompt is standing in the composer's slot at the foot of the
+   * chat, so the composer is unmounted right now.
+   *
+   * Named because two things below need the same answer: the slot itself, and
+   * the recording notice that has to step in for the microphone button while
+   * the button is off screen (issue #409).
+   */
+  const composerReplaced = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
   const { selection: soundSelection } = useNotificationSound();
   const { settings } = useSettings();
   const autoScrollThreshold = clampAutoScrollThreshold(
@@ -402,6 +417,7 @@ function ChatPageContent() {
                 {t('chatPage.scrollToBottom')}
               </button>
           )}
+          {composerReplaced && <ListeningNotice />}
           {pendingUserAnswer ? (
               <AskUserQuestionInputPanel
                   toolUse={pendingUserAnswer.toolUse}

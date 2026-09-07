@@ -101,6 +101,10 @@
       "notLoggedIn": "语音输入需要登录 Claude 账号。仅使用 API 密钥无法使用听写功能。",
       "install": "安装",
       "installing": "正在安装…",
+      "stillListening": "仍在聆听。你说的内容会保存到输入框。",
+      "stoppedBySilence": "静音一段时间后已停止录音。",
+      "resume": "重新录音",
+      "dismissNotice": "关闭",
       "firstUse": {
         "title": "要试试语音输入吗？",
         "message": "说话即可转写到输入框。需要一次性安装 @swttch/extend-kit。\n\n不使用则隐藏麦克风按钮。可随时在设置 → 常规 → 语音输入中重新开启。",

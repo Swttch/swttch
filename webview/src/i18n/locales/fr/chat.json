@@ -101,6 +101,10 @@
       "notLoggedIn": "La saisie vocale nécessite un compte Claude connecté. Une clé API seule ne permet pas d’accéder à la dictée.",
       "install": "Installer",
       "installing": "Installation…",
+      "stillListening": "Écoute toujours. Ce que vous dites est conservé dans le champ de saisie.",
+      "stoppedBySilence": "Enregistrement arrêté après un silence.",
+      "resume": "Enregistrer à nouveau",
+      "dismissNotice": "Fermer",
       "firstUse": {
         "title": "Envie de parler plutôt que de taper ?",
         "message": "Parlez et le texte est écrit dans le champ. Nécessite d’installer @swttch/extend-kit une fois.\n\nSi vous refusez, le bouton du micro est masqué. Réactivez-le à tout moment dans Réglages → Général → Saisie vocale.",
