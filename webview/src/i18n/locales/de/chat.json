@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Geplante Nachrichten konnten nicht geladen werden.",
     "schedule": "Fortsetzung planen",
     "cancel": "Reservierung abbrechen",
     "resumeNow": "Jetzt fortsetzen",

@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "予約済みメッセージを読み込めませんでした。",
     "schedule": "再開を予約",
     "cancel": "予約をキャンセル",
     "resumeNow": "今すぐ再開",

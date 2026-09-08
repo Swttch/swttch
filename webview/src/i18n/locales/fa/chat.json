@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "بارگیری پیام‌های زمان‌بندی‌شده انجام نشد.",
     "schedule": "زمان‌بندی از‌سرگیری",
     "cancel": "لغو رزرو",
     "resumeNow": "اکنون از سر بگیر",

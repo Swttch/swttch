@@ -14,8 +14,12 @@ import { MessageType, type ScheduledMessage } from '@/shared';
 interface ScheduledMessagesValue {
   /** The current session's reservations (all kinds), newest-relevant first. */
   reservations: ScheduledMessage[];
-  /** True until the current session has an authoritative reservation list. */
+  /** True while a reservation query is pending or the bridge is disconnected. */
   isLoading: boolean;
+  /** The last query failed; its list must not be treated as authoritative. */
+  hasError: boolean;
+  /** Retry the current session query without navigating away. */
+  refetch: () => void;
   /** Cancel a reservation by id. */
   cancel: (id: string) => void;
   // Panel UI state (mirrors WorkflowStateContext's Background tasks panel).
@@ -42,10 +46,13 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
   const { send, subscribe, isConnected } = useBridgeContext();
   const { currentSessionId } = useSessionContext();
 
-  const [snapshot, setSnapshot] = useState<{ sessionId: string | null; reservations: ScheduledMessage[] }>({
-    sessionId: null, reservations: [],
+  const [requestRevision, setRequestRevision] = useState(0);
+  const refetch = useCallback(() => setRequestRevision(value => value + 1), []);
+  const [snapshot, setSnapshot] = useState<{ sessionId: string | null; reservations: ScheduledMessage[]; hasError: boolean; revision: number }>({
+    sessionId: null, reservations: [], hasError: false, revision: -1,
   });
-  const isLoading = !!currentSessionId && (snapshot.sessionId !== currentSessionId || !isConnected);
+  const isLoading = !!currentSessionId && (snapshot.sessionId !== currentSessionId || snapshot.revision !== requestRevision || !isConnected);
+  const hasError = snapshot.sessionId === currentSessionId && snapshot.hasError;
   const reservations = useMemo(() => snapshot.sessionId === currentSessionId ? snapshot.reservations : [],
     [snapshot, currentSessionId]);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -71,7 +78,7 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
         | undefined;
       if (!active || !p || p.sessionId !== currentSessionId) return;
       receivedUpdate = true;
-      setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(p.schedules) ? p.schedules : [] });
+      setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(p.schedules) ? p.schedules : [], hasError: false, revision: requestRevision });
     });
 
     void send(MessageType.GET_SCHEDULED_MESSAGES, { sessionId: currentSessionId })
@@ -79,13 +86,17 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
         // A previous session's reply and a snapshot older than a live update
         // must never replace the current reservation list.
         if (!active || receivedUpdate) return;
-        setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(res?.schedules) ? res.schedules : [] });
+        setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(res?.schedules) ? res.schedules : [], hasError: false, revision: requestRevision });
       })
       .catch(() => {
-        // Unknown is not empty. A subsequent broadcast can complete loading.
+        if (!active || receivedUpdate) return;
+        // End loading, but keep failure distinct from an authoritative empty list.
+        setSnapshot(previous => ({ sessionId: currentSessionId,
+          reservations: previous.sessionId === currentSessionId ? previous.reservations : [],
+          hasError: true, revision: requestRevision }));
       });
     return () => { active = false; unsub(); };
-  }, [isConnected, currentSessionId, send, subscribe]);
+  }, [isConnected, currentSessionId, send, subscribe, requestRevision]);
 
   const openPanel = useCallback(() => setPanelOpen(true), []);
   const closePanel = useCallback(() => setPanelOpen(false), []);
@@ -109,6 +120,8 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
     () => ({
       reservations,
       isLoading,
+      hasError,
+      refetch,
       cancel,
       panelOpen,
       openPanel,
@@ -117,7 +130,7 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
       startEdit,
       stopEdit,
     }),
-    [reservations, isLoading, cancel, panelOpen, openPanel, closePanel, editing, startEdit, stopEdit],
+    [reservations, isLoading, hasError, refetch, cancel, panelOpen, openPanel, closePanel, editing, startEdit, stopEdit],
   );
 
   return (

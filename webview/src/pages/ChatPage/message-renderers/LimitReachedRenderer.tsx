@@ -5,6 +5,7 @@ import { getTextContent, type LoadedMessageDto } from '../../../types';
 import { ToolWrapper } from './ToolRenderers/common';
 import { type AutoResumeAction } from '@/hooks/useAutoResume';
 import { useAutoResumeContext } from '@/contexts/AutoResumeContext';
+import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { NotificationLine } from './NotificationMessageRenderer';
 
 interface Props {
@@ -92,6 +93,7 @@ export function LimitReachedRenderer(props: Props) {
   const { message } = props;
   const { t } = useTranslation('chat');
   const ar = useAutoResumeContext();
+  const { hasError, isLoading, refetch } = useScheduledMessages();
   const text = getTextContent(message);
 
   const isActive = ar.limit?.messageUuid === message.uuid;
@@ -130,6 +132,15 @@ export function LimitReachedRenderer(props: Props) {
         )}
       </span>
       </ToolWrapper>
+      {isActive && hasError && (
+        <div role="alert" className="flex justify-center items-center gap-2 py-2 text-xs text-text-secondary">
+          <span>{t('autoResume.reservationsLoadFailed')}</span>
+          <button type="button" onClick={refetch} disabled={isLoading} aria-busy={isLoading}
+            className="underline disabled:opacity-50">
+            {t('common:errorBoundary.retry')}
+          </button>
+        </div>
+      )}
       {accountPoolStatusText && (
         <NotificationLine
           text={accountPoolStatusText}

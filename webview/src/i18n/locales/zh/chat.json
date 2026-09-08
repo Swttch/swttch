@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "无法加载已安排的消息。",
     "schedule": "预约恢复",
     "cancel": "取消预约",
     "resumeNow": "立即恢复",

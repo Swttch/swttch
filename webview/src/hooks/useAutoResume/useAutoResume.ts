@@ -143,7 +143,7 @@ export function useAutoResume(): UseAutoResumeResult {
   // GET_SCHEDULED_MESSAGES + SCHEDULED_MESSAGE_UPDATED subscription) let the
   // banner and the panel drift apart; one list means the reservation an
   // auto-resume creates is, by construction, the reservation the panel lists.
-  const { reservations, isLoading: reservationsLoading } = useScheduledMessages();
+  const { reservations, isLoading: reservationsLoading, hasError: reservationsError } = useScheduledMessages();
   const [status, setStatus] = useState<AutoResumeStatusView | null>(null);
   const [accountPoolStatusKey, setAccountPoolStatusKey] = useState<string | null>(null);
   const [accountPoolElapsedSeconds, setAccountPoolElapsedSeconds] = useState<number | null>(null);
@@ -270,7 +270,7 @@ export function useAutoResume(): UseAutoResumeResult {
     [accounts, accountPools, limit?.messageUuid, accountPoolFallbackUuid],
   );
   useEffect(() => {
-    if (reservationsLoading || accountsLoading || !limit || !currentSessionId || (!accountPoolCandidate && !recovery?.awaitingLimit) || scheduled) return;
+    if (reservationsError || reservationsLoading || accountsLoading || !limit || !currentSessionId || (!accountPoolCandidate && !recovery?.awaitingLimit) || scheduled) return;
     const visit = sessionVisitRef.current;
     const attemptKey = `${currentSessionId}:${limit.messageUuid}`;
     if (handledAccountPoolLimitRef.current === attemptKey) return;
@@ -309,7 +309,7 @@ export function useAutoResume(): UseAutoResumeResult {
       setAccountPoolElapsedSeconds(null);
       setAccountPoolError(error instanceof Error ? error.message : String(error));
     });
-  }, [reservationsLoading, accountsLoading, limit, currentSessionId, accountPoolCandidate, scheduled, send, sessionModel, sendMessage, inputMode, recovery?.awaitingLimit]);
+  }, [reservationsError, reservationsLoading, accountsLoading, limit, currentSessionId, accountPoolCandidate, scheduled, send, sessionModel, sendMessage, inputMode, recovery?.awaitingLimit]);
 
   useEffect(() => {
     if (accountPoolStatusKey !== 'autoResume.accountPool.checkingUsage') return;
@@ -326,8 +326,8 @@ export function useAutoResume(): UseAutoResumeResult {
   useEffect(() => {
     // During reload the reservation can arrive before the transcript. An empty
     // message list is not evidence that the user cleared the limit.
-    if (!reservationsLoading && messages.length > 0 && !rawLimit && scheduled) cancelReservation(false);
-  }, [reservationsLoading, messages, rawLimit, scheduled, cancelReservation]);
+    if (!reservationsError && !reservationsLoading && messages.length > 0 && !rawLimit && scheduled) cancelReservation(false);
+  }, [reservationsError, reservationsLoading, messages, rawLimit, scheduled, cancelReservation]);
 
   // ── Countdown tick + one-shot browser notification at reset ─────────────────
   const resetsAtMs = useMemo(
@@ -366,12 +366,12 @@ export function useAutoResume(): UseAutoResumeResult {
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
     if (scheduled) return 'cancel';
     // An empty registry while loading is not evidence that no pool exists.
-    if (accountsLoading || reservationsLoading) return null;
+    if (accountsLoading || reservationsLoading || reservationsError) return null;
     if (accountPoolCandidate || recovery?.awaitingLimit) return null;
     if (accountPoolStatusKey === 'autoResume.accountPool.checkingUsage') return null;
     if (resumeResetsAt && Date.parse(resumeResetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
-  }, [reservationsLoading, accountsLoading, limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs, recovery?.awaitingLimit, resumeResetsAt]);
+  }, [reservationsError, reservationsLoading, accountsLoading, limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs, recovery?.awaitingLimit, resumeResetsAt]);
 
   // ── Auto-resume = "press the button for the user" ────────────────────────────
   // Turning the preference on does NOT switch to a second, parallel feature: the
@@ -397,7 +397,7 @@ export function useAutoResume(): UseAutoResumeResult {
   const lastScheduledRef = useRef(new Map<string, string>());
   const canceledLimitRef = useRef(new Set<string>());
   useEffect(() => {
-    if (!currentSessionId || reservationsLoading) return;
+    if (!currentSessionId || reservationsLoading || reservationsError) return;
     const previousLimit = lastScheduledRef.current.get(currentSessionId);
     if (scheduled) {
       if (limit) lastScheduledRef.current.set(currentSessionId, limit.messageUuid);
@@ -413,7 +413,7 @@ export function useAutoResume(): UseAutoResumeResult {
     autoActedForRef.current.set(currentSessionId, guardKey);
     if (action === 'schedule') schedule();
     else void resumeNow();
-  }, [currentSessionId, reservationsLoading, scheduled, limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
+  }, [currentSessionId, reservationsError, reservationsLoading, scheduled, limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 

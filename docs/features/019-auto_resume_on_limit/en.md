@@ -28,6 +28,20 @@ What the banner shows depends on **when your quota resets**:
 - The banner is derived from the conversation's own messages, so it **survives leaving and re-entering the session** — it's not a fleeting event that vanishes on reload.
 - If auto-resume is turned **on** for the session, the schedule is placed for you automatically as soon as the limit appears, and the banner goes straight to the **Auto-resume scheduled** state. If it's off, the **Schedule resume** action is there for you to arm it by hand.
 
+## If the reservation list cannot be loaded
+
+The limit banner shows **Could not load scheduled messages.** and a **Retry**
+button when the reservation query fails. Click **Retry** to check again without
+leaving the chat. The button is disabled while that check is pending; if it fails
+again, you can retry again.
+
+![The limit banner with "Could not load scheduled messages." and a "Retry" button](./assets/reservation-query-error.png)
+
+A failed query does not mean your reservation was cancelled. Until the list can
+be confirmed, the GUI pauses automatic recovery and scheduling to avoid acting
+on an incomplete view. Once the query succeeds, existing reservations reappear
+and the usual auto-resume flow continues according to your session setting.
+
 ## The setting
 
 The default lives in **Settings → General → "Auto-resume on usage limit"**. It's **off by default**.

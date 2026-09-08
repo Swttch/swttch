@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "無法載入已排程的訊息。",
     "schedule": "預約恢復",
     "cancel": "取消預約",
     "resumeNow": "立即恢復",

@@ -136,3 +136,31 @@ describe('reservation response ownership', () => {
     expect(result.current.isLoading).toBe(false);
   });
 });
+
+describe('reservation query failure recovery', () => {
+  it('ends loading after each failure and lets the user retry until success', async () => {
+    sendMock.mockRejectedValueOnce(new Error('Request timed out'));
+    const { result } = renderHook(() => useScheduledMessages(), { wrapper });
+    await act(async () => {});
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasError).toBe(true);
+    sendMock.mockRejectedValueOnce(new Error('Still unavailable'));
+    await act(async () => { result.current.refetch(); });
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasError).toBe(true);
+    initialSchedules = [res('restored')];
+    await act(async () => { result.current.refetch(); });
+    expect(result.current.hasError).toBe(false);
+    expect(result.current.reservations.map(r => r.id)).toEqual(['restored']);
+  });
+
+  it('keeps a successful live update when an older query rejects', async () => {
+    let fail: (error: Error) => void = () => {};
+    sendMock.mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+    const { result } = renderHook(() => useScheduledMessages(), { wrapper });
+    emit(MessageType.SCHEDULED_MESSAGE_UPDATED, { sessionId: 'sess-a', schedules: [res('live')] });
+    await act(async () => { fail(new Error('Old timeout')); });
+    expect(result.current.hasError).toBe(false);
+    expect(result.current.reservations.map(r => r.id)).toEqual(['live']);
+  });
+});

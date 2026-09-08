@@ -517,6 +517,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "تعذّر تحميل الرسائل المجدولة.",
     "schedule": "جدولة الاستئناف",
     "cancel": "إلغاء الحجز",
     "resumeNow": "استئناف الآن",

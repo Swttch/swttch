@@ -39,6 +39,7 @@ interface Ctx {
   /** Reservations served by the mocked ScheduledMessagesContext. */
   reservations: Reservation[];
   reservationsLoading?: boolean;
+  reservationsError?: boolean;
   accounts: {
     id: string;
     emailAddress: string;
@@ -122,6 +123,7 @@ vi.mock('@/contexts/ScheduledMessagesContext', () => ({
   useScheduledMessages: () => ({
     reservations: ctx.reservations,
     isLoading: ctx.reservationsLoading,
+    hasError: ctx.reservationsError,
     cancel: vi.fn(),
     panelOpen: false,
     openPanel: vi.fn(),
@@ -189,7 +191,7 @@ beforeEach(() => {
   ctx.inputMode = 'ask_before_edit';
   ctx.messages = [];
   ctx.autoResumeOnLimit = false;
-  ctx.reservations = []; ctx.reservationsLoading = false;
+  ctx.reservations = []; ctx.reservationsLoading = false; ctx.reservationsError = false;
   ctx.accounts = []; ctx.accountsLoading = false;
   ctx.accountPools = [];
   ensureSponsorMock.mockResolvedValue(true);
@@ -700,5 +702,31 @@ describe('reservation identity isolation', () => {
     await act(async () => { rerender(); });
     expect(sendMock).toHaveBeenCalledWith(MessageType.SCHEDULE_MESSAGE,
       expect.objectContaining({ sessionId: 'sess-b' }));
+  });
+});
+
+describe('failed reservation queries', () => {
+  it('waits for a successful retry before automatic scheduling', async () => {
+    ctx.autoResumeOnLimit = true; ctx.messages = [limitMsg('failed-query', FUTURE)];
+    ctx.reservationsError = true;
+    const { rerender } = renderHook(() => useAutoResume());
+    expect(sendMock).not.toHaveBeenCalled();
+    ctx.reservationsError = false;
+    await act(async () => { rerender(); });
+    expect(sendMock).toHaveBeenCalledWith(MessageType.SCHEDULE_MESSAGE,
+      expect.objectContaining({ sessionId: 'sess-a' }));
+  });
+
+  it('does not interpret an unknown empty list as cancellation', async () => {
+    ctx.autoResumeOnLimit = true; ctx.messages = [limitMsg('kept', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    ctx.reservations = []; ctx.reservationsError = true;
+    await act(async () => { rerender(); });
+    expect(sendMock).not.toHaveBeenCalled();
+    ctx.reservationsError = false; ctx.reservations = [makeReservation(FUTURE)];
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('cancel');
+    expect(sendMock).not.toHaveBeenCalled();
   });
 });

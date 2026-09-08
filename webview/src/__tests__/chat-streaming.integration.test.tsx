@@ -95,6 +95,8 @@ vi.mock('../contexts/ClaudeSettingsContext', () => ({
 let resumeAccounts: AccountListItem[] = [];
 let resumePools: AccountPool[] = [];
 let resumeReservations: ScheduledMessage[] = [];
+let resumeReservationsError = false;
+const refetchReservationsMock = vi.fn();
 const switchAccountMock = vi.fn(async (id: string) => {
   resumeAccounts = resumeAccounts.map(account => ({ ...account, active: account.id === id }));
 });
@@ -108,7 +110,7 @@ vi.mock('../contexts/AutoResumeOverrideContext', () => ({
   useAutoResumeOverride: () => ({ getOverride: () => undefined }),
 }));
 vi.mock('../contexts/ScheduledMessagesContext', () => ({
-  useScheduledMessages: () => ({ reservations: resumeReservations }),
+  useScheduledMessages: () => ({ reservations: resumeReservations, hasError: resumeReservationsError, isLoading: false, refetch: refetchReservationsMock }),
 }));
 vi.mock('../utils/ensureSponsor', () => ({ ensureSponsor: vi.fn().mockResolvedValue(true) }));
 vi.mock('../notifications', () => ({ notify: vi.fn() }));
@@ -220,7 +222,7 @@ describe('채팅 스트리밍 통합 테스트', () => {
     mockSession.currentSessionId = null;
     resumeAccounts = [];
     resumePools = [];
-    resumeReservations = [];
+    resumeReservations = []; resumeReservationsError = false;
     mockBridge.send.mockResolvedValue(undefined);
   });
 
@@ -291,6 +293,16 @@ describe('채팅 스트리밍 통합 테스트', () => {
     // The terminal result arrives separately, after the limit has started the pool switch.
     await act(async () => emitBridgeEvent(MessageType.CLI_EVENT, { type: 'result', is_error: true }));
     expect(screen.getByTestId('is-streaming')).toHaveTextContent('false');
+    if (!withPool) {
+      resumeReservationsError = true;
+      rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
+      expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('chat:autoResume.reservationsLoadFailed'));
+      fireEvent.click(screen.getByRole('button', { name: i18n.t('common:errorBoundary.retry') }));
+      expect(refetchReservationsMock).toHaveBeenCalledTimes(1);
+      resumeReservationsError = false;
+      rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    }
     if (withPool) {
       expect(mockBridge.send.mock.calls.find(call => call[0] === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY)?.[1]).toMatchObject({ sourceMessageUuid: 'limit-entry' });
       expect(switchAccountMock).not.toHaveBeenCalled();

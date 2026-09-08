@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Não foi possível carregar as mensagens agendadas.",
     "schedule": "Agendar retomada",
     "cancel": "Cancelar reserva",
     "resumeNow": "Retomar agora",

@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "예약된 메시지를 불러오지 못했습니다.",
     "schedule": "예약하기",
     "cancel": "예약취소",
     "resumeNow": "재개하기",

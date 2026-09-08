@@ -509,6 +509,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Could not load scheduled messages.",
     "schedule": "Schedule resume",
     "cancel": "Cancel reservation",
     "resumeNow": "Resume now",
