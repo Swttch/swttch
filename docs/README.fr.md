@@ -136,7 +136,9 @@ La même interface Claude Code GUI que vous aimez dans Cursor et VS Code, mainte
 Les problèmes fréquents que nous n'avons pas encore pu corriger de notre côté, mais pour lesquels une solution connue existe, sont rassemblés dans **[docs/troubleshooting](troubleshooting/fr/README.md)**, chacun avec les symptômes, la cause, la solution et des liens vers les issues associées.
 
 - [Presse-papiers Wayland](troubleshooting/fr/wayland-clipboard.md) — lorsque le collage dans le champ de chat échoue sous Linux · Wayland · KDE Plasma
+- [Onglet de chat vide sous Linux](troubleshooting/fr/linux-jcef-blank-panel.md) — lorsque l'onglet de chat est entièrement vide sous Linux, et que l'aperçu Markdown de l'IDE l'est aussi
 - [JCEF dans Android Studio](troubleshooting/fr/android-studio-jcef.md) — lorsque Android Studio affiche un panneau d'information ou une exception au lieu du chat, ou une fenêtre vide
+- [Couleurs de l'écran de revue](troubleshooting/fr/diff-colors-old-ide.md) — lorsque l'écran de revue s'affiche sans couleur sur les IDE 2025.2 et antérieurs
 
 Si votre problème ne figure pas dans la liste, merci d'[ouvrir une issue](https://github.com/Swttch/swttch/issues/new/choose).
 

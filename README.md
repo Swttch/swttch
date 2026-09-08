@@ -159,7 +159,9 @@ Same backend, same UI, opened in your default browser on `http://localhost:19836
 Problems that come up often, which we have not been able to fix on our side yet but for which a known workaround exists, are collected in **[docs/troubleshooting](docs/troubleshooting/en/README.md)** — each with the symptoms, the cause, how to fix it, and links to the related issues.
 
 - [Wayland clipboard](docs/troubleshooting/en/wayland-clipboard.md) — pasting into the chat input fails on Linux · Wayland · KDE Plasma
+- [Empty chat tab on Linux](docs/troubleshooting/en/linux-jcef-blank-panel.md) — the chat tab is completely empty on Linux, and the IDE's own Markdown preview is empty too
 - [Android Studio JCEF](docs/troubleshooting/en/android-studio-jcef.md) — Android Studio shows a guidance panel or an exception instead of the chat UI, or a blank window
+- [Review screen colours](docs/troubleshooting/en/diff-colors-old-ide.md) — the review screen comes out with no colour on IDE 2025.2 and older
 
 If your problem is not listed there, please [open an issue](https://github.com/Swttch/swttch/issues/new/choose).
 

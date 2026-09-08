@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | **日本語** | [中文](../zh/README.md) | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_最終更新: 2026-08-24_
+_最終更新: 2026-09-08_
 
 よく発生する問題のうち、まだこちらで直せていないものの、既知の解決方法があるものをまとめています。
 
@@ -13,6 +13,7 @@ _最終更新: 2026-08-24_
 | 文書 | こんなときに |
 |---|---|
 | [Wayland のクリップボード](wayland-clipboard.md) | Linux · Wayland · KDE Plasma でチャット入力欄に貼り付けができないとき |
+| [Linux でチャットタブが空](linux-jcef-blank-panel.md) | Linux でチャットタブが完全に空で、IDE の Markdown プレビューも空のとき |
 | [Android Studio の JCEF](android-studio-jcef.md) | Android Studio でチャット画面の代わりに案内パネルや例外が出る、またはウィンドウが空のとき |
 | [変更内容の画面の色](diff-colors-old-ide.md) | 2025.2 以前の IDE で変更内容の画面に色がつかないとき |
 
