@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.30.2 - Asset viewer, plus dictation and session list fixes</h3>
+            <ul>
+                <li>Add an Assets screen that collects and steps through the images in a session (#417)</li>
+                <li>Fix the account pool not resuming automatically after a rate limit (#422)</li>
+                <li>Fix the banner stalling when a reservation query fails, and add a Retry button (#422)</li>
+                <li>Add a copy entry to the user message menu (#416)</li>
+                <li>Fix dictation stopping when an approval dialog appears, and show the reason as given when it fails (#419, reported by @EndiButler and @VijitCoder)</li>
+                <li>Fix sessions from nested project folders not being distinguished in the list</li>
+                <li>Improve the input history</li>
+            </ul>
             <h3>0.30.1 - Add conversation fork, rewind, and account pools</h3>
             <ul>
                 <li>Add account pools (#410)</li>
