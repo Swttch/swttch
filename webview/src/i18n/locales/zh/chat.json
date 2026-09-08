@@ -516,10 +516,8 @@
     "accountPool": {
       "checkingUsage": "正在检查账户用量（{{seconds}} 秒）",
       "usageLookupFailed": "无法检查部分账户的用量。将使用当前账户的自动继续功能。",
-      "switching": "正在切换账户（{{seconds}}秒）",
       "continuing": "正在使用下一个账户继续…",
       "failed": "账户切换失败",
-      "timedOut": "账户切换验证超时。请稍后重新发送消息。",
       "failedWithReason": "账户切换验证已停止：{{reason}}"
     },
     "error": {

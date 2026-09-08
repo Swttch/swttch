@@ -133,7 +133,7 @@ export function LimitReachedRenderer(props: Props) {
       {accountPoolStatusText && (
         <NotificationLine
           text={accountPoolStatusText}
-          leading={ar.accountPoolStatusKey === 'autoResume.accountPool.switching' ? (
+          leading={ar.accountPoolStatusKey === 'autoResume.accountPool.checkingUsage' ? (
             <span className="w-3.5 h-3.5 border-2 border-border-default border-t-text-secondary rounded-full animate-spin" />
           ) : undefined}
         />

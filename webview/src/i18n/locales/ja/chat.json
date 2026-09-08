@@ -516,10 +516,8 @@
     "accountPool": {
       "checkingUsage": "アカウントの使用量を確認中（{{seconds}}秒）",
       "usageLookupFailed": "一部のアカウントの使用量を確認できませんでした。現在のアカウントで自動再開を使用します。",
-      "switching": "アカウント切り替え中（{{seconds}}秒）",
       "continuing": "次のアカウントで続行しています…",
       "failed": "アカウントの切り替えに失敗しました",
-      "timedOut": "アカウント切り替えの確認がタイムアウトしました。しばらくしてからメッセージを再送してください。",
       "failedWithReason": "アカウント切り替えの確認を中止しました：{{reason}}"
     },
     "error": {

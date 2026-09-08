@@ -59,11 +59,11 @@ export interface UseAutoResumeResult {
   scheduled: ScheduledMessage | null;
   /** i18n key (relative to the `chat` namespace) for the live status line, or null. */
   statusKey: string | null;
-  /** i18n key for account-pool switching status, or null when no pool switch is active. */
+  /** i18n key for account-pool recovery status, or null when no recovery is active. */
   accountPoolStatusKey: string | null;
-  /** Whole seconds elapsed while the isolated account-switch preflight is running. */
+  /** Whole seconds elapsed while saved-account usage is being checked. */
   accountPoolElapsedSeconds: number | null;
-  /** Non-limit failure that stopped the account-switch preflight early. */
+  /** Usage lookup warning or error that stopped account recovery. */
   accountPoolError: string | null;
   /** Seconds left in the post-reset countdown (30…0), or null when not counting. */
   countdownSeconds: number | null;
@@ -143,7 +143,7 @@ export function useAutoResume(): UseAutoResumeResult {
   // GET_SCHEDULED_MESSAGES + SCHEDULED_MESSAGE_UPDATED subscription) let the
   // banner and the panel drift apart; one list means the reservation an
   // auto-resume creates is, by construction, the reservation the panel lists.
-  const { reservations } = useScheduledMessages();
+  const { reservations, isLoading: reservationsLoading } = useScheduledMessages();
   const [status, setStatus] = useState<AutoResumeStatusView | null>(null);
   const [accountPoolStatusKey, setAccountPoolStatusKey] = useState<string | null>(null);
   const [accountPoolElapsedSeconds, setAccountPoolElapsedSeconds] = useState<number | null>(null);
@@ -176,9 +176,16 @@ export function useAutoResume(): UseAutoResumeResult {
     [reservations, currentSessionId],
   );
 
+  const handledAccountPoolLimitRef = useRef<string | null>(null);
+  const sessionVisitRef = useRef({ sessionId: currentSessionId });
+  if (sessionVisitRef.current.sessionId !== currentSessionId) {
+    sessionVisitRef.current = { sessionId: currentSessionId };
+  }
+
   // ── Reset status state when the active session changes ──────────────────────
   // The reservation list resets itself in ScheduledMessagesContext.
   useEffect(() => {
+    handledAccountPoolLimitRef.current = null;
     setStatus(null);
     setAccountPoolStatusKey(null);
     setAccountPoolElapsedSeconds(null);
@@ -262,11 +269,9 @@ export function useAutoResume(): UseAutoResumeResult {
       ? null : findNextAccountPoolAccount(accounts, accountPools),
     [accounts, accountPools, limit?.messageUuid, accountPoolFallbackUuid],
   );
-  const handledAccountPoolLimitRef = useRef<string | null>(null);
-  const sessionRef = useRef(currentSessionId);
-  sessionRef.current = currentSessionId;
   useEffect(() => {
-    if (accountsLoading || !limit || !currentSessionId || (!accountPoolCandidate && !recovery?.awaitingLimit) || scheduled) return;
+    if (reservationsLoading || accountsLoading || !limit || !currentSessionId || (!accountPoolCandidate && !recovery?.awaitingLimit) || scheduled) return;
+    const visit = sessionVisitRef.current;
     const attemptKey = `${currentSessionId}:${limit.messageUuid}`;
     if (handledAccountPoolLimitRef.current === attemptKey) return;
     handledAccountPoolLimitRef.current = attemptKey;
@@ -279,7 +284,7 @@ export function useAutoResume(): UseAutoResumeResult {
       model: sessionModel ?? undefined,
     }, { timeout: ACCOUNT_POOL_REQUEST_TIMEOUT_MS }).then(result => {
       // Never send the previous session's continuation into the tab navigated to.
-      if (sessionRef.current !== currentSessionId || limitRef.current?.messageUuid !== limit.messageUuid) return;
+      if (sessionVisitRef.current !== visit || limitRef.current?.messageUuid !== limit.messageUuid) return;
       recoverySessionRef.current = currentSessionId;
       setRecovery(result.recovery);
       if (result.recovery?.usageLookupFailed) setAccountPoolError(i18n.t('chat:autoResume.accountPool.usageLookupFailed'));
@@ -299,12 +304,12 @@ export function useAutoResume(): UseAutoResumeResult {
         setResolvedUuid(limit.messageUuid);
       }
     }).catch(error => {
-      if (sessionRef.current !== currentSessionId || limitRef.current?.messageUuid !== limit.messageUuid) return;
+      if (sessionVisitRef.current !== visit || limitRef.current?.messageUuid !== limit.messageUuid) return;
       setAccountPoolStatusKey(null);
       setAccountPoolElapsedSeconds(null);
       setAccountPoolError(error instanceof Error ? error.message : String(error));
     });
-  }, [accountsLoading, limit, currentSessionId, accountPoolCandidate, scheduled, send, sessionModel, sendMessage, inputMode, recovery?.awaitingLimit]);
+  }, [reservationsLoading, accountsLoading, limit, currentSessionId, accountPoolCandidate, scheduled, send, sessionModel, sendMessage, inputMode, recovery?.awaitingLimit]);
 
   useEffect(() => {
     if (accountPoolStatusKey !== 'autoResume.accountPool.checkingUsage') return;
@@ -321,8 +326,8 @@ export function useAutoResume(): UseAutoResumeResult {
   useEffect(() => {
     // During reload the reservation can arrive before the transcript. An empty
     // message list is not evidence that the user cleared the limit.
-    if (messages.length > 0 && !rawLimit && scheduled) cancelReservation(false);
-  }, [messages, rawLimit, scheduled, cancelReservation]);
+    if (!reservationsLoading && messages.length > 0 && !rawLimit && scheduled) cancelReservation(false);
+  }, [reservationsLoading, messages, rawLimit, scheduled, cancelReservation]);
 
   // ── Countdown tick + one-shot browser notification at reset ─────────────────
   const resetsAtMs = useMemo(
@@ -361,12 +366,12 @@ export function useAutoResume(): UseAutoResumeResult {
     if (status?.phase === AutoResumeStatusPhase.PROCEEDING) return null;
     if (scheduled) return 'cancel';
     // An empty registry while loading is not evidence that no pool exists.
-    if (accountsLoading) return null;
+    if (accountsLoading || reservationsLoading) return null;
     if (accountPoolCandidate || recovery?.awaitingLimit) return null;
     if (accountPoolStatusKey === 'autoResume.accountPool.checkingUsage') return null;
     if (resumeResetsAt && Date.parse(resumeResetsAt) > nowMs) return 'schedule';
     return 'resumeNow';
-  }, [accountsLoading, limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs, recovery?.awaitingLimit, resumeResetsAt]);
+  }, [reservationsLoading, accountsLoading, limit, scheduled, status, accountPoolCandidate, accountPoolStatusKey, nowMs, recovery?.awaitingLimit, resumeResetsAt]);
 
   // ── Auto-resume = "press the button for the user" ────────────────────────────
   // Turning the preference on does NOT switch to a second, parallel feature: the
@@ -386,29 +391,29 @@ export function useAutoResume(): UseAutoResumeResult {
   // this normally only runs for sponsors; if it somehow runs for a non-sponsor,
   // schedule() is rejected by the backend (the interceptor shows the invite) and
   // resumeNow() pre-checks via ensureSponsor.
-  const autoActedForRef = useRef<string | null>(null);
-  const lastScheduledRef = useRef<string | null>(null);
-  const canceledLimitRef = useRef<string | null>(null);
+  // Keep cancellation and one-shot actions scoped to the session across visits.
+  // A loading/other-session list is not evidence that a reservation disappeared.
+  const autoActedForRef = useRef(new Map<string, string>());
+  const lastScheduledRef = useRef(new Map<string, string>());
+  const canceledLimitRef = useRef(new Set<string>());
   useEffect(() => {
-    if (scheduled) lastScheduledRef.current = scheduled.id;
-    else if (lastScheduledRef.current) {
-      // A canceled/failed reservation must not be recreated by the automatic
-      // button press, including when this tab first learned of it after reload.
-      lastScheduledRef.current = null;
-      canceledLimitRef.current = limit?.messageUuid ?? null;
+    if (!currentSessionId || reservationsLoading) return;
+    const previousLimit = lastScheduledRef.current.get(currentSessionId);
+    if (scheduled) {
+      if (limit) lastScheduledRef.current.set(currentSessionId, limit.messageUuid);
+    } else if (previousLimit) {
+      lastScheduledRef.current.delete(currentSessionId);
+      canceledLimitRef.current.add(`${currentSessionId}:${previousLimit}`);
     }
-    if (!limit || !autoResumeEnabled || canceledLimitRef.current === limit.messageUuid) return;
+    if (!limit || !autoResumeEnabled || canceledLimitRef.current.has(`${currentSessionId}:${limit.messageUuid}`)) return;
     if (accountPoolCandidate) return;
     if (action !== 'schedule' && action !== 'resumeNow') return;
-    // One automatic press per (limit notice, action). Keyed by action too, so a
-    // banner that ticks past its reset from 'schedule' to 'resumeNow' still gets
-    // its one press — without this the guard would swallow the transition.
     const guardKey = `${limit.messageUuid}:${limit.resetsAt ?? 'none'}:${action}`;
-    if (autoActedForRef.current === guardKey) return;
-    autoActedForRef.current = guardKey;
+    if (autoActedForRef.current.get(currentSessionId) === guardKey) return;
+    autoActedForRef.current.set(currentSessionId, guardKey);
     if (action === 'schedule') schedule();
     else void resumeNow();
-  }, [scheduled, limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
+  }, [currentSessionId, reservationsLoading, scheduled, limit, autoResumeEnabled, accountPoolCandidate, action, schedule, resumeNow]);
 
   const statusKey = resolveAutoResumeStatusKey(status);
 

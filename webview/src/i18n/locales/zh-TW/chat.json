@@ -516,10 +516,8 @@
     "accountPool": {
       "checkingUsage": "正在確認帳戶用量（{{seconds}} 秒）",
       "usageLookupFailed": "無法確認部分帳戶的用量。將使用目前帳戶的自動繼續功能。",
-      "switching": "正在切換帳戶（{{seconds}}秒）",
       "continuing": "正在使用下一個帳戶繼續…",
       "failed": "帳戶切換失敗",
-      "timedOut": "帳戶切換驗證逾時。請稍後重新傳送訊息。",
       "failedWithReason": "帳戶切換驗證已停止：{{reason}}"
     },
     "error": {

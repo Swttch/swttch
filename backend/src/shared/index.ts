@@ -1,5 +1,4 @@
 export * from './account';
-export * from './account-switch-preflight';
 export * from './announcement';
 export * from './cli-update';
 export * from './client-env';

@@ -112,3 +112,27 @@ describe('ScheduledMessagesContext', () => {
     expect(result.current.editing).toBeNull();
   });
 });
+
+describe('reservation response ownership', () => {
+  it('ignores a late GET response from the previous session', async () => {
+    let finishA: (value: object) => void = () => {};
+    sendMock.mockImplementationOnce(() => new Promise(resolve => { finishA = resolve; }));
+    const { result, rerender } = renderHook(() => useScheduledMessages(), { wrapper });
+    expect(result.current.isLoading).toBe(true);
+    ctx.currentSessionId = 'sess-b'; initialSchedules = [res('b', 'sess-b')];
+    await act(async () => { rerender(); });
+    expect(result.current.isLoading).toBe(false);
+    await act(async () => { finishA({ schedules: [res('a')] }); });
+    expect(result.current.reservations.map(r => r.id)).toEqual(['b']);
+  });
+
+  it('does not overwrite a cancellation broadcast with an older GET response', async () => {
+    let finishGet: (value: object) => void = () => {};
+    sendMock.mockImplementationOnce(() => new Promise(resolve => { finishGet = resolve; }));
+    const { result } = renderHook(() => useScheduledMessages(), { wrapper });
+    emit(MessageType.SCHEDULED_MESSAGE_UPDATED, { sessionId: 'sess-a', schedules: [] });
+    await act(async () => { finishGet({ schedules: [res('canceled')] }); });
+    expect(result.current.reservations).toEqual([]);
+    expect(result.current.isLoading).toBe(false);
+  });
+});

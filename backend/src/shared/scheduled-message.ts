@@ -76,5 +76,6 @@ export interface ScheduledMessage {
   panelId?: string;
   /** Account whose quota this auto-resume waits for. */
   accountId?: string;
+  /** Model whose applicable quota must permit this auto-resume delivery. */
   model?: string;
 }

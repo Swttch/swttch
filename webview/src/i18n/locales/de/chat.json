@@ -516,10 +516,8 @@
     "accountPool": {
       "checkingUsage": "Kontonutzung wird geprüft ({{seconds}} s)",
       "usageLookupFailed": "Die Nutzung einiger Konten konnte nicht geprüft werden. Die automatische Fortsetzung wird für das aktuelle Konto verwendet.",
-      "switching": "Kontowechsel ({{seconds}} s)",
       "continuing": "Weiter mit dem nächsten Konto…",
       "failed": "Kontowechsel fehlgeschlagen",
-      "timedOut": "Die Prüfung des Kontowechsels hat das Zeitlimit überschritten. Senden Sie die Nachricht in Kürze erneut.",
       "failedWithReason": "Prüfung des Kontowechsels beendet: {{reason}}"
     },
     "error": {

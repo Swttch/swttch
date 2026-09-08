@@ -38,6 +38,7 @@ interface Ctx {
   autoResumeOnLimit: boolean;
   /** Reservations served by the mocked ScheduledMessagesContext. */
   reservations: Reservation[];
+  reservationsLoading?: boolean;
   accounts: {
     id: string;
     emailAddress: string;
@@ -120,6 +121,7 @@ vi.mock('@/contexts/AutoResumeOverrideContext', () => ({
 vi.mock('@/contexts/ScheduledMessagesContext', () => ({
   useScheduledMessages: () => ({
     reservations: ctx.reservations,
+    isLoading: ctx.reservationsLoading,
     cancel: vi.fn(),
     panelOpen: false,
     openPanel: vi.fn(),
@@ -187,7 +189,7 @@ beforeEach(() => {
   ctx.inputMode = 'ask_before_edit';
   ctx.messages = [];
   ctx.autoResumeOnLimit = false;
-  ctx.reservations = [];
+  ctx.reservations = []; ctx.reservationsLoading = false;
   ctx.accounts = []; ctx.accountsLoading = false;
   ctx.accountPools = [];
   ensureSponsorMock.mockResolvedValue(true);
@@ -575,3 +577,128 @@ function accountPool(id: string, accountIds: string[]): Ctx['accountPools'][numb
     updatedAt: 1,
   };
 }
+
+describe('PR 422 independent review reproduction', () => {
+  it('starts automatic scheduling in B after leaving a reserved session A', async () => {
+    ctx.autoResumeOnLimit = true;
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    ctx.sessionId = 'sess-b';
+    ctx.messages = [limitMsg('limit-b', FUTURE)];
+    ctx.reservations = [];
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('schedule');
+    expect(sendMock).toHaveBeenCalledWith(MessageType.SCHEDULE_MESSAGE,
+      expect.objectContaining({ sessionId: 'sess-b' }));
+  });
+
+  it('keeps an existing reservation actionable after returning to A', async () => {
+    ctx.autoResumeOnLimit = true;
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    ctx.sessionId = 'sess-b';
+    ctx.reservations = [];
+    await act(async () => { rerender(); });
+    ctx.messages = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-a';
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('cancel');
+    expect(result.current.scheduled?.id).toBe('r1');
+    expect(sendMock.mock.calls.filter(call => call[0] === MessageType.CANCEL_SCHEDULED_MESSAGE)).toHaveLength(0);
+  });
+
+  it('restores the fallback action after leaving and returning to A', async () => {
+    ctx.accounts = [account('acc-a', 'a@example.test', true), account('acc-b', 'b@example.test', false)];
+    ctx.accountPools = [accountPool('pool', ['acc-a','acc-b'])];
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.action).toBe('schedule');
+    ctx.sessionId = 'sess-b';
+    ctx.messages = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-a';
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('schedule');
+  });
+
+});
+
+describe('reservation loading and cancellation across navigation', () => {
+  it('waits for the reservation list before starting recovery or scheduling', async () => {
+    ctx.autoResumeOnLimit = true;
+    ctx.messages = [limitMsg('lim-loading', FUTURE)];
+    ctx.reservationsLoading = true;
+    const { result, rerender } = renderHook(() => useAutoResume());
+    expect(result.current.action).toBeNull();
+    expect(sendMock).not.toHaveBeenCalled();
+    ctx.reservations = [makeReservation(FUTURE)];
+    ctx.reservationsLoading = false;
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('cancel');
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('does not lose a real cancellation when visiting another session', async () => {
+    ctx.autoResumeOnLimit = true;
+    ctx.messages = [limitMsg('cancel-a', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { rerender } = renderHook(() => useAutoResume());
+    ctx.reservations = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-b'; ctx.messages = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-a'; ctx.messages = [limitMsg('cancel-a', FUTURE)];
+    await act(async () => { rerender(); });
+    expect(sendMock.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+  });
+
+  it('does not apply an old recovery response after A to B to A navigation', async () => {
+    ctx.accounts = [account('a', 'a@example.test', true), account('b', 'b@example.test', false)];
+    ctx.accountPools = [accountPool('pool', ['a','b'])];
+    ctx.messages = [limitMsg('limit-a', FUTURE)];
+    let finishOld: (value: object) => void = () => {};
+    sendMock.mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }));
+    const { result, rerender } = renderHook(() => useAutoResume());
+    ctx.sessionId = 'sess-b'; ctx.messages = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-a'; ctx.messages = [limitMsg('limit-a', FUTURE)];
+    await act(async () => { rerender(); });
+    await act(async () => { finishOld({ recovery: { accountId: 'b' }, continueInSession: true }); });
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(result.current.action).toBe('schedule');
+  });
+});
+
+describe('reservation identity isolation', () => {
+  it('does not mark temporary list loading as a cancellation', async () => {
+    ctx.autoResumeOnLimit = true; ctx.messages = [limitMsg('loading-a', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    ctx.reservationsLoading = true; ctx.reservations = [];
+    await act(async () => { rerender(); });
+    expect(sendMock).not.toHaveBeenCalled();
+    ctx.reservationsLoading = false; ctx.reservations = [makeReservation(FUTURE)];
+    await act(async () => { rerender(); });
+    expect(result.current.action).toBe('cancel');
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('does not transfer cancellation to another session with the same notice UUID', async () => {
+    ctx.autoResumeOnLimit = true; ctx.messages = [limitMsg('shared-uuid', FUTURE)];
+    ctx.reservations = [makeReservation(FUTURE)];
+    const { rerender } = renderHook(() => useAutoResume());
+    ctx.reservations = [];
+    await act(async () => { rerender(); });
+    ctx.sessionId = 'sess-b';
+    await act(async () => { rerender(); });
+    expect(sendMock).toHaveBeenCalledWith(MessageType.SCHEDULE_MESSAGE,
+      expect.objectContaining({ sessionId: 'sess-b' }));
+  });
+});

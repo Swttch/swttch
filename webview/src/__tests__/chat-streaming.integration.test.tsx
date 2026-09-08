@@ -296,6 +296,7 @@ describe('채팅 스트리밍 통합 테스트', () => {
       expect(switchAccountMock).not.toHaveBeenCalled();
       expect(screen.getByTestId('auto-resume-action')).toHaveTextContent('none');
       expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+      expect(screen.getByTestId('limit-notices').querySelector('.animate-spin')).not.toBeNull();
       await act(async () => finishPreparation({ recovery: { accountId: 'acc-2', sourceMessageUuid: 'limit-entry',
         resetsAt: selectedResetsAt, awaitingLimit: true }, continueInSession: true }));
       mockBridge.send.mockImplementation((type: string) => Promise.resolve(type === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY
@@ -320,14 +321,14 @@ describe('채팅 스트리밍 통합 테스트', () => {
     rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
     expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(1);
     expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SEND_MESSAGE)).toHaveLength(withPool ? 2 : 1);
-    expect(screen.queryByText('자동재개 예약됨')).not.toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('chat:autoResume.scheduled'))).not.toBeInTheDocument();
     resumeReservations = [{ id: 'reserved', sessionId: 'stream-limit-session',
       sendAt: new Date(Date.parse(selectedResetsAt) + 30_000).toISOString(),
       message: 'continue', kind: ScheduledMessageKind.AUTO_RESUME, createdAt: new Date().toISOString(), accountId: 'acc-2' }];
     rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
-    expect(screen.getByText('자동재개 예약됨')).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('chat:autoResume.scheduled'))).toBeInTheDocument();
     const notice = within(screen.getByTestId('limit-notices')).getByText(`You've hit your session limit · resets ${selectedResetsAt}`);
-    expect(notice.parentElement).toHaveTextContent('자동재개 예약됨');
+    expect(notice.parentElement).toHaveTextContent(i18n.t('chat:autoResume.scheduled'));
     expect(notice.parentElement?.querySelector('time')).toBeNull();
   });
 

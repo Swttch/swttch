@@ -83,3 +83,9 @@ later blocking reset, the reservation waits for the later time plus the existing
 Cancellation also stops a recharge check already in progress: a late successful
 usage response cannot send a cancelled reservation. Reopening a chat preserves
 an existing reservation, and temporary message loading does not cancel it.
+
+Switching between conversations keeps each session's automatic actions and
+cancellation separate. A reservation list still loading is not treated as a
+cancellation, and an older response cannot replace a newer cancellation update.
+During the current chat view's lifetime, returning to a session does not
+automatically recreate a reservation you cancelled there.
