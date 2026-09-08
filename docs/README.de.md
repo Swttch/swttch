@@ -136,7 +136,9 @@ Die Claude Code GUI, die in Cursor und VS Code beliebt ist, ist jetzt auch in Je
 Häufig auftretende Probleme, die wir noch nicht selbst beheben konnten, für die es aber eine bekannte Lösung gibt, sind unter **[docs/troubleshooting](troubleshooting/de/README.md)** gesammelt — jeweils mit Symptomen, Ursache, Lösung und Links zu den zugehörigen Issues.
 
 - [Wayland-Zwischenablage](troubleshooting/de/wayland-clipboard.md) — wenn das Einfügen in das Chat-Eingabefeld unter Linux · Wayland · KDE Plasma fehlschlägt
+- [Leerer Chat-Tab unter Linux](troubleshooting/de/linux-jcef-blank-panel.md) — wenn der Chat-Tab unter Linux völlig leer bleibt und die Markdown-Vorschau der IDE ebenfalls
 - [JCEF in Android Studio](troubleshooting/de/android-studio-jcef.md) — wenn Android Studio ein Hinweispanel oder eine Ausnahme statt der Chat-Oberfläche oder ein leeres Fenster zeigt
+- [Farben der Prüfansicht](troubleshooting/de/diff-colors-old-ide.md) — wenn die Prüfansicht auf IDE 2025.2 und älter ohne Farbe kommt
 
 Steht Ihr Problem nicht in der Liste, [eröffnen Sie bitte ein Issue](https://github.com/Swttch/swttch/issues/new/choose).
 

@@ -136,7 +136,9 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
 Los problemas frecuentes que todavía no hemos podido corregir por nuestra parte, pero para los que existe una solución conocida, están recogidos en **[docs/troubleshooting](troubleshooting/es/README.md)**, cada uno con los síntomas, la causa, cómo solucionarlo y enlaces a los issues relacionados.
 
 - [Portapapeles en Wayland](troubleshooting/es/wayland-clipboard.md) — cuando pegar en el campo de chat falla en Linux · Wayland · KDE Plasma
+- [Pestaña de chat vacía en Linux](troubleshooting/es/linux-jcef-blank-panel.md) — cuando la pestaña de chat está completamente vacía en Linux, y la vista previa de Markdown del IDE también
 - [JCEF en Android Studio](troubleshooting/es/android-studio-jcef.md) — cuando Android Studio muestra un panel informativo o una excepción en lugar del chat, o una ventana en blanco
+- [Color de la pantalla de revisión](troubleshooting/es/diff-colors-old-ide.md) — cuando la pantalla de revisión sale sin color en IDE 2025.2 y anteriores
 
 Si tu problema no está en la lista, por favor [abre un issue](https://github.com/Swttch/swttch/issues/new/choose).
 

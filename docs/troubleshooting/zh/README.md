@@ -2,7 +2,7 @@
 
 🌐 [English](../en/README.md) | [한국어](../ko/README.md) | [日本語](../ja/README.md) | **中文** | [Español](../es/README.md) | [Deutsch](../de/README.md) | [Français](../fr/README.md)
 
-_最后更新：2026-08-24_
+_最后更新：2026-09-08_
 
 这里收集的是常见问题中，我们尚未能自行修复、但已有已知解决方法的那些。
 
@@ -13,6 +13,7 @@ _最后更新：2026-08-24_
 | 文档 | 什么时候看 |
 |---|---|
 | [Wayland 剪贴板](wayland-clipboard.md) | 在 Linux · Wayland · KDE Plasma 上无法向聊天输入框粘贴时 |
+| [Linux 上聊天标签页空白](linux-jcef-blank-panel.md) | 在 Linux 上聊天标签页完全空白，并且 IDE 自带的 Markdown 预览同样空白时 |
 | [Android Studio JCEF](android-studio-jcef.md) | Android Studio 显示引导面板或抛出异常而不是聊天界面，或者窗口空白时 |
 | [变更界面颜色](diff-colors-old-ide.md) | 在 2025.2 及更早的 IDE 上变更界面没有颜色时 |
 

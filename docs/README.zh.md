@@ -135,7 +135,9 @@
 常见问题中，我们尚未能自行修复、但已有已知解决方法的那些，整理在 **[docs/troubleshooting](troubleshooting/zh/README.md)** 中，每篇都包含症状、原因、解决方法以及相关 Issue 的链接。
 
 - [Wayland 剪贴板](troubleshooting/zh/wayland-clipboard.md) — 在 Linux · Wayland · KDE Plasma 上无法向聊天输入框粘贴时
+- [Linux 上聊天标签页空白](troubleshooting/zh/linux-jcef-blank-panel.md) — 在 Linux 上聊天标签页完全空白，并且 IDE 自带的 Markdown 预览同样空白时
 - [Android Studio JCEF](troubleshooting/zh/android-studio-jcef.md) — Android Studio 显示引导面板或抛出异常而不是聊天界面，或者窗口空白时
+- [变更界面颜色](troubleshooting/zh/diff-colors-old-ide.md) — 在 2025.2 及更早的 IDE 上变更界面没有颜色时
 
 如果列表中没有您遇到的问题，请[提交 Issue](https://github.com/Swttch/swttch/issues/new/choose) 告诉我们。
 
