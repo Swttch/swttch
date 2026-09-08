@@ -9,6 +9,8 @@ import {
   editScheduledMessage,
 } from '../features/scheduled-messages';
 import { readSchedulesForSession } from '../features/scheduled-messages-store';
+import { readRegistry } from '../features/account-store';
+import { readAccountPoolRecovery } from '../features/account-pool-recovery-store';
 import { getSponsorStatus } from '../features/license';
 
 /**
@@ -28,7 +30,7 @@ export async function scheduleMessageHandler(
   _bridge: Bridge,
 ): Promise<void> {
   const payload = message.payload as
-    | { sessionId?: string; sendAt?: string; message?: string; kind?: ScheduledMessageKind }
+    | { sessionId?: string; sendAt?: string; message?: string; kind?: ScheduledMessageKind; model?: string }
     | undefined;
   const sessionId = payload?.sessionId;
   const sendAt = payload?.sendAt;
@@ -63,17 +65,30 @@ export async function scheduleMessageHandler(
   // panelId, in which case delivery falls back by session/focus.
   const panelId = connections.getClient(connectionId)?.panelId ?? undefined;
 
-  const reservation: ScheduledMessage = {
-    id: randomUUID(),
-    sessionId,
-    sendAt,
-    message: messageText,
-    kind,
-    createdAt: new Date().toISOString(),
-    panelId,
-  };
+  const create = async (): Promise<ScheduledMessage> => {
+    const recovery = kind === ScheduledMessageKind.AUTO_RESUME ? await readAccountPoolRecovery(sessionId) : null;
+    if (recovery?.awaitingLimit) throw new Error('Waiting for the selected account limit response');
+    const accountId = kind === ScheduledMessageKind.AUTO_RESUME
+      ? recovery?.accountId ?? (await readRegistry()).current ?? undefined : undefined;
+    const effectiveSendAt = recovery?.resetsAt
+      ? new Date(Math.max(Date.parse(sendAt), Date.parse(recovery.resetsAt) + 30_000)).toISOString() : sendAt;
+    const reservation: ScheduledMessage = {
+      id: randomUUID(),
+      sessionId,
+      sendAt: effectiveSendAt,
+      accountId,
+      model: payload?.model,
+      message: messageText,
+      kind,
+      createdAt: new Date().toISOString(),
+      panelId,
+    };
 
-  await scheduleMessage(reservation, connections);
+    await scheduleMessage(reservation, connections);
+    return reservation;
+  };
+  const reservation = kind === ScheduledMessageKind.AUTO_RESUME
+    ? await createAutoResumeOnce(sessionId, create) : await create();
 
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
@@ -196,4 +211,16 @@ export async function getScheduledMessagesHandler(
     requestId: message.requestId,
     schedules,
   });
+}
+
+const creatingAutoResume = new Map<string, Promise<ScheduledMessage>>();
+async function createAutoResumeOnce(sessionId: string, create: () => Promise<ScheduledMessage>): Promise<ScheduledMessage> {
+  const pending = creatingAutoResume.get(sessionId);
+  if (pending) return pending;
+  const operation = (async () => {
+    const existing = (await readSchedulesForSession(sessionId)).find(s => s.kind === ScheduledMessageKind.AUTO_RESUME);
+    return existing ?? await create();
+  })();
+  creatingAutoResume.set(sessionId, operation);
+  try { return await operation; } finally { creatingAutoResume.delete(sessionId); }
 }

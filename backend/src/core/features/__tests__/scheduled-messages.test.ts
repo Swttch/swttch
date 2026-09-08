@@ -162,7 +162,7 @@ describe('scheduled-messages scheduler', () => {
 
     await vi.advanceTimersByTimeAsync(1_000);
 
-    expect(waitingHook).toHaveBeenCalledWith(msg);
+    expect(waitingHook).toHaveBeenCalledWith(msg, expect.any(AbortSignal));
     expect(connections.sendTo).not.toHaveBeenCalled();
     // Still persisted — the hook owns the retry.
     expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
@@ -332,7 +332,41 @@ describe('scheduled-messages scheduler', () => {
     registerTimer(msg, explicit, connections as unknown as never);
     await vi.advanceTimersByTimeAsync(1_000);
 
-    expect(explicit).toHaveBeenCalledWith(msg);
+    expect(explicit).toHaveBeenCalledWith(msg, expect.any(AbortSignal));
     expect(connections.sendTo).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('in-flight reservation checks', () => {
+  beforeEach(() => { vi.useFakeTimers(); memStore.clear(); resetSchedulerForTest(); });
+  afterEach(() => { resetSchedulerForTest(); vi.useRealTimers(); });
+  it.each(['cancel', 'delete session', 'edit'] as const)('%s invalidates a check already in flight', async action => {
+    const connections = makeConnections();
+    let finish!: (value: { proceed: boolean }) => void;
+    const hook: ScheduleHook = vi.fn(() => new Promise<{ proceed: boolean }>(resolve => { finish = resolve; }));
+    registerHook(ScheduledMessageKind.AUTO_RESUME, hook);
+    await scheduleMessage(makeMsg('pending', 0), connections as never);
+    await vi.advanceTimersByTimeAsync(0);
+    if (action === 'cancel') await cancelSchedule('sess-a', 'pending', connections as never);
+    if (action === 'delete session') await cancelSchedulesForSession('sess-a', connections as never);
+    if (action === 'edit') await editScheduledMessage('sess-a', 'pending', { sendAt: new Date(Date.now() + 60000).toISOString() }, connections as never);
+    finish({ proceed: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(connections.sendTo).not.toHaveBeenCalled();
+  });
+  it('restoring while a check is in flight does not start another check', async () => {
+    const connections = makeConnections();
+    let finish!: (value: { proceed: boolean }) => void;
+    const hook: ScheduleHook = vi.fn(() => new Promise<{ proceed: boolean }>(resolve => { finish = resolve; }));
+    registerHook(ScheduledMessageKind.AUTO_RESUME, hook);
+    await scheduleMessage(makeMsg('pending', 0), connections as never);
+    await vi.advanceTimersByTimeAsync(0);
+    await restoreSchedulesForSession('sess-a', connections as never);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(hook).toHaveBeenCalledTimes(1);
+    finish({ proceed: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(connections.sendTo).toHaveBeenCalledTimes(1);
   });
 });

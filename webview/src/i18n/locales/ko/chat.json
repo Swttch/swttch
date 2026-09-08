@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "예약된 메시지를 불러오지 못했습니다.",
     "schedule": "예약하기",
     "cancel": "예약취소",
     "resumeNow": "재개하기",
@@ -514,10 +515,10 @@
       "proceeding": "재개하는 중…"
     },
     "accountPool": {
-      "switching": "계정 전환 중 ({{seconds}}초)",
+      "checkingUsage": "계정 사용량 확인 중 ({{seconds}}초)",
+      "usageLookupFailed": "일부 계정의 사용량을 확인하지 못했습니다. 현재 계정의 자동재개를 사용합니다.",
       "continuing": "다음 계정으로 이어가는 중…",
       "failed": "계정 전환 실패",
-      "timedOut": "계정 전환 확인 시간이 초과되었습니다. 잠시 뒤 메시지를 다시 보내 주세요.",
       "failedWithReason": "계정 전환 확인 중단: {{reason}}"
     },
     "error": {

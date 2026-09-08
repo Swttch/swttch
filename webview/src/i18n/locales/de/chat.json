@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Geplante Nachrichten konnten nicht geladen werden.",
     "schedule": "Fortsetzung planen",
     "cancel": "Reservierung abbrechen",
     "resumeNow": "Jetzt fortsetzen",
@@ -514,10 +515,10 @@
       "proceeding": "Wird fortgesetzt…"
     },
     "accountPool": {
-      "switching": "Kontowechsel ({{seconds}} s)",
+      "checkingUsage": "Kontonutzung wird geprüft ({{seconds}} s)",
+      "usageLookupFailed": "Die Nutzung einiger Konten konnte nicht geprüft werden. Die automatische Fortsetzung wird für das aktuelle Konto verwendet.",
       "continuing": "Weiter mit dem nächsten Konto…",
       "failed": "Kontowechsel fehlgeschlagen",
-      "timedOut": "Die Prüfung des Kontowechsels hat das Zeitlimit überschritten. Senden Sie die Nachricht in Kürze erneut.",
       "failedWithReason": "Prüfung des Kontowechsels beendet: {{reason}}"
     },
     "error": {

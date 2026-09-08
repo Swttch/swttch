@@ -1484,7 +1484,22 @@ describe('useChatStream', () => {
       });
     };
 
-    it('snake_case로 온 is_api_error_message를 마커로 보존한다', () => {
+    it.each([false, true])('원본 제한 메시지 ID와 시각을 보존한다 (streaming=%s)', streaming => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      if (streaming) act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { type: 'message_start', message: { id: 'previous-response' } } });
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Working' } } });
+      });
+      act(() => { emitLimitNotice(emit); emit(MessageType.CLI_EVENT, { type: 'result', is_error: true }); });
+      const last = result.current.messages[result.current.messages.length - 1];
+      expect(last.uuid).toBe('563ce3f4-c5ed-4fb0-9bd2-3bcfbb1a1511');
+      expect(last.timestamp).toBe('2026-08-18T17:41:12.737Z');
+      expect(last.isStreaming).toBe(false);
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('snake_case로 온 is_api_error_message를 마커로 보존한다' , () => {
       const { bridge, emit } = createMockBridge();
       const { result } = renderHook(() => useChatStream({ bridge }));
 

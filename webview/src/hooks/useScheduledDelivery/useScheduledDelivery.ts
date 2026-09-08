@@ -29,7 +29,7 @@ export function useScheduledDelivery(): void {
   const { sendMessage } = useChatStreamContext();
 
   // A delivery awaiting a session switch: once currentSessionId matches, send.
-  const pendingRef = useRef<{ id: string; sessionId: string; message: string } | null>(null);
+  const pendingRef = useRef<{ id: string; sessionId: string; message: string; accountId?: string } | null>(null);
   // Read live values inside the async wait without re-subscribing.
   const inputModeRef = useRef(inputMode);
   inputModeRef.current = inputMode;
@@ -38,8 +38,9 @@ export function useScheduledDelivery(): void {
   const sendRef = useRef(send);
   sendRef.current = send;
 
-  const deliver = useCallback((id: string, sessionId: string, message: string) => {
-    sendMessageRef.current(message, inputModeRef.current);
+  const deliver = useCallback((id: string, sessionId: string, message: string, accountId?: string) => {
+    if (accountId) sendMessageRef.current(message, inputModeRef.current, undefined, undefined, accountId);
+    else sendMessageRef.current(message, inputModeRef.current);
     // Fire-and-forget ACK: on loss the engine simply redelivers.
     void sendRef.current(MessageType.SCHEDULED_MESSAGE_DELIVERED, { id, sessionId });
   }, []);
@@ -49,17 +50,17 @@ export function useScheduledDelivery(): void {
   useEffect(() => {
     const unsub = subscribe(MessageType.DELIVER_SCHEDULED_MESSAGE, (msg) => {
       const p = msg.payload as
-        | { id?: string; sessionId?: string; message?: string; needsSessionSwitch?: boolean }
+        | { id?: string; sessionId?: string; message?: string; needsSessionSwitch?: boolean; accountId?: string }
         | undefined;
       if (!p?.id || !p.sessionId || typeof p.message !== 'string') return;
 
       if (p.needsSessionSwitch && p.sessionId !== currentSessionId) {
         // Navigate first; the effect below fires the send once the switch lands.
-        pendingRef.current = { id: p.id, sessionId: p.sessionId, message: p.message };
+        pendingRef.current = { id: p.id, sessionId: p.sessionId, message: p.message, accountId: p.accountId };
         navigateToSession(p.sessionId);
         return;
       }
-      deliver(p.id, p.sessionId, p.message);
+      deliver(p.id, p.sessionId, p.message, p.accountId);
     });
     return unsub;
   }, [subscribe, currentSessionId, navigateToSession, deliver]);
@@ -70,7 +71,7 @@ export function useScheduledDelivery(): void {
     const pending = pendingRef.current;
     if (pending && pending.sessionId === currentSessionId) {
       pendingRef.current = null;
-      deliver(pending.id, pending.sessionId, pending.message);
+      deliver(pending.id, pending.sessionId, pending.message, pending.accountId);
     }
   }, [currentSessionId, deliver]);
 }

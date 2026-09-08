@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { win32 } from 'node:path';
 import { execFile as cpExecFile } from 'child_process';
 import { augmentedEnv } from './augmented-path';
 import { execViaCmdArgv } from './win-exec';
@@ -32,13 +34,27 @@ export interface LauncherResult {
 export function runLauncher(
   command: string,
   args: string[],
-  opts: { timeout: number; maxBuffer: number },
+  opts: { timeout: number; maxBuffer: number; direct?: boolean; env?: NodeJS.ProcessEnv; cwd?: string },
 ): Promise<LauncherResult> {
-  if (process.platform === 'win32') {
+  // Both Claude CLI and companion updates make the same Windows launcher
+  // choice here. npm's JS entry bypasses cmd quoting and execution policy.
+  let direct = opts.direct || /\.exe$/i.test(command);
+  if (process.platform === 'win32' && !direct && /^npm(?:\.cmd)?$/i.test(win32.basename(command))) {
+    const directory = win32.isAbsolute(command) ? win32.dirname(command) : win32.dirname(process.execPath);
+    const cli = win32.join(directory, 'node_modules', 'npm', 'bin', 'npm-cli.js');
+    if (existsSync(cli)) {
+      command = process.execPath;
+      args = [cli, ...args];
+      direct = true;
+    }
+  }
+  if (process.platform === 'win32' && !direct) {
     return execViaCmdArgv(command, args, {
-      env: augmentedEnv(),
+      env: { ...augmentedEnv(), ...opts.env },
+      cwd: opts.cwd,
       timeout: opts.timeout,
       maxBuffer: opts.maxBuffer,
+      windowsHide: true,
     }).then(({ err, stdout, stderr }) => ({
       ok: !err,
       output: `${stdout}${stderr}`.trim(),
@@ -49,9 +65,11 @@ export function runLauncher(
       command,
       args,
       {
-        env: augmentedEnv(),
+        env: { ...augmentedEnv(), ...opts.env },
+        cwd: opts.cwd,
         timeout: opts.timeout,
         maxBuffer: opts.maxBuffer,
+        windowsHide: true,
         // macOS/Linux: run the launcher directly, no shell tokenization.
         shell: false,
       },

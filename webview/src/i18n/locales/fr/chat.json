@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Impossible de charger les messages programmés.",
     "schedule": "Planifier la reprise",
     "cancel": "Annuler la réservation",
     "resumeNow": "Reprendre maintenant",
@@ -514,10 +515,10 @@
       "proceeding": "Reprise en cours…"
     },
     "accountPool": {
-      "switching": "Changement de compte ({{seconds}} s)",
+      "checkingUsage": "Vérification de l’utilisation des comptes ({{seconds}} s)",
+      "usageLookupFailed": "L’utilisation de certains comptes n’a pas pu être vérifiée. La reprise automatique sera utilisée pour le compte actuel.",
       "continuing": "Poursuite avec le compte suivant…",
       "failed": "Échec du changement de compte",
-      "timedOut": "La vérification du changement de compte a expiré. Renvoyez le message dans quelques instants.",
       "failedWithReason": "Vérification du changement de compte interrompue : {{reason}}"
     },
     "error": {

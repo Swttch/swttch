@@ -57,6 +57,18 @@ describe('useExtendKit', () => {
     return calls[calls.length - 1]?.[1] as { refresh?: boolean } | undefined;
   }
 
+  it('refreshes the displayed version after a background startup update', async () => {
+    mockSend.mockResolvedValue({ ...info, installed: '0.4.0', latest: '0.5.0' });
+    renderHook();
+    await waitFor(() => expect(current?.info?.installed).toBe('0.4.0'));
+    const callback = mockSubscribe.mock.calls.find(call => call[0] === MessageType.EXTEND_KIT_UPDATED)?.[1] as () => void;
+    expect(callback).toBeTypeOf('function');
+    mockSend.mockResolvedValue({ ...info, installed: '0.5.0', latest: '0.5.0' });
+    act(() => callback());
+    await waitFor(() => expect(current?.info?.installed).toBe('0.5.0'));
+    expect(lastInfoPayload()).toEqual({ refresh: true });
+  });
+
   it('reads normally without asking the backend to re-resolve', async () => {
     mockSend.mockResolvedValue(info);
     renderHook();

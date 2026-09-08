@@ -505,6 +505,7 @@
     }
   },
   "autoResume": {
+    "reservationsLoadFailed": "Não foi possível carregar as mensagens agendadas.",
     "schedule": "Agendar retomada",
     "cancel": "Cancelar reserva",
     "resumeNow": "Retomar agora",
@@ -514,10 +515,10 @@
       "proceeding": "Retomando…"
     },
     "accountPool": {
-      "switching": "Trocando de conta ({{seconds}} s)",
+      "checkingUsage": "Verificando o uso das contas ({{seconds}} s)",
+      "usageLookupFailed": "Não foi possível verificar o uso de algumas contas. A retomada automática será usada para a conta atual.",
       "continuing": "Continuando com a próxima conta…",
       "failed": "Falha ao trocar de conta",
-      "timedOut": "A verificação da troca de conta expirou. Envie a mensagem novamente em instantes.",
       "failedWithReason": "Verificação da troca de conta interrompida: {{reason}}"
     },
     "error": {

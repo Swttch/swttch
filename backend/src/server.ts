@@ -1,3 +1,4 @@
+import { updateInstalledExtendKit } from './core/extend-kit-update';
 import { execFileSync, execSync } from 'child_process';
 import { selectKillablePids } from './core/port-utils';
 import { startWebSocketServer, type BridgeMap } from './ws/ws-server';
@@ -547,6 +548,11 @@ async function main() {
     tunnelPairing.seedCode(initialPairCode);
     console.error('[node-backend]', 'Seeded initial local pairing code');
   }
+
+  // Do not delay readiness for the optional companion's update.
+  void updateInstalledExtendKit().then(updated => {
+    if (updated) connections.broadcastToAll(MessageType.EXTEND_KIT_UPDATED, {});
+  });
 
   // Restore tunnel/sleep state from previous session
   restoreTunnelState();

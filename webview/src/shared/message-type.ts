@@ -195,8 +195,8 @@ export enum MessageType {
   SAVE_ACCOUNT = 'SAVE_ACCOUNT',
   /** Switch the live CLI credentials to a saved account by id. inbound webview→backend */
   SWITCH_ACCOUNT = 'SWITCH_ACCOUNT',
-  /** Verify the live account with an isolated, non-persistent CLI call. inbound webview→backend */
-  VERIFY_ACCOUNT_SWITCH = 'VERIFY_ACCOUNT_SWITCH',
+  /** Select a usable pool account or prepare its auto-resume fallback. inbound webview→backend */
+  PREPARE_ACCOUNT_POOL_RECOVERY = 'PREPARE_ACCOUNT_POOL_RECOVERY',
   /** Remove a saved account (snapshot + registry entry) by id. inbound webview→backend */
   DELETE_ACCOUNT = 'DELETE_ACCOUNT',
   /** Replace the saved Claude account pools. inbound webview→backend */
@@ -235,6 +235,8 @@ export enum MessageType {
   GET_DICTATION_AVAILABILITY = 'GET_DICTATION_AVAILABILITY',
   /** Installed and latest @swttch/extend-kit versions, for the voice settings section. inbound webview→backend */
   GET_EXTEND_KIT_INFO = 'GET_EXTEND_KIT_INFO',
+  /** Companion startup update completed. outbound backend→webview */
+  EXTEND_KIT_UPDATED = 'EXTEND_KIT_UPDATED',
   /** Read whether the user has answered the one-time "use voice input?" question, and when. Resolves to accepted without asking when the kit is already installed. inbound webview→backend */
   GET_VOICE_PROMPT = 'GET_VOICE_PROMPT',
   /** Record that the one-time voice question was shown (`{ asked: true }`) or answered (`{ accepted }`). inbound webview→backend */

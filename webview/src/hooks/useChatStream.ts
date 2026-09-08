@@ -951,6 +951,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           error: cliEvent.error as string | undefined,
         };
 
+        // The live notice and its JSONL entry must have the same identity.
+        // A temporary UI id makes a reload look like a second limit response.
+        const entryUuid = typeof cliEvent.uuid === 'string' ? cliEvent.uuid : undefined;
+        const entryTimestamp = typeof cliEvent.timestamp === 'string' ? cliEvent.timestamp : undefined;
         const messageId = assistantMessage.id as string;
         const incomingContent = assistantMessage.content;
         const assistantUsage = assistantMessage.usage as {
@@ -1045,12 +1049,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
             return {
               ...msg,
+              uuid: entryUuid ?? msg.uuid,
+              timestamp: entryTimestamp ?? msg.timestamp,
               message: { ...msg.message!, content: mergedBlocks },
               isStreaming: false,
               message_id: messageId,
               ...apiErrorFields,
             };
           }));
+
+          if (entryUuid) {
+            streamingMessageIdRef.current = entryUuid;
+            setStreamingMessageId(entryUuid);
+          }
 
           // Reset active block indices (this turn is done, next turn may start new blocks)
           activeBlockIndexRef.current = -1;
@@ -1064,8 +1075,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           // 새 메시지 추가 (스트리밍 없이 바로 온 경우)
           const newAssistantMessage: LoadedMessageDto = {
             type: LoadedMessageType.Assistant,
-            uuid: generateMessageId(),
-            timestamp: new Date().toISOString(),
+            uuid: entryUuid ?? generateMessageId(),
+            timestamp: entryTimestamp ?? new Date().toISOString(),
             message: { role: MessageRole.Assistant, content: finalTurnBlocks } as LoadedMessageDto['message'],
             isStreaming: false,
             message_id: messageId,

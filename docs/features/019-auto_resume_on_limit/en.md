@@ -1,8 +1,7 @@
 # Auto-resume on usage-limit reset
 
 > Languages: **English** · [한국어](./ko.md)
->
-> Related: ships on the `feat/auto-resume-on-limit-reset` branch (no PR/issue number yet).
+
 
 When you hit your Claude usage or session limit, Claude Code posts a limit notice into the chat and the conversation stalls until your quota resets. **Auto-resume** lets the GUI pick the conversation back up for you the moment that reset lands — you don't have to sit and watch the clock, come back to a cold session, or remember to type "continue" hours later.
 
@@ -29,6 +28,20 @@ What the banner shows depends on **when your quota resets**:
 - The banner is derived from the conversation's own messages, so it **survives leaving and re-entering the session** — it's not a fleeting event that vanishes on reload.
 - If auto-resume is turned **on** for the session, the schedule is placed for you automatically as soon as the limit appears, and the banner goes straight to the **Auto-resume scheduled** state. If it's off, the **Schedule resume** action is there for you to arm it by hand.
 
+## If the reservation list cannot be loaded
+
+The limit banner shows **Could not load scheduled messages.** and a **Retry**
+button when the reservation query fails. Click **Retry** to check again without
+leaving the chat. The button is disabled while that check is pending; if it fails
+again, you can retry again.
+
+![The limit banner with "Could not load scheduled messages." and a "Retry" button](./assets/reservation-query-error.png)
+
+A failed query does not mean your reservation was cancelled. Until the list can
+be confirmed, the GUI pauses automatic recovery and scheduling to avoid acting
+on an incomplete view. Once the query succeeds, existing reservations reappear
+and the usual auto-resume flow continues according to your session setting.
+
 ## The setting
 
 The default lives in **Settings → General → "Auto-resume on usage limit"**. It's **off by default**.
@@ -46,10 +59,10 @@ Each session can still override the default on its own:
 
 ## How resume works
 
-Auto-resume is careful: your quota resetting is a wall-clock estimate, so instead of firing blindly at the reset time, it opens a short **30-second window** and verifies your quota with your usage battery (`ccb`) before actually sending.
+Auto-resume is careful: your quota resetting is a wall-clock estimate, so instead of firing blindly at the reset time, it waits an additional **30 seconds** and then verifies your quota with your usage battery (`ccb`) before actually sending.
 
 1. **The reset arrives.** A **30-second countdown** begins on the banner (`30s → 0s`).
-2. **The backend gate re-checks your usage.** During that window it polls your usage battery every **5 seconds**, for up to **10 minutes**, waiting for the five-hour quota to actually recharge. While it waits, the banner shows *"Waiting for quota reset…"*.
+2. **The backend gate re-checks your usage.** After the countdown, it polls your usage battery every **5 seconds**, for up to **10 minutes**, waiting for the five-hour quota to actually recharge. While it waits, the banner shows *"Waiting for quota reset…"*.
 3. **Once recharged, it delivers "continue".** The message is sent **exactly the same way you'd send it yourself** — through the same [Scheduled Messages](../018-scheduled_messages/en.md) delivery path — so it appears as your own message and streaming, permissions, and tools all behave normally. The banner briefly reads *"Resuming…"*.
 
 A few safeguards keep this trustworthy:
@@ -67,3 +80,26 @@ The reset time isn't fetched from any private or official API. It's parsed **str
 - Auto-resume delivers a single **"continue"** — the same nudge you'd type by hand to pick a conversation back up.
 - The banner and its actions are shown to everyone; the sponsor check happens **when you use a control** (schedule or resume-now), never as a wall in front of the information.
 - Because the whole thing rides on [Scheduled Messages](../018-scheduled_messages/en.md), a queued auto-resume behaves like any other reservation: bound to its session, and delivered the next time that session is attached if no tab is open at the moment it fires.
+
+## Using an account pool
+
+[Account pools](../057-account_pool/en.md) first look for another account with
+confirmed available usage. When all members are confirmed exhausted, the pool
+selects the account with the earliest usable reset and returns to **this same
+auto-resume mechanism**. A failed lookup keeps the current account as the fallback.
+
+The selected account is saved with the reservation. Its five-hour, weekly, and
+applicable model limits must permit use before a scheduled continuation is sent.
+The reset time in the CLI notice is still used; if the account lookup reports a
+later blocking reset, the reservation waits for the later time plus the existing
+30-second margin. The Scheduled Messages panel shows the actual reservation.
+
+Cancellation also stops a recharge check already in progress: a late successful
+usage response cannot send a cancelled reservation. Reopening a chat preserves
+an existing reservation, and temporary message loading does not cancel it.
+
+Switching between conversations keeps each session's automatic actions and
+cancellation separate. A reservation list still loading is not treated as a
+cancellation, and an older response cannot replace a newer cancellation update.
+During the current chat view's lifetime, returning to a session does not
+automatically recreate a reservation you cancelled there.

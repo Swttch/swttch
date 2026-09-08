@@ -1,4 +1,5 @@
-import { PackageManager, UpdateMode } from '../shared';
+import { buildPackageInstallCommand } from './global-install-target';
+import { PackageManager, UpdateMode, LibraryManager } from '../shared';
 import { detectInstallCoordinate, toPackageManager } from './install-coordinate';
 
 export const CLAUDE_NPM_PACKAGE = '@anthropic-ai/claude-code';
@@ -126,13 +127,13 @@ export function buildUpdateCommand(
   const spec = version ? `${CLAUDE_NPM_PACKAGE}@${version}` : `${CLAUDE_NPM_PACKAGE}@latest`;
   switch (pm) {
     case PackageManager.NPM:
-      return { command: 'npm', args: ['install', '-g', spec] };
+      return buildPackageInstallCommand(LibraryManager.NPM, spec);
     case PackageManager.PNPM:
-      return { command: 'pnpm', args: ['add', '-g', spec] };
+      return buildPackageInstallCommand(LibraryManager.PNPM, spec);
     case PackageManager.YARN:
-      return { command: 'yarn', args: ['global', 'add', spec] };
+      return buildPackageInstallCommand(LibraryManager.YARN, spec);
     case PackageManager.VOLTA:
-      return { command: 'volta', args: ['install', spec] };
+      return buildPackageInstallCommand(LibraryManager.VOLTA, spec);
     case PackageManager.NATIVE:
       return { command: 'claude', args: ['update'] };
     case PackageManager.HOMEBREW:

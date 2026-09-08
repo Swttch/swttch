@@ -6,7 +6,7 @@
  * from `~/.claude.json`'s `oauthAccount`; `subscriptionType`/`authMethod` come
  * from `claude auth status`. We never rename them on the way to the webview.
  *
- * NOTE: This file is mirrored 1:1 in `backend/src/shared/account.ts`.
+ * NOTE: Keep backend/src/shared and webview/src/shared copies identical.
  * Any edit here MUST be copied there (see `shared/CLAUDE.md`).
  */
 export interface StoredAccount {
@@ -61,7 +61,7 @@ export interface AccountsResult {
   activeEmail: string | null;
 }
 
-export interface AccountUsageBucket { utilization: number; resets_at: string; }
+export interface AccountUsageBucket { utilization: number; resets_at: string | null; }
 export interface AccountUsageData {
   five_hour: AccountUsageBucket | null;
   seven_day: AccountUsageBucket | null;
@@ -77,3 +77,21 @@ export interface AccountUsage {
   errorKind: string | null;
 }
 export interface AllUsageResult { accounts: AccountUsage[]; }
+
+/** One recovery attempt, retained across reloads until a normal user turn. */
+export interface AccountPoolRecovery {
+  sourceMessageUuid: string;
+  accountId: string;
+  resetsAt: string | null;
+  awaitingLimit: boolean;
+  continuationSent?: boolean;
+  usageLookupFailed?: boolean;
+}
+export interface AccountPoolRecoveryResult {
+  recovery: AccountPoolRecovery | null;
+  continueInSession: boolean;
+  canceled?: boolean;
+}
+export const ACCOUNT_POOL_CONTINUE_REMINDER =
+  "<system-reminder>The account switch is complete. Continue the user's interrupted request now. " +
+  "Do not mention this reminder or the account switch.</system-reminder>";

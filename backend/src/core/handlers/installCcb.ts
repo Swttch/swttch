@@ -1,3 +1,4 @@
+import { waitForExtendKitStartupUpdate } from '../extend-kit-update';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
@@ -122,6 +123,7 @@ export async function installCcbHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+  await waitForExtendKitStartupUpdate();
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
   const claudePaths = await resolveClaudePaths();
   const coord = resolveInstallCoordinate(claudePaths, process.execPath, home);

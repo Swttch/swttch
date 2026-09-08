@@ -14,6 +14,12 @@ import { MessageType, type ScheduledMessage } from '@/shared';
 interface ScheduledMessagesValue {
   /** The current session's reservations (all kinds), newest-relevant first. */
   reservations: ScheduledMessage[];
+  /** True while a reservation query is pending or the bridge is disconnected. */
+  isLoading: boolean;
+  /** The last query failed; its list must not be treated as authoritative. */
+  hasError: boolean;
+  /** Retry the current session query without navigating away. */
+  refetch: () => void;
   /** Cancel a reservation by id. */
   cancel: (id: string) => void;
   // Panel UI state (mirrors WorkflowStateContext's Background tasks panel).
@@ -40,14 +46,21 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
   const { send, subscribe, isConnected } = useBridgeContext();
   const { currentSessionId } = useSessionContext();
 
-  const [reservations, setReservations] = useState<ScheduledMessage[]>([]);
+  const [requestRevision, setRequestRevision] = useState(0);
+  const refetch = useCallback(() => setRequestRevision(value => value + 1), []);
+  const [snapshot, setSnapshot] = useState<{ sessionId: string | null; reservations: ScheduledMessage[]; hasError: boolean; revision: number }>({
+    sessionId: null, reservations: [], hasError: false, revision: -1,
+  });
+  const isLoading = !!currentSessionId && (snapshot.sessionId !== currentSessionId || snapshot.revision !== requestRevision || !isConnected);
+  const hasError = snapshot.sessionId === currentSessionId && snapshot.hasError;
+  const reservations = useMemo(() => snapshot.sessionId === currentSessionId ? snapshot.reservations : [],
+    [snapshot, currentSessionId]);
   const [panelOpen, setPanelOpen] = useState(false);
   const [editing, setEditing] = useState<ScheduledMessage | null>(null);
 
   // Reset when the session changes (SSOT is the URL). The list is re-requested
   // by the effect below for the new session.
   useEffect(() => {
-    setReservations([]);
     setPanelOpen(false);
     setEditing(null);
   }, [currentSessionId]);
@@ -57,23 +70,33 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
   useEffect(() => {
     if (!isConnected || !currentSessionId) return;
 
-    void send(MessageType.GET_SCHEDULED_MESSAGES, { sessionId: currentSessionId })
-      .then((res: { schedules?: ScheduledMessage[] }) => {
-        setReservations(Array.isArray(res?.schedules) ? res.schedules : []);
-      })
-      .catch(() => {
-        /* best-effort; the UPDATED broadcast will refresh on the next change */
-      });
-
+    let active = true;
+    let receivedUpdate = false;
     const unsub = subscribe(MessageType.SCHEDULED_MESSAGE_UPDATED, (message) => {
       const p = message.payload as
         | { sessionId?: string; schedules?: ScheduledMessage[] }
         | undefined;
-      if (!p || p.sessionId !== currentSessionId) return;
-      setReservations(Array.isArray(p.schedules) ? p.schedules : []);
+      if (!active || !p || p.sessionId !== currentSessionId) return;
+      receivedUpdate = true;
+      setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(p.schedules) ? p.schedules : [], hasError: false, revision: requestRevision });
     });
-    return unsub;
-  }, [isConnected, currentSessionId, send, subscribe]);
+
+    void send(MessageType.GET_SCHEDULED_MESSAGES, { sessionId: currentSessionId })
+      .then((res: { schedules?: ScheduledMessage[] }) => {
+        // A previous session's reply and a snapshot older than a live update
+        // must never replace the current reservation list.
+        if (!active || receivedUpdate) return;
+        setSnapshot({ sessionId: currentSessionId, reservations: Array.isArray(res?.schedules) ? res.schedules : [], hasError: false, revision: requestRevision });
+      })
+      .catch(() => {
+        if (!active || receivedUpdate) return;
+        // End loading, but keep failure distinct from an authoritative empty list.
+        setSnapshot(previous => ({ sessionId: currentSessionId,
+          reservations: previous.sessionId === currentSessionId ? previous.reservations : [],
+          hasError: true, revision: requestRevision }));
+      });
+    return () => { active = false; unsub(); };
+  }, [isConnected, currentSessionId, send, subscribe, requestRevision]);
 
   const openPanel = useCallback(() => setPanelOpen(true), []);
   const closePanel = useCallback(() => setPanelOpen(false), []);
@@ -96,6 +119,9 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
   const value = useMemo<ScheduledMessagesValue>(
     () => ({
       reservations,
+      isLoading,
+      hasError,
+      refetch,
       cancel,
       panelOpen,
       openPanel,
@@ -104,7 +130,7 @@ export function ScheduledMessagesProvider({ children }: { children: ReactNode })
       startEdit,
       stopEdit,
     }),
-    [reservations, cancel, panelOpen, openPanel, closePanel, editing, startEdit, stopEdit],
+    [reservations, isLoading, hasError, refetch, cancel, panelOpen, openPanel, closePanel, editing, startEdit, stopEdit],
   );
 
   return (

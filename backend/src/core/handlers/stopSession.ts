@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendInterruptToProcess } from '../claude-process';
+import { clearAccountPoolRecovery } from '../features/account-pool-recovery-store';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 
@@ -27,6 +28,7 @@ export function stopSessionHandler(
   const client = connections.getClient(connectionId);
   if (client?.subscribedSessionId) {
     const sessionId = client.subscribedSessionId;
+    void clearAccountPoolRecovery(sessionId).catch(error => console.error('[account-pool] Failed to clear recovery', error));
     const session = connections.getSession(sessionId);
     if (session?.process) {
       console.error('[node-backend]', `Interrupting session ${sessionId} via stdin control_request`);

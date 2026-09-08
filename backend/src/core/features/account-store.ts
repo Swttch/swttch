@@ -54,7 +54,7 @@ function registryPath(): string {
 function snapshotsDir(): string {
   return join(baseDir(), 'accounts');
 }
-function snapshotPath(id: string): string {
+export function accountSnapshotPath(id: string): string {
   if (!ACCOUNT_ID_PATTERN.test(id)) {
     throw new Error(`Invalid account id: ${id}`);
   }
@@ -149,7 +149,7 @@ export async function writeAccountOrder(accountOrder: string[]): Promise<void> {
 
 /** Read one account's credential snapshot, or null when absent/unreadable. */
 export async function readSnapshot(id: string): Promise<AccountSnapshot | null> {
-  const path = snapshotPath(id);
+  const path = accountSnapshotPath(id);
   if (!existsSync(path)) return null;
   try {
     const parsed = JSON.parse(await readFile(path, 'utf-8')) as Partial<AccountSnapshot>;
@@ -168,7 +168,7 @@ export async function readSnapshot(id: string): Promise<AccountSnapshot | null> 
 
 /** Write one account's credential snapshot (0600). */
 export async function writeSnapshot(id: string, snapshot: AccountSnapshot): Promise<void> {
-  await writeAtomic0600(snapshotPath(id), JSON.stringify(snapshot, null, 2) + '\n');
+  await writeAtomic0600(accountSnapshotPath(id), JSON.stringify(snapshot, null, 2) + '\n');
 }
 
 /** Remove an account's metadata entry and its credential snapshot. */
@@ -187,7 +187,7 @@ export async function deleteAccountFiles(id: string): Promise<void> {
     if (registry.current === id) registry.current = null;
     await writeRegistry(registry);
   }
-  await unlink(snapshotPath(id)).catch(() => undefined);
+  await unlink(accountSnapshotPath(id)).catch(() => undefined);
 }
 
 /** True when a credential snapshot file exists for the given id. */

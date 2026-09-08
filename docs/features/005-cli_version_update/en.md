@@ -49,3 +49,28 @@ Available versions come from the **npm registry** (`npm view @anthropic-ai/claud
 
 - This works across macOS, Linux, WSL, and Windows, using the same command-resolution the plugin already uses to run the CLI.
 - The version is a single shared value across the app, so refreshing it in one place updates it everywhere.
+
+## Installed dependencies update at startup
+
+The backend now checks the installed **`@swttch/extend-kit` dependency** once at
+startup and updates it to the latest release in the background when a newer
+version exists. This companion supplies usage-battery and voice-input commands.
+This startup check does not update the plugin or the Claude Code CLI itself.
+
+If you have never installed the companion, startup skips it. Install it first
+using the existing usage or voice-input controls when you want those features.
+The check does not hold up the chat interface.
+
+Updates reuse the package-manager command construction and process launcher used
+by the Claude CLI update controls above. The target is the companion installation
+the backend actually found, including its global package store. For npm, the
+update pins that store's prefix; for pnpm and Yarn, it verifies the reported global
+store before proceeding. An ambiguous or unsupported installation is skipped
+rather than updated in a different location.
+
+If the registry cannot be reached, the installation cannot be identified safely,
+or the update fails, startup continues and records the result in the backend log.
+The automatic check runs once per backend start; manual dependency controls remain
+available. Manual install/removal waits for any startup update already in progress.
+After a successful update the backend re-reads the installed version and refreshes
+the shared dependency state, so the displayed version follows the active copy.

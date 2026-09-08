@@ -185,7 +185,7 @@ async function refreshOutgoingSnapshot(
  * account first, then overwrites the live credential slot + oauthAccount metadata.
  * Rolls the live slot back on failure. Throws when the target is unknown/missing.
  */
-export async function switchToAccount(id: string): Promise<StoredAccount> {
+async function switchToAccountUnlocked(id: string, shouldSwitch: () => boolean = () => true): Promise<StoredAccount> {
   const registry = await readRegistry();
   const target = registry.accounts[id];
   if (!target) {
@@ -203,6 +203,7 @@ export async function switchToAccount(id: string): Promise<StoredAccount> {
 
   await refreshOutgoingSnapshot(prevBlob, prevOauth, id);
 
+  if (!shouldSwitch()) throw new Error('Account recovery canceled');
   try {
     await writeLiveCredentials(snapshot.credentials);
     if (snapshot.oauthAccount) {
@@ -229,4 +230,27 @@ export async function switchToAccount(id: string): Promise<StoredAccount> {
 /** Remove a saved account's registry entry and credential snapshot. */
 export async function deleteAccount(id: string): Promise<void> {
   await deleteAccountFiles(id);
+}
+
+// Serialize credential swaps and account-bound process startup in this backend.
+let accountOperation: Promise<void> = Promise.resolve();
+export function withAccount<T>(id: string, action: () => Promise<T>): Promise<T> {
+  const operation = accountOperation.then(async () => {
+    const registry = await readRegistry();
+    const target = registry.accounts[id];
+    if (!target) throw new Error('Saved account no longer exists');
+    const live = await readLiveOauthAccount();
+    if (registry.current !== id || live?.emailAddress !== target.emailAddress) await switchToAccountUnlocked(id);
+    return action();
+  });
+  accountOperation = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+export function switchToAccount(id: string, shouldSwitch: () => boolean = () => true): Promise<StoredAccount> {
+  const operation = accountOperation.then(() => {
+    if (!shouldSwitch()) throw new Error('Account recovery canceled');
+    return switchToAccountUnlocked(id, shouldSwitch);
+  });
+  accountOperation = operation.then(() => undefined, () => undefined);
+  return operation;
 }
