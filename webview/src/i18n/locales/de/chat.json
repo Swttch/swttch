@@ -514,6 +514,8 @@
       "proceeding": "Wird fortgesetzt…"
     },
     "accountPool": {
+      "checkingUsage": "Kontonutzung wird geprüft ({{seconds}} s)",
+      "usageLookupFailed": "Die Nutzung einiger Konten konnte nicht geprüft werden. Die automatische Fortsetzung wird für das aktuelle Konto verwendet.",
       "switching": "Kontowechsel ({{seconds}} s)",
       "continuing": "Weiter mit dem nächsten Konto…",
       "failed": "Kontowechsel fehlgeschlagen",

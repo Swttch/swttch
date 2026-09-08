@@ -514,6 +514,8 @@
       "proceeding": "正在恢复…"
     },
     "accountPool": {
+      "checkingUsage": "正在检查账户用量（{{seconds}} 秒）",
+      "usageLookupFailed": "无法检查部分账户的用量。将使用当前账户的自动继续功能。",
       "switching": "正在切换账户（{{seconds}}秒）",
       "continuing": "正在使用下一个账户继续…",
       "failed": "账户切换失败",

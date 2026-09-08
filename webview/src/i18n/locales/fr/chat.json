@@ -514,6 +514,8 @@
       "proceeding": "Reprise en cours…"
     },
     "accountPool": {
+      "checkingUsage": "Vérification de l’utilisation des comptes ({{seconds}} s)",
+      "usageLookupFailed": "L’utilisation de certains comptes n’a pas pu être vérifiée. La reprise automatique sera utilisée pour le compte actuel.",
       "switching": "Changement de compte ({{seconds}} s)",
       "continuing": "Poursuite avec le compte suivant…",
       "failed": "Échec du changement de compte",

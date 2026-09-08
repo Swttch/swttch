@@ -514,6 +514,8 @@
       "proceeding": "Reanudando…"
     },
     "accountPool": {
+      "checkingUsage": "Comprobando el uso de las cuentas ({{seconds}} s)",
+      "usageLookupFailed": "No se pudo comprobar el uso de algunas cuentas. Se usará la reanudación automática para la cuenta actual.",
       "switching": "Cambiando de cuenta ({{seconds}} s)",
       "continuing": "Continuando con la siguiente cuenta…",
       "failed": "Error al cambiar de cuenta",
