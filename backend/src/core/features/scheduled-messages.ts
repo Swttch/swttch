@@ -34,12 +34,15 @@ import {
  */
 export type ScheduleHook = (
   msg: ScheduledMessage,
+  signal?: AbortSignal,
 ) => Promise<{ proceed: boolean; done?: boolean; error?: string }>;
 
 /** Live timers keyed by reservation id (in-memory; lost on backend restart, rebuilt by restore). */
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** Per-kind pre-send hook registry. Layer 2 overrides the stub via `registerHook`. */
+const checking = new Map<string, AbortController>();
+
 const hooks = new Map<ScheduledMessageKind, ScheduleHook>();
 
 /** The default stub for AUTO_RESUME: always proceed (layer 2 replaces this with the quota check). */
@@ -78,37 +81,47 @@ async function fire(
 ): Promise<void> {
   timers.delete(msg.id);
 
-  let result: { proceed: boolean; done?: boolean; error?: string };
+  const controller = new AbortController();
+  checking.set(msg.id, controller);
   try {
-    result = await hook(msg);
-  } catch (err) {
-    // A throwing hook is treated as "give up" so a broken hook cannot wedge the reservation.
-    result = { proceed: false, done: true, error: err instanceof Error ? err.message : String(err) };
-  }
-
-  if (result.proceed) {
-    // Deliver like a person would: hand the message to ONE chosen tab, which
-    // runs its normal send path. Keep the reservation until that tab ACKs
-    // (SCHEDULED_MESSAGE_DELIVERED → cancelSchedule) so a tab dying mid-delivery
-    // redelivers. If no tab is available right now, do nothing — the reservation
-    // stays and re-fires when a tab reattaches (restoreSchedulesForSession).
-    const target = connections.pickScheduledDeliveryTarget(msg.sessionId, msg.panelId);
-    if (target) {
-      connections.sendTo(target.connectionId, MessageType.DELIVER_SCHEDULED_MESSAGE, {
-        id: msg.id,
-        sessionId: msg.sessionId,
-        message: msg.message,
-        needsSessionSwitch: target.needsSessionSwitch,
-      });
+    let result: { proceed: boolean; done?: boolean; error?: string };
+    try {
+      result = await hook(msg, controller.signal);
+    } catch (err) {
+      // A throwing hook is treated as "give up" so a broken hook cannot wedge the reservation.
+      result = { proceed: false, done: true, error: err instanceof Error ? err.message : String(err) };
     }
-    return;
-  }
 
-  if (result.done) {
-    // Hook gave up: drop the reservation and notify.
-    await removeSchedule(msg.sessionId, msg.id);
-    await broadcastUpdate(msg.sessionId, connections);
-    return;
+    if (controller.signal.aborted) return;
+
+    if (result.proceed) {
+      // Deliver like a person would: hand the message to ONE chosen tab, which
+      // runs its normal send path. Keep the reservation until that tab ACKs
+      // (SCHEDULED_MESSAGE_DELIVERED → cancelSchedule) so a tab dying mid-delivery
+      // redelivers. If no tab is available right now, do nothing — the reservation
+      // stays and re-fires when a tab reattaches (restoreSchedulesForSession).
+      const target = connections.pickScheduledDeliveryTarget(msg.sessionId, msg.panelId);
+      if (target) {
+        connections.sendTo(target.connectionId, MessageType.DELIVER_SCHEDULED_MESSAGE, {
+          id: msg.id,
+          sessionId: msg.sessionId,
+          message: msg.message,
+          ...(msg.accountId ? { accountId: msg.accountId } : {}),
+          needsSessionSwitch: target.needsSessionSwitch,
+        });
+      }
+      return;
+    }
+
+    if (result.done) {
+      // Hook gave up: drop the reservation and notify.
+      await removeSchedule(msg.sessionId, msg.id);
+      await broadcastUpdate(msg.sessionId, connections);
+      return;
+    }
+
+  } finally {
+    if (checking.get(msg.id) === controller) checking.delete(msg.id);
   }
 
   // proceed:false, done:false → the hook is waiting and owns the retry. Leave the
@@ -125,7 +138,7 @@ export function registerTimer(
   hook: ScheduleHook,
   connections: ConnectionManager,
 ): void {
-  if (timers.has(msg.id)) return;
+  if (timers.has(msg.id) || checking.has(msg.id)) return;
   const delay = Math.max(0, new Date(msg.sendAt).getTime() - Date.now());
   const timer = setTimeout(() => {
     void fire(msg, hook, connections);
@@ -158,6 +171,8 @@ export async function editScheduledMessage(
   if (!updated) return false;
   // Re-arm: clear the old timer, then register against the updated reservation
   // (registerTimer dedups on id, so clear first for a new sendAt to take effect).
+  checking.get(id)?.abort();
+  checking.delete(id);
   const timer = timers.get(id);
   if (timer) {
     clearTimeout(timer);
@@ -174,6 +189,8 @@ export async function cancelSchedule(
   id: string,
   connections: ConnectionManager,
 ): Promise<void> {
+  checking.get(id)?.abort();
+  checking.delete(id);
   const timer = timers.get(id);
   if (timer) {
     clearTimeout(timer);
@@ -196,6 +213,8 @@ export async function cancelSchedulesForSession(
   const schedules = await readSchedulesForSession(sessionId);
   if (schedules.length === 0) return;
   for (const msg of schedules) {
+    checking.get(msg.id)?.abort();
+    checking.delete(msg.id);
     const timer = timers.get(msg.id);
     if (timer) {
       clearTimeout(timer);
@@ -227,6 +246,8 @@ export async function restoreSchedulesForSession(
 export function clearAllScheduledTimers(): void {
   for (const timer of timers.values()) clearTimeout(timer);
   timers.clear();
+  for (const controller of checking.values()) controller.abort();
+  checking.clear();
 }
 
 /** Test-only: reset all in-memory engine state (timers + hook registry) to defaults. */

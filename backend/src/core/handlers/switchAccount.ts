@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
+import { invalidateAccountPoolSelection } from '../features/account-pool-recovery-store';
 import { switchToAccount } from '../features/account-manager';
 import { resetUsageCache } from './getUsage';
 import { resetAllUsageCache } from './getAllUsage';
@@ -30,6 +31,7 @@ export async function switchAccountHandler(
     });
     return;
   }
+  invalidateAccountPoolSelection();
   try {
     const account = await switchToAccount(id);
     resetUsageCache();

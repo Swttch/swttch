@@ -1,3 +1,4 @@
+import { accountResetsAt, fetchAccountUsage } from './account-pool-usage';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import {
   MessageType,
@@ -74,7 +75,7 @@ export function utilizationFraction(utilization: number): number {
  * No bucket → not recharged (keep waiting).
  */
 export function isRecharged(
-  usage: CcbUsageResponse,
+  usage: Pick<CcbUsageResponse, 'five_hour'>,
   sendAtIso: string,
   opts: RechargeOpts = {},
 ): boolean {
@@ -85,7 +86,7 @@ export function isRecharged(
   const byUtilization = utilizationFraction(bucket.utilization) <= threshold;
 
   const margin = opts.resetRolloverMarginMs ?? RESET_ROLLOVER_MARGIN_MS;
-  const resetsAtMs = Date.parse(bucket.resets_at);
+  const resetsAtMs = Date.parse(bucket.resets_at ?? '');
   const sendAtMs = Date.parse(sendAtIso);
   const byRollover =
     !Number.isNaN(resetsAtMs) && !Number.isNaN(sendAtMs) && resetsAtMs > sendAtMs + margin;
@@ -119,7 +120,7 @@ export interface AutoResumeStatus {
 
 /** Everything the hook needs, injected so it is fully unit-testable (no real timers/ccb). */
 export interface AutoResumeHookDeps {
-  fetchUsage: () => Promise<CcbUsageResponse>;
+  fetchUsage: (accountId?: string) => Promise<CcbUsageResponse>;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
   pollIntervalMs: number;
@@ -143,17 +144,19 @@ function errorCode(err: unknown): number | string | undefined {
  * reservation stays put until we return a verdict.
  */
 export function createAutoResumeHook(deps: AutoResumeHookDeps): ScheduleHook {
-  return async (msg: ScheduledMessage) => {
+  return async (msg: ScheduledMessage, signal?: AbortSignal) => {
     const deadline = deps.now() + deps.timeoutMs;
     let attempt = 0;
 
     for (;;) {
+      if (signal?.aborted) return { proceed: false };
       attempt += 1;
 
       let usage: CcbUsageResponse;
       try {
-        usage = await deps.fetchUsage();
+        usage = await deps.fetchUsage(msg.accountId);
       } catch (err) {
+        if (signal?.aborted) return { proceed: false };
         // A fetch error is NOT "not recharged" — abort with a human-readable
         // reason (classifyError yields "Network error reaching Anthropic API"
         // for network failures, never a raw errno).
@@ -169,7 +172,11 @@ export function createAutoResumeHook(deps: AutoResumeHookDeps): ScheduleHook {
         return { proceed: false, done: true, error: info.message };
       }
 
-      if (isRecharged(usage, msg.sendAt, deps.rechargeOpts)) {
+      if (signal?.aborted) return { proceed: false };
+      const recharged = msg.accountId
+        ? accountResetsAt(usage, msg.model) === ''
+        : isRecharged(usage, msg.sendAt, deps.rechargeOpts);
+      if (recharged) {
         deps.broadcast({
           sessionId: msg.sessionId,
           scheduleId: msg.id,
@@ -234,7 +241,7 @@ export function registerAutoResumeHook(
   };
 
   const hook = createAutoResumeHook({
-    fetchUsage: options.fetchUsage ?? runCcbUsage,
+    fetchUsage: options.fetchUsage ?? (accountId => accountId ? fetchAccountUsage(accountId) : runCcbUsage()),
     now: options.now ?? Date.now,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,

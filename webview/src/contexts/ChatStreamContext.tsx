@@ -38,6 +38,7 @@ interface SendMessagePayload {
   // process has exited (set_model can't reach a dead process). Omitted when no
   // explicit model is selected (CLI uses its default).
   model?: string;
+  accountId?: string;
 }
 
 interface ChatStreamContextType {
@@ -49,7 +50,7 @@ interface ChatStreamContextType {
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
   // Actions
-  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[]) => void;
+  sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => void;
   handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[]) => void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
@@ -335,7 +336,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   }, [forkHandoff?.promptText, setInput]);
 
   const sendMessage = useCallback(
-    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[]) => {
+    (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => {
       // Prepend the IDE-context tag (open file / selection) when the toggle is on
       // and a selection is available. parseUserContent() turns the tag back into a
       // context chip in the UI bubble, while the CLI sees the same hint. Gated on
@@ -382,6 +383,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         // default with the strictest mode.
         inputMode: session.requestedInputMode ?? undefined,
         model: sessionModel ?? undefined,
+        ...(accountId ? { accountId } : {}),
       };
 
       // Send straight through, even mid-turn. The CLI buffers its stdin and picks

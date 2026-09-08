@@ -42,6 +42,7 @@ import {
   listAccounts,
   saveCurrentAccount,
   switchToAccount,
+  withAccount,
   updateAccountPools,
 } from '../account-manager';
 import { AccountPoolStrategy, type AccountPool, type StoredAccount } from '../../../shared';
@@ -203,4 +204,37 @@ describe('updateAccountPools', () => {
     await expect(updateAccountPools(accountPools)).resolves.toEqual(accountPools);
     expect(mockWritePools).toHaveBeenCalledWith(accountPools);
   });
+});
+
+it('holds account switching until a bound process has started and sent', async () => {
+  const a = acc('a', 'a@example.com');
+  mockReadRegistry.mockResolvedValue({ current: 'a', accounts: { a }, accountPools: [], accountOrder: [] });
+  mockReadOauth.mockResolvedValue({ emailAddress: a.emailAddress });
+  mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{}}', oauthAccount: { emailAddress: a.emailAddress } });
+  mockReadLive.mockResolvedValue('{"claudeAiOauth":{}}');
+  let finish = () => {};
+  let started = () => {};
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  const bound = withAccount('a', () => { started(); return new Promise<void>(resolve => { finish = resolve; }); });
+  await ready;
+  const switching = switchToAccount('a');
+  await Promise.resolve();
+  expect(mockWriteLive).not.toHaveBeenCalled();
+  finish();
+  await Promise.all([bound, switching]);
+  expect(mockWriteLive).toHaveBeenCalledTimes(1);
+});
+
+it('does not touch credentials when automatic selection is canceled while queued', async () => {
+  await expect(switchToAccount('a', () => false)).rejects.toThrow('Account recovery canceled');
+  expect(mockWriteLive).not.toHaveBeenCalled();
+});
+it('rechecks cancellation after asynchronous credential preparation', async () => {
+  const a = acc('a', 'a@example.com');
+  mockReadRegistry.mockResolvedValue({ current: 'a', accounts: { a }, accountPools: [], accountOrder: [] });
+  mockReadSnapshot.mockResolvedValue({ credentials: '{"claudeAiOauth":{}}', oauthAccount: null });
+  let valid = true;
+  mockReadLive.mockImplementationOnce(async () => { valid = false; return ''; });
+  await expect(switchToAccount('a', () => valid)).rejects.toThrow('Account recovery canceled');
+  expect(mockWriteLive).not.toHaveBeenCalled();
 });

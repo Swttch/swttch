@@ -8,7 +8,7 @@ import { readRegistry, upsertAccount } from '../features/account-store';
 
 interface UsageBucket {
   utilization: number;
-  resets_at: string;
+  resets_at: string | null;
 }
 
 interface ExtraUsage {

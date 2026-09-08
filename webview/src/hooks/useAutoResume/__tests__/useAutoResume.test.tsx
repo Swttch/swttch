@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import {
   AccountPoolStrategy,
-  AccountSwitchPreflightOutcome,
   MessageType,
   ScheduledMessageKind,
   AutoResumeStatusPhase,
@@ -52,6 +51,7 @@ interface Ctx {
     usageCachedAt: number;
     active: boolean;
   }[];
+  accountsLoading?: boolean;
   accountPools: {
     id: string;
     name: string;
@@ -132,9 +132,9 @@ vi.mock('@/contexts/ScheduledMessagesContext', () => ({
 vi.mock('@/hooks/queries/useAccounts', () => ({
   useAccounts: () => ({
     accounts: ctx.accounts,
+    isLoading: ctx.accountsLoading,
     accountPools: ctx.accountPools,
     activeEmail: ctx.accounts.find((account) => account.active)?.emailAddress ?? null,
-    isLoading: false,
     error: null,
     refetch: vi.fn(),
     save: vi.fn(),
@@ -178,8 +178,8 @@ function userMsg(uuid: string): Msg {
 beforeEach(() => {
   vi.clearAllMocks();
   sendMock.mockImplementation((type: string) => Promise.resolve(
-    type === MessageType.VERIFY_ACCOUNT_SWITCH
-      ? { outcome: AccountSwitchPreflightOutcome.SUCCESS }
+    type === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY
+      ? { recovery: null, continueInSession: false }
       : {},
   ));
   handlers.clear();
@@ -188,7 +188,7 @@ beforeEach(() => {
   ctx.messages = [];
   ctx.autoResumeOnLimit = false;
   ctx.reservations = [];
-  ctx.accounts = [];
+  ctx.accounts = []; ctx.accountsLoading = false;
   ctx.accountPools = [];
   ensureSponsorMock.mockResolvedValue(true);
   switchToMock.mockResolvedValue(undefined);
@@ -291,6 +291,17 @@ describe('useAutoResume', () => {
     expect(result.current.statusKey).toBe('autoResume.error.network');
   });
 
+  it('keeps a restored reservation while the transcript is still loading', () => {
+    ctx.autoResumeOnLimit = true;
+    ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30000).toISOString())];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    expect(sendMock).not.toHaveBeenCalled();
+    ctx.messages = [limitMsg('lim1', FUTURE)];
+    act(() => rerender());
+    expect(result.current.action).toBe('cancel');
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
   it('auto-cancels: a new user message after the limit clears it and cancels any reservation', () => {
     ctx.messages = [limitMsg('lim1', FUTURE)];
     ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
@@ -313,115 +324,148 @@ describe('useAutoResume', () => {
     expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(true);
   });
 
-  it('auto-switches to the next account pool account without sponsor gating', async () => {
-    ensureSponsorMock.mockResolvedValue(false);
+  function enablePool() {
     ctx.messages = [limitMsg('lim1', FUTURE)];
-    ctx.accounts = [
-      account('acc-1', 'a@example.com', true),
-      account('acc-2', 'b@example.com', false),
-    ];
+    ctx.accounts = [account('acc-1', 'a@example.com', true), account('acc-2', 'b@example.com', false)];
     ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
+  }
 
+  it('keeps auto-resume available and explains a failed candidate usage lookup', async () => {
+    enablePool(); ctx.autoResumeOnLimit = true;
+    sendMock.mockResolvedValueOnce({ recovery: { sourceMessageUuid: 'lim1', accountId: 'acc-1',
+      resetsAt: null, awaitingLimit: false, usageLookupFailed: true }, continueInSession: false });
     const { result } = renderHook(() => useAutoResume());
+    await act(async () => {});
+    expect(result.current.accountPoolError).toBeTruthy();
+    expect(result.current.action).toBe('schedule');
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(sendMock.mock.calls.filter(c => c[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(1);
+  });
+
+  it('prepares recovery before sending one foreground continuation, without sponsor gating', async () => {
+    enablePool();
+    sendMock.mockResolvedValue({ recovery: { sourceMessageUuid: 'lim1', accountId: 'acc-2',
+      resetsAt: FUTURE, awaitingLimit: true }, continueInSession: true });
+    const { result, rerender } = renderHook(() => useAutoResume());
     expect(result.current.action).toBeNull();
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(switchToMock).toHaveBeenCalledWith('acc-2');
-    expect(sendMock).toHaveBeenCalledWith(MessageType.VERIFY_ACCOUNT_SWITCH, {
-      workingDir: '/work',
-      sessionId: 'sess-a',
-    }, { timeout: 70_000 });
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      expect.stringMatching(/^<system-reminder>.*Continue.*<\/system-reminder>$/),
-      'ask_before_edit',
-    );
+    await act(async () => {});
+    expect(sendMock).toHaveBeenCalledWith(MessageType.PREPARE_ACCOUNT_POOL_RECOVERY, {
+      sessionId: 'sess-a', sourceMessageUuid: 'lim1', model: undefined,
+    }, { timeout: 30_000 });
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendMessageMock).toHaveBeenCalledWith(expect.stringMatching(/^<system-reminder>/), 'ask_before_edit', undefined, undefined, 'acc-2');
+    expect(switchToMock).not.toHaveBeenCalled();
     expect(ensureSponsorMock).not.toHaveBeenCalled();
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+    act(() => rerender());
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
   });
 
-  it('lets sponsor auto-resume schedule only when no account pool candidate exists', async () => {
-    ctx.autoResumeOnLimit = true;
-    ctx.messages = [limitMsg('lim1', FUTURE)];
-    ctx.accounts = [
-      account('acc-1', 'a@example.com', true),
-      account('acc-2', 'b@example.com', false),
-    ];
-    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
-
-    renderHook(() => useAutoResume());
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(switchToMock).toHaveBeenCalledWith('acc-2');
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+  it.each([false, true])('uses the next real CLI limit for scheduling (automatic: %s)', async enabled => {
+    enablePool(); ctx.autoResumeOnLimit = enabled;
+    sendMock.mockResolvedValueOnce({ recovery: { sourceMessageUuid: 'lim1', accountId: 'acc-2',
+      resetsAt: FUTURE, awaitingLimit: true }, continueInSession: true });
+    const { result, rerender } = renderHook(() => useAutoResume());
+    await act(async () => {});
+    expect(sendMock.mock.calls.filter(c => c[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+    sendMock.mockResolvedValue({ recovery: { sourceMessageUuid: 'lim1', accountId: 'acc-2',
+      resetsAt: FUTURE, awaitingLimit: false }, continueInSession: false });
+    ctx.messages = [...ctx.messages, userMsg('hidden-reminder'), limitMsg('company-limit', FUTURE)];
+    await act(async () => rerender());
+    expect(result.current.limit?.messageUuid).toBe('company-limit');
+    expect(result.current.action).toBe('schedule');
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(sendMock.mock.calls.filter(c => c[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(enabled ? 1 : 0);
+    if (!enabled) await act(async () => result.current.schedule());
+    expect(result.current.action).toBe('schedule'); // no optimistic "scheduled" label
+    ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
+    act(() => rerender());
+    expect(result.current.action).toBe('cancel');
   });
 
-  it('stops and surfaces the reason when switching the credential slot fails', async () => {
-    switchToMock.mockRejectedValueOnce(new Error('keychain locked'));
-    ctx.autoResumeOnLimit = true;
-    ctx.messages = [limitMsg('lim1', FUTURE)];
-    ctx.accounts = [
-      account('acc-1', 'a@example.com', true),
-      account('acc-2', 'b@example.com', false),
-    ];
-    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
-
+  it('restores scheduling on reload without sending another reminder', async () => {
+    enablePool();
+    sendMock.mockResolvedValue({ recovery: { sourceMessageUuid: 'older-limit', accountId: 'acc-2',
+      resetsAt: FUTURE, awaitingLimit: false }, continueInSession: false });
     const { result } = renderHook(() => useAutoResume());
-    await act(async () => {
-      await Promise.resolve();
-    });
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await act(async () => {});
+    expect(result.current.action).toBe('schedule');
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
 
-    expect(switchToMock).toHaveBeenCalledWith('acc-2');
+  it.each([false, true])('falls back to the existing account when no candidate is verified (automatic: %s)', async enabled => {
+    enablePool(); ctx.autoResumeOnLimit = enabled;
+    sendMock.mockResolvedValue({ recovery: null, continueInSession: false });
+    const { result } = renderHook(() => useAutoResume());
+    await act(async () => {});
+    expect(result.current.action).toBe('schedule');
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(sendMock.mock.calls.filter(c => c[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(enabled ? 1 : 0);
+  });
+
+  it('waits for the account registry after reload before attempting a reservation', async () => {
+    ctx.accountsLoading = true; ctx.autoResumeOnLimit = true;
+    ctx.messages = [limitMsg('lim1', FUTURE)];
+    sendMock.mockResolvedValue({ recovery: null, continueInSession: false });
+    const { result, rerender } = renderHook(() => useAutoResume());
+    await act(async () => {});
+    expect(result.current.action).toBeNull();
+    expect(sendMock).not.toHaveBeenCalled();
+    enablePool(); ctx.accountsLoading = false;
+    await act(async () => rerender());
+    expect(sendMock.mock.calls.filter(call => call[0] === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY)).toHaveLength(1);
+    expect(sendMock.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(1);
+  });
+
+  it('does not reserve or continue after preparation was canceled by user action', async () => {
+    enablePool(); ctx.autoResumeOnLimit = true;
+    sendMock.mockResolvedValue({ recovery: null, continueInSession: false, canceled: true });
+    const { result } = renderHook(() => useAutoResume());
+    await act(async () => {});
+    expect(result.current.action).toBeNull();
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(sendMock.mock.calls.filter(c => c[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+  });
+
+  it('stops after a credential preparation error', async () => {
+    enablePool(); ctx.autoResumeOnLimit = true;
+    sendMock.mockRejectedValue(new Error('keychain locked'));
+    const { result } = renderHook(() => useAutoResume());
+    await act(async () => {});
     expect(result.current.accountPoolError).toBe('keychain locked');
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.VERIFY_ACCOUNT_SWITCH)).toBe(false);
-    expect(sendMock.mock.calls.some((c) => c[0] === MessageType.SCHEDULE_MESSAGE)).toBe(false);
+    expect(result.current.action).toBeNull();
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
-  it('stops without sending a reminder when account verification times out', async () => {
-    sendMock.mockImplementation((type: string) => Promise.resolve(
-      type === MessageType.VERIFY_ACCOUNT_SWITCH
-        ? { outcome: AccountSwitchPreflightOutcome.TIMEOUT }
-        : {},
-    ));
-    ctx.messages = [limitMsg('lim-timeout', FUTURE)];
-    ctx.accounts = [account('acc-1', 'a@example.com', true), account('acc-2', 'b@example.com', false)];
-    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
-
-    const { result } = renderHook(() => useAutoResume());
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.accountPoolStatusKey).toBe('autoResume.accountPool.timedOut');
+  it('does not send into a different session after navigation during preparation', async () => {
+    enablePool();
+    let finish = (_: object) => {};
+    sendMock.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const { rerender } = renderHook(() => useAutoResume());
+    ctx.sessionId = 'sess-b'; ctx.messages = [];
+    act(() => rerender());
+    await act(async () => finish({ recovery: { sourceMessageUuid: 'lim1', accountId: 'acc-2',
+      resetsAt: FUTURE, awaitingLimit: true }, continueInSession: true }));
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
-  it('surfaces a non-limit verification error and does not continue', async () => {
-    sendMock.mockImplementation((type: string) => Promise.resolve(
-      type === MessageType.VERIFY_ACCOUNT_SWITCH
-        ? { outcome: AccountSwitchPreflightOutcome.ERROR, error: 'Authentication failed' }
-        : {},
-    ));
-    ctx.messages = [limitMsg('lim-error', FUTURE)];
-    ctx.accounts = [account('acc-1', 'a@example.com', true), account('acc-2', 'b@example.com', false)];
-    ctx.accountPools = [accountPool('pool-1', ['acc-1', 'acc-2'])];
+  it.each([FUTURE, '2020-01-01T00:00:00Z'])('does not rebook or resume after canceling a reservation restored on reload (%s)', resetsAt => {
+    ctx.messages = [limitMsg('lim1', resetsAt)]; ctx.autoResumeOnLimit = true;
+    ctx.reservations = [makeReservation(new Date(Date.parse(resetsAt) + 30000).toISOString())];
+    const { result, rerender } = renderHook(() => useAutoResume());
+    act(() => result.current.cancel());
+    ctx.reservations = [];
+    act(() => rerender());
+    expect(sendMock.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
 
+  it('offers cancellation for an existing reservation even with a pool candidate', () => {
+    enablePool();
+    ctx.reservations = [makeReservation(new Date(Date.parse(FUTURE) + 30_000).toISOString())];
     const { result } = renderHook(() => useAutoResume());
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.accountPoolError).toBe('Authentication failed');
+    expect(result.current.action).toBe('cancel');
+    act(() => result.current.cancel());
+    expect(sendMock).toHaveBeenCalledWith(MessageType.CANCEL_SCHEDULED_MESSAGE, { sessionId: 'sess-a', id: 'r1' });
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
 

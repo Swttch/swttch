@@ -1,11 +1,23 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
 import React from 'react';
 import { ChatStreamProvider, useChatStreamContext } from '../contexts/ChatStreamContext';
 import { ChatInputStateProvider, useChatInputState } from '../contexts/ChatInputStateContext';
-import { MessageType } from '@/shared';
+import {
+  AccountPoolStrategy,
+  MessageType,
+  ScheduledMessageKind,
+  type AccountListItem,
+  type AccountPool,
+  type AccountPoolRecoveryResult,
+  type ScheduledMessage,
+} from '@/shared';
+import { LimitReachedRenderer } from '../pages/ChatPage/message-renderers/LimitReachedRenderer';
+import { isLimitErrorMessage } from '../types';
+import { i18n } from '../i18n';
+import { AutoResumeProvider, useAutoResumeContext } from '../contexts/AutoResumeContext';
 
 // Mock requestAnimationFrame/cancelAnimationFrame
 globalThis.requestAnimationFrame = vi.fn((cb) => {
@@ -79,6 +91,36 @@ vi.mock('../contexts/ClaudeSettingsContext', () => ({
   useClaudeSettings: () => ({ settings: { permissions: {} } }),
   ClaudeSettingsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
+
+let resumeAccounts: AccountListItem[] = [];
+let resumePools: AccountPool[] = [];
+let resumeReservations: ScheduledMessage[] = [];
+const switchAccountMock = vi.fn(async (id: string) => {
+  resumeAccounts = resumeAccounts.map(account => ({ ...account, active: account.id === id }));
+});
+vi.mock('../hooks/queries/useAccounts', () => ({
+  useAccounts: () => ({ accounts: resumeAccounts, accountPools: resumePools, switchTo: switchAccountMock }),
+}));
+vi.mock('../contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { autoResumeOnLimit: true } }),
+}));
+vi.mock('../contexts/AutoResumeOverrideContext', () => ({
+  useAutoResumeOverride: () => ({ getOverride: () => undefined }),
+}));
+vi.mock('../contexts/ScheduledMessagesContext', () => ({
+  useScheduledMessages: () => ({ reservations: resumeReservations }),
+}));
+vi.mock('../utils/ensureSponsor', () => ({ ensureSponsor: vi.fn().mockResolvedValue(true) }));
+vi.mock('../notifications', () => ({ notify: vi.fn() }));
+vi.mock('../api/ClaudeCodeApi', () => ({ api: {}, getApi: () => ({}), ClaudeCodeApi: class {} }));
+
+function TestAutoResumeComponent() {
+  const resume = useAutoResumeContext();
+  const { messages } = useChatStreamContext();
+  return <><div data-testid="auto-resume-action">{resume.action ?? 'none'}</div>
+    <div data-testid="limit-notices">{messages.filter(isLimitErrorMessage).map(message =>
+      <LimitReachedRenderer key={message.uuid} message={message} />)}</div></>;
+}
 
 function TestWrapper({ children }: { children: React.ReactNode }) {
   const inputRef = React.useRef('');
@@ -176,10 +218,117 @@ describe('채팅 스트리밍 통합 테스트', () => {
 
     // Reset session mock state
     mockSession.currentSessionId = null;
+    resumeAccounts = [];
+    resumePools = [];
+    resumeReservations = [];
+    mockBridge.send.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     bridgeHandlers.clear();
+  });
+
+  it.each([false, true])('스트리밍 도중 한도에 도달해도 새로고침 없이 자동재개를 예약한다 (계정 풀: %s)', async (withPool) => {
+    mockSession.currentSessionId = 'stream-limit-session';
+    await i18n.changeLanguage('ko');
+    const resetsAt = new Date(Date.now() + 300_000).toISOString();
+    const selectedResetsAt = withPool ? new Date(Date.now() + 120_000).toISOString() : resetsAt;
+    if (withPool) {
+      resumeAccounts = ['acc-1', 'acc-2'].map((id, index) => ({
+        id, active: index === 0, emailAddress: `${id}@example.com`, displayName: null,
+        organizationName: null, subscriptionType: 'max', authMethod: 'claudeai',
+        createdAt: 1, updatedAt: 1, usageCached: null, usageCachedAt: 0,
+      }));
+      resumePools = [{
+        id: 'pool-1', name: 'Pool', provider: 'claude', enabled: true,
+        strategy: AccountPoolStrategy.ORDERED, accountIds: ['acc-1', 'acc-2'],
+        createdAt: 1, updatedAt: 1,
+      }];
+    }
+    let finishPreparation: (result: AccountPoolRecoveryResult) => void = () => {};
+    mockBridge.send.mockImplementation((type: string) => type === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY
+      ? new Promise<AccountPoolRecoveryResult>(resolve => { finishPreparation = resolve; })
+      : Promise.resolve({ status: 'ok' }));
+
+    const { rerender } = render(
+      <TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>,
+    );
+    fireEvent.change(screen.getByTestId('input'), { target: { value: 'Continue the task' } });
+    fireEvent.click(screen.getByTestId('submit'));
+    expect(screen.getByTestId('is-streaming')).toHaveTextContent('true');
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'stream_event', event: { type: 'message_start', message: { id: 'msg-tool' } },
+      });
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'stream_event', event: {
+          type: 'content_block_delta', delta: { type: 'text_delta', text: 'Checking files' },
+        },
+      });
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'assistant', message: { id: 'msg-tool', role: 'assistant', content: [
+          { type: 'text', text: 'Checking files' },
+          { type: 'tool_use', id: 'tool-1', name: 'Bash', input: { command: 'pwd' } },
+        ] },
+      });
+    });
+    await act(async () => {
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'user', message: { role: 'user', content: [
+          { type: 'tool_result', tool_use_id: 'tool-1', content: '/test' },
+        ] },
+      });
+      // This synthetic error has no message_start or deltas of its own.
+      emitBridgeEvent(MessageType.CLI_EVENT, {
+        type: 'assistant', uuid: 'limit-entry', timestamp: new Date().toISOString(),
+        is_api_error_message: true, api_error_status: 429, error: 'rate_limit',
+        message: { id: 'synthetic-limit', role: 'assistant', model: '<synthetic>', content: [
+          { type: 'text', text: `You've hit your session limit · resets ${resetsAt}` },
+        ] },
+      });
+    });
+    // The terminal result arrives separately, after the limit has started the pool switch.
+    await act(async () => emitBridgeEvent(MessageType.CLI_EVENT, { type: 'result', is_error: true }));
+    expect(screen.getByTestId('is-streaming')).toHaveTextContent('false');
+    if (withPool) {
+      expect(mockBridge.send.mock.calls.find(call => call[0] === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY)?.[1]).toMatchObject({ sourceMessageUuid: 'limit-entry' });
+      expect(switchAccountMock).not.toHaveBeenCalled();
+      expect(screen.getByTestId('auto-resume-action')).toHaveTextContent('none');
+      expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(0);
+      await act(async () => finishPreparation({ recovery: { accountId: 'acc-2', sourceMessageUuid: 'limit-entry',
+        resetsAt: selectedResetsAt, awaitingLimit: true }, continueInSession: true }));
+      mockBridge.send.mockImplementation((type: string) => Promise.resolve(type === MessageType.PREPARE_ACCOUNT_POOL_RECOVERY
+        ? { recovery: { accountId: 'acc-2', sourceMessageUuid: 'limit-entry', resetsAt: selectedResetsAt, awaitingLimit: false }, continueInSession: false }
+        : { status: 'ok' }));
+      expect(screen.getByTestId('auto-resume-action')).toHaveTextContent('none');
+      await act(async () => {
+        emitBridgeEvent(MessageType.CLI_EVENT, { type: 'assistant', uuid: 'company-limit-entry', timestamp: new Date().toISOString(),
+          is_api_error_message: true, api_error_status: 429, error: 'rate_limit',
+          message: { id: 'company-limit', role: 'assistant', model: '<synthetic>', content: [
+            { type: 'text', text: `You've hit your session limit · resets ${selectedResetsAt}` },
+          ] } });
+        emitBridgeEvent(MessageType.CLI_EVENT, { type: 'result', is_error: true });
+      });
+      expect(switchAccountMock).not.toHaveBeenCalled();
+    }
+    expect(screen.getByTestId('auto-resume-action')).toHaveTextContent('schedule');
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SCHEDULE_MESSAGE, {
+      sessionId: 'stream-limit-session', sendAt: new Date(Date.parse(selectedResetsAt) + 30_000).toISOString(),
+      message: 'continue', kind: ScheduledMessageKind.AUTO_RESUME, model: undefined,
+    });
+    rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
+    expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SCHEDULE_MESSAGE)).toHaveLength(1);
+    expect(mockBridge.send.mock.calls.filter(call => call[0] === MessageType.SEND_MESSAGE)).toHaveLength(withPool ? 2 : 1);
+    expect(screen.queryByText('자동재개 예약됨')).not.toBeInTheDocument();
+    resumeReservations = [{ id: 'reserved', sessionId: 'stream-limit-session',
+      sendAt: new Date(Date.parse(selectedResetsAt) + 30_000).toISOString(),
+      message: 'continue', kind: ScheduledMessageKind.AUTO_RESUME, createdAt: new Date().toISOString(), accountId: 'acc-2' }];
+    rerender(<TestWrapper><AutoResumeProvider><TestChatComponent /><TestAutoResumeComponent /></AutoResumeProvider></TestWrapper>);
+    expect(screen.getByText('자동재개 예약됨')).toBeInTheDocument();
+    const notice = within(screen.getByTestId('limit-notices')).getByText(`You've hit your session limit · resets ${selectedResetsAt}`);
+    expect(notice.parentElement).toHaveTextContent('자동재개 예약됨');
+    expect(notice.parentElement?.querySelector('time')).toBeNull();
   });
 
   it('초기 상태가 올바르다', () => {

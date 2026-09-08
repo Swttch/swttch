@@ -1,3 +1,5 @@
+import { clearAccountPoolRecovery } from '../../features/account-pool-recovery-store';
+vi.mock('../../features/account-pool-recovery-store', () => ({ clearAccountPoolRecovery: vi.fn(async () => {}) }));
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../claude-process', async (importOriginal) => {
@@ -54,6 +56,7 @@ describe.each([
 
     handler('conn-1', message(messageType), connections, mockBridge);
 
+    expect(clearAccountPoolRecovery).toHaveBeenCalledWith('session-1');
     expect(claudeProcess.sendInterruptToProcess).toHaveBeenCalledWith(connections, 'session-1');
   });
 

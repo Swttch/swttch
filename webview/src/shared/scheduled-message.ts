@@ -14,7 +14,7 @@
  * Field names are preserved verbatim end-to-end (data-preservation rule in
  * CLAUDE.md): no renaming or structural editing between backend and webview.
  *
- * NOTE: This file is mirrored 1:1 in `backend/src/shared/scheduled-message.ts`.
+ * NOTE: Keep backend/src/shared and webview/src/shared copies identical.
  * Any edit here MUST be copied there (see `shared/CLAUDE.md`).
  */
 
@@ -74,4 +74,7 @@ export interface ScheduledMessage {
    * tabs may not carry a panelId, and older reservations predate this field.
    */
   panelId?: string;
+  /** Account whose quota this auto-resume waits for. */
+  accountId?: string;
+  model?: string;
 }

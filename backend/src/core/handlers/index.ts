@@ -83,6 +83,7 @@ import { getAccountHandler } from './getAccount';
 import { getAccountsHandler } from './getAccounts';
 import { saveAccountHandler } from './saveAccount';
 import { switchAccountHandler } from './switchAccount';
+import { prepareAccountPoolRecoveryHandler } from './prepareAccountPoolRecovery';
 import { verifyAccountSwitchHandler } from './verifyAccountSwitch';
 import { deleteAccountHandler } from './deleteAccount';
 import { updateAccountPoolsHandler } from './updateAccountPools';
@@ -402,6 +403,9 @@ export async function handleMessage(
       break;
     case MessageType.SWITCH_ACCOUNT:
       await switchAccountHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.PREPARE_ACCOUNT_POOL_RECOVERY:
+      await prepareAccountPoolRecoveryHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.VERIFY_ACCOUNT_SWITCH:
       await verifyAccountSwitchHandler(connectionId, message, connections, bridge);

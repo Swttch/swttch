@@ -114,3 +114,11 @@ describe('useScheduledDelivery', () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 });
+
+it('carries the reserved account through navigation to actual send', () => {
+  const { rerender } = renderHook(() => useScheduledDelivery());
+  emit(MessageType.DELIVER_SCHEDULED_MESSAGE, { id: 'bound', sessionId: 'sess-b', message: 'continue',
+    needsSessionSwitch: true, accountId: 'company' });
+  act(() => rerender());
+  expect(sendMessageMock).toHaveBeenCalledWith('continue', 'ask_before_edit', undefined, undefined, 'company');
+});

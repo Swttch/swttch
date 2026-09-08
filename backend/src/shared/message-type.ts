@@ -197,6 +197,7 @@ export enum MessageType {
   SWITCH_ACCOUNT = 'SWITCH_ACCOUNT',
   /** Verify the live account with an isolated, non-persistent CLI call. inbound webview→backend */
   VERIFY_ACCOUNT_SWITCH = 'VERIFY_ACCOUNT_SWITCH',
+  PREPARE_ACCOUNT_POOL_RECOVERY = 'PREPARE_ACCOUNT_POOL_RECOVERY',
   /** Remove a saved account (snapshot + registry entry) by id. inbound webview→backend */
   DELETE_ACCOUNT = 'DELETE_ACCOUNT',
   /** Replace the saved Claude account pools. inbound webview→backend */

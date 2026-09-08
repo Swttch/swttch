@@ -2,9 +2,14 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { generateSessionId } from '../features/generateSessionId';
-import { ensureClaudeProcess, sendMessageToProcess } from '../claude-process';
+import { ensureClaudeProcess, sendMessageToProcess, restartClaudeSessionProcess } from '../claude-process';
 import { trackEvent } from '../features/telemetry';
-import { MessageType } from '../../shared';
+import { MessageType, ACCOUNT_POOL_CONTINUE_REMINDER } from '../../shared';
+import { withAccount } from '../features/account-manager';
+import { resetUsageCache } from './getUsage';
+import { resetAllUsageCache } from './getAllUsage';
+import { invalidateFableProbeCache } from '../features/fable-probe';
+import { clearAccountPoolRecovery, claimAccountPoolContinuation } from '../features/account-pool-recovery-store';
 
 export async function sendMessageHandler(
   connectionId: string,
@@ -27,6 +32,7 @@ export async function sendMessageHandler(
   // then reads its own `permissions.defaultMode` rather than being handed one.
   const inputMode = message.payload?.inputMode as string | undefined;
   const model = message.payload?.model as string | undefined;
+  const accountId = message.payload?.accountId as string | undefined;
   // 새 세션 여부는 webview가 판정해 payload로 알려준다. webview가 새 세션에도 sessionId를
   // 미리 생성해 보내므로(ChatStreamContext), 백엔드에서 sessionId 유무로는 판정할 수 없다.
   const isNewSession = message.payload?.isNewSession === true;
@@ -39,14 +45,37 @@ export async function sendMessageHandler(
 
   try {
     if (content || (attachments && attachments.length > 0)) {
+      if (content.includes(ACCOUNT_POOL_CONTINUE_REMINDER)) {
+        if (!(await claimAccountPoolContinuation(resolvedSessionId))) {
+          connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+          return;
+        }
+      } else {
+        await clearAccountPoolRecovery(resolvedSessionId);
+      }
       // Subscribe and ensure process is running (waits for spawn)
       // The directory goes with it: the session is what later answers
       // "which project is this?", and per-project settings depend on it.
       connections.subscribe(connectionId, resolvedSessionId, workingDir);
-      await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
-
-      // Send content to process stdin
-      sendMessageToProcess(connections, resolvedSessionId, content, attachments);
+      const send = async () => {
+        await ensureClaudeProcess(connections, connectionId, workingDir, resolvedSessionId, inputMode, bridge, model);
+        sendMessageToProcess(connections, resolvedSessionId, content, attachments);
+      };
+      if (accountId) {
+        // Re-establish the reservation's account at actual delivery, even if the
+        // foreground tab took time to navigate after the quota check.
+        await withAccount(accountId, async () => {
+          resetUsageCache();
+          resetAllUsageCache();
+          invalidateFableProbeCache();
+          connections.broadcastToAll(MessageType.ACCOUNTS_CHANGED, {});
+          const proc = connections.getProcess(resolvedSessionId);
+          if (proc) await restartClaudeSessionProcess(connections, resolvedSessionId, proc);
+          await send();
+        });
+      } else {
+        await send();
+      }
 
       // Broadcast user message to other subscribers (excluding sender)
       connections.broadcastToSession(resolvedSessionId, MessageType.USER_MESSAGE_BROADCAST, {

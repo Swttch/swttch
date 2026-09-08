@@ -88,9 +88,6 @@ describe('isRecharged', () => {
   });
 });
 
-describe('createAutoResumeHook', () => {
-  // Deterministic fake clock: `sleep` advances the same clock `now` reads, so no
-  // real timers are involved and the retry loop is fully synchronous to advance.
   function makeDeps(
     fetchUsage: () => Promise<CcbUsageResponse>,
     overrides: Partial<AutoResumeHookDeps> = {},
@@ -110,6 +107,10 @@ describe('createAutoResumeHook', () => {
     };
     return { deps, statuses };
   }
+
+describe('createAutoResumeHook', () => {
+  // Deterministic fake clock: `sleep` advances the same clock `now` reads, so no
+  // real timers are involved and the retry loop is fully synchronous to advance.
 
   it('proceeds immediately when the quota is already recharged on the first poll', async () => {
     const fetchUsage = vi.fn(async () => makeUsage(0, SEND_AT));
@@ -183,4 +184,43 @@ describe('createAutoResumeHook', () => {
       },
     ]);
   });
+});
+
+it('polls the reserved account and waits for every applicable exhausted bucket', async () => {
+  let now = 0;
+  const fetchUsage = vi.fn().mockResolvedValueOnce({ ...makeUsage(1, SEND_AT),
+    seven_day: { utilization: 100, resets_at: SEND_AT } }).mockResolvedValueOnce(makeUsage(1, SEND_AT));
+  const broadcast = vi.fn();
+  const hook = createAutoResumeHook({ fetchUsage, now: () => now, sleep: async ms => { now += ms; },
+    pollIntervalMs: 5_000, timeoutMs: 60_000, broadcast });
+  expect(await hook({ ...makeMsg(), accountId: 'company', model: 'opus' })).toEqual({ proceed: true });
+  expect(fetchUsage.mock.calls).toEqual([['company'], ['company']]);
+  expect(broadcast.mock.calls.map(([status]) => status.phase)).toEqual([AutoResumeStatusPhase.RETRYING, AutoResumeStatusPhase.PROCEEDING]);
+});
+it('does not use a reset clock rollover as proof of recharge for account-bound reservations', async () => {
+  const fetchUsage = vi.fn(async () => makeUsage(100, '2030-01-01T00:00:00Z'));
+  const hook = createAutoResumeHook({ fetchUsage, now: () => 0, sleep: async () => {},
+    pollIntervalMs: 5_000, timeoutMs: 0, broadcast: vi.fn() });
+  expect(await hook({ ...makeMsg(), accountId: 'company' })).toMatchObject({ proceed: false, error: 'timeout' });
+});
+
+it.each([false, true])('cancel while fetching suppresses late success or error (error=%s)', async fail => {
+  const controller = new AbortController();
+  const fetchUsage = vi.fn(async () => {
+    controller.abort();
+    if (fail) throw new Error('HTTP 503');
+    return makeUsage(0, SEND_AT);
+  });
+  const { deps, statuses } = makeDeps(fetchUsage);
+  expect(await createAutoResumeHook(deps)(makeMsg(), controller.signal)).toEqual({ proceed: false });
+  expect(statuses).toEqual([]);
+});
+it('cancel during recharge polling stops further usage calls', async () => {
+  const controller = new AbortController();
+  const fetchUsage = vi.fn(async () => makeUsage(100, SEND_AT));
+  const { deps, statuses } = makeDeps(fetchUsage);
+  deps.sleep = async () => { controller.abort(); };
+  expect(await createAutoResumeHook(deps)(makeMsg(), controller.signal)).toEqual({ proceed: false });
+  expect(fetchUsage).toHaveBeenCalledTimes(1);
+  expect(statuses.map(status => status.phase)).toEqual([AutoResumeStatusPhase.RETRYING]);
 });

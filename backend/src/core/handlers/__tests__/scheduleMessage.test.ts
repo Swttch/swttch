@@ -4,6 +4,9 @@ import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
 import { MessageType, ScheduledMessageKind, ErrorCode } from '../../../shared';
 
+vi.mock('../../features/account-store', () => ({ readRegistry: vi.fn(async () => ({ current: 'acc-current' })) }));
+vi.mock('../../features/account-pool-recovery-store', () => ({ readAccountPoolRecovery: vi.fn(async () => null) }));
+
 // Mock the engine so the handler test never touches real fs/timers.
 const scheduleMessage = vi.fn(async (..._args: unknown[]) => {});
 const editScheduledMessage = vi.fn(async (..._args: unknown[]) => true);
@@ -24,6 +27,7 @@ vi.mock('../../features/license', () => ({
   getSponsorStatus: () => getSponsorStatus(),
 }));
 
+import { readAccountPoolRecovery } from '../../features/account-pool-recovery-store';
 import { scheduleMessageHandler, updateScheduledMessageHandler } from '../scheduleMessage';
 
 function makeConnections(panelId: string | null = 'panel-a') {
@@ -51,9 +55,31 @@ function makeMessage(): IPCMessage {
 
 describe('scheduleMessageHandler sponsor gate', () => {
   beforeEach(() => {
+    vi.mocked(readAccountPoolRecovery).mockResolvedValue(null);
     scheduleMessage.mockClear();
     editScheduledMessage.mockClear();
     getSponsorStatus.mockReset();
+  });
+
+  it('creates only one reservation for concurrent tabs and binds the prepared account', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: true });
+    vi.mocked(readAccountPoolRecovery).mockResolvedValue({ sourceMessageUuid: 'limit', accountId: 'company',
+      resetsAt: '2026-03-30T12:00:00Z', awaitingLimit: false });
+    const connections = makeConnections();
+    await Promise.all([
+      scheduleMessageHandler('tab-a', makeMessage(), connections, bridge),
+      scheduleMessageHandler('tab-b', makeMessage(), connections, bridge),
+    ]);
+    expect(scheduleMessage).toHaveBeenCalledTimes(1);
+    expect(scheduleMessage.mock.calls[0][0]).toMatchObject({ accountId: 'company', sendAt: '2026-03-30T12:00:30.000Z' });
+  });
+
+  it('does not claim a reservation while still waiting for the real CLI notice', async () => {
+    getSponsorStatus.mockResolvedValue({ isSponsor: true });
+    vi.mocked(readAccountPoolRecovery).mockResolvedValue({ sourceMessageUuid: 'limit', accountId: 'company',
+      resetsAt: null, awaitingLimit: true });
+    await expect(scheduleMessageHandler('tab-a', makeMessage(), makeConnections(), bridge)).rejects.toThrow('Waiting');
+    expect(scheduleMessage).not.toHaveBeenCalled();
   });
 
   it('rejects a non-sponsor without creating a reservation', async () => {
