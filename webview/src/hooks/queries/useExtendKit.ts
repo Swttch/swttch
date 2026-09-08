@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { INSTALL_REQUEST_TIMEOUT_MS } from '@/api/bridge/Bridge';
@@ -46,8 +46,14 @@ let forceRefreshNextFetch = false;
  * missing kit and an outdated one take the same path.
  */
 export function useExtendKit(options?: { enabled?: boolean }) {
-  const { send, isConnected } = useBridgeContext();
+  const { send, subscribe, isConnected } = useBridgeContext();
   const queryClient = useQueryClient();
+
+  useEffect(() => subscribe(MessageType.EXTEND_KIT_UPDATED, () => {
+    forceRefreshNextFetch = true;
+    void queryClient.invalidateQueries({ queryKey: [MessageType.GET_EXTEND_KIT_INFO] });
+    void queryClient.invalidateQueries({ queryKey: [MessageType.GET_USAGE] });
+  }), [subscribe, queryClient]);
 
   const query = useQuery<ExtendKitInfo>({
     queryKey: [MessageType.GET_EXTEND_KIT_INFO],

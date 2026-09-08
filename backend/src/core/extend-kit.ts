@@ -310,7 +310,7 @@ export async function loadSpeechToText(): Promise<ExtendKitStt> {
  * the same place — so the version shown can never describe a different install
  * than the one dictation actually loads.
  */
-export async function getExtendKitVersion(): Promise<string | null> {
+export async function getExtendKitInstallation(): Promise<{ root: string; version: string } | null> {
   for (const root of await candidateRoots()) {
     try {
       // Read the manifest as a plain file rather than resolving it as a subpath:
@@ -319,12 +319,16 @@ export async function getExtendKitVersion(): Promise<string | null> {
       // installed kit reports as missing.
       const manifest = `${root}${sep}${EXTEND_KIT_PACKAGE.split('/').join(sep)}${sep}package.json`;
       const { version } = JSON.parse(await readFile(manifest, 'utf8')) as { version?: string };
-      if (typeof version === 'string' && version) return version;
+      if (typeof version === 'string' && version) return { root, version };
     } catch {
       // Not under this root, or an unreadable manifest — try the next one.
     }
   }
   return null;
+}
+
+export async function getExtendKitVersion(): Promise<string | null> {
+  return (await getExtendKitInstallation())?.version ?? null;
 }
 
 /** Forget the cached resolution so a fresh install is picked up without a restart. */

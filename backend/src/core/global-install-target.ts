@@ -1,3 +1,4 @@
+import { posix, win32 } from 'node:path';
 import { existsSync } from 'node:fs';
 import { LibraryManager, AppChannel, PackageManager, type InstallCoordinate } from '../shared';
 import {
@@ -113,6 +114,17 @@ function prefixArgs(
   return prefix ? ['--prefix', prefix] : [];
 }
 
+/** Shared package-manager verbs for Claude CLI and companion installs/updates. */
+export function buildPackageInstallCommand(library: LibraryManager, packageName: string, npmPrefix?: string): InstallSpec {
+  switch (library) {
+    case LibraryManager.VOLTA: return { command: 'volta', args: ['install', packageName] };
+    case LibraryManager.PNPM: return { command: 'pnpm', args: ['add', '-g', packageName] };
+    case LibraryManager.YARN: return { command: 'yarn', args: ['global', 'add', packageName] };
+    case LibraryManager.BUN: return { command: 'bun', args: ['add', '-g', packageName] };
+    default: return { command: 'npm', args: ['install', '-g', ...(npmPrefix ? ['--prefix', npmPrefix] : []), packageName] };
+  }
+}
+
 /** `<manager> <install verb>` for a package, with the launcher resolved. */
 export function buildInstallSpec(
   coord: InstallCoordinate,
@@ -123,21 +135,8 @@ export function buildInstallSpec(
 ): InstallSpec {
   const library = installManagerFor(coord);
   const command = launcherFor(library, nodeExecPath, platform, exists);
-  const pfx = prefixArgs(library, nodeExecPath, platform);
-  switch (library) {
-    case LibraryManager.VOLTA:
-      // volta keeps each package in its own directory and links the bins; an
-      // `npm i -g` under volta bypasses that store entirely.
-      return { command, args: ['install', packageName] };
-    case LibraryManager.PNPM:
-      return { command, args: ['add', '-g', packageName] };
-    case LibraryManager.YARN:
-      return { command, args: ['global', 'add', packageName] };
-    case LibraryManager.BUN:
-      return { command, args: ['add', '-g', packageName] };
-    default:
-      return { command, args: ['install', '-g', ...pfx, packageName] };
-  }
+  const spec = buildPackageInstallCommand(library, packageName, npmPrefixFor(library, nodeExecPath, platform) ?? undefined);
+  return { command, args: spec.args };
 }
 
 /** `<manager> <uninstall verb>` for one specific library manager. */
@@ -203,4 +202,48 @@ export function buildUninstallSpecsForAllStores(
 /** Legacy single-value view, for the wire format and the CLI-update UI. */
 export function packageManagerFor(coord: InstallCoordinate): PackageManager {
   return toPackageManager(coord);
+}
+
+/** Update only a verified global store; never infer it from Claude's location. */
+export function buildInstalledKitUpdateSpec(
+  root: string,
+  version: string,
+  nodeExecPath: string,
+  home: string,
+  platform: NodeJS.Platform = process.platform,
+  exists: (path: string) => boolean = existsSync,
+): (InstallSpec & { env?: NodeJS.ProcessEnv }) | null {
+  if (!['darwin', 'linux', 'win32'].includes(platform) || !/^\d+\.\d+\.\d+$/.test(version)) return null;
+  const path = platform === 'win32' ? win32 : posix;
+  if (!path.isAbsolute(root) || !path.isAbsolute(nodeExecPath)) return null;
+  const normalized = root.replace(/\\/g, '/').replace(/\/$/, '');
+  const packageName = `${EXTEND_KIT_PACKAGE}@${version}`;
+  // VOLTA_HOME can be outside ~/.volta. Pin it to the loaded package's store.
+  const voltaSuffix = `/tools/image/packages/${EXTEND_KIT_PACKAGE}/lib/node_modules`;
+  if (normalized.endsWith(voltaSuffix)) {
+    const voltaHome = normalized.slice(0, -voltaSuffix.length);
+    const binary = platform === 'win32' ? 'volta.exe' : 'volta';
+    const localBinary = path.join(voltaHome, 'bin', binary);
+    const command = exists(localBinary) ? localBinary : binary;
+    return { command, args: buildPackageInstallCommand(LibraryManager.VOLTA, packageName).args, env: { VOLTA_HOME: voltaHome } };
+  }
+  const coord = detectInstallCoordinate([`${normalized}/${EXTEND_KIT_PACKAGE}`], home, platform);
+  if (coord.library === LibraryManager.UNKNOWN || coord.library === LibraryManager.VOLTA) return null;
+  const spec = buildInstallSpec(coord, nodeExecPath, packageName, platform, exists);
+  if (coord.library === LibraryManager.BUN) {
+    if (!normalized.endsWith('/node_modules')) return null;
+    return { command: platform === 'win32' ? 'bun.exe' : 'bun', args: buildPackageInstallCommand(LibraryManager.BUN, packageName).args,
+      env: { BUN_INSTALL_GLOBAL_DIR: normalized.slice(0, -'/node_modules'.length) } };
+  }
+  if (coord.library !== LibraryManager.NPM) {
+    // These managers choose their store from configuration. The updater checks
+    // their current global root through the same launcher before mutation.
+    return spec;
+  }
+  const suffix = platform === 'win32' ? '/node_modules' : '/lib/node_modules';
+  if (!normalized.endsWith(suffix)) return null;
+  const prefix = normalized.slice(0, -suffix.length);
+  if (!prefix) return null;
+  const { args } = buildPackageInstallCommand(LibraryManager.NPM, packageName, prefix);
+  return { command: spec.command, args };
 }

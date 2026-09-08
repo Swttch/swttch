@@ -1,3 +1,4 @@
+import { waitForExtendKitStartupUpdate } from '../extend-kit-update';
 import { homedir } from 'os';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
@@ -46,6 +47,7 @@ export async function uninstallCcbHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+  await waitForExtendKitStartupUpdate();
   const home = process.env.HOME ?? process.env.USERPROFILE ?? homedir();
   const claudePaths = await resolveClaudePaths();
   const coord = resolveInstallCoordinate(claudePaths, process.execPath, home);
