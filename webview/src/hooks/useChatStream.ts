@@ -1120,6 +1120,48 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
           console.warn('[useChatStream] modelUsage key miss for', currentModel, 'keys:', Object.keys(modelUsage));
         }
 
+        // A peer Claude session's message reaches the live view only here.
+        //
+        // The CLI records it in the transcript as a `user` entry the moment it
+        // arrives, but never echoes that entry on stdout — measured across 270
+        // streamed `user` events in the backend's RAW stdout logs, every one of
+        // which was a tool_result and none of which carried `origin`. What it
+        // does emit is this `result`, with the same `origin` attached, body and
+        // all. Read nowhere, the message stayed invisible until the session was
+        // reopened and the transcript re-read from disk (#423).
+        //
+        // Only `kind === 'peer'` is materialized. `origin` also arrives with
+        // `kind: 'task-notification'` and no body, which has no card to show and
+        // would fall through to the plain user-text path as an empty bubble.
+        const origin = cliEvent.origin as LoadedMessageDto['origin'] | undefined;
+        if (origin?.kind === 'peer' && origin.body?.trim()) {
+          // It belongs at the START of the turn it triggered, not at the end
+          // where we happen to hear of it. Appended by arrival it would sit
+          // under the reply it caused and then jump above it on the next
+          // reload, so the live view and the reloaded view would disagree about
+          // the order of the same two entries. The result event dates its own
+          // turn, so that instant is derived here rather than tracked in a ref.
+          const durationMs = cliEvent.duration_ms as number | undefined;
+          const turnStart = typeof durationMs === 'number' && durationMs >= 0
+            ? new Date(Date.now() - durationMs).toISOString()
+            : undefined;
+          appendMessage({
+            type: LoadedMessageType.User,
+            uuid: generateMessageId(),
+            timestamp: turnStart ?? new Date().toISOString(),
+            // The CLI's own entry wraps this body in a `<cross-session-message>`
+            // tag plus boilerplate explaining it did not come from the user.
+            // That wrapper is the CLI's prose, not ours to reproduce from a
+            // guess, so the entry carries the unwrapped body `origin` handed us.
+            // Every renderer of a peer entry reads `origin.body` anyway (#383).
+            message: { role: 'user', content: origin.body } as LoadedMessageDto['message'],
+            origin,
+          }, !turnStart);
+          // Its own bubble mid-transcript, so the assistant message above it has
+          // to be closed off the way any other own-bubble entry does (#211).
+          sealStreamingAssistant();
+        }
+
         // 스트리밍 종료
         endStreaming();
         return;

@@ -1854,3 +1854,134 @@ describe('useChatStream — one assistant entry per CLI message id (issue #232)'
     expect(getTextContent(assistantEntries[0] as LoadedMessageDto)).toContain('first and second');
   });
 });
+
+describe('peer 세션 메시지의 라이브 표시 (issue #423)', () => {
+  // 실측한 result 이벤트의 origin. CLI는 peer 메시지를 트랜스크립트에는 user
+  // 엔트리로 기록하지만 stdout으로는 그 엔트리를 내보내지 않고, 대신 그 턴을
+  // 끝내는 result에 아래 객체를 실어 보낸다.
+  const PEER_BODY = '메시지 잘 도착했어요, 세션 간 전달 정상 동작합니다.';
+  const PEER_ORIGIN = {
+    kind: 'peer',
+    from: 'uds:/tmp/cc-socks/55161.sock',
+    verifiedPeerPid: 55161,
+    msg_id: '5e9ff0bd-b16c-4fde-852d-026a64ac70a9',
+    name: 'swttch-desktop-1b',
+    fromMode: 'bypass',
+    body: PEER_BODY,
+  };
+
+  const peerEntries = (messages: LoadedMessage[]) =>
+    messages.filter(m => (m as LoadedMessageDto).origin?.kind === 'peer');
+
+  it('result에 실려온 peer origin이 엔트리로 표시된다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, { type: 'result', origin: PEER_ORIGIN, duration_ms: 25341 });
+    });
+
+    const peers = peerEntries(result.current.messages);
+    expect(peers).toHaveLength(1);
+    expect((peers[0] as LoadedMessageDto).origin?.name).toBe('swttch-desktop-1b');
+    // 렌더러가 읽는 값은 origin.body 쪽이다.
+    expect((peers[0] as LoadedMessageDto).origin?.body).toBe(PEER_BODY);
+    // 원본의 wrapped 텍스트를 위조하지 않고 body를 그대로 싣는다.
+    expect(getTextContent(peers[0] as LoadedMessageDto)).toBe(PEER_BODY);
+  });
+
+  it('그 턴의 응답보다 앞에 놓인다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    // 턴 종료 시각을 고정한다. duration_ms 를 빼면 턴 시작 시각이 나온다.
+    const turnEnd = Date.parse('2026-09-09T06:11:00.000Z');
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(turnEnd);
+
+    try {
+      // peer 메시지가 유발한 응답이 먼저 화면에 그려진다 (턴 시작 이후 시각).
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'reply-marker',
+          timestamp: '2026-09-09T06:10:45.000Z',
+          message: { role: 'user', content: 'mid-turn entry' },
+        });
+      });
+
+      // 턴이 끝나면서 비로소 peer 메시지를 알게 된다. 30초짜리 턴이므로
+      // 시작 시각은 06:10:30 이고, 위 엔트리보다 앞이다.
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'result', origin: PEER_ORIGIN, duration_ms: 30000 });
+      });
+
+      const order = result.current.messages.map(m => getTextContent(m as LoadedMessageDto));
+      expect(order).toEqual([PEER_BODY, 'mid-turn entry']);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it('duration_ms 가 없으면 도착 순서 그대로 맨 끝에 놓인다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'user',
+        uuid: 'earlier',
+        timestamp: '2099-01-01T00:00:00.000Z',
+        message: { role: 'user', content: 'far future entry' },
+      });
+    });
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, { type: 'result', origin: PEER_ORIGIN });
+    });
+
+    const order = result.current.messages.map(m => getTextContent(m as LoadedMessageDto));
+    expect(order).toEqual(['far future entry', PEER_BODY]);
+  });
+
+  it('task-notification origin 은 엔트리를 만들지 않는다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    // 실측한 모양 그대로 — kind 만 있고 body 가 없다.
+    act(() => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'result',
+        origin: { kind: 'task-notification' },
+        duration_ms: 1000,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(0);
+  });
+
+  it('body 가 비어 있는 peer origin 은 엔트리를 만들지 않는다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, {
+        type: 'result',
+        origin: { ...PEER_ORIGIN, body: '   ' },
+        duration_ms: 1000,
+      });
+    });
+
+    expect(result.current.messages).toHaveLength(0);
+  });
+
+  it('origin 없는 보통의 result 는 아무 엔트리도 만들지 않는다', () => {
+    const { bridge, emit } = createMockBridge();
+    const { result } = renderHook(() => useChatStream({ bridge }));
+
+    act(() => {
+      emit(MessageType.CLI_EVENT, { type: 'result', duration_ms: 1000 });
+    });
+
+    expect(result.current.messages).toHaveLength(0);
+  });
+});

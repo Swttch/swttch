@@ -141,12 +141,30 @@ export class LoadedMessageDto {
   // come from the actual user (issue #383). `origin.body` is the same report
   // already unwrapped, so renderers can show it directly instead of
   // re-parsing the tag out of the wrapped text.
+  //
+  // The same object also arrives on the `result` event that ends the turn a peer
+  // message started — that stream is the only live notice of one, since the CLI
+  // does not echo the transcript entry on stdout (#423).
+  //
+  // `kind` is not an enum here on purpose: `peer` and `task-notification` are
+  // the two values measured so far, and a value we have not seen must survive
+  // the trip rather than be narrowed away. Fields below it are listed as the CLI
+  // spells them (original-data rule); a peer message carries all of them, while
+  // a task-notification carries `kind` alone.
   origin?: {
     kind: string;
     from?: string;
     senderTaskId?: string;
     name?: string;
     body?: string;
+    // Sender identity the CLI verified for itself, and the id it gave this
+    // delivery. Unused by the UI today, kept so the transport stays inspectable.
+    verifiedPeerPid?: number;
+    msg_id?: string;
+    // The sender's permission mode (e.g. `bypass`), and the relay path when the
+    // message travelled through more than one session before reaching this one.
+    fromMode?: string;
+    hopChain?: string[];
   };
 }
 
