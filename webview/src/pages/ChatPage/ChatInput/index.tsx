@@ -50,7 +50,12 @@ import { insertNewlineAtCursor } from './RichInput/insertNewlineAtCursor';
 import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
-import { useTelemetryConsent, ConsentStatus, ConsentSource } from '@/hooks/useTelemetryConsent';
+import {
+  useTelemetryConsent,
+  ConsentStatus,
+  ConsentSource,
+  ConsentBannerAction,
+} from '@/hooks/useTelemetryConsent';
 import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
@@ -145,8 +150,22 @@ export function ChatInput() {
   }, [showModePanel]);
   // 텔레메트리 동의: profile 상태가 미응답(PENDING)일 때만 배너 노출. X 닫기는 이 세션에서만
   // 숨기고(consentDismissed), 새 세션 전환 시 다시 노출한다. 수락/거절하면 status가 바뀌어 영영 숨는다.
-  const { status: consentStatus, accept: acceptConsent, deny: denyConsent } = useTelemetryConsent();
+  const {
+    status: consentStatus,
+    accept: acceptConsent,
+    deny: denyConsent,
+    trackBanner: trackConsentBanner,
+  } = useTelemetryConsent();
   const [consentDismissed, setConsentDismissed] = useState(false);
+  // 배너를 띄울지는 이 한 줄에서만 정한다. 렌더와 노출 보고가 각자 조건을 들고 있으면
+  // 한쪽만 고쳐졌을 때 "노출은 기록되는데 화면엔 없는" 상태로 조용히 갈라진다.
+  const showConsentBanner = consentStatus === ConsentStatus.PENDING && !consentDismissed;
+
+  // 노출 보고. 세션을 바꾸면 배너가 다시 떠 여러 번 발동하지만, 중복은 백엔드가 프로세스
+  // 단위로 억제한다(동의율의 분모가 같은 설치의 반복으로 부풀지 않게).
+  useEffect(() => {
+    if (showConsentBanner) trackConsentBanner(ConsentBannerAction.SHOW);
+  }, [showConsentBanner, trackConsentBanner]);
 
   // Native (IDE/Swing) drag-and-drop bridge: Kotlin → Node backend → IPC NATIVE_DROP_ENTRIES.
   // Currently unused (CefDragHandler forwards drops to the page as HTML5 events instead),
@@ -616,11 +635,14 @@ export function ChatInput() {
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
       {/* 텔레메트리 동의 인풋배너: 미응답(PENDING)이고 이 세션에서 닫지 않았을 때만 표시 */}
-      {consentStatus === ConsentStatus.PENDING && !consentDismissed && (
+      {showConsentBanner && (
         <TelemetryConsentBanner
           onAccept={() => void acceptConsent(ConsentSource.BANNER)}
           onDeny={() => void denyConsent(ConsentSource.BANNER)}
-          onClose={() => setConsentDismissed(true)}
+          onClose={() => {
+            setConsentDismissed(true);
+            trackConsentBanner(ConsentBannerAction.DISMISS);
+          }}
         />
       )}
       {/* Auto mode 강등 안내: auto를 요청했으나 CLI가 이 환경에서 미지원이라 기본 모드로 적용한 경우 */}

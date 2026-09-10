@@ -140,11 +140,23 @@ describe('telemetry consent gating', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('requireConsent=false면 DENIED여도 전송한다(철회 사실 전송)', async () => {
+  it('requireConsent=false면 DENIED여도 전송한다(거절·배너 이벤트 전송)', async () => {
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(denied, 'test-key');
     trackEvent('telemetry_consent', { action: 'deny' }, { requireConsent: false });
     await flushTelemetry();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('requireConsent=false 전송도 동의한 전송과 같은 user_id·공통 필드를 싣는다', async () => {
+    // 거절·노출·닫기의 유니크 사용자 집계가 user_id에 달려 있다. 게이팅을 우회하는 경로만
+    // 익명화하면 Rybbit에서 전부 한 덩어리로 뭉쳐 "몇 명이 거절했는지"를 셀 수 없게 된다.
+    // 호출 횟수만 보는 위 테스트는 그 익명화를 잡아내지 못하므로 body를 직접 확인한다.
+    const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(denied, 'test-key');
+    trackEvent('telemetry_consent', { action: 'deny' }, { requireConsent: false });
+    await flushTelemetry();
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.user_id).toBe('test-uuid');
+    expect(JSON.parse(body.properties).pluginVer).toBe('0.0.0-test');
   });
 
   it('API key가 없으면(개발 빌드) 동의했어도 전송하지 않는다', async () => {

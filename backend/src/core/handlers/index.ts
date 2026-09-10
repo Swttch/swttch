@@ -25,6 +25,7 @@ import { getClaudeConfigDirHandler } from './getClaudeConfigDir';
 import { saveClaudeConfigDirHandler } from './saveClaudeConfigDir';
 import { getTelemetryConsentHandler } from './getTelemetryConsent';
 import { setTelemetryConsentHandler } from './setTelemetryConsent';
+import { trackTelemetryConsentBannerHandler } from './trackTelemetryConsentBanner';
 import { getVoicePromptHandler } from './getVoicePrompt';
 import { setVoicePromptHandler } from './setVoicePrompt';
 import { getAnnouncementsHandler } from './getAnnouncements';
@@ -235,6 +236,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_TELEMETRY_CONSENT:
       await setTelemetryConsentHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.TRACK_TELEMETRY_CONSENT_BANNER:
+      trackTelemetryConsentBannerHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_ANNOUNCEMENTS:
       await getAnnouncementsHandler(connectionId, message, connections, bridge);
