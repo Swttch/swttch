@@ -17,3 +17,4 @@ export * from './mergeEdits';
 export * from './permission-rules';
 export * from './queued-prompts';
 export * from './session-asset';
+export * from './sponsor-gate';

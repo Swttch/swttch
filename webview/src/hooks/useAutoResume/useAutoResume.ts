@@ -3,6 +3,8 @@ import {
   MessageType,
   ScheduledMessageKind,
   AutoResumeStatusPhase,
+  SponsorGate,
+  SponsorGateSurface,
   ACCOUNT_POOL_CONTINUE_REMINDER,
   type AccountPoolRecovery,
   type AccountPoolRecoveryResult,
@@ -258,7 +260,7 @@ export function useAutoResume(): UseAutoResumeResult {
   // Pattern B: a plain chat message can't be gated by the request, so query
   // sponsorship first; ensureSponsor shows the invite toast on failure.
   const resumeNow = useCallback(async () => {
-    if (!(await ensureSponsor())) return;
+    if (!(await ensureSponsor(SponsorGate.AutoResume, SponsorGateSurface.UsageLimit))) return;
     setStatus(null);
     if (recovery?.accountId) sendMessage(AUTO_RESUME_MESSAGE, inputMode, undefined, undefined, recovery.accountId);
     else sendMessage(AUTO_RESUME_MESSAGE, inputMode);

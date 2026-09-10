@@ -7,9 +7,23 @@ import type { ImageBlockDto } from '../../../../../dto/message/ContentBlockDto';
 // grid and which position it opens the viewer on, so the surroundings are
 // stubbed rather than mounted.
 const gallery = vi.fn();
-const reportAssetActivity = vi.fn();
-vi.mock('@/utils/reportAssetActivity', () => ({
-  reportAssetActivity: (...a: unknown[]) => reportAssetActivity(...a),
+const reportSponsorGate = vi.fn();
+vi.mock('@/utils/reportSponsorGate', () => ({
+  reportSponsorGate: (...a: unknown[]) => reportSponsorGate(...a),
+}));
+// Tippy's open/close cannot be driven in jsdom, so the tooltip is replaced by a
+// stand-in that exposes its onShow. That is the signal the viewer hangs its
+// "offer shown" report on, and mocking it is the only way to exercise the whole
+// path — hint into the viewer, viewer into the arrow, arrow into this — rather
+// than trusting that it is still connected.
+const openTooltips: Array<() => void> = [];
+vi.mock('@/components/Tooltip', () => ({
+  Tooltip: (props: { content?: unknown; children: React.ReactNode; onShow?: () => void }) => {
+    if (props.content !== undefined && props.content !== null && props.onShow !== undefined) {
+      openTooltips.push(props.onShow);
+    }
+    return props.children;
+  },
 }));
 vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ currentSessionId: 's1' }) }));
 vi.mock('@/contexts/WorkingDirContext', () => ({ useWorkingDir: () => ({ workingDirectory: '/w' }) }));
@@ -22,6 +36,7 @@ vi.mock('@/hooks/useSessionAssetGallery', () => ({
     gallery(params),
 }));
 
+import { SponsorGate, SponsorGateStep, SponsorGateSurface } from '@/shared';
 import { ImageAttachments } from '../ImageAttachments';
 
 /** Minimal stand-in for the wire shape; only `source` is read for rendering. */
@@ -44,8 +59,9 @@ function localOnlyGallery(lockedCount = 0, hasMoreInSession = lockedCount > 0) {
 
 beforeEach(() => {
   cleanup();
+  openTooltips.length = 0;
   gallery.mockReset();
-  reportAssetActivity.mockReset();
+  reportSponsorGate.mockReset();
   openAssetsModal.mockReset();
   gallery.mockImplementation(localOnlyGallery());
 });
@@ -121,7 +137,9 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByText('Show all'));
 
     expect(openAssetsModal).toHaveBeenCalledWith('viewer');
-    expect(reportAssetActivity).not.toHaveBeenCalledWith('gate_clicked');
+    expect(
+      reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Clicked),
+    ).toHaveLength(0);
     expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
@@ -179,51 +197,47 @@ describe('ImageAttachments', () => {
     expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
-  it('records the gate being shown, with how much is out of reach', () => {
-    // The denominator of this feature's conversion rate.
+  it('does not count opening the viewer as having been offered anything', () => {
+    // This used to be the denominator, and it was the wrong one. Opening a
+    // viewer with images out of reach puts someone in the SITUATION the gate
+    // exists for, but the only link to the sponsor page sits inside a tooltip
+    // they still have to hover. Counted this way the funnel read 41 shown
+    // against 0 followed, which invites "we offered and nobody wanted it" when
+    // most of those people were never shown an offer at all.
     gallery.mockImplementation(localOnlyGallery(24));
     render(<ImageAttachments images={IMAGES} />);
 
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(reportAssetActivity).toHaveBeenCalledWith('gate_seen', { lockedCount: 24 });
+    expect(reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen)).toHaveLength(0);
   });
 
-  it('counts the gate once per opened viewer, even as the locked count settles', () => {
-    // The count is not final when the viewer opens: it starts at zero and lands
-    // on its real value once the session index arrives, and can change again if
-    // the index is refetched. Each change re-runs the report, so without a guard
-    // one person is filed several times and the conversion rate is meaningless.
-    gallery.mockImplementation(localOnlyGallery(0, true));
-    const { rerender } = render(<ImageAttachments images={IMAGES} />);
-    fireEvent.click(screen.getByAltText('Image 1'));
-
-    gallery.mockImplementation(localOnlyGallery(24));
-    rerender(<ImageAttachments images={IMAGES} />);
-    gallery.mockImplementation(localOnlyGallery(25));
-    rerender(<ImageAttachments images={IMAGES} />);
-
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(1);
-  });
-
-  it('counts the gate again for a fresh open', () => {
+  it('counts the offer when the arrow tooltip actually opens, with how much is out of reach', () => {
+    // The real denominator now. Driven through the viewer's onEdgeHintShown
+    // rather than by hovering, because Tippy's open/close is not reproducible in
+    // jsdom -- what is pinned here is that the viewer's showing signal is wired
+    // to a report carrying the surface and the locked count.
     gallery.mockImplementation(localOnlyGallery(24));
     render(<ImageAttachments images={IMAGES} />);
-
-    fireEvent.click(screen.getByAltText('Image 1'));
-    fireEvent.keyDown(window, { key: 'Escape' });
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(2);
+    openTooltips.forEach((open) => open());
+
+    expect(reportSponsorGate).toHaveBeenCalledWith(SponsorGate.Assets, SponsorGateStep.Seen, {
+      from: SponsorGateSurface.Viewer,
+      lockedCount: 24,
+    });
   });
 
-  it('does not report a gate to someone with nothing locked', () => {
+  it('offers nothing at all to someone with nothing locked', () => {
+    // No hint is passed to the viewer, so there is no showing signal to fire.
     gallery.mockImplementation(localOnlyGallery(0, true));
     render(<ImageAttachments images={IMAGES} />);
 
     fireEvent.click(screen.getByAltText('Image 1'));
+    openTooltips.forEach((open) => open());
 
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(0);
+    expect(reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen)).toHaveLength(0);
   });
 
   it('passes the entry uuid through so the gallery can locate this message', () => {

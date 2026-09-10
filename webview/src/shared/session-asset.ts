@@ -52,12 +52,12 @@ export interface SessionAsset extends SessionAssetRef {
  * counts unique users per event name but (as far as we could measure) cannot
  * filter users by a custom property. A conversion rate needs people, not hits,
  * so anything a rate is computed from has to be its own event.
+ *
+ * The sponsor gate used to be reported here too. It moved to
+ * {@link SponsorGate}, because the same offer is now raised by several features
+ * and a name beginning `asset_` could only ever measure one of them.
  */
 export enum AssetActivityKind {
-  /** A non-sponsor opened a viewer that had images out of reach. Once per open. */
-  GateSeen = 'gate_seen',
-  /** They followed that invitation to the sponsor page. */
-  GateClicked = 'gate_clicked',
   /** The Assets screen was opened. Carries which entry point did it. */
   ScreenOpened = 'screen_opened',
 }

@@ -41,11 +41,6 @@ describe('assetEventName', () => {
     );
   });
 
-  it('leaves the name unsuffixed for kinds that have no entry point', () => {
-    expect(assetEventName(AssetActivityKind.GateSeen, undefined)).toBe('asset_gate_seen');
-    expect(assetEventName(AssetActivityKind.GateClicked, undefined)).toBe('asset_gate_clicked');
-  });
-
   it('drops an unrecognized entry point rather than minting a name from it', () => {
     // These names are read as measurements later; a stale build must not be able
     // to invent one.
@@ -54,18 +49,10 @@ describe('assetEventName', () => {
 });
 
 describe('assetActivityHandler', () => {
-  it('records the gate being shown, with how much was out of reach', () => {
-    report({ kind: AssetActivityKind.GateSeen, lockedCount: 24 });
+  it('records the screen being opened, by the door it was opened from', () => {
+    report({ kind: AssetActivityKind.ScreenOpened, from: AssetScreenSource.Dock });
 
-    expect(lastName()).toBe('asset_gate_seen');
-    expect(lastProps()).toEqual({ lockedCount: 24 });
-  });
-
-  it('records the invitation being followed', () => {
-    report({ kind: AssetActivityKind.GateClicked });
-
-    expect(lastName()).toBe('asset_gate_clicked');
-    expect(lastProps()).toEqual({});
+    expect(lastName()).toBe('asset_screen_opened_dock');
   });
 
   it('ignores a kind it does not know', () => {
@@ -81,23 +68,26 @@ describe('assetActivityHandler', () => {
     expect(trackEvent).not.toHaveBeenCalled();
   });
 
-  it('never forwards a non-numeric lockedCount', () => {
-    report({ kind: AssetActivityKind.GateSeen, lockedCount: '24' });
+  it('no longer answers for the sponsor gate', () => {
+    // The gate moved to SPONSOR_GATE_ACTIVITY once several features began
+    // raising the same offer: a name beginning `asset_` could only ever measure
+    // one of them. A stale build still sending the old kind must not quietly
+    // resurrect a name nothing reads any more.
+    report({ kind: 'gate_seen', lockedCount: 24 });
+    report({ kind: 'gate_clicked' });
 
-    expect(lastProps()).toEqual({});
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 
   it('carries nothing the user typed', () => {
     // The Assets index holds a caption of the user's own prompt; it must not
     // reach telemetry even if a caller hands it over.
     report({
-      kind: AssetActivityKind.GateSeen,
-      lockedCount: 3,
+      kind: AssetActivityKind.ScreenOpened,
       messagePreview: 'my secret project plan',
       from: AssetScreenSource.Dock,
     });
 
-    expect(JSON.stringify(lastProps())).not.toContain('secret');
-    expect(lastProps()).toEqual({ lockedCount: 3 });
+    expect(JSON.stringify(lastProps() ?? {})).not.toContain('secret');
   });
 });

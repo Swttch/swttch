@@ -1,5 +1,5 @@
 import { getBridge } from '@/api/bridge/Bridge';
-import { MessageType } from '@/shared';
+import { MessageType, type SponsorGate, type SponsorGateSurface } from '@/shared';
 import { showSponsorGatedToast } from './showSponsorGatedToast';
 
 /**
@@ -12,8 +12,13 @@ import { showSponsorGatedToast } from './showSponsorGatedToast';
  *
  * Querying at call time means it reflects the latest server state, avoiding the
  * stale-cache pitfall of reading a pre-fetched isSponsor.
+ *
+ * `gate` and `from` say which feature is asking and from where, and are passed
+ * straight to the toast, which is where the offer is measured. A caller cannot
+ * gate an action without naming its feature — that is deliberate, since a gate
+ * nobody named is a gate nobody can compute a conversion rate for.
  */
-export async function ensureSponsor(): Promise<boolean> {
+export async function ensureSponsor(gate: SponsorGate, from: SponsorGateSurface): Promise<boolean> {
   try {
     const res = await getBridge().request<{ status?: string; isSponsor?: boolean }>(
       MessageType.GET_SPONSOR_STATUS,
@@ -22,6 +27,6 @@ export async function ensureSponsor(): Promise<boolean> {
   } catch {
     /* treat any failure as not-a-sponsor and fall through to the gated path */
   }
-  showSponsorGatedToast();
+  showSponsorGatedToast(gate, from);
   return false;
 }

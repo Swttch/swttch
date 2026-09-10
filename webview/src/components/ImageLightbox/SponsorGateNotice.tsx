@@ -2,8 +2,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n';
 import { openSettingsAt } from '@/utils/openSettingsAt';
 import { Route } from '@/router';
-import { AssetActivityKind } from '@/shared';
-import { reportAssetActivity } from '@/utils/reportAssetActivity';
+import { SponsorGate, SponsorGateStep, type SponsorGateSurface } from '@/shared';
+import { reportSponsorGate } from '@/utils/reportSponsorGate';
 
 /**
  * The one place the sponsor invitation is written.
@@ -66,7 +66,7 @@ export const MoreInSessionNotice: React.FC<{ count: number; onShowAll: () => voi
  * flowing line). Beside a several-line message the link would float against the
  * middle of it, pointing at nothing.
  */
-export const EdgeSponsorHint: React.FC = () => {
+export const EdgeSponsorHint: React.FC<{ from: SponsorGateSurface }> = ({ from }) => {
   const { t } = useTranslation('chat');
 
   return (
@@ -81,7 +81,7 @@ export const EdgeSponsorHint: React.FC = () => {
     */
     <span className="flex max-w-[170px] flex-col items-start gap-1.5 break-keep">
       <span>{t('assets.sponsorHint')}</span>
-      <LearnMoreButton />
+      <LearnMoreButton from={from} />
     </span>
   );
 };
@@ -89,11 +89,16 @@ export const EdgeSponsorHint: React.FC = () => {
 /**
  * Follows the invitation to the sponsor page, recording that it was followed.
  *
- * The report is here rather than at each call site so that no future placement
- * of this offer can forget it — the conversion rate is the numerator's only
- * source.
+ * The click is reported here so no future placement of this offer can forget it.
+ * The matching SHOWN report deliberately is NOT: this button cannot tell whether
+ * anyone can see it. Tippy's headless render commits tooltip content while the
+ * tooltip is still closed, so a mount here happens for arrows nobody ever
+ * hovered — and counting those was exactly the mistake that made the funnel read
+ * 41 shown against 0 followed. Each placement reports its own showing at the
+ * moment it is genuinely visible: the tooltip via its onShow, the Assets header
+ * on mount, because that one really is on screen as soon as it exists.
  */
-export function LearnMoreButton() {
+export function LearnMoreButton({ from }: { from: SponsorGateSurface }) {
   const { t: tc } = useTranslation('common');
 
   return (
@@ -101,7 +106,7 @@ export function LearnMoreButton() {
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        reportAssetActivity(AssetActivityKind.GateClicked);
+        reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Clicked, { from });
         void openSettingsAt(Route.SETTINGS_SPONSOR);
       }}
       className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"

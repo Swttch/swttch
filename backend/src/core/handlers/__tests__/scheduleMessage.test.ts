@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
-import { MessageType, ScheduledMessageKind, ErrorCode } from '../../../shared';
+import { MessageType, ScheduledMessageKind, ErrorCode, SponsorGate } from '../../../shared';
 
 vi.mock('../../features/account-store', () => ({ readRegistry: vi.fn(async () => ({ current: 'acc-current' })) }));
 vi.mock('../../features/account-pool-recovery-store', () => ({ readAccountPoolRecovery: vi.fn(async () => null) }));
@@ -93,7 +93,38 @@ describe('scheduleMessageHandler sponsor gate', () => {
       requestId: 'req-1',
       error: 'Sponsor-only feature',
       errorCode: ErrorCode.SPONSOR_REQUIRED,
+      // This handler serves two paid features, so the refusal has to say which
+      // one it refused. The webview turns this into the invite toast and counts
+      // it against that feature; unnamed, both would be measured as one and
+      // neither could be divided into a rate.
+      gate: SponsorGate.AutoResume,
     });
+  });
+
+  it('names the schedule-send gate when that is the kind being refused', async () => {
+    // Same handler, same refusal, different feature. A single `kind` decides
+    // which product the offer is attributed to, so it is worth pinning: get it
+    // backwards and every auto-resume sale would be credited to schedule send.
+    getSponsorStatus.mockResolvedValue({ isSponsor: false });
+    const connections = makeConnections();
+    const message = {
+      type: MessageType.SCHEDULE_MESSAGE,
+      requestId: 'req-1',
+      payload: {
+        sessionId: 'sess-a',
+        sendAt: '2026-03-30T11:00:00Z',
+        message: 'ship it',
+        kind: ScheduledMessageKind.USER_SCHEDULED,
+      },
+    } as unknown as IPCMessage;
+
+    await scheduleMessageHandler('conn-1', message, connections, bridge);
+
+    expect(connections.sendTo).toHaveBeenCalledWith(
+      'conn-1',
+      MessageType.ERROR,
+      expect.objectContaining({ gate: SponsorGate.Schedule }),
+    );
   });
 
   it('creates a reservation (stamped with the requesting tab panelId) and ACKs for a sponsor', async () => {
@@ -146,6 +177,9 @@ describe('scheduleMessageHandler sponsor gate', () => {
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ERROR, {
       requestId: 'req-u',
       error: 'Sponsor-only feature',
+      // An edit carries no kind, and is only reachable from the schedule-send
+      // popover whose own gate runs first.
+      gate: SponsorGate.Schedule,
       errorCode: ErrorCode.SPONSOR_REQUIRED,
     });
   });

@@ -169,6 +169,8 @@ export enum MessageType {
   SET_RUNNER_BEST_SCORE = 'SET_RUNNER_BEST_SCORE',
 
   // -- Sponsor / license --
+  /** The webview reports that one feature's sponsor gate was shown or followed, as {gate, step, from?}. Purely a measurement signal: the offer is raised and acted on entirely in the webview and reaches the backend no other way. The gate and step become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a per-feature conversion rate is a question about people. Never carries text the user typed. inbound webview→backend */
+  SPONSOR_GATE_ACTIVITY = 'SPONSOR_GATE_ACTIVITY',
   /** Build the sponsorship (pricing) URL with the install id + account context prefilled, for the webview to open in the external browser. The install id stays backend-side (never exposed to the webview). inbound webview→backend */
   GET_SPONSOR_URL = 'GET_SPONSOR_URL',
   /** Read the current sponsor entitlement (derived from the locally stored license key). inbound webview→backend */

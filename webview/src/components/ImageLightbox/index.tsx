@@ -26,6 +26,7 @@ function ArrowButton({
   label,
   enabled,
   hint,
+  onHintShown,
   onActivate,
   children,
 }: {
@@ -33,11 +34,13 @@ function ArrowButton({
   label: string;
   enabled: boolean;
   hint?: React.ReactNode;
+  /** Fires when the hint is really on screen, not merely mounted. */
+  onHintShown?: () => void;
   onActivate: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip content={enabled ? undefined : hint} interactive>
+    <Tooltip content={enabled ? undefined : hint} interactive onShow={onHintShown}>
       <span
         className={`absolute ${side === 'start' ? 'start-4' : 'end-4'} top-1/2 -translate-y-1/2`}
       >
@@ -109,6 +112,14 @@ interface ImageLightboxProps {
    * and the arrow stays quiet.
    */
   edgeHint?: React.ReactNode;
+  /**
+   * Called when `edgeHint` actually becomes visible on an arrow.
+   *
+   * Exists so the caller can measure the hint being SHOWN without this viewer
+   * having to know what the hint is about. Mounting cannot stand in for it:
+   * Tippy commits tooltip content while the tooltip is still closed.
+   */
+  onEdgeHintShown?: () => void;
 }
 
 /**
@@ -131,6 +142,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   notice,
   onOpenAssets,
   edgeHint,
+  onEdgeHintShown,
 }) => {
   const { t } = useTranslation('chatTools');
   const lastIndex = srcs.length - 1;
@@ -272,6 +284,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           label={t('attachments.lightbox.previous')}
           enabled={hasPrevious}
           hint={edgeHint}
+          onHintShown={onEdgeHintShown}
           onActivate={goPrevious}
         >
           <ChevronLeftIcon className="w-5 h-5" />
@@ -282,6 +295,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           label={t('attachments.lightbox.next')}
           enabled={hasNext}
           hint={edgeHint}
+          onHintShown={onEdgeHintShown}
           onActivate={goNext}
         >
           <ChevronRightIcon className="w-5 h-5" />

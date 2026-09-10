@@ -13,6 +13,7 @@ import { APP_NAME } from '@/config/app';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
+import { SponsorGate, SponsorGateSurface } from '@/shared';
 import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
@@ -202,7 +203,7 @@ export function GeneralSettings() {
           <ToggleSwitch
             checked={autoResumeOnLimit}
             onChange={async (checked) => {
-              if (await ensureSponsor()) {
+              if (await ensureSponsor(SponsorGate.AutoResume, SponsorGateSurface.SettingsToggle)) {
                 updateSetting(SettingKey.AUTO_RESUME_ON_LIMIT, checked);
               }
             }}

@@ -9,8 +9,8 @@ import {
 } from '@/components/ImageLightbox/SponsorGateNotice';
 import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSessionAssets';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
-import { AssetActivityKind, type SessionAsset } from '@/shared';
-import { reportAssetActivity } from '@/utils/reportAssetActivity';
+import { SponsorGate, SponsorGateStep, SponsorGateSurface, type SessionAsset } from '@/shared';
+import { reportSponsorGate } from '@/utils/reportSponsorGate';
 import { useTranslation } from '@/i18n';
 import { useDockLayout } from '@/pages/ChatPage/SessionHeader/dock/useDockLayout';
 import { toggleDockVisible } from '@/pages/ChatPage/SessionHeader/dock/toggleDockVisible';
@@ -117,18 +117,6 @@ export function AssetsModal(props: Props) {
     very surface the gate is designed around: someone here has already seen every
     thumbnail, so this is where "saw the gate" means the most.
   */
-  const gateReported = useRef(false);
-  useEffect(() => {
-    if (!openedKey) {
-      gateReported.current = false;
-      return;
-    }
-    if (lockedCount > 0 && !gateReported.current) {
-      gateReported.current = true;
-      reportAssetActivity(AssetActivityKind.GateSeen, { lockedCount });
-    }
-  }, [openedKey, lockedCount]);
-
   // Whether this screen is pulled out into the header dock.
   const { layout, save } = useDockLayout();
   const pinned = layout.visible.includes(DockItemId.ASSETS);
@@ -200,7 +188,7 @@ export function AssetsModal(props: Props) {
               <span>{t('assets.sponsorHint')}</span>
               {/* The shared button, so this door to the sponsor page is counted
                   like the others. Hand-rolled here, it reported nothing. */}
-              <LearnMoreButton />
+              <LearnMoreButton from={SponsorGateSurface.AssetsScreen} />
             </div>
           )}
 
@@ -257,7 +245,15 @@ export function AssetsModal(props: Props) {
           // Only when something really is out of reach. At the true end of the
           // session there is nothing to explain, and a sponsor line there would
           // be selling something the user already has.
-          edgeHint={lockedCount > 0 ? <EdgeSponsorHint /> : undefined}
+          edgeHint={
+            lockedCount > 0 ? <EdgeSponsorHint from={SponsorGateSurface.AssetsScreen} /> : undefined
+          }
+          onEdgeHintShown={() =>
+            reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Seen, {
+              from: SponsorGateSurface.AssetsScreen,
+              lockedCount,
+            })
+          }
           // Kept so the bottom panel is the same panel in both places. Opened
           // from here it steps back to the grid, which is where "view this
           // session's assets" already leads.
