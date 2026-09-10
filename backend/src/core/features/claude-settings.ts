@@ -315,6 +315,40 @@ export async function getEnvApiKeys(): Promise<string[]> {
   );
 }
 
+// ─── Proxy Env ─────────────────────────────────────────────────────────────
+
+// Both cases matter: most *nix tools check the uppercase form, but some HTTP
+// clients prefer lowercase. We forward whichever the user actually set in
+// settings.json, never inventing a value that was not there.
+const PROXY_ENV_KEYS = [
+  'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY',
+  'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy',
+] as const;
+
+/**
+ * Read proxy-related variables (HTTP_PROXY/HTTPS_PROXY/...) from the merged
+ * Claude settings `env` block (global → project, matching {@link readMergedClaudeSettings}).
+ *
+ * The official `claude` CLI reads ~/.claude/settings.json itself and applies its
+ * `env` block before talking to the API, so a proxy configured there already
+ * works for it. `ccb` — the separate helper CLI the usage-stats handlers spawn
+ * for `oauth usage` — is not the Claude CLI and never reads that file, so a
+ * proxy set only in settings.json never reached it. Callers that spawn `ccb`
+ * pass this result through as extra env so it does.
+ */
+export async function getProxyEnvFromSettings(workingDir?: string): Promise<NodeJS.ProcessEnv> {
+  const { settings } = await readMergedClaudeSettings(workingDir);
+  const env = settings.env;
+  if (!env || typeof env !== 'object' || Array.isArray(env)) return {};
+  const record = env as Record<string, unknown>;
+  const result: NodeJS.ProcessEnv = {};
+  for (const key of PROXY_ENV_KEYS) {
+    const value = record[key];
+    if (typeof value === 'string' && value.length > 0) result[key] = value;
+  }
+  return result;
+}
+
 // ─── File Watcher ──────────────────────────────────────────────────────────
 
 let watcherInstance: ReturnType<typeof watch> | null = null;

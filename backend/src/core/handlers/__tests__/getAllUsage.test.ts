@@ -17,6 +17,10 @@ vi.mock('../getUsage', () => ({
   classifyError: vi.fn().mockReturnValue({ kind: 'unknown', message: 'Test error' }),
 }));
 
+vi.mock('../../features/claude-settings', () => ({
+  getProxyEnvFromSettings: vi.fn().mockResolvedValue({}),
+}));
+
 import { getAllUsageHandler } from '../getAllUsage';
 import { Claude } from '../../claude';
 import { readRegistry } from '../../features/account-store';
