@@ -244,7 +244,9 @@
       "updating": "正在更新…",
       "jumpToBottom": "跳转到底部",
       "copyCommand": "复制命令",
-      "resize": "拖动以调整大小"
+      "resize": "拖动以调整大小",
+      "noOutputYet": "尚无输出。",
+      "noOutput": "无输出。"
     },
     "agentDetail": {
       "tools_one": "工具 {{count}} 次",

@@ -244,7 +244,9 @@
       "updating": "در حال به‌روزرسانی…",
       "jumpToBottom": "پرش به پایین",
       "copyCommand": "کپی دستور",
-      "resize": "برای تغییر اندازه بکشید"
+      "resize": "برای تغییر اندازه بکشید",
+      "noOutputYet": "هنوز خروجی‌ای نیست.",
+      "noOutput": "خروجی‌ای نیست."
     },
     "agentDetail": {
       "tools_one": "{{count}} ابزار",

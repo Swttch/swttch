@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowPathIcon, ArrowDownIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
+import { parseAnsi } from '@/utils/ansi';
 
 interface Props {
   task: WorkflowTask;
@@ -64,6 +65,7 @@ export function BackgroundTaskOutputBody(props: Props) {
   const isRunning = task.status === 'running';
 
   const { text, truncated, loading } = useBackgroundTaskOutput(outputFile);
+  const segments = useMemo(() => parseAnsi(text), [text]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   // Whether the user was already at (or near) the bottom right before this
@@ -122,7 +124,14 @@ export function BackgroundTaskOutputBody(props: Props) {
         <CommandLine outputFile={outputFile} isRunning={isRunning} />
       </div>
 
-      <div className="relative mt-3 h-[60vh] shrink-0">
+      {/* `flex-1 min-h-0`, not a slice of the viewport: `h-[60vh]` sized the
+          pane against the window while the room it actually had was whatever
+          the modal had left, and the two are not the same number. Measured at a
+          640px window, the pane asked for 384px into a 367px gap and hung 16px
+          past the modal, where `overflow-hidden` cut its bottom edge off. It
+          got worse as the modal was dragged taller. Filling the leftover space
+          is what the pane wanted all along. */}
+      <div className="relative mt-3 flex-1 min-h-0">
         {/* absolute inset-0 instead of h-full: a percentage height on a flex
             item whose own height comes from flex-grow (not an explicit CSS
             height) does not reliably resolve through this many nested flex
@@ -137,16 +146,20 @@ export function BackgroundTaskOutputBody(props: Props) {
               {t('backgroundTasks.transcriptModal.loading')}
             </div>
           ) : !text ? (
-            <div className="h-full flex items-center justify-center text-text-primary/50 text-[0.9230rem]">
-              {isRunning ? (
-                <span className="flex items-center gap-2">
-                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                  {t('backgroundTasks.transcriptModal.starting')}
-                </span>
-              ) : (
-                t('backgroundTasks.transcriptModal.empty')
-              )}
-            </div>
+            // A command that has printed nothing yet still has a terminal, so
+            // draw the same pane rather than a bare line on the modal's
+            // background — an empty shell window reads as "nothing yet", while
+            // an empty modal reads as a screen that failed to render.
+            //
+            // And it is not "starting": the task has been running for as long
+            // as the card says (measured at 44s, and at seven hours for one
+            // whose process had already been killed). Plenty of commands are
+            // simply quiet — `sleep`, or anything that writes to a file.
+            <pre className="min-h-full rounded-md bg-black/90 border border-border-subtle p-3 font-mono text-[0.8461rem] text-emerald-400/40 leading-relaxed">
+              {isRunning
+                ? t('backgroundTasks.transcriptModal.noOutputYet')
+                : t('backgroundTasks.transcriptModal.noOutput')}
+            </pre>
           ) : (
             <>
               {truncated && (
@@ -163,7 +176,18 @@ export function BackgroundTaskOutputBody(props: Props) {
                   than "empty terminal" — filling the pane makes it look like
                   what it is, a shell window with a few lines in it. */}
               <pre className="min-h-full rounded-md bg-black/90 border border-border-subtle p-3 whitespace-pre-wrap break-words font-mono text-[0.8461rem] text-emerald-400/90 leading-relaxed">
-                {text}
+                {/* Every tool a developer backgrounds writes colour, and as
+                    plain text those codes bury the output they decorate. The
+                    pane is dressed as a terminal, so it renders them. */}
+                {segments.map((segment, i) =>
+                  segment.className ? (
+                    <span key={i} className={segment.className}>
+                      {segment.text}
+                    </span>
+                  ) : (
+                    segment.text
+                  ),
+                )}
               </pre>
             </>
           )}

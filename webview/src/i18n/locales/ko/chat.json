@@ -244,7 +244,9 @@
       "updating": "업데이트 중…",
       "jumpToBottom": "맨 아래로 이동",
       "copyCommand": "명령어 복사",
-      "resize": "드래그해서 크기 조절"
+      "resize": "드래그해서 크기 조절",
+      "noOutputYet": "아직 출력이 없습니다.",
+      "noOutput": "출력이 없습니다."
     },
     "agentDetail": {
       "tools_one": "도구 {{count}}회",

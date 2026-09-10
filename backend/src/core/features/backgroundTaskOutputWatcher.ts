@@ -2,6 +2,7 @@ import { watch, type FSWatcher } from 'fs';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
 import { loadBackgroundTaskOutput } from './loadBackgroundTaskOutput';
+import { peekWorkflowTracker } from './workflow-tracker';
 
 const DEBOUNCE_MS = 200;
 // How often to retry starting the fs.watch while the output file doesn't
@@ -26,6 +27,12 @@ function key(connectionId: string, outputFile: string): string {
 }
 
 async function pushOutput(connectionId: string, outputFile: string, connections: ConnectionManager): Promise<void> {
+  // The CLI closes the log with `[exited with code N]` / `[killed]`, and for a
+  // task whose owning CLI died that line is the only notice we ever get that it
+  // is over. This file changing is the moment that line appears, so it is also
+  // the moment to stop the panel claiming the task is still running.
+  peekWorkflowTracker()?.settleByOutputFile(outputFile);
+
   const result = await loadBackgroundTaskOutput({ outputFile });
   connections.sendTo(connectionId, MessageType.BACKGROUND_TASK_OUTPUT_CHANGED, {
     outputFile,

@@ -546,6 +546,87 @@ describe('WorkflowProgressTracker local_bash background tasks', () => {
     expect(t.workflowId).toBeUndefined();
   });
 
+  // A backgrounded command whose owning CLI is killed never sends a terminal
+  // task_notification, so the tracker kept its entry at `running` with nothing
+  // to contradict it — four such tasks sat there for seven hours while their
+  // logs already said `[killed]`. The log's closing line is the notice.
+  describe('settling from the log the CLI closes', () => {
+    function startedBashTaskWithLog(contents: string) {
+      const dir = mkdtempSync(join(tmpdir(), 'wf-bash-'));
+      const outputFile = join(dir, 'task.output');
+      writeFileSync(outputFile, contents);
+
+      const { tracker, last } = makeTracker();
+      tracker.handleEvent('s1', bashStarted);
+      tracker.handleEvent('s1', {
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'toolu_bash1',
+              content: `Command running in background with ID: b1. Output is being written to: ${outputFile}. more.`,
+            },
+          ],
+        },
+      });
+      expect(last().status).toBe('running');
+      return { tracker, last, outputFile, cleanup: () => rmSync(dir, { recursive: true, force: true }) };
+    }
+
+    it('settles a killed task as stopped', () => {
+      const { tracker, last, outputFile, cleanup } = startedBashTaskWithLog('\n[killed]\n');
+      tracker.settleByOutputFile(outputFile);
+
+      expect(last().status).toBe('stopped');
+      expect(last().endedAt).toBeGreaterThan(0);
+      cleanup();
+    });
+
+    it('settles a clean exit as completed and a non-zero one as failed', () => {
+      const ok = startedBashTaskWithLog('hello\n[exited with code 0]\n');
+      ok.tracker.settleByOutputFile(ok.outputFile);
+      expect(ok.last().status).toBe('completed');
+      ok.cleanup();
+
+      const bad = startedBashTaskWithLog('boom\n[exited with code 2]\n');
+      bad.tracker.settleByOutputFile(bad.outputFile);
+      expect(bad.last().status).toBe('failed');
+      bad.cleanup();
+    });
+
+    // A quiet command is not a finished one. `sleep`, or anything writing to a
+    // file rather than stdout, leaves the log empty for its whole run.
+    it('leaves a task running while its log carries no closing line', () => {
+      const { tracker, last, outputFile, cleanup } = startedBashTaskWithLog('');
+      tracker.settleByOutputFile(outputFile);
+      expect(last().status).toBe('running');
+
+      const partial = startedBashTaskWithLog('still working\n');
+      partial.tracker.settleByOutputFile(partial.outputFile);
+      expect(partial.last().status).toBe('running');
+
+      cleanup();
+      partial.cleanup();
+    });
+
+    it('does not reopen a task that already finished', () => {
+      const { tracker, last, outputFile, cleanup } = startedBashTaskWithLog('\n[killed]\n');
+      tracker.handleEvent('s1', {
+        type: 'system',
+        subtype: 'task_notification',
+        tool_use_id: 'toolu_bash1',
+        status: 'completed',
+      });
+      expect(last().status).toBe('completed');
+
+      tracker.settleByOutputFile(outputFile);
+      expect(last().status).toBe('completed');
+      cleanup();
+    });
+  });
+
   it('does not overwrite outputFile once set from the immediate tool_result', () => {
     const { tracker, last } = makeTracker();
     tracker.handleEvent('s1', bashStarted);

@@ -244,7 +244,9 @@
       "updating": "Mise à jour…",
       "jumpToBottom": "Aller en bas",
       "copyCommand": "Copier la commande",
-      "resize": "Glisser pour redimensionner"
+      "resize": "Glisser pour redimensionner",
+      "noOutputYet": "Pas encore de sortie.",
+      "noOutput": "Aucune sortie."
     },
     "agentDetail": {
       "tools_one": "{{count}} outil",

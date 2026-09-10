@@ -389,6 +389,12 @@ export async function reconstructWorkflowTasks(
     if (task.transcriptDir) {
       task.agents = await aggregateAgents(task.transcriptDir);
     }
+    // A task the tracker still calls live may have ended while nobody was
+    // listening — its log says so even when no notification ever arrived.
+    if (task.status === 'running' && task.outputFile) {
+      const settled = readTerminalMarker(task.outputFile);
+      if (settled) task.status = settled;
+    }
   }
 
   return [...tasks.values()];
@@ -692,6 +698,27 @@ export class WorkflowProgressTracker {
     }
   }
 
+  /**
+   * Settle a task the CLI never sent a notification for, using the terminal
+   * line its own output log carries.
+   *
+   * Called when that log changes, so a task whose process was killed stops
+   * claiming to be running the moment the CLI writes `[killed]` into it,
+   * rather than at the next reload — or never, if the session stays open.
+   */
+  settleByOutputFile(outputFile: string): void {
+    for (const entry of this.entries.values()) {
+      const t = entry.task;
+      if (t.status !== 'running' || t.outputFile !== outputFile) continue;
+      const settled = readTerminalMarker(outputFile);
+      if (!settled) continue;
+      t.status = settled;
+      t.endedAt = Date.now();
+      t.usage = { ...t.usage, durationMs: t.usage?.durationMs ?? t.endedAt - t.startedAt };
+      this.broadcast(entry);
+    }
+  }
+
   /** Forget all workflows for a session (on CLI process close). */
   stopSession(sessionId: string): void {
     for (const [key, entry] of this.entries) {
@@ -705,7 +732,49 @@ export class WorkflowProgressTracker {
   }
 }
 
+/**
+ * The one tracker for this process, shared by the CLI stream (which creates it)
+ * and the output-log watcher (which only settles tasks through it). It lives
+ * here rather than beside the stream so the watcher can reach it without
+ * importing the CLI process module, which would close an import cycle.
+ */
+let sharedTracker: WorkflowProgressTracker | null = null;
+
+export function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTracker {
+  if (!sharedTracker) sharedTracker = WorkflowProgressTracker.create(connections);
+  return sharedTracker;
+}
+
+/** The tracker if one has been created; the watcher must not create one. */
+export function peekWorkflowTracker(): WorkflowProgressTracker | null {
+  return sharedTracker;
+}
+
 /** Read a workflow task `.output` JSON file for its summary + result (best-effort). */
+/**
+ * The CLI closes a background task's output log with its own terminal line —
+ * `[exited with code N]` or `[killed]`. That line is the only word we get when
+ * the task's owning CLI dies without ever emitting a `task_notification`, which
+ * is exactly what happens to a backgrounded command whose process is killed:
+ * the tracker keeps a live entry saying `running`, and nothing ever contradicts
+ * it. Four such tasks sat at "running" for seven hours with `[killed]` written
+ * in their logs the whole time.
+ *
+ * Read from the tail, since the marker is the last thing in the file.
+ */
+function readTerminalMarker(path: string): WorkflowStatus | undefined {
+  try {
+    if (!existsSync(path)) return undefined;
+    const tail = readFileSync(path, 'utf-8').trimEnd().split('\n').pop() ?? '';
+    if (/^\[killed\]$/.test(tail.trim())) return 'stopped';
+    const exited = tail.trim().match(/^\[exited with code (\d+)\]$/);
+    if (exited) return exited[1] === '0' ? 'completed' : 'failed';
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function readOutputFile(path: string): { summary?: string; result?: string } {
   try {
     if (!existsSync(path)) return {};

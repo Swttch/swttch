@@ -244,7 +244,9 @@
       "updating": "Atualizando…",
       "jumpToBottom": "Ir para o final",
       "copyCommand": "Copiar comando",
-      "resize": "Arraste para redimensionar"
+      "resize": "Arraste para redimensionar",
+      "noOutputYet": "Ainda sem saída.",
+      "noOutput": "Sem saída."
     },
     "agentDetail": {
       "tools_one": "{{count}} ferramenta",

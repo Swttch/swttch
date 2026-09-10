@@ -244,7 +244,9 @@
       "updating": "Wird aktualisiert…",
       "jumpToBottom": "Nach unten springen",
       "copyCommand": "Befehl kopieren",
-      "resize": "Zum Ändern der Größe ziehen"
+      "resize": "Zum Ändern der Größe ziehen",
+      "noOutputYet": "Noch keine Ausgabe.",
+      "noOutput": "Keine Ausgabe."
     },
     "agentDetail": {
       "tools_one": "{{count}} Tool",

@@ -244,7 +244,9 @@
       "updating": "更新中…",
       "jumpToBottom": "最新へ移動",
       "copyCommand": "コマンドをコピー",
-      "resize": "ドラッグしてサイズ変更"
+      "resize": "ドラッグしてサイズ変更",
+      "noOutputYet": "まだ出力がありません。",
+      "noOutput": "出力がありません。"
     },
     "agentDetail": {
       "tools_one": "ツール {{count}} 回",

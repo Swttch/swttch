@@ -248,7 +248,9 @@
       "updating": "جارٍ التحديث…",
       "jumpToBottom": "الانتقال إلى الأسفل",
       "copyCommand": "نسخ الأمر",
-      "resize": "اسحب لتغيير الحجم"
+      "resize": "اسحب لتغيير الحجم",
+      "noOutputYet": "لا يوجد إخراج بعد.",
+      "noOutput": "لا يوجد إخراج."
     },
     "agentDetail": {
       "tools_zero": "لا أدوات",
