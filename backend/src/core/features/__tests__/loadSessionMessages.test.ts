@@ -67,6 +67,43 @@ describe('loadSessionMessages', () => {
     expect(result.messages).toEqual([]);
   });
 
+  // #433: the webview redirects a session URL away on sessionMissing alone, so
+  // the flag has to separate "the transcript is not there" from "the transcript
+  // could not be read" and from "the transcript holds nothing".
+  describe('sessionMissing', () => {
+    it('reports a transcript that is not on disk as missing', async () => {
+      const result = await loadSessionMessages('/work', 'nonexistent');
+      expect(result.sessionMissing).toBe(true);
+    });
+
+    it('does not report a transcript that loaded as missing', async () => {
+      await writeSession('sess-1', [JSON.stringify({ type: 'user', uuid: 'u1' })]);
+
+      const result = await loadSessionMessages('/work', 'sess-1');
+      expect(result.sessionMissing).toBe(false);
+    });
+
+    it('does not report an empty transcript as missing', async () => {
+      await writeSession('sess-empty', []);
+
+      const result = await loadSessionMessages('/work', 'sess-empty');
+      expect(result.messages).toEqual([]);
+      expect(result.sessionMissing).toBe(false);
+    });
+
+    it('does not report an unreadable transcript as missing', async () => {
+      await writeSession('sess-unreadable', [JSON.stringify({ type: 'user', uuid: 'u1' })]);
+      const permissionError = Object.assign(new Error('EACCES: permission denied'), {
+        code: 'EACCES',
+      });
+      mockReadJsonl.mockRejectedValueOnce(permissionError);
+
+      const result = await loadSessionMessages('/work', 'sess-unreadable');
+      expect(result.messages).toEqual([]);
+      expect(result.sessionMissing).toBe(false);
+    });
+  });
+
   it('should pass through all JSONL entry types without filtering', async () => {
     await writeSession('sess-1', [
       JSON.stringify({ type: 'user', uuid: 'u1' }),

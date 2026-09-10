@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from 'react';
+import { plainToInstance } from 'class-transformer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionState } from '../types';
 import { SessionMetaDto } from '../dto';
@@ -68,6 +69,14 @@ interface SessionContextValue {
    * filter runs on what the client holds.
    */
   loadAllSessions: () => Promise<void>;
+  /**
+   * Put one session's row into the list, as the backend sent it.
+   *
+   * Called with the row that rides along on SESSION_LOADED, so the list holds
+   * the session being shown even when that session ranks past the page the
+   * webview fetched. See #434.
+   */
+  mergeSession: (raw: unknown) => void;
   /** Sessions exist beyond the ones loaded. */
   hasMoreSessions: boolean;
   /**
@@ -114,6 +123,21 @@ function sortSessions(sessions: SessionMetaDto[]): SessionMetaDto[] {
       const bTime = b.updatedAt?.getTime() ?? 0;
       return bTime - aTime;
     });
+}
+
+/**
+ * Fold rows into the list, one row per session id, newest first.
+ *
+ * Ranges are requested by offset, and a session that arrived outside that
+ * sequence (the open session carrying its own row, per #434) shifts what any
+ * later offset lands on — so the same session can come back in a page that was
+ * asked for by number. Keyed by id, arriving late wins: a row fetched now
+ * describes the session at least as well as the copy already held.
+ */
+function mergeSessions(held: SessionMetaDto[], incoming: SessionMetaDto[]): SessionMetaDto[] {
+  const byId = new Map(held.map(s => [s.id, s]));
+  for (const session of incoming) byId.set(session.id, session);
+  return sortSessions([...byId.values()]);
 }
 
 /**
@@ -166,7 +190,19 @@ export function SessionProvider({ children }: SessionProviderProps) {
   const bg = location.state?.backgroundLocation;
   const currentSessionId = parseSessionIdFromPath(bg?.pathname ?? location.pathname);
 
+
   const [sessions, setSessions] = useState<SessionMetaDto[]>([]);
+  /**
+   * The open session's id, for the list refresh to read without depending on it.
+   *
+   * A refresh replaces every row, which would drop the row the open session
+   * carried in when it ranks past the fetched page (#434) — so the refresh has
+   * to know which row to keep. Held in a ref because putting `currentSessionId`
+   * in `loadSessions`'s dependencies would rebuild the callback on every session
+   * change and re-fire the effects that list on it.
+   */
+  const currentSessionIdRef = useRef<string | null>(currentSessionId);
+  currentSessionIdRef.current = currentSessionId;
   /**
    * Where the next page continues from, or null when the list is complete.
    *
@@ -355,7 +391,19 @@ export function SessionProvider({ children }: SessionProviderProps) {
       const result = await api.sessions.index(rootDir, includeNested, {
         limit: SESSION_PAGE_SIZE,
       });
-      setSessions(sortSessions(result.sessions));
+      // A refresh replaces the rows — except the open session's. That row can
+      // only have come from the session carrying it in (#434), because the
+      // fetched page does not reach far enough to hold it; dropping it would
+      // put the header back on its generic label the next time anything asks
+      // for the list. Kept only while that session is still the open one, so a
+      // row cannot outlive the reason it is here.
+      const openSessionId = currentSessionIdRef.current;
+      setSessions(prev => {
+        const fresh = sortSessions(result.sessions);
+        if (!openSessionId || fresh.some(s => s.id === openSessionId)) return fresh;
+        const openRow = prev.find(s => s.id === openSessionId);
+        return openRow ? mergeSessions(fresh, [openRow]) : fresh;
+      });
       setNextSessionOffset(result.hasMore ? result.nextOffset : null);
       setScopeDirCount(result.scopeDirCount);
       setSessionsServiceError(result.serviceError ?? null);
@@ -388,9 +436,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
         offset: nextSessionOffset,
         limit,
       });
-      // Concatenate before sorting: a page is newest-first within itself but
-      // the ranges only line up once they are merged.
-      setSessions(prev => sortSessions([...prev, ...result.sessions]));
+      // Merged rather than concatenated: a page is newest-first within itself
+      // but the ranges only line up once they are put together, and a row the
+      // list already holds must not appear twice.
+      setSessions(prev => mergeSessions(prev, result.sessions));
       setNextSessionOffset(result.hasMore ? result.nextOffset : null);
     } catch (error) {
       console.error('[SessionContext] Failed to load more sessions:', error);
@@ -399,6 +448,26 @@ export function SessionProvider({ children }: SessionProviderProps) {
       setIsLoading(false);
     }
   }, [isConnected, api.sessions, rootDir, includeNested, settingsPending, nextSessionOffset]);
+
+  /**
+   * Put the row for one session into the list.
+   *
+   * The list arrives one page at a time, so the session being opened can be
+   * absent from every row the webview holds — and everything read off a row
+   * (the header title, the directory a switch navigates to) then falls back or
+   * fails for a session that opens perfectly well. The backend sends that
+   * session's own row with SESSION_LOADED, and this puts it where the rest of
+   * the app already looks instead of adding a second place to look. See #434.
+   *
+   * Takes the row as the backend sent it and runs the same DTO conversion the
+   * list does, so a merged row and a listed row cannot describe the same
+   * session differently.
+   */
+  const mergeSession = useCallback((raw: unknown) => {
+    if (!raw || typeof raw !== 'object') return;
+    const session = plainToInstance(SessionMetaDto, raw);
+    setSessions(prev => mergeSessions(prev, [session]));
+  }, []);
 
   const loadMoreSessions = useCallback(
     () => appendSessions(SESSION_PAGE_SIZE),
@@ -570,6 +639,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     loadSessions,
     loadMoreSessions,
     loadAllSessions,
+    mergeSession,
     hasMoreSessions: nextSessionOffset !== null,
     scopeDirCount,
     resetToNewSession,

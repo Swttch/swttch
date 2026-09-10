@@ -52,6 +52,7 @@ describe('loadAndSendSession', () => {
       total: 100,
       activeChain: fullChain,
       lastReportedMode: null,
+      sessionMissing: false,
     });
     mockReconstruct.mockResolvedValue([]);
   });
@@ -87,6 +88,33 @@ describe('loadAndSendSession', () => {
     // Must receive the whole chain (u1 + u99), not the latest page (u99 only) —
     // otherwise workflows older than the page are dropped on reload.
     expect(mockReconstruct.mock.calls[0][0]).toEqual(fullChain);
+  });
+
+  // #433: the webview leaves a session URL on this flag, so it has to survive the
+  // trip. A payload that drops it reads as "present" and the redirect never fires.
+  it('carries sessionMissing through to the webview', async () => {
+    mockLoad.mockResolvedValue({
+      messages: [],
+      hasMore: false,
+      total: 0,
+      activeChain: [],
+      lastReportedMode: null,
+      sessionMissing: true,
+    });
+
+    const { conn, sent } = makeConnections();
+    await loadAndSendSession('conn-1', conn, '/work', 'gone', {});
+
+    const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
+    expect(loaded?.payload).toMatchObject({ sessionId: 'gone', sessionMissing: true });
+  });
+
+  it('reports a session that loaded as present', async () => {
+    const { conn, sent } = makeConnections();
+    await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {});
+
+    const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
+    expect(loaded?.payload).toMatchObject({ sessionMissing: false });
   });
 
   it('marks prepend=true and skips workflow reconstruction for an older page', async () => {
