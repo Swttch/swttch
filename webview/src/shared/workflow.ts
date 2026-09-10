@@ -1,4 +1,4 @@
-// Shared dynamic-workflow types. MUST stay 1:1 with webview/src/shared/workflow.ts
+// Shared dynamic-workflow types. MUST stay 1:1 with backend/src/shared/workflow.ts
 // (see CLAUDE.md). Payload of MessageType.WORKFLOW_PROGRESS (backend → webview).
 
 export type WorkflowStatus = 'running' | 'completed' | 'failed' | 'stopped';
@@ -10,19 +10,65 @@ export interface WorkflowPhase {
 }
 
 /**
- * One subagent of a workflow. Stats are computed by the backend from the agent
- * transcript files; `label` is best-effort (derived from the agent's result) as
- * the runtime does not persist the script-supplied label.
+ * One subagent of a workflow, carried through **verbatim**: this is the CLI's
+ * own `task_progress.workflow_progress[]` entry, under the CLI's own field
+ * names, with nothing dropped or renamed on the way to the webview (see the
+ * original-data-preservation rule in CLAUDE.md).
+ *
+ * Every field is optional because the CLI fills them in as the agent
+ * progresses, not because they are unreliable. A first delta carries only
+ * `type`/`index`/`title`; `label`, `model` and `promptPreview` arrive with
+ * `state: 'start'`; `agentId`, `startedAt` and `attempt` once a slot is
+ * actually running; `tokens`/`toolCalls` at `state: 'progress'`; `error` and
+ * `durationMs` only at the end. So an absent field means "not yet", never
+ * "none" — do not render an absence as a value.
+ *
+ * The backend merges successive deltas per slot, so what reaches the webview
+ * is the union of everything seen so far for that agent.
  */
 export interface WorkflowAgent {
-  agentId: string;
-  label: string;
-  /** `done` = finished successfully; `stopped` = cut off when the workflow was
-   *  interrupted (never settle an unfinished agent to `done`). */
-  status: 'running' | 'done' | 'stopped';
-  tokens: number;
-  tools: number;
-  durationMs: number;
+  /** Always `'workflow_agent'` on real agent entries. */
+  type?: string;
+  /** Global slot number, stable across retries (the backend's merge key). */
+  index?: number;
+  /** Set on phase-header entries, which carry no agent identity. */
+  title?: string;
+  /** The name the workflow script passed as `label`. */
+  label?: string;
+  phaseIndex?: number;
+  phaseTitle?: string;
+  /** Runtime instance id; changes when a slot is retried. */
+  agentId?: string;
+  /** e.g. `claude-haiku-4-5-20251001`. */
+  model?: string;
+  /** CLI's own lifecycle value: `start`, `progress`, `error`, `done`, … */
+  state?: string;
+  queuedAt?: number;
+  startedAt?: number;
+  lastProgressAt?: number;
+  /** Retry counter, 1 on the first run. */
+  attempt?: number;
+  /** Opening of the prompt this agent was given. */
+  promptPreview?: string;
+  tokens?: number;
+  toolCalls?: number;
+  durationMs?: number;
+  error?: unknown;
+  /** Opening of what the agent returned. Arrives only once it has finished. */
+  resultPreview?: string;
+  /** The agent's return value as journal.jsonl recorded it (reload path only). */
+  result?: unknown;
+
+  /**
+   * True when this agent was rebuilt from disk after a reload rather than seen
+   * live. The CLI persists none of the fields above, so a rebuilt agent has
+   * only `agentId` plus figures the backend recomputed from the transcript;
+   * `label`, `model` and the rest are genuinely unknown, not empty.
+   */
+  reconstructed?: boolean;
+
+  /** Anything the CLI starts sending that this interface has not caught up to. */
+  [key: string]: unknown;
 }
 
 /** Aggregate usage, populated from the final `<task-notification>` `<usage>`. */

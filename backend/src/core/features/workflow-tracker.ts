@@ -6,17 +6,23 @@
  *
  * 1. LIVE — the CLI stdout stream emits rich `{type:'system', subtype:'task_*'}`
  *    events: `task_started` (id, name, script), `task_progress` (a
- *    `workflow_progress[]` array of per-agent objects with label, phase, state,
- *    tokens, toolCalls, durationMs) and `task_notification` (final status,
- *    output_file, usage). We translate these straight into a {@link WorkflowTask}
- *    and broadcast WORKFLOW_PROGRESS. These system events are NOT persisted.
+ *    `workflow_progress[]` array of per-agent objects carrying label, model,
+ *    phase, state, promptPreview, attempt, tokens, toolCalls, durationMs and
+ *    error) and `task_notification` (final status, output_file, usage). Each
+ *    per-agent object is merged into {@link WorkflowTask} and broadcast on
+ *    WORKFLOW_PROGRESS **as the CLI sent it**, field names and all.
  *
  * 2. RELOAD — {@link reconstructWorkflowTasks} rebuilds finished workflows from
  *    the persisted transcript (Workflow tool_use + immediate tool_result + the
  *    `<task-notification>` user message) plus the on-disk runtime files
- *    (`journal.jsonl` + per-agent `agent-<id>.jsonl`). Here agent labels are
- *    best-effort (derived from results) and tokens are approximated, since the
- *    structured live events aren't available.
+ *    (`journal.jsonl` + per-agent `agent-<id>.jsonl`).
+ *
+ * The two are not equivalent, and the gap is the CLI's: the `task_*` events are
+ * never persisted, and the runtime files record only `agentId` and `result`. So
+ * a reloaded agent genuinely has no label, model or promptPreview to give, and
+ * its tokens are recomputed from the transcript rather than reported. Rebuilt
+ * agents are flagged `reconstructed` and leave the unknown fields absent, so
+ * nothing downstream mistakes a stand-in for something the CLI said.
  */
 
 import { join } from 'path';
@@ -30,9 +36,7 @@ import type {
   WorkflowStatus,
 } from '../../shared';
 import { readJsonlEntries } from './readJsonlEntries';
-
-/** Live agent `state` values that count as finished. */
-const AGENT_DONE_STATES = new Set(['done', 'completed', 'success']);
+import { loadWorkflowAgentSnapshot, saveWorkflowAgentSnapshot } from './workflowAgentSnapshot';
 
 interface WatchEntry {
   sessionId: string;
@@ -217,20 +221,22 @@ async function computeAgentStats(file: string): Promise<AgentStats> {
   return { tokens, tools, durationMs };
 }
 
-/** Derive a display label from an agent's journal result (best-effort). */
-function deriveLabel(result: unknown, agentId: string): string {
-  if (result && typeof result === 'object') {
-    const topic = (result as Record<string, unknown>)['topic'];
-    if (typeof topic === 'string' && topic.trim()) return topic.trim();
-  }
-  return agentId.slice(0, 8);
-}
-
 /**
  * Aggregate per-agent progress for a workflow by reading its journal + agent
- * transcripts. Shared by the live poller and the historical reconstruction.
+ * transcripts, used when rebuilding a workflow after a reload.
+ *
+ * Prefers the snapshot this backend wrote while the workflow was streaming: it
+ * holds the CLI's own entries, so a reloaded workflow shows the same agent
+ * names, models and prompts the live one did. Only a workflow that streamed
+ * before snapshots existed — or on another machine — falls through to what the
+ * runtime files alone can tell us, which is far less.
  */
 async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> {
+  const workflowId = transcriptDir.split(/[\\/]/).pop();
+  if (workflowId) {
+    const snapshot = await loadWorkflowAgentSnapshot(workflowId);
+    if (snapshot) return snapshot;
+  }
   if (!existsSync(transcriptDir)) return [];
   const journalPath = join(transcriptDir, 'journal.jsonl');
   if (!existsSync(journalPath)) return [];
@@ -257,13 +263,25 @@ async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> 
   const agents: WorkflowAgent[] = [];
   for (const agentId of order) {
     const stats = await computeAgentStats(join(transcriptDir, `agent-${agentId}.jsonl`));
+    // Only what the runtime files actually record. The CLI persists none of the
+    // live fields (no label, model, promptPreview or attempt anywhere on disk —
+    // journal.jsonl holds `type`/`key`/`agentId`/`result` and nothing else), so
+    // they stay absent rather than being filled with a stand-in. A made-up
+    // value would be indistinguishable from one the CLI sent; `reconstructed`
+    // is what lets the webview tell the reader which of the two it is looking
+    // at, and `state` carries the one lifecycle fact the journal does record.
     agents.push({
       agentId,
-      label: deriveLabel(results.get(agentId), agentId),
-      status: results.has(agentId) ? 'done' : 'running',
+      state: results.has(agentId) ? 'done' : undefined,
+      // The agent's return value, as journal.jsonl recorded it. It is the one
+      // per-agent payload the CLI does persist, so it travels on untouched;
+      // what a workflow puts in there is its own business, and the webview is
+      // where any of it gets turned into something to look at.
+      result: results.get(agentId),
       tokens: stats.tokens,
-      tools: stats.tools,
+      toolCalls: stats.tools,
       durationMs: stats.durationMs,
+      reconstructed: true,
     });
   }
   return agents;
@@ -284,18 +302,6 @@ function applyNotification(task: WorkflowTask, text: string): void {
     toolUses: toInt(parseXmlTag(usageBlock, 'tool_uses')),
     durationMs: toInt(parseXmlTag(usageBlock, 'duration_ms')),
   };
-}
-
-/**
- * Settle still-running agents to match a terminal workflow status: a `completed`
- * workflow finished them (→ `done`, green); a `stopped`/`failed` one cut them off
- * (→ `stopped`, grey). Never paint an interrupted agent as a success. No-op while
- * the workflow is still running.
- */
-function settleAgents(agents: WorkflowAgent[], status: WorkflowStatus): void {
-  if (status === 'running') return;
-  const settled = status === 'completed' ? 'done' : 'stopped';
-  for (const a of agents) if (a.status === 'running') a.status = settled;
 }
 
 function eventTimestamp(event: Record<string, unknown>): number {
@@ -383,10 +389,6 @@ export async function reconstructWorkflowTasks(
     if (task.transcriptDir) {
       task.agents = await aggregateAgents(task.transcriptDir);
     }
-    // A terminal workflow has no running agents — settle any the journal left
-    // open (no `result` recorded) so a finished card doesn't show pulsing
-    // "running" dots after reload. Interrupted agents go grey, not green.
-    settleAgents(task.agents, task.status);
   }
 
   return [...tasks.values()];
@@ -482,23 +484,19 @@ export class WorkflowProgressTracker {
       for (const raw of wp) {
         if (!raw || typeof raw !== 'object') continue;
         const a = raw as Record<string, unknown>;
-        const agentId0 = str(a['agentId']);
-        const label0 = str(a['label']);
         // Skip pure placeholder deltas with no identity yet (no id and no label).
-        if (!agentId0 && !label0) continue;
+        if (!str(a['agentId']) && !str(a['label'])) continue;
         const index = num(a['index']);
         const slot = String(index);
         const prev = entry.agents.get(slot)?.agent;
-        const state = str(a['state']);
-        const agentId = agentId0 ?? prev?.agentId ?? slot;
-        const agent: WorkflowAgent = {
-          agentId,
-          label: label0 ?? prev?.label ?? agentId.slice(0, 8),
-          status: state ? (AGENT_DONE_STATES.has(state) ? 'done' : 'running') : (prev?.status ?? 'running'),
-          tokens: a['tokens'] != null ? num(a['tokens']) : (prev?.tokens ?? 0),
-          tools: a['toolCalls'] != null ? num(a['toolCalls']) : (prev?.tools ?? 0),
-          durationMs: a['durationMs'] != null ? num(a['durationMs']) : (prev?.durationMs ?? 0),
-        };
+        // Spread the CLI's entry as-is: every field it sends reaches the webview
+        // under the CLI's own name, including ones nothing renders yet (model,
+        // promptPreview, attempt, error…). Deltas are partial, so merging over
+        // the previous state is what keeps earlier fields alive — but the merge
+        // must never invent or rename a field (CLAUDE.md: no renaming, no
+        // dropping). `agentId` is the one value the webview needs as a key, so
+        // it falls back to the slot while the CLI has not assigned one yet.
+        const agent: WorkflowAgent = { ...prev, ...a, agentId: str(a['agentId']) ?? prev?.agentId ?? slot };
         entry.agents.set(slot, { order: index, agent });
       }
       t.agents = [...entry.agents.values()].sort((x, y) => x.order - y.order).map((v) => v.agent);
@@ -526,9 +524,6 @@ export class WorkflowProgressTracker {
 
     const status = typeof event['status'] === 'string' ? (event['status'] as WorkflowStatus) : undefined;
     t.status = status ?? 'completed';
-    // Settle stragglers whose final delta we missed: a completed workflow
-    // finished them (green); a stopped/failed one cut them off (grey).
-    settleAgents(t.agents, t.status);
     if (typeof event['summary'] === 'string') t.summary = event['summary'] as string;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
 
@@ -558,6 +553,17 @@ export class WorkflowProgressTracker {
     };
     t.endedAt = Date.now();
     this.broadcast(entry);
+    this.snapshotAgents(t);
+  }
+
+  /**
+   * Write down the CLI's per-agent entries now that the workflow is over and
+   * they carry everything it ever reported. Nothing persists them otherwise, so
+   * this is what lets a reopened tab show agent names instead of ids.
+   */
+  private snapshotAgents(task: WorkflowTask): void {
+    if (!task.workflowId || task.agents.length === 0) return;
+    void saveWorkflowAgentSnapshot(task.workflowId, task.agents);
   }
 
   /**
@@ -658,9 +664,11 @@ export class WorkflowProgressTracker {
     const t = entry.task;
     t.status = 'stopped';
     t.endedAt = Date.now();
-    settleAgents(t.agents, t.status);
     t.usage = { ...t.usage, durationMs: t.usage?.durationMs ?? t.endedAt - t.startedAt };
     this.broadcast(entry);
+    // An interrupted workflow is just as worth naming on reload as a finished
+    // one — arguably more, since the reader is probably coming back to it.
+    this.snapshotAgents(t);
   }
 
   /**

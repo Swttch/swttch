@@ -5,7 +5,14 @@ import type { WorkflowNotification } from '@/dto/message/ContentBlockDto';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
-import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
+import {
+    agentDisplayName,
+    agentDisplayStatus,
+    agentDotClass,
+    formatDuration,
+    formatTokens,
+    WORKFLOW_STATUS_COLOR,
+} from '@/utils/workflowFormat';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { RendererProps, ToolHeader, ToolWrapper, toolResultText } from './common';
 
@@ -126,11 +133,16 @@ export function WorkflowRenderer(props: RendererProps) {
                     {/* Per-agent progress dots */}
                     {showDots && (
                         <div className="px-3 pb-2 flex flex-wrap gap-1">
-                            {agents.map((a) => (
+                            {agents.map((a, i) => (
                                 <span
-                                    key={a.agentId}
-                                    title={a.label}
-                                    className={`inline-block w-1.5 h-1.5 rounded-full ${agentDotClass(a.status)}`}
+                                    key={a.agentId ?? a.index ?? i}
+                                    title={agentDisplayName(a)}
+                                    className={`inline-block w-1.5 h-1.5 rounded-full ${agentDotClass(
+                                        // These dots only render from `live`, so its status is
+                                        // the one that settles them (the notification's is a
+                                        // plain string and may lag a live stop).
+                                        agentDisplayStatus(a.state, live?.status ?? 'running'),
+                                    )}`}
                                 />
                             ))}
                         </div>

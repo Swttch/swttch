@@ -116,7 +116,7 @@ export function AgentTranscriptModal(props: Props) {
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="relative w-full max-w-2xl" style={{ height: `calc(60vh + ${heightOffset}px)` }}>
+        <div className="relative w-full max-w-3xl" style={{ height: `calc(60vh + ${heightOffset}px)` }}>
           <div
             ref={dialogRef}
             tabIndex={-1}
@@ -138,9 +138,14 @@ export function AgentTranscriptModal(props: Props) {
             {/* Everything the panel card's summary shows (status, agents/tokens/
                 time, description, phases) must also be here — the modal is the
                 detail view, so it must never carry less information than the
-                summary card it was opened from. */}
+                summary card it was opened from.
+
+                Phases are the exception, and only because the picker below now
+                carries them: it groups the agents under their phase and counts
+                them, which says strictly more than the header's flat list did.
+                Listing them in both places just read as the same thing twice. */}
             <div className="px-4 pb-3 flex-shrink-0 border-b border-border-subtle">
-              <WorkflowTaskSummary task={task} now={now} showPhases={isBashTask || isAgentTask ? false : true} />
+              <WorkflowTaskSummary task={task} now={now} showPhases={false} />
               {isRunning && (
                 <button
                   onClick={() => cancelTask(task)}
@@ -157,12 +162,40 @@ export function AgentTranscriptModal(props: Props) {
             ) : isAgentTask ? (
               <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
             ) : (
-              <>
+              /* Picker beside the transcript rather than above it (issue #425).
+                 Stacked, the two shared one column of height, so a workflow with
+                 many agents grew the picker until the transcript was left with
+                 ~30px. Side by side, the picker is bounded by the modal's height
+                 and the transcript's height no longer depends on how many agents
+                 the workflow spawned. Below `sm` the modal is too narrow for two
+                 columns, so `flex-col` puts the picker back on top; see
+                 AgentTabList for the row-with-sideways-scroll shape it takes
+                 there.
+
+                 Which column gives way when the modal narrows is decided by
+                 which one holds `flex-1`, because that is the one sized from
+                 what is left over. From `sm` up the transcript claims a width
+                 of its own (`w-full` capped at `max-w-xl`) and the picker holds
+                 `flex-1`, so the picker is what shrinks. `flex-initial` keeps
+                 the transcript shrinkable for after the picker has bottomed out
+                 at its `min-w`. */
+              <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
                 {task.agents.length > 0 && (
-                  <AgentTabList agents={task.agents} selectedAgentId={selectedAgentId} onSelect={setSelectedAgentId} />
+                  <AgentTabList
+                    agents={task.agents}
+                    taskStatus={task.status}
+                    selectedAgentId={selectedAgentId}
+                    onSelect={setSelectedAgentId}
+                  />
                 )}
-                <AgentTranscriptBody transcriptDir={task.transcriptDir} agent={selectedAgent} />
-              </>
+                <div className="flex flex-1 min-h-0 min-w-0 sm:flex-initial sm:w-full sm:max-w-xl">
+                  <AgentTranscriptBody
+                    transcriptDir={task.transcriptDir}
+                    agent={selectedAgent}
+                    taskStatus={task.status}
+                  />
+                </div>
+              </div>
             )}
           </div>
 

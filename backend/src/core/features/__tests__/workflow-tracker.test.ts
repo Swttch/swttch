@@ -1,12 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+// Finishing a workflow now writes its agents under os.homedir() so their names
+// survive a reload. Point that at the same throwaway dir these tests already
+// use, or the suite would leave files in the developer's real home.
+let dir: string;
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
+  return { ...actual, homedir: () => dir };
+});
+
 import { reconstructWorkflowTasks, WorkflowProgressTracker } from '../workflow-tracker';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { WorkflowTask } from '../../../shared';
 
-let dir: string;
 let transcriptDir: string;
 
 beforeAll(() => {
@@ -111,16 +120,26 @@ describe('reconstructWorkflowTasks', () => {
     // agents aggregated from transcript files
     expect(t.agents).toHaveLength(2);
     const a1 = t.agents.find((a) => a.agentId === 'a1')!;
-    expect(a1.status).toBe('done');
-    expect(a1.label).toBe('океан'); // derived from journal result.topic
+    expect(a1.state).toBe('done'); // the journal recorded a result for a1
+    expect(a1.result).toEqual({ topic: 'океан', fact: '…' }); // carried through verbatim
     expect(a1.tokens).toBe(15781 + 18515 + 50000 + 244); // input + cache_creation + cache_read + output
-    expect(a1.tools).toBe(1);
+    expect(a1.toolCalls).toBe(1);
     expect(a1.durationMs).toBe(7000);
+    expect(a1.reconstructed).toBe(true);
 
-    // a2 has no journal result, but the workflow is completed (terminal), so it
-    // is settled to done — a finished card must not show pulsing running dots.
+    // Nothing on disk records the live fields, so a rebuilt agent must leave
+    // them absent rather than invent stand-ins. `label` in particular used to
+    // be filled with the result's `topic` or a slice of the id, which made a
+    // guess indistinguishable from something the CLI actually said.
+    expect(a1.label).toBeUndefined();
+    expect(a1.model).toBeUndefined();
+    expect(a1.promptPreview).toBeUndefined();
+
+    // a2 has no journal result, so its state is simply unknown here. Settling
+    // that against the workflow's own terminal status is the webview's call
+    // (see agentDisplayStatus) — the backend does not overwrite it.
     const a2 = t.agents.find((a) => a.agentId === 'a2')!;
-    expect(a2.status).toBe('done');
+    expect(a2.state).toBeUndefined();
   });
 
   it('returns [] when there is no Workflow tool_use', async () => {
@@ -154,17 +173,18 @@ describe('reconstructWorkflowTasks', () => {
     const tasks = await reconstructWorkflowTasks(messagesWithoutNotification(), () => false);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].status).toBe('stopped');
-    // No agent stays running, but an interrupted one (a2, no journal result)
-    // goes grey 'stopped' — never green 'done'. a1 finished, so it stays done.
-    expect(tasks[0].agents.some((a) => a.status === 'running')).toBe(false);
-    expect(tasks[0].agents.find((a) => a.agentId === 'a1')!.status).toBe('done');
-    expect(tasks[0].agents.find((a) => a.agentId === 'a2')!.status).toBe('stopped');
+    // The workflow's own status settles, but the agents' `state` is the CLI's
+    // field and stays exactly as the journal left it: a1 has a result, a2 has
+    // none. Painting a2 as interrupted is display work the webview does from
+    // this pair of facts, so the backend must not bake it in here.
+    expect(tasks[0].agents.find((a) => a.agentId === 'a1')!.state).toBe('done');
+    expect(tasks[0].agents.find((a) => a.agentId === 'a2')!.state).toBeUndefined();
   });
 
-  it('keeps a live workflow\'s unfinished agents running', async () => {
+  it('leaves agent state untouched for a live workflow too', async () => {
     const tasks = await reconstructWorkflowTasks(messagesWithoutNotification(), () => true);
     expect(tasks[0].status).toBe('running');
-    expect(tasks[0].agents.some((a) => a.status === 'running')).toBe(true);
+    expect(tasks[0].agents.find((a) => a.agentId === 'a2')!.state).toBeUndefined();
   });
 
   it('keeps a notification-less workflow running when it is still live', async () => {
@@ -198,6 +218,132 @@ describe('WorkflowProgressTracker stop handling', () => {
     task_id: 'w1',
     workflow_name: 'demo-flow',
   };
+
+  // The per-agent entry the CLI puts in `workflow_progress[]`, captured verbatim
+  // from a real `claude -p --output-format stream-json` run. Every field here
+  // has to reach the webview under this exact name: the backend is a courier,
+  // not an editor (CLAUDE.md's original-data rule). It used to keep six of these
+  // and drop the rest, which is why nothing could show which model ran an agent.
+  const liveAgentEntry = {
+    type: 'workflow_agent',
+    index: 2,
+    label: 'probe:agent-1',
+    phaseIndex: 1,
+    phaseTitle: 'Probe',
+    agentId: 'aaff59243a072b430',
+    model: 'claude-haiku-4-5-20251001',
+    state: 'progress',
+    startedAt: 1789038911212,
+    queuedAt: 1789038911210,
+    attempt: 1,
+    promptPreview: 'Reply with exactly the number 1.',
+    lastProgressAt: 1789038912162,
+    tokens: 1234,
+    toolCalls: 2,
+  };
+
+  it('carries every field of a live agent entry through to the webview', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_1',
+      workflow_progress: [liveAgentEntry],
+    });
+
+    expect(last().agents).toHaveLength(1);
+    expect(last().agents[0]).toMatchObject(liveAgentEntry);
+  });
+
+  it('keeps a field an earlier delta established when a later one omits it', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_1',
+      workflow_progress: [liveAgentEntry],
+    });
+    // A later delta for the same slot reports only what changed. Merging is what
+    // keeps `label`/`model`/`promptPreview` alive; without it the agent would
+    // lose its name the moment it finished.
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_1',
+      workflow_progress: [{ type: 'workflow_agent', index: 2, agentId: 'aaff59243a072b430', state: 'error', error: 'boom', durationMs: 950 }],
+    });
+
+    const agent = last().agents[0];
+    expect(agent.label).toBe('probe:agent-1');
+    expect(agent.model).toBe('claude-haiku-4-5-20251001');
+    expect(agent.promptPreview).toBe('Reply with exactly the number 1.');
+    expect(agent.state).toBe('error');
+    expect(agent.error).toBe('boom');
+    expect(agent.durationMs).toBe(950);
+  });
+
+  // The whole reason for snapshotting: the CLI reports an agent's label, model
+  // and promptPreview only on the live stream and persists none of it, so
+  // reopening a finished workflow used to show a column of raw ids. What we saw
+  // while it streamed is written down at the end, and the reload path hands
+  // back those same entries.
+  it('replays the live agent entries after a reload instead of rebuilding ids', async () => {
+    const { tracker } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    // The immediate tool_result is what tells the live task its transcript dir,
+    // and its basename is the id the snapshot is filed under.
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_1',
+            content: `Task ID: w1\nTranscript dir: ${transcriptDir}`,
+          },
+        ],
+      },
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_1',
+      workflow_progress: [{ ...liveAgentEntry, agentId: 'a1' }],
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      tool_use_id: 'toolu_1',
+      status: 'completed',
+    });
+
+    // Snapshot writes are fire-and-forget, so let the microtask queue drain.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const [rebuilt] = await reconstructWorkflowTasks(messages());
+    const a1 = rebuilt.agents.find((a) => a.agentId === 'a1')!;
+    expect(a1.label).toBe('probe:agent-1');
+    expect(a1.model).toBe('claude-haiku-4-5-20251001');
+    expect(a1.promptPreview).toBe('Reply with exactly the number 1.');
+    // It is the live entry, not a reconstruction, so it carries no such flag.
+    expect(a1.reconstructed).toBeUndefined();
+  });
+
+  it('passes through a field this codebase has never heard of', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', startedEvent);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_1',
+      workflow_progress: [{ ...liveAgentEntry, somethingNewTheCliAdded: 'keep me' }],
+    });
+
+    expect(last().agents[0]['somethingNewTheCliAdded']).toBe('keep me');
+  });
 
   it('settles a running workflow as stopped on interrupt (stopRunning) and broadcasts it', () => {
     const { tracker, last } = makeTracker();

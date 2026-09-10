@@ -1,6 +1,13 @@
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
-import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
+import {
+    agentDisplayName,
+    agentDisplayStatus,
+    agentDotClass,
+    formatDuration,
+    formatTokens,
+    WORKFLOW_STATUS_COLOR,
+} from '@/utils/workflowFormat';
 
 interface Props {
     task: WorkflowTask;
@@ -107,16 +114,18 @@ export function WorkflowAgentsTable(props: { task: WorkflowTask }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {task.agents.map((a) => (
-                        <tr key={a.agentId} className="text-text-primary/75">
-                            <td className="py-0.5 pe-2 max-w-[10rem] truncate">
+                    {task.agents.map((a, i) => (
+                        <tr key={a.agentId ?? a.index ?? i} className="text-text-primary/75">
+                            <td className="py-0.5 pe-2 max-w-[10rem] truncate" title={a.model}>
                                 <span
-                                    className={`inline-block w-1.5 h-1.5 rounded-full me-1.5 align-middle ${agentDotClass(a.status)}`}
+                                    className={`inline-block w-1.5 h-1.5 rounded-full me-1.5 align-middle ${agentDotClass(
+                                        agentDisplayStatus(a.state, task.status),
+                                    )}`}
                                 />
-                                {a.label}
+                                {agentDisplayName(a)}
                             </td>
                             <td className="py-0.5 px-2 text-end">{formatTokens(a.tokens) ?? '0'}</td>
-                            <td className="py-0.5 px-2 text-end">{a.tools}</td>
+                            <td className="py-0.5 px-2 text-end">{a.toolCalls ?? 0}</td>
                             <td className="py-0.5 ps-2 text-end">{formatDuration(a.durationMs) ?? '—'}</td>
                         </tr>
                     ))}

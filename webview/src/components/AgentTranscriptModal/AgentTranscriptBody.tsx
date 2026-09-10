@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowPathIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
-import type { WorkflowAgent } from '@/shared';
+import type { WorkflowAgent, WorkflowStatus } from '@/shared';
+import { agentDisplayStatus } from '@/utils/workflowFormat';
 import { useAgentTranscript } from '@/hooks/useAgentTranscript';
 import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
@@ -12,18 +13,21 @@ import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
 interface Props {
   transcriptDir: string | undefined;
   agent: WorkflowAgent | undefined;
+  taskStatus: WorkflowStatus;
 }
 
 /** How close to the bottom (px) counts as "already at the bottom" for auto-scroll. */
 const BOTTOM_THRESHOLD_PX = 24;
 
 export function AgentTranscriptBody(props: Props) {
-  const { transcriptDir, agent } = props;
+  const { transcriptDir, agent, taskStatus } = props;
   const { t } = useTranslation('chat');
 
   // Changes whenever the agent's live stats change, so a running agent's
   // transcript refetches as WORKFLOW_PROGRESS updates arrive (see useAgentTranscript).
-  const fingerprint = agent ? `${agent.tokens}:${agent.tools}:${Math.floor(agent.durationMs / 2000)}` : undefined;
+  const fingerprint = agent
+    ? `${agent.tokens ?? 0}:${agent.toolCalls ?? 0}:${Math.floor((agent.durationMs ?? 0) / 2000)}`
+    : undefined;
 
   const { data, isPending, isError } = useAgentTranscript(transcriptDir, agent?.agentId, fingerprint);
 
@@ -102,7 +106,7 @@ export function AgentTranscriptBody(props: Props) {
         ))}
         {/* Same cue the main chat shows below the latest bubble for the whole
             span of a turn — here, the whole span of this agent still running. */}
-        {agent.status === 'running' && <StreamingIndicator />}
+        {agentDisplayStatus(agent.state, taskStatus) === 'running' && <StreamingIndicator />}
       </div>
 
       {showJumpToBottom && (
