@@ -2,7 +2,13 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { randomUUID } from 'crypto';
-import { MessageType, ScheduledMessageKind, ErrorCode, type ScheduledMessage } from '../../shared';
+import {
+  MessageType,
+  ScheduledMessageKind,
+  ErrorCode,
+  SponsorGate,
+  type ScheduledMessage,
+} from '../../shared';
 import {
   scheduleMessage,
   cancelSchedule,
@@ -21,6 +27,18 @@ import { getSponsorStatus } from '../features/license';
  *
  * ACK/requestId conventions follow the other request handlers (e.g. getUsage.ts).
  */
+
+/**
+ * Which feature a refused reservation was being made for.
+ *
+ * One handler serves two paid features, so a bare SPONSOR_REQUIRED would arrive
+ * at the webview's error interceptor with no way to tell them apart, and both
+ * would be measured as one. The refusal names the gate so the toast it triggers
+ * can be attributed to the feature that actually raised it.
+ */
+function gateForKind(kind: ScheduledMessageKind): SponsorGate {
+  return kind === ScheduledMessageKind.AUTO_RESUME ? SponsorGate.AutoResume : SponsorGate.Schedule;
+}
 
 /** SCHEDULE_MESSAGE: persist + arm a reservation, then ACK with the created reservation. */
 export async function scheduleMessageHandler(
@@ -55,6 +73,7 @@ export async function scheduleMessageHandler(
       requestId: message.requestId,
       error: 'Sponsor-only feature',
       errorCode: ErrorCode.SPONSOR_REQUIRED,
+      gate: gateForKind(kind),
     });
     return;
   }
@@ -151,6 +170,10 @@ export async function updateScheduledMessageHandler(
     connections.sendTo(connectionId, MessageType.ERROR, {
       requestId: message.requestId,
       error: 'Sponsor-only feature',
+      // An edit carries no kind, but it is only ever reachable from the
+      // schedule-send popover, whose own gate runs first — so anything arriving
+      // here is a direct IPC call against that same feature.
+      gate: SponsorGate.Schedule,
       errorCode: ErrorCode.SPONSOR_REQUIRED,
     });
     return;

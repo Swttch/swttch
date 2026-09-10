@@ -1,7 +1,9 @@
 import toast from 'react-hot-toast';
 import { i18n } from '@/i18n';
 import { Route } from '@/router';
+import { SponsorGateStep, type SponsorGate, type SponsorGateSurface } from '@/shared';
 import { openSettingsAt } from './openSettingsAt';
+import { reportSponsorGate } from './reportSponsorGate';
 
 /**
  * Toast shown when a NON-sponsor clicks a sponsor-gated control. The gated
@@ -12,14 +14,22 @@ import { openSettingsAt } from './openSettingsAt';
  * ("exclusive") wording so it reads as an invitation, not a paywall. The
  * "Learn more" link opens the Sponsor settings page the way the user prefers
  * settings to open (overlay or dedicated tab) — see {@link openSettingsAt}.
+ *
+ * The caller names the gate it is speaking for even though the wording never
+ * does. The copy is generic; the MEASUREMENT cannot be, because each feature
+ * converts at its own rate and one shared count would average that away. The
+ * reports live here rather than at each call site so that no future gated
+ * control can be added without them.
  */
-export function showSponsorGatedToast(): void {
+export function showSponsorGatedToast(gate: SponsorGate, from: SponsorGateSurface): void {
+  reportSponsorGate(gate, SponsorGateStep.Seen, { from });
   toast((t) => (
     <span className="flex items-center gap-3">
       <span>{i18n.t('common:sponsorGated.message')}</span>
       <button
         type="button"
         onClick={() => {
+          reportSponsorGate(gate, SponsorGateStep.Clicked, { from });
           void openSettingsAt(Route.SETTINGS_SPONSOR);
           toast.dismiss(t.id);
         }}

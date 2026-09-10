@@ -8,8 +8,8 @@ import {
 } from '@/components/ImageLightbox/SponsorGateNotice';
 import { useSessionAssetGallery } from '@/hooks/useSessionAssetGallery';
 import { openAssetsModal } from '@/pages/ChatPage/SessionHeader/dock/actions';
-import { AssetActivityKind, AssetScreenSource } from '@/shared';
-import { reportAssetActivity } from '@/utils/reportAssetActivity';
+import { AssetScreenSource, SponsorGate, SponsorGateStep, SponsorGateSurface } from '@/shared';
+import { reportSponsorGate } from '@/utils/reportSponsorGate';
 
 interface ImageAttachmentsProps {
   images: ImageBlockDto[];
@@ -60,7 +60,10 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
     }
     if (lockedCount > 0 && !gateReported.current) {
       gateReported.current = true;
-      reportAssetActivity(AssetActivityKind.GateSeen, { lockedCount });
+      reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Seen, {
+        from: SponsorGateSurface.Viewer,
+        lockedCount,
+      });
     }
   }, [openedIndex, lockedCount]);
 
@@ -107,7 +110,7 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
           // Only when something really is out of reach. At the true end of the
           // session there is nothing to explain, and a sponsor line there would
           // be selling something the user already has.
-          edgeHint={lockedCount > 0 ? <EdgeSponsorHint /> : undefined}
+          edgeHint={lockedCount > 0 ? <EdgeSponsorHint from={SponsorGateSurface.Viewer} /> : undefined}
           onOpenAssets={hasMoreInSession ? showAllAssets : undefined}
         />
       )}

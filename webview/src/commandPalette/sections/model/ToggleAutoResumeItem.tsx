@@ -7,6 +7,7 @@ import { SettingKey } from '@/types/settings';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
+import { SponsorGate, SponsorGateSurface } from '@/shared';
 import { ensureSponsor } from '@/utils/ensureSponsor';
 
 export const AUTO_RESUME_TOGGLE_EVENT = 'auto-resume-toggle';
@@ -44,7 +45,7 @@ const AutoResumeToggle = () => {
   // (ensureSponsor shows the invite toast on failure).
   const apply = async (value: boolean): Promise<void> => {
     if (!currentSessionId) return;
-    if (!(await ensureSponsor())) return;
+    if (!(await ensureSponsor(SponsorGate.AutoResume, SponsorGateSurface.CommandPalette))) return;
     setOverride(currentSessionId, value);
   };
 

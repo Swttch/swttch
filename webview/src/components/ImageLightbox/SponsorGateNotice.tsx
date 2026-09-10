@@ -2,8 +2,8 @@ import React from 'react';
 import { useTranslation } from '@/i18n';
 import { openSettingsAt } from '@/utils/openSettingsAt';
 import { Route } from '@/router';
-import { AssetActivityKind } from '@/shared';
-import { reportAssetActivity } from '@/utils/reportAssetActivity';
+import { SponsorGate, SponsorGateStep, type SponsorGateSurface } from '@/shared';
+import { reportSponsorGate } from '@/utils/reportSponsorGate';
 
 /**
  * The one place the sponsor invitation is written.
@@ -66,7 +66,7 @@ export const MoreInSessionNotice: React.FC<{ count: number; onShowAll: () => voi
  * flowing line). Beside a several-line message the link would float against the
  * middle of it, pointing at nothing.
  */
-export const EdgeSponsorHint: React.FC = () => {
+export const EdgeSponsorHint: React.FC<{ from: SponsorGateSurface }> = ({ from }) => {
   const { t } = useTranslation('chat');
 
   return (
@@ -81,7 +81,7 @@ export const EdgeSponsorHint: React.FC = () => {
     */
     <span className="flex max-w-[170px] flex-col items-start gap-1.5 break-keep">
       <span>{t('assets.sponsorHint')}</span>
-      <LearnMoreButton />
+      <LearnMoreButton from={from} />
     </span>
   );
 };
@@ -93,7 +93,7 @@ export const EdgeSponsorHint: React.FC = () => {
  * of this offer can forget it — the conversion rate is the numerator's only
  * source.
  */
-export function LearnMoreButton() {
+export function LearnMoreButton({ from }: { from: SponsorGateSurface }) {
   const { t: tc } = useTranslation('common');
 
   return (
@@ -101,7 +101,7 @@ export function LearnMoreButton() {
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        reportAssetActivity(AssetActivityKind.GateClicked);
+        reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Clicked, { from });
         void openSettingsAt(Route.SETTINGS_SPONSOR);
       }}
       className="whitespace-nowrap font-medium text-accent-claude transition-opacity hover:opacity-80"

@@ -2,7 +2,7 @@
 
 import type { Connector, ConnectionChangeHandler } from './Connector';
 import { WebSocketConnector } from './WebSocketConnector';
-import { MessageType, ErrorCode } from '@/shared';
+import { MessageType, ErrorCode, SponsorGate, SponsorGateSurface } from '@/shared';
 import { showSponsorGatedToast } from '@/utils/showSponsorGatedToast';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
@@ -230,8 +230,13 @@ export class Bridge {
       // Global sponsor gate: any request the backend rejects because the user
       // isn't a sponsor shows the invite toast here, so individual callers never
       // have to check sponsorship before sending.
-      if ((message.payload as { errorCode?: string } | undefined)?.errorCode === ErrorCode.SPONSOR_REQUIRED) {
-        showSponsorGatedToast();
+      const refusal = message.payload as { errorCode?: string; gate?: SponsorGate } | undefined;
+      if (refusal?.errorCode === ErrorCode.SPONSOR_REQUIRED) {
+        // The refusing handler names the feature, because one handler can serve
+        // several of them and a rate per feature is the whole point. A build
+        // that refuses without naming one is still shown the toast — losing the
+        // offer would be worse than losing its attribution.
+        showSponsorGatedToast(refusal.gate ?? SponsorGate.Schedule, SponsorGateSurface.BackendRefusal);
       }
       const pending = this.pending.get(message.requestId);
       if (pending) {

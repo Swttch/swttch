@@ -7,9 +7,9 @@ import type { ImageBlockDto } from '../../../../../dto/message/ContentBlockDto';
 // grid and which position it opens the viewer on, so the surroundings are
 // stubbed rather than mounted.
 const gallery = vi.fn();
-const reportAssetActivity = vi.fn();
-vi.mock('@/utils/reportAssetActivity', () => ({
-  reportAssetActivity: (...a: unknown[]) => reportAssetActivity(...a),
+const reportSponsorGate = vi.fn();
+vi.mock('@/utils/reportSponsorGate', () => ({
+  reportSponsorGate: (...a: unknown[]) => reportSponsorGate(...a),
 }));
 vi.mock('@/contexts/SessionContext', () => ({ useSessionContext: () => ({ currentSessionId: 's1' }) }));
 vi.mock('@/contexts/WorkingDirContext', () => ({ useWorkingDir: () => ({ workingDirectory: '/w' }) }));
@@ -22,6 +22,7 @@ vi.mock('@/hooks/useSessionAssetGallery', () => ({
     gallery(params),
 }));
 
+import { SponsorGate, SponsorGateStep, SponsorGateSurface } from '@/shared';
 import { ImageAttachments } from '../ImageAttachments';
 
 /** Minimal stand-in for the wire shape; only `source` is read for rendering. */
@@ -45,7 +46,7 @@ function localOnlyGallery(lockedCount = 0, hasMoreInSession = lockedCount > 0) {
 beforeEach(() => {
   cleanup();
   gallery.mockReset();
-  reportAssetActivity.mockReset();
+  reportSponsorGate.mockReset();
   openAssetsModal.mockReset();
   gallery.mockImplementation(localOnlyGallery());
 });
@@ -121,7 +122,9 @@ describe('ImageAttachments', () => {
     fireEvent.click(screen.getByText('Show all'));
 
     expect(openAssetsModal).toHaveBeenCalledWith('viewer');
-    expect(reportAssetActivity).not.toHaveBeenCalledWith('gate_clicked');
+    expect(
+      reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Clicked),
+    ).toHaveLength(0);
     expect(screen.queryByAltText('Full size')).toBeNull();
   });
 
@@ -186,7 +189,10 @@ describe('ImageAttachments', () => {
 
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(reportAssetActivity).toHaveBeenCalledWith('gate_seen', { lockedCount: 24 });
+    expect(reportSponsorGate).toHaveBeenCalledWith(SponsorGate.Assets, SponsorGateStep.Seen, {
+      from: SponsorGateSurface.Viewer,
+      lockedCount: 24,
+    });
   });
 
   it('counts the gate once per opened viewer, even as the locked count settles', () => {
@@ -203,7 +209,7 @@ describe('ImageAttachments', () => {
     gallery.mockImplementation(localOnlyGallery(25));
     rerender(<ImageAttachments images={IMAGES} />);
 
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(1);
+    expect(reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen)).toHaveLength(1);
   });
 
   it('counts the gate again for a fresh open', () => {
@@ -214,7 +220,7 @@ describe('ImageAttachments', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(2);
+    expect(reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen)).toHaveLength(2);
   });
 
   it('does not report a gate to someone with nothing locked', () => {
@@ -223,7 +229,7 @@ describe('ImageAttachments', () => {
 
     fireEvent.click(screen.getByAltText('Image 1'));
 
-    expect(reportAssetActivity.mock.calls.filter((c) => c[0] === 'gate_seen')).toHaveLength(0);
+    expect(reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen)).toHaveLength(0);
   });
 
   it('passes the entry uuid through so the gallery can locate this message', () => {

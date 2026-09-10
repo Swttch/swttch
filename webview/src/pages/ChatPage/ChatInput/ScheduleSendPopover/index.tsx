@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ClockIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { MessageType, ScheduledMessageKind, type ScheduledMessage } from '@/shared';
+import {
+  MessageType,
+  ScheduledMessageKind,
+  SponsorGate,
+  SponsorGateSurface,
+  type ScheduledMessage,
+} from '@/shared';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
@@ -195,7 +201,7 @@ export function ScheduleSendPopover(props: Props) {
     try {
       // Pattern B: scheduling/editing is a frontend action, so verify sponsorship
       // first; ensureSponsor shows the invite toast on failure.
-      if (!(await ensureSponsor())) return;
+      if (!(await ensureSponsor(SponsorGate.Schedule, SponsorGateSurface.SchedulePopover))) return;
 
       if (editReservation) {
         await send(MessageType.UPDATE_SCHEDULED_MESSAGE, {

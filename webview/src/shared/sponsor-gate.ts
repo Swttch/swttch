@@ -35,15 +35,31 @@ export enum SponsorGateStep {
 }
 
 /**
- * The event name one gate step is measured under.
+ * Where the offer was raised from.
  *
- * Both the feature and the step go into the NAME rather than into properties,
- * because Rybbit reports unique users per event name but (as far as we could
- * measure) cannot filter users by a custom property. Every question this funnel
- * asks is about people — how many saw it, how many followed it — and counting
- * hits instead would let one person opening a viewer twenty times read like
- * twenty people.
+ * Unlike the gate itself this rides in PROPERTIES, not in the event name. Which
+ * surface raised the offer is a secondary question, answerable by hits, and
+ * splitting the name by it would force every feature's headcount to be summed
+ * back together from several names — the same trade `consentEventName` makes
+ * with its `source`.
+ *
+ * It still has to be recorded, because one feature's surfaces are not
+ * interchangeable: someone who deliberately flipped the auto-resume toggle in
+ * Settings asked for it, while someone who merely hit a usage limit did not.
  */
-export function sponsorGateEventName(gate: SponsorGate, step: SponsorGateStep): string {
-  return `gate_${gate}_${step}`;
+export enum SponsorGateSurface {
+  /** The image viewer — its edge arrow, or the notice under the thumbnail. */
+  Viewer = 'viewer',
+  /** The Assets screen header. */
+  AssetsScreen = 'assets_screen',
+  /** The schedule-send popover. */
+  SchedulePopover = 'schedule_popover',
+  /** A backend request refused because the user isn't a sponsor. */
+  BackendRefusal = 'backend_refusal',
+  /** The auto-resume toggle in Settings. */
+  SettingsToggle = 'settings_toggle',
+  /** The auto-resume row in the command palette. */
+  CommandPalette = 'command_palette',
+  /** Auto-resume declining to run at the moment a usage limit was hit. */
+  UsageLimit = 'usage_limit',
 }
