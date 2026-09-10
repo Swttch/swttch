@@ -309,6 +309,173 @@ describe('SessionContext', () => {
       });
     });
 
+    // #434 — the session being opened carries its own row, so the list holds it
+    // even when it ranks past the page that was fetched.
+    describe('mergeSession', () => {
+      it('puts a session the fetched page does not contain into the list', async () => {
+        mockSessionsIndex.mockResolvedValue(page(['a', 'b'], true, 30));
+        let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+        render(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+
+        act(() => {
+          capturedCtx?.mergeSession({
+            sessionId: 'ranked-33rd',
+            title: 'A title only this row knows',
+            createdAt: '2026-02-09T00:00:00Z',
+            lastTimestamp: '2026-02-09T00:00:00Z',
+            messageCount: null,
+            isSidechain: false,
+            sessionDir: '/test/workspace',
+          });
+        });
+
+        await waitFor(() => {
+          const merged = capturedCtx?.sessions.find((s) => s.id === 'ranked-33rd');
+          expect(merged?.title).toBe('A title only this row knows');
+          expect(capturedCtx?.sessions).toHaveLength(3);
+        });
+      });
+
+      it('does not add a second row when the page later returns the same session', async () => {
+        mockSessionsIndex.mockResolvedValueOnce(page(['a'], true, 1));
+        mockSessionsIndex.mockResolvedValueOnce(page(['ranked-33rd'], false, 2));
+        let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+        render(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+        act(() => {
+          capturedCtx?.mergeSession({
+            sessionId: 'ranked-33rd',
+            title: 'merged first',
+            createdAt: '2026-02-09T00:00:00Z',
+            lastTimestamp: '2026-02-09T00:00:00Z',
+            isSidechain: false,
+          });
+        });
+        await act(async () => {
+          await capturedCtx?.loadMoreSessions();
+        });
+
+        await waitFor(() => {
+          const rows = capturedCtx?.sessions.filter((s) => s.id === 'ranked-33rd') ?? [];
+          expect(rows).toHaveLength(1);
+        });
+      });
+
+      // Caught in the browser, not by the tests above: the merged row landed and
+      // was then wiped by a list refresh that finished afterwards, so the header
+      // went back to its generic label with everything else working.
+      it('keeps the open session\'s row when the list is refreshed', async () => {
+        mockPathname = '/sessions/ranked-33rd';
+        mockSessionsIndex.mockResolvedValue(page(['a', 'b'], true, 30));
+        let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+        render(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+        act(() => {
+          capturedCtx?.mergeSession({
+            sessionId: 'ranked-33rd',
+            title: 'A title only this row knows',
+            createdAt: '2026-02-09T00:00:00Z',
+            lastTimestamp: '2026-02-09T00:00:00Z',
+            isSidechain: false,
+          });
+        });
+
+        // A second refresh, exactly as the app fires on reconnect.
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+
+        await waitFor(() => {
+          const kept = capturedCtx?.sessions.find((s) => s.id === 'ranked-33rd');
+          expect(kept?.title).toBe('A title only this row knows');
+        });
+      });
+
+      it('drops the carried row once a different session is open', async () => {
+        mockPathname = '/sessions/ranked-33rd';
+        mockSessionsIndex.mockResolvedValue(page(['a', 'b'], true, 30));
+        let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+        const { rerender } = render(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+        act(() => {
+          capturedCtx?.mergeSession({
+            sessionId: 'ranked-33rd',
+            title: 'A title only this row knows',
+            createdAt: '2026-02-09T00:00:00Z',
+            lastTimestamp: '2026-02-09T00:00:00Z',
+            isSidechain: false,
+          });
+        });
+
+        // The URL is the source of truth for which session is open, and the app
+        // re-renders when it changes. `useLocation` is mocked here, so that
+        // render has to be asked for rather than following from the assignment.
+        mockPathname = '/sessions/a';
+        rerender(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+
+        await waitFor(() => {
+          expect(capturedCtx?.sessions.some((s) => s.id === 'ranked-33rd')).toBe(false);
+        });
+      });
+
+      it('ignores a session the backend had no row for', async () => {
+        mockSessionsIndex.mockResolvedValue(page(['a'], false, 1));
+        let capturedCtx: ReturnType<typeof useSessionContext> | null = null;
+
+        render(
+          <SessionProvider>
+            <TestConsumer onMount={(ctx) => { capturedCtx = ctx; }} />
+          </SessionProvider>
+        );
+        await act(async () => {
+          await capturedCtx?.loadSessions();
+        });
+
+        act(() => {
+          capturedCtx?.mergeSession(null);
+          capturedCtx?.mergeSession(undefined);
+        });
+
+        await waitFor(() => expect(capturedCtx?.sessions).toHaveLength(1));
+      });
+    });
+
     it('appends the next page instead of replacing what is shown', async () => {
       mockSessionsIndex.mockResolvedValueOnce(page(['a'], true, 1));
       mockSessionsIndex.mockResolvedValueOnce(page(['b'], false, 2));

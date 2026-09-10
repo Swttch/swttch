@@ -57,7 +57,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
   const { subscribe } = useBridgeContext();
   const api = useApi();
   const {
-    loadSessions, currentSessionId, navigateToNewSession,
+    loadSessions, currentSessionId, navigateToNewSession, mergeSession,
     isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
   const { loadMessages, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
@@ -171,6 +171,12 @@ export function SessionLoader({ children }: { children: ReactNode }) {
           return;
         }
 
+        // Put this session's own row into the list before anything reads off
+        // it. The list is one page, so a session ranked past that page is not
+        // among the rows held and the header would fall back to its generic
+        // label for a session that opened fine. See #434.
+        mergeSession(message.payload?.session);
+
         // Skip empty loads for newly created sessions — their first user message
         // hasn't been written to JSONL yet, so loading would wipe local state.
         if (sid && isNewlyCreatedSession(sid) && rawMessages.length === 0) {
@@ -197,7 +203,7 @@ export function SessionLoader({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession]);
+  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession, mergeSession]);
 
   return <>{children}</>;
 }

@@ -20,6 +20,7 @@ const mockSubscribe = vi.fn((type: string, handler: SessionLoadedHandler) => {
 });
 
 const mockNavigateToNewSession = vi.fn();
+const mockMergeSession = vi.fn();
 const mockLoadSessions = vi.fn();
 const mockSetSessionState = vi.fn();
 const mockSyncEffectiveMode = vi.fn();
@@ -59,6 +60,7 @@ vi.mock('../SessionContext', () => ({
     sessions: firstPageOfOtherSessions,
     currentSessionId: mockCurrentSessionId,
     navigateToNewSession: mockNavigateToNewSession,
+    mergeSession: mockMergeSession,
     isNewlyCreatedSession: mockIsNewlyCreatedSession,
     setSessionState: mockSetSessionState,
     syncEffectiveMode: mockSyncEffectiveMode,
@@ -163,6 +165,34 @@ describe('SessionLoader — redirecting a session URL', () => {
     });
 
     expect(mockNavigateToNewSession).not.toHaveBeenCalled();
+  });
+
+  // #434 — the row the session carries with it, so the list contains the
+  // session being shown no matter where it ranks.
+  it('puts the row that arrives with the session into the list', () => {
+    const row = { sessionId: 'sess-past-the-page', title: 'A title only this row knows' };
+
+    emitSessionLoaded({
+      sessionId: 'sess-past-the-page',
+      messages: [{ type: 'user', uuid: 'u1' }],
+      hasMore: false,
+      sessionMissing: false,
+      session: row,
+    });
+
+    expect(mockMergeSession).toHaveBeenCalledWith(row);
+  });
+
+  it('does not merge anything for a session that is not on disk', () => {
+    emitSessionLoaded({
+      sessionId: 'sess-past-the-page',
+      messages: [],
+      hasMore: false,
+      sessionMissing: true,
+      session: null,
+    });
+
+    expect(mockMergeSession).not.toHaveBeenCalled();
   });
 
   // A backend older than this change sends no such field. Reading `undefined` as

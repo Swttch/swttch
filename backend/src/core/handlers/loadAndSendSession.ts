@@ -1,5 +1,6 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { loadSessionMessages } from '../features/loadSessionMessages';
+import { getSessionEntry } from '../features/getSessionEntry';
 import { reconstructWorkflowTasks } from '../features/workflow-tracker';
 import { isWorkflowRunning } from '../claude-process';
 import { MessageType } from '../../shared';
@@ -31,6 +32,14 @@ export async function loadAndSendSession(
   const { beforeUuid, limit, isOlderPage = false } = options;
 
   const result = await loadSessionMessages(workingDir, sessionId, beforeUuid, limit);
+
+  // The row this session would occupy in the list, sent so the webview's list
+  // contains the session it is showing no matter where the session ranks. Only
+  // on the initial load: an older page is more of the same conversation and the
+  // row has not changed. Null for a session with no row to give (missing,
+  // sidechain, unreadable) — the webview then leaves its list alone. See #434.
+  const entry = isOlderPage ? null : await getSessionEntry(workingDir, sessionId);
+
   connections.sendTo(connectionId, MessageType.SESSION_LOADED, {
     sessionId,
     messages: result.messages,
@@ -48,6 +57,9 @@ export async function loadAndSendSession(
     // project yet missing from the list, and a list-based check throws the user
     // out of a session that opens perfectly well. See #433.
     sessionMissing: result.sessionMissing,
+    // This session's own list row (see `entry` above). Same shape as a row from
+    // GET_SESSIONS, so the webview merges it into the list it already holds.
+    session: entry,
   });
 
   // Rebuild background-workflow state from the transcript so the inline cards
