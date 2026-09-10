@@ -32,6 +32,15 @@ export enum SponsorGateStep {
   Seen = 'seen',
   /** They followed it toward the sponsor page. */
   Clicked = 'clicked',
+  /**
+   * The pricing page was opened in the external browser for them.
+   *
+   * Reported by the BACKEND, which is the only side that knows the sponsor URL
+   * was actually built and handed over. It is also the last step the plugin can
+   * see at all: everything after it happens on the website and in the checkout,
+   * and is joined back to this by the per-install id riding on that URL.
+   */
+  Opened = 'opened',
 }
 
 /**

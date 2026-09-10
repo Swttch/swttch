@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { SponsorGate, SponsorGateStep, SponsorGateSurface } from '../../shared';
 import { sponsorGateEventName } from '../features/sponsorGateEvent';
+import { rememberFollowedGate } from '../features/lastSponsorGate';
 import { trackEvent } from '../features/telemetry';
 
 const KNOWN_GATES = new Set<string>(Object.values(SponsorGate));
@@ -42,6 +43,11 @@ export function sponsorGateActivityHandler(
 
   const from = message.payload?.from;
   const lockedCount = message.payload?.lockedCount;
+
+  // Following a gate may open Settings in a different editor tab, so the tab
+  // that eventually presses "sponsor" cannot be relied on to remember where the
+  // user came from. Record it on this side, where there is only one of us.
+  if (step === SponsorGateStep.Clicked) rememberFollowedGate(gate as SponsorGate);
 
   trackEvent(sponsorGateEventName(gate as SponsorGate, step as SponsorGateStep), {
     ...(typeof from === 'string' && KNOWN_SURFACES.has(from) ? { from } : {}),
