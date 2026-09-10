@@ -44,16 +44,31 @@ describe('trackTelemetryConsentBannerHandler', () => {
     report('show');
 
     expect(trackEvent).toHaveBeenCalledWith(
-      'telemetry_consent',
-      { action: 'show', source: 'banner', pluginVersion: '0.0.0-test' },
+      'telemetry_consent_show',
+      { source: 'banner', pluginVersion: '0.0.0-test' },
       { requireConsent: false },
     );
+  });
+
+  it('puts the action in the event name, since unique users cannot be split by a property', () => {
+    // Rybbit counts unique users per event name and cannot filter them by a
+    // custom property. With the action in properties every step of the funnel
+    // would collapse into one "someone answered" count and the accept rate
+    // would be uncomputable — the whole point of these events.
+    report('show');
+    report('dismiss');
+
+    expect(trackEvent.mock.calls.map((call) => call[0])).toEqual([
+      'telemetry_consent_show',
+      'telemetry_consent_dismiss',
+    ]);
+    expect(trackEvent.mock.calls[0][1]).not.toHaveProperty('action');
   });
 
   it('reports a dismissal, the answer that leaves no trace in the stored consent state', () => {
     report('dismiss');
 
-    expect(trackEvent.mock.calls[0][1].action).toBe('dismiss');
+    expect(trackEvent.mock.calls[0][0]).toBe('telemetry_consent_dismiss');
     expect(trackEvent.mock.calls[0][2]).toEqual({ requireConsent: false });
   });
 
@@ -67,7 +82,10 @@ describe('trackTelemetryConsentBannerHandler', () => {
     report('dismiss');
 
     expect(trackEvent).toHaveBeenCalledTimes(2);
-    expect(trackEvent.mock.calls.map((call) => call[1].action)).toEqual(['show', 'dismiss']);
+    expect(trackEvent.mock.calls.map((call) => call[0])).toEqual([
+      'telemetry_consent_show',
+      'telemetry_consent_dismiss',
+    ]);
   });
 
   it('ignores an unrecognized action rather than forwarding it', () => {

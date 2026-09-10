@@ -19,8 +19,10 @@ export enum ConsentSource {
 }
 
 /**
- * 동의 인풋배너에서 일어난 일. accept/deny와 같은 `action` 자리를 쓰므로,
- * 하나의 `telemetry_consent` 이벤트가 show → dismiss/deny/accept 퍼널 전체를 담는다.
+ * 동의 인풋배너에서 일어난 일. 백엔드가 이 값을 `telemetry_consent_<action>`이라는
+ * **이벤트 이름**으로 바꿔 보낸다(accept/deny와 같은 규칙). 이름으로 갈라야 하는 이유는
+ * 백엔드 `consentEvent.ts` 주석에 있다 — Rybbit이 유니크 사용자를 이벤트 이름으로만
+ * 세고 properties로는 못 나누기 때문이다.
  */
 export enum ConsentBannerAction {
   /** 배너가 사용자에게 표시됐다. */

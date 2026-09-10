@@ -61,8 +61,8 @@ describe('setTelemetryConsentHandler', () => {
     await decide(false, 'banner');
 
     expect(mocks.trackEvent).toHaveBeenCalledWith(
-      'telemetry_consent',
-      { action: 'deny', source: 'banner', pluginVersion: '0.0.0-test' },
+      'telemetry_consent_deny',
+      { source: 'banner', pluginVersion: '0.0.0-test' },
       { requireConsent: false },
     );
   });
@@ -73,8 +73,8 @@ describe('setTelemetryConsentHandler', () => {
     await decide(false, 'settings');
 
     expect(mocks.trackEvent).toHaveBeenCalledWith(
-      'telemetry_consent',
-      { action: 'deny', source: 'settings', pluginVersion: '0.0.0-test' },
+      'telemetry_consent_deny',
+      { source: 'settings', pluginVersion: '0.0.0-test' },
       { requireConsent: false },
     );
   });
@@ -82,11 +82,25 @@ describe('setTelemetryConsentHandler', () => {
   it('sends an acceptance through the normal consent gate, with no bypass option', async () => {
     await decide(true, 'banner');
 
-    expect(mocks.trackEvent).toHaveBeenCalledWith('telemetry_consent', {
-      action: 'accept',
+    expect(mocks.trackEvent).toHaveBeenCalledWith('telemetry_consent_accept', {
       source: 'banner',
       pluginVersion: '0.0.0-test',
     });
+  });
+
+  it('separates accept from deny by event name, not by a property', async () => {
+    // Unique users can only be counted per event name in Rybbit, so an accept
+    // rate needs accept and deny to be different names. A shared name with an
+    // `action` property would make the numerator and denominator the same row.
+    await decide(true, 'banner');
+    mocks.storedStatus.current = 'pending';
+    await decide(false, 'banner');
+
+    expect(mocks.trackEvent.mock.calls.map((call) => call[0])).toEqual([
+      'telemetry_consent_accept',
+      'telemetry_consent_deny',
+    ]);
+    expect(mocks.trackEvent.mock.calls[0][1]).not.toHaveProperty('action');
   });
 
   it('falls back to "unknown" rather than forwarding a missing source', async () => {
