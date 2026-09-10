@@ -3,12 +3,13 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { setTelemetryConsent, readProfile } from '../features/profile';
 import { trackEvent } from '../features/telemetry';
+import { consentEventName } from '../features/consentEvent';
 import { getPluginVersion } from './getVersion';
 import { MessageType } from '../../shared';
 
 /**
- * 텔레메트리 수락(accept)/거부(deny)를 profile.json에 기록하고, 'telemetry_consent'
- * 이벤트를 전송한다(전송은 fire-and-forget — await/then 없음).
+ * 텔레메트리 수락(accept)/거부(deny)를 profile.json에 기록하고, 해당 이벤트를 전송한다
+ * (전송은 fire-and-forget — await/then 없음).
  *
  * - accept: 저장(ACCEPTED) 후 전송 → 동의 게이팅 통과.
  * - deny: 최초 거부든 철회든 항상 전송한다(게이팅 우회).
@@ -30,14 +31,14 @@ export async function setTelemetryConsentHandler(
 
   if (accepted) {
     await setTelemetryConsent(true);
-    trackEvent('telemetry_consent', { action: 'accept', source, pluginVersion });
+    trackEvent(consentEventName('accept'), { source, pluginVersion });
   } else {
     await setTelemetryConsent(false);
     // 저장 후에는 상태가 DENIED라 동의 게이팅에 걸린다. 최초 거부와 철회를 모두 남기려면
     // 게이팅을 우회해야 한다.
     trackEvent(
-      'telemetry_consent',
-      { action: 'deny', source, pluginVersion },
+      consentEventName('deny'),
+      { source, pluginVersion },
       { requireConsent: false },
     );
   }

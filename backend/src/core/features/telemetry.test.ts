@@ -142,7 +142,7 @@ describe('telemetry consent gating', () => {
 
   it('requireConsent=false면 DENIED여도 전송한다(거절·배너 이벤트 전송)', async () => {
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(denied, 'test-key');
-    trackEvent('telemetry_consent', { action: 'deny' }, { requireConsent: false });
+    trackEvent('telemetry_consent_deny', {}, { requireConsent: false });
     await flushTelemetry();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -152,7 +152,7 @@ describe('telemetry consent gating', () => {
     // 익명화하면 Rybbit에서 전부 한 덩어리로 뭉쳐 "몇 명이 거절했는지"를 셀 수 없게 된다.
     // 호출 횟수만 보는 위 테스트는 그 익명화를 잡아내지 못하므로 body를 직접 확인한다.
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(denied, 'test-key');
-    trackEvent('telemetry_consent', { action: 'deny' }, { requireConsent: false });
+    trackEvent('telemetry_consent_deny', {}, { requireConsent: false });
     await flushTelemetry();
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.user_id).toBe('test-uuid');

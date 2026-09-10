@@ -2,13 +2,14 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { trackEvent } from '../features/telemetry';
+import { consentEventName } from '../features/consentEvent';
 import { getPluginVersion } from './getVersion';
 import { MessageType } from '../../shared';
 
 /**
- * What the consent input banner can report. These share the `action` property
- * with the accept/deny events, so one `telemetry_consent` event name carries the
- * whole funnel: show → dismiss / deny / accept.
+ * What the consent input banner can report. Each becomes its own event name via
+ * `consentEventName`, alongside the accept/deny names, so the funnel reads as
+ * show → dismiss / deny / accept in unique users.
  */
 const BANNER_ACTIONS = new Set(['show', 'dismiss']);
 
@@ -55,8 +56,8 @@ export function trackTelemetryConsentBannerHandler(
   if (BANNER_ACTIONS.has(action) && !reportedActions.has(action)) {
     reportedActions.add(action);
     trackEvent(
-      'telemetry_consent',
-      { action, source: BANNER_SOURCE, pluginVersion: getPluginVersion() },
+      consentEventName(action),
+      { source: BANNER_SOURCE, pluginVersion: getPluginVersion() },
       { requireConsent: false },
     );
   }
