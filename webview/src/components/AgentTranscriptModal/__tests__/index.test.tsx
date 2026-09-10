@@ -194,8 +194,11 @@ describe('AgentTranscriptModal', () => {
 
     const chip = screen.getByText('Agent One').closest('button')!;
     expect(chip.getAttribute('title')).toBeNull();
-    // Closed, the preview is not on screen; it is the tooltip's content.
-    expect(screen.queryByText('Look at the first file')).not.toBeInTheDocument();
+    // Closed, the preview is nowhere in the picker; it is the tooltip's content.
+    // (The detail header shows the selected agent's prompt in the open, which is
+    // a different thing from this chip's hover text.)
+    const picker = chip.closest('[class*="sm:max-w-52"]') as HTMLElement;
+    expect(picker.textContent).not.toContain('Look at the first file');
   });
 
   // Phases are how a multi-phase workflow is meant to be read, and the count

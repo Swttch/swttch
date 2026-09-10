@@ -254,8 +254,7 @@
       "context": "컨텍스트 {{value}}",
       "in": "입력 {{value}}",
       "cache": "캐시 +{{written}} / {{read}} 재사용",
-      "out": "출력 {{value}}",
-      "returned": "반환값"
+      "out": "출력 {{value}}"
     }
   },
   "scheduledMessages": {

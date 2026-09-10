@@ -254,8 +254,7 @@
       "context": "上下文 {{value}}",
       "in": "输入 {{value}}",
       "cache": "缓存 +{{written}} / 复用 {{read}}",
-      "out": "输出 {{value}}",
-      "returned": "返回值"
+      "out": "输出 {{value}}"
     }
   },
   "scheduledMessages": {

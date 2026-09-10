@@ -254,8 +254,7 @@
       "context": "Kontext {{value}}",
       "in": "Eingabe {{value}}",
       "cache": "Cache +{{written}} / {{read}} wiederverwendet",
-      "out": "Ausgabe {{value}}",
-      "returned": "Rückgabe"
+      "out": "Ausgabe {{value}}"
     }
   },
   "scheduledMessages": {

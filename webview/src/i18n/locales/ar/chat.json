@@ -262,8 +262,7 @@
       "context": "السياق {{value}}",
       "in": "إدخال {{value}}",
       "cache": "ذاكرة مؤقتة +{{written}} / {{read}} معاد استخدامها",
-      "out": "إخراج {{value}}",
-      "returned": "المُعاد"
+      "out": "إخراج {{value}}"
     }
   },
   "scheduledMessages": {

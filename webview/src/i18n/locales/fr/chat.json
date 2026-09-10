@@ -254,8 +254,7 @@
       "context": "contexte {{value}}",
       "in": "entrée {{value}}",
       "cache": "cache +{{written}} / {{read}} réutilisé",
-      "out": "sortie {{value}}",
-      "returned": "Retour"
+      "out": "sortie {{value}}"
     }
   },
   "scheduledMessages": {

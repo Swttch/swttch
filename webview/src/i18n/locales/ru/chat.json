@@ -258,8 +258,7 @@
       "context": "контекст {{value}}",
       "in": "ввод {{value}}",
       "cache": "кэш +{{written}} / {{read}} повторно",
-      "out": "вывод {{value}}",
-      "returned": "Возвращено"
+      "out": "вывод {{value}}"
     }
   },
   "scheduledMessages": {

@@ -254,8 +254,7 @@
       "context": "上下文 {{value}}",
       "in": "輸入 {{value}}",
       "cache": "快取 +{{written}} / 重用 {{read}}",
-      "out": "輸出 {{value}}",
-      "returned": "回傳值"
+      "out": "輸出 {{value}}"
     }
   },
   "scheduledMessages": {

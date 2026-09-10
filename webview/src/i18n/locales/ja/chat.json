@@ -254,8 +254,7 @@
       "context": "コンテキスト {{value}}",
       "in": "入力 {{value}}",
       "cache": "キャッシュ +{{written}} / {{read}} 再利用",
-      "out": "出力 {{value}}",
-      "returned": "戻り値"
+      "out": "出力 {{value}}"
     }
   },
   "scheduledMessages": {

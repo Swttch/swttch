@@ -49,10 +49,10 @@ const usageEntries = [
   },
 ];
 
-function renderHeader(agent: WorkflowAgent) {
+function renderHeader(agent: WorkflowAgent, transcriptDir: string | undefined = '/wf/dir') {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <AgentDetailHeader agent={agent} transcriptDir="/wf/dir" />
+      <AgentDetailHeader agent={agent} transcriptDir={transcriptDir} />
     </QueryClientProvider>,
   );
 }
@@ -63,65 +63,48 @@ describe('AgentDetailHeader', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: usageEntries, truncated: false });
   });
 
-  // The picker already carries the name, phase, status, tokens and duration, and
-  // the transcript below opens with the prompt itself. Repeating any of it here
-  // would cost space the unseen fields need.
-  it('shows what nothing else shows: model, tool calls and the queue wait', async () => {
+  // An agent is a question and an answer. The transcript below auto-scrolls to
+  // the end, so the prompt has scrolled off by the time the modal opens, and
+  // the returned value is a separate thing from whatever it said last.
+  it('leads with what the agent was asked and what it returned', () => {
     renderHeader(makeAgent());
 
-    await waitFor(() => expect(screen.getByText(/claude-haiku-4-5-20251001/)).toBeInTheDocument());
-    const meta = screen.getByText(/claude-haiku-4-5-20251001/).textContent!;
-    expect(meta).toContain('0'); // toolCalls
-    expect(meta).toContain('3ms'); // startedAt - queuedAt, which formatDuration would round to 0s
+    expect(screen.getByText('Prompt')).toBeInTheDocument();
+    expect(screen.getByText('Reply with exactly the number 0.')).toBeInTheDocument();
+    expect(screen.getByText('Result')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
-  // A first attempt is the normal case and says nothing.
-  it('mentions the attempt only when the agent was retried', async () => {
-    const { rerender } = renderHeader(makeAgent({ attempt: 1 }));
-    await waitFor(() => expect(screen.getByText(/claude-haiku/)).toBeInTheDocument());
-    expect(screen.getByText(/claude-haiku/).textContent).not.toMatch(/attempt|회차/i);
-
-    rerender(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <AgentDetailHeader agent={makeAgent({ attempt: 3 })} transcriptDir="/wf/dir" />
-      </QueryClientProvider>,
-    );
-    await waitFor(() => expect(screen.getByText(/claude-haiku/).textContent).toMatch(/3/));
-  });
-
-  // 51.5k on the chip is 10 new tokens and 51165 read back from cache, so the
-  // figure alone reads as a cost it is not. This is the only place that says so.
-  it('breaks the token figure down into what it is made of', async () => {
+  // Model, tool calls, queue wait, retry and the token split are occasionally
+  // useful and never urgent, so they hang off the badge rather than taking a
+  // line each. The badge says only which model ran.
+  it('keeps the rest behind one badge instead of listing it', async () => {
     renderHeader(makeAgent());
 
-    await waitFor(() => expect(screen.getByText(/51.5k/)).toBeInTheDocument());
-    const line = screen.getByText(/51.5k/).textContent!;
-    expect(line).toContain('10'); // input
-    expect(line).toContain('212'); // cache written
-    expect(line).toContain('51.2k'); // cache read
-    expect(line).toContain('73'); // output
+    expect(screen.getByText('haiku 4.5')).toBeInTheDocument();
+    // Closed, none of the metadata is on screen.
+    await waitFor(() => expect(screen.queryByText(/claude-haiku-4-5-20251001/)).not.toBeInTheDocument());
+    expect(screen.queryByText(/51\.5k/)).not.toBeInTheDocument();
   });
 
-  it('shows what the agent handed back', async () => {
-    renderHeader(makeAgent({ resultPreview: 'entity-count=90' }));
-
-    await waitFor(() => expect(screen.getByText(/entity-count=90/)).toBeInTheDocument());
-  });
-
-  it('shows why a failed agent failed', async () => {
+  // A failure is the one thing here that must not be a hover away.
+  it('shows a failure in the open, not behind the badge', () => {
     renderHeader(makeAgent({ state: 'error', error: 'subagent exited before replying' }));
 
-    await waitFor(() => expect(screen.getByText('subagent exited before replying')).toBeInTheDocument());
+    expect(screen.getByText('subagent exited before replying')).toBeInTheDocument();
+  });
+
+  it('shows only the half the CLI reported', () => {
+    renderHeader(makeAgent({ resultPreview: undefined }));
+
+    expect(screen.getByText('Prompt')).toBeInTheDocument();
+    expect(screen.queryByText('Result')).not.toBeInTheDocument();
   });
 
   // An agent rebuilt from disk has none of these fields, because the CLI
-  // persists none of them. An empty bar of separators would be worse than none.
+  // persists none of them. An empty row of labels would be worse than none.
   it('renders nothing when the CLI reported none of this', () => {
-    const { container } = render(
-      <QueryClientProvider client={createTestQueryClient()}>
-        <AgentDetailHeader agent={{ agentId: 'a1', reconstructed: true }} transcriptDir={undefined} />
-      </QueryClientProvider>,
-    );
+    const { container } = renderHeader({ agentId: 'a1', reconstructed: true }, undefined);
 
     expect(container).toBeEmptyDOMElement();
   });

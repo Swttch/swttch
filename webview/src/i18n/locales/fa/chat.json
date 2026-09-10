@@ -254,8 +254,7 @@
       "context": "زمینه {{value}}",
       "in": "ورودی {{value}}",
       "cache": "کش +{{written}} / {{read}} بازاستفاده",
-      "out": "خروجی {{value}}",
-      "returned": "بازگشتی"
+      "out": "خروجی {{value}}"
     }
   },
   "scheduledMessages": {
