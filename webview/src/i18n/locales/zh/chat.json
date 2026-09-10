@@ -245,6 +245,17 @@
       "jumpToBottom": "跳转到底部",
       "copyCommand": "复制命令",
       "resize": "拖动以调整大小"
+    },
+    "agentDetail": {
+      "tools_one": "工具 {{count}} 次",
+      "tools_other": "工具 {{count}} 次",
+      "queued": "排队 {{value}}",
+      "attempt": "第 {{count}} 次尝试",
+      "context": "上下文 {{value}}",
+      "in": "输入 {{value}}",
+      "cache": "缓存 +{{written}} / 复用 {{read}}",
+      "out": "输出 {{value}}",
+      "returned": "返回值"
     }
   },
   "scheduledMessages": {

@@ -245,6 +245,17 @@
       "jumpToBottom": "Aller en bas",
       "copyCommand": "Copier la commande",
       "resize": "Glisser pour redimensionner"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} outil",
+      "tools_other": "{{count}} outils",
+      "queued": "en file {{value}}",
+      "attempt": "tentative {{count}}",
+      "context": "contexte {{value}}",
+      "in": "entrée {{value}}",
+      "cache": "cache +{{written}} / {{read}} réutilisé",
+      "out": "sortie {{value}}",
+      "returned": "Retour"
     }
   },
   "scheduledMessages": {

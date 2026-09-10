@@ -245,6 +245,17 @@
       "jumpToBottom": "پرش به پایین",
       "copyCommand": "کپی دستور",
       "resize": "برای تغییر اندازه بکشید"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} ابزار",
+      "tools_other": "{{count}} ابزار",
+      "queued": "در صف {{value}}",
+      "attempt": "تلاش {{count}}",
+      "context": "زمینه {{value}}",
+      "in": "ورودی {{value}}",
+      "cache": "کش +{{written}} / {{read}} بازاستفاده",
+      "out": "خروجی {{value}}",
+      "returned": "بازگشتی"
     }
   },
   "scheduledMessages": {

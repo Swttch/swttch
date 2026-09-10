@@ -247,6 +247,19 @@
       "jumpToBottom": "Перейти вниз",
       "copyCommand": "Копировать команду",
       "resize": "Перетащите, чтобы изменить размер"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} инструмент",
+      "tools_few": "{{count}} инструмента",
+      "tools_many": "{{count}} инструментов",
+      "tools_other": "{{count}} инструмента",
+      "queued": "в очереди {{value}}",
+      "attempt": "попытка {{count}}",
+      "context": "контекст {{value}}",
+      "in": "ввод {{value}}",
+      "cache": "кэш +{{written}} / {{read}} повторно",
+      "out": "вывод {{value}}",
+      "returned": "Возвращено"
     }
   },
   "scheduledMessages": {

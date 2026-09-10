@@ -9,6 +9,7 @@ import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
+import { AgentDetailHeader } from './AgentDetailHeader';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
 import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import { BackgroundTaskOutputBody } from './BackgroundTaskOutputBody';
@@ -188,7 +189,10 @@ export function AgentTranscriptModal(props: Props) {
                     onSelect={setSelectedAgentId}
                   />
                 )}
-                <div className="flex flex-1 min-h-0 min-w-0 sm:flex-initial sm:w-full sm:max-w-xl">
+                <div className="flex flex-1 min-h-0 min-w-0 flex-col sm:flex-initial sm:w-full sm:max-w-xl">
+                  {selectedAgent && (
+                    <AgentDetailHeader agent={selectedAgent} transcriptDir={task.transcriptDir} />
+                  )}
                   <AgentTranscriptBody
                     transcriptDir={task.transcriptDir}
                     agent={selectedAgent}
