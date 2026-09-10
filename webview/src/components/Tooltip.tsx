@@ -22,10 +22,20 @@ interface Props {
      * <body> so it isn't clipped by an overflow ancestor.
      */
     interactive?: boolean;
+    /**
+     * Called when the tooltip actually becomes visible.
+     *
+     * Needed because mounting is NOT showing here: Tippy's headless `render`
+     * commits the content while the tooltip is still closed, so a component
+     * inside `content` cannot tell from its own lifecycle whether anyone has
+     * seen it. Measured that way, an offer nobody hovered counts as an offer
+     * shown.
+     */
+    onShow?: () => void;
 }
 
 export function Tooltip(props: Props) {
-    const {content, children, placement = "top", interactive = false} = props;
+    const {content, children, placement = "top", interactive = false, onShow} = props;
     if (content === undefined || content === null || content === "") return children;
 
     return (
@@ -34,6 +44,7 @@ export function Tooltip(props: Props) {
             offset={[0, 4]}
             delay={[200, interactive ? 120 : 0]}
             interactive={interactive}
+            onShow={onShow}
             appendTo={interactive ? () => document.body : undefined}
             render={(attrs) => (
                 <div

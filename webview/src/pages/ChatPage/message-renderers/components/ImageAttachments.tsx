@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { ImageBlockDto } from '../../../../dto/message/ContentBlockDto';
 import { useTranslation } from '@/i18n';
 import { ImageLightbox } from '@/components/ImageLightbox';
@@ -42,30 +42,6 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
     localSrcs,
     openedLocalIndex: openedIndex,
   });
-
-  /*
-    The denominator of this feature's conversion rate: how many people were shown
-    that some of the session is out of reach.
-
-    Reported once per opened viewer, not per render. The notice is on screen the
-    whole time the viewer is, and `lockedCount` only settles once the session
-    index arrives, so counting renders would file the same person dozens of times
-    and leave the rate meaningless.
-  */
-  const gateReported = useRef(false);
-  useEffect(() => {
-    if (openedIndex === null) {
-      gateReported.current = false;
-      return;
-    }
-    if (lockedCount > 0 && !gateReported.current) {
-      gateReported.current = true;
-      reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Seen, {
-        from: SponsorGateSurface.Viewer,
-        lockedCount,
-      });
-    }
-  }, [openedIndex, lockedCount]);
 
   // Close the viewer first: it sits above the Assets screen, so leaving it up
   // would hide the very screen just asked for.
@@ -111,6 +87,16 @@ export const ImageAttachments: React.FC<ImageAttachmentsProps> = ({ images, entr
           // session there is nothing to explain, and a sponsor line there would
           // be selling something the user already has.
           edgeHint={lockedCount > 0 ? <EdgeSponsorHint from={SponsorGateSurface.Viewer} /> : undefined}
+          // The offer counts as shown when the tooltip opens, not when the
+          // viewer does: opening a viewer with images out of reach puts someone
+          // in the situation the gate exists for, but says nothing about whether
+          // they were ever shown a way to buy their way past it.
+          onEdgeHintShown={() =>
+            reportSponsorGate(SponsorGate.Assets, SponsorGateStep.Seen, {
+              from: SponsorGateSurface.Viewer,
+              lockedCount,
+            })
+          }
           onOpenAssets={hasMoreInSession ? showAllAssets : undefined}
         />
       )}

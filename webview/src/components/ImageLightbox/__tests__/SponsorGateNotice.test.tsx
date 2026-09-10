@@ -11,6 +11,7 @@ vi.mock('@/utils/openSettingsAt', () => ({
 }));
 
 import { SponsorGate, SponsorGateStep, SponsorGateSurface } from '@/shared';
+import { Tooltip } from '@/components/Tooltip';
 import { MoreInSessionNotice, EdgeSponsorHint } from '../SponsorGateNotice';
 
 beforeEach(() => {
@@ -46,8 +47,14 @@ describe('MoreInSessionNotice', () => {
 
     expect(onShowAll).toHaveBeenCalledTimes(1);
     expect(openSettingsAt).not.toHaveBeenCalled();
-    // Nothing was followed to the sponsor page, so nothing may be counted as if
-    // it had been — that number is the conversion rate's numerator.
+  });
+
+  it('is not counted as an offer, because it carries no link to one', () => {
+    // This notice sends people to the Assets screen, not to the sponsor page.
+    // Counting it would inflate the denominator with people who were never
+    // actually offered anything.
+    render(<MoreInSessionNotice count={23} onShowAll={vi.fn()} />);
+
     expect(reportSponsorGate).not.toHaveBeenCalled();
   });
 });
@@ -79,7 +86,7 @@ describe('EdgeSponsorHint', () => {
   it('attributes the same button to the screen it was pressed on', () => {
     // Both surfaces render this identical button. If the surface did not travel
     // with the report, the Assets screen's clicks would be indistinguishable
-    // from the viewer's and neither could be told apart afterwards.
+    // from the viewer's.
     render(<EdgeSponsorHint from={SponsorGateSurface.AssetsScreen} />);
 
     fireEvent.click(screen.getByText('Learn more'));
@@ -87,5 +94,50 @@ describe('EdgeSponsorHint', () => {
     expect(reportSponsorGate).toHaveBeenCalledWith(SponsorGate.Assets, SponsorGateStep.Clicked, {
       from: SponsorGateSurface.AssetsScreen,
     });
+  });
+
+  it('does not count itself as shown merely by existing', () => {
+    // The load-bearing rule of this measurement, and the one that was wrong.
+    // This hint lives inside a Tippy tooltip, and Tippy's headless render
+    // commits its content while the tooltip is still CLOSED. A hint that
+    // reported on mount would therefore fire for arrows nobody ever hovered —
+    // which is how the funnel came to read 41 shown against 0 followed.
+    //
+    // Whoever displays it reports the showing instead, at the moment it is
+    // genuinely visible (the viewer hangs that on Tooltip's onShow).
+    render(<EdgeSponsorHint from={SponsorGateSurface.Viewer} />);
+
+    expect(
+      reportSponsorGate.mock.calls.filter((c) => c[1] === SponsorGateStep.Seen),
+    ).toHaveLength(0);
+  });
+
+  it('stays invisible, and uncounted, inside a tooltip nobody opened', () => {
+    // The same rule seen from outside: mounted into a closed tooltip, the link
+    // is not in the document and nothing has been reported.
+    render(
+      <Tooltip content={<EdgeSponsorHint from={SponsorGateSurface.Viewer} />} interactive>
+        <button type="button">arrow</button>
+      </Tooltip>,
+    );
+
+    expect(screen.queryByText('Learn more')).toBeNull();
+    expect(reportSponsorGate).not.toHaveBeenCalled();
+  });
+});
+
+describe('Tooltip', () => {
+  it('does not announce a showing before anyone has opened it', () => {
+    // What the viewer hangs its "shown" report on. Mounting cannot stand in for
+    // it — Tippy does that far too early to mean anything — so this signal must
+    // stay silent until the tooltip really opens.
+    const onShow = vi.fn();
+    render(
+      <Tooltip content="hi" onShow={onShow}>
+        <button type="button">target</button>
+      </Tooltip>,
+    );
+
+    expect(onShow).not.toHaveBeenCalled();
   });
 });

@@ -89,9 +89,14 @@ export const EdgeSponsorHint: React.FC<{ from: SponsorGateSurface }> = ({ from }
 /**
  * Follows the invitation to the sponsor page, recording that it was followed.
  *
- * The report is here rather than at each call site so that no future placement
- * of this offer can forget it — the conversion rate is the numerator's only
- * source.
+ * The click is reported here so no future placement of this offer can forget it.
+ * The matching SHOWN report deliberately is NOT: this button cannot tell whether
+ * anyone can see it. Tippy's headless render commits tooltip content while the
+ * tooltip is still closed, so a mount here happens for arrows nobody ever
+ * hovered — and counting those was exactly the mistake that made the funnel read
+ * 41 shown against 0 followed. Each placement reports its own showing at the
+ * moment it is genuinely visible: the tooltip via its onShow, the Assets header
+ * on mount, because that one really is on screen as soon as it exists.
  */
 export function LearnMoreButton({ from }: { from: SponsorGateSurface }) {
   const { t: tc } = useTranslation('common');
