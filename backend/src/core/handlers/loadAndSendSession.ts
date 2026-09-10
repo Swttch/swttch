@@ -42,6 +42,12 @@ export async function loadAndSendSession(
     // restores the composer to this on reload instead of the configured default,
     // and treats null as "not confidently known" rather than "unset".
     lastReportedMode: result.lastReportedMode,
+    // The transcript is known to be absent from disk (ENOENT only). This is the
+    // webview's sole ground for redirecting a session URL away: the session list
+    // it holds is one page, so a session ranked past that page is present in the
+    // project yet missing from the list, and a list-based check throws the user
+    // out of a session that opens perfectly well. See #433.
+    sessionMissing: result.sessionMissing,
   });
 
   // Rebuild background-workflow state from the transcript so the inline cards

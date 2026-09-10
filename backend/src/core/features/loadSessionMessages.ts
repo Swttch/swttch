@@ -23,6 +23,20 @@ export interface PaginatedSessionMessages {
   // the session's CURRENT mode. See findLastReportedModeInPage for why the search
   // is bounded to one page rather than the whole session.
   lastReportedMode: string | null;
+  /**
+   * The session's transcript is KNOWN to be absent from disk.
+   *
+   * True only for ENOENT. Every other read failure (a permission error, an I/O
+   * error, a directory that could not be resolved) leaves this false, because
+   * those say "the transcript could not be read", not "the transcript is not
+   * there" — and the webview redirects away from a session on this flag alone.
+   * Treating an unreadable file as a missing one would throw the user out of a
+   * session that exists.
+   *
+   * An empty `messages` array cannot answer the same question: a transcript that
+   * holds no active-chain entry produces one too.
+   */
+  sessionMissing: boolean;
 }
 
 // Extract Task tool_use id -> agentId mappings from main session messages
@@ -380,6 +394,7 @@ export async function loadSessionMessages(
       total: 0,
       activeChain: [],
       lastReportedMode: null,
+      sessionMissing: (err as NodeJS.ErrnoException)?.code === 'ENOENT',
     };
   }
 
@@ -442,5 +457,6 @@ export async function loadSessionMessages(
     total,
     activeChain: activeChainMessages,
     lastReportedMode,
+    sessionMissing: false,
   };
 }

@@ -45,14 +45,19 @@ interface AppProvidersProps {
  * Also handles:
  * - Loading session list on connect
  * - Reconnection recovery (isConnected false→true)
- * - Redirecting invalid session URLs
+ * - Redirecting a URL whose session is not on disk (the backend says so; the
+ *   session list is one page and cannot answer it — see #433)
+ *
+ * Exported for tests: mounting the whole provider tree to reach it would drag in
+ * every context it sits under, and the behaviour being covered is this
+ * component's alone.
  */
-function SessionLoader({ children }: { children: ReactNode }) {
+export function SessionLoader({ children }: { children: ReactNode }) {
   const { isConnected } = useApiContext();
   const { subscribe } = useBridgeContext();
   const api = useApi();
   const {
-    loadSessions, sessions, currentSessionId, navigateToNewSession,
+    loadSessions, currentSessionId, navigateToNewSession,
     isNewlyCreatedSession, setSessionState, syncEffectiveMode,
   } = useSessionContext();
   const { loadMessages, prependOlderMessages, setPaginationState, resetForSessionSwitch } = useChatStreamContext();
@@ -143,10 +148,26 @@ function SessionLoader({ children }: { children: ReactNode }) {
         const hasMore = message.payload?.hasMore as boolean | undefined;
         const oldestUuid = message.payload?.oldestUuid as string | undefined;
         const lastReportedMode = message.payload?.lastReportedMode as string | null | undefined;
+        const sessionMissing = message.payload?.sessionMissing as boolean | undefined;
 
         // Guard: ignore stale responses from previously requested sessions
         if (sid && sid !== currentSessionIdRef.current) {
           console.log('[SessionLoader] Ignoring stale SESSION_LOADED for:', sid, '(current:', currentSessionIdRef.current, ')');
+          return;
+        }
+
+        // The URL names a session whose transcript is not on disk. This is the
+        // only ground for leaving a session URL: the backend looked for the file
+        // and it was not there. A session that merely sits past the first page of
+        // the session list is present and opens fine, so the list cannot be asked
+        // this question. See #433.
+        //
+        // A newly created session has no transcript until its first message is
+        // written, so it is excluded — the same exclusion the empty-load skip
+        // below makes, for the same reason.
+        if (sessionMissing && sid && !isNewlyCreatedSession(sid)) {
+          console.warn('[SessionLoader] Session from URL is not on disk, redirecting:', sid);
+          navigateToNewSession();
           return;
         }
 
@@ -176,18 +197,7 @@ function SessionLoader({ children }: { children: ReactNode }) {
         }
       }
     });
-  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode]);
-
-  // 4. Validate session exists in list — redirect bad URLs
-  useEffect(() => {
-    if (!currentSessionId || sessions.length === 0) return;
-    if (isNewlyCreatedSession(currentSessionId)) return;
-
-    if (!sessions.some(s => s.id === currentSessionId)) {
-      console.warn('[SessionLoader] Session from URL not found, redirecting:', currentSessionId);
-      navigateToNewSession();
-    }
-  }, [currentSessionId, sessions, isNewlyCreatedSession, navigateToNewSession]);
+  }, [subscribe, loadMessages, prependOlderMessages, setPaginationState, isNewlyCreatedSession, syncEffectiveMode, navigateToNewSession]);
 
   return <>{children}</>;
 }
