@@ -294,6 +294,7 @@ const ACTIVITY_EXCLUDED_TYPES = new Set<string>([
   // 시스템 / 에러 / 폴링성 자동 트래픽
   MessageType.CLIENT_INFO,           // 순수 WS 연결 핸드셰이크
   MessageType.CLIENT_ERROR,          // 에러 보고(reportBackendError 경로)
+  MessageType.TRACK_TELEMETRY_CONSENT_BANNER, // 배너 노출/닫기 보고 — 자신이 telemetry_consent로 이미 남는다
   MessageType.GET_ACCOUNT,           // 창 포커스마다 자동 refetch
   MessageType.GET_USAGE,             // 사용량 조회 폴링성
   MessageType.PANEL_FOCUSED,         // 패널 포커스마다 자동 발생하는 라우팅 신호(노이즈)

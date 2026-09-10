@@ -149,6 +149,8 @@ export enum MessageType {
   GET_TELEMETRY_CONSENT = 'GET_TELEMETRY_CONSENT',
   /** Persist the user's telemetry consent decision. */
   SET_TELEMETRY_CONSENT = 'SET_TELEMETRY_CONSENT',
+  /** Report what happened on the consent input banner (`{ action: 'show' | 'dismiss' }`), so the accept rate has a denominator: without it we only ever learn about the installs that accepted. Reported regardless of consent, on the same footing as the announcements fetch, and carrying no more than an accepted install already sends. inbound webview→backend */
+  TRACK_TELEMETRY_CONSENT_BANNER = 'TRACK_TELEMETRY_CONSENT_BANNER',
 
   // -- Announcements --
   /** Fetch the current locale's announcement list plus dismissedIds. Backend fetches (cached) from the remote delivery endpoint and returns the raw response. inbound webview→backend */

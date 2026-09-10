@@ -18,6 +18,17 @@ export enum ConsentSource {
   SETTINGS = 'settings',
 }
 
+/**
+ * 동의 인풋배너에서 일어난 일. accept/deny와 같은 `action` 자리를 쓰므로,
+ * 하나의 `telemetry_consent` 이벤트가 show → dismiss/deny/accept 퍼널 전체를 담는다.
+ */
+export enum ConsentBannerAction {
+  /** 배너가 사용자에게 표시됐다. */
+  SHOW = 'show',
+  /** 답하지 않은 채 X로 닫았다 — 상태는 PENDING으로 남는다(거절과 다른 점). */
+  DISMISS = 'dismiss',
+}
+
 interface ConsentResponse {
   consentStatus: ConsentStatus;
   decidedAt: string | null;
@@ -25,8 +36,8 @@ interface ConsentResponse {
 
 /**
  * profile.json의 텔레메트리 동의 상태를 읽고, 수락(accept)/거부(deny)를 영속화하는 훅.
- * 동의 변경 이벤트(accept/deny + source) 전송은 백엔드 핸들러가 처리한다
- * (특히 deny는 저장 전에 전송해 철회 시점의 ACCEPTED 상태로 게이팅을 통과).
+ * 이벤트 전송은 전부 백엔드 핸들러가 처리한다 — deny와 배너 노출/닫기는 동의 게이팅을
+ * 우회해 보내야 동의율의 분모가 생기기 때문이다(각 핸들러 주석 참조).
  */
 export function useTelemetryConsent() {
   const { send } = useBridgeContext();
@@ -61,5 +72,17 @@ export function useTelemetryConsent() {
     [send],
   );
 
-  return { status, accept, deny, refresh };
+  /**
+   * 배너 노출/닫기를 백엔드에 보고한다. 동의 상태를 바꾸지 않으므로 응답을 기다리지 않는다.
+   * 노출은 세션을 바꿀 때마다 배너가 다시 떠 여러 번 불릴 수 있고, 그 중복은 백엔드가
+   * 프로세스 단위로 억제한다 — 호출자가 발동 조건을 따로 관리하지 않게 하기 위해서다.
+   */
+  const trackBanner = useCallback(
+    (action: ConsentBannerAction) => {
+      void send(MessageType.TRACK_TELEMETRY_CONSENT_BANNER, { action });
+    },
+    [send],
+  );
+
+  return { status, accept, deny, refresh, trackBanner };
 }
