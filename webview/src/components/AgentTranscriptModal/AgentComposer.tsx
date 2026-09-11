@@ -21,10 +21,10 @@ interface Props {
   /** Stop this agent. Omitted where there is no way to stop only this one. */
   onStop?: () => void;
   /**
-   * The CLI has refused to resume this agent, so nothing can reach it. The box
-   * stays in place saying why rather than vanishing — the transcript above is
-   * still worth reading, and a control that disappears leaves the reader
-   * wondering whether it was ever there.
+   * The CLI has refused to resume this agent, so nothing can reach it. Said
+   * under the box in the error's own colour rather than as placeholder text: a
+   * refusal answers a message that was just sent, and a greyed hint where the
+   * prompt used to be is not an answer to anything.
    */
   unreachable?: boolean;
 }
@@ -89,7 +89,11 @@ export function AgentComposer(props: Props) {
     if (isRunning) setJustSent(false);
   }, [isRunning]);
 
-  const isWorking = isRunning || justSent;
+
+  // A refused send never becomes a running agent, so `justSent` would stay on
+  // by itself — but being unreachable withdraws the working state outright,
+  // which settles that case without a second flag to keep in step.
+  const isWorking = (isRunning || justSent) && !unreachable;
 
   const stop = () => {
     // Drop the optimistic flag as well: if the agent had not actually started
@@ -152,6 +156,13 @@ export function AgentComposer(props: Props) {
       <InputFrame
         mode={inputMode}
         isFocused={isFocused}
+        belowEditor={
+          unreachable ? (
+            <div className="px-3 pb-1.5 text-xs text-state-error-fg">
+              {t('backgroundTasks.agentComposer.unreachable')}
+            </div>
+          ) : undefined
+        }
         editor={
           <RichInput
             ref={editorRef}
@@ -162,18 +173,14 @@ export function AgentComposer(props: Props) {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             disabled={unreachable}
-            placeholder={
-              unreachable
-                ? t('backgroundTasks.agentComposer.unreachable')
-                : t('backgroundTasks.agentComposer.placeholder')
-            }
+            placeholder={t('backgroundTasks.agentComposer.placeholder')}
             ariaLabel={t('backgroundTasks.agentComposer.placeholder')}
           />
         }
         barEnd={
           <ActionButtons
             mode={inputMode}
-            isActive={isWorking && !unreachable}
+            isActive={isWorking}
             disabled={!!unreachable}
             hasValue={!!text.trim()}
             onSubmit={send}

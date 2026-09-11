@@ -191,7 +191,7 @@ export function AgentTranscriptModal(props: Props) {
                     // A backgrounded Agent IS its task, so stopping it by its
                     // own address stops this agent and nothing else.
                     onStop={() => stopAgent(agentAddress, task.name)}
-                    unreachable={task.agentUnreachable}
+                    unreachable={task.unreachableAgentIds?.includes(agentAddress)}
                   />
                 )}
               </div>
@@ -252,7 +252,7 @@ export function AgentTranscriptModal(props: Props) {
                       // belongs to: resuming one starts it again as a task
                       // under that id, which is what there is to stop.
                       onStop={() => stopAgent(selectedAgent.agentId!, selectedAgent.label ?? selectedAgent.agentId!)}
-                      unreachable={task.agentUnreachable}
+                      unreachable={task.unreachableAgentIds?.includes(selectedAgent.agentId)}
                     />
                   )}
                 </div>

@@ -904,9 +904,13 @@ export class WorkflowProgressTracker {
   }
 
   /**
-   * Mark a task whose agent the CLI just refused to resume, so the view stops
-   * offering to send to it. Its `task_id` IS the agent id, which is how the
-   * refusal is matched back to a row.
+   * Note an agent the CLI just refused to resume, so the view stops offering to
+   * send where nothing can arrive.
+   *
+   * Matched two ways, because an agent id reaches us as either. A backgrounded
+   * Agent's task id IS its agent id; a workflow's agents each carry their own
+   * in `agents[]`, and the workflow's task id is something else entirely — so
+   * matching only on the task id missed every workflow agent.
    */
   private onAgentUnreachable(sessionId: string, event: Record<string, unknown>): void {
     for (const block of getContentBlocks(event)) {
@@ -916,9 +920,13 @@ export class WorkflowProgressTracker {
       const agentId = parseUnreachableAgentId(text);
       if (!agentId) continue;
       for (const entry of this.entries.values()) {
-        if (entry.sessionId !== sessionId || entry.task.taskId !== agentId) continue;
-        if (entry.task.agentUnreachable) continue;
-        entry.task.agentUnreachable = true;
+        if (entry.sessionId !== sessionId) continue;
+        const t = entry.task;
+        const isThisTask = t.taskId === agentId;
+        const isOneOfItsAgents = t.agents.some((a) => a.agentId === agentId);
+        if (!isThisTask && !isOneOfItsAgents) continue;
+        if (t.unreachableAgentIds?.includes(agentId)) continue;
+        t.unreachableAgentIds = [...(t.unreachableAgentIds ?? []), agentId];
         this.broadcast(entry);
       }
     }

@@ -150,14 +150,19 @@ export interface WorkflowTask {
    */
   events?: WorkflowTaskEvents;
   /**
-   * True once the CLI has refused to resume this task's agent, because the
-   * session that ran it is gone and its transcript with it.
+   * Agent ids the CLI has refused to resume, because the session that ran them
+   * is gone and their transcripts with it.
    *
-   * Not a guess made ahead of time — there is nothing to read that would say
-   * so. It is set when a SendMessage comes back refusing, and it is what lets
-   * the view stop offering to send where nothing can arrive.
+   * A list, and per agent rather than per task, because a workflow's agents are
+   * reached individually: one of them being unreachable says nothing about the
+   * others. For a backgrounded Agent the task id IS the agent id, so its own id
+   * appears here.
+   *
+   * Not a guess made ahead of time — nothing readable says so in advance, and a
+   * task that cannot be reached looks exactly like one that can. It is filled
+   * in when a SendMessage comes back refusing.
    */
-  agentUnreachable?: boolean;
+  unreachableAgentIds?: string[];
 }
 
 /**

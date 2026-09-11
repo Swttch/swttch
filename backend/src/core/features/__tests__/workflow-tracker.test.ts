@@ -1471,11 +1471,41 @@ describe('an agent that can no longer be reached', () => {
   it('marks the task the refusal names', () => {
     const { tracker, last } = makeTracker();
     tracker.handleEvent('s1', started);
-    expect(last().agentUnreachable).toBeUndefined();
+    expect(last().unreachableAgentIds).toBeUndefined();
 
     tracker.handleEvent('s1', refusal('ab5ae1f1b104ce2f7'));
 
-    expect(last().agentUnreachable).toBe(true);
+    expect(last().unreachableAgentIds).toEqual(['ab5ae1f1b104ce2f7']);
+  });
+
+  // A workflow's agents each carry their own id in `agents[]`, and the
+  // workflow's own task id is something else entirely — so matching on the task
+  // id alone missed every workflow agent, which is most of them.
+  it('marks a workflow agent by the id inside the agent list', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'wzj14if9q',
+      tool_use_id: 'toolu_wf',
+      task_type: 'local_workflow',
+      workflow_name: 'two-sleepers',
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_wf',
+      workflow_progress: [
+        { type: 'workflow_agent', index: 1, agentId: 'a7876c7eab66a65be', label: 'sleeper-1' },
+        { type: 'workflow_agent', index: 2, agentId: 'ae360bde8628c21ae', label: 'sleeper-2' },
+      ],
+    });
+
+    tracker.handleEvent('s1', refusal('a7876c7eab66a65be'));
+
+    // Only the one named. The other is still reachable, and a workflow being
+    // partly unreachable says nothing about the rest of it.
+    expect(last().unreachableAgentIds).toEqual(['a7876c7eab66a65be']);
   });
 
   it('leaves other agents alone', () => {
@@ -1484,7 +1514,7 @@ describe('an agent that can no longer be reached', () => {
 
     tracker.handleEvent('s1', refusal('some-other-agent'));
 
-    expect(last().agentUnreachable).toBeUndefined();
+    expect(last().unreachableAgentIds).toBeUndefined();
   });
 
   // Only the definitive refusal counts. A failure for any other reason says
@@ -1507,7 +1537,7 @@ describe('an agent that can no longer be reached', () => {
       },
     });
 
-    expect(last().agentUnreachable).toBeUndefined();
+    expect(last().unreachableAgentIds).toBeUndefined();
   });
 
   it('does not re-broadcast once it is already marked', () => {

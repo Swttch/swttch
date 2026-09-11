@@ -16,18 +16,19 @@ function type(box: HTMLElement, text: string) {
 
 function setup(overrides: { isRunning?: boolean; onStop?: () => void; unreachable?: boolean } = {}) {
   const onSend = vi.fn();
-  render(
+  const ui = (unreachable?: boolean) => (
     <AgentComposer
       agentId="a40be17f1967a0861"
       isRunning={overrides.isRunning ?? false}
       inputMode="ask_before_edit"
       onSend={onSend}
       onStop={overrides.onStop}
-      unreachable={overrides.unreachable}
-    />,
+      unreachable={unreachable ?? overrides.unreachable}
+    />
   );
+  const view = render(ui());
   const box = document.querySelector('[contenteditable]') as HTMLElement;
-  return { onSend, box };
+  return { onSend, box, rerender: (unreachable: boolean) => view.rerender(ui(unreachable)) };
 }
 
 describe('AgentComposer', () => {
@@ -156,18 +157,33 @@ describe('AgentComposer', () => {
   // still worth reading, and a control that vanishes leaves the reader
   // wondering whether it was ever there.
   describe('when the agent can no longer be reached', () => {
-    it('says so in place of the prompt, and refuses to send', () => {
+    // Said under the box in the error's own colour: a refusal answers a
+    // message that was just sent, and a greyed hint where the prompt used to be
+    // is not an answer to anything.
+    it('says why, and refuses to send', () => {
       const { onSend, box } = setup({ unreachable: true });
 
-      // The editor paints its placeholder from this attribute rather than a
-      // text node, so that is where the message has to be.
-      expect(box.getAttribute('data-placeholder')).toBe(
-        "This agent's session has ended — it can no longer be reached",
-      );
+      expect(
+        screen.getByText("This agent's session has ended — it can no longer be reached"),
+      ).toBeInTheDocument();
 
       type(box, 'anyone there?');
       fireEvent.keyDown(box, { key: 'Enter' });
       expect(onSend).not.toHaveBeenCalled();
+    });
+
+    // A refused send never becomes a running agent, so nothing would otherwise
+    // clear the optimistic flag and the button would sit on stop for good.
+    it('takes the stop button back down when the send turns out refused', () => {
+      const { box, rerender } = setup({ isRunning: false, onStop: vi.fn() });
+
+      type(box, 'anyone there?');
+      fireEvent.keyDown(box, { key: 'Enter' });
+      expect(screen.getByTitle('Stop generating')).toBeInTheDocument();
+
+      rerender(true);
+
+      expect(screen.queryByTitle('Stop generating')).not.toBeInTheDocument();
     });
 
     it('leaves the send button unusable', () => {
