@@ -149,6 +149,15 @@ export interface WorkflowTask {
    * original-data-preservation rule in CLAUDE.md).
    */
   events?: WorkflowTaskEvents;
+  /**
+   * True once the CLI has refused to resume this task's agent, because the
+   * session that ran it is gone and its transcript with it.
+   *
+   * Not a guess made ahead of time — there is nothing to read that would say
+   * so. It is set when a SendMessage comes back refusing, and it is what lets
+   * the view stop offering to send where nothing can arrive.
+   */
+  agentUnreachable?: boolean;
 }
 
 /**

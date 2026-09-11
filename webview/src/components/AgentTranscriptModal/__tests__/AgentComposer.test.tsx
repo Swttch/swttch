@@ -14,7 +14,7 @@ function type(box: HTMLElement, text: string) {
   fireEvent.input(box);
 }
 
-function setup(overrides: { isRunning?: boolean; onStop?: () => void } = {}) {
+function setup(overrides: { isRunning?: boolean; onStop?: () => void; unreachable?: boolean } = {}) {
   const onSend = vi.fn();
   render(
     <AgentComposer
@@ -23,6 +23,7 @@ function setup(overrides: { isRunning?: boolean; onStop?: () => void } = {}) {
       inputMode="ask_before_edit"
       onSend={onSend}
       onStop={overrides.onStop}
+      unreachable={overrides.unreachable}
     />,
   );
   const box = document.querySelector('[contenteditable]') as HTMLElement;
@@ -148,6 +149,38 @@ describe('AgentComposer', () => {
 
     expect(screen.queryByTitle('Attach file')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Slash commands')).not.toBeInTheDocument();
+  });
+
+  // An agent whose CLI session has ended cannot be resumed, so nothing said to
+  // it would arrive. The box stays put saying why: the transcript above is
+  // still worth reading, and a control that vanishes leaves the reader
+  // wondering whether it was ever there.
+  describe('when the agent can no longer be reached', () => {
+    it('says so in place of the prompt, and refuses to send', () => {
+      const { onSend, box } = setup({ unreachable: true });
+
+      // The editor paints its placeholder from this attribute rather than a
+      // text node, so that is where the message has to be.
+      expect(box.getAttribute('data-placeholder')).toBe(
+        "This agent's session has ended — it can no longer be reached",
+      );
+
+      type(box, 'anyone there?');
+      fireEvent.keyDown(box, { key: 'Enter' });
+      expect(onSend).not.toHaveBeenCalled();
+    });
+
+    it('leaves the send button unusable', () => {
+      setup({ unreachable: true });
+      expect(screen.getByTitle('Send message')).toBeDisabled();
+    });
+
+    // Even mid-run: if it cannot be reached, stopping it is not on offer here
+    // either, and a stop button would be the same lie in the other direction.
+    it('does not offer stop either', () => {
+      setup({ unreachable: true, isRunning: true, onStop: vi.fn() });
+      expect(screen.queryByTitle('Stop generating')).not.toBeInTheDocument();
+    });
   });
 
   // Nothing is echoed here: the CLI records the message itself as the resumed

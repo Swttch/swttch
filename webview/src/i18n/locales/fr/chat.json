@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "Écrire à cet agent…",
-      "send": "Envoyer à l'agent"
+      "send": "Envoyer à l'agent",
+      "unreachable": "La session de cet agent est terminée : il n'est plus joignable"
     },
     "agentDetail": {
       "tools_one": "{{count}} outil",

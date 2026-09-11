@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "Message this agent…",
-      "send": "Send to agent"
+      "send": "Send to agent",
+      "unreachable": "This agent's session has ended — it can no longer be reached"
     },
     "agentDetail": {
       "tools_one": "{{count}} tool",

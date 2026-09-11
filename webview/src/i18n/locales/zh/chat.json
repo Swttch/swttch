@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "给该智能体发消息…",
-      "send": "发送给智能体"
+      "send": "发送给智能体",
+      "unreachable": "该智能体的会话已结束，无法再联系"
     },
     "agentDetail": {
       "tools_one": "工具 {{count}} 次",

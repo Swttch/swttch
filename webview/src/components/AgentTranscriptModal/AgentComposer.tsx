@@ -20,6 +20,13 @@ interface Props {
   onSend: (agentId: string, message: string) => void;
   /** Stop this agent. Omitted where there is no way to stop only this one. */
   onStop?: () => void;
+  /**
+   * The CLI has refused to resume this agent, so nothing can reach it. The box
+   * stays in place saying why rather than vanishing — the transcript above is
+   * still worth reading, and a control that disappears leaves the reader
+   * wondering whether it was ever there.
+   */
+  unreachable?: boolean;
 }
 
 /**
@@ -51,7 +58,7 @@ interface Props {
  * of ours that could disagree with it.
  */
 export function AgentComposer(props: Props) {
-  const { agentId, isRunning, inputMode, onSend, onStop } = props;
+  const { agentId, isRunning, inputMode, onSend, onStop, unreachable } = props;
   const { t } = useTranslation('chat');
   const { settings } = useSettings();
   const [text, setText] = useState('');
@@ -67,6 +74,7 @@ export function AgentComposer(props: Props) {
   const ime = useIMEComposition();
 
   const send = () => {
+    if (unreachable) return;
     const message = text.trim();
     if (!message) return;
     onSend(agentId, message);
@@ -153,15 +161,20 @@ export function AgentComposer(props: Props) {
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder={t('backgroundTasks.agentComposer.placeholder')}
+            disabled={unreachable}
+            placeholder={
+              unreachable
+                ? t('backgroundTasks.agentComposer.unreachable')
+                : t('backgroundTasks.agentComposer.placeholder')
+            }
             ariaLabel={t('backgroundTasks.agentComposer.placeholder')}
           />
         }
         barEnd={
           <ActionButtons
             mode={inputMode}
-            isActive={isWorking}
-            disabled={false}
+            isActive={isWorking && !unreachable}
+            disabled={!!unreachable}
             hasValue={!!text.trim()}
             onSubmit={send}
             onStop={onStop && stop}

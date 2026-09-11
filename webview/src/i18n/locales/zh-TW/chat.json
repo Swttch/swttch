@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "傳訊息給這個代理…",
-      "send": "傳送給代理"
+      "send": "傳送給代理",
+      "unreachable": "這個代理的工作階段已結束，無法再聯繫"
     },
     "agentDetail": {
       "tools_one": "工具 {{count}} 次",

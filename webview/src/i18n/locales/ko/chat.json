@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "이 에이전트에게 메시지…",
-      "send": "에이전트에게 보내기"
+      "send": "에이전트에게 보내기",
+      "unreachable": "이 에이전트의 세션이 끝나 더 이상 닿을 수 없습니다"
     },
     "agentDetail": {
       "tools_one": "도구 {{count}}회",

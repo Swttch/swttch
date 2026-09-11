@@ -199,6 +199,24 @@ function parseTaskNotFoundId(text: string): string | undefined {
   return text.match(/No task found with ID:\s*([a-zA-Z0-9_-]+)/)?.[1];
 }
 
+/**
+ * Parse SendMessage's refusal to resume an agent:
+ *
+ *   Agent "ab5ae1f1b104ce2f7" could not be resumed: No transcript found for
+ *   agent ID: ab5ae1f1b104ce2f7. …it never ran in this session…
+ *
+ * An agent lives in the CLI session that started it. Once that session is gone
+ * — the process restarted, so a new one resumed the conversation — its
+ * transcript is not there to resume from, and nothing can be said to it again.
+ * The panel still lists it, because the task is still part of what happened.
+ *
+ * Only definitive refusals count. The message is matched, not merely
+ * `success:false`, which any number of transient problems could also produce.
+ */
+function parseUnreachableAgentId(text: string): string | undefined {
+  return text.match(/Agent \\?"([a-zA-Z0-9_-]+)\\?" could not be resumed/)?.[1];
+}
+
 function num(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
@@ -570,6 +588,7 @@ export class WorkflowProgressTracker {
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
         this.onTaskNotFound(sessionId, event);
+        this.onAgentUnreachable(sessionId, event);
       }
     } catch (err) {
       console.error('[node-backend]', 'workflow-tracker handleEvent failed:', err);
@@ -881,6 +900,27 @@ export class WorkflowProgressTracker {
       entry.task.transcriptDir = transcriptDir;
       entry.task.workflowId = transcriptDir.split(/[\\/]/).pop();
       this.broadcast(entry);
+    }
+  }
+
+  /**
+   * Mark a task whose agent the CLI just refused to resume, so the view stops
+   * offering to send to it. Its `task_id` IS the agent id, which is how the
+   * refusal is matched back to a row.
+   */
+  private onAgentUnreachable(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_result') continue;
+      const content = block['content'];
+      const text = typeof content === 'string' ? content : getEventText(event);
+      const agentId = parseUnreachableAgentId(text);
+      if (!agentId) continue;
+      for (const entry of this.entries.values()) {
+        if (entry.sessionId !== sessionId || entry.task.taskId !== agentId) continue;
+        if (entry.task.agentUnreachable) continue;
+        entry.task.agentUnreachable = true;
+        this.broadcast(entry);
+      }
     }
   }
 

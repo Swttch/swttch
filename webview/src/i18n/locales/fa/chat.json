@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "به این عامل پیام بدهید…",
-      "send": "ارسال به عامل"
+      "send": "ارسال به عامل",
+      "unreachable": "نشست این عامل پایان یافته و دیگر در دسترس نیست"
     },
     "agentDetail": {
       "tools_one": "{{count}} ابزار",

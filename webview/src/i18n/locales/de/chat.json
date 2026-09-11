@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "Diesem Agenten schreiben…",
-      "send": "An Agent senden"
+      "send": "An Agent senden",
+      "unreachable": "Die Sitzung dieses Agenten ist beendet — er ist nicht mehr erreichbar"
     },
     "agentDetail": {
       "tools_one": "{{count}} Tool",

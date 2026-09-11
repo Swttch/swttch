@@ -1421,3 +1421,103 @@ describe('how a task ended, in our words', () => {
     expect(last().events?.task_notification?.['status']).toBe('something-new');
   });
 });
+
+// An agent lives in the CLI session that started it. Once that session is gone
+// — the process restarted, so a new one resumed the conversation — SendMessage
+// refuses, and nothing said to that agent can arrive. Nothing readable says so
+// in advance, so the refusal itself is the signal.
+describe('an agent that can no longer be reached', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  const started = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'ab5ae1f1b104ce2f7',
+    tool_use_id: 'toolu_1',
+    description: 'Describe webview utils dir',
+    is_backgrounded: true,
+    task_type: 'local_agent',
+  };
+
+  /** The CLI's own wording, from a recorded session. */
+  function refusal(agentId: string) {
+    return {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_send',
+            content: JSON.stringify({
+              success: false,
+              message: `Agent "${agentId}" could not be resumed: No transcript found for agent ID: ${agentId}. If you read this id in a message from another Claude Code process, it never ran in this session.`,
+            }),
+          },
+        ],
+      },
+    };
+  }
+
+  it('marks the task the refusal names', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', started);
+    expect(last().agentUnreachable).toBeUndefined();
+
+    tracker.handleEvent('s1', refusal('ab5ae1f1b104ce2f7'));
+
+    expect(last().agentUnreachable).toBe(true);
+  });
+
+  it('leaves other agents alone', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', started);
+
+    tracker.handleEvent('s1', refusal('some-other-agent'));
+
+    expect(last().agentUnreachable).toBeUndefined();
+  });
+
+  // Only the definitive refusal counts. A failure for any other reason says
+  // nothing about whether the agent is still there.
+  it('ignores a failure that is not a refusal to resume', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', started);
+
+    tracker.handleEvent('s1', {
+      type: 'user',
+      message: {
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 'toolu_send',
+            content: JSON.stringify({ success: false, message: 'Something else went wrong' }),
+          },
+        ],
+      },
+    });
+
+    expect(last().agentUnreachable).toBeUndefined();
+  });
+
+  it('does not re-broadcast once it is already marked', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', started);
+    tracker.handleEvent('s1', refusal('ab5ae1f1b104ce2f7'));
+    const afterFirst = broadcasts.length;
+
+    tracker.handleEvent('s1', refusal('ab5ae1f1b104ce2f7'));
+
+    expect(broadcasts).toHaveLength(afterFirst);
+  });
+});

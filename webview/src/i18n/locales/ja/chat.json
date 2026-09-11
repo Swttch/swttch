@@ -250,7 +250,8 @@
     },
     "agentComposer": {
       "placeholder": "このエージェントにメッセージ…",
-      "send": "エージェントに送信"
+      "send": "エージェントに送信",
+      "unreachable": "このエージェントのセッションは終了しており、もう届きません"
     },
     "agentDetail": {
       "tools_one": "ツール {{count}} 回",
