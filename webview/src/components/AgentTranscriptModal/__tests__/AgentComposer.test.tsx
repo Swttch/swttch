@@ -19,6 +19,7 @@ function setup(overrides: { isRunning?: boolean; onStop?: () => void } = {}) {
   render(
     <AgentComposer
       agentId="a40be17f1967a0861"
+      recipientName="general-purpose"
       isRunning={overrides.isRunning ?? false}
       inputMode="ask_before_edit"
       onSend={onSend}
@@ -110,6 +111,14 @@ describe('AgentComposer', () => {
     fireEvent.keyDown(box, { key: 'Escape' });
 
     expect(onStop).not.toHaveBeenCalled();
+  });
+
+  // The session input's bar opens with the permission mode; this one opens with
+  // who the message is going to, which changes as you click through a
+  // workflow's agent tabs.
+  it('says who the message is going to', () => {
+    setup();
+    expect(screen.getByText('general-purpose')).toBeInTheDocument();
   });
 
   // Neither has anywhere to go: SendMessage carries a plain string, and a

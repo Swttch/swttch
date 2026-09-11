@@ -9,6 +9,7 @@ import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
 import { agentAddressOf } from '@/hooks/useSendToAgent';
+import { agentDisplayName, agentDisplayStatus, taskSubagentType } from '@/utils/workflowFormat';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
 import { DetailHeader } from './AgentDetailHeader';
@@ -20,6 +21,17 @@ import { BackgroundTaskOutputBody } from './BackgroundTaskOutputBody';
 interface Props {
   task: WorkflowTask;
   onClose: () => void;
+}
+
+/**
+ * The model a backgrounded Agent was launched with. No event reports one, so
+ * the call that asked for it is the only place it is ever stated — and most
+ * calls ask for none and inherit the session's, which is not ours to guess at.
+ */
+function agentModelOf(task: WorkflowTask): string | undefined {
+  const input = task.events?.tool_use?.['input'];
+  const model = input && typeof input === 'object' ? (input as Record<string, unknown>)['model'] : undefined;
+  return typeof model === 'string' && model.trim() ? model.trim() : undefined;
 }
 
 // The modal's height is `calc(60vh + <offset>px)` — the 60vh keeps it
@@ -184,6 +196,8 @@ export function AgentTranscriptModal(props: Props) {
                 {agentAddress && (
                   <AgentComposer
                     agentId={agentAddress}
+                    recipientName={taskSubagentType(task) ?? task.name}
+                    recipientModel={agentModelOf(task)}
                     isRunning={isRunning}
                     inputMode={inputMode}
                     onSend={sendToAgent}
@@ -241,7 +255,11 @@ export function AgentTranscriptModal(props: Props) {
                   {selectedAgent?.agentId && (
                     <AgentComposer
                       agentId={selectedAgent.agentId}
-                      isRunning={false}
+                      recipientName={agentDisplayName(selectedAgent, selectedAgent.phaseTitle)}
+                      recipientModel={selectedAgent.model}
+                      // This agent's own state, not the workflow's: one can be
+                      // finished while the run around it goes on.
+                      isRunning={agentDisplayStatus(selectedAgent.state, task.status) === 'running'}
                       inputMode={inputMode}
                       onSend={sendToAgent}
                     />

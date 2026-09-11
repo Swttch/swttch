@@ -82,6 +82,17 @@ function makeTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
   };
 }
 
+/**
+ * The picker's chip for an agent. Its name now appears twice on screen — once
+ * as a tab here, once on the composer's recipient tag below — so a plain
+ * getByText is ambiguous. The chip is the one that is a button.
+ */
+function agentChip(name: string): HTMLElement {
+  const chip = screen.getAllByText(name).map((el) => el.closest('button')).find(Boolean);
+  if (!chip) throw new Error(`no picker chip for ${name}`);
+  return chip;
+}
+
 function renderModal(task: WorkflowTask, onClose = vi.fn()) {
   const client = createTestQueryClient();
   return {
@@ -201,7 +212,7 @@ describe('AgentTranscriptModal', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask());
 
-    const chip = screen.getByText('Agent One').closest('button')!;
+    const chip = agentChip('Agent One');
     expect(chip.getAttribute('title')).toBeNull();
     // Closed, the preview is nowhere in the picker; it is the tooltip's content.
     // (The detail header shows the selected agent's prompt in the open, which is
@@ -239,7 +250,7 @@ describe('AgentTranscriptModal', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask());
 
-    expect(screen.getByText('Agent One')).toBeInTheDocument();
+    expect(agentChip('Agent One')).toBeInTheDocument();
     expect(screen.queryByText('explore:Agent One')).not.toBeInTheDocument();
   });
 
@@ -276,7 +287,7 @@ describe('AgentTranscriptModal', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask());
 
-    const chip = screen.getByText('Agent One').closest('button')!;
+    const chip = agentChip('Agent One');
     const picker = chip.closest('[class*="sm:max-w-52"]') as HTMLElement;
     const scroller = chip.parentElement as HTMLElement;
 
@@ -299,7 +310,7 @@ describe('AgentTranscriptModal', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask());
 
-    const picker = screen.getByText('Agent One').closest('[class*="sm:max-w-52"]') as HTMLElement;
+    const picker = agentChip('Agent One').closest('[class*="sm:max-w-52"]') as HTMLElement;
     const transcript = picker.nextElementSibling as HTMLElement;
 
     // The picker takes the leftover width, bounded at both ends.

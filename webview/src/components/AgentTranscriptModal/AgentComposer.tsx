@@ -8,11 +8,16 @@ import { insertNewlineAtCursor } from '@/pages/ChatPage/ChatInput/RichInput/inse
 import { useSettings } from '@/contexts/SettingsContext';
 import { isMobile } from '@/config/environment';
 import { InputFrame } from '@/pages/ChatPage/ChatInput/InputFrame';
+import { AgentRecipientTag } from './AgentRecipientTag';
 import type { InputMode } from '@/types/chatInput';
 
 interface Props {
   /** The agent's address. */
   agentId: string;
+  /** Who the message is going to, in the words the CLI used for them. */
+  recipientName: string;
+  /** The model that agent runs on, when the CLI said. */
+  recipientModel?: string;
   /** Whether this agent is working right now — the send button becomes stop. */
   isRunning: boolean;
   /** The session's mode, which colours the box and the send button. */
@@ -39,10 +44,16 @@ interface Props {
  * under it), not to the box around them — so styling it that way misshapes the
  * editor instead of the container, and the container is what this file owns.
  *
- * Three of the main bar's controls are absent rather than inert. `SendMessage`
- * carries a plain string, so an attachment has nowhere to go; a slash command
- * addresses the session, not the agent in front of you; and the mode, model and
- * context-window tags all describe the session rather than this exchange.
+ * The bar's start says who this is pointed at, where the session input says
+ * under what permission mode it sends — the same question asked of a different
+ * thing, and not a rhetorical one here: a workflow's agents are picked from
+ * tabs, so the recipient changes as you click around.
+ *
+ * Three of the session bar's controls are absent rather than inert.
+ * `SendMessage` carries a plain string, so an attachment has nowhere to go; a
+ * slash command addresses the session, not the agent in front of you; and the
+ * mode, model and context-window tags all describe the session rather than
+ * this exchange.
  *
  * Nothing is echoed here. Resuming an agent makes the CLI fire a fresh
  * `task_started` carrying this text as its `prompt`, so the message appears in
@@ -50,7 +61,7 @@ interface Props {
  * of ours that could disagree with it.
  */
 export function AgentComposer(props: Props) {
-  const { agentId, isRunning, inputMode, onSend, onStop } = props;
+  const { agentId, recipientName, recipientModel, isRunning, inputMode, onSend, onStop } = props;
   const { t } = useTranslation('chat');
   const { settings } = useSettings();
   const [text, setText] = useState('');
@@ -133,6 +144,7 @@ export function AgentComposer(props: Props) {
             ariaLabel={t('backgroundTasks.agentComposer.placeholder')}
           />
         }
+        barStart={<AgentRecipientTag name={recipientName} model={recipientModel} />}
         barEnd={
           <ActionButtons
             mode={inputMode}

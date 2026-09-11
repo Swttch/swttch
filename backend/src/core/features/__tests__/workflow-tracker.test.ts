@@ -1349,3 +1349,75 @@ describe('a resumed agent stays one task', () => {
     expect(rows()).toEqual(new Set(['toolu_launch', 'toolu_other']));
   });
 });
+
+// The CLI has two words for a task being stopped: a task_updated patch says
+// `killed` where a task_notification says `stopped`. Only one of them is a
+// WorkflowStatus, and casting the other through put "killed" on screen — seen
+// live after clicking stop on a running agent.
+describe('how a task ended, in our words', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  const started = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'a1a483e3cd0af8bea',
+    tool_use_id: 'toolu_1',
+    description: 'Sleep 120 then reply done',
+    is_backgrounded: true,
+    task_type: 'local_agent',
+  };
+
+  it('calls a killed task stopped, whichever event says so', () => {
+    for (const ending of [
+      { subtype: 'task_updated', task_id: 'a1a483e3cd0af8bea', patch: { status: 'killed', end_time: 1 } },
+      { subtype: 'task_notification', task_id: 'a1a483e3cd0af8bea', tool_use_id: 'toolu_1', status: 'stopped' },
+    ]) {
+      const { tracker, last } = makeTracker();
+      tracker.handleEvent('s1', started);
+      tracker.handleEvent('s1', { type: 'system', ...ending });
+      expect(last().status).toBe('stopped');
+    }
+  });
+
+  it('passes completed and failed through untouched', () => {
+    for (const status of ['completed', 'failed'] as const) {
+      const { tracker, last } = makeTracker();
+      tracker.handleEvent('s1', started);
+      tracker.handleEvent('s1', {
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'a1a483e3cd0af8bea',
+        tool_use_id: 'toolu_1',
+        status,
+      });
+      expect(last().status).toBe(status);
+    }
+  });
+
+  // A word we have no meaning for must not become the status: it would be
+  // painted with no colour and compared against by code that never expects it.
+  it('falls back rather than letting an unknown word through', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', started);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'a1a483e3cd0af8bea',
+      tool_use_id: 'toolu_1',
+      status: 'something-new',
+    });
+
+    expect(last().status).toBe('completed');
+    // The word itself is not lost — it is on the event, kept whole.
+    expect(last().events?.task_notification?.['status']).toBe('something-new');
+  });
+});

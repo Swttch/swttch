@@ -344,8 +344,7 @@ function parseXmlTags(block: string): Record<string, string> {
 /** Apply a `<task-notification>` envelope's fields onto a task (no I/O). */
 function applyNotification(task: WorkflowTask, text: string): void {
   const usageBlock = parseXmlTag(text, 'usage') ?? '';
-  const status = parseXmlTag(text, 'status') as WorkflowStatus | undefined;
-  task.status = status ?? 'completed';
+  task.status = toWorkflowStatus(parseXmlTag(text, 'status')) ?? 'completed';
   task.summary = parseXmlTag(text, 'summary');
   task.result = parseXmlTag(text, 'result');
   task.outputFile = parseXmlTag(text, 'output-file');
@@ -514,6 +513,28 @@ export async function reconstructWorkflowTasks(
 
 function str(v: unknown): string | undefined {
   return typeof v === 'string' && v ? v : undefined;
+}
+
+/**
+ * The CLI's word for how a task ended, in ours.
+ *
+ * It has two for being stopped: a `task_updated` patch says `killed`, while a
+ * `task_notification` says `stopped` — measured across one machine's logs,
+ * where notifications only ever said completed/failed/stopped. `killed` has no
+ * place in WorkflowStatus, and casting it through put that word on screen.
+ */
+function toWorkflowStatus(value: unknown): WorkflowStatus | undefined {
+  switch (value) {
+    case 'killed':
+    case 'stopped':
+      return 'stopped';
+    case 'completed':
+    case 'failed':
+    case 'running':
+      return value;
+    default:
+      return undefined;
+  }
 }
 
 export class WorkflowProgressTracker {
@@ -708,12 +729,8 @@ export class WorkflowProgressTracker {
 
     if (p['is_backgrounded'] === true) entry.backgrounded = true;
 
-    // The CLI's own words for how it ended. `killed` is the one that needs
-    // saying differently, because we call that state `stopped`; the other two
-    // are already our names for it.
-    const status = p['status'];
-    if (status === 'killed') t.status = 'stopped';
-    else if (status === 'completed' || status === 'failed') t.status = status;
+    const status = toWorkflowStatus(p['status']);
+    if (status) t.status = status;
 
     const endTime = p['end_time'];
     if (typeof endTime === 'number') t.endedAt = endTime;
@@ -773,8 +790,7 @@ export class WorkflowProgressTracker {
     this.keepEvent(entry, 'task_notification', event);
     const t = entry.task;
 
-    const status = typeof event['status'] === 'string' ? (event['status'] as WorkflowStatus) : undefined;
-    t.status = status ?? 'completed';
+    t.status = toWorkflowStatus(event['status']) ?? 'completed';
     if (typeof event['summary'] === 'string') t.summary = event['summary'] as string;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
 
