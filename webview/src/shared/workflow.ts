@@ -149,20 +149,6 @@ export interface WorkflowTask {
    * original-data-preservation rule in CLAUDE.md).
    */
   events?: WorkflowTaskEvents;
-  /**
-   * Agent ids the CLI has refused to resume, because the session that ran them
-   * is gone and their transcripts with it.
-   *
-   * A list, and per agent rather than per task, because a workflow's agents are
-   * reached individually: one of them being unreachable says nothing about the
-   * others. For a backgrounded Agent the task id IS the agent id, so its own id
-   * appears here.
-   *
-   * Not a guess made ahead of time — nothing readable says so in advance, and a
-   * task that cannot be reached looks exactly like one that can. It is filled
-   * in when a SendMessage comes back refusing.
-   */
-  unreachableAgentIds?: string[];
 }
 
 /**

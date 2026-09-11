@@ -36,6 +36,13 @@ vi.mock('@/contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { useCtrlEnterToSend: false } }),
 }));
 
+// The composer asks the conversation which agents can no longer be reached
+// (useUnreachableAgents). These tests are not about that, so it reads an empty
+// one — and an empty conversation means every agent is still reachable.
+vi.mock('@/contexts/ChatStreamContext', () => ({
+  useChatStreamContext: () => ({ messages: [] }),
+}));
+
 import { AgentTranscriptModal } from '../index';
 
 function makeTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 // The composer reads one app setting (Enter vs Ctrl+Enter to send); the rest
 // of SettingsProvider is irrelevant here.
 vi.mock('@/contexts/SettingsContext', () => ({
@@ -32,6 +32,30 @@ function setup(overrides: { isRunning?: boolean; onStop?: () => void; unreachabl
 }
 
 describe('AgentComposer', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // A resume that finishes between two renders is never seen as `running`, and
+  // a workflow agent's resume becomes a separate task whose `running` never
+  // lands on this one. Either way nothing arrives to take the stop button back
+  // down, and it would sit there offering to stop something already over.
+  it('stops claiming to be working if the CLI never confirms it', () => {
+    vi.useFakeTimers();
+    const { box } = setup({ isRunning: false, onStop: vi.fn() });
+
+    type(box, 'anyone there?');
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect(screen.getByTitle('Stop generating')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+
+    expect(screen.queryByTitle('Stop generating')).not.toBeInTheDocument();
+    expect(screen.getByTitle('Send message')).toBeInTheDocument();
+  });
+
   it('sends to the agent it was given, and clears', () => {
     const { onSend, box } = setup();
 

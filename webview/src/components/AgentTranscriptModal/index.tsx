@@ -9,6 +9,7 @@ import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
 import { agentAddressOf } from '@/hooks/useSendToAgent';
+import { useUnreachableAgents } from '@/hooks/useUnreachableAgents';
 import { agentDisplayStatus } from '@/utils/workflowFormat';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
@@ -50,6 +51,7 @@ export function AgentTranscriptModal(props: Props) {
   const now = useNow(isRunning);
   const { cancelTask, sendToAgent, stopAgent } = useBackgroundTaskActions();
   const { inputMode } = useSessionContext();
+  const unreachableAgents = useUnreachableAgents();
   const { height: heightOffset, startResize, wasJustResizing } = useVerticalResize({
     initialHeight: DEFAULT_HEIGHT_OFFSET_PX,
     minHeight: MIN_HEIGHT_OFFSET_PX,
@@ -191,7 +193,7 @@ export function AgentTranscriptModal(props: Props) {
                     // A backgrounded Agent IS its task, so stopping it by its
                     // own address stops this agent and nothing else.
                     onStop={() => stopAgent(agentAddress, task.name)}
-                    unreachable={task.unreachableAgentIds?.includes(agentAddress)}
+                    unreachable={unreachableAgents.has(agentAddress)}
                   />
                 )}
               </div>
@@ -252,7 +254,7 @@ export function AgentTranscriptModal(props: Props) {
                       // belongs to: resuming one starts it again as a task
                       // under that id, which is what there is to stop.
                       onStop={() => stopAgent(selectedAgent.agentId!, selectedAgent.label ?? selectedAgent.agentId!)}
-                      unreachable={task.unreachableAgentIds?.includes(selectedAgent.agentId)}
+                      unreachable={unreachableAgents.has(selectedAgent.agentId)}
                     />
                   )}
                 </div>

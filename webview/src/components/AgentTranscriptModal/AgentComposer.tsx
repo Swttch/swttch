@@ -10,6 +10,22 @@ import { isMobile } from '@/config/environment';
 import { InputFrame } from '@/pages/ChatPage/ChatInput/InputFrame';
 import type { InputMode } from '@/types/chatInput';
 
+/**
+ * How long the composer will claim a message is being worked on before the CLI
+ * has confirmed it.
+ *
+ * The claim is a guess, and it needs an end: a resume that completes between
+ * two renders is never seen as `running` at all, and a workflow agent's resume
+ * becomes a separate task whose `running` never lands on this one. Either way
+ * nothing would arrive to take the stop button back down, and it would sit
+ * there for the rest of the session offering to stop something already over.
+ *
+ * Long enough to cover the round trip — the model has to notice the request and
+ * call SendMessage, then the agent has to restart — and short enough that a
+ * button pointing at nothing is not left standing.
+ */
+const ASSUME_WORKING_MS = 20_000;
+
 interface Props {
   /** The agent's address. */
   agentId: string;
@@ -82,12 +98,18 @@ export function AgentComposer(props: Props) {
     setJustSent(true);
   };
 
-  // Hand over to the real thing as soon as it is the real thing, and let go
-  // again when the agent finishes — the CLI's own account of what is happening
-  // outranks our guess the instant we have it.
+  // Hand over to the real thing as soon as it is the real thing: the CLI's own
+  // account outranks our guess the instant we have it.
   useEffect(() => {
     if (isRunning) setJustSent(false);
   }, [isRunning]);
+
+  // And give up on the guess if that account never comes. See ASSUME_WORKING_MS.
+  useEffect(() => {
+    if (!justSent) return;
+    const timer = setTimeout(() => setJustSent(false), ASSUME_WORKING_MS);
+    return () => clearTimeout(timer);
+  }, [justSent]);
 
 
   // A refused send never becomes a running agent, so `justSent` would stay on
