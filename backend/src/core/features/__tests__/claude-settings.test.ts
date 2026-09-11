@@ -7,6 +7,7 @@ import {
   readJsonFileSafe,
   readClaudeSettings,
   saveClaudeSetting,
+  getProxyEnvFromSettings,
 } from '../claude-settings';
 
 // deepMergeSettings used to be re-implemented here because it was not exported.
@@ -281,6 +282,75 @@ describe('claude-settings', () => {
     it('creates the file when there is none yet', async () => {
       expect(await saveClaudeSetting('theme', 'dark')).toEqual({ status: 'ok' });
       expect(JSON.parse(readSettings())).toEqual({ theme: 'dark' });
+    });
+  });
+
+  // ccb (the usage-stats helper CLI) is not the claude CLI and never reads
+  // ~/.claude/settings.json itself, so a proxy configured there must be read
+  // here and forwarded explicitly to whatever spawns ccb.
+  describe('getProxyEnvFromSettings()', () => {
+    let configDir: string;
+    let saved: string | undefined;
+
+    beforeEach(() => {
+      configDir = mkdtempSync(join(tmpdir(), 'ccg-proxy-'));
+      mkdirSync(configDir, { recursive: true });
+      saved = process.env.CLAUDE_CONFIG_DIR;
+      process.env.CLAUDE_CONFIG_DIR = configDir;
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = saved;
+      rmSync(configDir, { recursive: true, force: true });
+    });
+
+    const write = (name: string, raw: string) =>
+      writeFileSync(join(configDir, name), raw, 'utf-8');
+
+    it('returns {} when settings.json has no env block', async () => {
+      expect(await getProxyEnvFromSettings()).toEqual({});
+    });
+
+    it('returns {} when env has no proxy keys', async () => {
+      write('settings.json', JSON.stringify({ env: { ANTHROPIC_API_KEY: 'sk-test' } }));
+      expect(await getProxyEnvFromSettings()).toEqual({});
+    });
+
+    it('picks up HTTP_PROXY and HTTPS_PROXY from settings.json', async () => {
+      write('settings.json', JSON.stringify({
+        env: { HTTP_PROXY: 'http://proxy.local:8080', HTTPS_PROXY: 'http://proxy.local:8443' },
+      }));
+      expect(await getProxyEnvFromSettings()).toEqual({
+        HTTP_PROXY: 'http://proxy.local:8080',
+        HTTPS_PROXY: 'http://proxy.local:8443',
+      });
+    });
+
+    it('ignores a non-string proxy value instead of forwarding it', async () => {
+      write('settings.json', JSON.stringify({ env: { HTTP_PROXY: null } }));
+      expect(await getProxyEnvFromSettings()).toEqual({});
+    });
+
+    it('lets settings.local.json override the base proxy value', async () => {
+      write('settings.json', JSON.stringify({ env: { HTTP_PROXY: 'http://base:8080' } }));
+      write('settings.local.json', JSON.stringify({ env: { HTTP_PROXY: 'http://local:8080' } }));
+      expect(await getProxyEnvFromSettings()).toEqual({ HTTP_PROXY: 'http://local:8080' });
+    });
+
+    it('lets a project-level setting override the global one', async () => {
+      const projectDir = mkdtempSync(join(tmpdir(), 'ccg-proxy-project-'));
+      try {
+        write('settings.json', JSON.stringify({ env: { HTTP_PROXY: 'http://global:8080' } }));
+        mkdirSync(join(projectDir, '.claude'), { recursive: true });
+        writeFileSync(
+          join(projectDir, '.claude', 'settings.json'),
+          JSON.stringify({ env: { HTTP_PROXY: 'http://project:8080' } }),
+          'utf-8',
+        );
+        expect(await getProxyEnvFromSettings(projectDir)).toEqual({ HTTP_PROXY: 'http://project:8080' });
+      } finally {
+        rmSync(projectDir, { recursive: true, force: true });
+      }
     });
   });
 });

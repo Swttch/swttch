@@ -8,7 +8,7 @@ import {
   type ExecFileOptionsWithBufferEncoding,
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
-import { getStrippableAuthEnvKeys } from './features/claude-settings';
+import { getStrippableAuthEnvKeys, getProxyEnvFromSettings, PROXY_ENV_KEYS } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
 import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
 import { resolveWslCwd } from './wsl-path';
@@ -28,6 +28,13 @@ export class Claude {
   // user's shell, or echoed temporarily). Captured once, before any plugin-settings
   // override is applied, so we can restore it when the override is later cleared.
   private static readonly inheritedConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  // Same idea for the proxy variables: whatever the backend inherited at startup,
+  // captured before any settings value is projected, so switching to a project
+  // that configures no proxy restores the shell's proxy instead of dropping it.
+  private static readonly inheritedProxyEnv: NodeJS.ProcessEnv = Object.fromEntries(
+    PROXY_ENV_KEYS.filter((key) => process.env[key] !== undefined)
+      .map((key) => [key, process.env[key]]),
+  );
 
   /** Load cliPath from settings. Call at server start or on settings change. */
   static async refresh(workingDir?: string): Promise<void> {
@@ -48,6 +55,14 @@ export class Claude {
    * The Claude CLI reads CLAUDE_CONFIG_DIR only from process.env (never from
    * settings.json's `env`, which it consults too late), so we mirror our setting here.
    * Priority: settings env (project > global) > inherited startup env > ~/.claude.
+   *
+   * The proxy variables ride along for the same reason. `ccb` does not read
+   * settings.json, so a user who configures a proxy only there gets a usage panel
+   * that cannot reach the API while `claude` itself works (issue #181). Projecting
+   * here rather than at each spawn is what keeps the answer single: `fetchAccountUsage`
+   * and the auto-resume hook have no workingDir to read settings with — the hook is
+   * registered once at server start — so a per-call-site read would silently fall back
+   * to global settings in exactly the places a project-scoped proxy matters.
    */
   static async applyConfigDir(workingDir?: string): Promise<void> {
     // `cliPath` rides along on the same load-time projection. A terminal user can
@@ -71,6 +86,15 @@ export class Claude {
       process.env.CLAUDE_CONFIG_DIR = Claude.inheritedConfigDir;
     } else {
       delete process.env.CLAUDE_CONFIG_DIR;
+    }
+
+    // Each key is resolved on its own: setting HTTPS_PROXY in settings.json says
+    // nothing about HTTP_PROXY, so an inherited value for the other one survives.
+    const settingsProxy = await getProxyEnvFromSettings(workingDir);
+    for (const key of PROXY_ENV_KEYS) {
+      const value = settingsProxy[key] ?? Claude.inheritedProxyEnv[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
     }
   }
 

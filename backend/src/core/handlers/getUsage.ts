@@ -124,6 +124,9 @@ export async function runCcbUsage(): Promise<CcbUsageResponse> {
   // The Command core resolves the platform shell (win32 cmd.exe argv; unix login
   // shell so ccb sees the rc-file PATH) and layers on the augmented PATH, so ccb
   // is discoverable even when the backend's inherited PATH lacks the npm global bin.
+  //
+  // The proxy reaches ccb through process.env, projected by Claude.applyConfigDir
+  // when the context loaded — ccb does not read settings.json itself (#181).
   const { stdout } = await new Command('ccb', ['oauth', 'usage', '--json'], {
     timeout: 15000,
     shell: ShellKind.LoginInteractive,
