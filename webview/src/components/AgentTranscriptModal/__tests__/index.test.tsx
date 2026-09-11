@@ -27,6 +27,15 @@ vi.mock('@/hooks/useBackgroundTaskActions', () => ({
   useBackgroundTaskActions: () => ({ cancelTask: cancelTaskMock }),
 }));
 
+// The composer under each transcript reads the session's mode (for the send
+// button's colour) and one app setting (Enter vs Ctrl+Enter).
+vi.mock('@/contexts/SessionContext', () => ({
+  useSessionContext: () => ({ inputMode: 'ask_before_edit' }),
+}));
+vi.mock('@/contexts/SettingsContext', () => ({
+  useSettings: () => ({ settings: { useCtrlEnterToSend: false } }),
+}));
+
 import { AgentTranscriptModal } from '../index';
 
 function makeTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {

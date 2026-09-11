@@ -4,6 +4,7 @@ import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
 import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
+import { useSessionContext } from '@/contexts/SessionContext';
 import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
@@ -47,6 +48,7 @@ export function AgentTranscriptModal(props: Props) {
   const isRunning = task.status === 'running';
   const now = useNow(isRunning);
   const { cancelTask, sendToAgent } = useBackgroundTaskActions();
+  const { inputMode } = useSessionContext();
   const { height: heightOffset, startResize, wasJustResizing } = useVerticalResize({
     initialHeight: DEFAULT_HEIGHT_OFFSET_PX,
     minHeight: MIN_HEIGHT_OFFSET_PX,
@@ -179,7 +181,17 @@ export function AgentTranscriptModal(props: Props) {
               <div className="flex flex-1 min-h-0 flex-col">
                 <DetailHeader source={task} />
                 <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
-                {agentAddress && <AgentComposer agentId={agentAddress} onSend={sendToAgent} />}
+                {agentAddress && (
+                  <AgentComposer
+                    agentId={agentAddress}
+                    isRunning={isRunning}
+                    inputMode={inputMode}
+                    onSend={sendToAgent}
+                    // A backgrounded Agent IS its task, so stopping the task
+                    // stops this agent and nothing else.
+                    onStop={() => cancelTask(task)}
+                  />
+                )}
               </div>
             ) : (
               /* Picker beside the transcript rather than above it (issue #425).
@@ -217,6 +229,23 @@ export function AgentTranscriptModal(props: Props) {
                     agent={selectedAgent}
                     taskStatus={task.status}
                   />
+                  {/* The same composer the single-agent view gets. A workflow
+                      agent is reachable by its runtime agentId even though the
+                      CLI never tells the model that id — we have it from
+                      task_progress, so this is a thing only the GUI can offer.
+
+                      No stop button here: stopping would have to stop the whole
+                      workflow, which is a different act from stopping the agent
+                      you are looking at, and there is no request for the
+                      latter. */}
+                  {selectedAgent?.agentId && (
+                    <AgentComposer
+                      agentId={selectedAgent.agentId}
+                      isRunning={false}
+                      inputMode={inputMode}
+                      onSend={sendToAgent}
+                    />
+                  )}
                 </div>
               </div>
             )}
