@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   buildCheckpointingEnv,
   buildClaudeArgs,
+  isWorkflowRunning,
   needsRestartForMode,
   readReportedMode,
+  stopWorkflowsForSession,
 } from '../claude-process';
 
 describe('buildClaudeArgs', () => {
@@ -156,5 +158,28 @@ describe('readReportedMode', () => {
 
   it('reports nothing for an unrecognized flag rather than guessing', () => {
     expect(readReportedMode({ type: 'system', permissionMode: 'somethingNew' })).toBeNull();
+  });
+});
+
+// These two read the process-wide workflow tracker, which may legitimately not
+// exist yet: it is created lazily on the first CLI stream event, while session
+// load can ask about it before any event has arrived. They referenced a
+// module-local `workflowTracker` binding that was later removed in favour of an
+// imported accessor, and the references were not updated — so instead of
+// answering "no tracker, so no", they threw ReferenceError.
+//
+// That is worse than it sounds for `isWorkflowRunning`, because its only caller
+// passes it as the `isLive` callback to reconstructWorkflowTasks inside a
+// try/catch that merely logs. The throw aborted the whole reconstruction, so a
+// reloaded session silently showed none of its background tasks — not even the
+// workflows the reconstruction did know how to rebuild.
+describe('workflow tracker accessors before any tracker exists', () => {
+  it('reports a workflow as not running rather than throwing', () => {
+    expect(() => isWorkflowRunning('no-such-session', 'toolu_1')).not.toThrow();
+    expect(isWorkflowRunning('no-such-session', 'toolu_1')).toBe(false);
+  });
+
+  it('stops workflows for an unknown session without throwing', () => {
+    expect(() => stopWorkflowsForSession('no-such-session')).not.toThrow();
   });
 });
