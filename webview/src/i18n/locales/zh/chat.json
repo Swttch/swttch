@@ -248,6 +248,10 @@
       "noOutputYet": "尚无输出。",
       "noOutput": "无输出。"
     },
+    "agentComposer": {
+      "placeholder": "给该智能体发消息…",
+      "send": "发送给智能体"
+    },
     "agentDetail": {
       "tools_one": "工具 {{count}} 次",
       "tools_other": "工具 {{count}} 次",

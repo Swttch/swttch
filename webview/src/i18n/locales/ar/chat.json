@@ -252,6 +252,10 @@
       "noOutputYet": "لا يوجد إخراج بعد.",
       "noOutput": "لا يوجد إخراج."
     },
+    "agentComposer": {
+      "placeholder": "راسل هذا الوكيل…",
+      "send": "إرسال إلى الوكيل"
+    },
     "agentDetail": {
       "tools_zero": "لا أدوات",
       "tools_one": "أداة واحدة",

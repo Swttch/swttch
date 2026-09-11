@@ -248,6 +248,10 @@
       "noOutputYet": "Ainda sem saída.",
       "noOutput": "Sem saída."
     },
+    "agentComposer": {
+      "placeholder": "Enviar mensagem a este agente…",
+      "send": "Enviar ao agente"
+    },
     "agentDetail": {
       "tools_one": "{{count}} ferramenta",
       "tools_other": "{{count}} ferramentas",

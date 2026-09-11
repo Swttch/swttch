@@ -248,6 +248,10 @@
       "noOutputYet": "No output yet.",
       "noOutput": "No output."
     },
+    "agentComposer": {
+      "placeholder": "Message this agent…",
+      "send": "Send to agent"
+    },
     "agentDetail": {
       "tools_one": "{{count}} tool",
       "tools_other": "{{count}} tools",

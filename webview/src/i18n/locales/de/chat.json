@@ -248,6 +248,10 @@
       "noOutputYet": "Noch keine Ausgabe.",
       "noOutput": "Keine Ausgabe."
     },
+    "agentComposer": {
+      "placeholder": "Diesem Agenten schreiben…",
+      "send": "An Agent senden"
+    },
     "agentDetail": {
       "tools_one": "{{count}} Tool",
       "tools_other": "{{count}} Tools",

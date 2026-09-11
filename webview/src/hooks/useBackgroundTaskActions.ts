@@ -4,10 +4,12 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useCancelBackgroundTask } from './useCancelBackgroundTask';
+import { useSendToAgent } from './useSendToAgent';
 import type { WorkflowTask } from '@/shared';
 
 /**
- * Cancelling background tasks, bound to the current session.
+ * Acting on background tasks, bound to the current session: cancelling one, and
+ * passing a message to an agent.
  *
  * One place because two controls reach the same action: the panel's per-row "✕"
  * and the Escape ×3 gesture that stops all of them (issue #330). A shortcut that
@@ -25,6 +27,7 @@ export function useBackgroundTaskActions() {
   const { sendMessage } = useChatStreamContext();
   const { runningTasks } = useWorkflowState();
   const cancelBackgroundTask = useCancelBackgroundTask(bridge);
+  const sendToAgentInner = useSendToAgent();
 
   const { currentSessionId, workingDirectory, inputMode } = session;
   const context = useMemo(
@@ -44,6 +47,13 @@ export function useBackgroundTaskActions() {
     [cancelBackgroundTask, context],
   );
 
+  const sendToAgent = useCallback(
+    (agentId: string, message: string) => {
+      sendToAgentInner(agentId, message, { inputMode, sendMessage });
+    },
+    [sendToAgentInner, inputMode, sendMessage],
+  );
+
   const cancelAllRunning = useCallback(() => {
     // Fired one per task rather than as a single "stop everything" request:
     // there is no such request, and doing it per task means the fallback route
@@ -51,5 +61,5 @@ export function useBackgroundTaskActions() {
     for (const task of runningTasks) void cancelBackgroundTask(task, context);
   }, [runningTasks, cancelBackgroundTask, context]);
 
-  return { cancelTask, cancelAllRunning, runningCount: runningTasks.length };
+  return { cancelTask, cancelAllRunning, sendToAgent, runningCount: runningTasks.length };
 }

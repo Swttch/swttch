@@ -250,6 +250,10 @@
       "noOutputYet": "Вывода пока нет.",
       "noOutput": "Нет вывода."
     },
+    "agentComposer": {
+      "placeholder": "Написать этому агенту…",
+      "send": "Отправить агенту"
+    },
     "agentDetail": {
       "tools_one": "{{count}} инструмент",
       "tools_few": "{{count}} инструмента",

@@ -248,6 +248,10 @@
       "noOutputYet": "まだ出力がありません。",
       "noOutput": "出力がありません。"
     },
+    "agentComposer": {
+      "placeholder": "このエージェントにメッセージ…",
+      "send": "エージェントに送信"
+    },
     "agentDetail": {
       "tools_one": "ツール {{count}} 回",
       "tools_other": "ツール {{count}} 回",

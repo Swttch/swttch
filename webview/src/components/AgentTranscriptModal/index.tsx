@@ -7,9 +7,11 @@ import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
+import { agentAddressOf } from '@/hooks/useSendToAgent';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
 import { DetailHeader } from './AgentDetailHeader';
+import { AgentComposer } from './AgentComposer';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
 import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import { BackgroundTaskOutputBody } from './BackgroundTaskOutputBody';
@@ -44,7 +46,7 @@ export function AgentTranscriptModal(props: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const isRunning = task.status === 'running';
   const now = useNow(isRunning);
-  const { cancelTask } = useBackgroundTaskActions();
+  const { cancelTask, sendToAgent } = useBackgroundTaskActions();
   const { height: heightOffset, startResize, wasJustResizing } = useVerticalResize({
     initialHeight: DEFAULT_HEIGHT_OFFSET_PX,
     minHeight: MIN_HEIGHT_OFFSET_PX,
@@ -104,6 +106,9 @@ export function AgentTranscriptModal(props: Props) {
   const isBashTask = task.taskType === 'local_bash';
   const isAgentTask = task.taskType === 'local_agent';
   const resolvedOutputFile = useResolvedTaskOutputFile(task);
+  // An agent can be spoken to for as long as it exists — a finished one is
+  // resumed by the message, which is how the CLI itself describes it.
+  const agentAddress = agentAddressOf(task);
 
   return (
     <Portal>
@@ -174,6 +179,7 @@ export function AgentTranscriptModal(props: Props) {
               <div className="flex flex-1 min-h-0 flex-col">
                 <DetailHeader source={task} />
                 <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
+                {agentAddress && <AgentComposer agentId={agentAddress} onSend={sendToAgent} />}
               </div>
             ) : (
               /* Picker beside the transcript rather than above it (issue #425).

@@ -248,6 +248,10 @@
       "noOutputYet": "아직 출력이 없습니다.",
       "noOutput": "출력이 없습니다."
     },
+    "agentComposer": {
+      "placeholder": "이 에이전트에게 메시지…",
+      "send": "에이전트에게 보내기"
+    },
     "agentDetail": {
       "tools_one": "도구 {{count}}회",
       "tools_other": "도구 {{count}}회",

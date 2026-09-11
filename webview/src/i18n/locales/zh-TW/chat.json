@@ -248,6 +248,10 @@
       "noOutputYet": "尚無輸出。",
       "noOutput": "無輸出。"
     },
+    "agentComposer": {
+      "placeholder": "傳訊息給這個代理…",
+      "send": "傳送給代理"
+    },
     "agentDetail": {
       "tools_one": "工具 {{count}} 次",
       "tools_other": "工具 {{count}} 次",
