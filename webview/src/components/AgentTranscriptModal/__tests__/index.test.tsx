@@ -344,3 +344,65 @@ describe('AgentTranscriptModal', () => {
     expect(wrapper.style.height).toBe('calc(-84px + 60vh)');
   });
 });
+
+// The composer is offered only where there is somewhere for a message to go.
+// Which kind of task the reader opens is not ours to predict, so each kind is
+// pinned here rather than left to whichever one happened to be tested by hand.
+describe('AgentTranscriptModal: who gets a composer', () => {
+  function agentTask(overrides: Partial<WorkflowTask> = {}): WorkflowTask {
+    return {
+      toolUseId: 'toolu_a',
+      taskType: 'local_agent',
+      taskId: 'a40be17f1967a0861',
+      name: 'Describe webview utils dir',
+      status: 'completed',
+      startedAt: 0,
+      phases: [],
+      agents: [],
+      ...overrides,
+    };
+  }
+
+  function composer(): HTMLElement | null {
+    return document.querySelector('[contenteditable]');
+  }
+
+  it('gives a backgrounded Agent one, addressed by its own id', () => {
+    renderModal(agentTask());
+    expect(composer()).not.toBeNull();
+  });
+
+  // Before the launch text has been read there is no id, and an id is the whole
+  // address. Offering to send with nowhere to send is worse than not offering.
+  it('gives a backgrounded Agent none until its id is known', () => {
+    renderModal(agentTask({ taskId: undefined }));
+    expect(composer()).toBeNull();
+  });
+
+  // A plain background command is a process, not something that reads messages.
+  it('gives a Bash task none', () => {
+    renderModal(agentTask({ taskType: 'local_bash', taskId: 'b27yhtv6i' }));
+    expect(composer()).toBeNull();
+  });
+
+  // A workflow is not an agent; its agents are, and they are chosen in the
+  // picker. With none chosen there is nobody to write to yet.
+  it('gives a workflow with no agents none', () => {
+    renderModal(makeTask({ agents: [] }));
+    expect(composer()).toBeNull();
+  });
+
+  it('gives the workflow agent that is selected one', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    renderModal(makeTask());
+    expect(composer()).not.toBeNull();
+  });
+
+  // An agent rebuilt from disk has an id and no more, which is still an
+  // address. Whether it can be resumed is not knowable until it is tried.
+  it('gives a rebuilt workflow agent one, on the strength of its id alone', () => {
+    sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
+    renderModal(makeTask({ agents: [{ agentId: 'a1', reconstructed: true }] }));
+    expect(composer()).not.toBeNull();
+  });
+});
