@@ -1082,11 +1082,12 @@ describe('the CLI events, kept whole', () => {
     const { tracker, last } = makeTracker();
     tracker.handleEvent('s1', agentStarted);
 
-    expect(last().events?.task_started).toEqual(agentStarted);
+    expect(last().events?.task_started).toEqual([agentStarted]);
     // The ones that used to be read and thrown away, or never read at all.
-    expect(last().events?.task_started?.['prompt']).toBe('sleep 90 using Bash, then reply done');
-    expect(last().events?.task_started?.['subagent_type']).toBe('general-purpose');
-    expect(last().events?.task_started?.['spawn_depth']).toBe(1);
+    const started = last().events?.task_started?.[0];
+    expect(started?.['prompt']).toBe('sleep 90 using Bash, then reply done');
+    expect(started?.['subagent_type']).toBe('general-purpose');
+    expect(started?.['spawn_depth']).toBe(1);
   });
 
   it('keeps task_progress whole, including last_tool_name', () => {
@@ -1216,5 +1217,135 @@ describe('task_updated', () => {
     const { tracker, broadcasts } = makeTracker();
     tracker.handleEvent('s1', updated({ status: 'completed', end_time: 1 }));
     expect(broadcasts).toHaveLength(0);
+  });
+});
+
+// Resuming an agent makes the CLI start it again under a NEW tool_use_id while
+// keeping the SAME task_id — its own notification says so: "the same task-id
+// may notify more than once". Keyed by tool_use_id alone, that became a second
+// row for one agent, and the panel showed it sitting in "running" and
+// "finished" at the same time.
+describe('a resumed agent stays one task', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return {
+      tracker,
+      broadcasts,
+      last: () => broadcasts[broadcasts.length - 1],
+      rows: () => new Set(broadcasts.map((b) => b.toolUseId)),
+    };
+  }
+
+  // Verbatim shapes from a recorded session.
+  const launch = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'a40be17f1967a0861',
+    tool_use_id: 'toolu_launch',
+    description: 'Describe webview utils dir',
+    subagent_type: 'general-purpose',
+    is_backgrounded: true,
+    spawn_depth: 1,
+    task_type: 'local_agent',
+    prompt: 'Read every .ts file directly inside webview/src/utils…',
+  };
+  const finished = {
+    type: 'system',
+    subtype: 'task_notification',
+    task_id: 'a40be17f1967a0861',
+    tool_use_id: 'toolu_launch',
+    status: 'completed',
+    summary: 'Complete.',
+  };
+  // The resume: new tool_use_id, same task_id, and a prompt that is the message
+  // which resumed it rather than the one it was launched with.
+  const resume = {
+    ...launch,
+    tool_use_id: 'toolu_resume',
+    prompt: 'Your final return value was just "Complete." — please output the paragraph.',
+  };
+
+  it('does not open a second row for the resumed agent', () => {
+    const { tracker, rows } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    tracker.handleEvent('s1', finished);
+    tracker.handleEvent('s1', resume);
+
+    expect(rows()).toEqual(new Set(['toolu_launch']));
+  });
+
+  it('puts the finished task back to running', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    tracker.handleEvent('s1', finished);
+    expect(last().status).toBe('completed');
+    expect(last().endedAt).toBeDefined();
+
+    tracker.handleEvent('s1', resume);
+
+    expect(last().status).toBe('running');
+    expect(last().endedAt).toBeUndefined();
+  });
+
+  // A resume reports `description: "(resumed)"` and the resuming message as its
+  // prompt. Writing those over the row would erase what it has been about.
+  it('keeps the name and start time the launch gave it', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    const startedAt = last().startedAt;
+
+    tracker.handleEvent('s1', { ...resume, description: '(resumed)' });
+
+    expect(last().name).toBe('Describe webview utils dir');
+    expect(last().startedAt).toBe(startedAt);
+  });
+
+  it('keeps both task_started events, launch first', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    tracker.handleEvent('s1', resume);
+
+    const started = last().events?.task_started ?? [];
+    expect(started).toHaveLength(2);
+    expect(started[0]['prompt']).toBe('Read every .ts file directly inside webview/src/utils…');
+    expect(started[1]['prompt']).toBe('Your final return value was just "Complete." — please output the paragraph.');
+  });
+
+  // Everything after a resume arrives under the new tool_use_id, so the
+  // alias has to carry the later events back to the original row.
+  it('follows later events sent under the new tool_use_id', () => {
+    const { tracker, last, rows } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    tracker.handleEvent('s1', resume);
+
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'a40be17f1967a0861',
+      tool_use_id: 'toolu_resume',
+      status: 'completed',
+      summary: 'the paragraph',
+      usage: { total_tokens: 200, tool_uses: 3, duration_ms: 900 },
+    });
+
+    expect(rows()).toEqual(new Set(['toolu_launch']));
+    expect(last().status).toBe('completed');
+    expect(last().summary).toBe('the paragraph');
+    expect(last().usage).toMatchObject({ total_tokens: 200 });
+  });
+
+  // Two unrelated tasks must not be merged just because both are agents.
+  it('leaves a genuinely different task alone', () => {
+    const { tracker, rows } = makeTracker();
+    tracker.handleEvent('s1', launch);
+    tracker.handleEvent('s1', { ...launch, task_id: 'other', tool_use_id: 'toolu_other' });
+
+    expect(rows()).toEqual(new Set(['toolu_launch', 'toolu_other']));
   });
 });

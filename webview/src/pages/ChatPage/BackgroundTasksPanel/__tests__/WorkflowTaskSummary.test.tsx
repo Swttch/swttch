@@ -78,7 +78,7 @@ describe('WorkflowTaskSummary: the subagent type', () => {
         task={makeTask({
           taskType: 'local_agent',
           agents: [],
-          events: { task_started: { subagent_type: 'general-purpose' } },
+          events: { task_started: [{ subagent_type: 'general-purpose' }] },
         })}
         now={0}
       />,

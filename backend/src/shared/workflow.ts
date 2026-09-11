@@ -169,7 +169,16 @@ export interface WorkflowTask {
  * envelope from the transcript, every tag of it, plus its `raw` text.
  */
 export interface WorkflowTaskEvents {
-  task_started?: Record<string, unknown>;
+  /**
+   * Every `task_started` for this task, oldest first.
+   *
+   * A list because a resumed agent gets another one: the CLI fires a fresh
+   * `task_started` under a NEW `tool_use_id` but the SAME `task_id`, and its
+   * `prompt` is the message that resumed it rather than the one it was
+   * launched with. So `[0]` is what the task was asked to do, and the rest are
+   * what has been said to it since.
+   */
+  task_started?: Array<Record<string, unknown>>;
   task_progress?: Record<string, unknown>;
   task_updated?: Array<Record<string, unknown>>;
   task_notification?: Record<string, unknown>;

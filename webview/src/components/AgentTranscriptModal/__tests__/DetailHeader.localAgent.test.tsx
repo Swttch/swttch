@@ -24,7 +24,7 @@ describe('DetailHeader, given a backgrounded Agent task', () => {
       <DetailHeader
         source={makeTask({
           summary: 'done',
-          events: { task_started: { prompt: 'sleep 90 using Bash, then reply done' } },
+          events: { task_started: [{ prompt: 'sleep 90 using Bash, then reply done' }] },
         })}
       />,
     );
@@ -61,7 +61,7 @@ describe('DetailHeader, given a backgrounded Agent task', () => {
       <DetailHeader
         source={makeTask({
           summary: 'done',
-          events: { task_started: { prompt: 'go', subagent_type: 'general-purpose' } },
+          events: { task_started: [{ prompt: 'go', subagent_type: 'general-purpose' }] },
         })}
       />,
     );
@@ -76,7 +76,7 @@ describe('DetailHeader, given a backgrounded Agent task', () => {
         source={makeTask({
           summary: 'done',
           events: {
-            task_started: { prompt: 'go', subagent_type: 'general-purpose' },
+            task_started: [{ prompt: 'go', subagent_type: 'general-purpose' }],
             tool_use: { name: 'Agent', input: { model: 'opus' } },
           },
         })}
@@ -93,7 +93,7 @@ describe('DetailHeader, given a backgrounded Agent task', () => {
       <DetailHeader
         source={makeTask({
           summary: 'done',
-          events: { task_started: { prompt: 'go', subagent_type: 'general-purpose' } },
+          events: { task_started: [{ prompt: 'go', subagent_type: 'general-purpose' }] },
         })}
       />,
     );

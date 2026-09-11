@@ -519,6 +519,15 @@ function str(v: unknown): string | undefined {
 export class WorkflowProgressTracker {
   /** key = `${sessionId}::${toolUseId}` */
   private readonly entries = new Map<string, WatchEntry>();
+  /**
+   * A resumed task's new `tool_use_id` key, pointing at the entry it belongs
+   * to. Resuming an agent makes the CLI fire a fresh `task_started` under a new
+   * `tool_use_id` while keeping the `task_id`, and every later event for it
+   * arrives under that new id — so without this the panel grows a second row
+   * for one agent, which is exactly what the notification's own `note` warns
+   * about ("the same task-id may notify more than once").
+   */
+  private readonly aliases = new Map<string, string>();
 
   private constructor(private readonly connections: ConnectionManager) {}
 
@@ -550,8 +559,14 @@ export class WorkflowProgressTracker {
     return `${sessionId}::${toolUseId}`;
   }
 
-  private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
+  /** The entry key this tool_use_id belongs to, following a resume's alias. */
+  private resolveKey(sessionId: string, toolUseId: string): string {
     const key = this.key(sessionId, toolUseId);
+    return this.aliases.get(key) ?? key;
+  }
+
+  private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
+    const key = this.resolveKey(sessionId, toolUseId);
     let entry = this.entries.get(key);
     if (!entry) {
       entry = {
@@ -583,7 +598,7 @@ export class WorkflowProgressTracker {
       (events.task_updated ??= []).push(event);
       return;
     }
-    if (subtype === 'task_started') events.task_started = event;
+    if (subtype === 'task_started') (events.task_started ??= []).push(event);
     else if (subtype === 'task_progress') events.task_progress = event;
     else if (subtype === 'task_notification') events.task_notification = event;
   }
@@ -613,6 +628,29 @@ export class WorkflowProgressTracker {
   private onStarted(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
+
+    // Resuming an agent starts it again under a NEW tool_use_id while keeping
+    // the task_id, so this is the same task arriving under another name. The
+    // notification's own `note` says as much: "the same task-id may notify more
+    // than once". Left alone it became a second row for one agent — visibly, an
+    // agent sitting in both "running" and "finished" at the same time.
+    const taskId = str(event['task_id']);
+    const resumed = taskId ? this.findByTaskId(sessionId, taskId) : undefined;
+    if (resumed && resumed.task.toolUseId !== toolUseId) {
+      this.aliases.set(this.key(sessionId, toolUseId), this.key(sessionId, resumed.task.toolUseId));
+      this.keepEvent(resumed, 'task_started', event);
+      // It is running again, and its previous ending is no longer its ending.
+      resumed.task.status = 'running';
+      resumed.task.endedAt = undefined;
+      // Everything else is left as it was. A resume reports `description:
+      // "(resumed)"` and a `prompt` that is the message which resumed it, not
+      // the one it was launched with — overwriting the name and the start time
+      // with those would erase what the row has been about all along. Both are
+      // kept in `events.task_started`, where the launch is [0] and every
+      // resume follows it.
+      this.broadcast(resumed);
+      return;
+    }
 
     const entry = this.ensureEntry(sessionId, toolUseId);
     this.keepEvent(entry, 'task_started', event);
@@ -730,7 +768,7 @@ export class WorkflowProgressTracker {
   private onNotification(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
-    const entry = this.entries.get(this.key(sessionId, toolUseId));
+    const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
     if (!entry) return;
     this.keepEvent(entry, 'task_notification', event);
     const t = entry.task;
@@ -789,7 +827,7 @@ export class WorkflowProgressTracker {
       if (block['type'] !== 'tool_result') continue;
       const toolUseId = block['tool_use_id'];
       if (typeof toolUseId !== 'string') continue;
-      const entry = this.entries.get(this.key(sessionId, toolUseId));
+      const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
       if (!entry) continue;
       const content = block['content'];
       const text = typeof content === 'string' ? content : getEventText(event);

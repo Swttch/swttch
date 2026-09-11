@@ -269,7 +269,9 @@ function taskToolInput(task: WorkflowTask): Record<string, unknown> {
  *   standing in for the answer.
  */
 function fieldsFromTask(task: WorkflowTask): DetailHeaderFields {
-  const started = task.events?.task_started;
+  // `[0]` is the launch. Later entries are resumes, whose `prompt` is the
+  // message that resumed the agent rather than the one it was asked to do.
+  const started = task.events?.task_started?.[0];
   const input = taskToolInput(task);
 
   const model = trimmed(input['model']);

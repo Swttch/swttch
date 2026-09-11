@@ -148,10 +148,11 @@ export function agentDisplayName(
  * like). Only a backgrounded Agent/Task has one.
  *
  * Stated live on `task_started`, and after a reload only on the tool call that
- * launched the task — the CLI persists none of its events.
+ * launched the task — the CLI persists none of its events. `[0]` is the launch;
+ * later entries are resumes, which report the same type anyway.
  */
 export function taskSubagentType(task: WorkflowTask): string | undefined {
-    const fromEvent = task.events?.task_started?.['subagent_type'];
+    const fromEvent = task.events?.task_started?.[0]?.['subagent_type'];
     if (typeof fromEvent === 'string' && fromEvent.trim()) return fromEvent.trim();
     const input = task.events?.tool_use?.['input'];
     const fromCall = input && typeof input === 'object' ? (input as Record<string, unknown>)['subagent_type'] : undefined;
