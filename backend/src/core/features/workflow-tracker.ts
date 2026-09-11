@@ -501,6 +501,12 @@ function str(v: unknown): string | undefined {
 export class WorkflowProgressTracker {
   /** key = `${sessionId}::${toolUseId}` */
   private readonly entries = new Map<string, WatchEntry>();
+  /**
+   * Tasks the CLI told us were never backgrounded, so later events about them
+   * are not mistaken for a task nobody has started yet. Keyed the same way as
+   * {@link entries} and cleared with them.
+   */
+  private readonly inline = new Set<string>();
 
   private constructor(private readonly connections: ConnectionManager) {}
 
@@ -529,6 +535,11 @@ export class WorkflowProgressTracker {
     return `${sessionId}::${toolUseId}`;
   }
 
+  /** True once `task_started` said this one was never backgrounded. */
+  private isInline(sessionId: string, toolUseId: string): boolean {
+    return this.inline.has(this.key(sessionId, toolUseId));
+  }
+
   private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
     const key = this.key(sessionId, toolUseId);
     let entry = this.entries.get(key);
@@ -546,6 +557,19 @@ export class WorkflowProgressTracker {
   private onStarted(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
+
+    // The CLI states whether a task was actually backgrounded, and an ordinary
+    // inline Bash call says `false`. Those are not background tasks: the user
+    // is watching them run in the transcript already, and listing them in the
+    // Background tasks panel filled it with rows for `ls` and the like — and
+    // ticked the running badge for them. A workflow carries no such field
+    // because it is always backgrounded.
+    if (event['is_backgrounded'] === false) {
+      this.inline.add(this.key(sessionId, toolUseId));
+      this.entries.delete(this.key(sessionId, toolUseId));
+      return;
+    }
+
     const entry = this.ensureEntry(sessionId, toolUseId);
     const t = entry.task;
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
@@ -569,6 +593,9 @@ export class WorkflowProgressTracker {
   private onProgress(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
+    // Creates the entry on demand, so without this an inline task's progress
+    // would put back the row `task_started` just declined to make.
+    if (this.isInline(sessionId, toolUseId)) return;
     const entry = this.ensureEntry(sessionId, toolUseId);
     const t = entry.task;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
@@ -825,6 +852,11 @@ export class WorkflowProgressTracker {
       // dropping the entry, otherwise the webview hangs it on "running" forever.
       this.settleStopped(entry);
       this.entries.delete(key);
+    }
+    // The inline set is keyed by session too, and nothing else prunes it.
+    const prefix = `${sessionId}::`;
+    for (const key of this.inline) {
+      if (key.startsWith(prefix)) this.inline.delete(key);
     }
   }
 }

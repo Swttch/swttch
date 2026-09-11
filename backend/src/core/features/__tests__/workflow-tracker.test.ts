@@ -960,3 +960,80 @@ describe('what the CLI reported, as it reported it', () => {
     expect(last().usage).not.toHaveProperty('agentCount');
   });
 });
+
+// The CLI states whether a task was actually backgrounded, and we were not
+// reading it. An ordinary inline Bash call emits task_started too, so every
+// `ls` the model ran landed in the Background tasks panel and ticked the
+// running badge on the way past — measured live: one `sleep 12 && echo hi`,
+// run explicitly not in the background, took the panel from 6 rows to 7.
+describe('only tasks the CLI says were backgrounded', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  // Verbatim shape of an inline Bash run, from a recorded stream.
+  const inlineBash = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'b8iwesz1c',
+    owned_by_subagent: true,
+    tool_use_id: 'toolu_inline',
+    description: 'Sleep for 90 seconds',
+    is_backgrounded: false,
+    task_type: 'local_bash',
+  };
+
+  it('ignores a Bash call the CLI says was not backgrounded', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    expect(broadcasts).toHaveLength(0);
+  });
+
+  it('still tracks a Bash call that was backgrounded', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', { ...inlineBash, tool_use_id: 'toolu_bg', is_backgrounded: true });
+    expect(last().toolUseId).toBe('toolu_bg');
+    expect(last().taskType).toBe('local_bash');
+  });
+
+  // A workflow never carries the field, because it is always backgrounded.
+  it('still tracks a workflow, which states no such field', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      tool_use_id: 'toolu_wf',
+      task_type: 'local_workflow',
+      workflow_name: 'demo',
+    });
+    expect(last().toolUseId).toBe('toolu_wf');
+  });
+
+  // Progress events build an entry on demand, so an inline task's progress
+  // would otherwise put back the row task_started just declined to make.
+  it('keeps ignoring it when later events arrive for the same task', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_inline',
+      usage: { total_tokens: 10, tool_uses: 1, duration_ms: 5 },
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_notification',
+      tool_use_id: 'toolu_inline',
+      status: 'completed',
+    });
+
+    expect(broadcasts).toHaveLength(0);
+  });
+});
