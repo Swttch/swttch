@@ -244,7 +244,24 @@
       "updating": "Wird aktualisiert…",
       "jumpToBottom": "Nach unten springen",
       "copyCommand": "Befehl kopieren",
-      "resize": "Zum Ändern der Größe ziehen"
+      "resize": "Zum Ändern der Größe ziehen",
+      "noOutputYet": "Noch keine Ausgabe.",
+      "noOutput": "Keine Ausgabe."
+    },
+    "agentComposer": {
+      "placeholder": "Diesem Agenten schreiben…",
+      "send": "An Agent senden",
+      "unreachable": "Die Sitzung dieses Agenten ist beendet — er ist nicht mehr erreichbar"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} Tool",
+      "tools_other": "{{count}} Tools",
+      "queued": "{{value}} gewartet",
+      "attempt": "Versuch {{count}}",
+      "context": "Kontext {{value}}",
+      "in": "Eingabe {{value}}",
+      "cache": "Cache +{{written}} / {{read}} wiederverwendet",
+      "out": "Ausgabe {{value}}"
     }
   },
   "scheduledMessages": {

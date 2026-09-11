@@ -1,6 +1,17 @@
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
-import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
+import {
+    agentDisplayName,
+    agentDisplayStatus,
+    agentDotClass,
+    formatDuration,
+    formatTokens,
+    workflowAgentCount,
+    workflowDurationMs,
+    taskSubagentType,
+    workflowTokens,
+    WORKFLOW_STATUS_COLOR,
+} from '@/utils/workflowFormat';
 
 interface Props {
     task: WorkflowTask;
@@ -22,13 +33,19 @@ export function WorkflowTaskSummary(props: Props) {
 
     const isRunning = task.status === 'running';
     const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
-    const agentCount = task.agents.length || task.usage?.agentCount;
-    const durationMs = task.usage?.durationMs ?? (isRunning ? now - task.startedAt : undefined);
+    const agentCount = task.agents.length || workflowAgentCount(task.usage);
+    // The CLI's own figure first. Failing that: the clock while running, and
+    // for a task settled from its output log — which gets no usage at all —
+    // the span between the two timestamps we do have.
+    const durationMs =
+        workflowDurationMs(task.usage) ??
+        (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
     const duration = formatDuration(durationMs);
     // Authoritative workflow-level total first; per-agent sum is only a fallback
     // (see WorkflowRenderer) so the header stays consistent with the agent table.
     const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
-    const tokens = formatTokens(task.usage?.subagentTokens || liveTokens);
+    const tokens = formatTokens(workflowTokens(task.usage) || liveTokens);
+    const subagentType = taskSubagentType(task);
 
     return (
         <div>
@@ -63,10 +80,21 @@ export function WorkflowTaskSummary(props: Props) {
                         <span className="text-text-primary/60">{duration}</span>
                     </>
                 )}
+                {/* Which kind of agent ran — only a backgrounded Agent/Task
+                    has one, so a workflow's row simply ends at the duration. */}
+                {subagentType && (
+                    <>
+                        <span className="text-text-tertiary">·</span>
+                        <span className="text-text-primary/60">{subagentType}</span>
+                    </>
+                )}
             </div>
 
-            {task.description && (
-                <div className="mt-1 text-[0.8461rem] text-text-primary/50">{task.description}</div>
+            {/* What the task turned out to be, falling back to what it was
+                asked to be. The summary only exists once the task has
+                finished, and until then the description is all there is. */}
+            {(task.summary || task.description) && (
+                <div className="mt-1 text-[0.8461rem] text-text-primary/50">{task.summary || task.description}</div>
             )}
 
             {showPhases && task.phases.length > 0 && (
@@ -107,16 +135,18 @@ export function WorkflowAgentsTable(props: { task: WorkflowTask }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {task.agents.map((a) => (
-                        <tr key={a.agentId} className="text-text-primary/75">
-                            <td className="py-0.5 pe-2 max-w-[10rem] truncate">
+                    {task.agents.map((a, i) => (
+                        <tr key={a.agentId ?? a.index ?? i} className="text-text-primary/75">
+                            <td className="py-0.5 pe-2 max-w-[10rem] truncate" title={a.model}>
                                 <span
-                                    className={`inline-block w-1.5 h-1.5 rounded-full me-1.5 align-middle ${agentDotClass(a.status)}`}
+                                    className={`inline-block w-1.5 h-1.5 rounded-full me-1.5 align-middle ${agentDotClass(
+                                        agentDisplayStatus(a.state, task.status),
+                                    )}`}
                                 />
-                                {a.label}
+                                {agentDisplayName(a)}
                             </td>
                             <td className="py-0.5 px-2 text-end">{formatTokens(a.tokens) ?? '0'}</td>
-                            <td className="py-0.5 px-2 text-end">{a.tools}</td>
+                            <td className="py-0.5 px-2 text-end">{a.toolCalls ?? 0}</td>
                             <td className="py-0.5 ps-2 text-end">{formatDuration(a.durationMs) ?? '—'}</td>
                         </tr>
                     ))}

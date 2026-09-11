@@ -244,7 +244,24 @@
       "updating": "更新中…",
       "jumpToBottom": "最新へ移動",
       "copyCommand": "コマンドをコピー",
-      "resize": "ドラッグしてサイズ変更"
+      "resize": "ドラッグしてサイズ変更",
+      "noOutputYet": "まだ出力がありません。",
+      "noOutput": "出力がありません。"
+    },
+    "agentComposer": {
+      "placeholder": "このエージェントにメッセージ…",
+      "send": "エージェントに送信",
+      "unreachable": "このエージェントのセッションは終了しており、もう届きません"
+    },
+    "agentDetail": {
+      "tools_one": "ツール {{count}} 回",
+      "tools_other": "ツール {{count}} 回",
+      "queued": "待機 {{value}}",
+      "attempt": "{{count}} 回目",
+      "context": "コンテキスト {{value}}",
+      "in": "入力 {{value}}",
+      "cache": "キャッシュ +{{written}} / {{read}} 再利用",
+      "out": "出力 {{value}}"
     }
   },
   "scheduledMessages": {

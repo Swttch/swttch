@@ -248,7 +248,28 @@
       "updating": "جارٍ التحديث…",
       "jumpToBottom": "الانتقال إلى الأسفل",
       "copyCommand": "نسخ الأمر",
-      "resize": "اسحب لتغيير الحجم"
+      "resize": "اسحب لتغيير الحجم",
+      "noOutputYet": "لا يوجد إخراج بعد.",
+      "noOutput": "لا يوجد إخراج."
+    },
+    "agentComposer": {
+      "placeholder": "راسل هذا الوكيل…",
+      "send": "إرسال إلى الوكيل",
+      "unreachable": "انتهت جلسة هذا الوكيل — لم يعد من الممكن الوصول إليه"
+    },
+    "agentDetail": {
+      "tools_zero": "لا أدوات",
+      "tools_one": "أداة واحدة",
+      "tools_two": "أداتان",
+      "tools_few": "{{count}} أدوات",
+      "tools_many": "{{count}} أداة",
+      "tools_other": "{{count}} أداة",
+      "queued": "في الانتظار {{value}}",
+      "attempt": "المحاولة {{count}}",
+      "context": "السياق {{value}}",
+      "in": "إدخال {{value}}",
+      "cache": "ذاكرة مؤقتة +{{written}} / {{read}} معاد استخدامها",
+      "out": "إخراج {{value}}"
     }
   },
   "scheduledMessages": {

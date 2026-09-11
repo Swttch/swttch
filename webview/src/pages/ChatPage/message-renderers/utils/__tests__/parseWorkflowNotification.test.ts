@@ -32,10 +32,24 @@ describe('parseWorkflowNotification', () => {
     expect(n.summary).toContain('completed');
     expect(n.result).toBe('{"completed":68,"total":68}');
     expect(n.usage).toEqual({
-      agentCount: 68,
-      subagentTokens: 4569489,
-      toolUses: 801,
-      durationMs: 1598048,
+      // The envelope's own tag names — the parser must not rename them.
+      agent_count: 68,
+      subagent_tokens: 4569489,
+      tool_uses: 801,
+      duration_ms: 1598048,
     });
+  });
+
+  // A fixed list of tags drops anything the CLI adds later where nobody can
+  // see it. `<note>` is the one already being dropped: it is the CLI saying a
+  // finished agent can be resumed and will then notify again under the same
+  // task-id, which is why one agent could show up as two rows.
+  it('keeps a tag it has no named field for, and reports none when there is none', () => {
+    const note = 'A task-notification fires each time this agent stops.';
+    const withNote = SAMPLE.replace('<usage>', `<note>${note}</note>\n<usage>`);
+
+    expect(parseWorkflowNotification(withNote)!.notification).toEqual({ note });
+    // The envelope's own tag is not one of its contents.
+    expect(parseWorkflowNotification(SAMPLE)!.notification).toBeUndefined();
   });
 });

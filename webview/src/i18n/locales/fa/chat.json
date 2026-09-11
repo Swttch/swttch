@@ -244,7 +244,24 @@
       "updating": "در حال به‌روزرسانی…",
       "jumpToBottom": "پرش به پایین",
       "copyCommand": "کپی دستور",
-      "resize": "برای تغییر اندازه بکشید"
+      "resize": "برای تغییر اندازه بکشید",
+      "noOutputYet": "هنوز خروجی‌ای نیست.",
+      "noOutput": "خروجی‌ای نیست."
+    },
+    "agentComposer": {
+      "placeholder": "به این عامل پیام بدهید…",
+      "send": "ارسال به عامل",
+      "unreachable": "نشست این عامل پایان یافته و دیگر در دسترس نیست"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} ابزار",
+      "tools_other": "{{count}} ابزار",
+      "queued": "در صف {{value}}",
+      "attempt": "تلاش {{count}}",
+      "context": "زمینه {{value}}",
+      "in": "ورودی {{value}}",
+      "cache": "کش +{{written}} / {{read}} بازاستفاده",
+      "out": "خروجی {{value}}"
     }
   },
   "scheduledMessages": {

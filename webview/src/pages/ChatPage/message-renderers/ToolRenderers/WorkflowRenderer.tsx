@@ -5,7 +5,17 @@ import type { WorkflowNotification } from '@/dto/message/ContentBlockDto';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
-import { agentDotClass, formatDuration, formatTokens, WORKFLOW_STATUS_COLOR } from '@/utils/workflowFormat';
+import {
+    agentDisplayName,
+    agentDisplayStatus,
+    agentDotClass,
+    formatDuration,
+    formatTokens,
+    workflowAgentCount,
+    workflowDurationMs,
+    workflowTokens,
+    WORKFLOW_STATUS_COLOR,
+} from '@/utils/workflowFormat';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { RendererProps, ToolHeader, ToolWrapper, toolResultText } from './common';
 
@@ -54,14 +64,15 @@ export function WorkflowRenderer(props: RendererProps) {
     const agents = live?.agents ?? [];
     const agentCount =
         agents.length ||
-        live?.usage?.agentCount ||
-        notification?.usage?.agentCount ||
+        workflowAgentCount(live?.usage) ||
+        workflowAgentCount(notification?.usage) ||
         undefined;
 
     const durationMs =
-        live?.usage?.durationMs ??
-        notification?.usage?.durationMs ??
-        (live && isRunning ? now - live.startedAt : undefined);
+        workflowDurationMs(live?.usage) ??
+        workflowDurationMs(notification?.usage) ??
+        (live && isRunning ? now - live.startedAt : undefined) ??
+        (live?.endedAt ? live.endedAt - live.startedAt : undefined);
     const duration = formatDuration(durationMs);
 
     // Prefer the authoritative workflow-level total (live usage / final
@@ -69,7 +80,7 @@ export function WorkflowRenderer(props: RendererProps) {
     // total isn't known yet (e.g. early in a live run).
     const liveTokens = agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
     const tokens = formatTokens(
-        live?.usage?.subagentTokens || notification?.usage?.subagentTokens || liveTokens,
+        workflowTokens(live?.usage) || workflowTokens(notification?.usage) || liveTokens,
     );
 
     const summary = live?.summary ?? notification?.summary;
@@ -126,11 +137,16 @@ export function WorkflowRenderer(props: RendererProps) {
                     {/* Per-agent progress dots */}
                     {showDots && (
                         <div className="px-3 pb-2 flex flex-wrap gap-1">
-                            {agents.map((a) => (
+                            {agents.map((a, i) => (
                                 <span
-                                    key={a.agentId}
-                                    title={a.label}
-                                    className={`inline-block w-1.5 h-1.5 rounded-full ${agentDotClass(a.status)}`}
+                                    key={a.agentId ?? a.index ?? i}
+                                    title={agentDisplayName(a)}
+                                    className={`inline-block w-1.5 h-1.5 rounded-full ${agentDotClass(
+                                        // These dots only render from `live`, so its status is
+                                        // the one that settles them (the notification's is a
+                                        // plain string and may lag a live stop).
+                                        agentDisplayStatus(a.state, live?.status ?? 'running'),
+                                    )}`}
                                 />
                             ))}
                         </div>

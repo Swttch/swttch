@@ -1,0 +1,215 @@
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useTranslation } from '@/i18n';
+import { RichInput } from '@/pages/ChatPage/ChatInput/RichInput';
+import { ActionButtons } from '@/pages/ChatPage/ChatInput/ActionButtons';
+import { useIMEComposition } from '@/pages/ChatPage/ChatInput/RichInput/useIMEComposition';
+import { shouldSubmitOnEnter } from '@/pages/ChatPage/ChatInput/shouldSubmitOnEnter';
+import { insertNewlineAtCursor } from '@/pages/ChatPage/ChatInput/RichInput/insertNewlineAtCursor';
+import { useSettings } from '@/contexts/SettingsContext';
+import { isMobile } from '@/config/environment';
+import { InputFrame } from '@/pages/ChatPage/ChatInput/InputFrame';
+import type { InputMode } from '@/types/chatInput';
+
+/**
+ * How long the composer will claim a message is being worked on before the CLI
+ * has confirmed it.
+ *
+ * The claim is a guess, and it needs an end: a resume that completes between
+ * two renders is never seen as `running` at all, and a workflow agent's resume
+ * becomes a separate task whose `running` never lands on this one. Either way
+ * nothing would arrive to take the stop button back down, and it would sit
+ * there for the rest of the session offering to stop something already over.
+ *
+ * Long enough to cover the round trip — the model has to notice the request and
+ * call SendMessage, then the agent has to restart — and short enough that a
+ * button pointing at nothing is not left standing.
+ */
+const ASSUME_WORKING_MS = 20_000;
+
+interface Props {
+  /** The agent's address. */
+  agentId: string;
+  /** Whether this agent is working right now — the send button becomes stop. */
+  isRunning: boolean;
+  /** The session's mode, which colours the box and the send button. */
+  inputMode: InputMode;
+  onSend: (agentId: string, message: string) => void;
+  /** Stop this agent. Omitted where there is no way to stop only this one. */
+  onStop?: () => void;
+  /**
+   * The CLI has refused to resume this agent, so nothing can reach it. Said
+   * under the box in the error's own colour rather than as placeholder text: a
+   * refusal answers a message that was just sent, and a greyed hint where the
+   * prompt used to be is not an answer to anything.
+   */
+  unreachable?: boolean;
+}
+
+/**
+ * Say something to an agent, from the view of that agent.
+ *
+ * Literally the session input's own frame and parts: `InputFrame` draws the
+ * box, and `RichInput` and `ActionButtons` fill it. Nothing about the shape is
+ * restated here, so the two cannot drift — a change to the frame reaches both.
+ *
+ * The whole `ChatInput` could not come along. It is 905 lines with no props at
+ * all, reading the session, the stream and the input state straight from
+ * context, which is a fair design for the one composer a screen has and the
+ * wrong shape for a second one pointed somewhere else.
+ *
+ * `RichInput` gets no `className`, exactly as it does there: what it is handed
+ * is applied to its two stacked layers (the editable and the mirror that paints
+ * under it), not to the box around them — so styling it that way misshapes the
+ * editor instead of the container, and the container is what this file owns.
+ *
+ * Three of the session bar's controls are absent rather than inert.
+ * `SendMessage` carries a plain string, so an attachment has nowhere to go; a
+ * slash command addresses the session, not the agent in front of you; and the
+ * mode, model and context-window tags all describe the session rather than
+ * this exchange.
+ *
+ * Nothing is echoed here. Resuming an agent makes the CLI fire a fresh
+ * `task_started` carrying this text as its `prompt`, so the message appears in
+ * the transcript above from the CLI's own record rather than from a second copy
+ * of ours that could disagree with it.
+ */
+export function AgentComposer(props: Props) {
+  const { agentId, isRunning, inputMode, onSend, onStop, unreachable } = props;
+  const { t } = useTranslation('chat');
+  const { settings } = useSettings();
+  const [text, setText] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
+  // Turned on the moment a message goes out, because the button has to say
+  // "something is happening" straight away. The CLI only reports the agent as
+  // running once it has restarted it and that `task_started` has made the round
+  // trip, and until then a send button would read as if nothing had happened.
+  const [justSent, setJustSent] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null);
+  // Owned here so this keydown handler and the editor agree on one source of
+  // truth for composition — under JCEF the native `isComposing` flag lies.
+  const ime = useIMEComposition();
+
+  const send = () => {
+    if (unreachable) return;
+    const message = text.trim();
+    if (!message) return;
+    onSend(agentId, message);
+    setText('');
+    setJustSent(true);
+  };
+
+  // Hand over to the real thing as soon as it is the real thing: the CLI's own
+  // account outranks our guess the instant we have it.
+  useEffect(() => {
+    if (isRunning) setJustSent(false);
+  }, [isRunning]);
+
+  // And give up on the guess if that account never comes. See ASSUME_WORKING_MS.
+  useEffect(() => {
+    if (!justSent) return;
+    const timer = setTimeout(() => setJustSent(false), ASSUME_WORKING_MS);
+    return () => clearTimeout(timer);
+  }, [justSent]);
+
+
+  // A refused send never becomes a running agent, so `justSent` would stay on
+  // by itself — but being unreachable withdraws the working state outright,
+  // which settles that case without a second flag to keep in step.
+  const isWorking = (isRunning || justSent) && !unreachable;
+
+  const stop = () => {
+    // Drop the optimistic flag as well: if the agent had not actually started
+    // yet, nothing else will ever clear it and the button would stay stuck on
+    // stop with nothing to stop.
+    setJustSent(false);
+    onStop?.();
+  };
+
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    // Escape stops the agent rather than closing the modal. Closing the view
+    // you are typing in is not what Escape means while an agent is working,
+    // and the modal's own handler sits on `window` — so the native event has
+    // to be stopped, not just the React one.
+    if (e.key === 'Escape' && isWorking && onStop) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
+      stop();
+      return;
+    }
+
+    // Enter is double-detected (key OR keyCode 13) and the composition truth is
+    // ours OR'd with the native flag, exactly as the main composer does it —
+    // under JCEF a non-English layout surfaces Enter with a different `key`,
+    // and the native `isComposing` alone is unreliable (issue #215).
+    const isEnterKey = e.key === 'Enter' || e.nativeEvent.keyCode === 13;
+    if (!isEnterKey) return;
+
+    const isIMEComposing = ime.isComposing() || e.nativeEvent.isComposing;
+    const willSubmit = shouldSubmitOnEnter(
+      {
+        key: e.key,
+        keyCode: e.nativeEvent.keyCode,
+        shiftKey: e.shiftKey,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        isComposing: isIMEComposing,
+        isMobile: isMobile(),
+      },
+      settings.useCtrlEnterToSend ?? false,
+    );
+    if (willSubmit) {
+      e.preventDefault();
+      send();
+      return;
+    }
+    // Not a submit: write the line break ourselves, since under JCEF a plain
+    // Enter is otherwise swallowed as an IME commit. While composing we leave
+    // the keystroke to the composition.
+    if (!isIMEComposing) {
+      e.preventDefault();
+      insertNewlineAtCursor();
+      setText(e.currentTarget.textContent ?? '');
+    }
+  };
+
+  return (
+    <div className="shrink-0 px-3 pb-3 pt-1">
+      <InputFrame
+        mode={inputMode}
+        isFocused={isFocused}
+        belowEditor={
+          unreachable ? (
+            <div className="px-3 pb-1.5 text-xs text-state-error-fg">
+              {t('backgroundTasks.agentComposer.unreachable')}
+            </div>
+          ) : undefined
+        }
+        editor={
+          <RichInput
+            ref={editorRef}
+            ime={ime}
+            value={text}
+            onChange={setText}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            disabled={unreachable}
+            placeholder={t('backgroundTasks.agentComposer.placeholder')}
+            ariaLabel={t('backgroundTasks.agentComposer.placeholder')}
+          />
+        }
+        barEnd={
+          <ActionButtons
+            mode={inputMode}
+            isActive={isWorking}
+            disabled={!!unreachable}
+            hasValue={!!text.trim()}
+            onSubmit={send}
+            onStop={onStop && stop}
+          />
+        }
+      />
+    </div>
+  );
+}

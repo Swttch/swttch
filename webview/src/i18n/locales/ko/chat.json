@@ -244,7 +244,24 @@
       "updating": "업데이트 중…",
       "jumpToBottom": "맨 아래로 이동",
       "copyCommand": "명령어 복사",
-      "resize": "드래그해서 크기 조절"
+      "resize": "드래그해서 크기 조절",
+      "noOutputYet": "아직 출력이 없습니다.",
+      "noOutput": "출력이 없습니다."
+    },
+    "agentComposer": {
+      "placeholder": "이 에이전트에게 메시지…",
+      "send": "에이전트에게 보내기",
+      "unreachable": "이 에이전트의 세션이 끝나 더 이상 닿을 수 없습니다"
+    },
+    "agentDetail": {
+      "tools_one": "도구 {{count}}회",
+      "tools_other": "도구 {{count}}회",
+      "queued": "대기 {{value}}",
+      "attempt": "{{count}}회차",
+      "context": "컨텍스트 {{value}}",
+      "in": "입력 {{value}}",
+      "cache": "캐시 +{{written}} / {{read}} 재사용",
+      "out": "출력 {{value}}"
     }
   },
   "scheduledMessages": {

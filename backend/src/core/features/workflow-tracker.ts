@@ -6,17 +6,23 @@
  *
  * 1. LIVE — the CLI stdout stream emits rich `{type:'system', subtype:'task_*'}`
  *    events: `task_started` (id, name, script), `task_progress` (a
- *    `workflow_progress[]` array of per-agent objects with label, phase, state,
- *    tokens, toolCalls, durationMs) and `task_notification` (final status,
- *    output_file, usage). We translate these straight into a {@link WorkflowTask}
- *    and broadcast WORKFLOW_PROGRESS. These system events are NOT persisted.
+ *    `workflow_progress[]` array of per-agent objects carrying label, model,
+ *    phase, state, promptPreview, attempt, tokens, toolCalls, durationMs and
+ *    error) and `task_notification` (final status, output_file, usage). Each
+ *    per-agent object is merged into {@link WorkflowTask} and broadcast on
+ *    WORKFLOW_PROGRESS **as the CLI sent it**, field names and all.
  *
  * 2. RELOAD — {@link reconstructWorkflowTasks} rebuilds finished workflows from
  *    the persisted transcript (Workflow tool_use + immediate tool_result + the
  *    `<task-notification>` user message) plus the on-disk runtime files
- *    (`journal.jsonl` + per-agent `agent-<id>.jsonl`). Here agent labels are
- *    best-effort (derived from results) and tokens are approximated, since the
- *    structured live events aren't available.
+ *    (`journal.jsonl` + per-agent `agent-<id>.jsonl`).
+ *
+ * The two are not equivalent, and the gap is the CLI's: the `task_*` events are
+ * never persisted, and the runtime files record only `agentId` and `result`. So
+ * a reloaded agent genuinely has no label, model or promptPreview to give, and
+ * its tokens are recomputed from the transcript rather than reported. Rebuilt
+ * agents are flagged `reconstructed` and leave the unknown fields absent, so
+ * nothing downstream mistakes a stand-in for something the CLI said.
  */
 
 import { join } from 'path';
@@ -24,15 +30,15 @@ import { existsSync, readFileSync } from 'fs';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
 import type {
+  BackgroundTaskType,
   WorkflowTask,
   WorkflowAgent,
   WorkflowPhase,
   WorkflowStatus,
+  WorkflowUsage,
 } from '../../shared';
 import { readJsonlEntries } from './readJsonlEntries';
-
-/** Live agent `state` values that count as finished. */
-const AGENT_DONE_STATES = new Set(['done', 'completed', 'success']);
+import { loadWorkflowAgentSnapshot, saveWorkflowAgentSnapshot } from './workflowAgentSnapshot';
 
 interface WatchEntry {
   sessionId: string;
@@ -45,6 +51,18 @@ interface WatchEntry {
    */
   agents: Map<string, { order: number; agent: WorkflowAgent }>;
   lastSerialized?: string;
+  /**
+   * Whether the CLI has said this task is running in the background.
+   *
+   * An ordinary inline Bash call emits `task_started` too, with
+   * `is_backgrounded: false`, and does not belong in the Background tasks
+   * panel — the user is watching it in the transcript already. But that answer
+   * is not final: sending a running command to the background arrives later as
+   * `task_updated` with `patch: {is_backgrounded: true}`. So the task is
+   * tracked either way and this only gates the broadcast, which lets it start
+   * being reported the moment the CLI changes its mind.
+   */
+  backgrounded: boolean;
 }
 
 // ── event parsing helpers ────────────────────────────────────
@@ -137,9 +155,33 @@ function parseImmediateBashResult(text: string): { taskId?: string; outputFile?:
  * `output_file` is the agent's own JSONL transcript, available immediately
  * rather than only at the terminal task_notification (issue #383).
  */
-function parseImmediateAgentResult(text: string): { outputFile?: string } {
+function parseImmediateAgentResult(text: string): { agentId?: string; outputFile?: string } {
   const outputFile = text.match(/output_file:\s*(.+)/)?.[1]?.trim();
-  return { outputFile };
+  // The same value the terminal notification later reports as <task-id>, and
+  // the address SendMessage takes to resume this agent. It is only ever stated
+  // here, so a reload that skips this line has no id for the task at all.
+  const agentId = text.match(/agentId:\s*([a-zA-Z0-9_-]+)/)?.[1];
+  return { agentId, outputFile };
+}
+
+/**
+ * Which kind of background task a tool_use starts, or `undefined` if it starts
+ * none. This is the reload-side counterpart of the `task_type` the CLI states
+ * on `task_started`, and it has to be derived rather than read because the
+ * persisted transcript records the tool call, not the system event.
+ *
+ * `Agent` and `Bash` each run inline unless explicitly backgrounded, so the
+ * flag is what separates a task from an ordinary call. `Workflow` always runs
+ * in the background and carries no such flag.
+ */
+function backgroundTaskType(block: Record<string, unknown>): BackgroundTaskType | undefined {
+  const name = block['name'];
+  if (name === 'Workflow') return 'local_workflow';
+  const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
+  if (input['run_in_background'] !== true) return undefined;
+  if (name === 'Agent') return 'local_agent';
+  if (name === 'Bash') return 'local_bash';
+  return undefined;
 }
 
 /**
@@ -217,20 +259,22 @@ async function computeAgentStats(file: string): Promise<AgentStats> {
   return { tokens, tools, durationMs };
 }
 
-/** Derive a display label from an agent's journal result (best-effort). */
-function deriveLabel(result: unknown, agentId: string): string {
-  if (result && typeof result === 'object') {
-    const topic = (result as Record<string, unknown>)['topic'];
-    if (typeof topic === 'string' && topic.trim()) return topic.trim();
-  }
-  return agentId.slice(0, 8);
-}
-
 /**
  * Aggregate per-agent progress for a workflow by reading its journal + agent
- * transcripts. Shared by the live poller and the historical reconstruction.
+ * transcripts, used when rebuilding a workflow after a reload.
+ *
+ * Prefers the snapshot this backend wrote while the workflow was streaming: it
+ * holds the CLI's own entries, so a reloaded workflow shows the same agent
+ * names, models and prompts the live one did. Only a workflow that streamed
+ * before snapshots existed — or on another machine — falls through to what the
+ * runtime files alone can tell us, which is far less.
  */
 async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> {
+  const workflowId = transcriptDir.split(/[\\/]/).pop();
+  if (workflowId) {
+    const snapshot = await loadWorkflowAgentSnapshot(workflowId);
+    if (snapshot) return snapshot;
+  }
   if (!existsSync(transcriptDir)) return [];
   const journalPath = join(transcriptDir, 'journal.jsonl');
   if (!existsSync(journalPath)) return [];
@@ -257,45 +301,74 @@ async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> 
   const agents: WorkflowAgent[] = [];
   for (const agentId of order) {
     const stats = await computeAgentStats(join(transcriptDir, `agent-${agentId}.jsonl`));
+    // Only what the runtime files actually record. The CLI persists none of the
+    // live fields (no label, model, promptPreview or attempt anywhere on disk —
+    // journal.jsonl holds `type`/`key`/`agentId`/`result` and nothing else), so
+    // they stay absent rather than being filled with a stand-in. A made-up
+    // value would be indistinguishable from one the CLI sent; `reconstructed`
+    // is what lets the webview tell the reader which of the two it is looking
+    // at, and `state` carries the one lifecycle fact the journal does record.
     agents.push({
       agentId,
-      label: deriveLabel(results.get(agentId), agentId),
-      status: results.has(agentId) ? 'done' : 'running',
+      state: results.has(agentId) ? 'done' : undefined,
+      // The agent's return value, as journal.jsonl recorded it. It is the one
+      // per-agent payload the CLI does persist, so it travels on untouched;
+      // what a workflow puts in there is its own business, and the webview is
+      // where any of it gets turned into something to look at.
+      result: results.get(agentId),
       tokens: stats.tokens,
-      tools: stats.tools,
+      toolCalls: stats.tools,
       durationMs: stats.durationMs,
+      reconstructed: true,
     });
   }
   return agents;
 }
 
+/**
+ * Every top-level tag of an XML-ish block, under the tag's own name.
+ *
+ * Reading a fixed list of tags means a tag the CLI adds later is dropped
+ * silently, which is how `<note>` — the envelope's own warning that an agent
+ * can be resumed and so may notify under the same task-id more than once —
+ * never reached anything that could act on it.
+ */
+function parseXmlTags(block: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of block.matchAll(/<([a-zA-Z0-9_-]+)>([\s\S]*?)<\/\1>/g)) {
+    out[m[1]] = m[2].trim();
+  }
+  return out;
+}
+
 /** Apply a `<task-notification>` envelope's fields onto a task (no I/O). */
 function applyNotification(task: WorkflowTask, text: string): void {
   const usageBlock = parseXmlTag(text, 'usage') ?? '';
-  const status = parseXmlTag(text, 'status') as WorkflowStatus | undefined;
-  task.status = status ?? 'completed';
+  task.status = toWorkflowStatus(parseXmlTag(text, 'status')) ?? 'completed';
   task.summary = parseXmlTag(text, 'summary');
   task.result = parseXmlTag(text, 'result');
   task.outputFile = parseXmlTag(text, 'output-file');
   task.taskId = task.taskId ?? parseXmlTag(text, 'task-id');
-  task.usage = {
-    agentCount: toInt(parseXmlTag(usageBlock, 'agent_count')),
-    subagentTokens: toInt(parseXmlTag(usageBlock, 'subagent_tokens')),
-    toolUses: toInt(parseXmlTag(usageBlock, 'tool_uses')),
-    durationMs: toInt(parseXmlTag(usageBlock, 'duration_ms')),
-  };
-}
+  // The envelope's own tag names, kept as written. They differ from the live
+  // events' names for the same figures (`subagent_tokens` here vs
+  // `total_tokens` there), and that difference is the CLI's, not ours to
+  // normalise away.
+  const usage: WorkflowUsage = {};
+  for (const [tag, value] of Object.entries(parseXmlTags(usageBlock))) {
+    const n = toInt(value);
+    usage[tag] = n ?? value;
+  }
+  if (Object.keys(usage).length > 0) task.usage = usage;
 
-/**
- * Settle still-running agents to match a terminal workflow status: a `completed`
- * workflow finished them (→ `done`, green); a `stopped`/`failed` one cut them off
- * (→ `stopped`, grey). Never paint an interrupted agent as a success. No-op while
- * the workflow is still running.
- */
-function settleAgents(agents: WorkflowAgent[], status: WorkflowStatus): void {
-  if (status === 'running') return;
-  const settled = status === 'completed' ? 'done' : 'stopped';
-  for (const a of agents) if (a.status === 'running') a.status = settled;
+  // The CLI persists none of its `task_*` events, so on reload this envelope is
+  // the only thing left of what it said. Every tag of it is kept, plus the text
+  // itself, rather than the handful read into fields above: a tag with no field
+  // of its own is dropped where nothing can notice, and `<note>` — the CLI
+  // explaining that a resumed agent notifies again under the same task-id — was
+  // being dropped exactly that way.
+  const envelope = parseXmlTag(text, 'task-notification') ?? '';
+  const tags = parseXmlTags(envelope);
+  task.events = { ...task.events, task_notification: { ...tags, raw: text } };
 }
 
 function eventTimestamp(event: Record<string, unknown>): number {
@@ -330,7 +403,14 @@ export async function reconstructWorkflowTasks(
   for (const msg of messages) {
     if (msg['type'] !== 'assistant') continue;
     for (const block of getContentBlocks(msg)) {
-      if (block['type'] !== 'tool_use' || block['name'] !== 'Workflow') continue;
+      if (block['type'] !== 'tool_use') continue;
+      // All three kinds of background task are reconstructed, not just
+      // workflows. Scanning for `Workflow` alone is what left a reloaded
+      // session showing none of the backgrounded Agent/Bash tasks it had
+      // started: the live stream is not replayed, so a task the reload does
+      // not rebuild is one the panel never hears about again.
+      const taskType = backgroundTaskType(block);
+      if (!taskType) continue;
       const toolUseId = block['id'];
       if (typeof toolUseId !== 'string' || tasks.has(toolUseId)) continue;
       const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
@@ -339,15 +419,27 @@ export async function reconstructWorkflowTasks(
       const description = typeof input['description'] === 'string' ? (input['description'] as string) : undefined;
       tasks.set(toolUseId, {
         toolUseId,
-        name: parseMetaName(script) || scriptPathName(scriptPath) || description || 'workflow',
+        taskType,
+        // Same order the live path names a task in (see onStarted): a
+        // workflow names itself from its script, and the other two have only
+        // their description to go by.
+        name:
+          taskType === 'local_workflow'
+            ? parseMetaName(script) || scriptPathName(scriptPath) || description || 'workflow'
+            : description || taskType,
         description,
         // Default only — overwritten by applyNotification when a terminal
-        // <task-notification> exists. A workflow with no notification that is
+        // <task-notification> exists. A task with no notification that is
         // not live was interrupted, so it must not come back as 'running'.
         status: isLive?.(toolUseId) ? 'running' : 'stopped',
         startedAt: eventTimestamp(msg),
-        phases: parseMetaPhases(script),
+        // Phases are declared by a workflow script; the other two have none.
+        phases: taskType === 'local_workflow' ? parseMetaPhases(script) : [],
         agents: [],
+        // The CLI persists none of its task_* events, so on reload the tool
+        // call is the only record of what was asked for — the `model` among
+        // it, which no event ever reports.
+        events: { tool_use: block },
       });
     }
   }
@@ -361,9 +453,32 @@ export async function reconstructWorkflowTasks(
       const toolUseId = block['tool_use_id'];
       if (typeof toolUseId !== 'string') continue;
       const task = tasks.get(toolUseId);
-      if (!task || task.transcriptDir) continue;
+      if (!task) continue;
       const content = block['content'];
       const text = typeof content === 'string' ? content : getEventText(msg);
+
+      // Each kind announces itself in its own words, so each gets its own
+      // parser — the same three shapes the live path already distinguishes in
+      // onImmediateResult.
+      if (task.taskType === 'local_agent') {
+        if (task.outputFile) continue;
+        const { agentId, outputFile } = parseImmediateAgentResult(text);
+        if (outputFile) task.outputFile = outputFile;
+        // The agent's id doubles as its task id, and this line is the only
+        // place a reload can learn it before the terminal notification.
+        if (agentId) task.taskId = task.taskId ?? agentId;
+        continue;
+      }
+
+      if (task.taskType === 'local_bash') {
+        if (task.outputFile) continue;
+        const { taskId, outputFile } = parseImmediateBashResult(text);
+        if (outputFile) task.outputFile = outputFile;
+        if (taskId) task.taskId = task.taskId ?? taskId;
+        continue;
+      }
+
+      if (task.transcriptDir) continue;
       const { taskId, transcriptDir } = parseImmediateResult(text);
       if (transcriptDir) {
         task.taskId = taskId ?? task.taskId;
@@ -383,10 +498,12 @@ export async function reconstructWorkflowTasks(
     if (task.transcriptDir) {
       task.agents = await aggregateAgents(task.transcriptDir);
     }
-    // A terminal workflow has no running agents — settle any the journal left
-    // open (no `result` recorded) so a finished card doesn't show pulsing
-    // "running" dots after reload. Interrupted agents go grey, not green.
-    settleAgents(task.agents, task.status);
+    // A task the tracker still calls live may have ended while nobody was
+    // listening — its log says so even when no notification ever arrived.
+    if (task.status === 'running' && task.outputFile) {
+      const settled = readTerminalMarker(task.outputFile);
+      if (settled) task.status = settled;
+    }
   }
 
   return [...tasks.values()];
@@ -398,9 +515,40 @@ function str(v: unknown): string | undefined {
   return typeof v === 'string' && v ? v : undefined;
 }
 
+/**
+ * The CLI's word for how a task ended, in ours.
+ *
+ * It has two for being stopped: a `task_updated` patch says `killed`, while a
+ * `task_notification` says `stopped` — measured across one machine's logs,
+ * where notifications only ever said completed/failed/stopped. `killed` has no
+ * place in WorkflowStatus, and casting it through put that word on screen.
+ */
+function toWorkflowStatus(value: unknown): WorkflowStatus | undefined {
+  switch (value) {
+    case 'killed':
+    case 'stopped':
+      return 'stopped';
+    case 'completed':
+    case 'failed':
+    case 'running':
+      return value;
+    default:
+      return undefined;
+  }
+}
+
 export class WorkflowProgressTracker {
   /** key = `${sessionId}::${toolUseId}` */
   private readonly entries = new Map<string, WatchEntry>();
+  /**
+   * A resumed task's new `tool_use_id` key, pointing at the entry it belongs
+   * to. Resuming an agent makes the CLI fire a fresh `task_started` under a new
+   * `tool_use_id` while keeping the `task_id`, and every later event for it
+   * arrives under that new id — so without this the panel grows a second row
+   * for one agent, which is exactly what the notification's own `note` warns
+   * about ("the same task-id may notify more than once").
+   */
+  private readonly aliases = new Map<string, string>();
 
   private constructor(private readonly connections: ConnectionManager) {}
 
@@ -414,8 +562,11 @@ export class WorkflowProgressTracker {
       if (event['type'] === 'system') {
         const subtype = event['subtype'];
         if (subtype === 'task_started') this.onStarted(sessionId, event);
-        else if (subtype === 'task_progress' || subtype === 'task_updated') this.onProgress(sessionId, event);
+        else if (subtype === 'task_progress') this.onProgress(sessionId, event);
+        else if (subtype === 'task_updated') this.onUpdated(sessionId, event);
         else if (subtype === 'task_notification') this.onNotification(sessionId, event);
+      } else if (event['type'] === 'assistant') {
+        this.onToolUse(sessionId, event);
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
         this.onTaskNotFound(sessionId, event);
@@ -429,24 +580,110 @@ export class WorkflowProgressTracker {
     return `${sessionId}::${toolUseId}`;
   }
 
-  private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
+  /** The entry key this tool_use_id belongs to, following a resume's alias. */
+  private resolveKey(sessionId: string, toolUseId: string): string {
     const key = this.key(sessionId, toolUseId);
+    return this.aliases.get(key) ?? key;
+  }
+
+  private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
+    const key = this.resolveKey(sessionId, toolUseId);
     let entry = this.entries.get(key);
     if (!entry) {
       entry = {
         sessionId,
         task: { toolUseId, name: 'workflow', status: 'running', startedAt: Date.now(), phases: [], agents: [] },
         agents: new Map(),
+        // Assumed until `task_started` says otherwise: a workflow carries no
+        // such field and is always backgrounded, and an entry built by any
+        // other event has no reason to be held back.
+        backgrounded: true,
       };
       this.entries.set(key, entry);
     }
     return entry;
   }
 
+  /** Find a task by the CLI's `task_id`, which is all `task_updated` carries. */
+  private findByTaskId(sessionId: string, taskId: string): WatchEntry | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.sessionId === sessionId && entry.task.taskId === taskId) return entry;
+    }
+    return undefined;
+  }
+
+  /** Record the CLI's event on the task, whole. */
+  private keepEvent(entry: WatchEntry, subtype: string, event: Record<string, unknown>): void {
+    const events = (entry.task.events ??= {});
+    if (subtype === 'task_updated') {
+      (events.task_updated ??= []).push(event);
+      return;
+    }
+    if (subtype === 'task_started') (events.task_started ??= []).push(event);
+    else if (subtype === 'task_progress') events.task_progress = event;
+    else if (subtype === 'task_notification') events.task_notification = event;
+  }
+
+  /**
+   * Keep the `tool_use` block that starts a task, before its `task_started`
+   * arrives. Some of what was asked for is stated nowhere else: `task_started`
+   * reports no `model`, so an Agent launched with one is only knowable as
+   * having run on it from here.
+   *
+   * Deliberately silent — it does not broadcast. An inline Bash call has a
+   * tool_use like any other, and whether it belongs in the panel is decided at
+   * `task_started`; announcing it here would flash a row for every `ls`.
+   */
+  private onToolUse(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_use') continue;
+      const name = block['name'];
+      if (name !== 'Agent' && name !== 'Bash' && name !== 'Workflow') continue;
+      const toolUseId = block['id'];
+      if (typeof toolUseId !== 'string') continue;
+      const entry = this.ensureEntry(sessionId, toolUseId);
+      entry.task.events = { ...entry.task.events, tool_use: block };
+    }
+  }
+
   private onStarted(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
+
+    // Resuming an agent starts it again under a NEW tool_use_id while keeping
+    // the task_id, so this is the same task arriving under another name. The
+    // notification's own `note` says as much: "the same task-id may notify more
+    // than once". Left alone it became a second row for one agent — visibly, an
+    // agent sitting in both "running" and "finished" at the same time.
+    const taskId = str(event['task_id']);
+    const resumed = taskId ? this.findByTaskId(sessionId, taskId) : undefined;
+    if (resumed && resumed.task.toolUseId !== toolUseId) {
+      this.aliases.set(this.key(sessionId, toolUseId), this.key(sessionId, resumed.task.toolUseId));
+      this.keepEvent(resumed, 'task_started', event);
+      // It is running again, and its previous ending is no longer its ending.
+      resumed.task.status = 'running';
+      resumed.task.endedAt = undefined;
+      // Everything else is left as it was. A resume reports `description:
+      // "(resumed)"` and a `prompt` that is the message which resumed it, not
+      // the one it was launched with — overwriting the name and the start time
+      // with those would erase what the row has been about all along. Both are
+      // kept in `events.task_started`, where the launch is [0] and every
+      // resume follows it.
+      this.broadcast(resumed);
+      return;
+    }
+
     const entry = this.ensureEntry(sessionId, toolUseId);
+    this.keepEvent(entry, 'task_started', event);
+
+    // The CLI states whether a task was actually backgrounded, and an ordinary
+    // inline Bash call says `false`. Those do not belong in the Background
+    // tasks panel: the user is watching them run in the transcript already,
+    // and listing them filled it with rows for `ls` and the like. The task is
+    // still tracked — a later `task_updated` can flip this to true — but it is
+    // not reported until it does. A workflow carries no such field at all.
+    if (event['is_backgrounded'] === false) entry.backgrounded = false;
+
     const t = entry.task;
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
@@ -466,10 +703,46 @@ export class WorkflowProgressTracker {
     this.broadcast(entry);
   }
 
+  /**
+   * `task_updated` amends a task already under way, and it is addressed by
+   * `task_id` alone — it carries no `tool_use_id`, which is why routing it
+   * through onProgress meant it was dropped on the first line, all 179 of them
+   * in one machine's logs.
+   *
+   * Two patches exist. `{is_backgrounded: true}` is a running command being
+   * sent to the background, and it is the CLI revising what it said at
+   * `task_started`. `{status, end_time}` closes the task — the same fact the
+   * output log's `[killed]` line reports, except stated outright and arriving
+   * without anyone reading a file for it.
+   */
+  private onUpdated(sessionId: string, event: Record<string, unknown>): void {
+    const taskId = event['task_id'];
+    if (typeof taskId !== 'string') return;
+    const entry = this.findByTaskId(sessionId, taskId);
+    if (!entry) return;
+    this.keepEvent(entry, 'task_updated', event);
+
+    const patch = event['patch'];
+    if (!patch || typeof patch !== 'object') return;
+    const p = patch as Record<string, unknown>;
+    const t = entry.task;
+
+    if (p['is_backgrounded'] === true) entry.backgrounded = true;
+
+    const status = toWorkflowStatus(p['status']);
+    if (status) t.status = status;
+
+    const endTime = p['end_time'];
+    if (typeof endTime === 'number') t.endedAt = endTime;
+
+    this.broadcast(entry);
+  }
+
   private onProgress(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
     const entry = this.ensureEntry(sessionId, toolUseId);
+    this.keepEvent(entry, 'task_progress', event);
     const t = entry.task;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
 
@@ -482,53 +755,42 @@ export class WorkflowProgressTracker {
       for (const raw of wp) {
         if (!raw || typeof raw !== 'object') continue;
         const a = raw as Record<string, unknown>;
-        const agentId0 = str(a['agentId']);
-        const label0 = str(a['label']);
         // Skip pure placeholder deltas with no identity yet (no id and no label).
-        if (!agentId0 && !label0) continue;
+        if (!str(a['agentId']) && !str(a['label'])) continue;
         const index = num(a['index']);
         const slot = String(index);
         const prev = entry.agents.get(slot)?.agent;
-        const state = str(a['state']);
-        const agentId = agentId0 ?? prev?.agentId ?? slot;
-        const agent: WorkflowAgent = {
-          agentId,
-          label: label0 ?? prev?.label ?? agentId.slice(0, 8),
-          status: state ? (AGENT_DONE_STATES.has(state) ? 'done' : 'running') : (prev?.status ?? 'running'),
-          tokens: a['tokens'] != null ? num(a['tokens']) : (prev?.tokens ?? 0),
-          tools: a['toolCalls'] != null ? num(a['toolCalls']) : (prev?.tools ?? 0),
-          durationMs: a['durationMs'] != null ? num(a['durationMs']) : (prev?.durationMs ?? 0),
-        };
+        // Spread the CLI's entry as-is: every field it sends reaches the webview
+        // under the CLI's own name, including ones nothing renders yet (model,
+        // promptPreview, attempt, error…). Deltas are partial, so merging over
+        // the previous state is what keeps earlier fields alive — but the merge
+        // must never invent or rename a field (CLAUDE.md: no renaming, no
+        // dropping). `agentId` is the one value the webview needs as a key, so
+        // it falls back to the slot while the CLI has not assigned one yet.
+        const agent: WorkflowAgent = { ...prev, ...a, agentId: str(a['agentId']) ?? prev?.agentId ?? slot };
         entry.agents.set(slot, { order: index, agent });
       }
       t.agents = [...entry.agents.values()].sort((x, y) => x.order - y.order).map((v) => v.agent);
     }
 
-    // Live workflow-level usage. Omit durationMs while running so the inline
-    // card's client-side timer keeps ticking; it is set on finalize.
+    // Live workflow-level usage, carried through as the CLI sent it. Picking
+    // two of its fields out and renaming them lost whatever else it reports,
+    // and made the same figure read as `total_tokens` here and something else
+    // downstream. The agent count belongs to the agent list, not in here.
     const usage = event['usage'] as Record<string, unknown> | undefined;
-    if (usage) {
-      t.usage = {
-        agentCount: t.agents.length || undefined,
-        subagentTokens: num(usage['total_tokens']) || undefined,
-        toolUses: num(usage['tool_uses']) || undefined,
-      };
-    }
+    if (usage) t.usage = { ...usage };
     this.broadcast(entry);
   }
 
   private onNotification(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
-    const entry = this.entries.get(this.key(sessionId, toolUseId));
+    const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
     if (!entry) return;
+    this.keepEvent(entry, 'task_notification', event);
     const t = entry.task;
 
-    const status = typeof event['status'] === 'string' ? (event['status'] as WorkflowStatus) : undefined;
-    t.status = status ?? 'completed';
-    // Settle stragglers whose final delta we missed: a completed workflow
-    // finished them (green); a stopped/failed one cut them off (grey).
-    settleAgents(t.agents, t.status);
+    t.status = toWorkflowStatus(event['status']) ?? 'completed';
     if (typeof event['summary'] === 'string') t.summary = event['summary'] as string;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
 
@@ -550,14 +812,22 @@ export class WorkflowProgressTracker {
     }
 
     const usage = event['usage'] as Record<string, unknown> | undefined;
-    t.usage = {
-      agentCount: t.agents.length || num(usage?.['agent_count']) || undefined,
-      subagentTokens: num(usage?.['total_tokens']) || undefined,
-      toolUses: num(usage?.['tool_uses']) || undefined,
-      durationMs: num(usage?.['duration_ms']) || undefined,
-    };
+    if (usage) t.usage = { ...usage };
+    // Nothing is picked out of the event here: keepEvent above already holds
+    // all of it, this one included.
     t.endedAt = Date.now();
     this.broadcast(entry);
+    this.snapshotAgents(t);
+  }
+
+  /**
+   * Write down the CLI's per-agent entries now that the workflow is over and
+   * they carry everything it ever reported. Nothing persists them otherwise, so
+   * this is what lets a reopened tab show agent names instead of ids.
+   */
+  private snapshotAgents(task: WorkflowTask): void {
+    if (!task.workflowId || task.agents.length === 0) return;
+    void saveWorkflowAgentSnapshot(task.workflowId, task.agents);
   }
 
   /**
@@ -573,7 +843,7 @@ export class WorkflowProgressTracker {
       if (block['type'] !== 'tool_result') continue;
       const toolUseId = block['tool_use_id'];
       if (typeof toolUseId !== 'string') continue;
-      const entry = this.entries.get(this.key(sessionId, toolUseId));
+      const entry = this.entries.get(this.resolveKey(sessionId, toolUseId));
       if (!entry) continue;
       const content = block['content'];
       const text = typeof content === 'string' ? content : getEventText(event);
@@ -638,6 +908,9 @@ export class WorkflowProgressTracker {
   }
 
   private broadcast(entry: WatchEntry): void {
+    // Tracked but not reported: an inline task the CLI has not (yet) moved to
+    // the background. See WatchEntry.backgrounded.
+    if (!entry.backgrounded) return;
     const serialized = JSON.stringify(entry.task);
     if (serialized === entry.lastSerialized) return;
     entry.lastSerialized = serialized;
@@ -658,9 +931,11 @@ export class WorkflowProgressTracker {
     const t = entry.task;
     t.status = 'stopped';
     t.endedAt = Date.now();
-    settleAgents(t.agents, t.status);
     t.usage = { ...t.usage, durationMs: t.usage?.durationMs ?? t.endedAt - t.startedAt };
     this.broadcast(entry);
+    // An interrupted workflow is just as worth naming on reload as a finished
+    // one — arguably more, since the reader is probably coming back to it.
+    this.snapshotAgents(t);
   }
 
   /**
@@ -684,6 +959,30 @@ export class WorkflowProgressTracker {
     }
   }
 
+  /**
+   * Settle a task the CLI never sent a notification for, using the terminal
+   * line its own output log carries.
+   *
+   * Called when that log changes, so a task whose process was killed stops
+   * claiming to be running the moment the CLI writes `[killed]` into it,
+   * rather than at the next reload — or never, if the session stays open.
+   */
+  settleByOutputFile(outputFile: string): void {
+    for (const entry of this.entries.values()) {
+      const t = entry.task;
+      if (t.status !== 'running' || t.outputFile !== outputFile) continue;
+      const settled = readTerminalMarker(outputFile);
+      if (!settled) continue;
+      t.status = settled;
+      // `endedAt` is the whole record of this: a task settled from its log got
+      // no usage from the CLI, and a duration we worked out from our own clock
+      // is not something the CLI reported. The webview derives it from
+      // endedAt/startedAt when the CLI gave no `duration_ms`.
+      t.endedAt = Date.now();
+      this.broadcast(entry);
+    }
+  }
+
   /** Forget all workflows for a session (on CLI process close). */
   stopSession(sessionId: string): void {
     for (const [key, entry] of this.entries) {
@@ -697,7 +996,49 @@ export class WorkflowProgressTracker {
   }
 }
 
+/**
+ * The one tracker for this process, shared by the CLI stream (which creates it)
+ * and the output-log watcher (which only settles tasks through it). It lives
+ * here rather than beside the stream so the watcher can reach it without
+ * importing the CLI process module, which would close an import cycle.
+ */
+let sharedTracker: WorkflowProgressTracker | null = null;
+
+export function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTracker {
+  if (!sharedTracker) sharedTracker = WorkflowProgressTracker.create(connections);
+  return sharedTracker;
+}
+
+/** The tracker if one has been created; the watcher must not create one. */
+export function peekWorkflowTracker(): WorkflowProgressTracker | null {
+  return sharedTracker;
+}
+
 /** Read a workflow task `.output` JSON file for its summary + result (best-effort). */
+/**
+ * The CLI closes a background task's output log with its own terminal line —
+ * `[exited with code N]` or `[killed]`. That line is the only word we get when
+ * the task's owning CLI dies without ever emitting a `task_notification`, which
+ * is exactly what happens to a backgrounded command whose process is killed:
+ * the tracker keeps a live entry saying `running`, and nothing ever contradicts
+ * it. Four such tasks sat at "running" for seven hours with `[killed]` written
+ * in their logs the whole time.
+ *
+ * Read from the tail, since the marker is the last thing in the file.
+ */
+function readTerminalMarker(path: string): WorkflowStatus | undefined {
+  try {
+    if (!existsSync(path)) return undefined;
+    const tail = readFileSync(path, 'utf-8').trimEnd().split('\n').pop() ?? '';
+    if (/^\[killed\]$/.test(tail.trim())) return 'stopped';
+    const exited = tail.trim().match(/^\[exited with code (\d+)\]$/);
+    if (exited) return exited[1] === '0' ? 'completed' : 'failed';
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function readOutputFile(path: string): { summary?: string; result?: string } {
   try {
     if (!existsSync(path)) return {};

@@ -118,8 +118,8 @@ describe('mergeToolResults', () => {
     expect(wf!.status).toBe('completed');
     expect(wf!.toolUseId).toBe('tool1');
     expect(wf!.summary).toContain('completed');
-    expect(wf!.usage.agentCount).toBe(5);
-    expect(wf!.usage.subagentTokens).toBe(171500);
+    expect(wf!.usage!.agent_count).toBe(5);
+    expect(wf!.usage!.subagent_tokens).toBe(171500);
   });
 
   it('keeps a tool_result visible when its tool_use is not loaded (split by paging)', () => {

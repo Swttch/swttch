@@ -5,7 +5,7 @@ import { Claude } from './claude';
 import { diagnoseAuthError } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
-import { WorkflowProgressTracker } from './features/workflow-tracker';
+import { getWorkflowTracker, peekWorkflowTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
@@ -25,11 +25,8 @@ const editedFileTracker = new EditedFileTracker();
 // Tracks background dynamic workflows and streams live progress to the webview.
 // Lazily created on the first stream event because it needs the (single,
 // process-lifetime) ConnectionManager to broadcast from its polling timers.
-let workflowTracker: WorkflowProgressTracker | null = null;
-function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTracker {
-  if (!workflowTracker) workflowTracker = WorkflowProgressTracker.create(connections);
-  return workflowTracker;
-}
+// The instance itself lives in the tracker module, so the output-log watcher
+// can settle tasks through the same one without importing this module.
 
 /**
  * Settle a session's still-running background workflows as `stopped` and push a
@@ -48,7 +45,7 @@ function getWorkflowTracker(connections: ConnectionManager): WorkflowProgressTra
  * process lives on, and nothing needs that today.
  */
 export function stopWorkflowsForSession(sessionId: string): void {
-  workflowTracker?.stopRunning(sessionId);
+  peekWorkflowTracker()?.stopRunning(sessionId);
 }
 
 /**
@@ -58,7 +55,7 @@ export function stopWorkflowsForSession(sessionId: string): void {
  * them as `running`.
  */
 export function isWorkflowRunning(sessionId: string, toolUseId: string): boolean {
-  return workflowTracker?.isRunning(sessionId, toolUseId) ?? false;
+  return peekWorkflowTracker()?.isRunning(sessionId, toolUseId) ?? false;
 }
 
 // InputMode -> CLI --permission-mode flag mapping
@@ -579,7 +576,7 @@ export async function ensureClaudeProcess(
       // the new CLI still reports on, and STREAM_END would end a stream the user never
       // stopped. The respawn emits its own STREAM_START.
       if (!restarting) {
-        workflowTracker?.stopSession(targetSessionId);
+        peekWorkflowTracker()?.stopSession(targetSessionId);
         connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
       }
 

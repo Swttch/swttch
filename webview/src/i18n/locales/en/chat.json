@@ -244,7 +244,24 @@
       "updating": "Updating…",
       "jumpToBottom": "Jump to bottom",
       "copyCommand": "Copy command",
-      "resize": "Drag to resize"
+      "resize": "Drag to resize",
+      "noOutputYet": "No output yet.",
+      "noOutput": "No output."
+    },
+    "agentComposer": {
+      "placeholder": "Message this agent…",
+      "send": "Send to agent",
+      "unreachable": "This agent's session has ended — it can no longer be reached"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} tool",
+      "tools_other": "{{count}} tools",
+      "queued": "queued {{value}}",
+      "attempt": "attempt {{count}}",
+      "context": "context {{value}}",
+      "in": "in {{value}}",
+      "cache": "cache +{{written}} / {{read}} reused",
+      "out": "out {{value}}"
     }
   },
   "scheduledMessages": {

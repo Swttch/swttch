@@ -244,7 +244,24 @@
       "updating": "Atualizando…",
       "jumpToBottom": "Ir para o final",
       "copyCommand": "Copiar comando",
-      "resize": "Arraste para redimensionar"
+      "resize": "Arraste para redimensionar",
+      "noOutputYet": "Ainda sem saída.",
+      "noOutput": "Sem saída."
+    },
+    "agentComposer": {
+      "placeholder": "Enviar mensagem a este agente…",
+      "send": "Enviar ao agente",
+      "unreachable": "A sessão deste agente terminou — já não é possível alcançá-lo"
+    },
+    "agentDetail": {
+      "tools_one": "{{count}} ferramenta",
+      "tools_other": "{{count}} ferramentas",
+      "queued": "na fila {{value}}",
+      "attempt": "tentativa {{count}}",
+      "context": "contexto {{value}}",
+      "in": "entrada {{value}}",
+      "cache": "cache +{{written}} / {{read}} reutilizado",
+      "out": "saída {{value}}"
     }
   },
   "scheduledMessages": {

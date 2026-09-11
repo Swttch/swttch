@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, KeyboardEvent, useState, type Clipboard
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
-import { INPUT_MODES } from '../../../types/chatInput';
 import { InputModeTag } from './InputModeTag';
 import { ModeSelectPanel } from './ModeSelectPanel';
 import { ScheduleSendPopover } from './ScheduleSendPopover';
 import { ActionButtons } from './ActionButtons';
+import { InputFrame } from './InputFrame';
 import { MicButton } from './MicButton';
 import { useDictationContext } from './DictationProvider';
 import { useNavigateToLogin } from '@/hooks';
@@ -281,8 +281,6 @@ export function ChatInput() {
   }, [claudeSettings.alwaysThinkingEnabled, updateClaudeSetting]);
 
   const disabled = sessionState === SessionState.Error || !workingDirectory;
-
-  const modeConfig = INPUT_MODES[mode];
 
   // IME composition truth (ref-only) shared between this keydown handler and the
   // RichInput editor. Under JCEF the native `isComposing` flag is unreliable.
@@ -744,14 +742,15 @@ export function ChatInput() {
       )}
       {/* SDUI 공지(INPUT_BANNER): 서버가 내려주는 공지가 있을 때만 표시 */}
       <AnnouncementInputBannerSlot />
-      {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다. */}
-      <div
-        className={`
-          relative rounded-lg border bg-surface-raised
-          transition-colors duration-150
-          ${isDragOver ? 'border-border-focus bg-accent-primary/5' : isFocused ? `${modeConfig.borderColorFocused} outline outline-4 ${modeConfig.outline}` : modeConfig.borderColor}
-        `}
-      >
+      {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다.
+          박스의 모양(테두리·포커스 링·구분선·하단 바)은 InputFrame이 쥐고 있고,
+          에이전트 뷰의 컴포저가 같은 것을 쓴다. 여기 있는 것은 전부 슬롯에 넣을
+          내용물이다. */}
+      <InputFrame
+        mode={mode}
+        isFocused={isFocused}
+        isDragOver={isDragOver}
+        overlays={<>
         {/* Mention dropdown. Shares this slot with the slash command panel;
             the panel yields whenever the caret is in an @token (issue #236),
             so the two never render at once. */}
@@ -812,10 +811,8 @@ export function ChatInput() {
 
         {/* 드래그 오버 오버레이 */}
         <DragOverlay visible={isDragOver} />
-
-        {/* Composer 영역. 마이크 버튼이 입력창 우측 상단에 겹쳐 앉으므로
-            relative 기준점이 된다. */}
-        <div className="relative pt-2.5 pb-1.5">
+        </>}
+        editor={<>
           <RichInput
             ref={textareaRef}
             ime={ime}
@@ -843,8 +840,8 @@ export function ChatInput() {
               onStop={() => void dictation.stop()}
             />
           )}
-        </div>
-
+        </>}
+        belowEditor={<>
         {/* 첨부 미리보기 */}
         <AttachmentPreview
           attachments={attachments}
@@ -857,16 +854,8 @@ export function ChatInput() {
             {attachmentError}
           </div>
         )}
-
-        {/* 구분선 */}
-        <div className="border-t border-border-subtle" />
-
-        {/* 하단 바: 모드 태그 + 파일 태그 + 액션 버튼 */}
-        <div className="flex items-center justify-between px-[5px] py-[3px] h-[35px]">
-          {/* 좌측: 모드 태그 + 파일 태그들.
-              min-w-0으로 축소를 허용해야 폭이 좁을 때 태그가 줄바꿈되지 않고
-              말줄임 처리된다 (issue #217). */}
-          <div className="flex items-center gap-0.5 xs:gap-1 min-w-0">
+        </>}
+        barStart={<>
             {/* On mobile the wrapper drops `relative` so the panel anchors to the
                 input box (like the model panel) and can span its full width;
                 on desktop it stays a compact panel above the mode tag. */}
@@ -885,12 +874,10 @@ export function ChatInput() {
             <ContextWindowTag onClick={handleCompact} disabled={isStreaming} />
             {/* IDE 컨텍스트 태그: 현재 열린 파일/선택을 표시하고 포함 여부를 토글 */}
             <IdeSelectionTag />
-          </div>
-
-          {/* 우측: 모델 태그 + 액션 버튼들 + 첨부 드롭다운 메뉴.
-              모델 태그는 좁아지면 말줄임되고(min-w-0), 액션 버튼은 항상 온전히
-              남아야 하므로 shrink-0으로 보호한다 (issue #217). */}
-          <div className="flex items-center gap-0.5 xs:gap-1 min-w-0">
+        </>}
+        barEnd={<>
+            {/* 모델 태그는 좁아지면 말줄임되고(min-w-0 — 프레임이 준다), 액션
+                버튼은 항상 온전히 남아야 하므로 shrink-0으로 보호한다 (issue #217). */}
             <ModelTag />
             <div className="relative shrink-0">
             <AttachMenu
@@ -914,10 +901,9 @@ export function ChatInput() {
               }}
               onStop={onStop}
             />
-          </div>
-          </div>
-        </div>
-      </div>
+            </div>
+        </>}
+      />
       {/* 첫 마이크 클릭에서 한 번만 뜨는 질문. 렌더 트리 최상단에 두는 이유는
           Portal로 그려지므로 위치가 레이아웃에 영향을 주지 않고, 인풋 내부에
           두면 컴포저가 조건부로 언마운트될 때 함께 사라지기 때문이다. */}

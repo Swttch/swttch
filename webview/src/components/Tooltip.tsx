@@ -48,7 +48,14 @@ export function Tooltip(props: Props) {
             appendTo={interactive ? () => document.body : undefined}
             render={(attrs) => (
                 <div
-                    className="max-w-[32rem] whitespace-pre-wrap break-all rounded-md border border-border-default bg-surface-overlay px-2 py-1 text-xs text-text-primary shadow-lg z-50"
+                    // Never wider than the window. Tippy flips to the opposite
+                    // side when a tooltip does not fit, but a tooltip wider than
+                    // the viewport does not fit on EITHER side, so it gives up
+                    // and leaves it hanging off the edge. Clamping the width is
+                    // what gives flipping somewhere to go. No spacing token
+                    // expresses "the smaller of 32rem and the window", hence the
+                    // arbitrary value.
+                    className="max-w-[min(32rem,calc(100vw-1rem))] whitespace-pre-wrap break-all rounded-md border border-border-default bg-surface-overlay px-2 py-1 text-xs text-text-primary shadow-lg z-50"
                     {...attrs}
                 >
                     {content}
