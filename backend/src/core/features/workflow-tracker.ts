@@ -35,6 +35,7 @@ import type {
   WorkflowAgent,
   WorkflowPhase,
   WorkflowStatus,
+  WorkflowUsage,
 } from '../../shared';
 import { readJsonlEntries } from './readJsonlEntries';
 import { loadWorkflowAgentSnapshot, saveWorkflowAgentSnapshot } from './workflowAgentSnapshot';
@@ -312,6 +313,22 @@ async function aggregateAgents(transcriptDir: string): Promise<WorkflowAgent[]> 
   return agents;
 }
 
+/**
+ * Every top-level tag of an XML-ish block, under the tag's own name.
+ *
+ * Reading a fixed list of tags means a tag the CLI adds later is dropped
+ * silently, which is how `<note>` — the envelope's own warning that an agent
+ * can be resumed and so may notify under the same task-id more than once —
+ * never reached anything that could act on it.
+ */
+function parseXmlTags(block: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const m of block.matchAll(/<([a-zA-Z0-9_-]+)>([\s\S]*?)<\/\1>/g)) {
+    out[m[1]] = m[2].trim();
+  }
+  return out;
+}
+
 /** Apply a `<task-notification>` envelope's fields onto a task (no I/O). */
 function applyNotification(task: WorkflowTask, text: string): void {
   const usageBlock = parseXmlTag(text, 'usage') ?? '';
@@ -321,12 +338,24 @@ function applyNotification(task: WorkflowTask, text: string): void {
   task.result = parseXmlTag(text, 'result');
   task.outputFile = parseXmlTag(text, 'output-file');
   task.taskId = task.taskId ?? parseXmlTag(text, 'task-id');
-  task.usage = {
-    agentCount: toInt(parseXmlTag(usageBlock, 'agent_count')),
-    subagentTokens: toInt(parseXmlTag(usageBlock, 'subagent_tokens')),
-    toolUses: toInt(parseXmlTag(usageBlock, 'tool_uses')),
-    durationMs: toInt(parseXmlTag(usageBlock, 'duration_ms')),
-  };
+  // The envelope's own tag names, kept as written. They differ from the live
+  // events' names for the same figures (`subagent_tokens` here vs
+  // `total_tokens` there), and that difference is the CLI's, not ours to
+  // normalise away.
+  const usage: WorkflowUsage = {};
+  for (const [tag, value] of Object.entries(parseXmlTags(usageBlock))) {
+    const n = toInt(value);
+    usage[tag] = n ?? value;
+  }
+  if (Object.keys(usage).length > 0) task.usage = usage;
+  // Whatever else the envelope carried, minus the fields already read above
+  // into their own places. `<note>` arrives here. Scanned from inside the
+  // envelope, so the envelope's own tag is not counted as one of its contents.
+  const rest = parseXmlTags(parseXmlTag(text, 'task-notification') ?? '');
+  for (const known of ['status', 'summary', 'result', 'output-file', 'task-id', 'tool-use-id', 'usage']) {
+    delete rest[known];
+  }
+  if (Object.keys(rest).length > 0) task.notification = rest;
 }
 
 function eventTimestamp(event: Record<string, unknown>): number {
@@ -571,16 +600,12 @@ export class WorkflowProgressTracker {
       t.agents = [...entry.agents.values()].sort((x, y) => x.order - y.order).map((v) => v.agent);
     }
 
-    // Live workflow-level usage. Omit durationMs while running so the inline
-    // card's client-side timer keeps ticking; it is set on finalize.
+    // Live workflow-level usage, carried through as the CLI sent it. Picking
+    // two of its fields out and renaming them lost whatever else it reports,
+    // and made the same figure read as `total_tokens` here and something else
+    // downstream. The agent count belongs to the agent list, not in here.
     const usage = event['usage'] as Record<string, unknown> | undefined;
-    if (usage) {
-      t.usage = {
-        agentCount: t.agents.length || undefined,
-        subagentTokens: num(usage['total_tokens']) || undefined,
-        toolUses: num(usage['tool_uses']) || undefined,
-      };
-    }
+    if (usage) t.usage = { ...usage };
     this.broadcast(entry);
   }
 
@@ -614,12 +639,18 @@ export class WorkflowProgressTracker {
     }
 
     const usage = event['usage'] as Record<string, unknown> | undefined;
-    t.usage = {
-      agentCount: t.agents.length || num(usage?.['agent_count']) || undefined,
-      subagentTokens: num(usage?.['total_tokens']) || undefined,
-      toolUses: num(usage?.['tool_uses']) || undefined,
-      durationMs: num(usage?.['duration_ms']) || undefined,
-    };
+    if (usage) t.usage = { ...usage };
+    // Same as the reload path: whatever else the event said, kept under the
+    // CLI's own names rather than discarded for not being on a known list.
+    // The envelope's `note` shows up here as the event's own equivalent.
+    const rest = { ...event };
+    for (const known of [
+      'type', 'subtype', 'session_id', 'uuid', 'tool_use_id',
+      'task_id', 'status', 'summary', 'output_file', 'usage',
+    ]) {
+      delete rest[known];
+    }
+    if (Object.keys(rest).length > 0) t.notification = rest;
     t.endedAt = Date.now();
     this.broadcast(entry);
     this.snapshotAgents(t);
@@ -776,8 +807,11 @@ export class WorkflowProgressTracker {
       const settled = readTerminalMarker(outputFile);
       if (!settled) continue;
       t.status = settled;
+      // `endedAt` is the whole record of this: a task settled from its log got
+      // no usage from the CLI, and a duration we worked out from our own clock
+      // is not something the CLI reported. The webview derives it from
+      // endedAt/startedAt when the CLI gave no `duration_ms`.
       t.endedAt = Date.now();
-      t.usage = { ...t.usage, durationMs: t.usage?.durationMs ?? t.endedAt - t.startedAt };
       this.broadcast(entry);
     }
   }

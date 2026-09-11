@@ -115,7 +115,8 @@ describe('reconstructWorkflowTasks', () => {
     expect(t.summary).toContain('completed');
     expect(t.result).toBe('{"ok":true}');
     expect(t.phases).toEqual([{ title: 'Phase 1' }]);
-    expect(t.usage).toMatchObject({ agentCount: 2, subagentTokens: 68760, toolUses: 1, durationMs: 7000 });
+    // The envelope's own tag names, not renamed on the way through.
+    expect(t.usage).toMatchObject({ agent_count: 2, subagent_tokens: 68760, tool_uses: 1, duration_ms: 7000 });
 
     // agents aggregated from transcript files
     expect(t.agents).toHaveLength(2);
@@ -837,7 +838,7 @@ describe('reconstructWorkflowTasks: backgrounded Agent and Bash tasks', () => {
     ]);
 
     expect(tasks[0].status).toBe('completed');
-    expect(tasks[0].usage).toMatchObject({ subagentTokens: 113355, toolUses: 31, durationMs: 132873 });
+    expect(tasks[0].usage).toMatchObject({ subagent_tokens: 113355, tool_uses: 31, duration_ms: 132873 });
   });
 
   // Without a live tracker saying otherwise, a task with no terminal
@@ -850,5 +851,112 @@ describe('reconstructWorkflowTasks: backgrounded Agent and Bash tasks', () => {
 
     expect((await reconstructWorkflowTasks(messages))[0].status).toBe('stopped');
     expect((await reconstructWorkflowTasks(messages, (id) => id === 'toolu_a'))[0].status).toBe('running');
+  });
+});
+
+// The tracker used to pick a few fields out of what the CLI sent, rename them,
+// and drop the rest. That cost real information: the envelope's <note> — the
+// CLI saying a finished agent can be resumed and will then notify again under
+// the same task-id — reached nothing that could act on it.
+describe('what the CLI reported, as it reported it', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  function agentNotification(extra: string[] = []) {
+    return [
+      '<task-notification>',
+      '<task-id>a40be17f1967a0861</task-id>',
+      '<tool-use-id>toolu_a</tool-use-id>',
+      '<status>completed</status>',
+      '<summary>Agent "x" finished</summary>',
+      ...extra,
+      '<usage><subagent_tokens>113355</subagent_tokens><tool_uses>31</tool_uses><duration_ms>132873</duration_ms></usage>',
+      '</task-notification>',
+    ].join('\n');
+  }
+
+  function rebuild(notif: string) {
+    return reconstructWorkflowTasks([
+      {
+        type: 'assistant',
+        timestamp: '2026-01-01T00:00:00.000Z',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', id: 'toolu_a', name: 'Agent', input: { description: 'x', run_in_background: true } }],
+        },
+      },
+      { type: 'user', message: { role: 'user', content: notif } },
+    ] as Array<Record<string, unknown>>);
+  }
+
+  it('keeps a tag the envelope carries that nothing reads yet', async () => {
+    const note = 'A task-notification fires each time this agent stops. The user can send it another message and resume it.';
+    const tasks = await rebuild(agentNotification([`<note>${note}</note>`]));
+
+    expect(tasks[0].notification).toEqual({ note });
+  });
+
+  it('leaves `notification` absent when the envelope carried nothing else', async () => {
+    const tasks = await rebuild(agentNotification());
+    expect(tasks[0].notification).toBeUndefined();
+  });
+
+  // The live events and the persisted envelope name the same figure
+  // differently. Both are kept as sent; neither is normalised into the other.
+  it('keeps the envelope\'s token name, and the live event\'s own, each as sent', async () => {
+    const rebuilt = await rebuild(agentNotification());
+    expect(rebuilt[0].usage).toMatchObject({ subagent_tokens: 113355, tool_uses: 31, duration_ms: 132873 });
+    expect(rebuilt[0].usage).not.toHaveProperty('total_tokens');
+
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      tool_use_id: 'toolu_live',
+      task_id: 'a1',
+      task_type: 'local_agent',
+      description: 'x',
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_live',
+      usage: { total_tokens: 121729, tool_uses: 2, duration_ms: 105449 },
+    });
+
+    expect(last().usage).toEqual({ total_tokens: 121729, tool_uses: 2, duration_ms: 105449 });
+  });
+
+  // An agent count we worked out from the agent list is not something the CLI
+  // said, and mixing it into the CLI's own object made the two impossible to
+  // tell apart. The webview counts the agents it was given instead.
+  it('does not put our own agent count into the CLI\'s usage object', async () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_started',
+      tool_use_id: 'toolu_live2',
+      task_type: 'local_workflow',
+      workflow_name: 'wf',
+    });
+    tracker.handleEvent('s1', {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_live2',
+      workflow_progress: [{ type: 'workflow_agent', index: 1, agentId: 'a1', label: 'one' }],
+      usage: { total_tokens: 10, tool_uses: 1, duration_ms: 5 },
+    });
+
+    expect(last().agents).toHaveLength(1);
+    expect(last().usage).not.toHaveProperty('agent_count');
+    expect(last().usage).not.toHaveProperty('agentCount');
   });
 });

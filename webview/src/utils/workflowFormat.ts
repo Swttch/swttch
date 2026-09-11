@@ -1,4 +1,40 @@
-import type { WorkflowStatus } from '@/shared';
+import type { WorkflowStatus, WorkflowUsage } from '@/shared';
+
+function usageNumber(usage: WorkflowUsage | undefined, key: string): number | undefined {
+    const value = usage?.[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * The token total, whichever of its two names the CLI used.
+ *
+ * A live `task_progress`/`task_notification` event calls it `total_tokens`; the
+ * `<task-notification>` envelope that survives in the transcript calls the same
+ * figure `subagent_tokens`. Both reach here as sent, so reading one name alone
+ * silently shows nothing for tasks that arrived by the other route.
+ */
+export function workflowTokens(usage?: WorkflowUsage): number | undefined {
+    return usageNumber(usage, 'total_tokens') ?? usageNumber(usage, 'subagent_tokens');
+}
+
+/** Tool-use count as the CLI reported it. */
+export function workflowToolUses(usage?: WorkflowUsage): number | undefined {
+    return usageNumber(usage, 'tool_uses');
+}
+
+/**
+ * Duration as the CLI reported it. Absent for a task that never got a
+ * notification (settled from its own output log instead), where the caller
+ * falls back to the clock.
+ */
+export function workflowDurationMs(usage?: WorkflowUsage): number | undefined {
+    return usageNumber(usage, 'duration_ms');
+}
+
+/** Agent count as the CLI reported it; only the envelope carries one. */
+export function workflowAgentCount(usage?: WorkflowUsage): number | undefined {
+    return usageNumber(usage, 'agent_count');
+}
 
 /** Format a millisecond duration as "Ns" / "Nm" / "Nm Ms". Returns undefined for 0/none. */
 export function formatDuration(ms?: number): string | undefined {

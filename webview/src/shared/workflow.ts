@@ -71,12 +71,34 @@ export interface WorkflowAgent {
   [key: string]: unknown;
 }
 
-/** Aggregate usage, populated from the final `<task-notification>` `<usage>`. */
+/**
+ * Aggregate usage, under the CLI's own field names.
+ *
+ * The CLI names the same figures differently depending on which way it is
+ * telling us, and both names are kept as sent rather than flattened into one
+ * of our own (see the original-data-preservation rule in CLAUDE.md):
+ *
+ * - live `task_progress` / `task_notification` JSON events send
+ *   `{total_tokens, tool_uses, duration_ms}` and no agent count;
+ * - the `<task-notification>` envelope that survives in the transcript sends
+ *   `<subagent_tokens>`, `<tool_uses>`, `<duration_ms>` and `<agent_count>`.
+ *
+ * So `total_tokens` and `subagent_tokens` are the same quantity arriving by
+ * different routes, and which one is present says which route it came by. Use
+ * `workflowTokens()` rather than reaching for either directly.
+ *
+ * Nothing here is computed by us: an agent count we worked out from the agent
+ * list, or a duration we worked out from our own clock, is not something the
+ * CLI said and does not belong in this object.
+ */
 export interface WorkflowUsage {
-  agentCount?: number;
-  subagentTokens?: number;
-  toolUses?: number;
-  durationMs?: number;
+  total_tokens?: number;
+  subagent_tokens?: number;
+  tool_uses?: number;
+  duration_ms?: number;
+  agent_count?: number;
+  /** Anything the CLI starts sending that this interface has not caught up to. */
+  [key: string]: unknown;
 }
 
 /**
@@ -116,4 +138,14 @@ export interface WorkflowTask {
   /** Workflow return value (raw `<result>` text). */
   result?: string;
   usage?: WorkflowUsage;
+  /**
+   * Whatever else the terminal notification carried, beyond the fields read
+   * into their own places above, under the CLI's own names.
+   *
+   * A fixed list of fields means anything the CLI adds later is dropped where
+   * nothing can see it. `note` arrives here, and it is the CLI telling us that
+   * a finished agent can be resumed and will then notify again under the same
+   * task-id — which is exactly the kind of thing worth not throwing away.
+   */
+  notification?: Record<string, unknown>;
 }

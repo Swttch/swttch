@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { agentDisplayName, agentDisplayStatus } from '../workflowFormat';
+import type { WorkflowUsage } from '@/shared';
+import {
+    agentDisplayName,
+    agentDisplayStatus,
+    workflowAgentCount,
+    workflowDurationMs,
+    workflowTokens,
+} from '../workflowFormat';
 
 // These two helpers exist because the backend stopped deciding for us: it now
 // forwards the CLI's `workflow_progress[]` entry untouched, so turning `state`
@@ -87,5 +94,39 @@ describe('agentDisplayName', () => {
         const agent = { agentId: 'a157cfae20b96c33d', result: { topic: 'океан' } };
         agentDisplayName(agent);
         expect(agent).toEqual({ agentId: 'a157cfae20b96c33d', result: { topic: 'океан' } });
+    });
+});
+
+// The CLI names the token total differently depending on which way it told us:
+// a live task_progress/task_notification event says `total_tokens`, while the
+// <task-notification> envelope preserved in the transcript says
+// `subagent_tokens`. Both now arrive as sent, so a reader of one name alone
+// shows nothing for every task that came by the other route.
+describe('usage figures under whichever name the CLI used', () => {
+    it('reads the token total from either name', () => {
+        expect(workflowTokens({ total_tokens: 121729 })).toBe(121729);
+        expect(workflowTokens({ subagent_tokens: 113355 })).toBe(113355);
+    });
+
+    it('returns undefined rather than 0 when no usage was reported', () => {
+        expect(workflowTokens(undefined)).toBeUndefined();
+        expect(workflowTokens({})).toBeUndefined();
+        expect(workflowDurationMs({})).toBeUndefined();
+        expect(workflowAgentCount({})).toBeUndefined();
+    });
+
+    // Only the envelope reports an agent count; the live events never do, and
+    // nothing we computed ourselves belongs in the CLI's object.
+    it('reads duration and agent count only from what the CLI sent', () => {
+        expect(workflowDurationMs({ duration_ms: 132873 })).toBe(132873);
+        expect(workflowAgentCount({ agent_count: 68 })).toBe(68);
+        expect(workflowAgentCount({ total_tokens: 10 })).toBeUndefined();
+    });
+
+    // The envelope parser keeps a tag's text when it does not parse as a
+    // number, so a non-numeric value can genuinely arrive here. It must not
+    // become NaN downstream.
+    it('ignores a non-numeric value', () => {
+        expect(workflowTokens({ total_tokens: 'lots' } as unknown as WorkflowUsage)).toBeUndefined();
     });
 });

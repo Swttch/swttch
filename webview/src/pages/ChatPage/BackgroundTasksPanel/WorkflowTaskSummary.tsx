@@ -6,6 +6,9 @@ import {
     agentDotClass,
     formatDuration,
     formatTokens,
+    workflowAgentCount,
+    workflowDurationMs,
+    workflowTokens,
     WORKFLOW_STATUS_COLOR,
 } from '@/utils/workflowFormat';
 
@@ -29,13 +32,18 @@ export function WorkflowTaskSummary(props: Props) {
 
     const isRunning = task.status === 'running';
     const statusColor = WORKFLOW_STATUS_COLOR[task.status] || 'text-text-primary/60';
-    const agentCount = task.agents.length || task.usage?.agentCount;
-    const durationMs = task.usage?.durationMs ?? (isRunning ? now - task.startedAt : undefined);
+    const agentCount = task.agents.length || workflowAgentCount(task.usage);
+    // The CLI's own figure first. Failing that: the clock while running, and
+    // for a task settled from its output log — which gets no usage at all —
+    // the span between the two timestamps we do have.
+    const durationMs =
+        workflowDurationMs(task.usage) ??
+        (isRunning ? now - task.startedAt : task.endedAt ? task.endedAt - task.startedAt : undefined);
     const duration = formatDuration(durationMs);
     // Authoritative workflow-level total first; per-agent sum is only a fallback
     // (see WorkflowRenderer) so the header stays consistent with the agent table.
     const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
-    const tokens = formatTokens(task.usage?.subagentTokens || liveTokens);
+    const tokens = formatTokens(workflowTokens(task.usage) || liveTokens);
 
     return (
         <div>

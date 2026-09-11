@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import type { LoadedMessageDto } from '../../types';
+import type { WorkflowUsage } from '../../shared';
 import { MessageRole } from '../common';
 
 export enum ContentBlockType {
@@ -60,12 +61,13 @@ export interface WorkflowNotification {
   status?: string;
   summary?: string;
   result?: string;
-  usage?: {
-    agentCount?: number;
-    subagentTokens?: number;
-    toolUses?: number;
-    durationMs?: number;
-  };
+  /** The `<usage>` sub-block under the envelope's own tag names. */
+  usage?: WorkflowUsage;
+  /**
+   * Any further tags the envelope carried, under their own names — `note`
+   * among them. Reading only a fixed list dropped those silently.
+   */
+  notification?: Record<string, string>;
 }
 
 /**

@@ -11,6 +11,9 @@ import {
     agentDotClass,
     formatDuration,
     formatTokens,
+    workflowAgentCount,
+    workflowDurationMs,
+    workflowTokens,
     WORKFLOW_STATUS_COLOR,
 } from '@/utils/workflowFormat';
 import { parseWorkflowName } from '@/utils/workflowName';
@@ -61,14 +64,15 @@ export function WorkflowRenderer(props: RendererProps) {
     const agents = live?.agents ?? [];
     const agentCount =
         agents.length ||
-        live?.usage?.agentCount ||
-        notification?.usage?.agentCount ||
+        workflowAgentCount(live?.usage) ||
+        workflowAgentCount(notification?.usage) ||
         undefined;
 
     const durationMs =
-        live?.usage?.durationMs ??
-        notification?.usage?.durationMs ??
-        (live && isRunning ? now - live.startedAt : undefined);
+        workflowDurationMs(live?.usage) ??
+        workflowDurationMs(notification?.usage) ??
+        (live && isRunning ? now - live.startedAt : undefined) ??
+        (live?.endedAt ? live.endedAt - live.startedAt : undefined);
     const duration = formatDuration(durationMs);
 
     // Prefer the authoritative workflow-level total (live usage / final
@@ -76,7 +80,7 @@ export function WorkflowRenderer(props: RendererProps) {
     // total isn't known yet (e.g. early in a live run).
     const liveTokens = agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
     const tokens = formatTokens(
-        live?.usage?.subagentTokens || notification?.usage?.subagentTokens || liveTokens,
+        workflowTokens(live?.usage) || workflowTokens(notification?.usage) || liveTokens,
     );
 
     const summary = live?.summary ?? notification?.summary;
