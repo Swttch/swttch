@@ -10,9 +10,6 @@ vi.mock('../account-store', () => ({
   readRegistry: async () => ({ current: 'personal', accounts: { personal: {}, company: {} } }),
   accountSnapshotPath: (id: string) => `/saved accounts/${id}.json`,
 }));
-vi.mock('../claude-settings', () => ({
-  getProxyEnvFromSettings: vi.fn().mockResolvedValue({}),
-}));
 beforeEach(() => {
   vi.clearAllMocks();
   mock.which.mockResolvedValue('/external bin/ccb');
@@ -23,7 +20,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 it('passes only the selected snapshot path as one argv item and preserves raw response', async () => {
   expect(await fetchAccountUsage('company')).toEqual({ five_hour: { utilization: 100, resets_at: null, extra_provider_field: 'preserved' } });
-  expect(mock.exec).toHaveBeenLastCalledWith('/external bin/ccb', ['oauth', 'usage', '--json', '--account-file=/saved accounts/company.json'], { timeout: 15000, env: {} });
+  expect(mock.exec).toHaveBeenLastCalledWith('/external bin/ccb', ['oauth', 'usage', '--json', '--account-file=/saved accounts/company.json'], { timeout: 15000 });
 });
 it('refuses old CLI versions instead of accepting a wrong-account response', async () => {
   mock.exec.mockResolvedValue({ stdout: 'Usage: ccb <command>', stderr: '' });

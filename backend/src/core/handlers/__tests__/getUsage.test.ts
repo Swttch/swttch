@@ -4,16 +4,10 @@ vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }));
 
-vi.mock('../../features/claude-settings', () => ({
-  getProxyEnvFromSettings: vi.fn().mockResolvedValue({}),
-}));
-
 import { execFile } from 'child_process';
 import { getUsageHandler, resetUsageCache } from '../getUsage';
-import { getProxyEnvFromSettings } from '../../features/claude-settings';
 
 const mockExecFile = vi.mocked(execFile);
-const mockGetProxyEnv = vi.mocked(getProxyEnvFromSettings);
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
@@ -86,26 +80,6 @@ describe('getUsageHandler', () => {
       status: 'ok',
       usage: SAMPLE_USAGE,
     });
-  });
-
-  // ccb does not read ~/.claude/settings.json itself, so a proxy configured
-  // there must reach it via the env passed to the spawned process.
-  it('forwards HTTP_PROXY/HTTPS_PROXY read from Claude settings to the ccb spawn', async () => {
-    const connections = createMockConnections();
-    const message: IPCMessage = { type: MessageType.GET_USAGE, payload: {}, timestamp: 0, requestId: 'req-1' };
-    mockGetProxyEnv.mockResolvedValueOnce({ HTTP_PROXY: 'http://proxy.local:8080', HTTPS_PROXY: 'http://proxy.local:8443' });
-    setupExecFileSuccess(SAMPLE_USAGE);
-
-    await getUsageHandler('conn-1', message, connections, mockBridge);
-
-    expect(mockExecFile).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(Array),
-      expect.objectContaining({
-        env: expect.objectContaining({ HTTP_PROXY: 'http://proxy.local:8080', HTTPS_PROXY: 'http://proxy.local:8443' }),
-      }),
-      expect.any(Function),
-    );
   });
 
   it('should not include error_kind on successful response', async () => {

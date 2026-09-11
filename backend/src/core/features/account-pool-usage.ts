@@ -2,7 +2,6 @@ import type { CcbUsageResponse } from '../handlers/getUsage';
 import type { AccountUsageData } from '../../shared';
 import { readRegistry, accountSnapshotPath, type AccountsRegistry } from './account-store';
 import { Command } from '../command';
-import { getProxyEnvFromSettings } from './claude-settings';
 
 const USAGE_TIMEOUT_MS = 15_000;
 const ACCOUNT_USAGE_CAPABILITY = 'oauth.usage.account-file';
@@ -21,9 +20,8 @@ export async function fetchAccountUsage(accountId: string): Promise<CcbUsageResp
     supported = (JSON.parse(capabilities) as { capabilities?: string[] }).capabilities?.includes(ACCOUNT_USAGE_CAPABILITY) === true;
   } catch { /* Old versions print help text. */ }
   if (!supported) throw new Error('Update ccb to enable saved-account usage queries');
-  const proxyEnv = await getProxyEnvFromSettings();
   const { stdout } = await new Command(binary, ['oauth', 'usage', '--json',
-    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS, env: proxyEnv }).exec();
+    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS }).exec();
   // Direct argv invocation preserves spaces in snapshot paths; no shell or token argument.
   try { return JSON.parse(stdout) as CcbUsageResponse; }
   catch { throw new Error('Invalid account usage response from ccb'); }

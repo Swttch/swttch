@@ -7,7 +7,6 @@ import { readRegistry } from '../features/account-store';
 import type { StoredAccount } from '../../shared';
 import { runCcbUsage, classifyError } from './getUsage';
 import type { AccountUsage, AccountUsageData } from '../../shared';
-import { getProxyEnvFromSettings } from '../features/claude-settings';
 
 interface CacheEntry {
   data: AccountUsage;
@@ -40,7 +39,6 @@ export async function getAllUsageHandler(
   try {
     const registry = await readRegistry();
     const savedAccounts = Object.values(registry.accounts);
-    const proxyEnv = await getProxyEnvFromSettings(workingDir);
 
     // Resolve active email
     let liveEmail: string | null = null;
@@ -96,7 +94,7 @@ export async function getAllUsageHandler(
 
       if (active) {
         try {
-          const rawUsage = await runCcbUsage(proxyEnv);
+          const rawUsage = await runCcbUsage();
           usage = {
             five_hour: rawUsage.five_hour || null,
             seven_day: rawUsage.seven_day || null,

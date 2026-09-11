@@ -8,7 +8,6 @@ import {
 } from '../../shared';
 import { runCcbUsage, classifyError, type CcbUsageResponse } from '../handlers/getUsage';
 import { registerHook, type ScheduleHook } from './scheduled-messages';
-import { getProxyEnvFromSettings } from './claude-settings';
 
 /**
  * Layer-2 "auto-resume on limit reset": PRE-SEND GATE half.
@@ -242,8 +241,7 @@ export function registerAutoResumeHook(
   };
 
   const hook = createAutoResumeHook({
-    fetchUsage: options.fetchUsage ?? (async accountId =>
-      accountId ? fetchAccountUsage(accountId) : runCcbUsage(await getProxyEnvFromSettings())),
+    fetchUsage: options.fetchUsage ?? (accountId => accountId ? fetchAccountUsage(accountId) : runCcbUsage()),
     now: options.now ?? Date.now,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,

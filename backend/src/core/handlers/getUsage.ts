@@ -5,7 +5,6 @@ import type { IPCMessage } from '../types';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 import { readRegistry, upsertAccount } from '../features/account-store';
-import { getProxyEnvFromSettings } from '../features/claude-settings';
 
 interface UsageBucket {
   utilization: number;
@@ -121,18 +120,16 @@ async function persistUsageToRegistry(usage: CcbUsageResponse): Promise<void> {
   }
 }
 
-export async function runCcbUsage(env?: NodeJS.ProcessEnv): Promise<CcbUsageResponse> {
+export async function runCcbUsage(): Promise<CcbUsageResponse> {
   // The Command core resolves the platform shell (win32 cmd.exe argv; unix login
   // shell so ccb sees the rc-file PATH) and layers on the augmented PATH, so ccb
   // is discoverable even when the backend's inherited PATH lacks the npm global bin.
   //
-  // `env` forwards HTTP_PROXY/HTTPS_PROXY read from ~/.claude/settings.json
-  // (see getProxyEnvFromSettings) — ccb is not the claude CLI and does not read
-  // that file itself, so without this a proxy configured there is invisible to it.
+  // The proxy reaches ccb through process.env, projected by Claude.applyConfigDir
+  // when the context loaded — ccb does not read settings.json itself (#181).
   const { stdout } = await new Command('ccb', ['oauth', 'usage', '--json'], {
     timeout: 15000,
     shell: ShellKind.LoginInteractive,
-    env,
   }).exec();
   // Interactive login shells (`-l -i`) source startup files like .bashrc, which on
   // Linux often emit control sequences such as printf "\e[?2004l" (disable bracketed
@@ -206,8 +203,7 @@ export async function getUsageHandler(
       // workingDir is supplied — otherwise keep whatever context is already active so we
       // don't clobber it back to global. (#123)
       if (workingDir) await Claude.applyConfigDir(workingDir);
-      const proxyEnv = await getProxyEnvFromSettings(workingDir);
-      const usage = await runCcbUsage(proxyEnv);
+      const usage = await runCcbUsage();
       cachedUsage = usage;
       cachedAt = Date.now();
       lastErrorInfo = null;
