@@ -9,7 +9,7 @@ import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
-import { AgentDetailHeader } from './AgentDetailHeader';
+import { DetailHeader } from './AgentDetailHeader';
 import { AgentTranscriptBody } from './AgentTranscriptBody';
 import { AgentOutputTranscriptBody } from './AgentOutputTranscriptBody';
 import { BackgroundTaskOutputBody } from './BackgroundTaskOutputBody';
@@ -124,7 +124,14 @@ export function AgentTranscriptModal(props: Props) {
             className="h-full bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none"
           >
             <div className="flex items-center justify-between px-4 pt-4 pb-2 flex-shrink-0">
-              <h2 className="text-lg font-semibold text-text-primary truncate">
+              {/* Clicking the title logs the task object this modal was built
+                  from, so what the CLI actually sends for a single Agent/Task
+                  can be read in full. Logged as the object, not a string, so
+                  the console can be expanded field by field. */}
+              <h2
+                className="text-lg font-semibold text-text-primary truncate"
+                onClick={isAgentTask ? () => console.log(task) : undefined}
+              >
                 {t('backgroundTasks.transcriptModal.title', { name: task.name })}
               </h2>
               <button
@@ -161,7 +168,13 @@ export function AgentTranscriptModal(props: Props) {
             {isBashTask ? (
               <BackgroundTaskOutputBody task={task} outputFile={resolvedOutputFile} />
             ) : isAgentTask ? (
-              <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
+              // Same two-part shape as the workflow view to its right: what it
+              // was asked and what it returned on top, the transcript below.
+              // There is no picker because there is one agent, not many.
+              <div className="flex flex-1 min-h-0 flex-col">
+                <DetailHeader source={task} />
+                <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
+              </div>
             ) : (
               /* Picker beside the transcript rather than above it (issue #425).
                  Stacked, the two shared one column of height, so a workflow with
@@ -191,7 +204,7 @@ export function AgentTranscriptModal(props: Props) {
                 )}
                 <div className="flex flex-1 min-h-0 min-w-0 flex-col sm:flex-initial sm:w-full sm:max-w-xl">
                   {selectedAgent && (
-                    <AgentDetailHeader agent={selectedAgent} transcriptDir={task.transcriptDir} />
+                    <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} />
                   )}
                   <AgentTranscriptBody
                     transcriptDir={task.transcriptDir}

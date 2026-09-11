@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
+import type React from 'react';
 import { useTranslation } from '@/i18n';
-import type { WorkflowAgent } from '@/shared';
+import type { WorkflowAgent, WorkflowTask } from '@/shared';
 import { Tooltip } from '@/components/Tooltip';
 import { useAgentTranscript } from '@/hooks/useAgentTranscript';
-import { formatTokens } from '@/utils/workflowFormat';
-
-interface Props {
-  agent: WorkflowAgent;
-  transcriptDir: string | undefined;
-}
+import { formatTokens, workflowToolUses } from '@/utils/workflowFormat';
 
 /**
  * What the selected agent was asked, and what it gave back.
@@ -25,15 +21,56 @@ interface Props {
  * this already carries the name, phase, status, tokens and duration; none of
  * that is repeated here.
  */
-export function AgentDetailHeader(props: Props) {
+/**
+ * One header, given whichever object it is describing.
+ *
+ * A workflow's agent arrives as the CLI's `workflow_progress[]` entry and a
+ * backgrounded Agent/Task as its own task, and reading each is this
+ * component's own business rather than something a caller pulls apart first.
+ * Both are the same thing to look at, so both take the same path through here
+ * and cannot drift apart.
+ *
+ * `transcriptDir` is the one thing a workflow's agent needs that is not on the
+ * agent itself: its transcript lives in the workflow's directory, and the
+ * token breakdown is computed from it.
+ */
+export function DetailHeader(props: { source: WorkflowAgent | WorkflowTask; transcriptDir?: string }) {
+  const { source, transcriptDir } = props;
+  // Split at a component boundary rather than a branch, so each side calls
+  // only its own hooks: a workflow's agent fetches its transcript for the
+  // token breakdown, and a task has no transcript of that kind to fetch and
+  // should not be made to depend on a query client for one.
+  return isWorkflowTask(source) ? (
+    <TaskHeader task={source} />
+  ) : (
+    <AgentHeader agent={source} transcriptDir={transcriptDir} />
+  );
+}
+
+/** A workflow's agent: the CLI's `workflow_progress[]` entry. */
+function AgentHeader(props: { agent: WorkflowAgent; transcriptDir: string | undefined }) {
   const { agent, transcriptDir } = props;
   const { t } = useTranslation('chat');
   const breakdown = useTokenBreakdown(agent, transcriptDir);
 
-  const prompt = typeof agent.promptPreview === 'string' ? agent.promptPreview.trim() : undefined;
-  const result = typeof agent.resultPreview === 'string' ? agent.resultPreview.trim() : undefined;
-  const error = typeof agent.error === 'string' ? agent.error.trim() : undefined;
-  const badge = agent.model ? shortModelName(agent.model) : undefined;
+  return (
+    <HeaderLayout
+      fields={fieldsFromAgent(agent)}
+      meta={<MetaLines agent={agent} breakdown={breakdown} t={t} />}
+    />
+  );
+}
+
+/** A backgrounded Agent/Task: its own task events. */
+function TaskHeader(props: { task: WorkflowTask }) {
+  const { task } = props;
+  const { t } = useTranslation('chat');
+  return <HeaderLayout fields={fieldsFromTask(task)} meta={metaFromTask(task, t)} />;
+}
+
+function HeaderLayout(props: { fields: DetailHeaderFields; meta?: React.ReactNode }) {
+  const { prompt, result, error, badge } = props.fields;
+  const { meta } = props;
 
   // A rebuilt agent has none of this, because the CLI persists none of it. An
   // empty row of labels would be worse than no header at all.
@@ -49,11 +86,14 @@ export function AgentDetailHeader(props: Props) {
           {prompt && <FieldRow label="Prompt" value={prompt} />}
           {result && <FieldRow label="Result" value={result} />}
         </div>
-        {badge && (
-          <Tooltip content={<MetaLines agent={agent} breakdown={breakdown} t={t} />} placement="bottom">
+        {badge &&
+          (meta ? (
+            <Tooltip content={meta} placement="bottom">
+              <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-text-tertiary">{badge}</span>
+            </Tooltip>
+          ) : (
             <span className="shrink-0 rounded bg-surface-hover px-1.5 py-0.5 text-text-tertiary">{badge}</span>
-          </Tooltip>
-        )}
+          ))}
       </div>
 
       {/* A failure is the one thing here that must not be a hover away. */}
@@ -115,7 +155,7 @@ function MetaLines(props: {
  * `claude-haiku-4-5-20251001` reads as `haiku 4.5`. The full id is a line of
  * the tooltip, so the badge only has to say which family and version ran.
  */
-function shortModelName(model: string): string {
+export function shortModelName(model: string): string {
   const cleaned = model
     .replace(/^claude-/, '')
     .replace(/\[.*\]$/, '')
@@ -180,4 +220,90 @@ function useTokenBreakdown(agent: WorkflowAgent, transcriptDir: string | undefin
     const total = input + cacheWrite + cacheRead + output;
     return total > 0 ? { total, input, cacheWrite, cacheRead, output } : undefined;
   }, [data]);
+}
+
+/** What a header row shows, whoever worked it out. */
+interface DetailHeaderFields {
+  prompt?: string;
+  result?: string;
+  error?: string;
+  badge?: string;
+}
+
+/** Only a task carries a `toolUseId`; only an agent entry carries `agentId`. */
+function isWorkflowTask(source: WorkflowAgent | WorkflowTask): source is WorkflowTask {
+  return typeof (source as WorkflowTask).toolUseId === 'string';
+}
+
+function trimmed(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const text = value.trim();
+  return text ? text : undefined;
+}
+
+function fieldsFromAgent(agent: WorkflowAgent): DetailHeaderFields {
+  return {
+    prompt: trimmed(agent.promptPreview),
+    result: trimmed(agent.resultPreview),
+    error: trimmed(agent.error),
+    badge: agent.model ? shortModelName(agent.model) : undefined,
+  };
+}
+
+/** The `input` of the tool call that launched a task, if it was kept. */
+function taskToolInput(task: WorkflowTask): Record<string, unknown> {
+  const input = task.events?.tool_use?.['input'];
+  return input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+}
+
+/**
+ * A backgrounded Agent/Task says the same things under different names
+ * depending on how it reached us, and both ways are read here rather than one
+ * being preferred and the other lost:
+ *
+ * - the prompt is on `task_started` live, and on the launching `tool_use`
+ *   after a reload, since the CLI persists no events;
+ * - live there is no `result` and `summary` IS the value the agent returned;
+ *   the reload envelope splits the two, and then `summary` is a sentence about
+ *   the agent rather than from it, so it gets a row of its own instead of
+ *   standing in for the answer.
+ */
+function fieldsFromTask(task: WorkflowTask): DetailHeaderFields {
+  const started = task.events?.task_started;
+  const input = taskToolInput(task);
+
+  const model = trimmed(input['model']);
+
+  return {
+    prompt: trimmed(started?.['prompt']) ?? trimmed(input['prompt']),
+    result: trimmed(task.result) ?? trimmed(task.summary),
+    // No event reports the model, so an Agent launched with one is only
+    // knowable from the call that launched it. Most name none and inherit the
+    // session's, which is not ours to guess at — so there is simply no badge.
+    badge: model ? shortModelName(model) : undefined,
+  };
+}
+
+function metaFromTask(
+  task: WorkflowTask,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): React.ReactNode {
+  const model = trimmed(taskToolInput(task)['model']);
+  const toolUses = workflowToolUses(task.usage);
+
+  const lines = [
+    model,
+    typeof toolUses === 'number' ? t('backgroundTasks.agentDetail.tools', { count: toolUses }) : undefined,
+  ].filter((line): line is string => !!line);
+
+  if (lines.length === 0) return undefined;
+  return (
+    <div className="space-y-0.5">
+      {lines.map((line, i) => (
+        <div key={i} className={i === 0 ? undefined : 'text-text-primary/70'}>
+          {line}
+        </div>
+      ))}
+    </div>
+  );
 }

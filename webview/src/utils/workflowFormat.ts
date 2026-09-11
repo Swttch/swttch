@@ -1,4 +1,4 @@
-import type { WorkflowStatus, WorkflowUsage } from '@/shared';
+import type { WorkflowStatus, WorkflowTask, WorkflowUsage } from '@/shared';
 
 function usageNumber(usage: WorkflowUsage | undefined, key: string): number | undefined {
     const value = usage?.[key];
@@ -141,4 +141,19 @@ export function agentDisplayName(
         : undefined;
     if (typeof topic === 'string' && topic.trim()) return topic.trim();
     return agent.agentId?.slice(0, 8) ?? '';
+}
+
+/**
+ * Which kind of agent ran, as the CLI named it (`general-purpose` and the
+ * like). Only a backgrounded Agent/Task has one.
+ *
+ * Stated live on `task_started`, and after a reload only on the tool call that
+ * launched the task — the CLI persists none of its events.
+ */
+export function taskSubagentType(task: WorkflowTask): string | undefined {
+    const fromEvent = task.events?.task_started?.['subagent_type'];
+    if (typeof fromEvent === 'string' && fromEvent.trim()) return fromEvent.trim();
+    const input = task.events?.tool_use?.['input'];
+    const fromCall = input && typeof input === 'object' ? (input as Record<string, unknown>)['subagent_type'] : undefined;
+    return typeof fromCall === 'string' && fromCall.trim() ? fromCall.trim() : undefined;
 }

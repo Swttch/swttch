@@ -9,7 +9,7 @@ vi.mock('@/hooks/useBridge', () => ({
   useBridge: () => ({ send: sendMock }),
 }));
 
-import { AgentDetailHeader } from '../AgentDetailHeader';
+import { DetailHeader } from '../AgentDetailHeader';
 
 // The CLI's own entry for a finished agent.
 function makeAgent(overrides: Partial<WorkflowAgent> = {}): WorkflowAgent {
@@ -52,7 +52,7 @@ const usageEntries = [
 function renderHeader(agent: WorkflowAgent, transcriptDir: string | undefined = '/wf/dir') {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <AgentDetailHeader agent={agent} transcriptDir={transcriptDir} />
+      <DetailHeader source={agent} transcriptDir={transcriptDir} />
     </QueryClientProvider>,
   );
 }

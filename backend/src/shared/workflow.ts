@@ -173,4 +173,12 @@ export interface WorkflowTaskEvents {
   task_progress?: Record<string, unknown>;
   task_updated?: Array<Record<string, unknown>>;
   task_notification?: Record<string, unknown>;
+  /**
+   * The `tool_use` block that started the task, whole.
+   *
+   * Not a `task_*` event, and the only place some of what was asked for is
+   * ever stated: `task_started` reports no `model`, so an Agent launched with
+   * one can only be known to have run on it from here.
+   */
+  tool_use?: Record<string, unknown>;
 }

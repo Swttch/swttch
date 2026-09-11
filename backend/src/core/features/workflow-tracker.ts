@@ -437,6 +437,10 @@ export async function reconstructWorkflowTasks(
         // Phases are declared by a workflow script; the other two have none.
         phases: taskType === 'local_workflow' ? parseMetaPhases(script) : [],
         agents: [],
+        // The CLI persists none of its task_* events, so on reload the tool
+        // call is the only record of what was asked for — the `model` among
+        // it, which no event ever reports.
+        events: { tool_use: block },
       });
     }
   }
@@ -531,6 +535,8 @@ export class WorkflowProgressTracker {
         else if (subtype === 'task_progress') this.onProgress(sessionId, event);
         else if (subtype === 'task_updated') this.onUpdated(sessionId, event);
         else if (subtype === 'task_notification') this.onNotification(sessionId, event);
+      } else if (event['type'] === 'assistant') {
+        this.onToolUse(sessionId, event);
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
         this.onTaskNotFound(sessionId, event);
@@ -580,6 +586,28 @@ export class WorkflowProgressTracker {
     if (subtype === 'task_started') events.task_started = event;
     else if (subtype === 'task_progress') events.task_progress = event;
     else if (subtype === 'task_notification') events.task_notification = event;
+  }
+
+  /**
+   * Keep the `tool_use` block that starts a task, before its `task_started`
+   * arrives. Some of what was asked for is stated nowhere else: `task_started`
+   * reports no `model`, so an Agent launched with one is only knowable as
+   * having run on it from here.
+   *
+   * Deliberately silent — it does not broadcast. An inline Bash call has a
+   * tool_use like any other, and whether it belongs in the panel is decided at
+   * `task_started`; announcing it here would flash a row for every `ls`.
+   */
+  private onToolUse(sessionId: string, event: Record<string, unknown>): void {
+    for (const block of getContentBlocks(event)) {
+      if (block['type'] !== 'tool_use') continue;
+      const name = block['name'];
+      if (name !== 'Agent' && name !== 'Bash' && name !== 'Workflow') continue;
+      const toolUseId = block['id'];
+      if (typeof toolUseId !== 'string') continue;
+      const entry = this.ensureEntry(sessionId, toolUseId);
+      entry.task.events = { ...entry.task.events, tool_use: block };
+    }
   }
 
   private onStarted(sessionId: string, event: Record<string, unknown>): void {

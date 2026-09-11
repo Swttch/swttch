@@ -8,6 +8,7 @@ import {
     formatTokens,
     workflowAgentCount,
     workflowDurationMs,
+    taskSubagentType,
     workflowTokens,
     WORKFLOW_STATUS_COLOR,
 } from '@/utils/workflowFormat';
@@ -44,6 +45,7 @@ export function WorkflowTaskSummary(props: Props) {
     // (see WorkflowRenderer) so the header stays consistent with the agent table.
     const liveTokens = task.agents.reduce((sum, a) => sum + (a.tokens || 0), 0);
     const tokens = formatTokens(workflowTokens(task.usage) || liveTokens);
+    const subagentType = taskSubagentType(task);
 
     return (
         <div>
@@ -78,10 +80,21 @@ export function WorkflowTaskSummary(props: Props) {
                         <span className="text-text-primary/60">{duration}</span>
                     </>
                 )}
+                {/* Which kind of agent ran — only a backgrounded Agent/Task
+                    has one, so a workflow's row simply ends at the duration. */}
+                {subagentType && (
+                    <>
+                        <span className="text-text-tertiary">·</span>
+                        <span className="text-text-primary/60">{subagentType}</span>
+                    </>
+                )}
             </div>
 
-            {task.description && (
-                <div className="mt-1 text-[0.8461rem] text-text-primary/50">{task.description}</div>
+            {/* What the task turned out to be, falling back to what it was
+                asked to be. The summary only exists once the task has
+                finished, and until then the description is all there is. */}
+            {(task.summary || task.description) && (
+                <div className="mt-1 text-[0.8461rem] text-text-primary/50">{task.summary || task.description}</div>
             )}
 
             {showPhases && task.phases.length > 0 && (
