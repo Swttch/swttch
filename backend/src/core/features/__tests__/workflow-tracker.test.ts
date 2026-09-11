@@ -734,3 +734,121 @@ describe('WorkflowProgressTracker "No task found" settling', () => {
     expect(broadcasts).toHaveLength(before);
   });
 });
+
+// Reload used to rebuild workflows and nothing else, because the scan matched
+// only `name === 'Workflow'`. The live progress stream is never replayed, so a
+// backgrounded Agent or Bash task that the reload skipped was gone from the
+// panel for good: reopening a session showed only the tasks started after it
+// was reopened.
+describe('reconstructWorkflowTasks: backgrounded Agent and Bash tasks', () => {
+  // The CLI's own wording, copied from a recorded session transcript rather
+  // than paraphrased — these strings are the contract the parsers read.
+  const agentLaunched = [
+    'Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)',
+    "agentId: a40be17f1967a0861 (internal ID - do not mention to user. Use SendMessage with to: 'a40be17f1967a0861', summary: '<5-10 word recap>' to continue this agent.)",
+    'The agent is working in the background. You will be notified automatically when it completes.',
+    'output_file: /tmp/tasks/a40be17f1967a0861.output',
+  ].join('\n');
+
+  const bashLaunched =
+    'Command running in background with ID: b27yhtv6i. Output is being written to: /tmp/tasks/b27yhtv6i.output. ';
+
+  function toolUse(id: string, name: string, input: Record<string, unknown>) {
+    return {
+      type: 'assistant',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] },
+    } as Record<string, unknown>;
+  }
+
+  function toolResult(id: string, content: string) {
+    return {
+      type: 'user',
+      message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content }] },
+    } as Record<string, unknown>;
+  }
+
+  it('rebuilds a backgrounded Agent call, with the agentId the launch text states as its task id', async () => {
+    const tasks = await reconstructWorkflowTasks([
+      toolUse('toolu_a', 'Agent', {
+        description: 'Describe webview utils dir',
+        prompt: 'Read every .ts file…',
+        subagent_type: 'general-purpose',
+        run_in_background: true,
+      }),
+      toolResult('toolu_a', agentLaunched),
+    ]);
+
+    expect(tasks).toHaveLength(1);
+    const t = tasks[0];
+    expect(t.taskType).toBe('local_agent');
+    // Named from `description`, the same field the live path names it from.
+    expect(t.name).toBe('Describe webview utils dir');
+    expect(t.taskId).toBe('a40be17f1967a0861');
+    expect(t.outputFile).toBe('/tmp/tasks/a40be17f1967a0861.output');
+    // One agent, not a workflow of many, and no script to declare phases.
+    expect(t.agents).toEqual([]);
+    expect(t.phases).toEqual([]);
+  });
+
+  it('rebuilds a backgrounded Bash call', async () => {
+    const tasks = await reconstructWorkflowTasks([
+      toolUse('toolu_b', 'Bash', { command: 'pnpm build', description: 'Build the bundle', run_in_background: true }),
+      toolResult('toolu_b', bashLaunched),
+    ]);
+
+    expect(tasks).toHaveLength(1);
+    const t = tasks[0];
+    expect(t.taskType).toBe('local_bash');
+    expect(t.name).toBe('Build the bundle');
+    expect(t.taskId).toBe('b27yhtv6i');
+    expect(t.outputFile).toBe('/tmp/tasks/b27yhtv6i.output');
+  });
+
+  // Both tools run inline unless asked to background themselves, and an inline
+  // call never becomes a task. Rebuilding one would put a row in the panel for
+  // something that was never a background task at all.
+  it('ignores Agent and Bash calls that were not backgrounded', async () => {
+    const tasks = await reconstructWorkflowTasks([
+      toolUse('toolu_c', 'Agent', { description: 'inline agent', prompt: 'do it' }),
+      toolUse('toolu_d', 'Bash', { command: 'ls', description: 'list' }),
+      toolUse('toolu_e', 'Bash', { command: 'ls', description: 'list', run_in_background: false }),
+    ]);
+
+    expect(tasks).toEqual([]);
+  });
+
+  it('settles a rebuilt Agent task from its terminal notification', async () => {
+    const notif = [
+      '<task-notification>',
+      '<task-id>a40be17f1967a0861</task-id>',
+      '<tool-use-id>toolu_a</tool-use-id>',
+      '<output-file>/tmp/tasks/a40be17f1967a0861.output</output-file>',
+      '<status>completed</status>',
+      '<summary>Agent "Describe webview utils dir" finished</summary>',
+      '<usage><subagent_tokens>113355</subagent_tokens><tool_uses>31</tool_uses><duration_ms>132873</duration_ms></usage>',
+      '</task-notification>',
+    ].join('\n');
+
+    const tasks = await reconstructWorkflowTasks([
+      toolUse('toolu_a', 'Agent', { description: 'Describe webview utils dir', run_in_background: true }),
+      toolResult('toolu_a', agentLaunched),
+      { type: 'user', message: { role: 'user', content: notif } } as Record<string, unknown>,
+    ]);
+
+    expect(tasks[0].status).toBe('completed');
+    expect(tasks[0].usage).toMatchObject({ subagentTokens: 113355, toolUses: 31, durationMs: 132873 });
+  });
+
+  // Without a live tracker saying otherwise, a task with no terminal
+  // notification was interrupted — it must not come back claiming to run.
+  it('settles a rebuilt task with no notification to stopped unless it is live', async () => {
+    const messages = [
+      toolUse('toolu_a', 'Agent', { description: 'still going', run_in_background: true }),
+      toolResult('toolu_a', agentLaunched),
+    ];
+
+    expect((await reconstructWorkflowTasks(messages))[0].status).toBe('stopped');
+    expect((await reconstructWorkflowTasks(messages, (id) => id === 'toolu_a'))[0].status).toBe('running');
+  });
+});

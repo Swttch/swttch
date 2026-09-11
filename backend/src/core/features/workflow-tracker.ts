@@ -30,6 +30,7 @@ import { existsSync, readFileSync } from 'fs';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import { MessageType } from '../../shared';
 import type {
+  BackgroundTaskType,
   WorkflowTask,
   WorkflowAgent,
   WorkflowPhase,
@@ -141,9 +142,33 @@ function parseImmediateBashResult(text: string): { taskId?: string; outputFile?:
  * `output_file` is the agent's own JSONL transcript, available immediately
  * rather than only at the terminal task_notification (issue #383).
  */
-function parseImmediateAgentResult(text: string): { outputFile?: string } {
+function parseImmediateAgentResult(text: string): { agentId?: string; outputFile?: string } {
   const outputFile = text.match(/output_file:\s*(.+)/)?.[1]?.trim();
-  return { outputFile };
+  // The same value the terminal notification later reports as <task-id>, and
+  // the address SendMessage takes to resume this agent. It is only ever stated
+  // here, so a reload that skips this line has no id for the task at all.
+  const agentId = text.match(/agentId:\s*([a-zA-Z0-9_-]+)/)?.[1];
+  return { agentId, outputFile };
+}
+
+/**
+ * Which kind of background task a tool_use starts, or `undefined` if it starts
+ * none. This is the reload-side counterpart of the `task_type` the CLI states
+ * on `task_started`, and it has to be derived rather than read because the
+ * persisted transcript records the tool call, not the system event.
+ *
+ * `Agent` and `Bash` each run inline unless explicitly backgrounded, so the
+ * flag is what separates a task from an ordinary call. `Workflow` always runs
+ * in the background and carries no such flag.
+ */
+function backgroundTaskType(block: Record<string, unknown>): BackgroundTaskType | undefined {
+  const name = block['name'];
+  if (name === 'Workflow') return 'local_workflow';
+  const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
+  if (input['run_in_background'] !== true) return undefined;
+  if (name === 'Agent') return 'local_agent';
+  if (name === 'Bash') return 'local_bash';
+  return undefined;
 }
 
 /**
@@ -336,7 +361,14 @@ export async function reconstructWorkflowTasks(
   for (const msg of messages) {
     if (msg['type'] !== 'assistant') continue;
     for (const block of getContentBlocks(msg)) {
-      if (block['type'] !== 'tool_use' || block['name'] !== 'Workflow') continue;
+      if (block['type'] !== 'tool_use') continue;
+      // All three kinds of background task are reconstructed, not just
+      // workflows. Scanning for `Workflow` alone is what left a reloaded
+      // session showing none of the backgrounded Agent/Bash tasks it had
+      // started: the live stream is not replayed, so a task the reload does
+      // not rebuild is one the panel never hears about again.
+      const taskType = backgroundTaskType(block);
+      if (!taskType) continue;
       const toolUseId = block['id'];
       if (typeof toolUseId !== 'string' || tasks.has(toolUseId)) continue;
       const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
@@ -345,14 +377,22 @@ export async function reconstructWorkflowTasks(
       const description = typeof input['description'] === 'string' ? (input['description'] as string) : undefined;
       tasks.set(toolUseId, {
         toolUseId,
-        name: parseMetaName(script) || scriptPathName(scriptPath) || description || 'workflow',
+        taskType,
+        // Same order the live path names a task in (see onStarted): a
+        // workflow names itself from its script, and the other two have only
+        // their description to go by.
+        name:
+          taskType === 'local_workflow'
+            ? parseMetaName(script) || scriptPathName(scriptPath) || description || 'workflow'
+            : description || taskType,
         description,
         // Default only — overwritten by applyNotification when a terminal
-        // <task-notification> exists. A workflow with no notification that is
+        // <task-notification> exists. A task with no notification that is
         // not live was interrupted, so it must not come back as 'running'.
         status: isLive?.(toolUseId) ? 'running' : 'stopped',
         startedAt: eventTimestamp(msg),
-        phases: parseMetaPhases(script),
+        // Phases are declared by a workflow script; the other two have none.
+        phases: taskType === 'local_workflow' ? parseMetaPhases(script) : [],
         agents: [],
       });
     }
@@ -367,9 +407,32 @@ export async function reconstructWorkflowTasks(
       const toolUseId = block['tool_use_id'];
       if (typeof toolUseId !== 'string') continue;
       const task = tasks.get(toolUseId);
-      if (!task || task.transcriptDir) continue;
+      if (!task) continue;
       const content = block['content'];
       const text = typeof content === 'string' ? content : getEventText(msg);
+
+      // Each kind announces itself in its own words, so each gets its own
+      // parser — the same three shapes the live path already distinguishes in
+      // onImmediateResult.
+      if (task.taskType === 'local_agent') {
+        if (task.outputFile) continue;
+        const { agentId, outputFile } = parseImmediateAgentResult(text);
+        if (outputFile) task.outputFile = outputFile;
+        // The agent's id doubles as its task id, and this line is the only
+        // place a reload can learn it before the terminal notification.
+        if (agentId) task.taskId = task.taskId ?? agentId;
+        continue;
+      }
+
+      if (task.taskType === 'local_bash') {
+        if (task.outputFile) continue;
+        const { taskId, outputFile } = parseImmediateBashResult(text);
+        if (outputFile) task.outputFile = outputFile;
+        if (taskId) task.taskId = task.taskId ?? taskId;
+        continue;
+      }
+
+      if (task.transcriptDir) continue;
       const { taskId, transcriptDir } = parseImmediateResult(text);
       if (transcriptDir) {
         task.taskId = taskId ?? task.taskId;
