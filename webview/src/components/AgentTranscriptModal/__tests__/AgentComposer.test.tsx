@@ -19,7 +19,6 @@ function setup(overrides: { isRunning?: boolean; onStop?: () => void } = {}) {
   render(
     <AgentComposer
       agentId="a40be17f1967a0861"
-      recipientName="general-purpose"
       isRunning={overrides.isRunning ?? false}
       inputMode="ask_before_edit"
       onSend={onSend}
@@ -72,6 +71,35 @@ describe('AgentComposer', () => {
     expect(onSend).toHaveBeenCalledWith('a40be17f1967a0861', 'hello');
   });
 
+  // The button has to say "something is happening" the moment a message goes,
+  // not when the CLI eventually reports the agent as running again — that round
+  // trip takes a restart, and a send button in the meantime reads as if nothing
+  // had happened.
+  it('turns into stop as soon as a message is sent', () => {
+    const onStop = vi.fn();
+    const { box } = setup({ isRunning: false, onStop });
+
+    type(box, 'one more thing');
+    fireEvent.keyDown(box, { key: 'Enter' });
+
+    expect(screen.getByTitle('Stop generating')).toBeInTheDocument();
+    expect(screen.queryByTitle('Send message')).not.toBeInTheDocument();
+  });
+
+  // Stopping something that never started would otherwise leave the button
+  // stuck on stop, since no "running" will ever arrive to clear it.
+  it('goes back to send after stopping something that had not started', () => {
+    const onStop = vi.fn();
+    const { box } = setup({ isRunning: false, onStop });
+
+    type(box, 'one more thing');
+    fireEvent.keyDown(box, { key: 'Enter' });
+    fireEvent.click(screen.getByTitle('Stop generating'));
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(screen.getByTitle('Send message')).toBeInTheDocument();
+  });
+
   // The send button becomes a stop button while the agent is working — the
   // same control the main composer offers, because it is the same component.
   it('offers stop instead of send while the agent is working', () => {
@@ -111,14 +139,6 @@ describe('AgentComposer', () => {
     fireEvent.keyDown(box, { key: 'Escape' });
 
     expect(onStop).not.toHaveBeenCalled();
-  });
-
-  // The session input's bar opens with the permission mode; this one opens with
-  // who the message is going to, which changes as you click through a
-  // workflow's agent tabs.
-  it('says who the message is going to', () => {
-    setup();
-    expect(screen.getByText('general-purpose')).toBeInTheDocument();
   });
 
   // Neither has anywhere to go: SendMessage carries a plain string, and a

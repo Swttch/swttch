@@ -9,7 +9,7 @@ import { useNow } from '@/hooks/useNow';
 import { useVerticalResize } from '@/hooks/useVerticalResize';
 import { useResolvedTaskOutputFile } from '@/hooks/useResolvedTaskOutputFile';
 import { agentAddressOf } from '@/hooks/useSendToAgent';
-import { agentDisplayName, agentDisplayStatus, taskSubagentType } from '@/utils/workflowFormat';
+import { agentDisplayStatus } from '@/utils/workflowFormat';
 import { WorkflowTaskSummary } from '@/pages/ChatPage/BackgroundTasksPanel/WorkflowTaskSummary';
 import { AgentTabList } from './AgentTabList';
 import { DetailHeader } from './AgentDetailHeader';
@@ -21,17 +21,6 @@ import { BackgroundTaskOutputBody } from './BackgroundTaskOutputBody';
 interface Props {
   task: WorkflowTask;
   onClose: () => void;
-}
-
-/**
- * The model a backgrounded Agent was launched with. No event reports one, so
- * the call that asked for it is the only place it is ever stated — and most
- * calls ask for none and inherit the session's, which is not ours to guess at.
- */
-function agentModelOf(task: WorkflowTask): string | undefined {
-  const input = task.events?.tool_use?.['input'];
-  const model = input && typeof input === 'object' ? (input as Record<string, unknown>)['model'] : undefined;
-  return typeof model === 'string' && model.trim() ? model.trim() : undefined;
 }
 
 // The modal's height is `calc(60vh + <offset>px)` — the 60vh keeps it
@@ -59,7 +48,7 @@ export function AgentTranscriptModal(props: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const isRunning = task.status === 'running';
   const now = useNow(isRunning);
-  const { cancelTask, sendToAgent } = useBackgroundTaskActions();
+  const { cancelTask, sendToAgent, stopAgent } = useBackgroundTaskActions();
   const { inputMode } = useSessionContext();
   const { height: heightOffset, startResize, wasJustResizing } = useVerticalResize({
     initialHeight: DEFAULT_HEIGHT_OFFSET_PX,
@@ -196,14 +185,12 @@ export function AgentTranscriptModal(props: Props) {
                 {agentAddress && (
                   <AgentComposer
                     agentId={agentAddress}
-                    recipientName={taskSubagentType(task) ?? task.name}
-                    recipientModel={agentModelOf(task)}
                     isRunning={isRunning}
                     inputMode={inputMode}
                     onSend={sendToAgent}
-                    // A backgrounded Agent IS its task, so stopping the task
-                    // stops this agent and nothing else.
-                    onStop={() => cancelTask(task)}
+                    // A backgrounded Agent IS its task, so stopping it by its
+                    // own address stops this agent and nothing else.
+                    onStop={() => stopAgent(agentAddress, task.name)}
                   />
                 )}
               </div>
@@ -255,13 +242,15 @@ export function AgentTranscriptModal(props: Props) {
                   {selectedAgent?.agentId && (
                     <AgentComposer
                       agentId={selectedAgent.agentId}
-                      recipientName={agentDisplayName(selectedAgent, selectedAgent.phaseTitle)}
-                      recipientModel={selectedAgent.model}
                       // This agent's own state, not the workflow's: one can be
                       // finished while the run around it goes on.
                       isRunning={agentDisplayStatus(selectedAgent.state, task.status) === 'running'}
                       inputMode={inputMode}
                       onSend={sendToAgent}
+                      // Stops this agent by its own id, not the workflow it
+                      // belongs to: resuming one starts it again as a task
+                      // under that id, which is what there is to stop.
+                      onStop={() => stopAgent(selectedAgent.agentId!, selectedAgent.label ?? selectedAgent.agentId!)}
                     />
                   )}
                 </div>

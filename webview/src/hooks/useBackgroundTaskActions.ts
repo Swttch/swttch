@@ -54,6 +54,21 @@ export function useBackgroundTaskActions() {
     [sendToAgentInner, inputMode, sendMessage],
   );
 
+  /**
+   * Stop one agent by its own address.
+   *
+   * An agent's id IS a task id: a backgrounded Agent is launched under it, and
+   * resuming a workflow's agent starts it again as a task under that same id.
+   * So the stop a task already knows how to do reaches either of them, without
+   * touching the workflow a workflow agent came from.
+   */
+  const stopAgent = useCallback(
+    (agentId: string, name: string) => {
+      void cancelBackgroundTask({ taskId: agentId, name }, context);
+    },
+    [cancelBackgroundTask, context],
+  );
+
   const cancelAllRunning = useCallback(() => {
     // Fired one per task rather than as a single "stop everything" request:
     // there is no such request, and doing it per task means the fallback route
@@ -61,5 +76,5 @@ export function useBackgroundTaskActions() {
     for (const task of runningTasks) void cancelBackgroundTask(task, context);
   }, [runningTasks, cancelBackgroundTask, context]);
 
-  return { cancelTask, cancelAllRunning, sendToAgent, runningCount: runningTasks.length };
+  return { cancelTask, cancelAllRunning, sendToAgent, stopAgent, runningCount: runningTasks.length };
 }

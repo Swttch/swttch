@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useTranslation } from '@/i18n';
 import { RichInput } from '@/pages/ChatPage/ChatInput/RichInput';
 import { ActionButtons } from '@/pages/ChatPage/ChatInput/ActionButtons';
@@ -8,16 +8,11 @@ import { insertNewlineAtCursor } from '@/pages/ChatPage/ChatInput/RichInput/inse
 import { useSettings } from '@/contexts/SettingsContext';
 import { isMobile } from '@/config/environment';
 import { InputFrame } from '@/pages/ChatPage/ChatInput/InputFrame';
-import { AgentRecipientTag } from './AgentRecipientTag';
 import type { InputMode } from '@/types/chatInput';
 
 interface Props {
   /** The agent's address. */
   agentId: string;
-  /** Who the message is going to, in the words the CLI used for them. */
-  recipientName: string;
-  /** The model that agent runs on, when the CLI said. */
-  recipientModel?: string;
   /** Whether this agent is working right now — the send button becomes stop. */
   isRunning: boolean;
   /** The session's mode, which colours the box and the send button. */
@@ -44,11 +39,6 @@ interface Props {
  * under it), not to the box around them — so styling it that way misshapes the
  * editor instead of the container, and the container is what this file owns.
  *
- * The bar's start says who this is pointed at, where the session input says
- * under what permission mode it sends — the same question asked of a different
- * thing, and not a rhetorical one here: a workflow's agents are picked from
- * tabs, so the recipient changes as you click around.
- *
  * Three of the session bar's controls are absent rather than inert.
  * `SendMessage` carries a plain string, so an attachment has nowhere to go; a
  * slash command addresses the session, not the agent in front of you; and the
@@ -61,11 +51,16 @@ interface Props {
  * of ours that could disagree with it.
  */
 export function AgentComposer(props: Props) {
-  const { agentId, recipientName, recipientModel, isRunning, inputMode, onSend, onStop } = props;
+  const { agentId, isRunning, inputMode, onSend, onStop } = props;
   const { t } = useTranslation('chat');
   const { settings } = useSettings();
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  // Turned on the moment a message goes out, because the button has to say
+  // "something is happening" straight away. The CLI only reports the agent as
+  // running once it has restarted it and that `task_started` has made the round
+  // trip, and until then a send button would read as if nothing had happened.
+  const [justSent, setJustSent] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   // Owned here so this keydown handler and the editor agree on one source of
   // truth for composition — under JCEF the native `isComposing` flag lies.
@@ -76,6 +71,24 @@ export function AgentComposer(props: Props) {
     if (!message) return;
     onSend(agentId, message);
     setText('');
+    setJustSent(true);
+  };
+
+  // Hand over to the real thing as soon as it is the real thing, and let go
+  // again when the agent finishes — the CLI's own account of what is happening
+  // outranks our guess the instant we have it.
+  useEffect(() => {
+    if (isRunning) setJustSent(false);
+  }, [isRunning]);
+
+  const isWorking = isRunning || justSent;
+
+  const stop = () => {
+    // Drop the optimistic flag as well: if the agent had not actually started
+    // yet, nothing else will ever clear it and the button would stay stuck on
+    // stop with nothing to stop.
+    setJustSent(false);
+    onStop?.();
   };
 
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -83,11 +96,11 @@ export function AgentComposer(props: Props) {
     // you are typing in is not what Escape means while an agent is working,
     // and the modal's own handler sits on `window` — so the native event has
     // to be stopped, not just the React one.
-    if (e.key === 'Escape' && isRunning && onStop) {
+    if (e.key === 'Escape' && isWorking && onStop) {
       e.preventDefault();
       e.stopPropagation();
       e.nativeEvent.stopImmediatePropagation();
-      onStop();
+      stop();
       return;
     }
 
@@ -144,15 +157,14 @@ export function AgentComposer(props: Props) {
             ariaLabel={t('backgroundTasks.agentComposer.placeholder')}
           />
         }
-        barStart={<AgentRecipientTag name={recipientName} model={recipientModel} />}
         barEnd={
           <ActionButtons
             mode={inputMode}
-            isActive={isRunning}
+            isActive={isWorking}
             disabled={false}
             hasValue={!!text.trim()}
             onSubmit={send}
-            onStop={onStop}
+            onStop={onStop && stop}
           />
         }
       />
