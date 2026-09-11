@@ -51,6 +51,18 @@ interface WatchEntry {
    */
   agents: Map<string, { order: number; agent: WorkflowAgent }>;
   lastSerialized?: string;
+  /**
+   * Whether the CLI has said this task is running in the background.
+   *
+   * An ordinary inline Bash call emits `task_started` too, with
+   * `is_backgrounded: false`, and does not belong in the Background tasks
+   * panel — the user is watching it in the transcript already. But that answer
+   * is not final: sending a running command to the background arrives later as
+   * `task_updated` with `patch: {is_backgrounded: true}`. So the task is
+   * tracked either way and this only gates the broadcast, which lets it start
+   * being reported the moment the CLI changes its mind.
+   */
+  backgrounded: boolean;
 }
 
 // ── event parsing helpers ────────────────────────────────────
@@ -348,14 +360,16 @@ function applyNotification(task: WorkflowTask, text: string): void {
     usage[tag] = n ?? value;
   }
   if (Object.keys(usage).length > 0) task.usage = usage;
-  // Whatever else the envelope carried, minus the fields already read above
-  // into their own places. `<note>` arrives here. Scanned from inside the
-  // envelope, so the envelope's own tag is not counted as one of its contents.
-  const rest = parseXmlTags(parseXmlTag(text, 'task-notification') ?? '');
-  for (const known of ['status', 'summary', 'result', 'output-file', 'task-id', 'tool-use-id', 'usage']) {
-    delete rest[known];
-  }
-  if (Object.keys(rest).length > 0) task.notification = rest;
+
+  // The CLI persists none of its `task_*` events, so on reload this envelope is
+  // the only thing left of what it said. Every tag of it is kept, plus the text
+  // itself, rather than the handful read into fields above: a tag with no field
+  // of its own is dropped where nothing can notice, and `<note>` — the CLI
+  // explaining that a resumed agent notifies again under the same task-id — was
+  // being dropped exactly that way.
+  const envelope = parseXmlTag(text, 'task-notification') ?? '';
+  const tags = parseXmlTags(envelope);
+  task.events = { ...task.events, task_notification: { ...tags, raw: text } };
 }
 
 function eventTimestamp(event: Record<string, unknown>): number {
@@ -501,12 +515,6 @@ function str(v: unknown): string | undefined {
 export class WorkflowProgressTracker {
   /** key = `${sessionId}::${toolUseId}` */
   private readonly entries = new Map<string, WatchEntry>();
-  /**
-   * Tasks the CLI told us were never backgrounded, so later events about them
-   * are not mistaken for a task nobody has started yet. Keyed the same way as
-   * {@link entries} and cleared with them.
-   */
-  private readonly inline = new Set<string>();
 
   private constructor(private readonly connections: ConnectionManager) {}
 
@@ -520,7 +528,8 @@ export class WorkflowProgressTracker {
       if (event['type'] === 'system') {
         const subtype = event['subtype'];
         if (subtype === 'task_started') this.onStarted(sessionId, event);
-        else if (subtype === 'task_progress' || subtype === 'task_updated') this.onProgress(sessionId, event);
+        else if (subtype === 'task_progress') this.onProgress(sessionId, event);
+        else if (subtype === 'task_updated') this.onUpdated(sessionId, event);
         else if (subtype === 'task_notification') this.onNotification(sessionId, event);
       } else if (event['type'] === 'user') {
         this.onImmediateResult(sessionId, event);
@@ -535,11 +544,6 @@ export class WorkflowProgressTracker {
     return `${sessionId}::${toolUseId}`;
   }
 
-  /** True once `task_started` said this one was never backgrounded. */
-  private isInline(sessionId: string, toolUseId: string): boolean {
-    return this.inline.has(this.key(sessionId, toolUseId));
-  }
-
   private ensureEntry(sessionId: string, toolUseId: string): WatchEntry {
     const key = this.key(sessionId, toolUseId);
     let entry = this.entries.get(key);
@@ -548,29 +552,51 @@ export class WorkflowProgressTracker {
         sessionId,
         task: { toolUseId, name: 'workflow', status: 'running', startedAt: Date.now(), phases: [], agents: [] },
         agents: new Map(),
+        // Assumed until `task_started` says otherwise: a workflow carries no
+        // such field and is always backgrounded, and an entry built by any
+        // other event has no reason to be held back.
+        backgrounded: true,
       };
       this.entries.set(key, entry);
     }
     return entry;
   }
 
+  /** Find a task by the CLI's `task_id`, which is all `task_updated` carries. */
+  private findByTaskId(sessionId: string, taskId: string): WatchEntry | undefined {
+    for (const entry of this.entries.values()) {
+      if (entry.sessionId === sessionId && entry.task.taskId === taskId) return entry;
+    }
+    return undefined;
+  }
+
+  /** Record the CLI's event on the task, whole. */
+  private keepEvent(entry: WatchEntry, subtype: string, event: Record<string, unknown>): void {
+    const events = (entry.task.events ??= {});
+    if (subtype === 'task_updated') {
+      (events.task_updated ??= []).push(event);
+      return;
+    }
+    if (subtype === 'task_started') events.task_started = event;
+    else if (subtype === 'task_progress') events.task_progress = event;
+    else if (subtype === 'task_notification') events.task_notification = event;
+  }
+
   private onStarted(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
 
-    // The CLI states whether a task was actually backgrounded, and an ordinary
-    // inline Bash call says `false`. Those are not background tasks: the user
-    // is watching them run in the transcript already, and listing them in the
-    // Background tasks panel filled it with rows for `ls` and the like — and
-    // ticked the running badge for them. A workflow carries no such field
-    // because it is always backgrounded.
-    if (event['is_backgrounded'] === false) {
-      this.inline.add(this.key(sessionId, toolUseId));
-      this.entries.delete(this.key(sessionId, toolUseId));
-      return;
-    }
-
     const entry = this.ensureEntry(sessionId, toolUseId);
+    this.keepEvent(entry, 'task_started', event);
+
+    // The CLI states whether a task was actually backgrounded, and an ordinary
+    // inline Bash call says `false`. Those do not belong in the Background
+    // tasks panel: the user is watching them run in the transcript already,
+    // and listing them filled it with rows for `ls` and the like. The task is
+    // still tracked — a later `task_updated` can flip this to true — but it is
+    // not reported until it does. A workflow carries no such field at all.
+    if (event['is_backgrounded'] === false) entry.backgrounded = false;
+
     const t = entry.task;
     const prompt = typeof event['prompt'] === 'string' ? (event['prompt'] as string) : undefined;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
@@ -590,13 +616,50 @@ export class WorkflowProgressTracker {
     this.broadcast(entry);
   }
 
+  /**
+   * `task_updated` amends a task already under way, and it is addressed by
+   * `task_id` alone — it carries no `tool_use_id`, which is why routing it
+   * through onProgress meant it was dropped on the first line, all 179 of them
+   * in one machine's logs.
+   *
+   * Two patches exist. `{is_backgrounded: true}` is a running command being
+   * sent to the background, and it is the CLI revising what it said at
+   * `task_started`. `{status, end_time}` closes the task — the same fact the
+   * output log's `[killed]` line reports, except stated outright and arriving
+   * without anyone reading a file for it.
+   */
+  private onUpdated(sessionId: string, event: Record<string, unknown>): void {
+    const taskId = event['task_id'];
+    if (typeof taskId !== 'string') return;
+    const entry = this.findByTaskId(sessionId, taskId);
+    if (!entry) return;
+    this.keepEvent(entry, 'task_updated', event);
+
+    const patch = event['patch'];
+    if (!patch || typeof patch !== 'object') return;
+    const p = patch as Record<string, unknown>;
+    const t = entry.task;
+
+    if (p['is_backgrounded'] === true) entry.backgrounded = true;
+
+    // The CLI's own words for how it ended. `killed` is the one that needs
+    // saying differently, because we call that state `stopped`; the other two
+    // are already our names for it.
+    const status = p['status'];
+    if (status === 'killed') t.status = 'stopped';
+    else if (status === 'completed' || status === 'failed') t.status = status;
+
+    const endTime = p['end_time'];
+    if (typeof endTime === 'number') t.endedAt = endTime;
+
+    this.broadcast(entry);
+  }
+
   private onProgress(sessionId: string, event: Record<string, unknown>): void {
     const toolUseId = event['tool_use_id'];
     if (typeof toolUseId !== 'string') return;
-    // Creates the entry on demand, so without this an inline task's progress
-    // would put back the row `task_started` just declined to make.
-    if (this.isInline(sessionId, toolUseId)) return;
     const entry = this.ensureEntry(sessionId, toolUseId);
+    this.keepEvent(entry, 'task_progress', event);
     const t = entry.task;
     if (typeof event['task_id'] === 'string') t.taskId = event['task_id'] as string;
 
@@ -641,6 +704,7 @@ export class WorkflowProgressTracker {
     if (typeof toolUseId !== 'string') return;
     const entry = this.entries.get(this.key(sessionId, toolUseId));
     if (!entry) return;
+    this.keepEvent(entry, 'task_notification', event);
     const t = entry.task;
 
     const status = typeof event['status'] === 'string' ? (event['status'] as WorkflowStatus) : undefined;
@@ -667,17 +731,8 @@ export class WorkflowProgressTracker {
 
     const usage = event['usage'] as Record<string, unknown> | undefined;
     if (usage) t.usage = { ...usage };
-    // Same as the reload path: whatever else the event said, kept under the
-    // CLI's own names rather than discarded for not being on a known list.
-    // The envelope's `note` shows up here as the event's own equivalent.
-    const rest = { ...event };
-    for (const known of [
-      'type', 'subtype', 'session_id', 'uuid', 'tool_use_id',
-      'task_id', 'status', 'summary', 'output_file', 'usage',
-    ]) {
-      delete rest[known];
-    }
-    if (Object.keys(rest).length > 0) t.notification = rest;
+    // Nothing is picked out of the event here: keepEvent above already holds
+    // all of it, this one included.
     t.endedAt = Date.now();
     this.broadcast(entry);
     this.snapshotAgents(t);
@@ -771,6 +826,9 @@ export class WorkflowProgressTracker {
   }
 
   private broadcast(entry: WatchEntry): void {
+    // Tracked but not reported: an inline task the CLI has not (yet) moved to
+    // the background. See WatchEntry.backgrounded.
+    if (!entry.backgrounded) return;
     const serialized = JSON.stringify(entry.task);
     if (serialized === entry.lastSerialized) return;
     entry.lastSerialized = serialized;
@@ -852,11 +910,6 @@ export class WorkflowProgressTracker {
       // dropping the entry, otherwise the webview hangs it on "running" forever.
       this.settleStopped(entry);
       this.entries.delete(key);
-    }
-    // The inline set is keyed by session too, and nothing else prunes it.
-    const prefix = `${sessionId}::`;
-    for (const key of this.inline) {
-      if (key.startsWith(prefix)) this.inline.delete(key);
     }
   }
 }

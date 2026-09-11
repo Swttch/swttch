@@ -901,12 +901,20 @@ describe('what the CLI reported, as it reported it', () => {
     const note = 'A task-notification fires each time this agent stops. The user can send it another message and resume it.';
     const tasks = await rebuild(agentNotification([`<note>${note}</note>`]));
 
-    expect(tasks[0].notification).toEqual({ note });
+    expect(tasks[0].events?.task_notification?.['note']).toBe(note);
   });
 
-  it('leaves `notification` absent when the envelope carried nothing else', async () => {
-    const tasks = await rebuild(agentNotification());
-    expect(tasks[0].notification).toBeUndefined();
+  // Every tag of the envelope is kept, not a chosen few, and the text it was
+  // parsed from is kept beside them.
+  it('keeps every tag of the envelope, and the envelope itself', async () => {
+    const notif = agentNotification();
+    const tasks = await rebuild(notif);
+    const kept = tasks[0].events?.task_notification as Record<string, unknown>;
+
+    expect(kept['task-id']).toBe('a40be17f1967a0861');
+    expect(kept['status']).toBe('completed');
+    expect(kept['summary']).toBe('Agent "x" finished');
+    expect(kept['raw']).toBe(notif);
   });
 
   // The live events and the persisted envelope name the same figure
@@ -1034,6 +1042,179 @@ describe('only tasks the CLI says were backgrounded', () => {
       status: 'completed',
     });
 
+    expect(broadcasts).toHaveLength(0);
+  });
+});
+
+// Nothing the CLI sends about a task is discarded on the way to the webview.
+// The named fields on the task are conveniences read off these events; this is
+// the record they were read from.
+describe('the CLI events, kept whole', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  // Verbatim from a recorded stream. Half of these fields had no field of
+  // their own on the task and were dropped where nothing could see them.
+  const agentStarted = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'aa68a75caf638ed39',
+    tool_use_id: 'toolu_a',
+    description: 'Sleep 90 then report',
+    subagent_type: 'general-purpose',
+    is_backgrounded: true,
+    spawn_depth: 1,
+    task_type: 'local_agent',
+    prompt: 'sleep 90 using Bash, then reply done',
+    uuid: '953e8ace-dfb2-4fa0-8b75-1e2c2be4a573',
+    session_id: 's1',
+  };
+
+  it('keeps task_started whole, including fields no task field is named for', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+
+    expect(last().events?.task_started).toEqual(agentStarted);
+    // The ones that used to be read and thrown away, or never read at all.
+    expect(last().events?.task_started?.['prompt']).toBe('sleep 90 using Bash, then reply done');
+    expect(last().events?.task_started?.['subagent_type']).toBe('general-purpose');
+    expect(last().events?.task_started?.['spawn_depth']).toBe(1);
+  });
+
+  it('keeps task_progress whole, including last_tool_name', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    const progress = {
+      type: 'system',
+      subtype: 'task_progress',
+      tool_use_id: 'toolu_a',
+      task_id: 'aa68a75caf638ed39',
+      description: 'Sleep 90 then report',
+      subagent_type: 'general-purpose',
+      last_tool_name: 'Bash',
+      summary: 'running sleep',
+      usage: { total_tokens: 100, tool_uses: 1, duration_ms: 5 },
+      session_id: 's1',
+      uuid: 'u2',
+    };
+    tracker.handleEvent('s1', progress);
+
+    expect(last().events?.task_progress).toEqual(progress);
+    expect(last().events?.task_progress?.['last_tool_name']).toBe('Bash');
+  });
+
+  it('keeps the terminal notification whole', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', agentStarted);
+    const notif = {
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'aa68a75caf638ed39',
+      tool_use_id: 'toolu_a',
+      status: 'completed',
+      output_file: '/tmp/tasks/aa68a75caf638ed39.output',
+      summary: 'done',
+      usage: { total_tokens: 64217, tool_uses: 1, duration_ms: 110162 },
+      session_id: 's1',
+      uuid: 'u3',
+    };
+    tracker.handleEvent('s1', notif);
+
+    expect(last().events?.task_notification).toEqual(notif);
+  });
+});
+
+// task_updated is addressed by task_id alone — it carries no tool_use_id — so
+// routing it through onProgress dropped it on the first line. 179 of them sat
+// unread in one machine's logs, and two things were being reconstructed the
+// hard way because of it.
+describe('task_updated', () => {
+  function makeTracker() {
+    const broadcasts: WorkflowTask[] = [];
+    const connections = {
+      broadcastToSession: (_sessionId: string, _type: string, payload: Record<string, unknown>) => {
+        broadcasts.push(JSON.parse(JSON.stringify(payload)) as WorkflowTask);
+      },
+    } as unknown as ConnectionManager;
+    const tracker = WorkflowProgressTracker.create(connections);
+    return { tracker, broadcasts, last: () => broadcasts[broadcasts.length - 1] };
+  }
+
+  const inlineBash = {
+    type: 'system',
+    subtype: 'task_started',
+    task_id: 'byemn0kwq',
+    tool_use_id: 'toolu_b',
+    description: '프록시 존중 여부 대조 실측',
+    is_backgrounded: false,
+    task_type: 'local_bash',
+  };
+
+  function updated(patch: Record<string, unknown>) {
+    return { type: 'system', subtype: 'task_updated', task_id: 'byemn0kwq', patch, uuid: 'u', session_id: 's1' };
+  }
+
+  // The real sequence from a recorded session: a command starts inline, the
+  // user sends it to the background, and it is killed later. Judging only by
+  // task_started, such a task would be hidden from the panel for good.
+  it('reports a task that starts inline and is later sent to the background', () => {
+    const { tracker, broadcasts, last } = makeTracker();
+
+    tracker.handleEvent('s1', inlineBash);
+    expect(broadcasts).toHaveLength(0);
+
+    tracker.handleEvent('s1', updated({ is_backgrounded: true }));
+
+    expect(broadcasts.length).toBeGreaterThan(0);
+    expect(last().toolUseId).toBe('toolu_b');
+    expect(last().description).toBe('프록시 존중 여부 대조 실측');
+  });
+
+  // The same fact the output log's `[killed]` line carries, except the CLI
+  // states it outright and nobody has to read a file to find out.
+  it('settles the task from the patch, mapping the CLI\'s own word for it', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    tracker.handleEvent('s1', updated({ is_backgrounded: true }));
+
+    tracker.handleEvent('s1', updated({ status: 'killed', end_time: 1789059708585 }));
+
+    expect(last().status).toBe('stopped');
+    expect(last().endedAt).toBe(1789059708585);
+  });
+
+  it('carries completed and failed through under our own names for them', () => {
+    for (const [cliStatus, ours] of [['completed', 'completed'], ['failed', 'failed']] as const) {
+      const { tracker, last } = makeTracker();
+      tracker.handleEvent('s1', { ...inlineBash, is_backgrounded: true });
+      tracker.handleEvent('s1', updated({ status: cliStatus, end_time: 1 }));
+      expect(last().status).toBe(ours);
+    }
+  });
+
+  it('keeps every patch, in the order they arrived', () => {
+    const { tracker, last } = makeTracker();
+    tracker.handleEvent('s1', inlineBash);
+    tracker.handleEvent('s1', updated({ is_backgrounded: true }));
+    tracker.handleEvent('s1', updated({ status: 'killed', end_time: 1789059708585 }));
+
+    const kept = last().events?.task_updated ?? [];
+    expect(kept).toHaveLength(2);
+    expect(kept[0]['patch']).toEqual({ is_backgrounded: true });
+    expect(kept[1]['patch']).toEqual({ status: 'killed', end_time: 1789059708585 });
+  });
+
+  it('ignores a patch for a task_id it is not tracking', () => {
+    const { tracker, broadcasts } = makeTracker();
+    tracker.handleEvent('s1', updated({ status: 'completed', end_time: 1 }));
     expect(broadcasts).toHaveLength(0);
   });
 });

@@ -139,13 +139,38 @@ export interface WorkflowTask {
   result?: string;
   usage?: WorkflowUsage;
   /**
-   * Whatever else the terminal notification carried, beyond the fields read
-   * into their own places above, under the CLI's own names.
+   * Every event the CLI sent about this task, kept whole.
    *
-   * A fixed list of fields means anything the CLI adds later is dropped where
-   * nothing can see it. `note` arrives here, and it is the CLI telling us that
-   * a finished agent can be resumed and will then notify again under the same
-   * task-id — which is exactly the kind of thing worth not throwing away.
+   * The fields above are conveniences read off these — a name to show, a
+   * status to colour — and each one is a decision about what mattered at the
+   * time. This is the record those decisions were made from, so a field
+   * nothing reads yet is still here to be read later, and anything the CLI
+   * starts sending arrives without a change on this side (see the
+   * original-data-preservation rule in CLAUDE.md).
    */
-  notification?: Record<string, unknown>;
+  events?: WorkflowTaskEvents;
+}
+
+/**
+ * The CLI's `task_*` events for one background task, under their own
+ * `subtype` names and with nothing removed.
+ *
+ * `task_updated` is a list because each one carries a different `patch` and
+ * they only make sense in order: one flips `is_backgrounded` to true when a
+ * running command is sent to the background, and a later one closes the task
+ * with `{status, end_time}`.
+ *
+ * `task_progress` keeps only the newest, because they are deltas whose merge
+ * is what `agents` and `usage` already hold — the range-splitting allowance in
+ * CLAUDE.md, not a licence to drop fields from the one that is kept.
+ *
+ * On reload there are no events to keep: the CLI persists none of them. What
+ * stands in for `task_notification` there is the `<task-notification>`
+ * envelope from the transcript, every tag of it, plus its `raw` text.
+ */
+export interface WorkflowTaskEvents {
+  task_started?: Record<string, unknown>;
+  task_progress?: Record<string, unknown>;
+  task_updated?: Array<Record<string, unknown>>;
+  task_notification?: Record<string, unknown>;
 }
