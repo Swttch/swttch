@@ -17,6 +17,32 @@ import { pickWin32Launcher } from './which-launcher';
 import { spawnWin32JobCli, utf8BashEnv } from './win-job';
 import { decodeConsoleOutput } from './console-encoding';
 
+/**
+ * Write the effective proxy variables onto `target`, clearing the ones that no
+ * longer apply.
+ *
+ * **Every removal happens before any assignment, and that ordering is the whole
+ * point of this function.** Windows matches environment variable names
+ * case-insensitively, so `delete target.https_proxy` removes a value written a
+ * moment earlier as `HTTPS_PROXY` — the two spellings are one variable there.
+ * Interleaving the two operations therefore had the loop wipe the proxy it had
+ * just projected, and a Windows user got no proxy at all while the same code
+ * behaved correctly on macOS and Linux. Verified on a Windows 11 machine.
+ *
+ * Each key is still resolved on its own: setting HTTPS_PROXY in settings.json
+ * says nothing about HTTP_PROXY, so an inherited value for the other survives.
+ */
+export function projectProxyEnv(
+  settingsProxy: NodeJS.ProcessEnv,
+  inherited: NodeJS.ProcessEnv,
+  target: NodeJS.ProcessEnv = process.env,
+): void {
+  const resolved = PROXY_ENV_KEYS.map((key) =>
+    [key, settingsProxy[key] ?? inherited[key]] as const);
+  for (const [key, value] of resolved) if (value === undefined) delete target[key];
+  for (const [key, value] of resolved) if (value !== undefined) target[key] = value;
+}
+
 export class Claude {
   private static cliPath: string | null = null;
   private static initialized = false;
@@ -88,14 +114,7 @@ export class Claude {
       delete process.env.CLAUDE_CONFIG_DIR;
     }
 
-    // Each key is resolved on its own: setting HTTPS_PROXY in settings.json says
-    // nothing about HTTP_PROXY, so an inherited value for the other one survives.
-    const settingsProxy = await getProxyEnvFromSettings(workingDir);
-    for (const key of PROXY_ENV_KEYS) {
-      const value = settingsProxy[key] ?? Claude.inheritedProxyEnv[key];
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
+    projectProxyEnv(await getProxyEnvFromSettings(workingDir), Claude.inheritedProxyEnv);
   }
 
   static get command(): string {

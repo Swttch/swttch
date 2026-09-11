@@ -41,7 +41,7 @@ const INHERITED: Record<string, string> = {
 for (const key of PROXY_KEYS) delete process.env[key];
 Object.assign(process.env, INHERITED);
 
-const { Claude } = await import('../claude');
+const { Claude, projectProxyEnv } = await import('../claude');
 
 /** Put process.env back to what the class believes it inherited. */
 afterEach(() => {
@@ -126,5 +126,101 @@ describe('Claude.applyConfigDir — proxy projection', () => {
 
     expect(process.env.ALL_PROXY).toBeUndefined();
     expect(process.env.NO_PROXY).toBeUndefined();
+  });
+});
+
+/**
+ * Windows matches environment variable names case-insensitively: `HTTPS_PROXY`
+ * and `https_proxy` are one variable, so deleting one spelling removes the other's
+ * value. Node reproduces that, which means a projection loop that interleaves
+ * writes and deletes wipes the proxy it just set — measured on a Windows 11
+ * machine, where the usage panel ended up with no proxy at all while macOS was
+ * fine.
+ *
+ * The env below models that behaviour so the regression is caught on any host.
+ */
+function windowsLikeEnv(initial: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const store = new Map<string, string>();
+  for (const [key, value] of Object.entries(initial)) store.set(key.toLowerCase(), value);
+  return new Proxy({} as NodeJS.ProcessEnv, {
+    get: (_t, prop) => (typeof prop === 'string' ? store.get(prop.toLowerCase()) : undefined),
+    set: (_t, prop, value) => {
+      if (typeof prop === 'string') store.set(prop.toLowerCase(), String(value));
+      return true;
+    },
+    deleteProperty: (_t, prop) => {
+      if (typeof prop === 'string') store.delete(prop.toLowerCase());
+      return true;
+    },
+    has: (_t, prop) => typeof prop === 'string' && store.has(prop.toLowerCase()),
+    ownKeys: () => [...store.keys()],
+    getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true, value: undefined }),
+  });
+}
+
+describe('projectProxyEnv — case-insensitive environments (Windows)', () => {
+  // The regression. Before clearing was separated from writing, the uppercase
+  // value written first was deleted again when the lowercase spelling of the
+  // same variable came up as "not configured".
+  it('keeps an uppercase proxy that the lowercase spelling would otherwise clear', () => {
+    const env = windowsLikeEnv();
+
+    projectProxyEnv({ HTTPS_PROXY: 'http://proxy.corp:8080' }, {}, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://proxy.corp:8080');
+    expect(env.https_proxy).toBe('http://proxy.corp:8080');
+  });
+
+  it('keeps a lowercase proxy just the same', () => {
+    const env = windowsLikeEnv();
+
+    projectProxyEnv({ https_proxy: 'http://proxy.corp:8080' }, {}, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://proxy.corp:8080');
+  });
+
+  it('still clears a proxy that no longer applies', () => {
+    const env = windowsLikeEnv({ HTTPS_PROXY: 'http://stale:8080' });
+
+    projectProxyEnv({}, {}, env);
+
+    expect(env.HTTPS_PROXY).toBeUndefined();
+  });
+
+  it('still restores the inherited proxy', () => {
+    const env = windowsLikeEnv({ HTTPS_PROXY: 'http://from-settings:8080' });
+
+    projectProxyEnv({}, { HTTPS_PROXY: 'http://from-shell:3128' }, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://from-shell:3128');
+  });
+
+  it('resolves each variable independently here too', () => {
+    const env = windowsLikeEnv();
+
+    projectProxyEnv({ HTTPS_PROXY: 'http://settings:8080' }, { HTTP_PROXY: 'http://shell:3128' }, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://settings:8080');
+    expect(env.HTTP_PROXY).toBe('http://shell:3128');
+  });
+});
+
+describe('projectProxyEnv — case-sensitive environments (macOS, Linux, WSL)', () => {
+  it('keeps the two spellings apart', () => {
+    const env: NodeJS.ProcessEnv = {};
+
+    projectProxyEnv({ HTTPS_PROXY: 'http://upper:8080' }, {}, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://upper:8080');
+    expect(env.https_proxy).toBeUndefined();
+  });
+
+  it('clears and restores the same way', () => {
+    const env: NodeJS.ProcessEnv = { HTTPS_PROXY: 'http://stale:8080', ALL_PROXY: 'socks5://stale:1080' };
+
+    projectProxyEnv({}, { HTTPS_PROXY: 'http://from-shell:3128' }, env);
+
+    expect(env.HTTPS_PROXY).toBe('http://from-shell:3128');
+    expect(env.ALL_PROXY).toBeUndefined();
   });
 });
