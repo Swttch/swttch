@@ -225,7 +225,7 @@
     "nameLabel": "이름",
     "namePlaceholder": "이 프롬프트의 용도",
     "contentLabel": "내용",
-    "contentPlaceholder": "채팅 입력창에 붙여넣을 문장",
+    "contentPlaceholder": "채팅 입력창에 붙여넣을 문장. {{sample}}처럼 쓰면 삽입할 때 값을 물어봅니다.",
     "save": "저장",
     "cancel": "취소",
     "edit": "수정",
@@ -248,6 +248,12 @@
     "openLibrary": "프롬프트 라이브러리",
     "scopeFieldLabel": "저장 위치",
     "scopeGlobal": "전역",
-    "scopeProject": "프로젝트"
+    "scopeProject": "프로젝트",
+    "variables": {
+      "title": "값 채우기",
+      "description": "이 프롬프트에는 채울 자리가 있습니다. 입력한 값이 그 자리에 들어갑니다.",
+      "preview": "미리보기",
+      "insert": "삽입"
+    }
   }
 }

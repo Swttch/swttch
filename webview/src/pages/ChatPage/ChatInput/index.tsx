@@ -38,6 +38,8 @@ import { displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
+import { usePromptVariableFill } from './hooks/usePromptVariableFill';
+import { PromptVariablesModal } from '@/components/PromptVariablesModal';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
 import { PromptDropdown } from './PromptDropdown';
@@ -333,11 +335,18 @@ export function ChatInput() {
     },
   });
 
+  // Every route that puts a saved prompt in the composer stops here first, so a
+  // prompt holding `{{...}}` is answered before it is inserted rather than
+  // landing as literal braces the user has to edit out.
+  const variableFill = usePromptVariableFill();
+  const { requestFill } = variableFill;
+
   const promptLibrary = usePromptLibrary({
     workingDirectory,
     value,
     onChange,
     inputRef: textareaRef,
+    requestFill: variableFill.requestFill,
     // Pasting a saved prompt settles the `!!` token, so hand the shared slot
     // back the same way picking a mention does (issue #236): the pasted text may
     // itself end in a `/command` or an `@file` the other panels should answer.
@@ -534,30 +543,33 @@ export function ChatInput() {
       const content = (e as CustomEvent<InsertPromptDetail>).detail?.content;
       if (!content) return;
 
-      const el = textareaRef.current;
-      el?.focus();
+      // Placeholders are answered first; a prompt without any goes straight in.
+      requestFill(content, (filled) => {
+        const el = textareaRef.current;
+        el?.focus();
 
-      const currentValue = el?.textContent ?? value;
-      const insertAt = currentValue.length;
-      const nextValue = currentValue + content;
-      const caretOffset = insertAt + content.length;
+        const currentValue = el?.textContent ?? value;
+        const insertAt = currentValue.length;
+        const nextValue = currentValue + filled;
+        const caretOffset = insertAt + filled.length;
 
-      const handledByBrowser = el
-        ? replaceRangeWithText(el, insertAt, insertAt, content)
-        : false;
-      if (!handledByBrowser) onChange(nextValue);
+        const handledByBrowser = el
+          ? replaceRangeWithText(el, insertAt, insertAt, filled)
+          : false;
+        if (!handledByBrowser) onChange(nextValue);
 
-      requestAnimationFrame(() => {
-        const target = textareaRef.current;
-        if (target) setCaretOffset(target, caretOffset);
+        requestAnimationFrame(() => {
+          const target = textareaRef.current;
+          if (target) setCaretOffset(target, caretOffset);
+        });
+        // The pasted text may itself end in a `/command` or an `@file`, so let
+        // the panels that own those decide whether they belong on screen now.
+        paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
       });
-      // The pasted text may itself end in a `/command` or an `@file`, so let the
-      // panels that own those decide whether they belong on screen now.
-      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
     };
     window.addEventListener(INSERT_PROMPT_EVENT, handler);
     return () => window.removeEventListener(INSERT_PROMPT_EVENT, handler);
-  }, [value, onChange, textareaRef]);
+  }, [value, onChange, textareaRef, requestFill]);
 
   const handleRichChange = useCallback((newValue: string) => {
     onChange(newValue);
@@ -839,6 +851,18 @@ export function ChatInput() {
               onClose={promptLibrary.close}
             />
           </div>
+        )}
+
+        {/* Asks for a prompt's `{{...}}` values. Rendered here, above the
+            composer it will insert into, so both routes that pick a prompt get
+            the same dialog. */}
+        {variableFill.pending && (
+          <PromptVariablesModal
+            content={variableFill.pending.content}
+            names={variableFill.pending.names}
+            onSubmit={variableFill.submit}
+            onCancel={variableFill.cancel}
+          />
         )}
 
         {/* Mention dropdown. Shares this slot with the slash command panel;

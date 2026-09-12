@@ -225,7 +225,7 @@
     "nameLabel": "Nombre",
     "namePlaceholder": "Para qué sirve este prompt",
     "contentLabel": "Contenido",
-    "contentPlaceholder": "El texto que se pega en el campo de chat",
+    "contentPlaceholder": "La frase que se pegará en el campo de chat. Escribe {{sample}} para que te pida un valor al insertarla.",
     "save": "Guardar",
     "cancel": "Cancelar",
     "edit": "Editar",
@@ -248,6 +248,12 @@
     "openLibrary": "Biblioteca de prompts",
     "scopeFieldLabel": "Guardar en",
     "scopeGlobal": "Global",
-    "scopeProject": "Proyecto"
+    "scopeProject": "Proyecto",
+    "variables": {
+      "title": "Rellena los valores",
+      "description": "Este prompt tiene huecos por rellenar. Lo que escribas irá en su lugar.",
+      "preview": "Vista previa",
+      "insert": "Insertar"
+    }
   }
 }

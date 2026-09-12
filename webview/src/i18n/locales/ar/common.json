@@ -229,7 +229,7 @@
     "nameLabel": "الاسم",
     "namePlaceholder": "الغرض من هذه المطالبة",
     "contentLabel": "المحتوى",
-    "contentPlaceholder": "النص الذي يُلصق في حقل الدردشة",
+    "contentPlaceholder": "النص الذي سيُلصق في حقل الدردشة. اكتب {{sample}} ليُطلب منك إدخال قيمة عند الإدراج.",
     "save": "حفظ",
     "cancel": "إلغاء",
     "edit": "تعديل",
@@ -252,6 +252,12 @@
     "openLibrary": "مكتبة المطالبات",
     "scopeFieldLabel": "الحفظ في",
     "scopeGlobal": "عام",
-    "scopeProject": "المشروع"
+    "scopeProject": "المشروع",
+    "variables": {
+      "title": "املأ القيم",
+      "description": "تحتوي هذه المطالبة على مواضع للتعبئة. سيوضع ما تكتبه في مكانها.",
+      "preview": "معاينة",
+      "insert": "إدراج"
+    }
   }
 }

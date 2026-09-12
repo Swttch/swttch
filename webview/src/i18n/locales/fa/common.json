@@ -225,7 +225,7 @@
     "nameLabel": "نام",
     "namePlaceholder": "این پرامپت برای چیست",
     "contentLabel": "محتوا",
-    "contentPlaceholder": "متنی که در کادر گفتگو چسبانده می‌شود",
+    "contentPlaceholder": "متنی که در کادر گفتگو چسبانده می‌شود. {{sample}} را بنویسید تا هنگام درج مقدار پرسیده شود.",
     "save": "ذخیره",
     "cancel": "لغو",
     "edit": "ویرایش",
@@ -248,6 +248,12 @@
     "openLibrary": "کتابخانهٔ پرامپت",
     "scopeFieldLabel": "ذخیره در",
     "scopeGlobal": "سراسری",
-    "scopeProject": "پروژه"
+    "scopeProject": "پروژه",
+    "variables": {
+      "title": "مقادیر را پر کنید",
+      "description": "این پرامپت جاهایی برای پر کردن دارد. آنچه بنویسید در همان جا قرار می‌گیرد.",
+      "preview": "پیش‌نمایش",
+      "insert": "درج"
+    }
   }
 }

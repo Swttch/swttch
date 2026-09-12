@@ -47,7 +47,15 @@ interface HarnessParams {
   onChange: (next: string) => void;
   onPastePrompt: (caretOffset: number, nextValue: string) => void;
   onCreatePrompt: () => void;
+  /**
+   * Stands in for the `{{...}}` dialog. Defaults to the no-placeholder path —
+   * hand the content straight back — so every test that is not about variables
+   * reads as it did before the gate existed.
+   */
+  requestFill?: (content: string, onFilled: (filled: string) => void) => void;
 }
+
+const fillImmediately = (content: string, onFilled: (filled: string) => void) => onFilled(content);
 
 function renderLibrary(params: HarnessParams) {
   return renderHook(
@@ -58,6 +66,7 @@ function renderLibrary(params: HarnessParams) {
         onChange: props.onChange,
         onPastePrompt: props.onPastePrompt,
         onCreatePrompt: props.onCreatePrompt,
+        requestFill: props.requestFill ?? fillImmediately,
       }),
     { initialProps: params },
   );

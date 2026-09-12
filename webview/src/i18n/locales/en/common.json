@@ -225,7 +225,7 @@
     "nameLabel": "Name",
     "namePlaceholder": "What this prompt is for",
     "contentLabel": "Content",
-    "contentPlaceholder": "The text pasted into the chat input",
+    "contentPlaceholder": "The phrase to paste into the chat input. Write {{sample}} to be asked for a value when it is inserted.",
     "save": "Save",
     "cancel": "Cancel",
     "edit": "Edit",
@@ -248,6 +248,12 @@
     "openLibrary": "Prompt Library",
     "scopeFieldLabel": "Save to",
     "scopeGlobal": "Global",
-    "scopeProject": "Project"
+    "scopeProject": "Project",
+    "variables": {
+      "title": "Fill in the values",
+      "description": "This prompt has places to fill in. What you type goes where the placeholder is.",
+      "preview": "Preview",
+      "insert": "Insert"
+    }
   }
 }

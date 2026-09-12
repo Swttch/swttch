@@ -225,7 +225,7 @@
     "nameLabel": "名稱",
     "namePlaceholder": "這個提示詞的用途",
     "contentLabel": "內容",
-    "contentPlaceholder": "貼上到聊天輸入框的文字",
+    "contentPlaceholder": "要貼到聊天輸入框的文字。寫成 {{sample}} 會在插入時詢問取值。",
     "save": "儲存",
     "cancel": "取消",
     "edit": "編輯",
@@ -248,6 +248,12 @@
     "openLibrary": "提示詞庫",
     "scopeFieldLabel": "儲存位置",
     "scopeGlobal": "全域",
-    "scopeProject": "專案"
+    "scopeProject": "專案",
+    "variables": {
+      "title": "填寫變數",
+      "description": "這條提示詞有待填寫的位置。輸入的內容會放到那裡。",
+      "preview": "預覽",
+      "insert": "插入"
+    }
   }
 }

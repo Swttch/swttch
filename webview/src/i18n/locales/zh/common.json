@@ -225,7 +225,7 @@
     "nameLabel": "名称",
     "namePlaceholder": "这个提示词的用途",
     "contentLabel": "内容",
-    "contentPlaceholder": "粘贴到聊天输入框的文本",
+    "contentPlaceholder": "要粘贴到聊天输入框的文本。写成 {{sample}} 会在插入时询问取值。",
     "save": "保存",
     "cancel": "取消",
     "edit": "编辑",
@@ -248,6 +248,12 @@
     "openLibrary": "提示词库",
     "scopeFieldLabel": "保存位置",
     "scopeGlobal": "全局",
-    "scopeProject": "项目"
+    "scopeProject": "项目",
+    "variables": {
+      "title": "填写变量",
+      "description": "这条提示词有待填写的位置。输入的内容会放到那里。",
+      "preview": "预览",
+      "insert": "插入"
+    }
   }
 }

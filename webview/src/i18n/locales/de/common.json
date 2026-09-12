@@ -225,7 +225,7 @@
     "nameLabel": "Name",
     "namePlaceholder": "Wofür dieser Prompt gedacht ist",
     "contentLabel": "Inhalt",
-    "contentPlaceholder": "Der Text, der ins Chatfeld eingefügt wird",
+    "contentPlaceholder": "Der Text, der in das Chatfeld eingefügt wird. Schreibe {{sample}}, um beim Einfügen nach einem Wert gefragt zu werden.",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "edit": "Bearbeiten",
@@ -248,6 +248,12 @@
     "openLibrary": "Prompt-Bibliothek",
     "scopeFieldLabel": "Speichern unter",
     "scopeGlobal": "Global",
-    "scopeProject": "Projekt"
+    "scopeProject": "Projekt",
+    "variables": {
+      "title": "Werte ausfüllen",
+      "description": "Dieser Prompt hat Stellen zum Ausfüllen. Deine Eingabe wird dort eingesetzt.",
+      "preview": "Vorschau",
+      "insert": "Einfügen"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import type { PromptScope, SavedPrompt } from '@/types/prompt';
@@ -21,6 +22,20 @@ interface Props {
   onBusyChange?: (busy: boolean) => void;
 }
 
+/**
+ * The `{{...}}` example shown in the content placeholder.
+ *
+ * It is handed to t() as a value rather than written into each translation:
+ * i18next reads `{{...}}` as an interpolation, so a literal one in the string
+ * would be substituted away before anyone saw it.
+ */
+const VARIABLE_EXAMPLE = '{{name}}';
+
+interface PromptFormValues {
+  name: string;
+  content: string;
+}
+
 /** The create/edit screen for one saved prompt, shown in place of the list. */
 export function PromptForm({
   editing,
@@ -32,35 +47,36 @@ export function PromptForm({
   onBusyChange,
 }: Props) {
   const { t } = useTranslation('common');
-  const [name, setName] = useState(editing?.name ?? '');
-  const [content, setContent] = useState(editing?.content ?? '');
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
-  const setBusy = (busy: boolean) => {
-    setIsSaving(busy);
-    onBusyChange?.(busy);
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<PromptFormValues>({
+    defaultValues: { name: editing?.name ?? '', content: editing?.content ?? '' },
+  });
 
-  const handleSubmit = async () => {
-    if (name.trim() === '') {
-      setError(t('promptLibrary.nameRequired'));
-      return;
-    }
-    if (content.trim() === '') {
-      setError(t('promptLibrary.contentRequired'));
-      return;
-    }
-    setError(null);
-    setBusy(true);
+  /**
+   * A failed save, which is not a problem with any one field. Field problems
+   * live in the form's own errors; this is the backend saying no.
+   */
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const submit = handleSubmit(async (values) => {
+    setSaveError(null);
+    onBusyChange?.(true);
     try {
-      await onSubmit(name, content);
+      await onSubmit(values.name, values.content);
     } catch {
-      setError(t('promptLibrary.saveFailed'));
+      setSaveError(t('promptLibrary.saveFailed'));
     } finally {
-      setBusy(false);
+      onBusyChange?.(false);
     }
-  };
+  });
+
+  // A field's own message wins: it names what to fix, where a save failure only
+  // says the attempt did not land.
+  const error = errors.name?.message ?? errors.content?.message ?? saveError;
 
   // Project scope is offered only when a project is open, because a prompt has
   // nowhere to be written without one.
@@ -130,8 +146,13 @@ export function PromptForm({
           <span className="block text-xs text-text-tertiary mb-1">{t('promptLibrary.nameLabel')}</span>
           <input
             autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            {...register('name', {
+              // Trimmed, so a name of only spaces is refused the same way an
+              // empty one is.
+              validate: (value) =>
+                value.trim() !== '' || t('promptLibrary.nameRequired'),
+            })}
+            aria-invalid={errors.name ? true : undefined}
             placeholder={t('promptLibrary.namePlaceholder')}
             className="w-full px-2 py-1.5 text-sm rounded-md bg-surface-base border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-focus"
           />
@@ -140,9 +161,12 @@ export function PromptForm({
         <label className="block">
           <span className="block text-xs text-text-tertiary mb-1">{t('promptLibrary.contentLabel')}</span>
           <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={t('promptLibrary.contentPlaceholder')}
+            {...register('content', {
+              validate: (value) =>
+                value.trim() !== '' || t('promptLibrary.contentRequired'),
+            })}
+            aria-invalid={errors.content ? true : undefined}
+            placeholder={t('promptLibrary.contentPlaceholder', { sample: VARIABLE_EXAMPLE })}
             rows={8}
             className="w-full px-2 py-1.5 text-sm rounded-md bg-surface-base border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-focus resize-y"
           />
@@ -161,8 +185,8 @@ export function PromptForm({
         </button>
         <button
           type="button"
-          onClick={() => void handleSubmit()}
-          disabled={isSaving}
+          onClick={() => void submit()}
+          disabled={isSubmitting}
           className="px-3 py-1.5 text-sm rounded-md bg-accent-primary text-text-inverse transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {t('promptLibrary.save')}

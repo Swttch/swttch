@@ -51,6 +51,12 @@ interface UsePromptLibraryParams {
   onPastePrompt: (caretOffset: number, nextValue: string) => void;
   /** Called when the user picks the last row, to open the prompt settings page. */
   onCreatePrompt: () => void;
+  /**
+   * Hands the picked prompt over for its `{{...}}` placeholders to be answered,
+   * then calls back with the text to paste. A prompt without placeholders calls
+   * back at once, so the ordinary case is unchanged.
+   */
+  requestFill: (content: string, onFilled: (filled: string) => void) => void;
 }
 
 interface UsePromptLibraryReturn {
@@ -90,7 +96,8 @@ const EMPTY_STATE: PromptLibraryState = {
 };
 
 export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibraryReturn {
-  const { workingDirectory, value, onChange, inputRef, onPastePrompt, onCreatePrompt } = params;
+  const { workingDirectory, value, onChange, inputRef, onPastePrompt, onCreatePrompt, requestFill } =
+    params;
   const bridge = useBridgeContext();
 
   const [state, setState] = useState<PromptLibraryState>(EMPTY_STATE);
@@ -214,25 +221,33 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
         return;
       }
 
-      // Replace the `!!query` span with the prompt's text. No trailing space is
-      // added: the prompt is a whole phrase the user is about to edit, not a
-      // token another word follows.
-      const currentValue = valueRef.current;
       const spanEnd = triggerIndex + PROMPT_TRIGGER.length + query.length;
-      const pasted = row.prompt.content;
-      const nextValue = currentValue.slice(0, triggerIndex) + pasted + currentValue.slice(spanEnd);
-      const caretOffset = triggerIndex + pasted.length;
 
-      const el = inputRef?.current ?? null;
-      const handledByBrowser = el
-        ? replaceRangeWithText(el, triggerIndex, spanEnd, pasted)
-        : false;
-      if (!handledByBrowser) onChange(nextValue);
-
-      onPastePrompt(caretOffset, nextValue);
+      // Close first: the panel has served its purpose, and a prompt with
+      // placeholders is about to put a dialog over the composer.
       close();
+
+      // Placeholders are answered before anything is written, so cancelling
+      // leaves the `!!query` the user typed untouched and they can pick again.
+      requestFill(row.prompt.content, (pasted) => {
+        // Replace the `!!query` span with the prompt's text. No trailing space
+        // is added: the prompt is a whole phrase the user is about to edit, not
+        // a token another word follows.
+        const currentValue = valueRef.current;
+        const nextValue =
+          currentValue.slice(0, triggerIndex) + pasted + currentValue.slice(spanEnd);
+        const caretOffset = triggerIndex + pasted.length;
+
+        const el = inputRef?.current ?? null;
+        const handledByBrowser = el
+          ? replaceRangeWithText(el, triggerIndex, spanEnd, pasted)
+          : false;
+        if (!handledByBrowser) onChange(nextValue);
+
+        onPastePrompt(caretOffset, nextValue);
+      });
     },
-    [rows, state, inputRef, onChange, onPastePrompt, onCreatePrompt, close],
+    [rows, state, inputRef, onChange, onPastePrompt, onCreatePrompt, close, requestFill],
   );
 
   const handleKeyDown = useCallback(

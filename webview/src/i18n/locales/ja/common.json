@@ -225,7 +225,7 @@
     "nameLabel": "名前",
     "namePlaceholder": "このプロンプトの用途",
     "contentLabel": "内容",
-    "contentPlaceholder": "チャット入力欄に貼り付ける文章",
+    "contentPlaceholder": "チャット入力欄に貼り付ける文章。{{sample}} と書くと、挿入時に値を尋ねます。",
     "save": "保存",
     "cancel": "キャンセル",
     "edit": "編集",
@@ -248,6 +248,12 @@
     "openLibrary": "プロンプトライブラリ",
     "scopeFieldLabel": "保存先",
     "scopeGlobal": "グローバル",
-    "scopeProject": "プロジェクト"
+    "scopeProject": "プロジェクト",
+    "variables": {
+      "title": "値を入力",
+      "description": "このプロンプトには埋める箇所があります。入力した値がその場所に入ります。",
+      "preview": "プレビュー",
+      "insert": "挿入"
+    }
   }
 }

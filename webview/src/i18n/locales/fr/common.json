@@ -225,7 +225,7 @@
     "nameLabel": "Nom",
     "namePlaceholder": "À quoi sert ce prompt",
     "contentLabel": "Contenu",
-    "contentPlaceholder": "Le texte collé dans le champ de chat",
+    "contentPlaceholder": "La phrase à coller dans le champ de saisie. Écrivez {{sample}} pour qu'une valeur vous soit demandée à l'insertion.",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "edit": "Modifier",
@@ -248,6 +248,12 @@
     "openLibrary": "Bibliothèque de prompts",
     "scopeFieldLabel": "Enregistrer dans",
     "scopeGlobal": "Global",
-    "scopeProject": "Projet"
+    "scopeProject": "Projet",
+    "variables": {
+      "title": "Renseigner les valeurs",
+      "description": "Ce prompt comporte des emplacements à remplir. Ce que vous saisissez y sera placé.",
+      "preview": "Aperçu",
+      "insert": "Insérer"
+    }
   }
 }
