@@ -133,6 +133,8 @@ JetBrains IDE에서는 IDE의 저장 대화상자가, 그 밖에서는 운영체
 
 불러오기는 파일을 물어보고, 그 안에 무엇이 있는지 알려준 다음, 그때서야 씁니다.
 
+!["Import prompts" 다이얼로그. 맨 위에 "2 new, 1 already in your library."라고 적혀 있다. 체크된 줄 세 개가 이어진다: "Daily standup"은 New, "Write a handoff"는 New, "PR review"는 Already there로 표시되어 있다. 그 아래 "When a prompt is already in your library"와 함께 "Keep mine"이 선택된 세 갈래 컨트롤("Replace", "Keep both")이 있고, "The prompt you already have stays as it is."라는 줄이 붙어 있다. 맨 아래에 "3 selected"와 Cancel, Import가 있다.](./assets/import-preview.png)
+
 들어올 프롬프트마다 **새로 추가**인지 **이미 있음**인지 보이고, 원하지 않는 것은 체크를 해제할 수 있습니다. 그런 다음 이미 가지고 있는 것을 어떻게 할지 고릅니다.
 
 | 선택 | 무슨 일이 일어나나 |

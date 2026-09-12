@@ -197,6 +197,13 @@ operating system's, which is the same dialog either way for you.
 
 Import asks for a file, tells you what is in it, and only then writes anything.
 
+![The Import prompts dialog. It reads "2 new, 1 already in your library." Three
+ticked rows follow: "Daily standup" marked New, "Write a handoff" marked New,
+and "PR review" marked Already there. Below them, "When a prompt is already in
+your library" with a three-way control set to "Keep mine" beside "Replace" and
+"Keep both", and the line "The prompt you already have stays as it is." At the
+bottom, "3 selected", Cancel and Import.](./assets/import-preview.png)
+
 For each incoming prompt you see whether it is **New** or **Already there**, and
 you can untick any of them. Then you choose what to do about the ones you
 already have:
