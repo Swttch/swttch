@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useDraggable } from '@dnd-kit/react';
 import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -7,6 +8,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
+import { PROMPT_DRAG_TYPE } from '@/utils/promptDrag';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
@@ -194,94 +196,16 @@ function PromptSection(props: SectionProps) {
       ) : (
         <div className="flex min-h-[5.5rem] flex-col gap-2 overflow-y-auto">
           {prompts.map((prompt) => (
-            <div
+            <PromptCard
               key={prompt.id}
-              data-prompt-id={prompt.id}
-              /*
-               * A card sits ON the panel, so it is drawn lighter than the panel
-               * rather than darker. It used to be `surface-base`, which in the
-               * dark theme is darker than the modal it sits in — the card read
-               * as a hole and only the border held it together. `surface-overlay`
-               * puts it above, and the border can then fall back to `subtle`,
-               * which carries the light theme (where the two surfaces are five
-               * shades apart) without boxing in the dark one.
-               */
-              className={`group flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                prompt.id === selectedId
-                  ? isFocusedPane
-                    // The arrows are on this card. The focus border it always
-                    // had says "selected"; the ring says "and Up/Down move
-                    // HERE", which is the half the category column took away by
-                    // holding a selection of its own.
-                    ? 'border-border-focus bg-surface-selected ring-1 ring-inset ring-border-focus'
-                    : 'border-border-subtle bg-surface-selected'
-                  : 'border-border-subtle bg-surface-overlay hover:bg-surface-hover'
-              }`}
-            >
-              {/* The card body is the "use this prompt" button: picking a prompt
-                  here has to mean what picking one in the `!!` panel means, and
-                  that is putting its text in the composer. */}
-              <button
-                type="button"
-                onClick={() => onUse(prompt)}
-                className="flex min-w-0 flex-1 items-center gap-3 text-start"
-              >
-                {/* Bare, with no tile behind it, the way the `!!` panel draws the
-                    same mark. The tile existed to bind two stacked lines into one
-                    block; on a single line there is nothing to bind. */}
-                <BookmarkIcon className="h-4 w-4 flex-shrink-0 text-text-tertiary" />
-                {/* One line, laid out like the `!!` panel: the name takes a
-                    quarter and carries the weight, the content takes the rest,
-                    because the content is the thing about to be pasted.
-
-                    The floor matters here in a way it does not in the panel.
-                    The category column took 11rem off this list, and a quarter
-                    of what is left cut "Reproduce a report" down to "Reproduce
-                    …". Below the floor it is the preview that gives way, which
-                    is the right order: the preview is a hint, the name is how
-                    the user tells one saved phrase from another. */}
-                <span className="w-1/4 min-w-[7.5rem] flex-shrink-0 truncate text-sm font-medium text-text-primary">
-                  {prompt.name}
-                </span>
-                {/* Tippy rather than the native `title`: a `title` tooltip does
-                    not render at all inside the JCEF WebView the plugin embeds,
-                    so the IDE user would get nothing. */}
-                <Tooltip content={prompt.content}>
-                  <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">
-                    {preview(prompt.content)}
-                  </span>
-                </Tooltip>
-              </button>
-              {/* Edit and delete as their own buttons: two everyday actions are
-                  one click each rather than two. They stay on screen here,
-                  unlike in the `!!` panel, because this is the screen a user
-                  opens in order to tend the library — hiding its only two verbs
-                  until the pointer finds them would be hiding the point.
-
-                  Colour alone marks the hover. A filled hover state is a second
-                  surface on top of the row's own, and on a selected row that
-                  read as a hole punched in the highlight. */}
-              <span className="flex flex-shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onEdit(scope, prompt)}
-                  className="rounded p-1 text-text-tertiary transition-colors hover:text-text-primary"
-                  title={t('promptLibrary.edit')}
-                  aria-label={t('promptLibrary.edit')}
-                >
-                  <PencilSquareIcon className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(scope, prompt)}
-                  className="rounded p-1 text-text-tertiary transition-colors hover:text-state-error-fg"
-                  title={t('promptLibrary.delete')}
-                  aria-label={t('promptLibrary.delete')}
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              </span>
-            </div>
+              prompt={prompt}
+              scope={scope}
+              isSelected={prompt.id === selectedId}
+              isFocusedPane={isFocusedPane}
+              onUse={onUse}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
           ))}
         </div>
       )}
@@ -365,6 +289,135 @@ export function PromptList(props: Props) {
         onCreate={projectAvailable ? onCreate : undefined}
         onDelete={onDelete}
       />
+    </div>
+  );
+}
+
+interface PromptCardProps {
+  prompt: SavedPrompt;
+  scope: PromptScope;
+  isSelected: boolean;
+  isFocusedPane: boolean;
+  onUse: (prompt: SavedPrompt) => void;
+  onEdit: (scope: PromptScope, prompt: SavedPrompt) => void;
+  onDelete: (scope: PromptScope, prompt: SavedPrompt) => void;
+}
+
+/**
+ * One prompt, which can also be dragged onto a category to file it there.
+ *
+ * A component of its own because each card registers its own drag source and
+ * hooks cannot be called in a loop.
+ *
+ * The bookmark is the handle rather than the whole card. The card body is a
+ * button that pastes the prompt, and a drag that started anywhere on it would
+ * have to be told apart from a click by distance alone — which gets it wrong
+ * exactly when the user is being careful. A handle says where to grab.
+ */
+function PromptCard(props: PromptCardProps) {
+  const { prompt, scope, isSelected, isFocusedPane, onUse, onEdit, onDelete } = props;
+  const { t } = useTranslation('common');
+
+  const { ref: dragRef, isDragging } = useDraggable({
+    id: `prompt-drag:${scope}:${prompt.id}`,
+    type: PROMPT_DRAG_TYPE,
+    data: { promptId: prompt.id, scope, categories: prompt.categories ?? [] },
+  });
+
+  return (
+    <div
+      data-prompt-id={prompt.id}
+      /*
+       * A card sits ON the panel, so it is drawn lighter than the panel rather
+       * than darker. It used to be `surface-base`, which in the dark theme is
+       * darker than the modal it sits in — the card read as a hole and only the
+       * border held it together. `surface-overlay` puts it above, and the
+       * border can then fall back to `subtle`, which carries the light theme
+       * (where the two surfaces are five shades apart) without boxing in the
+       * dark one.
+       */
+      className={`group flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+        isSelected
+          ? isFocusedPane
+            // The arrows are on this card. The focus border it always had says
+            // "selected"; the ring says "and Up/Down move HERE", which is the
+            // half the category column took away by holding a selection of its
+            // own.
+            ? 'border-border-focus bg-surface-selected ring-1 ring-inset ring-border-focus'
+            : 'border-border-subtle bg-surface-selected'
+          : 'border-border-subtle bg-surface-overlay hover:bg-surface-hover'
+      } ${isDragging ? 'opacity-50' : ''}`}
+    >
+      {/* Bare, with no tile behind it, the way the `!!` panel draws the same
+          mark. The tile existed to bind two stacked lines into one block; on a
+          single line there is nothing to bind. */}
+      <span
+        ref={dragRef}
+        title={t('promptLibrary.dragToCategory')}
+        aria-label={t('promptLibrary.dragToCategory')}
+        className="flex-shrink-0 cursor-grab text-text-tertiary transition-colors hover:text-text-primary active:cursor-grabbing"
+      >
+        <BookmarkIcon className="h-4 w-4" />
+      </span>
+      {/* The card body is the "use this prompt" button: picking a prompt here
+          has to mean what picking one in the `!!` panel means, and that is
+          putting its text in the composer. */}
+      <button
+        type="button"
+        onClick={() => onUse(prompt)}
+        className="flex min-w-0 flex-1 items-center gap-3 text-start"
+      >
+        {/* One line, laid out like the `!!` panel: the name takes a quarter and
+            carries the weight, the content takes the rest, because the content
+            is the thing about to be pasted.
+
+            The floor matters here in a way it does not in the panel. The
+            category column took 11rem off this list, and a quarter of what is
+            left cut "Reproduce a report" down to "Reproduce …". Below the floor
+            it is the preview that gives way, which is the right order: the
+            preview is a hint, the name is how the user tells one saved phrase
+            from another. */}
+        <span className="w-1/4 min-w-[7.5rem] flex-shrink-0 truncate text-sm font-medium text-text-primary">
+          {prompt.name}
+        </span>
+        {/* Tippy rather than the native `title`: a `title` tooltip does not
+            render at all inside the JCEF WebView the plugin embeds, so the IDE
+            user would get nothing. */}
+        <Tooltip content={prompt.content}>
+          <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">
+            {preview(prompt.content)}
+          </span>
+        </Tooltip>
+      </button>
+      {/* Edit and delete as their own buttons: two everyday actions are one
+          click each rather than two. They stay on screen here, unlike in the
+          `!!` panel, because this is the screen a user opens in order to tend
+          the library — hiding its only two verbs until the pointer finds them
+          would be hiding the point.
+
+          Colour alone marks the hover. A filled hover state is a second surface
+          on top of the row's own, and on a selected row that read as a hole
+          punched in the highlight. */}
+      <span className="flex flex-shrink-0 items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => onEdit(scope, prompt)}
+          className="rounded p-1 text-text-tertiary transition-colors hover:text-text-primary"
+          title={t('promptLibrary.edit')}
+          aria-label={t('promptLibrary.edit')}
+        >
+          <PencilSquareIcon className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(scope, prompt)}
+          className="rounded p-1 text-text-tertiary transition-colors hover:text-state-error-fg"
+          title={t('promptLibrary.delete')}
+          aria-label={t('promptLibrary.delete')}
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      </span>
     </div>
   );
 }

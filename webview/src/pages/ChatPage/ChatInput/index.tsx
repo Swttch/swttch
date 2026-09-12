@@ -890,6 +890,9 @@ export function ChatInput() {
               selectedCategory={promptLibrary.selectedCategory}
               focusedPane={promptLibrary.focusedPane}
               onSelectCategory={promptLibrary.selectCategory}
+              onFilePrompt={(prompt, categoryIds) =>
+                void promptLibrary.setPromptCategories(prompt, categoryIds)
+              }
               onSelect={promptLibrary.selectRow}
               onEdit={editSavedPrompt}
               onDelete={(prompt) => void deleteSavedPrompt(prompt)}

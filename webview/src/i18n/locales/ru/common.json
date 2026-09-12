@@ -294,6 +294,7 @@
     },
     "searchPlaceholder": "Поиск промптов",
     "categoryLabel": "Категория",
+    "dragToCategory": "Перетащите на категорию, чтобы отнести к ней",
     "categoryPlaceholder": "Выберите или введите категорию",
     "createCategoryNamed": "Создать «{{name}}»",
     "removeCategory": "Убрать {{name}}",

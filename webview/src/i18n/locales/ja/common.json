@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "プロンプトを検索",
     "categoryLabel": "カテゴリ",
+    "dragToCategory": "カテゴリにドラッグすると分類されます",
     "categoryPlaceholder": "カテゴリを選ぶか入力",
     "createCategoryNamed": "「{{name}}」を作成",
     "removeCategory": "{{name}} を外す",

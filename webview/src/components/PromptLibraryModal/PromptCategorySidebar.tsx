@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { useDroppable, useDragOperation } from '@dnd-kit/react';
 import { PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { ALL_CATEGORIES, UNCATEGORISED, type CategorySelection } from '@/utils/promptCategories';
+import {
+  CATEGORY_DROP_TYPE,
+  PROMPT_DRAG_TYPE,
+  acceptsDrop,
+  readPromptDrag,
+} from '@/utils/promptDrag';
 import type { PromptCategory } from '@/types/prompt';
 
 /** One row of the sidebar: the two fixed ones, or a category. */
@@ -175,66 +182,15 @@ export function PromptCategorySidebar(props: Props) {
             />
           </div>
         ) : (
-          <button
+          <CategoryRowButton
             key={row.key}
-            type="button"
-            data-category-key={row.key}
-            aria-pressed={selected === row.key}
-            onClick={() => onSelect(row.key)}
+            row={row}
             className={rowClass(selected === row.key)}
-            title={row.label}
-          >
-            <span className="min-w-0 flex-1 truncate">{row.label}</span>
-            {/* The count and the two actions share one slot, the way the `!!`
-                panel's scope label shares its slot with the same two actions.
-
-                The actions are positioned OUT OF FLOW on purpose. Drawn in
-                flow they are 18px tall against the count's 16px, so the row
-                grew by ~2px the moment the pointer touched it and the whole
-                sidebar shifted under the cursor. Out of flow the count alone
-                sets the height and the swap is invisible. */}
-            <span className="relative flex-shrink-0 text-text-tertiary">
-              {/* Only a row with something to swap in hides its count. "All"
-                  and "Uncategorised" are not the user's to rename or remove, so
-                  hovering them used to blank the number and offer nothing in
-                  its place — the row looked like it was about to do something
-                  it could not do. */}
-              <span className={row.category ? 'group-hover/cat:invisible' : undefined}>
-                ({row.count})
-              </span>
-              {row.category && (
-                <span className="absolute inset-y-0 end-0 hidden items-center gap-0.5 group-hover/cat:flex">
-                  {/* Spans, not buttons: this sits inside the row's own button. */}
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    title={t('promptLibrary.edit')}
-                    aria-label={t('promptLibrary.edit')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRename(row.category as PromptCategory);
-                    }}
-                    className="rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
-                  >
-                    <PencilSquareIcon className="h-3.5 w-3.5" />
-                  </span>
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    title={t('promptLibrary.delete')}
-                    aria-label={t('promptLibrary.delete')}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(row.category as PromptCategory);
-                    }}
-                    className="rounded p-0.5 text-text-tertiary transition-colors hover:text-state-error-fg"
-                  >
-                    <TrashIcon className="h-3.5 w-3.5" />
-                  </span>
-                </span>
-              )}
-            </span>
-          </button>
+            isSelected={selected === row.key}
+            onSelect={onSelect}
+            onStartRename={startRename}
+            onDelete={onDelete}
+          />
         );
       })}
 
@@ -268,3 +224,105 @@ export function PromptCategorySidebar(props: Props) {
 
 /** Stands in for a category id while a brand new name is being typed. */
 const NEW_CATEGORY_KEY = '__new__';
+
+interface CategoryRowButtonProps {
+  row: SidebarRow;
+  className: string;
+  isSelected: boolean;
+  onSelect: (key: CategorySelection) => void;
+  onStartRename: (category: PromptCategory) => void;
+  onDelete: (category: PromptCategory) => void;
+}
+
+/**
+ * One category row, which is also somewhere a prompt can be dropped.
+ *
+ * A component of its own rather than markup inside the map, because each row
+ * registers its own drop target and hooks cannot be called in a loop.
+ *
+ * The row only lights up when the drop would actually change something: the
+ * category the prompt already carries, and "All", take no drop, so showing them
+ * as live targets would promise a write that never happens.
+ */
+function CategoryRowButton(props: CategoryRowButtonProps) {
+  const { row, className, isSelected, onSelect, onStartRename, onDelete } = props;
+  const { t } = useTranslation('common');
+
+  const { ref: dropRef, isDropTarget } = useDroppable({
+    id: `category-drop:${row.key}`,
+    type: CATEGORY_DROP_TYPE,
+    accept: PROMPT_DRAG_TYPE,
+    data: { key: row.key },
+  });
+
+  // What is being dragged right now, so the row can say whether it would take
+  // it. Read from the live operation rather than from the drop event, because
+  // the answer is needed while the pointer is still moving.
+  const { source } = useDragOperation();
+  const dragged = readPromptDrag(source?.data);
+  const wouldAccept = dragged !== null && acceptsDrop(dragged.categories, row.key);
+
+  return (
+    <button
+      ref={dropRef}
+      type="button"
+      data-category-key={row.key}
+      aria-pressed={isSelected}
+      onClick={() => onSelect(row.key)}
+      className={`${className} ${
+        isDropTarget && wouldAccept ? 'ring-1 ring-accent-primary bg-accent-primary/10' : ''
+      } ${dragged !== null && !wouldAccept ? 'opacity-40' : ''}`}
+      title={row.label}
+    >
+      <span className="min-w-0 flex-1 truncate">{row.label}</span>
+      {/* The count and the two actions share one slot, the way the `!!` panel's
+          scope label shares its slot with the same two actions.
+
+          The actions are positioned OUT OF FLOW on purpose. Drawn in flow they
+          are 18px tall against the count's 16px, so the row grew by ~2px the
+          moment the pointer touched it and the whole sidebar shifted under the
+          cursor. Out of flow the count alone sets the height and the swap is
+          invisible. */}
+      <span className="relative flex-shrink-0 text-text-tertiary">
+        {/* Only a row with something to swap in hides its count. "All" and
+            "Uncategorised" are not the user's to rename or remove, so hovering
+            them used to blank the number and offer nothing in its place — the
+            row looked like it was about to do something it could not do. */}
+        <span className={row.category ? 'group-hover/cat:invisible' : undefined}>
+          ({row.count})
+        </span>
+        {row.category && (
+          <span className="absolute inset-y-0 end-0 hidden items-center gap-0.5 group-hover/cat:flex">
+            {/* Spans, not buttons: this sits inside the row's own button. */}
+            <span
+              role="button"
+              tabIndex={-1}
+              title={t('promptLibrary.edit')}
+              aria-label={t('promptLibrary.edit')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartRename(row.category as PromptCategory);
+              }}
+              className="rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
+            >
+              <PencilSquareIcon className="h-3.5 w-3.5" />
+            </span>
+            <span
+              role="button"
+              tabIndex={-1}
+              title={t('promptLibrary.delete')}
+              aria-label={t('promptLibrary.delete')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(row.category as PromptCategory);
+              }}
+              className="rounded p-0.5 text-text-tertiary transition-colors hover:text-state-error-fg"
+            >
+              <TrashIcon className="h-3.5 w-3.5" />
+            </span>
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}

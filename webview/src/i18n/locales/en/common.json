@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "Search prompts",
     "categoryLabel": "Category",
+    "dragToCategory": "Drag onto a category to file it there",
     "categoryPlaceholder": "Pick or type a category",
     "createCategoryNamed": "Create \"{{name}}\"",
     "removeCategory": "Remove {{name}}",

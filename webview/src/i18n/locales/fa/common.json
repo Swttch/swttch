@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "جستجوی پرامپت‌ها",
     "categoryLabel": "دسته",
+    "dragToCategory": "برای دسته‌بندی، روی یک دسته بکشید",
     "categoryPlaceholder": "دسته‌ای را انتخاب یا تایپ کنید",
     "createCategoryNamed": "ساخت «{{name}}»",
     "removeCategory": "حذف {{name}}",

@@ -8,6 +8,9 @@ import type { PanelCategoryRow, PromptRow } from '../hooks/usePromptLibrary';
 // selected row visible on selectedIndex change.
 Element.prototype.scrollIntoView = vi.fn();
 
+/** The row element a prompt is drawn in: a <li>'s only child. */
+const promptRow = (name: string) => screen.getByText(name).closest('li')?.firstElementChild;
+
 const row = (id: string, name: string, content: string, scope: 'global' | 'project'): PromptRow => ({
   kind: 'prompt',
   prompt: { id, name, content, scope, createdAt: 1, updatedAt: 1 },
@@ -24,6 +27,7 @@ function renderPanel(rows: PromptRow[], overrides: Partial<React.ComponentProps<
       selectedCategory={ALL_CATEGORIES}
       focusedPane="prompts"
       onSelectCategory={vi.fn()}
+      onFilePrompt={vi.fn()}
       onSelect={vi.fn()}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
@@ -217,7 +221,7 @@ describe('PromptDropdown', () => {
       });
 
       expect(screen.getByRole('button', { name: '리뷰 (2)' }).className).toContain('ring-1');
-      expect(screen.getByText('시작').closest('button')?.className).not.toContain('ring-1');
+      expect(promptRow('시작')?.className).not.toContain('ring-1');
 
       rerender(
         <PromptDropdown
@@ -229,6 +233,7 @@ describe('PromptDropdown', () => {
           selectedCategory="c1"
           focusedPane="prompts"
           onSelectCategory={vi.fn()}
+          onFilePrompt={vi.fn()}
           onSelect={vi.fn()}
           onEdit={vi.fn()}
           onDelete={vi.fn()}
@@ -237,7 +242,7 @@ describe('PromptDropdown', () => {
       );
 
       expect(screen.getByRole('button', { name: '리뷰 (2)' }).className).not.toContain('ring-1');
-      expect(screen.getByText('시작').closest('button')?.className).toContain('ring-1');
+      expect(promptRow('시작')?.className).toContain('ring-1');
     });
   });
 });

@@ -296,6 +296,7 @@
     },
     "searchPlaceholder": "البحث في المطالبات",
     "categoryLabel": "الفئة",
+    "dragToCategory": "اسحبه إلى فئة لتصنيفه فيها",
     "categoryPlaceholder": "اختر فئة أو اكتبها",
     "createCategoryNamed": "إنشاء \"{{name}}\"",
     "removeCategory": "إزالة {{name}}",

@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "Prompts suchen",
     "categoryLabel": "Kategorie",
+    "dragToCategory": "Auf eine Kategorie ziehen, um sie dort abzulegen",
     "categoryPlaceholder": "Kategorie wählen oder eingeben",
     "createCategoryNamed": "„{{name}}\" erstellen",
     "removeCategory": "{{name}} entfernen",

@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "프롬프트 검색",
     "categoryLabel": "카테고리",
+    "dragToCategory": "카테고리로 끌어다 놓으면 분류됩니다",
     "categoryPlaceholder": "카테고리를 고르거나 입력하세요",
     "createCategoryNamed": "\"{{name}}\" 만들기",
     "removeCategory": "{{name}} 빼기",

@@ -292,6 +292,7 @@
     },
     "searchPlaceholder": "搜尋提示詞",
     "categoryLabel": "分類",
+    "dragToCategory": "拖到分類上即可歸類",
     "categoryPlaceholder": "選擇或輸入分類",
     "createCategoryNamed": "建立「{{name}}」",
     "removeCategory": "移除 {{name}}",

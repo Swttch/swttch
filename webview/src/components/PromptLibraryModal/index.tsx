@@ -11,8 +11,10 @@ import {
 import type { ConflictStrategy, ImportItem, PromptScope, SavedPrompt } from '@/types/prompt';
 import { usePromptStore } from './usePromptStore';
 import { PromptList, buildPromptRows, matchesPromptQuery } from './PromptList';
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
 import { PromptForm } from './PromptForm';
 import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
+import { categoriesAfterDrop, readCategoryDrop, readPromptDrag } from '@/utils/promptDrag';
 import { PromptCategorySidebar, buildSidebarRows } from './PromptCategorySidebar';
 import {
   ALL_CATEGORIES,
@@ -370,6 +372,28 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     return ack?.categories?.find((c) => c.name.toLowerCase() === wanted)?.id ?? null;
   };
 
+  /**
+   * File a prompt by dropping it on a category.
+   *
+   * What the drop means is decided by `categoriesAfterDrop`, which the `!!`
+   * panel uses too, so the gesture means the same thing on both screens. A null
+   * answer means the drop changes nothing and no write happens — dropping a
+   * prompt back on a category it already carries should not cost a round trip.
+   */
+  const handlePromptDrop = async (event: DragEndEvent) => {
+    if (event.canceled) return;
+    const dragged = readPromptDrag(event.operation.source?.data);
+    const onto = readCategoryDrop(event.operation.target?.data);
+    if (!dragged || !onto) return;
+
+    const next = categoriesAfterDrop(dragged.categories, onto.key);
+    if (next === null) return;
+
+    const prompt = [...globalPrompts, ...projectPrompts].find((p) => p.id === dragged.promptId);
+    if (!prompt) return;
+    await store.update(dragged.scope, prompt.id, prompt.name, prompt.content, next);
+  };
+
   /** Remove a category, after asking. Its prompts are kept. */
   const handleDeleteCategory = async (category: { id: string; name: string }) => {
     const confirmed = await confirm({
@@ -481,6 +505,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               /* Two columns from `sm` up, stacked below it. The sidebar decides
                  which slice of the library the lists show, so it sits beside
                  them rather than above the search box that narrows within it. */
+              <DragDropProvider onDragEnd={(event) => void handlePromptDrop(event)}>
               <div className="flex min-h-0 flex-1 flex-col px-4 sm:flex-row sm:gap-3">
                 <PromptCategorySidebar
                   rows={sidebarRows}
@@ -511,6 +536,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
                 onCreate={(scope) => setView({ kind: 'create', scope })}
                 />
               </div>
+              </DragDropProvider>
             )}
             {isListView && transferNote && (
               <p className="flex-shrink-0 px-4 pb-2 text-xs text-text-tertiary">{transferNote}</p>

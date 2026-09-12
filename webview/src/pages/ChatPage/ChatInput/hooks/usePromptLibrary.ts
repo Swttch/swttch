@@ -108,6 +108,14 @@ interface UsePromptLibraryReturn {
    * panel rather than waiting for the next time it is opened.
    */
   deletePrompt: (prompt: ScopedPrompt) => Promise<void>;
+  /**
+   * File a prompt under a different set of categories and re-read the list.
+   *
+   * Used by dragging a row onto a category chip, which is the same gesture the
+   * library modal offers. Nothing else about the prompt changes: its name and
+   * content travel back unedited, because UPDATE_PROMPT writes the whole row.
+   */
+  setPromptCategories: (prompt: ScopedPrompt, categoryIds: string[]) => Promise<void>;
   close: () => void;
 }
 
@@ -244,6 +252,21 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
         scope: prompt.scope,
         ...(prompt.scope === 'project' ? { workingDir: workingDirectory } : {}),
         id: prompt.id,
+      });
+      load();
+    },
+    [bridge, workingDirectory, load],
+  );
+
+  const setPromptCategories = useCallback(
+    async (prompt: ScopedPrompt, categoryIds: string[]) => {
+      await bridge.send(MessageType.UPDATE_PROMPT, {
+        scope: prompt.scope,
+        ...(prompt.scope === 'project' ? { workingDir: workingDirectory } : {}),
+        id: prompt.id,
+        name: prompt.name,
+        content: prompt.content,
+        categories: categoryIds,
       });
       load();
     },
@@ -481,6 +504,7 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     handleKeyDown,
     selectRow,
     deletePrompt,
+    setPromptCategories,
     close,
   };
 }
