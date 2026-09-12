@@ -8,7 +8,13 @@ import type {
   PromptCategory,
   ScopedPrompt,
 } from '@/types/prompt';
-import { matchesCategoryName } from '@/utils/promptCategories';
+import {
+  ALL_CATEGORIES,
+  countByCategory,
+  matchesCategoryName,
+  matchesCategorySelection,
+  type CategorySelection,
+} from '@/utils/promptCategories';
 import { replaceRangeWithText } from '../RichInput/replaceRangeWithText';
 
 /**
@@ -21,18 +27,23 @@ import { replaceRangeWithText } from '../RichInput/replaceRangeWithText';
  * picking a row runs something.
  */
 
-/** One row of the panel. Headings are drawn but not navigable. */
+/** One row of the panel. */
 export type PromptRow =
   | { kind: 'prompt'; prompt: ScopedPrompt }
-  /** A category name over the prompts that carry it, or null for the rest. */
-  | { kind: 'heading'; category: string | null }
   /** The last row, which leaves for the settings page to add a prompt. */
   | { kind: 'create' };
 
-/** Whether the arrow keys and Enter can land on [row]. */
-export function isSelectableRow(row: PromptRow | undefined): boolean {
-  return row !== undefined && row.kind !== 'heading';
+/** One row of the panel's category column. */
+export interface PanelCategoryRow {
+  /** A category id, or the sentinel for "everything". */
+  key: CategorySelection;
+  /** Null on the "everything" row, which the panel names itself. */
+  category: PromptCategory | null;
+  count: number;
 }
+
+/** Which of the panel's two columns the up and down arrows act on. */
+export type PromptPane = 'categories' | 'prompts';
 
 interface PromptLibraryState {
   isActive: boolean;
@@ -46,6 +57,9 @@ interface PromptLibraryState {
   hasLoaded: boolean;
   /** The category records, read alongside the prompts so names can be matched. */
   categories: PromptCategory[];
+  /** Which category the list is narrowed to. Every opening starts on "everything". */
+  selectedCategory: CategorySelection;
+  focusedPane: PromptPane;
 }
 
 interface UsePromptLibraryParams {
@@ -81,6 +95,11 @@ interface UsePromptLibraryReturn {
   selectedIndex: number;
   isLoading: boolean;
   hasLoaded: boolean;
+  /** The category column's rows, already counted. Empty when nobody made any. */
+  categoryRows: PanelCategoryRow[];
+  selectedCategory: CategorySelection;
+  focusedPane: PromptPane;
+  selectCategory: (key: CategorySelection) => void;
   detectPrompt: (value: string, caretPosition: number) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => boolean;
   selectRow: (index: number) => void;
@@ -97,8 +116,8 @@ interface UsePromptLibraryReturn {
  *
  * Name and content so a user who remembers a phrase but not the name they gave
  * it still finds it; category so typing the group narrows to it, which is the
- * other half of what grouping is for — browse by heading, or jump straight past
- * the headings to a group by name.
+ * other half of what grouping is for — pick the group in the column beside the
+ * list, or name it and skip the column.
  */
 function matchesQuery(
   prompt: ScopedPrompt,
@@ -114,33 +133,10 @@ function matchesQuery(
   );
 }
 
-/**
- * The next row the selection can land on, [step] rows away and wrapping.
- *
- * Headings are drawn between the prompts, and stepping onto one would leave the
- * highlight on a row Enter cannot use. Bounded by the row count so a list of
- * nothing but headings cannot spin forever.
- */
-/**
- * The first row the selection can land on.
- *
- * The list starts at index 0 and index 0 is a heading whenever the prompts are
- * grouped, so without this the panel opens with nothing usable highlighted and
- * Enter does nothing.
- */
-export function firstSelectableIndex(rows: PromptRow[]): number {
-  const index = rows.findIndex(isSelectableRow);
-  return index === -1 ? 0 : index;
-}
-
+/** The row [step] away from [from], wrapping at both ends. */
 export function stepSelection(rows: PromptRow[], from: number, step: 1 | -1): number {
   if (rows.length === 0) return 0;
-  let index = from;
-  for (let moved = 0; moved < rows.length; moved += 1) {
-    index = (index + step + rows.length) % rows.length;
-    if (isSelectableRow(rows[index])) return index;
-  }
-  return from;
+  return (from + step + rows.length) % rows.length;
 }
 
 const EMPTY_STATE: PromptLibraryState = {
@@ -152,6 +148,8 @@ const EMPTY_STATE: PromptLibraryState = {
   isLoading: false,
   hasLoaded: false,
   categories: [],
+  selectedCategory: ALL_CATEGORIES,
+  focusedPane: 'prompts',
 };
 
 export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibraryReturn {
@@ -164,10 +162,32 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
   const valueRef = useRef(value);
   valueRef.current = value;
 
+  /**
+   * The focused pane is plain state here, unlike the library modal, which keeps
+   * a ref alongside it. The difference is where the handler lives: the modal
+   * registers its listener from an effect, so a key arriving before the effect
+   * re-subscribes still runs the previous render's closure. This one is called
+   * through the current render's closure every time, so state is already
+   * current by the second arrow key.
+   */
+  const setFocusedPane = useCallback((pane: PromptPane) => {
+    setState(prev => (prev.focusedPane === pane ? prev : { ...prev, focusedPane: pane }));
+  }, []);
+
   const close = useCallback(() => {
     // The loaded prompts are deliberately kept: closing the panel is not a
     // reason to refetch when the user opens it again two keystrokes later.
-    setState(prev => ({ ...prev, isActive: false, query: '', triggerIndex: -1, selectedIndex: 0 }));
+    // The narrowing is not kept, because `!!` is a fresh search every time and
+    // a list silently hiding most of the library is the worst thing it can do.
+    setState(prev => ({
+      ...prev,
+      isActive: false,
+      query: '',
+      triggerIndex: -1,
+      selectedIndex: 0,
+      selectedCategory: ALL_CATEGORIES,
+      focusedPane: 'prompts',
+    }));
   }, []);
 
   /**
@@ -261,28 +281,64 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     [state.isActive, state.triggerIndex, load],
   );
 
+  // Both narrowings, in the order the user applies them: the column says which
+  // part of the library is in play, the typed query finds within it.
   const rows: PromptRow[] = [
     ...state.loaded
+      .filter(prompt => matchesCategorySelection(prompt, state.selectedCategory, state.categories))
       .filter(prompt => matchesQuery(prompt, state.query, state.categories))
       .map((prompt): PromptRow => ({ kind: 'prompt', prompt })),
     { kind: 'create' },
   ];
 
   /**
+   * The category column.
+   *
+   * Counted over the whole library rather than over what the query left, so the
+   * numbers do not move under the user while they type. There is no
+   * "uncategorised" row and no way to add, rename or delete here: the panel is
+   * a picker, and the library modal is where categories are kept.
+   *
+   * Empty when the user has made no categories, so the panel that shipped
+   * before this is exactly the panel they still get.
+   */
+  const counts = countByCategory(state.loaded, state.categories);
+  const categoryRows: PanelCategoryRow[] =
+    state.categories.length === 0
+      ? []
+      : [
+          { key: ALL_CATEGORIES, category: null, count: counts.all },
+          ...state.categories.map((category) => ({
+            key: category.id,
+            category,
+            count: counts.byId.get(category.id) ?? 0,
+          })),
+        ];
+
+  const selectCategory = useCallback((key: CategorySelection) => {
+    // A different slice of the library is on screen now, so where the highlight
+    // sat in the other column means nothing.
+    setState(prev => ({
+      ...prev,
+      selectedCategory: key,
+      selectedIndex: 0,
+      focusedPane: 'categories',
+    }));
+  }, []);
+
+  /**
    * Where the highlight actually sits.
    *
-   * The stored index can point at a heading — on opening, and after typing
-   * regroups the list under the same index — so it is resolved to a usable row
-   * here rather than in each of the three places that read it.
+   * The stored index can point past the end after the category or the query
+   * shortened the list, so it is resolved to a real row here rather than in
+   * each of the three places that read it.
    */
-  const selectedIndex = isSelectableRow(rows[state.selectedIndex])
-    ? state.selectedIndex
-    : firstSelectableIndex(rows);
+  const selectedIndex = state.selectedIndex < rows.length ? state.selectedIndex : 0;
 
   const selectRow = useCallback(
     (index: number) => {
       const row = rows[index];
-      if (!row || row.kind === 'heading') return;
+      if (!row) return;
 
       if (row.kind === 'create') {
         // Leaving for the settings page will not bring the user back to this
@@ -342,21 +398,43 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     (e: React.KeyboardEvent<HTMLElement>): boolean => {
       if (!state.isActive) return false;
 
+      const hasCategories = categoryRows.length > 0;
+
+      // Left and right cross between the two columns; up and down walk whichever
+      // one was crossed into last. Left and right are only taken when there is a
+      // second column to reach, so a library with no categories leaves the
+      // composer's own caret movement alone.
+      if (hasCategories && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        setFocusedPane(e.key === 'ArrowLeft' ? 'categories' : 'prompts');
+        return true;
+      }
+
+      if (
+        hasCategories &&
+        state.focusedPane === 'categories' &&
+        (e.key === 'ArrowDown' || e.key === 'ArrowUp')
+      ) {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        const current = Math.max(
+          0,
+          categoryRows.findIndex((row) => row.key === state.selectedCategory),
+        );
+        const next = (current + step + categoryRows.length) % categoryRows.length;
+        selectCategory(categoryRows[next].key);
+        return true;
+      }
+
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setState(prev => ({
-          ...prev,
-          selectedIndex: stepSelection(rows, isSelectableRow(rows[prev.selectedIndex]) ? prev.selectedIndex : firstSelectableIndex(rows) - 1, 1),
-        }));
+        setState(prev => ({ ...prev, selectedIndex: stepSelection(rows, selectedIndex, 1) }));
         return true;
       }
 
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setState(prev => ({
-          ...prev,
-          selectedIndex: stepSelection(rows, isSelectableRow(rows[prev.selectedIndex]) ? prev.selectedIndex : firstSelectableIndex(rows), -1),
-        }));
+        setState(prev => ({ ...prev, selectedIndex: stepSelection(rows, selectedIndex, -1) }));
         return true;
       }
 
@@ -375,7 +453,18 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
 
       return false;
     },
-    [state.isActive, state.selectedIndex, rows.length, selectRow, close],
+    [
+      state.isActive,
+      state.focusedPane,
+      state.selectedCategory,
+      categoryRows,
+      rows,
+      selectedIndex,
+      selectCategory,
+      setFocusedPane,
+      selectRow,
+      close,
+    ],
   );
 
   return {
@@ -384,6 +473,10 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     selectedIndex,
     isLoading: state.isLoading,
     hasLoaded: state.hasLoaded,
+    categoryRows,
+    selectedCategory: state.selectedCategory,
+    focusedPane: state.focusedPane,
+    selectCategory,
     detectPrompt,
     handleKeyDown,
     selectRow,

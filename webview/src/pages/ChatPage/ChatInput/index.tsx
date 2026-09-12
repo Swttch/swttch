@@ -886,6 +886,10 @@ export function ChatInput() {
               selectedIndex={promptLibrary.selectedIndex}
               isLoading={promptLibrary.isLoading}
               hasLoaded={promptLibrary.hasLoaded}
+              categoryRows={promptLibrary.categoryRows}
+              selectedCategory={promptLibrary.selectedCategory}
+              focusedPane={promptLibrary.focusedPane}
+              onSelectCategory={promptLibrary.selectCategory}
               onSelect={promptLibrary.selectRow}
               onEdit={editSavedPrompt}
               onDelete={(prompt) => void deleteSavedPrompt(prompt)}

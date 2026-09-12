@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PromptDropdown } from '../PromptDropdown';
-import type { PromptRow } from '../hooks/usePromptLibrary';
+import { ALL_CATEGORIES } from '@/utils/promptCategories';
+import type { PanelCategoryRow, PromptRow } from '../hooks/usePromptLibrary';
 
 // jsdom does not implement scrollIntoView; PromptDropdown calls it to keep the
 // selected row visible on selectedIndex change.
@@ -19,6 +20,10 @@ function renderPanel(rows: PromptRow[], overrides: Partial<React.ComponentProps<
       selectedIndex={0}
       isLoading={false}
       hasLoaded
+      categoryRows={[]}
+      selectedCategory={ALL_CATEGORIES}
+      focusedPane="prompts"
+      onSelectCategory={vi.fn()}
       onSelect={vi.fn()}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
@@ -157,6 +162,82 @@ describe('PromptDropdown', () => {
       renderPanel([{ kind: 'create' }]);
       expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    });
+  });
+
+  /**
+   * The category column, which the library modal also has. Rendering it only
+   * when there is something to pick keeps the panel unchanged for everyone who
+   * never filed a prompt under anything.
+   */
+  describe('the category column', () => {
+    const categoryRows: PanelCategoryRow[] = [
+      { key: ALL_CATEGORIES, category: null, count: 3 },
+      { key: 'c1', category: { id: 'c1', name: '리뷰', createdAt: 1 }, count: 2 },
+    ];
+
+    it('is not drawn at all when no categories exist', () => {
+      renderPanel([row('p1', '시작', 'body', 'global')], { categoryRows: [] });
+
+      expect(screen.queryByRole('button', { name: /All/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /리뷰/ })).toBeNull();
+    });
+
+    it('names each category with how many prompts are behind it', () => {
+      renderPanel([row('p1', '시작', 'body', 'global')], { categoryRows });
+
+      expect(screen.getByRole('button', { name: '리뷰 (2)' })).toBeInTheDocument();
+    });
+
+    it('reports the picked category rather than selecting a prompt', () => {
+      const onSelectCategory = vi.fn();
+      const onSelect = vi.fn();
+      renderPanel([row('p1', '시작', 'body', 'global')], {
+        categoryRows,
+        onSelectCategory,
+        onSelect,
+      });
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: '리뷰 (2)' }));
+
+      expect(onSelectCategory).toHaveBeenCalledWith('c1');
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Both columns hold a highlight at once, so the highlight alone cannot say
+     * which one Up and Down would move. The focused column's selected row is
+     * ringed and the other one's is not.
+     */
+    it('rings the selected row of whichever column the arrows are walking', () => {
+      const { rerender } = renderPanel([row('p1', '시작', 'body', 'global')], {
+        categoryRows,
+        selectedCategory: 'c1',
+        focusedPane: 'categories',
+      });
+
+      expect(screen.getByRole('button', { name: '리뷰 (2)' }).className).toContain('ring-1');
+      expect(screen.getByText('시작').closest('button')?.className).not.toContain('ring-1');
+
+      rerender(
+        <PromptDropdown
+          rows={[row('p1', '시작', 'body', 'global')]}
+          selectedIndex={0}
+          isLoading={false}
+          hasLoaded
+          categoryRows={categoryRows}
+          selectedCategory="c1"
+          focusedPane="prompts"
+          onSelectCategory={vi.fn()}
+          onSelect={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onClose={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: '리뷰 (2)' }).className).not.toContain('ring-1');
+      expect(screen.getByText('시작').closest('button')?.className).toContain('ring-1');
     });
   });
 });

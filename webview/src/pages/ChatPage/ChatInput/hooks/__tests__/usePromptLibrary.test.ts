@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { MessageType } from '@/shared';
-import type { SavedPrompt } from '@/types/prompt';
+import { ALL_CATEGORIES } from '@/utils/promptCategories';
+import type { PromptCategory, SavedPrompt } from '@/types/prompt';
 
 // ---------------------------------------------------------------------------
 // BridgeContext mock — GET_PROMPTS answers per scope, so the hook has a real
@@ -18,6 +19,7 @@ const prompt = (id: string, name: string, content: string): SavedPrompt => ({
 
 let globalPrompts: SavedPrompt[] = [];
 let projectPrompts: SavedPrompt[] = [];
+let categories: PromptCategory[] = [];
 
 const sendMock = vi.fn((type: string, payload?: Record<string, unknown>) => {
   if (type === MessageType.GET_PROMPTS) {
@@ -26,6 +28,9 @@ const sendMock = vi.fn((type: string, payload?: Record<string, unknown>) => {
       scope,
       prompts: scope === 'project' ? projectPrompts : globalPrompts,
     });
+  }
+  if (type === MessageType.GET_PROMPT_CATEGORIES) {
+    return Promise.resolve({ categories });
   }
   return Promise.resolve({});
 });
@@ -40,12 +45,7 @@ vi.mock('@/contexts/BridgeContext', () => ({
 }));
 
 // Imported AFTER vi.mock so the mock is wired first.
-import {
-  usePromptLibrary,
-  firstSelectableIndex,
-  stepSelection,
-  type PromptRow,
-} from '../usePromptLibrary';
+import { usePromptLibrary, stepSelection, type PromptRow } from '../usePromptLibrary';
 
 interface HarnessParams {
   value: string;
@@ -77,6 +77,9 @@ function renderLibrary(params: HarnessParams) {
   );
 }
 
+const keyEvent = (key: string) =>
+  ({ key, preventDefault: vi.fn() } as unknown as React.KeyboardEvent<HTMLElement>);
+
 function makeParams(value: string) {
   return {
     value,
@@ -91,6 +94,7 @@ describe('usePromptLibrary', () => {
     sendMock.mockClear();
     globalPrompts = [prompt('g1', 'merge cleanup', 'Merged it, check and tidy up locally')];
     projectPrompts = [prompt('p1', 'demo check', 'Check this demo project')];
+    categories = [];
   });
 
   it('stays closed until both bangs are typed', async () => {
@@ -252,9 +256,6 @@ describe('usePromptLibrary', () => {
   });
 
   describe('keyboard', () => {
-    const keyEvent = (key: string) =>
-      ({ key, preventDefault: vi.fn() } as unknown as React.KeyboardEvent<HTMLElement>);
-
     it('claims the arrow keys while open, so history recall never sees them', async () => {
       const params = makeParams('!!');
       const { result } = renderLibrary(params);
@@ -300,44 +301,156 @@ describe('usePromptLibrary', () => {
   });
 });
 
-/**
- * Category headings are drawn between the prompts but are not rows anyone can
- * pick, so the two helpers that move the highlight have to step over them.
- */
-describe('selection skips category headings', () => {
-  const heading = (category: string | null): PromptRow => ({ kind: 'heading', category });
+describe('stepSelection', () => {
   const promptRow = (id: string): PromptRow => ({
     kind: 'prompt',
     prompt: { id, name: id, content: id, scope: 'global', createdAt: 1, updatedAt: 1 },
   });
 
-  it('opens on the first prompt, not on the heading above it', () => {
-    expect(firstSelectableIndex([heading('a'), promptRow('p1')])).toBe(1);
+  it('moves one row at a time', () => {
+    const rows = [promptRow('p1'), promptRow('p2'), promptRow('p3')];
+    expect(stepSelection(rows, 0, 1)).toBe(1);
+    expect(stepSelection(rows, 2, -1)).toBe(1);
   });
 
-  it('opens on index 0 when there is nothing to select', () => {
-    expect(firstSelectableIndex([heading('a')])).toBe(0);
-    expect(firstSelectableIndex([])).toBe(0);
+  it('wraps around both ends', () => {
+    const rows = [promptRow('p1'), promptRow('p2')];
+    expect(stepSelection(rows, 1, 1)).toBe(0);
+    expect(stepSelection(rows, 0, -1)).toBe(1);
   });
 
-  it('steps past a heading on the way down', () => {
-    const rows = [promptRow('p1'), heading('b'), promptRow('p2')];
-    expect(stepSelection(rows, 0, 1)).toBe(2);
+  it('has nowhere to go in an empty list', () => {
+    expect(stepSelection([], 0, 1)).toBe(0);
+  });
+});
+
+/**
+ * The panel's category column, which the library modal also has: picking a
+ * category narrows the list, and the arrows cross between the two columns.
+ */
+describe('the category column', () => {
+  const category = (id: string, name: string): PromptCategory => ({ id, name, createdAt: 1 });
+
+  async function openWithCategories() {
+    const params = makeParams('!!');
+    const rendered = renderLibrary(params);
+    act(() => rendered.result.current.detectPrompt('!!', 2));
+    await waitFor(() => expect(rendered.result.current.categoryRows.length).toBeGreaterThan(0));
+    return rendered;
+  }
+
+  beforeEach(() => {
+    sendMock.mockClear();
+    categories = [category('c1', 'review'), category('c2', 'docs')];
+    globalPrompts = [
+      { ...prompt('g1', 'merge cleanup', 'merged it'), categories: ['c1'] },
+      prompt('g2', 'plain', 'filed under nothing'),
+    ];
+    projectPrompts = [{ ...prompt('p1', 'demo check', 'check the demo'), categories: ['c2'] }];
   });
 
-  it('steps past a heading on the way up', () => {
-    const rows = [promptRow('p1'), heading('b'), promptRow('p2')];
-    expect(stepSelection(rows, 2, -1)).toBe(0);
+  /**
+   * A user who never made a category must get the panel they had before this.
+   * An empty column is also what tells the key handler to leave Left and Right
+   * to the composer's own caret.
+   */
+  it('is empty when no categories exist', async () => {
+    categories = [];
+    const params = makeParams('!!');
+    const { result } = renderLibrary(params);
+
+    act(() => result.current.detectPrompt('!!', 2));
+    await waitFor(() => expect(result.current.rows).toHaveLength(4));
+
+    expect(result.current.categoryRows).toEqual([]);
   });
 
-  it('wraps around the ends', () => {
-    const rows = [heading('a'), promptRow('p1'), promptRow('p2')];
-    expect(stepSelection(rows, 2, 1)).toBe(1);
-    expect(stepSelection(rows, 1, -1)).toBe(2);
+  it('leads with "everything" and counts each category over the whole library', async () => {
+    const { result } = await openWithCategories();
+
+    expect(result.current.categoryRows.map((row) => [row.key, row.count])).toEqual([
+      [ALL_CATEGORIES, 3],
+      ['c1', 1],
+      ['c2', 1],
+    ]);
   });
 
-  // A list of nothing but headings has nowhere to go, and must not spin.
-  it('stays put when no row is selectable', () => {
-    expect(stepSelection([heading('a'), heading('b')], 0, 1)).toBe(0);
+  it('opens on "everything", so nothing is hidden until the user asks', async () => {
+    const { result } = await openWithCategories();
+
+    expect(result.current.selectedCategory).toBe(ALL_CATEGORIES);
+    expect(result.current.rows).toHaveLength(4); // three prompts and the create row
+  });
+
+  it('narrows the list to the picked category', async () => {
+    const { result } = await openWithCategories();
+
+    act(() => result.current.selectCategory('c1'));
+
+    expect(result.current.rows.map((row) => (row.kind === 'prompt' ? row.prompt.id : 'create'))).toEqual([
+      'g1',
+      'create',
+    ]);
+  });
+
+  it('walks the column with Up and Down once Left has crossed into it', async () => {
+    const { result } = await openWithCategories();
+
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowLeft')); });
+    expect(result.current.focusedPane).toBe('categories');
+
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowDown')); });
+    expect(result.current.selectedCategory).toBe('c1');
+  });
+
+  /**
+   * Right then Down arrive as two events. Reading the focused column from state
+   * would still see "categories" on the second one and change the category
+   * instead of moving down the list.
+   */
+  it('walks the list again as soon as Right has crossed back', async () => {
+    const { result } = await openWithCategories();
+
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowLeft')); });
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowDown')); });
+    expect(result.current.selectedCategory).toBe('c1');
+
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowRight')); });
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowDown')); });
+
+    expect(result.current.selectedCategory).toBe('c1');
+    expect(result.current.selectedIndex).toBe(1);
+  });
+
+  // Left and Right are the composer's own caret movement. Taking them when
+  // there is no second column to reach would break typing for everyone who
+  // never made a category.
+  it('leaves Left and Right alone when there is no column to cross to', async () => {
+    categories = [];
+    const params = makeParams('!!');
+    const { result } = renderLibrary(params);
+    act(() => result.current.detectPrompt('!!', 2));
+    await waitFor(() => expect(result.current.rows).toHaveLength(4));
+
+    let handled = true;
+    act(() => { handled = result.current.handleKeyDown(keyEvent('ArrowLeft')); });
+    expect(handled).toBe(false);
+  });
+
+  /**
+   * `!!` is a fresh search every time. A panel that opened still narrowed to a
+   * category chosen ten minutes ago would hide most of the library and say
+   * nothing about why.
+   */
+  it('forgets the narrowing when the panel closes', async () => {
+    const { result } = await openWithCategories();
+
+    act(() => result.current.selectCategory('c1'));
+    expect(result.current.selectedCategory).toBe('c1');
+
+    act(() => result.current.close());
+
+    expect(result.current.selectedCategory).toBe(ALL_CATEGORIES);
+    expect(result.current.focusedPane).toBe('prompts');
   });
 });
