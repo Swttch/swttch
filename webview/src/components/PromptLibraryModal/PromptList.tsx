@@ -222,8 +222,15 @@ function PromptSection(props: SectionProps) {
                 <BookmarkIcon className="h-4 w-4 flex-shrink-0 text-text-tertiary" />
                 {/* One line, laid out like the `!!` panel: the name takes a
                     quarter and carries the weight, the content takes the rest,
-                    because the content is the thing about to be pasted. */}
-                <span className="w-1/4 flex-shrink-0 truncate text-sm font-medium text-text-primary">
+                    because the content is the thing about to be pasted.
+
+                    The floor matters here in a way it does not in the panel.
+                    The category column took 11rem off this list, and a quarter
+                    of what is left cut "Reproduce a report" down to "Reproduce
+                    …". Below the floor it is the preview that gives way, which
+                    is the right order: the preview is a hint, the name is how
+                    the user tells one saved phrase from another. */}
+                <span className="w-1/4 min-w-[7.5rem] flex-shrink-0 truncate text-sm font-medium text-text-primary">
                   {prompt.name}
                 </span>
                 {/* Tippy rather than the native `title`: a `title` tooltip does
