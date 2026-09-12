@@ -115,6 +115,14 @@
         "installFailed": "Das Spracheingabe-Werkzeug konnte nicht installiert werden"
       },
       "help": "Hilfe"
+    },
+    "promptDropdown": {
+      "loading": "Wird geladen…",
+      "noPrompts": "Keine gespeicherten Prompts",
+      "createPrompt": "Prompt erstellen",
+      "scopeProject": "Projekt",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Prompt-Bibliothek schließen"
     }
   },
   "sessionHeader": {

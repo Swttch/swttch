@@ -115,6 +115,14 @@
         "installFailed": "無法安裝語音輸入工具"
       },
       "help": "說明"
+    },
+    "promptDropdown": {
+      "loading": "載入中…",
+      "noPrompts": "沒有已儲存的提示詞",
+      "createPrompt": "新增提示詞",
+      "scopeProject": "專案",
+      "scopeGlobal": "全域",
+      "closeAriaLabel": "關閉提示詞庫"
     }
   },
   "sessionHeader": {

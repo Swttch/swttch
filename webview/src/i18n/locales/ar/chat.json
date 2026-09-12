@@ -115,6 +115,14 @@
         "installFailed": "تعذّر تثبيت أداة الإدخال الصوتي"
       },
       "help": "مساعدة"
+    },
+    "promptDropdown": {
+      "loading": "جارٍ التحميل…",
+      "noPrompts": "لا توجد مطالبات محفوظة",
+      "createPrompt": "إنشاء مطالبة",
+      "scopeProject": "المشروع",
+      "scopeGlobal": "عام",
+      "closeAriaLabel": "إغلاق مكتبة المطالبات"
     }
   },
   "sessionHeader": {

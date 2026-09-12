@@ -31,8 +31,30 @@ export function replaceRangeWithText(
 ): boolean {
   setSelectionRange(root, start, end);
 
+  // A `\n` inside `insertText` is NOT a line break to Chromium: it wraps the
+  // remainder in a `<div>` instead. The composer reads its value from
+  // `textContent`, where that `<div>` contributes no newline at all — so the
+  // screen showed two lines while the value had the sentences run together
+  // (issue #430). Measured in a `plaintext-only` editable: inserting
+  // "a\nb" yields `a<div>b</div>` and a textContent of "ab".
+  //
+  // Alternating insertText with insertLineBreak — the same command
+  // insertNewlineAtCursor uses for a single Enter — produces real `\n`
+  // characters and no wrapper, and keeps every step inside the browser's
+  // editing pipeline so the undo history above still holds.
+  const lines = text.split('\n');
+
   try {
-    return document.execCommand('insertText', false, text);
+    // The first segment also deletes the selected range, including when it is
+    // empty (measured: insertText with "" returns true and clears the range).
+    if (!document.execCommand('insertText', false, lines[0] ?? '')) return false;
+
+    for (let index = 1; index < lines.length; index++) {
+      if (!document.execCommand('insertLineBreak')) return false;
+      const line = lines[index] as string;
+      if (line !== '' && !document.execCommand('insertText', false, line)) return false;
+    }
+    return true;
   } catch {
     return false;
   }

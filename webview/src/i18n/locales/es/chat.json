@@ -115,6 +115,14 @@
         "installFailed": "No se pudo instalar la herramienta de entrada de voz"
       },
       "help": "Ayuda"
+    },
+    "promptDropdown": {
+      "loading": "Cargando…",
+      "noPrompts": "No hay prompts guardados",
+      "createPrompt": "Crear prompt",
+      "scopeProject": "Proyecto",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Cerrar la biblioteca de prompts"
     }
   },
   "sessionHeader": {

@@ -115,6 +115,14 @@
         "installFailed": "음성 입력 도구를 설치하지 못했습니다"
       },
       "help": "도움말"
+    },
+    "promptDropdown": {
+      "loading": "불러오는 중…",
+      "noPrompts": "저장된 프롬프트가 없습니다",
+      "createPrompt": "프롬프트 만들기",
+      "scopeProject": "프로젝트",
+      "scopeGlobal": "전역",
+      "closeAriaLabel": "프롬프트 라이브러리 닫기"
     }
   },
   "sessionHeader": {

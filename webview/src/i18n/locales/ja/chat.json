@@ -115,6 +115,14 @@
         "installFailed": "音声入力ツールをインストールできませんでした"
       },
       "help": "ヘルプ"
+    },
+    "promptDropdown": {
+      "loading": "読み込み中…",
+      "noPrompts": "保存されたプロンプトがありません",
+      "createPrompt": "プロンプトを作成",
+      "scopeProject": "プロジェクト",
+      "scopeGlobal": "グローバル",
+      "closeAriaLabel": "プロンプトライブラリを閉じる"
     }
   },
   "sessionHeader": {

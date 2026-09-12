@@ -20,6 +20,11 @@ import { DiffOverlay } from '../DiffPage/DiffOverlay';
 import { CHAT_FOOTER_ID } from './chatFooter';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
+import {
+  OPEN_PROMPT_LIBRARY_EVENT,
+  type OpenPromptLibraryDetail,
+} from '@/commandPalette/sections/context/items';
+import { PromptLibraryModal } from '@/components/PromptLibraryModal';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatInputFocus } from '../../contexts/ChatInputFocusContext';
@@ -64,6 +69,8 @@ function ChatPageContent() {
   useMcpServers();
   const queryClient = useQueryClient();
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
+  // Which screen the prompt library opens on, or null while it is closed.
+  const [promptLibraryView, setPromptLibraryView] = useState<'list' | 'create' | null>(null);
   // The review being shown over this screen, when the settings ask for an
   // overlay rather than a tab. Null the rest of the time, which is every host
   // that opens a window of its own — there the review is not this screen's to
@@ -80,6 +87,17 @@ function ChatPageContent() {
     window.addEventListener(OPEN_MCP_MODAL_EVENT, handler);
     return () => window.removeEventListener(OPEN_MCP_MODAL_EVENT, handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The prompt library is opened from the palette's Context section and from the
+  // "create" row of the `!!` panel; the latter asks for the create screen.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<OpenPromptLibraryDetail>).detail;
+      setPromptLibraryView(detail?.view === 'create' ? 'create' : 'list');
+    };
+    window.addEventListener(OPEN_PROMPT_LIBRARY_EVENT, handler);
+    return () => window.removeEventListener(OPEN_PROMPT_LIBRARY_EVENT, handler);
   }, []);
 
   const api = useApi();
@@ -448,6 +466,12 @@ function ChatPageContent() {
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
+      {promptLibraryView !== null && (
+        <PromptLibraryModal
+          initialView={promptLibraryView}
+          onClose={() => setPromptLibraryView(null)}
+        />
+      )}
       {/* Only while its question is still open: a prompt that has been answered
           — here, from the overlay itself, or anywhere else — takes the review
           with it, the same way closing the tab does on the other surfaces. */}

@@ -115,6 +115,14 @@
         "installFailed": "نصب ابزار ورودی صوتی ممکن نشد"
       },
       "help": "راهنما"
+    },
+    "promptDropdown": {
+      "loading": "در حال بارگذاری…",
+      "noPrompts": "هیچ پرامپت ذخیره‌شده‌ای نیست",
+      "createPrompt": "ساختن پرامپت",
+      "scopeProject": "پروژه",
+      "scopeGlobal": "سراسری",
+      "closeAriaLabel": "بستن کتابخانهٔ پرامپت"
     }
   },
   "sessionHeader": {

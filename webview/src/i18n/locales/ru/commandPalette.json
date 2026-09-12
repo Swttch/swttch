@@ -13,7 +13,8 @@
     "clearConversation": "Очистить разговор",
     "resumeConversation": "Возобновить разговор",
     "showBackgroundTasks": "Рабочий процесс: показать фоновые задачи",
-    "scheduleSend": "Запланировать сообщение..."
+    "scheduleSend": "Запланировать сообщение...",
+    "promptLibrary": "Библиотека промптов"
   },
   "scheduleSend": {
     "title": "Запланировать сообщение",

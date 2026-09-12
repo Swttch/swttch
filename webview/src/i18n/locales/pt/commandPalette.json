@@ -13,7 +13,8 @@
     "clearConversation": "Limpar conversa",
     "resumeConversation": "Retomar conversa",
     "showBackgroundTasks": "Fluxo de trabalho: Mostrar tarefas em segundo plano",
-    "scheduleSend": "Agendar uma mensagem..."
+    "scheduleSend": "Agendar uma mensagem...",
+    "promptLibrary": "Biblioteca de prompts"
   },
   "scheduleSend": {
     "title": "Agendar uma mensagem",

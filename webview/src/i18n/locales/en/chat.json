@@ -115,6 +115,14 @@
         "installFailed": "Could not install the voice input tool"
       },
       "help": "Help"
+    },
+    "promptDropdown": {
+      "loading": "Loading…",
+      "noPrompts": "No saved prompts",
+      "createPrompt": "Create prompt",
+      "scopeProject": "Project",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Close prompt library"
     }
   },
   "sessionHeader": {

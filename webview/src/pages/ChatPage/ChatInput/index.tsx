@@ -37,8 +37,17 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { displayShortcut } from '@/utils/shortcut';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
+import { usePromptLibrary } from './hooks/usePromptLibrary';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
+import { PromptDropdown } from './PromptDropdown';
+import {
+  OPEN_PROMPT_LIBRARY_EVENT,
+  INSERT_PROMPT_EVENT,
+  type OpenPromptLibraryDetail,
+  type InsertPromptDetail,
+} from '@/commandPalette/sections/context/items';
+import { replaceRangeWithText } from './RichInput/replaceRangeWithText';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
@@ -324,6 +333,32 @@ export function ChatInput() {
     },
   });
 
+  const promptLibrary = usePromptLibrary({
+    workingDirectory,
+    value,
+    onChange,
+    inputRef: textareaRef,
+    // Pasting a saved prompt settles the `!!` token, so hand the shared slot
+    // back the same way picking a mention does (issue #236): the pasted text may
+    // itself end in a `/command` or an `@file` the other panels should answer.
+    onPastePrompt: (caretOffset, nextValue) => {
+      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) setCaretOffset(el, caretOffset);
+      });
+    },
+    // The last row of the `!!` panel opens the prompt library straight on its
+    // create screen, so writing a prompt is one step from wanting one.
+    onCreatePrompt: () => {
+      window.dispatchEvent(
+        new CustomEvent<OpenPromptLibraryDetail>(OPEN_PROMPT_LIBRARY_EVENT, {
+          detail: { view: 'create' },
+        }),
+      );
+    },
+  });
+
   // Backend pushes EDITOR_CONTEXT (the file the user is viewing + selection)
   // → insert `relativePath[#L..]` at the composer caret.
   // shouldFocus is controlled by the focusInputOnEditorContext user setting (default true).
@@ -491,6 +526,39 @@ export function ChatInput() {
     if (value === '') resetHistory();
   }, [value, resetHistory]);
 
+  // A prompt picked in the library modal lands at the END of whatever is already
+  // in the composer, not at the caret: while the modal was open the composer had
+  // no visible caret, so "where the caret was" is not a place the user chose.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const content = (e as CustomEvent<InsertPromptDetail>).detail?.content;
+      if (!content) return;
+
+      const el = textareaRef.current;
+      el?.focus();
+
+      const currentValue = el?.textContent ?? value;
+      const insertAt = currentValue.length;
+      const nextValue = currentValue + content;
+      const caretOffset = insertAt + content.length;
+
+      const handledByBrowser = el
+        ? replaceRangeWithText(el, insertAt, insertAt, content)
+        : false;
+      if (!handledByBrowser) onChange(nextValue);
+
+      requestAnimationFrame(() => {
+        const target = textareaRef.current;
+        if (target) setCaretOffset(target, caretOffset);
+      });
+      // The pasted text may itself end in a `/command` or an `@file`, so let the
+      // panels that own those decide whether they belong on screen now.
+      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
+    };
+    window.addEventListener(INSERT_PROMPT_EVENT, handler);
+    return () => window.removeEventListener(INSERT_PROMPT_EVENT, handler);
+  }, [value, onChange, textareaRef]);
+
   const handleRichChange = useCallback((newValue: string) => {
     onChange(newValue);
     // The caret decides which of the two dropdowns owns the slot above the
@@ -498,7 +566,8 @@ export function ChatInput() {
     const caret = textareaRef.current ? getCaretOffset(textareaRef.current) : newValue.length;
     palette.detectSlashCommand(newValue, caret);
     mention.detectMention(newValue, caret);
-  }, [onChange, palette, mention, textareaRef]);
+    promptLibrary.detectPrompt(newValue, caret);
+  }, [onChange, palette, mention, promptLibrary, textareaRef]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
     // Feed the IME truth: keyCode 229 means the IME is still processing this
@@ -520,6 +589,11 @@ export function ChatInput() {
     // including this one, and including the history navigation below, which
     // reads a bare ArrowUp and must not see a Cmd+ArrowUp meaning "go to the
     // top of the text".
+
+    // Prompt library interaction. First of the three because `!!` is the most
+    // specific trigger, and because the render order below puts it first too —
+    // #236 was caused by a keydown order that disagreed with the render order.
+    if (promptLibrary.isActive && promptLibrary.handleKeyDown(e)) return;
 
     // Mention interaction (must precede slash command handling)
     if (mention.isActive && mention.handleKeyDown(e)) return;
@@ -604,7 +678,7 @@ export function ChatInput() {
         if (target) setCaretOffset(target, historyValue.length);
       });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
 
   // Wrap the attachment paste handler so images keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -751,10 +825,26 @@ export function ChatInput() {
         isFocused={isFocused}
         isDragOver={isDragOver}
         overlays={<>
+        {/* Prompt library panel. Shares this slot with the mention dropdown and
+            the slash command panel, and wins it while the caret is in a `!!`
+            token. Rendered first to match the keydown order above. */}
+        {promptLibrary.isActive && (
+          <div className="absolute bottom-full start-0 w-full z-20">
+            <PromptDropdown
+              rows={promptLibrary.rows}
+              selectedIndex={promptLibrary.selectedIndex}
+              isLoading={promptLibrary.isLoading}
+              hasLoaded={promptLibrary.hasLoaded}
+              onSelect={promptLibrary.selectRow}
+              onClose={promptLibrary.close}
+            />
+          </div>
+        )}
+
         {/* Mention dropdown. Shares this slot with the slash command panel;
             the panel yields whenever the caret is in an @token (issue #236),
             so the two never render at once. */}
-        {mention.isActive && (
+        {mention.isActive && !promptLibrary.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <MentionDropdown
               results={mention.results}
@@ -771,7 +861,7 @@ export function ChatInput() {
             mention handling also runs first. detectSlashCommand already closes
             the panel on caret-in-@token; this also covers the paths that open
             it without a caret (e.g. the "/" toolbar button). */}
-        {palette.showSlashCommands && !mention.isActive && (
+        {palette.showSlashCommands && !mention.isActive && !promptLibrary.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <CommandPalettePanel
               sections={palette.filteredSections}

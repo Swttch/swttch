@@ -13,7 +13,8 @@
     "clearConversation": "مسح المحادثة",
     "resumeConversation": "استئناف المحادثة",
     "showBackgroundTasks": "مهمة سير العمل: عرض المهام الخلفية",
-    "scheduleSend": "جدولة رسالة..."
+    "scheduleSend": "جدولة رسالة...",
+    "promptLibrary": "مكتبة المطالبات"
   },
   "scheduleSend": {
     "title": "جدولة رسالة",

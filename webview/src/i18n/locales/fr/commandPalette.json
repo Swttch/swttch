@@ -13,7 +13,8 @@
     "clearConversation": "Effacer la conversation",
     "resumeConversation": "Reprendre la conversation",
     "showBackgroundTasks": "Workflow : afficher les tâches en arrière-plan",
-    "scheduleSend": "Planifier un message..."
+    "scheduleSend": "Planifier un message...",
+    "promptLibrary": "Bibliothèque de prompts"
   },
   "scheduleSend": {
     "title": "Planifier un message",

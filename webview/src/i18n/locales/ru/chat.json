@@ -115,6 +115,14 @@
         "installFailed": "Не удалось установить инструмент голосового ввода"
       },
       "help": "Справка"
+    },
+    "promptDropdown": {
+      "loading": "Загрузка…",
+      "noPrompts": "Сохранённых промптов нет",
+      "createPrompt": "Создать промпт",
+      "scopeProject": "Проект",
+      "scopeGlobal": "Глобально",
+      "closeAriaLabel": "Закрыть библиотеку промптов"
     }
   },
   "sessionHeader": {

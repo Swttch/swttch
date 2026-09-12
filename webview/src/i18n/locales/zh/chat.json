@@ -115,6 +115,14 @@
         "installFailed": "无法安装语音输入工具"
       },
       "help": "帮助"
+    },
+    "promptDropdown": {
+      "loading": "加载中…",
+      "noPrompts": "没有已保存的提示词",
+      "createPrompt": "新建提示词",
+      "scopeProject": "项目",
+      "scopeGlobal": "全局",
+      "closeAriaLabel": "关闭提示词库"
     }
   },
   "sessionHeader": {
