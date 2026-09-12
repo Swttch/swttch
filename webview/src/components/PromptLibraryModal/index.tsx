@@ -421,7 +421,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
              buttons beside a project name, and at the narrower width the name
              was the thing that gave way. */
           className={`w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
-          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(20rem, 88vh)' }}
+          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(32rem, 88vh)' }}
         >
           {isListView && (
             <>
@@ -471,6 +471,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
                 <PromptCategorySidebar
                   rows={sidebarRows}
                   selected={selectedCategory}
+                  isFocusedPane={focusedPane === 'categories'}
                   onSelect={(key) => {
                     setSelectedCategory(key);
                     setSelectedIndex(0);
@@ -487,6 +488,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
                 projectAvailable={store.projectAvailable}
                 workingDirectory={workingDirectory}
                 selectedId={selectedRow?.prompt.id ?? null}
+                isFocusedPane={focusedPane === 'prompts'}
                 onUse={(prompt) => usePrompt(prompt.content)}
                 onEdit={(scope, prompt) => setView({ kind: 'edit', scope, prompt })}
                 onDelete={(scope, prompt) => void handleDelete(scope, prompt)}

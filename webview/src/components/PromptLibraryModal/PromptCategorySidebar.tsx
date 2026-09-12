@@ -45,6 +45,14 @@ export function buildSidebarRows(
 interface Props {
   rows: SidebarRow[];
   selected: CategorySelection;
+  /**
+   * True while the arrow keys are walking this column rather than the lists.
+   *
+   * Both columns hold a selection at once, so the selection alone cannot say
+   * which one Up and Down would move. The `!!` panel answers this with a ring
+   * on the focused column's selected row, and this is the same answer.
+   */
+  isFocusedPane: boolean;
   onSelect: (key: CategorySelection) => void;
   onCreate: (name: string) => Promise<unknown>;
   onRename: (id: string, name: string) => Promise<unknown>;
@@ -69,7 +77,8 @@ interface Props {
  *   nothing left.
  */
 export function PromptCategorySidebar(props: Props) {
-  const { rows, selected, onSelect, onCreate, onRename, onDelete, onEditingChange } = props;
+  const { rows, selected, isFocusedPane, onSelect, onCreate, onRename, onDelete, onEditingChange } =
+    props;
   const { t } = useTranslation('common');
 
   /** The category being renamed, or the sentinel while a new name is typed. */
@@ -148,7 +157,7 @@ export function PromptCategorySidebar(props: Props) {
       isActive
         ? 'bg-surface-selected text-text-primary'
         : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
-    }`;
+    } ${isActive && isFocusedPane ? 'ring-1 ring-inset ring-border-focus' : ''}`;
 
   return (
     <div className="flex max-h-24 shrink-0 flex-row gap-1 overflow-x-auto overflow-y-hidden border-b border-border-subtle pb-2 sm:max-h-none sm:w-44 sm:min-w-28 sm:max-w-52 sm:flex-col sm:overflow-x-visible sm:overflow-y-auto sm:border-b-0 sm:border-e sm:pb-0 sm:pe-2">
@@ -176,43 +185,48 @@ export function PromptCategorySidebar(props: Props) {
             title={row.label}
           >
             <span className="min-w-0 flex-1 truncate">{row.label}</span>
-            {/* The count is what makes the sidebar readable at a glance: it says
-                how much is behind a row before the row is opened. It gives way
-                to the two actions on hover, so the row stays one line wide. */}
-            <span className="flex-shrink-0 text-text-tertiary group-hover/cat:hidden">
-              ({row.count})
+            {/* The count and the two actions share one slot, the way the `!!`
+                panel's scope label shares its slot with the same two actions.
+
+                The actions are positioned OUT OF FLOW on purpose. Drawn in
+                flow they are 18px tall against the count's 16px, so the row
+                grew by ~2px the moment the pointer touched it and the whole
+                sidebar shifted under the cursor. Out of flow the count alone
+                sets the height and the swap is invisible. */}
+            <span className="relative flex-shrink-0 text-text-tertiary">
+              <span className="group-hover/cat:invisible">({row.count})</span>
+              {row.category && (
+                <span className="absolute inset-y-0 end-0 hidden items-center gap-0.5 group-hover/cat:flex">
+                  {/* Spans, not buttons: this sits inside the row's own button. */}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    title={t('promptLibrary.edit')}
+                    aria-label={t('promptLibrary.edit')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename(row.category as PromptCategory);
+                    }}
+                    className="rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
+                  >
+                    <PencilSquareIcon className="h-3.5 w-3.5" />
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    title={t('promptLibrary.delete')}
+                    aria-label={t('promptLibrary.delete')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(row.category as PromptCategory);
+                    }}
+                    className="rounded p-0.5 text-text-tertiary transition-colors hover:text-state-error-fg"
+                  >
+                    <TrashIcon className="h-3.5 w-3.5" />
+                  </span>
+                </span>
+              )}
             </span>
-            {row.category && (
-              <span className="hidden flex-shrink-0 items-center gap-0.5 group-hover/cat:flex">
-                {/* Spans, not buttons: this sits inside the row's own button. */}
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  title={t('promptLibrary.edit')}
-                  aria-label={t('promptLibrary.edit')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startRename(row.category as PromptCategory);
-                  }}
-                  className="rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
-                >
-                  <PencilSquareIcon className="h-3.5 w-3.5" />
-                </span>
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  title={t('promptLibrary.delete')}
-                  aria-label={t('promptLibrary.delete')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(row.category as PromptCategory);
-                  }}
-                  className="rounded p-0.5 text-text-tertiary transition-colors hover:text-state-error-fg"
-                >
-                  <TrashIcon className="h-3.5 w-3.5" />
-                </span>
-              </span>
-            )}
           </button>
         );
       })}

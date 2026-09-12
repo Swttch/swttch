@@ -49,6 +49,8 @@ interface Props {
   workingDirectory: string | null | undefined;
   /** The card the arrow keys currently sit on, or null when the list is empty. */
   selectedId: string | null;
+  /** True while the arrow keys walk the lists rather than the category column. */
+  isFocusedPane: boolean;
   /** Put this prompt in the composer, which is what picking a card means. */
   onUse: (prompt: SavedPrompt) => void;
   onEdit: (scope: PromptScope, prompt: SavedPrompt) => void;
@@ -89,6 +91,7 @@ interface SectionProps {
   /** Shown in place of the list when the section cannot be written to. */
   unavailableNote?: string;
   selectedId: string | null;
+  isFocusedPane: boolean;
   onUse: (prompt: SavedPrompt) => void;
   onEdit: (scope: PromptScope, prompt: SavedPrompt) => void;
   onDelete: (scope: PromptScope, prompt: SavedPrompt) => void;
@@ -115,6 +118,7 @@ function PromptSection(props: SectionProps) {
     prompts,
     unavailableNote,
     selectedId,
+    isFocusedPane,
     onUse,
     onEdit,
     onDelete,
@@ -204,7 +208,13 @@ function PromptSection(props: SectionProps) {
                */
               className={`group flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
                 prompt.id === selectedId
-                  ? 'border-border-focus bg-surface-selected'
+                  ? isFocusedPane
+                    // The arrows are on this card. The focus border it always
+                    // had says "selected"; the ring says "and Up/Down move
+                    // HERE", which is the half the category column took away by
+                    // holding a selection of its own.
+                    ? 'border-border-focus bg-surface-selected ring-1 ring-inset ring-border-focus'
+                    : 'border-border-subtle bg-surface-selected'
                   : 'border-border-subtle bg-surface-overlay hover:bg-surface-hover'
               }`}
             >
@@ -293,6 +303,7 @@ export function PromptList(props: Props) {
     projectAvailable,
     workingDirectory,
     selectedId,
+    isFocusedPane,
     onUse,
     onEdit,
     onDelete,
@@ -328,6 +339,7 @@ export function PromptList(props: Props) {
         scope="global"
         prompts={globalPrompts}
         selectedId={selectedId}
+        isFocusedPane={isFocusedPane}
         onUse={onUse}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -345,6 +357,7 @@ export function PromptList(props: Props) {
         prompts={projectPrompts}
         unavailableNote={projectAvailable ? undefined : t('promptLibrary.projectUnavailable')}
         selectedId={selectedId}
+        isFocusedPane={isFocusedPane}
         onUse={onUse}
         onEdit={onEdit}
         onExport={projectAvailable ? onExport : undefined}
