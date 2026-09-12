@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { MessageType } from '@/shared';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
-import type { GetPromptsAck, PromptScope, SavedPrompt } from '@/types/prompt';
+import type {
+  ConflictStrategy,
+  ExportPromptsAck,
+  GetPromptsAck,
+  ImportPromptsAck,
+  PreviewImportAck,
+  PromptScope,
+  SavedPrompt,
+} from '@/types/prompt';
 
 /**
  * Both scopes of the prompt library, read together.
@@ -24,6 +32,22 @@ export interface PromptStore {
   create: (scope: PromptScope, name: string, content: string) => Promise<void>;
   update: (scope: PromptScope, id: string, name: string, content: string) => Promise<void>;
   remove: (scope: PromptScope, id: string) => Promise<void>;
+  /**
+   * Write the given prompts to a file the user picks, answering with the path
+   * written or null when they cancelled the save dialog.
+   */
+  exportPrompts: (scope: PromptScope, ids: string[]) => Promise<ExportPromptsAck>;
+  /**
+   * Read a prompt file the user picks and say what importing it would do.
+   * Nothing is written until {@link PromptStore.importPrompts} is called.
+   */
+  previewImport: (scope: PromptScope) => Promise<PreviewImportAck>;
+  /** Apply a previewed import with the chosen conflict strategy. */
+  importPrompts: (
+    scope: PromptScope,
+    prompts: SavedPrompt[],
+    strategy: ConflictStrategy,
+  ) => Promise<ImportPromptsAck>;
 }
 
 export function usePromptStore(): PromptStore {
@@ -100,6 +124,34 @@ export function usePromptStore(): PromptStore {
     [bridge, scopePayload, reload],
   );
 
+  const exportPrompts = useCallback(
+    async (scope: PromptScope, ids: string[]) =>
+      (await bridge.send(MessageType.EXPORT_PROMPTS, {
+        ...scopePayload(scope),
+        ids,
+      })) as ExportPromptsAck,
+    [bridge, scopePayload],
+  );
+
+  const previewImport = useCallback(
+    async (scope: PromptScope) =>
+      (await bridge.send(MessageType.PREVIEW_PROMPT_IMPORT, scopePayload(scope))) as PreviewImportAck,
+    [bridge, scopePayload],
+  );
+
+  const importPrompts = useCallback(
+    async (scope: PromptScope, prompts: SavedPrompt[], strategy: ConflictStrategy) => {
+      const ack = (await bridge.send(MessageType.IMPORT_PROMPTS, {
+        ...scopePayload(scope),
+        prompts,
+        strategy,
+      })) as ImportPromptsAck;
+      reload();
+      return ack;
+    },
+    [bridge, scopePayload, reload],
+  );
+
   return {
     globalPrompts,
     projectPrompts,
@@ -110,5 +162,8 @@ export function usePromptStore(): PromptStore {
     create,
     update,
     remove,
+    exportPrompts,
+    previewImport,
+    importPrompts,
   };
 }

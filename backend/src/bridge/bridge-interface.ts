@@ -146,6 +146,22 @@ export interface Bridge {
     mode: 'files' | 'folders' | 'both';
     multiple?: boolean;
   }): Promise<{ paths: string[] }>;
+  /**
+   * Ask the user where to put [contents] and write it there, answering with the
+   * path written, or null when they cancelled.
+   *
+   * Every host implements this. "Put this somewhere I choose" means something
+   * wherever the product runs, so it is not a no-op outside the IDE: JetBrains
+   * shows the IDE's own save dialog, and standalone shows the platform's. A
+   * user who exported their prompts in a browser tab and got nothing would have
+   * lost the feature, not merely seen it degrade.
+   */
+  saveFile(options: {
+    /** File name to offer, e.g. `prompts-20260913010203.json`. */
+    suggestedName: string;
+    /** The text to write, UTF-8. */
+    contents: string;
+  }): Promise<{ path: string | null }>;
   updatePlugin(): Promise<void>;
   requiresRestart(): Promise<boolean>;
   /**

@@ -254,6 +254,41 @@
       "description": "这条提示词有待填写的位置。输入的内容会放到那里。",
       "preview": "预览",
       "insert": "插入"
+    },
+    "transfer": {
+      "export": "导出",
+      "import": "导入",
+      "exportTitle": "导出提示词",
+      "exportHint": "选择要写入文件的提示词。",
+      "exportConfirm": "导出",
+      "exportDone": "已保存 {{count}} 条提示词。",
+      "importTitle": "导入提示词",
+      "importHint": "新增 {{new}} 条，已有 {{update}} 条。",
+      "importConfirm": "导入",
+      "importDone": "新增 {{imported}} 条，更新 {{updated}} 条，跳过 {{skipped}} 条。",
+      "selectedCount": "已选 {{count}} 条",
+      "strategyLabel": "遇到你已经有的提示词时",
+      "status": {
+        "new": "新增",
+        "update": "已存在"
+      },
+      "strategy": {
+        "skip": "保留我的",
+        "overwrite": "替换",
+        "duplicate": "两者都留"
+      },
+      "strategyHint": {
+        "skip": "保持你已有的提示词不变。",
+        "overwrite": "用导入的提示词替换你的。",
+        "duplicate": "两者都保留，导入的使用新 id。"
+      },
+      "error": {
+        "notJson": "这不是 JSON 文件。",
+        "unrecognisedShape": "这看起来不是提示词库文件。",
+        "noPrompts": "无法从该文件读取任何提示词。",
+        "unreadableFile": "无法读取该文件。",
+        "failed": "无法转移提示词。"
+      }
     }
   }
 }

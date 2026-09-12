@@ -287,6 +287,15 @@ class NodeProcessManager(
         suspend fun openDevTools()
         suspend fun openUrl(url: String)
         suspend fun pickFiles(mode: String, multiple: Boolean): List<String>
+        /**
+         * Ask where to put [contents] and write it there, answering with the path
+         * written or null when the user cancelled.
+         *
+         * The backend exposes the same call in standalone mode through the
+         * platform's own save dialog, so a feature that saves a file works the
+         * same wherever the product runs.
+         */
+        suspend fun saveFile(suggestedName: String, contents: String): String?
         suspend fun updatePlugin()
         suspend fun requiresRestart(): Boolean
         /**

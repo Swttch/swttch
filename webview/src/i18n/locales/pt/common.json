@@ -254,6 +254,41 @@
       "description": "Este prompt tem lacunas a preencher. O que você digitar entra no lugar delas.",
       "preview": "Prévia",
       "insert": "Inserir"
+    },
+    "transfer": {
+      "export": "Exportar",
+      "import": "Importar",
+      "exportTitle": "Exportar prompts",
+      "exportHint": "Escolha quais prompts vão para o arquivo.",
+      "exportConfirm": "Exportar",
+      "exportDone": "{{count}} prompts salvos.",
+      "importTitle": "Importar prompts",
+      "importHint": "{{new}} novos, {{update}} já na sua biblioteca.",
+      "importConfirm": "Importar",
+      "importDone": "{{imported}} adicionados, {{updated}} atualizados, {{skipped}} ignorados.",
+      "selectedCount": "{{count}} selecionados",
+      "strategyLabel": "Quando um prompt já está na sua biblioteca",
+      "status": {
+        "new": "Novo",
+        "update": "Já existe"
+      },
+      "strategy": {
+        "skip": "Manter o meu",
+        "overwrite": "Substituir",
+        "duplicate": "Manter os dois"
+      },
+      "strategyHint": {
+        "skip": "O prompt que você já tem fica como está.",
+        "overwrite": "O prompt recebido substitui o seu.",
+        "duplicate": "Os dois ficam, e o recebido recebe um id novo."
+      },
+      "error": {
+        "notJson": "Esse arquivo não é JSON.",
+        "unrecognisedShape": "Esse arquivo não parece uma biblioteca de prompts.",
+        "noPrompts": "Nenhum prompt pôde ser lido desse arquivo.",
+        "unreadableFile": "Esse arquivo não pôde ser lido.",
+        "failed": "Não foi possível transferir os prompts."
+      }
     }
   }
 }

@@ -254,6 +254,41 @@
       "description": "このプロンプトには埋める箇所があります。入力した値がその場所に入ります。",
       "preview": "プレビュー",
       "insert": "挿入"
+    },
+    "transfer": {
+      "export": "エクスポート",
+      "import": "インポート",
+      "exportTitle": "プロンプトのエクスポート",
+      "exportHint": "ファイルに含めるプロンプトを選んでください。",
+      "exportConfirm": "エクスポート",
+      "exportDone": "プロンプト {{count}} 件を保存しました。",
+      "importTitle": "プロンプトのインポート",
+      "importHint": "新規 {{new}} 件、既存 {{update}} 件です。",
+      "importConfirm": "インポート",
+      "importDone": "{{imported}} 件追加、{{updated}} 件更新、{{skipped}} 件スキップ。",
+      "selectedCount": "{{count}} 件選択中",
+      "strategyLabel": "すでに持っているプロンプトに出会ったら",
+      "status": {
+        "new": "新規",
+        "update": "既存"
+      },
+      "strategy": {
+        "skip": "自分のを残す",
+        "overwrite": "置き換える",
+        "duplicate": "両方残す"
+      },
+      "strategyHint": {
+        "skip": "すでに持っているプロンプトをそのままにします。",
+        "overwrite": "取り込んだプロンプトで置き換えます。",
+        "duplicate": "両方残し、取り込んだ方に新しい id を付けます。"
+      },
+      "error": {
+        "notJson": "JSON ファイルではありません。",
+        "unrecognisedShape": "プロンプトライブラリのファイルに見えません。",
+        "noPrompts": "そのファイルから読み取れるプロンプトがありません。",
+        "unreadableFile": "ファイルを読み取れませんでした。",
+        "failed": "プロンプトを移せませんでした。"
+      }
     }
   }
 }

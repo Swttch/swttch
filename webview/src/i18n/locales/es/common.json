@@ -254,6 +254,41 @@
       "description": "Este prompt tiene huecos por rellenar. Lo que escribas irá en su lugar.",
       "preview": "Vista previa",
       "insert": "Insertar"
+    },
+    "transfer": {
+      "export": "Exportar",
+      "import": "Importar",
+      "exportTitle": "Exportar prompts",
+      "exportHint": "Elige qué prompts van al archivo.",
+      "exportConfirm": "Exportar",
+      "exportDone": "Se guardaron {{count}} prompts.",
+      "importTitle": "Importar prompts",
+      "importHint": "{{new}} nuevos, {{update}} ya en tu biblioteca.",
+      "importConfirm": "Importar",
+      "importDone": "{{imported}} añadidos, {{updated}} actualizados, {{skipped}} omitidos.",
+      "selectedCount": "{{count}} seleccionados",
+      "strategyLabel": "Cuando un prompt ya está en tu biblioteca",
+      "status": {
+        "new": "Nuevo",
+        "update": "Ya existe"
+      },
+      "strategy": {
+        "skip": "Conservar el mío",
+        "overwrite": "Reemplazar",
+        "duplicate": "Conservar ambos"
+      },
+      "strategyHint": {
+        "skip": "El prompt que ya tienes se queda como está.",
+        "overwrite": "El prompt entrante reemplaza al tuyo.",
+        "duplicate": "Se conservan ambos; el entrante recibe un id nuevo."
+      },
+      "error": {
+        "notJson": "Ese archivo no es JSON.",
+        "unrecognisedShape": "Ese archivo no parece una biblioteca de prompts.",
+        "noPrompts": "No se pudo leer ningún prompt de ese archivo.",
+        "unreadableFile": "No se pudo leer ese archivo.",
+        "failed": "No se pudieron transferir los prompts."
+      }
     }
   }
 }

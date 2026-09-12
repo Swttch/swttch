@@ -258,6 +258,41 @@
       "description": "تحتوي هذه المطالبة على مواضع للتعبئة. سيوضع ما تكتبه في مكانها.",
       "preview": "معاينة",
       "insert": "إدراج"
+    },
+    "transfer": {
+      "export": "تصدير",
+      "import": "استيراد",
+      "exportTitle": "تصدير المطالبات",
+      "exportHint": "اختر المطالبات التي ستُكتب في الملف.",
+      "exportConfirm": "تصدير",
+      "exportDone": "تم حفظ {{count}} مطالبة.",
+      "importTitle": "استيراد المطالبات",
+      "importHint": "{{new}} جديدة، {{update}} موجودة لديك بالفعل.",
+      "importConfirm": "استيراد",
+      "importDone": "تمت إضافة {{imported}}، وتحديث {{updated}}، وتخطي {{skipped}}.",
+      "selectedCount": "{{count}} محددة",
+      "strategyLabel": "عند وجود المطالبة لديك بالفعل",
+      "status": {
+        "new": "جديدة",
+        "update": "موجودة"
+      },
+      "strategy": {
+        "skip": "الإبقاء على مطالبتي",
+        "overwrite": "الاستبدال",
+        "duplicate": "الإبقاء على الاثنتين"
+      },
+      "strategyHint": {
+        "skip": "تبقى المطالبة الموجودة لديك كما هي.",
+        "overwrite": "تحل المطالبة الواردة محل مطالبتك.",
+        "duplicate": "تبقى الاثنتان، وتأخذ الواردة معرفًا جديدًا."
+      },
+      "error": {
+        "notJson": "هذا الملف ليس JSON.",
+        "unrecognisedShape": "لا يبدو هذا الملف مكتبة مطالبات.",
+        "noPrompts": "تعذّرت قراءة أي مطالبة من هذا الملف.",
+        "unreadableFile": "تعذّرت قراءة هذا الملف.",
+        "failed": "تعذّر نقل المطالبات."
+      }
     }
   }
 }

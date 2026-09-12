@@ -31,3 +31,47 @@ export interface PromptMutationAck {
   scope: PromptScope;
   prompt: SavedPrompt;
 }
+
+/** What to do with an incoming prompt whose id is already stored. */
+export type ConflictStrategy = 'skip' | 'overwrite' | 'duplicate';
+
+/** What one incoming prompt would do to the library it lands in. */
+export type ImportItemStatus = 'new' | 'update';
+
+export interface ImportItem {
+  prompt: SavedPrompt;
+  status: ImportItemStatus;
+}
+
+/** The reply to EXPORT_PROMPTS. `path` is null when the save dialog was cancelled. */
+export interface ExportPromptsAck {
+  status?: 'ok' | 'error';
+  error?: string;
+  path: string | null;
+  count: number;
+}
+
+/**
+ * The reply to PREVIEW_PROMPT_IMPORT.
+ *
+ * `cancelled` is set when the user closed the file picker, which is neither a
+ * preview nor an error.
+ */
+export interface PreviewImportAck {
+  status?: 'ok' | 'error';
+  error?: string;
+  cancelled?: boolean;
+  scope?: PromptScope;
+  items?: ImportItem[];
+  newCount?: number;
+  updateCount?: number;
+}
+
+/** The reply to IMPORT_PROMPTS. */
+export interface ImportPromptsAck {
+  status?: 'ok' | 'error';
+  error?: string;
+  imported?: number;
+  updated?: number;
+  skipped?: number;
+}

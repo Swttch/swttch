@@ -387,6 +387,8 @@ export enum MessageType {
   LIST_PROJECT_FILES = 'LIST_PROJECT_FILES',
   /** Native multi-file picker. */
   PICK_FILES = 'PICK_FILES',
+  /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */
+  SAVE_FILE = 'SAVE_FILE',
   /** List recent/known projects. */
   GET_PROJECTS = 'GET_PROJECTS',
   /**
@@ -520,6 +522,12 @@ export enum MessageType {
   UPDATE_PROMPT = 'UPDATE_PROMPT',
   /** Remove one saved prompt, as {scope, workingDir, id}. inbound webview→backend */
   DELETE_PROMPT = 'DELETE_PROMPT',
+  /** Write the chosen saved prompts to a file the user picks, as {scope, workingDir, ids}. Empty `ids` means every prompt of that scope. The reply carries {path} or {path: null} when the save dialog was cancelled. inbound webview→backend */
+  EXPORT_PROMPTS = 'EXPORT_PROMPTS',
+  /** Read a prompt file the user picks and answer with a preview of what importing it would do, as {scope, workingDir}. The reply carries {items, newCount, updateCount} or {error}. Accepts our own export file, our on-disk store, and another tool's id-keyed store. inbound webview→backend */
+  PREVIEW_PROMPT_IMPORT = 'PREVIEW_PROMPT_IMPORT',
+  /** Apply a previewed import, as {scope, workingDir, prompts, strategy}. `strategy` is 'skip' | 'overwrite' | 'duplicate' and decides what happens to an id already stored. inbound webview→backend */
+  IMPORT_PROMPTS = 'IMPORT_PROMPTS',
 
   // -- Attachments --
   /** The webview reports that the user attached an image, carrying { source, mimeType, size }. Purely a telemetry signal: the image itself still travels inline with SEND_MESSAGE, so the backend does nothing but record it. All three attach paths (button / paste / drop) are handled in the webview and never reach the backend otherwise, which is why attaching was invisible to telemetry until this. Never carries the file NAME. inbound webview→backend */

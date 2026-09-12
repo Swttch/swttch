@@ -138,6 +138,9 @@ import {
   createPromptHandler,
   updatePromptHandler,
   deletePromptHandler,
+  exportPromptsHandler,
+  previewPromptImportHandler,
+  importPromptsHandler,
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
@@ -567,6 +570,15 @@ export async function handleMessage(
       break;
     case MessageType.DELETE_PROMPT:
       await deletePromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.EXPORT_PROMPTS:
+      await exportPromptsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.PREVIEW_PROMPT_IMPORT:
+      await previewPromptImportHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.IMPORT_PROMPTS:
+      await importPromptsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_ASSETS:
       await getSessionAssetsHandler(connectionId, message, connections, bridge);

@@ -53,6 +53,7 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun openDevTools() {}
     override suspend fun openUrl(url: String) {}
     override suspend fun pickFiles(mode: String, multiple: Boolean): List<String> = emptyList()
+    override suspend fun saveFile(suggestedName: String, contents: String): String? = null
     override suspend fun updatePlugin() {}
     override suspend fun requiresRestart(): Boolean = false
     override suspend fun getIdeRoot(workingDir: String?): String? = null

@@ -254,6 +254,41 @@
       "description": "This prompt has places to fill in. What you type goes where the placeholder is.",
       "preview": "Preview",
       "insert": "Insert"
+    },
+    "transfer": {
+      "export": "Export",
+      "import": "Import",
+      "exportTitle": "Export prompts",
+      "exportHint": "Choose which prompts go into the file.",
+      "exportConfirm": "Export",
+      "exportDone": "Saved {{count}} prompts.",
+      "importTitle": "Import prompts",
+      "importHint": "{{new}} new, {{update}} already in your library.",
+      "importConfirm": "Import",
+      "importDone": "Added {{imported}}, updated {{updated}}, skipped {{skipped}}.",
+      "selectedCount": "{{count}} selected",
+      "strategyLabel": "When a prompt is already in your library",
+      "status": {
+        "new": "New",
+        "update": "Already there"
+      },
+      "strategy": {
+        "skip": "Keep mine",
+        "overwrite": "Replace",
+        "duplicate": "Keep both"
+      },
+      "strategyHint": {
+        "skip": "The prompt you already have stays as it is.",
+        "overwrite": "The incoming prompt replaces yours.",
+        "duplicate": "Both are kept, the incoming one under a new id."
+      },
+      "error": {
+        "notJson": "That file is not JSON.",
+        "unrecognisedShape": "That file does not look like a prompt library.",
+        "noPrompts": "No prompts could be read from that file.",
+        "unreadableFile": "That file could not be read.",
+        "failed": "The prompts could not be transferred."
+      }
     }
   }
 }

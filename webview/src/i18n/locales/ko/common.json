@@ -254,6 +254,41 @@
       "description": "이 프롬프트에는 채울 자리가 있습니다. 입력한 값이 그 자리에 들어갑니다.",
       "preview": "미리보기",
       "insert": "삽입"
+    },
+    "transfer": {
+      "export": "내보내기",
+      "import": "가져오기",
+      "exportTitle": "프롬프트 내보내기",
+      "exportHint": "파일에 담을 프롬프트를 고르세요.",
+      "exportConfirm": "내보내기",
+      "exportDone": "프롬프트 {{count}}개를 저장했습니다.",
+      "importTitle": "프롬프트 가져오기",
+      "importHint": "새로 들어올 것 {{new}}개, 이미 있는 것 {{update}}개입니다.",
+      "importConfirm": "가져오기",
+      "importDone": "{{imported}}개 추가, {{updated}}개 갱신, {{skipped}}개 건너뜀.",
+      "selectedCount": "{{count}}개 선택됨",
+      "strategyLabel": "이미 가지고 있는 프롬프트를 만나면",
+      "status": {
+        "new": "새로 추가",
+        "update": "이미 있음"
+      },
+      "strategy": {
+        "skip": "내 것 유지",
+        "overwrite": "덮어쓰기",
+        "duplicate": "둘 다 보관"
+      },
+      "strategyHint": {
+        "skip": "이미 가지고 있던 프롬프트를 그대로 둡니다.",
+        "overwrite": "들어온 프롬프트가 기존 것을 대체합니다.",
+        "duplicate": "둘 다 남기고, 들어온 것에 새 id를 붙입니다."
+      },
+      "error": {
+        "notJson": "JSON 파일이 아닙니다.",
+        "unrecognisedShape": "프롬프트 라이브러리 파일로 보이지 않습니다.",
+        "noPrompts": "그 파일에서 읽을 수 있는 프롬프트가 없습니다.",
+        "unreadableFile": "파일을 읽지 못했습니다.",
+        "failed": "프롬프트를 옮기지 못했습니다."
+      }
     }
   }
 }

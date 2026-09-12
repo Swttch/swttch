@@ -254,6 +254,41 @@
       "description": "Dieser Prompt hat Stellen zum Ausfüllen. Deine Eingabe wird dort eingesetzt.",
       "preview": "Vorschau",
       "insert": "Einfügen"
+    },
+    "transfer": {
+      "export": "Exportieren",
+      "import": "Importieren",
+      "exportTitle": "Prompts exportieren",
+      "exportHint": "Wähle aus, welche Prompts in die Datei kommen.",
+      "exportConfirm": "Exportieren",
+      "exportDone": "{{count}} Prompts gespeichert.",
+      "importTitle": "Prompts importieren",
+      "importHint": "{{new}} neu, {{update}} bereits in deiner Bibliothek.",
+      "importConfirm": "Importieren",
+      "importDone": "{{imported}} hinzugefügt, {{updated}} aktualisiert, {{skipped}} übersprungen.",
+      "selectedCount": "{{count}} ausgewählt",
+      "strategyLabel": "Wenn ein Prompt schon in deiner Bibliothek ist",
+      "status": {
+        "new": "Neu",
+        "update": "Schon vorhanden"
+      },
+      "strategy": {
+        "skip": "Meinen behalten",
+        "overwrite": "Ersetzen",
+        "duplicate": "Beide behalten"
+      },
+      "strategyHint": {
+        "skip": "Der Prompt, den du schon hast, bleibt unverändert.",
+        "overwrite": "Der eingehende Prompt ersetzt deinen.",
+        "duplicate": "Beide bleiben, der eingehende mit neuer id."
+      },
+      "error": {
+        "notJson": "Diese Datei ist kein JSON.",
+        "unrecognisedShape": "Diese Datei sieht nicht nach einer Prompt-Bibliothek aus.",
+        "noPrompts": "Aus dieser Datei ließ sich kein Prompt lesen.",
+        "unreadableFile": "Diese Datei ließ sich nicht lesen.",
+        "failed": "Die Prompts ließen sich nicht übertragen."
+      }
     }
   }
 }

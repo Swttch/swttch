@@ -254,6 +254,41 @@
       "description": "Ce prompt comporte des emplacements à remplir. Ce que vous saisissez y sera placé.",
       "preview": "Aperçu",
       "insert": "Insérer"
+    },
+    "transfer": {
+      "export": "Exporter",
+      "import": "Importer",
+      "exportTitle": "Exporter des prompts",
+      "exportHint": "Choisissez les prompts à mettre dans le fichier.",
+      "exportConfirm": "Exporter",
+      "exportDone": "{{count}} prompts enregistrés.",
+      "importTitle": "Importer des prompts",
+      "importHint": "{{new}} nouveaux, {{update}} déjà dans votre bibliothèque.",
+      "importConfirm": "Importer",
+      "importDone": "{{imported}} ajoutés, {{updated}} mis à jour, {{skipped}} ignorés.",
+      "selectedCount": "{{count}} sélectionnés",
+      "strategyLabel": "Quand un prompt est déjà dans votre bibliothèque",
+      "status": {
+        "new": "Nouveau",
+        "update": "Déjà présent"
+      },
+      "strategy": {
+        "skip": "Garder le mien",
+        "overwrite": "Remplacer",
+        "duplicate": "Garder les deux"
+      },
+      "strategyHint": {
+        "skip": "Le prompt que vous avez déjà reste tel quel.",
+        "overwrite": "Le prompt entrant remplace le vôtre.",
+        "duplicate": "Les deux sont gardés, l'entrant sous un nouvel id."
+      },
+      "error": {
+        "notJson": "Ce fichier n'est pas du JSON.",
+        "unrecognisedShape": "Ce fichier ne ressemble pas à une bibliothèque de prompts.",
+        "noPrompts": "Aucun prompt n'a pu être lu dans ce fichier.",
+        "unreadableFile": "Ce fichier n'a pas pu être lu.",
+        "failed": "Les prompts n'ont pas pu être transférés."
+      }
     }
   }
 }

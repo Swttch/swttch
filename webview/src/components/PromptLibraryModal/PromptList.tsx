@@ -41,6 +41,10 @@ interface Props {
   onUse: (prompt: SavedPrompt) => void;
   onEdit: (scope: PromptScope, prompt: SavedPrompt) => void;
   onDelete: (scope: PromptScope, prompt: SavedPrompt) => void;
+  /** Open the export picker for this scope. Absent when there is nothing to export. */
+  onExport?: (scope: PromptScope) => void;
+  /** Read a file into this scope. Absent when the scope cannot be written. */
+  onImport?: (scope: PromptScope) => void;
 }
 
 /** A one-line preview of the prompt's text, shown under its name on the card. */
@@ -58,6 +62,10 @@ interface SectionProps {
   onUse: (prompt: SavedPrompt) => void;
   onEdit: (scope: PromptScope, prompt: SavedPrompt) => void;
   onDelete: (scope: PromptScope, prompt: SavedPrompt) => void;
+  /** Open the export picker for this scope. Absent when there is nothing to export. */
+  onExport?: (scope: PromptScope) => void;
+  /** Read a file into this scope. Absent when the scope cannot be written. */
+  onImport?: (scope: PromptScope) => void;
 }
 
 /**
@@ -66,9 +74,14 @@ interface SectionProps {
  * The heading carries no create button of its own: the modal's header already
  * has one, and the create form asks which scope to save to, so a button per
  * section would be a second way to say the same thing.
+ *
+ * Export and import do sit here, because unlike create they are about one
+ * scope's file. "Export" with no scope would have to ask which one, which is the
+ * question this placement already answers.
  */
 function PromptSection(props: SectionProps) {
-  const { title, scope, prompts, unavailableNote, selectedId, onUse, onEdit, onDelete } = props;
+  const { title, scope, prompts, unavailableNote, selectedId, onUse, onEdit, onDelete, onExport, onImport } =
+    props;
   const { t } = useTranslation('common');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -93,8 +106,28 @@ function PromptSection(props: SectionProps) {
 
   return (
     <div className="mb-5">
-      <div className="py-1.5">
-        <span className="text-sm font-semibold text-text-secondary truncate">{title}</span>
+      <div className="flex items-center justify-between gap-2 py-1.5">
+        <span className="truncate text-sm font-semibold text-text-secondary">{title}</span>
+        <span className="flex flex-shrink-0 items-center gap-1">
+          {onExport && prompts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onExport(scope)}
+              className="rounded px-2 py-1 text-xs text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+            >
+              {t('promptLibrary.transfer.export')}
+            </button>
+          )}
+          {onImport && (
+            <button
+              type="button"
+              onClick={() => onImport(scope)}
+              className="rounded px-2 py-1 text-xs text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+            >
+              {t('promptLibrary.transfer.import')}
+            </button>
+          )}
+        </span>
       </div>
 
       {unavailableNote ? (
@@ -192,7 +225,18 @@ function PromptSection(props: SectionProps) {
  * screen that hides half of them would not match what typing `!!` shows.
  */
 export function PromptList(props: Props) {
-  const { globalPrompts, projectPrompts, projectAvailable, workingDirectory, selectedId, onUse, onEdit, onDelete } = props;
+  const {
+    globalPrompts,
+    projectPrompts,
+    projectAvailable,
+    workingDirectory,
+    selectedId,
+    onUse,
+    onEdit,
+    onDelete,
+    onExport,
+    onImport,
+  } = props;
   const { t } = useTranslation('common');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -216,6 +260,8 @@ export function PromptList(props: Props) {
         onUse={onUse}
         onEdit={onEdit}
         onDelete={onDelete}
+        onExport={onExport}
+        onImport={onImport}
       />
       <PromptSection
         title={
@@ -229,6 +275,8 @@ export function PromptList(props: Props) {
         selectedId={selectedId}
         onUse={onUse}
         onEdit={onEdit}
+        onExport={projectAvailable ? onExport : undefined}
+        onImport={projectAvailable ? onImport : undefined}
         onDelete={onDelete}
       />
     </div>

@@ -158,8 +158,12 @@ function validateNameAndContent(name: string, content: string): string | null {
  * Run a read-modify-write over one scope's store through {@link updateJsonFile},
  * so an unreadable file aborts the save instead of being overwritten by the one
  * entry being written.
+ *
+ * Exported so prompt-transfer.ts can fold an imported set in through the same
+ * path every other write uses. The dependency runs one way: this module owns the
+ * store and knows nothing about files being carried in or out.
  */
-async function mutateStore(
+export async function mutatePromptStore(
   scope: PromptScope,
   projectPath: string | undefined,
   mutate: (prompts: SavedPrompt[]) => SavedPrompt[] | string,
@@ -207,7 +211,7 @@ export async function createPrompt(
     updatedAt: now,
   };
 
-  const written = await mutateStore(scope, projectPath, (prompts) => [...prompts, prompt]);
+  const written = await mutatePromptStore(scope, projectPath, (prompts) => [...prompts, prompt]);
   if (written.status === 'error') return written;
   return { status: 'ok', prompt };
 }
@@ -229,7 +233,7 @@ export async function updatePrompt(
   if (validationError) return { status: 'error', error: validationError };
 
   let updated: SavedPrompt | null = null;
-  const written = await mutateStore(scope, projectPath, (prompts) => {
+  const written = await mutatePromptStore(scope, projectPath, (prompts) => {
     const index = prompts.findIndex((prompt) => prompt.id === id);
     if (index === -1) return `Prompt not found: ${id}`;
     const existing = prompts[index] as SavedPrompt;
@@ -251,7 +255,7 @@ export async function deletePrompt(
 ): Promise<PromptDeleteResult> {
   if (!VALID_ID_PATTERN.test(id)) return { status: 'error', error: `Invalid prompt id: ${id}` };
 
-  return mutateStore(scope, projectPath, (prompts) => {
+  return mutatePromptStore(scope, projectPath, (prompts) => {
     const next = prompts.filter((prompt) => prompt.id !== id);
     if (next.length === prompts.length) return `Prompt not found: ${id}`;
     return next;

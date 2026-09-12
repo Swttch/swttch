@@ -26,6 +26,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.fileChooser.FileChooserFactory
+import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -1829,6 +1831,39 @@ class ClaudeCodePanel(
                     } catch (e: Exception) {
                         logger.warn("Failed to pick files (mode=$mode, multiple=$multiple)", e)
                         result.complete(emptyList())
+                    }
+                }
+                return result.await()
+            }
+
+            /**
+             * Write [contents] to a path chosen in the IDE's own save dialog.
+             *
+             * The dialog only names the file; the write is ours, which keeps the
+             * result byte-identical to the one standalone mode produces.
+             */
+            override suspend fun saveFile(suggestedName: String, contents: String): String? {
+                val result = CompletableDeferred<String?>()
+                ApplicationManager.getApplication().invokeLater {
+                    try {
+                        val descriptor = FileSaverDescriptor(
+                            "Save File",
+                            "Choose where to write the file"
+                        )
+                        val dialog = FileChooserFactory.getInstance()
+                            .createSaveFileDialog(descriptor, project)
+                        val wrapper = dialog.save(null as VirtualFile?, suggestedName)
+                        if (wrapper == null) {
+                            result.complete(null)
+                        } else {
+                            val file = wrapper.file
+                            file.parentFile?.mkdirs()
+                            file.writeText(contents, Charsets.UTF_8)
+                            result.complete(file.absolutePath)
+                        }
+                    } catch (e: Exception) {
+                        logger.warn("Failed to save file (suggestedName=$suggestedName)", e)
+                        result.complete(null)
                     }
                 }
                 return result.await()

@@ -8,10 +8,11 @@ import {
   INSERT_PROMPT_EVENT,
   type InsertPromptDetail,
 } from '@/commandPalette/sections/context/items';
-import type { PromptScope, SavedPrompt } from '@/types/prompt';
+import type { ConflictStrategy, ImportItem, PromptScope, SavedPrompt } from '@/types/prompt';
 import { usePromptStore } from './usePromptStore';
 import { PromptList, buildPromptRows } from './PromptList';
 import { PromptForm } from './PromptForm';
+import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
 
 interface Props {
   onClose: () => void;
@@ -23,6 +24,17 @@ type View =
   | { kind: 'list' }
   | { kind: 'create'; scope: PromptScope }
   | { kind: 'edit'; scope: PromptScope; prompt: SavedPrompt };
+
+type TransferState =
+  | null
+  | { kind: 'export'; scope: PromptScope; prompts: SavedPrompt[] }
+  | {
+      kind: 'import';
+      scope: PromptScope;
+      items: ImportItem[];
+      newCount: number;
+      updateCount: number;
+    };
 
 /**
  * The prompt library: where saved phrases are written, edited and removed.
@@ -45,6 +57,16 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
     initialView === 'create' ? { kind: 'create', scope: 'global' } : { kind: 'list' },
   );
   const [formBusy, setFormBusy] = useState(false);
+  /**
+   * The transfer screen on top of the library, or null when none is open.
+   *
+   * Held here rather than in `view` because a transfer happens *over* the list:
+   * cancelling one puts the user back where they were, with the same scroll and
+   * the same selection.
+   */
+  const [transfer, setTransfer] = useState<TransferState>(null);
+  /** The outcome line shown after a transfer, replaced by the next one. */
+  const [transferNote, setTransferNote] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // The cards in the order they are drawn, which is also the order the arrow
@@ -77,6 +99,84 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
     window.addEventListener('keyup', handleKeyUp);
     return () => window.removeEventListener('keyup', handleKeyUp);
   }, []);
+
+
+  /** Which scope's list a transfer applies to. */
+  const promptsOf = (scope: PromptScope) =>
+    scope === 'global' ? store.globalPrompts : store.projectPrompts;
+
+  const openExport = (scope: PromptScope) => {
+    setTransferNote(null);
+    setTransfer({ kind: 'export', scope, prompts: promptsOf(scope) });
+  };
+
+  /**
+   * Read a file and show what importing it would do.
+   *
+   * The file picker is the host's and opens before this screen, so a user who
+   * changes their mind there is simply back on the list with nothing shown.
+   */
+  const openImport = async (scope: PromptScope) => {
+    setTransferNote(null);
+    const ack = await store.previewImport(scope);
+    if (ack?.cancelled) return;
+    if (ack?.status === 'error' || !ack?.items) {
+      setTransferNote(transferError(ack?.error));
+      return;
+    }
+    setTransfer({
+      kind: 'import',
+      scope,
+      items: ack.items,
+      newCount: ack.newCount ?? 0,
+      updateCount: ack.updateCount ?? 0,
+    });
+  };
+
+  /** Turn a backend error code into the sentence for it. */
+  const transferError = (code: string | undefined): string => {
+    const known: Record<string, string> = {
+      'not-json': 'notJson',
+      'unrecognised-shape': 'unrecognisedShape',
+      'no-prompts': 'noPrompts',
+      'unreadable-file': 'unreadableFile',
+    };
+    const key = code ? known[code] : undefined;
+    return t(`promptLibrary.transfer.error.${key ?? 'failed'}`);
+  };
+
+  const confirmExport = async (scope: PromptScope, ids: string[]) => {
+    setTransfer(null);
+    const ack = await store.exportPrompts(scope, ids);
+    if (ack?.status === 'error') {
+      setTransferNote(transferError(ack.error));
+      return;
+    }
+    // A null path means the save dialog was cancelled, which needs no notice.
+    if (ack?.path) {
+      setTransferNote(t('promptLibrary.transfer.exportDone', { count: ack.count }));
+    }
+  };
+
+  const confirmImport = async (
+    scope: PromptScope,
+    prompts: SavedPrompt[],
+    strategy: ConflictStrategy,
+  ) => {
+    setTransfer(null);
+    const ack = await store.importPrompts(scope, prompts, strategy);
+    if (ack?.status === 'error') {
+      setTransferNote(transferError(ack.error));
+      return;
+    }
+    setTransferNote(
+      t('promptLibrary.transfer.importDone', {
+        imported: ack?.imported ?? 0,
+        updated: ack?.updated ?? 0,
+        skipped: ack?.skipped ?? 0,
+      }),
+    );
+  };
 
   /** Put a saved prompt in the composer, which is what picking one means. */
   const usePrompt = (content: string) => {
@@ -238,7 +338,12 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
                 onUse={(prompt) => usePrompt(prompt.content)}
                 onEdit={(scope, prompt) => setView({ kind: 'edit', scope, prompt })}
                 onDelete={(scope, prompt) => void handleDelete(scope, prompt)}
+                onExport={(scope) => openExport(scope)}
+                onImport={(scope) => void openImport(scope)}
               />
+            )}
+            {isListView && transferNote && (
+              <p className="flex-shrink-0 px-4 pb-2 text-xs text-text-tertiary">{transferNote}</p>
             )}
             {view.kind === 'create' && (
               <PromptForm
@@ -264,6 +369,25 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Over the library rather than in place of it: cancelling a transfer puts
+          the user back on the same list, with the same scroll and selection. */}
+      {transfer?.kind === 'export' && (
+        <PromptExportDialog
+          prompts={transfer.prompts}
+          onConfirm={(ids) => void confirmExport(transfer.scope, ids)}
+          onCancel={() => setTransfer(null)}
+        />
+      )}
+      {transfer?.kind === 'import' && (
+        <PromptImportDialog
+          items={transfer.items}
+          newCount={transfer.newCount}
+          updateCount={transfer.updateCount}
+          onConfirm={(prompts, strategy) => void confirmImport(transfer.scope, prompts, strategy)}
+          onCancel={() => setTransfer(null)}
+        />
+      )}
     </Portal>
   );
 }

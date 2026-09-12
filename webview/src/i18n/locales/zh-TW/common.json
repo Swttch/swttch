@@ -254,6 +254,41 @@
       "description": "這條提示詞有待填寫的位置。輸入的內容會放到那裡。",
       "preview": "預覽",
       "insert": "插入"
+    },
+    "transfer": {
+      "export": "匯出",
+      "import": "匯入",
+      "exportTitle": "匯出提示詞",
+      "exportHint": "選擇要寫入檔案的提示詞。",
+      "exportConfirm": "匯出",
+      "exportDone": "已儲存 {{count}} 則提示詞。",
+      "importTitle": "匯入提示詞",
+      "importHint": "新增 {{new}} 則，已有 {{update}} 則。",
+      "importConfirm": "匯入",
+      "importDone": "新增 {{imported}} 則，更新 {{updated}} 則，略過 {{skipped}} 則。",
+      "selectedCount": "已選 {{count}} 則",
+      "strategyLabel": "遇到你已經有的提示詞時",
+      "status": {
+        "new": "新增",
+        "update": "已存在"
+      },
+      "strategy": {
+        "skip": "保留我的",
+        "overwrite": "取代",
+        "duplicate": "兩者都留"
+      },
+      "strategyHint": {
+        "skip": "保持你已有的提示詞不變。",
+        "overwrite": "以匯入的提示詞取代你的。",
+        "duplicate": "兩者都保留，匯入的使用新 id。"
+      },
+      "error": {
+        "notJson": "這不是 JSON 檔案。",
+        "unrecognisedShape": "這看起來不是提示詞庫檔案。",
+        "noPrompts": "無法從該檔案讀取任何提示詞。",
+        "unreadableFile": "無法讀取該檔案。",
+        "failed": "無法轉移提示詞。"
+      }
     }
   }
 }
