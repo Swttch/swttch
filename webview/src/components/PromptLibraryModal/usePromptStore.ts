@@ -57,6 +57,12 @@ export interface PromptStore {
    * Nothing is written until {@link PromptStore.importPrompts} is called.
    */
   previewImport: (scope: PromptScope) => Promise<PreviewImportAck>;
+  /** Add a category, which starts empty. Rejected when the name is taken. */
+  createCategory: (name: string) => Promise<PromptCategoriesAck>;
+  /** Rename one category. Every prompt follows, because they reference its id. */
+  renameCategory: (id: string, name: string) => Promise<PromptCategoriesAck>;
+  /** Remove a category. Its prompts stay and fall back to uncategorised. */
+  deleteCategory: (id: string) => Promise<PromptCategoriesAck>;
   /** Apply a previewed import with the chosen conflict strategy. */
   importPrompts: (
     scope: PromptScope,
@@ -157,6 +163,42 @@ export function usePromptStore(): PromptStore {
     [bridge, scopePayload, reload],
   );
 
+  /**
+   * The three category writes.
+   *
+   * Each answers with the full list, which is set straight away rather than
+   * waiting for the next reload: the sidebar is what the user just acted on, so
+   * it is the thing that must not lag.
+   */
+  const applyCategoryAck = useCallback((ack: PromptCategoriesAck) => {
+    if (ack?.status !== 'error' && ack?.categories) setCategories(ack.categories);
+    return ack;
+  }, []);
+
+  const createCategory = useCallback(
+    async (name: string) =>
+      applyCategoryAck(
+        (await bridge.send(MessageType.CREATE_PROMPT_CATEGORY, { name })) as PromptCategoriesAck,
+      ),
+    [bridge, applyCategoryAck],
+  );
+
+  const renameCategory = useCallback(
+    async (id: string, name: string) =>
+      applyCategoryAck(
+        (await bridge.send(MessageType.RENAME_PROMPT_CATEGORY, { id, name })) as PromptCategoriesAck,
+      ),
+    [bridge, applyCategoryAck],
+  );
+
+  const deleteCategory = useCallback(
+    async (id: string) =>
+      applyCategoryAck(
+        (await bridge.send(MessageType.DELETE_PROMPT_CATEGORY, { id })) as PromptCategoriesAck,
+      ),
+    [bridge, applyCategoryAck],
+  );
+
   const exportPrompts = useCallback(
     async (scope: PromptScope, ids: string[]) =>
       (await bridge.send(MessageType.EXPORT_PROMPTS, {
@@ -196,6 +238,9 @@ export function usePromptStore(): PromptStore {
     create,
     update,
     remove,
+    createCategory,
+    renameCategory,
+    deleteCategory,
     exportPrompts,
     previewImport,
     importPrompts,

@@ -297,6 +297,10 @@
     "searchPlaceholder": "البحث في المطالبات",
     "categoryLabel": "الفئة",
     "uncategorised": "بدون فئة",
-    "noCategories": "لا توجد فئات بعد. أضف واحدة من الشريط الجانبي."
+    "noCategories": "لا توجد فئات بعد. أضف واحدة من الشريط الجانبي.",
+    "allCategories": "الكل",
+    "addCategory": "إضافة فئة",
+    "deleteCategoryTitle": "حذف الفئة",
+    "deleteCategoryMessage": "هل تريد حذف \"{{name}}\"؟ ستبقى مطالباتها وتصبح بدون فئة."
   }
 }

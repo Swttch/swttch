@@ -293,6 +293,10 @@
     "searchPlaceholder": "搜索提示词",
     "categoryLabel": "分类",
     "uncategorised": "未分类",
-    "noCategories": "还没有分类。请在侧边栏添加。"
+    "noCategories": "还没有分类。请在侧边栏添加。",
+    "allCategories": "全部",
+    "addCategory": "添加分类",
+    "deleteCategoryTitle": "删除分类",
+    "deleteCategoryMessage": "要删除“{{name}}”吗？提示词会保留并变为未分类。"
   }
 }

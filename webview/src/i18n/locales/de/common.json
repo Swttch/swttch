@@ -293,6 +293,10 @@
     "searchPlaceholder": "Prompts suchen",
     "categoryLabel": "Kategorie",
     "uncategorised": "Ohne Kategorie",
-    "noCategories": "Noch keine Kategorien. Füge eine in der Seitenleiste hinzu."
+    "noCategories": "Noch keine Kategorien. Füge eine in der Seitenleiste hinzu.",
+    "allCategories": "Alle",
+    "addCategory": "Kategorie hinzufügen",
+    "deleteCategoryTitle": "Kategorie löschen",
+    "deleteCategoryMessage": "„{{name}}“ löschen? Die Prompts bleiben und werden ohne Kategorie."
   }
 }

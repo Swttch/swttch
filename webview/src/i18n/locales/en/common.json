@@ -293,6 +293,10 @@
     "searchPlaceholder": "Search prompts",
     "categoryLabel": "Category",
     "uncategorised": "Uncategorised",
-    "noCategories": "No categories yet. Add one in the sidebar."
+    "noCategories": "No categories yet. Add one in the sidebar.",
+    "allCategories": "All",
+    "addCategory": "Add category",
+    "deleteCategoryTitle": "Delete category",
+    "deleteCategoryMessage": "Remove \"{{name}}\"? Its prompts are kept and become uncategorised."
   }
 }

@@ -13,6 +13,13 @@ import { usePromptStore } from './usePromptStore';
 import { PromptList, buildPromptRows, matchesPromptQuery } from './PromptList';
 import { PromptForm } from './PromptForm';
 import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
+import { PromptCategorySidebar, buildSidebarRows } from './PromptCategorySidebar';
+import {
+  ALL_CATEGORIES,
+  matchesCategorySelection,
+  countByCategory,
+  type CategorySelection,
+} from '@/utils/promptCategories';
 
 interface Props {
   onClose: () => void;
@@ -81,13 +88,55 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
    * the `!!` panel matches.
    */
   const [query, setQuery] = useState('');
+  /** Which sidebar row is chosen. Opens on "all", which is the whole library. */
+  const [selectedCategory, setSelectedCategory] = useState<CategorySelection>(ALL_CATEGORIES);
+  /**
+   * Which of the two columns the arrows act on.
+   *
+   * Up and down move within a column and left and right move between them, so
+   * something has to remember which column "within" means. Left and right are
+   * the natural pair for a two-column screen, and the alternative — making the
+   * lists and the sidebar fight over the same two keys — has no right answer.
+   */
+  const [focusedPane, setFocusedPane] = useState<'categories' | 'prompts'>('prompts');
+  /**
+   * The same value, readable the instant it is set.
+   *
+   * The key handler runs off a closure over state, so a Right immediately
+   * followed by a Down — one intent, two keys, and easily inside one frame —
+   * had the Down still acting on the column the Right had just left.
+   */
+  const focusedPaneRef = useRef(focusedPane);
+  const focusPane = (pane: 'categories' | 'prompts') => {
+    focusedPaneRef.current = pane;
+    setFocusedPane(pane);
+  };
+  /** True while a category name is being typed, so the arrows leave the caret alone. */
+  const [renamingCategory, setRenamingCategory] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // The cards in the order they are drawn, which is also the order the arrow
   // keys walk. Built from one definition so the two cannot disagree.
-  const globalPrompts = store.globalPrompts.filter((p) => matchesPromptQuery(p, query));
-  const projectPrompts = store.projectPrompts.filter((p) => matchesPromptQuery(p, query));
+  // Both narrowings, in the order the user applies them: the sidebar says which
+  // part of the library is on screen, the search box then finds within it.
+  const inCategory = (prompt: SavedPrompt) =>
+    matchesCategorySelection(prompt, selectedCategory, store.categories) &&
+    matchesPromptQuery(prompt, query);
+  const globalPrompts = store.globalPrompts.filter(inCategory);
+  const projectPrompts = store.projectPrompts.filter(inCategory);
   const rows = buildPromptRows(globalPrompts, projectPrompts);
+
+  // Counted over everything, not over what the search left: a count that moved
+  // as the user typed would stop meaning "how much is in here".
+  const counts = countByCategory([...store.globalPrompts, ...store.projectPrompts], store.categories);
+  const sidebarRows = buildSidebarRows(store.categories, counts, {
+    all: t('promptLibrary.allCategories'),
+    uncategorised: t('promptLibrary.uncategorised'),
+  });
+  const selectedCategoryIndex = Math.max(
+    0,
+    sidebarRows.findIndex((row) => row.key === selectedCategory),
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // A reload can shorten the list under the selection — deleting the last card
@@ -244,9 +293,39 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
 
       // Arrow navigation belongs to the list only. While a form is open the
       // arrows move the caret inside the name and content fields, which is what
-      // the user means by them there.
-      if (view.kind !== 'list' || formBusy || rows.length === 0) return;
+      // the user means by them there — and the same goes for a category name
+      // being typed in the sidebar.
+      if (view.kind !== 'list' || formBusy || renamingCategory) return;
 
+      // Left and right cross between the two columns; up and down move within
+      // whichever one they last crossed into.
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        focusPane('categories');
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        focusPane('prompts');
+        return;
+      }
+
+      if (focusedPaneRef.current === 'categories') {
+        if (sidebarRows.length === 0) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const step = e.key === 'ArrowDown' ? 1 : -1;
+          const next =
+            (selectedCategoryIndex + step + sidebarRows.length) % sidebarRows.length;
+          setSelectedCategory(sidebarRows[next]?.key ?? ALL_CATEGORIES);
+          // A different slice of the library is on screen, so the highlight in
+          // the other column has nothing to do with where it was.
+          setSelectedIndex(0);
+        }
+        return;
+      }
+
+      if (rows.length === 0) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setSelectedIndex((prev) => (Math.min(prev, rows.length - 1) + 1) % rows.length);
@@ -265,7 +344,31 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, view, formBusy, rows.length, selectedRow]);
+  }, [
+    onClose,
+    view,
+    formBusy,
+    rows.length,
+    selectedRow,
+    focusedPane,
+    renamingCategory,
+    sidebarRows,
+    selectedCategoryIndex,
+  ]);
+
+  /** Remove a category, after asking. Its prompts are kept. */
+  const handleDeleteCategory = async (category: { id: string; name: string }) => {
+    const confirmed = await confirm({
+      title: t('promptLibrary.deleteCategoryTitle'),
+      message: t('promptLibrary.deleteCategoryMessage', { name: category.name }),
+      confirmLabel: t('promptLibrary.delete'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await store.deleteCategory(category.id);
+    // The row the user was standing on is gone; "all" is where it goes back to.
+    setSelectedCategory((current) => (current === category.id ? ALL_CATEGORIES : current));
+  };
 
   const handleCreate = async (
     scope: PromptScope,
@@ -361,7 +464,24 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               </div>
             )}
             {isListView && !store.loading && !store.error && (
-              <PromptList
+              /* Two columns from `sm` up, stacked below it. The sidebar decides
+                 which slice of the library the lists show, so it sits beside
+                 them rather than above the search box that narrows within it. */
+              <div className="flex min-h-0 flex-1 flex-col px-4 sm:flex-row sm:gap-3">
+                <PromptCategorySidebar
+                  rows={sidebarRows}
+                  selected={selectedCategory}
+                  onSelect={(key) => {
+                    setSelectedCategory(key);
+                    setSelectedIndex(0);
+                    focusPane('categories');
+                  }}
+                  onCreate={(name) => store.createCategory(name)}
+                  onRename={(id, name) => store.renameCategory(id, name)}
+                  onDelete={(category) => void handleDeleteCategory(category)}
+                  onEditingChange={setRenamingCategory}
+                />
+                <PromptList
                 globalPrompts={globalPrompts}
                 projectPrompts={projectPrompts}
                 projectAvailable={store.projectAvailable}
@@ -373,7 +493,8 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
                 onExport={(scope) => openExport(scope)}
                 onImport={(scope) => void openImport(scope)}
                 onCreate={(scope) => setView({ kind: 'create', scope })}
-              />
+                />
+              </div>
             )}
             {isListView && transferNote && (
               <p className="flex-shrink-0 px-4 pb-2 text-xs text-text-tertiary">{transferNote}</p>

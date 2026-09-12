@@ -293,6 +293,10 @@
     "searchPlaceholder": "프롬프트 검색",
     "categoryLabel": "카테고리",
     "uncategorised": "미분류",
-    "noCategories": "아직 카테고리가 없습니다. 사이드바에서 추가하세요."
+    "noCategories": "아직 카테고리가 없습니다. 사이드바에서 추가하세요.",
+    "allCategories": "전체",
+    "addCategory": "카테고리 추가",
+    "deleteCategoryTitle": "카테고리 삭제",
+    "deleteCategoryMessage": "\"{{name}}\"을 삭제할까요? 프롬프트는 남고 미분류가 됩니다."
   }
 }

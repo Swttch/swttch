@@ -315,7 +315,7 @@ export function PromptList(props: Props) {
      * inside itself, so both headings and some of both lists are always on
      * screen.
      */
-    <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-2">
+    <div ref={scrollRef} className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto py-2">
       <PromptSection
         title={t('promptLibrary.globalSection')}
         scope="global"

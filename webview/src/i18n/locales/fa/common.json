@@ -293,6 +293,10 @@
     "searchPlaceholder": "جستجوی پرامپت‌ها",
     "categoryLabel": "دسته",
     "uncategorised": "بدون دسته",
-    "noCategories": "هنوز دسته‌ای نیست. از نوار کناری اضافه کنید."
+    "noCategories": "هنوز دسته‌ای نیست. از نوار کناری اضافه کنید.",
+    "allCategories": "همه",
+    "addCategory": "افزودن دسته",
+    "deleteCategoryTitle": "حذف دسته",
+    "deleteCategoryMessage": "«{{name}}» حذف شود؟ پرامپت‌هایش می‌مانند و بدون دسته می‌شوند."
   }
 }

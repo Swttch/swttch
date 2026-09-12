@@ -293,6 +293,10 @@
     "searchPlaceholder": "Buscar prompts",
     "categoryLabel": "Categoria",
     "uncategorised": "Sem categoria",
-    "noCategories": "Ainda não há categorias. Adicione uma na barra lateral."
+    "noCategories": "Ainda não há categorias. Adicione uma na barra lateral.",
+    "allCategories": "Tudo",
+    "addCategory": "Adicionar categoria",
+    "deleteCategoryTitle": "Excluir categoria",
+    "deleteCategoryMessage": "Excluir \"{{name}}\"? Os prompts são mantidos e ficam sem categoria."
   }
 }

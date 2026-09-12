@@ -295,6 +295,10 @@
     "searchPlaceholder": "Поиск промптов",
     "categoryLabel": "Категория",
     "uncategorised": "Без категории",
-    "noCategories": "Категорий пока нет. Добавьте их на боковой панели."
+    "noCategories": "Категорий пока нет. Добавьте их на боковой панели.",
+    "allCategories": "Все",
+    "addCategory": "Добавить категорию",
+    "deleteCategoryTitle": "Удалить категорию",
+    "deleteCategoryMessage": "Удалить «{{name}}»? Промпты останутся и станут без категории."
   }
 }

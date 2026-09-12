@@ -293,6 +293,10 @@
     "searchPlaceholder": "プロンプトを検索",
     "categoryLabel": "カテゴリ",
     "uncategorised": "未分類",
-    "noCategories": "カテゴリがまだありません。サイドバーで追加してください。"
+    "noCategories": "カテゴリがまだありません。サイドバーで追加してください。",
+    "allCategories": "すべて",
+    "addCategory": "カテゴリを追加",
+    "deleteCategoryTitle": "カテゴリを削除",
+    "deleteCategoryMessage": "「{{name}}」を削除しますか？プロンプトは残り、未分類になります。"
   }
 }
