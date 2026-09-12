@@ -35,6 +35,7 @@ import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/command
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { displayShortcut } from '@/utils/shortcut';
+import type { ScopedPrompt } from '@/types/prompt';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
@@ -79,6 +80,9 @@ interface NativeDropEntry {
 
 export function ChatInput() {
   const { t } = useTranslation('chat');
+  // The library's own strings live in the common namespace, and the delete
+  // question must read the same here as it does inside the library.
+  const { t: tCommon } = useTranslation('common');
   const { textareaRef } = useChatInputFocus();
   const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
@@ -368,6 +372,40 @@ export function ChatInput() {
       );
     },
   });
+
+
+  /**
+   * Open the library on this prompt's edit screen.
+   *
+   * The panel closes first: the editor is a modal over the composer, and a
+   * dropdown left hanging under it would outlive the token that opened it.
+   */
+  const editSavedPrompt = useCallback(
+    (prompt: ScopedPrompt) => {
+      promptLibrary.close();
+      window.dispatchEvent(
+        new CustomEvent<OpenPromptLibraryDetail>(OPEN_PROMPT_LIBRARY_EVENT, {
+          detail: { view: 'list', edit: { scope: prompt.scope, prompt } },
+        }),
+      );
+    },
+    [promptLibrary],
+  );
+
+  /** Remove a prompt from the panel, after asking. Deleting cannot be undone. */
+  const deleteSavedPrompt = useCallback(
+    async (prompt: ScopedPrompt) => {
+      const confirmed = await confirm({
+        title: tCommon('promptLibrary.deleteTitle'),
+        message: tCommon('promptLibrary.deleteMessage', { name: prompt.name }),
+        confirmLabel: tCommon('promptLibrary.delete'),
+        variant: 'danger',
+      });
+      if (!confirmed) return;
+      await promptLibrary.deletePrompt(prompt);
+    },
+    [confirm, tCommon, promptLibrary],
+  );
 
   // Backend pushes EDITOR_CONTEXT (the file the user is viewing + selection)
   // → insert `relativePath[#L..]` at the composer caret.
@@ -849,6 +887,8 @@ export function ChatInput() {
               isLoading={promptLibrary.isLoading}
               hasLoaded={promptLibrary.hasLoaded}
               onSelect={promptLibrary.selectRow}
+              onEdit={editSavedPrompt}
+              onDelete={(prompt) => void deleteSavedPrompt(prompt)}
               onClose={promptLibrary.close}
             />
           </div>

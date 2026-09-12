@@ -122,7 +122,9 @@
       "createPrompt": "Создать промпт",
       "scopeProject": "Проект",
       "scopeGlobal": "Глобально",
-      "closeAriaLabel": "Закрыть библиотеку промптов"
+      "closeAriaLabel": "Закрыть библиотеку промптов",
+      "editPrompt": "Изменить",
+      "deletePrompt": "Удалить"
     }
   },
   "sessionHeader": {

@@ -1,4 +1,5 @@
 import { IconType } from '@/types/commandPalette';
+import type { PromptScope, SavedPrompt } from '@/types/prompt';
 import { i18n } from '@/i18n';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
@@ -26,6 +27,13 @@ export const OPEN_PROMPT_LIBRARY_EVENT = 'command-palette:open-prompt-library';
 
 export interface OpenPromptLibraryDetail {
   view?: 'list' | 'create';
+  /**
+   * Open straight on the edit screen for this prompt.
+   *
+   * The `!!` panel edits a prompt without leaving the composer, and the editor
+   * is the library's, so the panel names what to edit and the library shows it.
+   */
+  edit?: { scope: PromptScope; prompt: SavedPrompt };
 }
 
 /**

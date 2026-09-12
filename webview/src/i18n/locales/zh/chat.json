@@ -122,7 +122,9 @@
       "createPrompt": "新建提示词",
       "scopeProject": "项目",
       "scopeGlobal": "全局",
-      "closeAriaLabel": "关闭提示词库"
+      "closeAriaLabel": "关闭提示词库",
+      "editPrompt": "编辑",
+      "deletePrompt": "删除"
     }
   },
   "sessionHeader": {

@@ -12,7 +12,7 @@ const row = (id: string, name: string, content: string, scope: 'global' | 'proje
   prompt: { id, name, content, scope, createdAt: 1, updatedAt: 1 },
 });
 
-function renderPanel(rows: PromptRow[]) {
+function renderPanel(rows: PromptRow[], overrides: Partial<React.ComponentProps<typeof PromptDropdown>> = {}) {
   return render(
     <PromptDropdown
       rows={rows}
@@ -20,7 +20,10 @@ function renderPanel(rows: PromptRow[]) {
       isLoading={false}
       hasLoaded
       onSelect={vi.fn()}
+      onEdit={vi.fn()}
+      onDelete={vi.fn()}
       onClose={vi.fn()}
+      {...overrides}
     />,
   );
 }
@@ -114,6 +117,46 @@ describe('PromptDropdown', () => {
       const body = document.querySelector('.whitespace-pre-wrap');
       expect(body).not.toBeNull();
       expect(body?.textContent).toBe(content);
+    });
+  });
+
+  /**
+   * The row is itself a <button>, so its two actions are spans with a button
+   * role. mousedown rather than click, because the composer's blur must not fire
+   * first — the same reason the row uses mousedown to select.
+   */
+  describe('a row can be edited and deleted from the panel', () => {
+    it('names the prompt to edit and does not also select it', () => {
+      const onEdit = vi.fn();
+      const onSelect = vi.fn();
+      renderPanel([row('p1', '시작', 'body', 'global')], { onEdit, onSelect });
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: 'Edit' }));
+
+      expect(onEdit).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'p1', scope: 'global' }),
+      );
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('names the prompt to delete and does not also select it', () => {
+      const onDelete = vi.fn();
+      const onSelect = vi.fn();
+      renderPanel([row('p1', '시작', 'body', 'project')], { onDelete, onSelect });
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(onDelete).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'p1', scope: 'project' }),
+      );
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    // The create row has no prompt behind it, so it has nothing to edit.
+    it('offers neither on the create row', () => {
+      renderPanel([{ kind: 'create' }]);
+      expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
     });
   });
 });

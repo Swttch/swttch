@@ -69,6 +69,11 @@ interface UsePromptLibraryReturn {
   detectPrompt: (value: string, caretPosition: number) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => boolean;
   selectRow: (index: number) => void;
+  /**
+   * Remove one prompt and re-read the list, so the row disappears from the open
+   * panel rather than waiting for the next time it is opened.
+   */
+  deletePrompt: (prompt: ScopedPrompt) => Promise<void>;
   close: () => void;
 }
 
@@ -152,6 +157,18 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
         setState(prev => ({ ...prev, isLoading: false, hasLoaded: true }));
       });
   }, [bridge, workingDirectory]);
+
+  const deletePrompt = useCallback(
+    async (prompt: ScopedPrompt) => {
+      await bridge.send(MessageType.DELETE_PROMPT, {
+        scope: prompt.scope,
+        ...(prompt.scope === 'project' ? { workingDir: workingDirectory } : {}),
+        id: prompt.id,
+      });
+      load();
+    },
+    [bridge, workingDirectory, load],
+  );
 
   const detectPrompt = useCallback(
     (newValue: string, caretPosition: number) => {
@@ -299,6 +316,7 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     detectPrompt,
     handleKeyDown,
     selectRow,
+    deletePrompt,
     close,
   };
 }

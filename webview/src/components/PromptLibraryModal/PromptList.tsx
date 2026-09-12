@@ -214,11 +214,12 @@ function PromptSection(props: SectionProps) {
                   </span>
                 </Tooltip>
               </button>
-              {/* Edit and delete as their own buttons, the way the session
-                  dropdown does it: two everyday actions are one click each
-                  rather than two, and the row stays quiet until pointed at.
-                  Focus reveals them too, so the keyboard can still reach them. */}
-              <span className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              {/* Edit and delete as their own buttons: two everyday actions are
+                  one click each rather than two. They stay on screen here,
+                  unlike in the `!!` panel, because this is the screen a user
+                  opens in order to tend the library — hiding its only two verbs
+                  until the pointer finds them would be hiding the point. */}
+              <span className="flex flex-shrink-0 items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => onEdit(scope, prompt)}

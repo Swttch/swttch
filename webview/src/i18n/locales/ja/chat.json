@@ -122,7 +122,9 @@
       "createPrompt": "プロンプトを作成",
       "scopeProject": "プロジェクト",
       "scopeGlobal": "グローバル",
-      "closeAriaLabel": "プロンプトライブラリを閉じる"
+      "closeAriaLabel": "プロンプトライブラリを閉じる",
+      "editPrompt": "編集",
+      "deletePrompt": "削除"
     }
   },
   "sessionHeader": {

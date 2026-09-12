@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
+import { PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
+import type { ScopedPrompt } from '@/types/prompt';
 import type { PromptRow } from './hooks/usePromptLibrary';
 
 interface Props {
@@ -10,6 +12,10 @@ interface Props {
   /** True once a load has resolved, so "no prompts yet" is only shown when true. */
   hasLoaded: boolean;
   onSelect: (index: number) => void;
+  /** Open this prompt's edit screen in the library, without leaving the composer. */
+  onEdit: (prompt: ScopedPrompt) => void;
+  /** Remove this prompt, after asking. */
+  onDelete: (prompt: ScopedPrompt) => void;
   onClose: () => void;
 }
 
@@ -32,7 +38,7 @@ function preview(content: string): string {
  * defect on its own (issue #314).
  */
 export function PromptDropdown(props: Props) {
-  const { rows, selectedIndex, isLoading, hasLoaded, onSelect, onClose } = props;
+  const { rows, selectedIndex, isLoading, hasLoaded, onSelect, onEdit, onDelete, onClose } = props;
   const { t } = useTranslation('chat');
 
   const listRef = useRef<HTMLUListElement>(null);
@@ -65,7 +71,7 @@ export function PromptDropdown(props: Props) {
               <li key={row.kind === 'prompt' ? row.prompt.id : 'create'}>
                 <button
                   type="button"
-                  className={`w-full px-3 py-1.5 text-start text-xs flex items-center gap-2 ${
+                  className={`group/row flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs ${
                     index === selectedIndex
                       ? 'bg-surface-selected text-text-primary'
                       : 'text-text-secondary hover:bg-surface-selected/60'
@@ -112,10 +118,49 @@ export function PromptDropdown(props: Props) {
                           {preview(row.prompt.content)}
                         </span>
                       </Tooltip>
-                      <span className="flex-shrink-0 text-text-tertiary">
-                        {row.prompt.scope === 'project'
-                          ? t('chatInput.promptDropdown.scopeProject')
-                          : t('chatInput.promptDropdown.scopeGlobal')}
+                      {/* The scope label and the two actions share one slot:
+                          the label says where the prompt lives, which matters
+                          while reading the list, and the actions matter only
+                          once the pointer has settled on a row. Swapping them
+                          keeps the row one line wide either way. */}
+                      <span className="relative flex-shrink-0 text-text-tertiary">
+                        <span className="group-hover/row:invisible">
+                          {row.prompt.scope === 'project'
+                            ? t('chatInput.promptDropdown.scopeProject')
+                            : t('chatInput.promptDropdown.scopeGlobal')}
+                        </span>
+                        <span className="absolute inset-y-0 end-0 hidden items-center gap-0.5 group-hover/row:flex">
+                          {/* Rendered as spans: this sits inside the row's own
+                              <button>, and a button may not contain a button. */}
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            title={t('chatInput.promptDropdown.editPrompt')}
+                            aria-label={t('chatInput.promptDropdown.editPrompt')}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onEdit(row.prompt);
+                            }}
+                            className="rounded p-0.5 text-text-tertiary transition-colors hover:text-text-primary"
+                          >
+                            <PencilSquareIcon className="h-3.5 w-3.5" />
+                          </span>
+                          <span
+                            role="button"
+                            tabIndex={-1}
+                            title={t('chatInput.promptDropdown.deletePrompt')}
+                            aria-label={t('chatInput.promptDropdown.deletePrompt')}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onDelete(row.prompt);
+                            }}
+                            className="rounded p-0.5 text-text-tertiary transition-colors hover:text-state-error-fg"
+                          >
+                            <TrashIcon className="h-3.5 w-3.5" />
+                          </span>
+                        </span>
                       </span>
                     </>
                   )}

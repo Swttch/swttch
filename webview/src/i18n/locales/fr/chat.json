@@ -122,7 +122,9 @@
       "createPrompt": "Créer un prompt",
       "scopeProject": "Projet",
       "scopeGlobal": "Global",
-      "closeAriaLabel": "Fermer la bibliothèque de prompts"
+      "closeAriaLabel": "Fermer la bibliothèque de prompts",
+      "editPrompt": "Modifier",
+      "deletePrompt": "Supprimer"
     }
   },
   "sessionHeader": {

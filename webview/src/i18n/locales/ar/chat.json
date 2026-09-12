@@ -122,7 +122,9 @@
       "createPrompt": "إنشاء مطالبة",
       "scopeProject": "المشروع",
       "scopeGlobal": "عام",
-      "closeAriaLabel": "إغلاق مكتبة المطالبات"
+      "closeAriaLabel": "إغلاق مكتبة المطالبات",
+      "editPrompt": "تعديل",
+      "deletePrompt": "حذف"
     }
   },
   "sessionHeader": {

@@ -18,6 +18,8 @@ interface Props {
   onClose: () => void;
   /** Open straight on the create screen, for the "create" row of the `!!` panel. */
   initialView?: 'list' | 'create';
+  /** Open straight on this prompt's edit screen, for a `!!` panel row's pencil. */
+  initialEdit?: { scope: PromptScope; prompt: SavedPrompt };
 }
 
 type View =
@@ -44,7 +46,7 @@ type TransferState =
  * for mid-conversation — the same way they reach for MCP servers. Its chrome
  * deliberately mirrors {@link McpModal} so the two read as one kind of screen.
  */
-export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
+export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit }: Props) {
   const { t } = useTranslation('common');
   const { workingDirectory } = useWorkingDir();
   const { confirmDialog, confirm } = useConfirmDialog();
@@ -55,9 +57,10 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
   // scope to name, and global is the answer for it: a prompt reached for from
   // the composer is usually one the user wants everywhere, and project scope
   // does not exist at all when no project is open.
-  const [view, setView] = useState<View>(
-    initialView === 'create' ? { kind: 'create', scope: 'global' } : { kind: 'list' },
-  );
+  const [view, setView] = useState<View>(() => {
+    if (initialEdit) return { kind: 'edit', scope: initialEdit.scope, prompt: initialEdit.prompt };
+    return initialView === 'create' ? { kind: 'create', scope: 'global' } : { kind: 'list' };
+  });
   const [formBusy, setFormBusy] = useState(false);
   /**
    * The transfer screen on top of the library, or null when none is open.

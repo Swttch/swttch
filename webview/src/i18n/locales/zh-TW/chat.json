@@ -122,7 +122,9 @@
       "createPrompt": "新增提示詞",
       "scopeProject": "專案",
       "scopeGlobal": "全域",
-      "closeAriaLabel": "關閉提示詞庫"
+      "closeAriaLabel": "關閉提示詞庫",
+      "editPrompt": "編輯",
+      "deletePrompt": "刪除"
     }
   },
   "sessionHeader": {

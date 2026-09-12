@@ -70,7 +70,13 @@ function ChatPageContent() {
   const queryClient = useQueryClient();
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   // Which screen the prompt library opens on, or null while it is closed.
-  const [promptLibraryView, setPromptLibraryView] = useState<'list' | 'create' | null>(null);
+  /**
+   * How the prompt library should open, or null while it is closed.
+   *
+   * More than a screen name because the `!!` panel can ask for one prompt's
+   * edit screen: the panel knows which prompt, the library owns the editor.
+   */
+  const [promptLibraryOpen, setPromptLibraryOpen] = useState<OpenPromptLibraryDetail | null>(null);
   // The review being shown over this screen, when the settings ask for an
   // overlay rather than a tab. Null the rest of the time, which is every host
   // that opens a window of its own — there the review is not this screen's to
@@ -90,11 +96,12 @@ function ChatPageContent() {
   }, []);
 
   // The prompt library is opened from the palette's Context section and from the
-  // "create" row of the `!!` panel; the latter asks for the create screen.
+  // `!!` panel, which asks for the create screen from its last row and for one
+  // prompt's edit screen from a row's pencil.
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<OpenPromptLibraryDetail>).detail;
-      setPromptLibraryView(detail?.view === 'create' ? 'create' : 'list');
+      setPromptLibraryOpen({ view: detail?.view === 'create' ? 'create' : 'list', edit: detail?.edit });
     };
     window.addEventListener(OPEN_PROMPT_LIBRARY_EVENT, handler);
     return () => window.removeEventListener(OPEN_PROMPT_LIBRARY_EVENT, handler);
@@ -466,10 +473,11 @@ function ChatPageContent() {
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
-      {promptLibraryView !== null && (
+      {promptLibraryOpen !== null && (
         <PromptLibraryModal
-          initialView={promptLibraryView}
-          onClose={() => setPromptLibraryView(null)}
+          initialView={promptLibraryOpen.view ?? 'list'}
+          initialEdit={promptLibraryOpen.edit}
+          onClose={() => setPromptLibraryOpen(null)}
         />
       )}
       {/* Only while its question is still open: a prompt that has been answered

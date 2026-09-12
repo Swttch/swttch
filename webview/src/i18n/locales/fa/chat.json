@@ -122,7 +122,9 @@
       "createPrompt": "ساختن پرامپت",
       "scopeProject": "پروژه",
       "scopeGlobal": "سراسری",
-      "closeAriaLabel": "بستن کتابخانهٔ پرامپت"
+      "closeAriaLabel": "بستن کتابخانهٔ پرامپت",
+      "editPrompt": "ویرایش",
+      "deletePrompt": "حذف"
     }
   },
   "sessionHeader": {
