@@ -13,6 +13,16 @@
     "update": "Mettre à jour",
     "skip": "Ignorer"
   },
+  "whatsNew": {
+    "title": "Nouveautés",
+    "promo": "Ce plugin est 100 % notre propre travail, open source et gratuit.",
+    "star": "Star",
+    "close": "Fermer",
+    "newer": "Version plus récente",
+    "older": "Version antérieure",
+    "unknownDate": "Date inconnue",
+    "noNotes": "Aucune note de version."
+  },
   "telemetry": {
     "title": "Autoriser la collecte de statistiques d'utilisation pour améliorer le produit ?",
     "subtitle": "Le code source et les données personnelles ne sont jamais envoyés. Vous pouvez désactiver cette option à tout moment dans les paramètres.",

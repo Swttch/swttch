@@ -13,6 +13,16 @@
     "update": "Update",
     "skip": "Skip"
   },
+  "whatsNew": {
+    "title": "What's New",
+    "promo": "This plugin is 100% our own work, open source and free.",
+    "star": "Star",
+    "close": "Close",
+    "newer": "Newer release",
+    "older": "Older release",
+    "unknownDate": "Unknown date",
+    "noNotes": "No release notes."
+  },
   "telemetry": {
     "title": "Allow collecting usage statistics to improve the product?",
     "subtitle": "Source code and personal data are never sent. You can turn this off anytime in settings.",

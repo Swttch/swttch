@@ -13,6 +13,16 @@
     "update": "Aktualisieren",
     "skip": "Überspringen"
   },
+  "whatsNew": {
+    "title": "Neuigkeiten",
+    "promo": "Dieses Plugin ist zu 100 % Eigenentwicklung, quelloffen und kostenlos.",
+    "star": "Star",
+    "close": "Schließen",
+    "newer": "Neuere Version",
+    "older": "Ältere Version",
+    "unknownDate": "Unbekanntes Datum",
+    "noNotes": "Keine Versionshinweise."
+  },
   "telemetry": {
     "title": "Nutzungsstatistiken zur Produktverbesserung erlauben?",
     "subtitle": "Quellcode und persönliche Daten werden niemals gesendet. Du kannst dies jederzeit in den Einstellungen deaktivieren.",

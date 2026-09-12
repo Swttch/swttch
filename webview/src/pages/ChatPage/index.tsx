@@ -19,6 +19,7 @@ import { McpModal } from '@/components/McpModal';
 import { DiffOverlay } from '../DiffPage/DiffOverlay';
 import { CHAT_FOOTER_ID } from './chatFooter';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
+import { WhatsNewSlot } from '@/components/WhatsNewModal/WhatsNewSlot';
 import { OPEN_MCP_MODAL_EVENT } from '@/commandPalette/sections/customize/items';
 import {
   OPEN_PROMPT_LIBRARY_EVENT,
@@ -490,6 +491,7 @@ function ChatPageContent() {
         />
       )}
       <AnnouncementModalSlot />
+      <WhatsNewSlot />
     </div>
   );
 }

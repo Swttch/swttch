@@ -13,6 +13,16 @@
     "update": "Actualizar",
     "skip": "Omitir"
   },
+  "whatsNew": {
+    "title": "Novedades",
+    "promo": "Este complemento es 100 % obra propia, de código abierto y gratuito.",
+    "star": "Estrella",
+    "close": "Cerrar",
+    "newer": "Versión más reciente",
+    "older": "Versión anterior",
+    "unknownDate": "Fecha desconocida",
+    "noNotes": "No hay notas de la versión."
+  },
   "telemetry": {
     "title": "¿Permitir la recopilación de estadísticas de uso para mejorar el producto?",
     "subtitle": "El código fuente y los datos personales nunca se envían. Puedes desactivarlo en cualquier momento desde la configuración.",
