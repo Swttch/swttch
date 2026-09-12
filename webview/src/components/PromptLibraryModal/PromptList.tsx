@@ -3,9 +3,11 @@ import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   BookmarkIcon,
-  EllipsisVerticalIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline';
+// Solid rather than outline: the outline ellipsis is three thin rings, which
+// wash out at this size. SendActionMenu reaches for the same one.
+import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
@@ -242,13 +244,13 @@ function PromptSection(props: SectionProps) {
                 <button
                   type="button"
                   onClick={() => setOpenMenuId(openMenuId === prompt.id ? null : prompt.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-hover"
                   title={t('promptLibrary.menu')}
                   aria-label={t('promptLibrary.menu')}
                   aria-haspopup="true"
                   aria-expanded={openMenuId === prompt.id}
                 >
-                  <EllipsisVerticalIcon className="w-4 h-4" />
+                  <EllipsisVerticalIcon className="h-5 w-5" />
                 </button>
                 {openMenuId === prompt.id && (
                   <div
