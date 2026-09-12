@@ -32,13 +32,17 @@ class OpenClaudeCodeAction : AnAction() {
          * action's job (issue #180).
          */
         fun openOrFocus(project: Project) {
-            val state = EditorTabStateService.getInstance(project)
-            val tabId = ChatHostRouter.planOpen(
-                state.getOpenTabIds(),
-                state.getActiveTabId(),
-                UUID.randomUUID().toString(),
-            )
-            openTab(project, tabId)
+            // useFromEdt, not getInstance: this runs on the EDT and can be the first
+            // thing to touch the service — creating it here throws on a WSL project
+            // (issue #438, documented on EditorTabStateService.getInstanceIfCreated).
+            EditorTabStateService.useFromEdt(project) { state ->
+                val tabId = ChatHostRouter.planOpen(
+                    state.getOpenTabIds(),
+                    state.getActiveTabId(),
+                    UUID.randomUUID().toString(),
+                )
+                openTab(project, tabId)
+            }
         }
 
         /**

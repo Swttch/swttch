@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
@@ -189,8 +190,97 @@ class EditorTabStateService : PersistentStateComponent<EditorTabStateService.Edi
 
         private const val SESSIONS_PREFIX = "/sessions/"
 
+        /**
+         * The service, creating it on this thread if the platform has not yet.
+         *
+         * **Never call this from the EDT on a path that may run before the project
+         * has finished opening** — use [getInstanceIfCreated] there. Creating this
+         * service is not a cheap object allocation: it is a
+         * [PersistentStateComponent], so the platform reads
+         * `claudeCodeEditorTabs.xml` as part of creating it, and reading a project
+         * XML expands path macros, which asks every
+         * `ProjectWidePathMacroContributor` in the IDE for its macros. See
+         * [getInstanceIfCreated] for what goes wrong when that runs on the EDT.
+         */
         fun getInstance(project: Project): EditorTabStateService =
             project.getService(EditorTabStateService::class.java)
+
+        /**
+         * The service **only if the platform already created it**, and null while
+         * it has not.
+         *
+         * ## Why this exists (issue #438)
+         *
+         * Creating this service on the EDT crashed the IDE's error reporter for a
+         * user whose project lived in WSL. The chain is entirely inside the
+         * platform, so nothing about our own code looks dangerous at the call site:
+         *
+         * 1. creating the service makes the platform load `claudeCodeEditorTabs.xml`;
+         * 2. loading a project XML expands path macros;
+         * 3. expanding them calls every `ProjectWidePathMacroContributor`, one of
+         *    which is the Maven plugin's;
+         * 4. the Maven one asks EEL for the local repository path, and **when the
+         *    project is not on a local file system** (WSL, remote dev, dev
+         *    containers) that call blocks;
+         * 5. blocking is forbidden on the EDT, so the platform throws
+         *    `IllegalStateException: This method is forbidden on EDT`.
+         *
+         * A local project never reaches step 5, because EEL short-circuits for a
+         * `LocalEelDescriptor` — which is why this was invisible on macOS and on a
+         * plain Windows checkout, and only ever reported from WSL.
+         *
+         * So the rule is not "avoid the Maven plugin", it is: **the EDT must never
+         * be the thread that creates this service.** Callers that can run that
+         * early ask with this method and do without the state when the answer is
+         * null, letting a background thread
+         * ([com.github.yhk1038.claudecodegui.startup.ChatHostRestoreActivity]) be
+         * the one that creates it.
+         */
+        fun getInstanceIfCreated(project: Project): EditorTabStateService? =
+            project.getServiceIfCreated(EditorTabStateService::class.java)
+
+        /**
+         * Hand [use] the service from the EDT without ever creating it there.
+         *
+         * Every entry point that can run while the project is still opening goes
+         * through this, so the rule from [getInstanceIfCreated] lives in one place
+         * instead of being re-derived at each call site. There are four such entry
+         * points and they are easy to miss, because each one reads like an ordinary
+         * service lookup:
+         *
+         *  - restoring an editor tab (`ClaudeCodeEditorProvider.createEditor`),
+         *  - resolving a tab URL (`ClaudeCodeFileSystem.findFileByPath`),
+         *  - building the tool window (`ToolWindowHost.hydrate`),
+         *  - the user opening the chat (`OpenClaudeCodeAction.openOrFocus`).
+         *
+         * [use] runs immediately, on the calling thread, whenever the service is
+         * already there — which is the normal case, since
+         * [com.github.yhk1038.claudecodegui.startup.ChatHostRestoreActivity] creates
+         * it on a background thread as the project opens. Only when that has not
+         * happened yet does the work move to a background thread and come back to
+         * the EDT, which is why [use] must be safe to run a little later.
+         */
+        internal fun useFromEdt(
+            project: Project,
+            runOffTheEdt: (Runnable) -> Unit = ::runOnPooledThread,
+            use: (EditorTabStateService) -> Unit,
+        ) {
+            val existing = getInstanceIfCreated(project)
+            if (existing != null) {
+                use(existing)
+                return
+            }
+
+            runOffTheEdt {
+                if (project.isDisposed) return@runOffTheEdt
+                val created = getInstance(project)
+                ApplicationManager.getApplication().invokeLater({ use(created) }, project.disposed)
+            }
+        }
+
+        private fun runOnPooledThread(task: Runnable) {
+            ApplicationManager.getApplication().executeOnPooledThread(task)
+        }
     }
 
     /**
