@@ -290,6 +290,9 @@
         "failed": "プロンプトを移せませんでした。"
       }
     },
-    "searchPlaceholder": "プロンプトを検索"
+    "searchPlaceholder": "プロンプトを検索",
+    "categoryLabel": "カテゴリ",
+    "categoryPlaceholder": "任意。例: デバッグ",
+    "uncategorised": "未分類"
   }
 }

@@ -294,6 +294,9 @@
         "failed": "تعذّر نقل المطالبات."
       }
     },
-    "searchPlaceholder": "البحث في المطالبات"
+    "searchPlaceholder": "البحث في المطالبات",
+    "categoryLabel": "الفئة",
+    "categoryPlaceholder": "اختياري، مثل: تصحيح الأخطاء",
+    "uncategorised": "بدون فئة"
   }
 }

@@ -104,8 +104,9 @@ export async function createPromptHandler(
   const projectPath = readProjectPath(message);
   const name = (message.payload?.name as string) ?? '';
   const content = (message.payload?.content as string) ?? '';
+  const category = message.payload?.category as string | undefined;
 
-  const result = await createPrompt(scope, projectPath, name, content);
+  const result = await createPrompt(scope, projectPath, name, content, category);
   if (result.status === 'error') {
     sendError(connections, connectionId, message, result.error);
     return;
@@ -124,8 +125,9 @@ export async function updatePromptHandler(
   const id = (message.payload?.id as string) ?? '';
   const name = (message.payload?.name as string) ?? '';
   const content = (message.payload?.content as string) ?? '';
+  const category = message.payload?.category as string | undefined;
 
-  const result = await updatePrompt(scope, projectPath, id, name, content);
+  const result = await updatePrompt(scope, projectPath, id, name, content, category);
   if (result.status === 'error') {
     sendError(connections, connectionId, message, result.error);
     return;

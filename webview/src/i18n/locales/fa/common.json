@@ -290,6 +290,9 @@
         "failed": "پرامپت‌ها منتقل نشدند."
       }
     },
-    "searchPlaceholder": "جستجوی پرامپت‌ها"
+    "searchPlaceholder": "جستجوی پرامپت‌ها",
+    "categoryLabel": "دسته",
+    "categoryPlaceholder": "اختیاری، مثلاً: اشکال‌زدایی",
+    "uncategorised": "بدون دسته"
   }
 }

@@ -11,6 +11,7 @@ import {
 import type { ConflictStrategy, ImportItem, PromptScope, SavedPrompt } from '@/types/prompt';
 import { usePromptStore } from './usePromptStore';
 import { PromptList, buildPromptRows, matchesPromptQuery } from './PromptList';
+import { existingCategories } from '@/utils/promptCategories';
 import { PromptForm } from './PromptForm';
 import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
 
@@ -85,6 +86,9 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
 
   // The cards in the order they are drawn, which is also the order the arrow
   // keys walk. Built from one definition so the two cannot disagree.
+  // Offered while writing a prompt, from both scopes: a user who groups their
+  // global prompts under "debugging" means the same thing in a project.
+  const knownCategories = existingCategories([...store.globalPrompts, ...store.projectPrompts]);
   const globalPrompts = store.globalPrompts.filter((p) => matchesPromptQuery(p, query));
   const projectPrompts = store.projectPrompts.filter((p) => matchesPromptQuery(p, query));
   const rows = buildPromptRows(globalPrompts, projectPrompts);
@@ -267,13 +271,19 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose, view, formBusy, rows.length, selectedRow]);
 
-  const handleCreate = async (scope: PromptScope, name: string, content: string) => {
-    await store.create(scope, name, content);
+  const handleCreate = async (scope: PromptScope, name: string, content: string, category: string) => {
+    await store.create(scope, name, content, category);
     setView({ kind: 'list' });
   };
 
-  const handleUpdate = async (scope: PromptScope, id: string, name: string, content: string) => {
-    await store.update(scope, id, name, content);
+  const handleUpdate = async (
+    scope: PromptScope,
+    id: string,
+    name: string,
+    content: string,
+    category: string,
+  ) => {
+    await store.update(scope, id, name, content, category);
     setView({ kind: 'list' });
   };
 
@@ -307,7 +317,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
              buttons beside a project name, and at the narrower width the name
              was the thing that gave way. */
           className={`w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
-          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(32rem, 88vh)' }}
+          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(20rem, 88vh)' }}
         >
           {isListView && (
             <>
@@ -326,19 +336,15 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               <p className="flex-shrink-0 px-4 pb-3 text-xs text-text-secondary">
                 {t('promptLibrary.description')}
               </p>
-              {/* Only once there is enough to search through: on a library of
-                  three, a search box is one more thing to read past. */}
-              {store.globalPrompts.length + store.projectPrompts.length > 5 && (
-                <div className="flex-shrink-0 px-4 pb-3">
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={t('promptLibrary.searchPlaceholder')}
-                    aria-label={t('promptLibrary.searchPlaceholder')}
-                    className="w-full rounded-md border border-border-default bg-surface-base px-2 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none"
-                  />
-                </div>
-              )}
+              <div className="flex-shrink-0 px-4 pb-3">
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t('promptLibrary.searchPlaceholder')}
+                  aria-label={t('promptLibrary.searchPlaceholder')}
+                  className="w-full rounded-md border border-border-default bg-surface-base px-2 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none"
+                />
+              </div>
             </>
           )}
 
@@ -373,7 +379,10 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
             )}
             {view.kind === 'create' && (
               <PromptForm
-                onSubmit={(name, content) => handleCreate(view.scope, name, content)}
+                knownCategories={knownCategories}
+                onSubmit={(name, content, category) =>
+                  handleCreate(view.scope, name, content, category)
+                }
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}
               />
@@ -382,7 +391,10 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               <PromptForm
                 key={view.prompt.id}
                 editing={view.prompt}
-                onSubmit={(name, content) => handleUpdate(view.scope, view.prompt.id, name, content)}
+                knownCategories={knownCategories}
+                onSubmit={(name, content, category) =>
+                  handleUpdate(view.scope, view.prompt.id, name, content, category)
+                }
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}
               />

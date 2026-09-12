@@ -290,6 +290,9 @@
         "failed": "프롬프트를 옮기지 못했습니다."
       }
     },
-    "searchPlaceholder": "프롬프트 검색"
+    "searchPlaceholder": "프롬프트 검색",
+    "categoryLabel": "카테고리",
+    "categoryPlaceholder": "선택. 예: 디버깅",
+    "uncategorised": "미분류"
   }
 }

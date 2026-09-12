@@ -290,6 +290,9 @@
         "failed": "Não foi possível transferir os prompts."
       }
     },
-    "searchPlaceholder": "Buscar prompts"
+    "searchPlaceholder": "Buscar prompts",
+    "categoryLabel": "Categoria",
+    "categoryPlaceholder": "Opcional, por ex. depuração",
+    "uncategorised": "Sem categoria"
   }
 }

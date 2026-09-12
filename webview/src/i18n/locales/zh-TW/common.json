@@ -290,6 +290,9 @@
         "failed": "無法轉移提示詞。"
       }
     },
-    "searchPlaceholder": "搜尋提示詞"
+    "searchPlaceholder": "搜尋提示詞",
+    "categoryLabel": "分類",
+    "categoryPlaceholder": "可選，例如：除錯",
+    "uncategorised": "未分類"
   }
 }

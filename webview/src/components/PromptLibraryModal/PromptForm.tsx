@@ -7,7 +7,9 @@ import type { SavedPrompt } from '@/types/prompt';
 interface Props {
   /** The prompt being edited, or undefined when a new one is being written. */
   editing?: SavedPrompt;
-  onSubmit: (name: string, content: string) => Promise<void>;
+  onSubmit: (name: string, content: string, category: string) => Promise<void>;
+  /** The categories already in use in this scope, offered while typing. */
+  knownCategories?: string[];
   onCancel: () => void;
   /** Reported while a save is in flight, so the modal can lock itself. */
   onBusyChange?: (busy: boolean) => void;
@@ -25,10 +27,11 @@ const VARIABLE_EXAMPLE = '{{name}}';
 interface PromptFormValues {
   name: string;
   content: string;
+  category: string;
 }
 
 /** The create/edit screen for one saved prompt, shown in place of the list. */
-export function PromptForm({ editing, onSubmit, onCancel, onBusyChange }: Props) {
+export function PromptForm({ editing, onSubmit, onCancel, onBusyChange, knownCategories = [] }: Props) {
   const { t } = useTranslation('common');
 
   const {
@@ -36,7 +39,11 @@ export function PromptForm({ editing, onSubmit, onCancel, onBusyChange }: Props)
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<PromptFormValues>({
-    defaultValues: { name: editing?.name ?? '', content: editing?.content ?? '' },
+    defaultValues: {
+      name: editing?.name ?? '',
+      content: editing?.content ?? '',
+      category: editing?.category ?? '',
+    },
   });
 
   /**
@@ -49,7 +56,7 @@ export function PromptForm({ editing, onSubmit, onCancel, onBusyChange }: Props)
     setSaveError(null);
     onBusyChange?.(true);
     try {
-      await onSubmit(values.name, values.content);
+      await onSubmit(values.name, values.content, values.category);
     } catch {
       setSaveError(t('promptLibrary.saveFailed'));
     } finally {
@@ -93,6 +100,26 @@ export function PromptForm({ editing, onSubmit, onCancel, onBusyChange }: Props)
             placeholder={t('promptLibrary.namePlaceholder')}
             className="w-full px-2 py-1.5 text-sm rounded-md bg-surface-base border border-border-default text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-border-focus"
           />
+        </label>
+
+        <label className="block">
+          <span className="mb-1 block text-xs text-text-tertiary">
+            {t('promptLibrary.categoryLabel')}
+          </span>
+          {/* A datalist rather than a picker: the category is free text, and the
+              list only offers what is already in use so near-duplicates like
+              "Debug" and "debugging" are less likely. */}
+          <input
+            {...register('category')}
+            list="prompt-category-suggestions"
+            placeholder={t('promptLibrary.categoryPlaceholder')}
+            className="w-full rounded-md border border-border-default bg-surface-base px-2 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none"
+          />
+          <datalist id="prompt-category-suggestions">
+            {knownCategories.map((category) => (
+              <option key={category} value={category} />
+            ))}
+          </datalist>
         </label>
 
         <label className="block">

@@ -40,6 +40,8 @@ function preview(content: string): string {
 export function PromptDropdown(props: Props) {
   const { rows, selectedIndex, isLoading, hasLoaded, onSelect, onEdit, onDelete, onClose } = props;
   const { t } = useTranslation('chat');
+  // The category wording belongs to the library, and must read the same here.
+  const { t: tCommon } = useTranslation('common');
 
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -68,7 +70,22 @@ export function PromptDropdown(props: Props) {
           )}
           <ul ref={listRef} className="overflow-y-auto max-h-[200px]">
             {rows.map((row, index) => (
-              <li key={row.kind === 'prompt' ? row.prompt.id : 'create'}>
+              <li
+                key={
+                  row.kind === 'prompt'
+                    ? row.prompt.id
+                    : row.kind === 'heading'
+                      ? `heading:${row.category ?? ''}`
+                      : 'create'
+                }
+              >
+                {/* A heading is drawn, not offered: the arrows step over it and
+                    it has nothing to paste. */}
+                {row.kind === 'heading' ? (
+                  <span className="block px-3 pb-0.5 pt-2 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+                    {row.category ?? tCommon('promptLibrary.uncategorised')}
+                  </span>
+                ) : (
                 <button
                   type="button"
                   className={`group/row flex w-full items-center gap-2 px-3 py-1.5 text-start text-xs ${
@@ -165,6 +182,7 @@ export function PromptDropdown(props: Props) {
                     </>
                   )}
                 </button>
+                )}
               </li>
             ))}
           </ul>

@@ -13,6 +13,11 @@ export interface SavedPrompt {
   content: string;
   createdAt: number;
   updatedAt: number;
+  /**
+   * A name the user groups this prompt under, absent for the uncategorised
+   * group. Free text, so the groupings are the user's own way of working.
+   */
+  category?: string;
 }
 
 /** A saved prompt together with the scope it was read from. */

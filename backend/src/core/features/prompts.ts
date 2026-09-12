@@ -35,6 +35,16 @@ export interface SavedPrompt {
   createdAt: number;
   /** Last edit time in epoch milliseconds. Equals createdAt until first edit. */
   updatedAt: number;
+  /**
+   * A name the user groups this prompt under, or absent for the uncategorised
+   * group.
+   *
+   * Free text rather than a fixed list: the useful groupings are the user's own
+   * way of working, and a list we picked would be wrong for most of them.
+   * Optional so a store written before categories existed reads back unchanged
+   * and needs no migration.
+   */
+  category?: string;
 }
 
 export type PromptResult =
@@ -54,6 +64,8 @@ export type PromptDeleteResult =
  * file from becoming a prompt by accident.
  */
 export const PROMPT_NAME_MAX_LENGTH = 60;
+/** Same reasoning as the name: a category sits on one heading row. */
+export const PROMPT_CATEGORY_MAX_LENGTH = 60;
 export const PROMPT_CONTENT_MAX_LENGTH = 100000;
 
 /** Ids are ours to generate, so reject anything that did not come from us. */
@@ -103,15 +115,19 @@ function parseStoredPrompts(value: unknown): SavedPrompt[] {
   for (const entry of value) {
     if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
     const candidate = entry as Record<string, unknown>;
-    const { id, name, content, createdAt, updatedAt } = candidate;
+    const { id, name, content, createdAt, updatedAt, category } = candidate;
     if (typeof id !== 'string' || !VALID_ID_PATTERN.test(id)) continue;
     if (typeof name !== 'string' || typeof content !== 'string') continue;
+    // A blank category is the same as none, so the two cannot become separate
+    // groups that both read as "uncategorised".
+    const trimmedCategory = typeof category === 'string' ? category.trim() : '';
     prompts.push({
       id,
       name,
       content,
       createdAt: typeof createdAt === 'number' ? createdAt : 0,
       updatedAt: typeof updatedAt === 'number' ? updatedAt : 0,
+      ...(trimmedCategory === '' ? {} : { category: trimmedCategory }),
     });
   }
   return prompts;
@@ -139,6 +155,14 @@ export async function readPrompts(scope: PromptScope, projectPath?: string): Pro
     console.error('[node-backend]', 'Failed to read prompts:', err);
     return [];
   }
+}
+
+function validateCategory(category: string | undefined): string | null {
+  if (category === undefined) return null;
+  if (category.trim().length > PROMPT_CATEGORY_MAX_LENGTH) {
+    return `Prompt category must be at most ${PROMPT_CATEGORY_MAX_LENGTH} characters`;
+  }
+  return null;
 }
 
 function validateNameAndContent(name: string, content: string): string | null {
@@ -198,17 +222,21 @@ export async function createPrompt(
   projectPath: string | undefined,
   name: string,
   content: string,
+  category?: string,
 ): Promise<PromptResult> {
-  const validationError = validateNameAndContent(name, content);
+  const validationError = validateNameAndContent(name, content) ?? validateCategory(category);
   if (validationError) return { status: 'error', error: validationError };
 
   const now = Date.now();
+  const trimmedCategory = category?.trim() ?? '';
   const prompt: SavedPrompt = {
     id: randomUUID(),
     name: name.trim(),
     content,
     createdAt: now,
     updatedAt: now,
+    // Absent rather than empty, so "no category" is one value on disk.
+    ...(trimmedCategory === '' ? {} : { category: trimmedCategory }),
   };
 
   const written = await mutatePromptStore(scope, projectPath, (prompts) => [...prompts, prompt]);
@@ -217,7 +245,8 @@ export async function createPrompt(
 }
 
 /**
- * Edit one prompt's name and content. `id` and `createdAt` are not editable:
+ * Edit one prompt's name, content and category. `id` and `createdAt` are not
+ * editable:
  * the id is what the webview's cached rows are keyed by, and a creation time
  * that moves would reshuffle the newest-first order the user just looked at.
  */
@@ -227,9 +256,10 @@ export async function updatePrompt(
   id: string,
   name: string,
   content: string,
+  category?: string,
 ): Promise<PromptResult> {
   if (!VALID_ID_PATTERN.test(id)) return { status: 'error', error: `Invalid prompt id: ${id}` };
-  const validationError = validateNameAndContent(name, content);
+  const validationError = validateNameAndContent(name, content) ?? validateCategory(category);
   if (validationError) return { status: 'error', error: validationError };
 
   let updated: SavedPrompt | null = null;
@@ -237,7 +267,12 @@ export async function updatePrompt(
     const index = prompts.findIndex((prompt) => prompt.id === id);
     if (index === -1) return `Prompt not found: ${id}`;
     const existing = prompts[index] as SavedPrompt;
+    const trimmedCategory = category?.trim() ?? '';
+    // Spread first, then drop the key when the field was cleared: leaving the
+    // old value in place would make a category impossible to remove.
     updated = { ...existing, name: name.trim(), content, updatedAt: Date.now() };
+    if (trimmedCategory === '') delete updated.category;
+    else updated.category = trimmedCategory;
     const next = [...prompts];
     next[index] = updated;
     return next;

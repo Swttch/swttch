@@ -130,8 +130,19 @@ export function normaliseImportedPrompt(entry: unknown, now: number): SavedPromp
 
   const createdAt = typeof candidate.createdAt === 'number' ? candidate.createdAt : now;
   const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : createdAt;
+  // Carried through if it is there: a library exported with categories arrives
+  // with them, and one exported without simply has none.
+  const rawCategory = candidate.category;
+  const category = typeof rawCategory === 'string' ? rawCategory.trim() : '';
 
-  return { id, name, content, createdAt, updatedAt };
+  return {
+    id,
+    name,
+    content,
+    createdAt,
+    updatedAt,
+    ...(category === '' ? {} : { category }),
+  };
 }
 
 /**

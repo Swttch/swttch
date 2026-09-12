@@ -292,6 +292,9 @@
         "failed": "Не удалось перенести промпты."
       }
     },
-    "searchPlaceholder": "Поиск промптов"
+    "searchPlaceholder": "Поиск промптов",
+    "categoryLabel": "Категория",
+    "categoryPlaceholder": "Необязательно, например: отладка",
+    "uncategorised": "Без категории"
   }
 }

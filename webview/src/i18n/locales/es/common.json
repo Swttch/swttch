@@ -290,6 +290,9 @@
         "failed": "No se pudieron transferir los prompts."
       }
     },
-    "searchPlaceholder": "Buscar prompts"
+    "searchPlaceholder": "Buscar prompts",
+    "categoryLabel": "Categoría",
+    "categoryPlaceholder": "Opcional, p. ej. depuración",
+    "uncategorised": "Sin categoría"
   }
 }

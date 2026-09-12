@@ -29,8 +29,14 @@ export interface PromptStore {
   /** False when no project is open, so the project section cannot be written. */
   projectAvailable: boolean;
   reload: () => void;
-  create: (scope: PromptScope, name: string, content: string) => Promise<void>;
-  update: (scope: PromptScope, id: string, name: string, content: string) => Promise<void>;
+  create: (scope: PromptScope, name: string, content: string, category?: string) => Promise<void>;
+  update: (
+    scope: PromptScope,
+    id: string,
+    name: string,
+    content: string,
+    category?: string,
+  ) => Promise<void>;
   remove: (scope: PromptScope, id: string) => Promise<void>;
   /**
    * Write the given prompts to a file the user picks, answering with the path
@@ -101,16 +107,27 @@ export function usePromptStore(): PromptStore {
   );
 
   const create = useCallback(
-    async (scope: PromptScope, name: string, content: string) => {
-      await bridge.send(MessageType.CREATE_PROMPT, { ...scopePayload(scope), name, content });
+    async (scope: PromptScope, name: string, content: string, category?: string) => {
+      await bridge.send(MessageType.CREATE_PROMPT, {
+        ...scopePayload(scope),
+        name,
+        content,
+        category,
+      });
       reload();
     },
     [bridge, scopePayload, reload],
   );
 
   const update = useCallback(
-    async (scope: PromptScope, id: string, name: string, content: string) => {
-      await bridge.send(MessageType.UPDATE_PROMPT, { ...scopePayload(scope), id, name, content });
+    async (scope: PromptScope, id: string, name: string, content: string, category?: string) => {
+      await bridge.send(MessageType.UPDATE_PROMPT, {
+        ...scopePayload(scope),
+        id,
+        name,
+        content,
+        category,
+      });
       reload();
     },
     [bridge, scopePayload, reload],

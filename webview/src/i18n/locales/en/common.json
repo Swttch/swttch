@@ -290,6 +290,9 @@
         "failed": "The prompts could not be transferred."
       }
     },
-    "searchPlaceholder": "Search prompts"
+    "searchPlaceholder": "Search prompts",
+    "categoryLabel": "Category",
+    "categoryPlaceholder": "Optional, e.g. debugging",
+    "uncategorised": "Uncategorised"
   }
 }

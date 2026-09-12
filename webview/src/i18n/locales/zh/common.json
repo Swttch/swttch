@@ -290,6 +290,9 @@
         "failed": "无法转移提示词。"
       }
     },
-    "searchPlaceholder": "搜索提示词"
+    "searchPlaceholder": "搜索提示词",
+    "categoryLabel": "分类",
+    "categoryPlaceholder": "可选，例如：调试",
+    "uncategorised": "未分类"
   }
 }

@@ -40,7 +40,12 @@ vi.mock('@/contexts/BridgeContext', () => ({
 }));
 
 // Imported AFTER vi.mock so the mock is wired first.
-import { usePromptLibrary } from '../usePromptLibrary';
+import {
+  usePromptLibrary,
+  firstSelectableIndex,
+  stepSelection,
+  type PromptRow,
+} from '../usePromptLibrary';
 
 interface HarnessParams {
   value: string;
@@ -292,5 +297,47 @@ describe('usePromptLibrary', () => {
       act(() => { handled = result.current.handleKeyDown(keyEvent('Enter')); });
       expect(handled).toBe(false);
     });
+  });
+});
+
+/**
+ * Category headings are drawn between the prompts but are not rows anyone can
+ * pick, so the two helpers that move the highlight have to step over them.
+ */
+describe('selection skips category headings', () => {
+  const heading = (category: string | null): PromptRow => ({ kind: 'heading', category });
+  const promptRow = (id: string): PromptRow => ({
+    kind: 'prompt',
+    prompt: { id, name: id, content: id, scope: 'global', createdAt: 1, updatedAt: 1 },
+  });
+
+  it('opens on the first prompt, not on the heading above it', () => {
+    expect(firstSelectableIndex([heading('a'), promptRow('p1')])).toBe(1);
+  });
+
+  it('opens on index 0 when there is nothing to select', () => {
+    expect(firstSelectableIndex([heading('a')])).toBe(0);
+    expect(firstSelectableIndex([])).toBe(0);
+  });
+
+  it('steps past a heading on the way down', () => {
+    const rows = [promptRow('p1'), heading('b'), promptRow('p2')];
+    expect(stepSelection(rows, 0, 1)).toBe(2);
+  });
+
+  it('steps past a heading on the way up', () => {
+    const rows = [promptRow('p1'), heading('b'), promptRow('p2')];
+    expect(stepSelection(rows, 2, -1)).toBe(0);
+  });
+
+  it('wraps around the ends', () => {
+    const rows = [heading('a'), promptRow('p1'), promptRow('p2')];
+    expect(stepSelection(rows, 2, 1)).toBe(1);
+    expect(stepSelection(rows, 1, -1)).toBe(2);
+  });
+
+  // A list of nothing but headings has nowhere to go, and must not spin.
+  it('stays put when no row is selectable', () => {
+    expect(stepSelection([heading('a'), heading('b')], 0, 1)).toBe(0);
   });
 });

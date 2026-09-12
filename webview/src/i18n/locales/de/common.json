@@ -290,6 +290,9 @@
         "failed": "Die Prompts ließen sich nicht übertragen."
       }
     },
-    "searchPlaceholder": "Prompts suchen"
+    "searchPlaceholder": "Prompts suchen",
+    "categoryLabel": "Kategorie",
+    "categoryPlaceholder": "Optional, z. B. Debugging",
+    "uncategorised": "Ohne Kategorie"
   }
 }
