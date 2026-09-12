@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "排队发送下一条消息...",
-      "focusHint": "⌘ Esc 聚焦或取消聚焦 Claude"
+      "hint": "@ 引用文件，/ 命令，!! 插入提示词，{{send}} 发送"
     },
     "ariaLabel": "给 Claude 发消息",
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",

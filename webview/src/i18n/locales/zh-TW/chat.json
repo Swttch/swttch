@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "排入下一則訊息...",
-      "focusHint": "⌘ Esc 可聚焦或取消聚焦 Claude"
+      "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，{{send}} 傳送"
     },
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",

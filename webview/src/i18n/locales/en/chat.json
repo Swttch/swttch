@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Queue another message...",
-      "focusHint": "⌘ Esc to focus or unfocus Claude"
+      "hint": "@ to reference files, / for commands, !! to insert prompts, {{send}} to send"
     },
     "ariaLabel": "Message Claude",
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",

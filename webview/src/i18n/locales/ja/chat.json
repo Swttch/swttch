@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "次のメッセージをキューに追加...",
-      "focusHint": "⌘ Esc でClaudeにフォーカス/フォーカス解除"
+      "hint": "@ ファイル参照、/ コマンド、!! プロンプト挿入、{{send}} で送信"
     },
     "ariaLabel": "Claudeにメッセージを送信",
     "autoModeFallback": "ここでは自動モードは使用できません — 代わりにデフォルトの権限モードを使用します。",

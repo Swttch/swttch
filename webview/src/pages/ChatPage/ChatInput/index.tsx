@@ -53,6 +53,7 @@ import { replaceRangeWithText } from './RichInput/replaceRangeWithText';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
+import { sendKeyLabel } from './sendKeyLabel';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
@@ -936,7 +937,13 @@ export function ChatInput() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onPaste={handleRichPaste}
-            placeholder={isStreaming ? t('chatInput.placeholder.queueMessage') : t('chatInput.placeholder.focusHint')}
+            placeholder={
+              isStreaming
+                ? t('chatInput.placeholder.queueMessage')
+                : t('chatInput.placeholder.hint', {
+                    send: sendKeyLabel(appSettings.useCtrlEnterToSend ?? false),
+                  })
+            }
             disabled={disabled}
             ariaLabel={t('chatInput.ariaLabel')}
             highlightTokens={pathTokens}

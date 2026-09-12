@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Encolar otro mensaje...",
-      "focusHint": "⌘ Esc para enfocar o quitar el foco de Claude"
+      "hint": "@ para archivos, / para comandos, !! para insertar prompts, {{send}} para enviar"
     },
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",

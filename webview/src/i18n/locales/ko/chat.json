@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "다음 메시지 대기열에 추가...",
-      "focusHint": "⌘ Esc로 Claude에 포커스 지정/해제"
+      "hint": "@ 파일 참조, / 명령, !! 프롬프트 삽입, {{send}}로 전송"
     },
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",
