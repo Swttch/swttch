@@ -240,7 +240,7 @@
     "globalSection": "グローバルプロンプト",
     "projectSection": "プロジェクトプロンプト",
     "projectSectionNamed": "プロジェクトプロンプト - {{projectName}}",
-    "addPrompt": "プロンプトを追加",
+    "addPrompt": "追加",
     "createTitle": "プロンプトを作成",
     "editTitle": "プロンプトを編集",
     "menu": "メニュー",
@@ -256,8 +256,8 @@
       "insert": "挿入"
     },
     "transfer": {
-      "export": "エクスポート",
-      "import": "インポート",
+      "export": "書き出し",
+      "import": "読み込み",
       "exportTitle": "プロンプトのエクスポート",
       "exportHint": "ファイルに含めるプロンプトを選んでください。",
       "exportConfirm": "エクスポート",

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
@@ -286,7 +286,10 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
         <div
           ref={dialogRef}
           tabIndex={-1}
-          className={`w-full max-w-lg bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
+          /* Wider than the other overlays: each scope heading now carries three
+             buttons beside a project name, and at the narrower width the name
+             was the thing that gave way. */
+          className={`w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
           style={{ maxHeight: '50rem', minHeight: '32rem' }}
         >
           {isListView && (
@@ -294,14 +297,6 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
               <div className="flex items-center justify-between px-4 pt-4 pb-1 flex-shrink-0">
                 <h2 className="text-lg font-semibold text-text-primary">{t('promptLibrary.title')}</h2>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setView({ kind: 'create', scope: 'global' })}
-                    className="w-8 h-8 flex items-center justify-center rounded text-text-tertiary hover:bg-surface-hover transition-colors"
-                    title={t('promptLibrary.addPrompt')}
-                    aria-label={t('promptLibrary.addPrompt')}
-                  >
-                    <PlusIcon className="w-5 h-5" />
-                  </button>
                   <button
                     onClick={onClose}
                     className="w-8 h-8 flex items-center justify-center rounded text-text-tertiary hover:bg-surface-hover transition-colors"
@@ -340,6 +335,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
                 onDelete={(scope, prompt) => void handleDelete(scope, prompt)}
                 onExport={(scope) => openExport(scope)}
                 onImport={(scope) => void openImport(scope)}
+                onCreate={(scope) => setView({ kind: 'create', scope })}
               />
             )}
             {isListView && transferNote && (
@@ -347,9 +343,6 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
             )}
             {view.kind === 'create' && (
               <PromptForm
-                scope={view.scope}
-                onScopeChange={(scope) => setView({ kind: 'create', scope })}
-                projectAvailable={store.projectAvailable}
                 onSubmit={(name, content) => handleCreate(view.scope, name, content)}
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}
@@ -359,8 +352,6 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
               <PromptForm
                 key={view.prompt.id}
                 editing={view.prompt}
-                scope={view.scope}
-                projectAvailable={store.projectAvailable}
                 onSubmit={(name, content) => handleUpdate(view.scope, view.prompt.id, name, content)}
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookmarkIcon, EllipsisVerticalIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  BookmarkIcon,
+  EllipsisVerticalIcon,
+  PlusIcon,
+} from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
@@ -45,6 +51,8 @@ interface Props {
   onExport?: (scope: PromptScope) => void;
   /** Read a file into this scope. Absent when the scope cannot be written. */
   onImport?: (scope: PromptScope) => void;
+  /** Start a new prompt in this scope. Absent when the scope cannot be written. */
+  onCreate?: (scope: PromptScope) => void;
 }
 
 /** A one-line preview of the prompt's text, shown under its name on the card. */
@@ -66,22 +74,32 @@ interface SectionProps {
   onExport?: (scope: PromptScope) => void;
   /** Read a file into this scope. Absent when the scope cannot be written. */
   onImport?: (scope: PromptScope) => void;
+  /** Start a new prompt in this scope. Absent when the scope cannot be written. */
+  onCreate?: (scope: PromptScope) => void;
 }
 
 /**
  * One scope's heading and cards.
  *
- * The heading carries no create button of its own: the modal's header already
- * has one, and the create form asks which scope to save to, so a button per
- * section would be a second way to say the same thing.
- *
- * Export and import do sit here, because unlike create they are about one
- * scope's file. "Export" with no scope would have to ask which one, which is the
- * question this placement already answers.
+ * Create, export and import all sit on the heading, because all three are about
+ * this scope's file. Put anywhere else they would have to ask which scope they
+ * meant, and the heading has already answered that — which is why the create
+ * form no longer carries a scope picker.
  */
 function PromptSection(props: SectionProps) {
-  const { title, scope, prompts, unavailableNote, selectedId, onUse, onEdit, onDelete, onExport, onImport } =
-    props;
+  const {
+    title,
+    scope,
+    prompts,
+    unavailableNote,
+    selectedId,
+    onUse,
+    onEdit,
+    onDelete,
+    onExport,
+    onImport,
+    onCreate,
+  } = props;
   const { t } = useTranslation('common');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -106,15 +124,20 @@ function PromptSection(props: SectionProps) {
 
   return (
     <div className="mb-5">
-      <div className="flex items-center justify-between gap-2 py-1.5">
-        <span className="truncate text-sm font-semibold text-text-secondary">{title}</span>
-        <span className="flex flex-shrink-0 items-center gap-1">
+      <div className="mb-2 flex items-center justify-between gap-2 py-1.5">
+        <span className="truncate text-sm font-semibold text-text-primary">{title}</span>
+        {/* All three actions belong to one scope, so they sit on that scope's
+            heading rather than on the modal's. Which file a prompt is written to
+            is then answered by which row the button was on, and never asked
+            again. */}
+        <span className="flex flex-shrink-0 items-center gap-1.5">
           {onExport && prompts.length > 0 && (
             <button
               type="button"
               onClick={() => onExport(scope)}
-              className="rounded px-2 py-1 text-xs text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md border border-border-default px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
             >
+              <ArrowUpTrayIcon className="h-3.5 w-3.5" />
               {t('promptLibrary.transfer.export')}
             </button>
           )}
@@ -122,9 +145,20 @@ function PromptSection(props: SectionProps) {
             <button
               type="button"
               onClick={() => onImport(scope)}
-              className="rounded px-2 py-1 text-xs text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md border border-border-default px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
             >
+              <ArrowDownTrayIcon className="h-3.5 w-3.5" />
               {t('promptLibrary.transfer.import')}
+            </button>
+          )}
+          {onCreate && (
+            <button
+              type="button"
+              onClick={() => onCreate(scope)}
+              className="flex items-center gap-1 rounded-md bg-accent-primary px-2.5 py-1 text-xs text-text-inverse transition-opacity hover:opacity-90"
+            >
+              <PlusIcon className="h-3.5 w-3.5" />
+              {t('promptLibrary.addPrompt')}
             </button>
           )}
         </span>
@@ -140,10 +174,19 @@ function PromptSection(props: SectionProps) {
             <div
               key={prompt.id}
               data-prompt-id={prompt.id}
-              className={`flex items-center gap-3 rounded-lg border bg-surface-base p-3 ${
+              /*
+               * A card sits ON the panel, so it is drawn lighter than the panel
+               * rather than darker. It used to be `surface-base`, which in the
+               * dark theme is darker than the modal it sits in — the card read
+               * as a hole and only the border held it together. `surface-overlay`
+               * puts it above, and the border can then fall back to `subtle`,
+               * which carries the light theme (where the two surfaces are five
+               * shades apart) without boxing in the dark one.
+               */
+              className={`group flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                 prompt.id === selectedId
                   ? 'border-border-focus bg-surface-selected'
-                  : 'border-border-default'
+                  : 'border-border-subtle bg-surface-overlay hover:bg-surface-hover'
               }`}
             >
               {/* The card body is the "use this prompt" button: picking a prompt
@@ -158,16 +201,21 @@ function PromptSection(props: SectionProps) {
                 {/* The icon sits in a square tile of its own, so the two text lines
                     beside it read as one block rather than as text wrapped around
                     a loose glyph. */}
-                <span className="flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-surface-overlay text-text-tertiary">
-                  <BookmarkIcon className="w-4 h-4" />
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-text-tertiary">
+                  <BookmarkIcon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-text-primary truncate">{prompt.name}</span>
+                  {/* The name carries the weight and the preview the colour: the
+                      two used to sit a single step apart on the text scale, which
+                      left the row flat and the name hard to pick out. */}
+                  <span className="mb-0.5 block truncate text-sm font-semibold text-text-primary">
+                    {prompt.name}
+                  </span>
                   {/* Tippy rather than the native `title`: a `title` tooltip does
                       not render at all inside the JCEF WebView the plugin embeds,
                       so the IDE user would get nothing. */}
                   <Tooltip content={prompt.content}>
-                    <span className="block text-xs text-text-tertiary truncate">
+                    <span className="block truncate text-xs text-text-secondary">
                       {preview(prompt.content)}
                     </span>
                   </Tooltip>
@@ -236,6 +284,7 @@ export function PromptList(props: Props) {
     onDelete,
     onExport,
     onImport,
+    onCreate,
   } = props;
   const { t } = useTranslation('common');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -262,6 +311,7 @@ export function PromptList(props: Props) {
         onDelete={onDelete}
         onExport={onExport}
         onImport={onImport}
+        onCreate={onCreate}
       />
       <PromptSection
         title={
@@ -277,6 +327,7 @@ export function PromptList(props: Props) {
         onEdit={onEdit}
         onExport={projectAvailable ? onExport : undefined}
         onImport={projectAvailable ? onImport : undefined}
+        onCreate={projectAvailable ? onCreate : undefined}
         onDelete={onDelete}
       />
     </div>

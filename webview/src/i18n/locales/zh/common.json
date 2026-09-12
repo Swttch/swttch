@@ -240,7 +240,7 @@
     "globalSection": "全局提示词",
     "projectSection": "项目提示词",
     "projectSectionNamed": "项目提示词 - {{projectName}}",
-    "addPrompt": "添加提示词",
+    "addPrompt": "添加",
     "createTitle": "新建提示词",
     "editTitle": "编辑提示词",
     "menu": "菜单",

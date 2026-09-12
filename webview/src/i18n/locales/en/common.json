@@ -240,7 +240,7 @@
     "globalSection": "Global Prompts",
     "projectSection": "Project Prompts",
     "projectSectionNamed": "Project Prompts - {{projectName}}",
-    "addPrompt": "Add a prompt",
+    "addPrompt": "Add",
     "createTitle": "Create Prompt",
     "editTitle": "Edit Prompt",
     "menu": "Menu",

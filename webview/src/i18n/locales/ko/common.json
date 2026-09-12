@@ -240,7 +240,7 @@
     "globalSection": "전역 프롬프트",
     "projectSection": "프로젝트 프롬프트",
     "projectSectionNamed": "프로젝트 프롬프트 - {{projectName}}",
-    "addPrompt": "프롬프트 추가",
+    "addPrompt": "추가",
     "createTitle": "프롬프트 만들기",
     "editTitle": "프롬프트 수정",
     "menu": "메뉴",
@@ -257,7 +257,7 @@
     },
     "transfer": {
       "export": "내보내기",
-      "import": "가져오기",
+      "import": "불러오기",
       "exportTitle": "프롬프트 내보내기",
       "exportHint": "파일에 담을 프롬프트를 고르세요.",
       "exportConfirm": "내보내기",

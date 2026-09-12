@@ -240,7 +240,7 @@
     "globalSection": "پرامپت‌های سراسری",
     "projectSection": "پرامپت‌های پروژه",
     "projectSectionNamed": "پرامپت‌های پروژه - {{projectName}}",
-    "addPrompt": "افزودن پرامپت",
+    "addPrompt": "افزودن",
     "createTitle": "ساختن پرامپت",
     "editTitle": "ویرایش پرامپت",
     "menu": "منو",
@@ -256,8 +256,8 @@
       "insert": "درج"
     },
     "transfer": {
-      "export": "برون‌ریزی",
-      "import": "درون‌ریزی",
+      "export": "برون‌بری",
+      "import": "بارگذاری",
       "exportTitle": "برون‌ریزی پرامپت‌ها",
       "exportHint": "انتخاب کنید کدام پرامپت‌ها در فایل نوشته شوند.",
       "exportConfirm": "برون‌ریزی",

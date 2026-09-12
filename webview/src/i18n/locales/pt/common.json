@@ -240,7 +240,7 @@
     "globalSection": "Prompts globais",
     "projectSection": "Prompts do projeto",
     "projectSectionNamed": "Prompts do projeto - {{projectName}}",
-    "addPrompt": "Adicionar um prompt",
+    "addPrompt": "Adicionar",
     "createTitle": "Criar prompt",
     "editTitle": "Editar prompt",
     "menu": "Menu",
@@ -257,7 +257,7 @@
     },
     "transfer": {
       "export": "Exportar",
-      "import": "Importar",
+      "import": "Carregar",
       "exportTitle": "Exportar prompts",
       "exportHint": "Escolha quais prompts vão para o arquivo.",
       "exportConfirm": "Exportar",

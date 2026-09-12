@@ -244,7 +244,7 @@
     "globalSection": "المطالبات العامة",
     "projectSection": "مطالبات المشروع",
     "projectSectionNamed": "مطالبات المشروع - {{projectName}}",
-    "addPrompt": "إضافة مطالبة",
+    "addPrompt": "إضافة",
     "createTitle": "إنشاء مطالبة",
     "editTitle": "تعديل المطالبة",
     "menu": "القائمة",
@@ -261,7 +261,7 @@
     },
     "transfer": {
       "export": "تصدير",
-      "import": "استيراد",
+      "import": "تحميل",
       "exportTitle": "تصدير المطالبات",
       "exportHint": "اختر المطالبات التي ستُكتب في الملف.",
       "exportConfirm": "تصدير",

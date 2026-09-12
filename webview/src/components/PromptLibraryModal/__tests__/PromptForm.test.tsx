@@ -12,8 +12,6 @@ function renderForm(overrides: Partial<Parameters<typeof PromptForm>[0]> = {}) {
   const onBusyChange = vi.fn();
   render(
     <PromptForm
-      scope="global"
-      projectAvailable
       onSubmit={onSubmit}
       onCancel={onCancel}
       onBusyChange={onBusyChange}

@@ -242,7 +242,7 @@
     "globalSection": "Глобальные промпты",
     "projectSection": "Промпты проекта",
     "projectSectionNamed": "Промпты проекта - {{projectName}}",
-    "addPrompt": "Добавить промпт",
+    "addPrompt": "Добавить",
     "createTitle": "Создать промпт",
     "editTitle": "Изменить промпт",
     "menu": "Меню",
@@ -259,7 +259,7 @@
     },
     "transfer": {
       "export": "Экспорт",
-      "import": "Импорт",
+      "import": "Загрузить",
       "exportTitle": "Экспорт промптов",
       "exportHint": "Выберите, какие промпты попадут в файл.",
       "exportConfirm": "Экспортировать",

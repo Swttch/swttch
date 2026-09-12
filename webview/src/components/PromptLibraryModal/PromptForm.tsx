@@ -2,20 +2,11 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
-import type { PromptScope, SavedPrompt } from '@/types/prompt';
+import type { SavedPrompt } from '@/types/prompt';
 
 interface Props {
   /** The prompt being edited, or undefined when a new one is being written. */
   editing?: SavedPrompt;
-  /** Where a new prompt will be saved. Ignored while editing. */
-  scope: PromptScope;
-  /**
-   * Called when the user picks a different scope for a new prompt. Absent while
-   * editing, which is what makes the picker read-only there.
-   */
-  onScopeChange?: (scope: PromptScope) => void;
-  /** False when no project is open, so 'project' cannot be chosen. */
-  projectAvailable: boolean;
   onSubmit: (name: string, content: string) => Promise<void>;
   onCancel: () => void;
   /** Reported while a save is in flight, so the modal can lock itself. */
@@ -37,15 +28,7 @@ interface PromptFormValues {
 }
 
 /** The create/edit screen for one saved prompt, shown in place of the list. */
-export function PromptForm({
-  editing,
-  scope,
-  onScopeChange,
-  projectAvailable,
-  onSubmit,
-  onCancel,
-  onBusyChange,
-}: Props) {
+export function PromptForm({ editing, onSubmit, onCancel, onBusyChange }: Props) {
   const { t } = useTranslation('common');
 
   const {
@@ -78,24 +61,6 @@ export function PromptForm({
   // says the attempt did not land.
   const error = errors.name?.message ?? errors.content?.message ?? saveError;
 
-  // Project scope is offered only when a project is open, because a prompt has
-  // nowhere to be written without one.
-  const scopeOptions: Array<{ value: PromptScope; label: string }> = [
-    { value: 'global', label: t('promptLibrary.scopeGlobal') },
-    ...(projectAvailable
-      ? [{ value: 'project' as PromptScope, label: t('promptLibrary.scopeProject') }]
-      : []),
-  ];
-
-  // A segmented control rather than a dropdown, matching ProjectSortToggle:
-  // both choices are visible and one click switches, with no menu to open first.
-  const scopeOptionClass = (isActive: boolean) =>
-    `rounded px-3 py-1 text-sm transition-colors ${
-      isActive
-        ? 'bg-surface-hover text-text-primary'
-        : 'text-text-tertiary hover:text-text-secondary'
-    }`;
-
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       <div className="flex items-center gap-2 px-4 pt-4 pb-2 flex-shrink-0">
@@ -114,34 +79,6 @@ export function PromptForm({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-3">
-        {/* Only while creating. Moving a saved prompt between scopes is a
-            delete-and-recreate across two files, not an edit of one, so the
-            picker stays out of the edit screen rather than implying otherwise. */}
-        {!editing && (
-          <div>
-            <span className="block text-xs text-text-tertiary mb-1">
-              {t('promptLibrary.scopeFieldLabel')}
-            </span>
-            <div
-              role="group"
-              aria-label={t('promptLibrary.scopeFieldLabel')}
-              className="inline-flex items-center gap-0.5 rounded border border-border-default p-0.5"
-            >
-              {scopeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-pressed={scope === option.value}
-                  onClick={() => onScopeChange?.(option.value)}
-                  className={scopeOptionClass(scope === option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <label className="block">
           <span className="block text-xs text-text-tertiary mb-1">{t('promptLibrary.nameLabel')}</span>
           <input
