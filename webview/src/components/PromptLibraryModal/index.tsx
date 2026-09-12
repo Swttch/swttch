@@ -356,6 +356,20 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     selectedCategoryIndex,
   ]);
 
+  /**
+   * Make a category from the prompt form and hand back its id.
+   *
+   * The backend answers every category message with the FULL list rather than
+   * with the row it just wrote, so the new id is found by name. That is the
+   * same case-insensitive rule the registry dedupes by, which is why asking for
+   * a name that already exists returns the existing id instead of a second one.
+   */
+  const createCategoryForForm = async (name: string): Promise<string | null> => {
+    const ack = await store.createCategory(name);
+    const wanted = name.trim().toLowerCase();
+    return ack?.categories?.find((c) => c.name.toLowerCase() === wanted)?.id ?? null;
+  };
+
   /** Remove a category, after asking. Its prompts are kept. */
   const handleDeleteCategory = async (category: { id: string; name: string }) => {
     const confirmed = await confirm({
@@ -504,6 +518,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
             {view.kind === 'create' && (
               <PromptForm
                 categories={store.categories}
+                onCreateCategory={createCategoryForForm}
                 onSubmit={(name, content, categoryIds) =>
                   handleCreate(view.scope, name, content, categoryIds)
                 }
@@ -516,6 +531,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
                 key={view.prompt.id}
                 editing={view.prompt}
                 categories={store.categories}
+                onCreateCategory={createCategoryForForm}
                 onSubmit={(name, content, categoryIds) =>
                   handleUpdate(view.scope, view.prompt.id, name, content, categoryIds)
                 }

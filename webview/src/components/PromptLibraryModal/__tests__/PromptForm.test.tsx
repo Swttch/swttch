@@ -24,18 +24,21 @@ function renderForm(overrides: Partial<Parameters<typeof PromptForm>[0]> = {}) {
       {...overrides}
     />,
   );
-  // Name then content, in DOM order. The categories are toggle buttons rather
-  // than a field, so they are reached by their own names.
-  const textboxes = screen.getAllByRole('textbox') as HTMLInputElement[];
-  const fields = { name: textboxes[0], content: textboxes[1] };
-  const categoryToggle = (name: string) => screen.getByRole('button', { name });
-  return { onSubmit, onCancel, onBusyChange, fields, categoryToggle };
+  // The category picker puts a combobox between the two, so they are taken by
+  // tag rather than by position: `name` is the only <input> of the three, and
+  // the combobox input is a `combobox` role rather than a plain textbox.
+  const inputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+  const fields = {
+    name: inputs.find((el) => el.tagName === 'INPUT') as HTMLInputElement,
+    content: inputs.find((el) => el.tagName === 'TEXTAREA') as HTMLInputElement,
+  };
+  /** The chip for a chosen category carries a remove button named after it. */
+  const chipRemove = (name: string) => screen.getByRole('button', { name: `Remove ${name}` });
+  return { onSubmit, onCancel, onBusyChange, fields, chipRemove };
 }
 
-/** The save button is the last one on the screen, after the category toggles. */
 function saveButton() {
-  const buttons = screen.getAllByRole('button');
-  return buttons[buttons.length - 1];
+  return screen.getByRole('button', { name: 'Save' });
 }
 
 describe('PromptForm', () => {
@@ -108,35 +111,37 @@ describe('PromptForm', () => {
     expect(screen.getAllByRole('textbox')).toHaveLength(2);
   });
 
-  it('saves the categories that were toggled on, by id', async () => {
-    const { onSubmit, fields, categoryToggle } = renderForm();
-    fireEvent.change(fields.name, { target: { value: 'a' } });
-    fireEvent.change(fields.content, { target: { value: 'b' } });
-    fireEvent.click(categoryToggle('디버깅'));
+  /**
+   * The picker replaced a row of toggles, so what is asserted here is the
+   * contract that survived the swap: whatever is chosen travels to onSubmit as
+   * ids, and what the prompt already carries is on screen when it opens.
+   *
+   * Picking from the dropdown is not driven here. Ark UI's combobox is a state
+   * machine that needs real pointer and focus events, and a test that fakes
+   * them would be testing the fake. The chips, the removal, and the values that
+   * reach onSubmit are the parts that are ours.
+   */
+  it('carries the prompt\'s categories through a save untouched', async () => {
+    const { onSubmit } = renderForm({
+      editing: {
+        id: 'p1',
+        name: 'n',
+        content: 'c',
+        categories: ['c1', 'c2'],
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    });
 
     fireEvent.click(saveButton());
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('a', 'b', ['c1']));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('n', 'c', ['c1', 'c2']));
   });
 
-  // A prompt belongs to as many categories as the user says, which is the whole
-  // reason the field is a list.
-  it('saves more than one category', async () => {
-    const { onSubmit, fields, categoryToggle } = renderForm();
-    fireEvent.change(fields.name, { target: { value: 'a' } });
-    fireEvent.change(fields.content, { target: { value: 'b' } });
-    fireEvent.click(categoryToggle('디버깅'));
-    fireEvent.click(categoryToggle('리뷰'));
-
-    fireEvent.click(saveButton());
-
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('a', 'b', ['c1', 'c2']));
-  });
-
-  // Turning the last one off is how a prompt leaves its categories, so the empty
+  // Removing the last chip is how a prompt leaves its categories, so the empty
   // list has to travel rather than being read as "no change".
-  it('passes an empty list when the last category is turned off', async () => {
-    const { onSubmit, categoryToggle } = renderForm({
+  it('passes an empty list once the last chip is removed', async () => {
+    const { onSubmit, chipRemove } = renderForm({
       editing: {
         id: 'p1',
         name: 'n',
@@ -146,15 +151,38 @@ describe('PromptForm', () => {
         updatedAt: 1,
       },
     });
-    fireEvent.click(categoryToggle('디버깅'));
 
+    fireEvent.click(chipRemove('디버깅'));
     fireEvent.click(saveButton());
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('n', 'c', []));
   });
 
-  it('shows the categories of the prompt being edited as already on', () => {
-    const { categoryToggle } = renderForm({
+  it('removes only the chip that was clicked', async () => {
+    const { onSubmit, chipRemove } = renderForm({
+      editing: {
+        id: 'p1',
+        name: 'n',
+        content: 'c',
+        categories: ['c1', 'c2'],
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    });
+
+    fireEvent.click(chipRemove('디버깅'));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith('n', 'c', ['c2']));
+  });
+
+  /**
+   * Asserted through the chip's remove button rather than through its text: the
+   * dropdown lists every category by name too, so the name alone appears twice
+   * for a chosen one and matching it would pass for the wrong reason.
+   */
+  it('shows a chip for each category the prompt being edited carries', () => {
+    renderForm({
       editing: {
         id: 'p1',
         name: 'n',
@@ -164,8 +192,9 @@ describe('PromptForm', () => {
         updatedAt: 1,
       },
     });
-    expect(categoryToggle('리뷰')).toHaveAttribute('aria-pressed', 'true');
-    expect(categoryToggle('디버깅')).toHaveAttribute('aria-pressed', 'false');
+
+    expect(screen.queryByRole('button', { name: 'Remove 리뷰' })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove 디버깅' })).toBeNull();
   });
 
   it('prefills the fields of the prompt being edited', () => {

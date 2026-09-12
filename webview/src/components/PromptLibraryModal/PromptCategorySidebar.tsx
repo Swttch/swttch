@@ -194,7 +194,14 @@ export function PromptCategorySidebar(props: Props) {
                 sidebar shifted under the cursor. Out of flow the count alone
                 sets the height and the swap is invisible. */}
             <span className="relative flex-shrink-0 text-text-tertiary">
-              <span className="group-hover/cat:invisible">({row.count})</span>
+              {/* Only a row with something to swap in hides its count. "All"
+                  and "Uncategorised" are not the user's to rename or remove, so
+                  hovering them used to blank the number and offer nothing in
+                  its place — the row looked like it was about to do something
+                  it could not do. */}
+              <span className={row.category ? 'group-hover/cat:invisible' : undefined}>
+                ({row.count})
+              </span>
               {row.category && (
                 <span className="absolute inset-y-0 end-0 hidden items-center gap-0.5 group-hover/cat:flex">
                   {/* Spans, not buttons: this sits inside the row's own button. */}

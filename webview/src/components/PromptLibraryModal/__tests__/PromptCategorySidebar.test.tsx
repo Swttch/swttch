@@ -98,4 +98,16 @@ describe('the row does not change height on hover', () => {
     expect(count.className).toContain('group-hover/cat:invisible');
     expect(count.className).not.toContain('group-hover/cat:hidden');
   });
+
+  /**
+   * "All" and "Uncategorised" are not the user's to rename or remove, so there
+   * is nothing to swap their count out FOR. Blanking it on hover promised an
+   * action the row does not have.
+   */
+  it('leaves the fixed rows alone on hover, because they have no actions', () => {
+    renderSidebar({ selected: ALL_CATEGORIES });
+
+    expect(screen.getByText('(5)').className ?? '').not.toContain('group-hover/cat:invisible');
+    expect(screen.getByText('(2)').className ?? '').not.toContain('group-hover/cat:invisible');
+  });
 });
