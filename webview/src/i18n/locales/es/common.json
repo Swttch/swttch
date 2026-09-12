@@ -289,6 +289,7 @@
         "unreadableFile": "No se pudo leer ese archivo.",
         "failed": "No se pudieron transferir los prompts."
       }
-    }
+    },
+    "searchPlaceholder": "Buscar prompts"
   }
 }

@@ -12,16 +12,17 @@ const prompt = (id: string): SavedPrompt => ({
 
 /**
  * The sections render from this order and the arrow keys walk it, so the one
- * thing that must hold is that it matches what is drawn: global first, project
- * second, each scope in the order the backend sent.
+ * thing that must hold is that it matches what is drawn: project first, global
+ * second, each scope in the order the backend sent. Project leads because a
+ * long global list would otherwise push the project section off the bottom.
  */
 describe('buildPromptRows', () => {
-  it('puts every global prompt before every project prompt', () => {
+  it('puts every project prompt before every global prompt', () => {
     const rows = buildPromptRows([prompt('g1'), prompt('g2')], [prompt('p1')]);
     expect(rows.map((row) => `${row.scope}:${row.prompt.id}`)).toEqual([
+      'project:p1',
       'global:g1',
       'global:g2',
-      'project:p1',
     ]);
   });
 
@@ -36,7 +37,7 @@ describe('buildPromptRows', () => {
 
   it('carries the scope each prompt came from, so an edit writes back to it', () => {
     const rows = buildPromptRows([prompt('g1')], [prompt('p1')]);
-    expect(rows[0]?.scope).toBe('global');
-    expect(rows[1]?.scope).toBe('project');
+    expect(rows[0]?.scope).toBe('project');
+    expect(rows[1]?.scope).toBe('global');
   });
 });

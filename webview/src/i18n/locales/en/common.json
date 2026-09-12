@@ -289,6 +289,7 @@
         "unreadableFile": "That file could not be read.",
         "failed": "The prompts could not be transferred."
       }
-    }
+    },
+    "searchPlaceholder": "Search prompts"
   }
 }

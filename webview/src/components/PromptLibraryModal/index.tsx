@@ -10,7 +10,7 @@ import {
 } from '@/commandPalette/sections/context/items';
 import type { ConflictStrategy, ImportItem, PromptScope, SavedPrompt } from '@/types/prompt';
 import { usePromptStore } from './usePromptStore';
-import { PromptList, buildPromptRows } from './PromptList';
+import { PromptList, buildPromptRows, matchesPromptQuery } from './PromptList';
 import { PromptForm } from './PromptForm';
 import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
 
@@ -72,11 +72,22 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
   const [transfer, setTransfer] = useState<TransferState>(null);
   /** The outcome line shown after a transfer, replaced by the next one. */
   const [transferNote, setTransferNote] = useState<string | null>(null);
+  /**
+   * Narrows both scopes at once.
+   *
+   * Scrolling is the wrong tool once a library is large, and both scopes grow
+   * independently, so the answer to "where is that one prompt" has to be a
+   * search rather than a longer scroll. Matching is by name AND content, the way
+   * the `!!` panel matches.
+   */
+  const [query, setQuery] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // The cards in the order they are drawn, which is also the order the arrow
   // keys walk. Built from one definition so the two cannot disagree.
-  const rows = buildPromptRows(store.globalPrompts, store.projectPrompts);
+  const globalPrompts = store.globalPrompts.filter((p) => matchesPromptQuery(p, query));
+  const projectPrompts = store.projectPrompts.filter((p) => matchesPromptQuery(p, query));
+  const rows = buildPromptRows(globalPrompts, projectPrompts);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // A reload can shorten the list under the selection — deleting the last card
@@ -109,6 +120,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
   /** Which scope's list a transfer applies to. */
   const promptsOf = (scope: PromptScope) =>
     scope === 'global' ? store.globalPrompts : store.projectPrompts;
+
 
   const openExport = (scope: PromptScope) => {
     setTransferNote(null);
@@ -295,7 +307,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
              buttons beside a project name, and at the narrower width the name
              was the thing that gave way. */
           className={`w-full max-w-2xl bg-surface-raised border border-border-default rounded-xl shadow-2xl overflow-hidden flex flex-col focus:outline-none ${formBusy ? 'pointer-events-none' : ''}`}
-          style={{ maxHeight: '50rem', minHeight: '32rem' }}
+          style={{ maxHeight: 'min(50rem, 88vh)', minHeight: 'min(32rem, 88vh)' }}
         >
           {isListView && (
             <>
@@ -314,6 +326,19 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               <p className="flex-shrink-0 px-4 pb-3 text-xs text-text-secondary">
                 {t('promptLibrary.description')}
               </p>
+              {/* Only once there is enough to search through: on a library of
+                  three, a search box is one more thing to read past. */}
+              {store.globalPrompts.length + store.projectPrompts.length > 5 && (
+                <div className="flex-shrink-0 px-4 pb-3">
+                  <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={t('promptLibrary.searchPlaceholder')}
+                    aria-label={t('promptLibrary.searchPlaceholder')}
+                    className="w-full rounded-md border border-border-default bg-surface-base px-2 py-1.5 text-sm text-text-primary placeholder:text-text-disabled focus:border-border-focus focus:outline-none"
+                  />
+                </div>
+              )}
             </>
           )}
 
@@ -330,8 +355,8 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
             )}
             {isListView && !store.loading && !store.error && (
               <PromptList
-                globalPrompts={store.globalPrompts}
-                projectPrompts={store.projectPrompts}
+                globalPrompts={globalPrompts}
+                projectPrompts={projectPrompts}
                 projectAvailable={store.projectAvailable}
                 workingDirectory={workingDirectory}
                 selectedId={selectedRow?.prompt.id ?? null}

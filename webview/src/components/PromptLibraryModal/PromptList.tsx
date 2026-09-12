@@ -19,7 +19,13 @@ export interface PromptRow {
 }
 
 /**
- * The cards in the order they appear on screen, global section first.
+ * The cards in the order they appear on screen, project section first.
+ *
+ * Project before global, which is the order the `!!` panel already lists them
+ * in: a project-specific phrase is the more specific answer, and the project set
+ * is the smaller one. Global used to come first, which meant a long global list
+ * pushed the project section off the bottom of the modal — the section a user
+ * opened the library to reach was the one they had to scroll for.
  *
  * Arrow-key navigation walks this list while the sections render from it, so the
  * two can never disagree about what "the next card" is — the order is defined
@@ -30,8 +36,8 @@ export function buildPromptRows(
   projectPrompts: SavedPrompt[],
 ): PromptRow[] {
   return [
-    ...globalPrompts.map((prompt): PromptRow => ({ scope: 'global', prompt })),
     ...projectPrompts.map((prompt): PromptRow => ({ scope: 'project', prompt })),
+    ...globalPrompts.map((prompt): PromptRow => ({ scope: 'global', prompt })),
   ];
 }
 
@@ -59,6 +65,22 @@ interface Props {
 /** A one-line preview of the prompt's text, shown under its name on the card. */
 function preview(content: string): string {
   return content.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Whether [prompt] answers [query], by name and by content.
+ *
+ * Content as well as name, the same way the `!!` panel matches: a user who
+ * remembers a phrase but not the name they gave it still finds it. An empty
+ * query matches everything, so the unfiltered list is the same code path.
+ */
+export function matchesPromptQuery(prompt: SavedPrompt, query: string): boolean {
+  const lowered = query.trim().toLowerCase();
+  if (lowered === '') return true;
+  return (
+    prompt.name.toLowerCase().includes(lowered) ||
+    prompt.content.toLowerCase().includes(lowered)
+  );
 }
 
 interface SectionProps {
@@ -104,8 +126,8 @@ function PromptSection(props: SectionProps) {
   const { t } = useTranslation('common');
 
   return (
-    <div className="mb-5">
-      <div className="mb-2 flex items-center justify-between gap-2 py-1.5">
+    <div className="flex min-h-0 flex-col">
+      <div className="mb-2 flex flex-shrink-0 items-center justify-between gap-2 py-1.5">
         <span className="truncate text-sm font-semibold text-text-primary">{title}</span>
         {/* All three actions belong to one scope, so they sit on that scope's
             heading rather than on the modal's. Which file a prompt is written to
@@ -167,7 +189,7 @@ function PromptSection(props: SectionProps) {
           )}
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex min-h-[5.5rem] flex-col gap-2 overflow-y-auto">
           {prompts.map((prompt) => (
             <div
               key={prompt.id}
@@ -218,12 +240,16 @@ function PromptSection(props: SectionProps) {
                   one click each rather than two. They stay on screen here,
                   unlike in the `!!` panel, because this is the screen a user
                   opens in order to tend the library — hiding its only two verbs
-                  until the pointer finds them would be hiding the point. */}
+                  until the pointer finds them would be hiding the point.
+
+                  Colour alone marks the hover. A filled hover state is a second
+                  surface on top of the row's own, and on a selected row that
+                  read as a hole punched in the highlight. */}
               <span className="flex flex-shrink-0 items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => onEdit(scope, prompt)}
-                  className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  className="rounded p-1 text-text-tertiary transition-colors hover:text-text-primary"
                   title={t('promptLibrary.edit')}
                   aria-label={t('promptLibrary.edit')}
                 >
@@ -232,7 +258,7 @@ function PromptSection(props: SectionProps) {
                 <button
                   type="button"
                   onClick={() => onDelete(scope, prompt)}
-                  className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-state-error-fg"
+                  className="rounded p-1 text-text-tertiary transition-colors hover:text-state-error-fg"
                   title={t('promptLibrary.delete')}
                   aria-label={t('promptLibrary.delete')}
                 >
@@ -282,19 +308,15 @@ export function PromptList(props: Props) {
   }, [selectedId]);
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2">
-      <PromptSection
-        title={t('promptLibrary.globalSection')}
-        scope="global"
-        prompts={globalPrompts}
-        selectedId={selectedId}
-        onUse={onUse}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onExport={onExport}
-        onImport={onImport}
-        onCreate={onCreate}
-      />
+    /*
+     * A column of sections that each scroll on their own, rather than one long
+     * scroll holding both. With a single scroll, whichever scope was listed
+     * first buried the other as soon as it grew — and both scopes grow. Here a
+     * short section keeps its natural height and a long one shrinks and scrolls
+     * inside itself, so both headings and some of both lists are always on
+     * screen.
+     */
+    <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-2">
       <PromptSection
         title={
           projectName
@@ -311,6 +333,18 @@ export function PromptList(props: Props) {
         onImport={projectAvailable ? onImport : undefined}
         onCreate={projectAvailable ? onCreate : undefined}
         onDelete={onDelete}
+      />
+      <PromptSection
+        title={t('promptLibrary.globalSection')}
+        scope="global"
+        prompts={globalPrompts}
+        selectedId={selectedId}
+        onUse={onUse}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onExport={onExport}
+        onImport={onImport}
+        onCreate={onCreate}
       />
     </div>
   );

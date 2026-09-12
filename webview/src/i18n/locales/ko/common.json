@@ -289,6 +289,7 @@
         "unreadableFile": "파일을 읽지 못했습니다.",
         "failed": "프롬프트를 옮기지 못했습니다."
       }
-    }
+    },
+    "searchPlaceholder": "프롬프트 검색"
   }
 }
