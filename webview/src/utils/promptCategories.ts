@@ -1,80 +1,94 @@
-import type { SavedPrompt } from '@/types/prompt';
+import type { PromptCategory, SavedPrompt } from '@/types/prompt';
 
 /**
- * Grouping prompts by the category their author gave them.
+ * Reading the categories a prompt belongs to.
  *
- * A flat list stops being scannable somewhere around a dozen prompts, and the
- * useful groupings are the user's own way of working — "debugging", "commit
- * messages", "the thing I say to start a session" — not a set we could pick for
- * them. So the category is free text and this only arranges what is there.
+ * A prompt stores category IDS, never names: the name lives in exactly one
+ * record, so renaming a category is one write and every prompt follows. That
+ * makes "what is this prompt filed under" a lookup rather than a field read,
+ * which is what these helpers are for.
+ *
+ * The library does not draw category headings. It filters: the sidebar holds
+ * the categories and picking one narrows the lists beside it. Headings would
+ * repeat a prompt under every category it carries, which is exactly what
+ * letting a prompt carry several was for.
  */
 
-/** One heading and the prompts under it. */
-export interface PromptGroup {
-  /**
-   * The category name, or null for the prompts that have none. Null rather than
-   * a translated "Uncategorised" so the caller owns the wording.
-   */
-  category: string | null;
-  prompts: SavedPrompt[];
+/** The sentinel the sidebar uses for "show everything". */
+export const ALL_CATEGORIES = '__all__';
+/** The sentinel the sidebar uses for "prompts filed under nothing". */
+export const UNCATEGORISED = '__uncategorised__';
+
+/** What the sidebar's selection can be: a category id, or one of the two sentinels. */
+export type CategorySelection = string;
+
+/**
+ * Whether [prompt] belongs in the list for [selection].
+ *
+ * An id with no record behind it counts as uncategorised rather than as a
+ * category of its own, so a prompt whose category was deleted stays reachable
+ * instead of disappearing into a heading that no longer exists.
+ */
+export function matchesCategorySelection(
+  prompt: SavedPrompt,
+  selection: CategorySelection,
+  categories: PromptCategory[],
+): boolean {
+  if (selection === ALL_CATEGORIES) return true;
+
+  const known = new Set(categories.map((category) => category.id));
+  const filed = (prompt.categories ?? []).filter((id) => known.has(id));
+
+  if (selection === UNCATEGORISED) return filed.length === 0;
+  return filed.includes(selection);
 }
 
-/**
- * Arrange [prompts] under their categories, keeping the order they arrived in.
- *
- * Categories appear in the order their first prompt does, so a list the user
- * just reordered does not reshuffle its headings. The uncategorised group is
- * always last: it is where a prompt sits when nobody has decided yet, so it is
- * the least interesting place to look.
- */
-export function groupPromptsByCategory(prompts: SavedPrompt[]): PromptGroup[] {
-  const byCategory = new Map<string, SavedPrompt[]>();
-  const uncategorised: SavedPrompt[] = [];
+/** How many of [prompts] each sidebar row would show. */
+export function countByCategory(
+  prompts: SavedPrompt[],
+  categories: PromptCategory[],
+): { all: number; uncategorised: number; byId: Map<string, number> } {
+  const known = new Set(categories.map((category) => category.id));
+  const byId = new Map<string, number>(categories.map((category) => [category.id, 0]));
+  let uncategorised = 0;
 
   for (const prompt of prompts) {
-    const category = prompt.category?.trim() ?? '';
-    if (category === '') {
-      uncategorised.push(prompt);
+    const filed = (prompt.categories ?? []).filter((id) => known.has(id));
+    if (filed.length === 0) {
+      uncategorised += 1;
       continue;
     }
-    const existing = byCategory.get(category);
-    if (existing) existing.push(prompt);
-    else byCategory.set(category, [prompt]);
+    // Counted once per category it carries, because it appears in each of them.
+    for (const id of filed) byId.set(id, (byId.get(id) ?? 0) + 1);
   }
 
-  const groups: PromptGroup[] = [...byCategory.entries()].map(([category, items]) => ({
-    category,
-    prompts: items,
-  }));
-  if (uncategorised.length > 0) groups.push({ category: null, prompts: uncategorised });
-  return groups;
+  return { all: prompts.length, uncategorised, byId };
+}
+
+/** The names of the categories [prompt] is filed under, in the sidebar's order. */
+export function categoryNamesOf(
+  prompt: SavedPrompt,
+  categories: PromptCategory[],
+): string[] {
+  const filed = new Set(prompt.categories ?? []);
+  return categories.filter((category) => filed.has(category.id)).map((category) => category.name);
 }
 
 /**
- * Flatten groups back into the order they are drawn in.
+ * Whether [prompt] answers [query] through one of its category names.
  *
- * The arrow keys walk the drawn order, and grouping changes it: a prompt that
- * was third in the list may be first under its heading. Building the walk order
- * from the same grouping is what keeps the highlight on the row the user sees.
+ * Typing a category's name in the `!!` panel has to reach its prompts, which is
+ * the other half of what grouping is for: browse by the sidebar, or name the
+ * group and skip it.
  */
-export function flattenGroups(groups: PromptGroup[]): SavedPrompt[] {
-  return groups.flatMap((group) => group.prompts);
-}
-
-/**
- * The categories already in use, for offering them while writing a prompt.
- *
- * Free text invites near-duplicates ("Debug" and "debugging"), and the cheapest
- * guard against that is showing what already exists while the user types.
- */
-export function existingCategories(prompts: SavedPrompt[]): string[] {
-  const seen = new Set<string>();
-  const names: string[] = [];
-  for (const prompt of prompts) {
-    const category = prompt.category?.trim() ?? '';
-    if (category === '' || seen.has(category)) continue;
-    seen.add(category);
-    names.push(category);
-  }
-  return names.sort((a, b) => a.localeCompare(b));
+export function matchesCategoryName(
+  prompt: SavedPrompt,
+  query: string,
+  categories: PromptCategory[],
+): boolean {
+  const lowered = query.trim().toLowerCase();
+  if (lowered === '') return true;
+  return categoryNamesOf(prompt, categories).some((name) =>
+    name.toLowerCase().includes(lowered),
+  );
 }

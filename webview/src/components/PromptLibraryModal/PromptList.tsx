@@ -10,7 +10,6 @@ import {
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
-import { groupPromptsByCategory, flattenGroups } from '@/utils/promptCategories';
 import type { PromptScope, SavedPrompt } from '@/types/prompt';
 
 /** One card of the list, together with the scope its section belongs to. */
@@ -35,13 +34,9 @@ export function buildPromptRows(
   globalPrompts: SavedPrompt[],
   projectPrompts: SavedPrompt[],
 ): PromptRow[] {
-  // Through the same grouping the sections draw: category headings reorder the
-  // rows, and a walk order built from the ungrouped list would put the
-  // highlight on a different row than the one under the pointer.
-  const walk = (prompts: SavedPrompt[]) => flattenGroups(groupPromptsByCategory(prompts));
   return [
-    ...walk(globalPrompts).map((prompt): PromptRow => ({ scope: 'global', prompt })),
-    ...walk(projectPrompts).map((prompt): PromptRow => ({ scope: 'project', prompt })),
+    ...globalPrompts.map((prompt): PromptRow => ({ scope: 'global', prompt })),
+    ...projectPrompts.map((prompt): PromptRow => ({ scope: 'project', prompt })),
   ];
 }
 
@@ -129,10 +124,6 @@ function PromptSection(props: SectionProps) {
   } = props;
   const { t } = useTranslation('common');
 
-  // One group means one heading over everything, which says nothing. Headings
-  // earn their row only once the prompts are actually split.
-  const showCategoryHeadings = groupPromptsByCategory(prompts).length > 1;
-
   return (
     <div className="flex min-h-0 flex-col">
       <div className="mb-2 flex flex-shrink-0 items-center justify-between gap-2 py-1.5">
@@ -198,17 +189,7 @@ function PromptSection(props: SectionProps) {
         </div>
       ) : (
         <div className="flex min-h-[5.5rem] flex-col gap-2 overflow-y-auto">
-          {groupPromptsByCategory(prompts).map((group) => (
-            <div key={group.category ?? '\u0000uncategorised'} className="flex flex-col gap-2">
-              {/* A heading only once there is more than one group: a single
-                  "Uncategorised" bar over every prompt is a row of chrome that
-                  tells the user nothing. */}
-              {showCategoryHeadings && (
-                <span className="px-1 pt-1 text-xs font-medium uppercase tracking-wide text-text-tertiary">
-                  {group.category ?? t('promptLibrary.uncategorised')}
-                </span>
-              )}
-              {group.prompts.map((prompt) => (
+          {prompts.map((prompt) => (
             <div
               key={prompt.id}
               data-prompt-id={prompt.id}
@@ -283,8 +264,6 @@ function PromptSection(props: SectionProps) {
                   <TrashIcon className="h-4 w-4" />
                 </button>
               </span>
-            </div>
-              ))}
             </div>
           ))}
         </div>

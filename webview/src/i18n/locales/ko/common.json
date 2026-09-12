@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "프롬프트 검색",
     "categoryLabel": "카테고리",
-    "categoryPlaceholder": "선택. 예: 디버깅",
-    "uncategorised": "미분류"
+    "uncategorised": "미분류",
+    "noCategories": "아직 카테고리가 없습니다. 사이드바에서 추가하세요."
   }
 }

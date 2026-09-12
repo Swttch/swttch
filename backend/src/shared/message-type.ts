@@ -528,6 +528,14 @@ export enum MessageType {
   PREVIEW_PROMPT_IMPORT = 'PREVIEW_PROMPT_IMPORT',
   /** Apply a previewed import, as {scope, workingDir, prompts, strategy}. `strategy` is 'skip' | 'overwrite' | 'duplicate' and decides what happens to an id already stored. inbound webview→backend */
   IMPORT_PROMPTS = 'IMPORT_PROMPTS',
+  /** Ask for every prompt category that exists, as {workingDir}. The reply carries {categories}: the stored name list folded together with any name still only written on a prompt. inbound webview→backend */
+  GET_PROMPT_CATEGORIES = 'GET_PROMPT_CATEGORIES',
+  /** Add a category with no prompts in it yet, as {workingDir, name}. The reply carries the full list. inbound webview→backend */
+  CREATE_PROMPT_CATEGORY = 'CREATE_PROMPT_CATEGORY',
+  /** Rename a category everywhere it appears, as {workingDir, from, to}. Every prompt of both scopes that carries the old name is rewritten. inbound webview→backend */
+  RENAME_PROMPT_CATEGORY = 'RENAME_PROMPT_CATEGORY',
+  /** Remove a category, as {workingDir, name}. Its prompts are kept and fall back to uncategorised. inbound webview→backend */
+  DELETE_PROMPT_CATEGORY = 'DELETE_PROMPT_CATEGORY',
 
   // -- Attachments --
   /** The webview reports that the user attached an image, carrying { source, mimeType, size }. Purely a telemetry signal: the image itself still travels inline with SEND_MESSAGE, so the backend does nothing but record it. All three attach paths (button / paste / drop) are handled in the webview and never reach the backend otherwise, which is why attaching was invisible to telemetry until this. Never carries the file NAME. inbound webview→backend */

@@ -22,7 +22,7 @@ const prompt = (over: Partial<SavedPrompt> = {}): SavedPrompt => ({
 
 describe('buildExportFile', () => {
   it('stamps the format so a reader can tell where the file came from', () => {
-    const file = buildExportFile([prompt()], new Date('2026-09-13T01:02:03Z'));
+    const file = buildExportFile([prompt()], [], new Date('2026-09-13T01:02:03Z'));
     expect(file.format).toBe(PROMPT_EXPORT_FORMAT);
     expect(file.promptCount).toBe(1);
     expect(file.prompts).toHaveLength(1);

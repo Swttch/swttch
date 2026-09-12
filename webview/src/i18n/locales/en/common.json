@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "Search prompts",
     "categoryLabel": "Category",
-    "categoryPlaceholder": "Optional, e.g. debugging",
-    "uncategorised": "Uncategorised"
+    "uncategorised": "Uncategorised",
+    "noCategories": "No categories yet. Add one in the sidebar."
   }
 }

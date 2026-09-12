@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "搜索提示词",
     "categoryLabel": "分类",
-    "categoryPlaceholder": "可选，例如：调试",
-    "uncategorised": "未分类"
+    "uncategorised": "未分类",
+    "noCategories": "还没有分类。请在侧边栏添加。"
   }
 }

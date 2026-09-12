@@ -3,6 +3,8 @@ import { MessageType } from '@/shared';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type {
+  PromptCategory,
+  PromptCategoriesAck,
   ConflictStrategy,
   ExportPromptsAck,
   GetPromptsAck,
@@ -29,13 +31,20 @@ export interface PromptStore {
   /** False when no project is open, so the project section cannot be written. */
   projectAvailable: boolean;
   reload: () => void;
-  create: (scope: PromptScope, name: string, content: string, category?: string) => Promise<void>;
+  /** Every category that exists, named once each. */
+  categories: PromptCategory[];
+  create: (
+    scope: PromptScope,
+    name: string,
+    content: string,
+    categoryIds?: string[],
+  ) => Promise<void>;
   update: (
     scope: PromptScope,
     id: string,
     name: string,
     content: string,
-    category?: string,
+    categoryIds?: string[],
   ) => Promise<void>;
   remove: (scope: PromptScope, id: string) => Promise<void>;
   /**
@@ -62,6 +71,7 @@ export function usePromptStore(): PromptStore {
 
   const [globalPrompts, setGlobalPrompts] = useState<SavedPrompt[]>([]);
   const [projectPrompts, setProjectPrompts] = useState<SavedPrompt[]>([]);
+  const [categories, setCategories] = useState<PromptCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +80,12 @@ export function usePromptStore(): PromptStore {
   const reload = useCallback(() => {
     setLoading(true);
     setError(null);
+
+    // Categories come back on the same round trip: the sidebar and the lists are
+    // drawn together, so reading them apart would show one before the other.
+    (bridge.send(MessageType.GET_PROMPT_CATEGORIES, {}) as Promise<PromptCategoriesAck>)
+      .then((ack) => setCategories(ack?.categories ?? []))
+      .catch(() => setCategories([]));
 
     const requests: Array<Promise<GetPromptsAck>> = [
       bridge.send(MessageType.GET_PROMPTS, { scope: 'global' }) as Promise<GetPromptsAck>,
@@ -107,12 +123,12 @@ export function usePromptStore(): PromptStore {
   );
 
   const create = useCallback(
-    async (scope: PromptScope, name: string, content: string, category?: string) => {
+    async (scope: PromptScope, name: string, content: string, categoryIds?: string[]) => {
       await bridge.send(MessageType.CREATE_PROMPT, {
         ...scopePayload(scope),
         name,
         content,
-        category,
+        categories: categoryIds,
       });
       reload();
     },
@@ -120,13 +136,13 @@ export function usePromptStore(): PromptStore {
   );
 
   const update = useCallback(
-    async (scope: PromptScope, id: string, name: string, content: string, category?: string) => {
+    async (scope: PromptScope, id: string, name: string, content: string, categoryIds?: string[]) => {
       await bridge.send(MessageType.UPDATE_PROMPT, {
         ...scopePayload(scope),
         id,
         name,
         content,
-        category,
+        categories: categoryIds,
       });
       reload();
     },
@@ -175,6 +191,7 @@ export function usePromptStore(): PromptStore {
     loading,
     error,
     projectAvailable,
+    categories,
     reload,
     create,
     update,

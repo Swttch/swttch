@@ -296,7 +296,7 @@
     },
     "searchPlaceholder": "البحث في المطالبات",
     "categoryLabel": "الفئة",
-    "categoryPlaceholder": "اختياري، مثل: تصحيح الأخطاء",
-    "uncategorised": "بدون فئة"
+    "uncategorised": "بدون فئة",
+    "noCategories": "لا توجد فئات بعد. أضف واحدة من الشريط الجانبي."
   }
 }

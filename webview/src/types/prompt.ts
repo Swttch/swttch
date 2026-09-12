@@ -14,10 +14,27 @@ export interface SavedPrompt {
   createdAt: number;
   updatedAt: number;
   /**
-   * A name the user groups this prompt under, absent for the uncategorised
-   * group. Free text, so the groupings are the user's own way of working.
+   * The ids of the categories this prompt is filed under, absent when it is
+   * filed under none.
+   *
+   * Ids, not names: the name lives in one {@link PromptCategory} record, so
+   * renaming a category is one write and every prompt follows.
    */
-  category?: string;
+  categories?: string[];
+}
+
+/** One category, named once and referenced by id. */
+export interface PromptCategory {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+/** The reply to the four category messages: always the full list. */
+export interface PromptCategoriesAck {
+  status?: 'ok' | 'error';
+  error?: string;
+  categories?: PromptCategory[];
 }
 
 /** A saved prompt together with the scope it was read from. */

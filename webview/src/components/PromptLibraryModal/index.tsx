@@ -11,7 +11,6 @@ import {
 import type { ConflictStrategy, ImportItem, PromptScope, SavedPrompt } from '@/types/prompt';
 import { usePromptStore } from './usePromptStore';
 import { PromptList, buildPromptRows, matchesPromptQuery } from './PromptList';
-import { existingCategories } from '@/utils/promptCategories';
 import { PromptForm } from './PromptForm';
 import { PromptExportDialog, PromptImportDialog } from './PromptTransferDialog';
 
@@ -86,9 +85,6 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
 
   // The cards in the order they are drawn, which is also the order the arrow
   // keys walk. Built from one definition so the two cannot disagree.
-  // Offered while writing a prompt, from both scopes: a user who groups their
-  // global prompts under "debugging" means the same thing in a project.
-  const knownCategories = existingCategories([...store.globalPrompts, ...store.projectPrompts]);
   const globalPrompts = store.globalPrompts.filter((p) => matchesPromptQuery(p, query));
   const projectPrompts = store.projectPrompts.filter((p) => matchesPromptQuery(p, query));
   const rows = buildPromptRows(globalPrompts, projectPrompts);
@@ -271,8 +267,13 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose, view, formBusy, rows.length, selectedRow]);
 
-  const handleCreate = async (scope: PromptScope, name: string, content: string, category: string) => {
-    await store.create(scope, name, content, category);
+  const handleCreate = async (
+    scope: PromptScope,
+    name: string,
+    content: string,
+    categoryIds: string[],
+  ) => {
+    await store.create(scope, name, content, categoryIds);
     setView({ kind: 'list' });
   };
 
@@ -281,9 +282,9 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
     id: string,
     name: string,
     content: string,
-    category: string,
+    categoryIds: string[],
   ) => {
-    await store.update(scope, id, name, content, category);
+    await store.update(scope, id, name, content, categoryIds);
     setView({ kind: 'list' });
   };
 
@@ -379,9 +380,9 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
             )}
             {view.kind === 'create' && (
               <PromptForm
-                knownCategories={knownCategories}
-                onSubmit={(name, content, category) =>
-                  handleCreate(view.scope, name, content, category)
+                categories={store.categories}
+                onSubmit={(name, content, categoryIds) =>
+                  handleCreate(view.scope, name, content, categoryIds)
                 }
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}
@@ -391,9 +392,9 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
               <PromptForm
                 key={view.prompt.id}
                 editing={view.prompt}
-                knownCategories={knownCategories}
-                onSubmit={(name, content, category) =>
-                  handleUpdate(view.scope, view.prompt.id, name, content, category)
+                categories={store.categories}
+                onSubmit={(name, content, categoryIds) =>
+                  handleUpdate(view.scope, view.prompt.id, name, content, categoryIds)
                 }
                 onCancel={() => setView({ kind: 'list' })}
                 onBusyChange={setFormBusy}

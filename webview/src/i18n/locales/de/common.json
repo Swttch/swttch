@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "Prompts suchen",
     "categoryLabel": "Kategorie",
-    "categoryPlaceholder": "Optional, z. B. Debugging",
-    "uncategorised": "Ohne Kategorie"
+    "uncategorised": "Ohne Kategorie",
+    "noCategories": "Noch keine Kategorien. Füge eine in der Seitenleiste hinzu."
   }
 }

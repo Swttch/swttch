@@ -2,8 +2,13 @@ import { useState, useCallback, useRef, type RefObject } from 'react';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { findPromptToken, PROMPT_TRIGGER } from '@/utils/findPromptToken';
-import { groupPromptsByCategory } from '@/utils/promptCategories';
-import type { GetPromptsAck, ScopedPrompt } from '@/types/prompt';
+import type {
+  GetPromptsAck,
+  PromptCategoriesAck,
+  PromptCategory,
+  ScopedPrompt,
+} from '@/types/prompt';
+import { matchesCategoryName } from '@/utils/promptCategories';
 import { replaceRangeWithText } from '../RichInput/replaceRangeWithText';
 
 /**
@@ -39,6 +44,8 @@ interface PromptLibraryState {
   isLoading: boolean;
   /** True once a load has resolved, so an empty list can be told from "not yet". */
   hasLoaded: boolean;
+  /** The category records, read alongside the prompts so names can be matched. */
+  categories: PromptCategory[];
 }
 
 interface UsePromptLibraryParams {
@@ -93,13 +100,17 @@ interface UsePromptLibraryReturn {
  * other half of what grouping is for — browse by heading, or jump straight past
  * the headings to a group by name.
  */
-function matchesQuery(prompt: ScopedPrompt, query: string): boolean {
+function matchesQuery(
+  prompt: ScopedPrompt,
+  query: string,
+  categories: PromptCategory[],
+): boolean {
   if (query === '') return true;
   const lowered = query.toLowerCase();
   return (
     prompt.name.toLowerCase().includes(lowered) ||
     prompt.content.toLowerCase().includes(lowered) ||
-    (prompt.category?.toLowerCase().includes(lowered) ?? false)
+    matchesCategoryName(prompt, query, categories)
   );
 }
 
@@ -140,6 +151,7 @@ const EMPTY_STATE: PromptLibraryState = {
   selectedIndex: 0,
   isLoading: false,
   hasLoaded: false,
+  categories: [],
 };
 
 export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibraryReturn {
@@ -166,6 +178,12 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
    */
   const load = useCallback(() => {
     setState(prev => ({ ...prev, isLoading: true }));
+
+    // Read with the prompts, because a category name is only reachable through
+    // its record and the panel filters on both in the same keystroke.
+    (bridge.send(MessageType.GET_PROMPT_CATEGORIES, {}) as Promise<PromptCategoriesAck>)
+      .then((ack) => setState(prev => ({ ...prev, categories: ack?.categories ?? [] })))
+      .catch(() => setState(prev => ({ ...prev, categories: [] })));
 
     const requests: Array<Promise<GetPromptsAck>> = [
       bridge.send(MessageType.GET_PROMPTS, { scope: 'global' }) as Promise<GetPromptsAck>,
@@ -243,22 +261,10 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
     [state.isActive, state.triggerIndex, load],
   );
 
-  const matching = state.loaded.filter(prompt => matchesQuery(prompt, state.query));
-  // Grouped through the same helper the library modal uses, so one list of one
-  // thing is arranged one way. Headings appear only once the prompts actually
-  // split into more than one group; a single heading over everything is a row
-  // that says nothing, and this panel is short.
-  const groups = groupPromptsByCategory(matching);
   const rows: PromptRow[] = [
-    ...groups.flatMap((group): PromptRow[] => [
-      ...(groups.length > 1
-        ? [{ kind: 'heading', category: group.category } as PromptRow]
-        : []),
-      ...group.prompts.map((prompt): PromptRow => ({
-        kind: 'prompt',
-        prompt: prompt as ScopedPrompt,
-      })),
-    ]),
+    ...state.loaded
+      .filter(prompt => matchesQuery(prompt, state.query, state.categories))
+      .map((prompt): PromptRow => ({ kind: 'prompt', prompt })),
     { kind: 'create' },
   ];
 

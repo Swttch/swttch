@@ -13,7 +13,15 @@ import {
   type SavedPrompt,
 } from '../features/prompts';
 import {
+  listCategories,
+  createCategory,
+  renameCategory,
+  deleteCategory,
+} from '../features/prompt-category-registry';
+import {
   buildExportFile,
+  extractCategoryRecords,
+  remapImportedCategories,
   exportFileName,
   parseImportFile,
   buildImportPreview,
@@ -104,9 +112,9 @@ export async function createPromptHandler(
   const projectPath = readProjectPath(message);
   const name = (message.payload?.name as string) ?? '';
   const content = (message.payload?.content as string) ?? '';
-  const category = message.payload?.category as string | undefined;
+  const categories = message.payload?.categories;
 
-  const result = await createPrompt(scope, projectPath, name, content, category);
+  const result = await createPrompt(scope, projectPath, name, content, categories);
   if (result.status === 'error') {
     sendError(connections, connectionId, message, result.error);
     return;
@@ -125,9 +133,9 @@ export async function updatePromptHandler(
   const id = (message.payload?.id as string) ?? '';
   const name = (message.payload?.name as string) ?? '';
   const content = (message.payload?.content as string) ?? '';
-  const category = message.payload?.category as string | undefined;
+  const categories = message.payload?.categories;
 
-  const result = await updatePrompt(scope, projectPath, id, name, content, category);
+  const result = await updatePrompt(scope, projectPath, id, name, content, categories);
   if (result.status === 'error') {
     sendError(connections, connectionId, message, result.error);
     return;
@@ -183,7 +191,7 @@ export async function exportPromptsHandler(
   }
 
   const now = new Date();
-  const file = buildExportFile(chosen, now);
+  const file = buildExportFile(chosen, await listCategories(), now);
   const result = await bridge.saveFile({
     suggestedName: exportFileName(now),
     contents: `${JSON.stringify(file, null, 2)}\n`,
@@ -230,8 +238,11 @@ export async function previewPromptImportHandler(
     return;
   }
 
+  // The file's category ids are the exporting machine's, so they are matched by
+  // name and rewritten before the preview shows what would land.
+  const remapped = await remapImportedCategories(parsed.prompts, extractCategoryRecords(JSON.parse(raw)));
   const existing = await readPrompts(scope, projectPath);
-  const preview = buildImportPreview(parsed.prompts, existing);
+  const preview = buildImportPreview(remapped, existing);
   sendOk(connections, connectionId, message, { scope, ...preview });
 }
 
@@ -279,4 +290,67 @@ export async function importPromptsHandler(
     updated: result.updated,
     skipped: result.skipped,
   });
+}
+
+/**
+ * The category handlers.
+ *
+ * All four answer with the full list rather than with what changed, because the
+ * sidebar draws the whole list and a diff would only give it a second way to be
+ * wrong.
+ */
+export async function getPromptCategoriesHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const categories = await listCategories();
+  sendOk(connections, connectionId, message, { categories });
+}
+
+export async function createPromptCategoryHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const name = (message.payload?.name as string) ?? '';
+  const result = await createCategory(name);
+  if (result.status === 'error') {
+    sendError(connections, connectionId, message, result.error);
+    return;
+  }
+  sendOk(connections, connectionId, message, { categories: result.categories });
+}
+
+export async function renamePromptCategoryHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const id = (message.payload?.id as string) ?? '';
+  const name = (message.payload?.name as string) ?? '';
+  const result = await renameCategory(id, name);
+  if (result.status === 'error') {
+    sendError(connections, connectionId, message, result.error);
+    return;
+  }
+  sendOk(connections, connectionId, message, { categories: result.categories });
+}
+
+export async function deletePromptCategoryHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const id = (message.payload?.id as string) ?? '';
+  const result = await deleteCategory(id);
+  if (result.status === 'error') {
+    sendError(connections, connectionId, message, result.error);
+    return;
+  }
+  sendOk(connections, connectionId, message, { categories: result.categories });
 }

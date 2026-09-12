@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "Buscar prompts",
     "categoryLabel": "Categoría",
-    "categoryPlaceholder": "Opcional, p. ej. depuración",
-    "uncategorised": "Sin categoría"
+    "uncategorised": "Sin categoría",
+    "noCategories": "Aún no hay categorías. Añade una en la barra lateral."
   }
 }

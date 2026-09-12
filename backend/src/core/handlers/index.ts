@@ -141,6 +141,10 @@ import {
   exportPromptsHandler,
   previewPromptImportHandler,
   importPromptsHandler,
+  getPromptCategoriesHandler,
+  createPromptCategoryHandler,
+  renamePromptCategoryHandler,
+  deletePromptCategoryHandler,
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
@@ -579,6 +583,18 @@ export async function handleMessage(
       break;
     case MessageType.IMPORT_PROMPTS:
       await importPromptsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_PROMPT_CATEGORIES:
+      await getPromptCategoriesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CREATE_PROMPT_CATEGORY:
+      await createPromptCategoryHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.RENAME_PROMPT_CATEGORY:
+      await renamePromptCategoryHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.DELETE_PROMPT_CATEGORY:
+      await deletePromptCategoryHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_ASSETS:
       await getSessionAssetsHandler(connectionId, message, connections, bridge);

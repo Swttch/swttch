@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "搜尋提示詞",
     "categoryLabel": "分類",
-    "categoryPlaceholder": "可選，例如：除錯",
-    "uncategorised": "未分類"
+    "uncategorised": "未分類",
+    "noCategories": "還沒有分類。請在側邊欄新增。"
   }
 }

@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "プロンプトを検索",
     "categoryLabel": "カテゴリ",
-    "categoryPlaceholder": "任意。例: デバッグ",
-    "uncategorised": "未分類"
+    "uncategorised": "未分類",
+    "noCategories": "カテゴリがまだありません。サイドバーで追加してください。"
   }
 }

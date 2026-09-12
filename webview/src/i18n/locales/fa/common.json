@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "جستجوی پرامپت‌ها",
     "categoryLabel": "دسته",
-    "categoryPlaceholder": "اختیاری، مثلاً: اشکال‌زدایی",
-    "uncategorised": "بدون دسته"
+    "uncategorised": "بدون دسته",
+    "noCategories": "هنوز دسته‌ای نیست. از نوار کناری اضافه کنید."
   }
 }

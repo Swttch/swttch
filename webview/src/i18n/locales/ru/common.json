@@ -294,7 +294,7 @@
     },
     "searchPlaceholder": "Поиск промптов",
     "categoryLabel": "Категория",
-    "categoryPlaceholder": "Необязательно, например: отладка",
-    "uncategorised": "Без категории"
+    "uncategorised": "Без категории",
+    "noCategories": "Категорий пока нет. Добавьте их на боковой панели."
   }
 }

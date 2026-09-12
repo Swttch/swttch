@@ -36,15 +36,39 @@ export interface SavedPrompt {
   /** Last edit time in epoch milliseconds. Equals createdAt until first edit. */
   updatedAt: number;
   /**
-   * A name the user groups this prompt under, or absent for the uncategorised
-   * group.
+   * The ids of the categories this prompt belongs to, or absent for the
+   * uncategorised group.
    *
-   * Free text rather than a fixed list: the useful groupings are the user's own
-   * way of working, and a list we picked would be wrong for most of them.
-   * Optional so a store written before categories existed reads back unchanged
-   * and needs no migration.
+   * Ids, not names: a name written here would have to be rewritten on every
+   * prompt that carries it whenever the user renames the category, across both
+   * scopes, and a rewrite that fails halfway leaves the two disagreeing. The
+   * name lives in one {@link PromptCategory} record instead.
+   *
+   * A list rather than one id: "review this diff" is both a review prompt and a
+   * git prompt, and making the user pick one would push them into inventing a
+   * category that means both.
+   *
+   * Optional, so a store written before categories existed reads back unchanged
+   * and needs no migration. An id with no record behind it is ignored rather
+   * than shown, which is what makes reading a store safe to do without writing.
    */
-  category?: string;
+  categories?: string[];
+}
+
+/**
+ * One category, named once and referenced by id.
+ *
+ * Stored in the GLOBAL store even when only project prompts use it: a category
+ * is a dimension of its own, independent of scope, so one taxonomy spans both
+ * and the global store is the one that exists whether or not a project is open.
+ */
+export interface PromptCategory {
+  /** Ours to generate; the same shape as a prompt id. */
+  id: string;
+  /** What the user called it. The only place this name is written. */
+  name: string;
+  /** Creation time in epoch milliseconds. */
+  createdAt: number;
 }
 
 export type PromptResult =
@@ -64,8 +88,15 @@ export type PromptDeleteResult =
  * file from becoming a prompt by accident.
  */
 export const PROMPT_NAME_MAX_LENGTH = 60;
-/** Same reasoning as the name: a category sits on one heading row. */
+/** Same reasoning as the name: a category sits on one sidebar row. */
 export const PROMPT_CATEGORY_MAX_LENGTH = 60;
+/**
+ * A ceiling on how many categories one prompt may carry.
+ *
+ * Not a design limit so much as a guard: the field is free text arriving over
+ * IPC, and a list with no bound is a list something can fill.
+ */
+export const PROMPT_CATEGORIES_MAX_COUNT = 20;
 export const PROMPT_CONTENT_MAX_LENGTH = 100000;
 
 /** Ids are ours to generate, so reject anything that did not come from us. */
@@ -109,25 +140,75 @@ export function resolvePromptStoreFile(
  * whole list down with it: the user would see an empty library and assume every
  * prompt was lost.
  */
+/**
+ * Read the category ids written on a prompt.
+ *
+ * Only well-formed ids are kept. An id with no record behind it is left in the
+ * list and ignored when the name is looked up, rather than being dropped here:
+ * reading must not quietly edit a store, and a record that is merely missing
+ * today may be back tomorrow (a project opened without its global store, a file
+ * mid-sync).
+ *
+ * Duplicates are collapsed, because one category twice on one prompt would file
+ * it under the same heading twice.
+ */
+export function parseCategoryIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string') continue;
+    const id = entry.trim();
+    if (!VALID_ID_PATTERN.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= PROMPT_CATEGORIES_MAX_COUNT) break;
+  }
+  return ids;
+}
+
+/** Read the stored category records, dropping anything that is not one. */
+export function parseCategoryRecords(value: unknown): PromptCategory[] {
+  if (!Array.isArray(value)) return [];
+
+  const seenIds = new Set<string>();
+  const categories: PromptCategory[] = [];
+  for (const entry of value) {
+    if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const candidate = entry as Record<string, unknown>;
+    const { id, name, createdAt } = candidate;
+    if (typeof id !== 'string' || !VALID_ID_PATTERN.test(id) || seenIds.has(id)) continue;
+    if (typeof name !== 'string') continue;
+    const trimmed = name.trim();
+    if (trimmed === '' || trimmed.length > PROMPT_CATEGORY_MAX_LENGTH) continue;
+    seenIds.add(id);
+    categories.push({
+      id,
+      name: trimmed,
+      createdAt: typeof createdAt === 'number' ? createdAt : 0,
+    });
+  }
+  return categories;
+}
+
 function parseStoredPrompts(value: unknown): SavedPrompt[] {
   if (!Array.isArray(value)) return [];
   const prompts: SavedPrompt[] = [];
   for (const entry of value) {
     if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) continue;
     const candidate = entry as Record<string, unknown>;
-    const { id, name, content, createdAt, updatedAt, category } = candidate;
+    const { id, name, content, createdAt, updatedAt } = candidate;
     if (typeof id !== 'string' || !VALID_ID_PATTERN.test(id)) continue;
     if (typeof name !== 'string' || typeof content !== 'string') continue;
-    // A blank category is the same as none, so the two cannot become separate
-    // groups that both read as "uncategorised".
-    const trimmedCategory = typeof category === 'string' ? category.trim() : '';
+    const categories = parseCategoryIds(candidate.categories);
     prompts.push({
       id,
       name,
       content,
       createdAt: typeof createdAt === 'number' ? createdAt : 0,
       updatedAt: typeof updatedAt === 'number' ? updatedAt : 0,
-      ...(trimmedCategory === '' ? {} : { category: trimmedCategory }),
+      ...(categories.length === 0 ? {} : { categories }),
     });
   }
   return prompts;
@@ -155,14 +236,6 @@ export async function readPrompts(scope: PromptScope, projectPath?: string): Pro
     console.error('[node-backend]', 'Failed to read prompts:', err);
     return [];
   }
-}
-
-function validateCategory(category: string | undefined): string | null {
-  if (category === undefined) return null;
-  if (category.trim().length > PROMPT_CATEGORY_MAX_LENGTH) {
-    return `Prompt category must be at most ${PROMPT_CATEGORY_MAX_LENGTH} characters`;
-  }
-  return null;
 }
 
 function validateNameAndContent(name: string, content: string): string | null {
@@ -222,13 +295,13 @@ export async function createPrompt(
   projectPath: string | undefined,
   name: string,
   content: string,
-  category?: string,
+  categories?: unknown,
 ): Promise<PromptResult> {
-  const validationError = validateNameAndContent(name, content) ?? validateCategory(category);
+  const validationError = validateNameAndContent(name, content);
   if (validationError) return { status: 'error', error: validationError };
 
   const now = Date.now();
-  const trimmedCategory = category?.trim() ?? '';
+  const parsed = parseCategoryIds(categories);
   const prompt: SavedPrompt = {
     id: randomUUID(),
     name: name.trim(),
@@ -236,7 +309,7 @@ export async function createPrompt(
     createdAt: now,
     updatedAt: now,
     // Absent rather than empty, so "no category" is one value on disk.
-    ...(trimmedCategory === '' ? {} : { category: trimmedCategory }),
+    ...(parsed.length === 0 ? {} : { categories: parsed }),
   };
 
   const written = await mutatePromptStore(scope, projectPath, (prompts) => [...prompts, prompt]);
@@ -245,7 +318,7 @@ export async function createPrompt(
 }
 
 /**
- * Edit one prompt's name, content and category. `id` and `createdAt` are not
+ * Edit one prompt's name, content and categories. `id` and `createdAt` are not
  * editable:
  * the id is what the webview's cached rows are keyed by, and a creation time
  * that moves would reshuffle the newest-first order the user just looked at.
@@ -256,10 +329,10 @@ export async function updatePrompt(
   id: string,
   name: string,
   content: string,
-  category?: string,
+  categories?: unknown,
 ): Promise<PromptResult> {
   if (!VALID_ID_PATTERN.test(id)) return { status: 'error', error: `Invalid prompt id: ${id}` };
-  const validationError = validateNameAndContent(name, content) ?? validateCategory(category);
+  const validationError = validateNameAndContent(name, content);
   if (validationError) return { status: 'error', error: validationError };
 
   let updated: SavedPrompt | null = null;
@@ -267,12 +340,12 @@ export async function updatePrompt(
     const index = prompts.findIndex((prompt) => prompt.id === id);
     if (index === -1) return `Prompt not found: ${id}`;
     const existing = prompts[index] as SavedPrompt;
-    const trimmedCategory = category?.trim() ?? '';
-    // Spread first, then drop the key when the field was cleared: leaving the
-    // old value in place would make a category impossible to remove.
+    const parsed = parseCategoryIds(categories);
+    // Spread first, then drop the key when the list came back empty: leaving
+    // the old value in place would make a category impossible to remove.
     updated = { ...existing, name: name.trim(), content, updatedAt: Date.now() };
-    if (trimmedCategory === '') delete updated.category;
-    else updated.category = trimmedCategory;
+    if (parsed.length === 0) delete updated.categories;
+    else updated.categories = parsed;
     const next = [...prompts];
     next[index] = updated;
     return next;

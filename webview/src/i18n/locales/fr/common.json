@@ -292,7 +292,7 @@
     },
     "searchPlaceholder": "Rechercher des prompts",
     "categoryLabel": "Catégorie",
-    "categoryPlaceholder": "Facultatif, par ex. débogage",
-    "uncategorised": "Sans catégorie"
+    "uncategorised": "Sans catégorie",
+    "noCategories": "Aucune catégorie pour l'instant. Ajoutez-en une dans la barre latérale."
   }
 }

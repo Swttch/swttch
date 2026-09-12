@@ -2,10 +2,14 @@ import { randomUUID } from 'crypto';
 import {
   PROMPT_NAME_MAX_LENGTH,
   PROMPT_CONTENT_MAX_LENGTH,
+  parseCategoryIds,
+  parseCategoryRecords,
   mutatePromptStore,
+  type PromptCategory,
   type PromptScope,
   type SavedPrompt,
 } from './prompts';
+import { listCategories, resolveCategoryIdsByName } from './prompt-category-registry';
 
 /**
  * Reading and writing a prompt library as one file, so a set of prompts can move
@@ -26,6 +30,13 @@ export interface PromptExportFile {
   exportTime: string;
   promptCount: number;
   prompts: SavedPrompt[];
+  /**
+   * The category records the exported prompts reference.
+   *
+   * Without them the ids on those prompts would mean nothing on the machine
+   * that reads the file: the names live only here.
+   */
+  categories: PromptCategory[];
 }
 
 /** What one incoming prompt would do to the library it is imported into. */
@@ -55,12 +66,20 @@ export type ParseImportResult =
  * `prompts` is an array here even though a reader must also accept an object,
  * because an array is the shape that keeps the order the user sees.
  */
-export function buildExportFile(prompts: SavedPrompt[], now: Date = new Date()): PromptExportFile {
+export function buildExportFile(
+  prompts: SavedPrompt[],
+  categories: PromptCategory[] = [],
+  now: Date = new Date(),
+): PromptExportFile {
+  // Only the records actually referenced: exporting three prompts should not
+  // hand the reader the author's whole taxonomy.
+  const used = new Set(prompts.flatMap((prompt) => prompt.categories ?? []));
   return {
     format: PROMPT_EXPORT_FORMAT,
     exportTime: now.toISOString(),
     promptCount: prompts.length,
     prompts,
+    categories: categories.filter((category) => used.has(category.id)),
   };
 }
 
@@ -130,10 +149,9 @@ export function normaliseImportedPrompt(entry: unknown, now: number): SavedPromp
 
   const createdAt = typeof candidate.createdAt === 'number' ? candidate.createdAt : now;
   const updatedAt = typeof candidate.updatedAt === 'number' ? candidate.updatedAt : createdAt;
-  // Carried through if it is there: a library exported with categories arrives
-  // with them, and one exported without simply has none.
-  const rawCategory = candidate.category;
-  const category = typeof rawCategory === 'string' ? rawCategory.trim() : '';
+  // Kept as written. These are the FILE's ids, which are remapped to this
+  // machine's by {@link remapImportedCategories} before anything is stored.
+  const categories = parseCategoryIds(candidate.categories);
 
   return {
     id,
@@ -141,7 +159,7 @@ export function normaliseImportedPrompt(entry: unknown, now: number): SavedPromp
     content,
     createdAt,
     updatedAt,
-    ...(category === '' ? {} : { category }),
+    ...(categories.length === 0 ? {} : { categories }),
   };
 }
 
@@ -170,6 +188,61 @@ export function parseImportFile(raw: string, now: number = Date.now()): ParseImp
 
   if (prompts.length === 0) return { status: 'error', error: 'no-prompts' };
   return { status: 'ok', prompts };
+}
+
+/**
+ * Pull the category records out of a parsed prompt file.
+ *
+ * Absent in a file written before categories existed, and in one written by
+ * another tool, which is why this answers with an empty list rather than
+ * failing.
+ */
+export function extractCategoryRecords(parsed: unknown): PromptCategory[] {
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return [];
+  return parseCategoryRecords((parsed as Record<string, unknown>).categories);
+}
+
+/**
+ * Rewrite the incoming prompts' category ids into this machine's.
+ *
+ * The file's ids are the exporting machine's and collide with nothing here by
+ * design, so each is looked up in the file's own records to get its NAME, and
+ * the name is matched against this machine's categories — creating the ones it
+ * does not have. An id whose record the file did not carry is dropped, because
+ * there is no name to match it by and a dangling id would file the prompt under
+ * a heading that can never appear.
+ */
+export async function remapImportedCategories(
+  prompts: SavedPrompt[],
+  records: PromptCategory[],
+): Promise<SavedPrompt[]> {
+  const nameById = new Map(records.map((record) => [record.id, record.name]));
+  const wantedNames = [...new Set(prompts.flatMap((prompt) => prompt.categories ?? []))]
+    .map((id) => nameById.get(id))
+    .filter((name): name is string => name !== undefined);
+
+  if (wantedNames.length === 0) {
+    return prompts.map((prompt) => {
+      if (!prompt.categories) return prompt;
+      const stripped = { ...prompt };
+      delete stripped.categories;
+      return stripped;
+    });
+  }
+
+  const idByName = await resolveCategoryIdsByName(wantedNames);
+  return prompts.map((prompt) => {
+    if (!prompt.categories) return prompt;
+    const mapped = prompt.categories
+      .map((id) => nameById.get(id))
+      .filter((name): name is string => name !== undefined)
+      .map((name) => idByName.get(name))
+      .filter((id): id is string => id !== undefined);
+    const next = { ...prompt };
+    if (mapped.length === 0) delete next.categories;
+    else next.categories = [...new Set(mapped)];
+    return next;
+  });
 }
 
 /** Mark each incoming prompt as new or as an update of one already stored. */
