@@ -42,8 +42,27 @@ class ChatHostRestoreActivity : ProjectActivity {
     private val logger = Logger.getInstance(ChatHostRestoreActivity::class.java)
 
     override suspend fun execute(project: Project) {
+        createTabStateOffTheEdt(project)
         resolveHostMode(project)
         ChatHostRouter.currentHost(project).restorePersistedSessions(project)
+    }
+
+    /**
+     * Create [EditorTabStateService] here, where "here" is a background thread.
+     *
+     * This looks redundant next to [resolveHostMode], which reads the same service
+     * on its first line. It is not: **creating the service is a job this activity
+     * owns**, and leaving that to a side effect of some later read means any
+     * refactor of that read silently hands the job back to whoever asks first.
+     *
+     * Whoever asks first is sometimes the EDT, and the EDT must not be the one to
+     * create it — see [EditorTabStateService.getInstanceIfCreated] for the WSL
+     * crash that causes (issue #438). Doing it on the first line of the first
+     * project-scoped code we run is what keeps the EDT paths finding a service
+     * that already exists.
+     */
+    private fun createTabStateOffTheEdt(project: Project) {
+        EditorTabStateService.getInstance(project)
     }
 
     /**

@@ -79,15 +79,25 @@ class ToolWindowHost(private val project: Project) : ChatHost {
         removePlaceholders(toolWindow)
         if (toolWindow.contentManager.contentCount > 0) return
 
-        val state = EditorTabStateService.getInstance(project)
-        when (val plan = ChatHostRouter.planHydrate(state.getOpenTabIds(), state.getActiveTabId())) {
-            is ChatHostRouter.HydratePlan.FreshSession ->
-                openOrFocus(project, UUID.randomUUID().toString(), initialPath = null, initialTitle = null)
+        // useFromEdt, not getInstance: the factory builds the tool window on the EDT
+        // while the project is still opening, so this can be the first thing to touch
+        // the service — and creating it on the EDT throws on a WSL project (issue
+        // #438, documented on EditorTabStateService.getInstanceIfCreated). This is
+        // the tool-window twin of the editor-tab restore in ClaudeCodeEditorProvider.
+        EditorTabStateService.useFromEdt(project) { state ->
+            // Re-checked because this can now run a moment later than the guard
+            // above, and the user may have opened a chat in between.
+            if (toolWindow.contentManager.contentCount > 0) return@useFromEdt
 
-            is ChatHostRouter.HydratePlan.Restore ->
-                for (tabId in plan.order) {
-                    openOrFocus(project, tabId, state.getRestorePath(tabId), state.getEffectiveTitle(tabId))
-                }
+            when (val plan = ChatHostRouter.planHydrate(state.getOpenTabIds(), state.getActiveTabId())) {
+                is ChatHostRouter.HydratePlan.FreshSession ->
+                    openOrFocus(project, UUID.randomUUID().toString(), initialPath = null, initialTitle = null)
+
+                is ChatHostRouter.HydratePlan.Restore ->
+                    for (tabId in plan.order) {
+                        openOrFocus(project, tabId, state.getRestorePath(tabId), state.getEffectiveTitle(tabId))
+                    }
+            }
         }
     }
 

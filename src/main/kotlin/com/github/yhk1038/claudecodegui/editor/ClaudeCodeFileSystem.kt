@@ -102,25 +102,35 @@ class ClaudeCodeFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
 
         ClaudeCodeVirtualFile.findExisting(tabId)?.let { return it }
 
-        // getInstanceIfCreated() resolves an application service, so it throws —
-        // rather than answering null — when there is no application at all. That
-        // is the case in plain unit tests, and during teardown. The whole lookup
-        // is therefore guarded, not just its result.
-        val project = runCatching {
+        // ProjectManager.getInstanceIfCreated() resolves an application service, so
+        // it throws — rather than answering null — when there is no application at
+        // all. That is the case in plain unit tests, and during teardown. The whole
+        // lookup is therefore guarded, not just its result.
+        //
+        // Each project is asked with EditorTabStateService.getInstanceIfCreated
+        // rather than getInstance, because this call can arrive on the EDT during
+        // layout restore and creating that service on the EDT throws on a WSL
+        // project (issue #438 — the chain is documented on getInstanceIfCreated).
+        // A project that has not created it yet is simply not asked, which lands on
+        // the same unclaimed-tab fallback the restart case already uses below.
+        val projectAndState = runCatching {
             ProjectManager.getInstanceIfCreated()
                 ?.openProjects
-                ?.firstOrNull {
-                    !it.isDisposed && tabId in EditorTabStateService.getInstance(it).getOpenTabIds()
+                ?.asSequence()
+                ?.filter { !it.isDisposed }
+                ?.mapNotNull { project ->
+                    EditorTabStateService.getInstanceIfCreated(project)?.let { project to it }
                 }
+                ?.firstOrNull { (_, state) -> tabId in state.getOpenTabIds() }
         }.getOrNull()
 
-        if (project == null) {
+        if (projectAndState == null) {
             // The restart case: no project can vouch for this tab yet. Hand back
             // the tab anyway — see the note above on why waiting for one loses it.
             return ClaudeCodeVirtualFile.getOrCreateUnclaimed(tabId)
         }
 
-        val state = EditorTabStateService.getInstance(project)
+        val (project, state) = projectAndState
         return ClaudeCodeVirtualFile.getOrCreate(
             project,
             tabId,

@@ -30,10 +30,33 @@ class ClaudeCodeEditorProvider : FileEditorProvider, DumbAware {
         val chatTab = file as ClaudeCodeVirtualFile
         ClaudeCodeVirtualFile.claim(project, chatTab.tabId)
 
-        val state = EditorTabStateService.getInstance(project)
-        chatTab.seedRestoredState(state.getPath(chatTab.tabId), state.getEffectiveTitle(chatTab.tabId))
+        seedFromPersistedState(project, chatTab)
 
         return ClaudeCodeFileEditor(project, chatTab)
+    }
+
+    /**
+     * Fill a restored tab in from [EditorTabStateService] without ever being the
+     * thread that creates that service.
+     *
+     * This method runs on the EDT, and creating [EditorTabStateService] there
+     * throws on a WSL project — the reason is spelled out on
+     * [EditorTabStateService.getInstanceIfCreated] (issue #438). The layout
+     * restore is the one path that can reach this before the project has finished
+     * opening, so it is also the one path where the service may genuinely not
+     * exist yet.
+     *
+     * When it does not, the read moves to a background thread and the seed is
+     * applied when it comes back. Arriving late costs nothing: the tab shows its
+     * generic label for a moment longer, and
+     * [ClaudeCodeVirtualFile.seedRestoredState] only fills in what is still
+     * unset, so a pane whose real address arrived first (via `readState` →
+     * `setState`) keeps it.
+     */
+    private fun seedFromPersistedState(project: Project, chatTab: ClaudeCodeVirtualFile) {
+        EditorTabStateService.useFromEdt(project) { state ->
+            chatTab.seedRestoredState(state.getPath(chatTab.tabId), state.getEffectiveTitle(chatTab.tabId))
+        }
     }
 
     override fun getEditorTypeId(): String = "ClaudeCodeEditor"
