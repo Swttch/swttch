@@ -135,7 +135,7 @@ function PromptSection(props: SectionProps) {
             <button
               type="button"
               onClick={() => onExport(scope)}
-              className="flex items-center gap-1 rounded-md border border-border-default px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md border border-border-strong bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
             >
               <ArrowUpTrayIcon className="h-3.5 w-3.5" />
               {t('promptLibrary.transfer.export')}
@@ -145,7 +145,7 @@ function PromptSection(props: SectionProps) {
             <button
               type="button"
               onClick={() => onImport(scope)}
-              className="flex items-center gap-1 rounded-md border border-border-default px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+              className="flex items-center gap-1 rounded-md border border-border-strong bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
             >
               <ArrowDownTrayIcon className="h-3.5 w-3.5" />
               {t('promptLibrary.transfer.import')}
@@ -164,10 +164,27 @@ function PromptSection(props: SectionProps) {
         </span>
       </div>
 
+      {/* An empty section is drawn as a card too, not as loose text. Bare text
+          sat on nothing and started a few pixels in from the heading above it,
+          so the section looked misaligned; a box gives it the same left edge and
+          the same surface as the rows it will be replaced by. */}
       {unavailableNote ? (
-        <p className="px-1 py-3 text-sm text-text-tertiary">{unavailableNote}</p>
+        <div className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-3.5 text-sm text-text-secondary">
+          {unavailableNote}
+        </div>
       ) : prompts.length === 0 ? (
-        <p className="px-1 py-3 text-sm text-text-tertiary">{t('promptLibrary.empty')}</p>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-overlay px-3 py-3.5">
+          <span className="text-sm text-text-secondary">{t('promptLibrary.empty')}</span>
+          {onCreate && (
+            <button
+              type="button"
+              onClick={() => onCreate(scope)}
+              className="flex-shrink-0 text-sm text-text-link underline-offset-2 hover:underline"
+            >
+              {t('promptLibrary.addPrompt')}
+            </button>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-2">
           {prompts.map((prompt) => (
@@ -225,7 +242,7 @@ function PromptSection(props: SectionProps) {
                 <button
                   type="button"
                   onClick={() => setOpenMenuId(openMenuId === prompt.id ? null : prompt.id)}
-                  className="w-7 h-7 flex items-center justify-center rounded text-text-tertiary hover:bg-surface-hover"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                   title={t('promptLibrary.menu')}
                   aria-label={t('promptLibrary.menu')}
                   aria-haspopup="true"

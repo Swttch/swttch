@@ -50,9 +50,11 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
   const { confirmDialog, confirm } = useConfirmDialog();
   const store = usePromptStore();
 
-  // The create screen starts on global scope and lets the user change it there:
-  // a prompt reached for from the composer is usually one they want everywhere,
-  // and project scope does not exist at all when no project is open.
+  // Every other way in names its scope, because the button that opened it sat on
+  // that scope's heading. The `!!` panel's create row is the one caller with no
+  // scope to name, and global is the answer for it: a prompt reached for from
+  // the composer is usually one the user wants everywhere, and project scope
+  // does not exist at all when no project is open.
   const [view, setView] = useState<View>(
     initialView === 'create' ? { kind: 'create', scope: 'global' } : { kind: 'list' },
   );
@@ -306,7 +308,7 @@ export function PromptLibraryModal({ onClose, initialView = 'list' }: Props) {
                   </button>
                 </div>
               </div>
-              <p className="px-4 pb-2 text-xs text-text-tertiary flex-shrink-0">
+              <p className="flex-shrink-0 px-4 pb-3 text-xs text-text-secondary">
                 {t('promptLibrary.description')}
               </p>
             </>
