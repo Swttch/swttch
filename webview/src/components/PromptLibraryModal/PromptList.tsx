@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
   BookmarkIcon,
+  PencilSquareIcon,
   PlusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
-// Solid rather than outline: the outline ellipsis is three thin rings, which
-// wash out at this size. SendActionMenu reaches for the same one.
-import { EllipsisVerticalIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
@@ -103,26 +102,6 @@ function PromptSection(props: SectionProps) {
     onCreate,
   } = props;
   const { t } = useTranslation('common');
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close the kebab menu on a click anywhere outside it. Registered a tick late
-  // so the very mousedown that opened the menu does not immediately close it.
-  useEffect(() => {
-    if (openMenuId === null) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && event.target instanceof Node && !menuRef.current.contains(event.target)) {
-        setOpenMenuId(null);
-      }
-    };
-    const timer = window.setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [openMenuId]);
 
   return (
     <div className="mb-5">
@@ -202,7 +181,7 @@ function PromptSection(props: SectionProps) {
                * which carries the light theme (where the two surfaces are five
                * shades apart) without boxing in the dark one.
                */
-              className={`group flex items-center gap-3 rounded-lg border p-3 transition-colors ${
+              className={`group flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
                 prompt.id === selectedId
                   ? 'border-border-focus bg-surface-selected'
                   : 'border-border-subtle bg-surface-overlay hover:bg-surface-hover'
@@ -210,72 +189,55 @@ function PromptSection(props: SectionProps) {
             >
               {/* The card body is the "use this prompt" button: picking a prompt
                   here has to mean what picking one in the `!!` panel means, and
-                  that is putting its text in the composer. Editing stays behind
-                  the kebab, so the everyday action is the one click away. */}
+                  that is putting its text in the composer. */}
               <button
                 type="button"
                 onClick={() => onUse(prompt)}
                 className="flex min-w-0 flex-1 items-center gap-3 text-start"
               >
-                {/* The icon sits in a square tile of its own, so the two text lines
-                    beside it read as one block rather than as text wrapped around
-                    a loose glyph. */}
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-surface-sunken text-text-tertiary">
-                  <BookmarkIcon className="h-4 w-4" />
+                {/* Bare, with no tile behind it, the way the `!!` panel draws the
+                    same mark. The tile existed to bind two stacked lines into one
+                    block; on a single line there is nothing to bind. */}
+                <BookmarkIcon className="h-4 w-4 flex-shrink-0 text-text-tertiary" />
+                {/* One line, laid out like the `!!` panel: the name takes a
+                    quarter and carries the weight, the content takes the rest,
+                    because the content is the thing about to be pasted. */}
+                <span className="w-1/4 flex-shrink-0 truncate text-sm font-medium text-text-primary">
+                  {prompt.name}
                 </span>
-                <span className="min-w-0 flex-1">
-                  {/* The name carries the weight and the preview the colour: the
-                      two used to sit a single step apart on the text scale, which
-                      left the row flat and the name hard to pick out. */}
-                  <span className="mb-0.5 block truncate text-sm font-semibold text-text-primary">
-                    {prompt.name}
+                {/* Tippy rather than the native `title`: a `title` tooltip does
+                    not render at all inside the JCEF WebView the plugin embeds,
+                    so the IDE user would get nothing. */}
+                <Tooltip content={prompt.content}>
+                  <span className="min-w-0 flex-1 truncate text-xs text-text-secondary">
+                    {preview(prompt.content)}
                   </span>
-                  {/* Tippy rather than the native `title`: a `title` tooltip does
-                      not render at all inside the JCEF WebView the plugin embeds,
-                      so the IDE user would get nothing. */}
-                  <Tooltip content={prompt.content}>
-                    <span className="block truncate text-xs text-text-secondary">
-                      {preview(prompt.content)}
-                    </span>
-                  </Tooltip>
-                </span>
+                </Tooltip>
               </button>
-              <div className="relative flex-shrink-0" ref={openMenuId === prompt.id ? menuRef : null}>
+              {/* Edit and delete as their own buttons, the way the session
+                  dropdown does it: two everyday actions are one click each
+                  rather than two, and the row stays quiet until pointed at.
+                  Focus reveals them too, so the keyboard can still reach them. */}
+              <span className="flex flex-shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <button
                   type="button"
-                  onClick={() => setOpenMenuId(openMenuId === prompt.id ? null : prompt.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-hover"
-                  title={t('promptLibrary.menu')}
-                  aria-label={t('promptLibrary.menu')}
-                  aria-haspopup="true"
-                  aria-expanded={openMenuId === prompt.id}
+                  onClick={() => onEdit(scope, prompt)}
+                  className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                  title={t('promptLibrary.edit')}
+                  aria-label={t('promptLibrary.edit')}
                 >
-                  <EllipsisVerticalIcon className="h-5 w-5" />
+                  <PencilSquareIcon className="h-4 w-4" />
                 </button>
-                {openMenuId === prompt.id && (
-                  <div
-                    role="menu"
-                    className="absolute end-0 top-full z-10 mt-1 min-w-28 overflow-hidden rounded-md border border-border-default bg-surface-overlay shadow-lg"
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { setOpenMenuId(null); onEdit(scope, prompt); }}
-                      className="w-full px-3 py-1.5 text-start text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                    >
-                      {t('promptLibrary.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => { setOpenMenuId(null); onDelete(scope, prompt); }}
-                      className="w-full px-3 py-1.5 text-start text-xs text-text-secondary hover:bg-surface-hover hover:text-state-error-fg"
-                    >
-                      {t('promptLibrary.delete')}
-                    </button>
-                  </div>
-                )}
-              </div>
+                <button
+                  type="button"
+                  onClick={() => onDelete(scope, prompt)}
+                  className="rounded p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-state-error-fg"
+                  title={t('promptLibrary.delete')}
+                  aria-label={t('promptLibrary.delete')}
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </span>
             </div>
           ))}
         </div>
