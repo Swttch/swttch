@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "إضافة رسالة أخرى إلى القائمة...",
-      "focusHint": "⌘ Esc للتركيز على Claude أو إلغاء التركيز"
+      "hint": "@ للملفات، / للأوامر، !! لإدراج المطالبات، {{send}} للإرسال"
     },
     "ariaLabel": "مراسلة Claude",
     "autoModeFallback": "الوضع التلقائي غير متاح هنا — سيُستخدم وضع الأذونات الافتراضي بدلًا منه.",
@@ -115,6 +115,16 @@
         "installFailed": "تعذّر تثبيت أداة الإدخال الصوتي"
       },
       "help": "مساعدة"
+    },
+    "promptDropdown": {
+      "loading": "جارٍ التحميل…",
+      "noPrompts": "لا توجد مطالبات محفوظة",
+      "createPrompt": "إنشاء مطالبة",
+      "scopeProject": "المشروع",
+      "scopeGlobal": "عام",
+      "closeAriaLabel": "إغلاق مكتبة المطالبات",
+      "editPrompt": "تعديل",
+      "deletePrompt": "حذف"
     }
   },
   "sessionHeader": {

@@ -133,6 +133,19 @@ import { clientInfoHandler } from './clientInfo';
 import { clientErrorHandler } from './clientError';
 import { panelFocusedHandler } from './panelFocused';
 import { imageAttachedHandler } from './imageAttached';
+import {
+  getPromptsHandler,
+  createPromptHandler,
+  updatePromptHandler,
+  deletePromptHandler,
+  exportPromptsHandler,
+  previewPromptImportHandler,
+  importPromptsHandler,
+  getPromptCategoriesHandler,
+  createPromptCategoryHandler,
+  renamePromptCategoryHandler,
+  deletePromptCategoryHandler,
+} from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { assetActivityHandler } from './assetActivity';
@@ -549,6 +562,39 @@ export async function handleMessage(
       break;
     case MessageType.IMAGE_ATTACHED:
       imageAttachedHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_PROMPTS:
+      await getPromptsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CREATE_PROMPT:
+      await createPromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPDATE_PROMPT:
+      await updatePromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.DELETE_PROMPT:
+      await deletePromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.EXPORT_PROMPTS:
+      await exportPromptsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.PREVIEW_PROMPT_IMPORT:
+      await previewPromptImportHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.IMPORT_PROMPTS:
+      await importPromptsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_PROMPT_CATEGORIES:
+      await getPromptCategoriesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CREATE_PROMPT_CATEGORY:
+      await createPromptCategoryHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.RENAME_PROMPT_CATEGORY:
+      await renamePromptCategoryHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.DELETE_PROMPT_CATEGORY:
+      await deletePromptCategoryHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_ASSETS:
       await getSessionAssetsHandler(connectionId, message, connections, bridge);

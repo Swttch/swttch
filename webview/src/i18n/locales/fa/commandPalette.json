@@ -13,7 +13,8 @@
     "clearConversation": "پاک کردن گفتگو",
     "resumeConversation": "ازسرگیری گفتگو",
     "showBackgroundTasks": "جریان کاری: نمایش کارهای پس‌زمینه",
-    "scheduleSend": "زمان‌بندی پیام..."
+    "scheduleSend": "زمان‌بندی پیام...",
+    "promptLibrary": "کتابخانهٔ پرامپت"
   },
   "scheduleSend": {
     "title": "زمان‌بندی پیام",

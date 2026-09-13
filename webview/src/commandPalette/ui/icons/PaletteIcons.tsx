@@ -47,6 +47,12 @@ export const ClockIcon: React.FC<IconProps> = ({ className, style }) => (
   </svg>
 );
 
+export const BookmarkIcon: React.FC<IconProps> = ({ className, style }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className={className} style={style}>
+    <path fillRule="evenodd" clipRule="evenodd" d="M4 1.5H12C12.5523 1.5 13 1.94772 13 2.5V14.5L8 11.5L3 14.5V2.5C3 1.94772 3.44772 1.5 4 1.5ZM4.5 3V11.85L8 9.75L11.5 11.85V3H4.5Z"/>
+  </svg>
+);
+
 export const getIcon = (iconType: IconType | undefined): React.FC<IconProps> | null => {
   switch (iconType) {
     case IconType.Terminal: return TerminalIcon;
@@ -55,6 +61,7 @@ export const getIcon = (iconType: IconType | undefined): React.FC<IconProps> | n
     case IconType.Command: return CommandIcon;
     case IconType.Settings: return SettingsIcon;
     case IconType.Clock: return ClockIcon;
+    case IconType.Bookmark: return BookmarkIcon;
     default: return null;
   }
 };

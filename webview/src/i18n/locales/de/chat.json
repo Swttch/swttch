@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Weitere Nachricht in die Warteschlange...",
-      "focusHint": "⌘ Esc, um Claude zu fokussieren oder Fokus zu entfernen"
+      "hint": "@ für Dateien, / für Befehle, !! zum Einfügen von Prompts, {{send}} zum Senden"
     },
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
@@ -115,6 +115,16 @@
         "installFailed": "Das Spracheingabe-Werkzeug konnte nicht installiert werden"
       },
       "help": "Hilfe"
+    },
+    "promptDropdown": {
+      "loading": "Wird geladen…",
+      "noPrompts": "Keine gespeicherten Prompts",
+      "createPrompt": "Prompt erstellen",
+      "scopeProject": "Projekt",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Prompt-Bibliothek schließen",
+      "editPrompt": "Bearbeiten",
+      "deletePrompt": "Löschen"
     }
   },
   "sessionHeader": {

@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "排入下一則訊息...",
-      "focusHint": "⌘ Esc 可聚焦或取消聚焦 Claude"
+      "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，{{send}} 傳送"
     },
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
@@ -115,6 +115,16 @@
         "installFailed": "無法安裝語音輸入工具"
       },
       "help": "說明"
+    },
+    "promptDropdown": {
+      "loading": "載入中…",
+      "noPrompts": "沒有已儲存的提示詞",
+      "createPrompt": "新增提示詞",
+      "scopeProject": "專案",
+      "scopeGlobal": "全域",
+      "closeAriaLabel": "關閉提示詞庫",
+      "editPrompt": "編輯",
+      "deletePrompt": "刪除"
     }
   },
   "sessionHeader": {

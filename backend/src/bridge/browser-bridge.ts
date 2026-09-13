@@ -1,4 +1,5 @@
 import { execFile, spawn } from 'child_process';
+import { writeFile } from 'fs/promises';
 import type { Bridge } from './bridge-interface';
 import { readMergedSettings } from '../core/features/settings';
 import { Claude } from '../core/claude';
@@ -379,6 +380,79 @@ if ($dialog.ShowDialog() -eq 'OK') {
         const paths = stdout.trim().split('\n').filter((p) => p.length > 0);
         resolve({ paths });
       });
+    });
+  }
+
+  /**
+   * Ask where to write [contents] using the platform's own save dialog.
+   *
+   * There is no IDE here to hand the job to, so this reaches for the same
+   * native dialogs pickFiles does. The dialog only names a path; the write is
+   * ours either way, which keeps the file identical to the one JetBrains mode
+   * produces.
+   */
+  async saveFile(options: {
+    suggestedName: string;
+    contents: string;
+  }): Promise<{ path: string | null }> {
+    const path = await this.askForSavePath(options.suggestedName);
+    if (path === null) return { path: null };
+    await writeFile(path, options.contents, 'utf-8');
+    return { path };
+  }
+
+  private askForSavePath(suggestedName: string): Promise<string | null> {
+    if (process.platform === 'darwin') return this.askForSavePathMacOS(suggestedName);
+    if (process.platform === 'win32') return this.askForSavePathWindows(suggestedName);
+    return this.askForSavePathLinux(suggestedName);
+  }
+
+  private askForSavePathMacOS(suggestedName: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      // The name is passed as an argument rather than interpolated into the
+      // script, so a quote in it cannot end the string and run as AppleScript.
+      const script =
+        'on run argv\n' +
+        '  set defaultName to item 1 of argv\n' +
+        '  set chosen to choose file name with prompt "Save prompts" default name defaultName\n' +
+        '  return POSIX path of chosen\n' +
+        'end run';
+      execFile('osascript', ['-e', script, suggestedName], (err, stdout) => {
+        // A cancelled dialog exits non-zero, which is not a failure worth
+        // reporting: the user said no.
+        resolve(err ? null : stdout.trim() || null);
+      });
+    });
+  }
+
+  private askForSavePathWindows(suggestedName: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      const script = [
+        'Add-Type -AssemblyName System.Windows.Forms',
+        '$dialog = New-Object System.Windows.Forms.SaveFileDialog',
+        '$dialog.FileName = $args[0]',
+        "$dialog.Filter = 'JSON (*.json)|*.json|All files (*.*)|*.*'",
+        'if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.FileName }',
+      ].join('; ');
+      execFile(
+        'powershell',
+        ['-NoProfile', '-STA', '-Command', script, suggestedName],
+        (err, stdout) => {
+          resolve(err ? null : stdout.trim() || null);
+        },
+      );
+    });
+  }
+
+  private askForSavePathLinux(suggestedName: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      execFile(
+        'zenity',
+        ['--file-selection', '--save', '--confirm-overwrite', `--filename=${suggestedName}`],
+        (err, stdout) => {
+          resolve(err ? null : stdout.trim() || null);
+        },
+      );
     });
   }
 

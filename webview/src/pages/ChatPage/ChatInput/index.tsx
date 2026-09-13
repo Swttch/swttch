@@ -35,13 +35,26 @@ import { OPEN_SESSION_DROPDOWN_EVENT, OPEN_SCHEDULE_SEND_EVENT } from '@/command
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { displayShortcut } from '@/utils/shortcut';
+import type { ScopedPrompt } from '@/types/prompt';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
+import { usePromptLibrary } from './hooks/usePromptLibrary';
+import { usePromptVariableFill } from './hooks/usePromptVariableFill';
+import { PromptVariablesModal } from '@/components/PromptVariablesModal';
 import { useEditorContext } from '@/hooks/useEditorContext';
 import { MentionDropdown } from './MentionDropdown';
+import { PromptDropdown } from './PromptDropdown';
+import {
+  OPEN_PROMPT_LIBRARY_EVENT,
+  INSERT_PROMPT_EVENT,
+  type OpenPromptLibraryDetail,
+  type InsertPromptDetail,
+} from '@/commandPalette/sections/context/items';
+import { replaceRangeWithText } from './RichInput/replaceRangeWithText';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
+import { sendKeyLabel } from './sendKeyLabel';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import { RichInput } from './RichInput';
@@ -67,6 +80,9 @@ interface NativeDropEntry {
 
 export function ChatInput() {
   const { t } = useTranslation('chat');
+  // The library's own strings live in the common namespace, and the delete
+  // question must read the same here as it does inside the library.
+  const { t: tCommon } = useTranslation('common');
   const { textareaRef } = useChatInputFocus();
   const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
@@ -324,6 +340,73 @@ export function ChatInput() {
     },
   });
 
+  // Every route that puts a saved prompt in the composer stops here first, so a
+  // prompt holding `{{...}}` is answered before it is inserted rather than
+  // landing as literal braces the user has to edit out.
+  const variableFill = usePromptVariableFill();
+  const { requestFill } = variableFill;
+
+  const promptLibrary = usePromptLibrary({
+    workingDirectory,
+    value,
+    onChange,
+    inputRef: textareaRef,
+    requestFill: variableFill.requestFill,
+    // Pasting a saved prompt settles the `!!` token, so hand the shared slot
+    // back the same way picking a mention does (issue #236): the pasted text may
+    // itself end in a `/command` or an `@file` the other panels should answer.
+    onPastePrompt: (caretOffset, nextValue) => {
+      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) setCaretOffset(el, caretOffset);
+      });
+    },
+    // The last row of the `!!` panel opens the prompt library straight on its
+    // create screen, so writing a prompt is one step from wanting one.
+    onCreatePrompt: () => {
+      window.dispatchEvent(
+        new CustomEvent<OpenPromptLibraryDetail>(OPEN_PROMPT_LIBRARY_EVENT, {
+          detail: { view: 'create' },
+        }),
+      );
+    },
+  });
+
+
+  /**
+   * Open the library on this prompt's edit screen.
+   *
+   * The panel closes first: the editor is a modal over the composer, and a
+   * dropdown left hanging under it would outlive the token that opened it.
+   */
+  const editSavedPrompt = useCallback(
+    (prompt: ScopedPrompt) => {
+      promptLibrary.close();
+      window.dispatchEvent(
+        new CustomEvent<OpenPromptLibraryDetail>(OPEN_PROMPT_LIBRARY_EVENT, {
+          detail: { view: 'list', edit: { scope: prompt.scope, prompt } },
+        }),
+      );
+    },
+    [promptLibrary],
+  );
+
+  /** Remove a prompt from the panel, after asking. Deleting cannot be undone. */
+  const deleteSavedPrompt = useCallback(
+    async (prompt: ScopedPrompt) => {
+      const confirmed = await confirm({
+        title: tCommon('promptLibrary.deleteTitle'),
+        message: tCommon('promptLibrary.deleteMessage', { name: prompt.name }),
+        confirmLabel: tCommon('promptLibrary.delete'),
+        variant: 'danger',
+      });
+      if (!confirmed) return;
+      await promptLibrary.deletePrompt(prompt);
+    },
+    [confirm, tCommon, promptLibrary],
+  );
+
   // Backend pushes EDITOR_CONTEXT (the file the user is viewing + selection)
   // → insert `relativePath[#L..]` at the composer caret.
   // shouldFocus is controlled by the focusInputOnEditorContext user setting (default true).
@@ -491,6 +574,42 @@ export function ChatInput() {
     if (value === '') resetHistory();
   }, [value, resetHistory]);
 
+  // A prompt picked in the library modal lands at the END of whatever is already
+  // in the composer, not at the caret: while the modal was open the composer had
+  // no visible caret, so "where the caret was" is not a place the user chose.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const content = (e as CustomEvent<InsertPromptDetail>).detail?.content;
+      if (!content) return;
+
+      // Placeholders are answered first; a prompt without any goes straight in.
+      requestFill(content, (filled) => {
+        const el = textareaRef.current;
+        el?.focus();
+
+        const currentValue = el?.textContent ?? value;
+        const insertAt = currentValue.length;
+        const nextValue = currentValue + filled;
+        const caretOffset = insertAt + filled.length;
+
+        const handledByBrowser = el
+          ? replaceRangeWithText(el, insertAt, insertAt, filled)
+          : false;
+        if (!handledByBrowser) onChange(nextValue);
+
+        requestAnimationFrame(() => {
+          const target = textareaRef.current;
+          if (target) setCaretOffset(target, caretOffset);
+        });
+        // The pasted text may itself end in a `/command` or an `@file`, so let
+        // the panels that own those decide whether they belong on screen now.
+        paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
+      });
+    };
+    window.addEventListener(INSERT_PROMPT_EVENT, handler);
+    return () => window.removeEventListener(INSERT_PROMPT_EVENT, handler);
+  }, [value, onChange, textareaRef, requestFill]);
+
   const handleRichChange = useCallback((newValue: string) => {
     onChange(newValue);
     // The caret decides which of the two dropdowns owns the slot above the
@@ -498,7 +617,8 @@ export function ChatInput() {
     const caret = textareaRef.current ? getCaretOffset(textareaRef.current) : newValue.length;
     palette.detectSlashCommand(newValue, caret);
     mention.detectMention(newValue, caret);
-  }, [onChange, palette, mention, textareaRef]);
+    promptLibrary.detectPrompt(newValue, caret);
+  }, [onChange, palette, mention, promptLibrary, textareaRef]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
     // Feed the IME truth: keyCode 229 means the IME is still processing this
@@ -520,6 +640,11 @@ export function ChatInput() {
     // including this one, and including the history navigation below, which
     // reads a bare ArrowUp and must not see a Cmd+ArrowUp meaning "go to the
     // top of the text".
+
+    // Prompt library interaction. First of the three because `!!` is the most
+    // specific trigger, and because the render order below puts it first too —
+    // #236 was caused by a keydown order that disagreed with the render order.
+    if (promptLibrary.isActive && promptLibrary.handleKeyDown(e)) return;
 
     // Mention interaction (must precede slash command handling)
     if (mention.isActive && mention.handleKeyDown(e)) return;
@@ -604,7 +729,7 @@ export function ChatInput() {
         if (target) setCaretOffset(target, historyValue.length);
       });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
 
   // Wrap the attachment paste handler so images keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -751,10 +876,47 @@ export function ChatInput() {
         isFocused={isFocused}
         isDragOver={isDragOver}
         overlays={<>
+        {/* Prompt library panel. Shares this slot with the mention dropdown and
+            the slash command panel, and wins it while the caret is in a `!!`
+            token. Rendered first to match the keydown order above. */}
+        {promptLibrary.isActive && (
+          <div className="absolute bottom-full start-0 w-full z-20">
+            <PromptDropdown
+              rows={promptLibrary.rows}
+              selectedIndex={promptLibrary.selectedIndex}
+              isLoading={promptLibrary.isLoading}
+              hasLoaded={promptLibrary.hasLoaded}
+              categoryRows={promptLibrary.categoryRows}
+              selectedCategory={promptLibrary.selectedCategory}
+              focusedPane={promptLibrary.focusedPane}
+              onSelectCategory={promptLibrary.selectCategory}
+              onFilePrompt={(prompt, categoryIds) =>
+                void promptLibrary.setPromptCategories(prompt, categoryIds)
+              }
+              onSelect={promptLibrary.selectRow}
+              onEdit={editSavedPrompt}
+              onDelete={(prompt) => void deleteSavedPrompt(prompt)}
+              onClose={promptLibrary.close}
+            />
+          </div>
+        )}
+
+        {/* Asks for a prompt's `{{...}}` values. Rendered here, above the
+            composer it will insert into, so both routes that pick a prompt get
+            the same dialog. */}
+        {variableFill.pending && (
+          <PromptVariablesModal
+            content={variableFill.pending.content}
+            names={variableFill.pending.names}
+            onSubmit={variableFill.submit}
+            onCancel={variableFill.cancel}
+          />
+        )}
+
         {/* Mention dropdown. Shares this slot with the slash command panel;
             the panel yields whenever the caret is in an @token (issue #236),
             so the two never render at once. */}
-        {mention.isActive && (
+        {mention.isActive && !promptLibrary.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <MentionDropdown
               results={mention.results}
@@ -771,7 +933,7 @@ export function ChatInput() {
             mention handling also runs first. detectSlashCommand already closes
             the panel on caret-in-@token; this also covers the paths that open
             it without a caret (e.g. the "/" toolbar button). */}
-        {palette.showSlashCommands && !mention.isActive && (
+        {palette.showSlashCommands && !mention.isActive && !promptLibrary.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <CommandPalettePanel
               sections={palette.filteredSections}
@@ -822,7 +984,13 @@ export function ChatInput() {
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onPaste={handleRichPaste}
-            placeholder={isStreaming ? t('chatInput.placeholder.queueMessage') : t('chatInput.placeholder.focusHint')}
+            placeholder={
+              isStreaming
+                ? t('chatInput.placeholder.queueMessage')
+                : t('chatInput.placeholder.hint', {
+                    send: sendKeyLabel(appSettings.useCtrlEnterToSend ?? false),
+                  })
+            }
             disabled={disabled}
             ariaLabel={t('chatInput.ariaLabel')}
             highlightTokens={pathTokens}

@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "پیام دیگری در صف قرار دهید...",
-      "focusHint": "⌘ Esc برای فوکوس یا خروج از فوکوس روی Claude"
+      "hint": "@ برای فایل‌ها، / برای دستورها، !! برای درج پرامپت، {{send}} برای ارسال"
     },
     "ariaLabel": "پیام به Claude",
     "autoModeFallback": "حالت خودکار اینجا در دسترس نیست — به‌جای آن از حالت مجوز پیش‌فرض استفاده می‌شود.",
@@ -115,6 +115,16 @@
         "installFailed": "نصب ابزار ورودی صوتی ممکن نشد"
       },
       "help": "راهنما"
+    },
+    "promptDropdown": {
+      "loading": "در حال بارگذاری…",
+      "noPrompts": "هیچ پرامپت ذخیره‌شده‌ای نیست",
+      "createPrompt": "ساختن پرامپت",
+      "scopeProject": "پروژه",
+      "scopeGlobal": "سراسری",
+      "closeAriaLabel": "بستن کتابخانهٔ پرامپت",
+      "editPrompt": "ویرایش",
+      "deletePrompt": "حذف"
     }
   },
   "sessionHeader": {

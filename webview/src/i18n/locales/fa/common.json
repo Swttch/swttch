@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "با عرض پوزش، این هدیه‌ای کوچک برای حامیان ماست",
     "learnMore": "بیشتر بدانید"
+  },
+  "promptLibrary": {
+    "title": "کتابخانهٔ پرامپت",
+    "description": "عبارت‌هایی را که زیاد می‌نویسید ذخیره کنید و برای چسباندن یکی از آن‌ها در کادر گفتگو !! را بنویسید.",
+    "create": "ساختن پرامپت",
+    "empty": "هنوز پرامپت ذخیره‌شده‌ای نیست",
+    "projectUnavailable": "برای ذخیرهٔ پرامپت‌های پروژه، یک پروژه باز کنید.",
+    "nameLabel": "نام",
+    "namePlaceholder": "این پرامپت برای چیست",
+    "contentLabel": "محتوا",
+    "contentPlaceholder": "متنی که در کادر گفتگو چسبانده می‌شود. {{sample}} را بنویسید تا هنگام درج مقدار پرسیده شود.",
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "edit": "ویرایش",
+    "delete": "حذف",
+    "deleteTitle": "حذف پرامپت",
+    "deleteMessage": "«{{name}}» حذف شود؟ این کار بازگشت‌پذیر نیست.",
+    "nameRequired": "یک نام وارد کنید.",
+    "contentRequired": "متن پرامپت را وارد کنید.",
+    "saveFailed": "پرامپت ذخیره نشد.",
+    "deleteFailed": "پرامپت حذف نشد.",
+    "loadFailed": "پرامپت‌ها بارگذاری نشدند.",
+    "globalSection": "پرامپت‌های سراسری",
+    "projectSection": "پرامپت‌های پروژه",
+    "projectSectionNamed": "پرامپت‌های پروژه - {{projectName}}",
+    "addPrompt": "افزودن",
+    "createTitle": "ساختن پرامپت",
+    "editTitle": "ویرایش پرامپت",
+    "menu": "منو",
+    "loading": "در حال بارگذاری…",
+    "openLibrary": "کتابخانهٔ پرامپت",
+    "scopeFieldLabel": "ذخیره در",
+    "scopeGlobal": "سراسری",
+    "scopeProject": "پروژه",
+    "variables": {
+      "title": "مقادیر را پر کنید",
+      "description": "این پرامپت جاهایی برای پر کردن دارد. آنچه بنویسید در همان جا قرار می‌گیرد.",
+      "preview": "پیش‌نمایش",
+      "insert": "درج"
+    },
+    "transfer": {
+      "export": "برون‌بری",
+      "import": "بارگذاری",
+      "exportTitle": "برون‌ریزی پرامپت‌ها",
+      "exportHint": "انتخاب کنید کدام پرامپت‌ها در فایل نوشته شوند.",
+      "exportConfirm": "برون‌ریزی",
+      "exportDone": "{{count}} پرامپت ذخیره شد.",
+      "importTitle": "درون‌ریزی پرامپت‌ها",
+      "importHint": "{{new}} تازه، {{update}} از قبل در کتابخانه شما.",
+      "importConfirm": "درون‌ریزی",
+      "importDone": "{{imported}} افزوده، {{updated}} به‌روز، {{skipped}} رد شد.",
+      "selectedCount": "{{count}} انتخاب‌شده",
+      "strategyLabel": "وقتی پرامپتی از قبل در کتابخانه شما هست",
+      "status": {
+        "new": "تازه",
+        "update": "از قبل هست"
+      },
+      "strategy": {
+        "skip": "مال خودم بماند",
+        "overwrite": "جایگزینی",
+        "duplicate": "هر دو بماند"
+      },
+      "strategyHint": {
+        "skip": "پرامپتی که از قبل دارید دست‌نخورده می‌ماند.",
+        "overwrite": "پرامپت واردشده جای پرامپت شما را می‌گیرد.",
+        "duplicate": "هر دو می‌مانند و واردشده شناسه تازه می‌گیرد."
+      },
+      "error": {
+        "notJson": "این فایل JSON نیست.",
+        "unrecognisedShape": "این فایل شبیه کتابخانه پرامپت نیست.",
+        "noPrompts": "هیچ پرامپتی از این فایل خوانده نشد.",
+        "unreadableFile": "این فایل خوانده نشد.",
+        "failed": "پرامپت‌ها منتقل نشدند."
+      }
+    },
+    "searchPlaceholder": "جستجوی پرامپت‌ها",
+    "categoryLabel": "دسته",
+    "dragToCategory": "برای دسته‌بندی، روی یک دسته بکشید",
+    "categoryPlaceholder": "دسته‌ای را انتخاب یا تایپ کنید",
+    "createCategoryNamed": "ساخت «{{name}}»",
+    "removeCategory": "حذف {{name}}",
+    "noCategoriesYet": "هنوز دسته‌ای نیست. برای ساختن، نامی تایپ کنید.",
+    "noCategoryMatch": "دسته‌ای با این نام نیست.",
+    "uncategorised": "بدون دسته",
+    "noCategories": "هنوز دسته‌ای نیست. از نوار کناری اضافه کنید.",
+    "allCategories": "همه",
+    "addCategory": "افزودن دسته",
+    "deleteCategoryTitle": "حذف دسته",
+    "deleteCategoryMessage": "«{{name}}» حذف شود؟ پرامپت‌هایش می‌مانند و بدون دسته می‌شوند."
   }
 }

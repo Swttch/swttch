@@ -219,5 +219,94 @@
   "sponsorGated": {
     "message": "نعتذر، هذه هديةٌ صغيرة نخصّ بها داعمينا",
     "learnMore": "معرفة المزيد"
+  },
+  "promptLibrary": {
+    "title": "مكتبة المطالبات",
+    "description": "احفظ العبارات التي تكتبها كثيرًا، ثم اكتب !! في حقل الدردشة للصق إحداها.",
+    "create": "إنشاء مطالبة",
+    "empty": "لا توجد مطالبات محفوظة بعد",
+    "projectUnavailable": "افتح مشروعًا لحفظ مطالبات المشروع.",
+    "nameLabel": "الاسم",
+    "namePlaceholder": "الغرض من هذه المطالبة",
+    "contentLabel": "المحتوى",
+    "contentPlaceholder": "النص الذي سيُلصق في حقل الدردشة. اكتب {{sample}} ليُطلب منك إدخال قيمة عند الإدراج.",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "deleteTitle": "حذف المطالبة",
+    "deleteMessage": "حذف «{{name}}»؟ لا يمكن التراجع عن ذلك.",
+    "nameRequired": "أدخل اسمًا.",
+    "contentRequired": "أدخل نص المطالبة.",
+    "saveFailed": "لم يتم حفظ المطالبة.",
+    "deleteFailed": "لم يتم حذف المطالبة.",
+    "loadFailed": "لم يتم تحميل المطالبات.",
+    "globalSection": "المطالبات العامة",
+    "projectSection": "مطالبات المشروع",
+    "projectSectionNamed": "مطالبات المشروع - {{projectName}}",
+    "addPrompt": "إضافة",
+    "createTitle": "إنشاء مطالبة",
+    "editTitle": "تعديل المطالبة",
+    "menu": "القائمة",
+    "loading": "جارٍ التحميل…",
+    "openLibrary": "مكتبة المطالبات",
+    "scopeFieldLabel": "الحفظ في",
+    "scopeGlobal": "عام",
+    "scopeProject": "المشروع",
+    "variables": {
+      "title": "املأ القيم",
+      "description": "تحتوي هذه المطالبة على مواضع للتعبئة. سيوضع ما تكتبه في مكانها.",
+      "preview": "معاينة",
+      "insert": "إدراج"
+    },
+    "transfer": {
+      "export": "تصدير",
+      "import": "تحميل",
+      "exportTitle": "تصدير المطالبات",
+      "exportHint": "اختر المطالبات التي ستُكتب في الملف.",
+      "exportConfirm": "تصدير",
+      "exportDone": "تم حفظ {{count}} مطالبة.",
+      "importTitle": "استيراد المطالبات",
+      "importHint": "{{new}} جديدة، {{update}} موجودة لديك بالفعل.",
+      "importConfirm": "استيراد",
+      "importDone": "تمت إضافة {{imported}}، وتحديث {{updated}}، وتخطي {{skipped}}.",
+      "selectedCount": "{{count}} محددة",
+      "strategyLabel": "عند وجود المطالبة لديك بالفعل",
+      "status": {
+        "new": "جديدة",
+        "update": "موجودة"
+      },
+      "strategy": {
+        "skip": "الإبقاء على مطالبتي",
+        "overwrite": "الاستبدال",
+        "duplicate": "الإبقاء على الاثنتين"
+      },
+      "strategyHint": {
+        "skip": "تبقى المطالبة الموجودة لديك كما هي.",
+        "overwrite": "تحل المطالبة الواردة محل مطالبتك.",
+        "duplicate": "تبقى الاثنتان، وتأخذ الواردة معرفًا جديدًا."
+      },
+      "error": {
+        "notJson": "هذا الملف ليس JSON.",
+        "unrecognisedShape": "لا يبدو هذا الملف مكتبة مطالبات.",
+        "noPrompts": "تعذّرت قراءة أي مطالبة من هذا الملف.",
+        "unreadableFile": "تعذّرت قراءة هذا الملف.",
+        "failed": "تعذّر نقل المطالبات."
+      }
+    },
+    "searchPlaceholder": "البحث في المطالبات",
+    "categoryLabel": "الفئة",
+    "dragToCategory": "اسحبه إلى فئة لتصنيفه فيها",
+    "categoryPlaceholder": "اختر فئة أو اكتبها",
+    "createCategoryNamed": "إنشاء \"{{name}}\"",
+    "removeCategory": "إزالة {{name}}",
+    "noCategoriesYet": "لا توجد فئات بعد. اكتب اسمًا لإنشائها.",
+    "noCategoryMatch": "لا توجد فئة بهذا الاسم.",
+    "uncategorised": "بدون فئة",
+    "noCategories": "لا توجد فئات بعد. أضف واحدة من الشريط الجانبي.",
+    "allCategories": "الكل",
+    "addCategory": "إضافة فئة",
+    "deleteCategoryTitle": "حذف الفئة",
+    "deleteCategoryMessage": "هل تريد حذف \"{{name}}\"؟ ستبقى مطالباتها وتصبح بدون فئة."
   }
 }

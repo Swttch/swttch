@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Enfileirar outra mensagem...",
-      "focusHint": "⌘ Esc para focar ou desfocar o Claude"
+      "hint": "@ para arquivos, / para comandos, !! para inserir prompts, {{send}} para enviar"
     },
     "ariaLabel": "Mensagem para o Claude",
     "autoModeFallback": "O modo automático não está disponível aqui — usando o modo de permissão padrão.",
@@ -115,6 +115,16 @@
         "installFailed": "Não foi possível instalar a ferramenta de entrada de voz"
       },
       "help": "Ajuda"
+    },
+    "promptDropdown": {
+      "loading": "Carregando…",
+      "noPrompts": "Nenhum prompt salvo",
+      "createPrompt": "Criar prompt",
+      "scopeProject": "Projeto",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Fechar a biblioteca de prompts",
+      "editPrompt": "Editar",
+      "deletePrompt": "Excluir"
     }
   },
   "sessionHeader": {

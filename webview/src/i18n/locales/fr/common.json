@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "Une petite attention réservée à nos sponsors",
     "learnMore": "En savoir plus"
+  },
+  "promptLibrary": {
+    "title": "Bibliothèque de prompts",
+    "description": "Enregistrez les phrases que vous tapez souvent, puis saisissez !! dans le champ de chat pour en coller une.",
+    "create": "Créer un prompt",
+    "empty": "Aucun prompt enregistré pour le moment",
+    "projectUnavailable": "Ouvrez un projet pour enregistrer des prompts de projet.",
+    "nameLabel": "Nom",
+    "namePlaceholder": "À quoi sert ce prompt",
+    "contentLabel": "Contenu",
+    "contentPlaceholder": "La phrase à coller dans le champ de saisie. Écrivez {{sample}} pour qu'une valeur vous soit demandée à l'insertion.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteTitle": "Supprimer le prompt",
+    "deleteMessage": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "nameRequired": "Saisissez un nom.",
+    "contentRequired": "Saisissez le texte du prompt.",
+    "saveFailed": "Impossible d’enregistrer le prompt.",
+    "deleteFailed": "Impossible de supprimer le prompt.",
+    "loadFailed": "Impossible de charger les prompts.",
+    "globalSection": "Prompts globaux",
+    "projectSection": "Prompts du projet",
+    "projectSectionNamed": "Prompts du projet - {{projectName}}",
+    "addPrompt": "Ajouter",
+    "createTitle": "Créer un prompt",
+    "editTitle": "Modifier le prompt",
+    "menu": "Menu",
+    "loading": "Chargement…",
+    "openLibrary": "Bibliothèque de prompts",
+    "scopeFieldLabel": "Enregistrer dans",
+    "scopeGlobal": "Global",
+    "scopeProject": "Projet",
+    "variables": {
+      "title": "Renseigner les valeurs",
+      "description": "Ce prompt comporte des emplacements à remplir. Ce que vous saisissez y sera placé.",
+      "preview": "Aperçu",
+      "insert": "Insérer"
+    },
+    "transfer": {
+      "export": "Exporter",
+      "import": "Charger",
+      "exportTitle": "Exporter des prompts",
+      "exportHint": "Choisissez les prompts à mettre dans le fichier.",
+      "exportConfirm": "Exporter",
+      "exportDone": "{{count}} prompts enregistrés.",
+      "importTitle": "Importer des prompts",
+      "importHint": "{{new}} nouveaux, {{update}} déjà dans votre bibliothèque.",
+      "importConfirm": "Importer",
+      "importDone": "{{imported}} ajoutés, {{updated}} mis à jour, {{skipped}} ignorés.",
+      "selectedCount": "{{count}} sélectionnés",
+      "strategyLabel": "Quand un prompt est déjà dans votre bibliothèque",
+      "status": {
+        "new": "Nouveau",
+        "update": "Déjà présent"
+      },
+      "strategy": {
+        "skip": "Garder le mien",
+        "overwrite": "Remplacer",
+        "duplicate": "Garder les deux"
+      },
+      "strategyHint": {
+        "skip": "Le prompt que vous avez déjà reste tel quel.",
+        "overwrite": "Le prompt entrant remplace le vôtre.",
+        "duplicate": "Les deux sont gardés, l'entrant sous un nouvel id."
+      },
+      "error": {
+        "notJson": "Ce fichier n'est pas du JSON.",
+        "unrecognisedShape": "Ce fichier ne ressemble pas à une bibliothèque de prompts.",
+        "noPrompts": "Aucun prompt n'a pu être lu dans ce fichier.",
+        "unreadableFile": "Ce fichier n'a pas pu être lu.",
+        "failed": "Les prompts n'ont pas pu être transférés."
+      }
+    },
+    "searchPlaceholder": "Rechercher des prompts",
+    "categoryLabel": "Catégorie",
+    "dragToCategory": "Faites glisser sur une catégorie pour l’y classer",
+    "categoryPlaceholder": "Choisissez ou saisissez une catégorie",
+    "createCategoryNamed": "Créer « {{name}} »",
+    "removeCategory": "Retirer {{name}}",
+    "noCategoriesYet": "Aucune catégorie pour l'instant. Saisissez-en une pour la créer.",
+    "noCategoryMatch": "Aucune catégorie de ce nom.",
+    "uncategorised": "Sans catégorie",
+    "noCategories": "Aucune catégorie pour l'instant. Ajoutez-en une dans la barre latérale.",
+    "allCategories": "Tout",
+    "addCategory": "Ajouter une catégorie",
+    "deleteCategoryTitle": "Supprimer la catégorie",
+    "deleteCategoryMessage": "Supprimer « {{name}} » ? Ses prompts sont conservés et deviennent sans catégorie."
   }
 }

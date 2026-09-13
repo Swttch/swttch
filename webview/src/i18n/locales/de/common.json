@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "Ein kleines Dankeschön, das wir leider unseren Sponsoren vorbehalten",
     "learnMore": "Mehr erfahren"
+  },
+  "promptLibrary": {
+    "title": "Prompt-Bibliothek",
+    "description": "Speichere Sätze, die du häufig tippst, und gib !! im Chatfeld ein, um einen einzufügen.",
+    "create": "Prompt erstellen",
+    "empty": "Noch keine gespeicherten Prompts",
+    "projectUnavailable": "Öffne ein Projekt, um Projekt-Prompts zu speichern.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Wofür dieser Prompt gedacht ist",
+    "contentLabel": "Inhalt",
+    "contentPlaceholder": "Der Text, der in das Chatfeld eingefügt wird. Schreibe {{sample}}, um beim Einfügen nach einem Wert gefragt zu werden.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteTitle": "Prompt löschen",
+    "deleteMessage": "„{{name}}“ löschen? Das lässt sich nicht widerrufen.",
+    "nameRequired": "Gib einen Namen ein.",
+    "contentRequired": "Gib den Prompt-Text ein.",
+    "saveFailed": "Der Prompt konnte nicht gespeichert werden.",
+    "deleteFailed": "Der Prompt konnte nicht gelöscht werden.",
+    "loadFailed": "Die Prompts konnten nicht geladen werden.",
+    "globalSection": "Globale Prompts",
+    "projectSection": "Projekt-Prompts",
+    "projectSectionNamed": "Projekt-Prompts - {{projectName}}",
+    "addPrompt": "Hinzufügen",
+    "createTitle": "Prompt erstellen",
+    "editTitle": "Prompt bearbeiten",
+    "menu": "Menü",
+    "loading": "Wird geladen…",
+    "openLibrary": "Prompt-Bibliothek",
+    "scopeFieldLabel": "Speichern unter",
+    "scopeGlobal": "Global",
+    "scopeProject": "Projekt",
+    "variables": {
+      "title": "Werte ausfüllen",
+      "description": "Dieser Prompt hat Stellen zum Ausfüllen. Deine Eingabe wird dort eingesetzt.",
+      "preview": "Vorschau",
+      "insert": "Einfügen"
+    },
+    "transfer": {
+      "export": "Exportieren",
+      "import": "Laden",
+      "exportTitle": "Prompts exportieren",
+      "exportHint": "Wähle aus, welche Prompts in die Datei kommen.",
+      "exportConfirm": "Exportieren",
+      "exportDone": "{{count}} Prompts gespeichert.",
+      "importTitle": "Prompts importieren",
+      "importHint": "{{new}} neu, {{update}} bereits in deiner Bibliothek.",
+      "importConfirm": "Importieren",
+      "importDone": "{{imported}} hinzugefügt, {{updated}} aktualisiert, {{skipped}} übersprungen.",
+      "selectedCount": "{{count}} ausgewählt",
+      "strategyLabel": "Wenn ein Prompt schon in deiner Bibliothek ist",
+      "status": {
+        "new": "Neu",
+        "update": "Schon vorhanden"
+      },
+      "strategy": {
+        "skip": "Meinen behalten",
+        "overwrite": "Ersetzen",
+        "duplicate": "Beide behalten"
+      },
+      "strategyHint": {
+        "skip": "Der Prompt, den du schon hast, bleibt unverändert.",
+        "overwrite": "Der eingehende Prompt ersetzt deinen.",
+        "duplicate": "Beide bleiben, der eingehende mit neuer id."
+      },
+      "error": {
+        "notJson": "Diese Datei ist kein JSON.",
+        "unrecognisedShape": "Diese Datei sieht nicht nach einer Prompt-Bibliothek aus.",
+        "noPrompts": "Aus dieser Datei ließ sich kein Prompt lesen.",
+        "unreadableFile": "Diese Datei ließ sich nicht lesen.",
+        "failed": "Die Prompts ließen sich nicht übertragen."
+      }
+    },
+    "searchPlaceholder": "Prompts suchen",
+    "categoryLabel": "Kategorie",
+    "dragToCategory": "Auf eine Kategorie ziehen, um sie dort abzulegen",
+    "categoryPlaceholder": "Kategorie wählen oder eingeben",
+    "createCategoryNamed": "„{{name}}\" erstellen",
+    "removeCategory": "{{name}} entfernen",
+    "noCategoriesYet": "Noch keine Kategorien. Tippen Sie eine, um sie anzulegen.",
+    "noCategoryMatch": "Keine Kategorie mit diesem Namen.",
+    "uncategorised": "Ohne Kategorie",
+    "noCategories": "Noch keine Kategorien. Füge eine in der Seitenleiste hinzu.",
+    "allCategories": "Alle",
+    "addCategory": "Kategorie hinzufügen",
+    "deleteCategoryTitle": "Kategorie löschen",
+    "deleteCategoryMessage": "„{{name}}“ löschen? Die Prompts bleiben und werden ohne Kategorie."
   }
 }

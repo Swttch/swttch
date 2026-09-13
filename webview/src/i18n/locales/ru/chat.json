@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Добавить ещё одно сообщение в очередь...",
-      "focusHint": "⌘ Esc, чтобы навести или снять фокус с Claude"
+      "hint": "@ файлы, / команды, !! промпты, {{send}} для отправки"
     },
     "ariaLabel": "Сообщение для Claude",
     "autoModeFallback": "Автоматический режим здесь недоступен — используется режим разрешений по умолчанию.",
@@ -115,6 +115,16 @@
         "installFailed": "Не удалось установить инструмент голосового ввода"
       },
       "help": "Справка"
+    },
+    "promptDropdown": {
+      "loading": "Загрузка…",
+      "noPrompts": "Сохранённых промптов нет",
+      "createPrompt": "Создать промпт",
+      "scopeProject": "Проект",
+      "scopeGlobal": "Глобально",
+      "closeAriaLabel": "Закрыть библиотеку промптов",
+      "editPrompt": "Изменить",
+      "deletePrompt": "Удалить"
     }
   },
   "sessionHeader": {

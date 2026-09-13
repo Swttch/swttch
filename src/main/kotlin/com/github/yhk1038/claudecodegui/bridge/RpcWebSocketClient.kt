@@ -390,6 +390,14 @@ class RpcWebSocketClient(
                     }
                 }
             }
+            "SAVE_FILE" -> {
+                val suggestedName = params["suggestedName"]?.jsonPrimitive?.content ?: "export.json"
+                val contents = params["contents"]?.jsonPrimitive?.content ?: ""
+                val path = rpcHandler.saveFile(suggestedName, contents)
+                buildJsonObject {
+                    if (path != null) put("path", path) else put("path", JsonNull)
+                }
+            }
             "UPDATE_PLUGIN" -> {
                 rpcHandler.updatePlugin()
                 buildJsonObject {}

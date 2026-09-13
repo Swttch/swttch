@@ -1,4 +1,5 @@
 import { IconType } from '@/types/commandPalette';
+import type { PromptScope, SavedPrompt } from '@/types/prompt';
 import { i18n } from '@/i18n';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
@@ -15,6 +16,41 @@ export const OPEN_SESSION_DROPDOWN_EVENT = 'command-palette:open-session-dropdow
  * draft). Everyone can open it; the sponsor gate lives on the popover's submit.
  */
 export const OPEN_SCHEDULE_SEND_EVENT = 'command-palette:open-schedule-send';
+
+/**
+ * Fired when the user picks "Prompt Library" from the Context section, or picks
+ * the "create" row of the `!!` panel in the composer. The ChatPage opens the
+ * prompt library modal; `detail.view === 'create'` asks it to land on the create
+ * screen rather than the list.
+ */
+export const OPEN_PROMPT_LIBRARY_EVENT = 'command-palette:open-prompt-library';
+
+export interface OpenPromptLibraryDetail {
+  view?: 'list' | 'create';
+  /**
+   * Open straight on the edit screen for this prompt.
+   *
+   * The `!!` panel edits a prompt without leaving the composer, and the editor
+   * is the library's, so the panel names what to edit and the library shows it.
+   */
+  edit?: { scope: PromptScope; prompt: SavedPrompt };
+}
+
+/**
+ * Fired when the user picks a saved prompt in the prompt library modal. The
+ * ChatInput appends the prompt's text to the composer and puts the caret after
+ * it, the same thing picking a row in the `!!` panel does — the modal is the
+ * other way to reach the same library, so picking must mean the same thing.
+ *
+ * Dispatched after the modal has closed, so the composer has focus back before
+ * the insert runs.
+ */
+export const INSERT_PROMPT_EVENT = 'command-palette:insert-prompt';
+
+export interface InsertPromptDetail {
+  /** The prompt's text, exactly as it was saved. */
+  content: string;
+}
 
 /**
  * Built on demand (not a module-eval constant) so the labels resolve against
@@ -77,6 +113,17 @@ export const getContextItems = (): StaticItem[] => [
     disabled: false,
     action: async () => {
       window.dispatchEvent(new CustomEvent(OPEN_SCHEDULE_SEND_EVENT));
+    },
+  }),
+  // Below "Schedule a message": opens the prompt library, where saved phrases
+  // are written and edited. The read side of the same store is the `!!` panel
+  // in the composer (issue #430).
+  new StaticItem('prompt-library', i18n.t('commandPalette:context.promptLibrary'), {
+    keywords: [enKeyword('commandPalette:context.promptLibrary'), 'prompt', 'library', 'snippet'],
+    icon: IconType.Bookmark,
+    disabled: false,
+    action: async () => {
+      window.dispatchEvent(new CustomEvent(OPEN_PROMPT_LIBRARY_EVENT));
     },
   }),
 ];

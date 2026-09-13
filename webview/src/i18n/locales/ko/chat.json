@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "다음 메시지 대기열에 추가...",
-      "focusHint": "⌘ Esc로 Claude에 포커스 지정/해제"
+      "hint": "@ 파일 참조, / 명령, !! 프롬프트 삽입, {{send}}로 전송"
     },
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",
@@ -115,6 +115,16 @@
         "installFailed": "음성 입력 도구를 설치하지 못했습니다"
       },
       "help": "도움말"
+    },
+    "promptDropdown": {
+      "loading": "불러오는 중…",
+      "noPrompts": "저장된 프롬프트가 없습니다",
+      "createPrompt": "프롬프트 만들기",
+      "scopeProject": "프로젝트",
+      "scopeGlobal": "전역",
+      "closeAriaLabel": "프롬프트 라이브러리 닫기",
+      "editPrompt": "수정",
+      "deletePrompt": "삭제"
     }
   },
   "sessionHeader": {

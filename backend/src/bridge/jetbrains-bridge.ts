@@ -433,6 +433,18 @@ export class JetBrainsBridge implements Bridge {
     return { paths: Array.isArray(paths) ? (paths as string[]) : [] };
   }
 
+  async saveFile(options: {
+    suggestedName: string;
+    contents: string;
+  }): Promise<{ path: string | null }> {
+    const result = await this.request(
+      MessageType.SAVE_FILE,
+      options as unknown as Record<string, unknown>,
+    );
+    const path = result['path'];
+    return { path: typeof path === 'string' && path !== '' ? path : null };
+  }
+
   async updatePlugin(): Promise<void> {
     await this.request(MessageType.UPDATE_PLUGIN, {});
   }

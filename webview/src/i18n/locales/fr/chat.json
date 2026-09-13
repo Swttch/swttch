@@ -86,7 +86,7 @@
     },
     "placeholder": {
       "queueMessage": "Mettre un autre message en file d'attente...",
-      "focusHint": "⌘ Échap pour focaliser ou défocaliser Claude"
+      "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, {{send}} pour envoyer"
     },
     "ariaLabel": "Message à Claude",
     "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place.",
@@ -115,6 +115,16 @@
         "installFailed": "Impossible d'installer l'outil de saisie vocale"
       },
       "help": "Aide"
+    },
+    "promptDropdown": {
+      "loading": "Chargement…",
+      "noPrompts": "Aucun prompt enregistré",
+      "createPrompt": "Créer un prompt",
+      "scopeProject": "Projet",
+      "scopeGlobal": "Global",
+      "closeAriaLabel": "Fermer la bibliothèque de prompts",
+      "editPrompt": "Modifier",
+      "deletePrompt": "Supprimer"
     }
   },
   "sessionHeader": {

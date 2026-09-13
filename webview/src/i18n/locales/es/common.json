@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "Un pequeño detalle que reservamos a nuestros patrocinadores",
     "learnMore": "Más información"
+  },
+  "promptLibrary": {
+    "title": "Biblioteca de prompts",
+    "description": "Guarda las frases que escribes a menudo y escribe !! en el campo de chat para pegar una.",
+    "create": "Crear prompt",
+    "empty": "Todavía no hay prompts guardados",
+    "projectUnavailable": "Abre un proyecto para guardar prompts de proyecto.",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "Para qué sirve este prompt",
+    "contentLabel": "Contenido",
+    "contentPlaceholder": "La frase que se pegará en el campo de chat. Escribe {{sample}} para que te pida un valor al insertarla.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleteTitle": "Eliminar prompt",
+    "deleteMessage": "¿Eliminar «{{name}}»? No se puede deshacer.",
+    "nameRequired": "Escribe un nombre.",
+    "contentRequired": "Escribe el texto del prompt.",
+    "saveFailed": "No se pudo guardar el prompt.",
+    "deleteFailed": "No se pudo eliminar el prompt.",
+    "loadFailed": "No se pudieron cargar los prompts.",
+    "globalSection": "Prompts globales",
+    "projectSection": "Prompts del proyecto",
+    "projectSectionNamed": "Prompts del proyecto - {{projectName}}",
+    "addPrompt": "Añadir",
+    "createTitle": "Crear prompt",
+    "editTitle": "Editar prompt",
+    "menu": "Menú",
+    "loading": "Cargando…",
+    "openLibrary": "Biblioteca de prompts",
+    "scopeFieldLabel": "Guardar en",
+    "scopeGlobal": "Global",
+    "scopeProject": "Proyecto",
+    "variables": {
+      "title": "Rellena los valores",
+      "description": "Este prompt tiene huecos por rellenar. Lo que escribas irá en su lugar.",
+      "preview": "Vista previa",
+      "insert": "Insertar"
+    },
+    "transfer": {
+      "export": "Exportar",
+      "import": "Cargar",
+      "exportTitle": "Exportar prompts",
+      "exportHint": "Elige qué prompts van al archivo.",
+      "exportConfirm": "Exportar",
+      "exportDone": "Se guardaron {{count}} prompts.",
+      "importTitle": "Importar prompts",
+      "importHint": "{{new}} nuevos, {{update}} ya en tu biblioteca.",
+      "importConfirm": "Importar",
+      "importDone": "{{imported}} añadidos, {{updated}} actualizados, {{skipped}} omitidos.",
+      "selectedCount": "{{count}} seleccionados",
+      "strategyLabel": "Cuando un prompt ya está en tu biblioteca",
+      "status": {
+        "new": "Nuevo",
+        "update": "Ya existe"
+      },
+      "strategy": {
+        "skip": "Conservar el mío",
+        "overwrite": "Reemplazar",
+        "duplicate": "Conservar ambos"
+      },
+      "strategyHint": {
+        "skip": "El prompt que ya tienes se queda como está.",
+        "overwrite": "El prompt entrante reemplaza al tuyo.",
+        "duplicate": "Se conservan ambos; el entrante recibe un id nuevo."
+      },
+      "error": {
+        "notJson": "Ese archivo no es JSON.",
+        "unrecognisedShape": "Ese archivo no parece una biblioteca de prompts.",
+        "noPrompts": "No se pudo leer ningún prompt de ese archivo.",
+        "unreadableFile": "No se pudo leer ese archivo.",
+        "failed": "No se pudieron transferir los prompts."
+      }
+    },
+    "searchPlaceholder": "Buscar prompts",
+    "categoryLabel": "Categoría",
+    "dragToCategory": "Arrástralo a una categoría para archivarlo ahí",
+    "categoryPlaceholder": "Elige o escribe una categoría",
+    "createCategoryNamed": "Crear «{{name}}»",
+    "removeCategory": "Quitar {{name}}",
+    "noCategoriesYet": "Aún no hay categorías. Escribe una para crearla.",
+    "noCategoryMatch": "No hay ninguna categoría con ese nombre.",
+    "uncategorised": "Sin categoría",
+    "noCategories": "Aún no hay categorías. Añade una en la barra lateral.",
+    "allCategories": "Todo",
+    "addCategory": "Añadir categoría",
+    "deleteCategoryTitle": "Eliminar categoría",
+    "deleteCategoryMessage": "¿Eliminar «{{name}}»? Sus prompts se conservan y quedan sin categoría."
   }
 }

@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "This one is a little perk I keep for sponsors",
     "learnMore": "Learn more"
+  },
+  "promptLibrary": {
+    "title": "Prompt Library",
+    "description": "Save phrases you type often, then type !! in the chat input to paste one.",
+    "create": "Create prompt",
+    "empty": "No saved prompts yet",
+    "projectUnavailable": "Open a project to save project prompts.",
+    "nameLabel": "Name",
+    "namePlaceholder": "What this prompt is for",
+    "contentLabel": "Content",
+    "contentPlaceholder": "The phrase to paste into the chat input. Write {{sample}} to be asked for a value when it is inserted.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete prompt",
+    "deleteMessage": "Delete \"{{name}}\"? This cannot be undone.",
+    "nameRequired": "Enter a name.",
+    "contentRequired": "Enter the prompt text.",
+    "saveFailed": "Could not save the prompt.",
+    "deleteFailed": "Could not delete the prompt.",
+    "loadFailed": "Could not load the prompts.",
+    "globalSection": "Global Prompts",
+    "projectSection": "Project Prompts",
+    "projectSectionNamed": "Project Prompts - {{projectName}}",
+    "addPrompt": "Add",
+    "createTitle": "Create Prompt",
+    "editTitle": "Edit Prompt",
+    "menu": "Menu",
+    "loading": "Loading…",
+    "openLibrary": "Prompt Library",
+    "scopeFieldLabel": "Save to",
+    "scopeGlobal": "Global",
+    "scopeProject": "Project",
+    "variables": {
+      "title": "Fill in the values",
+      "description": "This prompt has places to fill in. What you type goes where the placeholder is.",
+      "preview": "Preview",
+      "insert": "Insert"
+    },
+    "transfer": {
+      "export": "Export",
+      "import": "Import",
+      "exportTitle": "Export prompts",
+      "exportHint": "Choose which prompts go into the file.",
+      "exportConfirm": "Export",
+      "exportDone": "Saved {{count}} prompts.",
+      "importTitle": "Import prompts",
+      "importHint": "{{new}} new, {{update}} already in your library.",
+      "importConfirm": "Import",
+      "importDone": "Added {{imported}}, updated {{updated}}, skipped {{skipped}}.",
+      "selectedCount": "{{count}} selected",
+      "strategyLabel": "When a prompt is already in your library",
+      "status": {
+        "new": "New",
+        "update": "Already there"
+      },
+      "strategy": {
+        "skip": "Keep mine",
+        "overwrite": "Replace",
+        "duplicate": "Keep both"
+      },
+      "strategyHint": {
+        "skip": "The prompt you already have stays as it is.",
+        "overwrite": "The incoming prompt replaces yours.",
+        "duplicate": "Both are kept, the incoming one under a new id."
+      },
+      "error": {
+        "notJson": "That file is not JSON.",
+        "unrecognisedShape": "That file does not look like a prompt library.",
+        "noPrompts": "No prompts could be read from that file.",
+        "unreadableFile": "That file could not be read.",
+        "failed": "The prompts could not be transferred."
+      }
+    },
+    "searchPlaceholder": "Search prompts",
+    "categoryLabel": "Category",
+    "dragToCategory": "Drag onto a category to file it there",
+    "categoryPlaceholder": "Pick or type a category",
+    "createCategoryNamed": "Create \"{{name}}\"",
+    "removeCategory": "Remove {{name}}",
+    "noCategoriesYet": "No categories yet. Type one to make it.",
+    "noCategoryMatch": "No category by that name.",
+    "uncategorised": "Uncategorised",
+    "noCategories": "No categories yet. Add one in the sidebar.",
+    "allCategories": "All",
+    "addCategory": "Add category",
+    "deleteCategoryTitle": "Delete category",
+    "deleteCategoryMessage": "Remove \"{{name}}\"? Its prompts are kept and become uncategorised."
   }
 }

@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "恐れ入りますが、スポンサーの皆さまへのささやかな特典とさせていただいております",
     "learnMore": "詳しく見る"
+  },
+  "promptLibrary": {
+    "title": "プロンプトライブラリ",
+    "description": "よく使う文章を保存して、チャット入力欄に !! と入力して貼り付けます。",
+    "create": "プロンプトを作成",
+    "empty": "保存されたプロンプトはまだありません",
+    "projectUnavailable": "プロジェクトのプロンプトを保存するにはプロジェクトを開いてください。",
+    "nameLabel": "名前",
+    "namePlaceholder": "このプロンプトの用途",
+    "contentLabel": "内容",
+    "contentPlaceholder": "チャット入力欄に貼り付ける文章。{{sample}} と書くと、挿入時に値を尋ねます。",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "edit": "編集",
+    "delete": "削除",
+    "deleteTitle": "プロンプトを削除",
+    "deleteMessage": "「{{name}}」を削除しますか？元に戻せません。",
+    "nameRequired": "名前を入力してください。",
+    "contentRequired": "プロンプトの文章を入力してください。",
+    "saveFailed": "プロンプトを保存できませんでした。",
+    "deleteFailed": "プロンプトを削除できませんでした。",
+    "loadFailed": "プロンプトを読み込めませんでした。",
+    "globalSection": "グローバルプロンプト",
+    "projectSection": "プロジェクトプロンプト",
+    "projectSectionNamed": "プロジェクトプロンプト - {{projectName}}",
+    "addPrompt": "追加",
+    "createTitle": "プロンプトを作成",
+    "editTitle": "プロンプトを編集",
+    "menu": "メニュー",
+    "loading": "読み込み中…",
+    "openLibrary": "プロンプトライブラリ",
+    "scopeFieldLabel": "保存先",
+    "scopeGlobal": "グローバル",
+    "scopeProject": "プロジェクト",
+    "variables": {
+      "title": "値を入力",
+      "description": "このプロンプトには埋める箇所があります。入力した値がその場所に入ります。",
+      "preview": "プレビュー",
+      "insert": "挿入"
+    },
+    "transfer": {
+      "export": "書き出し",
+      "import": "読み込み",
+      "exportTitle": "プロンプトのエクスポート",
+      "exportHint": "ファイルに含めるプロンプトを選んでください。",
+      "exportConfirm": "エクスポート",
+      "exportDone": "プロンプト {{count}} 件を保存しました。",
+      "importTitle": "プロンプトのインポート",
+      "importHint": "新規 {{new}} 件、既存 {{update}} 件です。",
+      "importConfirm": "インポート",
+      "importDone": "{{imported}} 件追加、{{updated}} 件更新、{{skipped}} 件スキップ。",
+      "selectedCount": "{{count}} 件選択中",
+      "strategyLabel": "すでに持っているプロンプトに出会ったら",
+      "status": {
+        "new": "新規",
+        "update": "既存"
+      },
+      "strategy": {
+        "skip": "自分のを残す",
+        "overwrite": "置き換える",
+        "duplicate": "両方残す"
+      },
+      "strategyHint": {
+        "skip": "すでに持っているプロンプトをそのままにします。",
+        "overwrite": "取り込んだプロンプトで置き換えます。",
+        "duplicate": "両方残し、取り込んだ方に新しい id を付けます。"
+      },
+      "error": {
+        "notJson": "JSON ファイルではありません。",
+        "unrecognisedShape": "プロンプトライブラリのファイルに見えません。",
+        "noPrompts": "そのファイルから読み取れるプロンプトがありません。",
+        "unreadableFile": "ファイルを読み取れませんでした。",
+        "failed": "プロンプトを移せませんでした。"
+      }
+    },
+    "searchPlaceholder": "プロンプトを検索",
+    "categoryLabel": "カテゴリ",
+    "dragToCategory": "カテゴリにドラッグすると分類されます",
+    "categoryPlaceholder": "カテゴリを選ぶか入力",
+    "createCategoryNamed": "「{{name}}」を作成",
+    "removeCategory": "{{name}} を外す",
+    "noCategoriesYet": "カテゴリがまだありません。入力すると作成されます。",
+    "noCategoryMatch": "その名前のカテゴリはありません。",
+    "uncategorised": "未分類",
+    "noCategories": "カテゴリがまだありません。サイドバーで追加してください。",
+    "allCategories": "すべて",
+    "addCategory": "カテゴリを追加",
+    "deleteCategoryTitle": "カテゴリを削除",
+    "deleteCategoryMessage": "「{{name}}」を削除しますか？プロンプトは残り、未分類になります。"
   }
 }

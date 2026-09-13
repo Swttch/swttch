@@ -281,6 +281,9 @@ class NodeBackendService : Disposable {
             override suspend fun pickFiles(mode: String, multiple: Boolean): List<String> =
                 any()?.pickFiles(mode, multiple) ?: run { warn("pickFiles"); emptyList() }
 
+            override suspend fun saveFile(suggestedName: String, contents: String): String? =
+                any()?.saveFile(suggestedName, contents) ?: run { warn("saveFile"); null }
+
             override suspend fun updatePlugin() {
                 any()?.updatePlugin() ?: warn("updatePlugin")
             }

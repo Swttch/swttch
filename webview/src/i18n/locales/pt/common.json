@@ -215,5 +215,94 @@
   "sponsorGated": {
     "message": "Um pequeno agrado reservado a quem nos apoia",
     "learnMore": "Saiba mais"
+  },
+  "promptLibrary": {
+    "title": "Biblioteca de prompts",
+    "description": "Salve as frases que você digita com frequência e digite !! no campo de chat para colar uma.",
+    "create": "Criar prompt",
+    "empty": "Ainda não há prompts salvos",
+    "projectUnavailable": "Abra um projeto para salvar prompts do projeto.",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Para que serve este prompt",
+    "contentLabel": "Conteúdo",
+    "contentPlaceholder": "A frase que será colada no campo de chat. Escreva {{sample}} para que um valor seja pedido ao inserir.",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "deleteTitle": "Excluir prompt",
+    "deleteMessage": "Excluir “{{name}}”? Isso não pode ser desfeito.",
+    "nameRequired": "Digite um nome.",
+    "contentRequired": "Digite o texto do prompt.",
+    "saveFailed": "Não foi possível salvar o prompt.",
+    "deleteFailed": "Não foi possível excluir o prompt.",
+    "loadFailed": "Não foi possível carregar os prompts.",
+    "globalSection": "Prompts globais",
+    "projectSection": "Prompts do projeto",
+    "projectSectionNamed": "Prompts do projeto - {{projectName}}",
+    "addPrompt": "Adicionar",
+    "createTitle": "Criar prompt",
+    "editTitle": "Editar prompt",
+    "menu": "Menu",
+    "loading": "Carregando…",
+    "openLibrary": "Biblioteca de prompts",
+    "scopeFieldLabel": "Salvar em",
+    "scopeGlobal": "Global",
+    "scopeProject": "Projeto",
+    "variables": {
+      "title": "Preencha os valores",
+      "description": "Este prompt tem lacunas a preencher. O que você digitar entra no lugar delas.",
+      "preview": "Prévia",
+      "insert": "Inserir"
+    },
+    "transfer": {
+      "export": "Exportar",
+      "import": "Carregar",
+      "exportTitle": "Exportar prompts",
+      "exportHint": "Escolha quais prompts vão para o arquivo.",
+      "exportConfirm": "Exportar",
+      "exportDone": "{{count}} prompts salvos.",
+      "importTitle": "Importar prompts",
+      "importHint": "{{new}} novos, {{update}} já na sua biblioteca.",
+      "importConfirm": "Importar",
+      "importDone": "{{imported}} adicionados, {{updated}} atualizados, {{skipped}} ignorados.",
+      "selectedCount": "{{count}} selecionados",
+      "strategyLabel": "Quando um prompt já está na sua biblioteca",
+      "status": {
+        "new": "Novo",
+        "update": "Já existe"
+      },
+      "strategy": {
+        "skip": "Manter o meu",
+        "overwrite": "Substituir",
+        "duplicate": "Manter os dois"
+      },
+      "strategyHint": {
+        "skip": "O prompt que você já tem fica como está.",
+        "overwrite": "O prompt recebido substitui o seu.",
+        "duplicate": "Os dois ficam, e o recebido recebe um id novo."
+      },
+      "error": {
+        "notJson": "Esse arquivo não é JSON.",
+        "unrecognisedShape": "Esse arquivo não parece uma biblioteca de prompts.",
+        "noPrompts": "Nenhum prompt pôde ser lido desse arquivo.",
+        "unreadableFile": "Esse arquivo não pôde ser lido.",
+        "failed": "Não foi possível transferir os prompts."
+      }
+    },
+    "searchPlaceholder": "Buscar prompts",
+    "categoryLabel": "Categoria",
+    "dragToCategory": "Arraste para uma categoria para arquivá-lo ali",
+    "categoryPlaceholder": "Escolha ou digite uma categoria",
+    "createCategoryNamed": "Criar \"{{name}}\"",
+    "removeCategory": "Remover {{name}}",
+    "noCategoriesYet": "Ainda não há categorias. Digite uma para criá-la.",
+    "noCategoryMatch": "Nenhuma categoria com esse nome.",
+    "uncategorised": "Sem categoria",
+    "noCategories": "Ainda não há categorias. Adicione uma na barra lateral.",
+    "allCategories": "Tudo",
+    "addCategory": "Adicionar categoria",
+    "deleteCategoryTitle": "Excluir categoria",
+    "deleteCategoryMessage": "Excluir \"{{name}}\"? Os prompts são mantidos e ficam sem categoria."
   }
 }
