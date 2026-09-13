@@ -1,6 +1,6 @@
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { SettingSection, SettingRow } from '../common';
-import { APP_NAME } from '@/config/app';
+import { APP_NAME, REPO_URL, ISSUES_URL } from '@/config/app';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useTranslation } from '@/i18n';
 import { CliUpdateControl } from './CliUpdateControl';
@@ -54,7 +54,7 @@ export function AboutSettings() {
       <SettingSection title={t('about.links.title')}>
         <SettingRow label={t('about.links.documentation')}>
           <a
-            href="https://github.com/Swttch/swttch"
+            href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:text-text-link hover:underline"
@@ -65,7 +65,7 @@ export function AboutSettings() {
 
         <SettingRow label={t('about.links.reportIssue')}>
           <a
-            href="https://github.com/Swttch/swttch/issues"
+            href={ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-text-link hover:text-text-link hover:underline"

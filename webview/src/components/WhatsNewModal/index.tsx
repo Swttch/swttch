@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-import { StarIcon } from '@heroicons/react/24/solid';
 import { Portal } from '@/components/Portal';
-import { getAdapter } from '@/adapters';
 import { HeroSparkles } from './HeroSparkles';
+import { StarButton } from './StarButton';
 import { useTranslation } from '@/i18n';
 import {
   sanitizeReleaseHtml,
@@ -12,8 +11,6 @@ import {
   stripVersionPrefix,
   takeFirstSection,
 } from '@/utils/releaseNotesHtml';
-
-const REPO_URL = 'https://github.com/yhk1038/claude-code-gui-jetbrains';
 
 export interface WhatsNewRelease {
   id: number;
@@ -163,13 +160,9 @@ export function WhatsNewModal(props: Props) {
               written without touching this layout. */}
           <div className="flex items-center gap-3 px-6 py-2.5 border-b border-banner-info-border bg-banner-info-bg flex-shrink-0">
             <span className="text-sm text-text-link">{t('whatsNew.promo')}</span>
-            <button
-              onClick={() => void getAdapter().openUrl(REPO_URL)}
-              className="ms-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent-primary hover:bg-accent-primary-hover text-accent-primary-fg transition-colors"
-            >
-              <StarIcon className="w-3.5 h-3.5" />
-              {t('whatsNew.star')}
-            </button>
+            <div className="ms-auto">
+              <StarButton />
+            </div>
           </div>
 
           {/* Body, flanked by the paging arrows. They sit beside what they move

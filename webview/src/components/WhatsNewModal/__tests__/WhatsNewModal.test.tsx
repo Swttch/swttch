@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { WhatsNewModal } from '../index';
+import { REPO_URL } from '@/config/app';
 
 const openUrl = vi.fn();
 vi.mock('@/adapters', () => ({
@@ -120,8 +121,13 @@ describe('WhatsNewModal', () => {
   it('sends the Star button to the repository through the adapter', () => {
     render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByText('whatsNew.star'));
-    expect(openUrl).toHaveBeenCalledWith('https://github.com/yhk1038/claude-code-gui-jetbrains');
+    // The label is literal English, not a key: the button imitates GitHub's,
+    // which says "Star" in every locale.
+    fireEvent.click(screen.getByText('Star'));
+    // Asserting against the constant, not a copy of its value: the repo was
+    // renamed once already and GitHub redirects the old path, so a hard-coded
+    // URL here would keep passing while pointing somewhere stale.
+    expect(openUrl).toHaveBeenCalledWith(REPO_URL);
   });
 
   it('renders nothing when the listing is empty', () => {
