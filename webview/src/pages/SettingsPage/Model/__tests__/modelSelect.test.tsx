@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { toModelAlias } from '@/types/models';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 /**
  * The Default Model row of Settings > Model showed an EMPTY dropdown for anyone
@@ -41,21 +41,21 @@ import { ModelSettings } from '../index';
 
 /** The catalog a real account serves, Fable row included. */
 const CATALOG: ModelInfo[] = [
-  {
+  ModelInfo.from({
     value: 'default',
     resolvedModel: 'claude-opus-5[1m]',
     displayName: 'Default (recommended)',
     description: 'Opus 5 with 1M context · Best for everyday tasks',
-  },
-  { value: 'fable', resolvedModel: 'claude-fable-5', displayName: 'Fable', description: 'Fable 5 · creative' },
-  {
+  }),
+  ModelInfo.from({ value: 'fable', resolvedModel: 'claude-fable-5', displayName: 'Fable', description: 'Fable 5 · creative' }),
+  ModelInfo.from({
     value: 'opus[1m]',
     resolvedModel: 'claude-opus-5[1m]',
     displayName: 'Opus (1M context)',
     description: 'Opus 5 with 1M context · hard tasks',
-  },
-  { value: 'sonnet', resolvedModel: 'claude-sonnet-5', displayName: 'Sonnet', description: 'Sonnet 5 · everyday' },
-  { value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+  }),
+  ModelInfo.from({ value: 'sonnet', resolvedModel: 'claude-sonnet-5', displayName: 'Sonnet', description: 'Sonnet 5 · everyday' }),
+  ModelInfo.from({ value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' }),
 ];
 
 /** The label the Default Model dropdown currently displays. */
@@ -74,14 +74,16 @@ describe('Settings > Model — Default Model dropdown', () => {
     // The regression: this exact value rendered a blank dropdown.
     mockClaudeSettings = { model: 'opus[1m]' };
     render(<ModelSettings />);
-    expect(modelTriggerLabel()).toContain('Opus (1M context)');
+    expect(modelTriggerLabel()).toContain('Opus 5 (1M)');
   });
 
   it('displays every catalog row a user could have saved', () => {
+    // Each row is named by the model it runs, so a saved pick is recognisable
+    // even when the catalog's own wording belongs to a different model.
     for (const row of CATALOG.filter((m) => m.value !== 'default')) {
       mockClaudeSettings = { model: row.value };
       const { unmount } = render(<ModelSettings />);
-      expect(modelTriggerLabel()).toContain(row.displayName);
+      expect(modelTriggerLabel()).toContain(row.label);
       unmount();
     }
   });
@@ -89,7 +91,8 @@ describe('Settings > Model — Default Model dropdown', () => {
   it('shows the default row when no model is saved', () => {
     mockClaudeSettings = {};
     render(<ModelSettings />);
-    expect(modelTriggerLabel()).toContain('Default (recommended)');
+    const defaultRow = CATALOG.find((m) => m.value === 'default');
+    expect(modelTriggerLabel()).toContain(defaultRow!.label);
   });
 
   it('shows a default label before the CLI has served a catalog', () => {

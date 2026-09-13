@@ -29,6 +29,9 @@ export async function probeFableAvailabilityHandler(
       requestId: message.requestId,
       status: 'ok',
       available: result.available,
+      // The id the alias resolved to (e.g. claude-fable-5-1). The picker names
+      // the version from this instead of us hardcoding one that goes stale.
+      canonicalModel: result.canonicalModel,
       checkedAt: result.checkedAt,
       fromCache: result.fromCache,
     });

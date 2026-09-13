@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 const { mockSend } = vi.hoisted(() => ({ mockSend: vi.fn() }));
 
@@ -94,7 +94,8 @@ describe('shouldProbeFable (trigger condition)', () => {
   const SUPPORTED_CLI = '2.1.170'; // FABLE_MIN_CLI_VERSION
   const OLD_CLI = '2.1.169';
 
-  const model = (value: string): ModelInfo => ({ value, displayName: value, description: `${value} desc` });
+  const model = (value: string): ModelInfo =>
+    ModelInfo.from({ value, displayName: value, description: `${value} desc` });
   const CATALOG = [model('default'), model('sonnet'), model('opus')];
   const CATALOG_WITH_FABLE = [...CATALOG, model('fable')];
 

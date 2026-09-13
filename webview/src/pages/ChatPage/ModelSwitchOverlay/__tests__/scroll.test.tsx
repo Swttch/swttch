@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 /**
  * Issue #314 — with a large catalog (the report had 16+ models) the picker grew
@@ -50,7 +50,7 @@ import { ModelSwitchOverlay } from '../index';
 
 /** A proxy catalog of the size that triggered the report. */
 function largeCatalog(count: number): ModelInfo[] {
-  return Array.from({ length: count }, (_, i) => ({
+  return Array.from({ length: count }, (_, i) => ModelInfo.from({
     value: `proxy-model-${i}`,
     resolvedModel: `proxy-model-${i}`,
     displayName: `Proxy Model ${i}`,

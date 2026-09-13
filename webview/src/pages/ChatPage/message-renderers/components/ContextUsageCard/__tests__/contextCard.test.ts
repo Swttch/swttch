@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { assignCategoryColors, FREE_CELL_CLASS } from '../palette';
 import { buildAgentGroups, buildSkillGroups, buildMemoryGroups } from '../treeModel';
 import { formatTokensSummary, resolveContextModelName } from '../modelDisplayName';
@@ -102,12 +102,12 @@ describe('model display helpers', () => {
 
   it('reconstructs a parenthesized model name from the catalog description', () => {
     const models: ModelInfo[] = [
-      {
+      ModelInfo.from({
         value: 'opus[1m]',
         resolvedModel: 'claude-opus-4-8[1m]',
         displayName: 'Opus',
         description: 'Opus 4.8 with 1M context · Best for everyday tasks',
-      },
+      }),
     ];
     expect(resolveContextModelName(models, 'claude-opus-4-8[1m]')).toBe('Opus 4.8 (1M context)');
   });

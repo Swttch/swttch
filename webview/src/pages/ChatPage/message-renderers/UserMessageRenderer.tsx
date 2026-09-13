@@ -17,7 +17,7 @@ import { IfVisible, hasVisibleGlyph } from './components/IfVisible';
 import { toolResultText } from './ToolRenderers/common/toolStatus';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { modelChangeTarget } from '@/types/models';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { useTranslation } from '@/i18n';
 
 interface UserMessageRendererProps {

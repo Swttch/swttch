@@ -4,7 +4,7 @@ import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { isModelChangeFor } from '@/types/models';
 import { parseUserContent } from './utils/parseUserContent';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 interface NotificationMessageRendererProps {
   message: LoadedMessageDto;

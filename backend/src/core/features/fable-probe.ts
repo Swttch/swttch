@@ -47,6 +47,8 @@ export const FABLE_PROBE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 interface FableProbeCacheEntry {
   available: boolean;
+  /** The id the `fable` alias resolved to, so the picker can name the version. */
+  canonicalModel: string | null;
   /** epoch ms when the probe ran. */
   checkedAt: number;
 }
@@ -61,7 +63,10 @@ let cache: FableProbeCacheEntry | null = null;
  * advertise a model the account can't actually select — a false positive
  * surfaces Fable in the picker only for `set_model` to fail on use.
  */
-export async function probeFableAvailability(workingDir?: string): Promise<boolean> {
+export async function probeFableAvailability(
+  workingDir?: string,
+): Promise<{ available: boolean; canonicalModel: string | null }> {
+  const DENIED = { available: false, canonicalModel: null };
   try {
     // 30s: the probe itself is ~6-10s; leave headroom for a cold CLI start.
     const { stdout } = await Claude.exec([...PROBE_ARGS], { timeout: 30_000, cwd: workingDir });
@@ -71,11 +76,26 @@ export async function probeFableAvailability(workingDir?: string): Promise<boole
       .map((l) => l.trim())
       .filter(Boolean)
       .pop();
-    if (!lastLine) return false;
-    const parsed = JSON.parse(lastLine) as { subtype?: string; is_error?: boolean };
-    return parsed.subtype === 'success' && parsed.is_error === false;
+    if (!lastLine) return DENIED;
+    const parsed = JSON.parse(lastLine) as {
+      subtype?: string;
+      is_error?: boolean;
+      modelUsage?: Record<string, { canonicalModel?: string }>;
+    };
+    // `subtype` alone would lie here: an authentication failure still comes back
+    // as subtype "success" with is_error true (measured against a proxy base URL
+    // with a bad token). Both fields have to agree.
+    if (parsed.subtype !== 'success' || parsed.is_error !== false) return DENIED;
+
+    // The id the alias actually resolved to, so the picker can name the version
+    // instead of us writing one down. `modelUsage` is empty on a refused call
+    // and may be absent entirely, so nothing here assumes it has a key.
+    const usage = parsed.modelUsage ?? {};
+    const key = Object.keys(usage)[0];
+    const canonicalModel = (key && (usage[key]?.canonicalModel ?? key)) || null;
+    return { available: true, canonicalModel };
   } catch {
-    return false;
+    return DENIED;
   }
 }
 
@@ -91,17 +111,22 @@ export async function getFableAvailability(opts?: {
   now?: number;
   ttlMs?: number;
   force?: boolean;
-}): Promise<{ available: boolean; checkedAt: number; fromCache: boolean }> {
+}): Promise<{ available: boolean; canonicalModel: string | null; checkedAt: number; fromCache: boolean }> {
   const now = opts?.now ?? Date.now();
   const ttlMs = opts?.ttlMs ?? FABLE_PROBE_TTL_MS;
 
   if (!opts?.force && cache && now - cache.checkedAt < ttlMs) {
-    return { available: cache.available, checkedAt: cache.checkedAt, fromCache: true };
+    return {
+      available: cache.available,
+      canonicalModel: cache.canonicalModel,
+      checkedAt: cache.checkedAt,
+      fromCache: true,
+    };
   }
 
-  const available = await probeFableAvailability(opts?.workingDir);
-  cache = { available, checkedAt: now };
-  return { available, checkedAt: now, fromCache: false };
+  const { available, canonicalModel } = await probeFableAvailability(opts?.workingDir);
+  cache = { available, canonicalModel, checkedAt: now };
+  return { available, canonicalModel, checkedAt: now, fromCache: false };
 }
 
 /**

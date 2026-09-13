@@ -1,63 +1,26 @@
-import type { ModelInfo } from './slashCommand';
+import { ModelInfo, DEFAULT_MODEL_ALIAS, alphanumericKey, toDisplayLabel } from './ModelInfo';
 import { isAtLeastVersion } from '@/utils/compareVersions';
 
-/**
- * CLI model alias ("default", "opus", "sonnet", "haiku", "fable") used by the
- * Claude Code CLI as the short form of `ModelInfo.value` in the
- * initialize control_response. Full model IDs such as
- * `claude-opus-4-7[1m]` or `claude-fable-5` are mapped to one of these
- * aliases via `toModelAlias`.
- */
-export const DEFAULT_MODEL_ALIAS = 'default';
-
-/** The concrete model families the CLI exposes as short aliases. */
-const MODEL_FAMILIES = ['opus', 'sonnet', 'haiku', 'fable'] as const;
-
-/** First family token appearing in `text` (case-insensitive), if any. */
-function familyIn(text: string): string | null {
-  const haystack = text.toLowerCase();
-  return MODEL_FAMILIES.find((family) => haystack.includes(family)) ?? null;
-}
+export { DEFAULT_MODEL_ALIAS, toDisplayLabel };
+export type { ModelRowText } from './ModelInfo';
 
 /**
- * Reduce a model value to its coarse family alias.
- *
- * `description` is the model's catalog blurb and is consulted only when the
- * value itself carries no family token. Third-party proxies map the CLI's model
- * slots onto their own ids via `ANTHROPIC_DEFAULT_*_MODEL`, so the value can be
- * something like `glm-4.5-air-mayi` with no "haiku" in it — but the CLI still
- * names the slot in the description ("Custom Haiku model"). Without that second
- * look every custom entry collapses onto `default`, and the model indicator
- * shows the default row's blurb no matter which model is actually running
- * (issue #217).
- *
- * The value stays the stronger signal: a description is only a tie-breaker for
- * values we can't classify, never an override.
+ * Free-function views onto `ModelInfo`, kept so existing call sites (and the
+ * CLI-echo helpers below, which work on strings rather than rows) keep reading
+ * the same. Each one is a one-line delegation to the method that now owns the
+ * logic; the reasoning lives in `ModelInfo.ts`.
  */
-export function toModelAlias(
-  value: string | null | undefined,
-  description?: string | null,
-): string {
-  if (!value) return DEFAULT_MODEL_ALIAS;
-  if (value === DEFAULT_MODEL_ALIAS) return DEFAULT_MODEL_ALIAS;
-  const fromValue = familyIn(value);
-  if (fromValue) return fromValue;
-  return (description && familyIn(description)) || DEFAULT_MODEL_ALIAS;
+export function toModelAlias(value: string | null | undefined, description?: string | null): string {
+  return ModelInfo.aliasOf(value, description);
 }
-
-/** `toModelAlias` for a catalog entry, so the description is always considered. */
 export function modelInfoAlias(info: ModelInfo): string {
-  return toModelAlias(info.value, info.description);
+  return info.alias;
 }
-
-/**
- * Reduce a model id to letters and digits, lowercased. One model is named in
- * different shapes across sources (`opus[1m]` vs `claude-opus-5[1m]`,
- * `GLM-4.5-Air-MAYI` vs `glm-4.5-air-mayi`), so a comparison of last resort keys
- * on this rather than on the raw strings.
- */
-function alphanumericKey(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+export function resolveModelLabel(info: ModelInfo): string {
+  return info.label;
+}
+export function resolveModelRowText(info: ModelInfo): { title: string; blurb: string | undefined } {
+  return info.rowText;
 }
 
 /**
@@ -88,17 +51,25 @@ export function isFableSupportedCli(cliVersion: string | null | undefined): bool
 /**
  * Hardcoded Fable item appended only when the CLI-provided catalog lacks Fable.
  * `value: 'fable'` matches the verified `--model fable` / `set_model` path.
- * Structure mirrors the CLI's own rows verbatim — `displayName: 'Fable'` (the
- * short name) and `description: 'Fable 5 · …'` (name+version, then blurb). The
- * leading "Fable 5 ·" matters: `resolveModelLabel` reads the model label out of
- * the description's first "·" segment, so without it the label degrades to the
- * full blurb ("Most capable for your…") instead of "Fable 5".
+ *
+ * **It carries no version number, on purpose.** This used to read "Fable 5 · …",
+ * and that number went stale the moment the server moved the alias to Fable 5.1:
+ * the picker kept saying "Fable 5" while `--model fable` ran `claude-fable-5-1`
+ * (measured 2026-09-13 via `modelUsage.canonicalModel`). A version we write down
+ * is a version we will be wrong about, because the server decides it and never
+ * tells us here.
+ *
+ * "Fable" alone cannot go stale: `--model fable` means "the latest Fable" by the
+ * CLI's own documented contract (`claude --help`), so the bare family name is
+ * exactly as precise as what we are actually selecting. Once the account's
+ * catalog serves Fable natively, this row is deduped away and the CLI's own
+ * wording — version included — takes over.
  */
-export const FABLE_FALLBACK_MODEL: ModelInfo = {
+export const FABLE_FALLBACK_MODEL: ModelInfo = ModelInfo.from({
   value: 'fable',
   displayName: 'Fable',
-  description: 'Fable 5 · Most capable for your hardest and longest-running tasks',
-};
+  description: 'Most capable for your hardest and longest-running tasks',
+});
 
 /**
  * Augment the CLI's model list with a Fable fallback when the account's catalog
@@ -134,6 +105,13 @@ export function withFableFallback(
   models: ModelInfo[],
   cliVersion: string | null | undefined,
   probedAvailable?: boolean | null,
+  /**
+   * The id the probe saw the `fable` alias resolve to (`claude-fable-5-1`).
+   * Attached to the row as `resolvedModel` so the label can state the version
+   * without us hardcoding one. Absent until the probe answers, in which case
+   * the row simply reads "Fable" — correct, just less specific.
+   */
+  probedCanonicalModel?: string | null,
 ): ModelInfo[] {
   if (models.length === 0) return models;
   if (models.some((m) => modelInfoAlias(m) === 'fable')) return models; // CLI already serves it — always trust, regardless of version (a custom catalog names it in the description)
@@ -144,7 +122,10 @@ export function withFableFallback(
   // mirroring how the CLI orders a natively-served Fable ahead of them.
   const defaultIdx = models.findIndex((m) => m.value === DEFAULT_MODEL_ALIAS);
   const at = defaultIdx >= 0 ? defaultIdx + 1 : 0;
-  return [...models.slice(0, at), FABLE_FALLBACK_MODEL, ...models.slice(at)];
+  const item = probedCanonicalModel
+    ? FABLE_FALLBACK_MODEL.withResolvedModel(probedCanonicalModel)
+    : FABLE_FALLBACK_MODEL;
+  return [...models.slice(0, at), item, ...models.slice(at)];
 }
 
 /**
@@ -192,28 +173,6 @@ export function resolveCurrentModel(
   settingsModel: string | null | undefined,
 ): string {
   return sessionModel ?? settingsModel ?? DEFAULT_MODEL_ALIAS;
-}
-
-/**
- * Resolve the label to show for a model. The CLI's displayName hides the
- * real model behind generic labels ("Default (recommended)", "Sonnet"),
- * but the description's first "·"-separated segment carries the actual
- * model, e.g. "Opus 4.8 with 1M context · Best for everyday tasks".
- * Keep only the model name + version ("Opus 4.8"), dropping trailing
- * qualifiers.
- *
- * That shape is specific to the Anthropic catalog. A custom catalog describes
- * its rows differently ("Custom Haiku model") and puts the real id in the
- * displayName instead, so a description with no "<name> <version>" prefix is
- * not a label — we use the displayName rather than pasting a whole sentence
- * into the composer's bottom row (issue #217).
- */
-export function resolveModelLabel(info: ModelInfo): string {
-  const firstSegment = info.description?.split('·')[0]?.trim();
-  if (!firstSegment) return info.displayName;
-  const nameVersion = firstSegment.match(/^.+?\s[\d.]+/);
-  if (nameVersion) return nameVersion[0].trim();
-  return info.displayName || firstSegment;
 }
 
 /**
@@ -347,7 +306,12 @@ export function modelChangeTarget(
   const raw = modelChangeToken(text);
   if (raw === null) return null;
   const info = resolveModelInfo(models, raw);
-  return info ? { value: info.value, label: resolveModelLabel(info) } : { value: raw, label: raw };
+  // The label is spelled out from the id the echo NAMED, not borrowed from the
+  // row it matched. Several rows can serve one id — "Default (recommended)" and
+  // "Opus (1M context)" both resolve to `claude-opus-5[1m]` — and the default
+  // row is the one `resolveModelInfo` finds first, so borrowing its name would
+  // announce "set model to Default" for a pick the user made by name.
+  return { value: info ? info.value : raw, label: toDisplayLabel(raw) };
 }
 
 /** The model token inside a CLI `/model` echo line, or null if it isn't one. */

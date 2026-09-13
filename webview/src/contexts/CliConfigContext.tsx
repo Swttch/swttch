@@ -2,6 +2,7 @@ import { createContext, useContext, useCallback, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBridge } from '@/hooks/useBridge';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
+import { ModelInfo } from '@/types/slashCommand';
 import type { CliConfigControlResponse } from '@/types/slashCommand';
 import { MessageType } from '@/shared';
 
@@ -42,7 +43,26 @@ export function CliConfigProvider(props: Props) {
         console.warn('[CliConfigContext] No controlResponse in response');
         return null;
       }
-      return cr;
+      // The catalog becomes instances here and nowhere else. This is the first
+      // point at which the CLI's JSON exists on this side, so hydrating here is
+      // what keeps a plain catalog row from ever reaching a component. Every
+      // other level of the envelope is copied through untouched, and each row
+      // keeps its original entry inside it (see `ModelInfo.toJSON`).
+      //
+      // Doing it inside `queryFn` also pins identity: react-query caches this
+      // object, so the same instances are handed out until a refetch. The picker
+      // ticks the selected row by object identity — a proxy catalog can list one
+      // model id in two slots — and rebuilding rows per render would break that.
+      return {
+        ...cr,
+        response: {
+          ...cr.response,
+          response: {
+            ...cr.response.response,
+            models: ModelInfo.fromList(cr.response.response?.models),
+          },
+        },
+      };
     },
     // Commands/skills change at runtime, so treat the data as always stale:
     // reopening the panel refetches, while the cached list shows instantly and

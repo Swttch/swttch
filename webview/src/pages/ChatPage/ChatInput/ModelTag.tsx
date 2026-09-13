@@ -9,7 +9,7 @@ import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { useModelSwitch } from '@/hooks/useModelSwitch';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { LoadedMessageType } from '@/types';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { useTranslation } from '@/i18n';
 
 /** Fired by the ⌘/Ctrl+Shift+. shortcut to rotate to the next model. */
@@ -47,12 +47,12 @@ export function ModelTag() {
   const switchModel = useModelSwitch();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
-  const { probedAvailable } = useFableProbe();
+  const { probedAvailable, probedCanonicalModel } = useFableProbe();
 
   // Memoized on the CLI response so the fallback-augmented array keeps a stable
   // reference across renders (the rotate effect below depends on `models`).
   const models: ModelInfo[] = useMemo(
-    () => withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable),
+    () => withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable, probedCanonicalModel),
     [controlResponse, cliVersion, probedAvailable],
   );
 
@@ -91,6 +91,10 @@ export function ModelTag() {
   // fallbackModelLabel covers the unmatched case.
   const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
   const label = info ? resolveModelLabel(info) : fallbackModelLabel(currentModel);
+  // The chip drops the dated snapshot: "Haiku 4.5 (20251001)" eats the bottom
+  // row, and the date is the part least worth the space. The tooltip below still
+  // carries the full label.
+  const chipLabel = info ? info.compactLabel : label;
 
   const handleClick = () => {
     window.dispatchEvent(new CustomEvent(SWITCH_MODEL_EVENT));
@@ -109,8 +113,8 @@ export function ModelTag() {
       {/* Custom catalogs carry long model names, so cap the width and ellipsize
           rather than letting the bottom row grow or wrap (issue #217). The full
           name stays available in the tag's tooltip. */}
-      <span className="hidden xs:inline truncate max-w-[12rem]">{label}</span>
-      <span className="inline xs:hidden truncate max-w-[6rem]">{label.split(' ')[0]}</span>
+      <span className="hidden xs:inline truncate max-w-[12rem]">{chipLabel}</span>
+      <span className="inline xs:hidden truncate max-w-[6rem]">{chipLabel.split(' ')[0]}</span>
     </Tag>
   );
 }

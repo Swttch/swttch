@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
 import { useCliConfig } from '@/contexts/CliConfigContext';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { ContextUsage, parseTokenValue } from '@/utils/parseContextUsage';
 import { StreamingMessage } from '@/pages/ChatPage/StreamingMessage';
 import { allocateGridCells } from './gridAllocation';
