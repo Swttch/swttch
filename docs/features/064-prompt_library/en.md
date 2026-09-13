@@ -88,11 +88,10 @@ project ones off the bottom of the screen.
 
 ### Writing a prompt
 
-![The Edit Prompt screen. A Name field reading "Reproduce a report", a Category
-row with three chips - "Review" and "Debug" filled in blue, "Docs" not - and a
-Content box reading "Reproduce issue #{{number}} exactly as the reporter wrote
-it, on {{platform}}. Do not paraphrase their steps." Cancel and Save at the
-bottom.](./assets/edit-prompt.png)
+![The Edit Prompt screen. A Name field reading "Reproduce a report". A Category
+box holding two blue chips, "Review" and "Debug", each with an X, and the text
+"Onb" typed after them, with a menu below offering `Create "Onb"`. Under that a
+Content box, and Cancel and Save at the bottom.](./assets/edit-prompt.png)
 
 | Field | Limit |
 |-------|-------|
@@ -102,6 +101,18 @@ bottom.](./assets/edit-prompt.png)
 
 The name exists to tell your prompts apart in a list. It is not sent to Claude
 and it does not have to be tidy.
+
+The category box takes as many as you want. Type to narrow the list, and if the
+name you typed is not one you have yet, the menu offers to create it:
+
+- **Enter** creates what you typed, with the caret still sitting after it.
+- **Tab** walks down the menu the way the down arrow does, and **Shift+Tab**
+  walks back up. Past either end, Tab goes back to leaving the field.
+- **Backspace** on an empty box takes the last chip off. With text still in the
+  box it deletes the text instead.
+
+A name you already have is never offered for creation, whatever the casing, so
+"Review" is found rather than made a second time as "review".
 
 ## Places to fill in
 
@@ -176,6 +187,33 @@ row of chips reading "All (6)", "Review (2)", "Docs (1)", "Debug (2)" above the
 prompt list, rather than a column beside it.](./assets/quick-panel-narrow.png)
 
 This matches how the workflow agent list behaves at the same width.
+
+### Filing by dragging
+
+Opening a prompt's form to file it is a lot of steps for a small decision, so
+the bookmark at the start of every row is a grab handle. Drag it onto a
+category and the prompt is filed there.
+
+![The Prompt Library mid-drag. "Explain a file" is faded because it is the row
+being dragged. In the category column "Docs" is outlined and carries a bookmark
+mark, while "All" and "Uncategorised" are faded because they would not take
+this prompt.](./assets/drag-to-category.png)
+
+It works the same way in the `!!` panel, on the category chips there.
+
+While you drag, a category lights up only if dropping would actually change
+something. The ones that would not stay faded, which is the screen telling you
+in advance rather than accepting the drop and doing nothing.
+
+| Dropped on | What happens |
+|------------|--------------|
+| A category | The prompt is **added** to it, keeping the categories it already had |
+| **Uncategorised** | Every category comes off |
+| **All** | Nothing. "All" is not a place to file anything |
+
+Adding rather than replacing is deliberate: a prompt can carry several, so a
+drag means "this one too", not "only this one". Dropping onto Uncategorised is
+how you take them all off again without opening the form.
 
 ## Export and import
 
