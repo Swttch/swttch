@@ -1,3 +1,5 @@
+import { ModelInfo } from './ModelInfo';
+
 export interface SlashCommandInfo {
   name: string;
   description: string;
@@ -18,6 +20,10 @@ export interface CliInitResponse {
   agents: AgentInfo[];
   output_style: string;
   available_output_styles: string[];
+  /**
+   * Instances, not raw JSON: `CliConfigContext` hydrates this array the moment
+   * the payload arrives, so nothing downstream ever holds a plain catalog row.
+   */
   models: ModelInfo[];
   account: AccountInfo;
   pid: number;
@@ -29,24 +35,12 @@ export interface AgentInfo {
   model?: string;
 }
 
-export interface ModelInfo {
-  value: string;
-  /**
-   * The concrete model this row resolves to, as the CLI reports it
-   * (`claude-haiku-4-5-20251001`). `value` is what we hand back to the CLI to
-   * select the row; this is what the CLI echoes as the running model on
-   * `system/init`, so placing a reported model on its row keys on this field.
-   * Absent on rows the CLI did not resolve (our Fable fallback row).
-   */
-  resolvedModel?: string;
-  displayName: string;
-  description: string;
-  supportsEffort?: boolean;
-  supportedEffortLevels?: string[];
-  supportsAdaptiveThinking?: boolean;
-  supportsFastMode?: boolean;
-  supportsAutoMode?: boolean;
-}
+/**
+ * Re-exported so the many modules that already import `ModelInfo` from here
+ * keep working. It is a class now, and `CliConfigContext` is the one place that
+ * turns the CLI's JSON into instances — see `ModelInfo.ts`.
+ */
+export { ModelInfo } from './ModelInfo';
 
 export interface AccountInfo {
   email: string;

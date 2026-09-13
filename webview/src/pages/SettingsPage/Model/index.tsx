@@ -10,7 +10,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
-import { DEFAULT_MODEL_ALIAS, withFableFallback } from '@/types/models';
+import { DEFAULT_MODEL_ALIAS, resolveModelRowText, withFableFallback } from '@/types/models';
 import { useTranslation } from '@/i18n';
 import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
@@ -22,12 +22,12 @@ export function ModelSettings() {
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
   const { controlResponse } = useCliConfig();
   const { cliVersion } = useVersionInfo();
-  const { probedAvailable, probeFableAvailability } = useFableProbe();
+  const { probedAvailable, probedCanonicalModel, probeFableAvailability } = useFableProbe();
   const { workingDirectory } = useWorkingDir();
   const rawModels = controlResponse?.response?.response?.models ?? [];
   // Same Fable fallback the model picker uses, gated on the per-account probe —
   // so an account that cannot actually select Fable never sees it here either.
-  const availableModels = withFableFallback(rawModels, cliVersion, probedAvailable);
+  const availableModels = withFableFallback(rawModels, cliVersion, probedAvailable, probedCanonicalModel);
 
   // Settings may be the first place the user looks for the default model, so run
   // the same availability probe the picker does (once per mount; cached backend-side).
@@ -43,7 +43,10 @@ export function ModelSettings() {
       ? [{ value: '', label: t('cli.model.defaultRecommended') }]
       : availableModels.map((m) => ({
           value: m.value === DEFAULT_MODEL_ALIAS ? '' : m.value,
-          label: m.displayName,
+          // Not `displayName`: a remapped slot advertises Anthropic's name while
+          // running someone else's model, and picking a default by a name that
+          // is not the model's is how the wrong default gets saved.
+          label: resolveModelRowText(m).title,
         }));
 
   return (

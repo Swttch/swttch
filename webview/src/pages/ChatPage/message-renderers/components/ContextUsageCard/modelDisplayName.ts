@@ -1,4 +1,4 @@
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { resolveModelInfo } from '@/types/models';
 
 /**

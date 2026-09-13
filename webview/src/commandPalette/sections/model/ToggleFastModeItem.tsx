@@ -6,7 +6,7 @@ import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { resolveModelInfo } from '@/types/models';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 
 export const FAST_MODE_TOGGLE_EVENT = 'fast-mode-toggle';

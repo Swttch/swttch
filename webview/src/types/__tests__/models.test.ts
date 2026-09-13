@@ -13,7 +13,7 @@ import {
   FABLE_FALLBACK_MODEL,
   DEFAULT_MODEL_ALIAS,
 } from '../models';
-import type { ModelInfo } from '../slashCommand';
+import { ModelInfo } from '../slashCommand';
 
 /**
  * A catalog row as the CLI actually serves it: every row it resolved carries a
@@ -22,11 +22,13 @@ import type { ModelInfo } from '../slashCommand';
  * object literally instead of using this helper.
  */
 function model(value: string, displayName = value, resolvedModel = `claude-${value}`): ModelInfo {
-  return { value, resolvedModel, displayName, description: `${displayName} desc` };
+  return ModelInfo.from({ value, resolvedModel, displayName, description: `${displayName} desc` });
 }
 
 function modelWithAuto(value: string, supportsAutoMode: boolean): ModelInfo {
-  return { ...model(value), supportsAutoMode };
+  // Spread the raw entry, not the instance: spreading an instance copies its
+  // internals rather than the catalog fields.
+  return ModelInfo.from({ ...model(value).toJSON(), supportsAutoMode });
 }
 
 describe('findModelForSelection', () => {
@@ -70,7 +72,7 @@ describe('isAutoModeAvailable', () => {
   const models = [
     modelWithAuto('default', true),
     modelWithAuto('sonnet', true),
-    { value: 'haiku', displayName: 'haiku', description: 'haiku desc' }, // supportsAutoMode absent (false)
+    ModelInfo.from({ value: 'haiku', displayName: 'haiku', description: 'haiku desc' }), // supportsAutoMode absent (false)
   ];
 
   it('is true when the current model supports auto and policy allows it', () => {
@@ -123,8 +125,8 @@ describe('toModelAlias', () => {
 
 describe('reconcileSessionModel — never overwrite a known pick with an unknown value', () => {
   const CUSTOM: ModelInfo[] = [
-    { value: 'default', displayName: 'Default (recommended)', description: 'Use the default model (currently glm-5.2-mayi[1m])' },
-    { value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+    ModelInfo.from({ value: 'default', displayName: 'Default (recommended)', description: 'Use the default model (currently glm-5.2-mayi[1m])' }),
+    ModelInfo.from({ value: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' }),
   ];
 
   it('adopts a reported model the catalog recognizes', () => {
@@ -158,8 +160,8 @@ describe('reconcileSessionModel — never overwrite a known pick with an unknown
 
   it('is unaffected on an Anthropic catalog (no regression)', () => {
     const anthropic: ModelInfo[] = [
-      { value: 'default', displayName: 'Default (recommended)', description: 'Opus 4.8 · recommended' },
-      { value: 'haiku', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+      ModelInfo.from({ value: 'default', displayName: 'Default (recommended)', description: 'Opus 4.8 · recommended' }),
+      ModelInfo.from({ value: 'haiku', displayName: 'Haiku', description: 'Haiku 4.5 · fast' }),
     ];
     expect(reconcileSessionModel('claude-haiku-4-5-20251001', 'default', anthropic)).toBe(
       'claude-haiku-4-5-20251001',
@@ -175,16 +177,16 @@ describe('custom model catalogs (issue #217)', () => {
   // The CLI still tells us the family in the description ("Custom Haiku model"),
   // so that is what we key on.
   const CUSTOM_MODELS: ModelInfo[] = [
-    {
+    ModelInfo.from({
       value: 'default',
       resolvedModel: 'glm-5.2-mayi[1m]',
       displayName: 'Default (recommended)',
       description: 'Use the default model (currently glm-5.2-mayi[1m])',
-    },
-    { value: 'glm-5.2-mayi', resolvedModel: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
-    { value: 'glm-5.1-mayi', resolvedModel: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
-    { value: 'glm-4.7-mayi', resolvedModel: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
-    { value: 'glm-4.5-air-mayi', resolvedModel: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+    }),
+    ModelInfo.from({ value: 'glm-5.2-mayi', resolvedModel: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' }),
+    ModelInfo.from({ value: 'glm-5.1-mayi', resolvedModel: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' }),
+    ModelInfo.from({ value: 'glm-4.7-mayi', resolvedModel: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' }),
+    ModelInfo.from({ value: 'glm-4.5-air-mayi', resolvedModel: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' }),
   ];
 
   it('derives the family from the description when the value carries no family token', () => {
@@ -230,8 +232,8 @@ describe('custom model catalogs (issue #217)', () => {
   it('labels a custom model by its own name rather than the default blurb', () => {
     const haiku = CUSTOM_MODELS[4];
     // Never the long "Use the default model (currently …)" sentence that broke
-    // the composer's bottom row.
-    expect(resolveModelLabel(haiku)).toBe('glm-4.5-air-mayi');
+    // the composer's bottom row. The id is spelled out, not renamed.
+    expect(resolveModelLabel(haiku)).toBe('Glm 4.5 Air Mayi');
   });
 
   it('does not fabricate a family for a genuinely unknown custom model', () => {
@@ -241,19 +243,24 @@ describe('custom model catalogs (issue #217)', () => {
 });
 
 describe('resolveModelLabel', () => {
-  it('extracts the model name + version from the description (e.g. "Opus 5")', () => {
-    // Opus 5 arrives purely via the CLI catalog; the label must resolve to
-    // "Opus 5" from the description's first "·" segment, dropping the qualifier.
-    const opus5: ModelInfo = {
+  it('spells out the model the row runs, not the prose around it', () => {
+    // The description says "Opus 5 with 1M context · Best for everyday…", but
+    // the label comes from the resolved id so a row that borrows someone else's
+    // prose cannot mislabel itself.
+    const opus5: ModelInfo = ModelInfo.from({
       value: 'opus[1m]',
+      resolvedModel: 'claude-opus-5[1m]',
       displayName: 'Opus (1M context)',
       description: 'Opus 5 with 1M context · Best for everyday, complex tasks',
-    };
-    expect(resolveModelLabel(opus5)).toBe('Opus 5');
+    });
+    expect(resolveModelLabel(opus5)).toBe('Opus 5 (1M)');
   });
 
-  it('extracts "Fable 5" from the hardcoded fallback description', () => {
-    expect(resolveModelLabel(FABLE_FALLBACK_MODEL)).toBe('Fable 5');
+  it('labels the hardcoded fallback by the family, with no version', () => {
+    // It used to read "Fable 5", which went stale as soon as the alias moved to
+    // claude-fable-5-1. With no resolvedModel the label falls back to `value`,
+    // and "fable" means "the latest Fable" by the CLI's own contract.
+    expect(resolveModelLabel(FABLE_FALLBACK_MODEL)).toBe('Fable');
   });
 });
 
@@ -309,10 +316,10 @@ describe('resolveModelInfo', () => {
 
 describe('modelChangeTarget', () => {
   const models: ModelInfo[] = [
-    { value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' },
-    { value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' },
-    { value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
-    { value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+    ModelInfo.from({ value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' }),
+    ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' }),
+    ModelInfo.from({ value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' }),
+    ModelInfo.from({ value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' }),
   ];
 
   it('resolves "Set model to <full id>" to a friendly label', () => {
@@ -321,24 +328,26 @@ describe('modelChangeTarget', () => {
     // label is well-defined; both rows carry the same one. Which row got picked
     // is the caller's business, and the caller that cares asks
     // `isModelChangeFor` instead (see below).
-    expect(modelChangeTarget('Set model to claude-opus-4-8[1m]', models)?.label).toBe('Opus 4.8');
+    expect(modelChangeTarget('Set model to claude-opus-4-8[1m]', models)?.label).toBe('Opus 4.8 (1M)');
   });
 
   it('resolves "Set model to <alias> (<id>)" by the alias before the paren', () => {
+    // The label spells out the token the echo named. That token is the alias
+    // here, so the label is the alias spelled out — not the row's own prose.
     expect(modelChangeTarget('Set model to sonnet (claude-sonnet-4-6)', models)).toEqual({
       value: 'sonnet',
-      label: 'Sonnet 4.6',
+      label: 'Sonnet',
     });
     expect(modelChangeTarget('Set model to haiku (claude-haiku-4-5-20251001)', models)).toEqual({
       value: 'haiku',
-      label: 'Haiku 4.5',
+      label: 'Haiku',
     });
   });
 
   it('still parses when wrapped in a local-command-stdout tag', () => {
     expect(
       modelChangeTarget('<local-command-stdout>Set model to claude-opus-4-8[1m]</local-command-stdout>', models)?.label,
-    ).toBe('Opus 4.8');
+    ).toBe('Opus 4.8 (1M)');
   });
 
   it('returns null for text that is not a model-change line', () => {
@@ -346,17 +355,19 @@ describe('modelChangeTarget', () => {
     expect(modelChangeTarget('', models)).toBeNull();
   });
 
-  it('falls back to the raw token (value and label) when the model is unknown', () => {
-    expect(modelChangeTarget('Set model to mystery', [])).toEqual({ value: 'mystery', label: 'mystery' });
+  it('falls back to the raw token when the model is unknown', () => {
+    // No row to attach it to, so the value stays the token verbatim; the label
+    // is that same token spelled out.
+    expect(modelChangeTarget('Set model to mystery', [])).toEqual({ value: 'mystery', label: 'Mystery' });
   });
 });
 
 describe('isModelChangeFor', () => {
   // Mirrors the real catalog: "default" and "opus[1m]" serve one model id.
   const models: ModelInfo[] = [
-    { value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' },
-    { value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' },
-    { value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
+    ModelInfo.from({ value: 'default', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Default (recommended)', description: 'Opus 4.8 with 1M context · recommended' }),
+    ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · best for hard tasks' }),
+    ModelInfo.from({ value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' }),
   ];
 
   it('matches every row the echoed id resolves to, not just the first one', () => {
@@ -395,10 +406,10 @@ describe('withFableFallback', () => {
     // Fable ranks just below "default" and above Opus (index 1), not appended last.
     expect(merged[1]).toBe(FABLE_FALLBACK_MODEL);
     expect(merged[1].value).toBe('fable');
-    // Verbatim CLI structure: short displayName + "Fable 5 · …" description so
-    // resolveModelLabel can extract "Fable 5" as the label.
+    // Short displayName, and a description that states what the model is good
+    // for without naming a version we would have to keep in sync.
     expect(merged[1].displayName).toBe('Fable');
-    expect(resolveModelLabel(merged[1])).toBe('Fable 5');
+    expect(resolveModelLabel(merged[1])).toBe('Fable');
   });
 
   it('ranks Fable just below the default item and above the other models', () => {

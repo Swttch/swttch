@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveModelInfo, resolveModelLabel } from '@/types/models';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 /**
  * Issue #217 — a third-party proxy maps the CLI's model slots onto its own ids
@@ -8,16 +8,16 @@ import type { ModelInfo } from '@/types/slashCommand';
  * "opus"/"sonnet"/"haiku" token. This is the exact catalog from the report.
  */
 const CUSTOM_CATALOG: ModelInfo[] = [
-  {
+  ModelInfo.from({
     value: 'default',
     resolvedModel: 'glm-5.2-mayi[1m]',
     displayName: 'Default (recommended)',
     description: 'Use the default model (currently glm-5.2-mayi[1m])',
-  },
-  { value: 'glm-5.2-mayi', resolvedModel: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' },
-  { value: 'glm-5.1-mayi', resolvedModel: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' },
-  { value: 'glm-4.7-mayi', resolvedModel: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' },
-  { value: 'glm-4.5-air-mayi', resolvedModel: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' },
+  }),
+  ModelInfo.from({ value: 'glm-5.2-mayi', resolvedModel: 'glm-5.2-mayi', displayName: 'glm-5.2-mayi', description: 'Custom Opus model' }),
+  ModelInfo.from({ value: 'glm-5.1-mayi', resolvedModel: 'glm-5.1-mayi', displayName: 'glm-5.1-mayi', description: 'Custom Fable model' }),
+  ModelInfo.from({ value: 'glm-4.7-mayi', resolvedModel: 'glm-4.7-mayi', displayName: 'glm-4.7-mayi', description: 'Custom Sonnet model' }),
+  ModelInfo.from({ value: 'glm-4.5-air-mayi', resolvedModel: 'glm-4.5-air-mayi', displayName: 'glm-4.5-air-mayi', description: 'Custom Haiku model' }),
 ];
 
 /** What the composer's model tag ends up showing for a given current model. */
@@ -29,14 +29,14 @@ function tagLabel(current: string | null): string {
 describe('ModelTag label on a custom model catalog (issue #217)', () => {
   it('shows the picked model right after switching', () => {
     // Before the CLI is spawned the tag reflects the user's pick directly.
-    expect(tagLabel('glm-4.5-air-mayi')).toBe('glm-4.5-air-mayi');
+    expect(tagLabel('glm-4.5-air-mayi')).toBe('Glm 4.5 Air Mayi');
   });
 
   it('keeps showing it once the session starts and system/init echoes back', () => {
     // The regression: each of these is a shape system/init may report for the
     // very model the user picked. None of them may fall back to the default row.
     for (const echoed of ['glm-4.5-air-mayi', 'glm-4.5-air-mayi[1m]', 'GLM-4.5-Air-MAYI']) {
-      expect(tagLabel(echoed)).toBe('glm-4.5-air-mayi');
+      expect(tagLabel(echoed)).toBe('Glm 4.5 Air Mayi');
     }
   });
 
@@ -48,16 +48,18 @@ describe('ModelTag label on a custom model catalog (issue #217)', () => {
     }
   });
 
-  it('labels the default row itself by its display name, not its blurb', () => {
+  it('labels the default row by its own name, not by the model behind it', () => {
+    // It stands for "use whatever the default is"; naming it after the model
+    // would misreport the choice. The long blurb never becomes the label.
     expect(tagLabel('default')).toBe('Default (recommended)');
   });
 
   it('resolves every slot to its own model, never to a neighbour', () => {
     // Each row here is a distinct proxy model, and the CLI reports whichever one
     // is running by its id — so every slot must land back on itself.
-    expect(tagLabel('glm-5.2-mayi')).toBe('glm-5.2-mayi');
-    expect(tagLabel('glm-4.7-mayi')).toBe('glm-4.7-mayi');
-    expect(tagLabel('glm-5.1-mayi')).toBe('glm-5.1-mayi');
+    expect(tagLabel('glm-5.2-mayi')).toBe('Glm 5.2 Mayi');
+    expect(tagLabel('glm-4.7-mayi')).toBe('Glm 4.7 Mayi');
+    expect(tagLabel('glm-5.1-mayi')).toBe('Glm 5.1 Mayi');
   });
 
   it('does not hand a coarse alias to a row that merely advertises that family', () => {
@@ -81,20 +83,20 @@ describe('ModelTag label on a custom model catalog (issue #217)', () => {
 
 describe('ModelTag label on the Anthropic catalog (no regression)', () => {
   const ANTHROPIC_CATALOG: ModelInfo[] = [
-    {
+    ModelInfo.from({
       value: 'default',
       resolvedModel: 'claude-opus-4-8[1m]',
       displayName: 'Default (recommended)',
       description: 'Opus 4.8 with 1M context · Best for everyday tasks',
-    },
-    { value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · hard tasks' },
-    { value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' },
-    { value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' },
+    }),
+    ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'claude-opus-4-8[1m]', displayName: 'Opus', description: 'Opus 4.8 with 1M context · hard tasks' }),
+    ModelInfo.from({ value: 'sonnet', resolvedModel: 'claude-sonnet-4-6', displayName: 'Sonnet', description: 'Sonnet 4.6 · everyday' }),
+    ModelInfo.from({ value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · fast' }),
   ];
 
-  it('still extracts name + version from the description', () => {
+  it('still spells out name + version for a first-party row', () => {
     const info = resolveModelInfo(ANTHROPIC_CATALOG, 'haiku');
-    expect(info && resolveModelLabel(info)).toBe('Haiku 4.5');
+    expect(info && resolveModelLabel(info)).toBe('Haiku 4.5 (20251001)');
   });
 
   it('still resolves a full model id reported by system/init', () => {

@@ -2,13 +2,14 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { isFableSupportedCli, modelInfoAlias } from '@/types/models';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 /** ACK payload shape for a PROBE_FABLE_AVAILABILITY request (see the backend
  *  `probeFableAvailability` handler). `available` is only present on success. */
 interface FableProbeResponse {
   status: 'ok' | 'error';
   available?: boolean;
+  canonicalModel?: string | null;
   checkedAt?: number;
   fromCache?: boolean;
   error?: string;
@@ -19,6 +20,10 @@ interface FableProbeContextValue {
    *  select Fable (per the real per-account availability probe). Feeds the 4th
    *  arg of `withFableFallback`, which only offers Fable post-promo when true. */
   probedAvailable: boolean | null;
+  /** The id the `fable` alias resolved to (e.g. `claude-fable-5-1`), or null
+   *  when unknown. The picker names the version from this rather than from a
+   *  version string of ours, which would go stale the moment the alias moves. */
+  probedCanonicalModel: string | null;
   /** Fire the backend probe and store the result. Never throws: a transient
    *  failure or an error status leaves the prior value untouched (null until a
    *  probe resolves), so a hiccup can neither falsely offer nor falsely hide
@@ -44,6 +49,7 @@ export function FableProbeProvider(props: Props) {
   const { children } = props;
   const { send } = useBridgeContext();
   const [probedAvailable, setProbedAvailable] = useState<boolean | null>(null);
+  const [probedCanonicalModel, setProbedCanonicalModel] = useState<string | null>(null);
 
   const probeFableAvailability = useCallback(
     async (workingDir?: string) => {
@@ -54,6 +60,9 @@ export function FableProbeProvider(props: Props) {
         // Fable's visibility.
         if (res?.status === 'ok' && typeof res.available === 'boolean') {
           setProbedAvailable(res.available);
+          // Absent on an older backend, and null when the call was refused
+          // before any model ran; both leave the previous value alone.
+          if (typeof res.canonicalModel === 'string') setProbedCanonicalModel(res.canonicalModel);
         }
       } catch {
         // Swallow: keep `probedAvailable` as-is (null = still undetermined).
@@ -63,7 +72,7 @@ export function FableProbeProvider(props: Props) {
   );
 
   return (
-    <FableProbeContext.Provider value={{ probedAvailable, probeFableAvailability }}>
+    <FableProbeContext.Provider value={{ probedAvailable, probedCanonicalModel, probeFableAvailability }}>
       {children}
     </FableProbeContext.Provider>
   );

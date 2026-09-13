@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import type { ModelInfo } from '@/types/slashCommand';
+import { ModelInfo } from '@/types/slashCommand';
 
 const updateSettingMock = vi.fn();
 let mockSettings: Record<string, unknown> = {};
@@ -30,18 +30,18 @@ vi.mock('@/contexts/ChatStreamContext', () => ({
 
 import { PermissionsSettings } from '../index';
 
-const AUTO_MODEL: ModelInfo = {
+const AUTO_MODEL: ModelInfo = ModelInfo.from({
   value: 'sonnet',
   displayName: 'Sonnet',
   description: 'Sonnet',
   supportsAutoMode: true,
-};
-const NO_AUTO_MODEL: ModelInfo = {
+});
+const NO_AUTO_MODEL: ModelInfo = ModelInfo.from({
   value: 'haiku',
   displayName: 'Haiku',
   description: 'Haiku',
   supportsAutoMode: false,
-};
+});
 
 /**
  * Open the "Default Input Mode" dropdown and read the labels it offers. The

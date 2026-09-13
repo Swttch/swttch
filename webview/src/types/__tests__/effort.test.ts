@@ -9,7 +9,8 @@ import {
   isUltracodeAvailable,
   nextEffortStep,
 } from '../effort';
-import type { CliConfigControlResponse, ModelInfo } from '../slashCommand';
+import { ModelInfo } from '../slashCommand';
+import type { CliConfigControlResponse } from '../slashCommand';
 
 // Mirrors the Claude Code CLI: effort levels are low/medium/high/xhigh (+max
 // when a model reports it). "Auto" is not a level — it's the unset state. The
@@ -142,13 +143,13 @@ describe('getModelEffortConfig', () => {
   // the bare `opus` alias, so an exact-match lookup missed it entirely.
   it('matches an opus[1m] entry even when currentModel is the suffixed value', () => {
     const models: ModelInfo[] = [
-      {
+      ModelInfo.from({
         value: 'opus[1m]',
         displayName: 'Opus',
         description: 'Opus 4.8 with 1M context · Best for everyday tasks',
         supportsEffort: true,
         supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
-      },
+      }),
     ];
     const controlResponse = controlResponseWithModels(models);
     expect(getModelEffortConfig(controlResponse, 'opus[1m]')).toEqual({
@@ -159,13 +160,13 @@ describe('getModelEffortConfig', () => {
 
   it('matches an opus[1m] entry when currentModel is the bare alias form', () => {
     const models: ModelInfo[] = [
-      {
+      ModelInfo.from({
         value: 'opus[1m]',
         displayName: 'Opus',
         description: 'Opus 4.8 with 1M context · Best for everyday tasks',
         supportsEffort: true,
         supportedEffortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
-      },
+      }),
     ];
     const controlResponse = controlResponseWithModels(models);
     expect(getModelEffortConfig(controlResponse, 'opus')).toEqual({
@@ -176,13 +177,13 @@ describe('getModelEffortConfig', () => {
 
   it('matches sonnet by exact alias and by a full model id', () => {
     const models: ModelInfo[] = [
-      {
+      ModelInfo.from({
         value: 'sonnet',
         displayName: 'Sonnet',
         description: 'Sonnet 5 · Great for everyday coding',
         supportsEffort: true,
         supportedEffortLevels: ['low', 'medium', 'high'],
-      },
+      }),
     ];
     const controlResponse = controlResponseWithModels(models);
     expect(getModelEffortConfig(controlResponse, 'sonnet')).toEqual({
@@ -197,11 +198,11 @@ describe('getModelEffortConfig', () => {
 
   it('returns unsupported for a model without effort support (e.g. Haiku)', () => {
     const models: ModelInfo[] = [
-      {
+      ModelInfo.from({
         value: 'haiku',
         displayName: 'Haiku',
         description: 'Haiku 5 · Fastest for everyday tasks',
-      },
+      }),
     ];
     const controlResponse = controlResponseWithModels(models);
     expect(getModelEffortConfig(controlResponse, 'haiku')).toEqual({

@@ -6,17 +6,20 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe } from '@/contexts/FableProbeContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
-import { resolveModelInfo, withFableFallback } from '@/types/models';
+import { resolveModelInfo, resolveModelLabel, withFableFallback } from '@/types/models';
 
 const SwitchModelValue = () => {
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
   const { cliVersion } = useVersionInfo();
-  const { probedAvailable } = useFableProbe();
-  const models = withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable);
+  const { probedAvailable, probedCanonicalModel } = useFableProbe();
+  const models = withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable, probedCanonicalModel);
   // Unidentified models show their raw value rather than "Default" (issue #217).
   const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
-  const text = info?.displayName ?? currentModel;
+  // displayName can name a model this row does not run once the slots are
+  // remapped onto another provider, so the label goes through the same resolver
+  // the composer's model tag uses.
+  const text = info ? resolveModelLabel(info) : currentModel;
   return (
     <span className="text-[0.8461rem] text-text-secondary whitespace-nowrap">
       {text}
