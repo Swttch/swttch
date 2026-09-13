@@ -131,7 +131,17 @@ export function WhatsNewModal(props: Props) {
               date beneath it. A centred masthead rather than one left-aligned
               row is what keeps this from reading as the same dialog everyone
               else ships. */}
-          <div className="relative flex-shrink-0 px-6 pt-10 pb-6 border-b border-border-default bg-gradient-to-b from-surface-overlay via-surface-overlay to-surface-raised">
+          <div className="relative flex-shrink-0 px-6 pt-10 pb-6 border-b border-border-default bg-surface-raised">
+            {/* A wash of the accent rather than a step between grey surfaces.
+                The greys cannot separate the hero from the notes in both
+                themes: on light, `surface-overlay` and `surface-raised` are
+                255 and 250, five points apart and invisible. A hue reads at
+                the same strength either way, and it is the sparkles' own
+                colour, so the hero holds together. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-b from-accent-claude/[0.12] to-accent-claude/0"
+            />
             <HeroSparkles />
             <button
               onClick={onClose}
