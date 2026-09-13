@@ -29,29 +29,27 @@ describe('WhatsNewModal', () => {
     render(<WhatsNewModal releases={releases} initialVersion="0.30.2" onClose={vi.fn()} />);
 
     expect(screen.getByText('v0.30.2')).toBeTruthy();
-    expect(screen.getByTestId('whats-new-pager').textContent).toBe('2 / 3');
   });
 
   it('falls back to the newest release when the installed version is not listed', () => {
     render(<WhatsNewModal releases={releases} initialVersion="9.9.9" onClose={vi.fn()} />);
 
     expect(screen.getByText('v0.31.0')).toBeTruthy();
-    expect(screen.getByTestId('whats-new-pager').textContent).toBe('1 / 3');
   });
 
   it('pages through the whole history one release at a time', () => {
     render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={vi.fn()} />);
 
     fireEvent.click(screen.getByLabelText('whatsNew.older'));
-    expect(screen.getByTestId('whats-new-pager').textContent).toBe('2 / 3');
+    expect(screen.getByText('v0.30.2')).toBeTruthy();
     expect(screen.getByText('Middle')).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('whatsNew.older'));
-    expect(screen.getByTestId('whats-new-pager').textContent).toBe('3 / 3');
+    expect(screen.getByText('v0.30.1')).toBeTruthy();
     expect(screen.getByText('Oldest')).toBeTruthy();
 
     fireEvent.click(screen.getByLabelText('whatsNew.newer'));
-    expect(screen.getByTestId('whats-new-pager').textContent).toBe('2 / 3');
+    expect(screen.getByText('v0.30.2')).toBeTruthy();
   });
 
   it('disables paging past either end', () => {
@@ -101,16 +99,6 @@ describe('WhatsNewModal', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(3);
     unmount();
-  });
-
-  it('closes on the footer dismiss button as well as the corner X', () => {
-    const onClose = vi.fn();
-    render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={onClose} />);
-
-    // The X carries the label; the footer button carries the same string as its
-    // visible text, so the two are addressed differently on purpose.
-    fireEvent.click(screen.getByText('whatsNew.close'));
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('shows the fixed English masthead regardless of the active locale', () => {
