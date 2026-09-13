@@ -13,6 +13,15 @@
     "update": "Atualizar",
     "skip": "Pular"
   },
+  "whatsNew": {
+    "title": "Novidades",
+    "promo": "Este plugin é open source e é construído com as contribuições de quem o usa.",
+    "close": "Fechar",
+    "newer": "Versão mais recente",
+    "older": "Versão anterior",
+    "unknownDate": "Data desconhecida",
+    "noNotes": "Sem notas de versão."
+  },
   "telemetry": {
     "title": "Permitir a coleta de estatísticas de uso para melhorar o produto?",
     "subtitle": "Código-fonte e dados pessoais nunca são enviados. Você pode desativar isso a qualquer momento nas configurações.",

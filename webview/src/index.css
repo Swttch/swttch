@@ -197,6 +197,12 @@
   --accent-claude-hover-rgb:    197 104 74;
   --accent-claude-hover:        rgb(var(--accent-claude-hover-rgb));
 
+  /* Ceiling opacity for the What's new hero sparkles, per theme. On white the
+     accent only darkens the background, so it needs more of itself than it
+     does over the dark surface to land at the same visual weight. Each glyph
+     scales this by its own weight (see HeroSparkles). */
+  --sparkle-alpha: 0.62;
+
   /* State — Success */
   --state-success-bg:     #E8F5E9;
   --state-success-fg-rgb: 46 125 50;
@@ -368,6 +374,8 @@
   --accent-claude:              rgb(var(--accent-claude-rgb));
   --accent-claude-hover-rgb:    197 104 74;
   --accent-claude-hover:        rgb(var(--accent-claude-hover-rgb));
+
+  --sparkle-alpha: 0.5;
 
   --state-success-bg:     rgba(34, 197, 94, 0.15);
   --state-success-fg-rgb: 74 222 128;

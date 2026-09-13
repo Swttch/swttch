@@ -22,6 +22,17 @@ export const PRIVACY_POLICY_URL = 'https://just-swttch.com/privacy';
 export const PRICING_URL = 'https://just-swttch.com/pricing';
 
 /**
+ * The source repository.
+ *
+ * `yhk1038/claude-code-gui-jetbrains` is the former name. GitHub still
+ * redirects it, so a stale link looks like it works and survives review —
+ * which is exactly why every link is built from this one constant.
+ */
+export const REPO_URL = 'https://github.com/Swttch/swttch';
+
+export const ISSUES_URL = `${REPO_URL}/issues`;
+
+/**
  * Where a feature doc lives, given its folder name under `docs/features/`.
  *
  * The docs are per-language files in the repo, so the link targets the folder
@@ -29,5 +40,5 @@ export const PRICING_URL = 'https://just-swttch.com/pricing';
  * guessing which translations exist for a given feature.
  */
 export function featureDocUrl(folder: string): string {
-  return `https://github.com/Swttch/swttch/tree/main/docs/features/${folder}`;
+  return `${REPO_URL}/tree/main/docs/features/${folder}`;
 }

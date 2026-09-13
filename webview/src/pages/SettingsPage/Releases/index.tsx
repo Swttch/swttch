@@ -5,142 +5,12 @@ import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-import type { TFunction } from 'i18next';
-
-/**
- * Sanitize HTML by stripping all tags except a safe allowlist.
- * This prevents XSS from untrusted release notes.
- *
- * Strategy: bottom-up walk so that when a disallowed parent is unwrapped,
- * its children have already been sanitized.
- */
-const ALLOWED_TAGS = new Set([
-  'p', 'br', 'b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'code', 'pre', 'blockquote',
-  'hr', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  'dl', 'dt', 'dd', 'sup', 'sub', 'del', 'ins',
-  'img',
-]);
-const ALLOWED_ATTRS: Record<string, Set<string>> = {
-  '*': new Set(['title', 'class', 'id', 'style']),
-  'a': new Set(['href']),
-  'img': new Set(['src', 'alt', 'width', 'height']),
-};
-
-function isAllowedAttr(tag: string, attrName: string): boolean {
-  return (ALLOWED_ATTRS['*']?.has(attrName) ?? false)
-    || (ALLOWED_ATTRS[tag]?.has(attrName) ?? false);
-}
-
-function isSafeUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value) || value.startsWith('#') || value.startsWith('/');
-}
-
-/**
- * Fallback when DOMParser is unavailable/failing (some JCEF builds) or produces
- * no <body>. The old fallback stripped every tag, which collapsed the whole
- * changelog into one run-on paragraph (the `\n`s between tags render as spaces
- * in HTML). Here we first turn block boundaries into newlines and list items
- * into bullets, strip the remaining tags, escape the text, then re-emit the
- * newlines as <br> — so the release notes keep their line structure even
- * without a working DOM parser.
- */
-export function stripToTextWithBreaks(html: string): string {
-  const withBreaks = html
-    .replace(/<li[^>]*>/gi, '• ') // list marker at item start
-    .replace(/<\/(p|div|li|h[1-6]|ul|ol|tr|blockquote|pre)\s*>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  const temp = document.createElement('div');
-  temp.textContent = withBreaks; // escape any stray < > &
-  return temp.innerHTML.replace(/\n/g, '<br>');
-}
-
-function sanitizeReleaseHtml(html: string): string {
-  try {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    if (!doc?.body) return stripToTextWithBreaks(html);
-    walkBottomUp(doc.body);
-    return doc.body.innerHTML;
-  } catch {
-    return stripToTextWithBreaks(html);
-  }
-}
-
-function walkBottomUp(node: Node): void {
-  // Recurse children first (bottom-up), snapshot to handle mutations
-  const children = Array.from(node.childNodes);
-  for (const child of children) {
-    walkBottomUp(child);
-  }
-
-  // Now process the current node itself
-  if (node.nodeType !== Node.ELEMENT_NODE) return;
-  const el = node as Element;
-  const tag = el.tagName.toLowerCase();
-
-  if (!ALLOWED_TAGS.has(tag)) {
-    // Unwrap: move (already-sanitized) children before this node, then remove it
-    while (el.firstChild) {
-      el.parentNode?.insertBefore(el.firstChild, el);
-    }
-    el.parentNode?.removeChild(el);
-    return;
-  }
-
-  // Remove disallowed attributes
-  for (const attr of Array.from(el.attributes)) {
-    if (!isAllowedAttr(tag, attr.name.toLowerCase())) {
-      el.removeAttribute(attr.name);
-    }
-  }
-
-  // Sanitize URL attributes
-  for (const urlAttr of ['href', 'src']) {
-    if (el.hasAttribute(urlAttr)) {
-      const val = el.getAttribute(urlAttr) ?? '';
-      if (!isSafeUrl(val)) {
-        el.removeAttribute(urlAttr);
-      }
-    }
-  }
-}
-
-function formatDate(cdate: string | number, t: TFunction): string {
-  const ms = typeof cdate === 'string' ? parseInt(cdate, 10) : cdate;
-  if (isNaN(ms)) return t('releases.unknownDate');
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  const ss = pad(d.getSeconds());
-  const tz = Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
-    .formatToParts().find(p => p.type === 'timeZoneName')?.value ?? '';
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss} (${tz})`;
-}
-
-function extractTitle(notes: string): string | null {
-  const match = notes.match(/<h[1-3][^>]*>(.*?)<\/h[1-3]>/i);
-  if (!match) return null;
-  try {
-    // Strip any HTML tags from the title text to prevent XSS
-    const temp = document.createElement('div');
-    temp.innerHTML = match[1];
-    return temp.textContent ?? null;
-  } catch {
-    // Fallback: strip tags with regex
-    return match[1].replace(/<[^>]*>/g, '') || null;
-  }
-}
-
-function stripTitle(notes: string): string {
-  return notes.replace(/<h[1-3][^>]*>.*?<\/h[1-3]>/i, '').trim();
-}
+import {
+  sanitizeReleaseHtml,
+  formatReleaseDate,
+  extractTitle,
+  stripTitle,
+} from '@/utils/releaseNotesHtml';
 
 function ReleasesSkeleton() {
   return (
@@ -193,7 +63,7 @@ function ReleaseAccordion(props: ReleaseAccordionProps) {
             v{update.version}
           </span>
           <span className="text-xs text-text-tertiary shrink-0 ms-auto">
-            {formatDate(update.cdate, t)}
+            {formatReleaseDate(update.cdate, t('releases.unknownDate'))}
           </span>
           {isCurrent && (
             <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-surface-tooltip text-text-secondary shrink-0">
