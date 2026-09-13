@@ -103,6 +103,24 @@ describe('WhatsNewModal', () => {
     unmount();
   });
 
+  it('closes on the footer dismiss button as well as the corner X', () => {
+    const onClose = vi.fn();
+    render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={onClose} />);
+
+    // The X carries the label; the footer button carries the same string as its
+    // visible text, so the two are addressed differently on purpose.
+    fireEvent.click(screen.getByText('whatsNew.close'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the fixed English masthead regardless of the active locale', () => {
+    render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={vi.fn()} />);
+
+    // `t` is stubbed to echo keys here, so a translated title would read
+    // "whatsNew.title". The masthead is hard-coded instead.
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe("What's new");
+  });
+
   it('does not close when the click lands inside the dialog', () => {
     const onClose = vi.fn();
     render(<WhatsNewModal releases={releases} initialVersion="0.31.0" onClose={onClose} />);
