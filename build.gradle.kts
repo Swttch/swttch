@@ -188,7 +188,7 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.31.0 - Prompt Library release, and background agent improvements</h3>
+            <h3>0.31.1 - Prompt Library release, and background agent improvements</h3>
             <ul>
                 <li>Add a Prompt Library for the phrases you retype, opened with !! in the chat input (#440, reported by @EndiButler)</li>
                 <li>Add a composer for sending a background agent another message and resuming it (#437)</li>

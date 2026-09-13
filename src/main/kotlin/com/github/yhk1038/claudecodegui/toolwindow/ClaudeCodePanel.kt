@@ -26,8 +26,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.FileChooserFactory
-import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -64,6 +62,8 @@ import org.cef.handler.CefRequestHandlerAdapter
 import org.cef.network.CefRequest
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.FileDialog
+import java.awt.Frame
 import java.awt.Image
 import java.awt.Point
 import java.awt.datatransfer.DataFlavor
@@ -1837,7 +1837,15 @@ class ClaudeCodePanel(
             }
 
             /**
-             * Write [contents] to a path chosen in the IDE's own save dialog.
+             * Write [contents] to a path chosen in the platform's own save dialog.
+             *
+             * AWT rather than the IDE's `FileSaverDescriptor`: the only variant of
+             * that constructor which exists on our lower bound (2024.2) is the one
+             * newer platforms deprecate, and the replacement it names arrived after
+             * 242 — so there is no spelling of it that is clean on both ends.
+             * `FileDialog` is the JDK's own, opens the real macOS and Windows sheet,
+             * and lands standalone mode's result here too, since BrowserBridge
+             * already asks the OS directly.
              *
              * The dialog only names the file; the write is ours, which keeps the
              * result byte-identical to the one standalone mode produces.
@@ -1846,17 +1854,18 @@ class ClaudeCodePanel(
                 val result = CompletableDeferred<String?>()
                 ApplicationManager.getApplication().invokeLater {
                     try {
-                        val descriptor = FileSaverDescriptor(
-                            "Save File",
-                            "Choose where to write the file"
-                        )
-                        val dialog = FileChooserFactory.getInstance()
-                            .createSaveFileDialog(descriptor, project)
-                        val wrapper = dialog.save(null as VirtualFile?, suggestedName)
-                        if (wrapper == null) {
+                        val dialog = FileDialog(null as Frame?, "Save File", FileDialog.SAVE)
+                        project.basePath?.let { dialog.directory = it }
+                        dialog.file = suggestedName
+                        dialog.isVisible = true
+
+                        val directory = dialog.directory
+                        val name = dialog.file
+                        if (directory == null || name == null) {
+                            // A cancelled dialog leaves both null. The user said no.
                             result.complete(null)
                         } else {
-                            val file = wrapper.file
+                            val file = File(directory, name)
                             file.parentFile?.mkdirs()
                             file.writeText(contents, Charsets.UTF_8)
                             result.complete(file.absolutePath)
