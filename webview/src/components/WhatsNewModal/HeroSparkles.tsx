@@ -19,7 +19,15 @@ interface Sparkle {
   glyph: number;
   /** rem */
   size: number;
-  opacity: number;
+  /**
+   * How strongly this glyph shows, relative to its neighbours, from 0 to 1.
+   *
+   * Relative rather than absolute because the ceiling is per theme: the accent
+   * is a mid-tone that brightens the dark surface but only darkens white, so
+   * the two need different amounts of it to read the same. `--sparkle-alpha`
+   * in index.css holds that ceiling and this scales it.
+   */
+  weight: number;
 }
 
 /**
@@ -29,16 +37,16 @@ interface Sparkle {
  * as debris on top of the text rather than as a backdrop behind it.
  */
 const SPARKLES: Sparkle[] = [
-  { x: 5, y: 30, glyph: 4, size: 1.0, opacity: 0.22 },
-  { x: 11, y: 52, glyph: 0, size: 0.7, opacity: 0.16 },
-  { x: 17, y: 12, glyph: 1, size: 0.8, opacity: 0.14 },
-  { x: 22, y: 38, glyph: 0, size: 0.65, opacity: 0.12 },
-  { x: 26, y: 20, glyph: 5, size: 0.85, opacity: 0.15 },
-  { x: 75, y: 16, glyph: 1, size: 0.8, opacity: 0.14 },
-  { x: 80, y: 46, glyph: 4, size: 0.95, opacity: 0.18 },
-  { x: 85, y: 24, glyph: 0, size: 0.65, opacity: 0.12 },
-  { x: 90, y: 54, glyph: 5, size: 1.0, opacity: 0.16 },
-  { x: 95, y: 32, glyph: 0, size: 0.7, opacity: 0.15 },
+  { x: 5, y: 30, glyph: 4, size: 1.0, weight: 1.0 },
+  { x: 11, y: 52, glyph: 0, size: 0.7, weight: 0.72 },
+  { x: 17, y: 12, glyph: 1, size: 0.8, weight: 0.64 },
+  { x: 22, y: 38, glyph: 0, size: 0.65, weight: 0.55 },
+  { x: 26, y: 20, glyph: 5, size: 0.85, weight: 0.68 },
+  { x: 75, y: 16, glyph: 1, size: 0.8, weight: 0.64 },
+  { x: 80, y: 46, glyph: 4, size: 0.95, weight: 0.82 },
+  { x: 85, y: 24, glyph: 0, size: 0.65, weight: 0.55 },
+  { x: 90, y: 54, glyph: 5, size: 1.0, weight: 0.72 },
+  { x: 95, y: 32, glyph: 0, size: 0.7, weight: 0.68 },
 ];
 
 export function HeroSparkles() {
@@ -52,7 +60,7 @@ export function HeroSparkles() {
             insetInlineStart: `${s.x}%`,
             top: `${s.y}%`,
             fontSize: `${s.size}rem`,
-            opacity: s.opacity,
+            opacity: `calc(var(--sparkle-alpha) * ${s.weight})`,
           }}
         >
           {BASE_FRAMES[s.glyph]}
