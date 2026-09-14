@@ -1,59 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { resolveModelLabel, resolveModelRowText, resolveModelInfo, withFableFallback } from '../models';
 import { ModelInfo } from '../slashCommand';
-
-/**
- * Catalogs captured verbatim from CLI 2.1.261 on 2026-09-13, by sending an
- * `initialize` control_request and printing `response.response.models`.
- *
- * They exist because a fixture written from imagination sent an earlier round of
- * this work in the wrong direction: it assumed a remapped catalog puts the
- * custom id in `value`/`displayName`, which is only true once ANTHROPIC_BASE_URL
- * is set as well. Reproducing both halves is what surfaced the label bugs these
- * tests pin down, so the rows stay measured rather than hand-written.
- */
-
-/** No remapping: a plain first-party account. */
-const ANTHROPIC: ModelInfo[] = [
-  ModelInfo.from({ value: 'default', resolvedModel: 'claude-opus-5[1m]', displayName: 'Default (recommended)', description: 'Opus 5 with 1M context · Best for everyday, complex tasks' }),
-  ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'claude-opus-5[1m]', displayName: 'Opus (1M context)', description: 'Opus 5 with 1M context · Best for everyday, complex tasks' }),
-  ModelInfo.from({ value: 'sonnet', resolvedModel: 'claude-sonnet-5', displayName: 'Sonnet', description: 'Sonnet 5 · Efficient for routine tasks' }),
-  ModelInfo.from({ value: 'haiku', resolvedModel: 'claude-haiku-4-5-20251001', displayName: 'Haiku', description: 'Haiku 4.5 · Fastest for quick answers' }),
-];
-
-/**
- * ANTHROPIC_DEFAULT_*_MODEL set, ANTHROPIC_BASE_URL not. The CLI still believes
- * it is talking to Anthropic, so every row keeps Anthropic's own wording while
- * `resolvedModel` alone names the model that actually runs.
- */
-const REMAPPED_NAMES_ONLY: ModelInfo[] = [
-  ModelInfo.from({ value: 'default', resolvedModel: 'glm-5.2-mayi[1m]', displayName: 'Default (recommended)', description: 'Opus with 1M context · Best for everyday, complex tasks' }),
-  ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'glm-5.2-mayi[1m]', displayName: 'Opus (1M context)', description: 'Opus with 1M context · Best for everyday, complex tasks' }),
-  ModelInfo.from({ value: 'sonnet', resolvedModel: 'glm-4.7-mayi', displayName: 'Sonnet', description: 'Sonnet · Efficient for routine tasks' }),
-  ModelInfo.from({ value: 'haiku', resolvedModel: 'glm-4.5-air-mayi', displayName: 'Haiku', description: 'Haiku 4.5 · Fastest for quick answers' }),
-];
-
-/** ANTHROPIC_BASE_URL set too: the CLI relabels most rows, but not all of them. */
-const PROXIED: ModelInfo[] = [
-  ModelInfo.from({ value: 'default', resolvedModel: 'glm-4.6[1m]', displayName: 'Default (recommended)', description: 'Use the default model (currently glm-4.6[1m])' }),
-  ModelInfo.from({ value: 'opus', resolvedModel: 'glm-4.6', displayName: 'glm-4.6', description: 'Custom Opus model' }),
-  ModelInfo.from({ value: 'sonnet', resolvedModel: 'glm-4.6', displayName: 'glm-4.6', description: 'Custom Sonnet model' }),
-  ModelInfo.from({ value: 'haiku', resolvedModel: 'glm-4.5-air', displayName: 'glm-4.5-air', description: 'Custom Haiku model' }),
-  ModelInfo.from({ value: 'opus[1m]', resolvedModel: 'glm-4.6[1m]', displayName: 'Opus (1M context)', description: 'Opus with 1M context · Best for everyday, complex tasks' }),
-];
-
-const rowFor = (catalog: ModelInfo[], value: string): ModelInfo => {
-  const row = catalog.find((m) => m.value === value);
-  if (!row) throw new Error(`no row ${value}`);
-  return row;
-};
+import { ANTHROPIC, REMAPPED_NAMES_ONLY, PROXIED, rowFor } from './measuredCatalogs';
 
 describe('the label names the model that actually runs', () => {
   it('spells out a first-party catalog', () => {
     expect(resolveModelLabel(rowFor(ANTHROPIC, 'sonnet'))).toBe('Sonnet 5');
     expect(resolveModelLabel(rowFor(ANTHROPIC, 'opus[1m]'))).toBe('Opus 5 (1M)');
     expect(resolveModelLabel(rowFor(ANTHROPIC, 'haiku'))).toBe('Haiku 4.5 (20251001)');
-    // The default row names the choice, not the model behind it.
+    // The default row names the choice, not the model behind it. That is the
+    // answer the picker rows and the settings dropdown want; the composer chip
+    // and the model-change line spell that row out differently, and each of
+    // those rules is tested with the screen that owns it.
     expect(resolveModelLabel(rowFor(ANTHROPIC, 'default'))).toBe('Default (recommended)');
     expect(resolveModelLabel(rowFor(PROXIED, 'default'))).toBe('Default (recommended)');
   });
