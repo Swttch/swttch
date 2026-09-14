@@ -84,6 +84,17 @@
       "noMatchingFiles": "No matching files",
       "closeAriaLabel": "Close mention dropdown"
     },
+    "agentMentionDropdown": {
+      "title": "Other active sessions",
+      "refresh": "Read the list again",
+      "loading": "Reading sessions...",
+      "noOtherSessions": "No other active sessions",
+      "closeAriaLabel": "Close session list",
+      "openSessionFailed": "Could not open that session"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "Stop sending to {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "Modes",
       "toSwitch": "to switch",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "Queue another message...",
-      "hint": "@ to reference files, / for commands, !! to insert prompts, {{send}} to send"
+      "hint": "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, {{send}} to send"
     },
     "ariaLabel": "Message Claude",
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",

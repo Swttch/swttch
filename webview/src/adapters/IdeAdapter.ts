@@ -31,7 +31,7 @@ export interface IdeAdapter {
    * - In JetBrains: Opens a new editor tab navigated to the session via Kotlin bridge
    * - In Browser: Opens a new browser tab at the session route
    */
-  openSession(sessionId: string): Promise<void>;
+  openSession(sessionId: string, workingDir?: string): Promise<void>;
 
   /**
    * Open the review for a proposed file edit in a tab/window of its own.

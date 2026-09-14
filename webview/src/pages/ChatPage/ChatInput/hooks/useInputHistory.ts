@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useBridge } from '@/hooks/useBridge';
 import { MessageType, isQueueOperation } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '@/types';
+import { stripSystemReminders } from '@/pages/ChatPage/message-renderers/utils/parseUserContent';
 
 /**
  * How close to the end of the loaded history the cursor may get before the next
@@ -19,8 +20,20 @@ const PREFETCH_MARGIN = 3;
  * made those prompts skip in the walk.
  */
 function promptTextOf(entry: Record<string, unknown>): string {
-  if (isQueueOperation(entry)) return typeof entry.content === 'string' ? entry.content : '';
-  return getTextContent(entry as unknown as LoadedMessageDto);
+  const raw = isQueueOperation(entry)
+    ? typeof entry.content === 'string'
+      ? entry.content
+      : ''
+    : getTextContent(entry as unknown as LoadedMessageDto);
+  // What was STORED is not what was TYPED. A send that addresses another
+  // session, or cancels a task, carries a `<system-reminder>` the GUI wrapped
+  // around the user's words — measured: Up recalled the whole delivery
+  // instruction, tag and markers and all, straight into the composer.
+  //
+  // Only the reminder is taken off here. The `<session-mention>` tag stays, so
+  // the composer can put the chip back as a live chip rather than as dead text
+  // that looks addressed and is not.
+  return stripSystemReminders(raw).trim();
 }
 
 interface PromptHistoryResponse {

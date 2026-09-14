@@ -84,6 +84,17 @@
       "noMatchingFiles": "일치하는 파일이 없습니다",
       "closeAriaLabel": "멘션 드롭다운 닫기"
     },
+    "agentMentionDropdown": {
+      "title": "다른 활성 세션 에이전트",
+      "refresh": "목록 다시 읽기",
+      "loading": "세션을 읽는 중...",
+      "noOtherSessions": "다른 활성 세션이 없습니다",
+      "closeAriaLabel": "세션 목록 닫기",
+      "openSessionFailed": "그 세션을 열지 못했습니다"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "{{name}} 에게 보내기 취소"
+    },
     "modeSelectPanel": {
       "modes": "모드",
       "toSwitch": "전환",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "다음 메시지 대기열에 추가...",
-      "hint": "@ 파일 참조, / 명령, !! 프롬프트 삽입, {{send}}로 전송"
+      "hint": "@ 파일 참조, / 명령, !! 프롬프트 삽입, @@ 다른 세션에 질의, {{send}}로 전송"
     },
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",

@@ -1,11 +1,22 @@
+import {
+  SESSION_MENTION_PATTERN,
+  readSessionMention,
+  type SessionMention,
+} from '../../ChatInput/sessionMentionTag';
+
 /**
  * A contiguous run of a submitted user message, classified for chip rendering.
  * `isPath` runs are `@`-prefixed file/folder mentions that render as clickable
  * chips; plain runs render as text (preserving whitespace/newlines).
+ *
+ * `mention` marks a `<session-mention>` element — another live Claude session
+ * the user addressed. It is a chip too, but not a path: nothing about it opens,
+ * and `text` is already the display label with the markup taken off.
  */
 export interface MessageSegment {
   text: string;
   isPath: boolean;
+  mention?: SessionMention;
 }
 
 /**
@@ -25,6 +36,23 @@ export interface MessageSegment {
 const PATH_TOKEN_PATTERN = /@\S*[^\s.,;:!?)\]}]/g;
 
 /**
+ * A match that is a session mention rather than a file one, and so is not a
+ * path at all.
+ *
+ * `@@` addresses another live Claude session. The pattern above cannot tell the
+ * two apart on its own: it opens on the first `@`, absorbs the second, and
+ * stops at the first space — so `@@fix the proxy` surfaced as a chip reading
+ * `@@fix`, which then offered to open a file named `@fix`. Wrong on both counts,
+ * and the clickable half is the dangerous one.
+ *
+ * Checked on the match rather than built into the pattern so the pattern keeps
+ * saying one thing about what a path looks like.
+ */
+function isSessionMention(token: string): boolean {
+  return token.startsWith('@@');
+}
+
+/**
  * Tokenize a submitted user message into ordered {@link MessageSegment}s.
  *
  * Plain text between matches is preserved verbatim (including whitespace and
@@ -35,12 +63,48 @@ const PATH_TOKEN_PATTERN = /@\S*[^\s.,;:!?)\]}]/g;
 export function tokenizeMessagePaths(text: string): MessageSegment[] {
   if (text.length === 0) return [];
 
+  // Session mentions are taken out first, because they are the only run here
+  // whose extent the text itself declares. What is left between them is ordinary
+  // prose, and only that is searched for paths.
+  const segments: MessageSegment[] = [];
+  const mentionPattern = new RegExp(SESSION_MENTION_PATTERN.source, 'g');
+  let cursor = 0;
+  let mentionMatch: RegExpExecArray | null;
+
+  const pushProse = (prose: string) => {
+    for (const segment of tokenizePaths(prose)) segments.push(segment);
+  };
+
+  while ((mentionMatch = mentionPattern.exec(text)) !== null) {
+    if (mentionMatch.index > cursor) pushProse(text.slice(cursor, mentionMatch.index));
+    const mention = readSessionMention(mentionMatch);
+    segments.push({ text: mention.label, isPath: false, mention });
+    cursor = mentionMatch.index + mentionMatch[0].length;
+  }
+
+  if (cursor < text.length) pushProse(text.slice(cursor));
+
+  if (segments.length === 0) {
+    return [{ text, isPath: false }];
+  }
+
+  return segments;
+}
+
+/** Split one run of prose into path chips and plain text. */
+function tokenizePaths(text: string): MessageSegment[] {
+  if (text.length === 0) return [];
+
   const segments: MessageSegment[] = [];
   const pattern = new RegExp(PATH_TOKEN_PATTERN.source, 'g');
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
   while ((match = pattern.exec(text)) !== null) {
+    // An unwrapped session mention — one typed by hand, or written before the
+    // tag existed. Left to merge into the plain run around it rather than
+    // surfaced as a chip offering to open a file named `@fix`.
+    if (isSessionMention(match[0])) continue;
     if (match.index > lastIndex) {
       segments.push({ text: text.slice(lastIndex, match.index), isPath: false });
     }
@@ -52,10 +116,7 @@ export function tokenizeMessagePaths(text: string): MessageSegment[] {
     segments.push({ text: text.slice(lastIndex), isPath: false });
   }
 
-  if (segments.length === 0) {
-    return [{ text, isPath: false }];
-  }
-
+  if (segments.length === 0) return [{ text, isPath: false }];
   return segments;
 }
 

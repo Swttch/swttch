@@ -9,6 +9,8 @@ import { SendFoldToggle } from './components/SendFoldToggle';
 import { parseUserContent } from './utils/parseUserContent';
 import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
 import { MessagePathChip } from './components/MessagePathChip';
+import { MessageSessionMentionChip } from './components/MessageSessionMentionChip';
+import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
@@ -223,7 +225,9 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
             <MessageBox>
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                 {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
-                  seg.isPath ? (
+                  seg.mention ? (
+                    <MessageSessionMentionChip key={idx} mention={seg.mention} />
+                  ) : seg.isPath ? (
                     <MessagePathChip key={idx} token={seg.text} />
                   ) : (
                     <React.Fragment key={idx}>{seg.text}</React.Fragment>
@@ -232,7 +236,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               </div>
             </MessageBox>
 
-            <SendActionMenu copyText={parsedContent.text} />
+            <SendActionMenu copyText={stripSessionMentionTags(parsedContent.text)} />
           </div>
         </div>
 

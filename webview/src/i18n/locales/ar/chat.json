@@ -84,6 +84,17 @@
       "noMatchingFiles": "لا توجد ملفات مطابقة",
       "closeAriaLabel": "إغلاق قائمة الإشارة"
     },
+    "agentMentionDropdown": {
+      "title": "جلسات نشطة أخرى",
+      "refresh": "إعادة قراءة القائمة",
+      "loading": "جارٍ قراءة الجلسات...",
+      "noOtherSessions": "لا توجد جلسات نشطة أخرى",
+      "closeAriaLabel": "إغلاق قائمة الجلسات",
+      "openSessionFailed": "تعذّر فتح الجلسة"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "إلغاء الإرسال إلى {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "الأوضاع",
       "toSwitch": "للتبديل",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "إضافة رسالة أخرى إلى القائمة...",
-      "hint": "@ للملفات، / للأوامر، !! لإدراج المطالبات، {{send}} للإرسال"
+      "hint": "@ للملفات، / للأوامر، !! لإدراج المطالبات، @@ لسؤال جلسة أخرى، {{send}} للإرسال"
     },
     "ariaLabel": "مراسلة Claude",
     "autoModeFallback": "الوضع التلقائي غير متاح هنا — سيُستخدم وضع الأذونات الافتراضي بدلًا منه.",

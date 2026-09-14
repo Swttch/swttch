@@ -84,6 +84,17 @@
       "noMatchingFiles": "沒有相符的檔案",
       "closeAriaLabel": "關閉提及下拉選單"
     },
+    "agentMentionDropdown": {
+      "title": "其他活躍工作階段",
+      "refresh": "重新讀取清單",
+      "loading": "正在讀取工作階段...",
+      "noOtherSessions": "沒有其他活躍的工作階段",
+      "closeAriaLabel": "關閉工作階段清單",
+      "openSessionFailed": "無法開啟該工作階段"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "取消傳送給 {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "模式",
       "toSwitch": "切換",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "排入下一則訊息...",
-      "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，{{send}} 傳送"
+      "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，@@ 詢問其他工作階段，{{send}} 傳送"
     },
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",

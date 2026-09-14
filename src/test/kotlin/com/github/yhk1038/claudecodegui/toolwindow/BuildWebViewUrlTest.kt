@@ -222,4 +222,70 @@ class BuildWebViewUrlTest {
             assertEquals(url, redactUrlSecrets(url))
         }
     }
+
+    /**
+     * A tab opened AT a conversation carries that conversation's directory in
+     * its route, because a session's transcript lives under its own directory
+     * rather than under whichever project the new tab happens to start in.
+     *
+     * Measured before the fix: the project's directory was appended anyway, with
+     * a second `?`, so the whole query parsed as one garbage value and the
+     * backend looked for the session under a path named after both directories
+     * joined together.
+     */
+    @Nested
+    inner class PathThatAlreadyCarriesAQuery {
+        private val sessionPath = "/sessions/abc?workingDir=%2Fsession%2Fdir"
+
+        @Test
+        fun `continues the query with an ampersand, never a second question mark`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = sessionPath,
+                workingDir = "/project/dir",
+                panelId = "p1",
+                isBright = false,
+            )
+            assertEquals(1, url.count { it == '?' }, "expected exactly one '?' in: $url")
+        }
+
+        @Test
+        fun `keeps the directory the route named and drops the tab's own`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = sessionPath,
+                workingDir = "/project/dir",
+                panelId = "p1",
+                isBright = false,
+            )
+            assertTrue(url.contains("workingDir=%2Fsession%2Fdir"), "expected the route's dir in: $url")
+            assertFalse(url.contains("%2Fproject%2Fdir"), "expected the tab's dir to be dropped from: $url")
+        }
+
+        @Test
+        fun `still adds the other params`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = sessionPath,
+                workingDir = "/project/dir",
+                panelId = "p1",
+                isBright = false,
+            )
+            assertTrue(url.contains("panelId=p1"), "expected panelId in: $url")
+            assertTrue(url.contains("theme=dark"), "expected theme in: $url")
+        }
+
+        @Test
+        fun `a plain path still gets the tab's directory`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = "/sessions/abc",
+                workingDir = "/project/dir",
+                panelId = "p1",
+                isBright = false,
+            )
+            assertTrue(url.contains("workingDir=%2Fproject%2Fdir"), "expected the tab's dir in: $url")
+            assertEquals(1, url.count { it == '?' })
+        }
+    }
 }
