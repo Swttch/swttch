@@ -194,7 +194,15 @@ export class ModelInfo {
   }
 
   /**
-   * The label to show for this model.
+   * This row's own name.
+   *
+   * It answers "what is this row called", which is what the model picker's rows
+   * and the settings dropdown ask. Screens that ask a different question do not
+   * use it: the composer's chip asks which model is *running* and the chat's
+   * model-change line asks what was *picked*, and both spell the `default` row
+   * out differently (see `chipLabel` in `ModelTag`, and `modelChangeLabel`).
+   * Those rules live with the screens that own them rather than here, so this
+   * class keeps answering only questions about the row itself.
    *
    * It is written from `resolvedModel`, which is the only field that always
    * names the model actually running. The other three can be borrowed: when a
@@ -228,20 +236,6 @@ export class ModelInfo {
    */
   get rowText(): ModelRowText {
     return { title: this.label, blurb: this.description || undefined };
-  }
-
-  /**
-   * `label` without the dated snapshot, for a place too narrow to carry it.
-   *
-   * "Haiku 4.5 (20251001)" is honest but eats the composer's bottom row, and the
-   * date is the part a person is least likely to be reading. Only the date goes:
-   * a context suffix like "(1M)" changes which model you get, so it stays.
-   *
-   * The full label still belongs wherever there is room for it — the picker
-   * rows, and the tag's own tooltip.
-   */
-  get compactLabel(): string {
-    return this.label.replace(/\s*\(\d{4,}\)/g, '');
   }
 
   /** A copy of this row carrying `resolvedModel`, leaving the original untouched. */

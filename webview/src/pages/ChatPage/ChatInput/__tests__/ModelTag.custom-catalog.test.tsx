@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveModelInfo, resolveModelLabel } from '@/types/models';
+import { chipLabel } from '../ModelTag';
 import { ModelInfo } from '@/types/slashCommand';
 
 /**
@@ -23,7 +24,7 @@ const CUSTOM_CATALOG: ModelInfo[] = [
 /** What the composer's model tag ends up showing for a given current model. */
 function tagLabel(current: string | null): string {
   const info = resolveModelInfo(CUSTOM_CATALOG, current);
-  return info ? resolveModelLabel(info) : '';
+  return info ? chipLabel(info) : '';
 }
 
 describe('ModelTag label on a custom model catalog (issue #217)', () => {
@@ -48,10 +49,11 @@ describe('ModelTag label on a custom model catalog (issue #217)', () => {
     }
   });
 
-  it('labels the default row by its own name, not by the model behind it', () => {
-    // It stands for "use whatever the default is"; naming it after the model
-    // would misreport the choice. The long blurb never becomes the label.
-    expect(tagLabel('default')).toBe('Default (recommended)');
+  it('labels the default row by the model behind it, never by its blurb', () => {
+    // The chip is asked which model is running, so on this row it looks past the
+    // row's own name to the model. The long blurb is still never the label, and
+    // the picker rows keep naming the row itself (see models.label.measured).
+    expect(tagLabel('default')).toBe('Glm 5.2 Mayi (1M)');
   });
 
   it('resolves every slot to its own model, never to a neighbour', () => {
@@ -75,8 +77,10 @@ describe('ModelTag label on a custom model catalog (issue #217)', () => {
   it('keeps labels short enough for a single-line bottom row', () => {
     // Not a pixel assertion — a guard that no label degrades into a sentence
     // again. Real width is bounded by `truncate max-w-*` on the tag.
+    // Measured on what the chip actually renders, not on the row label: those
+    // two diverge on the default row, and it is the chip that has to fit.
     for (const m of CUSTOM_CATALOG) {
-      expect(resolveModelLabel(m).length).toBeLessThanOrEqual(24);
+      expect(chipLabel(m).length).toBeLessThanOrEqual(24);
     }
   });
 });

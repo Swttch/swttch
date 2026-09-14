@@ -6,7 +6,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe } from '@/contexts/FableProbeContext';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
-import { resolveModelInfo, resolveModelLabel, withFableFallback } from '@/types/models';
+import { resolveModelInfo, resolveModelRowText, withFableFallback } from '@/types/models';
 
 const SwitchModelValue = () => {
   const { controlResponse } = useCliConfig();
@@ -16,10 +16,12 @@ const SwitchModelValue = () => {
   const models = withFableFallback(controlResponse?.response?.response?.models ?? [], cliVersion, probedAvailable, probedCanonicalModel);
   // Unidentified models show their raw value rather than "Default" (issue #217).
   const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
-  // displayName can name a model this row does not run once the slots are
-  // remapped onto another provider, so the label goes through the same resolver
-  // the composer's model tag uses.
-  const text = info ? resolveModelLabel(info) : currentModel;
+  // This item opens the model picker, so it names the current model the way
+  // that picker's rows do — open it and the ticked row reads back the same
+  // words. Notably that is NOT what the composer's chip shows: the chip names
+  // the model running behind the `default` row, while the picker (and so this
+  // item) names the row itself.
+  const text = info ? resolveModelRowText(info).title : currentModel;
   return (
     <span className="text-[0.8461rem] text-text-secondary whitespace-nowrap">
       {text}

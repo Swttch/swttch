@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toDisplayLabel, ModelInfo } from '../ModelInfo';
+import { toDisplayLabel } from '../ModelInfo';
 
 /**
  * The spelling rules for a model id on screen. They are written as a table
@@ -44,27 +44,5 @@ describe('toDisplayLabel', () => {
     expect(toDisplayLabel('')).toBe('');
     expect(toDisplayLabel('---')).toBe('');
     expect(toDisplayLabel('[1m]')).toBe('(1M)');
-  });
-});
-
-describe('compactLabel drops only the dated snapshot', () => {
-  const row = (resolvedModel: string) => ModelInfo.from({ value: 'x', resolvedModel, displayName: 'x', description: '' });
-
-  it('removes a dated suffix so the composer chip stays short', () => {
-    expect(row('claude-haiku-4-5-20251001').compactLabel).toBe('Haiku 4.5');
-  });
-
-  it('keeps a context suffix, which changes which model you get', () => {
-    expect(row('claude-opus-5[1m]').compactLabel).toBe('Opus 5 (1M)');
-    expect(row('glm-4.6[1m]').compactLabel).toBe('Glm 4.6 (1M)');
-  });
-
-  it('leaves a label with no date untouched', () => {
-    expect(row('claude-sonnet-5').compactLabel).toBe('Sonnet 5');
-    expect(row('glm-4.5-air').compactLabel).toBe('Glm 4.5 Air');
-  });
-
-  it('still reports the full label for the tooltip', () => {
-    expect(row('claude-haiku-4-5-20251001').label).toBe('Haiku 4.5 (20251001)');
   });
 });
