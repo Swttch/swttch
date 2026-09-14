@@ -1761,8 +1761,25 @@ class ClaudeCodePanel(
             override suspend fun openSession(sessionId: String, workingDir: String?) {
                 ApplicationManager.getApplication().invokeLater {
                     val targetProject = findProjectByBasePath(workingDir ?: "") ?: project
+                    // The directory has to travel IN THE ROUTE, not just in the
+                    // choice of project. A session's transcript is found under its
+                    // own working directory, so a tab opened at a bare
+                    // `/sessions/<id>` looks for it under whichever directory that
+                    // tab happens to start in — finds nothing, and falls back to a
+                    // new conversation. The tab opened, the session did not.
+                    //
+                    // `?workingDir=` is the same query the webview's own
+                    // navigation writes (withWorkingDir), so a tab opened from here
+                    // lands exactly as one switched from the session dropdown does.
+                    val path = buildString {
+                        append("/sessions/").append(sessionId)
+                        if (!workingDir.isNullOrBlank()) {
+                            append("?workingDir=")
+                            append(java.net.URLEncoder.encode(workingDir, "UTF-8"))
+                        }
+                    }
                     // Always open the session in a fresh editor tab (new tabId).
-                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), "/sessions/$sessionId")
+                    OpenClaudeCodeAction.openTab(targetProject, UUID.randomUUID().toString(), path)
                     logger.info("Opened session tab (sessionId=$sessionId, workingDir=$workingDir)")
                 }
             }
@@ -2106,16 +2123,30 @@ internal fun buildWebViewUrl(
     isBright: Boolean,
     pairCode: String? = null,
 ): String {
-    val workingDirParam = workingDir?.let {
-        "workingDir=${java.net.URLEncoder.encode(it, "UTF-8")}"
-    }
+    // A path that already names a working directory keeps it, and a path that
+    // already carries a query is continued with `&`.
+    //
+    // Both matter for a tab opened AT a specific conversation: a session's
+    // transcript lives under its own directory, which is not always the one this
+    // tab's project sits in. Appending the project's anyway produced
+    // `...?workingDir=<session>?workingDir=<project>` — two `?` in one URL, so
+    // the whole query parsed as garbage and the backend looked for the session
+    // under a directory named after both of them joined together.
+    //
+    // The route wins because it is the more specific statement: a caller that
+    // spelled out a directory in the path meant that one.
+    val pathCarriesWorkingDir = pathSegment.contains("workingDir=")
+    val workingDirParam = workingDir
+        ?.takeUnless { pathCarriesWorkingDir }
+        ?.let { "workingDir=${java.net.URLEncoder.encode(it, "UTF-8")}" }
     val panelParam = "panelId=${java.net.URLEncoder.encode(panelId, "UTF-8")}"
     val themeParam = "theme=${if (isBright) "light" else "dark"}"
     val pairParam = pairCode?.takeIf { it.isNotBlank() }?.let {
         "pair=${java.net.URLEncoder.encode(it, "UTF-8")}"
     }
     val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam).joinToString("&")
-    return "http://localhost:$port$pathSegment?$query"
+    val separator = if (pathSegment.contains('?')) "&" else "?"
+    return "http://localhost:$port$pathSegment$separator$query"
 }
 
 /**
