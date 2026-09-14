@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StickySendHeader } from '../StickySendHeader';
-import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT } from '../useScrollFold';
+import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 
 /**
  * The global setup installs an IntersectionObserver stub that never fires (it
@@ -71,10 +71,17 @@ function inScrollContainer(): HTMLElement {
  * The fold counts down from the bubble's measured height, and jsdom reports 0
  * for everything — so a send would pin at height 0 and never fold. Standing in
  * a resting height is what makes the spacer observable at all.
+ *
+ * `sentinelTop` places the sentinel relative to the scroll container's own top
+ * edge, which stands at 0 here. Below `PINNED_TOP_INSET` is above the line the
+ * chat actually starts at, i.e. already scrolled past — the state a restored
+ * session opens in. The default sits exactly on that line: a send that has
+ * just arrived and travelled nothing.
  */
-function giveBubblesHeight(px: number) {
+function giveBubblesHeight(px: number, sentinelTop = PINNED_TOP_INSET) {
   Element.prototype.getBoundingClientRect = function () {
-    return { height: px, top: 0, bottom: px, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    const top = (this as HTMLElement).hasAttribute?.('data-send-sentinel') ? sentinelTop : 0;
+    return { height: px, top, bottom: top + px, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
   };
 }
 
@@ -187,6 +194,39 @@ describe('StickySendHeader', () => {
     // the spacer must stop growing or the two would drift apart.
     scrollBy(10_000);
     expect(spacerHeight(container)).toBe(FOLD_MAX_HEIGHT - FOLD_MIN_HEIGHT);
+  });
+
+  it('opens already folded when it pins somewhere it had long since scrolled past', () => {
+    // Reopening a session does not scroll down through the transcript: ChatPage
+    // jumps straight to the bottom (or to the position it stored), and only
+    // then does the send pin. Counting the fold from that moment makes a
+    // message the user scrolled past hours ago claim it has not moved yet, so
+    // it opens at full height and stays there — the only way down being to
+    // scroll up until it unpins and come back, which is the round trip this
+    // covers.
+    const passed = 200;
+    giveBubblesHeight(FOLD_MAX_HEIGHT, PINNED_TOP_INSET - passed);
+    const { container } = render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>, {
+      container: inScrollContainer(),
+    });
+    setPinned(true);
+
+    expect(spacerHeight(container)).toBe(passed);
+  });
+
+  it('still opens at full height when it pins right at the top edge', () => {
+    // The ordinary case, and the one the distance above must not disturb: a
+    // send that pins the instant it reaches the edge has travelled nothing, so
+    // it is drawn whole and folds from there as the user keeps scrolling.
+    giveBubblesHeight(FOLD_MAX_HEIGHT, PINNED_TOP_INSET);
+    const { container } = render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>, {
+      container: inScrollContainer(),
+    });
+    setPinned(true);
+
+    expect(spacerHeight(container)).toBe(0);
+    scrollBy(100);
+    expect(spacerHeight(container)).toBe(100);
   });
 
   it('drops the spacer when the send unpins', () => {

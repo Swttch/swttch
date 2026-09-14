@@ -69,7 +69,36 @@ different height.
 
 It now reads one number: the scroll position. That is the only value in the
 chain the fold cannot disturb. It is taken once as the instruction pins, and
-every reading after it is a plain difference. No layout is measured at all.
+every reading after it is a plain difference. Nothing on screen is measured
+while the scrolling runs.
+
+### It was not folded when you came back
+
+The fold counted how far you had scrolled since the instruction pinned — and
+**those two are the same thing only while you scroll there yourself.**
+
+Reopening a conversation jumps the view to the bottom (or to the position it
+stored) first, and the instruction pins after that jump. So an instruction you
+had left thousands of pixels behind counted as not having moved at all. It was
+**drawn at full height and stayed there**, with no scrolling left below it to
+work the fold.
+
+What made this worse was that only one thing got you out of it. You had to
+scroll up to where the instruction actually sits and come back down, so that it
+would pin properly this time. That round trip came up every time you returned
+to the screen.
+
+The fold now measures, once as the instruction pins, **how far it had already
+travelled**, and counts from there. Reopening a conversation draws it folded
+from the start.
+
+This is not the measuring that caused the shudder. That one re-measured every
+frame; this is read once at the moment of pinning and never read again. Nothing
+is measured while the scrolling runs.
+
+Which direction you arrive from no longer matters either. The instruction is
+the same height at the same position whether you came down to it or back up
+to it.
 
 ### A pinned element still occupies its place
 

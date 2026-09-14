@@ -22,6 +22,19 @@ export const FOLD_MAX_HEIGHT = 280;
 export const FOLD_MIN_HEIGHT = 38;
 
 /**
+ * Where the top edge of the chat actually is, measured down from the scroll
+ * container's own top.
+ *
+ * The container carries a `pt-10` whose 40px sit behind the fixed session
+ * header, so a message level with the container's top edge is not visible —
+ * it is underneath that header. Everything that asks "has this scrolled past
+ * the top?" has to ask about this line instead, which is why the sentinel's
+ * observer and the fold's starting distance both read from here rather than
+ * each carrying their own 40.
+ */
+export const PINNED_TOP_INSET = 40;
+
+/**
  * How much of a pinned send stays on screen, as it slides under the top edge.
  *
  * The send is pinned, so it does not scroll away with the rest of the
@@ -59,6 +72,7 @@ export function useScrollFold(
   scrollRoot: HTMLElement | null,
   pinned: boolean,
   bubbleRef: RefObject<HTMLElement | null>,
+  sentinelRef: RefObject<HTMLElement | null>,
 ): ScrollFold {
   const [fold, setFold] = useState<ScrollFold>({ height: null, restingHeight: FOLD_MAX_HEIGHT });
 
@@ -90,18 +104,39 @@ export function useScrollFold(
       box.style.height = held;
     }
 
-    // Anchor on scrollTop, not on where the sentinel has moved to.
+    // Track scrollTop, but start counting from where the send crossed the top
+    // edge rather than from wherever it happened to pin.
     //
-    // Measuring the sentinel's position would feed the fold its own output: the
-    // bubble shrinks, the content below rises, scrollHeight drops, the browser
-    // nudges scrollTop to keep the view in range, the sentinel lands somewhere
-    // new — and the next frame measures a different distance and shrinks again.
-    // That loop is visible as a shudder along the bottom edge of the bubble.
+    // The two are the same thing while the user scrolls there by hand, and
+    // nothing else. Reopening a session jumps the container straight to the
+    // bottom or to the position it stored (`ChatPage`'s initial positioning),
+    // and the send pins after that jump, having crossed the edge without a
+    // single scroll event. Anchoring on that moment tells the fold the message
+    // has not moved yet, so it is drawn at full height and stays there, with no
+    // scrolling left below it to work the fold — the transcript opens under a
+    // bubble the user has to scroll up past and come back down to collapse.
     //
-    // scrollTop is the one number in this chain the fold cannot disturb. Taken
-    // once as the send pins, every later reading is a plain difference against
-    // it, so the height depends only on how far the user scrolled.
-    const origin = root.scrollTop;
+    // So the distance already travelled is measured once, off the sentinel,
+    // whose position is the very thing "pinned" was read from. Once only: it is
+    // taken before any listener is attached and never read again. Measuring it
+    // per frame would feed the fold its own output — the bubble shrinks, the
+    // content below rises, scrollHeight drops, the browser nudges scrollTop to
+    // keep the view in range, the sentinel lands somewhere new, and the next
+    // frame shrinks again, a loop visible as a shudder along the bubble's
+    // bottom edge. That is what scrollTop, which the fold cannot disturb, is
+    // here to avoid; every later reading stays a plain difference against the
+    // origin below.
+    //
+    // Never negative: a sentinel still below the edge has not been passed at
+    // all, and the bubble should open whole.
+    const sentinel = sentinelRef.current;
+    const passed = sentinel
+      ? Math.max(
+          root.getBoundingClientRect().top + PINNED_TOP_INSET - sentinel.getBoundingClientRect().top,
+          0,
+        )
+      : 0;
+    const origin = root.scrollTop - passed;
 
     let frame = 0;
     const measure = () => {
@@ -123,7 +158,7 @@ export function useScrollFold(
       root.removeEventListener('scroll', onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [scrollRoot, pinned, bubbleRef]);
+  }, [scrollRoot, pinned, bubbleRef, sentinelRef]);
 
   return fold;
 }
