@@ -4,7 +4,8 @@ import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe } from '@/contexts/FableProbeContext';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
-import { DEFAULT_MODEL_ALIAS, resolveModelInfo, resolveModelLabel, toModelAlias, withFableFallback } from '@/types/models';
+import { modelChangeLabel } from '@/pages/ChatPage/modelChangeLabel';
+import { DEFAULT_MODEL_ALIAS, resolveModelInfo, resolveModelLabel, toDisplayLabel, toModelAlias, withFableFallback } from '@/types/models';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import { useModelSwitch } from '@/hooks/useModelSwitch';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
@@ -32,12 +33,33 @@ function fallbackModelLabel(current: string): string {
 }
 
 /**
+ * What the chip names.
+ *
+ * The chip answers "which model is running right now", which makes the
+ * `default` row the one place where the row's own name is the wrong answer: it
+ * names a choice ("follow whatever the default is"), not a model. The chip
+ * spells out the model behind it instead. A default row the CLI did not resolve
+ * (an older CLI omits the field) has no model to spell, so it keeps its name.
+ *
+ * Then the dated snapshot goes: "Haiku 4.5 (20251001)" eats the composer's
+ * bottom row, and the date is the part least worth that space. A context suffix
+ * like "(1M)" stays, because it changes which model you get. The tag's tooltip
+ * still carries the name whole.
+ */
+export function chipLabel(info: ModelInfo): string {
+  const full = info.isDefaultRow && info.resolvedModel
+    ? toDisplayLabel(info.resolvedModel)
+    : resolveModelLabel(info);
+  return full.replace(/\s*\(\d{4,}\)/g, '');
+}
+
+/**
  * Always-on indicator of the current session model in the composer's
  * bottom bar. Clicking (or ⌘/Ctrl+Shift+M) opens the existing
  * `ModelSwitchOverlay`; ⌘/Ctrl+Shift+. rotates to the next model.
  *
  * The label is the real model name resolved from the CLI model info
- * (see `resolveModelLabel`). If the current model can't be resolved
+ * (see `chipLabel`). If the current model can't be resolved
  * (models not loaded yet), the tag renders nothing.
  */
 export function ModelTag() {
@@ -72,7 +94,7 @@ export function ModelTag() {
         type: LoadedMessageType.Notification,
         uuid: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
-        summary: t('chatInput.modelTag.setModelNotification', { model: resolveModelLabel(next) }),
+        summary: t('chatInput.modelTag.setModelNotification', { model: modelChangeLabel(next) }),
         modelChangeValue: next.value,
       });
       void switchModel(next.value);
@@ -90,11 +112,12 @@ export function ModelTag() {
   // masquerade as "Default" (issue #217). The tag still always renders —
   // fallbackModelLabel covers the unmatched case.
   const info = resolveModelInfo(models, currentModel, { allowDefaultFallback: false });
-  const label = info ? resolveModelLabel(info) : fallbackModelLabel(currentModel);
-  // The chip drops the dated snapshot: "Haiku 4.5 (20251001)" eats the bottom
-  // row, and the date is the part least worth the space. The tooltip below still
-  // carries the full label.
-  const chipLabel = info ? info.compactLabel : label;
+  // The tooltip has room for the whole story, so it says what the model-change
+  // line says: on the `default` row, both the choice and the model behind it.
+  // That is also what keeps the default row distinguishable from a row the user
+  // picked by name, which the chip alone can no longer show.
+  const label = info ? modelChangeLabel(info) : fallbackModelLabel(currentModel);
+  const chip = info ? chipLabel(info) : label;
 
   const handleClick = () => {
     window.dispatchEvent(new CustomEvent(SWITCH_MODEL_EVENT));
@@ -113,8 +136,8 @@ export function ModelTag() {
       {/* Custom catalogs carry long model names, so cap the width and ellipsize
           rather than letting the bottom row grow or wrap (issue #217). The full
           name stays available in the tag's tooltip. */}
-      <span className="hidden xs:inline truncate max-w-[12rem]">{chipLabel}</span>
-      <span className="inline xs:hidden truncate max-w-[6rem]">{chipLabel.split(' ')[0]}</span>
+      <span className="hidden xs:inline truncate max-w-[12rem]">{chip}</span>
+      <span className="inline xs:hidden truncate max-w-[6rem]">{chip.split(' ')[0]}</span>
     </Tag>
   );
 }
