@@ -16,6 +16,9 @@ function successStdout(): string {
   return JSON.stringify({ type: 'result', subtype: 'success', is_error: false, result: 'OK' });
 }
 
+/** What a denied probe reports, whatever denied it. */
+const DENIED = { available: false, canonicalModel: null };
+
 beforeEach(() => {
   execMock.mockReset();
   invalidateFableProbeCache();
@@ -54,33 +57,94 @@ describe('probeFableAvailability', () => {
     expect(args).not.toContain('--mcp-config');
   });
 
-  it('returns true only on a clean success result', async () => {
+  it('reports available only on a clean success result', async () => {
     execMock.mockResolvedValue({ stdout: successStdout(), stderr: '' });
-    await expect(probeFableAvailability()).resolves.toBe(true);
+    await expect(probeFableAvailability()).resolves.toEqual({ available: true, canonicalModel: null });
   });
 
-  it('returns false when the result reports an error', async () => {
+  it('reports unavailable when the result reports an error', async () => {
     execMock.mockResolvedValue({
       stdout: JSON.stringify({ type: 'result', subtype: 'error_during_execution', is_error: true }),
       stderr: '',
     });
-    await expect(probeFableAvailability()).resolves.toBe(false);
+    await expect(probeFableAvailability()).resolves.toEqual(DENIED);
+  });
+
+  it('reports unavailable when an auth failure hides behind subtype "success"', async () => {
+    // Measured against a proxy base URL with a bad token: the CLI answers
+    // subtype "success" with is_error true and an empty modelUsage, so reading
+    // `subtype` alone would advertise a model the account cannot reach.
+    execMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: true,
+        modelUsage: {},
+        result: 'API Error: 401',
+      }),
+      stderr: '',
+    });
+    await expect(probeFableAvailability()).resolves.toEqual(DENIED);
   });
 
   it('parses the LAST json line when hooks/noise precede the result', async () => {
     const stdout = ['{"type":"system","subtype":"hook_started"}', successStdout()].join('\n');
     execMock.mockResolvedValue({ stdout, stderr: '' });
-    await expect(probeFableAvailability()).resolves.toBe(true);
+    await expect(probeFableAvailability()).resolves.toEqual({ available: true, canonicalModel: null });
   });
 
   it('fails closed on unparseable output', async () => {
     execMock.mockResolvedValue({ stdout: 'not json at all', stderr: '' });
-    await expect(probeFableAvailability()).resolves.toBe(false);
+    await expect(probeFableAvailability()).resolves.toEqual(DENIED);
   });
 
   it('fails closed when the CLI throws (entitlement error, timeout, etc.)', async () => {
     execMock.mockRejectedValue(new Error('boom'));
-    await expect(probeFableAvailability()).resolves.toBe(false);
+    await expect(probeFableAvailability()).resolves.toEqual(DENIED);
+  });
+});
+
+/**
+ * The id the `fable` alias resolved to. The picker states the version from this
+ * rather than from a number written into our source, which is why the probe's
+ * return shape grew a second field (#442). Nothing covered that field.
+ */
+describe('probeFableAvailability reports the resolved model id', () => {
+  it('reads canonicalModel out of modelUsage', async () => {
+    execMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        modelUsage: { 'claude-fable-5-1': { canonicalModel: 'claude-fable-5-1' } },
+      }),
+      stderr: '',
+    });
+    await expect(probeFableAvailability()).resolves.toEqual({
+      available: true,
+      canonicalModel: 'claude-fable-5-1',
+    });
+  });
+
+  it('falls back to the modelUsage key when the entry names no canonical id', async () => {
+    execMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        modelUsage: { 'claude-fable-6': { inputTokens: 12 } },
+      }),
+      stderr: '',
+    });
+    await expect(probeFableAvailability()).resolves.toEqual({
+      available: true,
+      canonicalModel: 'claude-fable-6',
+    });
+  });
+
+  it('stays null when modelUsage is absent, so no version is invented', async () => {
+    execMock.mockResolvedValue({ stdout: successStdout(), stderr: '' });
+    await expect(probeFableAvailability()).resolves.toEqual({ available: true, canonicalModel: null });
   });
 });
 
@@ -93,10 +157,20 @@ describe('getFableAvailability (cache + TTL)', () => {
   });
 
   it('serves from cache within the TTL without re-probing', async () => {
-    execMock.mockResolvedValue({ stdout: successStdout(), stderr: '' });
+    execMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        type: 'result',
+        subtype: 'success',
+        is_error: false,
+        modelUsage: { 'claude-fable-5-1': { canonicalModel: 'claude-fable-5-1' } },
+      }),
+      stderr: '',
+    });
     await getFableAvailability({ now: 1_000 });
     const second = await getFableAvailability({ now: 1_000 + FABLE_PROBE_TTL_MS - 1 });
-    expect(second).toMatchObject({ available: true, fromCache: true });
+    // The cached answer carries the resolved id too; without it the picker loses
+    // the version on every open after the first.
+    expect(second).toMatchObject({ available: true, canonicalModel: 'claude-fable-5-1', fromCache: true });
     expect(execMock).toHaveBeenCalledTimes(1);
   });
 
