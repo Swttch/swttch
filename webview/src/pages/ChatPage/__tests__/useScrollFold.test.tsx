@@ -1,16 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useScrollFold, FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT } from '../useScrollFold';
+import { useScrollFold, FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 
 /**
- * The hook reads one number — the container's scrollTop — so that is all this
- * has to fake. It deliberately does NOT model element positions: measuring
- * those is what made the fold feed on its own output and shudder.
+ * Once the send is pinned the hook reads one number — the container's scrollTop
+ * — so that is nearly all this has to fake. It deliberately does NOT model
+ * element positions *per frame*: measuring those on every scroll is what made
+ * the fold feed on its own output and shudder.
+ *
+ * Positions are modelled for the single reading taken as the send pins, which
+ * is where the fold learns how far the send had already travelled. The default
+ * puts the sentinel exactly on the top edge — a send arriving there under its
+ * own scrolling, which has travelled nothing yet.
  */
-function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT) {
+function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT, sentinelTop = PINNED_TOP_INSET) {
   const root = document.createElement('div');
   document.body.append(root);
   root.scrollTop = startAt;
+  root.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
 
   // The fold counts down from the bubble's own height, so the harness has to
   // stand one up; jsdom reports 0 for everything otherwise.
@@ -18,9 +25,14 @@ function harness(startAt = 1000, restingHeight = FOLD_MAX_HEIGHT) {
   bubble.getBoundingClientRect = () => ({ height: restingHeight }) as DOMRect;
   const bubbleRef = { current: bubble };
 
+  const sentinel = document.createElement('div');
+  sentinel.getBoundingClientRect = () => ({ top: sentinelTop }) as DOMRect;
+  const sentinelRef = { current: sentinel };
+
   return {
     root,
     bubbleRef,
+    sentinelRef,
     /** Scroll the transcript by `px`; negative scrolls back up. */
     scrollBy(px: number) {
       root.scrollTop += px;
@@ -53,7 +65,7 @@ afterEach(() => {
 describe('useScrollFold', () => {
   it('sits at its resting height until the send pins', () => {
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, false, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, false, h.bubbleRef, h.sentinelRef).height);
     // null means "not folding" — the bubble simply sizes itself.
     expect(result.current).toBeNull();
 
@@ -64,7 +76,7 @@ describe('useScrollFold', () => {
 
   it('gives up one pixel of height per pixel scrolled', () => {
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     h.scrollBy(50);
     expect(result.current).toBe(FOLD_MAX_HEIGHT - 50);
@@ -77,7 +89,7 @@ describe('useScrollFold', () => {
     // The floor belongs to the render. If the hook clamped here, the overshoot
     // would be forgotten and the next test could not pass.
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     h.scrollBy(FOLD_MAX_HEIGHT + 500);
     expect(result.current).toBeLessThan(0);
@@ -89,7 +101,7 @@ describe('useScrollFold', () => {
     // until the scroll actually returns to where it closed — otherwise a
     // 10px nudge after a 500px scroll would pop it back open.
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     h.scrollBy(FOLD_MAX_HEIGHT + 500);
     h.scrollBy(-10);
@@ -109,7 +121,7 @@ describe('useScrollFold', () => {
     // back at the top edge and the observer drops `pinned`. The two line up on
     // their own; neither has to tell the other.
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     h.scrollBy(200);
     expect(result.current).toBe(FOLD_MAX_HEIGHT - 200);
@@ -118,28 +130,70 @@ describe('useScrollFold', () => {
     expect(result.current).toBe(FOLD_MAX_HEIGHT);
   });
 
-  it('measures the bubble once on pin and never again while scrolling', () => {
+  it('measures on pin and never again while scrolling', () => {
     // The shudder: folding shortens the document, the elements below shift, a
     // position-based measurement returns something new, and the height
     // oscillates frame to frame. Re-measuring during the scroll is how that
-    // gets in — so the resting height is read exactly once, as the send pins,
-    // and every frame after it is arithmetic on scrollTop.
+    // gets in — so every element is read as the send pins and never after, and
+    // every frame beyond that is arithmetic on scrollTop.
     const h = harness();
-    const rect = vi.fn(() => ({ height: FOLD_MAX_HEIGHT }) as DOMRect);
-    h.bubbleRef.current.getBoundingClientRect = rect;
-    // Nothing else may be measured at all, in any frame.
-    const forbidden = vi.fn(() => ({ top: 0, height: 0 }) as DOMRect);
-    h.root.getBoundingClientRect = forbidden;
+    const bubble = vi.fn(() => ({ height: FOLD_MAX_HEIGHT }) as DOMRect);
+    const root = vi.fn(() => ({ top: 0 }) as DOMRect);
+    const sentinel = vi.fn(() => ({ top: PINNED_TOP_INSET }) as DOMRect);
+    h.bubbleRef.current.getBoundingClientRect = bubble;
+    h.root.getBoundingClientRect = root;
+    h.sentinelRef.current.getBoundingClientRect = sentinel;
 
-    renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
-    const afterPin = rect.mock.calls.length;
+    renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+    const onPin = [bubble, root, sentinel].map(fn => fn.mock.calls.length);
 
     h.scrollBy(100);
     h.scrollBy(100);
 
-    expect(afterPin).toBe(1);
-    expect(rect).toHaveBeenCalledTimes(1);
-    expect(forbidden).not.toHaveBeenCalled();
+    // One reading each as it pins, and not one more across two scrolled frames.
+    expect(onPin).toEqual([1, 1, 1]);
+    expect([bubble, root, sentinel].map(fn => fn.mock.calls.length)).toEqual([1, 1, 1]);
+  });
+
+  it('starts already folded by whatever the send had scrolled past before pinning', () => {
+    // Arriving at the top edge and pinning are the same moment only while the
+    // user scrolls there. Reopening a session jumps the container to the stored
+    // position first and pins afterwards, with the send long since above the
+    // edge and no scrolling left to work the fold — so the distance is taken
+    // from where the sentinel actually sits, not from the pin.
+    const passed = 150;
+    const h = harness(1000, FOLD_MAX_HEIGHT, PINNED_TOP_INSET - passed);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - passed);
+
+    // And it keeps counting from there rather than restarting.
+    h.scrollBy(50);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - passed - 50);
+  });
+
+  it('unfolds on the way back up exactly where the send reaches the edge again', () => {
+    // The distance taken on pin has to be retraceable like any other, or a send
+    // that opened folded would pop to full height before it unpinned.
+    const passed = 150;
+    const h = harness(1000, FOLD_MAX_HEIGHT, PINNED_TOP_INSET - passed);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    h.scrollBy(-(passed - 10));
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - 10);
+
+    h.scrollBy(-10);
+    expect(result.current).toBe(FOLD_MAX_HEIGHT);
+  });
+
+  it('opens whole when the sentinel has not reached the edge yet', () => {
+    // A pin reported while the sentinel still sits below the line has travelled
+    // nothing. Letting the distance go negative would inflate the bubble past
+    // the height it actually has.
+    const h = harness(1000, FOLD_MAX_HEIGHT, PINNED_TOP_INSET + 120);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
+
+    expect(result.current).toBe(FOLD_MAX_HEIGHT);
   });
 
   it('counts down from the bubble it was given, not from the ceiling', () => {
@@ -147,7 +201,7 @@ describe('useScrollFold', () => {
     // the fold from the ceiling inflated a one-line send to 280px the instant
     // it pinned, then "folded" it back down to its own size.
     const h = harness(1000, 44);
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     expect(result.current).toBe(44);
 
@@ -159,7 +213,7 @@ describe('useScrollFold', () => {
     // A trackpad outruns the compositor; one layout-free read is cheap but a
     // setState per event is not.
     const h = harness();
-    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     act(() => {
       for (let i = 0; i < 10; i++) {
@@ -176,7 +230,7 @@ describe('useScrollFold', () => {
   it('drops its listener when the send unpins', () => {
     const h = harness();
     const remove = vi.spyOn(h.root, 'removeEventListener');
-    const { rerender } = renderHook(({ pinned }) => useScrollFold(h.root, pinned, h.bubbleRef).height, {
+    const { rerender } = renderHook(({ pinned }) => useScrollFold(h.root, pinned, h.bubbleRef, h.sentinelRef).height, {
       initialProps: { pinned: true },
     });
 
@@ -189,7 +243,7 @@ describe('useScrollFold', () => {
     // as the transcript pages — a leak here accumulates for the life of the page.
     const h = harness();
     const remove = vi.spyOn(h.root, 'removeEventListener');
-    const { unmount } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef).height);
+    const { unmount } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef).height);
 
     unmount();
     expect(remove).toHaveBeenCalledWith('scroll', expect.any(Function));
