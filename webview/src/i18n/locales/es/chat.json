@@ -84,6 +84,17 @@
       "noMatchingFiles": "No hay archivos coincidentes",
       "closeAriaLabel": "Cerrar menú de menciones"
     },
+    "agentMentionDropdown": {
+      "title": "Otras sesiones activas",
+      "refresh": "Volver a leer la lista",
+      "loading": "Leyendo sesiones...",
+      "noOtherSessions": "No hay otras sesiones activas",
+      "closeAriaLabel": "Cerrar lista de sesiones",
+      "openSessionFailed": "No se pudo abrir esa sesión"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "Dejar de enviar a {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "Modos",
       "toSwitch": "para cambiar",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "Encolar otro mensaje...",
-      "hint": "@ para archivos, / para comandos, !! para insertar prompts, {{send}} para enviar"
+      "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar"
     },
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",

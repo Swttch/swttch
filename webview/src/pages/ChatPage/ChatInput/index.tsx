@@ -17,6 +17,7 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useChatInputState } from '@/contexts/ChatInputStateContext';
 import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
+import { useSendToSession } from '@/hooks/useSendToAgent';
 import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { SessionState } from '@/types';
@@ -39,6 +40,8 @@ import type { ScopedPrompt } from '@/types/prompt';
 import { useEffort } from '@/hooks/useEffort';
 import { useMention } from './hooks/useMention';
 import { usePromptLibrary } from './hooks/usePromptLibrary';
+import { useAgentMention, type AgentRecipient } from './hooks/useAgentMention';
+import { AgentMentionDropdown } from './AgentMentionDropdown';
 import { usePromptVariableFill } from './hooks/usePromptVariableFill';
 import { PromptVariablesModal } from '@/components/PromptVariablesModal';
 import { useEditorContext } from '@/hooks/useEditorContext';
@@ -51,12 +54,25 @@ import {
   type InsertPromptDetail,
 } from '@/commandPalette/sections/context/items';
 import { replaceRangeWithText } from './RichInput/replaceRangeWithText';
+import {
+  wrapChipForTranscript,
+  readFirstSessionMention,
+  stripSessionMentionTags,
+} from './sessionMentionTag';
+import { AGENT_TRIGGER } from '@/utils/findAgentToken';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
 import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
 import { sendKeyLabel } from './sendKeyLabel';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
+import {
+  findChipRange,
+  caretAfterArrow,
+  caretPushedOutOfChip,
+  backspaceRange,
+  deleteRange,
+} from './recipientChipCaret';
 import { RichInput } from './RichInput';
 import { useIMEComposition } from './RichInput/useIMEComposition';
 import { insertNewlineAtCursor } from './RichInput/insertNewlineAtCursor';
@@ -72,6 +88,15 @@ import {
 import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
+
+/**
+ * Where a composer's recipient is kept while its session is not on screen.
+ *
+ * Sits beside `claude-gui:draft:<id>`, which holds the words, because the two
+ * are one draft: restoring the text without the address gives back a chip that
+ * looks addressed and is not.
+ */
+const RECIPIENT_DRAFT_PREFIX = 'claude-gui:draft-recipient:';
 
 interface NativeDropEntry {
   path: string;
@@ -373,6 +398,228 @@ export function ChatInput() {
     },
   });
 
+  /**
+   * Who this message is addressed to, once `@@` picked another live session.
+   *
+   * Held beside the text rather than inside it. The recipient is an address, not
+   * words: a session name left in the body would be sent to the CLI as part of
+   * the sentence, and the user would have to delete it by hand.
+   */
+  const [recipient, setRecipient] = useState<AgentRecipient | null>(null);
+
+  /**
+   * The chip IS the address, so losing the chip loses the address.
+   *
+   * Backspace has its own path below, but the token can also go by being
+   * selected and typed over, cut, or undone. Without this the composer would
+   * still be pointed at another session with nothing on screen saying so, and
+   * the next Enter would deliver the message somewhere the user cannot see.
+   */
+  useEffect(() => {
+    if (recipient && !value.includes(recipient.token)) setRecipient(null);
+  }, [value, recipient]);
+
+  /**
+   * Carry the recipient across a session switch, beside the draft.
+   *
+   * The draft is a plain string in localStorage, so switching away and back
+   * restored the words and lost the address: the chip came back as dead text
+   * that still read as addressed, and the next Enter sent it here instead.
+   *
+   * Keyed off the TEXT rather than restored on its own, which is what keeps the
+   * two in step without either having to land first. The recipient re-attaches
+   * only while its chip is actually standing in the composer, so a draft the
+   * user has since edited past the chip does not get an address back.
+   */
+  useEffect(() => {
+    if (!currentSessionId || recipient) return;
+    try {
+      const stored = localStorage.getItem(`${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`);
+      if (!stored) return;
+      const parsed = JSON.parse(stored) as AgentRecipient;
+      if (parsed?.token && value.includes(parsed.token)) setRecipient(parsed);
+    } catch {
+      // localStorage may be unavailable, and a draft we cannot read is a draft
+      // with no recipient — the same state as never having had one.
+    }
+  }, [currentSessionId, value, recipient]);
+
+  /**
+   * The session the save below last ran for.
+   *
+   * Arriving at a session, this composer has no recipient yet and no text yet —
+   * the draft lands a commit later. Measured: the save read that as "the user
+   * took the chip off" and deleted the stored address before the restore above
+   * had any text to match it against, so the chip came back dead every time.
+   */
+  const savedRecipientSessionRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!currentSessionId) return;
+    const key = `${RECIPIENT_DRAFT_PREFIX}${currentSessionId}`;
+    const sameSession = savedRecipientSessionRef.current === currentSessionId;
+    savedRecipientSessionRef.current = currentSessionId;
+    try {
+      if (recipient) localStorage.setItem(key, JSON.stringify(recipient));
+      // Only a clear that happens WHILE staying on one session is the user
+      // clearing it. Being slow to delete costs nothing: the next real clear
+      // removes it, and a stored address only reattaches to a draft whose chip
+      // is still standing.
+      else if (sameSession) localStorage.removeItem(key);
+    } catch {
+      // As above: losing the stored address costs the chip, not the message.
+    }
+  }, [recipient, currentSessionId]);
+
+  /**
+   * Keep the caret out of the middle of the recipient chip.
+   *
+   * The arrow keys are handled in keydown, but they are not the only way in: a
+   * click lands the caret wherever it was aimed, and so do a drag and a restored
+   * selection. A caret resting between two letters of an address is a caret
+   * about to break it, so it is pushed to the nearer edge the moment it arrives.
+   */
+  useEffect(() => {
+    if (!recipient) return;
+    const el = textareaRef.current;
+    if (!el) return;
+
+    const onSelectionChange = () => {
+      if (document.activeElement !== el) return;
+      const selection = window.getSelection();
+      if (!selection?.isCollapsed) return;
+      const range = findChipRange(value, recipient.token);
+      if (!range) return;
+      const target = caretPushedOutOfChip(range, getCaretOffset(el));
+      if (target !== null) setCaretOffset(el, target);
+    };
+
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => document.removeEventListener('selectionchange', onSelectionChange);
+  }, [recipient, value, textareaRef]);
+
+  /**
+   * Put a recalled prompt back in the composer, chip and all.
+   *
+   * A prompt that addressed another session comes back carrying its
+   * `<session-mention>` tag. Dropping the tag and keeping the words would leave
+   * `@@some title` sitting there looking addressed while the next Enter sent it
+   * to THIS session with a stray mention at the front — the worst of the three
+   * possible outcomes, because it looks right.
+   *
+   * So the tag is read back into the recipient and only its label goes into the
+   * text, which is exactly the state the composer was in before the send.
+   */
+  const applyHistoryValue = useCallback(
+    (raw: string) => {
+      const mention = readFirstSessionMention(raw);
+      setRecipient(
+        mention
+          ? {
+              name: mention.agentName,
+              sessionId: mention.sessionId,
+              sessionDir: mention.sessionDir,
+              label: mention.label.startsWith(AGENT_TRIGGER)
+                ? mention.label.slice(AGENT_TRIGGER.length)
+                : mention.label,
+              token: mention.label,
+            }
+          : null,
+      );
+      const applied = stripSessionMentionTags(raw);
+      onChange(applied);
+      // Answered so the caller can place the caret against what actually landed:
+      // the tag is longer than the chip it becomes, so the raw length overshoots.
+      return applied;
+    },
+    [onChange],
+  );
+
+  const sendToSession = useSendToSession();
+  const { sendMessage } = chatStream;
+
+  /**
+   * Send what is in the composer, to this session or to the one `@@` picked.
+   *
+   * Both the Enter key and the send button come through here, so a message
+   * cannot go one way from the keyboard and another from the mouse.
+   *
+   * A message addressed elsewhere carries no attachments: the delivery is a
+   * plain string, so a file picked here has nowhere to travel. They are left
+   * attached rather than dropped silently, so the next message the user sends
+   * to this session still has them.
+   */
+  const submitComposer = useCallback(() => {
+    if (disabled) return;
+    if (!value.trim() && attachments.length === 0) return;
+
+    if (recipient) {
+      // Two forms of the same message. What the user typed, chip and all, is
+      // what they see in their own bubble — the chip is how they addressed it,
+      // so it belongs in the record of what they said. What travels is that text
+      // with the chip cut off: to the other session the chip is not words, and
+      // leaving `@@fix the proxy` at the front would read as the opening line.
+      const body = value.replace(recipient.token, '').trim();
+      // The chip goes into the transcript wrapped, so the bubble can still find
+      // where it starts and ends once this component's state is gone — and so
+      // the record keeps the session id, which outlives the name.
+      const shown = wrapChipForTranscript(value, recipient.token, {
+        sessionId: recipient.sessionId,
+        agentName: recipient.name,
+        sessionDir: recipient.sessionDir,
+      });
+      // The WRAPPED form goes to history, not the box's own text.
+      //
+      // Up walks two lists that have to look alike: prompts fetched from the
+      // transcript, which hold the tag, and prompts pushed here so Up finds the
+      // one just sent without a round trip. Pushing the bare text made those two
+      // disagree, so recalling a send that had just happened gave back a chip
+      // with no address behind it — the exact failure this tag exists to stop,
+      // reappearing for the one entry most likely to be recalled.
+      pushToHistory(shown);
+      sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
+      onChange('');
+      setRecipient(null);
+      setPathTokens([]);
+      return;
+    }
+
+    pushToHistory(value);
+
+    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined);
+    clearAttachments();
+    setPathTokens([]);
+  }, [
+    disabled,
+    value,
+    attachments,
+    pushToHistory,
+    recipient,
+    sendToSession,
+    mode,
+    sendMessage,
+    onChange,
+    onSubmit,
+    clearAttachments,
+  ]);
+
+  const agentMention = useAgentMention({
+    currentSessionId,
+    value,
+    onChange,
+    inputRef: textareaRef,
+    // Picking a session settles the `@@` token, so hand the shared slot back the
+    // same way picking a mention or a prompt does (issue #236).
+    onPickRecipient: (picked, caretOffset, nextValue) => {
+      setRecipient(picked);
+      paletteRef.current?.detectSlashCommand(nextValue, caretOffset);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) setCaretOffset(el, caretOffset);
+      });
+    },
+  });
+
 
   /**
    * Open the library on this prompt's edit screen.
@@ -618,7 +865,8 @@ export function ChatInput() {
     palette.detectSlashCommand(newValue, caret);
     mention.detectMention(newValue, caret);
     promptLibrary.detectPrompt(newValue, caret);
-  }, [onChange, palette, mention, promptLibrary, textareaRef]);
+    agentMention.detectAgent(newValue, caret);
+  }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
     // Feed the IME truth: keyCode 229 means the IME is still processing this
@@ -641,10 +889,61 @@ export function ChatInput() {
     // reads a bare ArrowUp and must not see a Cmd+ArrowUp meaning "go to the
     // top of the text".
 
+    // Backspace just past the recipient chip removes the whole chip in one
+    // press, the way it does in any mention field. Character-by-character
+    // deletion of a chip is the behaviour nobody wants: the first press would
+    // leave `@fix the prox`, which is no longer an address and no longer a word.
+    //
+    // Only with the caret collapsed immediately after the token; anywhere else
+    // the key is deleting ordinary text and must be left alone.
+    if (recipient) {
+      const el = textareaRef.current;
+      const selection = window.getSelection();
+      const collapsed = selection?.isCollapsed ?? true;
+      const caret = el ? getCaretOffset(el) : -1;
+      const range = findChipRange(value, recipient.token);
+
+      if (el && collapsed && range && caret >= 0) {
+        // The arrows step over the chip in one press, in both directions, so it
+        // reads as a single character rather than a run of letters to walk.
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          const target = caretAfterArrow(range, caret, e.key);
+          if (target !== null) {
+            e.preventDefault();
+            setCaretOffset(el, target);
+            return;
+          }
+        }
+
+        // Backspace from the trailing edge, Delete from the leading one: either
+        // way the whole chip goes, because half a chip addresses nothing.
+        const cut =
+          e.key === 'Backspace'
+            ? backspaceRange(range, caret)
+            : e.key === 'Delete'
+              ? deleteRange(range, caret)
+              : null;
+        if (cut) {
+          e.preventDefault();
+          const [from, to] = cut;
+          const nextValue = value.slice(0, from) + value.slice(to);
+          if (!replaceRangeWithText(el, from, to, '')) onChange(nextValue);
+          setRecipient(null);
+          return;
+        }
+      }
+    }
+
     // Prompt library interaction. First of the three because `!!` is the most
     // specific trigger, and because the render order below puts it first too —
     // #236 was caused by a keydown order that disagreed with the render order.
     if (promptLibrary.isActive && promptLibrary.handleKeyDown(e)) return;
+
+    // Active sessions. Sits between the prompt library and the file mention
+    // because `@@` is the more specific of the two at-sign triggers, and because
+    // the render order below reads the same way — #236 was caused by a keydown
+    // order that disagreed with the render order.
+    if (agentMention.isActive && agentMention.handleKeyDown(e)) return;
 
     // Mention interaction (must precede slash command handling)
     if (mention.isActive && mention.handleKeyDown(e)) return;
@@ -675,12 +974,7 @@ export function ChatInput() {
       );
       if (willSubmit) {
         e.preventDefault();
-        if (!disabled && (value.trim() || attachments.length > 0)) {
-          pushToHistory(value);
-          onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined);
-          clearAttachments();
-          setPathTokens([]);
-        }
+        submitComposer();
         return;
       }
       // Not a submit. Insert a newline explicitly (issue #215): under JCEF a
@@ -709,7 +1003,7 @@ export function ChatInput() {
       const historyValue = navigateUp(value);
       if (historyValue === null) return;
       e.preventDefault();
-      onChange(historyValue);
+      applyHistoryValue(historyValue);
       // Land on the character the walk continues from, so holding Up keeps
       // moving through prompts instead of re-crossing the one just recalled.
       requestAnimationFrame(() => {
@@ -723,10 +1017,10 @@ export function ChatInput() {
       const historyValue = navigateDown();
       if (historyValue === null) return;
       e.preventDefault();
-      onChange(historyValue);
+      const applied = applyHistoryValue(historyValue);
       requestAnimationFrame(() => {
         const target = textareaRef.current;
-        if (target) setCaretOffset(target, historyValue.length);
+        if (target) setCaretOffset(target, applied.length);
       });
     }
   }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
@@ -913,10 +1207,28 @@ export function ChatInput() {
           />
         )}
 
+        {/* Active-session panel. Shares this slot too, and wins it while the
+            caret is in a `@@` token. The file mention detector rejects `@@` on
+            its own, so the two can never both want it; the guard below states
+            that rather than relying on it. */}
+        {agentMention.isActive && !promptLibrary.isActive && (
+          <div className="absolute bottom-full start-0 w-full z-20">
+            <AgentMentionDropdown
+              rows={agentMention.rows}
+              selectedIndex={agentMention.selectedIndex}
+              isPending={agentMention.isPending}
+              isFetching={agentMention.isFetching}
+              onRefresh={agentMention.refresh}
+              onSelect={agentMention.selectRow}
+              onClose={agentMention.close}
+            />
+          </div>
+        )}
+
         {/* Mention dropdown. Shares this slot with the slash command panel;
             the panel yields whenever the caret is in an @token (issue #236),
             so the two never render at once. */}
-        {mention.isActive && !promptLibrary.isActive && (
+        {mention.isActive && !promptLibrary.isActive && !agentMention.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <MentionDropdown
               results={mention.results}
@@ -933,7 +1245,7 @@ export function ChatInput() {
             mention handling also runs first. detectSlashCommand already closes
             the panel on caret-in-@token; this also covers the paths that open
             it without a caret (e.g. the "/" toolbar button). */}
-        {palette.showSlashCommands && !mention.isActive && !promptLibrary.isActive && (
+        {palette.showSlashCommands && !mention.isActive && !promptLibrary.isActive && !agentMention.isActive && (
           <div className="absolute bottom-full start-0 w-full z-20">
             <CommandPalettePanel
               sections={palette.filteredSections}
@@ -993,7 +1305,7 @@ export function ChatInput() {
             }
             disabled={disabled}
             ariaLabel={t('chatInput.ariaLabel')}
-            highlightTokens={pathTokens}
+            highlightTokens={recipient ? [...pathTokens, recipient.token] : pathTokens}
             interimRange={dictation.interimRange}
           />
           {voiceEnabled && (
@@ -1062,11 +1374,7 @@ export function ChatInput() {
               hasValue={hasValue}
               onAttach={() => setShowAttachMenu(prev => !prev)}
               onSlashCommand={palette.handleSlashButtonClick}
-              onSubmit={() => {
-                onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined);
-                clearAttachments();
-                setPathTokens([]);
-              }}
+              onSubmit={submitComposer}
               onStop={onStop}
             />
             </div>

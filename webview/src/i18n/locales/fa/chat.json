@@ -84,6 +84,17 @@
       "noMatchingFiles": "هیچ فایل مطابقی یافت نشد",
       "closeAriaLabel": "بستن منوی اشاره"
     },
+    "agentMentionDropdown": {
+      "title": "نشست‌های فعال دیگر",
+      "refresh": "خواندن دوباره فهرست",
+      "loading": "در حال خواندن نشست‌ها...",
+      "noOtherSessions": "نشست فعال دیگری نیست",
+      "closeAriaLabel": "بستن فهرست نشست‌ها",
+      "openSessionFailed": "باز کردن آن نشست ممکن نشد"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "لغو ارسال به {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "حالت‌ها",
       "toSwitch": "برای تغییر",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "پیام دیگری در صف قرار دهید...",
-      "hint": "@ برای فایل‌ها، / برای دستورها، !! برای درج پرامپت، {{send}} برای ارسال"
+      "hint": "@ برای فایل‌ها، / برای دستورها، !! برای درج پرامپت، @@ برای پرسش از نشست دیگر، {{send}} برای ارسال"
     },
     "ariaLabel": "پیام به Claude",
     "autoModeFallback": "حالت خودکار اینجا در دسترس نیست — به‌جای آن از حالت مجوز پیش‌فرض استفاده می‌شود.",

@@ -84,6 +84,17 @@
       "noMatchingFiles": "Keine passenden Dateien",
       "closeAriaLabel": "Erwähnungs-Dropdown schließen"
     },
+    "agentMentionDropdown": {
+      "title": "Andere aktive Sitzungen",
+      "refresh": "Liste neu laden",
+      "loading": "Sitzungen werden gelesen...",
+      "noOtherSessions": "Keine anderen aktiven Sitzungen",
+      "closeAriaLabel": "Sitzungsliste schließen",
+      "openSessionFailed": "Sitzung konnte nicht geöffnet werden"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "Nicht mehr an {{name}} senden"
+    },
     "modeSelectPanel": {
       "modes": "Modi",
       "toSwitch": "zum Wechseln",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "Weitere Nachricht in die Warteschlange...",
-      "hint": "@ für Dateien, / für Befehle, !! zum Einfügen von Prompts, {{send}} zum Senden"
+      "hint": "@ für Dateien, / für Befehle, !! zum Einfügen von Prompts, @@ um eine andere Sitzung zu fragen, {{send}} zum Senden"
     },
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",

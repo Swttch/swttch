@@ -20,6 +20,22 @@ import { Context, ContextType } from '../../../../types';
  * - <command-args>...</command-args>
  * - <local-command-stdout> (태그만 제거, 내용 보존)
  */
+/**
+ * Drop every `<system-reminder>` block, keeping the text around it.
+ *
+ * Split out of {@link parseUserContent} because the prompt history needs this
+ * one step WITHOUT the others. A recalled prompt must be the text the user
+ * typed, and a reminder is never that: it is instruction the GUI wrapped around
+ * the message (the `@@` delivery, the cancel button, issue #232). Left in, Up
+ * recalls a wall of markup into the composer.
+ *
+ * The rest of `parseUserContent` cannot come along there: it also strips
+ * `<command-name>`, and a recalled `/clear` would come back as the empty string.
+ */
+export function stripSystemReminders(text: string): string {
+  return text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '');
+}
+
 export function parseUserContent(content: string): {
   text: string;
   contexts: Context[];
@@ -47,8 +63,7 @@ export function parseUserContent(content: string): {
   cleanText = cleanText.replace(selectionPattern, '');
 
   // Step C: <system-reminder> 태그 제거 (추출 없이)
-  const systemReminderPattern = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
-  cleanText = cleanText.replace(systemReminderPattern, '');
+  cleanText = stripSystemReminders(cleanText);
 
   // Step D: <task-notification> 태그 제거 (추출 없이) — 상단 docstring 참고
   const taskNotificationPattern = /<task-notification>[\s\S]*?<\/task-notification>/g;

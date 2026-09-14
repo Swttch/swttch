@@ -158,3 +158,44 @@ describe('lineFromToken', () => {
     expect(lineFromToken('@src/utils/')).toBeUndefined();
   });
 });
+
+/**
+ * `@@` addresses another live Claude session, not a file.
+ *
+ * The path pattern opens on the first `@` and stops at the first space, so a
+ * session chip surfaced as `@@fix` — a chip reading half an address, that then
+ * offered to open a file named `@fix`. The clickable half is the dangerous one.
+ */
+describe('tokenizeMessagePaths — session mentions are not paths', () => {
+  it('leaves a session mention as plain text', () => {
+    const segments = tokenizeMessagePaths('@@fix the proxy hello');
+
+    expect(segments.every((s) => !s.isPath)).toBe(true);
+    expect(segments.map((s) => s.text).join('')).toBe('@@fix the proxy hello');
+  });
+
+  it('leaves one whose title was cut short as plain text', () => {
+    const segments = tokenizeMessagePaths('@@혹시 ListAgent 툴을 호출하지 않아도… 안녕');
+
+    expect(segments.every((s) => !s.isPath)).toBe(true);
+  });
+
+  it('still finds a real file mention in the same message', () => {
+    const segments = tokenizeMessagePaths('@@fix the proxy look at @src/App.tsx');
+
+    expect(segments.filter((s) => s.isPath).map((s) => s.text)).toEqual(['@src/App.tsx']);
+  });
+
+  it('still finds a file mention that follows a session mention immediately', () => {
+    const segments = tokenizeMessagePaths('@@fix @src/App.tsx');
+
+    expect(segments.filter((s) => s.isPath).map((s) => s.text)).toEqual(['@src/App.tsx']);
+  });
+
+  it('does not lose any text while skipping a session mention', () => {
+    const text = 'hey @@fix the proxy see @src/App.tsx now';
+    const segments = tokenizeMessagePaths(text);
+
+    expect(segments.map((s) => s.text).join('')).toBe(text);
+  });
+});

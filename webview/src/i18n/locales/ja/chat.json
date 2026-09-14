@@ -84,6 +84,17 @@
       "noMatchingFiles": "一致するファイルがありません",
       "closeAriaLabel": "メンションドロップダウンを閉じる"
     },
+    "agentMentionDropdown": {
+      "title": "他のアクティブなセッション",
+      "refresh": "リストを再読み込み",
+      "loading": "セッションを読み込み中...",
+      "noOtherSessions": "他のアクティブなセッションはありません",
+      "closeAriaLabel": "セッション一覧を閉じる",
+      "openSessionFailed": "そのセッションを開けませんでした"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "{{name}} への送信をやめる"
+    },
     "modeSelectPanel": {
       "modes": "モード",
       "toSwitch": "で切り替え",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "次のメッセージをキューに追加...",
-      "hint": "@ ファイル参照、/ コマンド、!! プロンプト挿入、{{send}} で送信"
+      "hint": "@ ファイル参照、/ コマンド、!! プロンプト挿入、@@ 他のセッションに問い合わせ、{{send}} で送信"
     },
     "ariaLabel": "Claudeにメッセージを送信",
     "autoModeFallback": "ここでは自動モードは使用できません — 代わりにデフォルトの権限モードを使用します。",

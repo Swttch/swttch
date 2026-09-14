@@ -1,4 +1,5 @@
 export * from './account';
+export * from './active-session';
 export * from './announcement';
 export * from './cli-update';
 export * from './client-env';

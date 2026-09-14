@@ -84,6 +84,17 @@
       "noMatchingFiles": "没有匹配的文件",
       "closeAriaLabel": "关闭提及下拉菜单"
     },
+    "agentMentionDropdown": {
+      "title": "其他活动会话",
+      "refresh": "重新读取列表",
+      "loading": "正在读取会话...",
+      "noOtherSessions": "没有其他活动会话",
+      "closeAriaLabel": "关闭会话列表",
+      "openSessionFailed": "无法打开该会话"
+    },
+    "recipientTag": {
+      "clearAriaLabel": "取消发送给 {{name}}"
+    },
     "modeSelectPanel": {
       "modes": "模式",
       "toSwitch": "切换",
@@ -95,7 +106,7 @@
     },
     "placeholder": {
       "queueMessage": "排队发送下一条消息...",
-      "hint": "@ 引用文件，/ 命令，!! 插入提示词，{{send}} 发送"
+      "hint": "@ 引用文件，/ 命令，!! 插入提示词，@@ 询问其他会话，{{send}} 发送"
     },
     "ariaLabel": "给 Claude 发消息",
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",

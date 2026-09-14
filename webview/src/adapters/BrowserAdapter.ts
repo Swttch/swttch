@@ -32,10 +32,16 @@ export class BrowserAdapter implements IdeAdapter {
     console.log('[BrowserAdapter] Opened new browser tab');
   }
 
-  async openSession(sessionId: string): Promise<void> {
+  async openSession(sessionId: string, workingDir?: string): Promise<void> {
     const url = new URL(window.location.href);
     url.hash = '';
     url.pathname = `/sessions/${sessionId}`;
+    // The URL is built from the CURRENT page, so it arrives carrying this
+    // project's `workingDir` in its query. That is right for a session picked
+    // out of this project's own list and wrong for one picked anywhere else:
+    // a session mention can point at another project entirely, and inheriting
+    // the wrong directory opens the right conversation against the wrong tree.
+    if (workingDir) url.searchParams.set('workingDir', workingDir);
     const newWindow = window.open(url.toString(), '_blank');
 
     if (!newWindow) {

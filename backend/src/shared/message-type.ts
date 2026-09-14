@@ -450,6 +450,14 @@ export enum MessageType {
   /** Fetch the tool list of one MCP server by connecting to it (MCP tools/list). inbound webview→backend */
   GET_MCP_SERVER_TOOLS = 'GET_MCP_SERVER_TOOLS',
 
+  // -- Other live Claude sessions (the `@@` composer panel) --
+  /**
+   * List the Claude sessions running on this machine right now, via the official
+   * `claude agents --json`, each paired with the session-list row that names it.
+   * inbound webview→backend
+   */
+  GET_ACTIVE_SESSIONS = 'GET_ACTIVE_SESSIONS',
+
   // -- Plugin updates --
   /** Check for available plugin updates. */
   GET_PLUGIN_UPDATES = 'GET_PLUGIN_UPDATES',

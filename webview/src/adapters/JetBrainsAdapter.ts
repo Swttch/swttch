@@ -23,8 +23,11 @@ export class JetBrainsAdapter implements IdeAdapter {
     console.log('[JetBrainsAdapter] Sent OPEN_NEW_TAB via WebSocket bridge');
   }
 
-  async openSession(sessionId: string): Promise<void> {
-    await getBridge().request(MessageType.OPEN_SESSION, { sessionId });
+  async openSession(sessionId: string, workingDir?: string): Promise<void> {
+    // `workingDir` picks the IDE project window: the Kotlin side runs it through
+    // findProjectByBasePath, so a session from another project lands where it
+    // belongs instead of against whichever project asked.
+    await getBridge().request(MessageType.OPEN_SESSION, { sessionId, workingDir });
     console.log('[JetBrainsAdapter] Sent OPEN_SESSION via WebSocket bridge:', sessionId);
   }
 
