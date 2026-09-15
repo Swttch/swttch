@@ -40,6 +40,22 @@ settings this reads.
 `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY` and `NO_PROXY` are all read, in
 upper- or lowercase. A proxy exported in your shell keeps working as before.
 
+### If you set only HTTP_PROXY
+
+The first version of this shipped broken for you, and the person who reported
+it came back to say so. It read `HTTPS_PROXY` and `ALL_PROXY` for an https
+request and skipped `HTTP_PROXY`, which is what `curl` does — but not what the
+`claude` CLI does. Given `HTTP_PROXY` alone, `claude` sends
+`api.anthropic.com` through it quite happily.
+
+So one `settings.json` had chat working and the usage panel going out direct,
+into a network that refuses direct connections. The panel showed
+`API error 403: Forbidden`, which sounds like an account problem and is not
+one.
+
+`HTTP_PROXY` now applies to https requests as well, the way `claude` treats it.
+`HTTPS_PROXY` still wins when both are set.
+
 ### Per-project proxies
 
 If a project's `.claude/settings.json` sets a different proxy than your global
@@ -67,7 +83,8 @@ and for the same reason.
 ## The companion updates itself
 
 The proxy support had to be built in `ccb` as well, not only here, so this
-needs **`ccb` 0.6.0 or newer**. Earlier versions accept the proxy setting but
+needs **`ccb` 0.6.0 or newer**, and the `HTTP_PROXY` correction above needs
+**0.6.1 or newer**. Earlier versions accept the proxy setting but
 do not act on it.
 
 You do not have to do anything about that. The backend checks the companion
@@ -81,3 +98,24 @@ A proxy is invisible in a URL, so a failure used to look like a plain network
 error. Now, when a request went through a proxy and could not get out, the
 message says so and names the variables involved, instead of leaving you to
 guess whether the proxy, your token, or the network was at fault.
+
+Three situations used to produce the identical sentence
+`API error 403: Forbidden`: the API refusing, the destination refusing after
+the tunnel opened, and **the proxy itself refusing to open the tunnel at all**.
+The third is now named as what it is, because the answer to it is on your proxy
+and not in your account:
+
+```
+The proxy refused to open a tunnel to api.anthropic.com (403 Forbidden)
+This is the proxy at http://***@proxy.example.com:8080 answering,
+not the Anthropic API.
+```
+
+Proxy credentials live in the URL, so the address is printed with the
+username and password removed. A message you paste into a bug report does not
+carry your proxy password.
+
+A proxy that is slow rather than broken used to leave you with your shell's
+own complaint about a line editor after fifteen seconds. Now it says that the
+request timed out, how long it waited, and whether the proxy ever finished
+opening the tunnel.
