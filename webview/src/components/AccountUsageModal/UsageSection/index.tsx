@@ -6,6 +6,8 @@ import { SectionLabel } from '../SectionLabel';
 import { SkeletonRow } from '../SkeletonRow';
 import { UsageRow } from '../UsageRow';
 import { formatRelativeTime } from '../formatters';
+import { scopedWindows } from '../scopedWindows';
+import { useAccountData } from '../useAccountData';
 
 interface Props {
     //
@@ -15,6 +17,17 @@ export const UsageSection = (props: Props) => {
     const {} = props;
     const { t } = useTranslation('common');
     const { data: usageData, isLoading: usageLoading, error: usageError, errorKind: usageErrorKind, lastUpdated, refresh } = useUsageData();
+    const { data: accountData } = useAccountData();
+
+    /**
+     * A credential from an environment variable is an API-key account, and the API has
+     * no subscription windows to report for one: it answers "usage limits are not
+     * applicable to API organizations". Drawing an empty five-hour bar there would be a
+     * guess dressed up as a measurement, so the section says so in the same muted tone
+     * an empty list uses rather than in the red one an error uses.
+     */
+    const apiKeyMode = Boolean(accountData?.apiKeySource);
+    const modelScoped = scopedWindows(usageData);
 
     return (
         <div>
@@ -34,13 +47,22 @@ export const UsageSection = (props: Props) => {
                 </div>
             </SectionLabel>
 
-            {usageError && usageErrorKind === 'ccb_missing' ? (
+            {apiKeyMode ? (
+                <p className="text-xs text-text-tertiary">
+                    {t('usageSection.notApplicableForApiKey', { source: accountData?.apiKeySource })}
+                </p>
+            ) : usageError && usageErrorKind === 'ccb_missing' ? (
                 <CcbNotInstalledNotice onRetry={refresh} isLoading={usageLoading} />
             ) : usageError ? (
                 <p className="text-xs text-state-error-fg mb-2">{usageError}</p>
             ) : null}
 
-            {usageLoading && !usageData ? (
+            {/*
+              In API-key mode the notice above is the whole answer. Drawing bars under it
+              would contradict it: whatever numbers a previous subscription login left in
+              the store are not this credential's, and the API has none to offer for it.
+            */}
+            {apiKeyMode ? null : usageLoading && !usageData ? (
                 <>
                     <SkeletonRow />
                     <SkeletonRow />
@@ -76,6 +98,20 @@ export const UsageSection = (props: Props) => {
                             resetsAt={usageData.seven_day_opus.resets_at}
                         />
                     )}
+                    {/*
+                      Per-model weekly windows arrive only in the `limits` array, so they
+                      are drawn from there rather than from a named field. Their labels
+                      come from the API, which is what lets a model the plugin has never
+                      heard of show up without a release.
+                    */}
+                    {modelScoped.map((window) => (
+                        <UsageRow
+                            key={window.label}
+                            label={t('usageSection.weeklyModel', { model: window.label })}
+                            utilization={window.utilization}
+                            resetsAt={window.resetsAt ?? ''}
+                        />
+                    ))}
                 </>
             ) : null}
         </div>

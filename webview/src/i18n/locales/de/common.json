@@ -44,7 +44,8 @@
     "accountSection": "Konto",
     "authMethod": "Anmeldemethode",
     "email": "E-Mail",
-    "plan": "Tarif"
+    "plan": "Tarif",
+    "credentialSource": "Quelle"
   },
   "usageSection": {
     "title": "Nutzung",
@@ -53,7 +54,9 @@
     "session5hr": "Sitzung (5 Std.)",
     "weekly7day": "Wöchentlich (7 Tage)",
     "weeklySonnet": "Wöchentlich Sonnet",
-    "weeklyOpus": "Wöchentlich Opus"
+    "weeklyOpus": "Wöchentlich Opus",
+    "weeklyModel": "Wöchentlich {{model}}",
+    "notApplicableForApiKey": "Im {{source}}-Modus gelten keine Ratenlimits."
   },
   "usageReport": {
     "title": "Beitrag zur Nutzung",

@@ -44,7 +44,8 @@
     "accountSection": "Compte",
     "authMethod": "Méthode d'authentification",
     "email": "E-mail",
-    "plan": "Forfait"
+    "plan": "Forfait",
+    "credentialSource": "Source"
   },
   "usageSection": {
     "title": "Utilisation",
@@ -53,7 +54,9 @@
     "session5hr": "Session (5 h)",
     "weekly7day": "Hebdomadaire (7 jours)",
     "weeklySonnet": "Sonnet hebdomadaire",
-    "weeklyOpus": "Opus hebdomadaire"
+    "weeklyOpus": "Opus hebdomadaire",
+    "weeklyModel": "Hebdomadaire {{model}}",
+    "notApplicableForApiKey": "Les limites de débit ne s'appliquent pas en mode {{source}}."
   },
   "usageReport": {
     "title": "Contribution à l'utilisation",

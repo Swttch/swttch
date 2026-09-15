@@ -23,7 +23,9 @@ export interface RawUsageResponse {
   error_kind?: string;
 }
 
-const ERROR_KINDS: ReadonlyArray<UsageErrorKind> = ['ccb_missing', 'npm_missing', 'auth', 'network', 'unknown'];
+const ERROR_KINDS: ReadonlyArray<UsageErrorKind> = [
+  'ccb_missing', 'npm_missing', 'auth', 'network', 'rate_limited', 'unknown',
+];
 
 function normalizeErrorKind(raw: string | undefined): UsageErrorKind | null {
   return ERROR_KINDS.includes(raw as UsageErrorKind) ? (raw as UsageErrorKind) : null;

@@ -61,7 +61,17 @@ export function AccountUsageModal({ onClose }: AccountUsageModalProps) {
             ) : (
               <>
                 <InfoRow label={t('accountUsage.authMethod')} value={accountData?.authMethod ?? null} />
-                <InfoRow label={t('accountUsage.email')} value={accountData?.email ?? null} />
+                {/*
+                  An API key has no email to show, and the CLI nulls the field rather
+                  than omitting it. Naming the variable the credential came from turns a
+                  blank row into an answer: the panel is not broken, the account simply
+                  is not a subscription login.
+                */}
+                {accountData?.apiKeySource ? (
+                  <InfoRow label={t('accountUsage.credentialSource')} value={accountData.apiKeySource} />
+                ) : (
+                  <InfoRow label={t('accountUsage.email')} value={accountData?.email ?? null} />
+                )}
                 <InfoRow label={t('accountUsage.plan')} value={accountData?.plan ?? null} />
               </>
             )}

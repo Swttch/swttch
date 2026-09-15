@@ -44,7 +44,8 @@
     "accountSection": "Conta",
     "authMethod": "Método de autenticação",
     "email": "E-mail",
-    "plan": "Plano"
+    "plan": "Plano",
+    "credentialSource": "Origem"
   },
   "usageSection": {
     "title": "Uso",
@@ -53,7 +54,9 @@
     "session5hr": "Sessão (5h)",
     "weekly7day": "Semanal (7 dias)",
     "weeklySonnet": "Sonnet semanal",
-    "weeklyOpus": "Opus semanal"
+    "weeklyOpus": "Opus semanal",
+    "weeklyModel": "Semanal {{model}}",
+    "notApplicableForApiKey": "Os limites de taxa não se aplicam no modo {{source}}."
   },
   "usageReport": {
     "title": "Contribuição para o uso",

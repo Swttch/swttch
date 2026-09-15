@@ -44,7 +44,8 @@
     "accountSection": "الحساب",
     "authMethod": "طريقة المصادقة",
     "email": "البريد الإلكتروني",
-    "plan": "الخطة"
+    "plan": "الخطة",
+    "credentialSource": "المصدر"
   },
   "usageSection": {
     "title": "الاستخدام",
@@ -53,7 +54,9 @@
     "session5hr": "الجلسة (5 ساعات)",
     "weekly7day": "أسبوعي (7 أيام)",
     "weeklySonnet": "Sonnet الأسبوعي",
-    "weeklyOpus": "Opus الأسبوعي"
+    "weeklyOpus": "Opus الأسبوعي",
+    "weeklyModel": "أسبوعي {{model}}",
+    "notApplicableForApiKey": "لا تنطبق حدود المعدل في وضع {{source}}."
   },
   "usageReport": {
     "title": "المساهمة في الاستخدام",

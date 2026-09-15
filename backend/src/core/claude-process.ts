@@ -17,6 +17,7 @@ import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { MessageType, SessionActivity } from '../shared';
+import { ingestRateLimitWindows } from './handlers/getUsage';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -1148,6 +1149,17 @@ function handleStreamEvent(
         `Held message for ${targetSessionId} after turn: ${sent ? 'sent' : 'FAILED to send'}`,
       );
     }
+  }
+
+  // The CLI volunteers the usage windows mid-turn. Taking them here keeps the panel
+  // current through a conversation without spending a request on it, and a request not
+  // made is a request that cannot be rate limited. The event is still forwarded below
+  // exactly as it arrived; this only takes a copy.
+  if (event.type === 'rate_limit_event') {
+    const info = event.rate_limit_info as { unifiedWindows?: unknown } | undefined;
+    void ingestRateLimitWindows(info?.unifiedWindows).catch((err) => {
+      console.error('[node-backend]', `Failed to absorb rate_limit_event: ${String(err)}`);
+    });
   }
 
   // 모든 CLI 이벤트를 있는 그대로 전달 — 타입별 분기/가공 없음
