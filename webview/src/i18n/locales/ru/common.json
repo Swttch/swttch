@@ -44,7 +44,8 @@
     "accountSection": "Аккаунт",
     "authMethod": "Способ авторизации",
     "email": "Email",
-    "plan": "Тариф"
+    "plan": "Тариф",
+    "credentialSource": "Источник"
   },
   "usageSection": {
     "title": "Использование",
@@ -53,7 +54,9 @@
     "session5hr": "Сессия (5 ч)",
     "weekly7day": "Неделя (7 дней)",
     "weeklySonnet": "Sonnet за неделю",
-    "weeklyOpus": "Opus за неделю"
+    "weeklyOpus": "Opus за неделю",
+    "weeklyModel": "Недельный {{model}}",
+    "notApplicableForApiKey": "В режиме {{source}} ограничения частоты не применяются."
   },
   "usageReport": {
     "title": "Расход использования",

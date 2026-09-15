@@ -44,7 +44,8 @@
     "accountSection": "Account",
     "authMethod": "Auth method",
     "email": "Email",
-    "plan": "Plan"
+    "plan": "Plan",
+    "credentialSource": "Source"
   },
   "usageSection": {
     "title": "Usage",
@@ -53,7 +54,9 @@
     "session5hr": "Session (5hr)",
     "weekly7day": "Weekly (7 day)",
     "weeklySonnet": "Weekly Sonnet",
-    "weeklyOpus": "Weekly Opus"
+    "weeklyOpus": "Weekly Opus",
+    "weeklyModel": "Weekly {{model}}",
+    "notApplicableForApiKey": "Rate limits do not apply in {{source}} mode."
   },
   "usageReport": {
     "title": "Contributing to usage",

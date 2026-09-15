@@ -102,8 +102,7 @@ export async function getAllUsageHandler(
             seven_day_opus: rawUsage.seven_day_opus || null,
           };
         } catch (err: any) {
-          const code = err instanceof Error ? (err as any).code : undefined;
-          const info = classifyError(err instanceof Error ? err.message : String(err), code);
+          const info = classifyError(err);
           error = info.message;
           errorKind = info.kind;
         }

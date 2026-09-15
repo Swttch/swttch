@@ -129,15 +129,6 @@ export interface AutoResumeHookDeps {
   rechargeOpts?: RechargeOpts;
 }
 
-/** Extract a child_process-style errno/exit code so classifyError can label it. */
-function errorCode(err: unknown): number | string | undefined {
-  if (err instanceof Error) {
-    const code = (err as { code?: number | string }).code;
-    if (typeof code === 'number' || typeof code === 'string') return code;
-  }
-  return undefined;
-}
-
 /**
  * Build the pre-send gate hook. Polls `fetchUsage` until recharged, timeout, or
  * a fetch error. The engine `await`s this hook, so a long wait is fine — the
@@ -158,9 +149,9 @@ export function createAutoResumeHook(deps: AutoResumeHookDeps): ScheduleHook {
       } catch (err) {
         if (signal?.aborted) return { proceed: false };
         // A fetch error is NOT "not recharged" — abort with a human-readable
-        // reason (classifyError yields "Network error reaching Anthropic API"
-        // for network failures, never a raw errno).
-        const info = classifyError(err instanceof Error ? err.message : String(err), errorCode(err));
+        // reason. classifyError reads the whole error, including the exit code and
+        // whether the child was killed, so a raw errno never reaches the user.
+        const info = classifyError(err);
         deps.broadcast({
           sessionId: msg.sessionId,
           scheduleId: msg.id,

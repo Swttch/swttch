@@ -44,7 +44,8 @@
     "accountSection": "账户",
     "authMethod": "认证方式",
     "email": "邮箱",
-    "plan": "套餐"
+    "plan": "套餐",
+    "credentialSource": "来源"
   },
   "usageSection": {
     "title": "用量",
@@ -53,7 +54,9 @@
     "session5hr": "会话(5 小时)",
     "weekly7day": "每周(7 天)",
     "weeklySonnet": "每周 Sonnet",
-    "weeklyOpus": "每周 Opus"
+    "weeklyOpus": "每周 Opus",
+    "weeklyModel": "每周 {{model}}",
+    "notApplicableForApiKey": "{{source}} 模式下不适用速率限制。"
   },
   "usageReport": {
     "title": "用量构成",
