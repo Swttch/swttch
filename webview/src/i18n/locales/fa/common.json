@@ -44,7 +44,8 @@
     "accountSection": "حساب کاربری",
     "authMethod": "روش احراز هویت",
     "email": "ایمیل",
-    "plan": "پلن"
+    "plan": "پلن",
+    "credentialSource": "منبع"
   },
   "usageSection": {
     "title": "مصرف",
@@ -53,7 +54,9 @@
     "session5hr": "نشست (5 ساعته)",
     "weekly7day": "هفتگی (7 روزه)",
     "weeklySonnet": "Sonnet هفتگی",
-    "weeklyOpus": "Opus هفتگی"
+    "weeklyOpus": "Opus هفتگی",
+    "weeklyModel": "هفتگی {{model}}",
+    "notApplicableForApiKey": "در حالت {{source}} محدودیت نرخ اعمال نمی‌شود."
   },
   "usageReport": {
     "title": "سهم در مصرف",

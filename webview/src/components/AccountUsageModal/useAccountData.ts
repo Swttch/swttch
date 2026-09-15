@@ -8,6 +8,8 @@ interface AccountInfo {
   authMethod: string | null;
   email: string | null;
   plan: string | null;
+  /** Set when the credential came from an environment variable, naming which one. */
+  apiKeySource: string | null;
 }
 
 interface UseAccountDataReturn {
@@ -49,6 +51,7 @@ export function useAccountData(): UseAccountDataReturn {
         authMethod: formatAuthMethod(raw.authMethod),
         email: raw.email ?? null,
         plan: formatPlan(raw.subscriptionType),
+        apiKeySource: raw.apiKeySource ?? null,
       }
     : null;
 
