@@ -9,6 +9,8 @@ import {
   hasUnreadFavicon,
   restoreDefaultFavicon,
   setUnreadFavicon,
+  startWorkingFavicon,
+  stopWorkingFavicon,
 } from './favicon';
 
 /**
@@ -80,6 +82,21 @@ export function useDocumentTitle(
     if (typeof notifyJcef === 'function') {
       (notifyJcef as (state: string) => void)(isStreaming ? 'streaming' : 'idle');
     }
+  }, [isStreaming]);
+
+  // Turn the favicon while the response streams, so a user who has moved to
+  // another browser tab can still see that this session is running (issue #449).
+  //
+  // Declared BEFORE the unread effect below, and that order matters: ending a
+  // stream runs this cleanup (which puts the default favicon back) and only then
+  // the unread effect, so the unread variant is what survives.
+  useEffect(() => {
+    if (isStreaming) {
+      startWorkingFavicon();
+    } else {
+      stopWorkingFavicon();
+    }
+    return () => stopWorkingFavicon();
   }, [isStreaming]);
 
   // Detect streaming end while tab is hidden → show unread favicon + desktop notification

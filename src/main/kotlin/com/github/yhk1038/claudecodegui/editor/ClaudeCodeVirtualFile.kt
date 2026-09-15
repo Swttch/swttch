@@ -10,6 +10,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 enum class TabBadge {
     NONE,
+
+    /**
+     * The session is streaming right now, so the tab wears a spinner
+     * ([WorkingTabIcon]). Unlike [UNREAD] this is NOT cleared by looking at the
+     * tab: the user coming back does not stop the session, and a tab that
+     * dropped its spinner on selection would go blank exactly while it is still
+     * working. It is cleared when the stream ends (issue #449).
+     */
+    WORKING,
+
     UNREAD
 }
 
