@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConnectionManager } from '../connection-manager';
 import { ClientEnv } from '../../shared';
 import { MessageType } from '../../shared';
+import { SessionActivity } from '../../shared';
 import { Claude } from '../../core/claude';
 
 // connection-manager delegates process kills to Claude.killTree (process-group
@@ -87,6 +88,11 @@ describe('ConnectionManager', () => {
       const conn2 = cm.addConnection(ws2);
       cm.subscribe(conn1, 'sess-1');
       cm.subscribe(conn2, 'sess-1');
+      // Subscribing opens the session, which is announced to every connection
+      // (issue #449). That is a different message from the one under test, so
+      // the counters start from here.
+      (ws1.send as ReturnType<typeof vi.fn>).mockClear();
+      (ws2.send as ReturnType<typeof vi.fn>).mockClear();
 
       cm.broadcastToSession('sess-1', 'TEST_EVENT', {}, conn1);
 
@@ -240,42 +246,184 @@ describe('ConnectionManager', () => {
     });
   });
 
-  describe('streaming flag / session counters', () => {
-    it('counts sessions and streaming sessions', () => {
+  describe('session activity / session counters', () => {
+    it('counts sessions and the ones with a turn in flight', () => {
       cm.getOrCreateSession('sess-1');
       cm.getOrCreateSession('sess-2');
       expect(cm.getSessionCount()).toBe(2);
       expect(cm.getStreamingSessionCount()).toBe(0);
 
-      cm.setStreaming('sess-1', true);
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
       expect(cm.getStreamingSessionCount()).toBe(1);
 
-      cm.setStreaming('sess-1', false);
+      cm.setSessionActivity('sess-1', SessionActivity.Idle);
       expect(cm.getStreamingSessionCount()).toBe(0);
     });
 
-    it('ignores setStreaming for an unknown session', () => {
-      cm.setStreaming('nonexistent', true);
+    it('counts a session blocked on the user as still in flight', () => {
+      // The turn has not ended; it is waiting for an answer. Callers of this
+      // counter are asking whether there is work that would be lost.
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Awaiting);
+
+      expect(cm.getStreamingSessionCount()).toBe(1);
+    });
+
+    it('does not count a finished turn nobody has read yet', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Done);
+
       expect(cm.getStreamingSessionCount()).toBe(0);
     });
 
-    it('clears the flag on STREAM_END broadcast (process death safety net)', () => {
+    it('ignores an activity change for an unknown session', () => {
+      cm.setSessionActivity('nonexistent', SessionActivity.Running);
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('reports only the sessions that are doing something', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.getOrCreateSession('sess-2');
+      cm.getOrCreateSession('sess-3');
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+      cm.setSessionActivity('sess-3', SessionActivity.Done);
+
+      // sess-2 is idle, and an idle session is left out rather than listed:
+      // the map is pushed on every change and would otherwise grow with every
+      // chat tab opened this run.
+      expect(cm.getSessionActivity()).toEqual({
+        'sess-1': SessionActivity.Running,
+        'sess-3': SessionActivity.Done,
+      });
+    });
+
+    it('announces an activity change to every connection', () => {
+      const ws = createMockWs();
+      cm.addConnection(ws);
+      cm.getOrCreateSession('sess-1');
+      const send = ws.send as ReturnType<typeof vi.fn>;
+      send.mockClear();
+
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+
+      const sent = send.mock.calls.map((c) => JSON.parse(c[0] as string));
+      const announcement = sent.find(
+        (m: { type: string }) => m.type === MessageType.SESSION_ACTIVITY_CHANGED,
+      );
+      expect(announcement?.payload.activity).toEqual({ 'sess-1': SessionActivity.Running });
+    });
+
+    it('says nothing when the activity did not actually move', () => {
+      const ws = createMockWs();
+      cm.addConnection(ws);
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+      const send = ws.send as ReturnType<typeof vi.fn>;
+      send.mockClear();
+
+      // The callers fire on events that repeat within one turn, so a repeat
+      // must not put another copy on every socket.
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+
+      const sent = send.mock.calls.map((c) => JSON.parse(c[0] as string));
+      expect(
+        sent.filter((m: { type: string }) => m.type === MessageType.SESSION_ACTIVITY_CHANGED),
+      ).toHaveLength(0);
+    });
+
+    it('treats a turn that died as finished (process death safety net)', () => {
       const connId = cm.addConnection(createMockWs());
       cm.subscribe(connId, 'sess-1');
-      cm.setStreaming('sess-1', true);
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
       expect(cm.getStreamingSessionCount()).toBe(1);
 
       cm.broadcastToSession('sess-1', MessageType.STREAM_END);
+
       expect(cm.getStreamingSessionCount()).toBe(0);
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Done });
     });
 
-    it('does not clear the flag on other broadcasts', () => {
+    it('leaves an idle session alone on STREAM_END', () => {
       const connId = cm.addConnection(createMockWs());
       cm.subscribe(connId, 'sess-1');
-      cm.setStreaming('sess-1', true);
+      cm.getOrCreateSession('sess-1');
+
+      cm.broadcastToSession('sess-1', MessageType.STREAM_END);
+
+      // Nothing ran, so there is nothing finished for the user to go and read.
+      expect(cm.getSessionActivity()).toEqual({});
+    });
+
+    it('does not end the turn on other broadcasts', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
 
       cm.broadcastToSession('sess-1', MessageType.CLI_EVENT, { type: 'assistant' });
       expect(cm.getStreamingSessionCount()).toBe(1);
+    });
+
+    it('reports a session as open only while some tab is subscribed', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.getOrCreateSession('sess-1');
+      expect(cm.getOpenSessionIds()).toEqual([]);
+
+      cm.subscribe(connId, 'sess-1');
+      expect(cm.getOpenSessionIds()).toEqual(['sess-1']);
+
+      cm.unsubscribe(connId);
+      expect(cm.getOpenSessionIds()).toEqual([]);
+    });
+
+    it('announces the change when the first tab opens a session', () => {
+      const ws = createMockWs();
+      const connId = cm.addConnection(ws);
+      const send = ws.send as ReturnType<typeof vi.fn>;
+      send.mockClear();
+
+      cm.subscribe(connId, 'sess-1');
+
+      const sent = send.mock.calls.map((c) => JSON.parse(c[0] as string));
+      const announcement = sent.find(
+        (m: { type: string }) => m.type === MessageType.SESSION_ACTIVITY_CHANGED,
+      );
+      expect(announcement?.payload.open).toEqual(['sess-1']);
+    });
+
+    it('announces the change when the last tab closes a session', () => {
+      const ws = createMockWs();
+      const connId = cm.addConnection(ws);
+      cm.subscribe(connId, 'sess-1');
+      const send = ws.send as ReturnType<typeof vi.fn>;
+      send.mockClear();
+
+      cm.unsubscribe(connId);
+
+      const sent = send.mock.calls.map((c) => JSON.parse(c[0] as string));
+      const announcement = sent.find(
+        (m: { type: string }) => m.type === MessageType.SESSION_ACTIVITY_CHANGED,
+      );
+      expect(announcement?.payload.open).toEqual([]);
+    });
+
+    it('clears a finished turn once the user has looked at it', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Done);
+
+      cm.markSessionRead('sess-1');
+
+      expect(cm.getSessionActivity()).toEqual({});
+    });
+
+    it('does not let a glance silence a session that is still working', () => {
+      // Every host sends the read signal the moment its tab becomes the visible
+      // one, which happens while sessions are running all the time.
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+
+      cm.markSessionRead('sess-1');
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Running });
     });
   });
 

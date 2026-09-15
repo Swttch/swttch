@@ -210,6 +210,23 @@
       "days": "{{n}}일",
       "hours": "{{n}}시간",
       "minutes": "{{n}}분"
+    },
+    "activity": {
+      "idle": "활동 없음",
+      "running": "작업 중",
+      "awaiting": "답변 대기 중",
+      "done": "완료 — 아직 읽지 않음"
+    },
+    "filter": {
+      "status": "상태",
+      "tabs": "탭",
+      "open": "열림",
+      "closed": "닫힘",
+      "completed": "완료",
+      "active": "활성",
+      "countsTitle": "상태별 세션 개수",
+      "activeTitle": "답변이 필요하거나 작업 중이거나 읽지 않은 세션만 보기",
+      "noneActive": "기다리는 세션이 없습니다"
     }
   },
   "sponsorGated": {

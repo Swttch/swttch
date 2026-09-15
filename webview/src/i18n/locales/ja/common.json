@@ -210,6 +210,23 @@
       "days": "{{n}}日前",
       "hours": "{{n}}時間前",
       "minutes": "{{n}}分前"
+    },
+    "activity": {
+      "idle": "アクティビティなし",
+      "running": "作業中",
+      "awaiting": "回答待ち",
+      "done": "完了 — 未読"
+    },
+    "filter": {
+      "status": "状態",
+      "tabs": "タブ",
+      "open": "開いている",
+      "closed": "閉じている",
+      "completed": "完了",
+      "active": "アクティブ",
+      "countsTitle": "状態ごとのセッション数",
+      "activeTitle": "回答待ち・作業中・未読のセッションだけを表示",
+      "noneActive": "待っているセッションはありません"
     }
   },
   "sponsorGated": {

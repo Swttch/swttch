@@ -20,6 +20,9 @@ function makeConnections() {
   return {
     getClient: () => ({ subscribedSessionId: 'sess-1' }),
     sendTo: vi.fn(),
+    // Answering the question puts the session back to work, so the handler
+    // records that (issue #449).
+    setSessionActivity: vi.fn(),
   } as any;
 }
 

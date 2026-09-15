@@ -4,6 +4,7 @@ import { Dock } from './dock/Dock';
 import { OverflowMenu } from './dock/OverflowMenu';
 import { AccountSwitcher } from './AccountSwitcher';
 import { useDocumentTitle } from '@/hooks';
+import { useMarkSessionRead } from '@/hooks/useMarkSessionRead';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useNotificationSound } from '@/notifications';
@@ -13,6 +14,9 @@ export function SessionHeader() {
   const { isStreaming, error } = useChatStreamContext();
   const { selection } = useNotificationSound();
   useDocumentTitle(currentSession?.title || null, currentSessionId === null, isStreaming, selection, error);
+  // Looking at a session is what marks it read, and this header is mounted for
+  // exactly as long as the chat is showing one (issue #449).
+  useMarkSessionRead(currentSessionId, isStreaming);
 
   return (
     <div className="flex justify-between items-center px-2 py-1">

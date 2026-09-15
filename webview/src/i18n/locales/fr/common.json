@@ -210,6 +210,23 @@
       "days": "{{n}} j",
       "hours": "{{n}} h",
       "minutes": "{{n}} min"
+    },
+    "activity": {
+      "idle": "Aucune activité",
+      "running": "En cours",
+      "awaiting": "En attente de votre réponse",
+      "done": "Terminé — non lu"
+    },
+    "filter": {
+      "status": "État",
+      "tabs": "Onglets",
+      "open": "Ouvertes",
+      "closed": "Fermées",
+      "completed": "Terminées",
+      "active": "Actives",
+      "countsTitle": "Sessions par état",
+      "activeTitle": "N'afficher que les sessions en attente de réponse, en cours ou non lues",
+      "noneActive": "Aucune session ne vous attend"
     }
   },
   "sponsorGated": {

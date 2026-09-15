@@ -16,7 +16,7 @@ import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
-import { MessageType } from '../shared';
+import { MessageType, SessionActivity } from '../shared';
 
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
@@ -285,7 +285,7 @@ export async function restartClaudeSessionProcess(
   // suppresses that STREAM_END. A previous turn that died without a `result`
   // would leave the flag stuck on forever, so clear it here explicitly. The
   // replacement process sets it again when the pending message reaches stdin.
-  connections.setStreaming(sessionId, false);
+  connections.setSessionActivity(sessionId, SessionActivity.Idle);
 }
 
 /**
@@ -658,7 +658,7 @@ export function sendMessageToProcess(
   session.process.stdin.write(stdinMessage);
   // Turn in flight — cleared on the CLI `result` event (turn end) or on
   // STREAM_END (process death safety net inside broadcastToSession).
-  connections.setStreaming(sessionId, true);
+  connections.setSessionActivity(sessionId, SessionActivity.Running);
   return true;
 }
 
@@ -890,6 +890,20 @@ export function sendControlResponseToProcess(
  * Deliberately not awaited by the caller: reading the setting and the file both
  * touch disk, and the permission prompt must reach the WebView immediately.
  */
+/**
+ * Whether this CLI event is a request the CLI is now blocked on.
+ *
+ * Tool permission, plan approval and AskUserQuestion all arrive as the same
+ * `can_use_tool` control request and are told apart by tool name further along,
+ * which is a distinction a session list does not need: all three mean the same
+ * thing to it, that the session cannot move until the user answers.
+ */
+function isAwaitingUserAnswer(event: Record<string, unknown>): boolean {
+  if (event.type !== 'control_request') return false;
+  const request = event.request as Record<string, unknown> | undefined;
+  return request?.subtype === 'can_use_tool';
+}
+
 function maybeOpenPermissionDiff(
   targetSessionId: string,
   event: Record<string, unknown>,
@@ -1038,6 +1052,13 @@ function handleStreamEvent(
   // below either way, and a diff we cannot open must not delay it.
   maybeOpenPermissionDiff(targetSessionId, event, connections, bridge);
 
+  // The CLI has stopped and is waiting on the user. Every prompt that needs an
+  // answer — a tool permission, a plan approval, an AskUserQuestion — reaches us
+  // as the same `can_use_tool` control request, so this one test covers them all.
+  if (isAwaitingUserAnswer(event)) {
+    connections.setSessionActivity(targetSessionId, SessionActivity.Awaiting);
+  }
+
   // Keep the recorded permission mode in step with what the CLI says it is running
   // under. The CLI reports this on `system/init` (spawn) and again on `system/status`
   // when it changes mode by itself — approving an ExitPlanMode plan leaves plan mode
@@ -1058,7 +1079,7 @@ function handleStreamEvent(
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
     // Turn ended (success, error and interrupt alike emit a result event).
-    connections.setStreaming(targetSessionId, false);
+    connections.setSessionActivity(targetSessionId, SessionActivity.Done);
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'upsert',
       session: {

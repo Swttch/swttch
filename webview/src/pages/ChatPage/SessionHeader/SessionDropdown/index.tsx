@@ -9,6 +9,24 @@ import { OPEN_SESSION_DROPDOWN_EVENT } from '@/commandPalette/sections/context/i
 import { isMobile } from '@/config/environment';
 import { useTranslation } from '@/i18n';
 
+/**
+ * Whether a click lands outside the dropdown, and so should close it.
+ *
+ * Exported for its own test: mounting the dropdown pulls in the session
+ * context, the bridge and the whole list, none of which decides this.
+ *
+ * A menu opened from INSIDE the dropdown renders into `<body>` (Tippy, so the
+ * session list's own overflow cannot clip it). Such a click is outside the
+ * dropdown's element while still being inside the dropdown as the user sees it,
+ * and closing on it shut the dropdown the moment they touched a filter.
+ */
+export function isClickOutsideDropdown(dropdown: Element | null, target: Node): boolean {
+  if (!dropdown) return false;
+  if (dropdown.contains(target)) return false;
+  if (target instanceof Element && target.closest('[data-tippy-root]')) return false;
+  return true;
+}
+
 export function SessionDropdown() {
   const { t } = useTranslation('chat');
   const { currentSession, switchSession, loadSessions, sessionsServiceError, isLoading } =
@@ -66,9 +84,7 @@ export function SessionDropdown() {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        closeDropdown();
-      }
+      if (isClickOutsideDropdown(dropdownRef.current, e.target as Node)) closeDropdown();
     };
 
     if (isOpen) {

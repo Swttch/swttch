@@ -7,20 +7,24 @@ import com.intellij.openapi.vfs.VirtualFile
 import javax.swing.Icon
 
 /**
- * Patches the editor tab icon for [ClaudeCodeVirtualFile] when it has an unread badge.
+ * Patches the editor tab icon for [ClaudeCodeVirtualFile] to reflect its badge.
  *
- * When streaming completes on a non-focused tab, [ClaudeCodeVirtualFile.badgeState] is set
- * to [TabBadge.UNREAD]. This patcher replaces the default icon with an orange-dot variant.
- * When the user returns to the tab, the badge is cleared and the original icon is restored.
+ * While the session streams, [ClaudeCodeVirtualFile.badgeState] is [TabBadge.WORKING]
+ * and this patcher swaps in the spinner, so a user with several chat tabs open can
+ * see which one is still working without opening it (issue #449). When streaming
+ * completes on a non-focused tab the badge becomes [TabBadge.UNREAD] and the icon
+ * becomes an orange-dot variant. When the user returns to the tab, the unread badge
+ * is cleared and the original icon is restored.
  */
 class ClaudeCodeFileIconPatcher : FileIconPatcher {
 
     override fun patchIcon(baseIcon: Icon, file: VirtualFile, flags: Int, project: Project?): Icon {
         if (file !is ClaudeCodeVirtualFile) return baseIcon
-        if (file.badgeState == TabBadge.UNREAD) {
-            return UNREAD_ICON
+        return when (file.badgeState) {
+            TabBadge.WORKING -> WorkingTabIcon.ICON
+            TabBadge.UNREAD -> UNREAD_ICON
+            TabBadge.NONE -> baseIcon
         }
-        return baseIcon
     }
 
     companion object {

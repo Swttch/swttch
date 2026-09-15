@@ -86,14 +86,22 @@ class ClaudeCodeFileEditor(
             state.getCustomTitle(virtualFile.tabId)?.let { virtualFile.setDisplayName(it) }
         }
 
-        // Streaming state change: show unread badge when streaming ends on inactive tab
+        // Streaming state change: spin while streaming, then show the unread badge
+        // if the stream ended on a tab the user is not looking at.
+        //
+        // Both arms are guarded on a transition rather than on the reported state
+        // alone. The WebView reports `idle` whenever the page mounts, so a tab that
+        // is merely moved or split reports idle again; acting on that report would
+        // clear an unread badge the user has not seen yet.
         panel.onStreamingStateChanged = { isStreaming ->
-            if (!isStreaming && wasStreaming) {
-                if (!isTabActive()) {
-                    if (virtualFile.setBadge(TabBadge.UNREAD)) {
-                        FileEditorManagerEx.getInstanceEx(project).refreshIcons()
-                    }
-                }
+            val badge = when {
+                isStreaming -> TabBadge.WORKING
+                !wasStreaming -> null
+                isTabActive() -> TabBadge.NONE
+                else -> TabBadge.UNREAD
+            }
+            if (badge != null && virtualFile.setBadge(badge)) {
+                FileEditorManagerEx.getInstanceEx(project).refreshIcons()
             }
             wasStreaming = isStreaming
         }

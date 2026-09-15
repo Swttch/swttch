@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { useSessionContextOrNull } from '@/contexts/SessionContext';
+import { useSessionActivity, activityOf } from '@/hooks/useSessionActivity';
+import {
+  SessionFilterBar,
+  TabState,
+  type SessionCounts,
+  type StatusFilterKey,
+} from './SessionFilterBar';
+import { SessionActivity } from '@/shared';
 
 interface Props {
   groupedSessions: GroupedSessions;
@@ -39,6 +47,93 @@ export function SessionList(props: Props) {
   // mount one, and an origin badge is not worth making the component unusable
   // there — without an anchor there is simply nothing to compare against.
   const rootDir = useWorkingDirOrNull()?.rootDir ?? null;
+
+  // Asked for here rather than by each caller, because both surfaces that show
+  // sessions (the header dropdown and the side panel) render this one component
+  // and would otherwise each have to remember to pass it through.
+  const { activity, open } = useSessionActivity();
+
+  // Whether the list is narrowed to the sessions that are not finished with the
+  // user. Local to the list rather than lifted: it is a way of looking at these
+  // rows, not a fact about the session the app is showing, and both surfaces
+  // that mount this component want their own.
+  const [activeOnly, setActiveOnly] = useState(false);
+  // Empty means "no opinion" rather than "nothing": selecting none and selecting
+  // all would otherwise say the same thing, and one of them would have to show
+  // an empty list to stay literal.
+  const [statusFilter, setStatusFilter] = useState<Set<StatusFilterKey>>(() => new Set());
+  const [tabFilter, setTabFilter] = useState<Set<TabState>>(() => new Set());
+
+  // Counted over the rows the list is holding — what the user can see — rather
+  // than over every session on disk. A count that included rows behind a search
+  // or past the loaded page would name a number nothing on screen adds up to.
+  const counts = useMemo<SessionCounts>(() => {
+    const tally: SessionCounts = {
+      [SessionActivity.Awaiting]: 0,
+      [SessionActivity.Running]: 0,
+      [SessionActivity.Done]: 0,
+      [TabState.Open]: 0,
+      [TabState.Closed]: 0,
+    };
+    for (const key of GROUP_ORDER) {
+      for (const session of groupedSessions[key]) {
+        const isOpen = open.has(session.id);
+        if (isOpen) tally[TabState.Open]++;
+        else tally[TabState.Closed]++;
+        // A closed session reports no state, exactly as its row draws no
+        // marker, so it is not counted into any of the three above.
+        if (!isOpen) continue;
+        const state = activityOf(activity, session.id);
+        if (state !== SessionActivity.Idle) tally[state]++;
+      }
+    }
+    return tally;
+  }, [groupedSessions, activity, open]);
+
+  // The filter keeps the same three states the Active count adds up, so the
+  // number on the button is exactly how many rows survive it.
+  const isActive = useCallback(
+    (sessionId: string) =>
+      open.has(sessionId) && activityOf(activity, sessionId) !== SessionActivity.Idle,
+    [activity, open],
+  );
+
+  // Every filter that is set has to pass. An unset one says nothing, so it
+  // cannot hide a row; a closed session has no status at all, so it never
+  // satisfies a status filter.
+  const passesFilters = useCallback(
+    (sessionId: string) => {
+      if (activeOnly && !isActive(sessionId)) return false;
+      const isOpen = open.has(sessionId);
+      if (tabFilter.size > 0 && !tabFilter.has(isOpen ? TabState.Open : TabState.Closed)) {
+        return false;
+      }
+      if (statusFilter.size > 0) {
+        if (!isOpen) return false;
+        const state = activityOf(activity, sessionId);
+        if (state === SessionActivity.Idle) return false;
+        if (!statusFilter.has(state as StatusFilterKey)) return false;
+      }
+      return true;
+    },
+    [activeOnly, isActive, open, tabFilter, statusFilter, activity],
+  );
+
+  const hasFilter = activeOnly || statusFilter.size > 0 || tabFilter.size > 0;
+
+  const visibleGroups = useMemo(() => {
+    if (!hasFilter) return groupedSessions;
+    const filtered = {} as GroupedSessions;
+    for (const key of GROUP_ORDER) {
+      filtered[key] = groupedSessions[key].filter((session) => passesFilters(session.id));
+    }
+    return filtered;
+  }, [hasFilter, groupedSessions, passesFilters]);
+
+  const visibleCount = useMemo(
+    () => GROUP_ORDER.reduce((n, key) => n + visibleGroups[key].length, 0),
+    [visibleGroups],
+  );
 
   // Taken from the side that walked the directories, not guessed from the rows.
   //
@@ -90,13 +185,28 @@ export function SessionList(props: Props) {
   }, [groupedSessions, requestMoreIfNeeded]);
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={requestMoreIfNeeded}
-      className={`${className} overflow-y-auto ${scale.listPad} flex flex-col gap-0.5`}
-    >
-      {GROUP_ORDER.map((groupKey) => {
-        const sessionsInGroup = groupedSessions[groupKey];
+    <>
+      <SessionFilterBar
+        counts={counts}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        tabFilter={tabFilter}
+        onTabFilterChange={setTabFilter}
+        activeOnly={activeOnly}
+        onActiveOnlyChange={setActiveOnly}
+      />
+      <div
+        ref={scrollRef}
+        onScroll={requestMoreIfNeeded}
+        className={`${className} overflow-y-auto ${scale.listPad} flex flex-col gap-0.5`}
+      >
+        {hasFilter && visibleCount === 0 && (
+          <div className="px-2.5 py-3 text-xs text-text-tertiary text-center">
+            {t('sessionList.filter.noneActive')}
+          </div>
+        )}
+        {GROUP_ORDER.map((groupKey) => {
+        const sessionsInGroup = visibleGroups[groupKey];
         if (sessionsInGroup.length === 0) return null;
 
         return (
@@ -113,6 +223,8 @@ export function SessionList(props: Props) {
                 originLabel={
                   isMerged ? getSessionOriginLabel(session.sessionDir, rootDir) : undefined
                 }
+                activity={activityOf(activity, session.id)}
+                isOpen={open.has(session.id)}
                 onSelect={() => onSelectSession(session.id)}
                 onDelete={() => onDeleteSession(session.id)}
                 onRename={(title) => onRenameSession(session.id, title)}
@@ -120,7 +232,8 @@ export function SessionList(props: Props) {
             ))}
           </div>
         );
-      })}
-    </div>
+        })}
+      </div>
+    </>
   );
 }

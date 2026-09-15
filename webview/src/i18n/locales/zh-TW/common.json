@@ -210,6 +210,23 @@
       "days": "{{n}}天",
       "hours": "{{n}}時",
       "minutes": "{{n}}分"
+    },
+    "activity": {
+      "idle": "無活動",
+      "running": "正在處理",
+      "awaiting": "等待你的答覆",
+      "done": "已完成 — 尚未檢視"
+    },
+    "filter": {
+      "status": "狀態",
+      "tabs": "分頁",
+      "open": "已開啟",
+      "closed": "已關閉",
+      "completed": "已完成",
+      "active": "活躍",
+      "countsTitle": "依狀態統計的工作階段數",
+      "activeTitle": "僅顯示需要答覆、正在處理或未讀的工作階段",
+      "noneActive": "沒有需要你處理的工作階段"
     }
   },
   "sponsorGated": {

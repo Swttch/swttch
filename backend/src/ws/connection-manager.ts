@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import type { ChildProcess } from 'child_process';
 import type { IPCMessage, NativeDropEntry } from '../core/types';
-import { ClientEnv, MessageType } from '../shared';
+import { ClientEnv, MessageType, SessionActivity, type SessionActivityMap } from '../shared';
 import { disableIdleShutdown } from '../config/environment';
 import { Claude } from '../core/claude';
 
@@ -39,14 +39,16 @@ interface SessionRecord {
   buffer: string;
   workingDir: string;
   /**
-   * True while a turn is in flight: set when a prompt is written to the CLI
-   * stdin, cleared on the CLI `result` event (turn end) and on STREAM_END
-   * (process death safety net). NOT the STREAM_START..STREAM_END window —
-   * the CLI process is long-lived across turns, so that window only means
-   * "process alive". Feeds the streaming-sessions counter (status endpoint,
-   * future IDE exit-confirm modal).
+   * What this session is doing, for the session list markers (issue #449) and
+   * the streaming-sessions counter (status endpoint, future IDE exit-confirm
+   * modal).
+   *
+   * Running is set when a prompt is written to the CLI stdin and left on the
+   * CLI `result` event (turn end) or on STREAM_END (process death safety net).
+   * NOT the STREAM_START..STREAM_END window — the CLI process is long-lived
+   * across turns, so that window only means "process alive".
    */
-  streaming: boolean;
+  activity: SessionActivity;
   /**
    * Permission mode the LIVE process was actually spawned with. `--permission-mode`
    * only applies at spawn, so a mode the user picks afterwards cannot reach a running
@@ -444,7 +446,11 @@ export class ConnectionManager {
     // process death path (close, spawn error, WSL mismatch), where no `result`
     // event will ever arrive to clear the flag.
     if (type === MessageType.STREAM_END) {
-      session.streaming = false;
+      // A turn that died still ended, so it reads as finished rather than as
+      // never having run — the same thing the unread badge concludes.
+      if (session.activity !== SessionActivity.Idle) {
+        this.setSessionActivity(sessionId, SessionActivity.Done);
+      }
     }
 
     const message: IPCMessage = {
@@ -510,7 +516,10 @@ export class ConnectionManager {
     this.unsubscribe(connectionId);
 
     const session = this.getOrCreateSession(sessionId, workingDir);
+    const wasClosed = session.subscribers.size === 0;
     session.subscribers.add(connectionId);
+    // A tab arriving is what opens a session, so the lists have to hear about it.
+    if (wasClosed) this.announceSessions();
     /*
      * Recorded on every subscribe, not only on the first.
      *
@@ -559,6 +568,8 @@ export class ConnectionManager {
 
     if (session) {
       session.subscribers.delete(connectionId);
+      // The last tab leaving is what closes a session.
+      if (session.subscribers.size === 0) this.announceSessions();
       console.error(
         '[node-backend]',
         `${connectionId} unsubscribed from session ${sessionId} (subscribers: ${session.subscribers.size})`,
@@ -609,23 +620,98 @@ export class ConnectionManager {
     return this.sessionRegistry.size;
   }
 
-  /** Number of sessions with a turn in flight (see SessionRecord.streaming). */
+  /**
+   * Number of sessions with a turn in flight.
+   *
+   * A session blocked on a permission prompt still counts: the turn has not
+   * ended, it is waiting on the user, and the callers of this (the status card,
+   * the exit-confirm modal) are asking "is there work that would be lost".
+   */
   getStreamingSessionCount(): number {
     let count = 0;
     for (const session of this.sessionRegistry.values()) {
-      if (session.streaming) count++;
+      if (session.activity === SessionActivity.Running) count++;
+      else if (session.activity === SessionActivity.Awaiting) count++;
     }
     return count;
   }
 
   /**
-   * Flip the per-session turn-in-flight flag. claude-process sets it true
-   * after writing a prompt to the CLI stdin and false on the `result` event;
-   * broadcastToSession clears it on STREAM_END as the process-death safety net.
+   * What every non-idle session is doing, keyed by session id.
+   *
+   * Idle sessions are left out rather than listed as idle: the map is pushed on
+   * every change, and a registry that has accumulated a session per chat tab
+   * opened this run would otherwise send a growing list of nothing.
    */
-  setStreaming(sessionId: string, streaming: boolean): void {
+  getSessionActivity(): SessionActivityMap {
+    const activity: SessionActivityMap = {};
+    for (const session of this.sessionRegistry.values()) {
+      if (session.activity !== SessionActivity.Idle) {
+        activity[session.sessionId] = session.activity;
+      }
+    }
+    return activity;
+  }
+
+  /**
+   * Ids of the sessions some tab is currently showing.
+   *
+   * "Open" is a subscriber, which is what a chat tab becomes when it starts
+   * viewing a session. A session with none is closed: it exists in the list and
+   * on disk, but nothing is watching it, and a session list says so by leaving
+   * its marker off rather than by colouring one (issue #449).
+   */
+  getOpenSessionIds(): string[] {
+    const ids: string[] = [];
+    for (const session of this.sessionRegistry.values()) {
+      if (session.subscribers.size > 0) ids.push(session.sessionId);
+    }
+    return ids;
+  }
+
+  /** The whole session-list picture, as one payload. */
+  getSessionActivityPayload(): { activity: SessionActivityMap; open: string[] } {
+    return { activity: this.getSessionActivity(), open: this.getOpenSessionIds() };
+  }
+
+  /**
+   * Tell every connection what the sessions are doing and which are open.
+   *
+   * Both travel together because both drive one marker: what colour it is, and
+   * whether it is drawn at all. Sending them apart would let a row render with
+   * a colour for a session the client still believes is closed.
+   */
+  private announceSessions(): void {
+    this.broadcastToAll(MessageType.SESSION_ACTIVITY_CHANGED, this.getSessionActivityPayload());
+  }
+
+  /**
+   * Record what a session is doing, and tell every connection when it moved.
+   *
+   * Only announces on an actual change. The callers fire on events that repeat
+   * within a single turn, so announcing unconditionally would put dozens of
+   * identical messages on every socket per response.
+   */
+  setSessionActivity(sessionId: string, activity: SessionActivity): void {
     const session = this.sessionRegistry.get(sessionId);
-    if (session) session.streaming = streaming;
+    if (!session) return;
+    if (session.activity === activity) return;
+    session.activity = activity;
+    this.announceSessions();
+  }
+
+  /**
+   * The user has looked at this session, so a finished turn stops being unread.
+   *
+   * Deliberately narrow: only [SessionActivity.Done] is cleared. A session that
+   * is still running must not be silenced by someone glancing at it, which is
+   * what a plain "set to idle" would do given that every host sends this the
+   * moment its tab becomes the visible one.
+   */
+  markSessionRead(sessionId: string): void {
+    const session = this.sessionRegistry.get(sessionId);
+    if (!session || session.activity !== SessionActivity.Done) return;
+    this.setSessionActivity(sessionId, SessionActivity.Idle);
   }
 
   getClient(connectionId: string): ClientRecord | undefined {
@@ -669,7 +755,7 @@ export class ConnectionManager {
         subscribers: new Set(),
         buffer: '',
         workingDir: workingDir ?? '',
-        streaming: false,
+        activity: SessionActivity.Idle,
         inputMode: null,
       };
       this.sessionRegistry.set(sessionId, session);

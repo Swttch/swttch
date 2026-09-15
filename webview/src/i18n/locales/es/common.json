@@ -210,6 +210,23 @@
       "days": "{{n}}d",
       "hours": "{{n}}h",
       "minutes": "{{n}}min"
+    },
+    "activity": {
+      "idle": "Sin actividad",
+      "running": "Trabajando",
+      "awaiting": "Esperando tu respuesta",
+      "done": "Terminado — sin leer"
+    },
+    "filter": {
+      "status": "Estado",
+      "tabs": "Pestañas",
+      "open": "Abiertas",
+      "closed": "Cerradas",
+      "completed": "Terminadas",
+      "active": "Activas",
+      "countsTitle": "Sesiones por estado",
+      "activeTitle": "Mostrar solo sesiones que esperan respuesta, están trabajando o sin leer",
+      "noneActive": "Ninguna sesión te está esperando"
     }
   },
   "sponsorGated": {
