@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectionManager } from '../connection-manager';
 import { handleStatusRequest } from '../status-route';
 import { ClientEnv } from '../../shared';
+import { SessionActivity } from '../../shared';
 
 vi.mock('../../core/claude', () => ({
   Claude: { killTree: vi.fn() },
@@ -40,7 +41,7 @@ describe('handleStatusRequest', () => {
 
     cm.subscribe(browserConn, 'sess-1');
     cm.getOrCreateSession('sess-2');
-    cm.setStreaming('sess-1', true);
+    cm.setSessionActivity('sess-1', SessionActivity.Running);
 
     expect(handleStatusRequest(cm).body).toEqual({
       keepAlive: true,

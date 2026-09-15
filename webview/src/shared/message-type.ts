@@ -458,6 +458,21 @@ export enum MessageType {
    */
   GET_ACTIVE_SESSIONS = 'GET_ACTIVE_SESSIONS',
 
+  /**
+   * What every non-idle session is doing right now, so a session list can mark
+   * its rows (issue #449). Answered with `{ activity: SessionActivityMap }`,
+   * and pushed again as SESSION_ACTIVITY_CHANGED whenever any of it moves.
+   * inbound webview→backend
+   */
+  GET_SESSION_ACTIVITY = 'GET_SESSION_ACTIVITY',
+  /**
+   * The user has now looked at this session, so a finished turn stops counting
+   * as unread. Each host sends it under the condition it already uses for its
+   * own unread badge: a browser tab becoming visible, a JetBrains editor tab
+   * becoming the selected one. inbound webview→backend
+   */
+  MARK_SESSION_READ = 'MARK_SESSION_READ',
+
   // -- Plugin updates --
   /** Check for available plugin updates. */
   GET_PLUGIN_UPDATES = 'GET_PLUGIN_UPDATES',
@@ -594,6 +609,14 @@ export enum MessageType {
   SESSION_LOADED = 'SESSION_LOADED',
   /** The session list changed and clients should refresh. */
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
+  /**
+   * What the sessions are doing, and which ones a tab has open, changed; carries
+   * both whole as `{ activity: SessionActivityMap, open: string[] }` rather than
+   * as deltas, so a client that missed a message still ends up correct. Sent to
+   * every connection, not just a session's subscribers: a session list shows
+   * rows nobody is subscribed to. outbound backend→webview
+   */
+  SESSION_ACTIVITY_CHANGED = 'SESSION_ACTIVITY_CHANGED',
   /** A user message was broadcast to all connections viewing the session. */
   USER_MESSAGE_BROADCAST = 'USER_MESSAGE_BROADCAST',
   /** A session's scheduled-message reservations changed (created/cancelled/fired/failed); carries the session's current reservation list so clients refresh. outbound backend→webview */

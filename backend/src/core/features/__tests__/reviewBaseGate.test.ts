@@ -30,7 +30,13 @@ const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i + 1}`
 let dir: string;
 
 function connections() {
-  return { broadcastToSession: vi.fn(), broadcastToAll: vi.fn() };
+  return {
+    broadcastToSession: vi.fn(),
+    broadcastToAll: vi.fn(),
+    // Answering a permission question puts the session back to work, and
+    // toolResponseHandler records that (issue #449).
+    setSessionActivity: vi.fn(),
+  };
 }
 
 /** The reported file-edit request, with its base as of when it arrived. */

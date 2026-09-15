@@ -124,4 +124,5 @@ export function useDocumentTitle(
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, []);
+
 }

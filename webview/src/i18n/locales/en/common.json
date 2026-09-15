@@ -210,6 +210,23 @@
       "days": "{{n}}d",
       "hours": "{{n}}h",
       "minutes": "{{n}}m"
+    },
+    "activity": {
+      "idle": "No activity",
+      "running": "Working",
+      "awaiting": "Waiting for your answer",
+      "done": "Finished — not read yet"
+    },
+    "filter": {
+      "status": "Status",
+      "tabs": "Tabs",
+      "open": "Open",
+      "closed": "Closed",
+      "completed": "Completed",
+      "active": "Active",
+      "countsTitle": "Session counts by state",
+      "activeTitle": "Show only sessions that need input, are working, or are unread",
+      "noneActive": "No session is waiting on you"
     }
   },
   "sponsorGated": {

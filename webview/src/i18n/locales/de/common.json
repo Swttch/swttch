@@ -210,6 +210,23 @@
       "days": "{{n}}T",
       "hours": "{{n}}Std",
       "minutes": "{{n}}Min"
+    },
+    "activity": {
+      "idle": "Keine Aktivität",
+      "running": "Arbeitet",
+      "awaiting": "Wartet auf deine Antwort",
+      "done": "Fertig — noch nicht gelesen"
+    },
+    "filter": {
+      "status": "Status",
+      "tabs": "Tabs",
+      "open": "Offen",
+      "closed": "Geschlossen",
+      "completed": "Fertig",
+      "active": "Aktiv",
+      "countsTitle": "Sitzungen nach Status",
+      "activeTitle": "Nur Sitzungen zeigen, die eine Antwort brauchen, arbeiten oder ungelesen sind",
+      "noneActive": "Keine Sitzung wartet auf dich"
     }
   },
   "sponsorGated": {

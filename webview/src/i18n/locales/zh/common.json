@@ -210,6 +210,23 @@
       "days": "{{n}}天",
       "hours": "{{n}}时",
       "minutes": "{{n}}分"
+    },
+    "activity": {
+      "idle": "无活动",
+      "running": "正在处理",
+      "awaiting": "等待你的答复",
+      "done": "已完成 — 尚未查看"
+    },
+    "filter": {
+      "status": "状态",
+      "tabs": "标签页",
+      "open": "已打开",
+      "closed": "已关闭",
+      "completed": "已完成",
+      "active": "活跃",
+      "countsTitle": "按状态统计的会话数",
+      "activeTitle": "仅显示需要答复、正在处理或未读的会话",
+      "noneActive": "没有需要你处理的会话"
     }
   },
   "sponsorGated": {

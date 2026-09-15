@@ -3,6 +3,7 @@ import { SessionMetaDto } from '@/dto';
 import { getRelativeTime } from './utils';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
+import { SessionActivity } from '@/shared';
 
 interface Props {
   session: SessionMetaDto;
@@ -18,11 +19,73 @@ interface Props {
    * what the list is anchored to.
    */
   originLabel?: string;
+  /**
+   * What this session is doing, so the row can mark it (issue #449). Decided by
+   * the caller from the backend's map, because a row can be working in a tab
+   * this list knows nothing about.
+   */
+  activity?: SessionActivity;
+  /**
+   * A tab currently has this session open. A closed session draws no marker at
+   * all: nothing is watching it, so there is no state to report, and colouring
+   * one anyway would say "idle" about a session that is merely absent.
+   */
+  isOpen?: boolean;
+}
+
+/** Dot colour per state. Only Running adds the turning ring. */
+const ACTIVITY_COLOR: Record<SessionActivity, string> = {
+  [SessionActivity.Running]: 'text-text-link',
+  [SessionActivity.Awaiting]: 'text-state-warning-fg',
+  [SessionActivity.Done]: 'text-state-success-fg',
+  [SessionActivity.Idle]: 'text-text-tertiary',
+};
+
+/**
+ * The marker a row wears, saying what its session is doing.
+ *
+ * Drawn only for a session some tab has open. A closed session has no state to
+ * report — nothing is running it and nothing is watching it — so the row leaves
+ * the marker off entirely, taking its width with it: a reserved blank indents
+ * every closed title against nothing, and closed rows are the common case.
+ *
+ * Only a running session adds the turning ring: colour alone says what a
+ * session is, and the ring is what says something is still happening. The shape
+ * is the one the workflow agent picker uses (`AgentTranscriptModal/AgentChip`).
+ *
+ * The box is a fixed 14px in every state it IS drawn in, so a title does not
+ * shift sideways as its session moves between them.
+ */
+function ActivityDot({ activity, isOpen }: { activity: SessionActivity; isOpen: boolean }) {
+  const { t } = useTranslation('common');
+  if (!isOpen) return null;
+  return (
+    <span
+      className={`relative inline-flex w-3.5 h-3.5 shrink-0 items-center justify-center ${ACTIVITY_COLOR[activity]}`}
+      data-testid="session-activity"
+      data-activity={activity}
+      title={t(`sessionList.activity.${activity}`)}
+    >
+      {activity === SessionActivity.Running && (
+        <span className="absolute inset-0 rounded-full border border-current border-e-transparent border-b-transparent animate-spin" />
+      )}
+      <span className="inline-block w-2 h-2 rounded-full bg-current" />
+    </span>
+  );
 }
 
 export function SessionItem(props: Props) {
-  const { session, isSelected, isHighlighted = false, onSelect, onDelete, onRename, originLabel } =
-    props;
+  const {
+    session,
+    isSelected,
+    isHighlighted = false,
+    onSelect,
+    onDelete,
+    onRename,
+    originLabel,
+    activity = SessionActivity.Idle,
+    isOpen = false,
+  } = props;
   const { t } = useTranslation('common');
   const scale = useSessionListScale();
   const [isHovered, setIsHovered] = useState(false);
@@ -102,13 +165,20 @@ export function SessionItem(props: Props) {
       onClick={isEditing ? undefined : onSelect}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`w-full ${scale.itemPad} text-start ${scale.itemText} rounded transition-colors flex justify-between items-center gap-2 ${
+      className={`w-full ${scale.itemPad} text-start ${scale.itemText} rounded transition-colors flex justify-between items-center gap-1 ${
         isSelected || isHighlighted
           ? 'text-text-primary bg-[var(--surface-selected)]'
           : 'text-text-secondary hover:text-text-primary hover:bg-[var(--surface-selected)]'
       }`}
       title={isEditing ? undefined : session.title}
     >
+      {/* The marker leads the whole ROW rather than the title line, so it stays
+          centred against the text no matter whether that is one line or two.
+          Inside the title line it sat half-way down a two-line row and looked
+          indented under the project path above it. Out here it is also outside
+          the renaming branch entirely, so it cannot blink out while the field
+          is open. */}
+      <ActivityDot activity={activity} isOpen={isOpen} />
       {/* The origin sits ABOVE the title rather than beside it: squeezed onto
           one row it competed with the title for the same horizontal space and
           both ended up truncated, which is worse than either alone. */}
