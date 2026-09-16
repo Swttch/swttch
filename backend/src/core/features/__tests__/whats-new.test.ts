@@ -8,9 +8,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * the popup too — someone who just installed the plugin is exactly who the release notes are for.
  */
 
-const getPluginVersion = vi.fn<[], string>();
-const getWhatsNewSeenVersion = vi.fn<[], Promise<string | null>>();
-const setWhatsNewSeenVersion = vi.fn<[string], Promise<string | null>>();
+// Typed as the function each one stands in for. Vitest 4 takes the whole
+// signature here, where earlier versions took the arguments and the return as
+// two parameters; written the old way these resolve to `never` and every call
+// below fails to typecheck.
+const getPluginVersion = vi.fn<() => string>();
+const getWhatsNewSeenVersion = vi.fn<() => Promise<string | null>>();
+const setWhatsNewSeenVersion = vi.fn<(version: string) => Promise<string | null>>();
 
 vi.mock('../../handlers/getVersion', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../handlers/getVersion')>()),
