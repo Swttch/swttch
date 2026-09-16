@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "Du bist bei Claude Code nicht angemeldet.",
-    "login": "Anmelden"
+    "login": "Anmelden",
+    "credentialSource": {
+      "title": "Authentifiziert mit {{source}}, nicht mit deiner Claude-Anmeldung",
+      "hint": "Der Server hat diese Anmeldedaten abgelehnt. Entferne {{source}} aus der Umgebung, die deine IDE erbt, und starte die IDE neu, um stattdessen deine Anmeldung zu verwenden."
+    }
   },
   "diffCard": {
     "operation": {

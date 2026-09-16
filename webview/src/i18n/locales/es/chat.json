@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "No has iniciado sesión en Claude Code.",
-    "login": "Iniciar sesión"
+    "login": "Iniciar sesión",
+    "credentialSource": {
+      "title": "Se autenticó con {{source}}, no con tu inicio de sesión de Claude",
+      "hint": "El servidor rechazó esa credencial. Elimina {{source}} del entorno que hereda tu IDE y reinicia el IDE para usar tu inicio de sesión."
+    }
   },
   "diffCard": {
     "operation": {

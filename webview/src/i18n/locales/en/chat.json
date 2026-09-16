@@ -352,7 +352,11 @@
   },
   "authError": {
     "banner": "You're signed out of Claude Code.",
-    "login": "Sign in"
+    "login": "Sign in",
+    "credentialSource": {
+      "title": "Authenticated with {{source}}, not your Claude login",
+      "hint": "The server rejected that credential. Remove {{source}} from the environment your IDE inherits and restart the IDE to use your login instead."
+    }
   },
   "diffCard": {
     "operation": {

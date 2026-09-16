@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "尚未登录 Claude Code。",
-    "login": "登录"
+    "login": "登录",
+    "credentialSource": {
+      "title": "使用 {{source}} 完成了身份验证，而非您的 Claude 登录账号",
+      "hint": "服务器拒绝了该凭据。请从 IDE 继承的环境中移除 {{source}}，然后重启 IDE 以改用登录账号。"
+    }
   },
   "diffCard": {
     "operation": {

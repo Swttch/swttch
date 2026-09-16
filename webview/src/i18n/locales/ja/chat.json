@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "Claude Code にログインしていません。",
-    "login": "ログイン"
+    "login": "ログイン",
+    "credentialSource": {
+      "title": "Claude のログインではなく {{source}} で認証しました",
+      "hint": "サーバーがこの認証情報を拒否しました。IDE が引き継ぐ環境から {{source}} を削除し、IDE を再起動するとログインアカウントで認証します。"
+    }
   },
   "diffCard": {
     "operation": {

@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "Vous n'êtes pas connecté à Claude Code.",
-    "login": "Se connecter"
+    "login": "Se connecter",
+    "credentialSource": {
+      "title": "Authentification effectuée avec {{source}}, et non avec votre connexion Claude",
+      "hint": "Le serveur a rejeté ces identifiants. Supprimez {{source}} de l'environnement hérité par votre IDE, puis redémarrez l'IDE pour utiliser votre connexion."
+    }
   },
   "diffCard": {
     "operation": {

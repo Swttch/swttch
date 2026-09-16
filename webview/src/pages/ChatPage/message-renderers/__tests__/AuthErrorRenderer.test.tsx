@@ -6,9 +6,12 @@ import { LoadedMessageType, toInstance } from '../../../../dto/common';
 // AuthErrorRenderer reads the auth context; without a provider it throws. Mock the
 // context (as LoginCta's own test does) so the renderer can be unit-tested in
 // isolation, with the login state and its check time driven per test.
-const { authState, ctaProps } = vi.hoisted(() => ({
+const { authState, ctaProps, streamState } = vi.hoisted(() => ({
   authState: { loggedIn: false as boolean | null, checkedAt: 0 },
   ctaProps: { authFailedAt: undefined as number | undefined },
+  // The CLI's `system/init` as the webview holds it. `apiKeySource` is the field
+  // that names which credential the CLI authenticated with (#446).
+  streamState: { systemInit: null as Record<string, unknown> | null },
 }));
 
 vi.mock('@/contexts', () => ({
@@ -17,6 +20,7 @@ vi.mock('@/contexts', () => ({
     checkedAt: authState.checkedAt,
     refetch: vi.fn(),
   }),
+  useChatStreamContext: () => ({ systemInit: streamState.systemInit }),
 }));
 
 vi.mock('../../LoginCta', () => ({
@@ -51,6 +55,7 @@ describe('AuthErrorRenderer', () => {
     authState.loggedIn = false;
     authState.checkedAt = 0;
     ctaProps.authFailedAt = undefined;
+    streamState.systemInit = null;
   });
 
   it('renders the error text', () => {
@@ -137,6 +142,45 @@ describe('AuthErrorRenderer', () => {
       authState.checkedAt = Date.parse('2026-08-06T03:00:00.000Z');
       const { container } = render(<AuthErrorRenderer message={toInstance(LoadedMessageDto, REAL_ENTRY)} />);
       expect(container.querySelector('.text-red-500')).not.toBeNull();
+    });
+  });
+
+  // A signed-in user who gets a 401 has no way to learn WHICH credential was
+  // offered. In #446 the CLI had picked up an ANTHROPIC_API_KEY from the
+  // environment the IDE inherited and used it instead of the login; the reporter
+  // read the failure as "the plugin is broken, I am obviously authenticated".
+  describe('credential source notice (#446)', () => {
+    it('names the credential the CLI authenticated with', () => {
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+      const { container } = render(<AuthErrorRenderer message={authErrorMessage()} />);
+      expect(container.querySelector('.border-state-pending-border')).not.toBeNull();
+      // Both the title and the hint interpolate the source, so the name appears twice.
+      expect(screen.getAllByText(/ANTHROPIC_API_KEY/).length).toBeGreaterThan(0);
+      expect(screen.getByText(/Authenticated with ANTHROPIC_API_KEY/)).toBeInTheDocument();
+    });
+
+    it('stays silent when the CLI used the stored login', () => {
+      // "none" is what the CLI reports when no API key overrode the login, which is
+      // already what the user assumes — naming it would add noise, not an answer.
+      streamState.systemInit = { apiKeySource: 'none' };
+      const { container } = render(<AuthErrorRenderer message={authErrorMessage()} />);
+      expect(container.querySelector('.border-state-pending-border')).toBeNull();
+    });
+
+    it('stays silent before any system/init has arrived', () => {
+      streamState.systemInit = null;
+      const { container } = render(<AuthErrorRenderer message={authErrorMessage()} />);
+      expect(container.querySelector('.border-state-pending-border')).toBeNull();
+    });
+
+    it('stops advising once the failure is resolved', () => {
+      // An auth check made after the failure means the user fixed it; a stale entry
+      // further up the transcript must not keep telling them to remove a variable.
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+      authState.loggedIn = true;
+      authState.checkedAt = FAILED_AT + 1000;
+      const { container } = render(<AuthErrorRenderer message={authErrorMessage()} />);
+      expect(container.querySelector('.border-state-pending-border')).toBeNull();
     });
   });
 });

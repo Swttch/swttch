@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "Claude Code에 로그인되어 있지 않습니다.",
-    "login": "로그인"
+    "login": "로그인",
+    "credentialSource": {
+      "title": "Claude 로그인이 아니라 {{source}}로 인증했습니다",
+      "hint": "서버가 이 자격증명을 거부했습니다. IDE가 물려받는 환경에서 {{source}}를 제거하고 IDE를 재시작하면 로그인 계정으로 인증합니다."
+    }
   },
   "diffCard": {
     "operation": {

@@ -348,7 +348,11 @@
   },
   "authError": {
     "banner": "Você não está conectado ao Claude Code.",
-    "login": "Entrar"
+    "login": "Entrar",
+    "credentialSource": {
+      "title": "Autenticado com {{source}}, não com seu login do Claude",
+      "hint": "O servidor rejeitou essa credencial. Remova {{source}} do ambiente que seu IDE herda e reinicie o IDE para usar seu login."
+    }
   },
   "diffCard": {
     "operation": {
