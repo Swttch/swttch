@@ -3,8 +3,6 @@ package com.github.yhk1038.claudecodegui.settings
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import javax.swing.JComponent
@@ -48,16 +46,11 @@ class ClaudeCodeSettingsConfigurable : Configurable {
 
     override fun apply() {
         panel?.apply()
-        // Trimmed for the same reason the backend trims on save: a path pasted from a
-        // file manager or a terminal often carries a trailing space, and spawn treats
-        // that space as part of the filename (issue #446). This dialog writes the
-        // settings file directly through SettingsManager rather than going through the
-        // backend, so the backend's normalization never sees what is typed here.
-        val cli = cliPath.trim()
-        val node = nodePath.trim()
+        // Whitespace hygiene lives in pathSettingValue — see the note there for why this
+        // dialog has to apply it itself (issue #446).
         settings.setAll(mapOf(
-            "cliPath" to if (cli.isEmpty()) JsonNull else JsonPrimitive(cli),
-            "nodePath" to if (node.isEmpty()) JsonNull else JsonPrimitive(node)
+            "cliPath" to pathSettingValue(cliPath),
+            "nodePath" to pathSettingValue(nodePath)
         ))
     }
 
