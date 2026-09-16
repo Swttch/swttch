@@ -55,6 +55,24 @@ prompt ends the turn, and the icon goes back to normal.
 
 Editor tabs, side panel tabs, and the browser favicon all behave the same way.
 
+### It turns again when the session goes back to work on its own
+
+A session sometimes starts working again without you sending anything. A task
+you pushed to the background finishes, a Stop hook fires, or another session
+sends it a message.
+
+**Every marker turns again for those too.** The chat tab, the browser favicon
+and the dot in the session list all move together.
+
+The three used to disagree. Push a twenty-second task to the background, wait
+for the answer to finish, and when the task completed and the session resumed,
+**the streaming indicator at the foot of the transcript started moving again
+while the dot in the session list stayed still**
+([#456](https://github.com/Swttch/swttch/issues/456)).
+
+They now read one value. If a response is flowing at the foot of the transcript,
+every screen shows the session as working, without exception.
+
 ### When it finishes, it becomes the unread dot
 
 If a response ends while you were not looking at that tab, the turning stops and
