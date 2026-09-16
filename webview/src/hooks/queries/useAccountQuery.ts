@@ -14,6 +14,15 @@ export interface AccountData {
   subscriptionType?: string | null;
   orgId?: string | null;
   orgName?: string | null;
+  /**
+   * Which environment variable supplied the credential, when one did.
+   *
+   * The CLI reports `authMethod: "claude.ai"` for an API key just as it does for a
+   * subscription login, and nulls email, org and plan alongside it. This is the field
+   * that tells the two apart, and the account panel shows it in place of the blank
+   * email row rather than leaving three empty lines that read as a broken product.
+   */
+  apiKeySource?: string | null;
 }
 
 /** Resolved account state. `account` is null when the backend definitively

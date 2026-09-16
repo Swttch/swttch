@@ -5,6 +5,7 @@ import { AppProviders } from './contexts';
 import { I18nLocaleSync } from './i18n/I18nLocaleSync';
 import { ChatPage, SettingsPage, SettingsOverlay, SwitchAccountPage, ProjectSelectorPage, SessionPanelPage, DiffPage } from './pages';
 import { AccountUsageModal } from './components/AccountUsageModal';
+import { useUsageStreamRefresh } from './hooks/useUsageStreamRefresh';
 import { TunnelModal } from './components/TunnelModal';
 import { AssetsModal } from './components/AssetsModal';
 import { RenameTabDialog } from './components/RenameTabDialog';
@@ -33,6 +34,8 @@ function AppContent() {
   useCaretBoundaryKeys();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
+  // The CLI reports the usage windows as a turn runs; take them instead of polling.
+  useUsageStreamRefresh();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.
   useSettingsOverlayNavigation();
   // The IDE's "Rename Session..." tab menu asks us to prompt; it cannot draw a

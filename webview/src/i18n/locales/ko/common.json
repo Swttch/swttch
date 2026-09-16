@@ -44,7 +44,8 @@
     "accountSection": "계정",
     "authMethod": "인증 방식",
     "email": "이메일",
-    "plan": "플랜"
+    "plan": "플랜",
+    "credentialSource": "소스"
   },
   "usageSection": {
     "title": "사용량",
@@ -53,7 +54,9 @@
     "session5hr": "세션 (5시간)",
     "weekly7day": "주간 (7일)",
     "weeklySonnet": "주간 Sonnet",
-    "weeklyOpus": "주간 Opus"
+    "weeklyOpus": "주간 Opus",
+    "weeklyModel": "주간 {{model}}",
+    "notApplicableForApiKey": "{{source}} 모드에서는 rate_limit 이 적용되지 않습니다."
   },
   "usageReport": {
     "title": "사용량 기여도",

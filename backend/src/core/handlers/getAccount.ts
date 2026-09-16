@@ -11,6 +11,16 @@ interface ClaudeAuthStatus {
   subscriptionType?: string | null;
   orgId?: string | null;
   orgName?: string | null;
+  /**
+   * Which environment variable supplied the credential, when one did.
+   *
+   * The CLI reports `authMethod: "claude.ai"` whether the request is signed with a
+   * subscription login or with an API key, and nulls `email`, `orgName` and
+   * `subscriptionType` in the API-key case. Read on its own, the panel then shows three
+   * blank rows and reads as "this product does not support my plan". This field is the
+   * one that says which of the two is actually in use.
+   */
+  apiKeySource?: string | null;
 }
 
 /**

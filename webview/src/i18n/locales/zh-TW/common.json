@@ -44,7 +44,8 @@
     "accountSection": "帳戶",
     "authMethod": "驗證方式",
     "email": "電子郵件",
-    "plan": "方案"
+    "plan": "方案",
+    "credentialSource": "來源"
   },
   "usageSection": {
     "title": "用量",
@@ -53,7 +54,9 @@
     "session5hr": "工作階段(5 小時)",
     "weekly7day": "每週(7 天)",
     "weeklySonnet": "每週 Sonnet",
-    "weeklyOpus": "每週 Opus"
+    "weeklyOpus": "每週 Opus",
+    "weeklyModel": "每週 {{model}}",
+    "notApplicableForApiKey": "{{source}} 模式下不適用速率限制。"
   },
   "usageReport": {
     "title": "用量明細",

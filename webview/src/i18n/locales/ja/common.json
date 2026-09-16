@@ -44,7 +44,8 @@
     "accountSection": "アカウント",
     "authMethod": "認証方法",
     "email": "メール",
-    "plan": "プラン"
+    "plan": "プラン",
+    "credentialSource": "ソース"
   },
   "usageSection": {
     "title": "使用状況",
@@ -53,7 +54,9 @@
     "session5hr": "セッション(5時間)",
     "weekly7day": "週間(7日間)",
     "weeklySonnet": "週間Sonnet",
-    "weeklyOpus": "週間Opus"
+    "weeklyOpus": "週間Opus",
+    "weeklyModel": "週間 {{model}}",
+    "notApplicableForApiKey": "{{source}} モードではレート制限は適用されません。"
   },
   "usageReport": {
     "title": "使用状況の内訳",
