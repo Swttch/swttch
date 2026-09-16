@@ -8,6 +8,7 @@ import { handleMessage } from './core/handlers/index';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
 import { migrateSettingsToCorrectStore } from './core/features/settings-migration';
 import { ensureProfile } from './core/features/profile';
+import { resolveWhatsNewOnStartup } from './core/features/whats-new';
 import { claimSponsorByInstall } from './core/features/license-claim';
 import { trackEvent, reportBackendError } from './core/features/telemetry';
 import { restoreTunnelState } from './core/features/tunnel-manager';
@@ -237,6 +238,12 @@ async function main() {
 
   // 설치 단위 가명 식별자(uuid)를 동의 여부와 무관하게 보장한다.
   await ensureProfile();
+
+  // 방금 설치된 버전의 "What's new"를 이번 실행에서 띄울지 지금 정한다. 백엔드가 새로 뜬 이
+  // 순간이 곧 "사용자가 IDE를 재시작해 새 배포본을 처음 실행한" 순간이라, 설치 버전과 마지막
+  // 으로 띄운 버전을 비교할 수 있는 자리다. 판정만 하고 띄우는 것은 웹뷰가 한다.
+  // ensureProfile 뒤에 두는 이유는 비교 대상이 그 프로필 안에 있기 때문이다(#453).
+  await resolveWhatsNewOnStartup();
 
   // A sponsor whose key never reached this install gets it back here, on the
   // one event they are guaranteed to trigger: opening the app. Everything else

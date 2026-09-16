@@ -168,6 +168,12 @@ export enum MessageType {
   /** Report a finished run's score; the backend keeps it only if it beats the stored best, and returns the current best either way. inbound webview→backend */
   SET_RUNNER_BEST_SCORE = 'SET_RUNNER_BEST_SCORE',
 
+  // -- What's new (post-update release notes) --
+  /** Ask whether the "What's new" popup should open in this run, and for which version. The backend decided at startup by comparing the version baked into its bundle against the last one it recorded in profile.json, so the answer survives an IDE restart that the webview's own localStorage does not (#453). Answers {version} with the version to show, or {version: null} when there is nothing to show. inbound webview→backend */
+  GET_WHATS_NEW = 'GET_WHATS_NEW',
+  /** Report that the popup for a version was shown, so it is not raised again on the next launch. inbound webview→backend */
+  SET_WHATS_NEW_SEEN = 'SET_WHATS_NEW_SEEN',
+
   // -- Sponsor / license --
   /** The webview reports that one feature's sponsor gate was shown or followed, as {gate, step, from?}. Purely a measurement signal: the offer is raised and acted on entirely in the webview and reaches the backend no other way. The gate and step become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a per-feature conversion rate is a question about people. Never carries text the user typed. inbound webview→backend */
   SPONSOR_GATE_ACTIVITY = 'SPONSOR_GATE_ACTIVITY',

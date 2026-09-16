@@ -33,6 +33,7 @@ import { dismissAnnouncementHandler } from './dismissAnnouncement';
 import { getAnnouncementsEnabledHandler } from './getAnnouncementsEnabled';
 import { setAnnouncementsEnabledHandler } from './setAnnouncementsEnabled';
 import { getRunnerBestScoreHandler, setRunnerBestScoreHandler } from './runnerBestScore';
+import { getWhatsNewHandler, setWhatsNewSeenHandler } from './whatsNew';
 import { getSponsorUrlHandler } from './getSponsorUrl';
 import { verifyLicenseHandler } from './verifyLicense';
 import { getSponsorStatusHandler } from './getSponsorStatus';
@@ -273,6 +274,12 @@ export async function handleMessage(
       break;
     case MessageType.SET_RUNNER_BEST_SCORE:
       await setRunnerBestScoreHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_WHATS_NEW:
+      await getWhatsNewHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_WHATS_NEW_SEEN:
+      await setWhatsNewSeenHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SPONSOR_URL:
       await getSponsorUrlHandler(connectionId, message, connections, bridge);
