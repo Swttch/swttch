@@ -3,8 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../extend-kit', () => ({
   getExtendKitVersion: vi.fn(async () => '0.4.0'),
   resetExtendKitCache: vi.fn(),
-  loadSpeechToText: vi.fn(),
+  spawnSpeechToText: vi.fn(),
+  probeSpeechToTextAvailable: vi.fn(),
   ExtendKitMissingError: class extends Error {},
+  ExtendKitTooOldError: class extends Error {},
   EXTEND_KIT_PACKAGE: '@swttch/extend-kit',
 }));
 vi.mock('../getCliUpdateInfo', () => ({
