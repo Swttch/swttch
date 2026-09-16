@@ -43,8 +43,31 @@ describe('normalizeSettingValue', () => {
   it('passes non-string values through untouched', () => {
     expect(normalizeSettingValue('cliPath', null)).toBeNull();
     expect(normalizeSettingValue('fontSize', 13)).toBe(13);
-    const custom = { path: '/bin/code ', arguments: [] };
-    // openFilesWithCustom is an object; this function must not reach inside it.
-    expect(normalizeSettingValue('openFilesWithCustom', custom)).toBe(custom);
+  });
+});
+
+describe('normalizeSettingValue — the custom file opener', () => {
+  it('trims the path inside the opener object', () => {
+    expect(
+      normalizeSettingValue('openFilesWithCustom', { path: ' /usr/bin/code ', arguments: '-g' }),
+    ).toEqual({ path: '/usr/bin/code', arguments: '-g' });
+  });
+
+  it('leaves the argument template exactly as the user wrote it', () => {
+    // Spacing inside a command line is the user's, not ours to edit.
+    expect(
+      normalizeSettingValue('openFilesWithCustom', { path: '/usr/bin/code', arguments: ' -n -w %TARGET_PATH% ' }),
+    ).toEqual({ path: '/usr/bin/code', arguments: ' -n -w %TARGET_PATH% ' });
+  });
+
+  it('drops the whole opener when its path is only whitespace', () => {
+    // An opener with no path cannot open anything; null is "no custom opener".
+    expect(normalizeSettingValue('openFilesWithCustom', { path: '   ', arguments: '-g' })).toBeNull();
+  });
+
+  it('passes through a null or malformed opener without inventing a shape', () => {
+    expect(normalizeSettingValue('openFilesWithCustom', null)).toBeNull();
+    const noPath = { arguments: '-g' };
+    expect(normalizeSettingValue('openFilesWithCustom', noPath)).toBe(noPath);
   });
 });

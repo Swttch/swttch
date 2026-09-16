@@ -14,9 +14,12 @@
 // unrelated auth failure, and the resulting ENOENT read as "the plugin cannot find a
 // CLI that is plainly there" (issue #446).
 //
-// `openFilesWithCustom` is deliberately absent: its value is an object rather than a
-// string, so trimming its inner path needs a different shape of fix than this one.
 export const PATH_SETTING_KEYS = new Set(['cliPath', 'nodePath', 'terminalApp', 'openFilesWith']);
+
+// The custom file opener holds its path inside an object, `{ path, arguments }`, so the
+// plain string rule above cannot reach it — but a path typed there is spawned the same
+// way and breaks the same way.
+export const CUSTOM_OPENER_KEY = 'openFilesWithCustom';
 
 /**
  * Normalize a setting value for storage and for use.
@@ -29,7 +32,27 @@ export const PATH_SETTING_KEYS = new Set(['cliPath', 'nodePath', 'terminalApp', 
  * setting through this function without knowing which keys hold paths.
  */
 export function normalizeSettingValue(key: string, value: unknown): unknown {
+  if (key === CUSTOM_OPENER_KEY) return normalizeCustomOpener(value);
   if (!PATH_SETTING_KEYS.has(key) || typeof value !== 'string') return value;
   const trimmed = value.trim();
   return trimmed === '' ? null : trimmed;
+}
+
+/**
+ * Trim the `path` of a custom file opener, leaving `arguments` exactly as typed.
+ *
+ * Only the path is spawned, and only the path breaks on stray whitespace. The argument
+ * template is a command line the user wrote (`-n -w %TARGET_PATH%`), where spacing is
+ * meaningful and trimming it would be us editing their command.
+ *
+ * A path that trims to nothing cannot open anything, so the whole opener becomes null —
+ * the value the rest of the code already reads as "no custom opener configured".
+ */
+function normalizeCustomOpener(value: unknown): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
+  const custom = value as Record<string, unknown>;
+  if (typeof custom.path !== 'string') return value;
+  const path = custom.path.trim();
+  if (path === '') return null;
+  return { ...custom, path };
 }
