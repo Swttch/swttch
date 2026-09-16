@@ -3,20 +3,30 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Hoisted with the mock factory, which vitest lifts above these declarations.
 const kit = vi.hoisted(() => {
   class FakeKitMissingError extends Error {}
-  const openSpeechToTextStream = vi.fn(async () => ({ sendAudio: vi.fn(), close: vi.fn() }));
-  const isSpeechToTextAvailable = vi.fn(async () => true);
-  const loadSpeechToText = vi.fn(async () => ({ openSpeechToTextStream, isSpeechToTextAvailable }));
-  return { FakeKitMissingError, openSpeechToTextStream, isSpeechToTextAvailable, loadSpeechToText };
+  class FakeKitTooOldError extends Error {}
+  const spawnSpeechToText = vi.fn(async () => ({ sendAudio: vi.fn(), close: vi.fn() }));
+  const probeSpeechToTextAvailable = vi.fn(async () => true);
+  return {
+    FakeKitMissingError,
+    FakeKitTooOldError,
+    spawnSpeechToText,
+    probeSpeechToTextAvailable,
+  };
 });
 
-const { FakeKitMissingError, openSpeechToTextStream, isSpeechToTextAvailable, loadSpeechToText } =
+const { FakeKitMissingError, FakeKitTooOldError, spawnSpeechToText, probeSpeechToTextAvailable } =
   kit;
 
+// Every export dictation.ts pulls from the module has to be listed: a factory
+// like this REPLACES the module, so anything omitted becomes undefined at the
+// import site rather than falling through to the real thing.
 vi.mock('../../extend-kit', () => ({
-  loadSpeechToText: kit.loadSpeechToText,
+  spawnSpeechToText: kit.spawnSpeechToText,
+  probeSpeechToTextAvailable: kit.probeSpeechToTextAvailable,
   getExtendKitVersion: vi.fn(async () => '0.4.0'),
   resetExtendKitCache: vi.fn(),
   ExtendKitMissingError: kit.FakeKitMissingError,
+  ExtendKitTooOldError: kit.FakeKitTooOldError,
   EXTEND_KIT_PACKAGE: '@swttch/extend-kit',
 }));
 vi.mock('../getCliUpdateInfo', () => ({
@@ -45,26 +55,28 @@ function lastPayload(conns: ConnectionManager): Record<string, unknown> {
 }
 
 /**
- * The exact failure the kit produces on a machine authenticated by API key
- * alone: `getAccessToken` reads `.accessToken` off a credentials object that has
- * no `claudeAiOauth`, so a TypeError comes out of the property read. It is not
- * the kit's own error type, so the kit's probe rethrows it rather than
- * answering false (#355).
+ * A probe that fails for a reason that is not about setup.
+ *
+ * The original shape of this on a machine authenticated by API key alone was a
+ * TypeError out of `getAccessToken` reading `.accessToken` off credentials with
+ * no `claudeAiOauth` (#355). That read now happens inside the spawned `ccb stt`
+ * rather than here, but the contract it proved still has to hold: anything that
+ * is not a kit problem answers "not logged in", and its raw text never reaches
+ * the banner.
  */
-function credentialsWithoutOauth(): never {
+function probeFailsOpaquely(): never {
   throw new TypeError("Cannot read properties of undefined (reading 'accessToken')");
 }
 
 describe('dictation on a machine with no Claude account login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    isSpeechToTextAvailable.mockResolvedValue(true);
-    loadSpeechToText.mockResolvedValue({ openSpeechToTextStream, isSpeechToTextAvailable });
+    probeSpeechToTextAvailable.mockResolvedValue(true);
   });
 
   describe('START_DICTATION', () => {
     it('reports a missing login rather than the raw exception text', async () => {
-      isSpeechToTextAvailable.mockImplementation(credentialsWithoutOauth);
+      probeSpeechToTextAvailable.mockImplementation(probeFailsOpaquely);
       const conns = mockConns();
 
       await startDictationHandler('c1', msg(MessageType.START_DICTATION), conns, bridge);
@@ -76,32 +88,44 @@ describe('dictation on a machine with no Claude account login', () => {
       expect(String(payload.error)).not.toContain('accessToken');
     });
 
-    // Opening the socket would send `Bearer undefined` and fail late, after the
-    // microphone is already live and the user is already talking.
-    it('does not open a stream when there is nothing to authorize with', async () => {
-      isSpeechToTextAvailable.mockResolvedValue(false);
+    // Spawning would hand `ccb stt` a login it cannot use and fail late, after
+    // the microphone is already live and the user is already talking.
+    it('does not spawn a stream when there is nothing to authorize with', async () => {
+      probeSpeechToTextAvailable.mockResolvedValue(false);
 
       await startDictationHandler('c1', msg(MessageType.START_DICTATION), mockConns(), bridge);
 
-      expect(openSpeechToTextStream).not.toHaveBeenCalled();
+      expect(spawnSpeechToText).not.toHaveBeenCalled();
     });
 
-    it('still opens a stream when a login is there', async () => {
+    it('still spawns a stream when a login is there', async () => {
       const conns = mockConns();
 
       await startDictationHandler('c1', msg(MessageType.START_DICTATION), conns, bridge);
 
-      expect(openSpeechToTextStream).toHaveBeenCalledTimes(1);
+      expect(spawnSpeechToText).toHaveBeenCalledTimes(1);
       expect(lastPayload(conns).status).toBe('ok');
     });
 
     it('keeps naming a missing kit as a missing kit', async () => {
-      loadSpeechToText.mockRejectedValue(new FakeKitMissingError());
+      probeSpeechToTextAvailable.mockRejectedValue(new FakeKitMissingError());
       const conns = mockConns();
 
       await startDictationHandler('c1', msg(MessageType.START_DICTATION), conns, bridge);
 
       expect(lastPayload(conns).errorKind).toBe(DictationErrorKind.KIT_MISSING);
+    });
+
+    // A kit without `ccb stt` is a setup problem, not a login problem. Telling
+    // this user to sign in would send them to fix something that is not broken.
+    it('names a kit too old for ccb stt as a kit problem, not a login problem', async () => {
+      probeSpeechToTextAvailable.mockRejectedValue(new FakeKitTooOldError('no stt'));
+      const conns = mockConns();
+
+      await startDictationHandler('c1', msg(MessageType.START_DICTATION), conns, bridge);
+
+      expect(lastPayload(conns).errorKind).toBe(DictationErrorKind.KIT_MISSING);
+      expect(spawnSpeechToText).not.toHaveBeenCalled();
     });
   });
 
@@ -109,8 +133,8 @@ describe('dictation on a machine with no Claude account login', () => {
     // The handler used to catch everything and call all of it `kit_missing`,
     // which named the wrong problem for the case that actually happens: an
     // installed kit with no login behind it.
-    it('blames the login, not the kit, when the kit loaded fine', async () => {
-      isSpeechToTextAvailable.mockImplementation(credentialsWithoutOauth);
+    it('blames the login, not the kit, when the kit is fine', async () => {
+      probeSpeechToTextAvailable.mockImplementation(probeFailsOpaquely);
       const conns = mockConns();
 
       await getDictationAvailabilityHandler(
@@ -128,7 +152,24 @@ describe('dictation on a machine with no Claude account login', () => {
     });
 
     it('blames the kit when the kit is the thing missing', async () => {
-      loadSpeechToText.mockRejectedValue(new FakeKitMissingError());
+      probeSpeechToTextAvailable.mockRejectedValue(new FakeKitMissingError());
+      const conns = mockConns();
+
+      await getDictationAvailabilityHandler(
+        'c1',
+        msg(MessageType.GET_DICTATION_AVAILABILITY),
+        conns,
+        bridge,
+      );
+
+      expect(lastPayload(conns)).toMatchObject({
+        available: false,
+        reason: DictationErrorKind.KIT_MISSING,
+      });
+    });
+
+    it('blames the kit when it is installed but too old to stream', async () => {
+      probeSpeechToTextAvailable.mockRejectedValue(new FakeKitTooOldError('no stt'));
       const conns = mockConns();
 
       await getDictationAvailabilityHandler(

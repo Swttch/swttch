@@ -3,10 +3,12 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType, DictationErrorKind } from '../../shared';
 import {
-  loadSpeechToText,
+  spawnSpeechToText,
+  probeSpeechToTextAvailable,
   getExtendKitVersion,
   resetExtendKitCache,
   ExtendKitMissingError,
+  ExtendKitTooOldError,
   EXTEND_KIT_PACKAGE,
   type SpeechToTextStream,
 } from '../extend-kit';
@@ -17,10 +19,13 @@ import { isNewerVersion } from '../cli-update';
  * Dictation — the backend half of voice input.
  *
  * The webview records the microphone (only a browser can) and the backend
- * holds the transcription socket (only it may touch credentials). Audio comes
- * in as base64 because the IPC envelope is JSON; transcripts go back out as
- * they arrive rather than in one lump at the end, so the text appears while
- * the user is still speaking.
+ * pumps that audio through a spawned `ccb stt`, which holds the transcription
+ * socket. Nothing here touches a credential: the child process reads the
+ * machine's Claude Code login on its own side of the process boundary, and this
+ * handler only ever sees audio going out and text coming back. Audio comes in
+ * as base64 because the IPC envelope is JSON; transcripts go back out as they
+ * arrive rather than in one lump at the end, so the text appears while the user
+ * is still speaking.
  *
  * One stream per connection: a second tab dictating is a separate connection
  * with its own stream, and closing a tab must not silence another.
@@ -45,7 +50,12 @@ const streams = new Map<string, SpeechToTextStream>();
 async function isDictationAuthorized(probe: () => Promise<boolean>): Promise<boolean> {
   try {
     return await probe();
-  } catch {
+  } catch (err) {
+    // A kit that is absent or too old is NOT "not signed in", and answering
+    // false here would tell the user to sign in when the real fix is to install
+    // or update. Naming the wrong problem is the bug #355 was about, so these
+    // two travel on to the caller that knows how to report them.
+    if (err instanceof ExtendKitMissingError || err instanceof ExtendKitTooOldError) throw err;
     return false;
   }
 }
@@ -86,9 +96,7 @@ export async function startDictationHandler(
   await endStream(connectionId);
 
   try {
-    const { openSpeechToTextStream, isSpeechToTextAvailable } = await loadSpeechToText();
-
-    if (!(await isDictationAuthorized(isSpeechToTextAvailable))) {
+    if (!(await isDictationAuthorized(probeSpeechToTextAvailable))) {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
         status: 'error',
@@ -98,7 +106,7 @@ export async function startDictationHandler(
       return;
     }
 
-    const stream = await openSpeechToTextStream(
+    const stream = await spawnSpeechToText(
       {
         onTranscript: (text, isFinal) => {
           connections.sendTo(connectionId, MessageType.DICTATION_TRANSCRIPT, { text, isFinal });
@@ -122,11 +130,17 @@ export async function startDictationHandler(
     // A missing kit is a setup problem the UI can offer to fix, not a failure
     // to report as noise, so it gets its own code rather than a message the
     // webview would have to pattern-match.
+    //
+    // A kit too old to know `ccb stt` travels on the same code because the fix
+    // is the same button: INSTALL_CCB installs at @latest, which updates an
+    // existing install. The message still says which of the two it was, so the
+    // reason is never lost even though the remedy is shared.
     const missing = err instanceof ExtendKitMissingError;
+    const tooOld = err instanceof ExtendKitTooOldError;
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
-      errorKind: missing ? DictationErrorKind.KIT_MISSING : DictationErrorKind.UNKNOWN,
+      errorKind: missing || tooOld ? DictationErrorKind.KIT_MISSING : DictationErrorKind.UNKNOWN,
       error: missing
         ? '@swttch/extend-kit is not installed'
         : err instanceof Error
@@ -201,10 +215,13 @@ export async function getDictationAvailabilityHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
-  let probe: () => Promise<boolean>;
+  let authorized: boolean;
   try {
-    ({ isSpeechToTextAvailable: probe } = await loadSpeechToText());
+    authorized = await isDictationAuthorized(probeSpeechToTextAvailable);
   } catch {
+    // Only a missing or too-old kit reaches here: isDictationAuthorized answers
+    // false for every other "no", so this branch cannot swallow a login problem
+    // and report it as a setup problem.
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'ok',
@@ -214,7 +231,6 @@ export async function getDictationAvailabilityHandler(
     return;
   }
 
-  const authorized = await isDictationAuthorized(probe);
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
     status: 'ok',

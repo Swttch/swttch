@@ -1,8 +1,6 @@
-import { createRequire } from 'node:module';
 import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { Command, ShellKind } from './command';
 import { LibraryManager } from '../shared';
 import { EXTEND_KIT_PACKAGE } from './global-install-target';
@@ -14,21 +12,25 @@ export { EXTEND_KIT_PACKAGE };
 const CCB_BINARY = 'ccb';
 
 /**
- * Loads @swttch/extend-kit from the user's global npm install at runtime.
+ * Locates the user's global @swttch/extend-kit install and RUNS it as `ccb`.
  *
- * It is deliberately NOT a dependency of this backend. Bundling it would put
- * credential-reading code inside the plugin, which is the exact thing that
- * forced these tools out into a separate package — a JetBrains plugin may not
- * handle credentials. Keeping it external means the plugin ships no such code
- * and the user installs it themselves, the same arrangement the usage panel
- * already uses for `ccb`.
+ * The kit is deliberately not a dependency of this backend, and it is never
+ * imported either — not statically, not with a dynamic `import()`. Both would
+ * put credential-reading code inside the plugin's own process, which is the
+ * exact thing that forced these tools out into a separate package: a JetBrains
+ * plugin may not handle credentials, and "the user installed it separately" does
+ * not change where the code RUNS. Spawning keeps the token on the other side of
+ * a process boundary — we write audio in and read text out.
  *
- * Everything runs through a login shell, because a GUI-launched backend
- * inherits a minimal PATH that usually does not include the npm global bin.
- * See {@link candidateRoots} for why one lookup is not enough.
+ * So the only thing this module resolves is a path to execute. Everything else
+ * goes over stdin/stdout, the same contract a terminal user gets.
+ *
+ * Lookups run through a login shell, because a GUI-launched backend inherits a
+ * minimal PATH that usually does not include the npm global bin. See
+ * {@link candidateRoots} for why one lookup is not enough.
  */
 
-/** Shape we use from the kit. Kept minimal so the import stays untyped-safe. */
+/** Shape the spawned stream presents to callers. Mirrors the kit's own type. */
 export interface SpeechToTextStream {
   sendAudio: (chunk: Uint8Array) => void;
   close: () => Promise<void>;
@@ -46,14 +48,6 @@ export interface SpeechToTextOptions {
   typedInterims?: boolean;
 }
 
-interface ExtendKitStt {
-  openSpeechToTextStream: (
-    handlers: SpeechToTextHandlers,
-    options?: SpeechToTextOptions,
-  ) => Promise<SpeechToTextStream>;
-  isSpeechToTextAvailable: () => Promise<boolean>;
-}
-
 /** Thrown when the kit is not installed, so callers can prompt for install. */
 export class ExtendKitMissingError extends Error {
   constructor() {
@@ -62,8 +56,37 @@ export class ExtendKitMissingError extends Error {
   }
 }
 
+/**
+ * Thrown when the kit is installed but predates `ccb stt`.
+ *
+ * Its own error rather than a missing kit, because the fix differs: this one is
+ * "update the kit", and telling the user to install something they already have
+ * is the kind of wrong-problem message that cost us #355. There is no fallback
+ * to offer here — the old path was an in-process import, which is the thing
+ * being removed.
+ */
+export class ExtendKitTooOldError extends Error {
+  constructor(public readonly version: string | null) {
+    super(`${EXTEND_KIT_PACKAGE} ${version ?? ''} does not support "ccb stt"`.trim());
+    this.name = 'ExtendKitTooOldError';
+  }
+}
+
+/** Capability the kit reports once `ccb stt` exists. */
+const STT_CAPABILITY = 'stt.stream';
+
+/**
+ * How long to wait for `ccb stt` to exit after its stdin closes.
+ *
+ * The child is deliberately given a moment to flush the speaker's last words,
+ * so this is not a failure budget — it is the point past which we stop waiting
+ * and kill it so the stop button cannot hang.
+ */
+const CLOSE_TIMEOUT_MS = 5_000;
+
 let cachedRoots: string[] | null = null;
-let cachedStt: ExtendKitStt | null = null;
+let cachedEntry: string | null = null;
+let cachedSttCapable = false;
 
 /** Last non-empty line of shell output — rc files print noise before it. */
 function lastLine(stdout: string): string | null {
@@ -275,30 +298,212 @@ async function candidateRoots(): Promise<string[]> {
 }
 
 /**
- * Load the kit's speech-to-text module.
+ * Absolute path of the kit's CLI script, to be run under THIS Node.
+ *
+ * The path comes from the installed package's own `bin.ccb` rather than a
+ * hardcoded `dist/cli/index.js`, so the kit can move its entry point without
+ * silently breaking dictation on machines that already updated.
  *
  * @throws ExtendKitMissingError when the package is not installed globally.
  */
-export async function loadSpeechToText(): Promise<ExtendKitStt> {
-  if (cachedStt) return cachedStt;
+async function resolveCcbEntry(): Promise<string> {
+  if (cachedEntry) return cachedEntry;
 
-  for (const root of await candidateRoots()) {
-    try {
-      // createRequire gives us node's own resolution rooted at that folder, so
-      // subpath exports and the package's own dependencies (ws) resolve the way
-      // they would for any consumer.
-      const entry = createRequire(`${root}${sep}`).resolve(`${EXTEND_KIT_PACKAGE}/stt`);
-      const mod = (await import(pathToFileURL(entry).href)) as ExtendKitStt;
-      if (typeof mod.openSpeechToTextStream === 'function') {
-        cachedStt = mod;
-        return mod;
-      }
-    } catch {
-      // Not here; try the next candidate.
-    }
+  const install = await getExtendKitInstallation();
+  if (!install) throw new ExtendKitMissingError();
+
+  const packageDir = join(install.root, ...EXTEND_KIT_PACKAGE.split('/'));
+  let relative: string | undefined;
+  try {
+    const manifest = JSON.parse(
+      await readFile(join(packageDir, 'package.json'), 'utf8'),
+    ) as { bin?: string | Record<string, string> };
+    relative = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.[CCB_BINARY];
+  } catch {
+    throw new ExtendKitMissingError();
+  }
+  if (!relative) throw new ExtendKitMissingError();
+
+  const entry = join(packageDir, relative);
+  if (!existsSync(entry)) throw new ExtendKitMissingError();
+
+  cachedEntry = entry;
+  return entry;
+}
+
+/**
+ * Run the kit's CLI under this Node rather than through the `ccb` shim.
+ *
+ * `process.execPath` is the Node already running this backend, so no PATH
+ * lookup can fail and no shell is involved — which matters because the audio
+ * stream writes raw bytes into stdin, and a shell in between is one more thing
+ * that can transform them.
+ */
+function ccbCommand(entry: string, args: string[], timeout?: number): Command {
+  return new Command(process.execPath, [entry, ...args], timeout ? { timeout } : {});
+}
+
+/**
+ * Whether the installed kit is new enough to stream dictation.
+ *
+ * Checked through `--capabilities` rather than by comparing version numbers: the
+ * capability list is the kit's own statement about what it supports, and a
+ * version comparison here would have to be updated in lockstep with a package
+ * that ships on its own schedule.
+ *
+ * @throws ExtendKitTooOldError when the kit predates `ccb stt`.
+ */
+async function assertSttCapable(entry: string): Promise<void> {
+  if (cachedSttCapable) return;
+
+  let capabilities: string[] = [];
+  try {
+    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000).exec();
+    const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
+    capabilities = parsed.capabilities ?? [];
+  } catch {
+    // A kit old enough to not know --capabilities fails here, which is the same
+    // answer as a kit that knows the flag but not stt.
+    capabilities = [];
   }
 
-  throw new ExtendKitMissingError();
+  if (!capabilities.includes(STT_CAPABILITY)) {
+    throw new ExtendKitTooOldError(await getExtendKitVersion());
+  }
+  cachedSttCapable = true;
+}
+
+/**
+ * Open a dictation stream by SPAWNING `ccb stt`.
+ *
+ * Audio goes in on stdin as raw PCM; transcripts come back on stdout as one
+ * JSON object per line. The credential that authorizes the transcription is
+ * read inside that child process and never crosses back — this process only
+ * ever holds audio and text.
+ *
+ * @throws ExtendKitMissingError when the package is not installed globally.
+ * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
+ */
+export async function spawnSpeechToText(
+  handlers: SpeechToTextHandlers,
+  options: SpeechToTextOptions = {},
+): Promise<SpeechToTextStream> {
+  const entry = await resolveCcbEntry();
+  await assertSttCapable(entry);
+
+  const args = ['stt'];
+  if (options.language) args.push(`--language=${options.language}`);
+  if (options.extraKeyterms?.length) args.push(`--keyterms=${options.extraKeyterms.join(',')}`);
+  if (options.typedInterims) args.push('--interims');
+
+  const child = ccbCommand(entry, args).spawn({
+    stdio: ['pipe', 'pipe', 'pipe'],
+    // Never a shell: stdin carries raw audio bytes.
+    shell: false,
+  });
+
+  let closed = false;
+
+  // stdout arrives in chunks that do not respect line boundaries, so a partial
+  // line is held until its newline shows up. Dropping it instead would corrupt
+  // exactly the long transcripts that matter most.
+  let buffer = '';
+  child.stdout?.on('data', (chunk: Buffer) => {
+    buffer += chunk.toString('utf8');
+    let newline = buffer.indexOf('\n');
+    while (newline >= 0) {
+      const line = buffer.slice(0, newline).trim();
+      buffer = buffer.slice(newline + 1);
+      newline = buffer.indexOf('\n');
+      if (!line) continue;
+      try {
+        const event = JSON.parse(line) as {
+          type?: string;
+          text?: string;
+          isFinal?: boolean;
+          message?: string;
+          fatal?: boolean;
+        };
+        if (event.type === 'transcript' && typeof event.text === 'string') {
+          handlers.onTranscript(event.text, event.isFinal ?? false);
+        } else if (event.type === 'error') {
+          handlers.onError(event.message ?? 'Dictation failed', { fatal: event.fatal ?? false });
+        } else if (event.type === 'open') {
+          handlers.onOpen?.();
+        }
+        // Any other type is ignored on purpose: a kit that starts emitting a new
+        // event must not break dictation on an older plugin.
+      } catch {
+        // A line that is not JSON is noise from the child's runtime, not a
+        // transcript. Reporting it as an error would put runtime warnings in
+        // the user's text field.
+      }
+    }
+  });
+
+  child.on('error', (err: Error) => {
+    if (closed) return;
+    handlers.onError(err.message, { fatal: true });
+  });
+
+  child.on('close', (code: number | null) => {
+    if (closed) return;
+    // The child ended without us asking. Its own error line, if it managed one,
+    // has already been delivered above; this covers a silent death.
+    closed = true;
+    if (code !== 0) {
+      handlers.onError(`Dictation stopped unexpectedly (exit ${code ?? 'signal'})`, {
+        fatal: true,
+      });
+    }
+  });
+
+  return {
+    sendAudio: (chunk: Uint8Array) => {
+      if (closed) return;
+      child.stdin?.write(Buffer.from(chunk));
+    },
+    close: () =>
+      new Promise<void>((resolve) => {
+        if (closed) {
+          resolve();
+          return;
+        }
+        closed = true;
+
+        // Closing stdin is what tells the child the speaker is done; it then
+        // waits for the service to flush the last words before exiting, so the
+        // trailing transcript still arrives on stdout.
+        const settle = (): void => {
+          clearTimeout(guard);
+          resolve();
+        };
+        const guard = setTimeout(() => {
+          // A child that will not exit must not hang the UI's stop button.
+          child.kill();
+          resolve();
+        }, CLOSE_TIMEOUT_MS);
+
+        child.once('close', settle);
+        child.stdin?.end();
+      }),
+  };
+}
+
+/**
+ * Whether this machine can dictate — that is, whether a Claude Code login is
+ * available to the kit.
+ *
+ * @throws ExtendKitMissingError when the package is not installed globally.
+ * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
+ */
+export async function probeSpeechToTextAvailable(): Promise<boolean> {
+  const entry = await resolveCcbEntry();
+  await assertSttCapable(entry);
+
+  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000).exec();
+  const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { available?: boolean };
+  return parsed.available === true;
 }
 
 /**
@@ -334,5 +539,6 @@ export async function getExtendKitVersion(): Promise<string | null> {
 /** Forget the cached resolution so a fresh install is picked up without a restart. */
 export function resetExtendKitCache(): void {
   cachedRoots = null;
-  cachedStt = null;
+  cachedEntry = null;
+  cachedSttCapable = false;
 }
