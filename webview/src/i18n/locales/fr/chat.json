@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "Des clés API sont définies dans l'env de ~/.claude/settings.json :",
+      "title": "Des clés API sont définies dans l'env de ~/.claude/settings.json ou settings.local.json :",
       "hint": "Ces clés sont peut-être expirées ou invalides. Vérifiez-les, puis supprimez-les ou renouvelez-les."
     },
     "sessionConflict": {

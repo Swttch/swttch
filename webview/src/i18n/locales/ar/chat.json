@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "مفاتيح API معيّنة في env ضمن ~/.claude/settings.json:",
+      "title": "مفاتيح API معيّنة في env ضمن ~/.claude/settings.json أو settings.local.json:",
       "hint": "قد تكون هذه المفاتيح منتهية الصلاحية أو غير صالحة. يرجى التحقق منها، ثم إزالتها أو تجديدها."
     },
     "sessionConflict": {

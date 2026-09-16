@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "Ключи API заданы в env файла ~/.claude/settings.json:",
+      "title": "Ключи API заданы в env файла ~/.claude/settings.json или settings.local.json:",
       "hint": "Эти ключи могут быть просрочены или недействительны. Проверьте их, затем удалите или обновите."
     },
     "sessionConflict": {

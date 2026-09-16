@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "کلیدهای API در env فایل ~/.claude/settings.json تنظیم شده‌اند:",
+      "title": "کلیدهای API در env فایل ~/.claude/settings.json یا settings.local.json تنظیم شده‌اند:",
       "hint": "ممکن است این کلیدها منقضی یا نامعتبر باشند. بررسی کنید و سپس آن‌ها را حذف یا تمدید کنید."
     },
     "sessionConflict": {

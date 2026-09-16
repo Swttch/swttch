@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "~/.claude/settings.json のenvにAPIキーが設定されています:",
+      "title": "~/.claude/settings.json または settings.local.json のenvにAPIキーが設定されています:",
       "hint": "これらのキーは期限切れまたは無効な可能性があります。確認のうえ、削除または更新してください。"
     },
     "sessionConflict": {

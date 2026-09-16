@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "~/.claude/settings.json의 env에 API 키가 설정되어 있습니다:",
+      "title": "~/.claude/settings.json 또는 settings.local.json의 env에 API 키가 설정되어 있습니다:",
       "hint": "이 키들이 만료되었거나 유효하지 않을 수 있습니다. 확인 후 제거하거나 갱신하세요."
     },
     "sessionConflict": {

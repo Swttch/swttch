@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "API-Schlüssel sind in der env von ~/.claude/settings.json festgelegt:",
+      "title": "API-Schlüssel sind in der env von ~/.claude/settings.json oder settings.local.json festgelegt:",
       "hint": "Diese Schlüssel könnten abgelaufen oder ungültig sein. Bitte überprüfe sie und entferne oder erneuere sie."
     },
     "sessionConflict": {

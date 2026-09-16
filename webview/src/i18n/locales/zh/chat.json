@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "在 ~/.claude/settings.json 的 env 中设置了以下 API 密钥:",
+      "title": "在 ~/.claude/settings.json 或 settings.local.json 的 env 中设置了以下 API 密钥:",
       "hint": "这些密钥可能已过期或无效。请检查后移除或更新它们。"
     },
     "sessionConflict": {

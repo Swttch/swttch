@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "API keys are set in the env of ~/.claude/settings.json:",
+      "title": "API keys are set in the env of ~/.claude/settings.json or settings.local.json:",
       "hint": "These keys may be expired or invalid. Please check, then remove or renew them."
     },
     "sessionConflict": {
