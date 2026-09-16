@@ -2,6 +2,7 @@ package com.github.yhk1038.claudecodegui.hosting
 
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.TabActivity
+import com.github.yhk1038.claudecodegui.editor.TabActivityTracker
 import com.github.yhk1038.claudecodegui.editor.WorkingTabIcon
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.toolwindow.ClaudeCodePanel
@@ -174,34 +175,39 @@ class ToolWindowHost(private val project: Project) : ChatHost {
         // the selected one. The selection listener restores the base icon when the
         // user comes back (mirrors the editor tab).
         //
-        // The idle arm is guarded on a transition, not on the reported state alone:
-        // the WebView reports `idle` whenever the page mounts, and acting on that
-        // would clear an unread badge the user has not seen yet.
-        var lastActivity = TabActivity.IDLE
-        panel.onActivityChanged = { activity ->
-            if (activity == TabActivity.IDLE) {
+        // Which reports are worth drawing is [TabActivityTracker]'s to answer —
+        // the editor-tab host asks it the same question, and the rule used to be
+        // written out in both.
+        val activity = TabActivityTracker()
+        panel.onActivityChanged = { reported ->
+            if (reported == TabActivity.IDLE) {
                 busyTabs.remove(tabId)
             } else {
                 busyTabs.add(tabId)
             }
-            if (activity != TabActivity.IDLE || lastActivity != TabActivity.IDLE) {
-                ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)?.let { tw ->
-                    val tabContent = findContent(tw, tabId)
-                    if (tabContent != null) {
-                        tabContent.icon = when (activity) {
-                            TabActivity.STREAMING -> WorkingTabIcon.ICON
-                            // Worn whether or not this is the selected tab: the
-                            // question is addressed to the user wherever they are
-                            // looking, and only answering it ends the wait.
-                            TabActivity.AWAITING -> UNREAD_ICON
-                            TabActivity.IDLE ->
-                                if (tw.contentManager.selectedContent === tabContent) BASE_ICON
-                                else UNREAD_ICON
-                        }
+            if (activity.record(reported)) {
+                // Drawn on the EDT, for the reason spelled out on onTitleChanged
+                // above: this callback arrives on the AppKit thread, and
+                // `Content.icon` is UI model state. Assigning it fires a property
+                // change the platform follows into ToolWindowContentUi.update ->
+                // SingleContentLayout -> DataManagerImpl.getDataContext, which
+                // asserts the EDT and throws (issue #456).
+                ApplicationManager.getApplication().invokeLater {
+                    val tw = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)
+                        ?: return@invokeLater
+                    val tabContent = findContent(tw, tabId) ?: return@invokeLater
+                    tabContent.icon = when (reported) {
+                        TabActivity.STREAMING -> WorkingTabIcon.ICON
+                        // Worn whether or not this is the selected tab: the
+                        // question is addressed to the user wherever they are
+                        // looking, and only answering it ends the wait.
+                        TabActivity.AWAITING -> UNREAD_ICON
+                        TabActivity.IDLE ->
+                            if (tw.contentManager.selectedContent === tabContent) BASE_ICON
+                            else UNREAD_ICON
                     }
                 }
             }
-            lastActivity = activity
         }
 
         return ContentFactory.getInstance().createContent(panel, virtualFile.presentableName, false).apply {
