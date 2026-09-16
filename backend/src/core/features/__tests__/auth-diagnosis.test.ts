@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { isAuthError, diagnoseAuthError } from '../auth-diagnosis';
+import { isAuthError, diagnoseAuthError, authFailureDetail } from '../auth-diagnosis';
 import { MessageType } from '../../../shared';
 
 // getEnvApiKeys를 mock
@@ -101,6 +101,52 @@ describe('auth-diagnosis', () => {
           message: expect.stringContaining('ANTHROPIC_API_KEY'),
         }),
       );
+    });
+  });
+
+  // The call site used to test `event.error?.message`, a field no result event carries,
+  // so the diagnosis never ran for the failures it exists to explain (#446).
+  describe('authFailureDetail()', () => {
+    // Trimmed from the transcript attached to the report, field names and values intact.
+    const REPORTED_401 = {
+      type: 'result',
+      subtype: 'success',
+      is_error: true,
+      api_error_status: 401,
+      terminal_reason: 'api_error',
+      result: 'Failed to authenticate. API Error: 401 API key is invalid.',
+      session_id: '67202852-0773-42e7-a62e-84aee0b9a55f',
+    };
+
+    it('reads the detail out of a real reported 401 result', () => {
+      expect(authFailureDetail(REPORTED_401)).toBe(
+        'Failed to authenticate. API Error: 401 API key is invalid.',
+      );
+    });
+
+    it('hands that detail to a diagnosis that recognizes it', () => {
+      // The two halves have to agree, or the call site fires into a no-op.
+      expect(isAuthError(authFailureDetail(REPORTED_401) as string)).toBe(true);
+    });
+
+    it('ignores a successful turn even when it carries text', () => {
+      expect(authFailureDetail({ type: 'result', is_error: false, result: 'all good' })).toBeNull();
+    });
+
+    it('synthesizes a detail when the CLI failed without text', () => {
+      const detail = authFailureDetail({ type: 'result', is_error: true, api_error_status: 401 });
+      expect(detail).toBe('API error 401');
+      expect(isAuthError(detail as string)).toBe(true);
+    });
+
+    it('returns null when a failure names neither text nor status', () => {
+      expect(authFailureDetail({ type: 'result', is_error: true })).toBeNull();
+    });
+
+    it('does not read the `error` field the old call site looked for', () => {
+      // Guards the regression directly: an event shaped the OLD way, with no is_error,
+      // must not produce a detail — otherwise the fix has quietly kept the dead path.
+      expect(authFailureDetail({ type: 'result', error: { message: 'Authentication failed' } })).toBeNull();
     });
   });
 });

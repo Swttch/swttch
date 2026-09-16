@@ -22,6 +22,26 @@ export function isAuthError(message: string): boolean {
 }
 
 /**
+ * The failure detail carried by a CLI `result` event, or null when the turn did not fail.
+ *
+ * A failed turn carries NO `error` object. The human-readable text sits in `result` and
+ * the HTTP status in `api_error_status`, while `subtype` still reads "success" — so the
+ * only field that decides failure is `is_error`. Code that looked for `error.message`
+ * never fired, which is why an authentication failure reached the user with no diagnosis
+ * at all (#446).
+ *
+ * Falls back to a synthesized "API error <status>" when the CLI failed without text, so a
+ * status-only failure still reaches {@link isAuthError}.
+ */
+export function authFailureDetail(event: Record<string, unknown>): string | null {
+  if (event.is_error !== true) return null;
+  const text = typeof event.result === 'string' ? event.result.trim() : '';
+  if (text) return text;
+  const status = typeof event.api_error_status === 'number' ? event.api_error_status : null;
+  return status === null ? null : `API error ${status}`;
+}
+
+/**
  * Check if error is auth-related and env has API keys.
  * If so, broadcast AUTH_ERROR_DIAGNOSIS event to the session.
  * Silently no-ops if the error is not auth-related or no env API keys are found.
