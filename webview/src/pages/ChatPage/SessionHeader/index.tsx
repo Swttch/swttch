@@ -5,6 +5,7 @@ import { OverflowMenu } from './dock/OverflowMenu';
 import { AccountSwitcher } from './AccountSwitcher';
 import { useDocumentTitle } from '@/hooks';
 import { useMarkSessionRead } from '@/hooks/useMarkSessionRead';
+import { useReportSessionActivity } from '@/hooks/useReportSessionActivity';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useNotificationSound } from '@/notifications';
@@ -32,6 +33,9 @@ export function SessionHeader({ isAwaitingUser }: SessionHeaderProps) {
     error,
     isAwaitingUser,
   );
+  // What this screen is doing, told to the backend so the session lists draw the
+  // same answer the favicon and the IDE tab draw (issue #456).
+  useReportSessionActivity(currentSessionId, isStreaming, isAwaitingUser);
   // Looking at a session is what marks it read, and this header is mounted for
   // exactly as long as the chat is showing one (issue #449).
   useMarkSessionRead(currentSessionId, isStreaming);

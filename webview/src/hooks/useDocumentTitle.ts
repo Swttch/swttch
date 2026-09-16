@@ -5,6 +5,7 @@ import {
   type SoundSelection,
 } from '@/notifications';
 import { APP_NAME } from '@/config/app';
+import { SessionActivity, resolveSessionActivity } from '@/shared';
 import {
   hasUnreadFavicon,
   restoreDefaultFavicon,
@@ -88,10 +89,19 @@ export function useDocumentTitle(
   // draw what this favicon draws. `awaiting` is its own report rather than an
   // `idle` one: a waiting session has not finished, and a tab that reported idle
   // would drop the badge as soon as the user selected it (issue #456).
+  //
+  // The value comes from `resolveSessionActivity`, the same call that decides
+  // what this screen reports to the backend, so the IDE tab and the session list
+  // cannot disagree. Only the word for "a turn is in flight" is translated here:
+  // this channel has said `streaming` since it existed, and a plugin older than
+  // this build reads any word it does not know as idle — so renaming it on the
+  // wire would blank the tab icon of everyone who updates the two halves at
+  // different times.
   useEffect(() => {
     const notifyJcef = (window as unknown as Record<string, unknown>).__notifyStreamingState;
     if (typeof notifyJcef === 'function') {
-      const state = isAwaitingUser ? 'awaiting' : isStreaming ? 'streaming' : 'idle';
+      const activity = resolveSessionActivity(isStreaming, isAwaitingUser);
+      const state = activity === SessionActivity.Running ? 'streaming' : activity;
       (notifyJcef as (state: string) => void)(state);
     }
   }, [isStreaming, isAwaitingUser]);

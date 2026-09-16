@@ -43,10 +43,17 @@ interface SessionRecord {
    * the streaming-sessions counter (status endpoint, future IDE exit-confirm
    * modal).
    *
-   * Running is set when a prompt is written to the CLI stdin and left on the
-   * CLI `result` event (turn end) or on STREAM_END (process death safety net).
+   * Written from what the chat screen showing the session reports, in
+   * [reportSessionActivity]. This used to be worked out here instead, from the
+   * moment a prompt was written to the CLI's stdin, and that only covers the
+   * turns we start: the CLI begins its own whenever a background task finishes,
+   * a Stop hook fires, or another session sends a message, and on those the row
+   * sat still while the transcript animated (issue #456).
+   *
    * NOT the STREAM_START..STREAM_END window — the CLI process is long-lived
-   * across turns, so that window only means "process alive".
+   * across turns, so that window only means "process alive". STREAM_END remains
+   * a safety net for the one case a screen cannot report, which is the process
+   * dying under it.
    */
   activity: SessionActivity;
   /**
@@ -710,6 +717,50 @@ export class ConnectionManager {
     if (session.activity === activity) return;
     session.activity = activity;
     this.announceSessions();
+  }
+
+  /**
+   * A chat screen has said what it is doing; record it for the session.
+   *
+   * Everything a screen can say is taken at face value, because the screen is
+   * where the answer is: [SessionActivity.Running] is the condition its
+   * streaming animation is drawn under, and [SessionActivity.Awaiting] is the
+   * condition one of its prompts is on screen. The one thing it cannot say is
+   * [SessionActivity.Done], which is derived here instead.
+   *
+   * An `idle` report means one of two different things, and the difference is
+   * what the session was doing a moment ago:
+   *
+   *  - it was running or waiting, so the turn has just ended and nobody has
+   *    looked at it yet. That is [SessionActivity.Done].
+   *  - it was already idle or already unread, so this is the report a screen
+   *    sends whenever it mounts. Treating that as a change would clear an unread
+   *    row every time a tab was moved, split or reloaded (issue #456).
+   */
+  reportSessionActivity(
+    sessionId: string,
+    reported: SessionActivity.Idle | SessionActivity.Running | SessionActivity.Awaiting,
+  ): void {
+    // Created rather than looked up, because a report can be the first this
+    // backend hears of a session: the screen sends one as it mounts, and whether
+    // that beats the subscribe carrying the same id is React's business rather
+    // than something to depend on. Dropping it would not cost one message, it
+    // would cost the whole turn — reports are sent when something moves, so
+    // nothing would say `running` again until the turn ended.
+    //
+    // A record on its own draws nothing. Rows are drawn for sessions some tab
+    // has open, and what opens a session is a subscriber.
+    const session = this.getOrCreateSession(sessionId);
+
+    if (reported !== SessionActivity.Idle) {
+      this.setSessionActivity(sessionId, reported);
+      return;
+    }
+
+    const wasBusy =
+      session.activity === SessionActivity.Running ||
+      session.activity === SessionActivity.Awaiting;
+    this.setSessionActivity(sessionId, wasBusy ? SessionActivity.Done : session.activity);
   }
 
   /**

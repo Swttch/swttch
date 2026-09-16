@@ -331,6 +331,97 @@ describe('ConnectionManager', () => {
       ).toHaveLength(0);
     });
 
+    it('takes a screen at its word when it says it is working', () => {
+      cm.getOrCreateSession('sess-1');
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Running });
+    });
+
+    it('takes a screen at its word when it says it is waiting on an answer', () => {
+      cm.getOrCreateSession('sess-1');
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Awaiting);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Awaiting });
+    });
+
+    /**
+     * The bug this whole path exists for.
+     *
+     * The backend used to decide a turn had started from the moment it wrote to
+     * the CLI's stdin, which is blind to the turns the CLI starts by itself: a
+     * background task finishing, a Stop hook, a message from another session.
+     * The transcript animated and the row sat still (issue #456).
+     */
+    it('goes back to working when a screen says so with nobody having sent anything', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+      cm.reportSessionActivity('sess-1', SessionActivity.Idle);
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Running });
+    });
+
+    it('reads idle after working as a finished turn nobody has read', () => {
+      cm.getOrCreateSession('sess-1');
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Idle);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Done });
+    });
+
+    it('reads idle after waiting as a finished turn too', () => {
+      // Cancelling a prompt ends the turn without it ever running again, and
+      // that still leaves something on screen the user has not been back to.
+      cm.getOrCreateSession('sess-1');
+      cm.reportSessionActivity('sess-1', SessionActivity.Awaiting);
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Idle);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Done });
+    });
+
+    it('leaves an idle session idle when a screen reports idle', () => {
+      // Every screen reports idle as it mounts, so a tab being moved, split or
+      // reloaded says this. Reading it as a change would invent a finished turn.
+      cm.getOrCreateSession('sess-1');
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Idle);
+
+      expect(cm.getSessionActivity()).toEqual({});
+    });
+
+    it('leaves an unread session unread when a screen reports idle', () => {
+      // Same mount report, arriving at a row that is already green. Clearing it
+      // here would mark the session read without the user having looked.
+      cm.getOrCreateSession('sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Done);
+
+      cm.reportSessionActivity('sess-1', SessionActivity.Idle);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Done });
+    });
+
+    it('keeps a report that arrives before the session is subscribed', () => {
+      // A screen reports as it mounts, and whether that beats the subscribe
+      // carrying the same id is not something to depend on. Reports are sent on
+      // movement, so a dropped one is not one stale message: nothing would say
+      // `running` again until the turn ended.
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+
+      expect(cm.getSessionActivity()).toEqual({ 'sess-1': SessionActivity.Running });
+    });
+
+    it('draws no row for a reported session no tab has open', () => {
+      cm.reportSessionActivity('sess-1', SessionActivity.Running);
+
+      expect(cm.getOpenSessionIds()).toEqual([]);
+    });
+
     it('treats a turn that died as finished (process death safety net)', () => {
       const connId = cm.addConnection(createMockWs());
       cm.subscribe(connId, 'sess-1');

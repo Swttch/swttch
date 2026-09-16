@@ -478,6 +478,22 @@ export enum MessageType {
    * becoming the selected one. inbound webview→backend
    */
   MARK_SESSION_READ = 'MARK_SESSION_READ',
+  /**
+   * What the chat screen showing this session is doing right now, as
+   * `{ sessionId, activity }` where activity is `running`, `awaiting` or `idle`.
+   *
+   * The screen reports rather than the backend guessing, because the screen is
+   * where the answer already exists: `running` is the exact condition the
+   * streaming animation is drawn under, and `awaiting` is the exact condition a
+   * panel is asking the user to answer something. The backend used to derive its
+   * own copy from "we just wrote to stdin", which is blind to every turn the CLI
+   * starts by itself — a background task finishing, a Stop hook, a peer message.
+   * The animation resumed and the session list did not (issue #456).
+   *
+   * `done` never arrives here: whether a finished turn is still unread is not
+   * something a chat screen knows about itself. inbound webview→backend
+   */
+  REPORT_SESSION_ACTIVITY = 'REPORT_SESSION_ACTIVITY',
 
   // -- Plugin updates --
   /** Check for available plugin updates. */

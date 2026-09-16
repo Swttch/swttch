@@ -154,7 +154,11 @@ import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
 import { getMcpServersHandler } from './getMcpServersHandler';
 import { getActiveSessionsHandler } from './getActiveSessions';
-import { getSessionActivityHandler, markSessionReadHandler } from './sessionActivity';
+import {
+  getSessionActivityHandler,
+  markSessionReadHandler,
+  reportSessionActivityHandler,
+} from './sessionActivity';
 import { getMcpServerToolsHandler } from './getMcpServerToolsHandler';
 import {
   reconnectMcpServerHandler,
@@ -632,6 +636,9 @@ export async function handleMessage(
       break;
     case MessageType.MARK_SESSION_READ:
       markSessionReadHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.REPORT_SESSION_ACTIVITY:
+      reportSessionActivityHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.RECONNECT_MCP_SERVER:
       await reconnectMcpServerHandler(connectionId, message, connections, bridge);
