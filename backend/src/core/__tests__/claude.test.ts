@@ -353,6 +353,34 @@ describe('Claude.applyConfigDir — per-project cliPath', () => {
     expect(readMergedSettings).toHaveBeenCalledWith('/home/u/proj');
   });
 
+  // Normalizing on read is what rescues a cliPath that was already saved with a
+  // trailing space: shipping the write-side trim does not rewrite settings files, so
+  // without this the reporter of #446 would install the update and keep getting
+  // `spawn /home/deth/.local/bin/claude  ENOENT` until re-saving the field by hand.
+  it('trims a stored cliPath that still carries a trailing space (#446)', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '/home/deth/.local/bin/claude ' },
+      overrides: ['cliPath'],
+    });
+
+    await Claude.applyConfigDir('/home/deth/CLionProjects/zephyr_esp32');
+
+    expect(Claude.command).toBe('/home/deth/.local/bin/claude');
+  });
+
+  it('falls back to a bare "claude" when the stored cliPath is only whitespace', async () => {
+    const { readMergedSettings } = await import('../features/settings');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { cliPath: '   ' },
+      overrides: [],
+    });
+
+    await Claude.applyConfigDir('/home/u/blanked');
+
+    expect(Claude.command).toBe('claude');
+  });
+
   it('falls back to the global cliPath when the project sets none', async () => {
     const { readMergedSettings } = await import('../features/settings');
     vi.mocked(readMergedSettings).mockResolvedValue({

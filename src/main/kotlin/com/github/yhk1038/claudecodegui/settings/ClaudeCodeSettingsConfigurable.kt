@@ -48,9 +48,16 @@ class ClaudeCodeSettingsConfigurable : Configurable {
 
     override fun apply() {
         panel?.apply()
+        // Trimmed for the same reason the backend trims on save: a path pasted from a
+        // file manager or a terminal often carries a trailing space, and spawn treats
+        // that space as part of the filename (issue #446). This dialog writes the
+        // settings file directly through SettingsManager rather than going through the
+        // backend, so the backend's normalization never sees what is typed here.
+        val cli = cliPath.trim()
+        val node = nodePath.trim()
         settings.setAll(mapOf(
-            "cliPath" to if (cliPath.isBlank()) JsonNull else JsonPrimitive(cliPath),
-            "nodePath" to if (nodePath.isBlank()) JsonNull else JsonPrimitive(nodePath)
+            "cliPath" to if (cli.isEmpty()) JsonNull else JsonPrimitive(cli),
+            "nodePath" to if (node.isEmpty()) JsonNull else JsonPrimitive(node)
         ))
     }
 

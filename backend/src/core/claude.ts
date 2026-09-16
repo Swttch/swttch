@@ -8,6 +8,7 @@ import {
   type ExecFileOptionsWithBufferEncoding,
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
+import { normalizeSettingValue } from './features/path-settings';
 import { getStrippableAuthEnvKeys, getProxyEnvFromSettings, PROXY_ENV_KEYS } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
 import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
@@ -98,7 +99,11 @@ export class Claude {
     // so it is re-projected whenever a context loads instead of being cached per
     // call site; that is what keeps a project-scoped value from leaking backend-wide.
     const { settings } = await readMergedSettings(workingDir);
-    const nextCliPath = (settings.cliPath as string) || null;
+    // Normalized on read as well as on write: a cliPath saved before the write-side
+    // trim existed still carries its trailing space, and shipping the fix does not
+    // rewrite settings files. Without this, the reporter of #446 would install the
+    // update and keep getting the same ENOENT until re-saving the field by hand.
+    const nextCliPath = (normalizeSettingValue('cliPath', settings.cliPath) as string) || null;
     if (nextCliPath !== Claude.cliPath) {
       Claude.cliPath = nextCliPath;
       // The win32 launcher cache was resolved from the previous binary.
