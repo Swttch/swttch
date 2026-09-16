@@ -475,7 +475,18 @@ export class ConnectionManager {
     }
   }
 
-  broadcastToAll(type: string, payload: Record<string, unknown> = {}): void {
+  /**
+   * Send to every connection, optionally skipping one.
+   *
+   * The exclusion mirrors [broadcastToSession]'s and exists for the same reason:
+   * a tab that reports something already acted on it, so echoing it back asks
+   * that tab to merge what it just did.
+   */
+  broadcastToAll(
+    type: string,
+    payload: Record<string, unknown> = {},
+    excludeConnectionId?: string,
+  ): void {
     const message: IPCMessage = {
       type,
       payload,
@@ -483,7 +494,8 @@ export class ConnectionManager {
     };
     const data = JSON.stringify(message);
 
-    for (const [, ws] of this.connectionMap) {
+    for (const [connId, ws] of this.connectionMap) {
+      if (connId === excludeConnectionId) continue;
       try {
         if (ws.readyState === 1 /* WebSocket.OPEN */) {
           ws.send(data);

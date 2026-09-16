@@ -9,6 +9,7 @@ import { stopSessionHandler } from './stopSession';
 import { sendControlRequestHandler } from './sendControlRequest';
 import { startSessionHandler } from './startSession';
 import { sessionChangeHandler } from './sessionChange';
+import { sessionStartedHandler } from './sessionStarted';
 import { toolResponseHandler } from './toolResponse';
 import { getSessionsHandler } from './getSessions';
 import { loadSessionHandler } from './loadSession';
@@ -198,6 +199,9 @@ export async function handleMessage(
       break;
     case MessageType.SESSION_CHANGE:
       sessionChangeHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SESSION_STARTED:
+      sessionStartedHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.TOOL_RESPONSE:
       await toolResponseHandler(connectionId, message, connections, bridge);

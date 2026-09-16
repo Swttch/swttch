@@ -616,6 +616,19 @@ export enum MessageType {
   /** The session list changed and clients should refresh. */
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
   /**
+   * A session was just created, carrying the row the creating tab drew for it.
+   *
+   * Sent by the tab that started the session so every OTHER list can show the
+   * same row at the same moment. Until this existed, only the creating tab had
+   * it: the row is built locally from the prompt the user just typed, and the
+   * transcript the lists read does not exist for several seconds yet.
+   *
+   * The row travels rather than being rebuilt on each side, so the dropdown and
+   * the side panel cannot describe one session differently. Relayed to other
+   * connections as SESSIONS_UPDATED with action 'started'. inbound webview→backend
+   */
+  SESSION_STARTED = 'SESSION_STARTED',
+  /**
    * What the sessions are doing, and which ones a tab has open, changed; carries
    * both whole as `{ activity: SessionActivityMap, open: string[] }` rather than
    * as deltas, so a client that missed a message still ends up correct. Sent to
