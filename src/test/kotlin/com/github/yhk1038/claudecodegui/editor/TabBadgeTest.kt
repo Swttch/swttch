@@ -73,4 +73,50 @@ class TabBadgeTest {
         assertEquals(TabBadge.WORKING, working.badgeState)
         assertEquals(TabBadge.NONE, untouched.badgeState)
     }
+
+    @Test
+    fun `a session waiting on an answer wears the badge whether or not the tab is selected`() {
+        val file = ClaudeCodeVirtualFile("tab-1")
+        file.setBadge(TabBadge.WORKING)
+
+        assertTrue(file.setBadge(TabBadge.AWAITING))
+        assertEquals(TabBadge.AWAITING, file.badgeState)
+    }
+
+    /**
+     * The rule the selection listener acts on (issue #456).
+     *
+     * An unread badge is taken off by arriving at the tab, because arriving IS
+     * reading it. The other two are not: a running session does not stop because
+     * someone looked at it, and a question does not become answered by being
+     * looked at. Before this, a waiting tab would have dropped its badge the
+     * moment the user clicked it — while the question it pointed at was still on
+     * screen, unanswered.
+     */
+    @Test
+    fun `only the unread badge is cleared by selecting the tab`() {
+        assertTrue(TabBadge.UNREAD.clearedBySelection)
+        assertFalse(TabBadge.WORKING.clearedBySelection)
+        assertFalse(TabBadge.AWAITING.clearedBySelection)
+        assertFalse(TabBadge.NONE.clearedBySelection)
+    }
+
+    @Test
+    fun `the reports the WebView sends map onto the three activities`() {
+        assertEquals(TabActivity.STREAMING, TabActivity.fromReport("streaming"))
+        assertEquals(TabActivity.AWAITING, TabActivity.fromReport("awaiting"))
+        assertEquals(TabActivity.IDLE, TabActivity.fromReport("idle"))
+    }
+
+    /**
+     * A word this build does not know claims nothing, so it reads as idle rather
+     * than throwing. The one that exists today is `repaint`, which the panel
+     * intercepts before it ever reaches here; the case that matters is a future
+     * WebView reporting something this plugin predates.
+     */
+    @Test
+    fun `an unrecognized report reads as idle`() {
+        assertEquals(TabActivity.IDLE, TabActivity.fromReport("something-new"))
+        assertEquals(TabActivity.IDLE, TabActivity.fromReport(""))
+    }
 }

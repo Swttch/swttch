@@ -119,14 +119,25 @@ function ChatPageContent() {
   const { pending: pendingPermission, approve: approvePermission, approveForSession, deny: denyPermission } = usePendingPermissions();
   const { pending: pendingPlan, approve: approvePlan, deny: denyPlan } = usePendingPlanApproval();
   /**
+   * The CLI has stopped and is waiting for this user to answer something.
+   *
+   * All three prompts mean the same thing to anything outside the chat: nothing
+   * is running, and the next move is the user's. The tab icons say so from here
+   * (issue #456) — `isStreaming` stays true through a prompt, because the turn
+   * really has not ended, so it cannot answer this question on its own.
+   */
+  const isAwaitingUser = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
+  /**
    * An approval prompt is standing in the composer's slot at the foot of the
    * chat, so the composer is unmounted right now.
    *
-   * Named because two things below need the same answer: the slot itself, and
-   * the recording notice that has to step in for the microphone button while
-   * the button is off screen (issue #409).
+   * The same condition as above, under the name of what it does to this screen:
+   * a prompt waiting for an answer is drawn where the composer would be. Two
+   * things below read it that way — the slot itself, and the recording notice
+   * that has to step in for the microphone button while the button is off
+   * screen (issue #409).
    */
-  const composerReplaced = Boolean(pendingUserAnswer || pendingPlan || pendingPermission);
+  const composerReplaced = isAwaitingUser;
   const { selection: soundSelection } = useNotificationSound();
   const { settings } = useSettings();
   const autoScrollThreshold = clampAutoScrollThreshold(
@@ -399,7 +410,7 @@ function ChatPageContent() {
         above the sticky user message (issue #274).
       */}
       <div className="fixed w-full top-0 bg-blend-darken bg-surface-base z-30 h-10">
-        <SessionHeader />
+        <SessionHeader isAwaitingUser={isAwaitingUser} />
       </div>
 
       <BannerArea>
@@ -420,7 +431,7 @@ function ChatPageContent() {
       */}
       <div ref={scrollContainerRef} data-chat-scroll onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0">
         <ChatMessageArea
-          isStreaming={isStreaming && !pendingUserAnswer && !pendingPlan && !pendingPermission}
+          isStreaming={isStreaming && !isAwaitingUser}
           mergedMessages={mergedMessages}
           hasMore={hasMoreOlder}
           isLoadingMore={isLoadingMore}

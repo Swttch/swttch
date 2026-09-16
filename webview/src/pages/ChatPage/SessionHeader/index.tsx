@@ -9,11 +9,29 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useNotificationSound } from '@/notifications';
 
-export function SessionHeader() {
+interface SessionHeaderProps {
+  /**
+   * Whether the CLI has stopped and is waiting for the user to answer a prompt.
+   *
+   * Passed down rather than read here: the three prompt hooks that produce this
+   * each own their own subscription and state, and calling them a second time
+   * would give this header a second, separately-updated copy of the answer.
+   */
+  isAwaitingUser: boolean;
+}
+
+export function SessionHeader({ isAwaitingUser }: SessionHeaderProps) {
   const { currentSession, currentSessionId } = useSessionContext();
   const { isStreaming, error } = useChatStreamContext();
   const { selection } = useNotificationSound();
-  useDocumentTitle(currentSession?.title || null, currentSessionId === null, isStreaming, selection, error);
+  useDocumentTitle(
+    currentSession?.title || null,
+    currentSessionId === null,
+    isStreaming,
+    selection,
+    error,
+    isAwaitingUser,
+  );
   // Looking at a session is what marks it read, and this header is mounted for
   // exactly as long as the chat is showing one (issue #449).
   useMarkSessionRead(currentSessionId, isStreaming);

@@ -22,7 +22,7 @@ class ClaudeCodeEditorManagerListener : FileEditorManagerListener {
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         val file = event.newFile
-        if (file is ClaudeCodeVirtualFile && file.badgeState == TabBadge.UNREAD) {
+        if (file is ClaudeCodeVirtualFile && file.badgeState.clearedBySelection) {
             if (file.setBadge(TabBadge.NONE)) {
                 (event.manager as? FileEditorManagerEx)?.refreshIcons()
             }

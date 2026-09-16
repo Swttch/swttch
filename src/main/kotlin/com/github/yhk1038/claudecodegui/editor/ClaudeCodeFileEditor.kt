@@ -44,8 +44,12 @@ class ClaudeCodeFileEditor(
         }
     }
 
+    /**
+     * The last activity this tab reported, so a report that changes nothing can
+     * be told from one that does. See the callback in [attachPanelCallbacks].
+     */
     @Volatile
-    private var wasStreaming: Boolean = false
+    private var lastActivity: TabActivity = TabActivity.IDLE
 
     private fun attachPanelCallbacks(panel: ClaudeCodePanel) {
 
@@ -86,24 +90,32 @@ class ClaudeCodeFileEditor(
             state.getCustomTitle(virtualFile.tabId)?.let { virtualFile.setDisplayName(it) }
         }
 
-        // Streaming state change: spin while streaming, then show the unread badge
-        // if the stream ended on a tab the user is not looking at.
+        // Activity change: spin while streaming, wear the dot while the session
+        // waits on an answer, then show the unread badge if the turn ended on a
+        // tab the user is not looking at.
         //
-        // Both arms are guarded on a transition rather than on the reported state
-        // alone. The WebView reports `idle` whenever the page mounts, so a tab that
-        // is merely moved or split reports idle again; acting on that report would
-        // clear an unread badge the user has not seen yet.
-        panel.onStreamingStateChanged = { isStreaming ->
-            val badge = when {
-                isStreaming -> TabBadge.WORKING
-                !wasStreaming -> null
-                isTabActive() -> TabBadge.NONE
-                else -> TabBadge.UNREAD
+        // The idle arm is guarded on a transition rather than on the reported
+        // state alone. The WebView reports `idle` whenever the page mounts, so a
+        // tab that is merely moved or split reports idle again; acting on that
+        // report would clear an unread badge the user has not seen yet.
+        panel.onActivityChanged = { activity ->
+            val badge = when (activity) {
+                TabActivity.STREAMING -> TabBadge.WORKING
+                // Not conditional on the tab being unselected, unlike the unread
+                // badge below: a question is addressed to the user whether or not
+                // they are already looking at it, and this one stays until it is
+                // answered (see [TabBadge.AWAITING]).
+                TabActivity.AWAITING -> TabBadge.AWAITING
+                TabActivity.IDLE -> when {
+                    lastActivity == TabActivity.IDLE -> null
+                    isTabActive() -> TabBadge.NONE
+                    else -> TabBadge.UNREAD
+                }
             }
             if (badge != null && virtualFile.setBadge(badge)) {
                 FileEditorManagerEx.getInstanceEx(project).refreshIcons()
             }
-            wasStreaming = isStreaming
+            lastActivity = activity
         }
     }
 

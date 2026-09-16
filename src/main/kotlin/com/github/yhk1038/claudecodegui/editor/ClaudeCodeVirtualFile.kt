@@ -20,7 +20,32 @@ enum class TabBadge {
      */
     WORKING,
 
-    UNREAD
+    /**
+     * The session is waiting for the user to answer a prompt, so the tab wears
+     * the same dot [UNREAD] wears (issue #456).
+     *
+     * Drawn identically to [UNREAD] but held under the rule [WORKING] is held
+     * under: selecting the tab does not clear it. Looking at a tab IS reading
+     * it, which is why an unread badge goes away; it is not answering it, which
+     * is the only thing that ends a wait. A badge that vanished the moment the
+     * user clicked the tab would disappear exactly while the question it points
+     * at is still on screen and unanswered.
+     */
+    AWAITING,
+
+    UNREAD;
+
+    /**
+     * Whether selecting the tab takes this badge off.
+     *
+     * Stated here rather than at the selection listener because it is a property
+     * of what the badge means, and two hosts act on it. [UNREAD] says "you missed
+     * the end of a turn", and arriving at the tab is what reads it. The other two
+     * say something the user's arrival does not change: a running session is
+     * still running, and a question is still unanswered (issue #456).
+     */
+    val clearedBySelection: Boolean
+        get() = this == UNREAD
 }
 
 /**
