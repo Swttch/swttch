@@ -62,6 +62,15 @@ export interface ProfileData {
   runnerBestScore: number;
   /** 음성 입력을 쓸지 한 번 물은 질문의 응답. 설치 단위(글로벌)로 한 번만 묻는다. */
   voicePrompt: VoicePrompt;
+  /**
+   * "What's new" 팝업을 마지막으로 띄운 플러그인 버전. 한 번도 띄운 적이 없으면 null.
+   *
+   * 웹뷰의 localStorage가 아니라 여기에 두는 이유: JetBrains 모드의 웹뷰 주소는
+   * `http://localhost:<매번 새로 할당되는 포트>`라서, IDE를 재시작할 때마다 origin이
+   * 바뀌고 localStorage가 통째로 빈 채로 시작된다. 기록이 매번 사라지니 설치된 버전과
+   * 비교할 대상이 없어 팝업이 영영 뜨지 못했다(#453).
+   */
+  whatsNewSeenVersion: string | null;
 }
 
 function createDefaultProfile(): ProfileData {
@@ -72,6 +81,7 @@ function createDefaultProfile(): ProfileData {
     announcementsEnabled: true,
     runnerBestScore: 0,
     voicePrompt: { status: VoicePromptStatus.PENDING, askedAt: null, decidedAt: null },
+    whatsNewSeenVersion: null,
   };
 }
 
@@ -95,6 +105,16 @@ function normalizeAnnouncementsEnabled(value: unknown): boolean {
 /** 점수가 아닌 값(누락/손상/음수/소수)이면 0으로 보정한다. */
 function normalizeRunnerBestScore(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+/**
+ * 버전 문자열이 아닌 값(누락/손상)은 null로 보정한다.
+ *
+ * 필드가 통째로 없는 기존 사용자는 null로 시작한다. 설치된 버전과 다르므로 다음 실행에서
+ * 팝업을 한 번 보고, 그때 기록된다.
+ */
+export function normalizeWhatsNewSeenVersion(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 /** ISO 문자열이 아닌 값(누락/손상)은 null로 보정한다. */
@@ -146,6 +166,7 @@ export async function ensureProfile(): Promise<ProfileData> {
     const announcementsEnabled = normalizeAnnouncementsEnabled(parsed.announcementsEnabled);
     const runnerBestScore = normalizeRunnerBestScore(parsed.runnerBestScore);
     const voicePrompt = normalizeVoicePrompt(parsed.voicePrompt);
+    const whatsNewSeenVersion = normalizeWhatsNewSeenVersion(parsed.whatsNewSeenVersion);
 
     const profile: ProfileData = {
       uuid:
@@ -158,6 +179,7 @@ export async function ensureProfile(): Promise<ProfileData> {
       announcementsEnabled,
       runnerBestScore,
       voicePrompt,
+      whatsNewSeenVersion,
     };
 
     // 누락/손상 필드를 보정했으면 파일을 다시 써서 정규화한다.
@@ -171,7 +193,11 @@ export async function ensureProfile(): Promise<ProfileData> {
       parsed.runnerBestScore !== runnerBestScore ||
       parsed.voicePrompt?.status !== voicePrompt.status ||
       parsed.voicePrompt?.askedAt !== voicePrompt.askedAt ||
-      parsed.voicePrompt?.decidedAt !== voicePrompt.decidedAt;
+      parsed.voicePrompt?.decidedAt !== voicePrompt.decidedAt ||
+      // 필드가 통째로 없는 기존 프로필은 "손상"이 아니라 "아직 없음"이고, 없을 때 읽히는 값이
+      // 곧 기본값 null이다. undefined와 null을 같게 봐야 이 필드를 도입했다는 이유만으로
+      // 모든 기존 사용자의 파일을 한 번씩 다시 쓰지 않는다.
+      (parsed.whatsNewSeenVersion ?? null) !== whatsNewSeenVersion;
     if (needsRewrite) {
       await writeProfile(profile);
     }
@@ -291,6 +317,20 @@ export async function setAnnouncementsEnabled(enabled: boolean): Promise<Profile
   profile.announcementsEnabled = enabled;
   await writeProfile(profile);
   return profile;
+}
+
+/** "What's new" 팝업을 마지막으로 띄운 버전을 읽는다(띄운 적이 없으면 null). */
+export async function getWhatsNewSeenVersion(): Promise<string | null> {
+  const profile = await ensureProfile();
+  return profile.whatsNewSeenVersion;
+}
+
+/** "What's new" 팝업을 띄운 버전을 기록한다. */
+export async function setWhatsNewSeenVersion(version: string): Promise<string | null> {
+  const profile = await ensureProfile();
+  profile.whatsNewSeenVersion = normalizeWhatsNewSeenVersion(version);
+  await writeProfile(profile);
+  return profile.whatsNewSeenVersion;
 }
 
 /** 러너 게임 최고 점수를 읽는다(기록이 없으면 0). */
