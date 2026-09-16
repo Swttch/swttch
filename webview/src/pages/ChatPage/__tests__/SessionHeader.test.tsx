@@ -179,7 +179,7 @@ beforeEach(() => {
 describe('SessionHeader', () => {
   it('드롭다운 토글 버튼 클릭 시 드롭다운이 열림/닫힘', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 초기 상태: 드롭다운 닫힘
     expect(screen.queryByPlaceholderText('Search sessions...')).not.toBeInTheDocument();
@@ -195,7 +195,7 @@ describe('SessionHeader', () => {
   });
 
   it('/resume 이벤트(open-session-dropdown) 디스패치 시 드롭다운이 열리고 검색창에 포커스', async () => {
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 초기 상태: 드롭다운 닫힘
     expect(screen.queryByPlaceholderText('Search sessions...')).not.toBeInTheDocument();
@@ -212,7 +212,7 @@ describe('SessionHeader', () => {
 
   it('방향키(ArrowDown)로 세션을 이동하고 Enter로 진입', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
     const searchInput = screen.getByPlaceholderText('Search sessions...');
 
@@ -226,7 +226,7 @@ describe('SessionHeader', () => {
 
   it('하이라이트된 세션이 없을 때 Enter는 아무 세션도 진입하지 않음', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
     const searchInput = screen.getByPlaceholderText('Search sessions...');
 
@@ -238,7 +238,7 @@ describe('SessionHeader', () => {
 
   it('Escape로 드롭다운이 닫힘', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
     const searchInput = screen.getByPlaceholderText('Search sessions...');
     expect(searchInput).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('SessionHeader', () => {
 
   it('드롭다운이 열린 상태에서 Cmd/Ctrl+Shift+P로 세션 목록을 새로고침', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
 
     mockLoadSessions.mockClear();
@@ -261,7 +261,7 @@ describe('SessionHeader', () => {
 
   it('세션 아이디(uuid)로 검색하면 해당 세션이 표시됨', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
 
     const searchInput = screen.getByPlaceholderText('Search sessions...');
@@ -275,7 +275,7 @@ describe('SessionHeader', () => {
 
   it('드롭다운 외부 클릭 시 드롭다운이 닫힘', async () => {
     const user = userEvent.setup();
-    const { container } = render(<SessionHeader />, { wrapper: queryWrapper });
+    const { container } = render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     const toggleButton = screen.getByRole('button', { name: /First Chat/i });
@@ -289,7 +289,7 @@ describe('SessionHeader', () => {
 
   it('세션 목록을 올바르게 렌더링', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -303,7 +303,7 @@ describe('SessionHeader', () => {
 
   it('검색어 입력 시 필터링된 세션 목록 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -321,7 +321,7 @@ describe('SessionHeader', () => {
 
   it('검색어가 없을 때 "No matching sessions" 메시지 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -338,7 +338,7 @@ describe('SessionHeader', () => {
     const user = userEvent.setup();
     mockSessionCtxValue.sessions = [];
     mockSessionCtxValue.currentSession = null;
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기 (세션 없으면 제목이 Past Conversations)
     await user.click(screen.getByRole('button', { name: /Past Conversations/i }));
@@ -349,7 +349,7 @@ describe('SessionHeader', () => {
 
   it('세션 클릭 시 switchSession 호출 및 드롭다운 닫힘', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -390,7 +390,7 @@ describe('SessionHeader', () => {
 
   it('더보기 메뉴의 새 탭 항목 클릭 시 openNewTab 호출', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     await user.click(screen.getByText('Open New Tab'));
@@ -402,7 +402,7 @@ describe('SessionHeader', () => {
   // and either requests an overlay or asks the adapter for a dedicated tab.
   it('설정 항목: openSettingsAs=overlay(기본)이면 새 탭을 열지 않음', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     await user.click(screen.getByText('Settings'));
@@ -414,7 +414,7 @@ describe('SessionHeader', () => {
   it('설정 항목: openSettingsAs=new-tab이면 General 목적지로 새 탭을 연다', async () => {
     const user = userEvent.setup();
     setCurrentSettings({ ...DEFAULT_SETTINGS, openSettingsAs: 'new-tab' } as SettingsState);
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     await user.click(screen.getByText('Settings'));
@@ -426,7 +426,7 @@ describe('SessionHeader', () => {
     const user = userEvent.setup();
     mockSessionCtxValue.currentSessionId = null;
     mockSessionCtxValue.currentSession = null;
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     expect(screen.getByText('Open New Tab').closest('button')).not.toBeDisabled();
@@ -435,7 +435,7 @@ describe('SessionHeader', () => {
   // A fresh install must show ONLY ⋮ on the right — that is the whole point of
   // the change (the old header grew one icon per feature and squeezed the title).
   it('기본 상태에서 우측에는 더보기 버튼만 있고 도크는 비어 있다', () => {
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     expect(screen.getByTitle('More')).toBeInTheDocument();
     // None of the dock icons are rendered until the user places them.
@@ -448,7 +448,7 @@ describe('SessionHeader', () => {
   // or its eye toggle) runs the feature directly — the same click that always ran it.
   it('더보기 메뉴는 항상 하나의 목록으로 표시된다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
 
@@ -461,7 +461,7 @@ describe('SessionHeader', () => {
   // item (unlike clicking the row), and the icon must then appear in the dock.
   it('눈 아이콘을 누르면 실행되지 않고, 해당 항목이 도크에 나타난다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     const eyeToggle = within(dockRow('newTab')).getByTitle('Add to dock');
@@ -482,7 +482,7 @@ describe('SessionHeader', () => {
   // ROW must still run it — exactly like every icon behaved before this menu.
   it('행의 드래그 핸들을 누르고 움직여도 항목이 실행되지 않는다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     const row = screen.getByText('Open New Tab').closest('button');
@@ -524,7 +524,7 @@ describe('SessionHeader', () => {
   // driving a real browser instead.
   it('드래그 핸들은 키보드로 집을 수 있다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     const rowCount = screen.getAllByTitle('Drag to rearrange').length;
@@ -552,7 +552,7 @@ describe('SessionHeader', () => {
   // the class list because jsdom computes no styles worth measuring.
   it('행의 좌우 여백은 RTL에서 뒤집히도록 논리 속성을 쓴다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     const row = dockRow('newTab');
@@ -578,7 +578,7 @@ describe('SessionHeader', () => {
   // stuck permanently.
   it('드래그를 Esc로 취소하면 순서가 저장되지 않는다', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await openOverflowMenu(user);
     mockSettingsValue.updateSettingWithScope.mockClear();
@@ -601,7 +601,7 @@ describe('SessionHeader', () => {
 
   it('현재 세션이 하이라이트 스타일로 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -618,7 +618,7 @@ describe('SessionHeader', () => {
 
   it('비활성 세션은 다른 스타일로 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -635,7 +635,7 @@ describe('SessionHeader', () => {
 
   it('세션 제목이 없을 때 "Past Conversations" 표시', () => {
     mockSessionCtxValue.currentSession = null;
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // "Past Conversations" 표시 확인
     expect(screen.getByText('Past Conversations')).toBeInTheDocument();
@@ -643,7 +643,7 @@ describe('SessionHeader', () => {
 
   it('세션에 updatedAt이 있을 때 상대 시간 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -661,7 +661,7 @@ describe('SessionHeader', () => {
 
   it('regex 검색이 올바르게 작동', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -678,7 +678,7 @@ describe('SessionHeader', () => {
 
   it('잘못된 regex 검색어일 때 fallback으로 includes 검색', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -693,7 +693,7 @@ describe('SessionHeader', () => {
 
   it('검색어 초기화 시 모든 세션이 다시 표시', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -717,7 +717,7 @@ describe('SessionHeader', () => {
 
   it('세션 선택 시 검색어 초기화', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     // 드롭다운 열기
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
@@ -745,7 +745,7 @@ describe('SessionHeader', () => {
 describe('SessionHeader - 날짜별 그룹화', () => {
   it('세션이 올바른 그룹 라벨 아래에 표시됨', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
 
@@ -761,7 +761,7 @@ describe('SessionHeader - 날짜별 그룹화', () => {
 
   it('검색 필터링 후에도 그룹화가 적용됨', async () => {
     const user = userEvent.setup();
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
     await user.type(screen.getByPlaceholderText('Search sessions...'), 'API');
@@ -777,7 +777,7 @@ describe('SessionHeader - 날짜별 그룹화', () => {
       ...mockSessions,
       { id: 'session-4', title: 'Old Session', updatedAt: undefined as unknown as Date, createdAt: daysAgo(400), messageCount: 1 },
     ];
-    render(<SessionHeader />, { wrapper: queryWrapper });
+    render(<SessionHeader isAwaitingUser={false} />, { wrapper: queryWrapper });
 
     await user.click(screen.getByRole('button', { name: /First Chat/i }));
 

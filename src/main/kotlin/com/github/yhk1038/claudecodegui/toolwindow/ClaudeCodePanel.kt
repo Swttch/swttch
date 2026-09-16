@@ -3,6 +3,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
+import com.github.yhk1038.claudecodegui.editor.TabActivity
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
 import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
@@ -139,7 +140,7 @@ class ClaudeCodePanel(
     // pooled holder that already has a callback (tab move/split safety).
     private val titleStaging = CallbackStaging<(String) -> Unit>()
     private val pathStaging = CallbackStaging<(String) -> Unit>()
-    private val streamingStaging = CallbackStaging<(Boolean) -> Unit>()
+    private val activityStaging = CallbackStaging<(TabActivity) -> Unit>()
 
     @Volatile
     private var isPanelDisposed: Boolean = false
@@ -161,11 +162,11 @@ class ClaudeCodePanel(
             holder?.onPathChanged = value
         }
 
-    var onStreamingStateChanged: ((Boolean) -> Unit)?
-        get() = holder?.onStreamingStateChanged ?: streamingStaging.current()
+    var onActivityChanged: ((TabActivity) -> Unit)?
+        get() = holder?.onActivityChanged ?: activityStaging.current()
         set(value) {
-            streamingStaging.stage(value)
-            holder?.onStreamingStateChanged = value
+            activityStaging.stage(value)
+            holder?.onActivityChanged = value
         }
 
     // panelId IS the tabId — one identity across Kotlin (tabId) and the backend
@@ -247,7 +248,7 @@ class ClaudeCodePanel(
         // callback, so pooled-holder wiring from a previous panel survives.
         titleStaging.flush(acquired.onTitleChanged) { acquired.onTitleChanged = it }
         pathStaging.flush(acquired.onPathChanged) { acquired.onPathChanged = it }
-        streamingStaging.flush(acquired.onStreamingStateChanged) { acquired.onStreamingStateChanged = it }
+        activityStaging.flush(acquired.onActivityChanged) { acquired.onActivityChanged = it }
 
         val b = acquired.browser
 
@@ -386,7 +387,7 @@ class ClaudeCodePanel(
             if (state == "repaint") {
                 requestRepaintNudge?.invoke()
             } else {
-                holder!!.onStreamingStateChanged?.invoke(state == "streaming")
+                holder!!.onActivityChanged?.invoke(TabActivity.fromReport(state))
             }
         }
 

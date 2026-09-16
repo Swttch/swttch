@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.services
 
+import com.github.yhk1038.claudecodegui.editor.TabActivity
 import com.github.yhk1038.claudecodegui.toolwindow.JcefAvailability
 import com.github.yhk1038.claudecodegui.toolwindow.resolveJcefAvailability
 import com.intellij.openapi.Disposable
@@ -148,8 +149,8 @@ class ClaudeCodeBrowserService(private val project: Project) : Disposable {
         /** Callback for WebView URL path changes (set by ClaudeCodePanel, consumed by handlers). */
         var onPathChanged: ((String) -> Unit)? = null
 
-        /** Callback for WebView streaming state changes (set by ClaudeCodePanel, consumed by ClaudeCodeFileEditor). */
-        var onStreamingStateChanged: ((isStreaming: Boolean) -> Unit)? = null
+        /** Callback for WebView tab-activity changes (set by ClaudeCodePanel, consumed by ClaudeCodeFileEditor). */
+        var onActivityChanged: ((activity: TabActivity) -> Unit)? = null
 
         /** Whether the WebView URL has been loaded at least once. */
         var isLoaded: Boolean = false

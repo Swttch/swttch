@@ -73,7 +73,6 @@ describe('useAwaitingNotifications', () => {
       { sessionTitle: 'Session A' },
       SOUND_OFF,
     );
-    expect(hasUnreadFavicon()).toBe(true);
   });
 
   it('does NOT fire AWAITING_PLAN_APPROVAL while tab is visible', () => {
@@ -111,7 +110,6 @@ describe('useAwaitingNotifications', () => {
       { sessionTitle: 'Session A' },
       SOUND_OFF,
     );
-    expect(hasUnreadFavicon()).toBe(true);
   });
 
   it('does NOT fire when the tab is visible', () => {
@@ -126,7 +124,6 @@ describe('useAwaitingNotifications', () => {
     rerender({ pending: true });
 
     expect(notifyMock).not.toHaveBeenCalled();
-    expect(hasUnreadFavicon()).toBe(false);
   });
 
   it('does NOT fire again while a permission stays pending', () => {
@@ -200,7 +197,32 @@ describe('useAwaitingNotifications', () => {
       { sessionTitle: 'Session A' },
       SOUND_OFF,
     );
-    expect(hasUnreadFavicon()).toBe(true);
+  });
+
+  // Regression guard for issue #456. This hook used to set the unread favicon
+  // alongside each notification, behind the same `document.hidden` condition —
+  // which meant the tab in front of the user never wore the badge, and the
+  // streaming spinner overwrote it on the next frame for the tab that did.
+  // The badge now belongs to useDocumentTitle, which owns the favicon outright.
+  it('leaves the favicon alone, hidden or not', () => {
+    for (const hidden of [true, false]) {
+      restoreDefaultFavicon();
+      setHidden(hidden);
+      const { rerender, unmount } = renderHook(
+        ({ pending }) =>
+          useAwaitingNotifications('Session A', SOUND_OFF, {
+            pendingPermission: pending,
+            pendingPlanApproval: pending,
+            pendingUserAnswer: pending,
+          }),
+        { initialProps: { pending: false } },
+      );
+
+      rerender({ pending: true });
+
+      expect(hasUnreadFavicon()).toBe(false);
+      unmount();
+    }
   });
 
   it('does NOT fire AWAITING_USER_INPUT while tab is visible', () => {

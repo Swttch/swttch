@@ -657,9 +657,16 @@ export function sendMessageToProcess(
     : stdinMessage.trimEnd();
   console.error('[node-backend]', `Sending to stdin: ${logPreview}`);
   session.process.stdin.write(stdinMessage);
-  // Turn in flight — cleared on the CLI `result` event (turn end) or on
-  // STREAM_END (process death safety net inside broadcastToSession).
-  connections.setSessionActivity(sessionId, SessionActivity.Running);
+  // The session's activity is NOT set here, though it used to be.
+  //
+  // Writing to stdin is us starting a turn, and a turn we start is only some of
+  // the turns there are. The CLI starts its own whenever a background task
+  // finishes, a Stop hook fires, or another session sends a message, and on
+  // those this line never ran: the transcript animated and the row in the
+  // session list sat still (issue #456).
+  //
+  // The chat screen reports it instead, off the condition it already draws its
+  // streaming animation under. See REPORT_SESSION_ACTIVITY.
   return true;
 }
 
@@ -891,20 +898,6 @@ export function sendControlResponseToProcess(
  * Deliberately not awaited by the caller: reading the setting and the file both
  * touch disk, and the permission prompt must reach the WebView immediately.
  */
-/**
- * Whether this CLI event is a request the CLI is now blocked on.
- *
- * Tool permission, plan approval and AskUserQuestion all arrive as the same
- * `can_use_tool` control request and are told apart by tool name further along,
- * which is a distinction a session list does not need: all three mean the same
- * thing to it, that the session cannot move until the user answers.
- */
-function isAwaitingUserAnswer(event: Record<string, unknown>): boolean {
-  if (event.type !== 'control_request') return false;
-  const request = event.request as Record<string, unknown> | undefined;
-  return request?.subtype === 'can_use_tool';
-}
-
 function maybeOpenPermissionDiff(
   targetSessionId: string,
   event: Record<string, unknown>,
@@ -1053,13 +1046,6 @@ function handleStreamEvent(
   // below either way, and a diff we cannot open must not delay it.
   maybeOpenPermissionDiff(targetSessionId, event, connections, bridge);
 
-  // The CLI has stopped and is waiting on the user. Every prompt that needs an
-  // answer — a tool permission, a plan approval, an AskUserQuestion — reaches us
-  // as the same `can_use_tool` control request, so this one test covers them all.
-  if (isAwaitingUserAnswer(event)) {
-    connections.setSessionActivity(targetSessionId, SessionActivity.Awaiting);
-  }
-
   // Keep the recorded permission mode in step with what the CLI says it is running
   // under. The CLI reports this on `system/init` (spawn) and again on `system/status`
   // when it changes mode by itself — approving an ExitPlanMode plan leaves plan mode
@@ -1079,8 +1065,12 @@ function handleStreamEvent(
   // 백엔드 고유 사이드이펙트 (WebView 전달과 무관한 서버 내부 로직)
   if (eventType === 'result') {
     sessionsWithResult.add(targetSessionId);
-    // Turn ended (success, error and interrupt alike emit a result event).
-    connections.setSessionActivity(targetSessionId, SessionActivity.Done);
+    // The session's activity is NOT set here, though it used to be. A `result`
+    // does end the turn, but the screen showing the session says so itself the
+    // moment its animation stops, and it is the only one of the two that also
+    // knows when a turn STARTS without us asking for it. Keeping both left the
+    // list and the transcript disagreeing in one direction (issue #456). See
+    // REPORT_SESSION_ACTIVITY.
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'upsert',
       session: {

@@ -33,6 +33,46 @@ while it was still working. It stops when the response actually ends.
 It keeps turning while you are away on another tab, which is the situation this
 exists for.
 
+### It does not turn while it waits for your answer
+
+When a session asks for a tool permission, waits on a plan approval, or puts up
+a multiple-choice question, **the turning stops and the unread dot appears.**
+
+Nothing is running at that moment. The CLI has stopped, and the next move is
+yours. A turning icon there claims work that is not happening
+([#456](https://github.com/Swttch/swttch/issues/456)).
+
+**Selecting the tab does not clear this dot.** The unread dot after a finished
+response goes away when you open the tab, because opening it is reading it. A
+question is not answered by being looked at. It goes away when you answer.
+
+**It appears whether or not you are looking at the tab.** If it only showed up
+behind your back, the one tab that can actually answer would be the one without
+a mark on it.
+
+Answering resumes the turn, so the icon **starts turning again**. Cancelling the
+prompt ends the turn, and the icon goes back to normal.
+
+Editor tabs, side panel tabs, and the browser favicon all behave the same way.
+
+### It turns again when the session goes back to work on its own
+
+A session sometimes starts working again without you sending anything. A task
+you pushed to the background finishes, a Stop hook fires, or another session
+sends it a message.
+
+**Every marker turns again for those too.** The chat tab, the browser favicon
+and the dot in the session list all move together.
+
+The three used to disagree. Push a twenty-second task to the background, wait
+for the answer to finish, and when the task completed and the session resumed,
+**the streaming indicator at the foot of the transcript started moving again
+while the dot in the session list stayed still**
+([#456](https://github.com/Swttch/swttch/issues/456)).
+
+They now read one value. If a response is flowing at the foot of the transcript,
+every screen shows the session as working, without exception.
+
 ### When it finishes, it becomes the unread dot
 
 If a response ends while you were not looking at that tab, the turning stops and

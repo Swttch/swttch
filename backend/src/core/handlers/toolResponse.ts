@@ -2,7 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { sendToolResultToProcess, sendControlResponseToProcess } from '../claude-process';
-import { MessageType, buildUserDeclinedContent, SessionActivity } from '../../shared';
+import { MessageType, buildUserDeclinedContent } from '../../shared';
 import type { PermissionUpdate } from '../../shared';
 import { takePreview, peekPreview } from '../features/diffPreview';
 import { holdApprovalIfBaseMoved } from '../features/reviewBase';
@@ -119,10 +119,11 @@ export async function toolResponseHandler(
         : { behavior: 'deny', message: buildUserDeclinedContent(payload?.reason) },
     };
     sendControlResponseToProcess(connections, sessionId, response);
-    // The question is answered, so the session is working again rather than
-    // waiting. Approved or denied makes no difference to that: the CLI resumes
-    // the turn either way, and `result` is what ends it (issue #449).
-    connections.setSessionActivity(sessionId, SessionActivity.Running);
+    // The session's activity is NOT set here, though it used to be. Answering a
+    // prompt does put the session back to work, but the screen that answered
+    // says so itself the moment its prompt comes down — and having two places
+    // answer one question is what let the list and the transcript disagree
+    // (issue #456). See REPORT_SESSION_ACTIVITY.
     console.error('[node-backend]', `CONTROL_RESPONSE sent for request ${controlRequestId} (approved: ${approved})`);
   } else {
     // Legacy tool_result path (kept for completeness; permission prompts use the

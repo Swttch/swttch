@@ -22,7 +22,10 @@ class ClaudeCodeFileIconPatcher : FileIconPatcher {
         if (file !is ClaudeCodeVirtualFile) return baseIcon
         return when (file.badgeState) {
             TabBadge.WORKING -> WorkingTabIcon.ICON
-            TabBadge.UNREAD -> UNREAD_ICON
+            // One dot for both, on purpose: to the user they say the same thing,
+            // which is that this tab wants them. What differs is when each one
+            // goes away, and that is decided where the badge is set, not here.
+            TabBadge.AWAITING, TabBadge.UNREAD -> UNREAD_ICON
             TabBadge.NONE -> baseIcon
         }
     }

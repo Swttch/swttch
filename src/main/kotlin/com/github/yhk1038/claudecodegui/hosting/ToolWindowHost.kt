@@ -1,6 +1,8 @@
 package com.github.yhk1038.claudecodegui.hosting
 
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
+import com.github.yhk1038.claudecodegui.editor.TabActivity
+import com.github.yhk1038.claudecodegui.editor.TabActivityTracker
 import com.github.yhk1038.claudecodegui.editor.WorkingTabIcon
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.toolwindow.ClaudeCodePanel
@@ -42,15 +44,20 @@ class ToolWindowHost(private val project: Project) : ChatHost {
     private var closeListenerInstalled = false
 
     /**
-     * Tabs whose session is streaming right now, so they wear the spinner.
+     * Tabs whose session is streaming or waiting on an answer, so their icon
+     * must survive being selected.
      *
      * Kept here rather than read off the [Content] because selecting a tab has
-     * to know whether restoring the base icon would erase a spinner, and the
-     * icon itself cannot answer that. The editor-tab host asks
+     * to know whether restoring the base icon would erase a spinner or a pending
+     * question, and the icon itself cannot answer that. The editor-tab host asks
      * [com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile.badgeState]
      * for the same reason; a tool-window content has no such field to carry.
+     *
+     * Both states are held by the same rule for the same reason: arriving at a
+     * tab neither stops the session nor answers its question, so neither icon is
+     * the user's arrival to clear (issue #456).
      */
-    private val workingTabs: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val busyTabs: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     override fun openOrFocus(project: Project, tabId: String, initialPath: String?, initialTitle: String?) {
         val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID) ?: run {
@@ -163,34 +170,44 @@ class ToolWindowHost(private val project: Project) : ChatHost {
                 }
             }
         }
-        // Spinner while streaming, then the unread badge when the stream ends on a
-        // tab that is NOT the selected one. The selection listener restores the base
-        // icon when the user comes back (mirrors the editor tab).
+        // Spinner while streaming, the unread dot while the session waits for an
+        // answer, then the unread dot again when the turn ends on a tab that is NOT
+        // the selected one. The selection listener restores the base icon when the
+        // user comes back (mirrors the editor tab).
         //
-        // Both arms are guarded on a transition, not on the reported state alone:
-        // the WebView reports `idle` whenever the page mounts, and acting on that
-        // would clear an unread badge the user has not seen yet.
-        var wasStreaming = false
-        panel.onStreamingStateChanged = { isStreaming ->
-            if (isStreaming) {
-                workingTabs.add(tabId)
-            } else if (wasStreaming) {
-                workingTabs.remove(tabId)
+        // Which reports are worth drawing is [TabActivityTracker]'s to answer —
+        // the editor-tab host asks it the same question, and the rule used to be
+        // written out in both.
+        val activity = TabActivityTracker()
+        panel.onActivityChanged = { reported ->
+            if (reported == TabActivity.IDLE) {
+                busyTabs.remove(tabId)
+            } else {
+                busyTabs.add(tabId)
             }
-            if (isStreaming || wasStreaming) {
-                ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)?.let { tw ->
-                    val tabContent = findContent(tw, tabId)
-                    if (tabContent != null) {
-                        val isSelected = tw.contentManager.selectedContent === tabContent
-                        tabContent.icon = when {
-                            isStreaming -> WorkingTabIcon.ICON
-                            isSelected -> BASE_ICON
-                            else -> UNREAD_ICON
-                        }
+            if (activity.record(reported)) {
+                // Drawn on the EDT, for the reason spelled out on onTitleChanged
+                // above: this callback arrives on the AppKit thread, and
+                // `Content.icon` is UI model state. Assigning it fires a property
+                // change the platform follows into ToolWindowContentUi.update ->
+                // SingleContentLayout -> DataManagerImpl.getDataContext, which
+                // asserts the EDT and throws (issue #456).
+                ApplicationManager.getApplication().invokeLater {
+                    val tw = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)
+                        ?: return@invokeLater
+                    val tabContent = findContent(tw, tabId) ?: return@invokeLater
+                    tabContent.icon = when (reported) {
+                        TabActivity.STREAMING -> WorkingTabIcon.ICON
+                        // Worn whether or not this is the selected tab: the
+                        // question is addressed to the user wherever they are
+                        // looking, and only answering it ends the wait.
+                        TabActivity.AWAITING -> UNREAD_ICON
+                        TabActivity.IDLE ->
+                            if (tw.contentManager.selectedContent === tabContent) BASE_ICON
+                            else UNREAD_ICON
                     }
                 }
             }
-            wasStreaming = isStreaming
         }
 
         return ContentFactory.getInstance().createContent(panel, virtualFile.presentableName, false).apply {
@@ -220,10 +237,11 @@ class ToolWindowHost(private val project: Project) : ChatHost {
                 // Track the active tab so restart restore re-focuses the right one.
                 EditorTabStateService.getInstance(project).addTab(tabId)
                 // The user is now looking at this tab, so clear any unread badge.
-                // A streaming tab keeps its spinner: the user arriving does not
-                // stop the session, and dropping the spinner here would blank the
-                // tab exactly while it is still working.
-                if (tabId !in workingTabs) {
+                // A busy tab keeps its icon: arriving does not stop a running
+                // session, nor answer a question one is waiting on, so dropping
+                // the icon here would blank the tab exactly while it still has
+                // something to say (see [busyTabs]).
+                if (tabId !in busyTabs) {
                     event.content.icon = BASE_ICON
                 }
             }
@@ -231,7 +249,7 @@ class ToolWindowHost(private val project: Project) : ChatHost {
             override fun contentRemoved(event: ContentManagerEvent) {
                 val content = event.content
                 val closedTabId = content.getUserData(TAB_ID_KEY) ?: return
-                workingTabs.remove(closedTabId)
+                busyTabs.remove(closedTabId)
                 val panel = content.component as? ClaudeCodePanel ?: return
                 // Disposing the panel self-cleans: releaseRef (grace-period, harmless
                 // here) → removeTab + EditorTabStateService.removeTab + virtual-file

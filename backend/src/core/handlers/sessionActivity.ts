@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { MessageType } from '../../shared';
+import { MessageType, SessionActivity } from '../../shared';
 
 /**
  * GET_SESSION_ACTIVITY — what every non-idle session is doing, and which
@@ -51,4 +51,57 @@ export function markSessionReadHandler(
     requestId: message.requestId,
     status: 'ok',
   });
+}
+
+/**
+ * REPORT_SESSION_ACTIVITY — a chat screen saying what it is doing.
+ *
+ * This is the only thing that moves a session between idle, running and
+ * awaiting. The backend used to decide for itself, and it decided from the
+ * moment it wrote a message to the CLI's stdin — which is blind to every turn
+ * the CLI starts without being asked. A background task finishing is one: the
+ * transcript animated, the favicon turned, and the row in the session list sat
+ * still, because only one of the three was reading the CLI (issue #456).
+ *
+ * `done` is not reported and is not accepted. Whether a finished turn is still
+ * unread is not something a chat screen knows about itself, so it is derived
+ * here, from the move out of a busy state, and cleared by MARK_SESSION_READ.
+ */
+export function reportSessionActivityHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): void {
+  const payload = message.payload as
+    | { sessionId?: string; activity?: string }
+    | undefined;
+  const sessionId = payload?.sessionId;
+  const reported = payload?.activity;
+
+  if (sessionId && isReportable(reported)) {
+    connections.reportSessionActivity(sessionId, reported);
+  }
+
+  connections.sendTo(connectionId, MessageType.ACK, {
+    requestId: message.requestId,
+    status: 'ok',
+  });
+}
+
+/**
+ * Whether a reported word is one a screen is allowed to say.
+ *
+ * `done` is excluded on purpose rather than by omission: it is a real member of
+ * the enum, and letting a screen assert it would let one tab mark another tab's
+ * session unread.
+ */
+function isReportable(
+  activity: string | undefined,
+): activity is SessionActivity.Idle | SessionActivity.Running | SessionActivity.Awaiting {
+  return (
+    activity === SessionActivity.Idle ||
+    activity === SessionActivity.Running ||
+    activity === SessionActivity.Awaiting
+  );
 }

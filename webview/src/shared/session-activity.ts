@@ -29,3 +29,30 @@ export enum SessionActivity {
 
 /** Session ids by what each one is doing. Sessions not listed are [SessionActivity.Idle]. */
 export type SessionActivityMap = Record<string, SessionActivity>;
+
+/**
+ * What a session is doing, from the two things a chat screen already knows.
+ *
+ * The one definition of the value, so that everything showing a session says the
+ * same thing: the streaming animation at the foot of the transcript, the browser
+ * favicon, the IDE tab icon, and the row in the session list.
+ *
+ * Both arms are the conditions those surfaces are already drawn under, not a
+ * second reading of them. [SessionActivity.Running] is exactly the condition the
+ * streaming animation is drawn under (`isStreaming && !isAwaitingUser`), and
+ * [SessionActivity.Awaiting] is exactly "a panel is asking the user to answer
+ * something" — a tool permission, a plan approval, or a question.
+ *
+ * [SessionActivity.Done] is deliberately not produced here. Whether a finished
+ * turn is still unread is not something a chat screen knows about itself: the
+ * backend derives it from the move into [SessionActivity.Idle], and clears it
+ * when a host reports that the user has looked.
+ */
+export function resolveSessionActivity(
+  isStreaming: boolean,
+  isAwaitingUser: boolean,
+): SessionActivity {
+  if (isAwaitingUser) return SessionActivity.Awaiting;
+  if (isStreaming) return SessionActivity.Running;
+  return SessionActivity.Idle;
+}

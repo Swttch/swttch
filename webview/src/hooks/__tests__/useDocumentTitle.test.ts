@@ -38,7 +38,7 @@ afterEach(() => {
 
 describe('useDocumentTitle', () => {
   it('sets document.title from the session title', () => {
-    renderHook(() => useDocumentTitle('My Session', false, false, SOUND_OFF, null));
+    renderHook(() => useDocumentTitle('My Session', false, false, SOUND_OFF, null, false));
     expect(document.title).toBe('My Session');
   });
 
@@ -49,28 +49,28 @@ describe('useDocumentTitle', () => {
     // JetBrains side restores from EditorTabStateService, flashing "Claude Code"
     // mid-load (see useDocumentTitle.ts).
     document.title = 'Cached Session';
-    renderHook(() => useDocumentTitle(null, false, false, SOUND_OFF, null));
+    renderHook(() => useDocumentTitle(null, false, false, SOUND_OFF, null, false));
     expect(document.title).toBe('Cached Session');
   });
 
   // 버그 2 회귀 방지: title=null이어도 isResetSession=true이면 APP_NAME으로 reset
   it('resets document.title to APP_NAME when title is null and isResetSession is true', () => {
     document.title = 'Old Session';
-    renderHook(() => useDocumentTitle(null, true, false, SOUND_OFF, null));
+    renderHook(() => useDocumentTitle(null, true, false, SOUND_OFF, null, false));
     expect(document.title).toBe('Claude Code');
   });
 
   // 회귀 방지: title=null이고 isResetSession=false이면 기존 제목 유지(캐시 보호)
   it('does not change document.title when title is null and isResetSession is false', () => {
     document.title = 'Cached Session';
-    renderHook(() => useDocumentTitle(null, false, false, SOUND_OFF, null));
+    renderHook(() => useDocumentTitle(null, false, false, SOUND_OFF, null, false));
     expect(document.title).toBe('Cached Session');
   });
 
   it('calls notify(SESSION_COMPLETE) when streaming ends while hidden', () => {
     setHidden(true);
     const { rerender } = renderHook(
-      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null),
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null, false),
       { initialProps: { streaming: true } },
     );
 
@@ -88,7 +88,7 @@ describe('useDocumentTitle', () => {
   it('does NOT call notify when streaming ends while tab is visible', () => {
     setHidden(false);
     const { rerender } = renderHook(
-      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null),
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null, false),
       { initialProps: { streaming: true } },
     );
 
@@ -101,7 +101,7 @@ describe('useDocumentTitle', () => {
   it('passes the SOUND_OFF selection through to notify()', () => {
     setHidden(true);
     const { rerender } = renderHook(
-      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null),
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, null, false),
       { initialProps: { streaming: true } },
     );
 
@@ -118,7 +118,7 @@ describe('useDocumentTitle', () => {
   it('passes a backend soundId through to notify()', () => {
     setHidden(true);
     const { rerender } = renderHook(
-      ({ streaming }) => useDocumentTitle('Session A', false, streaming, 'Glass', null),
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, 'Glass', null, false),
       { initialProps: { streaming: true } },
     );
 
@@ -135,7 +135,7 @@ describe('useDocumentTitle', () => {
   it('uses the latest soundSelection captured before the streaming-end transition', () => {
     setHidden(true);
     const { rerender } = renderHook(
-      ({ streaming, sound }) => useDocumentTitle('Session A', false, streaming, sound, null),
+      ({ streaming, sound }) => useDocumentTitle('Session A', false, streaming, sound, null, false),
       { initialProps: { streaming: true, sound: SOUND_OFF as string } },
     );
 
@@ -156,7 +156,7 @@ describe('useDocumentTitle', () => {
     setHidden(true);
     const err = new Error('boom');
     const { rerender } = renderHook(
-      ({ streaming, error }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, error),
+      ({ streaming, error }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, error, false),
       { initialProps: { streaming: true, error: null as Error | null } },
     );
 
@@ -175,7 +175,7 @@ describe('useDocumentTitle', () => {
     setHidden(false);
     const err = new Error('boom');
     const { rerender } = renderHook(
-      ({ streaming, error }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, error),
+      ({ streaming, error }) => useDocumentTitle('Session A', false, streaming, SOUND_OFF, error, false),
       { initialProps: { streaming: true, error: null as Error | null } },
     );
 
@@ -227,7 +227,7 @@ describe('useDocumentTitle – JCEF environment (Notification API unavailable)',
     setHidden(true);
 
     const { rerender } = renderHook(
-      ({ streaming }) => useDocumentTitle('Test session', false, streaming, SOUND_OFF, null),
+      ({ streaming }) => useDocumentTitle('Test session', false, streaming, SOUND_OFF, null, false),
       { initialProps: { streaming: true } },
     );
 

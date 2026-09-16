@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from 'react';
-import { plainToInstance } from 'class-transformer';
+import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SessionState } from '../types';
 import { SessionMetaDto } from '../dto';
@@ -492,6 +492,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
   useEffect(() => {
     const unsubscribe = subscribe(MessageType.SESSIONS_UPDATED, (message) => {
       const { action, session } = message.payload as { action: string; session: { sessionId: string; title?: string } };
+      if (action === 'started') {
+        // Another window just created a session and sent the row it drew.
+        //
+        // Merged rather than reloaded because there is nothing to reload yet:
+        // the transcript this session will be listed from does not exist for a
+        // few seconds, so asking the backend now returns a list without it. The
+        // refresh comes on its own once the file lands, and replaces this row
+        // with the recorded one.
+        mergeSession(session);
+        return;
+      }
       if (action === 'rename' && session?.sessionId && session.title) {
         setSessions(prev => prev.map(s =>
           s.id === session.sessionId
@@ -517,7 +528,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
       }
     });
     return unsubscribe;
-  }, [subscribe, loadSessions]);
+  }, [subscribe, loadSessions, mergeSession]);
 
   const resetToNewSession = useCallback(() => {
     // URL change is the SSOT — SessionLoader reacts to clear state + reset
@@ -595,12 +606,31 @@ export function SessionProvider({ children }: SessionProviderProps) {
     newlyCreatedSessionIds.current.add(sessionId);
     setSessions(prev => [newSession, ...prev]);
 
+    // Hand the very same row to every other window.
+    //
+    // This row is the only one that exists right now: the transcript the lists
+    // read is not written for several more seconds, so a window that was told
+    // to refresh instead would read a folder that still lacks this session.
+    // Sending the row rather than a "go and look" means the side panel and the
+    // other tabs show what this dropdown shows, at the same moment, worded the
+    // same way — the title here is derived from the prompt, and deriving it
+    // twice is how two lists start disagreeing.
+    //
+    // Fire and forget: this is a courtesy to other windows, and a failed relay
+    // costs them the head start, not the session. The backend's own refresh
+    // still arrives once the file lands.
+    void send(MessageType.SESSION_STARTED, {
+      sessionId,
+      workingDir: workingDirectory ?? undefined,
+      session: instanceToPlain(newSession),
+    }).catch(() => {});
+
     // addNewSession은 사용자가 모드를 선택한 직후 호출되므로
     // URL 변경으로 인한 모드 리셋을 건너뜀
     skipNextModeReset.current = true;
     // URL change is the SSOT — navigating IS the session creation
     navigateToSession(sessionId, undefined, handoff);
-  }, [navigateToSession]);
+  }, [navigateToSession, send, workingDirectory]);
 
   const isNewlyCreatedSession = useCallback((sessionId: string) => {
     return newlyCreatedSessionIds.current.has(sessionId);

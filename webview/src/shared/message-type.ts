@@ -478,6 +478,22 @@ export enum MessageType {
    * becoming the selected one. inbound webview→backend
    */
   MARK_SESSION_READ = 'MARK_SESSION_READ',
+  /**
+   * What the chat screen showing this session is doing right now, as
+   * `{ sessionId, activity }` where activity is `running`, `awaiting` or `idle`.
+   *
+   * The screen reports rather than the backend guessing, because the screen is
+   * where the answer already exists: `running` is the exact condition the
+   * streaming animation is drawn under, and `awaiting` is the exact condition a
+   * panel is asking the user to answer something. The backend used to derive its
+   * own copy from "we just wrote to stdin", which is blind to every turn the CLI
+   * starts by itself — a background task finishing, a Stop hook, a peer message.
+   * The animation resumed and the session list did not (issue #456).
+   *
+   * `done` never arrives here: whether a finished turn is still unread is not
+   * something a chat screen knows about itself. inbound webview→backend
+   */
+  REPORT_SESSION_ACTIVITY = 'REPORT_SESSION_ACTIVITY',
 
   // -- Plugin updates --
   /** Check for available plugin updates. */
@@ -615,6 +631,19 @@ export enum MessageType {
   SESSION_LOADED = 'SESSION_LOADED',
   /** The session list changed and clients should refresh. */
   SESSIONS_UPDATED = 'SESSIONS_UPDATED',
+  /**
+   * A session was just created, carrying the row the creating tab drew for it.
+   *
+   * Sent by the tab that started the session so every OTHER list can show the
+   * same row at the same moment. Until this existed, only the creating tab had
+   * it: the row is built locally from the prompt the user just typed, and the
+   * transcript the lists read does not exist for several seconds yet.
+   *
+   * The row travels rather than being rebuilt on each side, so the dropdown and
+   * the side panel cannot describe one session differently. Relayed to other
+   * connections as SESSIONS_UPDATED with action 'started'. inbound webview→backend
+   */
+  SESSION_STARTED = 'SESSION_STARTED',
   /**
    * What the sessions are doing, and which ones a tab has open, changed; carries
    * both whole as `{ activity: SessionActivityMap, open: string[] }` rather than
