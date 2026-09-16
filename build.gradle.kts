@@ -188,19 +188,11 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.31.1 - Prompt Library release, and background agent improvements</h3>
+            <h3>0.32.0 - Ask another session, and a working indicator on the tab</h3>
             <ul>
-                <li>Add a Prompt Library for the phrases you retype, opened with !! in the chat input (#440, reported by @EndiButler)</li>
-                <li>Add a composer for sending a background agent another message and resuming it (#437)</li>
-                <li>Fix the agent list growing without bound as agents pile up (#437, reported by @CraftedFury)</li>
-                <li>Fix the background task list disappearing entirely on reload (#437)</li>
-                <li>Add a What's new dialog on the first launch after an update (#441)</li>
-                <li>Fix lists and links being flattened to plain text on the Releases settings screen (#441)</li>
-                <li>Fix a session past the 30th failing to open and showing the wrong title (#435)</li>
-                <li>Fix a message from another session not appearing until reload (#424)</li>
-                <li>Fix the model name being wrong on an account pointed at another provider (#442)</li>
-                <li>Add support for the proxy setting in settings.json to usage stats (#432 by @zavitkov, reported by @lemniscat)</li>
-                <li>Fix an exception thrown by the IDE on WSL (#439, reported by @macnuadaclurichaun)</li>
+                <li>Add @@ in the chat input to ask another running session (#447)</li>
+                <li>Add a working indicator on the chat tab while a session runs (#451, reported by @andreiGl)</li>
+                <li>Fix the usage panel's proxy setting, live updates, per-model weekly limits, and API key accounts (#450, reported by @lemniscat)</li>
             </ul>
         """.trimIndent()
     }
