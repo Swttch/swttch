@@ -77,8 +77,23 @@ noise rather than an answer.
 
 ## Also fixed in the same report
 
-The reporter tried to work around the failure by pointing the plugin at their
-CLI by hand, in Settings → CLI Path. The path they pasted carried a trailing
+**The spinner that never stopped.** The reporter's first complaint was not the
+401 at all. It was that the plugin sat "stuck forever on claude's weird verbs
+running without producing any result", with the 401 as something that happened
+only occasionally. Those are two different failures.
+
+A turn ends when the CLI says so. If the CLI dies before saying anything, the
+backend says it instead. If the backend dies too, nobody is left to say it —
+and the animation kept running until the view was reloaded, because every
+signal that ends a turn travels over the same connection that just went away.
+
+Both gaps are closed. The animation now stops when the CLI process dies
+mid-turn, and when the connection to the backend drops. If the backend is
+actually still working and only the connection blinked, the animation resumes
+by itself as soon as the next update arrives.
+
+**A path with a trailing space.** The reporter also tried to work around the
+failure by pointing the plugin at their CLI by hand, in Settings → CLI Path. The path they pasted carried a trailing
 space, and `spawn` treats a trailing space as part of the filename:
 
 ```
