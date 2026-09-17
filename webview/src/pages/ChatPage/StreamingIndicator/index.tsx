@@ -3,7 +3,18 @@ import { ICON_FRAMES, TEXT_CHANGE_DELAYS, getVerbs } from './constants.ts';
 import { useScramble } from './useScramble.ts';
 import { randomPick } from './utils.ts';
 
-export const StreamingIndicator: React.FC = () => {
+interface Props {
+    /**
+     * Seconds left before a dropped connection ends this turn, appended to the verb
+     * as "(7s)". Null or omitted while the connection is up.
+     *
+     * Without it a lost backend looks exactly like a slow one: the same verbs
+     * scrambling on forever, with nothing saying we noticed (#446).
+     */
+    countdownSeconds?: number | null;
+}
+
+export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null }) => {
     // 아이콘 프레임 인덱스
     const [frameIdx, setFrameIdx] = useState(0);
 
@@ -76,6 +87,13 @@ export const StreamingIndicator: React.FC = () => {
                         <span className="text-text-tertiary text-base font-mono">
                             {displayText}...
                         </span>
+                        {/* Outside the scrambling span on purpose: the seconds must stay
+                            readable while the verb dissolves into dots and underscores. */}
+                        {countdownSeconds !== null && (
+                            <span className="text-state-warning-fg text-base font-mono ms-2">
+                                ({countdownSeconds}s)
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

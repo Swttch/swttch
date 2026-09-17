@@ -111,7 +111,7 @@ function ChatPageContent() {
   const api = useApi();
   const { textareaRef, focus: focusInput } = useChatInputFocus();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { messages, isStreaming, disconnectCountdown, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -432,6 +432,7 @@ function ChatPageContent() {
       <div ref={scrollContainerRef} data-chat-scroll onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0">
         <ChatMessageArea
           isStreaming={isStreaming && !isAwaitingUser}
+          disconnectCountdown={disconnectCountdown}
           mergedMessages={mergedMessages}
           hasMore={hasMoreOlder}
           isLoadingMore={isLoadingMore}

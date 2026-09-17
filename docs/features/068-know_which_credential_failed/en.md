@@ -88,9 +88,24 @@ and the animation kept running until the view was reloaded, because every
 signal that ends a turn travels over the same connection that just went away.
 
 Both gaps are closed. The animation now stops when the CLI process dies
-mid-turn, and when the connection to the backend drops. If the backend is
-actually still working and only the connection blinked, the animation resumes
-by itself as soon as the next update arrives.
+mid-turn, and when the connection to the backend drops.
+
+Losing the connection does not end the turn immediately, because connections
+drop for a second and come back on their own often enough that reacting at once
+would kill turns that were perfectly fine. Instead the animation starts counting
+down, and you see the seconds next to it:
+
+```
+✻ Brewing... (7s)
+```
+
+If the connection returns before the count runs out, the countdown disappears
+and the turn carries on as if nothing happened. If it does not, the turn ends
+the same way a finished turn does.
+
+The banner at the top of the window still appears the instant the connection
+drops. That banner is describing the connection, which is gone right now; the
+animation is describing your turn, which usually survives a blink.
 
 **A path with a trailing space.** The reporter also tried to work around the
 failure by pointing the plugin at their CLI by hand, in Settings → CLI Path. The path they pasted carried a trailing

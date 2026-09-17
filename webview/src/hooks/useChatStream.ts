@@ -98,10 +98,23 @@ export interface UseChatStreamOptions {
   onControlRequestResult?: (result: ControlRequestResult) => void;
 }
 
+/**
+ * How long a running turn survives a dropped connection before the view gives up
+ * on it.
+ *
+ * Not instant, because the socket drops briefly and comes back on its own often
+ * enough that reacting at once would end healthy turns. The connection banner can
+ * afford to be instant — it describes the connection. The spinner describes the
+ * turn, and the turn usually survives a blink.
+ */
+export const DISCONNECT_GRACE_SECONDS = 10;
+
 export interface UseChatStreamReturn {
   messages: LoadedMessageDto[];
   isStreaming: boolean;
   streamingMessageId: string | null;
+  /** Seconds left before a dropped connection ends the turn; null while connected. */
+  disconnectCountdown: number | null;
   error: Error | null;
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
@@ -135,6 +148,9 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   const [messages, setMessages] = useState<LoadedMessageDto[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  // Seconds left before a dropped connection ends the turn. Null whenever the
+  // connection is up or no turn is running. See the disconnect effect below.
+  const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [authDiagnosis, setAuthDiagnosis] = useState<{ envApiKeys: string[]; message: string } | null>(null);
   const [systemInit, setSystemInit] = useState<Record<string, unknown> | null>(null);
@@ -454,24 +470,55 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   }, [flushPendingDeltas, updateMessage]);
 
   /*
-   * A dropped connection ends the stream too.
+   * A dropped connection ends the stream too — after a grace period.
    *
    * The spinner promises "the CLI is working on this". A lost socket breaks that
    * promise in the worst way: every signal that would have ended the turn — the
    * CLI's `result`, the backend's STREAM_END, SERVICE_ERROR — travels over the
-   * socket that just went away. If the backend process itself died, there is no
-   * longer anything alive to send them, so nothing will ever stop the spinner and
-   * it runs until the user reloads. That is what the reporter of #446 hit: their
-   * backend took a SIGTERM mid-turn and the turn simply never ended.
+   * socket that just went away. If the backend process itself died, nothing is
+   * left alive to send them, so nothing will ever stop the spinner and it runs
+   * until the user reloads. That is what the reporter of #446 hit: their backend
+   * took a SIGTERM mid-turn and the turn simply never ended.
    *
-   * Clearing on disconnect is safe in the other case too. If the backend is alive
-   * and only the socket blinked, the turn keeps running and its next stream event
-   * starts the spinner again on reconnect. A spinner that briefly stops is honest
-   * about what we know; one that spins next to a "connection lost" banner is not.
+   * The grace period is why this does not just call endStreaming(). The socket
+   * drops briefly and comes back on its own often enough that reacting at once
+   * would end healthy turns — the connection banner can afford to be instant
+   * because it is describing the connection, but the spinner is describing the
+   * TURN, and the turn usually survives a blink.
+   *
+   * The countdown is published so the indicator can show it. A spinner that goes
+   * on spinning tells the user nothing; one that reads "Brewing... (7s)" says
+   * both that we noticed and how long we will wait.
+   *
+   * Reads the same `isConnected` the connection banner does (both come from
+   * BridgeContext), but deliberately NOT the `navigator.onLine` the banner also
+   * checks. The backend is on localhost: losing internet leaves both it and the
+   * running turn untouched, so reacting to that would kill healthy turns. When
+   * the view is reached through a tunnel, losing internet drops the socket too
+   * and `isConnected` catches it anyway.
    */
   useEffect(() => {
-    if (!bridge.isConnected) endStreaming();
-  }, [bridge.isConnected, endStreaming]);
+    if (bridge.isConnected || !isStreaming) {
+      setDisconnectCountdown(null);
+      return;
+    }
+
+    let secondsLeft = DISCONNECT_GRACE_SECONDS;
+    setDisconnectCountdown(secondsLeft);
+
+    const timer = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft > 0) {
+        setDisconnectCountdown(secondsLeft);
+        return;
+      }
+      clearInterval(timer);
+      setDisconnectCountdown(null);
+      endStreaming();
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [bridge.isConnected, isStreaming, endStreaming]);
 
   // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
   const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
@@ -1432,6 +1479,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     messages,
     isStreaming,
     streamingMessageId,
+    disconnectCountdown,
     error,
     authDiagnosis,
     addUserMessage,
