@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ICON_FRAMES, TEXT_CHANGE_DELAYS, getVerbs } from './constants.ts';
 import { useScramble } from './useScramble.ts';
 import { randomPick } from './utils.ts';
+import { useTranslation } from '@/i18n';
 
 interface Props {
     /**
@@ -12,9 +13,21 @@ interface Props {
      * scrambling on forever, with nothing saying we noticed (#446).
      */
     countdownSeconds?: number | null;
+    /**
+     * The CLI's retry progress, shown as "(retry 3/10)".
+     *
+     * The CLI re-sends a failed request up to ten times with a widening backoff, which
+     * can run for minutes. Without this the screen is an unchanging spinner and reads as
+     * frozen — the reporter of #446 described it as "stuck forever". We cannot shorten
+     * the retries (the CLI owns that schedule), so the least we do is show them.
+     *
+     * Yields to `countdownSeconds`: once the connection is gone, retry progress is the
+     * last thing we heard rather than what is happening now.
+     */
+    apiRetry?: { attempt: number; max: number } | null;
 }
 
-export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null }) => {
+export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null, apiRetry = null }) => {
     // 아이콘 프레임 인덱스
     const [frameIdx, setFrameIdx] = useState(0);
 
@@ -72,6 +85,7 @@ export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null })
 
     // 스크램블 디스플레이
     const displayText = useScramble(verb);
+    const { t } = useTranslation('chat');
 
     return (
         <div>
@@ -87,13 +101,20 @@ export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null })
                         <span className="text-text-tertiary text-base font-mono">
                             {displayText}...
                         </span>
-                        {/* Outside the scrambling span on purpose: the seconds must stay
-                            readable while the verb dissolves into dots and underscores. */}
-                        {countdownSeconds !== null && (
-                            <span className="text-state-warning-fg text-base font-mono ms-2">
+                        {/* Outside the scrambling span on purpose: the text must stay
+                            readable while the verb dissolves into dots and underscores.
+                            Dimmer than the verb, not louder: this is progress detail, not a
+                            warning, and a bright badge beside a calm spinner reads as an
+                            alert about something the user is supposed to act on. */}
+                        {countdownSeconds !== null ? (
+                            <span className="text-text-tertiary/70 text-base font-mono ms-2">
                                 ({countdownSeconds}s)
                             </span>
-                        )}
+                        ) : apiRetry ? (
+                            <span className="text-text-tertiary/70 text-base font-mono ms-2">
+                                ({t('streamingIndicator.retry', { attempt: apiRetry.attempt, max: apiRetry.max })})
+                            </span>
+                        ) : null}
                     </div>
                 </div>
             </div>

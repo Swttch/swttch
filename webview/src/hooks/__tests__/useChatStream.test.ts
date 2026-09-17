@@ -373,6 +373,56 @@ describe('useChatStream', () => {
     });
   });
 
+  // The CLI retries a failed request up to ten times with a widening backoff, which
+  // can run for minutes. It reports every attempt; nothing was listening, so the screen
+  // showed an unchanging spinner and read as frozen (#446).
+  describe('api_retry 진행', () => {
+    it('재시도 진행을 노출한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'system', subtype: 'api_retry',
+          attempt: 3, max_retries: 10, error_status: 401,
+        });
+      });
+
+      expect(result.current.apiRetry).toEqual({ attempt: 3, max: 10 });
+    });
+
+    it('응답이 시작되면 재시도 표시를 지운다', () => {
+      // Content is arriving, so whatever retrying happened is over.
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'api_retry', attempt: 3, max_retries: 10 });
+      });
+      expect(result.current.apiRetry).not.toBeNull();
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+
+      expect(result.current.apiRetry).toBeNull();
+    });
+
+    it('턴이 끝나면 재시도 표시를 지운다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'api_retry', attempt: 9, max_retries: 10 });
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'result' });
+      });
+
+      expect(result.current.apiRetry).toBeNull();
+    });
+  });
+
   describe('result 처리', () => {
     it('수신 시 isStreaming이 false로 전환된다', () => {
       const { bridge, emit } = createMockBridge();

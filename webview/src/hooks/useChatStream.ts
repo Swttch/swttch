@@ -115,6 +115,8 @@ export interface UseChatStreamReturn {
   streamingMessageId: string | null;
   /** Seconds left before a dropped connection ends the turn; null while connected. */
   disconnectCountdown: number | null;
+  /** The CLI's retry progress while it re-sends a failed request; null when not retrying. */
+  apiRetry: { attempt: number; max: number } | null;
   error: Error | null;
   authDiagnosis: { envApiKeys: string[]; message: string } | null;
 
@@ -151,6 +153,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
   // Seconds left before a dropped connection ends the turn. Null whenever the
   // connection is up or no turn is running. See the disconnect effect below.
   const [disconnectCountdown, setDisconnectCountdown] = useState<number | null>(null);
+  // The CLI retries a failed request up to ten times with a widening backoff, which
+  // can run for minutes. It reports every attempt; nothing was listening, so the
+  // screen showed an unchanging spinner and read as frozen (#446).
+  const [apiRetry, setApiRetry] = useState<{ attempt: number; max: number } | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [authDiagnosis, setAuthDiagnosis] = useState<{ envApiKeys: string[]; message: string } | null>(null);
   const [systemInit, setSystemInit] = useState<Record<string, unknown> | null>(null);
@@ -348,6 +354,8 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
   // Start streaming helper - initializes all streaming refs
   const startStreaming = useCallback((messageId: string) => {
+    // Content is arriving, so whatever retrying happened is over.
+    setApiRetry(null);
     setIsStreaming(true);
     setStreamingMessageId(messageId);
     streamingMessageIdRef.current = messageId;
@@ -458,6 +466,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     }
 
     setIsStreaming(false);
+    setApiRetry(null);
     setStreamingMessageId(null);
     streamingMessageIdRef.current = null;
     activeBlockIndexRef.current = -1;
@@ -793,6 +802,13 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         // dedicated `system/thinking_tokens` event (no block index — always the
         // currently active thinking block). Stash it for the next RAF flush so
         // it lands on the same frame as the thinking text deltas.
+        if (cliEvent.subtype === 'api_retry') {
+          const attempt = cliEvent.attempt;
+          const max = cliEvent.max_retries;
+          if (typeof attempt === 'number' && typeof max === 'number') {
+            setApiRetry({ attempt, max });
+          }
+        }
         if (cliEvent.subtype === 'thinking_tokens') {
           const estimate = cliEvent.estimated_tokens;
           if (typeof estimate === 'number') {
@@ -1480,6 +1496,7 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     isStreaming,
     streamingMessageId,
     disconnectCountdown,
+    apiRetry,
     error,
     authDiagnosis,
     addUserMessage,

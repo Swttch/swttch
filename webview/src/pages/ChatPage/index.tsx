@@ -111,7 +111,7 @@ function ChatPageContent() {
   const api = useApi();
   const { textareaRef, focus: focusInput } = useChatInputFocus();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, disconnectCountdown, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { messages, isStreaming, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -433,6 +433,7 @@ function ChatPageContent() {
         <ChatMessageArea
           isStreaming={isStreaming && !isAwaitingUser}
           disconnectCountdown={disconnectCountdown}
+          apiRetry={apiRetry}
           mergedMessages={mergedMessages}
           hasMore={hasMoreOlder}
           isLoadingMore={isLoadingMore}
