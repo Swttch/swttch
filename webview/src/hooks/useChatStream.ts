@@ -1318,11 +1318,19 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
 
     // STREAM_END handler — 스트림 종료 안전망
     // result나 SERVICE_ERROR가 도착하지 않은 경우에도 스트리밍 상태를 정리
+    //
+    // Unconditional on purpose. The backend emits STREAM_END when the CLI process
+    // dies without a `result`, which is precisely the case this net exists for — and
+    // a turn that dies that way usually has NO assistant message yet. Gating on
+    // `streamingMessageIdRef` therefore skipped the net exactly when it was needed:
+    // a turn killed while retrying a 401, or one whose spawn failed, never started a
+    // message, so the spinner kept running with nothing left to stop it (#446).
+    //
+    // endStreaming() is idempotent — with no streaming message it only clears the
+    // flags — so calling it on a STREAM_END that arrives after a clean turn costs
+    // nothing.
     const unsubscribeStreamEnd = bridge.subscribe(MessageType.STREAM_END, () => {
-      if (streamingMessageIdRef.current) {
-        console.warn('[useChatStream] STREAM_END received while still streaming — ending stream as safety net');
-        endStreaming();
-      }
+      endStreaming();
     });
 
     /*

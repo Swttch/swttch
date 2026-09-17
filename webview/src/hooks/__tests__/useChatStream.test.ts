@@ -237,6 +237,64 @@ describe('useChatStream', () => {
     });
   });
 
+  // The backend emits STREAM_END when the CLI process dies without a `result`.
+  // A turn that dies that way often has no assistant message yet — a 401 still
+  // retrying, or a spawn that failed — and the spinner had nothing left to stop
+  // it, so it ran forever (#446).
+  describe('STREAM_END 안전망', () => {
+    it('assistant 메시지가 시작되지 않은 턴도 끝낸다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // addCommandEcho spins WITHOUT creating an assistant placeholder, which is
+      // exactly the state a turn is in while the CLI is retrying before its first
+      // token: isStreaming true, streamingMessageId null.
+      act(() => {
+        result.current.addCommandEcho('/model');
+      });
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.streamingMessageId).toBeNull();
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('assistant 메시지가 있는 턴도 그대로 끝낸다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('스트리밍 중이 아닐 때 도착해도 아무것도 깨뜨리지 않는다', () => {
+      // endStreaming() is idempotent, which is what lets the handler drop its
+      // guard. A STREAM_END after a clean turn must stay a no-op.
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      expect(result.current.isStreaming).toBe(false);
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.messages).toEqual([]);
+    });
+  });
+
   describe('result 처리', () => {
     it('수신 시 isStreaming이 false로 전환된다', () => {
       const { bridge, emit } = createMockBridge();
