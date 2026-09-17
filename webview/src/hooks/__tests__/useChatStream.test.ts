@@ -278,6 +278,28 @@ describe('useChatStream', () => {
       expect(result.current.isStreaming).toBe(false);
     });
 
+    it('연결이 끊기면 스트리밍을 끝낸다', () => {
+      // Every signal that would end the turn travels over the socket that just
+      // went away. If the backend process itself died there is nothing left to
+      // send them, so without this the spinner runs until a reload (#446).
+      const { bridge, emit } = createMockBridge();
+      const { result, rerender } = renderHook(
+        (props: { bridge: typeof bridge }) => useChatStream({ bridge: props.bridge }),
+        { initialProps: { bridge } },
+      );
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => {
+        rerender({ bridge: { ...bridge, isConnected: false } });
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
     it('스트리밍 중이 아닐 때 도착해도 아무것도 깨뜨리지 않는다', () => {
       // endStreaming() is idempotent, which is what lets the handler drop its
       // guard. A STREAM_END after a clean turn must stay a no-op.

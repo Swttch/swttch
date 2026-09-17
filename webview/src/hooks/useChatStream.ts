@@ -453,6 +453,26 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     streamingApiMessageIdRef.current = null;
   }, [flushPendingDeltas, updateMessage]);
 
+  /*
+   * A dropped connection ends the stream too.
+   *
+   * The spinner promises "the CLI is working on this". A lost socket breaks that
+   * promise in the worst way: every signal that would have ended the turn — the
+   * CLI's `result`, the backend's STREAM_END, SERVICE_ERROR — travels over the
+   * socket that just went away. If the backend process itself died, there is no
+   * longer anything alive to send them, so nothing will ever stop the spinner and
+   * it runs until the user reloads. That is what the reporter of #446 hit: their
+   * backend took a SIGTERM mid-turn and the turn simply never ended.
+   *
+   * Clearing on disconnect is safe in the other case too. If the backend is alive
+   * and only the socket blinked, the turn keeps running and its next stream event
+   * starts the spinner again on reconnect. A spinner that briefly stops is honest
+   * about what we know; one that spins next to a "connection lost" banner is not.
+   */
+  useEffect(() => {
+    if (!bridge.isConnected) endStreaming();
+  }, [bridge.isConnected, endStreaming]);
+
   // addUserMessage - 로컬 상태 조작만 (bridge.send 하지 않음)
   const addUserMessage = useCallback((content: string, context?: Context[], attachments?: Attachment[]) => {
     if (!content.trim() && (!attachments || attachments.length === 0)) return;
