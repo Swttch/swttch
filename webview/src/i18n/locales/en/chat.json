@@ -354,8 +354,18 @@
     "banner": "You're signed out of Claude Code.",
     "login": "Sign in",
     "credentialSource": {
-      "title": "Authenticated with {{source}}, not your Claude login",
-      "hint": "The server rejected that credential. Remove {{source}} from the environment your IDE inherits and restart the IDE to use your login instead."
+      "title": "The server rejected {{source}}",
+      "body": "This request authenticated with {{source}} rather than your Claude login, because the CLI prefers an API key whenever one is set.",
+      "advice": "Check whether the key is still valid, or remove it to use your Claude login instead.",
+      "setIn": "Where {{source}} is set:",
+      "notFound": "{{source}} is not assigned in any startup or settings file we can read. It may have been typed on the command line that launched the IDE, exported by hand in a shell, set with launchctl or setx, or inherited from whatever started the IDE.",
+      "kind": {
+        "shellFile": "shell startup file",
+        "systemFile": "system environment file",
+        "dotenv": ".env file",
+        "claudeSettings": "Claude settings",
+        "pluginSettings": "plugin settings"
+      }
     }
   },
   "diffCard": {
@@ -515,7 +525,8 @@
       "Wibbling",
       "Working",
       "Wrangling"
-    ]
+    ],
+    "retry": "retry {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "Thought for {{seconds}}s",

@@ -350,8 +350,18 @@
     "banner": "Claude Code にログインしていません。",
     "login": "ログイン",
     "credentialSource": {
-      "title": "Claude のログインではなく {{source}} で認証しました",
-      "hint": "サーバーがこの認証情報を拒否しました。IDE が引き継ぐ環境から {{source}} を削除し、IDE を再起動するとログインアカウントで認証します。"
+      "title": "サーバーが {{source}} を拒否しました",
+      "body": "この要求は Claude のログインではなく {{source}} で認証しました。CLI は API キーが設定されていると、ログインよりそちらを優先します。",
+      "advice": "キーがまだ有効か確認するか、キーを削除すると Claude のログインで認証します。",
+      "setIn": "{{source}} が設定されている場所:",
+      "notFound": "読み取れる起動ファイルと設定ファイルのどこにも {{source}} がありません。IDE を起動したコマンドラインで直接指定したか、シェルで手動で export したか、launchctl や setx で設定したか、IDE を起動した親プロセスから引き継いだ可能性があります。",
+      "kind": {
+        "shellFile": "シェル起動ファイル",
+        "systemFile": "システム環境ファイル",
+        "dotenv": ".env ファイル",
+        "claudeSettings": "Claude 設定",
+        "pluginSettings": "プラグイン設定"
+      }
     }
   },
   "diffCard": {
@@ -511,7 +521,8 @@
       "ふらふら中",
       "作業中",
       "手なずけ中"
-    ]
+    ],
+    "retry": "再試行 {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "{{seconds}}秒思考しました",

@@ -350,8 +350,18 @@
     "banner": "Você não está conectado ao Claude Code.",
     "login": "Entrar",
     "credentialSource": {
-      "title": "Autenticado com {{source}}, não com seu login do Claude",
-      "hint": "O servidor rejeitou essa credencial. Remova {{source}} do ambiente que seu IDE herda e reinicie o IDE para usar seu login."
+      "title": "O servidor rejeitou {{source}}",
+      "body": "Esta solicitação foi autenticada com {{source}} em vez do seu login do Claude, porque a CLI prefere uma chave de API sempre que existe uma.",
+      "advice": "Verifique se a chave ainda é válida ou remova-a para usar seu login do Claude.",
+      "setIn": "Onde {{source}} está definida:",
+      "notFound": "{{source}} não está definida em nenhum arquivo de inicialização ou configuração legível. Pode ter sido digitada na linha de comando que abriu o IDE, exportada manualmente em um shell, definida com launchctl ou setx, ou herdada do processo que iniciou o IDE.",
+      "kind": {
+        "shellFile": "arquivo de inicialização do shell",
+        "systemFile": "arquivo de ambiente do sistema",
+        "dotenv": "arquivo .env",
+        "claudeSettings": "configurações do Claude",
+        "pluginSettings": "configurações do plugin"
+      }
     }
   },
   "diffCard": {
@@ -511,7 +521,8 @@
       "Cambaleando",
       "Trabalhando",
       "Domando"
-    ]
+    ],
+    "retry": "tentativa {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "Pensou por {{seconds}}s",

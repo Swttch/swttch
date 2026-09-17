@@ -6,12 +6,20 @@ import { LoadedMessageType, toInstance } from '../../../../dto/common';
 // AuthErrorRenderer reads the auth context; without a provider it throws. Mock the
 // context (as LoginCta's own test does) so the renderer can be unit-tested in
 // isolation, with the login state and its check time driven per test.
-const { authState, ctaProps, streamState } = vi.hoisted(() => ({
+const { authState, ctaProps, streamState, originState } = vi.hoisted(() => ({
   authState: { loggedIn: false as boolean | null, checkedAt: 0 },
   ctaProps: { authFailedAt: undefined as number | undefined },
   // The CLI's `system/init` as the webview holds it. `apiKeySource` is the field
   // that names which credential the CLI authenticated with (#446).
   streamState: { systemInit: null as Record<string, unknown> | null },
+  // Where the backend says the variable is assigned. Undefined = lookup in flight.
+  originState: { data: undefined as unknown },
+}));
+
+// The notice asks the backend where the variable lives. That query needs a bridge and
+// a react-query client, neither of which this unit test has a use for.
+vi.mock('@/hooks/queries/useEnvVarOriginsQuery', () => ({
+  useEnvVarOriginsQuery: () => ({ data: originState.data }),
 }));
 
 vi.mock('@/contexts', () => ({
@@ -56,6 +64,7 @@ describe('AuthErrorRenderer', () => {
     authState.checkedAt = 0;
     ctaProps.authFailedAt = undefined;
     streamState.systemInit = null;
+    originState.data = undefined;
   });
 
   it('renders the error text', () => {
@@ -156,7 +165,7 @@ describe('AuthErrorRenderer', () => {
       expect(container.querySelector('.border-state-pending-border')).not.toBeNull();
       // Both the title and the hint interpolate the source, so the name appears twice.
       expect(screen.getAllByText(/ANTHROPIC_API_KEY/).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Authenticated with ANTHROPIC_API_KEY/)).toBeInTheDocument();
+      expect(screen.getByText(/The server rejected ANTHROPIC_API_KEY/)).toBeInTheDocument();
     });
 
     it('stays silent when the CLI used the stored login', () => {
@@ -171,6 +180,55 @@ describe('AuthErrorRenderer', () => {
       streamState.systemInit = null;
       const { container } = render(<AuthErrorRenderer message={authErrorMessage()} />);
       expect(container.querySelector('.border-state-pending-border')).toBeNull();
+    });
+
+    it('점유 위치를 파일과 줄 번호로 보여준다', () => {
+      // Being told the variable exists is only half an answer; the user still has to
+      // find it. A shell file they wrote years ago is exactly what they cannot find.
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+      originState.data = [
+        { kind: 'shell-file', path: '~/.zshrc', line: 42 },
+        { kind: 'dotenv', path: '~/proj/.env', line: 3 },
+      ];
+
+      render(<AuthErrorRenderer message={authErrorMessage()} />);
+
+      expect(screen.getByText('~/.zshrc:42')).toBeInTheDocument();
+      expect(screen.getByText('~/proj/.env:3')).toBeInTheDocument();
+    });
+
+    it('어디에도 없으면 그 사실과 다른 경로들을 알려준다', () => {
+      // An empty result is an answer, not a failure: the variable came from the
+      // command line, an exported shell session, launchctl/setx, or the parent process.
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+      originState.data = [];
+
+      render(<AuthErrorRenderer message={authErrorMessage()} />);
+
+      expect(screen.getByText(/not assigned in any startup or settings file/i)).toBeInTheDocument();
+    });
+
+    it('조회 중에는 위치 줄을 그리지 않는다', () => {
+      // The notice is useful without the locations, so nothing waits on the filesystem.
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+      originState.data = undefined;
+
+      render(<AuthErrorRenderer message={authErrorMessage()} />);
+
+      expect(screen.getByText(/The server rejected ANTHROPIC_API_KEY/)).toBeInTheDocument();
+      expect(screen.queryByText(/not assigned in any startup/i)).toBeNull();
+    });
+
+    it('키를 지우라고만 하지 않고 두 선택지를 함께 제시한다', () => {
+      // Authenticating with an API key is supported. The failure is that THIS key was
+      // rejected, not that keys are wrong, so the advice must not read as "stop using
+      // API keys with this plugin".
+      streamState.systemInit = { apiKeySource: 'ANTHROPIC_API_KEY' };
+
+      render(<AuthErrorRenderer message={authErrorMessage()} />);
+
+      expect(screen.getByText(/Check whether the key is still valid/i)).toBeInTheDocument();
+      expect(screen.getByText(/or remove it to use your Claude login/i)).toBeInTheDocument();
     });
 
     it('stops advising once the failure is resolved', () => {

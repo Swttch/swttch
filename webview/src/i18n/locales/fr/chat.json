@@ -350,8 +350,18 @@
     "banner": "Vous n'êtes pas connecté à Claude Code.",
     "login": "Se connecter",
     "credentialSource": {
-      "title": "Authentification effectuée avec {{source}}, et non avec votre connexion Claude",
-      "hint": "Le serveur a rejeté ces identifiants. Supprimez {{source}} de l'environnement hérité par votre IDE, puis redémarrez l'IDE pour utiliser votre connexion."
+      "title": "Le serveur a rejeté {{source}}",
+      "body": "Cette requête s'est authentifiée avec {{source}} plutôt qu'avec votre connexion Claude, car la CLI privilégie une clé API dès qu'il en existe une.",
+      "advice": "Vérifiez si la clé est toujours valide, ou supprimez-la pour utiliser votre connexion Claude.",
+      "setIn": "Où {{source}} est définie :",
+      "notFound": "{{source}} n'est définie dans aucun fichier de démarrage ou de configuration lisible. Elle a pu être saisie dans la ligne de commande qui a lancé l'IDE, exportée à la main dans un shell, définie via launchctl ou setx, ou héritée du processus qui a démarré l'IDE.",
+      "kind": {
+        "shellFile": "fichier de démarrage du shell",
+        "systemFile": "fichier d'environnement système",
+        "dotenv": "fichier .env",
+        "claudeSettings": "paramètres Claude",
+        "pluginSettings": "paramètres du plugin"
+      }
     }
   },
   "diffCard": {
@@ -511,7 +521,8 @@
       "Wibblant",
       "Travaillant",
       "Maîtrisant"
-    ]
+    ],
+    "retry": "tentative {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "A réfléchi pendant {{seconds}} s",

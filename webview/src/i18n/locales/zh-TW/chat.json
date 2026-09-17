@@ -350,8 +350,18 @@
     "banner": "尚未登入 Claude Code。",
     "login": "登入",
     "credentialSource": {
-      "title": "使用 {{source}} 完成了身分驗證，而非您的 Claude 登入帳號",
-      "hint": "伺服器拒絕了該憑證。請從 IDE 繼承的環境中移除 {{source}}，然後重新啟動 IDE 以改用登入帳號。"
+      "title": "伺服器拒絕了 {{source}}",
+      "body": "此請求使用 {{source}} 而非您的 Claude 登入帳號進行了身分驗證，因為只要設定了 API 金鑰，CLI 就會優先使用它。",
+      "advice": "請檢查該金鑰是否仍然有效，或將其移除以改用 Claude 登入帳號。",
+      "setIn": "{{source}} 的設定位置：",
+      "notFound": "在可讀取的啟動檔案和設定檔案中都沒有找到 {{source}}。它可能是在啟動 IDE 的命令列中直接指定的、在 shell 中手動匯出的、透過 launchctl 或 setx 設定的，或從啟動 IDE 的父程序繼承的。",
+      "kind": {
+        "shellFile": "shell 啟動檔案",
+        "systemFile": "系統環境檔案",
+        "dotenv": ".env 檔案",
+        "claudeSettings": "Claude 設定",
+        "pluginSettings": "外掛設定"
+      }
     }
   },
   "diffCard": {
@@ -511,7 +521,8 @@
       "搖擺不定中",
       "工作中",
       "馴服中"
-    ]
+    ],
+    "retry": "重試 {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "思考了 {{seconds}} 秒",

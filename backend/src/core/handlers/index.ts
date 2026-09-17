@@ -23,6 +23,7 @@ import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } 
 import { getSettingsHandler } from './getSettings';
 import { saveSettingsHandler } from './saveSettings';
 import { getClaudeConfigDirHandler } from './getClaudeConfigDir';
+import { traceEnvOriginHandler } from './traceEnvOrigin';
 import { saveClaudeConfigDirHandler } from './saveClaudeConfigDir';
 import { getTelemetryConsentHandler } from './getTelemetryConsent';
 import { setTelemetryConsentHandler } from './setTelemetryConsent';
@@ -425,6 +426,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_VOICE_PROMPT:
       await setVoicePromptHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.TRACE_ENV_ORIGIN:
+      await traceEnvOriginHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_ACCOUNT:
       await getAccountHandler(connectionId, message, connections, bridge);

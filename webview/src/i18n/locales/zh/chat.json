@@ -350,8 +350,18 @@
     "banner": "尚未登录 Claude Code。",
     "login": "登录",
     "credentialSource": {
-      "title": "使用 {{source}} 完成了身份验证，而非您的 Claude 登录账号",
-      "hint": "服务器拒绝了该凭据。请从 IDE 继承的环境中移除 {{source}}，然后重启 IDE 以改用登录账号。"
+      "title": "服务器拒绝了 {{source}}",
+      "body": "此请求使用 {{source}} 而非您的 Claude 登录账号进行了身份验证，因为只要设置了 API 密钥，CLI 就会优先使用它。",
+      "advice": "请检查该密钥是否仍然有效，或将其移除以改用 Claude 登录账号。",
+      "setIn": "{{source}} 的设置位置：",
+      "notFound": "在可读取的启动文件和配置文件中都没有找到 {{source}}。它可能是在启动 IDE 的命令行中直接指定的、在 shell 中手动导出的、通过 launchctl 或 setx 设置的，或从启动 IDE 的父进程继承的。",
+      "kind": {
+        "shellFile": "shell 启动文件",
+        "systemFile": "系统环境文件",
+        "dotenv": ".env 文件",
+        "claudeSettings": "Claude 配置",
+        "pluginSettings": "插件配置"
+      }
     }
   },
   "diffCard": {
@@ -511,7 +521,8 @@
       "摇摆不定中",
       "工作中",
       "驯服中"
-    ]
+    ],
+    "retry": "重试 {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "思考了 {{seconds}} 秒",
