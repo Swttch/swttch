@@ -1,4 +1,4 @@
-import { ClaudeCodeSection } from './ClaudeCode';
+import { BasicsSection } from './Basics';
 import { ComposerSection } from './Composer';
 import { VoiceSection } from './Voice';
 import { DiffViewSection } from './DiffView';
@@ -19,7 +19,7 @@ export function GeneralSettings() {
     <div>
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.general')}</h2>
 
-      <ClaudeCodeSection />
+      <BasicsSection />
       <ComposerSection />
       <VoiceSection />
       <DiffViewSection />

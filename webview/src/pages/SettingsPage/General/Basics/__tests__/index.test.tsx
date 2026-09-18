@@ -56,7 +56,7 @@ vi.mock('@/hooks/queries/useSponsorStatus', () => ({
   useSponsorStatus: () => ({ isSponsor: false }),
 }));
 
-import { ClaudeCodeSection } from '../index';
+import { BasicsSection } from '../index';
 
 beforeEach(() => {
   updateSettingMock.mockReset();
@@ -76,10 +76,10 @@ function selectLanguage(label: string) {
   fireEvent.click(screen.getByRole('option', { name: label }));
 }
 
-describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
+describe('BasicsSection — interface language ↔ RTL auto-sync', () => {
   it('LTR → RTL: switching to a RTL language turns uiDirection on', () => {
     mockScopeSettings = { uiLanguage: 'english' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('فارسی'); // persian
 
@@ -90,7 +90,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
 
   it('RTL → LTR: switching to a LTR language turns uiDirection off', () => {
     mockScopeSettings = { uiLanguage: 'arabic' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('English');
 
@@ -101,7 +101,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
 
   it('LTR → LTR: uiDirection is left untouched', () => {
     mockScopeSettings = { uiLanguage: 'english' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('한국어'); // korean
 
@@ -111,7 +111,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
 
   it('RTL → RTL: uiDirection is left untouched', () => {
     mockScopeSettings = { uiLanguage: 'persian' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('العربية'); // arabic
 
@@ -123,7 +123,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
     mockScope = 'project';
     mockScopeSettings = {}; // rawUiLanguage undefined + scope 'project' => NOT_SET
 
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('فارسی'); // persian
 
@@ -136,7 +136,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
     mockScope = 'project';
     mockScopeSettings = {}; // rawUiLanguage undefined + scope 'project' => NOT_SET
 
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     selectLanguage('한국어'); // korean
 
@@ -147,7 +147,7 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
   it('choosing "Not set" resets to global instead of touching uiDirection', () => {
     mockScope = 'project';
     mockScopeSettings = { uiLanguage: 'persian' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     fireEvent.click(getTrigger());
     fireEvent.click(screen.getByRole('option', { name: /Not set/i }));
@@ -162,10 +162,10 @@ describe('ClaudeCodeSection — interface language ↔ RTL auto-sync', () => {
 // schema: keys in it must go to ~/.claude/settings.json so the CLI reads them,
 // keys outside it must stay in our app settings so the native file is not
 // polluted. Both directions were once wrong, so they are pinned here.
-describe('ClaudeCodeSection — settings are written to the correct store', () => {
+describe('BasicsSection — settings are written to the correct store', () => {
   it("writes Claude's response language to the NATIVE store (official `language` key)", () => {
     mockClaudeScopeSettings = { language: 'english' };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Language' }), {
       target: { value: 'korean' },
@@ -178,7 +178,7 @@ describe('ClaudeCodeSection — settings are written to the correct store', () =
 
   it('writes the .gitignore toggle to the NATIVE store under the official `respectGitignore` name', () => {
     mockClaudeScopeSettings = { respectGitignore: false };
-    render(<ClaudeCodeSection />);
+    render(<BasicsSection />);
 
     fireEvent.click(screen.getByRole('switch', { name: /gitignore/i }));
 

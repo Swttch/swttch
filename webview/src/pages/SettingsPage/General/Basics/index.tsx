@@ -1,5 +1,5 @@
 import { SettingSection } from '../../common';
-import { APP_NAME } from '@/config/app';
+import { useTranslation } from '@/i18n';
 import { LanguageRow } from './LanguageRow';
 import { UiLanguageRow } from './UiLanguageRow';
 import { UiDirectionRow } from './UiDirectionRow';
@@ -20,9 +20,11 @@ import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
  * row knows which; the section does not, so that moving a key between the two
  * files stays a change to one row.
  */
-export function ClaudeCodeSection() {
+export function BasicsSection() {
+  const { t } = useTranslation('settings');
+
   return (
-    <SettingSection title={APP_NAME}>
+    <SettingSection title={t('nav.general')}>
       <LanguageRow />
       <UiLanguageRow />
       <UiDirectionRow />
