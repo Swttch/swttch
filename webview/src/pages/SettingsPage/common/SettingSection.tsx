@@ -33,11 +33,16 @@ export function SettingSection({
   children,
 }: SettingSectionProps) {
   return (
-    <section className="mb-8">
+    <section className="mb-10">
       {(title || titleAction) && (
         <div className={`flex items-center gap-4 mb-4 ${title ? 'justify-between' : 'justify-end'}`}>
           {title && (
-            <h2 className="text-[0.9230rem] font-semibold text-text-tertiary uppercase tracking-wider">
+            // Set in the ordinary case, not in small caps. A section heading is
+            // a quiet label above its card rather than a shout, and uppercase
+            // only ever applied to half our users anyway: it does nothing to
+            // Korean, Japanese or Chinese, so the same heading read as two
+            // different designs depending on the interface language.
+            <h2 className="text-[0.9230rem] font-medium text-text-primary">
               {title}
             </h2>
           )}
@@ -45,11 +50,14 @@ export function SettingSection({
         </div>
       )}
       {description && (typeof description === 'string' ? (
-        <p className="text-[0.8461rem] font-normal text-text-tertiary -mt-2 mb-3">{description}</p>
+        <p className="text-[0.8461rem] font-normal text-text-secondary -mt-2 mb-3">{description}</p>
       ) : description)}
       <div
         className={
-          'bg-surface-raised rounded-lg border border-border-default px-4 ' +
+          // The outline is the same colour as the dividers inside it, so the
+          // card reads as one quiet enclosure rather than as a box with a
+          // stronger frame than its own contents.
+          'bg-surface-raised rounded-2xl border border-border-subtle px-5 ' +
           // aria-disabled rather than a fieldset: the rows are a mix of custom
           // controls and native inputs, and `inert` is not available in every
           // WebView we run in, so pointer-events carries the interaction block

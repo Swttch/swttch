@@ -31,7 +31,10 @@ export function SettingRow(props: SettingRowProps) {
   const { t } = useTranslation('settings');
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:items-center md:justify-between py-3 border-b border-border-default">
+    // The divider is subtler than the card's own outline, and the last row does
+    // without one: drawn there it lands a hair above the card's bottom edge and
+    // reads as a doubled line rather than as a separation.
+    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:items-center md:justify-between py-4 border-b border-border-subtle last:border-b-0">
       <div className="flex-1 me-4">
         <div className="flex items-center gap-1.5">
           <label className="text-sm text-text-primary">{label}</label>
