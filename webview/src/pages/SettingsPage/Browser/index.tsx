@@ -1,5 +1,5 @@
-import { PermissionsSection } from './PermissionsSection';
-import { NotificationsSection } from './NotificationsSection';
+import { PermissionsSection } from './Permissions';
+import { NotificationsSection } from './Notifications';
 import { useTranslation } from '@/i18n';
 
 interface Props {

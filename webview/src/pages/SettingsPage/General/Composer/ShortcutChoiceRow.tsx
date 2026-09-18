@@ -1,6 +1,5 @@
-import { SettingRow } from '../../common';
+import { SettingRow, ShortcutInput } from '../../common';
 import { Select, type SelectOption } from '@/components/Select';
-import { ShortcutInput } from '../ShortcutInput';
 
 interface Props {
   label: string;
