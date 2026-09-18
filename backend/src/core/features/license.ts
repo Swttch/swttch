@@ -1,6 +1,7 @@
 import { readFile, mkdir, rm } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
+import { proxiedRequest } from './outbound-proxy';
 import { readProfile } from './profile';
 import { readLiveOauthAccount } from './live-credentials';
 import { buildDeviceName } from './deviceName';
@@ -136,16 +137,16 @@ export interface SponsorStatus {
 // this is a single round-trip. Network/other failures resolve to invalid.
 export async function verifyLicenseRemote(sponsorKey: string): Promise<LicenseVerifyResult> {
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/status`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsorKey }),
     });
-    // fetch does not reject on 4xx/5xx — treat any non-2xx as "could not verify".
+    // A non-2xx is not an exception here either — treat any of them as "could not verify".
     if (!res.ok) {
       return { valid: false, error: `HTTP ${res.status}` };
     }
-    const json = (await res.json()) as {
+    const json = JSON.parse(res.body) as {
       valid?: boolean;
       status?: string;
       tier?: string;
@@ -178,13 +179,13 @@ export async function verifyLicenseRemote(sponsorKey: string): Promise<LicenseVe
 // plugin polls this to pick the key up on its own. Returns null until available.
 export async function findSponsorByInstall(uid: string): Promise<string | null> {
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/by-install`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/by-install`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid }),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { sponsorKey?: string };
+    const json = JSON.parse(res.body) as { sponsorKey?: string };
     return typeof json.sponsorKey === 'string' && json.sponsorKey !== '' ? json.sponsorKey : null;
   } catch {
     return null;
@@ -209,7 +210,7 @@ export async function reportActivation(sponsorKey: string): Promise<void> {
     } catch {
       // email is a best-effort hint — proceed without it.
     }
-    await fetch(`${wwwApiBase()}/sponsor/activation`, {
+    await proxiedRequest(`${wwwApiBase()}/sponsor/activation`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -411,13 +412,13 @@ export async function listSponsorDevices(): Promise<SponsorDevice[]> {
   const license = await readLicense();
   if (license === null) return [];
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/devices`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/devices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsorKey: license.licenseKey }),
     });
     if (!res.ok) return [];
-    const json = (await res.json()) as { devices?: Omit<SponsorDevice, 'isCurrent'>[] };
+    const json = JSON.parse(res.body) as { devices?: Omit<SponsorDevice, 'isCurrent'>[] };
     if (!Array.isArray(json.devices)) return [];
 
     // Resolved here rather than in the webview so this install's id stays
@@ -440,13 +441,13 @@ export async function removeSponsorDevice(telemetryId: string): Promise<boolean>
   const license = await readLicense();
   if (license === null) return false;
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/devices/remove`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/devices/remove`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsorKey: license.licenseKey, telemetryId }),
     });
     if (!res.ok) return false;
-    const json = (await res.json()) as { ok?: boolean };
+    const json = JSON.parse(res.body) as { ok?: boolean };
     return json.ok === true;
   } catch {
     return false;
@@ -464,13 +465,13 @@ export async function listSponsorInvoices(): Promise<SponsorInvoice[]> {
   const license = await readLicense();
   if (license === null) return [];
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/invoices`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/invoices`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsorKey: license.licenseKey }),
     });
     if (!res.ok) return [];
-    const json = (await res.json()) as { invoices?: SponsorInvoice[] };
+    const json = JSON.parse(res.body) as { invoices?: SponsorInvoice[] };
     return Array.isArray(json.invoices) ? json.invoices : [];
   } catch {
     return [];
@@ -492,13 +493,13 @@ export async function cancelSponsorSubscription(): Promise<boolean> {
   const license = await readLicense();
   if (license === null) return false;
   try {
-    const res = await fetch(`${wwwApiBase()}/sponsor/cancel`, {
+    const res = await proxiedRequest(`${wwwApiBase()}/sponsor/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sponsorKey: license.licenseKey }),
     });
     if (!res.ok) return false;
-    const json = (await res.json()) as { ok?: boolean };
+    const json = JSON.parse(res.body) as { ok?: boolean };
     return json.ok === true;
   } catch {
     return false;

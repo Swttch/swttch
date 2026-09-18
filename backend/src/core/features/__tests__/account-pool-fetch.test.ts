@@ -6,6 +6,10 @@ vi.mock('../../command', () => ({ Command: class {
   which() { return mock.which(); }
   exec() { return mock.exec(this.bin, this.args, this.options); }
 } }));
+// fetchAccountUsage settles the Claude data directory before spawning, so the child reads
+// credentials from the same profile chat does. That is real filesystem work and not what this
+// file is about; stubbing it keeps the fake-timer test from waiting on it.
+vi.mock('../../claude', () => ({ Claude: { applyConfigDir: vi.fn().mockResolvedValue(undefined) } }));
 vi.mock('../account-store', () => ({
   readRegistry: async () => ({ current: 'personal', accounts: { personal: {}, company: {} } }),
   accountSnapshotPath: (id: string) => `/saved accounts/${id}.json`,
@@ -20,7 +24,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 it('passes only the selected snapshot path as one argv item and preserves raw response', async () => {
   expect(await fetchAccountUsage('company')).toEqual({ five_hour: { utilization: 100, resets_at: null, extra_provider_field: 'preserved' } });
-  expect(mock.exec).toHaveBeenLastCalledWith('/external bin/ccb', ['oauth', 'usage', '--json', '--account-file=/saved accounts/company.json'], { timeout: 15000 });
+  expect(mock.exec).toHaveBeenLastCalledWith('/external bin/ccb', ['oauth', 'usage', '--json', '--account-file=/saved accounts/company.json'], { timeout: 15000, cwd: undefined });
 });
 it('refuses old CLI versions instead of accepting a wrong-account response', async () => {
   mock.exec.mockResolvedValue({ stdout: 'Usage: ccb <command>', stderr: '' });

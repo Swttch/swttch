@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+
+const proxiedRequest = vi.hoisted(() => vi.fn());
+
+// 텔레메트리 전송은 전역 fetch가 아니라 proxiedRequest를 쓴다. 전역 fetch는 HTTP_PROXY를
+// 읽지 않아서, 프록시로만 바깥에 나가는 머신에서는 전송이 통째로 실패했다.
+vi.mock('./outbound-proxy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./outbound-proxy')>()),
+  proxiedRequest,
+}));
+
 import { MessageType } from '../../shared';
 
 // config/environment를 hoisted mock으로 대체하고, telemetry가 읽는 API 키만 holder로
@@ -69,7 +79,7 @@ let loadedTelemetry: typeof import('./telemetry') | null = null;
 async function loadTelemetry(
   profile: TestProfile,
   apiKey: string,
-  fetchImpl?: (input: string, init: { body: string }) => Promise<unknown>,
+  fetchImpl?: (input: string, init: { body: string }) => Promise<unknown>, // ProxiedResponse 모양
 ) {
   // inFlight는 모듈 스코프 상태라 resetModules()가 새 인스턴스에 빈 Set을 만든다. 직전
   // 테스트의 전송이 아직 떠 있는 채로 리셋하면, 그 전송을 기다려 줄 주체가 사라진다 —
@@ -87,8 +97,8 @@ async function loadTelemetry(
   // profile은 hoisted mock이라 붙였다 떼지 않는다 — 값만 갈아끼운다(상단 mock 주석 참고).
   profileHolder.current = profile;
   mockCommonDeps();
-  const fetchMock = vi.fn(fetchImpl ?? (async () => ({ ok: true })));
-  vi.stubGlobal('fetch', fetchMock);
+  const fetchMock = vi.fn(fetchImpl ?? (async () => ({ ok: true, status: 200, body: '' })));
+  proxiedRequest.mockImplementation(fetchMock as never);
   const mod = await import('./telemetry');
   loadedTelemetry = mod;
   return {
@@ -194,7 +204,7 @@ describe('telemetry consent gating', () => {
     const { trackEvent, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key', async () => ({
       ok: false,
       status: 400,
-      text: async () => 'bad request',
+      body: 'bad request',
     }));
     trackEvent('e', {});
     await flushTelemetry();

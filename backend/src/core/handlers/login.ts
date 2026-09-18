@@ -31,7 +31,7 @@ export function extractOAuthUrl(text: string): string | null {
   return match[0].replace(TRAILING_PUNCTUATION, '');
 }
 
-export function loginHandler(
+export async function loginHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -39,6 +39,17 @@ export function loginHandler(
   // handlers with the same args); login no longer opens URLs through the bridge.
   _bridge: Bridge,
 ): Promise<void> {
+  // `auth login` WRITES the credential, into whatever directory CLAUDE_CONFIG_DIR names at
+  // the moment it runs. process.env holds one such value for the whole backend, so without
+  // this the login could be saved into a directory belonging to whichever project happened
+  // to load last — and the user would sign in successfully and still look signed out.
+  //
+  // Done here rather than inside `Claude.spawn` because that one is synchronous and cannot
+  // await. `spawnAuthed` covers every other spawn; this handler cannot use it, since
+  // `auth login` is meant to re-authenticate rather than reuse the stripped credentials.
+  const workingDir = (message.payload as { workingDir?: string } | undefined)?.workingDir;
+  await Claude.applyConfigDir(workingDir);
+
   return new Promise((resolve) => {
     // Map the webview-selected login method to the CLI flag. The default
     // (`claude auth login` with no flag) is the Claude subscription flow, so an

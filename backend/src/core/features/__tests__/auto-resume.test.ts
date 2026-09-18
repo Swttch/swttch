@@ -194,7 +194,7 @@ it('polls the reserved account and waits for every applicable exhausted bucket',
   const hook = createAutoResumeHook({ fetchUsage, now: () => now, sleep: async ms => { now += ms; },
     pollIntervalMs: 5_000, timeoutMs: 60_000, broadcast });
   expect(await hook({ ...makeMsg(), accountId: 'company', model: 'opus' })).toEqual({ proceed: true });
-  expect(fetchUsage.mock.calls).toEqual([['company'], ['company']]);
+  expect(fetchUsage.mock.calls).toEqual([['company', undefined], ['company', undefined]]);
   expect(broadcast.mock.calls.map(([status]) => status.phase)).toEqual([AutoResumeStatusPhase.RETRYING, AutoResumeStatusPhase.PROCEEDING]);
 });
 it('does not use a reset clock rollover as proof of recharge for account-bound reservations', async () => {

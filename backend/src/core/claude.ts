@@ -9,7 +9,7 @@ import {
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
 import { normalizeSettingValue } from './features/path-settings';
-import { getStrippableAuthEnvKeys, getProxyEnvFromSettings, PROXY_ENV_KEYS } from './features/claude-settings';
+import { getStrippableAuthEnvKeys } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
 import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
 import { resolveWslCwd } from './wsl-path';
@@ -17,32 +17,6 @@ import { execViaCmdArgv } from './win-exec';
 import { pickWin32Launcher } from './which-launcher';
 import { spawnWin32JobCli, utf8BashEnv } from './win-job';
 import { decodeConsoleOutput } from './console-encoding';
-
-/**
- * Write the effective proxy variables onto `target`, clearing the ones that no
- * longer apply.
- *
- * **Every removal happens before any assignment, and that ordering is the whole
- * point of this function.** Windows matches environment variable names
- * case-insensitively, so `delete target.https_proxy` removes a value written a
- * moment earlier as `HTTPS_PROXY` — the two spellings are one variable there.
- * Interleaving the two operations therefore had the loop wipe the proxy it had
- * just projected, and a Windows user got no proxy at all while the same code
- * behaved correctly on macOS and Linux. Verified on a Windows 11 machine.
- *
- * Each key is still resolved on its own: setting HTTPS_PROXY in settings.json
- * says nothing about HTTP_PROXY, so an inherited value for the other survives.
- */
-export function projectProxyEnv(
-  settingsProxy: NodeJS.ProcessEnv,
-  inherited: NodeJS.ProcessEnv,
-  target: NodeJS.ProcessEnv = process.env,
-): void {
-  const resolved = PROXY_ENV_KEYS.map((key) =>
-    [key, settingsProxy[key] ?? inherited[key]] as const);
-  for (const [key, value] of resolved) if (value === undefined) delete target[key];
-  for (const [key, value] of resolved) if (value !== undefined) target[key] = value;
-}
 
 export class Claude {
   private static cliPath: string | null = null;
@@ -55,13 +29,6 @@ export class Claude {
   // user's shell, or echoed temporarily). Captured once, before any plugin-settings
   // override is applied, so we can restore it when the override is later cleared.
   private static readonly inheritedConfigDir = process.env.CLAUDE_CONFIG_DIR;
-  // Same idea for the proxy variables: whatever the backend inherited at startup,
-  // captured before any settings value is projected, so switching to a project
-  // that configures no proxy restores the shell's proxy instead of dropping it.
-  private static readonly inheritedProxyEnv: NodeJS.ProcessEnv = Object.fromEntries(
-    PROXY_ENV_KEYS.filter((key) => process.env[key] !== undefined)
-      .map((key) => [key, process.env[key]]),
-  );
 
   /** Load cliPath from settings. Call at server start or on settings change. */
   static async refresh(workingDir?: string): Promise<void> {
@@ -81,15 +48,17 @@ export class Claude {
    *
    * The Claude CLI reads CLAUDE_CONFIG_DIR only from process.env (never from
    * settings.json's `env`, which it consults too late), so we mirror our setting here.
-   * Priority: settings env (project > global) > inherited startup env > ~/.claude.
+   * Priority: plugin settings env (project > global) > inherited startup env > ~/.claude.
    *
-   * The proxy variables ride along for the same reason. `ccb` does not read
-   * settings.json, so a user who configures a proxy only there gets a usage panel
-   * that cannot reach the API while `claude` itself works (issue #181). Projecting
-   * here rather than at each spawn is what keeps the answer single: `fetchAccountUsage`
-   * and the auto-resume hook have no workingDir to read settings with — the hook is
-   * registered once at server start — so a per-call-site read would silently fall back
-   * to global settings in exactly the places a project-scoped proxy matters.
+   * **This variable and no other.** The proxy variables used to ride along here, projected
+   * from Claude's settings.json through an allow-list of eight names, because `ccb` did not
+   * read that file (#181). `ccb` reads it now, and `claude` always did — so both children
+   * resolve the block themselves, by name-blind rules, and a ninth name needs no ninth fix.
+   * See features/settings-env.ts for what replaced the allow-list on this side.
+   *
+   * CLAUDE_CONFIG_DIR stays because it cannot be resolved that way: it decides WHERE the
+   * settings files are, so reading it from one of them is circular. It comes from the
+   * plugin's own settings, whose location does not depend on it.
    */
   static async applyConfigDir(workingDir?: string): Promise<void> {
     // `cliPath` rides along on the same load-time projection. A terminal user can
@@ -119,7 +88,6 @@ export class Claude {
       delete process.env.CLAUDE_CONFIG_DIR;
     }
 
-    projectProxyEnv(await getProxyEnvFromSettings(workingDir), Claude.inheritedProxyEnv);
   }
 
   static get command(): string {
@@ -210,6 +178,10 @@ export class Claude {
     options?: SpawnOptions,
     win32JobSessionId?: string,
   ): Promise<ChildProcess> {
+    // {@link spawn} is synchronous and cannot await this, so the async wrapper does it.
+    // Every auth-bearing spawn goes through here, which is exactly the set that must not
+    // read or write the wrong project's Claude data directory.
+    await Claude.applyConfigDir(workingDir);
     const stripEnv = await Claude.authStripEnv(workingDir);
     return Claude.spawn(args, { ...options, env: { ...options?.env, ...stripEnv } }, win32JobSessionId);
   }
@@ -225,7 +197,14 @@ export class Claude {
     options?: ExecFileOptions,
   ): Promise<{ stdout: string; stderr: string }> {
     const stripEnv = await Claude.authStripEnv(workingDir);
-    return Claude.exec(args, { ...options, env: { ...options?.env, ...stripEnv } });
+    // `workingDir` names the project; `cwd` is what {@link exec} reads to settle the Claude
+    // data directory. Callers pass the project through the first and mostly leave the second
+    // empty, and without this line every one of them would reset the directory to global.
+    return Claude.exec(args, {
+      ...options,
+      cwd: options?.cwd ?? workingDir,
+      env: { ...options?.env, ...stripEnv },
+    });
   }
 
   /**
@@ -264,6 +243,14 @@ export class Claude {
   }
 
   static async exec(args: string[], options?: ExecFileOptions): Promise<{ stdout: string; stderr: string }> {
+    // Settle which Claude data directory this run belongs to, before the child exists to
+    // inherit it. Done here rather than at each call site because at each call site it was
+    // not done: of the sixteen places that run `claude` or `ccb`, eleven never called
+    // applyConfigDir at all, and `auth login` — which WRITES the credential — was one of
+    // them. process.env holds one CLAUDE_CONFIG_DIR for the whole backend, so a run that
+    // skips this step silently borrows whichever project last set it.
+    await Claude.applyConfigDir(typeof options?.cwd === 'string' ? options.cwd : undefined);
+
     // The default win32 path runs through a shell so the `.cmd`/`.ps1` launcher
     // resolves (issue #99 — see runExecFile). But a shell tokenizes the argv:
     // for callers that pass arbitrary values (e.g. `mcp add-json <json>` whose

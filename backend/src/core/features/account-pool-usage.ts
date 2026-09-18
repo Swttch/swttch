@@ -2,26 +2,38 @@ import type { CcbUsageResponse } from '../handlers/getUsage';
 import type { AccountUsageData } from '../../shared';
 import { readRegistry, accountSnapshotPath, type AccountsRegistry } from './account-store';
 import { Command } from '../command';
+import { Claude } from '../claude';
 
 const USAGE_TIMEOUT_MS = 15_000;
 const ACCOUNT_USAGE_CAPABILITY = 'oauth.usage.account-file';
 
-/** External CLI owns credential reads and HTTP; this process sends only a file path. */
-export async function fetchAccountUsage(accountId: string): Promise<CcbUsageResponse> {
+/**
+ * External CLI owns credential reads and HTTP; this process sends only a file path.
+ *
+ * [workingDir] names the project whose settings apply. It is not optional in spirit: ccb
+ * reads Claude's settings files itself, and the project half of those lives under the
+ * working directory, so a caller that omits it gets global settings — no project proxy and
+ * no project token. The auto-resume hook used to have no way to name one at all, which is
+ * the gap this parameter closes.
+ */
+export async function fetchAccountUsage(accountId: string, workingDir?: string): Promise<CcbUsageResponse> {
   const registry = await readRegistry();
   if (!registry.accounts[accountId]) throw new Error('Saved account no longer exists');
+  // Settle the Claude data directory before the child exists to inherit it. `Command` is the
+  // generic runner and knows nothing about Claude, so it cannot do this the way Claude.exec does.
+  await Claude.applyConfigDir(workingDir);
   const binary = await new Command('ccb').which();
   if (!binary) throw new Error('The ccb CLI is not installed');
   // Old ccb versions ignore unrecognised flags: never let them silently query
   // the active account while claiming to have inspected another account.
-  const { stdout: capabilities } = await new Command(binary, ['--capabilities', '--json'], { timeout: 5000 }).exec();
+  const { stdout: capabilities } = await new Command(binary, ['--capabilities', '--json'], { timeout: 5000, cwd: workingDir }).exec();
   let supported = false;
   try {
     supported = (JSON.parse(capabilities) as { capabilities?: string[] }).capabilities?.includes(ACCOUNT_USAGE_CAPABILITY) === true;
   } catch { /* Old versions print help text. */ }
   if (!supported) throw new Error('Update ccb to enable saved-account usage queries');
   const { stdout } = await new Command(binary, ['oauth', 'usage', '--json',
-    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS }).exec();
+    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS, cwd: workingDir }).exec();
   // Direct argv invocation preserves spaces in snapshot paths; no shell or token argument.
   try { return JSON.parse(stdout) as CcbUsageResponse; }
   catch { throw new Error('Invalid account usage response from ccb'); }

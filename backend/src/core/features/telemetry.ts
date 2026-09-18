@@ -1,4 +1,5 @@
 import { readProfile, ConsentStatus } from './profile';
+import { proxiedRequest } from './outbound-proxy';
 import { homedir, release } from 'os';
 import { getPluginVersion, getCliVersion } from '../handlers/getVersion';
 import { basename } from 'path';
@@ -244,7 +245,10 @@ async function send(
       pathname: '/',
     };
 
-    const res = await fetch(TRACK_ENDPOINT, {
+    // proxiedRequest, not fetch: the global fetch ignores HTTP_PROXY. Respecting the proxy
+    // is also the correct posture — a proxy is the organisation's own traffic policy, and
+    // slipping past it is not ours to do.
+    const res = await proxiedRequest(TRACK_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -252,10 +256,10 @@ async function send(
       },
       body: JSON.stringify(body),
     });
-    // fetch는 4xx/5xx를 reject하지 않는다. 서버 거부(예: properties 초과 400)를 흘리지 않도록
+    // 4xx/5xx는 예외로 던져지지 않는다. 서버 거부(예: properties 초과 400)를 흘리지 않도록
     // 명시적으로 확인해 transport error로 보고한다(재귀 가드: transport error 자신은 제외).
     if (!res.ok && eventName !== TRANSPORT_ERROR_EVENT) {
-      const detail = sanitizeText(await res.text().catch(() => '')).slice(0, 300);
+      const detail = sanitizeText(res.body).slice(0, 300);
       fireAndForget(send(
         TrackType.ERROR,
         TRANSPORT_ERROR_EVENT,

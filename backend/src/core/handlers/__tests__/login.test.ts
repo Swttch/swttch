@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'events';
 
 vi.mock('../../claude', () => ({
-  Claude: { spawn: vi.fn() },
+  // applyConfigDir alongside spawn: `auth login` WRITES the credential, so the handler settles
+  // which Claude data directory it belongs to before spawning.
+  Claude: { spawn: vi.fn(), applyConfigDir: vi.fn().mockResolvedValue(undefined) },
 }));
 
 import { loginHandler, cancelLogin, extractOAuthUrl } from '../login';
@@ -36,11 +38,26 @@ function createMockConnections() {
 
 const mockBridge = { openUrl: vi.fn() } as unknown as Bridge;
 
+/**
+ * Wait until the handler has actually spawned the CLI.
+ *
+ * The handler settles the Claude data directory before spawning — `auth login` WRITES the
+ * credential, so which directory it belongs to has to be decided first — and that await puts
+ * the spawn a microtask later than the call. Emitting on the fake child before then would be
+ * emitting at a child nothing is listening to yet.
+ */
+async function waitForSpawn(): Promise<void> {
+  for (let i = 0; i < 20 && mockSpawn.mock.calls.length === 0; i++) {
+    await Promise.resolve();
+  }
+}
+
 async function runLogin(method: unknown, exitCode: number, connections = createMockConnections()) {
   const child = fakeChild();
   mockSpawn.mockReturnValue(child as never);
   const message: IPCMessage = { type: MessageType.LOGIN, payload: method === undefined ? {} : { method }, requestId: 'r1', timestamp: 0 };
   const promise = loginHandler('c1', message, connections, mockBridge);
+  await waitForSpawn();
   child.emit('close', exitCode);
   await promise;
   return connections;
@@ -89,18 +106,19 @@ describe('loginHandler', () => {
 describe('loginHandler OAuth URL forwarding', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  function startLogin(connections = createMockConnections()) {
+  async function startLogin(connections = createMockConnections()) {
     const child = fakeChild();
     mockSpawn.mockReturnValue(child as never);
     const message: IPCMessage = { type: MessageType.LOGIN, payload: { method: 'claude-ai' }, requestId: 'r1', timestamp: 0 };
     const promise = loginHandler('c1', message, connections, mockBridge);
+    await waitForSpawn();
     return { child, connections, promise };
   }
 
   const URL = 'https://claude.ai/oauth/authorize?code=abc123&state=xyz';
 
   it('forwards the OAuth URL to the webview and does NOT open it directly', async () => {
-    const { child, connections, promise } = startLogin();
+    const { child, connections, promise } = await startLogin();
 
     child.stdout.emit('data', Buffer.from(`Opening browser to sign in…\nIf the browser didn't open, visit: ${URL}\n`));
 
@@ -115,7 +133,7 @@ describe('loginHandler OAuth URL forwarding', () => {
   });
 
   it('forwards the URL only once even when it spans multiple chunks', async () => {
-    const { child, connections, promise } = startLogin();
+    const { child, connections, promise } = await startLogin();
 
     child.stdout.emit('data', Buffer.from('If the browser didn\'t open, visit: https://claude.ai/oauth/'));
     child.stdout.emit('data', Buffer.from('authorize?code=abc123&state=xyz\n'));
@@ -133,13 +151,14 @@ describe('loginHandler OAuth URL forwarding', () => {
 describe('cancelLogin', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('kills the in-flight login child for the connection and forgets it', () => {
+  it('kills the in-flight login child for the connection and forgets it', async () => {
     const child = fakeChild();
     mockSpawn.mockReturnValue(child as never);
     const connections = createMockConnections();
     const message: IPCMessage = { type: MessageType.LOGIN, payload: { method: 'claude-ai' }, requestId: 'r1', timestamp: 0 };
     // Login is in flight: the child has NOT closed yet.
     void loginHandler('c1', message, connections, mockBridge);
+    await waitForSpawn();
 
     expect(cancelLogin('c1')).toBe(true);
     expect(child.kill).toHaveBeenCalled();

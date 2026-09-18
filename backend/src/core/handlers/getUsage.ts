@@ -5,6 +5,7 @@ import type { IPCMessage } from '../types';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 import { readProxySummary } from '../features/proxy-summary';
+import { resolveEnv } from '../features/settings-env';
 import { readRegistry, upsertAccount } from '../features/account-store';
 import {
   LIVE_ACCOUNT_ID, armCooldown, clearCooldown, readCooldownUntil, readUsageSnapshot,
@@ -177,7 +178,7 @@ function readCcbFailure(raw: string): CcbFailure | undefined {
   return undefined;
 }
 
-export function classifyError(err: unknown): UsageErrorInfo {
+export function classifyError(err: unknown, env: NodeJS.ProcessEnv = process.env): UsageErrorInfo {
   const raw = err instanceof Error ? err.message : String(err);
   const detail = (err ?? {}) as { code?: number | string; killed?: boolean; stderr?: string };
   const code = typeof detail.code === 'number' || typeof detail.code === 'string' ? detail.code : undefined;
@@ -251,11 +252,11 @@ export function classifyError(err: unknown): UsageErrorInfo {
     // into "this proxy did not answer".
     //
     // The absence of one proves nothing, though, and the fallback keeps its
-    // conditional wording for that reason: readProxySummary reads THIS process's
-    // environment, while ccb runs through a login shell (`zsh -l -i`) that sources
-    // the user's startup files. A proxy exported in `.zshrc` reaches ccb and never
-    // reaches us, so "no proxy here" must not be reported as "no proxy at all".
-    const proxy = readProxySummary();
+    // conditional wording for that reason: this reads the environment we can see,
+    // while ccb runs through a login shell (`zsh -l -i`) that sources the user's
+    // startup files. A proxy exported in `.zshrc` reaches ccb and never reaches us,
+    // so "no proxy here" must not be reported as "no proxy at all".
+    const proxy = readProxySummary(env);
     return {
       kind: proxy ? 'proxy' : 'network',
       message: proxy
@@ -400,15 +401,22 @@ const EMPTY_USAGE: CcbUsageResponse = {
   extra_usage: null,
 };
 
-export async function runCcbUsage(): Promise<CcbUsageResponse> {
+export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse> {
+  // Settle the Claude data directory first, so the child reads credentials from the same
+  // profile chat does. `Command` is the generic runner and knows nothing about Claude, so
+  // unlike `Claude.exec` it cannot do this for us.
+  await Claude.applyConfigDir(workingDir);
+
   // The Command core resolves the platform shell (win32 cmd.exe argv; unix login
   // shell so ccb sees the rc-file PATH) and layers on the augmented PATH, so ccb
   // is discoverable even when the backend's inherited PATH lacks the npm global bin.
   //
-  // The proxy reaches ccb through process.env, projected by Claude.applyConfigDir
-  // when the context loaded — ccb does not read settings.json itself (#181).
+  // `cwd` is how ccb learns which project it is answering for: it reads Claude's settings
+  // files itself now, and the project pair of those lives under the working directory.
+  // Without it a project's proxy — or its CLAUDE_CODE_OAUTH_TOKEN — is simply not seen.
   const { stdout } = await new Command('ccb', ['oauth', 'usage', '--json'], {
     timeout: SPAWN_TIMEOUT_MS,
+    cwd: workingDir,
     // Tell ccb the budget instead of only enforcing it from out here. Killing the
     // child at the mark leaves whatever its shell had printed by then standing in
     // for an explanation; given the budget, ccb finishes inside it and reports
@@ -432,11 +440,17 @@ export async function getUsageHandler(
   _bridge: Bridge,
 ): Promise<void> {
 
-  // Read once per request and attached to every answer, so the panel can name the hop
-  // a request takes instead of asking the user whether they are behind a proxy.
-  const proxy = readProxySummary();
   const force = (message.payload as { force?: boolean })?.force === true;
   const workingDir = (message.payload as { workingDir?: string })?.workingDir;
+
+  // Read once per request and attached to every answer, so the panel can name the hop
+  // a request takes instead of asking the user whether they are behind a proxy.
+  //
+  // Resolved rather than read straight from process.env: the proxy the user configured may
+  // live only in Claude's settings.json, which is not an environment variable — naming no
+  // proxy there would send someone to check an internet connection that works fine.
+  const env = await resolveEnv(workingDir);
+  const proxy = readProxySummary(env);
 
   if (!force && Date.now() - cachedAt < CACHE_TTL_MS && (cachedUsage !== null || lastErrorInfo !== null)) {
     if (cachedUsage !== null) {
@@ -492,10 +506,15 @@ export async function getUsageHandler(
 
     const runPromise = (async () => {
       // Resolve this context's CLAUDE_CONFIG_DIR onto process.env before invoking ccb,
-      // so the usage child reads credentials from the same profile as chat. Only when a
-      // workingDir is supplied — otherwise keep whatever context is already active so we
-      // don't clobber it back to global. (#123)
-      if (workingDir) await Claude.applyConfigDir(workingDir);
+      // so the usage child reads credentials from the same profile as chat. (#123)
+      //
+      // Unconditional, where it used to run only when a workingDir was supplied. Skipping
+      // it does not leave the answer "unset" — process.env is one slot for the whole
+      // backend, so skipping leaves whatever project last wrote it, and the usage panel of
+      // a project with no override would quietly read another project's credentials.
+      // Calling with no workingDir resolves to the global value, which is the right answer
+      // for a context that has no project.
+      await Claude.applyConfigDir(workingDir);
 
       const accountId = await currentAccountId();
 
@@ -518,7 +537,7 @@ export async function getUsageHandler(
         if (fresh) return fresh.usage;
       }
 
-      const usage = await runCcbUsage();
+      const usage = await runCcbUsage(workingDir);
       cachedUsage = usage;
       cachedAt = Date.now();
       lastErrorInfo = null;
@@ -548,7 +567,7 @@ export async function getUsageHandler(
       cached_at: new Date(served?.cachedAt ?? Date.now()).toISOString(),
     });
   } catch (err) {
-    const info = classifyError(err);
+    const info = classifyError(err, env);
     const accountId = await currentAccountId();
 
     // A fresh 429 arms the cool-down. The seconds come from ccb's structured details

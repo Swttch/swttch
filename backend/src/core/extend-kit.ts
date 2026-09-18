@@ -2,6 +2,7 @@ import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { Command, ShellKind } from './command';
+import { Claude } from './claude';
 import { LibraryManager } from '../shared';
 import { EXTEND_KIT_PACKAGE } from './global-install-target';
 import { launcherFor, npmPrefixFor } from './install-coordinate';
@@ -339,8 +340,11 @@ async function resolveCcbEntry(): Promise<string> {
  * stream writes raw bytes into stdin, and a shell in between is one more thing
  * that can transform them.
  */
-function ccbCommand(entry: string, args: string[], timeout?: number): Command {
-  return new Command(process.execPath, [entry, ...args], timeout ? { timeout } : {});
+function ccbCommand(entry: string, args: string[], timeout?: number, cwd?: string): Command {
+  // `cwd` is how the child learns which project it is answering for. It reads Claude's
+  // settings files itself, and the project half of those lives under the working directory,
+  // so without this a project's proxy or CLAUDE_CODE_OAUTH_TOKEN is simply not seen.
+  return new Command(process.execPath, [entry, ...args], { ...(timeout ? { timeout } : {}), cwd });
 }
 
 /**
@@ -387,16 +391,22 @@ async function assertSttCapable(entry: string): Promise<void> {
 export async function spawnSpeechToText(
   handlers: SpeechToTextHandlers,
   options: SpeechToTextOptions = {},
+  workingDir?: string,
 ): Promise<SpeechToTextStream> {
   const entry = await resolveCcbEntry();
   await assertSttCapable(entry);
+
+  // Settle the Claude data directory before the child exists to inherit it. Dictation was
+  // the one feature that never did this, so the login it authenticated with was whichever
+  // project had most recently loaded — in a second project, somebody else's.
+  await Claude.applyConfigDir(workingDir);
 
   const args = ['stt'];
   if (options.language) args.push(`--language=${options.language}`);
   if (options.extraKeyterms?.length) args.push(`--keyterms=${options.extraKeyterms.join(',')}`);
   if (options.typedInterims) args.push('--interims');
 
-  const child = ccbCommand(entry, args).spawn({
+  const child = ccbCommand(entry, args, undefined, workingDir).spawn({
     stdio: ['pipe', 'pipe', 'pipe'],
     // Never a shell: stdin carries raw audio bytes.
     shell: false,
@@ -497,11 +507,14 @@ export async function spawnSpeechToText(
  * @throws ExtendKitMissingError when the package is not installed globally.
  * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
  */
-export async function probeSpeechToTextAvailable(): Promise<boolean> {
+export async function probeSpeechToTextAvailable(workingDir?: string): Promise<boolean> {
   const entry = await resolveCcbEntry();
   await assertSttCapable(entry);
 
-  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000).exec();
+  // The same project the stream will run against, or the answer describes a different one.
+  await Claude.applyConfigDir(workingDir);
+
+  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000, workingDir).exec();
   const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { available?: boolean };
   return parsed.available === true;
 }

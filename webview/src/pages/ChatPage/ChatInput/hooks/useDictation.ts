@@ -3,6 +3,7 @@ import i18n from '@/i18n/config';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import {
   SettingKey,
   VOICE_SILENCE_TIMEOUT_DEFAULT,
@@ -114,6 +115,9 @@ interface DictationTarget {
  */
 export function useDictation(getTarget: () => DictationTarget) {
   const { send, sendRaw, subscribe } = useBridgeContext();
+  // Which project's Claude Code login authorizes this. A project can point at its own data
+  // directory, and the backend cannot guess which project a socket message came from.
+  const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
   const { settings } = useSettings();
   const { settings: claudeSettings } = useClaudeSettings();
   const voice = settings[SettingKey.VOICE] ?? {};
@@ -259,6 +263,7 @@ export function useDictation(getTarget: () => DictationTarget) {
       // "ah ñomaseu".
       const ack = (await send(MessageType.START_DICTATION, {
         language: spokenLanguage,
+        workingDir: workingDirectory,
       })) as StartAck;
       if (ack?.status !== 'ok') {
         setError({
@@ -317,7 +322,7 @@ export function useDictation(getTarget: () => DictationTarget) {
       });
       finish();
     }
-  }, [send, sendRaw, finish, armSilenceTimer, spokenLanguage]);
+  }, [send, sendRaw, finish, armSilenceTimer, spokenLanguage, workingDirectory]);
 
   const stop = useCallback(async (reason: DictationStopReason = DictationStopReason.User) => {
     if (stateRef.current === DictationState.Idle) return;

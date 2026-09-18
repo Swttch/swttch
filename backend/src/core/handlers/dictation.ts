@@ -91,12 +91,12 @@ export async function startDictationHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
-  const payload = (message.payload ?? {}) as { language?: string; extraKeyterms?: string[] };
+  const payload = (message.payload ?? {}) as { language?: string; extraKeyterms?: string[]; workingDir?: string };
 
   await endStream(connectionId);
 
   try {
-    if (!(await isDictationAuthorized(probeSpeechToTextAvailable))) {
+    if (!(await isDictationAuthorized(() => probeSpeechToTextAvailable(payload.workingDir)))) {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
         status: 'error',
@@ -119,6 +119,7 @@ export async function startDictationHandler(
         },
       },
       { language: payload.language, extraKeyterms: payload.extraKeyterms },
+      payload.workingDir,
     );
 
     streams.set(connectionId, stream);
@@ -215,9 +216,11 @@ export async function getDictationAvailabilityHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+  const { workingDir } = (message.payload ?? {}) as { workingDir?: string };
+
   let authorized: boolean;
   try {
-    authorized = await isDictationAuthorized(probeSpeechToTextAvailable);
+    authorized = await isDictationAuthorized(() => probeSpeechToTextAvailable(workingDir));
   } catch {
     // Only a missing or too-old kit reaches here: isDictationAuthorized answers
     // false for every other "no", so this branch cannot swallow a login problem

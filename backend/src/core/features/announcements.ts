@@ -1,4 +1,5 @@
 import { announcementsUrl } from '../../config/environment';
+import { proxiedRequest } from './outbound-proxy';
 import { readMergedSettings } from './settings';
 import { getPluginVersion } from '../handlers/getVersion';
 import { getAnnouncementsEnabled } from './profile';
@@ -239,13 +240,16 @@ export async function fetchAnnouncements(workingDir?: string): Promise<Announcem
     url.searchParams.set('locale', locale);
     url.searchParams.set('pluginVersion', pluginVersion);
 
-    const res = await fetch(url.toString(), { method: 'GET' });
+    // proxiedRequest, not fetch: the global fetch ignores HTTP_PROXY, so on a machine that
+    // reaches the internet only through a proxy this request never arrived and the user
+    // simply never saw an announcement.
+    const res = await proxiedRequest(url.toString(), { method: 'GET' });
     if (!res.ok) {
       console.error('[node-backend]', `Failed to fetch announcements: HTTP ${res.status}`);
       return EMPTY_RESPONSE;
     }
 
-    const data: unknown = await res.json();
+    const data: unknown = JSON.parse(res.body);
     const response = validateResponse(data);
     cache.set(cacheKey, { expiresAt: now + CACHE_TTL_MS, response });
     return response;

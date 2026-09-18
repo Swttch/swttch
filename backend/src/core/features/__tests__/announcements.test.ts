@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const proxiedRequest = vi.hoisted(() => vi.fn());
+
+// The five outbound requests this backend makes of its own no longer go through the global
+// fetch, which ignores HTTP_PROXY — so the stub moves to the client that replaced it.
+vi.mock('../outbound-proxy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../outbound-proxy')>()),
+  proxiedRequest,
+}));
+
 import {
   AnnouncementActionType,
   AnnouncementFrequency,
@@ -128,14 +138,14 @@ describe('fetchAnnouncements', () => {
       settings: { uiLanguage: 'korean' },
       overrides: [],
     });
-    const fetchSpy = vi.fn((_url: string, _init?: RequestInit) =>
+    const fetchSpy = vi.fn((_url: string, _init?: unknown) =>
       Promise.resolve({
         ok: true,
         status: 200,
-        json: async () => ({ schemaVersion: 1, announcements: [] }),
+        body: JSON.stringify({ schemaVersion: 1, announcements: [] }),
       }),
     );
-    vi.stubGlobal('fetch', fetchSpy);
+    proxiedRequest.mockImplementation(fetchSpy);
 
     await fetchAnnouncements();
 
@@ -153,10 +163,7 @@ describe('fetchAnnouncements', () => {
       settings: { uiLanguage: 'english' },
       overrides: [],
     });
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve({ ok: false, status: 503, json: async () => ({}) })),
-    );
+    proxiedRequest.mockResolvedValue({ ok: false, status: 503, body: '{}' });
 
     const result = await fetchAnnouncements();
     expect(result.announcements).toEqual([]);
@@ -168,14 +175,14 @@ describe('fetchAnnouncements', () => {
       settings: { uiLanguage: 'japanese' },
       overrides: [],
     });
-    const fetchSpy = vi.fn((_url: string, _init?: RequestInit) =>
+    const fetchSpy = vi.fn((_url: string, _init?: unknown) =>
       Promise.resolve({
         ok: true,
         status: 200,
-        json: async () => ({ schemaVersion: 1, announcements: [] }),
+        body: JSON.stringify({ schemaVersion: 1, announcements: [] }),
       }),
     );
-    vi.stubGlobal('fetch', fetchSpy);
+    proxiedRequest.mockImplementation(fetchSpy);
 
     await fetchAnnouncements();
     await fetchAnnouncements();
