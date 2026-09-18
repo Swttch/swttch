@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.32.1 - Improved proxy and environment variable delivery, improved settings UI, and more</h3>
+            <ul>
+                <li>Add a setting to choose the newline key (#468, reported by @alxakx)</li>
+                <li>Add a setting to queue a message sent mid-turn or interrupt the turn with it (#468)</li>
+                <li>Apply the whole env block of settings.json instead of a fixed list of names (#466, reported by @VijitCoder)</li>
+                <li>Fix dictation to accept an account authenticated with CLAUDE_CODE_OAUTH_TOKEN (#466, reported by @VijitCoder)</li>
+                <li>Fix the chat panel never opening while stuck on Waiting for project indexing... (#465, reported by @renshengkuduan-go)</li>
+                <li>Fix the endless spinner on an authentication failure, and show which credential was rejected (#461, reported by @evilone79)</li>
+                <li>Stop the tab from spinning while a session waits for your answer, and mark it unread instead (#460)</li>
+            </ul>
             <h3>0.32.0 - Ask another session, and a working indicator on the tab</h3>
             <ul>
                 <li>Add @@ in the chat input to ask another running session (#447)</li>
