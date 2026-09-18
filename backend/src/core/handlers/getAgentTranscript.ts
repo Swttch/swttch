@@ -3,6 +3,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { loadWorkflowAgentTranscript } from '../features/loadWorkflowAgentTranscript';
+import { Claude } from '../claude';
 
 /**
  * GET_AGENT_TRANSCRIPT — load one workflow agent's full transcript (raw JSONL
@@ -15,9 +16,19 @@ export async function getAgentTranscriptHandler(
   _bridge: Bridge,
 ): Promise<void> {
   try {
-    const payload = message.payload as { transcriptDir?: string; agentId?: string } | undefined;
+    const payload = message.payload as {
+      transcriptDir?: string;
+      agentId?: string;
+      workingDir?: string;
+    } | undefined;
     const transcriptDir = payload?.transcriptDir;
     const agentId = payload?.agentId;
+
+    // The transcript is validated against this project's projects root, so the directory has
+    // to be this project's. It used to be whichever project last set one, which happened to
+    // be right most of the time and silently refused the transcript when it was not.
+    await Claude.applyConfigDir(payload?.workingDir);
+
     const result = await loadWorkflowAgentTranscript({
       transcriptDir: transcriptDir ?? '',
       agentId: agentId ?? '',
