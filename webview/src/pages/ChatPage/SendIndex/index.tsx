@@ -246,14 +246,24 @@ function SendIndexCard({ text }: { text: string }) {
 
   return (
     /*
-      The wrapper carries the gap between tick and card as padding rather than
-      margin, so the pointer crossing that gap never leaves the hovered element
-      and the card cannot flicker out from under the cursor.
+      The card is reachable with the mouse, not just readable.
+
+      It sits inside the row it belongs to, so the pointer moving onto it never
+      leaves that row and the hover holds. The gap between tick and card is
+      padding on this wrapper rather than margin on the card, so crossing the
+      gap does not leave the element either — with margin the card would flicker
+      out from under the cursor halfway across.
     */
-    <div className="absolute end-full top-1/2 -translate-y-1/2 pe-2 pointer-events-none">
+    <div className="absolute end-full top-1/2 -translate-y-1/2 pe-2">
       <div
-        className="bg-surface-raised border border-border-default rounded-lg shadow-md px-3 py-2 space-y-0.5"
+        className="bg-surface-raised border border-border-default rounded-lg shadow-md px-3 py-2 space-y-0.5 select-text cursor-auto"
         style={{ width: CARD_WIDTH }}
+        /*
+          The row beneath treats a click as "go to this send". Inside the card a
+          click is someone starting to select text, which must not move the
+          transcript out from under them.
+        */
+        onClick={e => e.stopPropagation()}
       >
         {lines.map((line, i) => (
           <div
