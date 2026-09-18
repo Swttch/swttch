@@ -16,6 +16,7 @@
  */
 
 import { McpTransportType } from '../../shared';
+import { proxiedRequest } from './outbound-proxy';
 import type { McpServerConfig, McpRegistryServer, McpRegistrySearchResult } from '../../shared';
 
 const REGISTRY_BASE = 'https://registry.modelcontextprotocol.io/v0/servers';
@@ -86,25 +87,22 @@ export async function searchMcpRegistry(
   params.set('limit', String(PAGE_LIMIT));
   if (cursor) params.set('cursor', cursor);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${REGISTRY_BASE}?${params.toString()}`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) {
-      throw new Error(`MCP registry returned HTTP ${res.status} ${res.statusText}`);
-    }
-    const data = (await res.json()) as RawSearchResponse;
-    const servers: McpRegistryServer[] = (data.servers ?? [])
-      .map(normalizeRegistryServer)
-      .filter((s): s is McpRegistryServer => s !== null);
-    return { servers, nextCursor: data.metadata?.nextCursor ?? null };
-  } finally {
-    clearTimeout(timer);
+  // proxiedRequest, not fetch: the global fetch ignores HTTP_PROXY, so behind a corporate
+  // proxy the server browser came up empty with no explanation. The deadline moves into the
+  // request with it — an AbortController does nothing for a node:https request.
+  const res = await proxiedRequest(`${REGISTRY_BASE}?${params.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    timeoutMs: REQUEST_TIMEOUT_MS,
+  });
+  if (!res.ok) {
+    throw new Error(`MCP registry returned HTTP ${res.status}`);
   }
+  const data = JSON.parse(res.body) as RawSearchResponse;
+  const servers: McpRegistryServer[] = (data.servers ?? [])
+    .map(normalizeRegistryServer)
+    .filter((s): s is McpRegistryServer => s !== null);
+  return { servers, nextCursor: data.metadata?.nextCursor ?? null };
 }
 
 /**

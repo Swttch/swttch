@@ -6,6 +6,7 @@ import type { IPCMessage } from '../types';
 import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { getClaudeConfigDir } from '../features/claudeConfigDir';
 import { MessageType } from '../../shared';
+import { Claude } from '../claude';
 
 /**
  * Delete a project: the whole folder under ~/.claude/projects that holds its
@@ -21,6 +22,15 @@ export async function deleteProjectHandler(
   _bridge: Bridge,
 ): Promise<void> {
   const path = message.payload?.path as string | undefined;
+
+  // Settle the Claude data directory to the global one, explicitly.
+  //
+  // The list this delete was launched from is built by getProjects, which resolves the global
+  // directory on purpose — so the folder to remove is under the global projects root. This
+  // message carries no working directory, and without this line the directory would be
+  // whichever project last set one: process.env holds a single value for the whole backend,
+  // so "not set here" means "still set to somewhere else".
+  await Claude.applyConfigDir();
 
   if (!path) {
     connections.sendTo(connectionId, MessageType.ACK, {

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { MessageType, DictationErrorKind } from '@/shared';
 
 export interface DictationAvailability {
@@ -32,11 +33,19 @@ interface RawResult {
  */
 export function useDictationAvailability(options?: { enabled?: boolean }) {
   const { send, isConnected } = useBridgeContext();
+  // The project decides which login answers this: a project can point Claude Code at its own
+  // data directory, and the backend has no way to guess which project a request came from.
+  // `OrNull` because the voice settings render outside the chat's provider.
+  const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
 
   const query = useQuery<DictationAvailability>({
-    queryKey: [MessageType.GET_DICTATION_AVAILABILITY],
+    // The project is part of the key: the answer for one project does not describe another,
+    // and a cached "not signed in" would follow the user into a project that is signed in.
+    queryKey: [MessageType.GET_DICTATION_AVAILABILITY, workingDirectory ?? null],
     queryFn: async () => {
-      const r = (await send(MessageType.GET_DICTATION_AVAILABILITY, {})) as RawResult;
+      const r = (await send(MessageType.GET_DICTATION_AVAILABILITY, {
+        workingDir: workingDirectory,
+      })) as RawResult;
       return { available: r.available ?? false, reason: r.reason ?? null };
     },
     enabled: isConnected && (options?.enabled ?? true),

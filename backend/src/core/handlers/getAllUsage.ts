@@ -7,6 +7,7 @@ import { readRegistry } from '../features/account-store';
 import type { StoredAccount } from '../../shared';
 import { runCcbUsage, classifyError } from './getUsage';
 import { readProxySummary } from '../features/proxy-summary';
+import { resolveEnv } from '../features/settings-env';
 import type { AccountUsage, AccountUsageData } from '../../shared';
 
 interface CacheEntry {
@@ -29,9 +30,13 @@ export async function getAllUsageHandler(
   const force = (message.payload as { force?: boolean })?.force === true;
   const workingDir = (message.payload as { workingDir?: string })?.workingDir;
 
-  if (workingDir) {
-    await Claude.applyConfigDir(workingDir);
-  }
+  // Unconditional: process.env holds one CLAUDE_CONFIG_DIR for the whole backend, so
+  // skipping this leaves whichever project last wrote it rather than leaving it unset.
+  await Claude.applyConfigDir(workingDir);
+
+  // The proxy a user configured may live only in Claude's settings.json, which is not an
+  // environment variable. Resolving picks up both that and an exported one.
+  const env = await resolveEnv(workingDir);
 
   if (force) {
     cache.clear();
@@ -95,7 +100,7 @@ export async function getAllUsageHandler(
 
       if (active) {
         try {
-          const rawUsage = await runCcbUsage();
+          const rawUsage = await runCcbUsage(workingDir);
           usage = {
             five_hour: rawUsage.five_hour || null,
             seven_day: rawUsage.seven_day || null,
@@ -103,7 +108,7 @@ export async function getAllUsageHandler(
             seven_day_opus: rawUsage.seven_day_opus || null,
           };
         } catch (err: any) {
-          const info = classifyError(err);
+          const info = classifyError(err, env);
           error = info.message;
           errorKind = info.kind;
         }
@@ -157,14 +162,14 @@ export async function getAllUsageHandler(
       // Sent whether or not anything failed, so the panel can name the hop a request
       // takes instead of asking the user whether they are behind a proxy. Null when
       // requests go out directly.
-      proxy: readProxySummary(),
+      proxy: readProxySummary(env),
     });
   } catch (err: any) {
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
       accounts: [],
-      proxy: readProxySummary(),
+      proxy: readProxySummary(env),
       error: err.message || 'Failed to fetch all usage info',
     });
   }

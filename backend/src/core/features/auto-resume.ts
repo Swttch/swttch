@@ -8,6 +8,7 @@ import {
 } from '../../shared';
 import { runCcbUsage, classifyError, type CcbUsageResponse } from '../handlers/getUsage';
 import { registerHook, type ScheduleHook } from './scheduled-messages';
+import { resolveEnv } from './settings-env';
 
 /**
  * Layer-2 "auto-resume on limit reset": PRE-SEND GATE half.
@@ -120,7 +121,16 @@ export interface AutoResumeStatus {
 
 /** Everything the hook needs, injected so it is fully unit-testable (no real timers/ccb). */
 export interface AutoResumeHookDeps {
-  fetchUsage: (accountId?: string) => Promise<CcbUsageResponse>;
+  fetchUsage: (accountId?: string, workingDir?: string) => Promise<CcbUsageResponse>;
+  /**
+   * The project a reservation belongs to, looked up from its session.
+   *
+   * This hook is registered once at server start, so it has no project of its own — which is
+   * why the usage call it makes used to run against global settings no matter which project
+   * the waiting session was in. A reservation does know its session, and a session knows its
+   * working directory, so the answer was reachable all along; it just was not asked for.
+   */
+  workingDirFor?: (sessionId: string) => string | undefined;
   now: () => number;
   sleep: (ms: number) => Promise<void>;
   pollIntervalMs: number;
@@ -137,6 +147,7 @@ export interface AutoResumeHookDeps {
 export function createAutoResumeHook(deps: AutoResumeHookDeps): ScheduleHook {
   return async (msg: ScheduledMessage, signal?: AbortSignal) => {
     const deadline = deps.now() + deps.timeoutMs;
+    const workingDir = deps.workingDirFor?.(msg.sessionId);
     let attempt = 0;
 
     for (;;) {
@@ -145,13 +156,17 @@ export function createAutoResumeHook(deps: AutoResumeHookDeps): ScheduleHook {
 
       let usage: CcbUsageResponse;
       try {
-        usage = await deps.fetchUsage(msg.accountId);
+        usage = await deps.fetchUsage(msg.accountId, workingDir);
       } catch (err) {
         if (signal?.aborted) return { proceed: false };
         // A fetch error is NOT "not recharged" — abort with a human-readable
         // reason. classifyError reads the whole error, including the exit code and
         // whether the child was killed, so a raw errno never reaches the user.
-        const info = classifyError(err);
+        //
+        // The resolved environment goes in so a proxy configured only in Claude's
+        // settings.json can be named. Without it the message says "check whether you
+        // have a proxy" to someone who has one, written down, in a file we just read.
+        const info = classifyError(err, await resolveEnv(workingDir));
         deps.broadcast({
           sessionId: msg.sessionId,
           scheduleId: msg.id,
@@ -232,7 +247,11 @@ export function registerAutoResumeHook(
   };
 
   const hook = createAutoResumeHook({
-    fetchUsage: options.fetchUsage ?? (accountId => accountId ? fetchAccountUsage(accountId) : runCcbUsage()),
+    fetchUsage: options.fetchUsage
+      ?? ((accountId, workingDir) => accountId
+        ? fetchAccountUsage(accountId, workingDir)
+        : runCcbUsage(workingDir)),
+    workingDirFor: (sessionId) => connections.getSession(sessionId)?.workingDir || undefined,
     now: options.now ?? Date.now,
     sleep: options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,

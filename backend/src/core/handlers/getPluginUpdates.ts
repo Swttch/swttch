@@ -1,4 +1,5 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
+import { proxiedRequest } from '../features/outbound-proxy';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
@@ -41,16 +42,18 @@ export async function getPluginUpdatesHandler(
     }
 
     inflightPromise = (async () => {
-      const response = await fetch(
+      // proxiedRequest, not fetch: the global fetch ignores HTTP_PROXY, so the machines
+      // most likely to sit behind one were also the ones never told an update existed.
+      const response = await proxiedRequest(
         'https://plugins.jetbrains.com/api/plugins/30313/updates?size=20',
         { method: 'GET' },
       );
 
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        throw new Error(`API returned ${response.status}`);
       }
 
-      const updates = await response.json();
+      const updates = JSON.parse(response.body);
       cachedUpdates = updates;
       cachedAt = Date.now();
       return updates;

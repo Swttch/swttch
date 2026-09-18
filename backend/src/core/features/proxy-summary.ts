@@ -1,13 +1,11 @@
-import { PROXY_ENV_KEYS } from './claude-settings';
-
 /**
  * The proxy this backend will send an outbound request through, ready to show a user.
  *
- * Read from `process.env` rather than from settings.json, because that is where the
- * effective value lives: `projectProxyEnv` has already merged the settings value with
- * whatever the backend inherited at startup, and the inherited one is invisible to a
- * settings reader. What the spawned child will actually use is what the user needs to
- * see named.
+ * Neither `process.env` nor settings.json answers this on its own. A proxy exported in a
+ * shell is invisible to a settings reader, and a proxy written into settings.json is not an
+ * environment variable at all — `claude` reads that file itself. The effective value is the
+ * two laid over each other, which is what features/settings-env.ts returns and what every
+ * caller here passes in.
  */
 export interface ProxySummary {
   /** The variable that supplied it, e.g. `HTTPS_PROXY`. */
@@ -47,11 +45,14 @@ export function maskProxyUrl(raw: string): string {
  * client picks one, so the name shown is the name that matters.
  */
 export function readProxySummary(env: NodeJS.ProcessEnv = process.env): ProxySummary | null {
+  // Both cases in both families: most *nix tools read the upper-case form and some HTTP
+  // clients prefer the lower-case one, and a user who wrote only one of them still has a
+  // proxy worth naming.
   const ordered = [
     'HTTPS_PROXY', 'https_proxy',
     'ALL_PROXY', 'all_proxy',
     'HTTP_PROXY', 'http_proxy',
-  ].filter((key) => (PROXY_ENV_KEYS as readonly string[]).includes(key));
+  ];
 
   for (const variable of ordered) {
     const value = env[variable];

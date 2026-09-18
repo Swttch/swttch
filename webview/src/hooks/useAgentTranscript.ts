@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useBridge } from './useBridge';
+import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
 
 interface AgentTranscriptData {
@@ -19,16 +20,20 @@ export function useAgentTranscript(
   fingerprint?: string | number,
 ) {
   const { send } = useBridge();
+  // The backend validates transcriptDir against this project's Claude data directory, and a
+  // project can point at its own. Without naming the project the backend would have to guess
+  // from whatever ran last.
+  const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? undefined;
 
   return useQuery({
-    queryKey: ['agent-transcript', transcriptDir, agentId, fingerprint],
+    queryKey: ['agent-transcript', workingDirectory ?? null, transcriptDir, agentId, fingerprint],
     queryFn: async (): Promise<AgentTranscriptData> => {
       const res = await send<{
         status: string;
         entries?: Record<string, unknown>[];
         truncated?: boolean;
         error?: string;
-      }>(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir, agentId });
+      }>(MessageType.GET_AGENT_TRANSCRIPT, { transcriptDir, agentId, workingDir: workingDirectory });
       if (res.status !== 'ok') throw new Error(res.error ?? 'Failed to load transcript');
       return { entries: res.entries ?? [], truncated: !!res.truncated };
     },

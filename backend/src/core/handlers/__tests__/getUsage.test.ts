@@ -12,6 +12,14 @@ import { join } from 'node:path';
 const CCG_HOME = mkdtempSync(join(tmpdir(), 'ccg-usage-test-'));
 process.env.CCG_HOME = CCG_HOME;
 
+// The usage path refuses a kit too old to read Claude's settings files, since this backend
+// stopped copying that env block into the child. Answering "yes" here keeps these tests about
+// what they are about; the refusal itself is covered where it lives.
+vi.mock('../../extend-kit', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../extend-kit')>()),
+  hasSettingsEnvCapability: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock('child_process', () => ({
   execFile: vi.fn(),
 }));

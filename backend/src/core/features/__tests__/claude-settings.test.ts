@@ -7,8 +7,8 @@ import {
   readJsonFileSafe,
   readClaudeSettings,
   saveClaudeSetting,
-  getProxyEnvFromSettings,
 } from '../claude-settings';
+import { readSettingsEnv } from '../settings-env';
 
 // deepMergeSettings used to be re-implemented here because it was not exported.
 // A copy passes no matter what the real function does, so it verified nothing:
@@ -285,15 +285,20 @@ describe('claude-settings', () => {
     });
   });
 
-  // ccb (the usage-stats helper CLI) is not the claude CLI and never reads
-  // ~/.claude/settings.json itself, so a proxy configured there must be read
-  // here and forwarded explicitly to whatever spawns ccb.
-  describe('getProxyEnvFromSettings()', () => {
+  /**
+   * The `env` block, read whole and layered across the four settings files.
+   *
+   * Reads real files on purpose. The layering IS the behaviour under test, and the reason it
+   * matters is that ccb and claude both resolve the same block from the same files now: if
+   * this side and their side disagree about which file wins, one user edits one file and gets
+   * two answers.
+   */
+  describe('readSettingsEnv()', () => {
     let configDir: string;
     let saved: string | undefined;
 
     beforeEach(() => {
-      configDir = mkdtempSync(join(tmpdir(), 'ccg-proxy-'));
+      configDir = mkdtempSync(join(tmpdir(), 'ccg-settings-env-'));
       mkdirSync(configDir, { recursive: true });
       saved = process.env.CLAUDE_CONFIG_DIR;
       process.env.CLAUDE_CONFIG_DIR = configDir;
@@ -308,37 +313,46 @@ describe('claude-settings', () => {
       writeFileSync(join(configDir, name), raw, 'utf-8');
 
     it('returns {} when settings.json has no env block', async () => {
-      expect(await getProxyEnvFromSettings()).toEqual({});
+      expect(await readSettingsEnv()).toEqual({});
     });
 
-    it('returns {} when env has no proxy keys', async () => {
+    it('returns names no proxy allow-list would have carried', async () => {
       write('settings.json', JSON.stringify({ env: { ANTHROPIC_API_KEY: 'sk-test' } }));
-      expect(await getProxyEnvFromSettings()).toEqual({});
+      // The allow-list this replaced returned {} here, which is how a proxy written in lower
+      // case went missing twice over.
+      expect(await readSettingsEnv()).toEqual({ ANTHROPIC_API_KEY: 'sk-test' });
     });
 
     it('picks up HTTP_PROXY and HTTPS_PROXY from settings.json', async () => {
       write('settings.json', JSON.stringify({
         env: { HTTP_PROXY: 'http://proxy.local:8080', HTTPS_PROXY: 'http://proxy.local:8443' },
       }));
-      expect(await getProxyEnvFromSettings()).toEqual({
+      expect(await readSettingsEnv()).toEqual({
         HTTP_PROXY: 'http://proxy.local:8080',
         HTTPS_PROXY: 'http://proxy.local:8443',
       });
     });
 
-    it('ignores a non-string proxy value instead of forwarding it', async () => {
+    it('drops a value that cannot be an environment value', async () => {
       write('settings.json', JSON.stringify({ env: { HTTP_PROXY: null } }));
-      expect(await getProxyEnvFromSettings()).toEqual({});
+      expect(await readSettingsEnv()).toEqual({});
     });
 
-    it('lets settings.local.json override the base proxy value', async () => {
+    it('lets settings.local.json override the base value', async () => {
       write('settings.json', JSON.stringify({ env: { HTTP_PROXY: 'http://base:8080' } }));
       write('settings.local.json', JSON.stringify({ env: { HTTP_PROXY: 'http://local:8080' } }));
-      expect(await getProxyEnvFromSettings()).toEqual({ HTTP_PROXY: 'http://local:8080' });
+      expect(await readSettingsEnv()).toEqual({ HTTP_PROXY: 'http://local:8080' });
+    });
+
+    it('keeps names the overriding file does not mention', async () => {
+      write('settings.json', JSON.stringify({ env: { HTTP_PROXY: 'http://base:8080', KEPT: 'yes' } }));
+      write('settings.local.json', JSON.stringify({ env: { HTTP_PROXY: 'http://local:8080' } }));
+      // A shallow merge would replace the whole block and lose KEPT.
+      expect(await readSettingsEnv()).toEqual({ HTTP_PROXY: 'http://local:8080', KEPT: 'yes' });
     });
 
     it('lets a project-level setting override the global one', async () => {
-      const projectDir = mkdtempSync(join(tmpdir(), 'ccg-proxy-project-'));
+      const projectDir = mkdtempSync(join(tmpdir(), 'ccg-settings-env-project-'));
       try {
         write('settings.json', JSON.stringify({ env: { HTTP_PROXY: 'http://global:8080' } }));
         mkdirSync(join(projectDir, '.claude'), { recursive: true });
@@ -347,7 +361,7 @@ describe('claude-settings', () => {
           JSON.stringify({ env: { HTTP_PROXY: 'http://project:8080' } }),
           'utf-8',
         );
-        expect(await getProxyEnvFromSettings(projectDir)).toEqual({ HTTP_PROXY: 'http://project:8080' });
+        expect(await readSettingsEnv(projectDir)).toEqual({ HTTP_PROXY: 'http://project:8080' });
       } finally {
         rmSync(projectDir, { recursive: true, force: true });
       }

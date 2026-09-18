@@ -2,6 +2,15 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+// The handler settles the Claude data directory to the global one before it deletes, so the
+// folder it removes is under the same projects root the project list was built from. Here the
+// fixture supplies that directory through CLAUDE_CONFIG_DIR directly, and a real resolution
+// would overwrite it with the developer's own — what applyConfigDir resolves to is pinned in
+// claude-config-dir-per-run.test.ts instead.
+vi.mock('../../claude', () => ({
+  Claude: { applyConfigDir: vi.fn().mockResolvedValue(undefined) },
+}));
+
 import { deleteProjectHandler } from '../deleteProject';
 import { MessageType } from '../../../shared';
 import type { IPCMessage } from '../../types';

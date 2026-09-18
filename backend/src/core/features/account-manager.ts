@@ -41,6 +41,12 @@ async function runAuthStatus(): Promise<ClaudeAuthStatus | null> {
   try {
     // execAuthed (global context — account management is not project-scoped) so the live
     // account matches what the chat spawn authenticates as; env-provided API keys are kept.
+    //
+    // The `undefined` is a choice, not an omission, and it now means what it says: `exec`
+    // settles CLAUDE_CONFIG_DIR from the working directory it is given, so no working
+    // directory resolves to the global value. Before that it resolved to nothing at all,
+    // which left whichever project had most recently loaded — so this global-by-design
+    // lookup could answer for a project.
     const { stdout } = await Claude.execAuthed(['auth', 'status', '--json'], undefined, { timeout: 8000 });
     // Extract the JSON object from stdout to guard against shell banner noise
     // (e.g. Windows Console banners, .bashrc printf sequences) that can prefix

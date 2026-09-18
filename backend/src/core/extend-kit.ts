@@ -2,6 +2,7 @@ import { sep, dirname, join } from 'node:path';
 import { realpath, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { Command, ShellKind } from './command';
+import { Claude } from './claude';
 import { LibraryManager } from '../shared';
 import { EXTEND_KIT_PACKAGE } from './global-install-target';
 import { launcherFor, npmPrefixFor } from './install-coordinate';
@@ -57,7 +58,7 @@ export class ExtendKitMissingError extends Error {
 }
 
 /**
- * Thrown when the kit is installed but predates `ccb stt`.
+ * Thrown when the kit is installed but too old for what the caller needs.
  *
  * Its own error rather than a missing kit, because the fix differs: this one is
  * "update the kit", and telling the user to install something they already have
@@ -66,14 +67,25 @@ export class ExtendKitMissingError extends Error {
  * being removed.
  */
 export class ExtendKitTooOldError extends Error {
-  constructor(public readonly version: string | null) {
-    super(`${EXTEND_KIT_PACKAGE} ${version ?? ''} does not support "ccb stt"`.trim());
+  constructor(public readonly version: string | null, missing: string) {
+    super(`${EXTEND_KIT_PACKAGE} ${version ?? ''} does not support "${missing}"`.trim());
     this.name = 'ExtendKitTooOldError';
   }
 }
 
 /** Capability the kit reports once `ccb stt` exists. */
 const STT_CAPABILITY = 'stt.stream';
+
+/**
+ * Capability the kit reports once it reads Claude's settings files itself.
+ *
+ * Required because this backend stopped copying that `env` block into the child's
+ * environment once the kit could read it. A kit without this reads neither — so a proxy or a
+ * CLAUDE_CODE_OAUTH_TOKEN configured only in settings.json reaches nothing, and the symptom
+ * is a 401 or a timeout with nothing pointing at the cause. `stt.stream` cannot stand in for
+ * it: 0.7.0 advertises that one too, and 0.7.0 is exactly the version this rules out.
+ */
+const SETTINGS_ENV_CAPABILITY = 'settings.env';
 
 /**
  * How long to wait for `ccb stt` to exit after its stdin closes.
@@ -86,7 +98,15 @@ const CLOSE_TIMEOUT_MS = 5_000;
 
 let cachedRoots: string[] | null = null;
 let cachedEntry: string | null = null;
-let cachedSttCapable = false;
+/**
+ * What the installed kit says it supports, cached until something changes the install.
+ *
+ * Asking costs a process spawn — measured at about 120ms — and the usage panel asks on every
+ * refresh, which used to mean two `ccb` spawns per reading where one would do. The answer
+ * cannot change under a running install, and the one thing that does change it (installing or
+ * updating the kit) already goes through {@link resetExtendKitCache}.
+ */
+let cachedCapabilities: string[] | null = null;
 
 /** Last non-empty line of shell output — rc files print noise before it. */
 function lastLine(stdout: string): string | null {
@@ -339,8 +359,44 @@ async function resolveCcbEntry(): Promise<string> {
  * stream writes raw bytes into stdin, and a shell in between is one more thing
  * that can transform them.
  */
-function ccbCommand(entry: string, args: string[], timeout?: number): Command {
-  return new Command(process.execPath, [entry, ...args], timeout ? { timeout } : {});
+function ccbCommand(
+  entry: string,
+  args: string[],
+  timeout?: number,
+  cwd?: string,
+  env?: NodeJS.ProcessEnv,
+): Command {
+  // `cwd` is how the child learns which project it is answering for. It reads Claude's
+  // settings files itself, and the project half of those lives under the working directory,
+  // so without this a project's proxy or CLAUDE_CODE_OAUTH_TOKEN is simply not seen.
+  return new Command(process.execPath, [entry, ...args], {
+    ...(timeout ? { timeout } : {}),
+    cwd,
+    env,
+  });
+}
+
+/**
+ * The env overrides handed to a `ccb` child, matching what a `claude` child gets.
+ *
+ * `ccb` authenticates with the same credential `claude` does, so it has to be handed the same
+ * environment — otherwise the usage panel reports for one account while the chat talks to
+ * another, and dictation authenticates as a third. The strip is the part that matters: an
+ * OAuth token inherited from whatever launched the IDE is discarded for `claude` unless the
+ * user pinned it in settings.json, and a `ccb` that kept it would be answering for a
+ * credential the chat never uses.
+ *
+ * Whatever else the chat spawn adds rides along without being filtered. Which of them mean
+ * anything to `ccb` is `ccb`'s business, and a list of "the ones we thought were relevant" is
+ * the same shape of mistake as the proxy allow-list this branch removed.
+ */
+async function ccbEnv(workingDir?: string): Promise<NodeJS.ProcessEnv> {
+  return {
+    TERM: 'dumb',
+    CI: 'true',
+    CLAUDECODE: undefined,
+    ...(await Claude.authStripEnv(workingDir)),
+  };
 }
 
 /**
@@ -353,24 +409,49 @@ function ccbCommand(entry: string, args: string[], timeout?: number): Command {
  *
  * @throws ExtendKitTooOldError when the kit predates `ccb stt`.
  */
-async function assertSttCapable(entry: string): Promise<void> {
-  if (cachedSttCapable) return;
+async function readCapabilities(entry: string, workingDir?: string): Promise<string[]> {
+  if (cachedCapabilities) return cachedCapabilities;
 
   let capabilities: string[] = [];
   try {
-    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000).exec();
+    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir, await ccbEnv(workingDir)).exec();
     const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
     capabilities = parsed.capabilities ?? [];
   } catch {
     // A kit old enough to not know --capabilities fails here, which is the same
-    // answer as a kit that knows the flag but not stt.
+    // answer as a kit that knows the flag but not the capability being asked about.
     capabilities = [];
   }
 
-  if (!capabilities.includes(STT_CAPABILITY)) {
-    throw new ExtendKitTooOldError(await getExtendKitVersion());
+  cachedCapabilities = capabilities;
+  return capabilities;
+}
+
+async function assertSttCapable(entry: string): Promise<void> {
+  const capabilities = await readCapabilities(entry);
+
+  for (const required of [STT_CAPABILITY, SETTINGS_ENV_CAPABILITY]) {
+    if (!capabilities.includes(required)) {
+      throw new ExtendKitTooOldError(await getExtendKitVersion(), required);
+    }
   }
-  cachedSttCapable = true;
+}
+
+/**
+ * Whether the installed kit reads Claude's settings files itself.
+ *
+ * Separate from {@link assertSttCapable} because the usage panel needs the same guarantee and
+ * has nothing to do with dictation. Answers rather than throws: the usage handler turns a "no"
+ * into its own message, and a failure to ask at all should not take the panel down.
+ */
+export async function hasSettingsEnvCapability(workingDir?: string): Promise<boolean> {
+  try {
+    const entry = await resolveCcbEntry();
+    return (await readCapabilities(entry, workingDir)).includes(SETTINGS_ENV_CAPABILITY);
+  } catch {
+    // Not installed. Either way it does not have the capability.
+    return false;
+  }
 }
 
 /**
@@ -387,16 +468,22 @@ async function assertSttCapable(entry: string): Promise<void> {
 export async function spawnSpeechToText(
   handlers: SpeechToTextHandlers,
   options: SpeechToTextOptions = {},
+  workingDir?: string,
 ): Promise<SpeechToTextStream> {
   const entry = await resolveCcbEntry();
   await assertSttCapable(entry);
+
+  // Settle the Claude data directory before the child exists to inherit it. Dictation was
+  // the one feature that never did this, so the login it authenticated with was whichever
+  // project had most recently loaded — in a second project, somebody else's.
+  await Claude.applyConfigDir(workingDir);
 
   const args = ['stt'];
   if (options.language) args.push(`--language=${options.language}`);
   if (options.extraKeyterms?.length) args.push(`--keyterms=${options.extraKeyterms.join(',')}`);
   if (options.typedInterims) args.push('--interims');
 
-  const child = ccbCommand(entry, args).spawn({
+  const child = ccbCommand(entry, args, undefined, workingDir, await ccbEnv(workingDir)).spawn({
     stdio: ['pipe', 'pipe', 'pipe'],
     // Never a shell: stdin carries raw audio bytes.
     shell: false,
@@ -497,11 +584,14 @@ export async function spawnSpeechToText(
  * @throws ExtendKitMissingError when the package is not installed globally.
  * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
  */
-export async function probeSpeechToTextAvailable(): Promise<boolean> {
+export async function probeSpeechToTextAvailable(workingDir?: string): Promise<boolean> {
   const entry = await resolveCcbEntry();
   await assertSttCapable(entry);
 
-  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000).exec();
+  // The same project the stream will run against, or the answer describes a different one.
+  await Claude.applyConfigDir(workingDir);
+
+  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000, workingDir, await ccbEnv(workingDir)).exec();
   const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { available?: boolean };
   return parsed.available === true;
 }
@@ -540,5 +630,5 @@ export async function getExtendKitVersion(): Promise<string | null> {
 export function resetExtendKitCache(): void {
   cachedRoots = null;
   cachedEntry = null;
-  cachedSttCapable = false;
+  cachedCapabilities = null;
 }
