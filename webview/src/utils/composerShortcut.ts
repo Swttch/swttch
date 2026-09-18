@@ -13,11 +13,22 @@ import {
   type ComposerShortcutSettings,
 } from '@/shared';
 import { isMac } from '@/config/environment';
-import { displayShortcut, matchesShortcut, type ShortcutEvent } from './shortcut';
+import {
+  displayShortcut,
+  formatShortcut,
+  matchesShortcut,
+  parseShortcut,
+  type ShortcutEvent,
+} from './shortcut';
 
 /** What the composer should do with a keystroke. */
 export enum ComposerKeyAction {
   Send = 'send',
+  /**
+   * Send, but treat this one message the other way round: queue it if the
+   * setting says steer, steer on it if the setting says queue.
+   */
+  SendInverted = 'send-inverted',
   Newline = 'newline',
   /** Nothing of ours — leave the keystroke to the editor. */
   None = 'none',
@@ -30,6 +41,8 @@ export interface ComposerBindings {
    * Cmd+Enter have always both submitted regardless of platform.
    */
   send: string[];
+  /** Combinations that send while inverting the follow-up behaviour once. */
+  sendInverted: string[];
   /** Combinations that insert a line break. */
   newline: string[];
 }
@@ -75,11 +88,42 @@ export function composerBindings(settings: ComposerShortcutSettings): ComposerBi
         ? ['Enter']
         : storedOrNothing(settings.composerNewlineShortcutCustom);
 
-  return { send: sendBindings, newline: newlineBindings };
+  return {
+    send: sendBindings,
+    sendInverted: sendBindings.map(invertedOf).filter((s): s is string => s !== null),
+    newline: newlineBindings,
+  };
 }
 
 function storedOrNothing(stored: string | null | undefined): string[] {
   return stored ? [stored] : [];
+}
+
+/**
+ * The send combination with one more modifier on it, which is how a single
+ * message asks for the other follow-up behaviour.
+ *
+ * Derived rather than bound separately, so the pair always reads as one idea:
+ * Enter sends and ⌘Enter sends the other way; ⌘Enter sends and ⇧⌘Enter sends the
+ * other way. Binding it would also give the user a third key to keep clear of
+ * the two they already set.
+ *
+ * Which modifier to add is decided by what the send key is missing. Ctrl/Cmd
+ * first, because Shift+Enter is the newline default and reaching for it here
+ * would collide with it on a stock setup. Shift second. A send key that already
+ * carries both has nothing left to add, so that configuration simply has no
+ * one-off invert — see the null below.
+ */
+export function invertedOf(stored: string): string | null {
+  const parts = parseShortcut(stored);
+  if (!parts) return null;
+  if (!parts.ctrl && !parts.meta) {
+    // Match the platform the label names, so the derived key is the one under
+    // the user's hand rather than the one their keyboard does not have.
+    return formatShortcut(isMac() ? { ...parts, meta: true } : { ...parts, ctrl: true });
+  }
+  if (!parts.shift) return formatShortcut({ ...parts, shift: true });
+  return null;
 }
 
 /**
@@ -109,6 +153,17 @@ export function composerKeyAction(
 
   if (bindings.newline.some((stored) => matchesShortcut(normalised, stored))) {
     return ComposerKeyAction.Newline;
+  }
+
+  // Last of the three, because this is the only binding the user did not choose:
+  // it is derived from the send key. A newline key that lands on the same
+  // combination keeps it — taking a chosen key away for a derived one would make
+  // a setting the user filled in stop working, with nothing on screen to say why.
+  if (
+    !event.isMobile &&
+    bindings.sendInverted.some((stored) => matchesShortcut(normalised, stored))
+  ) {
+    return ComposerKeyAction.SendInverted;
   }
 
   // An Enter that is bound to neither still breaks the line. Leaving it to do
@@ -141,6 +196,25 @@ function isEnter(event: ComposerKeyEvent): boolean {
 export function conflictingBinding(settings: ComposerShortcutSettings): string | null {
   const { send, newline } = composerBindings(settings);
   return send.find((stored) => newline.includes(stored)) ?? null;
+}
+
+/**
+ * How the one-off invert key is written, or empty when there is none.
+ *
+ * Picks by platform for the same reason {@link sendKeyLabel} does: `modEnter`
+ * binds both Ctrl and Cmd, and naming the wrong one tells a Mac user to press a
+ * key their keyboard does not have.
+ */
+export function invertKeyLabel(settings: ComposerShortcutSettings): string {
+  const { sendInverted, newline } = composerBindings(settings);
+  // A combination the newline key already claims is not ours to name: the
+  // newline key wins (see composerKeyAction), so promising it here would be a
+  // description of something that does not happen.
+  const available = sendInverted.filter((stored) => !newline.includes(stored));
+  if (available.length === 0) return '';
+  const wanted = isMac() ? 'Meta+' : 'Ctrl+';
+  const preferred = available.find((stored) => stored.includes(wanted)) ?? available[0];
+  return displayShortcut(preferred);
 }
 
 /**

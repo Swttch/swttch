@@ -11,6 +11,7 @@ import {
   BROWSER_DIFF_PRESENTATIONS,
   COMPOSER_SEND_SHORTCUTS,
   COMPOSER_NEWLINE_SHORTCUTS,
+  FOLLOW_UP_BEHAVIORS,
 } from '../../shared';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   composerSendShortcutCustom: null,
   composerNewlineShortcut: null,
   composerNewlineShortcutCustom: null,
+  composerFollowUpBehavior: null,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
@@ -136,6 +138,7 @@ const COMMENT_MAP: Record<string, string> = {
   composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
   composerNewlineShortcut: '줄을 바꾸는 키: "shiftEnter" | "enter" | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerNewlineShortcutCustom: 'composerNewlineShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Shift+Enter")',
+  composerFollowUpBehavior: '턴이 도는 중에 보낸 메시지의 처리: "queue"(턴이 끝날 때까지 대기) | "steer"(현재 턴을 중단하고 이 메시지로 새 턴 시작). null이면 queue',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
@@ -366,6 +369,11 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'composerNewlineShortcutCustom':
       if (value !== null && typeof value !== 'string') {
         return `${key} must be a string or null`;
+      }
+      break;
+    case 'composerFollowUpBehavior':
+      if (value !== null && !FOLLOW_UP_BEHAVIORS.includes(value as string)) {
+        return `composerFollowUpBehavior must be null or one of ${FOLLOW_UP_BEHAVIORS.map((s) => `"${s}"`).join(', ')}`;
       }
       break;
     case 'diffSurface':

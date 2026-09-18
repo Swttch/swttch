@@ -14,6 +14,8 @@ import {
   conflictingBinding,
   sendKeyLabel,
   ComposerKeyAction,
+  invertedOf,
+  invertKeyLabel,
   type ComposerKeyEvent,
 } from '../composerShortcut';
 import { ComposerSendShortcut, ComposerNewlineShortcut } from '@/shared';
@@ -82,8 +84,12 @@ describe('the legacy useCtrlEnterToSend still decides when nothing newer was cho
 
   it('is overruled the moment the user chooses explicitly', () => {
     const chosen = { useCtrlEnterToSend: true, composerSendShortcut: ComposerSendShortcut.Enter };
+    // Plain Enter sends, which is the whole point: the legacy key would have made
+    // it break the line.
     expect(actionUnder(chosen, press())).toBe(ComposerKeyAction.Send);
-    expect(actionUnder(chosen, press({ ctrlKey: true }))).toBe(ComposerKeyAction.Newline);
+    // Ctrl+Enter is no longer the legacy send key. It is the key derived from
+    // this send shortcut, so it sends with the follow-up behaviour inverted.
+    expect(actionUnder(chosen, press({ ctrlKey: true }))).toBe(ComposerKeyAction.SendInverted);
   });
 });
 
@@ -200,5 +206,93 @@ describe('sendKeyLabel', () => {
 
   it('falls back to Enter when custom has nothing recorded, matching what the composer does', () => {
     expect(sendKeyLabel({ composerSendShortcut: ComposerSendShortcut.Custom })).toBe('Enter');
+  });
+});
+
+describe('the key that inverts the follow-up behaviour once', () => {
+  it('adds the platform modifier when the send key has none', () => {
+    expect(invertedOf('Enter')).toBe('Ctrl+Enter');
+    mockIsMac = true;
+    expect(invertedOf('Enter')).toBe('Meta+Enter');
+  });
+
+  it('adds Shift when the send key already carries a modifier', () => {
+    // Not Shift first: Shift+Enter is the newline default, so reaching for it
+    // here would collide with it on a stock setup.
+    expect(invertedOf('Meta+Enter')).toBe('Shift+Meta+Enter');
+    expect(invertedOf('Ctrl+Enter')).toBe('Ctrl+Shift+Enter');
+  });
+
+  it('has nothing to add when the send key carries both', () => {
+    expect(invertedOf('Ctrl+Shift+Enter')).toBeNull();
+  });
+
+  it('is derived for every send binding, so either modifier works for modEnter', () => {
+    const bindings = composerBindings({ composerSendShortcut: ComposerSendShortcut.ModEnter });
+    expect(bindings.send).toEqual(['Ctrl+Enter', 'Meta+Enter']);
+    expect(bindings.sendInverted).toEqual(['Ctrl+Shift+Enter', 'Shift+Meta+Enter']);
+  });
+
+  it('sends with the behaviour inverted rather than doing nothing', () => {
+    // Default send is Enter, so Ctrl+Enter is the derived invert on Windows.
+    expect(actionUnder({}, press({ ctrlKey: true }))).toBe(ComposerKeyAction.SendInverted);
+  });
+
+  it('never steals a keystroke the send key itself claims', () => {
+    // With modEnter sending, Ctrl+Enter IS the send key and must stay a send.
+    const modEnter = { composerSendShortcut: ComposerSendShortcut.ModEnter };
+    expect(actionUnder(modEnter, press({ ctrlKey: true }))).toBe(ComposerKeyAction.Send);
+    expect(actionUnder(modEnter, press({ ctrlKey: true, shiftKey: true }))).toBe(
+      ComposerKeyAction.SendInverted,
+    );
+  });
+
+  it('types a line on a touch keyboard, where there are no modifiers to press', () => {
+    expect(actionUnder({}, press({ ctrlKey: true, isMobile: true }))).toBe(
+      ComposerKeyAction.Newline,
+    );
+  });
+});
+
+describe('invertKeyLabel', () => {
+  it('names the modifier this platform actually has', () => {
+    // modEnter binds Ctrl AND Cmd, so the label has to choose. Naming Ctrl to a
+    // Mac user would point at a key that does not send here.
+    const settings = { composerSendShortcut: ComposerSendShortcut.ModEnter };
+    expect(invertKeyLabel(settings)).toBe('Ctrl+Shift+Enter');
+    mockIsMac = true;
+    expect(invertKeyLabel(settings)).toBe('⇧⌘Enter');
+  });
+
+  it('is empty when the send key leaves no modifier to add', () => {
+    expect(
+      invertKeyLabel({
+        composerSendShortcut: ComposerSendShortcut.Custom,
+        composerSendShortcutCustom: 'Ctrl+Shift+Enter',
+      }),
+    ).toBe('');
+  });
+});
+
+describe('a chosen newline key beats the derived invert key', () => {
+  // Send on Enter derives Ctrl+Enter as the invert, and this user has put their
+  // newline key on exactly that. The one they chose has to win: a derived key
+  // taking it would make a setting they filled in stop working silently.
+  const collides = {
+    composerSendShortcut: ComposerSendShortcut.Enter,
+    composerNewlineShortcut: ComposerNewlineShortcut.Custom,
+    composerNewlineShortcutCustom: 'Ctrl+Enter',
+  };
+
+  it('Ctrl+Enter still breaks the line', () => {
+    expect(actionUnder(collides, press({ ctrlKey: true }))).toBe(ComposerKeyAction.Newline);
+  });
+
+  it('and the row stops naming a shortcut it cannot deliver', () => {
+    expect(invertKeyLabel(collides)).toBe('');
+  });
+
+  it('while an uncontested derived key is still named', () => {
+    expect(invertKeyLabel({ composerSendShortcut: ComposerSendShortcut.Enter })).toBe('Ctrl+Enter');
   });
 });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SettingSection } from '../../common';
 import { SendShortcutRow } from './SendShortcutRow';
 import { NewlineShortcutRow } from './NewlineShortcutRow';
+import { FollowUpBehaviorRow } from './FollowUpBehaviorRow';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import type { ComposerShortcutSettings } from '@/shared';
@@ -54,6 +55,7 @@ export function ComposerSection() {
         commit={commitFor('newline')}
         error={conflicted === 'newline' ? t('general.composer.conflictWithSend') : undefined}
       />
+      <FollowUpBehaviorRow />
     </SettingSection>
   );
 }

@@ -28,6 +28,26 @@ export enum ComposerNewlineShortcut {
   Custom = 'custom',
 }
 
+/**
+ * What happens to a message sent while a turn is already running.
+ *
+ * `Steer` is an interrupt, not a separate channel. The CLI queues whatever
+ * arrives mid-turn, and an interrupt makes it end the current turn and start a
+ * new one on the queued message — measured, not assumed: the interrupt's
+ * `control_response` comes back with `still_queued: []` and a fresh
+ * `system/init` follows. The same thing a terminal user does by typing and
+ * pressing Escape.
+ */
+export enum FollowUpBehavior {
+  /** Hold it until the current turn finishes on its own. The default. */
+  Queue = 'queue',
+  /** End the current turn now and answer this instead. */
+  Steer = 'steer',
+}
+
+/** Every accepted {@link FollowUpBehavior} value. */
+export const FOLLOW_UP_BEHAVIORS: readonly string[] = Object.values(FollowUpBehavior);
+
 /** Every accepted {@link ComposerSendShortcut} value, for validating storage. */
 export const COMPOSER_SEND_SHORTCUTS: readonly string[] = Object.values(ComposerSendShortcut);
 
@@ -44,6 +64,27 @@ export interface ComposerShortcutSettings {
   composerNewlineShortcutCustom?: string | null;
   /** The one setting that used to decide both, kept because users still have it. */
   useCtrlEnterToSend?: boolean | null;
+  /** Null until the user chooses, which reads as {@link FollowUpBehavior.Queue}. */
+  composerFollowUpBehavior?: FollowUpBehavior | string | null;
+}
+
+/**
+ * What a mid-turn message does, with nothing left null.
+ *
+ * Queue is the default because it is what the app has always done, and because
+ * the other one throws away work in progress: a user who has not asked for that
+ * should never get it.
+ */
+export function resolveFollowUpBehavior(settings: ComposerShortcutSettings): FollowUpBehavior {
+  const stored = settings.composerFollowUpBehavior;
+  return FOLLOW_UP_BEHAVIORS.includes(stored as string)
+    ? (stored as FollowUpBehavior)
+    : FollowUpBehavior.Queue;
+}
+
+/** The other one. Used for the keystroke that inverts the setting once. */
+export function invertFollowUpBehavior(behavior: FollowUpBehavior): FollowUpBehavior {
+  return behavior === FollowUpBehavior.Queue ? FollowUpBehavior.Steer : FollowUpBehavior.Queue;
 }
 
 /** The pair of modes in effect, with nothing left null. */

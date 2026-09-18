@@ -106,6 +106,13 @@
         "description": "The key that inserts a new line instead of sending the prompt",
         "shiftEnter": "Shift + Enter",
         "enter": "Enter"
+      },
+      "followUp": {
+        "label": "Follow-up behavior",
+        "description": "Queue follow-ups while {{appName}} runs or steer the current run. Press {{shortcut}} to do the opposite for one message.",
+        "descriptionNoShortcut": "Queue follow-ups while {{appName}} runs or steer the current run.",
+        "queue": "Queue",
+        "steer": "Steer"
       }
     },
     "shortcutInput": {

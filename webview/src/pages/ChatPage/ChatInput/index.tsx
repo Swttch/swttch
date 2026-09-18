@@ -68,6 +68,11 @@ import {
   sendKeyLabel,
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
+import {
+  FollowUpBehavior,
+  resolveFollowUpBehavior,
+  invertFollowUpBehavior,
+} from '@/shared';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -553,7 +558,29 @@ export function ChatInput() {
    * attached rather than dropped silently, so the next message the user sends
    * to this session still has them.
    */
-  const submitComposer = useCallback(() => {
+  /**
+   * End the current turn so the message just sent is answered now.
+   *
+   * Sent first, interrupted second, both over the same stdin pipe: the CLI
+   * queues whatever arrives mid-turn, and the interrupt makes it drop the
+   * turn and start a new one on the queue. Measured back to back with no gap
+   * — the interrupt's control_response comes back `still_queued: []` and a
+   * fresh system/init follows.
+   *
+   * Nothing to do when no turn is running: the message was not a follow-up,
+   * and interrupting an idle CLI would end a turn that has not begun.
+   */
+  const steerIfAsked = useCallback(
+    (invertOnce: boolean) => {
+      if (!isStreaming) return;
+      const chosen = resolveFollowUpBehavior(appSettings);
+      const behavior = invertOnce ? invertFollowUpBehavior(chosen) : chosen;
+      if (behavior === FollowUpBehavior.Steer) onStop();
+    },
+    [isStreaming, appSettings, onStop],
+  );
+
+  const submitComposer = useCallback((invertFollowUp = false) => {
     if (disabled) return;
     if (!value.trim() && attachments.length === 0) return;
 
@@ -582,6 +609,7 @@ export function ChatInput() {
       // reappearing for the one entry most likely to be recalled.
       pushToHistory(shown);
       sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
+      steerIfAsked(invertFollowUp);
       onChange('');
       setRecipient(null);
       setPathTokens([]);
@@ -591,6 +619,7 @@ export function ChatInput() {
     pushToHistory(value);
 
     onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined);
+    steerIfAsked(invertFollowUp);
     clearAttachments();
     setPathTokens([]);
   }, [
@@ -605,6 +634,7 @@ export function ChatInput() {
     onChange,
     onSubmit,
     clearAttachments,
+    steerIfAsked,
   ]);
 
   const agentMention = useAgentMention({
@@ -977,9 +1007,12 @@ export function ChatInput() {
       composerBindings(appSettings),
     );
 
-    if (composerAction === ComposerKeyAction.Send) {
+    if (
+      composerAction === ComposerKeyAction.Send ||
+      composerAction === ComposerKeyAction.SendInverted
+    ) {
       e.preventDefault();
-      submitComposer();
+      submitComposer(composerAction === ComposerKeyAction.SendInverted);
       return;
     }
 
@@ -1307,8 +1340,13 @@ export function ChatInput() {
             onBlur={() => setIsFocused(false)}
             onPaste={handleRichPaste}
             placeholder={
+              // While a turn runs, the placeholder names what this message will
+              // actually do. Saying "Queue another message" with steering on
+              // would describe the setting the user turned off.
               isStreaming
-                ? t('chatInput.placeholder.queueMessage')
+                ? resolveFollowUpBehavior(appSettings) === FollowUpBehavior.Steer
+                  ? t('chatInput.placeholder.steerMessage')
+                  : t('chatInput.placeholder.queueMessage')
                 : t('chatInput.placeholder.hint', {
                     send: sendKeyLabel(appSettings),
                   })
@@ -1384,7 +1422,7 @@ export function ChatInput() {
               hasValue={hasValue}
               onAttach={() => setShowAttachMenu(prev => !prev)}
               onSlashCommand={palette.handleSlashButtonClick}
-              onSubmit={submitComposer}
+              onSubmit={() => submitComposer()}
               onStop={onStop}
             />
             </div>

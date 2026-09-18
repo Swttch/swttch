@@ -106,6 +106,13 @@
         "description": "Die Taste, die eine neue Zeile einfügt, statt den Prompt zu senden",
         "shiftEnter": "Shift + Enter",
         "enter": "Enter"
+      },
+      "followUp": {
+        "label": "Verhalten bei Folgenachrichten",
+        "description": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf. Drücke {{shortcut}}, um das Verhalten für eine Nachricht umzukehren.",
+        "descriptionNoShortcut": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf.",
+        "queue": "In Warteschlange stellen",
+        "steer": "Steuern"
       }
     },
     "shortcutInput": {

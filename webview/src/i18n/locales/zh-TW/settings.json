@@ -106,6 +106,13 @@
         "description": "在不傳送提示詞的情況下插入新行的按鍵",
         "shiftEnter": "Shift + Enter",
         "enter": "Enter"
+      },
+      "followUp": {
+        "label": "後續訊息處理方式",
+        "description": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。按 {{shortcut}} 可針對單則訊息執行相反操作。",
+        "descriptionNoShortcut": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。",
+        "queue": "加入佇列",
+        "steer": "引導"
       }
     },
     "shortcutInput": {

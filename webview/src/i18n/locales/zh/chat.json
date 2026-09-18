@@ -106,7 +106,8 @@
     },
     "placeholder": {
       "queueMessage": "排队发送下一条消息...",
-      "hint": "@ 引用文件，/ 命令，!! 插入提示词，@@ 询问其他会话，{{send}} 发送"
+      "hint": "@ 引用文件，/ 命令，!! 插入提示词，@@ 询问其他会话，{{send}} 发送",
+      "steerMessage": "调整当前任务..."
     },
     "ariaLabel": "给 Claude 发消息",
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",

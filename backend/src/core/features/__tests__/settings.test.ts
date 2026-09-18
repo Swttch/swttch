@@ -429,6 +429,18 @@ describe('settings', () => {
       }
     });
 
+    it('should accept the follow-up behaviours, null, and nothing else', async () => {
+      for (const mode of ['queue', 'steer']) {
+        expect((await saveSettingToFile('composerFollowUpBehavior', mode)).status).toBe('ok');
+      }
+      // Null is a real value: it says the user never chose, which reads as queue.
+      expect((await saveSettingToFile('composerFollowUpBehavior', null)).status).toBe('ok');
+
+      const bad = await saveSettingToFile('composerFollowUpBehavior', 'interrupt');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('must be null or one of');
+    });
+
     it('should accept a recorded composer combination as a string or null', async () => {
       for (const key of ['composerSendShortcutCustom', 'composerNewlineShortcutCustom']) {
         expect((await saveSettingToFile(key, 'Meta+Enter')).status).toBe('ok');
@@ -671,6 +683,7 @@ describe('settings', () => {
         composerSendShortcutCustom: null,
         composerNewlineShortcut: null,
         composerNewlineShortcutCustom: null,
+        composerFollowUpBehavior: null,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
@@ -805,6 +818,7 @@ export default {
         composerSendShortcutCustom: null,
         composerNewlineShortcut: null,
         composerNewlineShortcutCustom: null,
+        composerFollowUpBehavior: null,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,

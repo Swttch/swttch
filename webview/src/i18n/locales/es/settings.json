@@ -106,6 +106,13 @@
         "description": "La tecla que inserta una línea nueva en lugar de enviar el prompt",
         "shiftEnter": "Shift + Enter",
         "enter": "Intro"
+      },
+      "followUp": {
+        "label": "Gestión de mensajes de seguimiento",
+        "description": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual. Pulsa {{shortcut}} para hacer lo contrario en un solo mensaje.",
+        "descriptionNoShortcut": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual.",
+        "queue": "Poner en cola",
+        "steer": "Redirigir"
       }
     },
     "shortcutInput": {

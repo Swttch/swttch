@@ -106,6 +106,13 @@
         "description": "A tecla que insere uma nova linha em vez de enviar o prompt",
         "shiftEnter": "Shift + Enter",
         "enter": "Enter"
+      },
+      "followUp": {
+        "label": "Comportamento do follow-up",
+        "description": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual. Pressione {{shortcut}} para fazer o oposto em uma mensagem.",
+        "descriptionNoShortcut": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual.",
+        "queue": "Enfileirar",
+        "steer": "Orientar"
       }
     },
     "shortcutInput": {

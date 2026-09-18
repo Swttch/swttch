@@ -106,6 +106,13 @@
         "description": "プロンプトを送信せずに改行を挿入するキーです",
         "shiftEnter": "Shift + Enter",
         "enter": "Enter"
+      },
+      "followUp": {
+        "label": "フォローアップの動作",
+        "description": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。{{shortcut}} を押すと、1 件のメッセージだけ逆の動作になります。",
+        "descriptionNoShortcut": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。",
+        "queue": "キューに追加",
+        "steer": "今すぐ反映"
       }
     },
     "shortcutInput": {

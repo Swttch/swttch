@@ -106,6 +106,13 @@
         "description": "La touche qui insère une nouvelle ligne au lieu d’envoyer le prompt",
         "shiftEnter": "Shift + Enter",
         "enter": "Entrée"
+      },
+      "followUp": {
+        "label": "Comportement de suivi",
+        "description": "Mettre les suivis en file d’attente pendant que {{appName}} s’exécute, ou orienter l’exécution en cours. Appuyer sur {{shortcut}} pour faire l’inverse pour un message.",
+        "descriptionNoShortcut": "Mettre les suivis en file d’attente pendant que {{appName}} s’exécute, ou orienter l’exécution en cours.",
+        "queue": "Mettre en file d’attente",
+        "steer": "Orienter"
       }
     },
     "shortcutInput": {

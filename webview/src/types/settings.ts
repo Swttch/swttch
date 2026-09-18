@@ -5,6 +5,7 @@ import {
   BrowserDiffPresentation,
   ComposerSendShortcut,
   ComposerNewlineShortcut,
+  FollowUpBehavior,
 } from '@/shared';
 
 /**
@@ -116,6 +117,10 @@ export enum SettingKey {
   COMPOSER_SEND_SHORTCUT_CUSTOM = 'composerSendShortcutCustom',
   COMPOSER_NEWLINE_SHORTCUT = 'composerNewlineShortcut',
   COMPOSER_NEWLINE_SHORTCUT_CUSTOM = 'composerNewlineShortcutCustom',
+
+  // What a message sent while a turn is running does: wait for the turn, or
+  // end it and be answered instead. Null until chosen, which reads as waiting.
+  COMPOSER_FOLLOW_UP_BEHAVIOR = 'composerFollowUpBehavior',
 
   // When true, move focus to the chat input after inserting a file path (Alt+K).
   FOCUS_INPUT_ON_EDITOR_CONTEXT = 'focusInputOnEditorContext',
@@ -366,6 +371,7 @@ export interface SettingsState {
   [SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM]: string | null;
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: ComposerNewlineShortcut | null;
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: string | null;
+  [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: FollowUpBehavior | null;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
@@ -406,6 +412,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM]: null,
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: null,
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: null,
+  [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: null,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
