@@ -100,7 +100,7 @@ export function GeneralSettings() {
             onChange={(e) => void updateClaudeSetting('language', e.target.value || null)}
             placeholder={t('general.language.placeholder')}
             aria-label={t('general.language.label')}
-            className="w-48 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
+            className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
           />
         </SettingRow>
 

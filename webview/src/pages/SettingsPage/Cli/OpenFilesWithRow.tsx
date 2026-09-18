@@ -122,7 +122,7 @@ export function OpenFilesWithRow() {
             className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
           />
           {isCustom && (
-            <div className="flex w-72 flex-col gap-2">
+            <div className="flex w-64 flex-col gap-2">
               <div className="flex items-center gap-2">
                 <input
                   type="text"

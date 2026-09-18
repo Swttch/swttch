@@ -108,7 +108,7 @@ export function AppearanceSettings() {
               }
               updateSetting(SettingKey.FONT_SIZE, parseInt(value, 10));
             }}
-            className={`w-20 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
+            className={`min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
               isFontSizeNotSet ? 'text-text-tertiary italic' : 'text-text-primary'
             }`}
           />
@@ -138,7 +138,7 @@ export function AppearanceSettings() {
               if (!Number.isFinite(parsed)) return;
               updateSetting(SettingKey.LINE_HEIGHT, parsed);
             }}
-            className={`w-20 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
+            className={`min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
               isLineHeightNotSet ? 'text-text-tertiary italic' : 'text-text-primary'
             }`}
           />
@@ -172,7 +172,7 @@ export function AppearanceSettings() {
               if (!Number.isInteger(parsed)) return;
               updateSetting(SettingKey.AUTO_SCROLL_THRESHOLD, clampAutoScrollThreshold(parsed));
             }}
-            className={`w-24 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
+            className={`min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
               isAutoScrollThresholdNotSet ? 'text-text-tertiary italic' : 'text-text-primary'
             }`}
           />

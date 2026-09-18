@@ -172,7 +172,7 @@ export function VoiceSection() {
           ariaLabel={t('general.voice.speechLanguage.label')}
           searchPlaceholder={t('general.voice.speechLanguage.search')}
           noMatchLabel={t('general.voice.speechLanguage.noMatch')}
-          className={`w-56 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
+          className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
             speechLanguage === null ? 'text-text-tertiary' : 'text-text-primary'
           }`}
           onChange={(value) => {
@@ -209,7 +209,7 @@ export function VoiceSection() {
               silenceTimeout: clampVoiceSilenceTimeout(parsed),
             });
           }}
-          className="w-24 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+          className="min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
         />
       </SettingRow>
 

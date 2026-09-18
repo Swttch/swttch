@@ -127,7 +127,7 @@ export function CliSettings() {
                   value={customInput}
                   onChange={(e) => handleCustomInput(e.target.value)}
                   placeholder={t('cli.terminal.app.customPlaceholder')}
-                  className="w-40 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
+                  className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
                 />
               )}
             </div>

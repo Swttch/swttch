@@ -52,7 +52,7 @@ export function FileSuggestionRow() {
         onBlur={commit}
         placeholder={t('general.fileSuggestion.placeholder')}
         aria-label="fileSuggestion"
-        className="w-72 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
+        className="w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-tertiary"
       />
     </SettingRow>
   );
