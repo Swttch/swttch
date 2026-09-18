@@ -6,6 +6,7 @@ import { Claude } from '../claude';
 import { MessageType } from '../../shared';
 import { readProxySummary } from '../features/proxy-summary';
 import { resolveEnv } from '../features/settings-env';
+import { hasSettingsEnvCapability } from '../extend-kit';
 import { readRegistry, upsertAccount } from '../features/account-store';
 import {
   LIVE_ACCOUNT_ID, armCooldown, clearCooldown, readCooldownUntil, readUsageSnapshot,
@@ -208,6 +209,13 @@ export function classifyError(err: unknown, env: NodeJS.ProcessEnv = process.env
     return { kind: 'ccb_missing', message: 'The ccb CLI is not installed' };
   }
 
+  // An installed-but-too-old kit rides the same code, because one button fixes both: the
+  // panel's install runs @latest, which updates an existing install. The message still says
+  // which of the two it was, so "update" is never shown as "install".
+  if (/^Update ccb:/.test(cleanOutput(raw))) {
+    return { kind: 'ccb_missing', message: cleanOutput(raw) };
+  }
+
   /**
    * Classify by the code ccb reported, not by the fact that it reported at all.
    *
@@ -406,6 +414,16 @@ export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse
   // profile chat does. `Command` is the generic runner and knows nothing about Claude, so
   // unlike `Claude.exec` it cannot do this for us.
   await Claude.applyConfigDir(workingDir);
+
+  // A kit too old to read Claude's settings files cannot see a proxy configured only there.
+  // This backend used to copy that value into the child's environment and no longer does, so
+  // on such a kit the panel would simply time out — the exact symptom of the report that got
+  // the copying added in the first place (#181), now with no message pointing anywhere.
+  // Saying "update ccb" is the one answer that helps, and the panel's install button
+  // installs @latest, which is also the update.
+  if (!(await hasSettingsEnvCapability(workingDir))) {
+    throw new Error('Update ccb: this version cannot read Claude Code settings files');
+  }
 
   // The Command core resolves the platform shell (win32 cmd.exe argv; unix login
   // shell so ccb sees the rc-file PATH) and layers on the augmented PATH, so ccb

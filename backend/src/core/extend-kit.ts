@@ -58,7 +58,7 @@ export class ExtendKitMissingError extends Error {
 }
 
 /**
- * Thrown when the kit is installed but predates `ccb stt`.
+ * Thrown when the kit is installed but too old for what the caller needs.
  *
  * Its own error rather than a missing kit, because the fix differs: this one is
  * "update the kit", and telling the user to install something they already have
@@ -67,14 +67,25 @@ export class ExtendKitMissingError extends Error {
  * being removed.
  */
 export class ExtendKitTooOldError extends Error {
-  constructor(public readonly version: string | null) {
-    super(`${EXTEND_KIT_PACKAGE} ${version ?? ''} does not support "ccb stt"`.trim());
+  constructor(public readonly version: string | null, missing: string) {
+    super(`${EXTEND_KIT_PACKAGE} ${version ?? ''} does not support "${missing}"`.trim());
     this.name = 'ExtendKitTooOldError';
   }
 }
 
 /** Capability the kit reports once `ccb stt` exists. */
 const STT_CAPABILITY = 'stt.stream';
+
+/**
+ * Capability the kit reports once it reads Claude's settings files itself.
+ *
+ * Required because this backend stopped copying that `env` block into the child's
+ * environment once the kit could read it. A kit without this reads neither — so a proxy or a
+ * CLAUDE_CODE_OAUTH_TOKEN configured only in settings.json reaches nothing, and the symptom
+ * is a 401 or a timeout with nothing pointing at the cause. `stt.stream` cannot stand in for
+ * it: 0.7.0 advertises that one too, and 0.7.0 is exactly the version this rules out.
+ */
+const SETTINGS_ENV_CAPABILITY = 'settings.env';
 
 /**
  * How long to wait for `ccb stt` to exit after its stdin closes.
@@ -371,10 +382,31 @@ async function assertSttCapable(entry: string): Promise<void> {
     capabilities = [];
   }
 
-  if (!capabilities.includes(STT_CAPABILITY)) {
-    throw new ExtendKitTooOldError(await getExtendKitVersion());
+  for (const required of [STT_CAPABILITY, SETTINGS_ENV_CAPABILITY]) {
+    if (!capabilities.includes(required)) {
+      throw new ExtendKitTooOldError(await getExtendKitVersion(), required);
+    }
   }
   cachedSttCapable = true;
+}
+
+/**
+ * Whether the installed kit reads Claude's settings files itself.
+ *
+ * Separate from {@link assertSttCapable} because the usage panel needs the same guarantee and
+ * has nothing to do with dictation. Answers rather than throws: the usage handler turns a "no"
+ * into its own message, and a failure to ask at all should not take the panel down.
+ */
+export async function hasSettingsEnvCapability(workingDir?: string): Promise<boolean> {
+  try {
+    const entry = await resolveCcbEntry();
+    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir).exec();
+    const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
+    return (parsed.capabilities ?? []).includes(SETTINGS_ENV_CAPABILITY);
+  } catch {
+    // Not installed, or too old to know the flag. Either way it does not have the capability.
+    return false;
+  }
 }
 
 /**
