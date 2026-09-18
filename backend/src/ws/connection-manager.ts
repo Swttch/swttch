@@ -64,6 +64,19 @@ interface SessionRecord {
    * mode back onto the webview (#172). Null when no process has been spawned yet.
    */
   inputMode: string | null;
+  /**
+   * Saved account the LIVE process authenticated as. Credentials are read at spawn
+   * from one shared slot, so a switch made for ANOTHER session does not reach this
+   * one: the process keeps running as whoever it started as until it is restarted.
+   *
+   * Account-pool recovery needs that distinction. Asking the registry "who is
+   * current?" answers for the backend, and while several sessions hit their limit
+   * together the answer changes under them — a session would then measure its own
+   * exhausted account against a registry that has already moved on, and conclude
+   * there is nothing to switch to. Null when no process has been spawned yet, or
+   * when no account is saved.
+   */
+  accountId: string | null;
 }
 
 interface ClientRecord {
@@ -820,6 +833,7 @@ export class ConnectionManager {
         workingDir: workingDir ?? '',
         activity: SessionActivity.Idle,
         inputMode: null,
+        accountId: null,
       };
       this.sessionRegistry.set(sessionId, session);
     }
@@ -834,6 +848,8 @@ export class ConnectionManager {
     // The recorded permission mode describes the LIVE process, so it dies with it.
     // Leaving a stale mode behind would make the next spawn look like a no-op change.
     if (!proc) session.inputMode = null;
+    // Same for the account: no process means nothing is authenticated as anyone.
+    if (!proc) session.accountId = null;
   }
 
   getProcess(sessionId: string): ChildProcess | null {
@@ -849,6 +865,17 @@ export class ConnectionManager {
   /** Permission mode the session's live CLI is actually running under, if any. */
   getInputMode(sessionId: string): string | null {
     return this.sessionRegistry.get(sessionId)?.inputMode ?? null;
+  }
+
+  /** Record the saved account the session's live CLI process was spawned as. */
+  setAccountId(sessionId: string, accountId: string | null): void {
+    const session = this.getOrCreateSession(sessionId);
+    session.accountId = accountId;
+  }
+
+  /** Saved account the session's live CLI is actually authenticated as, if known. */
+  getAccountId(sessionId: string): string | null {
+    return this.sessionRegistry.get(sessionId)?.accountId ?? null;
   }
 
   setBuffer(sessionId: string, buffer: string): void {

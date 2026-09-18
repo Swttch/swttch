@@ -16,6 +16,7 @@ import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
+import { readRegistry } from './features/account-store';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 
@@ -464,6 +465,17 @@ export async function ensureClaudeProcess(
   // from its own settings, and it reports that choice on `system/init`, which is
   // what fills the record in.
   connections.setInputMode(targetSessionId, inputMode ?? null);
+  // Remember which saved account this process authenticated as. The credential slot
+  // is shared backend-wide, so by the time this session hits a usage limit the
+  // registry may name a different account entirely — one another session switched
+  // to. Recovery compares against THIS value so it still knows which account ran out.
+  // Best-effort: a registry that cannot be read leaves the record null, and recovery
+  // falls back to the registry exactly as it did before.
+  try {
+    connections.setAccountId(targetSessionId, (await readRegistry()).current);
+  } catch {
+    connections.setAccountId(targetSessionId, null);
+  }
   connections.setBuffer(targetSessionId, '');
 
   // The session's process is now alive — this is where we re-arm any scheduled

@@ -16,7 +16,36 @@ const ACCOUNT_USAGE_CAPABILITY = 'oauth.usage.account-file';
  * no project token. The auto-resume hook used to have no way to name one at all, which is
  * the gap this parameter closes.
  */
-export async function fetchAccountUsage(accountId: string, workingDir?: string): Promise<CcbUsageResponse> {
+export function fetchAccountUsage(accountId: string, workingDir?: string): Promise<CcbUsageResponse> {
+  // Several sessions reach their usage limit on the same turn, and each one asks
+  // about every pool member. Left alone that is (sessions × accounts × 2) `ccb`
+  // children spawned at once, all asking the same questions, and the ones that lose
+  // the race come back rate-limited or timed out — which recovery then reads as
+  // "nothing certain to switch to". Requests that overlap in time share one child.
+  //
+  // This is NOT a cache: the entry is dropped the moment the child exits, so the
+  // next limit still gets a fresh reading. Sharing an IN-FLIGHT request only means
+  // asking one question once, and every sharer gets the answer the question had.
+  const key = JSON.stringify([accountId, workingDir ?? null]);
+  const shared = inFlightUsage.get(key);
+  if (shared) return shared;
+  // Dropped in `finally`, which runs BEFORE this promise settles, so a caller that
+  // awaits an answer and immediately asks again spawns a fresh child instead of being
+  // handed the reading it just took delivery of. Chaining the cleanup onto the promise
+  // resumes that caller first and leaves a spent entry standing for it to find.
+  // Deleting by key alone is safe: while this entry stands, every caller for the same
+  // key is handed it rather than starting a second one, so the entry found here can
+  // only be this request.
+  const request = (async () => {
+    try { return await runAccountUsage(accountId, workingDir); }
+    finally { inFlightUsage.delete(key); }
+  })();
+  inFlightUsage.set(key, request);
+  return request;
+}
+const inFlightUsage = new Map<string, Promise<CcbUsageResponse>>();
+
+async function runAccountUsage(accountId: string, workingDir?: string): Promise<CcbUsageResponse> {
   const registry = await readRegistry();
   if (!registry.accounts[accountId]) throw new Error('Saved account no longer exists');
   // Settle the Claude data directory before the child exists to inherit it. `Command` is the
@@ -63,13 +92,31 @@ export function accountResetsAt(usage: Pick<CcbUsageResponse, keyof AccountUsage
   return reset ? new Date(reset).toISOString() : '';
 }
 
-/** Read every member before deciding; caches never certify a candidate. */
+/**
+ * Pick the account the pool should continue on, in pool order starting after the
+ * one that ran out. Read every member before deciding; caches never certify a
+ * candidate.
+ *
+ * [currentAccountId] is the account that RAN OUT, which is what the rotation turns
+ * around. It defaults to the registry's current account, but a caller that knows
+ * better must say so: while several sessions recover at once the registry names
+ * whoever another session just switched to, and rotating around THAT skips the
+ * account this session still has to move off of.
+ *
+ * A reading only removes a candidate when it proves exhaustion. A lookup that
+ * failed, or an answer this code cannot read, leaves the candidate in the running:
+ * the CLI already said the current account is out, so an unverified neighbour is a
+ * better bet than staying put. Trying it costs one message that may come back
+ * limited, and the pool then rotates again; refusing to try costs the whole feature
+ * every time a usage query is slow or rate-limited.
+ */
 export async function selectAccountPoolAccount(
   registry: AccountsRegistry,
   model?: string,
   fetchUsage: typeof fetchAccountUsage = fetchAccountUsage,
+  currentAccountId: string | null = registry.current,
 ): Promise<{ accountId: string; resetsAt: string | null } | null> {
-  const current = registry.current;
+  const current = currentAccountId;
   if (!current) return null;
   const pool = registry.accountPools.find(p => p.enabled && p.accountIds.includes(current));
   if (!pool) return null;
@@ -85,9 +132,17 @@ export async function selectAccountPoolAccount(
       return { accountId, resetsAt: null };
     }
   }));
+  // `ids` is already the rotation order, so the first match is the next in line.
   // A just-limited current account cannot be certified by lagging usage data.
-  const available = readings.find(r => r.accountId !== current && r.resetsAt === '');
+  const candidates = readings.filter(r => r.accountId !== current);
+  const available = candidates.find(r => r.resetsAt === '');
   if (available) return { accountId: available.accountId, resetsAt: null };
+  const unverified = candidates.find(r => r.resetsAt === null);
+  if (unverified) return { accountId: unverified.accountId, resetsAt: null };
+  // Every candidate is provably exhausted. Waiting is the only move left, so hand
+  // back whichever account frees up first — including the current one. That answer
+  // needs every reading to name a time, which is why an unreadable current account
+  // ends the search instead of joining the comparison.
   if (readings.some(r => !r.resetsAt)) return null;
   return readings.reduce((a, b) => Date.parse(a.resetsAt!) <= Date.parse(b.resetsAt!) ? a : b);
 }
