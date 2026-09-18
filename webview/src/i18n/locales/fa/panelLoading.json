@@ -1,0 +1,15 @@
+{
+  "phase": {
+    "indexingWait": "در انتظار نمایه‌سازی پروژه...",
+    "backendStart": "در حال راه‌اندازی بک‌اند...",
+    "locatingNode": "در حال یافتن Node.js...",
+    "preparingBackend": "در حال آماده‌سازی فایل‌های بک‌اند...",
+    "waitingForPort": "در انتظار آماده شدن بک‌اند..."
+  },
+  "stuck": {
+    "stillIndexing": "نمایه‌سازی یک پروژه بزرگ ممکن است چند دقیقه طول بکشد.",
+    "stillIndexingAction": "بدون انتظار باز کن",
+    "indexingDone": "نمایه‌سازی تمام شده اما صفحه پاسخ نمی‌دهد؟",
+    "indexingDoneAction": "تلاش دوباره"
+  }
+}

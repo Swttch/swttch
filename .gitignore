@@ -38,6 +38,11 @@ node_modules/
 # WebView build output
 src/main/resources/webview/
 
+# Panel loading translations, copied from webview/src/i18n/locales by the
+# syncPanelLoadingMessages Gradle task. The locale catalog is the source; this
+# is a generated mirror the Kotlin side reads before the webview exists.
+src/main/resources/messages/panel-loading/
+
 # Node.js backend build output
 backend/node_modules/
 backend/dist/

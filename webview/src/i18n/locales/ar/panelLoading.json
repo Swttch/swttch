@@ -1,0 +1,15 @@
+{
+  "phase": {
+    "indexingWait": "في انتظار فهرسة المشروع...",
+    "backendStart": "جارٍ تشغيل الواجهة الخلفية...",
+    "locatingNode": "جارٍ البحث عن Node.js...",
+    "preparingBackend": "جارٍ تحضير ملفات الواجهة الخلفية...",
+    "waitingForPort": "في انتظار جاهزية الواجهة الخلفية..."
+  },
+  "stuck": {
+    "stillIndexing": "قد تستغرق فهرسة مشروع كبير عدة دقائق.",
+    "stillIndexingAction": "افتح دون انتظار",
+    "indexingDone": "اكتملت الفهرسة، لكن الصفحة لا تستجيب؟",
+    "indexingDoneAction": "إعادة المحاولة"
+  }
+}

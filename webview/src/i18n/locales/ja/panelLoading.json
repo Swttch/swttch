@@ -1,0 +1,15 @@
+{
+  "phase": {
+    "indexingWait": "プロジェクトのインデックス作成を待機中...",
+    "backendStart": "バックエンドを起動中...",
+    "locatingNode": "Node.js を検索中...",
+    "preparingBackend": "バックエンドファイルを準備中...",
+    "waitingForPort": "バックエンドの準備を待機中..."
+  },
+  "stuck": {
+    "stillIndexing": "大きなプロジェクトではインデックス作成に数分かかることがあります。",
+    "stillIndexingAction": "待たずに開く",
+    "indexingDone": "すでに完了しているのにページが応答しませんか？",
+    "indexingDoneAction": "再試行"
+  }
+}

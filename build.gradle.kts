@@ -408,8 +408,55 @@ tasks {
         }
     }
 
+    register("syncPanelLoadingMessages") {
+        description = "Copy panel loading translations from the webview locale catalog into plugin resources"
+        val localesDir = file("webview/src/i18n/locales")
+        val languageMapFile = file("webview/src/i18n/languageMap.ts")
+        val outDir = file("src/main/resources/messages/panel-loading")
+        // Reads the webview locale SOURCE, not webview/dist — the catalog is inlined into
+        // the JS bundle at build time, so the built artifact has no JSON to copy. Depending
+        // on the source also keeps this task independent of buildWebviewFrontend.
+        inputs.dir(localesDir)
+        inputs.file(languageMapFile)
+        outputs.dir(outDir)
+        doLast {
+            // Parse LANGUAGE_TO_LOCALE so the "setting value → locale" table keeps exactly one
+            // source (languageMap.ts). Files land named after the `uiLanguage` SETTING VALUE
+            // (korean.json, chinese.json), so PanelLoadingMessages can use the value read from
+            // settings.js directly as a file name and never carries a second copy of the table.
+            val body = languageMapFile.readText()
+                .substringAfter("LANGUAGE_TO_LOCALE")
+                .substringAfter('{')
+                .substringBefore('}')
+            val mapping = Regex("""'?([A-Za-z-]+)'?\s*:\s*'([A-Za-z-]+)'""")
+                .findAll(body)
+                .associate { it.groupValues[1] to it.groupValues[2] }
+            if (mapping.isEmpty()) {
+                throw GradleException(
+                    "[syncPanelLoadingMessages] LANGUAGE_TO_LOCALE을 ${languageMapFile}에서 읽지 못했습니다. " +
+                        "표의 형식이 바뀌었다면 이 태스크의 정규식도 함께 고쳐야 합니다."
+                )
+            }
+            val missing = mapping.values
+                .map { locale -> File(localesDir, "$locale/panelLoading.json") }
+                .filterNot { it.isFile }
+            if (missing.isNotEmpty()) {
+                throw GradleException(
+                    "[syncPanelLoadingMessages] panelLoading.json이 없는 로케일이 있습니다: " +
+                        missing.joinToString { it.parentFile.name }
+                )
+            }
+            outDir.deleteRecursively()
+            outDir.mkdirs()
+            mapping.forEach { (language, locale) ->
+                File(localesDir, "$locale/panelLoading.json").copyTo(File(outDir, "$language.json"))
+            }
+            println("[syncPanelLoadingMessages] ${mapping.size}개 언어 복사 완료 → $outDir")
+        }
+    }
+
     named<ProcessResources>("processResources") {
-        dependsOn("verifyBuildVersions")
+        dependsOn("verifyBuildVersions", "syncPanelLoadingMessages")
         // Inject pluginVersion into plugin-info.properties so the runtime can read it
         // without touching internal PluginManager APIs (which were marked
         // @ApiStatus.Internal in IntelliJ 2026.2). See NodeBackendService.getPluginVersion().

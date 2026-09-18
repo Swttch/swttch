@@ -1,0 +1,15 @@
+{
+  "phase": {
+    "indexingWait": "正在等待專案索引...",
+    "backendStart": "正在啟動後端...",
+    "locatingNode": "正在尋找 Node.js...",
+    "preparingBackend": "正在準備後端檔案...",
+    "waitingForPort": "正在等待後端就緒..."
+  },
+  "stuck": {
+    "stillIndexing": "大型專案的索引可能需要幾分鐘。",
+    "stillIndexingAction": "不等待，直接開啟",
+    "indexingDone": "索引已完成，但頁面沒有回應？",
+    "indexingDoneAction": "重試"
+  }
+}
