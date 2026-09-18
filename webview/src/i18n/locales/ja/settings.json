@@ -2,7 +2,7 @@
   "layout": {
     "title": "設定",
     "back": "戻る",
-    "toggleMenu": "メニューの切り替え",
+    "toggleSidebar": "サイドバーの表示/非表示",
     "close": "閉じる"
   },
   "nav": {

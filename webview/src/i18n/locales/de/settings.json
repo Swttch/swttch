@@ -2,7 +2,7 @@
   "layout": {
     "title": "Einstellungen",
     "back": "Zurück",
-    "toggleMenu": "Menü umschalten",
+    "toggleSidebar": "Seitenleiste ein-/ausblenden",
     "close": "Schließen"
   },
   "nav": {

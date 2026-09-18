@@ -2,7 +2,7 @@
   "layout": {
     "title": "Paramètres",
     "back": "Retour",
-    "toggleMenu": "Afficher/masquer le menu",
+    "toggleSidebar": "Afficher/masquer la barre latérale",
     "close": "Fermer"
   },
   "nav": {

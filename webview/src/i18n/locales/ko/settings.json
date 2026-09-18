@@ -2,7 +2,7 @@
   "layout": {
     "title": "설정",
     "back": "뒤로",
-    "toggleMenu": "메뉴 토글",
+    "toggleSidebar": "사이드바 표시/숨기기",
     "close": "닫기"
   },
   "nav": {

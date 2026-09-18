@@ -2,7 +2,7 @@
   "layout": {
     "title": "設定",
     "back": "返回",
-    "toggleMenu": "切換選單",
+    "toggleSidebar": "顯示/隱藏側邊欄",
     "close": "關閉"
   },
   "nav": {

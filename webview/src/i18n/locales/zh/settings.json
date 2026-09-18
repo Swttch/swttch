@@ -2,7 +2,7 @@
   "layout": {
     "title": "设置",
     "back": "返回",
-    "toggleMenu": "切换菜单",
+    "toggleSidebar": "显示/隐藏侧边栏",
     "close": "关闭"
   },
   "nav": {

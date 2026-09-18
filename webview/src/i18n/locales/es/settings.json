@@ -2,7 +2,7 @@
   "layout": {
     "title": "Configuración",
     "back": "Atrás",
-    "toggleMenu": "Alternar menú",
+    "toggleSidebar": "Mostrar/ocultar barra lateral",
     "close": "Cerrar"
   },
   "nav": {

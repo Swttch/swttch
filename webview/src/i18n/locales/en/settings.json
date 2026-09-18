@@ -2,7 +2,7 @@
   "layout": {
     "title": "Settings",
     "back": "Back",
-    "toggleMenu": "Toggle menu",
+    "toggleSidebar": "Show/hide sidebar",
     "close": "Close"
   },
   "nav": {
