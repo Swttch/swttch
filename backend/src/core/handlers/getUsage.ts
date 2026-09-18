@@ -431,6 +431,10 @@ export async function getUsageHandler(
   connections: ConnectionManager,
   _bridge: Bridge,
 ): Promise<void> {
+
+  // Read once per request and attached to every answer, so the panel can name the hop
+  // a request takes instead of asking the user whether they are behind a proxy.
+  const proxy = readProxySummary();
   const force = (message.payload as { force?: boolean })?.force === true;
   const workingDir = (message.payload as { workingDir?: string })?.workingDir;
 
@@ -438,16 +442,14 @@ export async function getUsageHandler(
     if (cachedUsage !== null) {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
-      // Named on every answer so the panel can say which hop a request takes
-      // instead of asking the user whether they are behind a proxy.
-      proxy: readProxySummary(),
+        proxy,
         status: 'ok',
         usage: cachedUsage,
       });
     } else {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
-        proxy: readProxySummary(),
+        proxy,
         status: 'error',
         usage: null,
         error: lastErrorInfo?.message ?? null,
@@ -471,12 +473,14 @@ export async function getUsageHandler(
       if (cachedUsage !== null) {
         connections.sendTo(connectionId, MessageType.ACK, {
           requestId: message.requestId,
+          proxy,
           status: 'ok',
           usage: cachedUsage,
         });
       } else {
         connections.sendTo(connectionId, MessageType.ACK, {
           requestId: message.requestId,
+          proxy,
           status: 'error',
           usage: null,
           error: lastErrorInfo?.message ?? null,
@@ -537,7 +541,7 @@ export async function getUsageHandler(
     const served = readUsageSnapshot(await currentAccountId());
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
-      proxy: readProxySummary(),
+      proxy,
       status: 'ok',
       usage,
       stale: served?.stale ?? false,
@@ -563,7 +567,7 @@ export async function getUsageHandler(
       cachedAt = Date.now();
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
-        proxy: readProxySummary(),
+        proxy,
         status: 'ok',
         usage: stored.usage,
         stale: stored.stale,
@@ -577,7 +581,7 @@ export async function getUsageHandler(
     cachedAt = Date.now();
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
-      proxy: readProxySummary(),
+      proxy,
       status: 'error',
       usage: cachedUsage,
       error: info.message,
