@@ -411,6 +411,35 @@ describe('settings', () => {
       }
     });
 
+    it('should accept the composer shortcut modes, null, and nothing else', async () => {
+      for (const [key, modes] of [
+        ['composerSendShortcut', ['enter', 'modEnter', 'custom']],
+        ['composerNewlineShortcut', ['shiftEnter', 'enter', 'custom']],
+      ] as const) {
+        for (const mode of modes) {
+          expect((await saveSettingToFile(key, mode)).status).toBe('ok');
+        }
+        // Null is a real value: it says the user never chose, which hands the
+        // answer to the legacy useCtrlEnterToSend.
+        expect((await saveSettingToFile(key, null)).status).toBe('ok');
+
+        const bad = await saveSettingToFile(key, 'shiftEnterAlways');
+        expect(bad.status).toBe('error');
+        expect(bad.error).toContain('must be null or one of');
+      }
+    });
+
+    it('should accept a recorded composer combination as a string or null', async () => {
+      for (const key of ['composerSendShortcutCustom', 'composerNewlineShortcutCustom']) {
+        expect((await saveSettingToFile(key, 'Meta+Enter')).status).toBe('ok');
+        expect((await saveSettingToFile(key, null)).status).toBe('ok');
+
+        const bad = await saveSettingToFile(key, 13);
+        expect(bad.status).toBe('error');
+        expect(bad.error).toContain('must be a string or null');
+      }
+    });
+
     // Legacy keys stay writable with null so the migration can clear them after
     // copying the value into the native file. Rejecting null would strand the
     // old value here forever.
@@ -638,6 +667,10 @@ describe('settings', () => {
         uiLanguage: null,
         voice: {},
         useCtrlEnterToSend: false,
+        composerSendShortcut: null,
+        composerSendShortcutCustom: null,
+        composerNewlineShortcut: null,
+        composerNewlineShortcutCustom: null,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,
@@ -768,6 +801,10 @@ export default {
         uiLanguage: null,
         voice: {},
         useCtrlEnterToSend: false,
+        composerSendShortcut: null,
+        composerSendShortcutCustom: null,
+        composerNewlineShortcut: null,
+        composerNewlineShortcutCustom: null,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
         attachEditorContext: true,

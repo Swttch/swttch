@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "Сочетание клавиш",
-        "description": "Клавиша, запускающая и останавливающая запись. Нажмите, чтобы задать другую комбинацию.",
-        "recording": "Нажмите клавишу…",
-        "needsModifier": "Удерживайте также Ctrl, Alt или Cmd."
+        "description": "Клавиша, запускающая и останавливающая запись. Нажмите, чтобы задать другую комбинацию."
       },
       "kit": {
         "required": "Для голосового ввода нужен @swttch/extend-kit. Установите его справа вверху.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "Включить RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "Отправлять по {{modifier}}+Enter",
-      "description": "Если включено, для отправки запроса используется Ctrl/Cmd+Enter вместо просто Enter. Это позволяет создавать новые строки клавишей Enter."
+    "composer": {
+      "title": "Редактор",
+      "custom": "Свой",
+      "conflictWithSend": "Это то же сочетание, что и для отправки",
+      "conflictWithNewline": "Это то же сочетание, что и для новой строки",
+      "send": {
+        "label": "Сочетание клавиш для отправки",
+        "description": "Задаёт клавишу, которая отправляет промпт",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "Сочетание клавиш для новой строки",
+        "description": "Клавиша, которая вставляет новую строку вместо отправки промпта",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Нажмите клавишу…",
+      "unset": "Не задано",
+      "needsModifier": "Удерживайте также Ctrl, Alt или Cmd."
     },
     "respectGitignore": {
       "label": "Учитывать .gitignore для контекста редактора",

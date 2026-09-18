@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "Tastenkürzel",
-        "description": "Die Taste, die die Aufnahme startet und beendet. Drücken, um eine neue Kombination festzulegen.",
-        "recording": "Taste drücken…",
-        "needsModifier": "Zusätzlich Strg, Alt oder Cmd halten."
+        "description": "Die Taste, die die Aufnahme startet und beendet. Drücken, um eine neue Kombination festzulegen."
       },
       "kit": {
         "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "RTL(Right-to-left) aktivieren"
     },
-    "useCtrlEnterToSend": {
-      "label": "Mit {{modifier}}+Enter senden",
-      "description": "Wenn aktiviert, wird Strg/Cmd+Enter statt nur Enter verwendet, um Prompts zu senden. So kann mit Enter ein Zeilenumbruch eingefügt werden."
+    "composer": {
+      "title": "Composer",
+      "custom": "Benutzerdefiniert",
+      "conflictWithSend": "Dieselbe Kombination wie das Tastenkürzel zum Senden",
+      "conflictWithNewline": "Dieselbe Kombination wie das Tastenkürzel für neue Zeile",
+      "send": {
+        "label": "Tastenkürzel zum Senden",
+        "description": "Legt die Taste fest, die den Prompt sendet",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "Tastenkürzel für neue Zeile",
+        "description": "Die Taste, die eine neue Zeile einfügt, statt den Prompt zu senden",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Taste drücken…",
+      "unset": "Nicht festgelegt",
+      "needsModifier": "Zusätzlich Strg, Alt oder Cmd halten."
     },
     "respectGitignore": {
       "label": ".gitignore für Editor-Kontext beachten",

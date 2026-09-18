@@ -7,6 +7,7 @@ import { ChatPaginationRow } from './ChatPaginationRow';
 import { UiDirectionRow } from './UiDirectionRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { FileSuggestionRow } from './FileSuggestionRow';
+import { ComposerSection } from './Composer';
 import { VoiceSection } from './VoiceSection';
 import { DiffViewSection } from './DiffViewSection';
 import { APP_NAME } from '@/config/app';
@@ -18,7 +19,6 @@ import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
-import { isMac } from '@/config/environment';
 import { useIsOverriddenByProject } from '@/utils/settingsScope';
 
 const NOT_SET_VALUE = '__NOT_SET__';
@@ -44,7 +44,7 @@ const LANGUAGE_OPTIONS = [
 export function GeneralSettings() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
-  // uiLanguage / useCtrlEnterToSend / focusInputOnEditorContext live in the app
+  // uiLanguage / composer shortcuts / focusInputOnEditorContext live in the app
   // settings (they are NOT in Claude's official schema). `language` and
   // `respectGitignore` ARE official keys, so they are read from and written to
   // the native Claude settings — see backend settings-migration.ts.
@@ -64,10 +64,6 @@ export function GeneralSettings() {
   // Interface language defaults to English when unset (does not follow the response language).
   const currentUiLanguage = isUiNotSet ? NOT_SET_VALUE : ((rawUiLanguage as string) ?? 'english');
 
-  const useCtrlEnterToSend = (scopeSettings.useCtrlEnterToSend as boolean | undefined) ?? false;
-  // Label the send-modifier per platform: macOS uses Cmd (⌘), everything else Ctrl.
-  // The handler accepts both (ctrlKey || metaKey); only the label needs to differ.
-  const sendModifier = isMac() ? 'Cmd' : 'Ctrl';
   const respectGitignore = (claudeScopeSettings.respectGitignore as boolean | undefined) ?? false;
   // Claude's schema defaults this one to `true`, unlike the toggles around it —
   // an absent value means the feature is ON, so the fallback has to say so.
@@ -147,18 +143,6 @@ export function GeneralSettings() {
         <UiDirectionRow />
 
         <SettingRow
-          label={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
-          description={t('general.useCtrlEnterToSend.description')}
-          isOverridden={isOverridden(SettingKey.USE_CTRL_ENTER_TO_SEND)}
-        >
-          <ToggleSwitch
-            checked={useCtrlEnterToSend}
-            onChange={(checked) => updateSetting(SettingKey.USE_CTRL_ENTER_TO_SEND, checked)}
-            ariaLabel={t('general.useCtrlEnterToSend.label', { modifier: sendModifier })}
-          />
-        </SettingRow>
-
-        <SettingRow
           label={t('general.respectGitignore.label')}
           description={t('general.respectGitignore.description')}
           isOverridden={isOverridden('respectGitignore')}
@@ -221,6 +205,8 @@ export function GeneralSettings() {
 
         <ClaudeConfigDirRow />
       </SettingSection>
+
+      <ComposerSection />
 
       <VoiceSection />
 

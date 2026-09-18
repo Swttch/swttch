@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "快速鍵",
-        "description": "開始和停止錄音的按鍵。按下以設定新的組合。",
-        "recording": "請按鍵…",
-        "needsModifier": "需要同時按住 Ctrl、Alt 或 Cmd。"
+        "description": "開始和停止錄音的按鍵。按下以設定新的組合。"
       },
       "kit": {
         "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "啟用 RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "使用 {{modifier}}+Enter 傳送",
-      "description": "啟用後,將以 Ctrl/Cmd+Enter 傳送提示,而不只是按 Enter。這樣 Enter 鍵就能用來換行。"
+    "composer": {
+      "title": "撰寫工具",
+      "custom": "自訂",
+      "conflictWithSend": "與傳送快捷鍵相同的組合",
+      "conflictWithNewline": "與換行快捷鍵相同的組合",
+      "send": {
+        "label": "傳送快捷鍵",
+        "description": "設定傳送提示詞的按鍵",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "換行快捷鍵",
+        "description": "在不傳送提示詞的情況下插入新行的按鍵",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "請按鍵…",
+      "unset": "未設定",
+      "needsModifier": "需要同時按住 Ctrl、Alt 或 Cmd。"
     },
     "respectGitignore": {
       "label": "編輯器上下文遵循 .gitignore",

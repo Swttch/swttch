@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "ショートカット",
-        "description": "録音を開始・停止するキーです。押して新しい組み合わせを設定します。",
-        "recording": "キーを押してください…",
-        "needsModifier": "Ctrl・Alt・Cmd のいずれかと一緒に押してください。"
+        "description": "録音を開始・停止するキーです。押して新しい組み合わせを設定します。"
       },
       "kit": {
         "required": "音声入力には @swttch/extend-kit が必要です。右上からインストールしてください。",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "RTL(Right-to-left) を有効化"
     },
-    "useCtrlEnterToSend": {
-      "label": "送信に{{modifier}}+Enterを使用",
-      "description": "有効にすると、Enterだけでなく Ctrl/Cmd+Enter でプロンプトを送信します。Enterキーは改行に使用できるようになります。"
+    "composer": {
+      "title": "コンポーザー",
+      "custom": "カスタム",
+      "conflictWithSend": "送信ショートカットと同じ組み合わせです",
+      "conflictWithNewline": "改行ショートカットと同じ組み合わせです",
+      "send": {
+        "label": "送信ショートカット",
+        "description": "プロンプトを送信するキーを設定します",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "改行ショートカット",
+        "description": "プロンプトを送信せずに改行を挿入するキーです",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "キーを押してください…",
+      "unset": "未設定",
+      "needsModifier": "Ctrl・Alt・Cmd のいずれかと一緒に押してください。"
     },
     "respectGitignore": {
       "label": "エディタコンテキストで.gitignoreを尊重",

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SettingKey, UiDirection } from '@/types/settings';
+import { ComposerSendShortcut, ComposerNewlineShortcut } from '@/shared';
 
 // ---------------------------------------------------------------------------
 // Mocks: SettingsContext owns uiLanguage AND uiDirection (our own GUI keys),
@@ -190,14 +191,33 @@ describe('GeneralSettings — settings are written to the correct store', () => 
     expect(updateSettingMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the GUI-only send-modifier toggle in the APP store', () => {
-    mockScopeSettings = { useCtrlEnterToSend: false };
+  it('keeps the GUI-only send shortcut in the APP store', () => {
+    mockScopeSettings = {};
     render(<GeneralSettings />);
 
-    fireEvent.click(screen.getByRole('switch', { name: /Enter To Send/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send shortcut' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Ctrl + Enter' }));
 
-    expect(updateSettingMock).toHaveBeenCalledWith(SettingKey.USE_CTRL_ENTER_TO_SEND, true);
+    expect(updateSettingMock).toHaveBeenCalledWith(
+      SettingKey.COMPOSER_SEND_SHORTCUT,
+      ComposerSendShortcut.ModEnter,
+    );
     // Never the native store — it is not an official Claude settings key.
     expect(updateClaudeSettingMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses a send shortcut that would collide with the newline one', () => {
+    // Both on Enter leaves the composer unable to break a line at all, and the
+    // row would be showing a value the composer does not honour.
+    mockScopeSettings = { composerNewlineShortcut: ComposerNewlineShortcut.Enter };
+    render(<GeneralSettings />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send shortcut' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Enter' }));
+
+    expect(updateSettingMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText('This is the same combination as the newline shortcut'),
+    ).toBeInTheDocument();
   });
 });

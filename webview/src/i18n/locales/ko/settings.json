@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "단축키",
-        "description": "녹음을 켜고 끄는 키입니다. 눌러서 새 조합을 지정하세요.",
-        "recording": "키를 누르세요…",
-        "needsModifier": "Ctrl·Alt·Cmd 중 하나를 함께 눌러야 합니다."
+        "description": "녹음을 켜고 끄는 키입니다. 눌러서 새 조합을 지정하세요."
       },
       "kit": {
         "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "RTL(Right-to-left) 켜기"
     },
-    "useCtrlEnterToSend": {
-      "label": "{{modifier}}+Enter로 전송",
-      "description": "켜면 Enter 대신 Ctrl/Cmd+Enter로 프롬프트를 전송합니다. 이렇게 하면 Enter로 줄바꿈을 넣을 수 있습니다."
+    "composer": {
+      "title": "입력창",
+      "custom": "사용자 설정",
+      "conflictWithSend": "보내기 단축키와 같은 조합입니다.",
+      "conflictWithNewline": "개행 단축키와 같은 조합입니다.",
+      "send": {
+        "label": "보내기 단축키",
+        "description": "프롬프트를 보내는 키를 설정합니다.",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "개행 단축키",
+        "description": "프롬프트를 보내지 않고 새 줄을 삽입하는 키입니다.",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "키를 누르세요…",
+      "unset": "지정 안 됨",
+      "needsModifier": "Ctrl·Alt·Cmd 중 하나를 함께 눌러야 합니다."
     },
     "respectGitignore": {
       "label": ".gitignore를 에디터 컨텍스트에 반영",

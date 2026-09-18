@@ -9,6 +9,8 @@ import {
   BrowserDiffPresentation,
   DIFF_SURFACES,
   BROWSER_DIFF_PRESENTATIONS,
+  COMPOSER_SEND_SHORTCUTS,
+  COMPOSER_NEWLINE_SHORTCUTS,
 } from '../../shared';
 
 // ─── Settings helpers ────────────────────────────────────────────────────────
@@ -70,6 +72,10 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   uiLanguage: null,
   voice: {},
   useCtrlEnterToSend: false,
+  composerSendShortcut: null,
+  composerSendShortcutCustom: null,
+  composerNewlineShortcut: null,
+  composerNewlineShortcutCustom: null,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
@@ -125,7 +131,11 @@ const COMMENT_MAP: Record<string, string> = {
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
   voice: '음성 입력 설정 중 공식 스키마에 없는 것들. speechLanguage: 말하는 언어의 BCP-47 코드(예: "ko"), 공식 language가 비었을 때만 쓰인다(VS Code 확장의 accessibility.voice.speechLanguage와 같은 자리). silenceTimeout: 말이 없을 때 녹음이 기다리는 초(1~15, 기본 15). 서비스가 15초 침묵이면 스스로 끊으므로 그 이상은 의미가 없다. enabled/mode/autoSubmit은 공식 키라 네이티브 settings.json에 있다',
-  useCtrlEnterToSend: 'true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송',
+  useCtrlEnterToSend: '[레거시] true면 Ctrl/Cmd+Enter로 전송하고 Enter는 줄바꿈. false면 Enter로 전송. composerSendShortcut/composerNewlineShortcut이 비었을 때만 쓰인다',
+  composerSendShortcut: '프롬프트를 보내는 키: "enter" | "modEnter"(Ctrl/Cmd+Enter) | "custom". null이면 useCtrlEnterToSend를 따른다',
+  composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
+  composerNewlineShortcut: '줄을 바꾸는 키: "shiftEnter" | "enter" | "custom". null이면 useCtrlEnterToSend를 따른다',
+  composerNewlineShortcutCustom: 'composerNewlineShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Shift+Enter")',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
@@ -334,6 +344,28 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'openSettingsAs':
       if (!['overlay', 'new-tab'].includes(value as string)) {
         return 'openSettingsAs must be one of "overlay", "new-tab"';
+      }
+      break;
+    // Null is a real value here, not a missing one: it says "the user has never
+    // chosen", which hands the answer to the legacy useCtrlEnterToSend. Rejecting
+    // it would make clearing the choice impossible.
+    case 'composerSendShortcut':
+      if (value !== null && !COMPOSER_SEND_SHORTCUTS.includes(value as string)) {
+        return `composerSendShortcut must be null or one of ${COMPOSER_SEND_SHORTCUTS.map((s) => `"${s}"`).join(', ')}`;
+      }
+      break;
+    case 'composerNewlineShortcut':
+      if (value !== null && !COMPOSER_NEWLINE_SHORTCUTS.includes(value as string)) {
+        return `composerNewlineShortcut must be null or one of ${COMPOSER_NEWLINE_SHORTCUTS.map((s) => `"${s}"`).join(', ')}`;
+      }
+      break;
+    // The recorded combination in stored form ('Meta+Enter'). Not parsed here:
+    // the webview writes what its own parser produced, and a backend that
+    // re-validated the grammar would be a second place to keep that grammar.
+    case 'composerSendShortcutCustom':
+    case 'composerNewlineShortcutCustom':
+      if (value !== null && typeof value !== 'string') {
+        return `${key} must be a string or null`;
       }
       break;
     case 'diffSurface':

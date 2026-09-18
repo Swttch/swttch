@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "اختصار",
-        "description": "المفتاح الذي يبدأ التسجيل ويوقفه. اضغط لتعيين تركيبة جديدة.",
-        "recording": "اضغط مفتاحًا…",
-        "needsModifier": "اضغط مع ذلك Ctrl أو Alt أو Cmd."
+        "description": "المفتاح الذي يبدأ التسجيل ويوقفه. اضغط لتعيين تركيبة جديدة."
       },
       "kit": {
         "required": "يحتاج الإدخال الصوتي إلى @swttch/extend-kit. ثبّته من أعلى اليمين.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "تفعيل الاتجاه من اليمين إلى اليسار (RTL)"
     },
-    "useCtrlEnterToSend": {
-      "label": "استخدام {{modifier}}+Enter للإرسال",
-      "description": "عند التفعيل، استخدم Ctrl/Cmd+Enter لإرسال الطلبات بدلًا من Enter فقط. يتيح هذا استخدام Enter لإنشاء أسطر جديدة."
+    "composer": {
+      "title": "المحرّر",
+      "custom": "مخصص",
+      "conflictWithSend": "هذه هي نفس تركيبة اختصار الإرسال",
+      "conflictWithNewline": "هذه هي نفس تركيبة اختصار السطر الجديد",
+      "send": {
+        "label": "اختصار الإرسال",
+        "description": "يحدد المفتاح الذي يرسل المطالبة",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "اختصار سطر جديد",
+        "description": "المفتاح الذي يُدرج سطرًا جديدًا بدلًا من إرسال المطالبة",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      }
+    },
+    "shortcutInput": {
+      "recording": "اضغط مفتاحًا…",
+      "unset": "غير محدد",
+      "needsModifier": "اضغط مع ذلك Ctrl أو Alt أو Cmd."
     },
     "respectGitignore": {
       "label": "احترام .gitignore في سياق المحرر",

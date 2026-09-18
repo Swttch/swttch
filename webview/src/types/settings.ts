@@ -1,6 +1,11 @@
 import { AUTO_SCROLL_THRESHOLD_DEFAULT } from '@/utils/autoScroll';
 import { ZOOM_DEFAULT } from '@/utils/zoom';
-import { DiffSurface, BrowserDiffPresentation } from '@/shared';
+import {
+  DiffSurface,
+  BrowserDiffPresentation,
+  ComposerSendShortcut,
+  ComposerNewlineShortcut,
+} from '@/shared';
 
 /**
  * Chat message line-height (unitless multiplier). Matches the CSS default in
@@ -90,7 +95,27 @@ export enum SettingKey {
   VOICE = 'voice',
 
   // When true, Ctrl/Cmd+Enter sends and plain Enter inserts a newline.
+  //
+  // Superseded by COMPOSER_SEND_SHORTCUT / COMPOSER_NEWLINE_SHORTCUT, which say
+  // the same thing with more room. Still read, because it is what every user who
+  // set it before those keys existed has in their file — see
+  // resolveComposerShortcuts().
   USE_CTRL_ENTER_TO_SEND = 'useCtrlEnterToSend',
+
+  // Which keystroke sends the prompt, and which one inserts a line break.
+  //
+  // Two settings rather than one, because moving "send" onto a modifier leaves an
+  // open question the one-setting form answered by guessing: what plain Enter now
+  // does. The custom keys hold the recorded combination in stored form
+  // ('Meta+Enter'); they are read only when the mode beside them is 'custom'.
+  //
+  // Null means the user has never chosen, in which case USE_CTRL_ENTER_TO_SEND
+  // decides. Defaulting them to a concrete mode instead would overwrite that
+  // older answer with our own on the first read.
+  COMPOSER_SEND_SHORTCUT = 'composerSendShortcut',
+  COMPOSER_SEND_SHORTCUT_CUSTOM = 'composerSendShortcutCustom',
+  COMPOSER_NEWLINE_SHORTCUT = 'composerNewlineShortcut',
+  COMPOSER_NEWLINE_SHORTCUT_CUSTOM = 'composerNewlineShortcutCustom',
 
   // When true, move focus to the chat input after inserting a file path (Alt+K).
   FOCUS_INPUT_ON_EDITOR_CONTEXT = 'focusInputOnEditorContext',
@@ -337,6 +362,10 @@ export interface SettingsState {
   [SettingKey.UI_LANGUAGE]: string | null;
   [SettingKey.VOICE]: VoiceSettings;
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: boolean;
+  [SettingKey.COMPOSER_SEND_SHORTCUT]: ComposerSendShortcut | null;
+  [SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM]: string | null;
+  [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: ComposerNewlineShortcut | null;
+  [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: string | null;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
@@ -373,6 +402,10 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.UI_LANGUAGE]: null,
   [SettingKey.VOICE]: {},
   [SettingKey.USE_CTRL_ENTER_TO_SEND]: false,
+  [SettingKey.COMPOSER_SEND_SHORTCUT]: null,
+  [SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM]: null,
+  [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: null,
+  [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: null,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,

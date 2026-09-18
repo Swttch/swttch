@@ -62,8 +62,12 @@ import {
 import { AGENT_TRIGGER } from '@/utils/findAgentToken';
 import { isMobile, isBrowser } from '@/config/environment';
 import { featureDocUrl } from '@/config/app';
-import { shouldSubmitOnEnter } from './shouldSubmitOnEnter';
-import { sendKeyLabel } from './sendKeyLabel';
+import {
+  composerBindings,
+  composerKeyAction,
+  sendKeyLabel,
+  ComposerKeyAction,
+} from '@/utils/composerShortcut';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -951,44 +955,50 @@ export function ChatInput() {
     // Slash command interaction
     if (palette.handleSlashKeyDown(e, value)) return;
 
-    // Enter: submit or newline depending on useCtrlEnterToSend setting.
-    // IME composition and mobile guards always apply to the submit path.
-    // Enter is double-detected (key OR keyCode 13) because non-English layouts
-    // under JCEF can surface it with a non-"Enter" key string (issue #215).
+    // Send or break the line, per the composer shortcut settings. Enter is
+    // double-detected (key OR keyCode 13) because non-English layouts under JCEF
+    // can surface it with a non-"Enter" key string (issue #215).
     const isEnterKey = e.key === 'Enter' || e.nativeEvent.keyCode === 13;
-    if (isEnterKey) {
-      // Combine our composition truth with the native flag: either being set
-      // means "in composition", since JCEF's native flag alone is unreliable.
-      const isIMEComposing = ime.isComposing() || e.nativeEvent.isComposing;
-      const willSubmit = shouldSubmitOnEnter(
-        {
-          key: e.key,
-          keyCode: e.nativeEvent.keyCode,
-          shiftKey: e.shiftKey,
-          ctrlKey: e.ctrlKey,
-          metaKey: e.metaKey,
-          isComposing: isIMEComposing,
-          isMobile: isMobile(),
-        },
-        appSettings.useCtrlEnterToSend ?? false,
-      );
-      if (willSubmit) {
-        e.preventDefault();
-        submitComposer();
-        return;
-      }
-      // Not a submit. Insert a newline explicitly (issue #215): under JCEF a
-      // plain Enter in a non-English layout is otherwise swallowed as an IME
-      // commit and no line break appears. While composing we do NOT touch it —
-      // the composition confirmation owns that keystroke.
-      if (!isIMEComposing) {
-        e.preventDefault();
-        insertNewlineAtCursor();
-        const text = e.currentTarget.textContent ?? '';
-        handleRichChange(text);
-      }
+    // Combine our composition truth with the native flag: either being set
+    // means "in composition", since JCEF's native flag alone is unreliable.
+    const isIMEComposing = ime.isComposing() || e.nativeEvent.isComposing;
+    const composerAction = composerKeyAction(
+      {
+        key: e.key,
+        code: e.nativeEvent.code,
+        keyCode: e.nativeEvent.keyCode,
+        shiftKey: e.shiftKey,
+        ctrlKey: e.ctrlKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        isComposing: isIMEComposing,
+        isMobile: isMobile(),
+      },
+      composerBindings(appSettings),
+    );
+
+    if (composerAction === ComposerKeyAction.Send) {
+      e.preventDefault();
+      submitComposer();
       return;
-    } else if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
+    }
+
+    if (composerAction === ComposerKeyAction.Newline) {
+      // Inserted explicitly (issue #215): under JCEF a plain Enter in a
+      // non-English layout is otherwise swallowed as an IME commit and no line
+      // break appears. A composition owns its own keystrokes, and
+      // composerKeyAction has already refused to act during one.
+      e.preventDefault();
+      insertNewlineAtCursor();
+      const text = e.currentTarget.textContent ?? '';
+      handleRichChange(text);
+      return;
+    }
+
+    // Enter that reaches here is one a composition is holding; leave it alone.
+    if (isEnterKey) return;
+
+    if (e.key === 'ArrowUp' && !palette.showSlashCommands) {
       // Moving comes first, and the history only gets the key once the caret has
       // nowhere left to go: Up walks up the visual rows, then from the top row to
       // the very first character, and only the press after that — one the
@@ -1023,7 +1033,7 @@ export function ChatInput() {
         if (target) setCaretOffset(target, applied.length);
       });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, ime, handleRichChange, textareaRef]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef]);
 
   // Wrap the attachment paste handler so images keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1300,7 +1310,7 @@ export function ChatInput() {
               isStreaming
                 ? t('chatInput.placeholder.queueMessage')
                 : t('chatInput.placeholder.hint', {
-                    send: sendKeyLabel(appSettings.useCtrlEnterToSend ?? false),
+                    send: sendKeyLabel(appSettings),
                   })
             }
             disabled={disabled}

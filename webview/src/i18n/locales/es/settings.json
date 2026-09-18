@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "Atajo",
-        "description": "La tecla que inicia y detiene la grabación. Púlsala para asignar otra combinación.",
-        "recording": "Pulsa una tecla…",
-        "needsModifier": "Mantén también Ctrl, Alt o Cmd."
+        "description": "La tecla que inicia y detiene la grabación. Púlsala para asignar otra combinación."
       },
       "kit": {
         "required": "La entrada de voz necesita @swttch/extend-kit. Instálalo desde la parte superior derecha.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "Activar RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "Usar {{modifier}}+Enter para enviar",
-      "description": "Cuando está activado, usa Ctrl/Cmd+Enter para enviar mensajes en lugar de solo Enter. Esto permite usar Enter para crear nuevas líneas."
+    "composer": {
+      "title": "Redacción",
+      "custom": "Personalizada",
+      "conflictWithSend": "Es la misma combinación que el atajo para enviar",
+      "conflictWithNewline": "Es la misma combinación que el atajo para nueva línea",
+      "send": {
+        "label": "Atajo para enviar",
+        "description": "Define la tecla que envía el prompt",
+        "enter": "Intro",
+        "modEnter": "{{modifier}} + Intro"
+      },
+      "newline": {
+        "label": "Atajo para nueva línea",
+        "description": "La tecla que inserta una línea nueva en lugar de enviar el prompt",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Intro"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Pulsa una tecla…",
+      "unset": "Sin asignar",
+      "needsModifier": "Mantén también Ctrl, Alt o Cmd."
     },
     "respectGitignore": {
       "label": "Respetar .gitignore en el contexto del editor",

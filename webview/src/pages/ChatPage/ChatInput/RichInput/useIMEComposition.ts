@@ -25,7 +25,7 @@ const COMPOSITION_INPUT_TYPES = new Set([
 /**
  * The subset of an `InputEvent` the composition tracker needs. Taking a plain
  * object (rather than the DOM event) keeps the decision unit-testable, matching
- * how `shouldSubmitOnEnter` takes its keyboard-event subset.
+ * how `composerKeyAction` takes its keyboard-event subset.
  */
 export interface InputSignal {
   /** `InputEvent.isComposing` — true while the edit is part of a composition. */

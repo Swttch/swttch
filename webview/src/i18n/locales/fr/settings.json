@@ -62,9 +62,7 @@
       },
       "shortcut": {
         "label": "Raccourci",
-        "description": "La touche qui démarre et arrête l'enregistrement. Appuyez pour définir une autre combinaison.",
-        "recording": "Appuyez sur une touche…",
-        "needsModifier": "Maintenez aussi Ctrl, Alt ou Cmd."
+        "description": "La touche qui démarre et arrête l'enregistrement. Appuyez pour définir une autre combinaison."
       },
       "kit": {
         "required": "La saisie vocale nécessite @swttch/extend-kit. Installez-le en haut à droite.",
@@ -92,9 +90,28 @@
     "uiDirection": {
       "label": "Activer RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "Utiliser {{modifier}}+Entrée pour envoyer",
-      "description": "Lorsque cette option est activée, utilisez Ctrl/Cmd+Entrée pour envoyer les invites au lieu de simplement Entrée. Cela permet à Entrée de créer de nouvelles lignes."
+    "composer": {
+      "title": "Éditeur",
+      "custom": "Personnalisé",
+      "conflictWithSend": "C’est la même combinaison que le raccourci d’envoi",
+      "conflictWithNewline": "C’est la même combinaison que le raccourci de nouvelle ligne",
+      "send": {
+        "label": "Raccourci d’envoi",
+        "description": "Définit la touche qui envoie le prompt",
+        "enter": "Entrée",
+        "modEnter": "{{modifier}} + Entrée"
+      },
+      "newline": {
+        "label": "Raccourci de nouvelle ligne",
+        "description": "La touche qui insère une nouvelle ligne au lieu d’envoyer le prompt",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Entrée"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Appuyez sur une touche…",
+      "unset": "Non défini",
+      "needsModifier": "Maintenez aussi Ctrl, Alt ou Cmd."
     },
     "respectGitignore": {
       "label": "Respecter .gitignore pour le contexte de l'éditeur",

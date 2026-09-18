@@ -175,15 +175,66 @@ export function matchesShortcut(e: ShortcutEvent, stored: string | null | undefi
 }
 
 /**
+ * Keys that type nothing, so taking one for a shortcut costs the user no
+ * character.
+ *
+ * Enter is the one this list exists for: Shift+Enter is what nearly every chat
+ * composer breaks a line with, and refusing it would have left the newline
+ * setting unable to express its own default (issue #463). The rest are here
+ * because the same reasoning covers them exactly.
+ */
+const NON_TYPING_KEYS = new Set([
+  'Enter',
+  'Tab',
+  'Backspace',
+  'Delete',
+  'Insert',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+]);
+
+/** Does this key put a character in the text when pressed on its own? */
+function typesACharacter(key: string): boolean {
+  if (NON_TYPING_KEYS.has(key)) return false;
+  // F1..F24 name themselves and produce nothing.
+  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(key)) return false;
+  return true;
+}
+
+/** How permissive {@link isBindableShortcut} is about Shift standing alone. */
+export interface BindableOptions {
+  /**
+   * Accept Shift as the only modifier when the key types nothing.
+   *
+   * Off by default, and deliberately per-caller rather than global: the voice
+   * shortcut listens on the whole window, so a Shift+Enter bound there would
+   * eat the composer's line break from a screen that never mentions the
+   * composer. The composer's own rows are the one place that combination
+   * belongs, so they are the one place that asks for it.
+   */
+  allowShiftAlone?: boolean;
+}
+
+/**
  * Is this combination safe to bind inside a text input?
  *
- * A bare key, or one with only Shift, is a character the user is trying to
- * type — binding it would make the composer unusable. At least one of
+ * A bare key, or one with only Shift, is normally a character the user is
+ * trying to type — binding it would make the composer unusable. At least one of
  * Ctrl/Alt/Meta is required.
+ *
+ * The exception is a key that types nothing at all. Shift+Enter takes no letter
+ * away from anyone, so a caller that has a use for it may say so.
  */
-export function isBindableShortcut(parts: ShortcutParts): boolean {
+export function isBindableShortcut(parts: ShortcutParts, options: BindableOptions = {}): boolean {
   if (!parts.key || isModifierOnly(parts.key)) return false;
-  return parts.ctrl || parts.alt || parts.meta;
+  if (parts.ctrl || parts.alt || parts.meta) return true;
+  return Boolean(options.allowShiftAlone) && parts.shift && !typesACharacter(parts.key);
 }
 
 /**

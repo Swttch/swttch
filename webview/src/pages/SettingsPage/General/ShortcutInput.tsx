@@ -13,6 +13,14 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   ariaLabel: string;
+  /**
+   * Accept Shift as the only modifier when the key types nothing (Shift+Enter).
+   *
+   * Only the composer rows ask for this. A window-wide shortcut bound to
+   * Shift+Enter would eat the composer's line break from a screen that never
+   * mentions the composer — see {@link isBindableShortcut}.
+   */
+  allowShiftAlone?: boolean;
 }
 
 /**
@@ -22,7 +30,7 @@ interface Props {
  * and getting the syntax right; pressing the keys is the only description of a
  * shortcut that cannot be mistyped.
  */
-export function ShortcutInput({ value, onChange, ariaLabel }: Props) {
+export function ShortcutInput({ value, onChange, ariaLabel, allowShiftAlone = false }: Props) {
   const { t } = useTranslation('settings');
   const [recording, setRecording] = useState(false);
   const [rejected, setRejected] = useState(false);
@@ -53,7 +61,7 @@ export function ShortcutInput({ value, onChange, ariaLabel }: Props) {
     if (isModifierOnly(e.key)) return;
 
     const parts = shortcutPartsFromEvent(e);
-    if (!isBindableShortcut(parts)) {
+    if (!isBindableShortcut(parts, { allowShiftAlone })) {
       // A bare letter would swallow that character in the composer, so it is
       // refused with a reason rather than silently ignored.
       setRejected(true);
@@ -82,10 +90,17 @@ export function ShortcutInput({ value, onChange, ariaLabel }: Props) {
             : 'border-border-default bg-surface-overlay text-text-primary hover:bg-surface-hover'
         }`}
       >
-        {recording ? t('general.voice.shortcut.recording') : displayShortcut(value)}
+        {recording
+          ? t('general.shortcutInput.recording')
+          : // Empty when nothing has been recorded yet, which as a bare button
+            // reads as broken rather than as unset. Voice always has a default,
+            // so this only shows on a composer row switched to Custom.
+            displayShortcut(value) || t('general.shortcutInput.unset')}
       </button>
       {rejected && (
-        <span className="text-xs text-state-error-fg">{t('general.voice.shortcut.needsModifier')}</span>
+        <span className="text-xs text-state-error-fg">
+          {t('general.shortcutInput.needsModifier')}
+        </span>
       )}
     </div>
   );
