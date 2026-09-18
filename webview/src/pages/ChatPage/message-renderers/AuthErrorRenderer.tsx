@@ -1,6 +1,7 @@
-import { useAuthContext } from '@/contexts';
+import { useAuthContext, useChatStreamContext } from '@/contexts';
 import { LoadedMessageDto, getTextContent } from '../../../types';
 import { LoginCta } from '../LoginCta';
+import { CredentialSourceNotice } from './CredentialSourceNotice';
 
 interface Props {
   message: LoadedMessageDto;
@@ -19,12 +20,22 @@ interface Props {
 export function AuthErrorRenderer(props: Props) {
   const { message } = props;
   const { loggedIn, checkedAt } = useAuthContext();
+  const { systemInit } = useChatStreamContext();
 
   const failedAt = message.timestamp ? Date.parse(message.timestamp) : NaN;
   // An unparseable/absent timestamp cannot date the failure, so no auth check can
   // be shown to postdate it — fall back to the failure standing (dot stays red).
   const authFailedAt = Number.isNaN(failedAt) ? Infinity : failedAt;
   const resolved = loggedIn === true && checkedAt > authFailedAt;
+
+  // `apiKeySource` names the credential the CLI authenticated with. "none" means it
+  // used the stored login, which is what the user already assumes — naming it would
+  // add noise without answering anything. Any other value means a key from the
+  // environment or from settings won over the login, and THAT is the thing a signed-in
+  // user cannot otherwise see (#446). Hidden once the failure is resolved, so a stale
+  // entry further up the transcript stops giving advice about a fixed problem.
+  const credentialSource = typeof systemInit?.apiKeySource === 'string' ? systemInit.apiKeySource : null;
+  const showCredentialSource = !resolved && credentialSource !== null && credentialSource !== 'none';
 
   return (
     <div className="group pt-2 pb-4 px-6">
@@ -34,6 +45,7 @@ export function AuthErrorRenderer(props: Props) {
         <span className="opacity-75 mr-auto">{getTextContent(message)}</span>
         <LoginCta authFailedAt={authFailedAt} />
       </div>
+      {showCredentialSource && <CredentialSourceNotice source={credentialSource} />}
     </div>
   );
 }

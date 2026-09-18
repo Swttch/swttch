@@ -2,6 +2,7 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import {useUsageData} from "@/pages/SettingsPage/Usage/useUsageData";
 import { CcbNotInstalledNotice } from '@/pages/SettingsPage/Usage/CcbNotInstalledNotice';
+import { ProxyNotice } from './ProxyNotice';
 import { SectionLabel } from '../SectionLabel';
 import { SkeletonRow } from '../SkeletonRow';
 import { UsageRow } from '../UsageRow';
@@ -16,7 +17,7 @@ interface Props {
 export const UsageSection = (props: Props) => {
     const {} = props;
     const { t } = useTranslation('common');
-    const { data: usageData, isLoading: usageLoading, error: usageError, errorKind: usageErrorKind, lastUpdated, refresh } = useUsageData();
+    const { data: usageData, isLoading: usageLoading, error: usageError, errorKind: usageErrorKind, proxy, lastUpdated, refresh } = useUsageData();
     const { data: accountData } = useAccountData();
 
     /**
@@ -54,7 +55,12 @@ export const UsageSection = (props: Props) => {
             ) : usageError && usageErrorKind === 'ccb_missing' ? (
                 <CcbNotInstalledNotice onRetry={refresh} isLoading={usageLoading} />
             ) : usageError ? (
-                <p className="text-xs text-state-error-fg mb-2">{usageError}</p>
+                <>
+                    <p className="text-xs text-state-error-fg mb-2">{usageError}</p>
+                    {/* Naming the hop turns "network error" into something the user can
+                        act on: the proxy that refused them is in their own settings. */}
+                    {proxy && <ProxyNotice proxy={proxy} />}
+                </>
             ) : null}
 
             {/*

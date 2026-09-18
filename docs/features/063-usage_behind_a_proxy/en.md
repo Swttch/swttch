@@ -119,3 +119,27 @@ A proxy that is slow rather than broken used to leave you with your shell's
 own complaint about a line editor after fifteen seconds. Now it says that the
 request timed out, how long it waited, and whether the proxy ever finished
 opening the tunnel.
+
+## And where that proxy is configured
+
+People often do not know they are behind a proxy. It came with a company image, or was set years ago and forgotten, or lives in a file IT edited once. "Check your proxy" is not actionable when you do not know which file decides it.
+
+The failure notice now lists the file and line that assign the variable.
+
+```
+This request goes out through http://proxy.corp:3128 (HTTPS_PROXY).
+
+Where HTTPS_PROXY is set:
+  ~/.zshrc:18                 (shell startup file)
+  /etc/environment:4          (system environment file)
+```
+
+The search covers the files a person actually edits: shell startup files, the session files a Linux desktop reads, a project `.env`, the `env` block in Claude's settings, and this plugin's settings. **Locations only — the value is never read back to you.**
+
+When nothing assigns it, the notice says so. In that case it most likely came from the command line that launched the IDE, or was inherited from the process that started it.
+
+## A limit
+
+**The environment this plugin sees and the environment the usage lookup sees are not the same.** The lookup runs through a login shell, so it picks up a proxy exported in something like `.zshrc` — a value the plugin's own environment never has.
+
+That is why a failure with no proxy in sight does not claim there is no proxy. It asks you to check, rather than telling you there is nothing to check.

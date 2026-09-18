@@ -3,8 +3,6 @@ package com.github.yhk1038.claudecodegui.settings
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.*
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import javax.swing.JComponent
@@ -48,9 +46,11 @@ class ClaudeCodeSettingsConfigurable : Configurable {
 
     override fun apply() {
         panel?.apply()
+        // Whitespace hygiene lives in pathSettingValue — see the note there for why this
+        // dialog has to apply it itself (issue #446).
         settings.setAll(mapOf(
-            "cliPath" to if (cliPath.isBlank()) JsonNull else JsonPrimitive(cliPath),
-            "nodePath" to if (nodePath.isBlank()) JsonNull else JsonPrimitive(nodePath)
+            "cliPath" to pathSettingValue(cliPath),
+            "nodePath" to pathSettingValue(nodePath)
         ))
     }
 

@@ -482,6 +482,11 @@
     },
     "errors": {
       "unknown": "不明なエラー"
+    },
+    "proxy": {
+      "routedThrough": "この要求は {{url}}（{{variable}}）を経由して送信されます。",
+      "setIn": "{{variable}} が設定されている場所:",
+      "notFound": "読み取れる起動ファイルと設定ファイルのどこにも {{variable}} がありません。IDE を起動したコマンドラインで指定したか、IDE を起動した親プロセスから引き継いだ可能性があります。"
     }
   },
   "sponsor": {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useChatStream, type LoadedMessage } from '../useChatStream';
+import { useChatStream, DISCONNECT_GRACE_SECONDS, type LoadedMessage } from '../useChatStream';
 import type { LoadedMessageDto } from '../../types';
 import { ContextType, getTextContent, isAuthErrorMessage, isLimitErrorMessage } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
@@ -234,6 +234,192 @@ describe('useChatStream', () => {
       // No messages should be added
       expect(result.current.messages.length).toBe(0);
       expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
+  // The backend emits STREAM_END when the CLI process dies without a `result`.
+  // A turn that dies that way often has no assistant message yet — a 401 still
+  // retrying, or a spawn that failed — and the spinner had nothing left to stop
+  // it, so it ran forever (#446).
+  describe('STREAM_END 안전망', () => {
+    it('assistant 메시지가 시작되지 않은 턴도 끝낸다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      // addCommandEcho spins WITHOUT creating an assistant placeholder, which is
+      // exactly the state a turn is in while the CLI is retrying before its first
+      // token: isStreaming true, streamingMessageId null.
+      act(() => {
+        result.current.addCommandEcho('/model');
+      });
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.streamingMessageId).toBeNull();
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('assistant 메시지가 있는 턴도 그대로 끝낸다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    it('스트리밍 중이 아닐 때 도착해도 아무것도 깨뜨리지 않는다', () => {
+      // endStreaming() is idempotent, which is what lets the handler drop its
+      // guard. A STREAM_END after a clean turn must stay a no-op.
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      expect(result.current.isStreaming).toBe(false);
+
+      act(() => {
+        emit(MessageType.STREAM_END, {});
+      });
+
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.messages).toEqual([]);
+    });
+  });
+
+  // Every signal that would end a turn travels over the WebSocket, so a backend
+  // that dies takes all of them with it and the spinner runs until a reload
+  // (#446). The wait is not instant: the socket blinks and recovers on its own
+  // often enough that reacting at once would end healthy turns.
+  describe('연결 끊김 유예', () => {
+    function streamingHook() {
+      const { bridge, emit } = createMockBridge();
+      const view = renderHook(
+        (props: { bridge: typeof bridge }) => useChatStream({ bridge: props.bridge }),
+        { initialProps: { bridge } },
+      );
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+      return { bridge, emit, ...view };
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('끊기자마자 끝내지 않고 카운트다운을 시작한다', () => {
+      const { bridge, result, rerender } = streamingHook();
+      expect(result.current.isStreaming).toBe(true);
+
+      act(() => { rerender({ bridge: { ...bridge, isConnected: false } }); });
+
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.disconnectCountdown).toBe(DISCONNECT_GRACE_SECONDS);
+    });
+
+    it('카운트다운이 1초마다 줄어든다', () => {
+      const { bridge, result, rerender } = streamingHook();
+      act(() => { rerender({ bridge: { ...bridge, isConnected: false } }); });
+
+      act(() => { vi.advanceTimersByTime(3000); });
+
+      expect(result.current.disconnectCountdown).toBe(DISCONNECT_GRACE_SECONDS - 3);
+      expect(result.current.isStreaming).toBe(true);
+    });
+
+    it('유예가 끝나면 턴을 종료한다', () => {
+      const { bridge, result, rerender } = streamingHook();
+      act(() => { rerender({ bridge: { ...bridge, isConnected: false } }); });
+
+      act(() => { vi.advanceTimersByTime(DISCONNECT_GRACE_SECONDS * 1000); });
+
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.disconnectCountdown).toBeNull();
+    });
+
+    it('유예 중에 다시 연결되면 취소된다', () => {
+      // The whole point of the grace period. A turn that survived the blink must
+      // keep running, with no trace of the countdown left on screen.
+      const { bridge, result, rerender } = streamingHook();
+      act(() => { rerender({ bridge: { ...bridge, isConnected: false } }); });
+      act(() => { vi.advanceTimersByTime(4000); });
+      expect(result.current.disconnectCountdown).toBe(DISCONNECT_GRACE_SECONDS - 4);
+
+      act(() => { rerender({ bridge: { ...bridge, isConnected: true } }); });
+      expect(result.current.disconnectCountdown).toBeNull();
+
+      act(() => { vi.advanceTimersByTime(DISCONNECT_GRACE_SECONDS * 1000); });
+      expect(result.current.isStreaming).toBe(true);
+    });
+
+    it('스트리밍 중이 아니면 카운트다운을 띄우지 않는다', () => {
+      const { bridge } = createMockBridge();
+      const { result, rerender } = renderHook(
+        (props: { bridge: typeof bridge }) => useChatStream({ bridge: props.bridge }),
+        { initialProps: { bridge } },
+      );
+
+      act(() => { rerender({ bridge: { ...bridge, isConnected: false } }); });
+
+      expect(result.current.disconnectCountdown).toBeNull();
+    });
+  });
+
+  // The CLI retries a failed request up to ten times with a widening backoff, which
+  // can run for minutes. It reports every attempt; nothing was listening, so the screen
+  // showed an unchanging spinner and read as frozen (#446).
+  describe('api_retry 진행', () => {
+    it('재시도 진행을 노출한다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'system', subtype: 'api_retry',
+          attempt: 3, max_retries: 10, error_status: 401,
+        });
+      });
+
+      expect(result.current.apiRetry).toEqual({ attempt: 3, max: 10 });
+    });
+
+    it('응답이 시작되면 재시도 표시를 지운다', () => {
+      // Content is arriving, so whatever retrying happened is over.
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'api_retry', attempt: 3, max_retries: 10 });
+      });
+      expect(result.current.apiRetry).not.toBeNull();
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'stream_event', event: { delta: { type: 'text_delta', text: 'Hi' } } });
+      });
+
+      expect(result.current.apiRetry).toBeNull();
+    });
+
+    it('턴이 끝나면 재시도 표시를 지운다', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'system', subtype: 'api_retry', attempt: 9, max_retries: 10 });
+      });
+      act(() => {
+        emit(MessageType.CLI_EVENT, { type: 'result' });
+      });
+
+      expect(result.current.apiRetry).toBeNull();
     });
   });
 

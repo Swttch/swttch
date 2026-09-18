@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "کلیدهای API در env فایل ~/.claude/settings.json تنظیم شده‌اند:",
+      "title": "کلیدهای API در env فایل ~/.claude/settings.json یا settings.local.json تنظیم شده‌اند:",
       "hint": "ممکن است این کلیدها منقضی یا نامعتبر باشند. بررسی کنید و سپس آن‌ها را حذف یا تمدید کنید."
     },
     "sessionConflict": {
@@ -348,7 +348,21 @@
   },
   "authError": {
     "banner": "به Claude Code وارد نشده‌اید.",
-    "login": "ورود"
+    "login": "ورود",
+    "credentialSource": {
+      "title": "سرور {{source}} را رد کرد",
+      "body": "این درخواست با {{source}} احراز هویت شد، نه با ورود شما به Claude، زیرا CLI هر زمان کلید API تنظیم شده باشد آن را ترجیح می‌دهد.",
+      "advice": "بررسی کنید که کلید هنوز معتبر است، یا آن را حذف کنید تا از ورود Claude استفاده شود.",
+      "setIn": "محل تنظیم {{source}}:",
+      "notFound": "{{source}} در هیچ فایل راه‌اندازی یا تنظیماتی که قابل خواندن باشد تنظیم نشده است. ممکن است در خط فرمانی که IDE را اجرا کرده وارد شده باشد، در پوسته به‌صورت دستی export شده باشد، با launchctl یا setx تنظیم شده باشد، یا از فرایندی که IDE را اجرا کرده به ارث رسیده باشد.",
+      "kind": {
+        "shellFile": "فایل راه‌اندازی پوسته",
+        "systemFile": "فایل محیط سیستم",
+        "dotenv": "فایل .env",
+        "claudeSettings": "تنظیمات Claude",
+        "pluginSettings": "تنظیمات افزونه"
+      }
+    }
   },
   "diffCard": {
     "operation": {
@@ -507,7 +521,8 @@
       "در حال لرزلرز",
       "در حال کار",
       "در حال دست‌وپنجه‌نرم‌کردن"
-    ]
+    ],
+    "retry": "تلاش مجدد {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "{{seconds}} ثانیه فکر کرد",

@@ -76,7 +76,25 @@ export interface AccountUsage {
   error: string | null;
   errorKind: string | null;
 }
-export interface AllUsageResult { accounts: AccountUsage[]; }
+/**
+ * The proxy an outbound request goes through, ready to show a user.
+ *
+ * The URL has any password replaced by `***`: corporate proxy URLs routinely carry
+ * credentials, and this string is headed for a panel that gets screenshotted into
+ * bug reports.
+ */
+export interface ProxySummary {
+  /** The variable that supplied it, e.g. `HTTPS_PROXY`. */
+  variable: string;
+  /** The proxy URL with any password masked. */
+  url: string;
+}
+
+export interface AllUsageResult {
+  accounts: AccountUsage[];
+  /** The proxy in effect, or null when requests go out directly. */
+  proxy?: ProxySummary | null;
+}
 
 /** One recovery attempt, retained across reloads until a normal user turn. */
 export interface AccountPoolRecovery {

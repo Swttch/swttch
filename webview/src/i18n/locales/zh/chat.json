@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "在 ~/.claude/settings.json 的 env 中设置了以下 API 密钥:",
+      "title": "在 ~/.claude/settings.json 或 settings.local.json 的 env 中设置了以下 API 密钥:",
       "hint": "这些密钥可能已过期或无效。请检查后移除或更新它们。"
     },
     "sessionConflict": {
@@ -348,7 +348,21 @@
   },
   "authError": {
     "banner": "尚未登录 Claude Code。",
-    "login": "登录"
+    "login": "登录",
+    "credentialSource": {
+      "title": "服务器拒绝了 {{source}}",
+      "body": "此请求使用 {{source}} 而非您的 Claude 登录账号进行了身份验证，因为只要设置了 API 密钥，CLI 就会优先使用它。",
+      "advice": "请检查该密钥是否仍然有效，或将其移除以改用 Claude 登录账号。",
+      "setIn": "{{source}} 的设置位置：",
+      "notFound": "在可读取的启动文件和配置文件中都没有找到 {{source}}。它可能是在启动 IDE 的命令行中直接指定的、在 shell 中手动导出的、通过 launchctl 或 setx 设置的，或从启动 IDE 的父进程继承的。",
+      "kind": {
+        "shellFile": "shell 启动文件",
+        "systemFile": "系统环境文件",
+        "dotenv": ".env 文件",
+        "claudeSettings": "Claude 配置",
+        "pluginSettings": "插件配置"
+      }
+    }
   },
   "diffCard": {
     "operation": {
@@ -507,7 +521,8 @@
       "摇摆不定中",
       "工作中",
       "驯服中"
-    ]
+    ],
+    "retry": "重试 {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "思考了 {{seconds}} 秒",

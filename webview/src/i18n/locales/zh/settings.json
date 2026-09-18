@@ -482,6 +482,11 @@
     },
     "errors": {
       "unknown": "未知错误"
+    },
+    "proxy": {
+      "routedThrough": "此请求通过 {{url}}（{{variable}}）发出。",
+      "setIn": "{{variable}} 的设置位置：",
+      "notFound": "在可读取的启动文件和配置文件中都没有找到 {{variable}}，它可能是在启动 IDE 的命令行中指定的，或从启动 IDE 的父进程继承的。"
     }
   },
   "sponsor": {

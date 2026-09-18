@@ -2,7 +2,7 @@ import type { ChildProcess } from 'child_process';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
-import { diagnoseAuthError } from './features/auth-diagnosis';
+import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
 import { getWorkflowTracker, peekWorkflowTracker } from './features/workflow-tracker';
@@ -1102,9 +1102,11 @@ function handleStreamEvent(
     });
 
     // 인증 에러 진단 (비동기, 실패해도 무시)
-    const errorData = event.error as { message?: string } | null;
-    if (errorData?.message) {
-      diagnoseAuthError(targetSessionId, errorData.message, connections).catch(() => {});
+    // Reads `is_error`/`result`/`api_error_status` rather than the `error.message` this
+    // used to test, which no CLI result ever carries — see authFailureDetail (#446).
+    const failureDetail = authFailureDetail(event);
+    if (failureDetail) {
+      diagnoseAuthError(targetSessionId, failureDetail, connections).catch(() => {});
     }
 
     /*

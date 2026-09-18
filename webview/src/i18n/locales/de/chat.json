@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "API-Schlüssel sind in der env von ~/.claude/settings.json festgelegt:",
+      "title": "API-Schlüssel sind in der env von ~/.claude/settings.json oder settings.local.json festgelegt:",
       "hint": "Diese Schlüssel könnten abgelaufen oder ungültig sein. Bitte überprüfe sie und entferne oder erneuere sie."
     },
     "sessionConflict": {
@@ -348,7 +348,21 @@
   },
   "authError": {
     "banner": "Du bist bei Claude Code nicht angemeldet.",
-    "login": "Anmelden"
+    "login": "Anmelden",
+    "credentialSource": {
+      "title": "Der Server hat {{source}} abgelehnt",
+      "body": "Diese Anfrage wurde mit {{source}} authentifiziert statt mit deiner Claude-Anmeldung, weil die CLI einen API-Schlüssel bevorzugt, sobald einer gesetzt ist.",
+      "advice": "Prüfe, ob der Schlüssel noch gültig ist, oder entferne ihn, um deine Claude-Anmeldung zu verwenden.",
+      "setIn": "Wo {{source}} gesetzt ist:",
+      "notFound": "{{source}} ist in keiner lesbaren Start- oder Konfigurationsdatei zugewiesen. Die Variable wurde möglicherweise in der Befehlszeile gesetzt, die die IDE gestartet hat, in einer Shell von Hand exportiert, mit launchctl oder setx gesetzt oder vom startenden Prozess geerbt.",
+      "kind": {
+        "shellFile": "Shell-Startdatei",
+        "systemFile": "Systemumgebungsdatei",
+        "dotenv": ".env-Datei",
+        "claudeSettings": "Claude-Einstellungen",
+        "pluginSettings": "Plugin-Einstellungen"
+      }
+    }
   },
   "diffCard": {
     "operation": {
@@ -507,7 +521,8 @@
       "Wibbelt",
       "Arbeitet",
       "Rangelt"
-    ]
+    ],
+    "retry": "Versuch {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "{{seconds}}s nachgedacht",

@@ -679,6 +679,12 @@ export enum MessageType {
   WSL_HOST_MISMATCH = 'WSL_HOST_MISMATCH',
   /** Structured diagnosis of an authentication failure. */
   AUTH_ERROR_DIAGNOSIS = 'AUTH_ERROR_DIAGNOSIS',
+  /**
+   * inbound webview→backend: ask where an environment variable is assigned, so an
+   * auth failure can point the user at the file that sets the credential it used.
+   * Answered on ACK with locations only — never the value.
+   */
+  TRACE_ENV_ORIGIN = 'TRACE_ENV_ORIGIN',
 
   // -- IDE / editor push --
   /** The resolved IDE project root for the current working directory. */

@@ -36,7 +36,7 @@
   },
   "streamError": {
     "authDiagnosis": {
-      "title": "~/.claude/settings.json의 env에 API 키가 설정되어 있습니다:",
+      "title": "~/.claude/settings.json 또는 settings.local.json의 env에 API 키가 설정되어 있습니다:",
       "hint": "이 키들이 만료되었거나 유효하지 않을 수 있습니다. 확인 후 제거하거나 갱신하세요."
     },
     "sessionConflict": {
@@ -348,7 +348,21 @@
   },
   "authError": {
     "banner": "Claude Code에 로그인되어 있지 않습니다.",
-    "login": "로그인"
+    "login": "로그인",
+    "credentialSource": {
+      "title": "서버가 {{source}}를 거부했습니다",
+      "body": "이번 요청은 Claude 로그인이 아니라 {{source}}로 인증했습니다. CLI는 API 키가 설정되어 있으면 로그인보다 키를 우선합니다.",
+      "advice": "키가 아직 유효한지 확인하시거나, 키를 제거하면 Claude 로그인으로 인증합니다.",
+      "setIn": "{{source}}가 설정된 위치:",
+      "notFound": "읽을 수 있는 시작 파일과 설정 파일 어디에도 {{source}}가 없습니다. IDE를 실행한 명령줄에서 직접 지정했거나, 셸에서 직접 export했거나, launchctl 또는 setx로 설정했거나, IDE를 실행한 상위 프로세스에서 물려받았을 수 있습니다.",
+      "kind": {
+        "shellFile": "셸 시작 파일",
+        "systemFile": "시스템 환경 파일",
+        "dotenv": ".env 파일",
+        "claudeSettings": "Claude 설정",
+        "pluginSettings": "플러그인 설정"
+      }
+    }
   },
   "diffCard": {
     "operation": {
@@ -507,7 +521,8 @@
       "흔들흔들거리는 중",
       "작업하는 중",
       "다루는 중"
-    ]
+    ],
+    "retry": "재시도 {{attempt}}/{{max}}"
   },
   "thinking": {
     "thoughtFor": "{{seconds}}초 동안 생각함",

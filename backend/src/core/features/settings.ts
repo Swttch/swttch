@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { atomicWriteFile, updateJsonFile } from './atomic-json';
+import { normalizeSettingValue } from './path-settings';
 import {
   DiffSurface,
   BrowserDiffPresentation,
@@ -575,8 +576,13 @@ export async function saveSettingToScope(
     // apply to it — validateSetting('theme', null) would reject, which would make
     // resetting a key to the global value fail for every typed setting.
     if (!(key in DEFAULT_SETTINGS)) return { status: 'error', error: `Unknown settings key: ${key}` };
-    if (value !== null) {
-      const validationError = validateSetting(key, value);
+    // Trimming before validation keeps the stored value and the validated value the
+    // same one. A path that trims down to nothing becomes null, which at project
+    // scope means "remove the override" — the right outcome for a field the user
+    // blanked out with spaces.
+    const normalized = normalizeSettingValue(key, value);
+    if (normalized !== null) {
+      const validationError = validateSetting(key, normalized);
       if (validationError) return { status: 'error', error: validationError };
     }
 
@@ -587,10 +593,10 @@ export async function saveSettingToScope(
       // is exactly what wipes a file: the one key being saved becomes the whole
       // file (issue #386). updateJsonFile aborts on a file it cannot read.
       const result = await updateJsonFile(filePath, (current) => {
-        if (value === null) {
+        if (normalized === null) {
           delete current[key];
         } else {
-          current[key] = value;
+          current[key] = normalized;
         }
         return current;
       });
@@ -623,14 +629,15 @@ export function saveSettingToFile(key: string, value: unknown): Promise<SaveResu
 }
 
 async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveResult> {
-  const validationError = validateSetting(key, value);
+  const normalized = normalizeSettingValue(key, value);
+  const validationError = validateSetting(key, normalized);
   if (validationError) {
     return { status: 'error', error: validationError };
   }
 
   try {
     const current = await readSettingsFile();
-    current[key] = value;
+    current[key] = normalized;
     await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
     await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(current));
     return { status: 'ok' };

@@ -20,6 +20,10 @@ import { useTranslation } from '@/i18n';
 
 interface Props {
   isStreaming: boolean;
+  /** Seconds left before a dropped connection ends the turn; null while connected. */
+  disconnectCountdown?: number | null;
+  /** The CLI's retry progress; null when not retrying. */
+  apiRetry?: { attempt: number; max: number } | null;
   mergedMessages: LoadedMessageDto[];
   hasMore: boolean;
   isLoadingMore: boolean;
@@ -28,7 +32,7 @@ interface Props {
 
 export function ChatMessageArea(props: Props) {
   const { t } = useTranslation('chat');
-  const { isStreaming, mergedMessages, hasMore, isLoadingMore, onLoadMore } = props;
+  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore } = props;
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry } = useChatStreamContext();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -186,7 +190,7 @@ export function ChatMessageArea(props: Props) {
       ))}
       </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
-      {isStreaming && <StreamingIndicator />}
+      {isStreaming && <StreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
       <StreamErrorBanner />
     </div>
   );

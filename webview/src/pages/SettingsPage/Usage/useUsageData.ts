@@ -4,7 +4,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type { UsageResponse, UsageErrorKind } from '@/types/usage';
-import { MessageType } from '@/shared';
+import { MessageType, type ProxySummary } from '@/shared';
 import { useUsageQuery, normalizeUsage, type RawUsageResponse } from '@/hooks/queries/useUsageQuery';
 import { useTranslation } from '@/i18n';
 
@@ -13,6 +13,8 @@ interface UseUsageDataReturn {
   isLoading: boolean;
   error: string | null;
   errorKind: UsageErrorKind | null;
+  /** The proxy the request goes through, or null when it goes out directly. */
+  proxy: ProxySummary | null;
   lastUpdated: Date | null;
   refresh: () => Promise<void>;
 }
@@ -51,6 +53,7 @@ export function useUsageData(): UseUsageDataReturn {
     isLoading: usageQuery.isLoading,
     error: result?.error ?? (usageQuery.isError ? (usageQuery.error?.message ?? t('usage.errors.unknown')) : null),
     errorKind: result?.errorKind ?? null,
+    proxy: result?.proxy ?? null,
     lastUpdated: usageQuery.dataUpdatedAt ? new Date(usageQuery.dataUpdatedAt) : null,
     refresh,
   };

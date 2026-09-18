@@ -89,6 +89,25 @@ describe('settings', () => {
       expect(result.status).toBe('ok');
     });
 
+    // A path pasted from a file manager or a terminal often carries a trailing space,
+    // and spawn treats the space as part of the filename (issue #446).
+    it('should store a path setting with its surrounding whitespace removed', async () => {
+      const result = await saveSettingToFile('cliPath', '  /home/deth/.local/bin/claude ');
+      expect(result.status).toBe('ok');
+
+      const [, content] = mockWriteFile.mock.calls[mockWriteFile.mock.calls.length - 1];
+      expect(content).toContain('cliPath: "/home/deth/.local/bin/claude"');
+      expect(content).not.toContain('claude "');
+    });
+
+    it('should store a whitespace-only path setting as null', async () => {
+      const result = await saveSettingToFile('cliPath', '   ');
+      expect(result.status).toBe('ok');
+
+      const [, content] = mockWriteFile.mock.calls[mockWriteFile.mock.calls.length - 1];
+      expect(content).toContain('cliPath: null');
+    });
+
     it('should reject zoomLevel out of range', async () => {
       const tooSmall = await saveSettingToFile('zoomLevel', 0.4);
       expect(tooSmall.status).toBe('error');

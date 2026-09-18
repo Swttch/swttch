@@ -4,6 +4,19 @@ interface Props {
   envApiKeys: string[];
 }
 
+/**
+ * Lists the API keys found in the user's Claude settings after an auth failure.
+ *
+ * The title names BOTH settings.json and settings.local.json, and has to keep doing so:
+ * the backend raises this from `readClaudeSettings()`, which merges the two files. Naming
+ * only the first sent anyone who had put the key in settings.local.json to a file where
+ * the key was not.
+ *
+ * Distinct from the notice under the failure entry itself, which names the credential the
+ * CLI actually authenticated with (`apiKeySource`). This one answers "what is configured
+ * in my settings"; that one answers "what was actually used".
+ */
+
 export const AuthDiagnosisBanner = (props: Props) => {
   const { envApiKeys } = props;
   const { t } = useTranslation('chat');

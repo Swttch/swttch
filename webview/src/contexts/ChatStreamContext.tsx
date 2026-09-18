@@ -76,6 +76,10 @@ interface ChatStreamContextType {
 
   // Session lifecycle
   systemInit: Record<string, unknown> | null;
+  /** Seconds left before a dropped connection ends the turn; null while connected. */
+  disconnectCountdown: number | null;
+  /** The CLI's retry progress while it re-sends a failed request; null when not retrying. */
+  apiRetry: { attempt: number; max: number } | null;
   sessionModel: string | null;
   setSessionModel: (model: string | null) => void;
   resetForSessionSwitch: () => void;
@@ -538,6 +542,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
 
     // Session lifecycle
     systemInit: chatStream.systemInit,
+    disconnectCountdown: chatStream.disconnectCountdown,
+    apiRetry: chatStream.apiRetry,
     sessionModel,
     setSessionModel,
     resetForSessionSwitch,
@@ -556,6 +562,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStream.error,
     chatStream.authDiagnosis,
     chatStream.systemInit,
+    chatStream.disconnectCountdown,
+    chatStream.apiRetry,
     chatStream.contextWindowUsage,
     chatStreamResetStreamState,
     chatStreamClearMessages,
