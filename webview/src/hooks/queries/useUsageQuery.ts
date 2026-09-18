@@ -2,6 +2,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import type { UsageResponse, UsageErrorKind } from '@/types/usage';
+import type { ProxySummary } from '@/shared';
 import { MessageType } from '@/shared';
 
 /**
@@ -14,6 +15,8 @@ export interface UsageQueryResult {
   usage: UsageResponse | null;
   error: string | null;
   errorKind: UsageErrorKind | null;
+  /** The proxy the request goes through, or null when it goes out directly. */
+  proxy: ProxySummary | null;
 }
 
 export interface RawUsageResponse {
@@ -21,10 +24,11 @@ export interface RawUsageResponse {
   usage?: UsageResponse;
   error?: string | null;
   error_kind?: string;
+  proxy?: ProxySummary | null;
 }
 
 const ERROR_KINDS: ReadonlyArray<UsageErrorKind> = [
-  'ccb_missing', 'npm_missing', 'auth', 'network', 'rate_limited', 'unknown',
+  'ccb_missing', 'npm_missing', 'auth', 'network', 'proxy', 'rate_limited', 'unknown',
 ];
 
 function normalizeErrorKind(raw: string | undefined): UsageErrorKind | null {
@@ -39,6 +43,9 @@ export function normalizeUsage(result: RawUsageResponse): UsageQueryResult {
     usage: result?.usage ?? null,
     error: result?.status === 'ok' ? null : (result?.error ?? 'Failed to fetch usage data'),
     errorKind: result?.status === 'ok' ? null : normalizeErrorKind(result?.error_kind),
+    // Carried on success too: the panel names the hop whenever it has something to
+    // say about a request, not only when one failed.
+    proxy: result?.proxy ?? null,
   };
 }
 

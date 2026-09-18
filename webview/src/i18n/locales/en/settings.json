@@ -486,6 +486,11 @@
     },
     "errors": {
       "unknown": "Unknown error"
+    },
+    "proxy": {
+      "routedThrough": "This request goes out through {{url}} ({{variable}}).",
+      "setIn": "Where {{variable}} is set:",
+      "notFound": "{{variable}} is not assigned in any startup or settings file we can read, so it may have been set on the command line that launched the IDE or inherited from the process that started it."
     }
   },
   "sponsor": {

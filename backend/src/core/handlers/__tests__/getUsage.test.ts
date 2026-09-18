@@ -260,7 +260,10 @@ describe('getUsageHandler', () => {
         expect(call?.[2].error).toContain('proxy');
       });
 
-      it('classifies a proxy that refused the tunnel as network', async () => {
+      // Filed under its own kind rather than `network`. The account is fine either
+      // way, but "network error" sends someone to check an internet connection that
+      // is working, while the thing that refused them is named in their own settings.
+      it('classifies a proxy that refused the tunnel as a proxy failure', async () => {
         const connections = createMockConnections();
         const message: IPCMessage = { type: MessageType.GET_USAGE, payload: {}, timestamp: 0, requestId: 'req-1' };
         setupExecFileError(ccbFailure(
@@ -272,7 +275,7 @@ describe('getUsageHandler', () => {
         await getUsageHandler('conn-1', message, connections, mockBridge);
 
         const call = (connections.sendTo as ReturnType<typeof vi.fn>).mock.calls.at(-1);
-        expect(call?.[2].error_kind).toBe('network');
+        expect(call?.[2].error_kind).toBe('proxy');
         expect(call?.[2].error).toContain('http://127.0.0.1:8080');
       });
 
@@ -339,7 +342,7 @@ describe('getUsageHandler', () => {
         await getUsageHandler('conn-1', message, connections, mockBridge);
 
         const call = (connections.sendTo as ReturnType<typeof vi.fn>).mock.calls.at(-1);
-        expect(call?.[2].error_kind).toBe('network');
+        expect(call?.[2].error_kind).toBe('proxy');
         expect(call?.[2].error).toContain('The proxy refused to open a tunnel');
         expect(call?.[2].error).not.toContain('Command failed');
         expect(call?.[2].error).not.toContain('/bin/zsh');
@@ -380,6 +383,47 @@ describe('getUsageHandler', () => {
       expect(call?.[2].error).not.toContain('zle');
       expect(call?.[2].error).not.toContain('/bin/zsh');
       expect(call?.[2].error).toContain('proxy');
+    });
+
+    it('names the proxy in a timeout when one is visible to this process', async () => {
+      // Turns "check whether you have a proxy" into "this proxy did not answer".
+      const previous = process.env.HTTPS_PROXY;
+      process.env.HTTPS_PROXY = 'http://proxy.corp:3128';
+      try {
+        const connections = createMockConnections();
+        const message: IPCMessage = { type: MessageType.GET_USAGE, payload: {}, timestamp: 0, requestId: 'req-1' };
+        setupExecFileError(Object.assign(new Error('Command failed'), { killed: true, signal: 'SIGTERM' }));
+
+        await getUsageHandler('conn-1', message, connections, mockBridge);
+
+        const call = (connections.sendTo as ReturnType<typeof vi.fn>).mock.calls.at(-1);
+        expect(call?.[2].error_kind).toBe('proxy');
+        expect(call?.[2].error).toContain('http://proxy.corp:3128');
+        expect(call?.[2].error).toContain('HTTPS_PROXY');
+      } finally {
+        if (previous === undefined) delete process.env.HTTPS_PROXY;
+        else process.env.HTTPS_PROXY = previous;
+      }
+    });
+
+    it('keeps the conditional wording when no proxy is visible here', async () => {
+      // Absence proves nothing: ccb runs through a login shell that sources the user's
+      // startup files, so a proxy exported in .zshrc reaches ccb and never reaches us.
+      const previous = process.env.HTTPS_PROXY;
+      delete process.env.HTTPS_PROXY;
+      try {
+        const connections = createMockConnections();
+        const message: IPCMessage = { type: MessageType.GET_USAGE, payload: {}, timestamp: 0, requestId: 'req-1' };
+        setupExecFileError(Object.assign(new Error('Command failed'), { killed: true, signal: 'SIGTERM' }));
+
+        await getUsageHandler('conn-1', message, connections, mockBridge);
+
+        const call = (connections.sendTo as ReturnType<typeof vi.fn>).mock.calls.at(-1);
+        expect(call?.[2].error_kind).toBe('network');
+        expect(call?.[2].error).toContain('If this machine reaches Anthropic through a proxy');
+      } finally {
+        if (previous !== undefined) process.env.HTTPS_PROXY = previous;
+      }
     });
 
     it('strips shell noise from an error it cannot otherwise explain', async () => {

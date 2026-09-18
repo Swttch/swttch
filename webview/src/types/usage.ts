@@ -43,4 +43,4 @@ export interface UsageResponse {
 }
 
 export type UsageErrorKind =
-  | 'ccb_missing' | 'npm_missing' | 'auth' | 'network' | 'rate_limited' | 'unknown';
+  | 'ccb_missing' | 'npm_missing' | 'auth' | 'network' | 'proxy' | 'rate_limited' | 'unknown';

@@ -486,6 +486,11 @@
     },
     "errors": {
       "unknown": "Unbekannter Fehler"
+    },
+    "proxy": {
+      "routedThrough": "Diese Anfrage läuft über {{url}} ({{variable}}).",
+      "setIn": "Wo {{variable}} gesetzt ist:",
+      "notFound": "{{variable}} ist in keiner lesbaren Start- oder Konfigurationsdatei zugewiesen. Möglicherweise wurde die Variable in der Befehlszeile gesetzt, die die IDE gestartet hat, oder vom startenden Prozess geerbt."
     }
   },
   "sponsor": {

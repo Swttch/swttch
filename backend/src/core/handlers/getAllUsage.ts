@@ -6,6 +6,7 @@ import { MessageType } from '../../shared';
 import { readRegistry } from '../features/account-store';
 import type { StoredAccount } from '../../shared';
 import { runCcbUsage, classifyError } from './getUsage';
+import { readProxySummary } from '../features/proxy-summary';
 import type { AccountUsage, AccountUsageData } from '../../shared';
 
 interface CacheEntry {
@@ -153,12 +154,17 @@ export async function getAllUsageHandler(
       requestId: message.requestId,
       status: 'ok',
       accounts,
+      // Sent whether or not anything failed, so the panel can name the hop a request
+      // takes instead of asking the user whether they are behind a proxy. Null when
+      // requests go out directly.
+      proxy: readProxySummary(),
     });
   } catch (err: any) {
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
       accounts: [],
+      proxy: readProxySummary(),
       error: err.message || 'Failed to fetch all usage info',
     });
   }

@@ -486,6 +486,11 @@
     },
     "errors": {
       "unknown": "Erreur inconnue"
+    },
+    "proxy": {
+      "routedThrough": "Cette requête passe par {{url}} ({{variable}}).",
+      "setIn": "Où {{variable}} est définie :",
+      "notFound": "{{variable}} n'est définie dans aucun fichier de démarrage ou de configuration lisible ; elle a pu être définie dans la ligne de commande qui a lancé l'IDE ou héritée du processus qui l'a démarré."
     }
   },
   "sponsor": {

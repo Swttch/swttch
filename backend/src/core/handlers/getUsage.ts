@@ -4,6 +4,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { Claude } from '../claude';
 import { MessageType } from '../../shared';
+import { readProxySummary } from '../features/proxy-summary';
 import { readRegistry, upsertAccount } from '../features/account-store';
 import {
   LIVE_ACCOUNT_ID, armCooldown, clearCooldown, readCooldownUntil, readUsageSnapshot,
@@ -61,7 +62,7 @@ export interface CcbUsageResponse {
   [key: string]: unknown;
 }
 
-type UsageErrorKind = 'ccb_missing' | 'npm_missing' | 'auth' | 'network' | 'rate_limited' | 'unknown';
+type UsageErrorKind = 'ccb_missing' | 'npm_missing' | 'auth' | 'network' | 'proxy' | 'rate_limited' | 'unknown';
 
 /** How long the ccb child may take before this backend gives up on it. */
 const SPAWN_TIMEOUT_MS = 15_000;
@@ -105,14 +106,20 @@ interface CcbFailure {
 /** ccb codes that mean the saved login is the problem. */
 const AUTH_CODES = new Set(['token_expired', 'unsupported_auth', 'credentials_not_found']);
 
+/** ccb codes that mean the request never got a real answer. */
+const NETWORK_CODES = new Set(['network_error', 'timeout']);
+
 /**
- * ccb codes that mean the request never got a real answer.
+ * ccb codes that mean a proxy refused to carry the request.
  *
- * `proxy_rejected` and `invalid_proxy` belong here rather than under auth even
- * though a refusing proxy answers 403 or 407: nothing about the account is wrong
- * when a proxy declines to open the tunnel.
+ * Not auth, even though a refusing proxy answers 403 or 407: nothing about the
+ * account is wrong when a proxy declines to open the tunnel. That reasoning used to
+ * file them under `network`, which was right about the account and wrong about the
+ * user — "network error" sends someone to check their internet, which is working
+ * fine, while the thing that refused them is named in their own settings. They get
+ * their own kind so the panel can say which proxy it was.
  */
-const NETWORK_CODES = new Set(['network_error', 'timeout', 'proxy_rejected', 'invalid_proxy']);
+const PROXY_CODES = new Set(['proxy_rejected', 'invalid_proxy']);
 
 /**
  * Noise a login-interactive shell writes before the command it was asked to run.
@@ -214,6 +221,7 @@ export function classifyError(err: unknown): UsageErrorInfo {
   if (failure) {
     const message = failure.hint ? `${failure.message} ${failure.hint}` : failure.message ?? raw;
     if (failure.code && AUTH_CODES.has(failure.code)) return { kind: 'auth', message };
+    if (failure.code && PROXY_CODES.has(failure.code)) return { kind: 'proxy', message };
     if (failure.code && NETWORK_CODES.has(failure.code)) return { kind: 'network', message };
     // Rate limiting is its own kind because it is the one failure with an answer:
     // stop asking. The caller arms a cool-down from retryAfterSec rather than
@@ -239,10 +247,22 @@ export function classifyError(err: unknown): UsageErrorInfo {
    * what surfaced instead was the shell's complaint about its line editor.
    */
   if (detail.killed) {
+    // Naming the proxy when we can see one turns "check whether you have a proxy"
+    // into "this proxy did not answer".
+    //
+    // The absence of one proves nothing, though, and the fallback keeps its
+    // conditional wording for that reason: readProxySummary reads THIS process's
+    // environment, while ccb runs through a login shell (`zsh -l -i`) that sources
+    // the user's startup files. A proxy exported in `.zshrc` reaches ccb and never
+    // reaches us, so "no proxy here" must not be reported as "no proxy at all".
+    const proxy = readProxySummary();
     return {
-      kind: 'network',
-      message: `The usage lookup did not finish within ${SPAWN_TIMEOUT_MS / 1000}s. `
-        + 'If this machine reaches Anthropic through a proxy, check that the proxy is responding.',
+      kind: proxy ? 'proxy' : 'network',
+      message: proxy
+        ? `The usage lookup did not finish within ${SPAWN_TIMEOUT_MS / 1000}s. `
+          + `It goes out through ${proxy.url} (${proxy.variable}), which did not answer in time.`
+        : `The usage lookup did not finish within ${SPAWN_TIMEOUT_MS / 1000}s. `
+          + 'If this machine reaches Anthropic through a proxy, check that the proxy is responding.',
     };
   }
 
@@ -418,12 +438,16 @@ export async function getUsageHandler(
     if (cachedUsage !== null) {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
+      // Named on every answer so the panel can say which hop a request takes
+      // instead of asking the user whether they are behind a proxy.
+      proxy: readProxySummary(),
         status: 'ok',
         usage: cachedUsage,
       });
     } else {
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
+        proxy: readProxySummary(),
         status: 'error',
         usage: null,
         error: lastErrorInfo?.message ?? null,
@@ -513,6 +537,7 @@ export async function getUsageHandler(
     const served = readUsageSnapshot(await currentAccountId());
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
+      proxy: readProxySummary(),
       status: 'ok',
       usage,
       stale: served?.stale ?? false,
@@ -538,6 +563,7 @@ export async function getUsageHandler(
       cachedAt = Date.now();
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
+        proxy: readProxySummary(),
         status: 'ok',
         usage: stored.usage,
         stale: stored.stale,
@@ -551,6 +577,7 @@ export async function getUsageHandler(
     cachedAt = Date.now();
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
+      proxy: readProxySummary(),
       status: 'error',
       usage: cachedUsage,
       error: info.message,
