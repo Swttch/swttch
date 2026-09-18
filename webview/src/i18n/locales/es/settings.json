@@ -2,7 +2,7 @@
   "layout": {
     "title": "Configuración",
     "back": "Atrás",
-    "toggleMenu": "Alternar menú",
+    "toggleSidebar": "Mostrar/ocultar barra lateral",
     "close": "Cerrar"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "sponsor": "Patrocinar"
   },
   "scope": {
+    "label": "Ámbito de configuración",
     "global": "Configuración de usuario (Global)",
     "globalShort": "Usuario (Global)",
     "project": "Configuración del proyecto (Local)",
@@ -62,9 +63,7 @@
       },
       "shortcut": {
         "label": "Atajo",
-        "description": "La tecla que inicia y detiene la grabación. Púlsala para asignar otra combinación.",
-        "recording": "Pulsa una tecla…",
-        "needsModifier": "Mantén también Ctrl, Alt o Cmd."
+        "description": "La tecla que inicia y detiene la grabación. Púlsala para asignar otra combinación."
       },
       "kit": {
         "required": "La entrada de voz necesita @swttch/extend-kit. Instálalo desde la parte superior derecha.",
@@ -92,9 +91,35 @@
     "uiDirection": {
       "label": "Activar RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "Usar {{modifier}}+Enter para enviar",
-      "description": "Cuando está activado, usa Ctrl/Cmd+Enter para enviar mensajes en lugar de solo Enter. Esto permite usar Enter para crear nuevas líneas."
+    "composer": {
+      "title": "Redacción",
+      "custom": "Personalizada",
+      "conflictWithSend": "Es la misma combinación que el atajo para enviar",
+      "conflictWithNewline": "Es la misma combinación que el atajo para nueva línea",
+      "send": {
+        "label": "Atajo para enviar",
+        "description": "Define la tecla que envía el prompt",
+        "enter": "Intro",
+        "modEnter": "{{modifier}} + Intro"
+      },
+      "newline": {
+        "label": "Atajo para nueva línea",
+        "description": "La tecla que inserta una línea nueva en lugar de enviar el prompt",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Intro"
+      },
+      "followUp": {
+        "label": "Gestión de mensajes de seguimiento",
+        "description": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual. Pulsa {{shortcut}} para hacer lo contrario en un solo mensaje.",
+        "descriptionNoShortcut": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual.",
+        "queue": "Poner en cola",
+        "steer": "Redirigir"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Pulsa una tecla…",
+      "unset": "Sin asignar",
+      "needsModifier": "Mantén también Ctrl, Alt o Cmd."
     },
     "respectGitignore": {
       "label": "Respetar .gitignore en el contexto del editor",

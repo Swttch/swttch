@@ -106,7 +106,8 @@
     },
     "placeholder": {
       "queueMessage": "Encolar otro mensaje...",
-      "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar"
+      "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar",
+      "steerMessage": "Ajustar la ejecución actual..."
     },
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",

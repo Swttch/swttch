@@ -2,7 +2,7 @@
   "layout": {
     "title": "تنظیمات",
     "back": "بازگشت",
-    "toggleMenu": "تغییر نمایش منو",
+    "toggleSidebar": "نمایش/پنهان کردن نوار کناری",
     "close": "بستن"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "sponsor": "حمایت"
   },
   "scope": {
+    "label": "دامنه تنظیمات",
     "global": "تنظیمات کاربر (سراسری)",
     "globalShort": "کاربر (سراسری)",
     "project": "تنظیمات پروژه (محلی)",
@@ -62,9 +63,7 @@
       },
       "shortcut": {
         "label": "میان‌بر",
-        "description": "کلیدی که ضبط را شروع و متوقف می‌کند. برای تعیین ترکیب جدید فشار دهید.",
-        "recording": "کلیدی را فشار دهید…",
-        "needsModifier": "هم‌زمان Ctrl، Alt یا Cmd را نگه دارید."
+        "description": "کلیدی که ضبط را شروع و متوقف می‌کند. برای تعیین ترکیب جدید فشار دهید."
       },
       "kit": {
         "required": "ورودی صوتی به @swttch/extend-kit نیاز دارد. از بالا سمت راست نصب کنید.",
@@ -92,9 +91,35 @@
     "uiDirection": {
       "label": "فعال‌سازی RTL (راست‌به‌چپ)"
     },
-    "useCtrlEnterToSend": {
-      "label": "استفاده از {{modifier}}+Enter برای ارسال",
-      "description": "وقتی فعال باشد، برای ارسال دستورها به‌جای Enter از Ctrl/Cmd+Enter استفاده کنید. این کار به Enter اجازه می‌دهد خط جدید ایجاد کند."
+    "composer": {
+      "title": "سازنده",
+      "custom": "سفارشی",
+      "conflictWithSend": "این همان ترکیب میان‌بر ارسال است",
+      "conflictWithNewline": "این همان ترکیب میان‌بر خط جدید است",
+      "send": {
+        "label": "میان‌بر ارسال",
+        "description": "کلیدی را که دستور را ارسال می‌کند تنظیم می‌کند",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "میان‌بر خط جدید",
+        "description": "کلیدی که به‌جای ارسال دستور، خط جدیدی درج می‌کند",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      },
+      "followUp": {
+        "label": "نحوهٔ رفتار پیام‌های پیگیری",
+        "description": "در حین اجرای {{appName}}، پیام‌های پیگیری را در صف قرار دهید یا اجرای فعلی را تغییر مسیر دهید. برای یک پیام، {{shortcut}} را بزنید تا برعکس عمل شود.",
+        "descriptionNoShortcut": "در حین اجرای {{appName}}، پیام‌های پیگیری را در صف قرار دهید یا اجرای فعلی را تغییر مسیر دهید.",
+        "queue": "در صف قرار دادن",
+        "steer": "تغییر مسیر پاسخ"
+      }
+    },
+    "shortcutInput": {
+      "recording": "کلیدی را فشار دهید…",
+      "unset": "تنظیم‌نشده",
+      "needsModifier": "هم‌زمان Ctrl، Alt یا Cmd را نگه دارید."
     },
     "respectGitignore": {
       "label": "رعایت .gitignore برای زمینه ویرایشگر",

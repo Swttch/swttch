@@ -3,6 +3,7 @@ export * from './active-session';
 export * from './announcement';
 export * from './cli-update';
 export * from './client-env';
+export * from './composer-shortcut';
 export * from './control-request-command';
 export * from './diff-surface';
 export * from './mcp';

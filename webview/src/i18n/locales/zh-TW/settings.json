@@ -2,7 +2,7 @@
   "layout": {
     "title": "設定",
     "back": "返回",
-    "toggleMenu": "切換選單",
+    "toggleSidebar": "顯示/隱藏側邊欄",
     "close": "關閉"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "sponsor": "贊助"
   },
   "scope": {
+    "label": "設定範圍",
     "global": "使用者設定(全域)",
     "globalShort": "使用者(全域)",
     "project": "專案設定(本機)",
@@ -62,9 +63,7 @@
       },
       "shortcut": {
         "label": "快速鍵",
-        "description": "開始和停止錄音的按鍵。按下以設定新的組合。",
-        "recording": "請按鍵…",
-        "needsModifier": "需要同時按住 Ctrl、Alt 或 Cmd。"
+        "description": "開始和停止錄音的按鍵。按下以設定新的組合。"
       },
       "kit": {
         "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
@@ -92,9 +91,35 @@
     "uiDirection": {
       "label": "啟用 RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "使用 {{modifier}}+Enter 傳送",
-      "description": "啟用後,將以 Ctrl/Cmd+Enter 傳送提示,而不只是按 Enter。這樣 Enter 鍵就能用來換行。"
+    "composer": {
+      "title": "撰寫工具",
+      "custom": "自訂",
+      "conflictWithSend": "與傳送快捷鍵相同的組合",
+      "conflictWithNewline": "與換行快捷鍵相同的組合",
+      "send": {
+        "label": "傳送快捷鍵",
+        "description": "設定傳送提示詞的按鍵",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "換行快捷鍵",
+        "description": "在不傳送提示詞的情況下插入新行的按鍵",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      },
+      "followUp": {
+        "label": "後續訊息處理方式",
+        "description": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。按 {{shortcut}} 可針對單則訊息執行相反操作。",
+        "descriptionNoShortcut": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。",
+        "queue": "加入佇列",
+        "steer": "引導"
+      }
+    },
+    "shortcutInput": {
+      "recording": "請按鍵…",
+      "unset": "未設定",
+      "needsModifier": "需要同時按住 Ctrl、Alt 或 Cmd。"
     },
     "respectGitignore": {
       "label": "編輯器上下文遵循 .gitignore",

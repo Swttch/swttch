@@ -193,6 +193,36 @@ describe('isBindableShortcut', () => {
     expect(isBindableShortcut(shortcutPartsFromEvent(press('Alt', { alt: true })))).toBe(false);
   });
 
+  it('refuses Shift+Enter unless the caller has a use for it', () => {
+    // The default: a window-wide shortcut on Shift+Enter would eat the
+    // composer's line break from a screen that never mentions the composer.
+    expect(isBindableShortcut(shortcutPartsFromEvent(press('Enter', { shift: true })))).toBe(false);
+  });
+
+  it('accepts Shift with a key that types nothing, when asked to', () => {
+    const allow = { allowShiftAlone: true };
+    for (const key of ['Enter', 'Tab', 'ArrowUp', 'F5']) {
+      expect(isBindableShortcut(shortcutPartsFromEvent(press(key, { shift: true })), allow)).toBe(
+        true,
+      );
+    }
+  });
+
+  it('still refuses Shift with a key that types a character', () => {
+    // Shift+D is how the user types 'D'; allowShiftAlone does not change that.
+    expect(
+      isBindableShortcut(shortcutPartsFromEvent(press('d', { shift: true })), {
+        allowShiftAlone: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('still refuses a bare non-typing key, with or without the allowance', () => {
+    expect(
+      isBindableShortcut(shortcutPartsFromEvent(press('Enter')), { allowShiftAlone: true }),
+    ).toBe(false);
+  });
+
   it('knows which keys are modifiers', () => {
     expect(isModifierOnly('Shift')).toBe(true);
     expect(isModifierOnly('d')).toBe(false);

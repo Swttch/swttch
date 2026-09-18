@@ -2,7 +2,7 @@
   "layout": {
     "title": "Settings",
     "back": "Back",
-    "toggleMenu": "Toggle menu",
+    "toggleSidebar": "Show/hide sidebar",
     "close": "Close"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "sponsor": "Sponsor"
   },
   "scope": {
+    "label": "Settings scope",
     "global": "User Settings (Global)",
     "globalShort": "User (Global)",
     "project": "Project Settings (Local)",
@@ -62,9 +63,7 @@
       },
       "shortcut": {
         "label": "Shortcut",
-        "description": "The key that starts and stops recording. Press it to set a new combination.",
-        "recording": "Press a key…",
-        "needsModifier": "Hold Ctrl, Alt or Cmd as well."
+        "description": "The key that starts and stops recording. Press it to set a new combination."
       },
       "kit": {
         "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
@@ -92,9 +91,35 @@
     "uiDirection": {
       "label": "Enable RTL(Right-to-left)"
     },
-    "useCtrlEnterToSend": {
-      "label": "Use {{modifier}}+Enter To Send",
-      "description": "When enabled, use Ctrl/Cmd+Enter to send prompts instead of just Enter. This allows Enter to create new lines."
+    "composer": {
+      "title": "Composer",
+      "custom": "Custom",
+      "conflictWithSend": "This is the same combination as the send shortcut",
+      "conflictWithNewline": "This is the same combination as the newline shortcut",
+      "send": {
+        "label": "Send shortcut",
+        "description": "Sets the key that sends the prompt",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "Newline shortcut",
+        "description": "The key that inserts a new line instead of sending the prompt",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      },
+      "followUp": {
+        "label": "Follow-up behavior",
+        "description": "Queue follow-ups while {{appName}} runs or steer the current run. Press {{shortcut}} to do the opposite for one message.",
+        "descriptionNoShortcut": "Queue follow-ups while {{appName}} runs or steer the current run.",
+        "queue": "Queue",
+        "steer": "Steer"
+      }
+    },
+    "shortcutInput": {
+      "recording": "Press a key…",
+      "unset": "Not set",
+      "needsModifier": "Hold Ctrl, Alt or Cmd as well."
     },
     "respectGitignore": {
       "label": "Respect .gitignore for editor context",

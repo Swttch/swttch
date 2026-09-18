@@ -106,7 +106,8 @@
     },
     "placeholder": {
       "queueMessage": "Mettre un autre message en file d'attente...",
-      "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, @@ pour interroger une autre session, {{send}} pour envoyer"
+      "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, @@ pour interroger une autre session, {{send}} pour envoyer",
+      "steerMessage": "Ajuster l’exécution en cours..."
     },
     "ariaLabel": "Message à Claude",
     "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place.",

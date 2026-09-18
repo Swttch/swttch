@@ -207,7 +207,11 @@ export function Select(props: Props) {
           else open();
         }}
         onKeyDown={handleKeyDown}
-        className={`inline-flex items-center justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+        // Sized by its value, with a floor. Letting it shrink to the text alone
+        // gave a column of dropdowns no two of which were the same width, and a
+        // two-character value collapsed into a target barely wider than its own
+        // chevron.
+        className={`inline-flex min-w-32 items-center justify-between gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
           selected?.italic ? 'italic' : ''
         } ${className}`}
       >

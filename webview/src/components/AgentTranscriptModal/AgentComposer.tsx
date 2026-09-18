@@ -3,7 +3,7 @@ import { useTranslation } from '@/i18n';
 import { RichInput } from '@/pages/ChatPage/ChatInput/RichInput';
 import { ActionButtons } from '@/pages/ChatPage/ChatInput/ActionButtons';
 import { useIMEComposition } from '@/pages/ChatPage/ChatInput/RichInput/useIMEComposition';
-import { shouldSubmitOnEnter } from '@/pages/ChatPage/ChatInput/shouldSubmitOnEnter';
+import { composerBindings, composerKeyAction, ComposerKeyAction } from '@/utils/composerShortcut';
 import { insertNewlineAtCursor } from '@/pages/ChatPage/ChatInput/RichInput/insertNewlineAtCursor';
 import { useSettings } from '@/contexts/SettingsContext';
 import { isMobile } from '@/config/environment';
@@ -138,35 +138,35 @@ export function AgentComposer(props: Props) {
       return;
     }
 
-    // Enter is double-detected (key OR keyCode 13) and the composition truth is
-    // ours OR'd with the native flag, exactly as the main composer does it —
-    // under JCEF a non-English layout surfaces Enter with a different `key`,
-    // and the native `isComposing` alone is unreliable (issue #215).
-    const isEnterKey = e.key === 'Enter' || e.nativeEvent.keyCode === 13;
-    if (!isEnterKey) return;
-
+    // The composition truth is ours OR'd with the native flag, exactly as the
+    // main composer does it — under JCEF the native `isComposing` alone is
+    // unreliable (issue #215).
     const isIMEComposing = ime.isComposing() || e.nativeEvent.isComposing;
-    const willSubmit = shouldSubmitOnEnter(
+    const action = composerKeyAction(
       {
         key: e.key,
+        code: e.nativeEvent.code,
         keyCode: e.nativeEvent.keyCode,
         shiftKey: e.shiftKey,
         ctrlKey: e.ctrlKey,
+        altKey: e.altKey,
         metaKey: e.metaKey,
         isComposing: isIMEComposing,
         isMobile: isMobile(),
       },
-      settings.useCtrlEnterToSend ?? false,
+      composerBindings(settings),
     );
-    if (willSubmit) {
+
+    if (action === ComposerKeyAction.Send) {
       e.preventDefault();
       send();
       return;
     }
-    // Not a submit: write the line break ourselves, since under JCEF a plain
-    // Enter is otherwise swallowed as an IME commit. While composing we leave
-    // the keystroke to the composition.
-    if (!isIMEComposing) {
+
+    // Write the line break ourselves, since under JCEF a plain Enter is
+    // otherwise swallowed as an IME commit. composerKeyAction has already
+    // refused to act while a composition is in flight.
+    if (action === ComposerKeyAction.Newline) {
       e.preventDefault();
       insertNewlineAtCursor();
       setText(e.currentTarget.textContent ?? '');

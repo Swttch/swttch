@@ -2,7 +2,7 @@
   "layout": {
     "title": "設定",
     "back": "戻る",
-    "toggleMenu": "メニューの切り替え",
+    "toggleSidebar": "サイドバーの表示/非表示",
     "close": "閉じる"
   },
   "nav": {
@@ -22,6 +22,7 @@
     "sponsor": "スポンサー"
   },
   "scope": {
+    "label": "設定の範囲",
     "global": "ユーザー設定(グローバル)",
     "globalShort": "ユーザー(グローバル)",
     "project": "プロジェクト設定(ローカル)",
@@ -62,9 +63,7 @@
       },
       "shortcut": {
         "label": "ショートカット",
-        "description": "録音を開始・停止するキーです。押して新しい組み合わせを設定します。",
-        "recording": "キーを押してください…",
-        "needsModifier": "Ctrl・Alt・Cmd のいずれかと一緒に押してください。"
+        "description": "録音を開始・停止するキーです。押して新しい組み合わせを設定します。"
       },
       "kit": {
         "required": "音声入力には @swttch/extend-kit が必要です。右上からインストールしてください。",
@@ -92,9 +91,35 @@
     "uiDirection": {
       "label": "RTL(Right-to-left) を有効化"
     },
-    "useCtrlEnterToSend": {
-      "label": "送信に{{modifier}}+Enterを使用",
-      "description": "有効にすると、Enterだけでなく Ctrl/Cmd+Enter でプロンプトを送信します。Enterキーは改行に使用できるようになります。"
+    "composer": {
+      "title": "コンポーザー",
+      "custom": "カスタム",
+      "conflictWithSend": "送信ショートカットと同じ組み合わせです",
+      "conflictWithNewline": "改行ショートカットと同じ組み合わせです",
+      "send": {
+        "label": "送信ショートカット",
+        "description": "プロンプトを送信するキーを設定します",
+        "enter": "Enter",
+        "modEnter": "{{modifier}} + Enter"
+      },
+      "newline": {
+        "label": "改行ショートカット",
+        "description": "プロンプトを送信せずに改行を挿入するキーです",
+        "shiftEnter": "Shift + Enter",
+        "enter": "Enter"
+      },
+      "followUp": {
+        "label": "フォローアップの動作",
+        "description": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。{{shortcut}} を押すと、1 件のメッセージだけ逆の動作になります。",
+        "descriptionNoShortcut": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。",
+        "queue": "キューに追加",
+        "steer": "今すぐ反映"
+      }
+    },
+    "shortcutInput": {
+      "recording": "キーを押してください…",
+      "unset": "未設定",
+      "needsModifier": "Ctrl・Alt・Cmd のいずれかと一緒に押してください。"
     },
     "respectGitignore": {
       "label": "エディタコンテキストで.gitignoreを尊重",

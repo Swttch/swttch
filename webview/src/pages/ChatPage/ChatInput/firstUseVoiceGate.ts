@@ -1,7 +1,7 @@
 /**
  * What pressing the microphone should do, before anything happens.
  *
- * Extracted from ChatInput the way `shouldSubmitOnEnter` was: the branching is
+ * Extracted from ChatInput the way `composerKeyAction` was: the branching is
  * the part worth pinning down, and mocking ChatInput's whole context tree to
  * reach it costs more than it proves.
  */
