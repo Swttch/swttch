@@ -14,7 +14,7 @@ that every time and move across by hand.
 ## What it does
 
 In **Settings → Account & Pool**, drag one account onto another and hold: the two
-are grouped into a **pool**. When a limit is reached the next account in that pool with confirmed available usage
+are grouped into a **pool**. When a limit is reached the next account in that pool
 takes over and **the conversation carries on where it stopped.**
 
 Once the switch is through, the answer resumes from the point it was cut off. No
@@ -60,9 +60,19 @@ moment: switch if there is a next account, wait for the reset if there is not.
 
 When a streamed answer reaches a limit, the plugin first asks the external usage
 battery (`ccb`) for each saved pool member's usage. It does this **without activating
-each account in turn**. The next account in pool order with confirmed available
-usage is selected. A stale reading for the account that just hit the limit cannot
-send the conversation straight back to that same account.
+each account in turn**. A stale reading for the account that just hit the limit
+cannot send the conversation straight back to that same account.
+
+Accounts are chosen in this order:
+
+1. The first account in pool order with **confirmed available usage**
+2. If there is none, the first account in pool order **not confirmed exhausted**
+3. If every account is confirmed exhausted, the one that resets soonest
+
+A reading removes an account from the running **only when it proves exhaustion**.
+An account whose lookup failed, or whose answer could not be read, stays a
+candidate. Whether it will work is uncertain, but that the current account has run
+out is something Claude has already said.
 
 Usage reports can lag behind Claude. After a switch, the existing chat sends a
 continuation instruction to Claude. If Claude still rejects it, that account's
@@ -102,10 +112,18 @@ or stopping the session cancels an account selection still in progress.
 
 A lookup can fail because of an expired login, a network error, or a missing or
 older battery CLI. A failed or incomplete result is **unknown**, not “unused” and
-not “exhausted.” If another account has confirmed available usage, it can still be
-selected. If none is confirmed available and any reading is unknown, the plugin
-keeps the current account and falls back to its limit notice and auto-resume
-controls. It does not claim to know which account resets first.
+not “exhausted.”
+
+**A failed lookup does not stop the switch.** An account with confirmed available
+usage is used first. If none is confirmed, an account whose lookup failed is used
+anyway, in pool order. If the message sent after that switch hits a limit too, that
+account's limit notice appears in the conversation and the pool rotates one more
+step. Trying costs one message; not trying costs the whole feature every time a
+usage query is slow or refused.
+
+Only when every account is confirmed exhausted does the plugin keep the current
+account and fall back to its limit notice and auto-resume controls. Reset times are
+compared only where a lookup reported one; nothing is guessed.
 
 Saved-account queries require the battery CLI capability shipped with
 `@swttch/extend-kit` **0.5.0**. An older CLI is detected before querying, so its
@@ -113,6 +131,25 @@ current-account response cannot be mistaken for another account's usage. The
 capability check has a five-second timeout and each usage query a fifteen-second
 timeout. Queries run together, so a larger pool does not multiply the wait by
 fifteen seconds per member.
+
+## When several conversations hit the limit at once
+
+With several tabs open at the same time, several conversations reach a limit in the
+same moment.
+
+Usage queries for the same account that overlap in time are **asked once and
+shared**. Spawning one query per conversation is what makes some of them slow down
+or get refused, and those conversations then find nowhere to switch to. The shared
+answer is dropped as soon as the query finishes, so the next limit asks again.
+
+Account switches themselves happen **one at a time**. There is only one credential
+slot, so two conversations switching together means the later one undoes the
+earlier. When another conversation has already moved to the same account, the
+credentials are left alone and only this conversation restarts on the new account.
+
+Each conversation rotates off **the account it was actually running as**. If a
+neighbouring conversation switched first and changed which account is active, this
+one still does not skip the account it has to leave.
 
 If your login has expired, sign in again using the normal account controls. If the
 companion is outdated, update it using the existing dependency controls; installed
