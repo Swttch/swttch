@@ -19,6 +19,8 @@ let advertised: string[] = [];
 let ccbPath: string | null = '/global/bin/ccb';
 /** A real directory laid out like a global node_modules, since the entry is stat'd. */
 let globalRoot = '';
+/** How many times the fake CLI was asked what it supports. */
+let capabilityProbes = 0;
 
 vi.mock('../command', () => ({
   ShellKind: { LoginInteractive: 'login-interactive', Direct: 'direct' },
@@ -32,6 +34,7 @@ vi.mock('../command', () => ({
     }
     exec() {
       if (this.args.includes('--capabilities')) {
+        capabilityProbes += 1;
         return Promise.resolve({ stdout: JSON.stringify({ capabilities: advertised }), stderr: '' });
       }
       // Root discovery: answer the one place the fixture lays the package out.
@@ -47,6 +50,7 @@ const { hasSettingsEnvCapability, resetExtendKitCache } = await import('../exten
 beforeEach(async () => {
   resetExtendKitCache();
   ccbPath = '/global/bin/ccb';
+  capabilityProbes = 0;
   globalRoot = await mkdtemp(join(tmpdir(), 'ccg-kit-caps-'));
   const packageDir = join(globalRoot, '@swttch', 'extend-kit');
   await mkdir(join(packageDir, 'bin'), { recursive: true });
@@ -78,5 +82,32 @@ describe('hasSettingsEnvCapability', () => {
     // The usage panel turns a "no" into "update ccb". A throw here would instead surface as
     // an unexplained failure of the whole panel.
     expect(await hasSettingsEnvCapability('/project/a')).toBe(false);
+  });
+});
+
+describe('asking what the kit supports', () => {
+  it('spawns the probe once and reuses the answer', async () => {
+    advertised = ['oauth.usage.account-file', 'stt.stream', 'settings.env'];
+
+    await hasSettingsEnvCapability('/project/a');
+    await hasSettingsEnvCapability('/project/a');
+    await hasSettingsEnvCapability('/project/b');
+
+    // Asking costs a process spawn, measured at about 120ms, and the usage panel asks on
+    // every refresh. The answer cannot change under a running install.
+    expect(capabilityProbes).toBe(1);
+  });
+
+  it('asks again after the install is refreshed', async () => {
+    advertised = ['stt.stream'];
+    expect(await hasSettingsEnvCapability()).toBe(false);
+
+    // Installing or updating the kit goes through this reset, and it is the one thing that
+    // can change the answer.
+    resetExtendKitCache();
+    advertised = ['stt.stream', 'settings.env'];
+
+    expect(await hasSettingsEnvCapability()).toBe(true);
+    expect(capabilityProbes).toBe(2);
   });
 });

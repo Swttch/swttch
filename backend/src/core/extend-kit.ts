@@ -98,7 +98,15 @@ const CLOSE_TIMEOUT_MS = 5_000;
 
 let cachedRoots: string[] | null = null;
 let cachedEntry: string | null = null;
-let cachedSttCapable = false;
+/**
+ * What the installed kit says it supports, cached until something changes the install.
+ *
+ * Asking costs a process spawn — measured at about 120ms — and the usage panel asks on every
+ * refresh, which used to mean two `ccb` spawns per reading where one would do. The answer
+ * cannot change under a running install, and the one thing that does change it (installing or
+ * updating the kit) already goes through {@link resetExtendKitCache}.
+ */
+let cachedCapabilities: string[] | null = null;
 
 /** Last non-empty line of shell output — rc files print noise before it. */
 function lastLine(stdout: string): string | null {
@@ -368,26 +376,32 @@ function ccbCommand(entry: string, args: string[], timeout?: number, cwd?: strin
  *
  * @throws ExtendKitTooOldError when the kit predates `ccb stt`.
  */
-async function assertSttCapable(entry: string): Promise<void> {
-  if (cachedSttCapable) return;
+async function readCapabilities(entry: string, workingDir?: string): Promise<string[]> {
+  if (cachedCapabilities) return cachedCapabilities;
 
   let capabilities: string[] = [];
   try {
-    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000).exec();
+    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir).exec();
     const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
     capabilities = parsed.capabilities ?? [];
   } catch {
     // A kit old enough to not know --capabilities fails here, which is the same
-    // answer as a kit that knows the flag but not stt.
+    // answer as a kit that knows the flag but not the capability being asked about.
     capabilities = [];
   }
+
+  cachedCapabilities = capabilities;
+  return capabilities;
+}
+
+async function assertSttCapable(entry: string): Promise<void> {
+  const capabilities = await readCapabilities(entry);
 
   for (const required of [STT_CAPABILITY, SETTINGS_ENV_CAPABILITY]) {
     if (!capabilities.includes(required)) {
       throw new ExtendKitTooOldError(await getExtendKitVersion(), required);
     }
   }
-  cachedSttCapable = true;
 }
 
 /**
@@ -400,11 +414,9 @@ async function assertSttCapable(entry: string): Promise<void> {
 export async function hasSettingsEnvCapability(workingDir?: string): Promise<boolean> {
   try {
     const entry = await resolveCcbEntry();
-    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir).exec();
-    const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
-    return (parsed.capabilities ?? []).includes(SETTINGS_ENV_CAPABILITY);
+    return (await readCapabilities(entry, workingDir)).includes(SETTINGS_ENV_CAPABILITY);
   } catch {
-    // Not installed, or too old to know the flag. Either way it does not have the capability.
+    // Not installed. Either way it does not have the capability.
     return false;
   }
 }
@@ -585,5 +597,5 @@ export async function getExtendKitVersion(): Promise<string | null> {
 export function resetExtendKitCache(): void {
   cachedRoots = null;
   cachedEntry = null;
-  cachedSttCapable = false;
+  cachedCapabilities = null;
 }

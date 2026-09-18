@@ -130,6 +130,10 @@ describe('fetchAnnouncements', () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    // The fetch these tests used to stub is gone; the transport is a module mock now, and
+    // `unstubAllGlobals` does not reach it. Leaving it pointed at the previous test's spy is
+    // how one test's request gets counted against the next one.
+    proxiedRequest.mockReset();
   });
 
   it('sends ONLY locale + pluginVersion in the query — no install id / uuid / PII', async () => {

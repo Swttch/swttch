@@ -123,6 +123,14 @@ async function loadTelemetry(
 async function drainThenUnmock() {
   if (loadedTelemetry) await loadedTelemetry.flushTelemetry();
   vi.unstubAllGlobals();
+  // 전송이 전역 fetch가 아니라 proxiedRequest로 나가므로 `unstubAllGlobals`가 걷어주지
+  // 않는다. 걷지 않으면 위 주석이 말하는 그 경로가 그대로 되살아난다 — 드레인을 빠져나간
+  // 전송이 **다음 테스트가 심어둔 fetchMock**을 부르고, "보내지 않아야 할 때 1번 호출됨"으로
+  // 산발 실패한다. 실제로 이 파일을 module mock으로 옮긴 직후 그렇게 실패했다.
+  // 중립 구현을 남겨두는 이유는, 늦게 도착한 전송이 구현 없는 mock을 만나 `res.ok`에서
+  // 터지는 것까지 막기 위해서다.
+  proxiedRequest.mockReset();
+  proxiedRequest.mockResolvedValue({ ok: true, status: 200, body: '' });
   vi.doUnmock('../handlers/getVersion');
 }
 
