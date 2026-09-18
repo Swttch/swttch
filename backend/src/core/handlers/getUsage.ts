@@ -435,11 +435,17 @@ export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse
   const { stdout } = await new Command('ccb', ['oauth', 'usage', '--json'], {
     timeout: SPAWN_TIMEOUT_MS,
     cwd: workingDir,
-    // Tell ccb the budget instead of only enforcing it from out here. Killing the
-    // child at the mark leaves whatever its shell had printed by then standing in
-    // for an explanation; given the budget, ccb finishes inside it and reports
-    // which phase stalled and whether a proxy was involved.
-    env: { CCB_REQUEST_TIMEOUT_MS: String(CCB_REQUEST_BUDGET_MS) },
+    env: {
+      // Tell ccb the budget instead of only enforcing it from out here. Killing the
+      // child at the mark leaves whatever its shell had printed by then standing in
+      // for an explanation; given the budget, ccb finishes inside it and reports
+      // which phase stalled and whether a proxy was involved.
+      CCB_REQUEST_TIMEOUT_MS: String(CCB_REQUEST_BUDGET_MS),
+      // And the same strip the chat spawn gets. `ccb` authenticates with the same credential
+      // `claude` does, so a token inherited from whatever launched the IDE must be discarded
+      // here too — otherwise this panel reports usage for an account the chat never uses.
+      ...(await Claude.authStripEnv(workingDir)),
+    },
     shell: ShellKind.LoginInteractive,
   }).exec();
   // Interactive login shells (`-l -i`) source startup files like .bashrc, which on

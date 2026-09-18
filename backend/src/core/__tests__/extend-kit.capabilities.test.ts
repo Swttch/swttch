@@ -43,7 +43,14 @@ vi.mock('../command', () => ({
   },
 }));
 
-vi.mock('../claude', () => ({ Claude: { applyConfigDir: vi.fn().mockResolvedValue(undefined) } }));
+// Every ccb spawn is handed the same env the chat spawn gets, so the strip is part of the
+// call path now even for a capability probe.
+vi.mock('../claude', () => ({
+  Claude: {
+    applyConfigDir: vi.fn().mockResolvedValue(undefined),
+    authStripEnv: vi.fn().mockResolvedValue({}),
+  },
+}));
 
 const { hasSettingsEnvCapability, resetExtendKitCache } = await import('../extend-kit');
 

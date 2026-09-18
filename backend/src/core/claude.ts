@@ -157,8 +157,13 @@ export class Claude {
    * stripped, so `auth status` could report a "logged in" state the chat then didn't use.
    * Returns `{ KEY: undefined }` pairs; child_process omits undefined-valued keys from the
    * spawned env. ANTHROPIC_API_KEY is never stripped — see getStrippableAuthEnvKeys.
+   *
+   * Not private, because the `ccb` spawns need the same strip and do not go through
+   * {@link spawnAuthed}: they run a different binary. A `ccb` that authenticates with a
+   * credential the chat spawn discards would report usage for one account while the chat
+   * talks to another.
    */
-  private static async authStripEnv(workingDir?: string): Promise<Record<string, undefined>> {
+  static async authStripEnv(workingDir?: string): Promise<Record<string, undefined>> {
     const keys = await getStrippableAuthEnvKeys(workingDir);
     if (keys.length > 0) {
       console.error('[node-backend]', `Stripping inherited auth env from CLI: ${keys.join(', ')}`);

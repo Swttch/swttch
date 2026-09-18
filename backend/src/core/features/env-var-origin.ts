@@ -141,5 +141,35 @@ export async function traceEnvVarOrigins(name: string, workingDir?: string): Pro
   }
 
   const results = await Promise.all(searches);
-  return results.flat();
+  return rankByAuthority(results.flat(), workingDir);
+}
+
+/**
+ * Order the places a variable is set so the one that actually decides it comes first.
+ *
+ * The list is read top-down by someone about to edit a file, so the first line has to be the
+ * file worth editing. Claude's settings files win over anything the process merely inherited,
+ * and a project's settings win over the global ones — measured against `claude`, and matched
+ * by features/settings-env.ts. A shell startup file listed first would send someone to change
+ * a value that is overridden the moment it is read.
+ *
+ * Plugin settings sit between the two: they supply CLAUDE_CONFIG_DIR, which no settings file
+ * may define, so for that one name they are the deciding file.
+ *
+ * Stable within each rank, so the search order above still decides ties.
+ */
+function rankByAuthority(origins: EnvVarOrigin[], workingDir?: string): EnvVarOrigin[] {
+  // Compared against the same rewrite the paths carry: `path` has already had the home
+  // directory replaced with `~`, so an untouched workingDir would never match one.
+  const projectPrefix = workingDir === undefined ? undefined : displayPath(workingDir);
+  const rank = (origin: EnvVarOrigin): number => {
+    const inProject = projectPrefix !== undefined && origin.path.startsWith(projectPrefix);
+    if (origin.kind === 'claude-settings') return inProject ? 0 : 1;
+    if (origin.kind === 'plugin-settings') return inProject ? 2 : 3;
+    return 4;
+  };
+  return origins
+    .map((origin, index) => ({ origin, index }))
+    .sort((a, b) => rank(a.origin) - rank(b.origin) || a.index - b.index)
+    .map(({ origin }) => origin);
 }

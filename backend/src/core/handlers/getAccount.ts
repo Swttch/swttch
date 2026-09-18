@@ -77,10 +77,15 @@ export async function getAccountHandler(
   _bridge: Bridge,
 ): Promise<void> {
   // Resolve this context's CLAUDE_CONFIG_DIR onto process.env so `auth status` reports
-  // the profile for the active workingDir (project > global), matching chat. Only when a
-  // workingDir is supplied — otherwise keep the already-active context. (#123)
+  // the profile for the active workingDir (project > global), matching chat. (#123)
+  //
+  // Unconditional. Skipping when no workingDir was supplied does not "keep the context
+  // unset" — process.env holds one value for the whole backend, so it keeps whichever
+  // project last wrote one, and this handler would report that project's account as the
+  // global one. No working directory resolves to the global value, which is the answer a
+  // message that named no project is asking for.
   const workingDir = (message.payload as { workingDir?: string })?.workingDir;
-  if (workingDir) await Claude.applyConfigDir(workingDir);
+  await Claude.applyConfigDir(workingDir);
 
   const resolution = await runClaudeAuthStatus(workingDir);
 

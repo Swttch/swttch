@@ -81,8 +81,9 @@ export async function getUsageReportHandler(
   }
 
   try {
-    // Read credentials from the same profile as chat when a workingDir is given (#123).
-    if (workingDir) await Claude.applyConfigDir(workingDir);
+    // Read credentials from the same profile as chat (#123). Unconditional for the same
+    // reason as everywhere else: skipping leaves the previous project's value, not none.
+    await Claude.applyConfigDir(workingDir);
     const report = await runUsageReport(workingDir);
     cachedReport = report;
     cachedAt = Date.now();

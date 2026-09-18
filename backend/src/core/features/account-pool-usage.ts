@@ -22,18 +22,22 @@ export async function fetchAccountUsage(accountId: string, workingDir?: string):
   // Settle the Claude data directory before the child exists to inherit it. `Command` is the
   // generic runner and knows nothing about Claude, so it cannot do this the way Claude.exec does.
   await Claude.applyConfigDir(workingDir);
+  // The same strip the chat spawn gets, so this reads the account the chat actually uses.
+  // A saved-account query answers from a snapshot file, but the capability probe beside it
+  // does not, and neither should authenticate with a credential `claude` discards.
+  const env = await Claude.authStripEnv(workingDir);
   const binary = await new Command('ccb').which();
   if (!binary) throw new Error('The ccb CLI is not installed');
   // Old ccb versions ignore unrecognised flags: never let them silently query
   // the active account while claiming to have inspected another account.
-  const { stdout: capabilities } = await new Command(binary, ['--capabilities', '--json'], { timeout: 5000, cwd: workingDir }).exec();
+  const { stdout: capabilities } = await new Command(binary, ['--capabilities', '--json'], { timeout: 5000, cwd: workingDir, env }).exec();
   let supported = false;
   try {
     supported = (JSON.parse(capabilities) as { capabilities?: string[] }).capabilities?.includes(ACCOUNT_USAGE_CAPABILITY) === true;
   } catch { /* Old versions print help text. */ }
   if (!supported) throw new Error('Update ccb to enable saved-account usage queries');
   const { stdout } = await new Command(binary, ['oauth', 'usage', '--json',
-    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS, cwd: workingDir }).exec();
+    `--account-file=${accountSnapshotPath(accountId)}`], { timeout: USAGE_TIMEOUT_MS, cwd: workingDir, env }).exec();
   // Direct argv invocation preserves spaces in snapshot paths; no shell or token argument.
   try { return JSON.parse(stdout) as CcbUsageResponse; }
   catch { throw new Error('Invalid account usage response from ccb'); }

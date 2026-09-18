@@ -359,11 +359,44 @@ async function resolveCcbEntry(): Promise<string> {
  * stream writes raw bytes into stdin, and a shell in between is one more thing
  * that can transform them.
  */
-function ccbCommand(entry: string, args: string[], timeout?: number, cwd?: string): Command {
+function ccbCommand(
+  entry: string,
+  args: string[],
+  timeout?: number,
+  cwd?: string,
+  env?: NodeJS.ProcessEnv,
+): Command {
   // `cwd` is how the child learns which project it is answering for. It reads Claude's
   // settings files itself, and the project half of those lives under the working directory,
   // so without this a project's proxy or CLAUDE_CODE_OAUTH_TOKEN is simply not seen.
-  return new Command(process.execPath, [entry, ...args], { ...(timeout ? { timeout } : {}), cwd });
+  return new Command(process.execPath, [entry, ...args], {
+    ...(timeout ? { timeout } : {}),
+    cwd,
+    env,
+  });
+}
+
+/**
+ * The env overrides handed to a `ccb` child, matching what a `claude` child gets.
+ *
+ * `ccb` authenticates with the same credential `claude` does, so it has to be handed the same
+ * environment — otherwise the usage panel reports for one account while the chat talks to
+ * another, and dictation authenticates as a third. The strip is the part that matters: an
+ * OAuth token inherited from whatever launched the IDE is discarded for `claude` unless the
+ * user pinned it in settings.json, and a `ccb` that kept it would be answering for a
+ * credential the chat never uses.
+ *
+ * Whatever else the chat spawn adds rides along without being filtered. Which of them mean
+ * anything to `ccb` is `ccb`'s business, and a list of "the ones we thought were relevant" is
+ * the same shape of mistake as the proxy allow-list this branch removed.
+ */
+async function ccbEnv(workingDir?: string): Promise<NodeJS.ProcessEnv> {
+  return {
+    TERM: 'dumb',
+    CI: 'true',
+    CLAUDECODE: undefined,
+    ...(await Claude.authStripEnv(workingDir)),
+  };
 }
 
 /**
@@ -381,7 +414,7 @@ async function readCapabilities(entry: string, workingDir?: string): Promise<str
 
   let capabilities: string[] = [];
   try {
-    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir).exec();
+    const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir, await ccbEnv(workingDir)).exec();
     const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
     capabilities = parsed.capabilities ?? [];
   } catch {
@@ -450,7 +483,7 @@ export async function spawnSpeechToText(
   if (options.extraKeyterms?.length) args.push(`--keyterms=${options.extraKeyterms.join(',')}`);
   if (options.typedInterims) args.push('--interims');
 
-  const child = ccbCommand(entry, args, undefined, workingDir).spawn({
+  const child = ccbCommand(entry, args, undefined, workingDir, await ccbEnv(workingDir)).spawn({
     stdio: ['pipe', 'pipe', 'pipe'],
     // Never a shell: stdin carries raw audio bytes.
     shell: false,
@@ -558,7 +591,7 @@ export async function probeSpeechToTextAvailable(workingDir?: string): Promise<b
   // The same project the stream will run against, or the answer describes a different one.
   await Claude.applyConfigDir(workingDir);
 
-  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000, workingDir).exec();
+  const { stdout } = await ccbCommand(entry, ['stt', '--check', '--json'], 20_000, workingDir, await ccbEnv(workingDir)).exec();
   const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { available?: boolean };
   return parsed.available === true;
 }

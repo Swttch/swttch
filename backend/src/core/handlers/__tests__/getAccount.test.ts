@@ -4,6 +4,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../claude', () => ({
   Claude: {
     execAuthed: vi.fn(),
+    // Called unconditionally now: skipping when no workingDir is given would leave whichever
+    // project last wrote one, and this handler would report that project's account.
+    applyConfigDir: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
