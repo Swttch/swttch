@@ -30,9 +30,9 @@ const process = new ChildProcess();
 const ack = vi.spyOn(connections, 'sendTo').mockImplementation(() => {});
 vi.spyOn(connections, 'broadcastToAll').mockImplementation(() => {});
 vi.spyOn(connections, 'getProcess').mockReturnValue(process);
-function prepare(sourceMessageUuid = 'personal-limit') {
+function prepare(sourceMessageUuid = 'personal-limit', sessionId = 'session') {
   return prepareAccountPoolRecoveryHandler('tab-a', { type: MessageType.PREPARE_ACCOUNT_POOL_RECOVERY,
-    requestId: 'r', timestamp: 0, payload: { sessionId: 'session', sourceMessageUuid, model: 'opus' } }, connections, bridge);
+    requestId: 'r', timestamp: 0, payload: { sessionId, sourceMessageUuid, model: 'opus' } }, connections, bridge);
 }
 beforeEach(() => {
   vi.clearAllMocks(); state.recovery = null;
@@ -40,6 +40,9 @@ beforeEach(() => {
   vi.mocked(accountPoolSelectionRevision).mockReturnValue(0);
   vi.mocked(readRegistry).mockResolvedValue({ current: 'personal', accounts: {}, accountOrder: [], accountPools: [] });
   vi.mocked(selectAccountPoolAccount).mockResolvedValue({ accountId: 'company', resetsAt: '2026-09-08T01:00:00Z' });
+  // No process has been spawned in these tests, so the registry is the fallback —
+  // the same answer the handler gets before a session's first message.
+  vi.spyOn(connections, 'getAccountId').mockReturnValue(null);
 });
 describe('foreground account pool recovery', () => {
   it('checks usage before switching and restarting, then grants one continuation', async () => {
@@ -90,6 +93,42 @@ describe('foreground account pool recovery', () => {
     await prepare();
     expect(switchToAccount).not.toHaveBeenCalled();
     expect(state.recovery).toMatchObject({ accountId: 'personal', resetsAt: null, awaitingLimit: false });
+  });
+  it('rotates off the account this session runs as, not the one the registry names', async () => {
+    // Another session recovered a moment ago and moved the registry onto 'company'.
+    // This session's CLI is still authenticated as 'personal' and has to leave it.
+    vi.mocked(readRegistry).mockResolvedValue({ current: 'company', accounts: {}, accountOrder: [], accountPools: [] });
+    vi.spyOn(connections, 'getAccountId').mockReturnValue('personal');
+    await prepare();
+    expect(selectAccountPoolAccount).toHaveBeenCalledWith(expect.anything(), 'opus', expect.any(Function), 'personal');
+    expect(restartClaudeSessionProcess).toHaveBeenCalledWith(connections, 'session', process);
+    expect(ack).toHaveBeenLastCalledWith('tab-a', MessageType.ACK, expect.objectContaining({ continueInSession: true }));
+  });
+  it('restarts without switching when another session already moved the credentials', async () => {
+    vi.spyOn(connections, 'getAccountId').mockReturnValue('personal');
+    // The lookup is measured against 'personal'; by the time the switch is due,
+    // another session has put 'company' in the shared slot.
+    vi.mocked(readRegistry)
+      .mockResolvedValueOnce({ current: 'personal', accounts: {}, accountOrder: [], accountPools: [] })
+      .mockResolvedValue({ current: 'company', accounts: {}, accountOrder: [], accountPools: [] });
+    await prepare();
+    expect(switchToAccount).not.toHaveBeenCalled();
+    expect(restartClaudeSessionProcess).toHaveBeenCalledWith(connections, 'session', process);
+    expect(state.recovery).toMatchObject({ accountId: 'company', awaitingLimit: true });
+  });
+  it('never has two sessions swapping the shared credential slot at once', async () => {
+    const overlapping: string[] = [];
+    let switching = 0;
+    vi.mocked(switchToAccount).mockImplementation(async id => {
+      if (switching > 0) overlapping.push(id);
+      switching += 1;
+      await new Promise(resolve => setTimeout(resolve, 0));
+      switching -= 1;
+      return {} as never;
+    });
+    await Promise.all([prepare('limit-a', 'session-a'), prepare('limit-b', 'session-b')]);
+    expect(switchToAccount).toHaveBeenCalledTimes(2);
+    expect(overlapping).toEqual([]);
   });
   it('does not send a second reminder after reload once the first was claimed', async () => {
     state.recovery = { sourceMessageUuid: 'personal-limit', accountId: 'company', resetsAt: null,

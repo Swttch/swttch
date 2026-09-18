@@ -40,17 +40,30 @@ describe('account pool usage selection without credential changes', () => {
       async id => usage(100, id === 'personal' ? early : late)))
       .toEqual({ accountId: 'personal', resetsAt: early });
   });
-  it('does not classify a lookup failure as exhaustion', async () => {
+  it('still rotates onto an account whose lookup failed', async () => {
     expect(await selectAccountPoolAccount(registry(), 'opus', async id => {
       if (id === 'company') throw new Error('401');
       return usage(100);
-    })).toBeNull();
+    })).toEqual({ accountId: 'company', resetsAt: null });
   });
-  it('can still select a verified available account after another lookup fails', async () => {
+  it('rotates onto an account whose usage it cannot read', async () => {
+    expect(await selectAccountPoolAccount(registry(), 'opus', async id =>
+      id === 'company' ? { ...usage(100), five_hour: null } : usage(100)))
+      .toEqual({ accountId: 'company', resetsAt: null });
+  });
+  it('prefers a verified available account over an unread one earlier in the pool', async () => {
     expect(await selectAccountPoolAccount(registry(), 'opus', async id => {
       if (id === 'company') throw new Error('network');
       return usage(id === 'third' ? 1 : 100);
     })).toEqual({ accountId: 'third', resetsAt: null });
+  });
+  it('rotates around the account it is told ran out, not the registry current', async () => {
+    // Another session already switched the registry onto 'company'; this session's
+    // CLI is still running as 'personal', so 'company' is where it has to go.
+    const r = registry();
+    r.current = 'company';
+    expect(await selectAccountPoolAccount(r, 'opus', async id => usage(id === 'personal' ? 100 : 1), 'personal'))
+      .toEqual({ accountId: 'company', resetsAt: null });
   });
   it('does not retry the just-limited current account based on a lagging reading', async () => {
     expect(await selectAccountPoolAccount(registry(['personal', 'company']), 'opus',
