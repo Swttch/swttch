@@ -90,6 +90,42 @@ that is actually in effect. Saving the collision instead would leave you with a
 composer that had silently lost one of the two actions, while the screen
 claimed otherwise.
 
+## A message sent while Claude is working
+
+The third row in the section is about a different moment: you have already sent
+something, Claude is working on it, and you type again.
+
+| Option | What your message does |
+| --- | --- |
+| **Queue** | Waits until the current turn finishes, then goes. This is the default, and it is what the app has always done. |
+| **Steer** | Ends the current turn now and gets answered instead. |
+
+Steering is not a separate channel. It is the same interrupt the Stop button
+sends, and it is what a terminal user does by typing and pressing Escape: your
+message is already in the CLI's queue, so ending the turn makes the CLI pick it
+up and start a new one on it. The work done so far is still in the conversation,
+so Claude answers you knowing everything it had just found out.
+
+### Doing the opposite for one message
+
+You do not have to change the setting to make one message go the other way.
+There is a key for it, and it follows whatever your send shortcut is:
+
+| Your send shortcut | The one-off key |
+| --- | --- |
+| Enter | ⌘+Enter (Ctrl+Enter on Windows and Linux) |
+| ⌘+Enter | ⇧⌘+Enter |
+| A custom combination without Ctrl/Cmd | Ctrl/Cmd plus that combination |
+| A custom combination with Ctrl/Cmd but no Shift | Shift plus that combination |
+
+A send shortcut that already carries both has nothing left to add, so it has no
+one-off key. The row says nothing about one in that case rather than naming a
+key that would not work.
+
+The same is true when your newline shortcut happens to sit on the combination
+the table above would produce. The key you chose keeps it — a key you never
+chose does not get to take a setting you filled in.
+
 ## Enter always breaks the line
 
 Whatever the two rows say, an Enter that is not the send key inserts a line
@@ -147,3 +183,9 @@ whatever the send key is set to. Use the send button.
 **While an input method is composing, neither key fires.** Enter is how an IME
 commits a candidate, and that keystroke belongs to the composition. Press Enter
 again once the candidate is committed.
+
+**Steering ends the turn; it does not pause it.** There is no way to hand Claude
+a note while it keeps working — the CLI has no such channel, and inventing one
+would mean relying on something undocumented that could stop working without
+notice. What Steer does is what you could do by hand, faster: end the turn and
+ask again with everything already learned still in the conversation.
