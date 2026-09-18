@@ -1,6 +1,8 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
-import { groupIntoSendSections } from './groupIntoSendSections';
+import type { SendSection } from './groupIntoSendSections';
+import type { SessionSend } from '@/shared';
+import { CarriedSendHeader } from './SendIndex/CarriedSendHeader';
 import { ProjectSelectorPage } from '@/pages/ProjectSelectorPage';
 import { useSessionContext } from '../../contexts/SessionContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
@@ -25,6 +27,21 @@ interface Props {
   /** The CLI's retry progress; null when not retrying. */
   apiRetry?: { attempt: number; max: number } | null;
   mergedMessages: LoadedMessageDto[];
+  /**
+   * The same list split into one section per send.
+   *
+   * Computed by ChatPage rather than here because the send index needs it too,
+   * and it is a sibling of this component rather than a child. Splitting it in
+   * both places would mean the rail could hold a different set of sends than
+   * the transcript draws.
+   */
+  sections: SendSection[];
+  /**
+   * The send this page's opening run of entries is answering, when it is older
+   * than the page reaches. Null whenever the transcript begins with a send of
+   * its own, which is most of the time. See carriedSend.
+   */
+  carriedSend: SessionSend | null;
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
@@ -32,7 +49,7 @@ interface Props {
 
 export function ChatMessageArea(props: Props) {
   const { t } = useTranslation('chat');
-  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, hasMore, isLoadingMore, onLoadMore } = props;
+  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, sections, carriedSend, hasMore, isLoadingMore, onLoadMore } = props;
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry } = useChatStreamContext();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,7 +58,6 @@ export function ChatMessageArea(props: Props) {
   // the container directly — this component only renders the messages.
 
   // Above the early returns below: hooks cannot run conditionally.
-  const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
   const fold = useSectionFold();
   // Rewind and fork are answered from the whole transcript, so they are worked
   // out here and handed down rather than recomputed inside each send's menu.
@@ -105,7 +121,16 @@ export function ChatMessageArea(props: Props) {
       */}
       <SectionFoldContext.Provider value={fold}>
       <SendActionsContext.Provider value={sendActions}>
-      {sections.map(section => (
+      {sections.map(section => {
+        /*
+          A headless opening section takes its header from the send index. The
+          key on the wrapper becomes that send's uuid so a jump from the rail
+          finds this section — the rail names sends by uuid, and this one has
+          no loaded entry to supply it.
+        */
+        const carried = section.head === null ? carriedSend : null;
+
+        return (
         /*
           `data-send-section` is how the fold measures this section's reply
           before dropping it — see `useSectionFold`. It has to be an attribute
@@ -113,7 +138,8 @@ export function ChatMessageArea(props: Props) {
           (the gutter arrow and the ⋮ menu) sit several memoised layers below
           this list and reach the fold only through context.
         */
-        <div key={section.key} data-send-section={section.key}>
+        <div key={section.key} data-send-section={carried ? carried.uuid : section.key}>
+          {carried && <CarriedSendHeader preview={carried.preview} />}
           {/*
             The send is pinned to the top of the viewport for as long as its
             own reply is on screen, so the instruction that produced a long
@@ -187,7 +213,8 @@ export function ChatMessageArea(props: Props) {
             />
           )}
         </div>
-      ))}
+        );
+      })}
       </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
       {isStreaming && <StreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}

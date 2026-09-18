@@ -380,6 +380,7 @@ export async function loadSessionMessages(
   targetSessionId: string,
   beforeUuid?: string,
   limit?: number,
+  includeUuid?: string,
 ): Promise<PaginatedSessionMessages> {
   let activeChainMessages: SessionMessage[];
   try {
@@ -399,7 +400,31 @@ export async function loadSessionMessages(
   }
 
   const total = activeChainMessages.length;
-  const pageSize = limit ?? 50;
+
+  /*
+    A jump from the send index names an entry that has to be on the page, no
+    matter how far back it sits.
+
+    The page is widened to reach it rather than centred on it, because the
+    client's transcript is one contiguous run that only ever grows at the front
+    (see the prepend anchoring in ChatPage). A window around the target would
+    leave a hole between it and what is already loaded, and nothing in the
+    paging contract can describe a hole — "load older" has no counterpart that
+    fills one in.
+
+    Widening costs the entries between the target and the newest page, which is
+    exactly what the user is about to scroll through anyway.
+
+    An unknown uuid falls through to the ordinary page. That happens when the
+    chain was rebuilt under the client by an edit or a rewind, and the same
+    recovery as the cursor-miss below applies: serve something reachable rather
+    than nothing.
+  */
+  let pageSize = limit ?? 50;
+  if (includeUuid) {
+    const target = activeChainMessages.findIndex(m => m.uuid === includeUuid);
+    if (target !== -1) pageSize = Math.max(pageSize, total - target);
+  }
 
   let slicedMessages: SessionMessage[] = [];
   let hasMore = false;

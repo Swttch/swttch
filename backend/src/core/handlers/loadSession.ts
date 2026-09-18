@@ -29,11 +29,15 @@ export async function loadSessionHandler(
     
     const beforeUuid = message.payload?.beforeUuid as string | undefined;
     const limit = message.payload?.limit as number | undefined;
+    // Set when the send index jumps to a send that is not loaded: the page has
+    // to reach back far enough to include it. See loadSessionMessages.
+    const includeUuid = message.payload?.includeUuid as string | undefined;
     const isOlderPage = message.type === MessageType.LOAD_OLDER_MESSAGES;
 
     await loadAndSendSession(connectionId, connections, workingDir, sessionId, {
       beforeUuid,
       limit,
+      includeUuid,
       isOlderPage,
     });
   }

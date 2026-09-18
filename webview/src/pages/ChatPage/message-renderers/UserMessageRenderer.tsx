@@ -7,6 +7,7 @@ import { ImageAttachments } from './components/ImageAttachments';
 import { SendActionMenu } from './components/SendActionMenu';
 import { SendFoldToggle } from './components/SendFoldToggle';
 import { parseUserContent } from './utils/parseUserContent';
+import { commandSendText } from '../sendText';
 import { tokenizeMessagePaths } from './utils/tokenizeMessagePaths';
 import { MessagePathChip } from './components/MessagePathChip';
 import { MessageSessionMentionChip } from './components/MessageSessionMentionChip';
@@ -28,28 +29,6 @@ interface UserMessageRendererProps {
 
 const INTERRUPTED_TEXT = '[Request interrupted by user]';
 const INTERRUPTED_FOR_TOOL_USE_TEXT = '[Request interrupted by user for tool use]';
-
-/**
- * What a slash-command send reads as, as one plain string.
- *
- * The bubble cannot draw it as one: it dims the leading `/` and the arguments
- * in spans of their own. So the rule for assembling the two parts lives here
- * and the copy entry is built from it. Copying has to produce what the user is
- * looking at, and for a slash command `parsedContent.text` alone is not that:
- * `parseUserContent` strips `<command-name>`, `<command-message>` and
- * `<command-args>`, which for every such entry the CLI writes leaves the empty
- * string. That empty string is what the old hover copy button put on the
- * clipboard for a bubble that plainly reads `/clear` (issue #412).
- *
- * The `args` half is therefore near-theoretical: measured across all 45
- * slash-command entries in the local session files, none carries text outside
- * those three tags. It is kept because the bubble has the same branch, and
- * these two must not disagree about what the send says.
- */
-function commandSendText(commandName: string | undefined, args: string): string {
-  const command = `/${commandName ?? ''}`;
-  return args ? `${command} ${args}` : command;
-}
 
 export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ message }) => {
   const { controlResponse } = useCliConfig();

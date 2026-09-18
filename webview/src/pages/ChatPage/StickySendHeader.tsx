@@ -3,6 +3,7 @@ import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
 import { useScrollFold, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from './useScrollFold';
 import { ScrollFoldContext } from './ScrollFoldContext';
+import { SEND_JUMP_SCROLL_MARGIN, SEND_SCROLL_OPTIONS } from './SendIndex/scrollToSend';
 
 interface Props {
   children: ReactNode;
@@ -41,6 +42,18 @@ export function StickySendHeader(props: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
+  /*
+    The send index does NOT get told anything from here.
+
+    It needs to know which send the reader is on, and that is a question about
+    position, not about crossing an edge — see readingLineSectionKey. This
+    component's own observer answers a different one (is my header stuck to the
+    top?), and lending it out produced a marker that never moved.
+
+    What the rail does depend on is the sentinel below, and the section wrapper
+    around it carrying `data-send-section`. Both are load-bearing for the jump
+    and for the reading line.
+  */
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -81,27 +94,31 @@ export function StickySendHeader(props: Props) {
     : Math.max(restingHeight - Math.max(foldHeight, FOLD_MIN_HEIGHT), 0);
 
   const scrollToSelf = () => {
-    // Same move as ChatPage's "scroll to bottom": let the browser do it, so a
-    // reduced-motion preference is honoured without us reimplementing it.
-    sentinelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // The options are shared with the send index, so a jump lands the same way
+    // whichever control started it — see SEND_SCROLL_OPTIONS.
+    sentinelRef.current?.scrollIntoView(SEND_SCROLL_OPTIONS);
   };
 
   return (
     <>
       {/*
-        `scroll-mt-*` is the breathing room the jump leaves above the message.
-        scrollIntoView would otherwise park it flush against the top edge,
-        with the preceding reply cut off mid-line right above it — landing
-        with a little of the previous section visible reads as arriving
-        somewhere rather than being snapped to a boundary.
+        The scroll margin is the breathing room a jump leaves above the
+        message; scrollIntoView would otherwise park it flush against the top
+        edge with the preceding reply cut off mid-line right above it.
 
         --- tweak this ---
-          scroll-mt-16 = 64px, and it is the one number that controls it
-          (scroll-mt-12 = 48px, scroll-mt-20 = 80px). Stay on Tailwind's
-          default scale: a value outside it emits no CSS at all and the
-          margin silently becomes zero.
+          SEND_JUMP_SCROLL_MARGIN is the one number that controls it. It is a
+          constant rather than `scroll-mt-16` because the send index builds its
+          reading line from it: moving the landing spot without moving that
+          line puts the rail's marker one send behind every jump.
       */}
-      <div ref={sentinelRef} data-send-sentinel aria-hidden className="h-0 scroll-mt-16" />
+      <div
+        ref={sentinelRef}
+        data-send-sentinel
+        aria-hidden
+        className="h-0"
+        style={{ scrollMarginTop: SEND_JUMP_SCROLL_MARGIN }}
+      />
       <div
         className="sticky top-0 z-[1] group"
         /*

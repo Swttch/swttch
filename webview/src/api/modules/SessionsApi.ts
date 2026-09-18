@@ -128,9 +128,21 @@ export class SessionsApi {
    * Triggers SESSION_LOADED event which AppProviders.SessionLoader handles
    * POST /sessions/:id/load
    */
-  async load(sessionId: string, workingDir?: string, limit?: number): Promise<void> {
+  async load(
+    sessionId: string,
+    workingDir?: string,
+    limit?: number,
+    /**
+     * An entry the page must contain, however far back it sits.
+     *
+     * Used by the send index to jump to a send the transcript has not loaded.
+     * The backend widens the page back to it rather than windowing around it,
+     * so the transcript stays one contiguous run with no hole in the middle.
+     */
+    includeUuid?: string,
+  ): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.LOAD_SESSION, { sessionId, workingDir: dir, limit });
+    await this.bridge.request(MessageType.LOAD_SESSION, { sessionId, workingDir: dir, limit, includeUuid });
   }
 
   /**

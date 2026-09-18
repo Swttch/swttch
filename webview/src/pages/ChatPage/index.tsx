@@ -47,6 +47,14 @@ import { isOlderPagePrepend, findNewestUserUuid } from './paging';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
 import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
+import { SendIndex, SEND_INDEX_RAIL_WIDTH } from './SendIndex';
+import { carriedSend } from './SendIndex/carriedSend';
+import { useSessionSends } from '@/hooks/useSessionSends';
+import type { SessionSend } from '@/shared';
+import { groupIntoSendSections } from './groupIntoSendSections';
+
+/** Stable empty list, so a session with no index yet does not re-render everything each time. */
+const EMPTY_SENDS: SessionSend[] = [];
 
 export function ChatPage() {
   return (
@@ -221,6 +229,20 @@ function ChatPageContent() {
     () => mergeToolResults(restoreQueuedMessages(messages)),
     [messages],
   );
+
+  // One split, read by both the transcript and the send index. See the
+  // `sections` prop on ChatMessageArea for why it is not computed there.
+  const sections = useMemo(() => groupIntoSendSections(mergedMessages), [mergedMessages]);
+
+  /*
+    Every send in the session, which two surfaces need: the rail draws a tick
+    per send, and the transcript uses it to fill the header above a page that
+    opens mid-reply. Fetched once here rather than by each of them, so they
+    cannot end up describing two different sessions.
+  */
+  const sessionSends = useSessionSends(true) ?? EMPTY_SENDS;
+  const carried = useMemo(() => carriedSend(sections, sessionSends), [sections, sessionSends]);
+
 
   // Scroll preservation on older-page prepend.
   //
@@ -429,12 +451,31 @@ function ChatPageContent() {
         someone restyles the container; the attribute says out loud that
         something depends on it.
       */}
-      <div ref={scrollContainerRef} data-chat-scroll onScroll={handleScroll} className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0">
+      {/*
+        The send index is a sibling of the scroll container rather than a child
+        of it, so it can hold the vertical middle of the viewport while the
+        transcript moves. Inside, it would scroll away with the content it is
+        describing.
+
+        `paddingInlineEnd` is what keeps the ticks beside the transcript instead
+        of on top of it. It is read from the rail's own constant so the two
+        cannot drift; see SEND_INDEX_RAIL_WIDTH.
+      */}
+      <SendIndex sections={sections} sessionSends={sessionSends} />
+      <div
+        ref={scrollContainerRef}
+        data-chat-scroll
+        onScroll={handleScroll}
+        style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH }}
+        className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0"
+      >
         <ChatMessageArea
           isStreaming={isStreaming && !isAwaitingUser}
           disconnectCountdown={disconnectCountdown}
           apiRetry={apiRetry}
           mergedMessages={mergedMessages}
+          sections={sections}
+          carriedSend={carried}
           hasMore={hasMoreOlder}
           isLoadingMore={isLoadingMore}
           onLoadMore={loadMore}

@@ -14,6 +14,10 @@ export interface LoadAndSendSessionOptions {
   // True when serving an older page (LOAD_OLDER_MESSAGES): the client prepends
   // the result and workflow reconstruction is skipped.
   isOlderPage?: boolean;
+  // An entry that must be on the page whatever the page size says. Set when the
+  // send index jumps to a send the transcript has not loaded yet; the page is
+  // widened back to it rather than windowed around it. See loadSessionMessages.
+  includeUuid?: string;
 }
 
 /**
@@ -29,9 +33,9 @@ export async function loadAndSendSession(
   sessionId: string,
   options: LoadAndSendSessionOptions = {},
 ): Promise<void> {
-  const { beforeUuid, limit, isOlderPage = false } = options;
+  const { beforeUuid, limit, isOlderPage = false, includeUuid } = options;
 
-  const result = await loadSessionMessages(workingDir, sessionId, beforeUuid, limit);
+  const result = await loadSessionMessages(workingDir, sessionId, beforeUuid, limit, includeUuid);
 
   // The row this session would occupy in the list, sent so the webview's list
   // contains the session it is showing no matter where the session ranks. Only

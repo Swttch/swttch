@@ -19,6 +19,7 @@ export * from './mergeEdits';
 export * from './permission-rules';
 export * from './queued-prompts';
 export * from './session-asset';
+export * from './session-send';
 export * from './session-activity';
 export * from './sponsor-gate';
 export * from './env-var-origin';
