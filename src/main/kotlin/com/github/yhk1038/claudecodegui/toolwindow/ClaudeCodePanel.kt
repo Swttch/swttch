@@ -16,7 +16,9 @@ import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.toolwindow.realization.CallbackStaging
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
+import com.github.yhk1038.claudecodegui.toolwindow.realization.PanelLoadingMessages
 import com.github.yhk1038.claudecodegui.toolwindow.realization.RealizationGate
+import com.github.yhk1038.claudecodegui.toolwindow.realization.StuckHintKeys
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDManager
@@ -45,6 +47,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,6 +138,12 @@ class ClaudeCodePanel(
     // One-shot guard so re-attach (tab move/split) does NOT re-schedule realization.
     private val realizationGate = RealizationGate()
 
+    // One-shot guard around realizeBrowser() itself. Three paths can reach it now —
+    // DumbService.runWhenSmart, the isDumb poll, and the user pressing the stuck-hint
+    // button (issue #464) — and whichever arrives first must be the only one to build
+    // a browser. Read and written on the EDT only, which is what makes it safe.
+    private val browserRealizationGate = RealizationGate()
+
     // Callback staging — set by ClaudeCodeFileEditor before the holder exists,
     // flushed onto the holder at realizeBrowser() time. Never overwrites a
     // pooled holder that already has a callback (tab move/split safety).
@@ -144,6 +153,13 @@ class ClaudeCodePanel(
 
     @Volatile
     private var isPanelDisposed: Boolean = false
+
+    // Which line the placeholder is currently showing. Tracked so translatePlaceholder()
+    // can repaint whatever is up once the catalog finishes loading. Without it, a catalog
+    // that arrives after realization started would rewind the label to the indexing line,
+    // and the later phases would stay English whenever the catalog arrives after them.
+    @Volatile
+    private var currentLoadingPhase: LoadingPhase = LoadingPhase.INDEXING_WAIT
 
     // Title/path change callbacks delegated to BrowserHolder
     // so handlers installed on first panel creation can reach the latest panel's callbacks.
@@ -182,7 +198,38 @@ class ClaudeCodePanel(
     // Loading label
     private val loadingLabel = javax.swing.JLabel(LoadingPhase.INDEXING_WAIT.message).apply {
         horizontalAlignment = javax.swing.SwingConstants.CENTER
+        alignmentX = java.awt.Component.CENTER_ALIGNMENT
         font = font.deriveFont(14f)
+    }
+
+    // Shown only once the wait has run long enough to look broken. Hidden until then so
+    // a normal start stays a single quiet line. See scheduleStuckHint() and issue #464.
+    private val stuckHintLabel = javax.swing.JLabel().apply {
+        horizontalAlignment = javax.swing.SwingConstants.CENTER
+        alignmentX = java.awt.Component.CENTER_ALIGNMENT
+        foreground = UIUtil.getContextHelpForeground()
+        isVisible = false
+    }
+
+    private val stuckRetryButton = javax.swing.JButton().apply {
+        alignmentX = java.awt.Component.CENTER_ALIGNMENT
+        isVisible = false
+        addActionListener { realizeBrowserOnce() }
+    }
+
+    // Holds the placeholder line plus the stuck hint. The label used to be added to
+    // BorderLayout.CENTER directly; it lives in a vertical box now so the hint and the
+    // button can appear under it without disturbing the centered placeholder.
+    private val loadingPanel = JPanel().apply {
+        layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS)
+        isOpaque = false
+        add(javax.swing.Box.createVerticalGlue())
+        add(loadingLabel)
+        add(javax.swing.Box.createVerticalStrut(12))
+        add(stuckHintLabel)
+        add(javax.swing.Box.createVerticalStrut(8))
+        add(stuckRetryButton)
+        add(javax.swing.Box.createVerticalGlue())
     }
 
     // Error panel
@@ -201,8 +248,8 @@ class ClaudeCodePanel(
         } else {
             // Browser realization is deferred until addNotify() + DumbService.runWhenSmart.
             // Show the indexing-wait placeholder so the user knows the tab is alive.
-            loadingLabel.text = LoadingPhase.INDEXING_WAIT.message
-            add(loadingLabel, BorderLayout.CENTER)
+            setLoadingPhase(LoadingPhase.INDEXING_WAIT)
+            add(loadingPanel, BorderLayout.CENTER)
         }
     }
 
@@ -219,13 +266,139 @@ class ClaudeCodePanel(
     }
 
     private fun scheduleBrowserRealization() {
-        // runWhenSmart runs on the EDT and may execute synchronously if already smart.
-        // dispose() may run before this callback fires (user closed the tab mid-indexing);
-        // guard with isPanelDisposed and project.isDisposed.
-        DumbService.getInstance(project).runWhenSmart {
-            if (isPanelDisposed || project.isDisposed) return@runWhenSmart
-            realizeBrowser()
+        translatePlaceholder()
+
+        // Path 1 — be told. runWhenSmart runs on the EDT and may execute synchronously if
+        // already smart. dispose() may run before this callback fires (user closed the tab
+        // mid-indexing); realizeBrowserOnce() guards on isPanelDisposed and project.isDisposed.
+        DumbService.getInstance(project).runWhenSmart { realizeBrowserOnce() }
+
+        // Path 2 — ask. runWhenSmart is one-shot, and issue #464 is what happens when its
+        // callback never arrives: the panel sits on "Waiting for project indexing..." until
+        // the IDE is restarted, with no timeout to rescue it. isDumb is a state read rather
+        // than a notification, so this path works whether or not the callback ever fires.
+        // Whichever path gets there first wins; browserRealizationGate discards the rest.
+        pollUntilIndexingFinishes()
+
+        // Path 3 — let the user out. Only surfaces after the wait has already looked broken.
+        scheduleStuckHint()
+    }
+
+    /**
+     * Repaints the placeholder in the user's Interface Language.
+     *
+     * The label is built with [LoadingPhase.INDEXING_WAIT] before any catalog is loaded, so
+     * it starts out English. Resolving the language means reading `uiLanguage` out of
+     * `~/.claude-code-gui/settings.js`, which is disk I/O and therefore must not happen on
+     * the EDT — a slow home directory would freeze the very screen this label exists to
+     * keep readable. Load off the EDT, then repaint on it.
+     */
+    private fun translatePlaceholder() {
+        scope.launch {
+            PanelLoadingMessages.preload()
+            ApplicationManager.getApplication().invokeLater {
+                if (isPanelDisposed || holder?.isLoaded == true) return@invokeLater
+                // Repaints whichever phase is up rather than the indexing line specifically.
+                // runWhenSmart can run synchronously on an already-indexed project, so by the
+                // time the catalog lands the placeholder may already be further along.
+                loadingLabel.text = currentLoadingPhase.message
+            }
         }
+    }
+
+    /** Moves the placeholder to [phase] and remembers it for [translatePlaceholder]. */
+    private fun setLoadingPhase(phase: LoadingPhase) {
+        currentLoadingPhase = phase
+        loadingLabel.text = phase.message
+    }
+
+    /**
+     * Polls [DumbService.isDumb] until indexing is over, then realizes the browser.
+     *
+     * Deliberately does NOT replace [DumbService.runWhenSmart]. Swapping one notification
+     * API for another would be a guess, because we still do not know why the callback goes
+     * missing. Asking for the current state instead is the one approach that holds either way.
+     */
+    private fun pollUntilIndexingFinishes() {
+        scope.launch {
+            while (true) {
+                delay(INDEXING_POLL_INTERVAL_MS)
+                if (isPanelDisposed || project.isDisposed) return@launch
+                if (browserRealizationGate.isAcquired()) return@launch
+                // isDumb is read on the EDT, where the answer cannot change underneath the
+                // decision that follows it.
+                ApplicationManager.getApplication().invokeLater {
+                    if (isPanelDisposed || project.isDisposed) return@invokeLater
+                    if (browserRealizationGate.isAcquired()) return@invokeLater
+                    if (!DumbService.getInstance(project).isDumb) realizeBrowserOnce()
+                }
+            }
+        }
+    }
+
+    /**
+     * After [INDEXING_WAIT_HINT_DELAY_MS], explains the wait and offers a way past it.
+     *
+     * Runs on its own timer rather than inside the poll loop on purpose: if the poll is the
+     * reason the panel is stuck, a hint scheduled inside it would never appear either.
+     *
+     * Which wording applies is decided by asking [DumbService.isDumb] at that moment, since
+     * the two situations that reach this point are opposites. Indexing still running means
+     * nothing has failed and the user is merely waiting. Indexing already finished means
+     * both paths above missed it, and the wait itself is the malfunction.
+     */
+    private fun scheduleStuckHint() {
+        scope.launch {
+            delay(INDEXING_WAIT_HINT_DELAY_MS)
+            if (isPanelDisposed || project.isDisposed) return@launch
+            if (browserRealizationGate.isAcquired()) return@launch
+            ApplicationManager.getApplication().invokeLater {
+                if (isPanelDisposed || project.isDisposed) return@invokeLater
+                if (browserRealizationGate.isAcquired()) return@invokeLater
+                showStuckHint(stillIndexing = DumbService.getInstance(project).isDumb)
+            }
+        }
+    }
+
+    /**
+     * Takes the stuck hint back down. Used when the placeholder is re-shown for a reason
+     * that has nothing to do with indexing (a backend reboot or retry), where asking about
+     * project indexing would point the user at the wrong thing entirely.
+     */
+    private fun hideStuckHint() {
+        stuckHintLabel.isVisible = false
+        stuckRetryButton.isVisible = false
+    }
+
+    private fun showStuckHint(stillIndexing: Boolean) {
+        val hintKey = if (stillIndexing) StuckHintKeys.STILL_INDEXING else StuckHintKeys.INDEXING_DONE
+        val actionKey =
+            if (stillIndexing) StuckHintKeys.STILL_INDEXING_ACTION else StuckHintKeys.INDEXING_DONE_ACTION
+        stuckHintLabel.text = PanelLoadingMessages.get(hintKey)
+        stuckRetryButton.text = PanelLoadingMessages.get(actionKey)
+        stuckHintLabel.isVisible = true
+        stuckRetryButton.isVisible = true
+        loadingPanel.revalidate()
+        loadingPanel.repaint()
+        logger.info("Browser realization still pending after ${INDEXING_WAIT_HINT_DELAY_MS}ms (stillIndexing=$stillIndexing)")
+    }
+
+    /**
+     * Realizes the browser at most once, on the EDT, no matter which path called.
+     *
+     * Runs inline when already on the EDT so the common case (indexing finished before the
+     * tab opened, runWhenSmart firing synchronously) still builds the browser within
+     * addNotify() instead of showing the placeholder for an extra frame.
+     */
+    private fun realizeBrowserOnce() {
+        val app = ApplicationManager.getApplication()
+        if (app.isDispatchThread) realizeBrowserGuarded() else app.invokeLater { realizeBrowserGuarded() }
+    }
+
+    private fun realizeBrowserGuarded() {
+        if (isPanelDisposed || project.isDisposed) return
+        if (!browserRealizationGate.tryAcquire()) return
+        realizeBrowser()
     }
 
     private fun realizeBrowser() {
@@ -236,7 +409,7 @@ class ClaudeCodePanel(
         // distinction — leaving the label up is what users saw as a blank window.
         val acquired = browserService.getOrCreate(tabId) ?: run {
             logger.warn("Could not create a JCEF browser for tab: $tabId — showing runtime mismatch panel")
-            remove(loadingLabel)
+            remove(loadingPanel)
             add(JcefRuntimeMismatchPanel(), BorderLayout.CENTER)
             revalidate()
             repaint()
@@ -259,14 +432,14 @@ class ClaudeCodePanel(
             if (parent != null && parent !== this) {
                 parent.remove(b.component)
             }
-            remove(loadingLabel)
+            remove(loadingPanel)
             add(b.component, BorderLayout.CENTER)
             revalidate()
             repaint()
             logger.info("Reattached existing JCEF browser for tab: $tabId")
         } else {
             // First load — switch the placeholder to the next phase.
-            loadingLabel.text = LoadingPhase.BACKEND_START.message
+            setLoadingPhase(LoadingPhase.BACKEND_START)
             revalidate()
             repaint()
         }
@@ -297,7 +470,7 @@ class ClaudeCodePanel(
         backendService.addProgressListener(project.basePath ?: "", panelId) { phase ->
             ApplicationManager.getApplication().invokeLater {
                 if (!isPanelDisposed && holder?.isLoaded != true) {
-                    loadingLabel.text = phase.message
+                    setLoadingPhase(phase)
                 }
             }
         }
@@ -1382,7 +1555,7 @@ class ClaudeCodePanel(
         javax.swing.SwingUtilities.invokeLater {
             val h = holder!!
             val b = h.browser
-            remove(loadingLabel)
+            remove(loadingPanel)
             // Paint the Swing component with the IDE surface color so the JCEF
             // native first paint is not white. Heavyweight (non-OSR) mode limits
             // this, but it reduces the white flash on a fresh tab (issue #47).
@@ -1405,7 +1578,7 @@ class ClaudeCodePanel(
      * the concrete cause instead of an opaque message — the watchdog half of #97.
      */
     private fun showBackendError(errorMessage: String, diagnostics: String? = null) {
-        remove(loadingLabel)
+        remove(loadingPanel)
 
         val staleBackendDetected = backendService.hasStaleBackend(project.basePath ?: "")
 
@@ -1494,7 +1667,8 @@ class ClaudeCodePanel(
     private fun rebootBackend() {
         errorPanel?.let { remove(it) }
         errorPanel = null
-        add(loadingLabel, BorderLayout.CENTER)
+        hideStuckHint()
+        add(loadingPanel, BorderLayout.CENTER)
         revalidate()
         repaint()
 
@@ -1564,7 +1738,8 @@ class ClaudeCodePanel(
     private fun retryBackendStart() {
         errorPanel?.let { remove(it) }
         errorPanel = null
-        add(loadingLabel, BorderLayout.CENTER)
+        hideStuckHint()
+        add(loadingPanel, BorderLayout.CENTER)
         revalidate()
         repaint()
 
@@ -2042,6 +2217,23 @@ class ClaudeCodePanel(
          * `wsl.exe` start, while still bounding the formerly-unbounded wait. See issue #97.
          */
         private const val BACKEND_START_TIMEOUT_MS = 30_000L
+
+        /**
+         * How often the panel asks whether project indexing has finished, instead of waiting
+         * to be told by DumbService.runWhenSmart. `isDumb` is a state read, so a short interval
+         * costs effectively nothing and keeps the recovery from a missed callback (issue #464)
+         * quick enough that the user never sees the stuck screen.
+         */
+        private const val INDEXING_POLL_INTERVAL_MS = 2_000L
+
+        /**
+         * How long the placeholder may sit on INDEXING_WAIT before the panel explains the
+         * wait and offers a way past it. Deliberately a separate constant from
+         * [BACKEND_START_TIMEOUT_MS] even though both are 30s — one bounds a backend that
+         * never reports its port, the other bounds a wait for the IDE to finish indexing,
+         * and tuning either must not silently move the other. See issue #464.
+         */
+        private const val INDEXING_WAIT_HINT_DELAY_MS = 30_000L
 
         /** Backup interval (ms) for the OSR stale-paint repaint nudge. Low frequency
          * on purpose — it only has to catch artifacts the mouse-motion nudge missed. */

@@ -1,0 +1,15 @@
+{
+  "phase": {
+    "indexingWait": "Aguardando a indexação do projeto...",
+    "backendStart": "Iniciando o backend...",
+    "locatingNode": "Procurando o Node.js...",
+    "preparingBackend": "Preparando os arquivos do backend...",
+    "waitingForPort": "Aguardando o backend ficar pronto..."
+  },
+  "stuck": {
+    "stillIndexing": "A indexação de um projeto grande pode levar vários minutos.",
+    "stillIndexingAction": "Abrir sem esperar",
+    "indexingDone": "Já terminou, mas a página não está respondendo?",
+    "indexingDoneAction": "Tentar novamente"
+  }
+}
