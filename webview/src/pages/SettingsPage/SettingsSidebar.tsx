@@ -21,7 +21,15 @@ export function SettingsSidebar({ isDrawer = false, open = false, onNavigate }: 
 
   return (
     <nav
-      className={`w-48 flex-shrink-0 border-e border-border-default py-4 bg-surface-base ${
+      // Set apart by its own surface rather than by a rule down the edge. A line
+      // draws itself; a lifted panel lets the two areas read as two areas
+      // without adding anything to look at.
+      //
+      // The same surface the section cards use, deliberately. This screen has two
+      // levels, not three: one canvas, and everything that sits on it. A sidebar
+      // pitched between the canvas and the cards would be a third level carrying
+      // no meaning, and the eye reads an unexplained step as an accident.
+      className={`w-48 flex-shrink-0 py-4 bg-surface-raised ${
         isDrawer
           ? `absolute start-0 top-0 bottom-0 z-20 transition-transform duration-200 ${
               open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'
@@ -47,10 +55,16 @@ export function SettingsSidebar({ isDrawer = false, open = false, onNavigate }: 
             <li key={subRoute}>
               <button
                 onClick={() => { navigate(subRoute); onNavigate?.(); }}
+                // Three states on one ramp, in the order of how much they claim:
+                // an untouched item is the sidebar itself, hovering fills it at
+                // `hover`, and the item you are on takes `pressed`, the far end.
+                // It used to take `overlay`, which sits BELOW `hover` — the item
+                // you were on was quieter than the one the cursor happened to be
+                // over, and it was only a few steps off the sidebar besides.
                 className={`
                   w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors
                   ${isActive
-                    ? 'bg-surface-overlay text-text-primary'
+                    ? 'bg-surface-pressed text-text-primary'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'}
                 `}
               >

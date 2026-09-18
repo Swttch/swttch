@@ -20,10 +20,10 @@ const ORDER: SponsorTab[] = [SponsorTab.BENEFITS, SponsorTab.DEVICES, SponsorTab
  * Stacking every section vertically made the page a long scroll of low-density
  * cards; only one of them is ever relevant at a time.
  *
- * Styled as pills sitting above the rule rather than tabs attached to it (the
- * shape ScopeTabs uses). Looking different is the point: this strip switches
- * panels within one settings page, while ScopeTabs switches the scope the whole
- * page edits — they are not the same kind of control.
+ * Styled as pills sitting above a rule, and deliberately not as the segmented
+ * control ScopeTabs uses. Looking different is the point: this strip swaps which
+ * panel of this one page is showing, which is what tabs are for, while ScopeTabs
+ * picks which file the whole page reads and writes.
  */
 export function SponsorTabs(props: Props) {
   const { active, onChange } = props;

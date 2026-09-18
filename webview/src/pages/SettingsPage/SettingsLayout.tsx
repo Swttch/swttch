@@ -19,7 +19,11 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-full bg-surface-base">
+    // The canvas the content scrolls on, and the quietest surface on this
+    // screen. The sidebar beside it and the section cards laid on it share the
+    // one above it, and the header takes `pressed`, the far end. Three areas,
+    // three surfaces, and no rule drawn between any of them.
+    <div className="flex flex-col h-full bg-surface-sunken">
       <SettingsHeader onToggleSidebar={mobile ? () => setSidebarOpen((o) => !o) : undefined} />
       <div className="flex flex-1 overflow-hidden relative">
         <SettingsSidebar
@@ -34,8 +38,11 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
           />
         )}
         <main className="flex-1 overflow-y-auto">
-          {showScopeTabs && <ScopeTabs />}
+          {/* Inside the padding rather than above it: the scope control is part
+              of the page's content, not a bar spanning the column, and it lines
+              up with the heading it governs. */}
           <div className="p-3 xs:p-6">
+            {showScopeTabs && <ScopeTabs />}
             {children}
           </div>
         </main>

@@ -22,6 +22,7 @@
     "sponsor": "후원"
   },
   "scope": {
+    "label": "설정 범위",
     "global": "사용자 설정 (전역)",
     "globalShort": "사용자 (전역)",
     "project": "프로젝트 설정 (로컬)",

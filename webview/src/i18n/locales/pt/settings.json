@@ -22,6 +22,7 @@
     "sponsor": "Patrocinar"
   },
   "scope": {
+    "label": "Escopo das configurações",
     "global": "Configurações do Usuário (Global)",
     "globalShort": "Usuário (Global)",
     "project": "Configurações do Projeto (Local)",

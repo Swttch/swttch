@@ -22,6 +22,7 @@
     "sponsor": "赞助"
   },
   "scope": {
+    "label": "设置范围",
     "global": "用户设置(全局)",
     "globalShort": "用户(全局)",
     "project": "项目设置(本地)",

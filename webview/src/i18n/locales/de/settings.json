@@ -22,6 +22,7 @@
     "sponsor": "Sponsern"
   },
   "scope": {
+    "label": "Einstellungsbereich",
     "global": "Benutzereinstellungen (Global)",
     "globalShort": "Benutzer (Global)",
     "project": "Projekteinstellungen (Lokal)",

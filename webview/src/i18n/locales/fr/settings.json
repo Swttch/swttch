@@ -22,6 +22,7 @@
     "sponsor": "Soutenir"
   },
   "scope": {
+    "label": "Portée des paramètres",
     "global": "Paramètres utilisateur (Global)",
     "globalShort": "Utilisateur (Global)",
     "project": "Paramètres du projet (Local)",

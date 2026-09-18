@@ -22,6 +22,7 @@
     "sponsor": "贊助"
   },
   "scope": {
+    "label": "設定範圍",
     "global": "使用者設定(全域)",
     "globalShort": "使用者(全域)",
     "project": "專案設定(本機)",
