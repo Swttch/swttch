@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatMessageArea } from '../ChatMessageArea';
+import { groupIntoSendSections } from '../groupIntoSendSections';
 import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType, MessageRole } from '../../../dto/common';
 import { i18n } from '@/i18n';
@@ -107,6 +108,8 @@ const renderArea = (messages: LoadedMessageDto[]) =>
       <ChatMessageArea
         isStreaming={false}
         mergedMessages={messages}
+        sections={groupIntoSendSections(messages)}
+        carriedSend={null}
         hasMore={false}
         isLoadingMore={false}
         onLoadMore={vi.fn()}
@@ -318,16 +321,20 @@ describe('ChatMessageArea — collapsing a reply', () => {
     await user.click(screen.getByRole('menuitem', { name: COLLAPSE }));
     expect(screen.getByText('second answer')).not.toBeVisible();
 
+    const rerenderMessages = [
+      send('u1', 'first prompt'),
+      reply('a1', 'first answer'),
+      send('u2', 'second prompt'),
+      reply('a2', 'second answer'),
+    ];
+
     rerender(
       <MemoryRouter>
         <ChatMessageArea
           isStreaming={false}
-          mergedMessages={[
-            send('u1', 'first prompt'),
-            reply('a1', 'first answer'),
-            send('u2', 'second prompt'),
-            reply('a2', 'second answer'),
-          ]}
+          mergedMessages={rerenderMessages}
+          sections={groupIntoSendSections(rerenderMessages)}
+          carriedSend={null}
           hasMore={false}
           isLoadingMore={false}
           onLoadMore={vi.fn()}

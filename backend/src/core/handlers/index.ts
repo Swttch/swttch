@@ -150,6 +150,7 @@ import {
   deletePromptCategoryHandler,
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
+import { getSessionSendsHandler } from './getSessionSends';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
@@ -622,6 +623,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_ASSET_DATA:
       await getSessionAssetDataHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_SENDS:
+      await getSessionSendsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.ASSET_ACTIVITY:
       assetActivityHandler(connectionId, message, connections, bridge);

@@ -7,6 +7,7 @@ import type { LoadedMessageDto } from '../../../types';
 import { LoadedMessageType, MessageRole } from '../../../dto/common';
 import { _resetRuntimeCache } from '@/config/environment';
 import { mergeToolResults } from '../mergeToolResults';
+import { groupIntoSendSections } from '../groupIntoSendSections';
 
 // Mock contexts
 const mockSessionContext = {
@@ -81,6 +82,8 @@ const renderArea = (isStreaming = false, hasMore = false, onLoadMore = vi.fn(), 
     <ChatMessageArea
       isStreaming={isStreaming}
       mergedMessages={merged}
+      sections={groupIntoSendSections(merged)}
+      carriedSend={null}
       hasMore={hasMore}
       isLoadingMore={isLoadingMore}
       onLoadMore={onLoadMore}

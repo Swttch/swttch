@@ -829,8 +829,11 @@ body {
   --toggle-knob-size: 16px;
   --toggle-knob-color: #FFFFFF;
 
-  /* Scrollbar (Slash Commands section) */
-  --scrollbar-width: 6px;
+  /* Scrollbar — every scrollable surface, not one panel.
+     8px is about half the width the UA draws its own scrollbar at, which is
+     what the transcript's end edge has room for now that the send index sits
+     there too. */
+  --scrollbar-width: 8px;
   --scrollbar-track: transparent;
   --scrollbar-thumb: #C0C0C0;
   --scrollbar-thumb-hover: #A0A0A0;
@@ -839,8 +842,42 @@ body {
 .dark {
   --item-text-color: #bfbfbf;
   --toggle-off-bg: #3C3C3C;
-  --scrollbar-thumb: #4A4A4A;
-  --scrollbar-thumb-hover: #5A5A5A;
+  /* Darker than the surface it sits on rather than lighter: the thumb is a
+     position marker, not something to be read, and a pale bar down the edge of
+     a dark transcript pulls the eye off the conversation. */
+  --scrollbar-thumb: #3A3A3A;
+  --scrollbar-thumb-hover: #4A4A4A;
+}
+
+/* The scrollbar every scrollable surface gets.
+   Applied at the root so the chat, the settings screens and the panels draw the
+   same bar; a scrollbar that changes shape between screens reads as a defect on
+   its own. `.no-scrollbar` still wins where it is used, being the more specific
+   selector. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+  height: var(--scrollbar-width);
+}
+
+/* Fully transparent, so the bar is a thumb floating over the content rather
+   than a channel drawn down the edge of it. */
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Custom scrollbar for slash command panel */

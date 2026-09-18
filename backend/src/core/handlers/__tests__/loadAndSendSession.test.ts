@@ -62,8 +62,8 @@ describe('loadAndSendSession', () => {
     await loadAndSendSession('conn-1', conn, '/work', 'sess-1', {
       limit: 1_000_000,
     });
-    // signature: (workingDir, sessionId, beforeUuid, limit)
-    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 1_000_000);
+    // signature: (workingDir, sessionId, beforeUuid, limit, includeUuid)
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', undefined, 1_000_000, undefined);
   });
 
   it('sends SESSION_LOADED with the paging fields and prepend=false on initial load', async () => {
@@ -127,7 +127,7 @@ describe('loadAndSendSession', () => {
 
     const loaded = sent.find((m) => m.type === MessageType.SESSION_LOADED);
     expect(loaded?.payload).toMatchObject({ prepend: true });
-    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', 'u9', 50);
+    expect(mockLoad).toHaveBeenCalledWith('/work', 'sess-1', 'u9', 50, undefined);
     expect(mockReconstruct).not.toHaveBeenCalled();
   });
 });

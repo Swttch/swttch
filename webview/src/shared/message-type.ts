@@ -554,6 +554,10 @@ export enum MessageType {
   /** Ask for one attached image's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex}. The reply is the block's own `source` object, passed through unedited. inbound webview→backend */
   GET_SESSION_ASSET_DATA = 'GET_SESSION_ASSET_DATA',
 
+  // -- Session sends --
+  /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */
+  GET_SESSION_SENDS = 'GET_SESSION_SENDS',
+
   // -- Assets telemetry --
   /** The webview reports something that happened on the Assets surfaces, as {kind, ...}. Purely a measurement signal: everything it describes (a gate shown, an invitation followed, the screen opened) happens in the webview and reaches the backend no other way. The kind — and, for a screen open, the entry point — become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a conversion rate needs people. Never carries text the user typed. inbound webview→backend */
   ASSET_ACTIVITY = 'ASSET_ACTIVITY',
