@@ -237,6 +237,13 @@ async function serveStaticFile(
     const contentType = MIME_TYPES[ext] ?? 'application/octet-stream';
     res.writeHead(200, {
       'Content-Type': contentType,
+      // Chromium will not put a chunked response in its disk cache. Without an
+      // explicit length Node falls back to `Transfer-Encoding: chunked`, so the
+      // 3.4MB bundle was re-fetched on every panel open even though it is served
+      // `immutable`: measured over Remote Development, three opens in a row each
+      // pulled the whole bundle while the client's JCEF cache stayed at 24KB
+      // (issue #292). The body is already a Buffer in hand, so the length is free.
+      'Content-Length': data.length,
       'Cache-Control': cacheControl,
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN',
@@ -256,6 +263,7 @@ async function serveStaticFile(
       const indexData = await readFile(join(webviewDir, 'index.html'));
       res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
+        'Content-Length': indexData.length,
         'Cache-Control': 'no-cache, must-revalidate',
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',
