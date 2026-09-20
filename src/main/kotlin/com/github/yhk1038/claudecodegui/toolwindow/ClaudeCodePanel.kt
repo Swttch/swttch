@@ -1534,8 +1534,13 @@ class ClaudeCodePanel(
         // theme=<light|dark> lets webview/index.html paint the correct surface
         // color before the CSS bundle / React mount, preventing a white flash on
         // a new JCEF tab. JBColor.isBright() reflects the current IDE LAF.
+        // The webview may not be on this machine: under Remote Development it runs
+        // in JetBrains Client, where `localhost` is the user's own loopback. Ask for
+        // a port reachable from there; locally, and wherever forwarding is
+        // unavailable, this is the backend's own port and nothing changes (#292).
+        val webViewPort = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.resolve(port)
         val url = buildWebViewUrl(
-            port = port,
+            port = webViewPort,
             pathSegment = initialPath ?: "/sessions/new",
             workingDir = project.basePath,
             panelId = panelId,
