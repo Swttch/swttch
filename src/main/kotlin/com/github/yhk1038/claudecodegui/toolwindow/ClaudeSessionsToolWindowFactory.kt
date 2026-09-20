@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.toolwindow
 
+import com.github.yhk1038.claudecodegui.hosting.ThinClient
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -31,6 +32,18 @@ class ClaudeSessionsToolWindowFactory : ToolWindowFactory, DumbAware {
         logger.info("Claude Sessions tool window content created")
     }
 
+    /**
+     * Not registered on the JetBrains Client half of Remote Development, for the
+     * same reason as the chat tool window: the client's own registration would
+     * cover the remote half's, which is the one with a backend behind it.
+     */
+    override fun isApplicable(project: Project): Boolean = !ThinClient.isThinClient()
+
+    /**
+     * Available everywhere, including the Remote Development client. What the
+     * client must not do is start a backend, which [createToolWindowContent]
+     * handles; hiding the stripe would only remove the sidebar entry point.
+     */
     override fun shouldBeAvailable(project: Project): Boolean = true
 
     companion object {

@@ -2,6 +2,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
 
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.hosting.HostMode
+import com.github.yhk1038.claudecodegui.hosting.ThinClient
 import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.settings.SettingsManager
 import com.github.yhk1038.claudecodegui.toolwindow.realization.ReentrancyGate
@@ -135,5 +136,26 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
         }, 500L)
     }
 
+    /**
+     * Not registered at all on the JetBrains Client half of Remote Development.
+     *
+     * Both halves run this plugin, so both would register a tool window under the
+     * same id — and the client's own wins, showing an empty panel that hides the
+     * remote one carrying the actual chat. Platform tool windows (Project, Git,
+     * Terminal) reach the client perfectly well; ours did not, because ours was
+     * being covered rather than dropped (issue #292).
+     *
+     * Declining registration here leaves the slot free for the remote half's tool
+     * window to arrive, which is what makes the tool-window host mode work over
+     * Remote Development at all.
+     */
+    override fun isApplicable(project: Project): Boolean = !ThinClient.isThinClient()
+
+    /**
+     * Available wherever this factory is registered at all.
+     *
+     * The Remote Development client never gets that far — [isApplicable] declines
+     * registration there — so this says nothing about it either way.
+     */
     override fun shouldBeAvailable(project: Project): Boolean = true
 }

@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.startup
 
+import com.github.yhk1038.claudecodegui.hosting.ThinClient
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.intellij.ide.AppLifecycleListener
 
@@ -28,6 +29,11 @@ import com.intellij.ide.AppLifecycleListener
  */
 class ResourceExtractionPrewarmActivity : AppLifecycleListener {
     override fun appFrameCreated(commandLineArgs: MutableList<String>) {
+        // Nothing to prewarm on the JetBrains Client half of Remote Development:
+        // the resources being unpacked are the backend and its webview, and this
+        // machine never starts either. Extracting them anyway wrote hundreds of
+        // files into the user's cache that nothing would ever read (issue #292).
+        if (ThinClient.isThinClient()) return
         NodeBackendService.getInstance().prewarmResources()
     }
 }

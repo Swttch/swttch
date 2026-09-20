@@ -4,7 +4,19 @@
     <vendor email="yhkks1038@gmail.com" url="https://github.com/Swttch">Swttch</vendor>
 
     <depends>com.intellij.modules.platform</depends>
-    <depends>org.jetbrains.plugins.terminal</depends>
+    <!--
+      Optional, not required. Every use of it is a `Class.forName` inside a
+      try/catch (ClaudeCodePanel.createTerminalTab / sendCommandToTerminal), so a
+      build without the terminal plugin loses the terminal tab and nothing else.
+      A hard <depends> would instead have the whole plugin refused on any IDE
+      that ships without it — including, potentially, the JetBrains Client half
+      of Remote Development (issue #292).
+
+      Kept rather than deleted: the plugin classloader only sees classes of
+      plugins it declares a dependency on, so removing the line would make the
+      reflective lookups fail even where the terminal plugin IS present.
+    -->
+    <depends optional="true">org.jetbrains.plugins.terminal</depends>
     <depends optional="true" config-file="claudecode-jcef.xml">com.intellij.modules.jcef</depends>
 
     <resource-bundle>messages.ClaudeCodeBundle</resource-bundle>
