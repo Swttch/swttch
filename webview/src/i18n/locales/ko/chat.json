@@ -436,6 +436,30 @@
       "rightPlace": "정확히 알맞은 곳에 오셨습니다!"
     }
   },
+  "onboarding": {
+    "title": "시작 준비",
+    "dismiss": "닫기",
+    "optional": "선택",
+    "unknown": "확인되지 않음",
+    "checking": "확인 중…",
+    "working": "진행 중…",
+    "perform": "설치",
+    "reveal": "보여주기",
+    "steps": {
+      "installCli": {
+        "label": "Claude Code CLI 설치"
+      },
+      "signIn": {
+        "label": "Claude 로그인"
+      },
+      "installKit": {
+        "label": "@swttch/extend-kit 설치"
+      },
+      "arrangeDock": {
+        "label": "상단바 도크 배치"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "완수하는 중",

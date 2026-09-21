@@ -436,6 +436,30 @@
       "rightPlace": "Vous êtes exactement au bon endroit !"
     }
   },
+  "onboarding": {
+    "title": "Mise en route",
+    "dismiss": "Fermer",
+    "optional": "facultatif",
+    "unknown": "non confirmé",
+    "checking": "Vérification…",
+    "working": "En cours…",
+    "perform": "Installer",
+    "reveal": "Montrer",
+    "steps": {
+      "installCli": {
+        "label": "Installer la CLI Claude Code"
+      },
+      "signIn": {
+        "label": "Se connecter à Claude"
+      },
+      "installKit": {
+        "label": "Installer @swttch/extend-kit"
+      },
+      "arrangeDock": {
+        "label": "Organiser le dock de la barre supérieure"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Accomplissant",

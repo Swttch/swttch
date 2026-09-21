@@ -436,6 +436,30 @@
       "rightPlace": "دقیقاً به جای درستی آمده‌اید!"
     }
   },
+  "onboarding": {
+    "title": "راه‌اندازی",
+    "dismiss": "بستن",
+    "optional": "اختیاری",
+    "unknown": "تأیید نشده",
+    "checking": "در حال بررسی…",
+    "working": "در حال انجام…",
+    "perform": "نصب",
+    "reveal": "نشانم بده",
+    "steps": {
+      "installCli": {
+        "label": "نصب Claude Code CLI"
+      },
+      "signIn": {
+        "label": "ورود به Claude"
+      },
+      "installKit": {
+        "label": "نصب @swttch/extend-kit"
+      },
+      "arrangeDock": {
+        "label": "چیدمان داک نوار بالا"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "در حال به سرانجام رساندن",

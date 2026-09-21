@@ -436,6 +436,30 @@
       "rightPlace": "你来对地方了!"
     }
   },
+  "onboarding": {
+    "title": "开始设置",
+    "dismiss": "关闭",
+    "optional": "可选",
+    "unknown": "未确认",
+    "checking": "检查中…",
+    "working": "进行中…",
+    "perform": "安装",
+    "reveal": "带我去",
+    "steps": {
+      "installCli": {
+        "label": "安装 Claude Code CLI"
+      },
+      "signIn": {
+        "label": "登录 Claude"
+      },
+      "installKit": {
+        "label": "安装 @swttch/extend-kit"
+      },
+      "arrangeDock": {
+        "label": "排列顶栏停靠区"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "完成中",

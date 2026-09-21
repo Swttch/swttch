@@ -436,6 +436,30 @@
       "rightPlace": "まさに正しい場所に来ましたね!"
     }
   },
+  "onboarding": {
+    "title": "セットアップ",
+    "dismiss": "閉じる",
+    "optional": "任意",
+    "unknown": "未確認",
+    "checking": "確認中…",
+    "working": "実行中…",
+    "perform": "インストール",
+    "reveal": "表示する",
+    "steps": {
+      "installCli": {
+        "label": "Claude Code CLI をインストール"
+      },
+      "signIn": {
+        "label": "Claude にログイン"
+      },
+      "installKit": {
+        "label": "@swttch/extend-kit をインストール"
+      },
+      "arrangeDock": {
+        "label": "上部バーのドックを配置"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "達成中",

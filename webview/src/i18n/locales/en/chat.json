@@ -440,6 +440,30 @@
       "rightPlace": "You've come to the absolutely right place!"
     }
   },
+  "onboarding": {
+    "title": "Get set up",
+    "dismiss": "Close",
+    "optional": "optional",
+    "unknown": "not confirmed",
+    "checking": "Checking…",
+    "working": "Working…",
+    "perform": "Install",
+    "reveal": "Show me",
+    "steps": {
+      "installCli": {
+        "label": "Install the Claude Code CLI"
+      },
+      "signIn": {
+        "label": "Sign in to Claude"
+      },
+      "installKit": {
+        "label": "Install @swttch/extend-kit"
+      },
+      "arrangeDock": {
+        "label": "Arrange the top bar dock"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Accomplishing",

@@ -46,6 +46,7 @@ import { restoreQueuedMessages } from './restoreQueuedMessages';
 import { isOlderPagePrepend, findNewestUserUuid } from './paging';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { AccountSwitchErrorBanner } from './AccountSwitchErrorBanner';
 import { SendIndex, SEND_INDEX_RAIL_WIDTH } from './SendIndex';
 import { carriedSend } from './SendIndex/carriedSend';
@@ -118,6 +119,7 @@ function ChatPageContent() {
 
   const api = useApi();
   const { textareaRef, focus: focusInput } = useChatInputFocus();
+  const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
@@ -519,7 +521,17 @@ function ChatPageContent() {
                   onOpenDiffOverlay={setDiffOverlayToolUseId}
               />
           ) : (
-              <ChatInput />
+              /* Setup is still being asked for, so there is nothing useful to
+                 type yet — a prompt sent now would reach a CLI that is missing
+                 or signed out. Dimmed and click-through rather than removed:
+                 the composer staying in place is what says the chat is here
+                 and waiting, where an empty gap would read as a broken screen. */
+              <div
+                className={onboarding.visible ? 'pointer-events-none opacity-40' : undefined}
+                aria-hidden={onboarding.visible || undefined}
+              >
+                <ChatInput />
+              </div>
           )}
         </div>
       </div>

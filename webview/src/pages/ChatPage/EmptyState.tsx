@@ -6,6 +6,8 @@ import { RunnerGame } from './runner/RunnerGame';
 import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
 import { AnnouncementEmptyStateSlot } from '@/components/Announcements/placements';
+import { OnboardingChecklist } from './Onboarding';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 export const EmptyState = () => {
   const { t } = useTranslation('chat');
@@ -54,6 +56,17 @@ export const EmptyState = () => {
   const [stashed, setStashed] = useState(false);
   const revealGame = useRef<() => void>();
 
+  /**
+   * Setup takes this screen over while it has something to ask for.
+   *
+   * Clawd and the rotating tip are what the empty state says when there is
+   * nothing to do — which is exactly what is not true before the CLI is
+   * installed and signed in. So the checklist stands in their place rather
+   * than stacking under them, and they come back once it is done or closed.
+   */
+  const onboarding = useOnboarding();
+  const showChecklist = onboarding.visible;
+
   useEffect(() => {
     const index = Math.floor(Math.random() * hints.length);
     setHint(hints[index]);
@@ -76,10 +89,18 @@ export const EmptyState = () => {
         )}
         {(!playing || stashed) && (
           <>
-            {/* Four quick clicks on Dorongi start a game, or bring a stashed
-                one back mid-run. */}
-            <ClawdWalk onDorongiKnock={() => (stashed ? revealGame.current?.() : setPlaying(true))} />
-            <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
+            {showChecklist ? (
+              <div className="w-full max-w-[22rem]">
+                <OnboardingChecklist steps={onboarding.steps} onDismiss={onboarding.dismiss} />
+              </div>
+            ) : (
+              <>
+                {/* Four quick clicks on Dorongi start a game, or bring a stashed
+                    one back mid-run. */}
+                <ClawdWalk onDorongiKnock={() => (stashed ? revealGame.current?.() : setPlaying(true))} />
+                <p className="text-text-secondary text-[1rem] text-center max-w-[18rem] leading-[1.7]">{hint}</p>
+              </>
+            )}
             <AnnouncementEmptyStateSlot />
           </>
         )}

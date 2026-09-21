@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { DockEditor } from './DockEditor';
+import { OPEN_DOCK_EDITOR_EVENT } from '../../Onboarding/openDockEditor';
 
 /**
  * The ⋮ button and its menu — the single place every dockable header feature is
@@ -31,6 +32,14 @@ export function OverflowMenu() {
     document.addEventListener('mousedown', onMouseDown);
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [open]);
+
+  // The onboarding checklist points here for "arrange the dock": the editor is
+  // this menu's body, so showing it means opening this menu.
+  useEffect(() => {
+    const onRequest = () => setOpen(true);
+    window.addEventListener(OPEN_DOCK_EDITOR_EVENT, onRequest);
+    return () => window.removeEventListener(OPEN_DOCK_EDITOR_EVENT, onRequest);
+  }, []);
 
   return (
     <div className="relative flex-shrink-0" ref={ref}>

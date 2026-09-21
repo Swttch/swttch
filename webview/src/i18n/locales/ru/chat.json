@@ -442,6 +442,30 @@
       "rightPlace": "Вы попали точно по адресу!"
     }
   },
+  "onboarding": {
+    "title": "Настройка",
+    "dismiss": "Закрыть",
+    "optional": "необязательно",
+    "unknown": "не подтверждено",
+    "checking": "Проверка…",
+    "working": "Выполняется…",
+    "perform": "Установить",
+    "reveal": "Показать",
+    "steps": {
+      "installCli": {
+        "label": "Установить Claude Code CLI"
+      },
+      "signIn": {
+        "label": "Войти в Claude"
+      },
+      "installKit": {
+        "label": "Установить @swttch/extend-kit"
+      },
+      "arrangeDock": {
+        "label": "Настроить док верхней панели"
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Свершение",
