@@ -5,6 +5,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useAccountQuery } from '@/hooks/queries/useAccountQuery';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { openSettingsAt } from '@/utils/openSettingsAt';
+import { runKitInstall } from '@/utils/runKitInstall';
 import { Route } from '@/router';
 import { MessageType } from '@/shared';
 import { SettingKey } from '@/types/settings';
@@ -135,7 +136,11 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
             : StepStatus.TODO,
         action: StepAction.PERFORM,
         running: kit.installing,
-        run: () => kit.install(),
+        // The same call the Voice input section's control makes, failure
+        // reporting included. A global install can need elevation, and the
+        // backend answers that with a command to run — dropping it here would
+        // leave the spinner stopping and nothing else said (#298).
+        run: () => runKitInstall(kit.install, 'installed'),
       },
       {
         id: 'arrangeDock',
