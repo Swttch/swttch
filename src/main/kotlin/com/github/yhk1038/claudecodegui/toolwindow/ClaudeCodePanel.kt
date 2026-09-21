@@ -307,6 +307,122 @@ class ClaudeCodePanel(
     }
 
     /** Moves the placeholder to [phase] and remembers it for [translatePlaceholder]. */
+    /** True once [clearLoadingOverlay] has taken the placeholder off the browser. */
+    private var loadingOverlayCleared = false
+
+    /** The layered container holding the browser with the placeholder above it. */
+    private var browserLayers: javax.swing.JPanel? = null
+
+    /**
+     * Put the browser on screen with the placeholder drawn over it.
+     *
+     * Both need the panel's centre, and the browser has to be visible to load at
+     * a normal speed, so they are stacked rather than swapped: the browser sits
+     * in the default layer and the placeholder in the palette layer above it.
+     * [javax.swing.JLayeredPane] has no layout manager of its own, so sizes are
+     * kept in step by hand through a component listener.
+     */
+    private fun overlayLoadingOverBrowser(browserComponent: java.awt.Component, startLoad: () -> Unit) {
+        // The browser loads at full size from the start, parked just below the
+        // visible area; the placeholder holds the part the user can see.
+        //
+        // Three arrangements were measured before this one. Keeping the browser
+        // out of the tree made the same page take 24 seconds instead of 4, every
+        // time. Layering the placeholder above it drew nothing at all — the
+        // measurement said layer 100 over layer 0, matching sizes, opaque,
+        // showing, label present, and the panel still read as empty, because a
+        // remote JCEF browser is composited by its own cef_server process and
+        // ignores Swing's paint order. Giving the browser no size at all fixed
+        // both, but then it laid the page out at 0x0 and re-flowed it on reveal,
+        // which the user sees as the chat unfolding from the top-left corner.
+        //
+        // Parking it at full size costs none of that: the page is laid out once,
+        // at the size it will be shown at, and revealing it is a move rather than
+        // a resize (issue #292).
+        var loadStarted = false
+        val stage = object : javax.swing.JPanel(null) {
+            override fun doLayout() {
+                val w = width
+                val h = height
+                loadingPanel.setBounds(0, 0, w, h)
+                // Below the bottom edge while loading, exactly in place once done.
+                browserComponent.setBounds(0, if (loadingOverlayCleared) 0 else h, w, h)
+                // First layout with a real size is the earliest moment the page can
+                // be laid out at the size it will be shown at.
+                if (!loadStarted && w > 0 && h > 0) {
+                    loadStarted = true
+                    startLoad()
+                }
+            }
+        }
+        browserLayers = stage
+        remove(loadingPanel)
+        loadingPanel.isOpaque = true
+        loadingPanel.background = if (com.intellij.ui.JBColor.isBright()) {
+            java.awt.Color(0xFFFFFF)
+        } else {
+            java.awt.Color(0x1A1A1A)
+        }
+        stage.add(browserComponent)
+        stage.add(loadingPanel)
+        add(stage, BorderLayout.CENTER)
+        javax.swing.SwingUtilities.invokeLater {
+            logger.info(
+                "Webview loading off-screen at full size" +
+                    " | stage=${stage.width}x${stage.height}" +
+                    " browser=${browserComponent.width}x${browserComponent.height}" +
+                    "@${browserComponent.x},${browserComponent.y}" +
+                    " | placeholder=${loadingPanel.width}x${loadingPanel.height}" +
+                    " showing=${loadingPanel.isShowing} label='${loadingLabel.text}'"
+            )
+        }
+    }
+
+    /**
+     * Take the placeholder away and leave the browser holding the panel, once.
+     *
+     * Called from the load handler on a healthy load, and from
+     * [armLoadingOverlayFallback] when that signal never arrives, so a page that
+     * fails to finish can never leave the user under a placeholder forever.
+     */
+    private fun clearLoadingOverlay(reason: String) {
+        javax.swing.SwingUtilities.invokeLater {
+            if (isPanelDisposed || loadingOverlayCleared) return@invokeLater
+            val layers = browserLayers ?: return@invokeLater
+            val b = holder?.browser ?: return@invokeLater
+            loadingOverlayCleared = true
+            // Move, do not resize: the browser already holds the final size, so
+            // this only slides it up over the placeholder and drops the latter.
+            layers.remove(loadingPanel)
+            layers.doLayout()
+            layers.revalidate()
+            layers.repaint()
+            logger.info(
+                "Loading placeholder cleared ($reason)" +
+                    " | browser=${b.component.width}x${b.component.height}" +
+                    "@${b.component.x},${b.component.y}"
+            )
+        }
+    }
+
+    /**
+     * Clear the placeholder anyway if the load handler never reports.
+     *
+     * Tied to the stage it was armed for. A panel reloads into a new stage while
+     * the previous one's alarm is still pending, and that alarm used to fire
+     * against whatever stage was current — measured, a timer armed for one panel
+     * took the placeholder off the next one three seconds after it appeared,
+     * because [loadingOverlayCleared] resets per load but the alarm did not
+     * (issue #292).
+     */
+    private fun armLoadingOverlayFallback() {
+        val armedFor = browserLayers ?: return
+        com.intellij.util.Alarm(com.intellij.util.Alarm.ThreadToUse.SWING_THREAD, this)
+            .addRequest({
+                if (browserLayers === armedFor) clearLoadingOverlay("fallback timer")
+            }, LOADING_OVERLAY_FALLBACK_MS)
+    }
+
     private fun setLoadingPhase(phase: LoadingPhase) {
         currentLoadingPhase = phase
         loadingLabel.text = phase.message
@@ -596,6 +712,7 @@ class ClaudeCodePanel(
                     // After the streaming bridge: the repaint reporter calls through it.
                     frame.executeJavaScript(repaintNudgeBridgeScript(), frame.url, 0)
                     installImeWorkaround()
+                    clearLoadingOverlay("load finished")
                     logger.info("WebView loaded successfully")
                     // The webview (IDE-selection chip consumer) just reloaded, so
                     // any previously shown context chips are gone. Re-query the IDE's
@@ -1560,7 +1677,6 @@ class ClaudeCodePanel(
         javax.swing.SwingUtilities.invokeLater {
             val h = holder!!
             val b = h.browser
-            remove(loadingPanel)
             // Paint the Swing component with the IDE surface color so the JCEF
             // native first paint is not white. Heavyweight (non-OSR) mode limits
             // this, but it reduces the white flash on a fresh tab (issue #47).
@@ -1569,9 +1685,31 @@ class ClaudeCodePanel(
             } else {
                 java.awt.Color(0x1A1A1A)
             }
-            b.loadURL(url)
-            add(b.component, BorderLayout.CENTER)
+            // The placeholder stays up until the page is actually on screen, but
+            // the browser goes on screen right now.
+            //
+            // Removing the placeholder here, next to loadURL, is what made the
+            // panel a blank rectangle for seconds: the browser paints its
+            // background long before it has a page to show. Measured over Remote
+            // Development at 10 frames a second, four openings sat empty for 3.9
+            // to 4.2 seconds each with nothing to explain the wait (issue #292).
+            //
+            // Holding the browser back until the page loaded was tried and is
+            // worse: a browser that is not on screen loads at a crawl. The same
+            // page took 24 seconds instead of 4, every time, with the fallback
+            // timer attaching it at 20s and the load finishing 4s later. So the
+            // browser is attached immediately and the placeholder is layered over
+            // it instead.
+            setLoadingPhase(LoadingPhase.LOADING_UI)
+            // loadURL waits for a size. Starting it here would let the very first
+            // panel lay the page out at 0x0 — the tool window has not been placed
+            // yet at this point, so Swing has not given the stage a size — and the
+            // page would re-flow the moment one arrives, which is the unfolding
+            // the browser is parked off-screen to avoid (issue #292). Panels after
+            // the first already have a size and load immediately.
+            overlayLoadingOverBrowser(b.component, JcefHandlers.loadUrlLater(b, url))
             h.isLoaded = true
+            armLoadingOverlayFallback()
             revalidate()
             repaint()
         }
@@ -2222,6 +2360,14 @@ class ClaudeCodePanel(
          * `wsl.exe` start, while still bounding the formerly-unbounded wait. See issue #97.
          */
         private const val BACKEND_START_TIMEOUT_MS = 30_000L
+
+        /**
+         * How long the placeholder may stay over the browser before it is cleared
+         * regardless. Comfortably past a healthy load — the slowest measured over
+         * Remote Development was 4.2s — so it only fires when the load handler
+         * never reports at all.
+         */
+        private const val LOADING_OVERLAY_FALLBACK_MS = 20_000
 
         /**
          * How often the panel asks whether project indexing has finished, instead of waiting

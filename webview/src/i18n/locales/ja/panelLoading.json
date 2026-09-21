@@ -4,7 +4,8 @@
     "backendStart": "バックエンドを起動中...",
     "locatingNode": "Node.js を検索中...",
     "preparingBackend": "バックエンドファイルを準備中...",
-    "waitingForPort": "バックエンドの準備を待機中..."
+    "waitingForPort": "バックエンドの準備を待機中...",
+    "loadingUi": "画面を読み込んでいます (SSH)..."
   },
   "stuck": {
     "stillIndexing": "大きなプロジェクトではインデックス作成に数分かかることがあります。",
