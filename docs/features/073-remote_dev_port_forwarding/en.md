@@ -1,6 +1,31 @@
-# Remote Development just works: the IDE forwards the backend port for you
+# You can now use the plugin against a Remote Development environment
 
-> Language: **English**
+> Language: **English** · [한국어](./ko.md)
+
+This is for people who connect over SSH through JetBrains Remote development and
+work on a development environment that lives on a remote server, reaching it from
+a client.
+
+Before, the backend never connected and all you got was the banner.
+
+Now you can drive Claude Code running inside the remote server from the plugin.
+
+## What has to be installed
+
+These have to be present **on the remote development server**:
+
+- **`claude` has to be installed, and logged in.**
+- **The extend kit has to be installed.** One button click finishes the install.
+  Things still work without it, but the UI cannot handle accounts, usage or voice.
+
+The extend kit's install button is at the top right of the **Voice input** section
+in **Settings → General**. It reads **Install**, and pressing it completes the
+install in place. When the kit is already there the same spot shows its version
+number, and an **Update** button when a newer one exists.
+
+Both belong on the **remote development server**, not on the machine in front of
+you. The plugin's backend runs on the remote server, and it is that backend which
+runs `claude` and the kit.
 
 ## What was wrong
 
@@ -40,6 +65,14 @@ there is no tunnel to create and nothing to recreate when the backend restarts.
 It is also per project: two remote projects run two backends on two ports, and each
 one is forwarded separately.
 
+To confirm it is working, open the **Port Forwarding** view on your own machine.
+The forwarded port is labelled **Claude Code**. The remote host's IDE log carries
+the matching line:
+
+```
+Backend port is reachable from the client on 46655
+```
+
 ## What it does not change
 
 **A local IDE is untouched.** The manager list resolves to
@@ -50,6 +83,27 @@ and the webview gets the backend's own port exactly as before.
 **Failure is never fatal.** Anything unexpected — the API missing, the client not
 binding its end in time, a call throwing — falls back to the host port. That is
 correct locally and no worse than the previous behaviour anywhere else.
+
+One limit is worth knowing. **If the IDE declines to forward the port, the plugin
+does not override it.** It asks once each time the panel opens, and falls back to
+the unforwarded port when the answer is no. Nothing in the plugin's own settings
+changes that.
+
+## Installing on the client does not help
+
+JetBrains offers to install a plugin on both halves, and doing so can look like a
+fix: the chat connects and the tool window icons appear.
+
+**It is not a fix.** The client half then starts its own backend, on your machine,
+and that backend runs `claude` against a local scaffold folder instead of the
+project you are editing. Measured on PhpStorm 2026.2.3, the working directory
+resolved to `~/Library/Application Support/JetBrains/PhpStorm2026.2/projects/<hash>`
+— not the remote project.
+
+A chat that looks connected while reading the wrong machine's files is worse than
+one that says it is disconnected. So the client half stands down: it starts no
+backend, registers no tool windows, restores no sessions and shows no status
+widget. The remote half is unaffected, and its menu actions still reach you.
 
 ## Notes for maintainers
 
