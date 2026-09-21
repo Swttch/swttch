@@ -4,6 +4,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useAccountQuery } from '@/hooks/queries/useAccountQuery';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
+import { useNavigateToLogin } from '@/hooks';
 import { openSettingsAt } from '@/utils/openSettingsAt';
 import { runKitInstall } from '@/utils/runKitInstall';
 import { Route } from '@/router';
@@ -87,6 +88,7 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
   const account = useAccountQuery();
   const kit = useExtendKit();
   const { settings, isLoading: settingsLoading } = useSettings();
+  const navigateToLogin = useNavigateToLogin();
 
   const dismiss = useCallback(() => dismissMutation.mutate(), [dismissMutation]);
 
@@ -125,7 +127,12 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
             ? StepStatus.UNKNOWN
             : StepStatus.CHECKING,
         action: StepAction.REVEAL,
-        run: () => void openSettingsAt(Route.SETTINGS_ACCOUNT),
+        // The same entry point the auth banner and the inline CTA use. It is
+        // the single one every "go to login" trigger is meant to share, because
+        // it records where the user was as a `fallback` so finishing the login
+        // returns them there — a jump straight to the account settings page
+        // would drop that and leave them on settings afterwards. (#178)
+        run: () => navigateToLogin(),
       },
       {
         id: 'installKit',
@@ -166,6 +173,10 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
     kit.install,
     settings,
     settingsLoading,
+    // Rebuilt whenever the route changes, and the fallback it records is the
+    // route at the time it was made. Left out, the button would send the user
+    // back to wherever they were when this list was last built.
+    navigateToLogin,
   ]);
 
   return {
