@@ -174,6 +174,12 @@ export enum MessageType {
   /** Report that the popup for a version was shown, so it is not raised again on the next launch. inbound webview→backend */
   SET_WHATS_NEW_SEEN = 'SET_WHATS_NEW_SEEN',
 
+  // -- Onboarding checklist (first-run setup steps) --
+  /** Ask whether the user has already closed the onboarding checklist. Kept in profile.json rather than the webview, because a JetBrains webview is served from a new origin on every launch and its localStorage starts empty (#453) — a dismissal stored there would only hold until the next IDE restart. Answers {dismissed}. inbound webview→backend */
+  GET_ONBOARDING_DISMISSED = 'GET_ONBOARDING_DISMISSED',
+  /** Record that the checklist was closed, so it does not come back on the next launch. Takes {dismissed} and answers with the value that was stored. inbound webview→backend */
+  SET_ONBOARDING_DISMISSED = 'SET_ONBOARDING_DISMISSED',
+
   // -- Sponsor / license --
   /** The webview reports that one feature's sponsor gate was shown or followed, as {gate, step, from?}. Purely a measurement signal: the offer is raised and acted on entirely in the webview and reaches the backend no other way. The gate and step become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a per-feature conversion rate is a question about people. Never carries text the user typed. inbound webview→backend */
   SPONSOR_GATE_ACTIVITY = 'SPONSOR_GATE_ACTIVITY',
