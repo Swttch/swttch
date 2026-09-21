@@ -456,7 +456,7 @@
         "label": "@swttch/extend-kit をインストール"
       },
       "arrangeDock": {
-        "label": "上部バーのドックを配置"
+        "label": "ドックを配置"
       }
     }
   },

@@ -456,7 +456,7 @@
         "label": "安裝 @swttch/extend-kit"
       },
       "arrangeDock": {
-        "label": "排列頂列停駐區"
+        "label": "排列停駐區"
       }
     }
   },

@@ -460,7 +460,7 @@
         "label": "Install @swttch/extend-kit"
       },
       "arrangeDock": {
-        "label": "Arrange the top bar dock"
+        "label": "Arrange the dock"
       }
     }
   },

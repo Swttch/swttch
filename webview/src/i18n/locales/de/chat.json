@@ -456,7 +456,7 @@
         "label": "@swttch/extend-kit installieren"
       },
       "arrangeDock": {
-        "label": "Dock der oberen Leiste anordnen"
+        "label": "Dock anordnen"
       }
     }
   },

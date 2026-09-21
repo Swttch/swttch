@@ -45,20 +45,28 @@ export function ChecklistRow(props: Props) {
         title={label}
       >
         {label}
-        {step.optional && !done && (
-          <span className="ml-1.5 text-[0.7307rem] font-normal text-text-tertiary">
-            {t('onboarding.optional')}
-          </span>
-        )}
       </span>
 
-      {/* An unresolved answer is the row's own news, so it is stated in the row
-          rather than left to the box to imply. */}
-      {unknown && (
-        <span className="flex shrink-0 items-center gap-1 text-[0.7307rem] text-text-tertiary group-hover/row:hidden">
-          <QuestionMarkCircleIcon className="h-3.5 w-3.5" />
-          {t('onboarding.unknown')}
+      {/* Outside the truncating label, so a long step name eats into its own
+          text rather than swallowing the word that says this one is skippable.
+          Measured in a clean container: inside the label, English truncated to
+          "Arrange the top bar dock opti…". */}
+      {step.optional && !done && (
+        <span className="shrink-0 text-[0.7307rem] text-text-tertiary">
+          {t('onboarding.optional')}
         </span>
+      )}
+
+      {/* An unresolved answer is marked, not spelled out. The dashed box carries
+          it, and the words live in the tooltip — a note beside the label competed
+          for the same line and truncated the step name itself, which is the one
+          thing on the row that has to stay readable. */}
+      {unknown && (
+        <QuestionMarkCircleIcon
+          className="h-3.5 w-3.5 shrink-0 text-text-tertiary"
+          title={t('onboarding.unknown')}
+          aria-label={t('onboarding.unknown')}
+        />
       )}
 
       {/* Nothing to offer while the answer is still coming: a button pressed

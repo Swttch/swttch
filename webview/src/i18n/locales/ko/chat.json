@@ -456,7 +456,7 @@
         "label": "@swttch/extend-kit 설치"
       },
       "arrangeDock": {
-        "label": "상단바 도크 배치"
+        "label": "도크 배치"
       }
     }
   },
