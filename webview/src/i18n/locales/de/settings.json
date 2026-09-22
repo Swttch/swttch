@@ -209,6 +209,13 @@
       "label": "Zeilenumbruch",
       "description": "Lange Zeilen in Diffs und Werkzeugausgaben umbrechen statt seitlich zu scrollen."
     },
+    "hideToolCalls": {
+      "label": "Tool-Aufrufe ausblenden",
+      "description": "Blendet die Karten für Befehle und Lesezugriffe aus. Dateiänderungen, Fragen und Pläne bleiben sichtbar."
+    },
+    "chat": {
+      "sectionTitle": "Chat"
+    },
     "scrolling": {
       "sectionTitle": "Scrollen",
       "autoScrollThreshold": {

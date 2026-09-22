@@ -34,6 +34,7 @@ vi.mock('@/contexts/SessionContext', () => ({
 }));
 vi.mock('@/contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { useCtrlEnterToSend: false } }),
+  useSettingsOrNull: () => null,
 }));
 
 // The composer asks the conversation which agents can no longer be reached

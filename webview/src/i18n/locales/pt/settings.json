@@ -209,6 +209,13 @@
       "label": "Quebra de linha",
       "description": "Dobrar as linhas longas dos diffs e saídas de ferramentas em vez de rolar na horizontal."
     },
+    "hideToolCalls": {
+      "label": "Ocultar chamadas de ferramentas",
+      "description": "Oculta os cartões dos comandos e das leituras. As alterações de ficheiros, as perguntas e os planos continuam visíveis."
+    },
+    "chat": {
+      "sectionTitle": "Chat"
+    },
     "scrolling": {
       "sectionTitle": "Rolagem",
       "autoScrollThreshold": {

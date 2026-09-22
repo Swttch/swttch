@@ -209,6 +209,13 @@
       "label": "Retour à la ligne",
       "description": "Replier les longues lignes des diffs et sorties d'outils au lieu de défiler latéralement."
     },
+    "hideToolCalls": {
+      "label": "Masquer les appels d'outils",
+      "description": "Masque les cartes des commandes et des lectures. Les modifications de fichiers, les questions et les plans restent visibles."
+    },
+    "chat": {
+      "sectionTitle": "Chat"
+    },
     "scrolling": {
       "sectionTitle": "Défilement",
       "autoScrollThreshold": {
