@@ -17,6 +17,7 @@ import {GenericMcpRenderer} from "./ToolRenderers/Mcp/Generic";
 import {isMcpToolName} from "./ToolRenderers/Mcp/Generic/cursorMcp";
 import {StreamSafeErrorBoundary} from "@/components/StreamSafeErrorBoundary";
 import { useTranslation } from '@/i18n';
+import { isAlwaysVisibleTool, useHideToolCalls } from './hideToolCalls';
 
 interface ToolRendererProps {
     toolUse: ToolUseBlockDto;
@@ -25,8 +26,11 @@ interface ToolRendererProps {
 
 export const ToolRenderer: React.FC<ToolRendererProps> = ({toolUse, message}) => {
     const { t } = useTranslation('chatTools');
+    const hideToolCalls = useHideToolCalls();
     const toolResult = toolUse.tool_result as LoadedMessageDto | undefined;
     const renderKey = JSON.stringify(toolUse.input ?? {});
+
+    if (hideToolCalls && !isAlwaysVisibleTool(toolUse.name)) return null;
 
     const Renderer = ToolRendererMap.get(toolUse.name);
 
