@@ -1,5 +1,6 @@
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import clawdSvg from '../../../assets/clawd.svg';
+import { Tooltip } from '@/components/Tooltip';
 import { useTranslation } from '@/i18n';
 import { ChecklistRow } from './ChecklistRow';
 import { StepStatus, type ChecklistStep } from './types';
@@ -44,15 +45,16 @@ export function OnboardingChecklist(props: Props) {
         <h3 className="min-w-0 flex-1 truncate text-[0.8461rem] font-semibold text-text-primary">
           {t('onboarding.title')}
         </h3>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label={t('onboarding.dismiss')}
-          title={t('onboarding.dismiss')}
-          className="-mr-1 shrink-0 rounded p-1 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
+        <Tooltip content={t('onboarding.dismiss')}>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label={t('onboarding.dismiss')}
+            className="-mr-1 shrink-0 rounded p-1 text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
       </div>
 
       <ul className="mt-3 flex flex-col">

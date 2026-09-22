@@ -1,4 +1,4 @@
-import { CheckIcon, ArrowPathIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Tooltip } from '@/components/Tooltip';
 import { useTranslation } from '@/i18n';
 import { ActionKind, StepStatus, type ChecklistStep, type StepAction } from './types';
@@ -34,62 +34,62 @@ export function ChecklistRow(props: Props) {
   const { t } = useTranslation('chat');
 
   const done = step.status === StepStatus.DONE;
-  const unknown = step.status === StepStatus.UNKNOWN;
   const checking = step.status === StepStatus.CHECKING;
   const label = t(`onboarding.steps.${step.id}.label`);
   const hint = t(`onboarding.steps.${step.id}.hint`);
 
   return (
     <Tooltip
-      // Above, not beside. A non-interactive tooltip renders in place rather
-      // than into <body>, so one hung off the side of a card this near the
-      // window edge is cut off instead of flipped.
-      placement="top"
+      // Below the row. Beside it gets cut off, because a non-interactive
+      // tooltip renders in place rather than into <body> and a card this near
+      // the window edge has no room to its right. Above it covers the card's
+      // own title, and a panel whose heading disappears when you point at it
+      // reads as broken; below, what it covers is the steps not read yet.
+      placement="bottom"
       content={
-        // `break-normal`, not `break-words`, to undo the shared tooltip's
-        // `break-all`. That setting suits the file paths it usually holds and
-        // splits a sentence mid-word ("without i / t"); the two are different
-        // CSS properties, so overriding the wrong one leaves it in place.
-        <span className="block max-w-[18rem] break-normal">
+        // `break-keep` to undo the shared tooltip's `break-all`. That setting
+        // suits the file paths it usually holds and splits a sentence mid-word
+        // ("without i / t"). `break-words` does not undo it, being a different
+        // CSS property.
+        <span className="block max-w-[18rem] break-keep">
           <span className="block font-semibold">{label}</span>
           <span className="mt-1 block text-text-secondary">{hint}</span>
         </span>
       }
     >
       <li className="group/row flex items-center gap-2.5 rounded px-2 py-[0.3125rem] transition-colors hover:bg-surface-hover focus-within:bg-surface-hover">
-        <StatusBox status={step.status} checkingLabel={t('onboarding.checking')} />
+        <StatusBox
+          status={step.status}
+          checkingLabel={t('onboarding.checking')}
+          unknownLabel={t('onboarding.unknown')}
+        />
 
-        <span
-          className={[
-            'min-w-0 flex-1 truncate text-[0.8461rem] leading-snug',
-            done
-              ? 'text-text-tertiary line-through'
-              : isNext
-                ? 'font-semibold text-text-primary'
-                : 'text-text-secondary',
-          ].join(' ')}
-        >
-          {label}
-        </span>
-
-        {/* Outside the truncating label, so a long step name eats into its own
-            text rather than swallowing the word that says this one is skippable. */}
-        {step.optional && !done && (
-          <span className="shrink-0 text-[0.7307rem] text-text-tertiary">
-            {t('onboarding.optional')}
+        {/* The tag travels WITH the label, inside a group that takes the free
+            space, so it reads as part of the step name. Left to sit between the
+            label and the buttons it drifted into the middle of the row, because
+            the buttons hold their place while invisible and it was pushed up
+            against them rather than following the text it belongs to. Only the
+            label truncates, so a long name eats into its own text instead of
+            swallowing the word that says this step is skippable. */}
+        <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span
+            className={[
+              'truncate text-[0.8461rem] leading-snug',
+              done
+                ? 'text-text-tertiary line-through'
+                : isNext
+                  ? 'font-semibold text-text-primary'
+                  : 'text-text-secondary',
+            ].join(' ')}
+          >
+            {label}
           </span>
-        )}
-
-        {/* An unresolved answer is marked, not spelled out. The dashed box
-            carries it and the row's tooltip says the rest — a note beside the
-            label competed for the same line and truncated the step name itself,
-            which is the one thing on the row that has to stay readable. */}
-        {unknown && (
-          <QuestionMarkCircleIcon
-            className="h-3.5 w-3.5 shrink-0 text-text-tertiary"
-            aria-label={t('onboarding.unknown')}
-          />
-        )}
+          {step.optional && !done && (
+            <span className="shrink-0 text-[0.7307rem] text-text-tertiary">
+              {t('onboarding.optional')}
+            </span>
+          )}
+        </span>
 
         {/* Nothing to offer while the answer is still coming: a button pressed
             now would act on a status about to be replaced. */}
@@ -123,9 +123,12 @@ function ActionButton(props: { action: StepAction }) {
         'rounded-[0.1875rem] px-2 py-[0.0625rem] text-[0.7307rem] font-medium transition-colors',
         'opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 focus:opacity-100',
         'disabled:cursor-not-allowed disabled:opacity-100',
+        // Outlined rather than filled with a quieter surface. `surface-tooltip`
+        // is the dark face a tooltip sits on, which on a light theme put a
+        // black pill inside a white card; a border reads as secondary in both.
         quiet
-          ? 'bg-surface-tooltip text-text-secondary hover:bg-surface-hover'
-          : 'bg-accent-claude text-white hover:bg-accent-claude-hover',
+          ? 'border border-border-default text-text-secondary hover:bg-surface-hover'
+          : 'border border-transparent bg-accent-claude text-white hover:bg-accent-claude-hover',
       ].join(' ')}
     >
       {action.running ? (
@@ -149,7 +152,7 @@ function ActionButton(props: { action: StepAction }) {
  * marks an answer we asked for and did not get, which a lighter grey would
  * only have read as a dimmer "no".
  */
-function StatusBox(props: { status: StepStatus; checkingLabel: string }) {
+function StatusBox(props: { status: StepStatus; checkingLabel: string; unknownLabel: string }) {
   const base =
     'flex h-[0.875rem] w-[0.875rem] shrink-0 items-center justify-center rounded-[0.1875rem] border';
   // A spinner in place of the box, not beside it: the box is the thing whose
@@ -172,8 +175,17 @@ function StatusBox(props: { status: StepStatus; checkingLabel: string }) {
       </span>
     );
   }
+  // The dashed edge is the whole marking. An icon beside the label said the
+  // same thing a second time and had to sit somewhere, which put a lone glyph
+  // in the middle of the row; the tooltip carries the sentence instead.
   if (props.status === StepStatus.UNKNOWN) {
-    return <span className={`${base} border-dashed border-accent-claude`} />;
+    return (
+      <span
+        className={`${base} border-dashed border-accent-claude`}
+        role="status"
+        aria-label={props.unknownLabel}
+      />
+    );
   }
   return <span className={`${base} border-accent-claude`} />;
 }

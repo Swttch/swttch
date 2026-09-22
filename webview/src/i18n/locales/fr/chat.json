@@ -462,7 +462,7 @@
       },
       "arrangeDock": {
         "label": "Organiser le dock",
-        "hint": "Placez sur la barre supérieure ce que vous utilisez le plus. L'ignorer ne coûte rien : tout reste dans le menu ⋮."
+        "hint": "Placez sur la barre supérieure ce que vous utilisez le plus. L'ignorer ne coûte rien : tout reste dans le menu Plus."
       }
     }
   },

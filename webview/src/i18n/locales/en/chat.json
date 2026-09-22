@@ -466,7 +466,7 @@
       },
       "arrangeDock": {
         "label": "Arrange the dock",
-        "hint": "Put the features you reach for most on the top bar. Nothing is lost by skipping it; every feature stays in the ⋮ menu either way."
+        "hint": "Put the features you reach for most on the top bar. Nothing is lost by skipping it; every feature stays in the More menu either way."
       }
     }
   },
