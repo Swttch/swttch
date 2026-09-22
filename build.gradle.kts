@@ -188,6 +188,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.32.2 - Remote Development support, and an indicator for the messages you sent</h3>
+            <ul>
+                <li>Add IDE port forwarding so the backend is reachable in Remote Development (#472 by @iljac, reported by @lenar and @alexandrezia)</li>
+                <li>Add an indicator for the messages you sent (#469, reported by @ylz4647)</li>
+                <li>Fix the account pool stalling when several sessions hit their limit at once (#470)</li>
+            </ul>
             <h3>0.32.1 - Improved proxy and environment variable delivery, improved settings UI, and more</h3>
             <ul>
                 <li>Add a setting to choose the newline key (#468, reported by @alxakx)</li>
