@@ -2,12 +2,24 @@ import { existsSync } from 'node:fs';
 import { win32 } from 'node:path';
 import { execFile as cpExecFile } from 'child_process';
 import { augmentedEnv } from './augmented-path';
-import { execViaCmdArgv } from './win-exec';
+import { execViaCmdArgv, isDirectlyExecutable } from './win-exec';
 
 export interface LauncherResult {
   ok: boolean;
   /** Combined stdout+stderr, trimmed — the text callers classify a failure by. */
   output: string;
+  /**
+   * stdout alone, untrimmed and unmixed.
+   *
+   * Carried beside `output` because a caller that PARSES the answer cannot use
+   * the combined text: `npm view … --json` prints JSON on stdout while npm
+   * writes warnings on stderr, and one warning turns the pair into something
+   * `JSON.parse` rejects. Classifying a failure still reads `output`, since a
+   * launcher is free to explain itself on either stream.
+   */
+  stdout: string;
+  /** stderr alone, untrimmed. The other half of `output`. */
+  stderr: string;
 }
 
 /**
@@ -38,7 +50,12 @@ export function runLauncher(
 ): Promise<LauncherResult> {
   // Both Claude CLI and companion updates make the same Windows launcher
   // choice here. npm's JS entry bypasses cmd quoting and execution policy.
-  let direct = opts.direct || /\.exe$/i.test(command);
+  //
+  // The `.exe` test moved into [isDirectlyExecutable] so `Command.exec` asks the
+  // same question in the same words. It used to live only here, and the copy
+  // that was missing over there sent `C:\Program Files\nodejs\node.exe` through
+  // cmd.exe, which split it at the space (#471).
+  let direct = opts.direct || isDirectlyExecutable(command);
   if (process.platform === 'win32' && !direct && /^npm(?:\.cmd)?$/i.test(win32.basename(command))) {
     const directory = win32.isAbsolute(command) ? win32.dirname(command) : win32.dirname(process.execPath);
     const cli = win32.join(directory, 'node_modules', 'npm', 'bin', 'npm-cli.js');
@@ -58,6 +75,8 @@ export function runLauncher(
     }).then(({ err, stdout, stderr }) => ({
       ok: !err,
       output: `${stdout}${stderr}`.trim(),
+      stdout,
+      stderr,
     }));
   }
   return new Promise((resolve) => {
@@ -74,8 +93,9 @@ export function runLauncher(
         shell: false,
       },
       (err, stdout, stderr) => {
-        const output = `${stdout?.toString() ?? ''}${stderr?.toString() ?? ''}`.trim();
-        resolve({ ok: !err, output });
+        const out = stdout?.toString() ?? '';
+        const errOut = stderr?.toString() ?? '';
+        resolve({ ok: !err, output: `${out}${errOut}`.trim(), stdout: out, stderr: errOut });
       },
     );
   });

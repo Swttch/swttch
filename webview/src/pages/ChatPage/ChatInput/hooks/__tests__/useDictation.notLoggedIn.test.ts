@@ -110,6 +110,49 @@ describe('useDictation when the backend refuses a start', () => {
     expect(result.current.error?.notLoggedIn).toBeFalsy();
   });
 
+  /**
+   * #471. Three kit failures, three flags.
+   *
+   * The backend used to send `kit_missing` for all three, so a Windows user
+   * whose kit was installed and current read "Voice input needs
+   * @swttch/extend-kit" and pressed an Install button that reported success and
+   * changed nothing. Each failure now reaches the banner as itself.
+   */
+  it('flags an out-of-date kit apart from an absent one', async () => {
+    ack.value = {
+      status: 'error',
+      errorKind: DictationErrorKind.KIT_TOO_OLD,
+      error: '@swttch/extend-kit 0.6.0 does not support "stt.stream"',
+    };
+    const { result } = renderDictation();
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.error?.kitTooOld).toBe(true);
+    // Not "install it": it is installed.
+    expect(result.current.error?.kitMissing).toBeFalsy();
+  });
+
+  it('flags a kit that could not be run, and keeps the words that say why', async () => {
+    const relayed =
+      "@swttch/extend-kit is installed but could not be run: 'C:\\Program' is not recognized as an internal or external command";
+    ack.value = { status: 'error', errorKind: DictationErrorKind.KIT_UNUSABLE, error: relayed };
+    const { result } = renderDictation();
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    expect(result.current.error?.kitUnusable).toBe(true);
+    expect(result.current.error?.kitMissing).toBeFalsy();
+    expect(result.current.error?.kitTooOld).toBeFalsy();
+    // The banner has no wording of its own for this, so the relayed text is the
+    // only thing that can name the cause.
+    expect(result.current.error?.message).toBe(relayed);
+  });
+
   it('sets neither flag when the start succeeds', async () => {
     const { result } = renderDictation();
 

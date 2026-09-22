@@ -73,6 +73,26 @@ export class ExtendKitTooOldError extends Error {
   }
 }
 
+/**
+ * Thrown when the kit is installed but running it did not produce an answer.
+ *
+ * Its own error rather than either of the two above, because it is a different
+ * event with a different remedy — and because the two used to be reported as one.
+ * A probe that cannot run was recorded as "supports nothing", which the caller
+ * then re-told as "the kit is missing or too old", so a Windows user whose kit
+ * was present and current was sent to install something he already had (#471).
+ *
+ * The `cause` is the failure verbatim. We do not know what stopped the run, so
+ * we relay what the run said instead of summarising it into a guess.
+ */
+export class ExtendKitProbeFailedError extends Error {
+  constructor(public readonly cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`${EXTEND_KIT_PACKAGE} is installed but could not be run: ${detail}`.trim());
+    this.name = 'ExtendKitProbeFailedError';
+  }
+}
+
 /** Capability the kit reports once `ccb stt` exists. */
 const STT_CAPABILITY = 'stt.stream';
 
@@ -400,35 +420,53 @@ async function ccbEnv(workingDir?: string): Promise<NodeJS.ProcessEnv> {
 }
 
 /**
- * Whether the installed kit is new enough to stream dictation.
+ * What the installed kit says it supports.
  *
- * Checked through `--capabilities` rather than by comparing version numbers: the
+ * Asked through `--capabilities` rather than by comparing version numbers: the
  * capability list is the kit's own statement about what it supports, and a
  * version comparison here would have to be updated in lockstep with a package
  * that ships on its own schedule.
  *
- * @throws ExtendKitTooOldError when the kit predates `ccb stt`.
+ * Two outcomes, deliberately kept apart:
+ *
+ *   - the kit ANSWERED, and the answer names some capabilities or none. That is
+ *     a fact about the kit, it cannot change under a running install, and it is
+ *     cached (a probe costs a process spawn, measured at about 120ms, and the
+ *     usage panel asks on every refresh).
+ *   - the run FAILED, so there is no answer. That is a fact about this machine
+ *     right now, it says nothing about what the kit supports, and it is neither
+ *     reported as an empty list nor cached. Caching it would keep answering with
+ *     a failure that has since been fixed, and reporting it as an empty list is
+ *     what turned a torn command line into "your kit is too old" (#471).
+ *
+ * @throws ExtendKitProbeFailedError when the kit could not be run or its answer
+ *         could not be read.
  */
 async function readCapabilities(entry: string, workingDir?: string): Promise<string[]> {
   if (cachedCapabilities) return cachedCapabilities;
 
-  let capabilities: string[] = [];
+  let capabilities: string[];
   try {
     const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir, await ccbEnv(workingDir)).exec();
     const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
     capabilities = parsed.capabilities ?? [];
-  } catch {
-    // A kit old enough to not know --capabilities fails here, which is the same
-    // answer as a kit that knows the flag but not the capability being asked about.
-    capabilities = [];
+  } catch (err) {
+    throw new ExtendKitProbeFailedError(err);
   }
 
   cachedCapabilities = capabilities;
   return capabilities;
 }
 
-async function assertSttCapable(entry: string): Promise<void> {
-  const capabilities = await readCapabilities(entry);
+/**
+ * Whether the installed kit is new enough to stream dictation.
+ *
+ * @throws ExtendKitTooOldError when the kit answers without a capability
+ *         dictation needs.
+ * @throws ExtendKitProbeFailedError when the kit could not be asked at all.
+ */
+async function assertSttCapable(entry: string, workingDir?: string): Promise<void> {
+  const capabilities = await readCapabilities(entry, workingDir);
 
   for (const required of [STT_CAPABILITY, SETTINGS_ENV_CAPABILITY]) {
     if (!capabilities.includes(required)) {
@@ -438,20 +476,48 @@ async function assertSttCapable(entry: string): Promise<void> {
 }
 
 /**
+ * Everything dictation needs from the kit, checked in one call.
+ *
+ * Exported so the installer can define "the install worked" as "dictation can
+ * actually run now" rather than "a version string exists on disk". Those two
+ * answers disagreed on the reporter's machine: the version was read straight out
+ * of package.json and said 0.7.3, while every attempt to RUN the kit failed, so
+ * Install reported success and the microphone failed immediately afterwards
+ * (#471). Asking the same way dictation asks is the only way the two can agree.
+ *
+ * @throws ExtendKitMissingError when the package is not installed.
+ * @throws ExtendKitTooOldError when it lacks a capability dictation needs.
+ * @throws ExtendKitProbeFailedError when it is there and cannot be run.
+ */
+export async function assertDictationCapable(workingDir?: string): Promise<void> {
+  const entry = await resolveCcbEntry();
+  await assertSttCapable(entry, workingDir);
+}
+
+/**
  * Whether the installed kit reads Claude's settings files itself.
  *
  * Separate from {@link assertSttCapable} because the usage panel needs the same guarantee and
- * has nothing to do with dictation. Answers rather than throws: the usage handler turns a "no"
- * into its own message, and a failure to ask at all should not take the panel down.
+ * has nothing to do with dictation. A kit that ANSWERS without the capability is answered with
+ * a plain false: the usage handler turns that into "update ccb", which is the right next step.
+ *
+ * A kit that could not be RUN is not answered at all — {@link ExtendKitProbeFailedError} travels
+ * on. "Update ccb" is a wrong instruction for a kit that is already current and simply could not
+ * be started, and sending a Windows user to press an update button that changes nothing is the
+ * same wasted afternoon dictation handed out in #471.
+ *
+ * @throws ExtendKitProbeFailedError when the kit is installed and could not be run.
  */
 export async function hasSettingsEnvCapability(workingDir?: string): Promise<boolean> {
+  let entry: string;
   try {
-    const entry = await resolveCcbEntry();
-    return (await readCapabilities(entry, workingDir)).includes(SETTINGS_ENV_CAPABILITY);
+    entry = await resolveCcbEntry();
   } catch {
-    // Not installed. Either way it does not have the capability.
+    // Not installed. It does not have the capability, and the panel's own
+    // install affordance is the way out of that.
     return false;
   }
+  return (await readCapabilities(entry, workingDir)).includes(SETTINGS_ENV_CAPABILITY);
 }
 
 /**
@@ -464,6 +530,7 @@ export async function hasSettingsEnvCapability(workingDir?: string): Promise<boo
  *
  * @throws ExtendKitMissingError when the package is not installed globally.
  * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
+ * @throws ExtendKitProbeFailedError when the installed kit could not be run.
  */
 export async function spawnSpeechToText(
   handlers: SpeechToTextHandlers,
@@ -471,7 +538,7 @@ export async function spawnSpeechToText(
   workingDir?: string,
 ): Promise<SpeechToTextStream> {
   const entry = await resolveCcbEntry();
-  await assertSttCapable(entry);
+  await assertSttCapable(entry, workingDir);
 
   // Settle the Claude data directory before the child exists to inherit it. Dictation was
   // the one feature that never did this, so the login it authenticated with was whichever
@@ -583,10 +650,11 @@ export async function spawnSpeechToText(
  *
  * @throws ExtendKitMissingError when the package is not installed globally.
  * @throws ExtendKitTooOldError when the installed kit has no `stt` command.
+ * @throws ExtendKitProbeFailedError when the installed kit could not be run.
  */
 export async function probeSpeechToTextAvailable(workingDir?: string): Promise<boolean> {
   const entry = await resolveCcbEntry();
-  await assertSttCapable(entry);
+  await assertSttCapable(entry, workingDir);
 
   // The same project the stream will run against, or the answer describes a different one.
   await Claude.applyConfigDir(workingDir);

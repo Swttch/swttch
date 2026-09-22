@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "语音输入需要 @swttch/extend-kit。请从右上角安装。",
+        "outdated": "已安装的 @swttch/extend-kit 版本过旧，不支持语音输入。请从右上角更新。",
+        "unusable": "@swttch/extend-kit 已安装，但无法启动：{{message}}",
         "install": "安装",
         "installing": "正在安装…",
         "installed": "已安装",

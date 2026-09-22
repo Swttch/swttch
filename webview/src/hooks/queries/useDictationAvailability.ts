@@ -8,12 +8,18 @@ export interface DictationAvailability {
   available: boolean;
   /** Why not, when it cannot. Null while it can. */
   reason: DictationErrorKind | null;
+  /**
+   * What the failed attempt said, for the reason that has words of its own
+   * (DictationErrorKind.KIT_UNUSABLE). Null for every other answer.
+   */
+  detail: string | null;
 }
 
 interface RawResult {
   status?: string;
   available?: boolean;
   reason?: DictationErrorKind | null;
+  detail?: string | null;
 }
 
 /**
@@ -46,7 +52,7 @@ export function useDictationAvailability(options?: { enabled?: boolean }) {
       const r = (await send(MessageType.GET_DICTATION_AVAILABILITY, {
         workingDir: workingDirectory,
       })) as RawResult;
-      return { available: r.available ?? false, reason: r.reason ?? null };
+      return { available: r.available ?? false, reason: r.reason ?? null, detail: r.detail ?? null };
     },
     enabled: isConnected && (options?.enabled ?? true),
     staleTime: 5 * 60 * 1000,

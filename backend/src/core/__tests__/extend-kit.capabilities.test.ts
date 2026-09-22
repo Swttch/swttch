@@ -21,6 +21,8 @@ let ccbPath: string | null = '/global/bin/ccb';
 let globalRoot = '';
 /** How many times the fake CLI was asked what it supports. */
 let capabilityProbes = 0;
+/** When set, asking the fake CLI fails the way a torn command line fails. */
+let capabilityFailure: Error | null = null;
 
 vi.mock('../command', () => ({
   ShellKind: { LoginInteractive: 'login-interactive', Direct: 'direct' },
@@ -35,6 +37,7 @@ vi.mock('../command', () => ({
     exec() {
       if (this.args.includes('--capabilities')) {
         capabilityProbes += 1;
+        if (capabilityFailure) return Promise.reject(capabilityFailure);
         return Promise.resolve({ stdout: JSON.stringify({ capabilities: advertised }), stderr: '' });
       }
       // Root discovery: answer the one place the fixture lays the package out.
@@ -52,12 +55,20 @@ vi.mock('../claude', () => ({
   },
 }));
 
-const { hasSettingsEnvCapability, resetExtendKitCache } = await import('../extend-kit');
+const {
+  hasSettingsEnvCapability,
+  assertDictationCapable,
+  resetExtendKitCache,
+  ExtendKitProbeFailedError,
+  ExtendKitTooOldError,
+  ExtendKitMissingError,
+} = await import('../extend-kit');
 
 beforeEach(async () => {
   resetExtendKitCache();
   ccbPath = '/global/bin/ccb';
   capabilityProbes = 0;
+  capabilityFailure = null;
   globalRoot = await mkdtemp(join(tmpdir(), 'ccg-kit-caps-'));
   const packageDir = join(globalRoot, '@swttch', 'extend-kit');
   await mkdir(join(packageDir, 'bin'), { recursive: true });
@@ -85,10 +96,22 @@ describe('hasSettingsEnvCapability', () => {
 
   it('says no when the kit is not installed, rather than failing the caller', async () => {
     ccbPath = null;
+    globalRoot = '/nowhere-a-kit-lives';
 
     // The usage panel turns a "no" into "update ccb". A throw here would instead surface as
     // an unexplained failure of the whole panel.
     expect(await hasSettingsEnvCapability('/project/a')).toBe(false);
+  });
+
+  // #471. "Update ccb" is a wrong instruction for a kit that is already current
+  // and simply could not be started, and the update button it points at reports
+  // success and changes nothing.
+  it('does not answer no for a kit that could not be run — it says what happened', async () => {
+    capabilityFailure = new Error("'C:\\Program' is not recognized as an internal or external command");
+
+    await expect(hasSettingsEnvCapability('/project/a')).rejects.toThrow(
+      /'C:\\Program' is not recognized/,
+    );
   });
 });
 
@@ -116,5 +139,77 @@ describe('asking what the kit supports', () => {
 
     expect(await hasSettingsEnvCapability()).toBe(true);
     expect(capabilityProbes).toBe(2);
+  });
+});
+
+/**
+ * #471. A probe that could not run is not a kit that supports nothing.
+ *
+ * On the reporter's Windows machine the probe died before it started —
+ * `'C:\Program' is not recognized as an internal or external command`, because
+ * cmd.exe tore `C:\Program Files\nodejs\node.exe` in half. That failure was
+ * caught, written down as an empty capability list, and then re-told to the user
+ * as "the kit is missing or too old", about a 0.7.3 install that was neither.
+ */
+describe('a probe that could not run', () => {
+  const torn = new Error("Command failed: 'C:\\Program' is not recognized as an internal or external command");
+
+  it('reports the failure instead of reporting an empty answer', async () => {
+    capabilityFailure = torn;
+
+    await expect(assertDictationCapable('/project/a')).rejects.toBeInstanceOf(
+      ExtendKitProbeFailedError,
+    );
+  });
+
+  it('is not the same event as a kit that answered without the capability', async () => {
+    // A kit that ANSWERS and lacks the capability is old, and "update it" is the
+    // right thing to say. A kit that cannot be asked at all is not old, and
+    // updating it fixes nothing.
+    advertised = ['oauth.usage.account-file'];
+
+    await expect(assertDictationCapable('/project/a')).rejects.toBeInstanceOf(ExtendKitTooOldError);
+  });
+
+  it('is not the same event as a kit that is not installed', async () => {
+    ccbPath = null;
+    globalRoot = '/nowhere-a-kit-lives';
+
+    await expect(assertDictationCapable('/project/a')).rejects.toBeInstanceOf(
+      ExtendKitMissingError,
+    );
+  });
+
+  it('carries what the failed run said, so the cause is not lost', async () => {
+    capabilityFailure = torn;
+
+    await expect(assertDictationCapable('/project/a')).rejects.toThrow(/'C:\\Program' is not recognized/);
+  });
+
+  it('is not cached, so the next ask sees a machine that has since been fixed', async () => {
+    capabilityFailure = torn;
+    await expect(assertDictationCapable('/project/a')).rejects.toBeInstanceOf(
+      ExtendKitProbeFailedError,
+    );
+
+    // Nothing about the install changed, so nothing calls resetExtendKitCache.
+    // Caching the failure would keep answering with it for the life of the
+    // backend, long after the cause was gone.
+    capabilityFailure = null;
+    advertised = ['oauth.usage.account-file', 'stt.stream', 'settings.env'];
+
+    await expect(assertDictationCapable('/project/a')).resolves.toBeUndefined();
+    expect(capabilityProbes).toBe(2);
+  });
+
+  it('still caches a real answer, failure or not', async () => {
+    // The optimisation the cache exists for has to survive this change: asking
+    // costs a spawn and the usage panel asks on every refresh.
+    advertised = ['oauth.usage.account-file', 'stt.stream', 'settings.env'];
+
+    await assertDictationCapable('/project/a');
+    await assertDictationCapable('/project/a');
+
+    expect(capabilityProbes).toBe(1);
   });
 });

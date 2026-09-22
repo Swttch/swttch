@@ -421,6 +421,10 @@ export async function runCcbUsage(workingDir?: string): Promise<CcbUsageResponse
   // the copying added in the first place (#181), now with no message pointing anywhere.
   // Saying "update ccb" is the one answer that helps, and the panel's install button
   // installs @latest, which is also the update.
+  //
+  // Only for a kit that ANSWERED, though. A kit that could not be run throws out of here with
+  // what the failed run said, because telling somebody to update a kit that is already current
+  // sends them to press a button that reports success and changes nothing (#471).
   if (!(await hasSettingsEnvCapability(workingDir))) {
     throw new Error('Update ccb: this version cannot read Claude Code settings files');
   }

@@ -1,11 +1,9 @@
-import { execFile as cpExecFile } from 'child_process';
 import { realpathSync } from 'fs';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { Claude } from '../claude';
-import { augmentedEnv } from '../augmented-path';
-import { execViaCmdArgv } from '../win-exec';
+import { runLauncher } from '../run-launcher';
 import { getCliVersion } from './getVersion';
 import {
   detectPackageManager,
@@ -21,43 +19,41 @@ import { MessageType, PackageManager, UpdateMode, type CliUpdateInfo } from '../
  * the user's machine, so node/npm exist; `npm view` is an official read command
  * (project philosophy: prefer documented CLI over private protocols).
  *
- * win32 runs `npm` (`npm.cmd`) through cmd.exe via [execViaCmdArgv] — a cmd.exe
- * argv ARRAY, standardized with the CLI-update path (M2). The argv here is fixed
- * so `shell:true` was safe today, but the argv array keeps every win32 launcher
- * invocation on one non-tokenizing path: if these args ever gain a variable
- * value, no space/metachar can split it. macOS/Linux run npm directly.
+ * Run through [runLauncher], the SAME runner that installs and updates. Asking
+ * and installing used to resolve npm two different ways, and only the installing
+ * half carried the Windows workaround: `runLauncher` rewrites a bare `npm` to
+ * `node <npm-cli.js>` when it can find the sibling script, while this function
+ * called the `npm` launcher itself. Measured on Windows 11 with a GUI-launched
+ * backend whose PATH holds no nodejs directory, the launcher at
+ * `%APPDATA%\npm\npm` died with `exec: node: not found`, `latest` came back
+ * null, and extend-kit-update.ts read that null as "nothing newer exists" — so
+ * the kit sat on an old version indefinitely (#471). One runner, one resolution,
+ * and the two halves cannot diverge again.
+ *
+ * `stdout` is parsed rather than the combined `output`, because npm writes
+ * warnings on stderr and `npm view --json` writes JSON on stdout: mixed together
+ * they are not parseable JSON.
+ *
+ * A failure answers null rather than throwing, since an unreachable registry is
+ * not an error the caller can act on. It is logged, though: the silent null is
+ * what made #471's stalled companion update invisible — 51 polls over 25 seconds
+ * with the same version and not one line explaining why.
  */
 export async function fetchDistTags(
   packageName: string = CLAUDE_NPM_PACKAGE,
 ): Promise<{ stable: string | null; latest: string | null }> {
   const args = ['view', packageName, 'dist-tags', '--json'];
-  if (process.platform === 'win32') {
-    const { err, stdout } = await execViaCmdArgv('npm', args, {
-      env: augmentedEnv(),
-      timeout: 15000,
-    });
-    if (err) return { stable: null, latest: null };
-    return parseDistTags(stdout);
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const result = await runLauncher(npm, args, { timeout: 15000, maxBuffer: 1024 * 1024 });
+  if (!result.ok) {
+    console.warn(`[dist-tags] ${packageName}: ${npm} ${args.join(' ')} failed\n`, result.output, '\n');
+    return { stable: null, latest: null };
   }
-  return new Promise((resolve) => {
-    cpExecFile(
-      'npm',
-      args,
-      {
-        env: augmentedEnv(),
-        timeout: 15000,
-        // macOS/Linux: run npm directly, no shell tokenization.
-        shell: false,
-      },
-      (err, stdout) => {
-        if (err) {
-          resolve({ stable: null, latest: null });
-          return;
-        }
-        resolve(parseDistTags(stdout?.toString() ?? ''));
-      },
-    );
-  });
+  const tags = parseDistTags(result.stdout);
+  if (!tags.latest) {
+    console.warn(`[dist-tags] ${packageName}: no latest tag in the answer\n`, result.stdout, '\n');
+  }
+  return tags;
 }
 
 /** Resolve every path we know for the running `claude` binary (shim + realpath). */

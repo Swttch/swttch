@@ -50,7 +50,7 @@ describe('Voice settings and the login they depend on', () => {
   });
 
   it('says a Claude account login is needed when there is none', () => {
-    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN };
+    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN, detail: null };
     render(<VoiceSection />);
 
     expect(screen.getByText(/signed-in Claude account/i)).toBeDefined();
@@ -59,14 +59,14 @@ describe('Voice settings and the login they depend on', () => {
   // The kit is installed, so telling this user to install it sends them to a
   // control that reports success and changes nothing.
   it('does not blame the kit for a missing login', () => {
-    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN };
+    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN, detail: null };
     render(<VoiceSection />);
 
     expect(screen.queryByText(/extend-kit\. Install it/i)).toBeNull();
   });
 
   it('locks the rows that cannot do anything without a login', () => {
-    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN };
+    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN, detail: null };
     const { container } = render(<VoiceSection />);
 
     const rows = container.querySelector('[aria-disabled="true"]');
@@ -77,7 +77,7 @@ describe('Voice settings and the login they depend on', () => {
   // Same reasoning as the kit: the toggle is the way back, and a user who turned
   // voice input off must not need to sign in first to turn it on again.
   it('leaves the on/off toggle usable', () => {
-    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN };
+    availability = { available: false, reason: DictationErrorKind.NOT_LOGGED_IN, detail: null };
     render(<VoiceSection />);
 
     const toggle = screen.getByRole('switch', { name: /voice input/i });
@@ -85,7 +85,7 @@ describe('Voice settings and the login they depend on', () => {
   });
 
   it('says nothing and locks nothing once a login is there', () => {
-    availability = { available: true, reason: null };
+    availability = { available: true, reason: null, detail: null };
     const { container } = render(<VoiceSection />);
 
     expect(screen.queryByText(/signed-in Claude account/i)).toBeNull();

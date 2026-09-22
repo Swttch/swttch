@@ -6,7 +6,11 @@ import { runLauncher } from '../run-launcher';
 import { MessageType } from '../../shared';
 import { isPermissionFailure, permissionErrorMessage } from './updateCli';
 import { resetUsageCache } from './getUsage';
-import { resetExtendKitCache, getExtendKitVersion } from '../extend-kit';
+import {
+  resetExtendKitCache,
+  assertDictationCapable,
+  ExtendKitMissingError,
+} from '../extend-kit';
 import { resolveClaudePaths } from './getCliUpdateInfo';
 import {
   EXTEND_KIT_PACKAGE,
@@ -41,27 +45,35 @@ function run(command: string, args: string[]): Promise<{ ok: boolean; output: st
 const INSTALL_ATTEMPTS = 2;
 
 /**
- * Is the kit actually loadable now?
+ * Can the thing we just installed actually do the job it was installed for?
  *
- * The lookup deliberately goes through {@link getExtendKitVersion}, the same
- * resolution dictation uses to LOAD the kit, rather than reading the installer's
- * output. Every failure in #298's history is a command that succeeded against a
- * place the loader never reads — a different Node's global folder, volta's own
- * store, an `npm_config_prefix` redirect — so parsing "added N packages" would
- * confirm the one thing that was never in doubt while missing the thing that
- * actually breaks. Asking the loader collapses install-target and load-target
- * into a single question, which is the only one the user cares about.
+ * The check deliberately goes through {@link assertDictationCapable}, the same
+ * call dictation itself makes, rather than reading the installer's output. Every
+ * failure in #298's history is a command that succeeded against a place the
+ * loader never reads — a different Node's global folder, volta's own store, an
+ * `npm_config_prefix` redirect — so parsing "added N packages" would confirm the
+ * one thing that was never in doubt while missing the thing that actually
+ * breaks.
  *
- * The cache is dropped first: it holds "found nowhere" from before the install,
- * and reading through it would report every fresh install as missing.
+ * Reading the version was the previous bar and it was too low. A version string
+ * is a line in a package.json, and #471's reporter had a perfectly good one
+ * (0.7.3) on a machine where the kit could not be started at all: Install said
+ * it had worked, and the microphone failed the moment it was pressed. The bar is
+ * now "dictation can run", which is the promise the button makes.
+ *
+ * The cache is dropped first: it holds what was true before the install, and
+ * reading through it would report every fresh install as missing.
+ *
+ * Returns the failure rather than a bare false, because what to do next depends
+ * on which failure it was.
  */
-async function kitIsLoadable(): Promise<boolean> {
+async function checkKitUsable(): Promise<{ ok: true } | { ok: false; error: unknown }> {
   resetExtendKitCache();
   try {
-    return (await getExtendKitVersion()) !== null;
-  } catch {
-    // A lookup that throws is not a found kit.
-    return false;
+    await assertDictationCapable();
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error };
   }
 }
 
@@ -113,9 +125,10 @@ function isBlockedByPredecessor(output: string): boolean {
  *
  * Success is CONFIRMED, not assumed: an exit code of 0 says the command ran,
  * while every bug in this issue's history is a command that ran fine against a
- * place the loader never reads. So the kit is looked up afterwards through the
- * same resolution dictation loads it with, and a first miss re-runs the install
- * once — the reporter's own workaround. Only a kit we can actually find acks ok.
+ * place the loader never reads. So the kit is exercised afterwards through the
+ * same call dictation makes, and a kit that cannot be FOUND re-runs the install
+ * once — the reporter's own workaround. Only a kit that can actually dictate
+ * acks ok; one that was found and then failed says what it failed with.
  */
 export async function installCcbHandler(
   connectionId: string,
@@ -172,9 +185,10 @@ export async function installCcbHandler(
       return;
     }
 
-    // Exit code 0 means the command ran, not that the kit is there. Confirm it
-    // by finding the package the way dictation will, and only then call it done.
-    if (await kitIsLoadable()) {
+    // Exit code 0 means the command ran, not that voice input works. Confirm it
+    // the way dictation will, and only then call it done.
+    const usable = await checkKitUsable();
+    if (usable.ok) {
       // Next usage fetch should re-run ccb rather than serve the cached error.
       resetUsageCache();
       connections.sendTo(connectionId, MessageType.ACK, {
@@ -185,13 +199,35 @@ export async function installCcbHandler(
     }
 
     console.log(
-      'extend-kit install reported success but the kit was not found\n',
-      JSON.stringify({ attempt, of: INSTALL_ATTEMPTS, command, args }),
+      'extend-kit install reported success but the kit is not usable\n',
+      JSON.stringify({
+        attempt,
+        of: INSTALL_ATTEMPTS,
+        command,
+        args,
+        reason: usable.error instanceof Error ? usable.error.message : String(usable.error),
+      }),
       '\n',
     );
+
+    // Only a kit that cannot be FOUND is worth installing again: that is #298's
+    // shape exactly, and the reporter's own workaround was running the identical
+    // command a second time. A kit that was found and then refused to run, or
+    // answered without the capability dictation needs, will refuse and answer
+    // the same way after a second identical install — so the user is told what
+    // happened now instead of waiting through it.
+    if (!(usable.error instanceof ExtendKitMissingError)) {
+      connections.sendTo(connectionId, MessageType.ACK, {
+        requestId: message.requestId,
+        status: 'error',
+        error:
+          usable.error instanceof Error ? usable.error.message : String(usable.error),
+      });
+      return;
+    }
   }
 
-  // Installed by every measure the command offers, and still not loadable. We
+  // Installed by every measure the command offers, and still not findable. We
   // cannot honestly call this a failure (nothing failed) and the user has no use
   // for our lookup's troubles, so the message says only what happened and what
   // to do — the same re-run that worked for the reporter.

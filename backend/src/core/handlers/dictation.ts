@@ -9,6 +9,7 @@ import {
   resetExtendKitCache,
   ExtendKitMissingError,
   ExtendKitTooOldError,
+  ExtendKitProbeFailedError,
   EXTEND_KIT_PACKAGE,
   type SpeechToTextStream,
 } from '../extend-kit';
@@ -51,13 +52,60 @@ async function isDictationAuthorized(probe: () => Promise<boolean>): Promise<boo
   try {
     return await probe();
   } catch (err) {
-    // A kit that is absent or too old is NOT "not signed in", and answering
-    // false here would tell the user to sign in when the real fix is to install
-    // or update. Naming the wrong problem is the bug #355 was about, so these
-    // two travel on to the caller that knows how to report them.
-    if (err instanceof ExtendKitMissingError || err instanceof ExtendKitTooOldError) throw err;
+    // A kit that is absent, too old, or impossible to run is NOT "not signed
+    // in", and answering false here would tell the user to sign in when the real
+    // fix is somewhere else entirely. Naming the wrong problem is the bug #355
+    // was about, so all three travel on to the caller that knows how to report
+    // them; anything else is a credential we could not read, and being told to
+    // sign in is still the right next step for that.
+    if (isKitFailure(err)) throw err;
     return false;
   }
+}
+
+/** Is this one of the kit's own failures, rather than a credential problem? */
+function isKitFailure(err: unknown): boolean {
+  return (
+    err instanceof ExtendKitMissingError ||
+    err instanceof ExtendKitTooOldError ||
+    err instanceof ExtendKitProbeFailedError
+  );
+}
+
+/**
+ * Which kit failure this is, and what to say about it.
+ *
+ * One function for both handlers, so the reason START_DICTATION reports and the
+ * reason GET_DICTATION_AVAILABILITY reports can never describe the same machine
+ * differently. Returns null for anything that is not a kit failure.
+ *
+ * The three used to share DictationErrorKind.KIT_MISSING and its one sentence,
+ * which was true for exactly one of them. The reporter in #471 had the kit
+ * installed and current, was told it was not installed, and ended up reading the
+ * shipped `backend.mjs` to find the real cause.
+ */
+function classifyKitFailure(
+  err: unknown,
+): { errorKind: DictationErrorKind; error: string } | null {
+  if (err instanceof ExtendKitMissingError) {
+    return {
+      errorKind: DictationErrorKind.KIT_MISSING,
+      error: `${EXTEND_KIT_PACKAGE} is not installed`,
+    };
+  }
+  if (err instanceof ExtendKitTooOldError) {
+    // The kit's own sentence names the capability it is missing, which is more
+    // than we could say from here.
+    return { errorKind: DictationErrorKind.KIT_TOO_OLD, error: err.message };
+  }
+  if (err instanceof ExtendKitProbeFailedError) {
+    // Relayed, not summarised. We do not know what stopped the run — the one
+    // measured cause is a Windows path with a space in it — and a sentence of
+    // ours would have to guess, while this text is the thing the user can
+    // search for or paste into a report.
+    return { errorKind: DictationErrorKind.KIT_UNUSABLE, error: err.message };
+  }
+  return null;
 }
 
 /** Tear down a connection's stream without waiting on it. */
@@ -128,25 +176,17 @@ export async function startDictationHandler(
       status: 'ok',
     });
   } catch (err) {
-    // A missing kit is a setup problem the UI can offer to fix, not a failure
-    // to report as noise, so it gets its own code rather than a message the
-    // webview would have to pattern-match.
-    //
-    // A kit too old to know `ccb stt` travels on the same code because the fix
-    // is the same button: INSTALL_CCB installs at @latest, which updates an
-    // existing install. The message still says which of the two it was, so the
-    // reason is never lost even though the remedy is shared.
-    const missing = err instanceof ExtendKitMissingError;
-    const tooOld = err instanceof ExtendKitTooOldError;
+    // A kit problem is a setup problem the UI can offer to fix, not a failure to
+    // report as noise, so each of the three gets its own code rather than a
+    // message the webview would have to pattern-match. Two of them (absent, too
+    // old) are answered by the same install button; the third is not, which is
+    // why they cannot share a code even though two of them share a remedy.
+    const kit = classifyKitFailure(err);
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'error',
-      errorKind: missing || tooOld ? DictationErrorKind.KIT_MISSING : DictationErrorKind.UNKNOWN,
-      error: missing
-        ? '@swttch/extend-kit is not installed'
-        : err instanceof Error
-          ? err.message
-          : String(err),
+      errorKind: kit?.errorKind ?? DictationErrorKind.UNKNOWN,
+      error: kit?.error ?? (err instanceof Error ? err.message : String(err)),
     });
   }
 }
@@ -200,15 +240,18 @@ export async function stopDictationHandler(
 /**
  * GET_DICTATION_AVAILABILITY — can this machine dictate at all?
  *
- * Two different "no" answers, because they need different UI: the kit is not
- * installed (offer to install it), or it is installed but this machine has no
- * Claude account login (tell them to sign in). Never throws, since an
- * unavailable feature is an answer rather than an error.
+ * Four different "no" answers, because they need different UI: the kit is not
+ * installed (offer to install it), the kit is too old (offer to update it), the
+ * kit is there and cannot be run (show what the run said), or everything is
+ * installed and this machine has no Claude account login (tell them to sign
+ * in). Never throws, since an unavailable feature is an answer rather than an
+ * error.
  *
  * Only a missing kit may be reported as a missing kit. Catching everything and
  * calling all of it `kit_missing` is what this handler used to do, which named
  * the wrong problem for the case that actually happens: an installed kit with no
- * login behind it (#355).
+ * login behind it (#355), and later an installed kit the backend could not spawn
+ * (#471).
  */
 export async function getDictationAvailabilityHandler(
   connectionId: string,
@@ -221,15 +264,19 @@ export async function getDictationAvailabilityHandler(
   let authorized: boolean;
   try {
     authorized = await isDictationAuthorized(() => probeSpeechToTextAvailable(workingDir));
-  } catch {
-    // Only a missing or too-old kit reaches here: isDictationAuthorized answers
-    // false for every other "no", so this branch cannot swallow a login problem
-    // and report it as a setup problem.
+  } catch (err) {
+    // Only a kit failure reaches here: isDictationAuthorized answers false for
+    // every other "no", so this branch cannot swallow a login problem and report
+    // it as a setup problem. `detail` carries the failed run's own words for the
+    // one case that has any — a UI that says "the kit could not be run" without
+    // saying what happened leaves the user exactly where #471's reporter was.
+    const kit = classifyKitFailure(err);
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'ok',
       available: false,
-      reason: DictationErrorKind.KIT_MISSING,
+      reason: kit?.errorKind ?? DictationErrorKind.UNKNOWN,
+      detail: kit?.error ?? null,
     });
     return;
   }
@@ -239,6 +286,7 @@ export async function getDictationAvailabilityHandler(
     status: 'ok',
     available: authorized,
     reason: authorized ? null : DictationErrorKind.NOT_LOGGED_IN,
+    detail: null,
   });
 }
 
