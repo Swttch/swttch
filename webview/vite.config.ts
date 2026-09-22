@@ -67,6 +67,30 @@ export default defineConfig(({ mode }) => {
         assetFileNames: 'assets/[name]-[hash][extname]',
         // JCEF 환경에서 dynamic chunk 로드 실패 방지: 단일 번들로 통합
         inlineDynamicImports: false,
+        // Keep any single chunk well under Chromium's per-entry cache limit.
+        //
+        // The JetBrains Client runs JCEF as a separate `cef_server` process whose
+        // disk cache accepted a 3KB entry but never the 3.4MB app bundle, so the
+        // whole bundle was re-fetched on every panel open over Remote Development
+        // — measured as twelve opens, twelve full transfers (issue #292). Chromium
+        // refuses entries above a fraction of the cache size, so the fix available
+        // to us is to stop shipping one enormous entry.
+        //
+        // Only leaf libraries are split out: ones nothing else in a chunk has to
+        // be initialised before. Splitting by family was tried and broke the app —
+        // `ui` evaluated before `react` and threw `Cannot read properties of
+        // undefined (reading 'memo')`, because Rollup does not order sibling
+        // chunks for us. React itself stays in the main chunk for the same reason.
+        //
+        // shiki is deliberately absent: its grammars are already split per
+        // language by dynamic import, and naming it here collapsed all of them
+        // into one 9.9MB chunk — the opposite of what this is for.
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('/katex/')) return 'katex';
+          if (id.includes('/@pierre/diffs/') || id.includes('/react-diff-view/')) return 'diff';
+          return undefined;
+        },
       }
     }
   },

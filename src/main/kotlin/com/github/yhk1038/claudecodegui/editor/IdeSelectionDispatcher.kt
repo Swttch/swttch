@@ -247,6 +247,11 @@ object IdeSelectionDispatcher {
 
         val backendKey = workingDir ?: return
         val backend = NodeBackendService.getInstance()
+        // No backend bound for this root means there is nothing to tell. Without
+        // this, every caret move on the Remote Development client throws out of
+        // awaitPort and is swallowed by the catch below — correct, but paid for on
+        // each selection change (issue #292).
+        if (backend.portOf(backendKey) == null) return
 
         ioScope.launch {
             try {

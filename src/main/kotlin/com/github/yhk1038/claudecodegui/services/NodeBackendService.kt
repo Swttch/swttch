@@ -8,6 +8,7 @@ import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
 import com.github.yhk1038.claudecodegui.bridge.WslPathResolver
 import com.github.yhk1038.claudecodegui.bridge.parseHostModeParam
 import com.github.yhk1038.claudecodegui.hosting.HostModeCache
+import com.github.yhk1038.claudecodegui.hosting.ThinClient
 import com.github.yhk1038.claudecodegui.statusbar.BackendStatusClient
 import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.intellij.openapi.Disposable
@@ -296,6 +297,16 @@ class NodeBackendService : Disposable {
 
         @Synchronized
         fun start() {
+            // The JetBrains Client half of Remote Development must never start a
+            // backend. It is a different machine from the one holding the project,
+            // so the backend it starts would run `claude` against a local scaffold
+            // folder while the user edits remote files — a chat that looks connected
+            // and reads the wrong disk (issue #292). The remote half owns this.
+            if (ThinClient.isThinClient()) {
+                logger.info("Thin client (Remote Development): not starting a backend; the remote host owns it")
+                return
+            }
+
             // Alive → nothing to do. A backend that started and then exited (e.g. the
             // Node idle-shutdown timer fired between panels) reports isDead == true and
             // must be respawned — otherwise we'd hand callers a port no one is listening
@@ -538,6 +549,14 @@ class NodeBackendService : Disposable {
      */
     @Synchronized
     fun ensureStarted(projectBasePath: String, panelId: String, rpcHandler: NodeProcessManager.RpcHandler) {
+        // The guard is here, not only in start(): a registered-but-never-started
+        // instance is worse than none. Its `portDeferred` never completes, so every
+        // awaitPort() on this side hangs for the full start timeout before failing,
+        // and the status bar reports a backend that does not exist (issue #292).
+        if (ThinClient.isThinClient()) {
+            logger.info("Thin client (Remote Development): not registering a backend for '$projectBasePath'; the remote host owns it")
+            return
+        }
         val inst = backends.getOrPut(projectBasePath) { BackendInstance(projectBasePath) }
         inst.handlers[panelId] = rpcHandler
         inst.start() // no-op if already running

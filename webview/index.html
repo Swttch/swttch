@@ -23,6 +23,7 @@
     -->
     <script>
       (function () {
+        var bootLocale = 'en';
         var param = new URLSearchParams(location.search).get('theme');
         var prefersDark =
           window.matchMedia &&
@@ -81,8 +82,53 @@
           };
           var locale = (uiLanguage && languageToLocale[uiLanguage]) || 'en';
           document.documentElement.setAttribute('lang', locale);
+          bootLocale = locale;
         } catch (e) {
           /* localStorage unavailable or unparsable: keep static lang="en" */
+        }
+
+        // Say something while the bundle is on its way.
+        //
+        // The page is served by a backend that may be on another machine: under
+        // Remote Development it is the remote host, and the bundle travels over
+        // the IDE's own channel. That took four to eight seconds in measurement,
+        // during which the panel was a blank rectangle with no indication that
+        // anything was happening (issue #292). Locally the same gap exists and is
+        // simply too short to see, so the message needs no environment check — it
+        // is replaced the moment React mounts either way.
+        //
+        // Written here rather than in a component because a component cannot run
+        // until the very bundle being waited for has arrived.
+        try {
+          var loadingText = {
+            en: 'Loading Claude Code…',
+            ko: 'Claude Code를 불러오는 중…',
+            ja: 'Claude Code を読み込んでいます…',
+            zh: '正在加载 Claude Code…',
+            'zh-TW': '正在載入 Claude Code…',
+            es: 'Cargando Claude Code…',
+            fr: 'Chargement de Claude Code…',
+            de: 'Claude Code wird geladen…',
+            pt: 'Carregando o Claude Code…',
+            ru: 'Загрузка Claude Code…',
+            fa: 'در حال بارگذاری Claude Code…',
+            ar: 'جارٍ تحميل Claude Code…',
+          };
+          var root = document.getElementById('root');
+          if (root) {
+            var box = document.createElement('div');
+            box.setAttribute('data-boot-loading', '');
+            box.style.cssText =
+              'position:fixed;inset:0;display:flex;align-items:center;' +
+              'justify-content:center;font:400 0.8461rem/1.5 -apple-system,' +
+              'BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;' +
+              'color:' + (resolved === 'dark' ? '#8A8A8A' : '#767676') + ';' +
+              'text-align:center;padding:0 24px;';
+            box.textContent = loadingText[bootLocale] || loadingText.en;
+            root.appendChild(box);
+          }
+        } catch (e) {
+          /* A missing message is not worth failing the boot over. */
         }
       })();
     </script>

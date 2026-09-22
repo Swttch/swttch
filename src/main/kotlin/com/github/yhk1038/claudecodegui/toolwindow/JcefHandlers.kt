@@ -47,6 +47,17 @@ internal object JcefHandlers {
     }
 
     /**
+     * A runnable that loads [url] in [browser], with no JCEF type on the caller.
+     *
+     * The caller is [ClaudeCodePanel], which must keep JCEF out of every member
+     * signature — a lambda written there capturing a browser compiles to a static
+     * method on the panel whose descriptor names `JBCefBrowser`, and that alone
+     * makes the panel unconstructible where JCEF is absent (issue #321). Built
+     * here, the descriptor lands on this class instead.
+     */
+    fun loadUrlLater(browser: JBCefBrowser, url: String): () -> Unit = { browser.loadURL(url) }
+
+    /**
      * Run [js] in [browser]'s current page.
      *
      * Exists so callers can hand over a plain String and a holder instead of

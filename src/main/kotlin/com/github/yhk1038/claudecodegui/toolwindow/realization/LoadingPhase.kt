@@ -15,6 +15,15 @@ enum class LoadingPhase(val key: String) {
     LOCATING_NODE("phase.locatingNode"),
     PREPARING_BACKEND("phase.preparingBackend"),
     WAITING_FOR_PORT("phase.waitingForPort"),
+
+    /**
+     * The backend answered and the page is on its way.
+     *
+     * Last phase before the browser takes over the panel. It covers the webview
+     * bundle crossing the wire, which over Remote Development is a different
+     * machine and took around four seconds in measurement (issue #292).
+     */
+    LOADING_UI("phase.loadingUi"),
     ;
 
     /** Text in the user's Interface Language. Cache-only lookup, safe on the EDT. */

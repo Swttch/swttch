@@ -2,6 +2,7 @@ package com.github.yhk1038.claudecodegui.startup
 
 import com.github.yhk1038.claudecodegui.bridge.NoopRpcHandler
 import com.github.yhk1038.claudecodegui.hosting.ChatHostRouter
+import com.github.yhk1038.claudecodegui.hosting.ThinClient
 import com.github.yhk1038.claudecodegui.hosting.HostModeCache
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
@@ -42,6 +43,16 @@ class ChatHostRestoreActivity : ProjectActivity {
     private val logger = Logger.getInstance(ChatHostRestoreActivity::class.java)
 
     override suspend fun execute(project: Project) {
+        // Nothing to restore on the JetBrains Client half of Remote Development.
+        // The sessions being restored belong to the remote project, and the remote
+        // half restores them into tabs that are mirrored here anyway. Running this
+        // on the client would instead build panels against a backend that is never
+        // allowed to start, so each one would sit through the full start timeout
+        // and then show an error where a chat should be (issue #292).
+        if (ThinClient.isThinClient()) {
+            logger.info("Thin client (Remote Development): skipping chat restore; the remote host restores its own sessions")
+            return
+        }
         createTabStateOffTheEdt(project)
         resolveHostMode(project)
         ChatHostRouter.currentHost(project).restorePersistedSessions(project)

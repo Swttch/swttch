@@ -4,7 +4,8 @@
     "backendStart": "백엔드를 시작하는 중...",
     "locatingNode": "Node.js를 찾는 중...",
     "preparingBackend": "백엔드 파일을 준비하는 중...",
-    "waitingForPort": "백엔드가 준비되기를 기다리는 중..."
+    "waitingForPort": "백엔드가 준비되기를 기다리는 중...",
+    "loadingUi": "화면을 불러오는 중 (SSH)..."
   },
   "stuck": {
     "stillIndexing": "프로젝트가 크면 인덱싱에 몇 분이 걸릴 수 있습니다.",

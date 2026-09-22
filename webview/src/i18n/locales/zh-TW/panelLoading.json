@@ -4,7 +4,8 @@
     "backendStart": "正在啟動後端...",
     "locatingNode": "正在尋找 Node.js...",
     "preparingBackend": "正在準備後端檔案...",
-    "waitingForPort": "正在等待後端就緒..."
+    "waitingForPort": "正在等待後端就緒...",
+    "loadingUi": "正在載入畫面 (SSH)..."
   },
   "stuck": {
     "stillIndexing": "大型專案的索引可能需要幾分鐘。",

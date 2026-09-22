@@ -4,7 +4,8 @@
     "backendStart": "Starting backend...",
     "locatingNode": "Locating Node.js...",
     "preparingBackend": "Preparing backend files...",
-    "waitingForPort": "Waiting for backend to be ready..."
+    "waitingForPort": "Waiting for backend to be ready...",
+    "loadingUi": "Loading the screen (SSH)..."
   },
   "stuck": {
     "stillIndexing": "Indexing a large project can take several minutes.",

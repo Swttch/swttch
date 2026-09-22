@@ -15,6 +15,7 @@ import { AuthProvider } from './AuthContext';
 import { CliConfigProvider } from './CliConfigContext';
 import { FableProbeProvider } from './FableProbeContext';
 import { ChatInputFocusProvider } from './ChatInputFocusContext';
+import { OnboardingProvider } from './OnboardingContext';
 import { ChatInputStateProvider } from './ChatInputStateContext';
 import { IdeSelectionProvider } from './IdeSelectionContext';
 import type { IdeSelectionPayload } from '@/hooks/useIdeSelection';
@@ -289,7 +290,9 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
           <CommandPaletteProvider>
             <ThemeProvider>
               <ChatInputFocusProvider>
-                <SessionLoader>{children}</SessionLoader>
+                <OnboardingProvider>
+                  <SessionLoader>{children}</SessionLoader>
+                </OnboardingProvider>
               </ChatInputFocusProvider>
             </ThemeProvider>
           </CommandPaletteProvider>

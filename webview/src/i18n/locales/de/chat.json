@@ -436,6 +436,36 @@
       "rightPlace": "Du bist absolut richtig hier!"
     }
   },
+  "onboarding": {
+    "title": "Einrichtung",
+    "dismiss": "Schließen",
+    "optional": "optional",
+    "unknown": "nicht bestätigt",
+    "checking": "Wird geprüft…",
+    "working": "Läuft…",
+    "perform": "Installieren",
+    "reveal": "Anzeigen",
+    "recheck": "Erneut prüfen",
+    "login": "Anmelden",
+    "steps": {
+      "installCli": {
+        "label": "Claude Code CLI installieren",
+        "hint": "Die Unterhaltungen führt die Claude Code CLI aus; dieses Fenster steuert sie nur. Ohne CLI auf diesem Rechner beginnt nichts."
+      },
+      "signIn": {
+        "label": "Bei Claude anmelden",
+        "hint": "Die CLI muss bei einem Claude-Konto angemeldet sein, bevor sie antwortet. Bereits im Terminal angemeldet? Auf „Erneut prüfen“ klicken."
+      },
+      "installKit": {
+        "label": "@swttch/extend-kit installieren",
+        "hint": "Kontowechsel, Nutzungsanzeige und Spracheingabe laufen über dieses Paket. Der Chat geht auch ohne, diese drei aber nicht."
+      },
+      "arrangeDock": {
+        "label": "Dock anordnen",
+        "hint": "Legen Sie häufig Genutztes auf die obere Leiste. Das Überspringen kostet nichts: Alles bleibt im Menü „Mehr“."
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Erledigt",

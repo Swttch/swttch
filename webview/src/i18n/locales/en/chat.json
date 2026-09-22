@@ -440,6 +440,36 @@
       "rightPlace": "You've come to the absolutely right place!"
     }
   },
+  "onboarding": {
+    "title": "Get set up",
+    "dismiss": "Close",
+    "optional": "optional",
+    "unknown": "not confirmed",
+    "checking": "Checking…",
+    "working": "Working…",
+    "perform": "Install",
+    "reveal": "Show",
+    "recheck": "Re-check",
+    "login": "Sign in",
+    "steps": {
+      "installCli": {
+        "label": "Install the Claude Code CLI",
+        "hint": "The Claude Code CLI is what actually runs your conversations. This window only drives it, so nothing can start until the CLI is on this machine."
+      },
+      "signIn": {
+        "label": "Sign in to Claude",
+        "hint": "The CLI has to be signed in to a Claude account before it will answer. Already signed in from a terminal? Press Re-check."
+      },
+      "installKit": {
+        "label": "Install @swttch/extend-kit",
+        "hint": "Account switching, the usage panel and dictation all go through this package. Chat works without it, but those three cannot be used from here."
+      },
+      "arrangeDock": {
+        "label": "Arrange the dock",
+        "hint": "Put the features you reach for most on the top bar. Nothing is lost by skipping it; every feature stays in the More menu either way."
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Accomplishing",

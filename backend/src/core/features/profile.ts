@@ -71,6 +71,19 @@ export interface ProfileData {
    * 비교할 대상이 없어 팝업이 영영 뜨지 못했다(#453).
    */
   whatsNewSeenVersion: string | null;
+  /**
+   * 사용자가 온보딩 체크리스트를 닫았는지. 기본값 false.
+   *
+   * 웹뷰가 아니라 여기에 두는 이유는 `whatsNewSeenVersion`과 같다. JetBrains 모드의
+   * 웹뷰 주소는 `http://localhost:<매번 새로 할당되는 포트>`라서 IDE를 재시작할 때마다
+   * origin이 바뀌고 `localStorage`가 통째로 빈 채로 시작된다(#453). 거기에 두면
+   * 닫아도 다음 실행에 다시 떠서, 닫기 버튼이 그 실행에서만 듣는 말이 된다.
+   *
+   * 항목의 완료 여부는 여기 담지 않는다. 그건 기록이 아니라 지금 기계의 상태이고,
+   * 매번 새로 물어야 맞는 답이 나온다 — 킷을 터미널에서 지운 사람에게 "설치됨"으로
+   * 남아 있으면 그 기록이 사용자를 속인다.
+   */
+  onboardingDismissed: boolean;
 }
 
 function createDefaultProfile(): ProfileData {
@@ -82,6 +95,7 @@ function createDefaultProfile(): ProfileData {
     runnerBestScore: 0,
     voicePrompt: { status: VoicePromptStatus.PENDING, askedAt: null, decidedAt: null },
     whatsNewSeenVersion: null,
+    onboardingDismissed: false,
   };
 }
 
@@ -115,6 +129,16 @@ function normalizeRunnerBestScore(value: unknown): number {
  */
 export function normalizeWhatsNewSeenVersion(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+/**
+ * boolean이 아닌 값(누락/손상)은 false로 보정한다.
+ *
+ * 필드가 통째로 없는 기존 사용자는 "닫지 않았다"로 시작한다. 체크리스트를 도입하기
+ * 전에는 닫을 기회 자체가 없었으므로 그것이 사실이다.
+ */
+export function normalizeOnboardingDismissed(value: unknown): boolean {
+  return value === true;
 }
 
 /** ISO 문자열이 아닌 값(누락/손상)은 null로 보정한다. */
@@ -167,6 +191,7 @@ export async function ensureProfile(): Promise<ProfileData> {
     const runnerBestScore = normalizeRunnerBestScore(parsed.runnerBestScore);
     const voicePrompt = normalizeVoicePrompt(parsed.voicePrompt);
     const whatsNewSeenVersion = normalizeWhatsNewSeenVersion(parsed.whatsNewSeenVersion);
+    const onboardingDismissed = normalizeOnboardingDismissed(parsed.onboardingDismissed);
 
     const profile: ProfileData = {
       uuid:
@@ -180,6 +205,7 @@ export async function ensureProfile(): Promise<ProfileData> {
       runnerBestScore,
       voicePrompt,
       whatsNewSeenVersion,
+      onboardingDismissed,
     };
 
     // 누락/손상 필드를 보정했으면 파일을 다시 써서 정규화한다.
@@ -197,7 +223,10 @@ export async function ensureProfile(): Promise<ProfileData> {
       // 필드가 통째로 없는 기존 프로필은 "손상"이 아니라 "아직 없음"이고, 없을 때 읽히는 값이
       // 곧 기본값 null이다. undefined와 null을 같게 봐야 이 필드를 도입했다는 이유만으로
       // 모든 기존 사용자의 파일을 한 번씩 다시 쓰지 않는다.
-      (parsed.whatsNewSeenVersion ?? null) !== whatsNewSeenVersion;
+      (parsed.whatsNewSeenVersion ?? null) !== whatsNewSeenVersion ||
+      // 같은 이유로 undefined와 false를 같게 본다. 필드를 도입했다는 것만으로
+      // 모든 기존 사용자의 파일을 한 번씩 다시 쓰지 않는다.
+      (parsed.onboardingDismissed ?? false) !== onboardingDismissed;
     if (needsRewrite) {
       await writeProfile(profile);
     }
@@ -331,6 +360,26 @@ export async function setWhatsNewSeenVersion(version: string): Promise<string | 
   profile.whatsNewSeenVersion = normalizeWhatsNewSeenVersion(version);
   await writeProfile(profile);
   return profile.whatsNewSeenVersion;
+}
+
+/** 온보딩 체크리스트를 닫은 적이 있는지 읽는다. */
+export async function getOnboardingDismissed(): Promise<boolean> {
+  const profile = await ensureProfile();
+  return profile.onboardingDismissed;
+}
+
+/**
+ * 체크리스트를 닫았다는 사실을 기록한다.
+ *
+ * 되돌리는 경로(false로 쓰기)도 열어둔다. 지금 UI에는 다시 여는 버튼이 없지만,
+ * 한 번 닫으면 영영 못 여는 값을 파일에 남기는 것은 사용자 자산을 일방통행으로
+ * 만드는 일이다.
+ */
+export async function setOnboardingDismissed(dismissed: boolean): Promise<boolean> {
+  const profile = await ensureProfile();
+  profile.onboardingDismissed = normalizeOnboardingDismissed(dismissed);
+  await writeProfile(profile);
+  return profile.onboardingDismissed;
 }
 
 /** 러너 게임 최고 점수를 읽는다(기록이 없으면 0). */

@@ -436,6 +436,36 @@
       "rightPlace": "Vous êtes exactement au bon endroit !"
     }
   },
+  "onboarding": {
+    "title": "Mise en route",
+    "dismiss": "Fermer",
+    "optional": "facultatif",
+    "unknown": "non confirmé",
+    "checking": "Vérification…",
+    "working": "En cours…",
+    "perform": "Installer",
+    "reveal": "Voir",
+    "recheck": "Revérifier",
+    "login": "Se connecter",
+    "steps": {
+      "installCli": {
+        "label": "Installer la CLI Claude Code",
+        "hint": "C'est la CLI Claude Code qui traite réellement les conversations ; cette fenêtre ne fait que la piloter. Sans elle sur cette machine, rien ne démarre."
+      },
+      "signIn": {
+        "label": "Se connecter à Claude",
+        "hint": "La CLI doit être connectée à un compte Claude pour répondre. Déjà connecté depuis un terminal ? Appuyez sur Revérifier."
+      },
+      "installKit": {
+        "label": "Installer @swttch/extend-kit",
+        "hint": "Le changement de compte, le panneau d'usage et la dictée passent par ce paquet. Le chat fonctionne sans, mais pas ces trois-là."
+      },
+      "arrangeDock": {
+        "label": "Organiser le dock",
+        "hint": "Placez sur la barre supérieure ce que vous utilisez le plus. L'ignorer ne coûte rien : tout reste dans le menu Plus."
+      }
+    }
+  },
   "streamingIndicator": {
     "verbs": [
       "Accomplissant",
