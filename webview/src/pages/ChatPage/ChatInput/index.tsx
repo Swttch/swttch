@@ -1124,7 +1124,20 @@ export function ChatInput() {
           message={
             dictation.error.kitMissing
               ? t('chatInput.dictation.kitMissing')
-              : // Said in full rather than as "signed out", because the user
+              : // Installed but behind. "Install it" would be a wrong
+                // instruction for something already on the machine, even though
+                // the button beside this sentence is the same install button.
+                dictation.error.kitTooOld
+                ? t('chatInput.dictation.kitTooOld')
+                : // Installed, and the backend could not run it. The sentence
+                  // names that much and then hands over the failed run's own
+                  // words: we do not know the cause, and the one we have
+                  // measured (a Windows path with a space in it) is not
+                  // something a user could have guessed from "kit missing",
+                  // which is what this case used to say (#471).
+                  dictation.error.kitUnusable
+                ? t('chatInput.dictation.kitUnusable', { message: dictation.error.message })
+                : // Said in full rather than as "signed out", because the user
                 // reaching this is usually NOT signed out: an API key
                 // authenticates everything else here and only dictation refuses
                 // it, so a banner that just says "sign in" reads as a bug (#355).
@@ -1159,7 +1172,12 @@ export function ChatInput() {
                     : t('chatInput.dictation.error', { message: dictation.error.message })
           }
           actions={
-            dictation.error.kitMissing ? (
+            // Absent and out-of-date share this button: INSTALL_CCB installs at
+            // @latest, which is also what updates an existing kit. A kit that is
+            // installed and cannot be RUN is deliberately not here — installing
+            // it again changes nothing about why it would not start, so it falls
+            // through to the documentation link below.
+            dictation.error.kitMissing || dictation.error.kitTooOld ? (
               <button
                 type="button"
                 onClick={installKit}
@@ -1168,7 +1186,9 @@ export function ChatInput() {
               >
                 {installingKit
                   ? t('chatInput.dictation.installing')
-                  : t('chatInput.dictation.install')}
+                  : dictation.error.kitTooOld
+                    ? t('chatInput.dictation.update')
+                    : t('chatInput.dictation.install')}
               </button>
             ) : dictation.error.notLoggedIn ? (
               // The same login page AuthErrorBanner sends people to, rather

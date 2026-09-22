@@ -9,12 +9,26 @@ vi.mock('child_process', () => ({
 }));
 // Spy on the cache reset without pulling the real usage module's other exports.
 vi.mock('../getUsage', () => ({ resetUsageCache: vi.fn() }));
-// `getExtendKitVersion` is what turns "the command exited 0" into "the kit is
-// actually there": the handler now confirms the install by finding the package
-// rather than by trusting an exit code.
+// `assertDictationCapable` is what turns "the command exited 0" into "voice
+// input works now": the handler confirms the install by exercising the kit the
+// way dictation does, rather than by trusting an exit code — or, as it used to,
+// by finding a version string in a package.json (#471).
+//
+// The error classes are the real thing's shape, since the handler branches on
+// `instanceof` to decide whether re-running the install could help.
+const kit = vi.hoisted(() => {
+  class FakeKitMissingError extends Error {}
+  class FakeKitProbeFailedError extends Error {}
+  return {
+    FakeKitMissingError,
+    FakeKitProbeFailedError,
+    assertDictationCapable: vi.fn(async () => {}),
+  };
+});
 vi.mock('../../extend-kit', () => ({
   resetExtendKitCache: vi.fn(),
-  getExtendKitVersion: vi.fn(async () => '0.4.0'),
+  assertDictationCapable: kit.assertDictationCapable,
+  ExtendKitMissingError: kit.FakeKitMissingError,
 }));
 // The handler now asks where `claude` lives, because the manager that owns this
 // machine's global packages is read off the CLI the user runs in a terminal
@@ -25,7 +39,7 @@ vi.mock('../getCliUpdateInfo', () => ({ resolveClaudePaths: vi.fn(async () => [n
 import { execFile as cpExecFile } from 'child_process';
 import { installCcbHandler } from '../installCcb';
 import { resetUsageCache } from '../getUsage';
-import { resetExtendKitCache, getExtendKitVersion } from '../../extend-kit';
+import { resetExtendKitCache, assertDictationCapable } from '../../extend-kit';
 import { resolveClaudePaths } from '../getCliUpdateInfo';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
@@ -35,7 +49,8 @@ import { MessageType } from '../../../shared';
 const mockExecFile = vi.mocked(cpExecFile);
 const mockResetUsageCache = vi.mocked(resetUsageCache);
 const mockResetExtendKitCache = vi.mocked(resetExtendKitCache);
-const mockGetExtendKitVersion = vi.mocked(getExtendKitVersion);
+const mockAssertDictationCapable = vi.mocked(assertDictationCapable);
+const { FakeKitMissingError, FakeKitProbeFailedError } = kit;
 const bridge = {} as Bridge;
 const msg: IPCMessage = { type: MessageType.INSTALL_CCB, payload: {}, timestamp: 0, requestId: 'req-1' };
 
@@ -87,9 +102,9 @@ beforeEach(() => {
   execPathSpy = vi.spyOn(process, 'execPath', 'get');
   execPathSpy.mockReturnValue('/nonexistent-for-tests/bin/node');
   mockResolveClaudePaths.mockResolvedValue([null, null]);
-  // Default: the kit is findable after installing. Tests about the "installed
-  // but not findable" path override this.
-  mockGetExtendKitVersion.mockResolvedValue('0.4.0');
+  // Default: the kit works after installing. Tests about the "installed and
+  // still not usable" paths override this.
+  mockAssertDictationCapable.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -302,36 +317,41 @@ describe('installCcbHandler', () => {
 });
 
 /**
- * #298 follow-up.
+ * #298 follow-up, and #471.
  *
- * An exit code of 0 says the COMMAND succeeded, not that the kit is loadable.
+ * An exit code of 0 says the COMMAND succeeded, not that voice input works.
  * Every failure in this issue's history has the same shape: a command that
  * reports success against a place the loader never reads — a different Node's
  * global folder, volta's own store, an `npm_config_prefix` redirect. The user
  * sees "installed" and voice input still does not work.
  *
- * So success is now defined as FINDING the package, using the very function
- * dictation loads it with, and a first miss is retried once — the reporter's own
- * workaround was running the identical command a second time.
+ * So success is defined as the kit ANSWERING the question dictation asks it, and
+ * a package that cannot be found is retried once — the reporter's own workaround
+ * was running the identical command a second time.
+ *
+ * Reading the version was the earlier bar and #471 walked under it: a
+ * package.json said 0.7.3 on a machine where the kit could not be started at
+ * all, so Install reported success and the microphone failed on the next press.
  */
 describe('installCcbHandler — confirming the install rather than trusting exit 0', () => {
-  it('acks ok only after the kit is actually found', async () => {
+  it('acks ok only after the kit answers the question dictation asks it', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
-    mockGetExtendKitVersion.mockResolvedValue('0.4.0');
     const conns = mockConns();
 
     await installCcbHandler('c1', msg, conns, bridge);
 
     expect(lastPayload(conns)).toMatchObject({ status: 'ok' });
-    // Looked for the kit rather than reading the command's output.
-    expect(mockGetExtendKitVersion).toHaveBeenCalled();
+    // Exercised the kit rather than reading the command's output.
+    expect(mockAssertDictationCapable).toHaveBeenCalled();
   });
 
   it('re-runs the install command when the kit is not found the first time', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
     // Missing after the first install, present after the second — exactly what
     // the reporter observed running the same command twice by hand.
-    mockGetExtendKitVersion.mockResolvedValueOnce(null).mockResolvedValue('0.4.0');
+    mockAssertDictationCapable
+      .mockRejectedValueOnce(new FakeKitMissingError('not installed'))
+      .mockResolvedValue(undefined);
     const conns = mockConns();
 
     await installCcbHandler('c1', msg, conns, bridge);
@@ -345,7 +365,7 @@ describe('installCcbHandler — confirming the install rather than trusting exit
 
   it('asks the user to try again when the kit is still missing after the retry', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
-    mockGetExtendKitVersion.mockResolvedValue(null);
+    mockAssertDictationCapable.mockRejectedValue(new FakeKitMissingError('not installed'));
     const conns = mockConns();
 
     await installCcbHandler('c1', msg, conns, bridge);
@@ -356,6 +376,40 @@ describe('installCcbHandler — confirming the install rather than trusting exit
     // lookup — just what happened and what to do about it.
     expect(String(p.error)).toContain('did not complete');
     expect(String(p.error)).toContain('try again');
+  });
+
+  // #471. The command installed something and the something cannot be started.
+  it('does not report success for an installed kit that cannot be run', async () => {
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    mockAssertDictationCapable.mockRejectedValue(
+      new FakeKitProbeFailedError(
+        "@swttch/extend-kit is installed but could not be run: 'C:\\Program' is not recognized",
+      ),
+    );
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    const p = lastPayload(conns);
+    expect(p.status).toBe('error');
+    // Relayed, not summarised: the user gets the words that name the real cause.
+    expect(String(p.error)).toContain("'C:\\Program' is not recognized");
+  });
+
+  it('does not re-run the install for a kit that was found and then failed', async () => {
+    // Re-running is the answer to "installed somewhere the loader does not
+    // read". A kit that WAS read and then refused will refuse identically the
+    // second time, so the user waits through another install for nothing.
+    mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
+    mockAssertDictationCapable.mockRejectedValue(new FakeKitProbeFailedError('could not be run'));
+    const conns = mockConns();
+
+    await installCcbHandler('c1', msg, conns, bridge);
+
+    const installs = mockExecFile.mock.calls
+      .map((_c, i) => spawnedArgv(i))
+      .filter((a) => a.includes('@swttch/extend-kit') && !a.includes('uninstall'));
+    expect(installs).toHaveLength(1);
   });
 
   it('does not retry when the install command itself failed', async () => {
@@ -378,7 +432,6 @@ describe('installCcbHandler — confirming the install rather than trusting exit
 
   it('re-resolves before looking, so the lookup cannot answer from the pre-install cache', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package' }));
-    mockGetExtendKitVersion.mockResolvedValue('0.4.0');
     const conns = mockConns();
 
     await installCcbHandler('c1', msg, conns, bridge);
@@ -386,7 +439,7 @@ describe('installCcbHandler — confirming the install rather than trusting exit
     // The cache holds "found nowhere" from before the install. Looking without
     // dropping it first would report the fresh install as missing.
     const resetOrder = mockResetExtendKitCache.mock.invocationCallOrder[0];
-    const lookupOrder = mockGetExtendKitVersion.mock.invocationCallOrder[0];
+    const lookupOrder = mockAssertDictationCapable.mock.invocationCallOrder[0];
     expect(resetOrder).toBeLessThan(lookupOrder);
   });
 });

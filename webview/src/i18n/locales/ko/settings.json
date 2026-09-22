@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "음성 입력에는 @swttch/extend-kit이 필요합니다. 오른쪽 위에서 설치하세요.",
+        "outdated": "설치된 @swttch/extend-kit이 음성 입력을 지원하기에는 오래되었습니다. 오른쪽 위에서 업데이트하세요.",
+        "unusable": "@swttch/extend-kit이 설치되어 있지만 실행하지 못했습니다: {{message}}",
         "install": "설치",
         "installing": "설치 중…",
         "installed": "설치했습니다",

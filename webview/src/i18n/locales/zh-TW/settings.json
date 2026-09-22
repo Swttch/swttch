@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "語音輸入需要 @swttch/extend-kit。請從右上角安裝。",
+        "outdated": "已安裝的 @swttch/extend-kit 版本過舊，不支援語音輸入。請從右上角更新。",
+        "unusable": "@swttch/extend-kit 已安裝，但無法啟動：{{message}}",
         "install": "安裝",
         "installing": "正在安裝…",
         "installed": "已安裝",

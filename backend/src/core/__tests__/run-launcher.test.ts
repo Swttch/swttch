@@ -28,7 +28,25 @@ describe('runLauncher', () => {
   it('reports ok and the combined stdout+stderr on success', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'added 1 package', stderr: '' }));
     const res = await runLauncher('npm', ['install', '-g', 'pkg'], OPTS);
-    expect(res).toEqual({ ok: true, output: 'added 1 package' });
+    expect(res).toEqual({ ok: true, output: 'added 1 package', stdout: 'added 1 package', stderr: '' });
+  });
+
+  /**
+   * #471. A caller that PARSES the answer cannot read the combined text.
+   *
+   * `npm view … --json` writes JSON on stdout while npm writes warnings on
+   * stderr, and the two concatenated are not JSON. fetchDistTags moved onto this
+   * runner so the query resolves npm the same way the install does, and it can
+   * only do that if the runner hands back the two streams separately.
+   */
+  it('hands back stdout on its own, unmixed with a warning on stderr', async () => {
+    mockExecFile.mockImplementation(
+      fakeExecFile({ stdout: '{"latest":"0.7.3"}', stderr: 'npm warn using --force' }),
+    );
+    const res = await runLauncher('npm', ['view', 'pkg', 'dist-tags', '--json'], OPTS);
+    expect(res.stdout).toBe('{"latest":"0.7.3"}');
+    expect(JSON.parse(res.stdout)).toEqual({ latest: '0.7.3' });
+    expect(res.stderr).toBe('npm warn using --force');
   });
 
   it('reports not-ok and surfaces the output on failure', async () => {

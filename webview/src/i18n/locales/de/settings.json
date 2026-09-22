@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "Die Spracheingabe benötigt @swttch/extend-kit. Oben rechts installieren.",
+        "outdated": "Das installierte @swttch/extend-kit ist zu alt für die Spracheingabe. Oben rechts aktualisieren.",
+        "unusable": "@swttch/extend-kit ist installiert, konnte aber nicht gestartet werden: {{message}}",
         "install": "Installieren",
         "installing": "Wird installiert…",
         "installed": "Installiert",

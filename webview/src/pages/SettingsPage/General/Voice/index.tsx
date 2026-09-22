@@ -17,7 +17,8 @@ import { useTranslation } from '@/i18n';
 export function VoiceSection() {
   const { t } = useTranslation('settings');
   const voiceEnabled = useVoiceEnabled();
-  const { kitMissing, notLoggedIn, blocked } = useVoiceAvailability();
+  const { kitMissing, kitTooOld, kitUnusable, detail, notLoggedIn, blocked } =
+    useVoiceAvailability();
 
   return (
     <SettingSection
@@ -26,9 +27,17 @@ export function VoiceSection() {
       description={
         kitMissing
           ? t('general.voice.kit.required')
-          : notLoggedIn
-            ? t('general.voice.login.required')
-            : undefined
+          : kitTooOld
+            ? t('general.voice.kit.outdated')
+            : // The failed run's own words go on the end rather than being
+              // replaced by a sentence of ours. What stopped it is not something
+              // this screen can name, and the text is what the user can act on
+              // or paste into a report (#471).
+              kitUnusable
+              ? t('general.voice.kit.unusable', { message: detail ?? '' })
+              : notLoggedIn
+                ? t('general.voice.login.required')
+                : undefined
       }
     >
       <EnabledRow />

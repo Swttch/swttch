@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "يحتاج الإدخال الصوتي إلى @swttch/extend-kit. ثبّته من أعلى اليمين.",
+        "outdated": "الإصدار المثبت من @swttch/extend-kit قديم جدًا على الإدخال الصوتي. حدّثه من أعلى اليمين.",
+        "unusable": "@swttch/extend-kit مثبَّت لكن تعذّر تشغيله: {{message}}",
         "install": "تثبيت",
         "installing": "جارٍ التثبيت…",
         "installed": "تم التثبيت",

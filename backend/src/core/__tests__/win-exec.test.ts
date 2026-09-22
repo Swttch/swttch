@@ -18,7 +18,7 @@ vi.mock('child_process', () => ({
 }));
 
 import { execFile as cpExecFile } from 'child_process';
-import { execViaCmdArgv, assertNoCmdPercentExpansion } from '../win-exec';
+import { execViaCmdArgv, assertNoCmdPercentExpansion, isDirectlyExecutable } from '../win-exec';
 
 describe('execViaCmdArgv', () => {
   const originalComSpec = process.env.ComSpec;
@@ -38,13 +38,43 @@ describe('execViaCmdArgv', () => {
   });
 
   it('passes the launcher and each arg as SEPARATE argv elements after /d /s /c', async () => {
-    await execViaCmdArgv('C:\\Program Files\\npm.cmd', ['view', '@anthropic-ai/claude-code', 'dist-tags', '--json']);
+    await execViaCmdArgv('npm.cmd', ['view', '@anthropic-ai/claude-code', 'dist-tags', '--json']);
 
     const args = vi.mocked(cpExecFile).mock.calls[0][1] as string[];
     expect(args.slice(0, 3)).toEqual(['/d', '/s', '/c']);
-    // Launcher path with a space stays a SINGLE element (never split at the space).
-    expect(args[3]).toBe('C:\\Program Files\\npm.cmd');
+    expect(args[3]).toBe('npm.cmd');
     expect(args.slice(4)).toEqual(['view', '@anthropic-ai/claude-code', 'dist-tags', '--json']);
+  });
+
+  /**
+   * #471. A launcher path containing a space is the one thing the argv array
+   * does NOT protect on its own.
+   *
+   * Node quotes that element, and cmd.exe's documented `/S` rule then strips the
+   * leading quote plus the last quote on the line — so the command is split at
+   * its space. Measured on Windows 11 as `'C:\Program' is not recognized as an
+   * internal or external command`. Prefixing `call` means the first character
+   * after `/c` is a letter, and the rule that does the stripping never applies.
+   */
+  it('prefixes `call` when the launcher path contains a space, so cmd cannot split it', async () => {
+    await execViaCmdArgv('C:\\Program Files\\nodejs\\npm.cmd', ['view', 'pkg', '--json']);
+
+    const args = vi.mocked(cpExecFile).mock.calls[0][1] as string[];
+    expect(args.slice(0, 4)).toEqual(['/d', '/s', '/c', 'call']);
+    // The path itself still travels as ONE element, unchanged.
+    expect(args[4]).toBe('C:\\Program Files\\nodejs\\npm.cmd');
+    expect(args.slice(5)).toEqual(['view', 'pkg', '--json']);
+  });
+
+  it('leaves a launcher without a space exactly as it was', async () => {
+    // No space means Node adds no quotes, which means cmd.exe has nothing to
+    // strip. Adding `call` here would change a command line that was never
+    // broken, so it is not added.
+    await execViaCmdArgv('npm.cmd', ['view', 'pkg']);
+
+    const args = vi.mocked(cpExecFile).mock.calls[0][1] as string[];
+    expect(args).not.toContain('call');
+    expect(args[3]).toBe('npm.cmd');
   });
 
   it('runs with shell:false and windowsVerbatimArguments:false (standard quoting)', async () => {
@@ -143,6 +173,35 @@ describe('execViaCmdArgv', () => {
 
     const result = await execViaCmdArgv('where.exe', ['claude']);
     expect(result.stdout).toBe(text);
+  });
+});
+
+/**
+ * #471. The judgment `Command.exec` and `runLauncher` share.
+ *
+ * It lived in `runLauncher` alone while `Command.exec` sent every win32 command
+ * through cmd.exe, and that missing copy is what put `C:\Program Files\nodejs\
+ * node.exe` on a command line cmd.exe tore in half. One function now, asked by
+ * both.
+ */
+describe('isDirectlyExecutable', () => {
+  it('says yes for an executable image, whatever its path looks like', () => {
+    expect(isDirectlyExecutable('C:\\Program Files\\nodejs\\node.exe')).toBe(true);
+    // Case is not part of the answer: Windows paths are written either way.
+    expect(isDirectlyExecutable('C:\\Windows\\System32\\CMD.EXE')).toBe(true);
+    // A bare name resolves through PATH under CreateProcess exactly as it would
+    // under cmd.exe, so absoluteness is not part of the test either.
+    expect(isDirectlyExecutable('node.exe')).toBe(true);
+  });
+
+  it('says no for a script launcher and for a bare name', () => {
+    // execFile cannot start a .cmd without a shell, and a bare `npm` needs
+    // PATHEXT to become one. Both still need cmd.exe.
+    expect(isDirectlyExecutable('C:\\Program Files\\nodejs\\npm.cmd')).toBe(false);
+    expect(isDirectlyExecutable('npm')).toBe(false);
+    expect(isDirectlyExecutable('claude.ps1')).toBe(false);
+    // `.exe` has to end the name, not merely appear in it.
+    expect(isDirectlyExecutable('C:\\tools\\node.exe.cmd')).toBe(false);
   });
 });
 

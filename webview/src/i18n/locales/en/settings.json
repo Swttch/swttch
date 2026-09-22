@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "Voice input needs @swttch/extend-kit. Install it from the top right.",
+        "outdated": "The installed @swttch/extend-kit is too old for voice input. Update it from the top right.",
+        "unusable": "@swttch/extend-kit is installed but could not be started: {{message}}",
         "install": "Install",
         "installing": "Installing…",
         "installed": "Installed",

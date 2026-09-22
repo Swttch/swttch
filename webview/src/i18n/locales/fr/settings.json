@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "La saisie vocale nécessite @swttch/extend-kit. Installez-le en haut à droite.",
+        "outdated": "Le @swttch/extend-kit installé est trop ancien pour la saisie vocale. Mettez-le à jour en haut à droite.",
+        "unusable": "@swttch/extend-kit est installé mais n’a pas pu être lancé : {{message}}",
         "install": "Installer",
         "installing": "Installation…",
         "installed": "Installé",

@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "ورودی صوتی به @swttch/extend-kit نیاز دارد. از بالا سمت راست نصب کنید.",
+        "outdated": "نسخهٔ نصب‌شدهٔ @swttch/extend-kit برای ورودی صوتی قدیمی است. از بالا سمت راست به‌روزرسانی کنید.",
+        "unusable": "@swttch/extend-kit نصب است اما اجرا نشد: {{message}}",
         "install": "نصب",
         "installing": "در حال نصب…",
         "installed": "نصب شد",

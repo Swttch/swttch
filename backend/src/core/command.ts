@@ -6,7 +6,7 @@ import {
 } from 'child_process';
 import { augmentedEnv } from './augmented-path';
 import { resolveWslCwd } from './wsl-path';
-import { execViaCmdArgv } from './win-exec';
+import { execViaCmdArgv, isDirectlyExecutable } from './win-exec';
 import { pickWin32Launcher } from './which-launcher';
 
 /**
@@ -76,8 +76,18 @@ export class Command {
 
   /** Run once and capture stdout/stderr. Rejects on non-zero exit. */
   async exec(): Promise<CommandResult> {
-    if (process.platform === 'win32') {
-      // cmd.exe argv array: the launcher (.cmd/.ps1/.exe) resolves via PATHEXT and
+    // win32 needs cmd.exe only for a command Node cannot start itself — a
+    // `.cmd`/`.ps1` script, or a bare name that PATHEXT has to resolve. An
+    // executable image is run directly, on win32 exactly as on unix.
+    //
+    // The condition is [isDirectlyExecutable] rather than a copy of its test,
+    // because `runLauncher` asks the same question and the two must never answer
+    // differently. Without the condition every win32 command went through
+    // cmd.exe, which re-parses the line and splits a quoted command path at its
+    // space — so `process.execPath`, `C:\Program Files\nodejs\node.exe` on a
+    // default install, could not start at all (#471).
+    if (process.platform === 'win32' && !isDirectlyExecutable(this.bin)) {
+      // cmd.exe argv array: the launcher (.cmd/.ps1) resolves via PATHEXT and
       // no shell tokenization touches the individual args.
       const { err, stdout, stderr } = await execViaCmdArgv(this.bin, this.args, {
         cwd: this.cwd(),
@@ -90,7 +100,13 @@ export class Command {
       if (err) throw Object.assign(err, { stdout, stderr });
       return { stdout, stderr };
     }
-    if ((this.options.shell ?? ShellKind.Direct) === ShellKind.LoginInteractive) {
+    // `!== 'win32'` is carried explicitly now that a win32 command can reach
+    // this line: an executable image skips the cmd.exe branch above, and win32
+    // has no login-interactive shell to fall into ({@link ShellKind}).
+    if (
+      process.platform !== 'win32' &&
+      (this.options.shell ?? ShellKind.Direct) === ShellKind.LoginInteractive
+    ) {
       const userShell = process.env.SHELL || '/bin/sh';
       // fish rejects `-i` in this form; fall back to a POSIX shell.
       const sh = /\/fish$/.test(userShell) ? '/bin/sh' : userShell;
@@ -101,15 +117,23 @@ export class Command {
   }
 
   /**
-   * Spawn for streaming output (chat). Shell defaults to true on win32 so the
-   * .cmd/.ps1 launcher resolves; callers may override via spawnOptions.
+   * Spawn for streaming output (chat). Shell defaults to true on win32 for a
+   * command Node cannot start itself, so the .cmd/.ps1 launcher resolves;
+   * callers may override via spawnOptions.
+   *
+   * An executable image defaults to no shell for the same reason {@link exec}
+   * skips cmd.exe for one: `shell: true` hands the whole line to cmd.exe, which
+   * splits a quoted command path at its space (#471). The judgment is the shared
+   * [isDirectlyExecutable] rather than a third copy of the test.
    */
   spawn(spawnOptions?: SpawnOptions): ChildProcess {
     return cpSpawn(this.bin, this.args, {
       ...spawnOptions,
       cwd: this.cwd(),
       env: { ...this.env(), ...spawnOptions?.env },
-      shell: spawnOptions?.shell ?? (process.platform === 'win32'),
+      shell:
+        spawnOptions?.shell ??
+        (process.platform === 'win32' && !isDirectlyExecutable(this.bin)),
     });
   }
 

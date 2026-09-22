@@ -67,6 +67,8 @@
       },
       "kit": {
         "required": "La entrada de voz necesita @swttch/extend-kit. Instálalo desde la parte superior derecha.",
+        "outdated": "El @swttch/extend-kit instalado es demasiado antiguo para la entrada de voz. Actualízalo desde la parte superior derecha.",
+        "unusable": "@swttch/extend-kit está instalado, pero no se pudo iniciar: {{message}}",
         "install": "Instalar",
         "installing": "Instalando…",
         "installed": "Instalado",

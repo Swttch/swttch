@@ -68,6 +68,20 @@ export interface DictationError {
   /** The kit itself is missing, so the UI can offer to install it. */
   kitMissing?: boolean;
   /**
+   * The kit is installed but too old for dictation, so the UI can offer to
+   * update it. Separate from {@link kitMissing} even though the button behind
+   * both is the same one: telling somebody to install what they already have is
+   * how a user ends up looking in the wrong place.
+   */
+  kitTooOld?: boolean;
+  /**
+   * The kit is installed and the backend could not run it. `message` carries
+   * the failed run's own words, because we do not know the cause — the one
+   * measured instance is a Windows path with a space in it (#471) — and no
+   * button of ours fixes it.
+   */
+  kitUnusable?: boolean;
+  /**
    * There is no Claude account login on this machine for dictation to
    * authorize with, so the UI can offer to sign in. Reached by anyone
    * authenticated with an API key alone. See
@@ -270,6 +284,8 @@ export function useDictation(getTarget: () => DictationTarget) {
           message: ack?.error ?? 'Could not start dictation',
           fatal: true,
           kitMissing: ack?.errorKind === DictationErrorKind.KIT_MISSING,
+          kitTooOld: ack?.errorKind === DictationErrorKind.KIT_TOO_OLD,
+          kitUnusable: ack?.errorKind === DictationErrorKind.KIT_UNUSABLE,
           notLoggedIn: ack?.errorKind === DictationErrorKind.NOT_LOGGED_IN,
         });
         finish();
