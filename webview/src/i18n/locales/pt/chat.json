@@ -444,19 +444,25 @@
     "checking": "A verificar…",
     "working": "Em curso…",
     "perform": "Instalar",
-    "reveal": "Mostrar",
+    "reveal": "Ver",
+    "recheck": "Verificar",
+    "login": "Entrar",
     "steps": {
       "installCli": {
-        "label": "Instalar a CLI do Claude Code"
+        "label": "Instalar a CLI do Claude Code",
+        "hint": "Quem executa as conversas é a CLI do Claude Code; esta janela apenas a comanda. Sem a CLI nesta máquina, nada começa."
       },
       "signIn": {
-        "label": "Entrar no Claude"
+        "label": "Entrar no Claude",
+        "hint": "A CLI precisa de estar autenticada numa conta Claude para responder. Já entrou a partir de um terminal? Carregue em Verificar."
       },
       "installKit": {
-        "label": "Instalar o @swttch/extend-kit"
+        "label": "Instalar o @swttch/extend-kit",
+        "hint": "A troca de contas, o painel de uso e o ditado passam por este pacote. O chat funciona sem ele, mas esses três não."
       },
       "arrangeDock": {
-        "label": "Organizar o dock"
+        "label": "Organizar o dock",
+        "hint": "Ponha na barra superior o que mais usa. Ignorar não custa nada: tudo continua no menu ⋮."
       }
     }
   },

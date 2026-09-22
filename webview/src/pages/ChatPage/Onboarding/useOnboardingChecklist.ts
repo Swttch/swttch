@@ -1,18 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthContext } from '@/contexts';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useAccountQuery } from '@/hooks/queries/useAccountQuery';
 import { useExtendKit } from '@/hooks/queries/useExtendKit';
 import { useNavigateToLogin } from '@/hooks';
-import { openSettingsAt } from '@/utils/openSettingsAt';
 import { runKitInstall } from '@/utils/runKitInstall';
-import { Route } from '@/router';
 import { MessageType } from '@/shared';
 import { SettingKey } from '@/types/settings';
 import { openDockEditor } from './openDockEditor';
 import { isBlocking } from './isBlocking';
-import { StepAction, StepStatus, type ChecklistStep } from './types';
+import { ActionKind, StepStatus, type ChecklistStep } from './types';
 
 export interface OnboardingChecklistState {
   steps: ChecklistStep[];
@@ -21,12 +20,7 @@ export interface OnboardingChecklistState {
   /**
    * A required step is KNOWN to be unsatisfied.
    *
-   * Deliberately narrower than "not all steps are done". `UNKNOWN` does not
-   * raise the card and neither does `CHECKING`, because the card takes the
-   * empty state over and turns the composer off — doing that to someone whose
-   * setup is fine, on the strength of an answer we did not get, would be the
-   * app breaking itself over its own uncertainty. An optional step never raises
-   * it either; the dock being unarranged is not a reason to stop someone typing.
+   * Deliberately narrower than "not all steps are done" — see {@link isBlocking}.
    */
   blocking: boolean;
   dismiss: () => void;
@@ -44,6 +38,11 @@ export interface OnboardingChecklistState {
  * rather than the webview: a JetBrains webview is served from a new origin on
  * every launch, so anything kept on the page starts empty after a restart and
  * the close button would only hold until the IDE was reopened (#453).
+ *
+ * Every check is the one the rest of the app already uses, not a second opinion:
+ * the account query behind AuthContext, the kit query behind the Voice input
+ * section, the same settings value the dock editor writes. Two answers to one
+ * question is a bug waiting for the day they disagree.
  */
 export function useOnboardingChecklist(): OnboardingChecklistState {
   const { isConnected, send } = useBridgeContext();
@@ -89,8 +88,13 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
   const kit = useExtendKit();
   const { settings, isLoading: settingsLoading } = useSettings();
   const navigateToLogin = useNavigateToLogin();
+  // The same re-check the inline login control runs, which refreshes the saved
+  // accounts alongside the live one so a login made in a terminal is picked up
+  // whole rather than half.
+  const { refetch: refetchAuth } = useAuthContext();
 
   const dismiss = useCallback(() => dismissMutation.mutate(), [dismissMutation]);
+  const recheckCli = useCallback(() => void cliQuery.refetch(), [cliQuery]);
 
   const steps = useMemo<ChecklistStep[]>(() => {
     const dock = settings[SettingKey.DOCK_LAYOUT];
@@ -108,11 +112,11 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
             : cliQuery.data
               ? StepStatus.DONE
               : StepStatus.TODO,
-        // We cannot install it for them, but the CLI settings page is where a
-        // `claude` in an unusual place is pointed at, which is the part of this
-        // we can carry.
-        action: StepAction.REVEAL,
-        run: () => void openSettingsAt(Route.SETTINGS_CLI),
+        // Installing a CLI is a terminal's job, so the only thing this row can
+        // offer is to look again once that is done.
+        actions: [
+          { kind: ActionKind.RECHECK, run: recheckCli, running: cliQuery.isFetching },
+        ],
       },
       {
         id: 'signIn',
@@ -126,13 +130,13 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
           : account.isError
             ? StepStatus.UNKNOWN
             : StepStatus.CHECKING,
-        action: StepAction.REVEAL,
-        // The same entry point the auth banner and the inline CTA use. It is
-        // the single one every "go to login" trigger is meant to share, because
-        // it records where the user was as a `fallback` so finishing the login
-        // returns them there — a jump straight to the account settings page
-        // would drop that and leave them on settings afterwards. (#178)
-        run: () => navigateToLogin(),
+        // Two acts, two buttons. Signing in here and saying "I already did,
+        // somewhere else" are different things, and one control cannot mean
+        // both — a login that happened in a terminal needs the second.
+        actions: [
+          { kind: ActionKind.LOGIN, run: () => navigateToLogin() },
+          { kind: ActionKind.RECHECK, run: () => void refetchAuth(), running: account.isFetching },
+        ],
       },
       {
         id: 'installKit',
@@ -141,13 +145,17 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
           : kit.info?.installed
             ? StepStatus.DONE
             : StepStatus.TODO,
-        action: StepAction.PERFORM,
-        running: kit.installing,
-        // The same call the Voice input section's control makes, failure
-        // reporting included. A global install can need elevation, and the
-        // backend answers that with a command to run — dropping it here would
-        // leave the spinner stopping and nothing else said (#298).
-        run: () => runKitInstall(kit.install, 'installed'),
+        actions: [
+          {
+            kind: ActionKind.PERFORM,
+            // The same call the Voice input section's control makes, failure
+            // reporting included. A global install can need elevation, and the
+            // backend answers that with a command to run — dropping it here
+            // would leave the spinner stopping and nothing else said (#298).
+            run: () => runKitInstall(kit.install, 'installed'),
+            running: kit.installing,
+          },
+        ],
       },
       {
         id: 'arrangeDock',
@@ -156,23 +164,26 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
           : dockArranged
             ? StepStatus.DONE
             : StepStatus.TODO,
-        action: StepAction.REVEAL,
         optional: true,
-        run: () => openDockEditor(),
+        actions: [{ kind: ActionKind.REVEAL, run: () => openDockEditor() }],
       },
     ];
   }, [
     cliQuery.isPending,
     cliQuery.isError,
+    cliQuery.isFetching,
     cliQuery.data,
+    recheckCli,
     account.data,
     account.isError,
+    account.isFetching,
     kit.loading,
     kit.info?.installed,
     kit.installing,
     kit.install,
     settings,
     settingsLoading,
+    refetchAuth,
     // Rebuilt whenever the route changes, and the fallback it records is the
     // route at the time it was made. Left out, the button would send the user
     // back to wherever they were when this list was last built.

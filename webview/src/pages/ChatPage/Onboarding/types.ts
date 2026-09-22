@@ -23,30 +23,44 @@ export enum StepStatus {
 }
 
 /**
- * What pressing the step's button actually does.
+ * Which of the fixed set of buttons this is.
  *
- * The button has to say which of the two it is before it is pressed. One of
- * them finishes the step where you stand; the rest open the screen where the
- * step is done and leave the doing to you. A single label over both would mean
- * you could not tell, without pressing, whether you were about to finish
- * something or merely arrive somewhere.
+ * The kind picks the label, so a button that does the same thing on two rows
+ * reads the same on both. Rows do not get to name their own buttons: the moment
+ * one says "Check" and another says "Re-check" for the same act, the list stops
+ * being scannable.
  */
-export enum StepAction {
-  /** We perform it here — installing the kit. The button reads "Install". */
+export enum ActionKind {
+  /** Finishes the step here — installing the kit. Reads "Install". */
   PERFORM = 'perform',
-  /** We open the screen where it is done. The button reads "Show me". */
+  /** Asks the question again. Reads "Re-check". */
+  RECHECK = 'recheck',
+  /** Opens the login page, remembering where to return to. Reads "Sign in". */
+  LOGIN = 'login',
+  /** Opens the screen where the step is done. Reads "Show". */
   REVEAL = 'reveal',
 }
 
+export interface StepAction {
+  kind: ActionKind;
+  run: () => void | Promise<void>;
+  /** True while {@link run} is in flight, so the button can say so. */
+  running?: boolean;
+}
+
 export interface ChecklistStep {
-  /** Stable key. Also the i18n key suffix and the dismissal record's id. */
+  /** Stable key. Also the i18n key suffix for the step's label. */
   id: string;
   status: StepStatus;
-  action: StepAction;
+  /**
+   * Buttons for this step, drawn left to right in this order.
+   *
+   * A list rather than one button because a step can be both acted on and
+   * asked about again: signing in offers the page AND a way to say "I did it
+   * elsewhere, look again", and those are different acts that must not share
+   * one control.
+   */
+  actions: StepAction[];
   /** Marked optional in the list, and never the one step shown as "next". */
   optional?: boolean;
-  /** Runs when the button is pressed. */
-  run: () => void | Promise<void>;
-  /** True while {@link run} is in flight, so the row can say so. */
-  running?: boolean;
 }

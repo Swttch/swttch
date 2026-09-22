@@ -444,19 +444,25 @@
     "checking": "检查中…",
     "working": "进行中…",
     "perform": "安装",
-    "reveal": "带我去",
+    "reveal": "查看",
+    "recheck": "重新检查",
+    "login": "登录",
     "steps": {
       "installCli": {
-        "label": "安装 Claude Code CLI"
+        "label": "安装 Claude Code CLI",
+        "hint": "真正处理对话的是 Claude Code CLI，本窗口只是操作它。这台机器上没有 CLI 就无法开始对话。"
       },
       "signIn": {
-        "label": "登录 Claude"
+        "label": "登录 Claude",
+        "hint": "CLI 必须登录 Claude 账户才会作答。如果已在终端登录，请点击「重新检查」。"
       },
       "installKit": {
-        "label": "安装 @swttch/extend-kit"
+        "label": "安装 @swttch/extend-kit",
+        "hint": "账户切换、用量面板和语音输入都经过此软件包。没有它也能对话，但这三项无法在此使用。"
       },
       "arrangeDock": {
-        "label": "排列停靠区"
+        "label": "排列停靠区",
+        "hint": "把常用功能放到顶栏。跳过不会有任何损失，所有功能都仍在 ⋮ 菜单中。"
       }
     }
   },

@@ -444,19 +444,25 @@
     "checking": "確認中…",
     "working": "実行中…",
     "perform": "インストール",
-    "reveal": "表示する",
+    "reveal": "表示",
+    "recheck": "再確認",
+    "login": "ログイン",
     "steps": {
       "installCli": {
-        "label": "Claude Code CLI をインストール"
+        "label": "Claude Code CLI をインストール",
+        "hint": "会話を実際に処理するのは Claude Code CLI です。この画面はそれを操作するだけなので、CLI がこのマシンにないと会話を始められません。"
       },
       "signIn": {
-        "label": "Claude にログイン"
+        "label": "Claude にログイン",
+        "hint": "CLI が Claude アカウントにログインしていないと応答しません。ターミナルで既にログイン済みなら「再確認」を押してください。"
       },
       "installKit": {
-        "label": "@swttch/extend-kit をインストール"
+        "label": "@swttch/extend-kit をインストール",
+        "hint": "アカウント切り替え、使用量パネル、音声入力がこのパッケージを使います。なくても会話はできますが、その三つはここから操作できません。"
       },
       "arrangeDock": {
-        "label": "ドックを配置"
+        "label": "ドックを配置",
+        "hint": "よく使う機能を上部バーに出しておけます。省いても失うものはなく、すべての機能は ⋮ メニューに残ります。"
       }
     }
   },

@@ -444,19 +444,25 @@
     "checking": "확인 중…",
     "working": "진행 중…",
     "perform": "설치",
-    "reveal": "보여주기",
+    "reveal": "보기",
+    "recheck": "재확인",
+    "login": "로그인",
     "steps": {
       "installCli": {
-        "label": "Claude Code CLI 설치"
+        "label": "Claude Code CLI 설치",
+        "hint": "대화를 실제로 처리하는 것은 Claude Code CLI입니다. 이 화면은 그것을 조작할 뿐이라, CLI가 이 컴퓨터에 없으면 대화를 시작할 수 없습니다."
       },
       "signIn": {
-        "label": "Claude 로그인"
+        "label": "Claude 로그인",
+        "hint": "CLI가 Claude 계정으로 로그인되어 있어야 답을 합니다. 터미널에서 이미 로그인했다면 재확인을 누르세요."
       },
       "installKit": {
-        "label": "@swttch/extend-kit 설치"
+        "label": "@swttch/extend-kit 설치",
+        "hint": "계정 전환과 사용량 표시와 받아쓰기가 이 패키지를 거칩니다. 없어도 대화는 되지만 그 셋은 여기서 쓸 수 없습니다."
       },
       "arrangeDock": {
-        "label": "도크 배치"
+        "label": "도크 배치",
+        "hint": "자주 쓰는 기능을 상단바에 꺼내 둘 수 있습니다. 건너뛰어도 잃는 것은 없고, 모든 기능은 ⋮ 메뉴에 그대로 있습니다."
       }
     }
   },

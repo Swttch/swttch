@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { isBlocking } from '../isBlocking';
-import { StepAction, StepStatus, type ChecklistStep } from '../types';
+import { StepStatus, type ChecklistStep } from '../types';
 
 const step = (
   id: string,
   status: StepStatus,
   optional = false,
-): ChecklistStep => ({ id, status, action: StepAction.REVEAL, optional, run: () => {} });
+): ChecklistStep => ({ id, status, optional, actions: [] });
 
 /**
  * What this rule decides is whether the chat can be typed into.

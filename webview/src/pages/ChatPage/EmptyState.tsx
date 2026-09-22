@@ -89,8 +89,11 @@ export const EmptyState = () => {
         )}
         {(!playing || stashed) && (
           <>
+            {/* The checklist is wider than the announcement card beside it: a row
+                here carries a step name, a marker and up to two buttons on one
+                line, where an announcement carries prose that simply wraps. */}
             {showChecklist ? (
-              <div className="w-full max-w-[22rem]">
+              <div className="w-full max-w-[30rem]">
                 <OnboardingChecklist steps={onboarding.steps} onDismiss={onboarding.dismiss} />
               </div>
             ) : (
