@@ -149,12 +149,12 @@ class ClaudeCodeToolWindowFactory : ToolWindowFactory, DumbAware {
      * window to arrive, which is what makes the tool-window host mode work over
      * Remote Development at all.
      */
-    override fun isApplicable(project: Project): Boolean = !ThinClient.isThinClient()
+    override suspend fun isApplicableAsync(project: Project): Boolean = !ThinClient.isThinClient()
 
     /**
      * Available wherever this factory is registered at all.
      *
-     * The Remote Development client never gets that far — [isApplicable] declines
+     * The Remote Development client never gets that far — [isApplicableAsync] declines
      * registration there — so this says nothing about it either way.
      */
     override fun shouldBeAvailable(project: Project): Boolean = true

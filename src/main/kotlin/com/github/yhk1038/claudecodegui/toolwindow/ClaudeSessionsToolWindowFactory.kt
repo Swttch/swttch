@@ -37,7 +37,7 @@ class ClaudeSessionsToolWindowFactory : ToolWindowFactory, DumbAware {
      * same reason as the chat tool window: the client's own registration would
      * cover the remote half's, which is the one with a backend behind it.
      */
-    override fun isApplicable(project: Project): Boolean = !ThinClient.isThinClient()
+    override suspend fun isApplicableAsync(project: Project): Boolean = !ThinClient.isThinClient()
 
     /**
      * Available everywhere, including the Remote Development client. What the
