@@ -6,7 +6,7 @@ const step = (
   id: string,
   status: StepStatus,
   optional = false,
-): ChecklistStep => ({ id, status, action: StepAction.REVEAL, optional });
+): ChecklistStep => ({ id, status, action: StepAction.REVEAL, optional, run: () => {} });
 
 /**
  * What this rule decides is whether the chat can be typed into.

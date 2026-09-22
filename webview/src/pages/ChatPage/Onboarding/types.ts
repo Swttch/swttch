@@ -25,17 +25,17 @@ export enum StepStatus {
 /**
  * What pressing the step's button actually does.
  *
- * The four steps do not divide evenly, and the button has to say which kind it
- * is before it is pressed. Two of them we can carry out in place; one we can
- * only navigate to; one belongs to a terminal we do not own.
+ * The button has to say which of the two it is before it is pressed. One of
+ * them finishes the step where you stand; the rest open the screen where the
+ * step is done and leave the doing to you. A single label over both would mean
+ * you could not tell, without pressing, whether you were about to finish
+ * something or merely arrive somewhere.
  */
 export enum StepAction {
   /** We perform it here — installing the kit. The button reads "Install". */
   PERFORM = 'perform',
   /** We open the screen where it is done. The button reads "Show me". */
   REVEAL = 'reveal',
-  /** The user does it outside the app. No button; the row explains instead. */
-  MANUAL = 'manual',
 }
 
 export interface ChecklistStep {
@@ -45,8 +45,8 @@ export interface ChecklistStep {
   action: StepAction;
   /** Marked optional in the list, and never the one step shown as "next". */
   optional?: boolean;
-  /** Runs when the button is pressed. Absent for {@link StepAction.MANUAL}. */
-  run?: () => void | Promise<void>;
+  /** Runs when the button is pressed. */
+  run: () => void | Promise<void>;
   /** True while {@link run} is in flight, so the row can say so. */
   running?: boolean;
 }

@@ -71,7 +71,7 @@ export function ChecklistRow(props: Props) {
 
       {/* Nothing to offer while the answer is still coming: a button pressed
           now would act on a status about to be replaced. */}
-      {step.action !== StepAction.MANUAL && !checking && (
+      {!checking && (
         <button
           type="button"
           disabled={step.running}
