@@ -122,6 +122,38 @@ export enum SettingKey {
   // end it and be answered instead. Null until chosen, which reads as waiting.
   COMPOSER_FOLLOW_UP_BEHAVIOR = 'composerFollowUpBehavior',
 
+  // Whether a desktop notification may put a banner on screen when a session
+  // ends its turn or stops to ask something while the user is looking
+  // elsewhere. The notification sound is NOT covered by this: it announces that
+  // the turn ended and rings wherever the user is, so it has its own key below.
+  //
+  // null is not "off" — it is "never asked". The first notification asks, since
+  // raising a banner from an unapproved bundle IS the OS permission prompt, and
+  // the answer is written back here. Until then it reads as on, because that is
+  // what happens next.
+  NOTIFICATION_BANNER = 'notificationBanner',
+
+  // Which OS sound a session makes when it ends a turn or stops to ask
+  // something. Holds a `SystemSound.id` as reported by LIST_SYSTEM_SOUNDS, or
+  // null for silence, which is the default.
+  //
+  // The backend reads this key itself every time it plays the sound; no screen
+  // sends the name along with the request. It used to live in localStorage and
+  // be read once per screen at mount, which is how the chat screen kept ringing
+  // the old sound after the settings overlay — drawn on top of it, so it never
+  // unmounted — wrote a new one.
+  NOTIFICATION_SOUND = 'notificationSound',
+
+  // How loud the notification sound plays, on a 1-10 scale, 5 by default.
+  //
+  // A step is not the same loudness on every OS and cannot be: macOS is the
+  // only one whose player amplifies past the recording, so there 1 is the file
+  // as recorded and 10 is ten times that, while Windows and Linux run from a
+  // tenth of the recording up to the recording itself.
+  //
+  // Read by the backend at playback time, like the sound name above.
+  NOTIFICATION_SOUND_VOLUME = 'notificationSoundVolume',
+
   // When true, move focus to the chat input after inserting a file path (Alt+K).
   FOCUS_INPUT_ON_EDITOR_CONTEXT = 'focusInputOnEditorContext',
 
@@ -372,6 +404,9 @@ export interface SettingsState {
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: ComposerNewlineShortcut | null;
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: string | null;
   [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: FollowUpBehavior | null;
+  [SettingKey.NOTIFICATION_BANNER]: boolean | null;
+  [SettingKey.NOTIFICATION_SOUND]: string | null;
+  [SettingKey.NOTIFICATION_SOUND_VOLUME]: number;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
@@ -413,6 +448,9 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT]: null,
   [SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM]: null,
   [SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR]: null,
+  [SettingKey.NOTIFICATION_BANNER]: null,
+  [SettingKey.NOTIFICATION_SOUND]: null,
+  [SettingKey.NOTIFICATION_SOUND_VOLUME]: 5,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,

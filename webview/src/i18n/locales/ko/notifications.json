@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "30초 뒤에 예약된 작업이 재개됩니다."
-  }
+  },
+  "openSession": "세션 열기"
 }

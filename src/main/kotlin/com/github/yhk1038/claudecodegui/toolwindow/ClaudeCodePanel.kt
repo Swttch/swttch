@@ -8,6 +8,7 @@ import com.github.yhk1038.claudecodegui.editor.TabActivity
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
 import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
+import com.github.yhk1038.claudecodegui.platform.HostAppBundleId
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
@@ -2270,9 +2271,18 @@ class ClaudeCodePanel(
                         (it.file as? ClaudeCodeVirtualFile)?.tabId == tabId
                     }
                     val ideFocused = WindowManager.getInstance().getFrame(project)?.isActive == true
+                    // Which app a click on the OS banner should raise. Reported in every
+                    // outcome because it describes this IDE, not this one notification.
+                    val activateBundleId = HostAppBundleId.get()
                     if (thisTabSelected && ideFocused) {
                         logger.info("Skipping notification (user viewing this session): $title")
-                        result.complete(NotificationOutcome(shown = false, ideFocused = ideFocused))
+                        result.complete(
+                            NotificationOutcome(
+                                shown = false,
+                                ideFocused = ideFocused,
+                                activateBundleId = activateBundleId,
+                            )
+                        )
                         return@invokeLater
                     }
 
@@ -2287,20 +2297,102 @@ class ClaudeCodePanel(
                     if (ClaudeCodeVirtualFile.isTabOpen(project, tabId)) {
                         notification.addAction(object : NotificationAction("Open session") {
                             override fun actionPerformed(e: AnActionEvent, n: Notification) {
-                                val virtualFile = ClaudeCodeVirtualFile.getOrCreate(project, tabId)
-                                FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                                revealThisSession()
                                 n.expire()
                             }
                         })
                     }
 
                     notification.notify(project)
-                    logger.info("Showed attention notification: $title (ideFocused=$ideFocused)")
-                    result.complete(NotificationOutcome(shown = true, ideFocused = ideFocused))
+                    logger.info(
+                        "Showed attention notification: $title " +
+                            "(ideFocused=$ideFocused, activateBundleId=$activateBundleId)"
+                    )
+                    result.complete(
+                        NotificationOutcome(
+                            shown = true,
+                            ideFocused = ideFocused,
+                            activateBundleId = activateBundleId,
+                        )
+                    )
                 }
                 return result.await()
             }
+
+            override suspend fun focusSession(panelId: String?) {
+                // The user clicked the desktop banner. Same destination as the IDE
+                // balloon's "Open session", plus raising the window — unlike the
+                // balloon, this click arrives while the user is in another
+                // application entirely.
+                ApplicationManager.getApplication().invokeLater {
+                    raiseIdeWindow()
+                    revealThisSession()
+                }
+            }
         }
+    }
+
+    /**
+     * Bring this chat session to the front of the IDE.
+     *
+     * Goes through the same door every other "reveal this chat" entry point
+     * uses, so the session is revealed wherever it actually lives. Opening the
+     * editor file directly ignored the host setting: a session mounted in the
+     * tool window got a SECOND copy of itself in a new editor tab instead of the
+     * tool window coming forward.
+     *
+     * Shared by the IDE balloon's "Open session" action and by a click on the
+     * desktop banner, because the two mean the same thing to the user.
+     */
+    private fun revealThisSession() {
+        OpenClaudeCodeAction.openTab(project, tabId)
+    }
+
+    /**
+     * Bring this IDE window in front of whatever application the user is in.
+     *
+     * `toFront()` alone is not enough, and on macOS does nothing at all: the OS
+     * refuses to let a background application raise itself over the one the user
+     * chose, so the call returns without an error and the window stays where it
+     * is. That was measured — the click reached this method, logged no failure,
+     * and nothing moved.
+     *
+     * `Desktop.requestForeground` is the part that asks for the APPLICATION to
+     * come forward, which is the permission `toFront()` is missing. Both are
+     * needed: the first activates the app, the second picks which of its windows
+     * ends up on top.
+     *
+     * Deliberately not `ProjectUtil.focusProjectWindow`, which does the same job:
+     * it lives in an `impl` package, and the marketplace's Plugin Verifier
+     * rejects internal API.
+     */
+    private fun raiseIdeWindow() {
+        val frame = WindowManager.getInstance().getFrame(project)
+        if (frame == null) {
+            logger.warn("focusSession: no IDE frame for this project; nothing to raise")
+            return
+        }
+        // A minimised window stays minimised however loudly it is asked to rise.
+        if (frame.state == java.awt.Frame.ICONIFIED) {
+            frame.state = java.awt.Frame.NORMAL
+        }
+        try {
+            val desktop = java.awt.Desktop.getDesktop()
+            if (desktop.isSupported(java.awt.Desktop.Action.APP_REQUEST_FOREGROUND)) {
+                // true: raise every window of this app, not just the frontmost
+                // one, so the project window below is not left behind another.
+                desktop.requestForeground(true)
+            }
+        } catch (ex: Exception) {
+            // Headless or a platform without the action: toFront alone still
+            // helps on Windows and Linux, where the OS is less strict.
+            logger.debug("requestForeground unavailable", ex)
+        }
+        frame.toFront()
+        frame.requestFocus()
+        // The click path crosses three processes; this is its last step, and the
+        // only one whose success cannot be read from a return value.
+        logger.info("focusSession: raised IDE window (active=${frame.isActive}, state=${frame.state})")
     }
 
     // ─── Project Helpers ─────────────────────────────────────────────

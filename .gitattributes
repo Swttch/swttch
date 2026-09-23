@@ -3,3 +3,12 @@
 # is copied verbatim into every distributable — a CRLF checkout would ship CRLF. Git
 # Bash tolerates the CR, but the GNU bash a WSL user gets does not have to.
 backend/src/core/win-bash-env.sh text eol=lf
+
+# The vendored desktop-notification executables are shipped byte-for-byte: the macOS
+# bundle carries a code signature that any content rewrite invalidates, and the Windows
+# toaster is a PE image. Git's content heuristics must not touch either of them.
+# The .plist and CodeResources inside the bundle are text but are sealed by the
+# signature all the same, so they are covered too. README.md and the licence files
+# beside the bundle are ours to read and stay normal text.
+backend/src/system-notifications/vendor/ntfytoast.exe binary
+backend/src/system-notifications/vendor/terminal-notifier.app/** binary

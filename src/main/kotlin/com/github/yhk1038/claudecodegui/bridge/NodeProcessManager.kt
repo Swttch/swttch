@@ -24,8 +24,16 @@ import java.io.InputStreamReader
  * - [ideFocused]: the IDE window was focused at the time. When false and [shown]
  *   is true, the backend additionally raises a real OS notification, since an
  *   in-IDE balloon is hidden behind other apps.
+ * - [activateBundleId]: the macOS bundle identifier of this IDE, which the
+ *   backend hands to the macOS notifier so that clicking the banner brings the
+ *   IDE forward. Null on every host but macOS, where the concept does not exist,
+ *   and null when no panel answered the call at all.
  */
-data class NotificationOutcome(val shown: Boolean, val ideFocused: Boolean)
+data class NotificationOutcome(
+    val shown: Boolean,
+    val ideFocused: Boolean,
+    val activateBundleId: String? = null,
+)
 
 /**
  * Manages the Node.js backend process lifecycle.
@@ -329,6 +337,22 @@ class NodeProcessManager(
          * the background).
          */
         suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome
+
+        /**
+         * Bring this IDE forward and reveal the session a clicked notification
+         * belongs to.
+         *
+         * Called when the backend is told a desktop banner was clicked. The
+         * backend cannot do this itself: it does not know which of several open
+         * windows raised the banner, and the macOS notifier's own "activate app
+         * by bundle identifier" picks whichever window the OS lists first — the
+         * wrong one as soon as a user has two projects open, and no window at
+         * all for a sandbox IDE macOS does not recognise as that app.
+         *
+         * [panelId] names the chat panel to reveal, absent when the notification
+         * did not belong to one.
+         */
+        suspend fun focusSession(panelId: String?)
     }
 
     /**

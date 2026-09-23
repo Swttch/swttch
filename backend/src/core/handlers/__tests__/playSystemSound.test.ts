@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../system-sounds', () => ({
+// Spread the real module: this handler also calls normalizeVolumeStep, and
+// a factory that lists only playSystemSound deletes every other export.
+vi.mock('../../../system-sounds', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../system-sounds')>()),
   playSystemSound: vi.fn(),
 }));
 
@@ -39,11 +42,33 @@ describe('playSystemSoundHandler', () => {
 
     await playSystemSoundHandler('conn-1', message, connections, mockBridge);
 
-    expect(mockPlay).toHaveBeenCalledWith('Glass');
+    // A preview that names no volume plays at the default step, so a caller
+    // with no volume of its own still auditions the sound.
+    expect(mockPlay).toHaveBeenCalledWith('Glass', { volumeStep: 5 });
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, {
       requestId: 'req-1',
       status: 'ok',
     });
+  });
+
+  /**
+   * The preview names its own volume rather than reading the saved one. The
+   * user is auditioning the value they are holding, and reading the file would
+   * mean waiting for the write to land — so a slow save would preview the
+   * previous volume, which is the defect this whole change removes.
+   */
+  it('plays at the volume the request names, without consulting the settings file', async () => {
+    const connections = createMockConnections();
+    const message: IPCMessage = {
+      type: MessageType.PLAY_SYSTEM_SOUND,
+      payload: { soundId: 'Glass', volumeStep: 3 },
+      timestamp: 0,
+      requestId: 'req-vol',
+    };
+
+    await playSystemSoundHandler('conn-1', message, connections, mockBridge);
+
+    expect(mockPlay).toHaveBeenCalledWith('Glass', { volumeStep: 3 });
   });
 
   it('rejects when soundId is missing', async () => {

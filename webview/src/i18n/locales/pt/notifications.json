@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "A tarefa agendada será retomada em 30 segundos."
-  }
+  },
+  "openSession": "Abrir sessão"
 }

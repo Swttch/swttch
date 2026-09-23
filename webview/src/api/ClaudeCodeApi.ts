@@ -63,7 +63,7 @@ export class ClaudeCodeApi {
     this.sessions = new SessionsApi(this.bridge, getConfig);
     this.messages = new MessagesApi(this.bridge);
     this.tools = new ToolsApi(this.bridge);
-    this.sounds = new SoundsApi(this.bridge);
+    this.sounds = new SoundsApi(this.bridge, getConfig);
     this.notifications = new NotificationsApi(this.bridge, getConfig);
   }
 

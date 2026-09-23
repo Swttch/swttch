@@ -77,9 +77,36 @@ describe('playSystemSound', () => {
       expect(mockSpawn).toHaveBeenCalledTimes(1);
       const [cmd, args, ...rest] = mockSpawn.mock.calls[0]!;
       expect(cmd).toBe('afplay');
-      expect(args).toEqual(['/System/Library/Sounds/Glass.aiff']);
+      // An unnamed volume is the default step, which on macOS is gain 5.
+      expect(args).toEqual(['-v', '5.000', '/System/Library/Sounds/Glass.aiff']);
       // No options object passed at all — confirms shell:true is NOT used.
       expect(rest).toEqual([]);
+    });
+
+    it('uses the step itself as the afplay gain', async () => {
+      spawnReturning(makeChild());
+
+      await playSystemSound('Glass', { volumeStep: 7 });
+
+      expect(mockSpawn.mock.calls[0]![1]).toEqual([
+        '-v',
+        '7.000',
+        '/System/Library/Sounds/Glass.aiff',
+      ]);
+    });
+
+    // The quietest step on macOS is the file as recorded, because this is the
+    // only platform whose player can go above that.
+    it('plays the file as recorded at the quietest step', async () => {
+      spawnReturning(makeChild());
+
+      await playSystemSound('Glass', { volumeStep: 1 });
+
+      expect(mockSpawn.mock.calls[0]![1]).toEqual([
+        '-v',
+        '1.000',
+        '/System/Library/Sounds/Glass.aiff',
+      ]);
     });
 
     it('rejects when spawn emits ENOENT', async () => {
@@ -102,7 +129,7 @@ describe('playSystemSound', () => {
   describe('win32', () => {
     beforeEach(() => setPlatform('win32'));
 
-    it('spawns powershell with PlaySync script and no shell option', async () => {
+    it('spawns powershell with a MediaPlayer script and no shell option', async () => {
       spawnReturning(makeChild());
 
       await playSystemSound('chimes');
@@ -110,12 +137,27 @@ describe('playSystemSound', () => {
       expect(mockSpawn).toHaveBeenCalledTimes(1);
       const [cmd, args, ...rest] = mockSpawn.mock.calls[0]!;
       expect(cmd).toBe('powershell');
-      expect(args).toEqual([
-        '-NoProfile',
-        '-Command',
-        '(New-Object Media.SoundPlayer "C:\\Windows\\Media\\chimes.wav").PlaySync()',
-      ]);
+      const [noProfile, command, script] = args as string[];
+      expect(noProfile).toBe('-NoProfile');
+      expect(command).toBe('-Command');
+      // MediaPlayer rather than SoundPlayer, because SoundPlayer has no volume
+      // control at all — a volume row that did nothing here would be a lie.
+      expect(script).toContain('System.Windows.Media.MediaPlayer');
+      expect(script).toContain('$p.Volume = 0.500');
+      expect(script).toContain('C:\\Windows\\Media\\chimes.wav');
+      // SoundPlayer survives as the in-script fallback, so a machine that
+      // cannot load presentationCore still gets its notification.
+      expect(script).toContain('New-Object Media.SoundPlayer');
       expect(rest).toEqual([]);
+    });
+
+    it('scales the MediaPlayer volume to the requested step', async () => {
+      spawnReturning(makeChild());
+
+      await playSystemSound('chimes', { volumeStep: 4 });
+
+      const script = (mockSpawn.mock.calls[0]![1] as string[])[2]!;
+      expect(script).toContain('$p.Volume = 0.400');
     });
 
     it('throws when path contains unsafe shell characters', async () => {
@@ -135,8 +177,21 @@ describe('playSystemSound', () => {
       expect(mockSpawn).toHaveBeenCalledTimes(1);
       const [cmd, args, ...rest] = mockSpawn.mock.calls[0]!;
       expect(cmd).toBe('paplay');
-      expect(args).toEqual(['/usr/share/sounds/freedesktop/stereo/bell.oga']);
+      // 65536 is "as recorded" to PulseAudio, which the top step maps onto;
+      // the default step 5 is half of that.
+      expect(args).toEqual(['--volume=32768', '/usr/share/sounds/freedesktop/stereo/bell.oga']);
       expect(rest).toEqual([]);
+    });
+
+    it('scales the paplay volume to the requested step', async () => {
+      spawnReturning(makeChild());
+
+      await playSystemSound('bell', { volumeStep: 10 });
+
+      expect(mockSpawn.mock.calls[0]![1]).toEqual([
+        '--volume=65536',
+        '/usr/share/sounds/freedesktop/stereo/bell.oga',
+      ]);
     });
 
     it('falls back to aplay when paplay spawn ENOENTs', async () => {

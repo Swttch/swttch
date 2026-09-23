@@ -194,11 +194,38 @@ export interface Bridge {
    * user is viewing the session) and whether the IDE window was focused. The
    * caller raises a real OS notification when the IDE is NOT focused, since an
    * in-IDE balloon is hidden behind other apps then.
+   *
+   * [activateBundleId] is the macOS bundle identifier of the host. It is no
+   * longer used to raise the IDE on click — {@link focusSession} does that, and
+   * does it for the right window — but it still identifies the host to callers
+   * that need to name it. Undefined off macOS and in browser mode.
    */
   showNotification(params: {
     title: string;
     body: string;
     workingDir?: string;
     panelId?: string;
-  }): Promise<{ shown: boolean; ideFocused: boolean }>;
+  }): Promise<{ shown: boolean; ideFocused: boolean; activateBundleId?: string }>;
+
+  /**
+   * Bring the session the user just clicked a notification for to the front.
+   *
+   * Called when a desktop notification reports that its banner was clicked, so
+   * the user lands back on the conversation that called them rather than on
+   * whatever happened to be in front.
+   *
+   * Asking the host to raise ITSELF is the whole point. Letting the notifier
+   * activate an app by bundle identifier was the previous design and it picked
+   * `runningApplications(id).firstObject` — the wrong window whenever a user had
+   * two projects open, and no window at all for a sandbox IDE that macOS does
+   * not recognise as that app.
+   *
+   * [panelId] names the chat panel to reveal. Absent when the notification did
+   * not belong to one, in which case raising the window alone is right.
+   *
+   * Every environment owes this, since "come back to the thing that called you"
+   * means something everywhere. A host with no windows to raise is the only
+   * case where doing nothing is the honest answer.
+   */
+  focusSession(params: { panelId?: string }): Promise<void>;
 }

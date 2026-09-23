@@ -35,7 +35,6 @@ import { useAwaitingNotifications } from '../../hooks';
 import { usePendingAskUserQuestion } from '../../hooks/usePendingAskUserQuestion';
 import { usePendingPermissions } from '../../hooks/usePendingPermissions';
 import { usePendingPlanApproval } from '../../hooks/usePendingPlanApproval';
-import { useNotificationSound } from '@/notifications';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { clampAutoScrollThreshold, nextAutoFollow, shouldShowScrollToBottom, AUTO_SCROLL_THRESHOLD_DEFAULT, AUTO_SCROLL_BOTTOM_EPS } from '@/utils/autoScroll';
@@ -148,7 +147,6 @@ function ChatPageContent() {
    * screen (issue #409).
    */
   const composerReplaced = isAwaitingUser;
-  const { selection: soundSelection } = useNotificationSound();
   const { settings } = useSettings();
   const autoScrollThreshold = clampAutoScrollThreshold(
     settings[SettingKey.AUTO_SCROLL_THRESHOLD] ?? AUTO_SCROLL_THRESHOLD_DEFAULT,
@@ -336,7 +334,7 @@ function ChatPageContent() {
     marker.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
-  useAwaitingNotifications(currentSession?.title ?? null, soundSelection, {
+  useAwaitingNotifications(currentSession?.title ?? null, {
     pendingPermission: pendingPermission !== null,
     pendingPlanApproval: pendingPlan !== null,
     pendingUserAnswer: pendingUserAnswer !== null,

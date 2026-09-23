@@ -59,4 +59,6 @@ object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun getIdeRoot(workingDir: String?): String? = null
     override suspend fun showNotification(title: String, body: String, panelId: String?) =
         NotificationOutcome(shown = false, ideFocused = true)
+
+    override suspend fun focusSession(panelId: String?) = Unit
 }

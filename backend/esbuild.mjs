@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { readFileSync, copyFileSync } from 'fs';
+import { readFileSync, copyFileSync, cpSync, rmSync } from 'fs';
 
 const pkg = JSON.parse(readFileSync('package.json', 'utf-8'));
 
@@ -92,5 +92,17 @@ copyFileSync('src/core/win-job-wrapper.ps1', 'dist/win-job-wrapper.ps1');
 // distributable that forgets to carry it degrades invisibly. Keep all three copy
 // sites (here, gradle syncResources, standalone tgz) in step.
 copyFileSync('src/core/win-bash-env.sh', 'dist/win-bash-env.sh');
+
+// The bundled desktop-notification executables (macOS terminal-notifier.app,
+// Windows ntfytoast.exe). system-notifications/notifier.ts resolves them via
+// `new URL('./vendor/…', import.meta.url)`, i.e. a `vendor/` directory beside
+// backend.mjs — which is also where they sit relative to notifier.ts in the
+// source tree, so the dev (tsx) and bundled runs take the same path. Wiped
+// first so a vendor file dropped upstream does not linger in dist/.
+// `vendor/README.md` explains what these are; it is copied along with them so
+// the answer travels with the files.
+// Keep all three copy sites (here, gradle syncResources, standalone tgz) in step.
+rmSync('dist/vendor', { recursive: true, force: true });
+cpSync('src/system-notifications/vendor', 'dist/vendor', { recursive: true });
 
 console.log('Backend bundled successfully');

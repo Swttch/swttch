@@ -465,14 +465,33 @@ export class JetBrainsBridge implements Bridge {
     body: string;
     workingDir?: string;
     panelId?: string;
-  }): Promise<{ shown: boolean; ideFocused: boolean }> {
-    const result = await this.request('SHOW_NOTIFICATION', params);
+  }): Promise<{ shown: boolean; ideFocused: boolean; activateBundleId?: string }> {
+    const result = await this.request(MessageType.SHOW_NOTIFICATION, params);
+    const activateBundleId = result['activateBundleId'];
     return {
       shown: result['shown'] === true,
       // Default ideFocused to true so we never raise a spurious OS notification
       // when the field is missing/malformed.
       ideFocused: result['ideFocused'] !== false,
+      // The IDE omits this on every platform but macOS, and an older IDE that
+      // predates the field omits it everywhere; both mean "raise the banner
+      // without a click target" rather than "do not raise it".
+      activateBundleId:
+        typeof activateBundleId === 'string' && activateBundleId.length > 0
+          ? activateBundleId
+          : undefined,
     };
+  }
+
+  async focusSession(params: { panelId?: string }): Promise<void> {
+    // A request, not a notification, even though the answer is empty.
+    //
+    // The IDE routes the two differently: a message with no `id` never reaches
+    // the RPC dispatcher at all, it goes to a separate notification callback.
+    // Sending this as a notification means the IDE silently never hears it, and
+    // the click does nothing — which is exactly what happened before this
+    // comment existed.
+    await this.request(MessageType.FOCUS_SESSION, params);
   }
 }
 

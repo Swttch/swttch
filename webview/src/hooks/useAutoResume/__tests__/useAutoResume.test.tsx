@@ -87,7 +87,7 @@ const sendMock = vi.fn((_type: string, _payload?: Record<string, unknown>) =>
 );
 const sendMessageMock = vi.fn();
 const switchToMock = vi.fn(() => Promise.resolve());
-const { notifyMock, ensureSponsorMock } = vi.hoisted(() => ({ notifyMock: vi.fn(), ensureSponsorMock: vi.fn() }));
+const { showBannerMock, ensureSponsorMock } = vi.hoisted(() => ({ showBannerMock: vi.fn(), ensureSponsorMock: vi.fn() }));
 
 function emit(type: string, payload: Record<string, unknown>) {
   const h = handlers.get(type);
@@ -111,7 +111,7 @@ vi.mock('@/contexts/ChatStreamContext', () => ({
 vi.mock('@/contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { autoResumeOnLimit: ctx.autoResumeOnLimit }, updateSetting: vi.fn() }),
 }));
-vi.mock('@/notifications', () => ({ notify: notifyMock }));
+vi.mock('@/notifications', () => ({ showNotificationBanner: showBannerMock }));
 vi.mock('@/contexts/AutoResumeOverrideContext', () => ({
   useAutoResumeOverride: () => ({ getOverride: () => undefined, setOverride: vi.fn() }),
 }));
@@ -473,7 +473,7 @@ describe('useAutoResume', () => {
     expect(sendMessageMock).not.toHaveBeenCalled();
   });
 
-  it('fires the countdown notification once when the reset is reached', () => {
+  it('shows the countdown banner once when the reset is reached', () => {
     vi.useFakeTimers();
     const now = Date.now();
     ctx.messages = [limitMsg('lim1', FUTURE)];
@@ -481,7 +481,7 @@ describe('useAutoResume', () => {
     ctx.reservations = [makeReservation(new Date(now + 30_000).toISOString())];
     const { result } = renderHook(() => useAutoResume());
     expect(result.current.countdownSeconds).not.toBeNull();
-    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(showBannerMock).toHaveBeenCalledTimes(1);
   });
 
   // ── Auto-resume is "the click", not a second feature ───────────────────────

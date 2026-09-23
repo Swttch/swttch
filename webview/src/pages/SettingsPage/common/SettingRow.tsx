@@ -23,18 +23,30 @@ interface SettingRowProps {
    * {@link useIsOverriddenByProject} computes it.
    */
   isOverridden?: boolean;
+  /**
+   * Rendered under the whole row, spanning its width.
+   *
+   * For something that follows from the control rather than describing it — a
+   * consequence of the current value, shown only while that value holds. The
+   * description above says what the setting does and is always true; this says
+   * what is happening now. Full width rather than tucked under the control
+   * because a sentence squeezed into the right-hand column wraps to three words
+   * a line.
+   */
+  below?: ReactNode;
   children: ReactNode;
 }
 
 export function SettingRow(props: SettingRowProps) {
-  const { label, description, badge, isOverridden, children } = props;
+  const { label, description, badge, isOverridden, below, children } = props;
   const { t } = useTranslation('settings');
 
   return (
     // The divider is subtler than the card's own outline, and the last row does
     // without one: drawn there it lands a hair above the card's bottom edge and
     // reads as a doubled line rather than as a separation.
-    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:items-center md:justify-between py-4 border-b border-border-subtle last:border-b-0">
+    <div className="py-4 border-b border-border-subtle last:border-b-0">
+    <div className="flex flex-col md:flex-row gap-4 md:gap-0 md:items-center md:justify-between">
       <div className="flex-1 me-4">
         <div className="flex items-center gap-1.5">
           <label className="text-sm text-text-primary">{label}</label>
@@ -58,6 +70,8 @@ export function SettingRow(props: SettingRowProps) {
           children
         )}
       </div>
+    </div>
+      {below}
     </div>
   );
 }

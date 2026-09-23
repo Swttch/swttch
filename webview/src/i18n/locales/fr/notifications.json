@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "La tâche planifiée reprend dans 30 secondes."
-  }
+  },
+  "openSession": "Ouvrir la session"
 }

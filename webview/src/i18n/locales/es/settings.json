@@ -118,6 +118,27 @@
         "steer": "Redirigir"
       }
     },
+    "notifications": {
+      "title": "Notificaciones",
+      "sound": {
+        "label": "Sonido",
+        "ariaLabel": "Sonido de notificación",
+        "off": "Desactivado",
+        "description": "Suena cuando una sesión termina su respuesta o se detiene a esperar tu confirmación. Al seleccionar un sonido se escucha una vista previa una sola vez.",
+        "loadingDescription": "Cargando sonidos del sistema...",
+        "emptyDescription": "No se detectaron sonidos del sistema. Selecciona Desactivado para silenciar las notificaciones.",
+        "errorDescription": "No se pudieron cargar los sonidos del sistema: {{error}}"
+      },
+      "volume": {
+        "label": "Volumen",
+        "description": "Qué tan fuerte suena el sonido de notificación, de 1 a 10."
+      },
+      "banner": {
+        "label": "Banner",
+        "description": "Muestra una notificación en la pantalla mientras miras a otro sitio. No aparece mientras estás viendo esa sesión.",
+        "fadeHint": "¿El aviso desaparece muy rápido? <action>Cámbialo aquí</action>."
+      }
+    },
     "shortcutInput": {
       "recording": "Pulsa una tecla…",
       "unset": "Sin asignar",
@@ -355,18 +376,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "Notificaciones",
-      "sound": {
-        "label": "Sonido",
-        "ariaLabel": "Sonido de notificación",
-        "off": "Desactivado",
-        "description": "Sonido que se reproduce cuando aparece una notificación de escritorio. Al seleccionar un sonido se escucha una vista previa una sola vez.",
-        "loadingDescription": "Cargando sonidos del sistema...",
-        "emptyDescription": "No se detectaron sonidos del sistema. Selecciona Desactivado para silenciar las notificaciones.",
-        "errorDescription": "No se pudieron cargar los sonidos del sistema: {{error}}"
-      }
-    },
     "permissions": {
       "title": "Permisos",
       "revokeHint": "Para revocarlo, cámbialo en la configuración de tu navegador.",

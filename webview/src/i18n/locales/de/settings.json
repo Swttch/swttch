@@ -118,6 +118,27 @@
         "steer": "Steuern"
       }
     },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "sound": {
+        "label": "Ton",
+        "ariaLabel": "Benachrichtigungston",
+        "off": "Aus",
+        "description": "Ertönt, wenn eine Sitzung ihre Antwort beendet oder auf deine Bestätigung wartet. Die Auswahl eines Tons spielt ihn einmal zur Vorschau ab.",
+        "loadingDescription": "Systemtöne werden geladen …",
+        "emptyDescription": "Keine Systemtöne gefunden. Wähle „Aus“, um Benachrichtigungen stummzuschalten.",
+        "errorDescription": "Systemtöne konnten nicht geladen werden: {{error}}"
+      },
+      "volume": {
+        "label": "Lautstärke",
+        "description": "Wie laut der Benachrichtigungston abgespielt wird, von 1 bis 10."
+      },
+      "banner": {
+        "label": "Banner",
+        "description": "Zeigt eine Benachrichtigung auf dem Bildschirm, während du woanders hinschaust. Sie erscheint nicht, während du diese Sitzung ansiehst.",
+        "fadeHint": "Banner verschwindet zu schnell? <action>Hier ändern</action>."
+      }
+    },
     "shortcutInput": {
       "recording": "Taste drücken…",
       "unset": "Nicht festgelegt",
@@ -355,18 +376,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "Benachrichtigungen",
-      "sound": {
-        "label": "Ton",
-        "ariaLabel": "Benachrichtigungston",
-        "off": "Aus",
-        "description": "Ton, der beim Auslösen einer Desktop-Benachrichtigung abgespielt wird. Die Auswahl eines Tons spielt ihn einmal zur Vorschau ab.",
-        "loadingDescription": "Systemtöne werden geladen …",
-        "emptyDescription": "Keine Systemtöne gefunden. Wähle „Aus“, um Benachrichtigungen stummzuschalten.",
-        "errorDescription": "Systemtöne konnten nicht geladen werden: {{error}}"
-      }
-    },
     "permissions": {
       "title": "Berechtigungen",
       "revokeHint": "Zum Widerrufen in deinen Browsereinstellungen ändern.",

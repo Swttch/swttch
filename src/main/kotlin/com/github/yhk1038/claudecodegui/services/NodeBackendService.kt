@@ -303,6 +303,14 @@ class NodeBackendService : Disposable {
                 return handler?.showNotification(title, body, panelId)
                     ?: run { warn("showNotification"); NotificationOutcome(shown = false, ideFocused = true) }
             }
+
+            override suspend fun focusSession(panelId: String?) {
+                // Same routing as showNotification: back to the panel that raised
+                // the banner, or any panel when its tab has since been closed —
+                // the user still asked to come back to this IDE.
+                val handler = panelId?.let { handlers[it] } ?: any()
+                handler?.focusSession(panelId) ?: warn("focusSession")
+            }
         }
 
         @Synchronized

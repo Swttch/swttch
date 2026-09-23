@@ -200,6 +200,9 @@ case "${1:-}" in
     if [[ ! -f "$ROOT/backend/dist/account-cli.mjs" ]]; then
       echo "backend/dist/account-cli.mjs not found. Run 'be-build' first." >&2; exit 1
     fi
+    if [[ ! -d "$ROOT/backend/dist/vendor" ]]; then
+      echo "backend/dist/vendor not found. Run 'be-build' first." >&2; exit 1
+    fi
     if [[ ! -d "$ROOT/webview/dist" ]]; then
       echo "webview/dist not found. Run 'wv-build' first." >&2; exit 1
     fi
@@ -211,9 +214,16 @@ case "${1:-}" in
     cp "$ROOT/backend/dist/account-cli.mjs" "$stage/"
     cp "$ROOT/backend/dist/win-job-wrapper.ps1" "$stage/"
     cp "$ROOT/backend/dist/win-bash-env.sh" "$stage/"
+    # Desktop-notification executables. notifier.ts resolves them at `vendor/`
+    # beside backend.mjs, so the directory name has to survive into the tarball
+    # unchanged. The macOS bundle only works if its executable bit comes along.
+    # Keep all three copy sites (backend/esbuild.mjs, gradle syncWebviewResources,
+    # here) in step.
+    cp -R "$ROOT/backend/dist/vendor" "$stage/vendor"
+    chmod +x "$stage/vendor/terminal-notifier.app/Contents/MacOS/terminal-notifier"
     cp -R "$ROOT/webview/dist/." "$stage/webview/"
     out="$ROOT/dist/claude-code-gui-standalone-v$version.tgz"
-    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 win-bash-env.sh webview
+    tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 win-bash-env.sh vendor webview
     rm -rf "$stage"
     echo "Created: $out"
     ;;
