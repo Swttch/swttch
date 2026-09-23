@@ -17,6 +17,7 @@ export * from './hunk';
 export * from './working-dir-path';
 export * from './mergeEdits';
 export * from './permission-rules';
+export * from './queued-message';
 export * from './queued-prompts';
 export * from './session-asset';
 export * from './session-send';

@@ -109,6 +109,9 @@
       "hint": "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, {{send}} to send",
       "steerMessage": "Steer the current run..."
     },
+    "queuedMessages": {
+      "cancel": "Remove from queue"
+    },
     "ariaLabel": "Message Claude",
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",
     "dictation": {

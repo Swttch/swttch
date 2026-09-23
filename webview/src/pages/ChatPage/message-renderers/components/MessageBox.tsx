@@ -7,6 +7,17 @@ interface MessageBoxProps {
   /** 최대 높이 제한 활성화 (기본: true). true면 280px 초과 시 접힘 */
   collapsible?: boolean;
   className?: string;
+  /**
+   * The collapsed height this box caps itself at before a click expands it.
+   *
+   * `'default'` (280px) is every ordinary chat bubble. `'compact'` (one line,
+   * ~28px at this app's 14px root font: `text-[1rem] leading-[1.5]` plus the
+   * `py-[3.5px]` padding above and below) is for a bubble that must read as a
+   * single line at rest — the queued-message stack, whose whole stacking and
+   * hover-to-expand effect depends on each entry starting that short. Expanding
+   * (click) behaves identically either way: both grow to `80vh` and scroll.
+   */
+  variant?: 'default' | 'compact';
 }
 
 /**
@@ -35,7 +46,7 @@ interface MessageBoxProps {
  * looks detached but keeps its place in the flow. `StickySendHeader` makes up
  * the difference outside itself; see the spacer there.
  */
-export const MessageBox: React.FC<MessageBoxProps> = ({ children, collapsible = true, className }) => {
+export const MessageBox: React.FC<MessageBoxProps> = ({ children, collapsible = true, className, variant = 'default' }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const fold = useScrollFoldValue();
   const folding = collapsible && !isExpanded && fold !== null;
@@ -47,12 +58,14 @@ export const MessageBox: React.FC<MessageBoxProps> = ({ children, collapsible = 
     ? Math.min(Math.max(fold.height, FOLD_MIN_HEIGHT), fold.restingHeight)
     : undefined;
 
+  const collapsedHeightClass = variant === 'compact' ? 'max-h-[28px]' : 'max-h-[280px]';
+
   return (
     <div
       // How useScrollFold finds the element whose natural height it must read.
       data-message-box
       className={`bg-surface-hover border border-border-default rounded-lg px-[8px] py-[3.5px] ${
-        collapsible && !isExpanded ? 'max-h-[280px] overflow-hidden' : ''
+        collapsible && !isExpanded ? `${collapsedHeightClass} overflow-hidden` : ''
       } ${collapsible && isExpanded ? 'max-h-[80vh] overflow-y-auto overscroll-contain' : ''} ${className ?? ''}`}
       style={folding ? { height } : undefined}
       onClick={collapsible ? () => setIsExpanded(!isExpanded) : undefined}

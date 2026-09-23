@@ -109,6 +109,9 @@
       "hint": "@ für Dateien, / für Befehle, !! zum Einfügen von Prompts, @@ um eine andere Sitzung zu fragen, {{send}} zum Senden",
       "steerMessage": "Aktuellen Lauf steuern..."
     },
+    "queuedMessages": {
+      "cancel": "Aus der Warteschlange entfernen"
+    },
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
     "dictation": {

@@ -7,10 +7,18 @@ import { useBridgeContext } from './BridgeContext';
 import { useSessionContext, type SessionHandoff } from './SessionContext';
 import { useCliConfig } from './CliConfigContext';
 import { useClaudeSettings } from './ClaudeSettingsContext';
+import { useSettings } from './SettingsContext';
 import { LoadedMessageDto, Context, Attachment, SessionState } from '../types';
 import { InputMode, InputModeValues, CLI_FLAG_TO_INPUT_MODE } from '../types/chatInput';
 import { isAutoModeAvailable, reconcileSessionModel } from '../types/models';
-import { MessageType, matchControlRequestCommand } from '@/shared';
+import {
+  MessageType,
+  matchControlRequestCommand,
+  FollowUpBehavior,
+  resolveFollowUpBehavior,
+  invertFollowUpBehavior,
+  type QueuedMessage,
+} from '@/shared';
 import { useControlRequestCommand } from '../hooks/useControlRequestCommand';
 import type { IdeSelectionPayload } from '../hooks/useIdeSelection';
 import { injectIdeContext, InjectedSelectionKey } from '../hooks/ideContextTag';
@@ -51,12 +59,29 @@ interface ChatStreamContextType {
 
   // Actions
   sendMessage: (content: string, inputMode: InputMode, context?: Context[], attachments?: Attachment[], accountId?: string) => void;
-  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[]) => void;
+  /**
+   * `invertFollowUp` does the opposite of the configured follow-up behavior for
+   * this one message — the derived key described in {@link invertedOf}. The
+   * setting is not touched, so the next message follows it again.
+   */
+  handleSubmit: (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp?: boolean) => void;
   /** Run a slash command the CLI only accepts as a control_request (#270). */
   runControlRequestCommand: (command: string, inputMode: InputMode) => void;
   stop: () => void;
   continue: () => void;
   retry: (messageId: string) => void;
+
+  /**
+   * The session's backend-owned queue of held follow-up messages (the "queue"
+   * composer follow-up-behavior setting). Never written to directly — it only
+   * ever reflects what QUEUED_MESSAGES_CHANGED and GET_QUEUED_MESSAGES last
+   * told this connection, per CLAUDE.md's rule that the backend owns this state.
+   */
+  queuedMessages: QueuedMessage[];
+  /** Hold [content] in the backend queue instead of sending it now. */
+  queueMessage: (content: string, attachments?: Attachment[]) => void;
+  /** Remove one held message from the backend queue by id, before it is sent. */
+  cancelQueuedMessage: (id: string) => void;
 
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
@@ -133,6 +158,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const session = useSessionContext();
   const { controlResponse, refresh: refreshCliConfig } = useCliConfig();
   const { settings: claudeSettings } = useClaudeSettings();
+  const { settings: appSettings } = useSettings();
   const tools = useTools();
   const diffs = useDiffs();
 
@@ -141,6 +167,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const [sessionModel, setSessionModel] = useState<string | null>(null);
   const [hasMoreOlder, setHasMoreOlder] = useState(false);
   const [oldestLoadedUuid, setOldestLoadedUuid] = useState<string | null>(null);
+  // The session's backend-owned queue (see messageQueue.ts on the backend).
+  // Only ever set from what the backend says — QUEUED_MESSAGES_CHANGED pushes
+  // and the GET_QUEUED_MESSAGES fetch below — never derived locally.
+  const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
 
   const setPaginationState = useCallback((hasMore: boolean, oldestUuid: string | null) => {
     setHasMoreOlder(hasMore);
@@ -290,6 +320,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     prePlanModeRef.current = null;
     setHasMoreOlder(false);
     setOldestLoadedUuid(null);
+    // The queue belongs to the session being left, not the one arriving — the
+    // GET_QUEUED_MESSAGES fetch below fills in whatever the new session already has.
+    setQueuedMessages([]);
   }, [chatStreamClearMessages, chatStreamResetStreamState, setInput, tools.clearToolUses, diffs.clearDiffs, session.currentSessionId, forkHandoff?.promptText]);
 
   // resetForSessionSwitch is called directly by SessionLoader
@@ -325,6 +358,48 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge.isConnected, bridge.subscribe]);
+
+  // Whether a live QUEUED_MESSAGES_CHANGED push has already landed for the
+  // fetch below's session since that fetch started. GET_QUEUED_MESSAGES asks
+  // "what is queued right now", but its answer describes the moment the
+  // request was made, not the moment the response arrives — a push that
+  // arrives while it is still in flight is strictly newer information, and
+  // applying the fetch's answer after that would overwrite it with the past.
+  const queueHydratedFromPushRef = useRef(false);
+
+  // The session's backend-owned queue: live pushes from every change
+  // (QUEUED_MESSAGES_CHANGED), matching by sessionId since a stale push from a
+  // session this connection has since left must not repaint the new one.
+  useEffect(() => {
+    if (!bridge.isConnected) return;
+
+    return bridge.subscribe(MessageType.QUEUED_MESSAGES_CHANGED, (message: IPCMessage) => {
+      const payload = message.payload as { sessionId?: string; queue?: QueuedMessage[] } | undefined;
+      if (!payload?.sessionId || payload.sessionId !== sessionRef.current.currentSessionId) return;
+      queueHydratedFromPushRef.current = true;
+      setQueuedMessages(payload.queue ?? []);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridge.isConnected, bridge.subscribe]);
+
+  // The queue this session already has, for a tab that opens or reconnects to
+  // it after messages were queued from elsewhere — live changes after this
+  // moment arrive through the subscription above instead.
+  useEffect(() => {
+    if (!bridge.isConnected || !session.currentSessionId) return;
+    const sessionId = session.currentSessionId;
+    queueHydratedFromPushRef.current = false;
+    bridge.send(MessageType.GET_QUEUED_MESSAGES, { sessionId }).then((response) => {
+      // Guard against a slow reply landing after the user has moved to another
+      // session — the same staleness the live subscription above guards against.
+      if (sessionRef.current.currentSessionId !== sessionId) return;
+      if (queueHydratedFromPushRef.current) return;
+      const queue = (response?.queue as QueuedMessage[] | undefined) ?? [];
+      setQueuedMessages(queue);
+    }).catch((error) => {
+      console.error('[ChatStreamContext] Failed to fetch queued messages:', error);
+    });
+  }, [bridge.isConnected, bridge, session.currentSessionId]);
 
   // sendMessage: add to local state + send to backend (or queue if streaming)
   /*
@@ -407,6 +482,51 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [addUserMessage, bridge, session, sessionModel]
   );
 
+  /**
+   * Hold [content] in the backend's per-session queue (messageQueue.ts)
+   * instead of writing it to the CLI's stdin now — the "queue" composer
+   * follow-up-behavior setting, chosen by handleSubmit below.
+   *
+   * No local bubble is added here, unlike sendMessage: this message has not
+   * gone anywhere yet, so it is not a chat message — it is drawn from
+   * `queuedMessages` as a stacked bubble above the composer instead. It
+   * becomes an ordinary chat message (via USER_MESSAGE_BROADCAST, reaching
+   * every connection including this one) only once the backend actually
+   * releases it to the CLI.
+   *
+   * Requires an existing session: queueing only ever happens mid-turn, and a
+   * turn cannot be running on a session that has not been created yet.
+   */
+  const queueMessage = useCallback(
+    (content: string, attachments?: Attachment[]) => {
+      const sessionId = session.currentSessionId;
+      if (!sessionId) return;
+
+      bridge.send(MessageType.QUEUE_MESSAGE, {
+        sessionId,
+        content,
+        attachments: attachments?.map(a => ({ ...a.toPayload() })),
+        workingDir: session.workingDirectory ?? '',
+      }).catch((error) => {
+        console.error('[ChatStreamContext] Failed to queue message:', error);
+      });
+    },
+    [bridge, session]
+  );
+
+  /** Remove one held message from the backend queue by id, before it is sent. */
+  const cancelQueuedMessage = useCallback(
+    (id: string) => {
+      const sessionId = session.currentSessionId;
+      if (!sessionId) return;
+
+      bridge.send(MessageType.CANCEL_QUEUED_MESSAGE, { sessionId, id }).catch((error) => {
+        console.error('[ChatStreamContext] Failed to cancel queued message:', error);
+      });
+    },
+    [bridge, session]
+  );
+
   // Run one of the slash commands the CLI won't take as text over stream-json.
   // Shared by the composer (typed) and the command palette (picked), so both
   // routes press the same button rather than drifting apart.
@@ -444,7 +564,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // Reads input via inputRef so this callback stays stable across keystrokes
   // — otherwise every key press would invalidate contextValue.
   const handleSubmit = useCallback(
-    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[]) => {
+    (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false) => {
       if (e) e.preventDefault();
       const trimmedInput = inputRef.current.trim();
       if (!trimmedInput && (!attachments || attachments.length === 0)) return;
@@ -469,10 +589,25 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         setInput('');
         return;
       }
+      // A turn is already running and the setting says queue rather than steer —
+      // hold this one in the backend's queue instead of writing it to stdin now.
+      // Idle sends and steer-mode sends both fall through to the plain
+      // sendMessage below unchanged.
+      //
+      // `invertFollowUp` is the derived key doing the opposite for this one
+      // message (see invertedOf): the setting itself is left alone, so the next
+      // message goes back to whichever behavior is configured.
+      const chosen = resolveFollowUpBehavior(appSettings);
+      const behavior = invertFollowUp ? invertFollowUpBehavior(chosen) : chosen;
+      if (chatStream.isStreaming && behavior === FollowUpBehavior.Queue) {
+        queueMessage(trimmedInput, attachments);
+        setInput('');
+        return;
+      }
       sendMessage(trimmedInput, inputMode, undefined, attachments);
       setInput('');
     },
-    [inputRef, runControlRequestCommand, sendMessage, setInput]
+    [inputRef, runControlRequestCommand, sendMessage, setInput, chatStream.isStreaming, appSettings, queueMessage]
   );
 
   // stop: stdin interrupt를 백엔드에 전송.
@@ -522,6 +657,10 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     stop,
     continue: continueGeneration,
     retry,
+
+    queuedMessages,
+    queueMessage,
+    cancelQueuedMessage,
 
     resetStreamState: chatStreamResetStreamState,
 
@@ -577,6 +716,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     stop,
     continueGeneration,
     retry,
+    queuedMessages,
+    queueMessage,
+    cancelQueuedMessage,
     tools,
     diffs,
     isThinkingExpanded,

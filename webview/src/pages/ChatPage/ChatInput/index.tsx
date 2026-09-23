@@ -68,11 +68,7 @@ import {
   sendKeyLabel,
   ComposerKeyAction,
 } from '@/utils/composerShortcut';
-import {
-  FollowUpBehavior,
-  resolveFollowUpBehavior,
-  invertFollowUpBehavior,
-} from '@/shared';
+import { FollowUpBehavior, resolveFollowUpBehavior } from '@/shared';
 import { arrowRecallsHistory } from './caretAtEdge';
 import { basename } from './basename';
 import {
@@ -87,6 +83,7 @@ import { useIMEComposition } from './RichInput/useIMEComposition';
 import { insertNewlineAtCursor } from './RichInput/insertNewlineAtCursor';
 import { TelemetryConsentBanner } from '../TelemetryConsentBanner';
 import { InputBanner } from '../InputBanner';
+import { QueuedMessagesStack } from './QueuedMessagesStack';
 import { AnnouncementInputBannerSlot } from '@/components/Announcements/placements';
 import {
   useTelemetryConsent,
@@ -120,7 +117,7 @@ export function ChatInput() {
   const { textareaRef } = useChatInputFocus();
   const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
-  const { handleSubmit: onSubmit, isStreaming, stop: onStop } = chatStream;
+  const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage } = chatStream;
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
@@ -558,28 +555,6 @@ export function ChatInput() {
    * attached rather than dropped silently, so the next message the user sends
    * to this session still has them.
    */
-  /**
-   * End the current turn so the message just sent is answered now.
-   *
-   * Sent first, interrupted second, both over the same stdin pipe: the CLI
-   * queues whatever arrives mid-turn, and the interrupt makes it drop the
-   * turn and start a new one on the queue. Measured back to back with no gap
-   * — the interrupt's control_response comes back `still_queued: []` and a
-   * fresh system/init follows.
-   *
-   * Nothing to do when no turn is running: the message was not a follow-up,
-   * and interrupting an idle CLI would end a turn that has not begun.
-   */
-  const steerIfAsked = useCallback(
-    (invertOnce: boolean) => {
-      if (!isStreaming) return;
-      const chosen = resolveFollowUpBehavior(appSettings);
-      const behavior = invertOnce ? invertFollowUpBehavior(chosen) : chosen;
-      if (behavior === FollowUpBehavior.Steer) onStop();
-    },
-    [isStreaming, appSettings, onStop],
-  );
-
   const submitComposer = useCallback((invertFollowUp = false) => {
     if (disabled) return;
     if (!value.trim() && attachments.length === 0) return;
@@ -609,7 +584,6 @@ export function ChatInput() {
       // reappearing for the one entry most likely to be recalled.
       pushToHistory(shown);
       sendToSession(recipient.name, shown, body, { inputMode: mode, sendMessage });
-      steerIfAsked(invertFollowUp);
       onChange('');
       setRecipient(null);
       setPathTokens([]);
@@ -618,8 +592,7 @@ export function ChatInput() {
 
     pushToHistory(value);
 
-    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined);
-    steerIfAsked(invertFollowUp);
+    onSubmit(undefined, mode, attachments.length > 0 ? attachments : undefined, invertFollowUp);
     clearAttachments();
     setPathTokens([]);
   }, [
@@ -634,7 +607,6 @@ export function ChatInput() {
     onChange,
     onSubmit,
     clearAttachments,
-    steerIfAsked,
   ]);
 
   const agentMention = useAgentMention({
@@ -1007,6 +979,8 @@ export function ChatInput() {
       composerBindings(appSettings),
     );
 
+    // Both send; the derived one sends with the follow-up behavior flipped for
+    // this message alone, which is what the setting's description promises.
     if (
       composerAction === ComposerKeyAction.Send ||
       composerAction === ComposerKeyAction.SendInverted
@@ -1224,6 +1198,10 @@ export function ChatInput() {
       )}
       {/* SDUI 공지(INPUT_BANNER): 서버가 내려주는 공지가 있을 때만 표시 */}
       <AnnouncementInputBannerSlot />
+      {/* Messages held in the backend queue (the "queue" follow-up-behavior
+          setting). Drawn exactly as ChatStreamContext.queuedMessages reports
+          it — this component holds nothing of its own. */}
+      <QueuedMessagesStack entries={queuedMessages} onCancel={cancelQueuedMessage} />
       {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다.
           박스의 모양(테두리·포커스 링·구분선·하단 바)은 InputFrame이 쥐고 있고,
           에이전트 뷰의 컴포저가 같은 것을 쓴다. 여기 있는 것은 전부 슬롯에 넣을

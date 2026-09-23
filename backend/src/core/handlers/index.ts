@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { ClientEnv, MessageType } from '../../shared';
 import { Claude } from '../claude';
 import { sendMessageHandler } from './sendMessage';
+import { queueMessageHandler, cancelQueuedMessageHandler, getQueuedMessagesHandler } from './queueMessage';
 import { stopGenerationHandler } from './stopGeneration';
 import { stopSessionHandler } from './stopSession';
 import { sendControlRequestHandler } from './sendControlRequest';
@@ -470,6 +471,15 @@ export async function handleMessage(
       break;
     case MessageType.RECLAIM_SESSION:
       await reclaimSessionHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.QUEUE_MESSAGE:
+      await queueMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.CANCEL_QUEUED_MESSAGE:
+      await cancelQueuedMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_QUEUED_MESSAGES:
+      await getQueuedMessagesHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SCHEDULE_MESSAGE:
       await scheduleMessageHandler(connectionId, message, connections, bridge);

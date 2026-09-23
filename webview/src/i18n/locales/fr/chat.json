@@ -109,6 +109,9 @@
       "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, @@ pour interroger une autre session, {{send}} pour envoyer",
       "steerMessage": "Ajuster l’exécution en cours..."
     },
+    "queuedMessages": {
+      "cancel": "Retirer de la file d’attente"
+    },
     "ariaLabel": "Message à Claude",
     "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place.",
     "dictation": {

@@ -109,6 +109,9 @@
       "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，@@ 詢問其他工作階段，{{send}} 傳送",
       "steerMessage": "調整目前的工作..."
     },
+    "queuedMessages": {
+      "cancel": "從佇列中移除"
+    },
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
     "dictation": {

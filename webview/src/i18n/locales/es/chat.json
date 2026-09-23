@@ -109,6 +109,9 @@
       "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar",
       "steerMessage": "Ajustar la ejecución actual..."
     },
+    "queuedMessages": {
+      "cancel": "Quitar de la cola"
+    },
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",
     "dictation": {

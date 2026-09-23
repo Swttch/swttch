@@ -40,6 +40,17 @@ export enum MessageType {
   SEND_CONTROL_REQUEST = 'SEND_CONTROL_REQUEST',
   /** Re-attach this connection to an already-running session (e.g. after reconnect). */
   RECLAIM_SESSION = 'RECLAIM_SESSION',
+  /**
+   * Hold a follow-up message in the session's backend-owned queue instead of
+   * writing it to the CLI's stdin, for the "queue" composer follow-up-behavior
+   * setting. Released one at a time as the session's current turn ends.
+   * inbound webview→backend
+   */
+  QUEUE_MESSAGE = 'QUEUE_MESSAGE',
+  /** Remove one held message from the session's backend-owned queue by id, before it is sent. inbound webview→backend */
+  CANCEL_QUEUED_MESSAGE = 'CANCEL_QUEUED_MESSAGE',
+  /** Read the session's backend-owned queue of held follow-up messages, for a webview opening or reconnecting to a session that already has messages queued. inbound webview→backend */
+  GET_QUEUED_MESSAGES = 'GET_QUEUED_MESSAGES',
 
   // -- Scheduled messages ("send later" engine, session-scoped) --
   /** Create a scheduled message reservation for a session. inbound webview→backend */
@@ -664,6 +675,13 @@ export enum MessageType {
   SESSION_ACTIVITY_CHANGED = 'SESSION_ACTIVITY_CHANGED',
   /** A user message was broadcast to all connections viewing the session. */
   USER_MESSAGE_BROADCAST = 'USER_MESSAGE_BROADCAST',
+  /**
+   * The session's backend-owned queue of held follow-up messages changed
+   * (one was added, cancelled, or released to the CLI); carries the queue's
+   * current contents so every connection watching the session draws the same
+   * stack. outbound backend→webview
+   */
+  QUEUED_MESSAGES_CHANGED = 'QUEUED_MESSAGES_CHANGED',
   /** A session's scheduled-message reservations changed (created/cancelled/fired/failed); carries the session's current reservation list so clients refresh. outbound backend→webview */
   SCHEDULED_MESSAGE_UPDATED = 'SCHEDULED_MESSAGE_UPDATED',
   /** Live progress of an AUTO_RESUME reservation's pre-send quota poll; carries { sessionId, scheduleId, phase, attempt, nextCheckInMs?, error? } (phase = AutoResumeStatusPhase) so the webview can show "waiting for quota reset" / "gave up" status. outbound backend→webview */

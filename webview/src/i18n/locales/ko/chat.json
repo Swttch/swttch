@@ -109,6 +109,9 @@
       "hint": "@ 파일 참조, / 명령, !! 프롬프트 삽입, @@ 다른 세션에 질의, {{send}}로 전송",
       "steerMessage": "현재 작업을 조정합니다..."
     },
+    "queuedMessages": {
+      "cancel": "대기열에서 제거"
+    },
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",
     "dictation": {

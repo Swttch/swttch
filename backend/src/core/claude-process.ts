@@ -10,6 +10,7 @@ import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
 import { restoreSchedulesForSession } from './features/scheduled-messages';
 import { takeMessagesForFinishedTurn, clearMessagesForSession } from './features/afterTurn';
+import { dequeueNextMessage, getQueuedMessages, clearQueuedMessages } from './features/messageQueue';
 import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { readMergedClaudeSettings } from './features/claude-settings';
@@ -544,6 +545,13 @@ export async function ensureClaudeProcess(
       // turn left to end. Dropped rather than kept, so it cannot surface in
       // whatever session reuses the id.
       clearMessagesForSession(targetSessionId);
+      if (getQueuedMessages(targetSessionId).length > 0) {
+        clearQueuedMessages(targetSessionId);
+        connections.broadcastToSession(targetSessionId, MessageType.QUEUED_MESSAGES_CHANGED, {
+          sessionId: targetSessionId,
+          queue: [],
+        });
+      }
 
       // We killed this process ourselves so the next message can respawn it with new
       // spawn-time settings or credentials. Skip failure reporting and STREAM_END,
@@ -1151,6 +1159,41 @@ function handleStreamEvent(
       console.error(
         '[node-backend]',
         `Held message for ${targetSessionId} after turn: ${sent ? 'sent' : 'FAILED to send'}`,
+      );
+    }
+
+    /*
+     * Release the oldest message in the explicit "queue" follow-up queue, if
+     * this session has one (see messageQueue.ts). Only the front, not the
+     * whole queue — see dequeueNextMessage for why one release per `result`
+     * is what keeps every entry visible in this queue rather than falling
+     * back to the CLI's own invisible mid-turn buffer for the second one on.
+     */
+    const nextQueued = dequeueNextMessage(targetSessionId);
+    if (nextQueued) {
+      const sent = sendMessageToProcess(
+        connections,
+        targetSessionId,
+        nextQueued.content,
+        nextQueued.attachments,
+      );
+      if (sent) {
+        connections.broadcastToSession(targetSessionId, MessageType.USER_MESSAGE_BROADCAST, {
+          content: nextQueued.content,
+          sessionId: targetSessionId,
+        });
+      }
+      connections.broadcastToSession(targetSessionId, MessageType.QUEUED_MESSAGES_CHANGED, {
+        sessionId: targetSessionId,
+        queue: getQueuedMessages(targetSessionId).map(entry => ({
+          id: entry.id,
+          content: entry.content,
+          queuedAt: entry.queuedAt,
+        })),
+      });
+      console.error(
+        '[node-backend]',
+        `Released queued message for ${targetSessionId}: ${sent ? 'sent' : 'FAILED to send'}`,
       );
     }
   }
