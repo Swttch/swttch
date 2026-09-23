@@ -19,7 +19,7 @@ because `notifier.ts` swallows every failure by design.
 
 ---
 
-## `Swttch.app` (macOS)
+## `Swttch Notifier.app` (macOS)
 
 | | |
 |---|---|
@@ -66,8 +66,8 @@ Three things are changed from the stock bundle, and each one is load-bearing:
 Re-signing after any of these:
 
 ```sh
-codesign --force --deep --sign - Swttch.app
-codesign --verify --deep --strict Swttch.app   # must report "valid on disk"
+codesign --force --deep --sign - Swttch Notifier.app
+codesign --verify --deep --strict Swttch Notifier.app   # must report "valid on disk"
 ```
 
 **The identifier must not change again.** macOS treats a new one as an app it
@@ -87,8 +87,27 @@ bundle sits in an Applications directory. Measured on macOS 26.6.2 with
 | Anywhere else (plugin resource dir, a checkout) | `none` | `not supported` | `Notifications are not allowed for this application` |
 | `~/Applications` | `banners` | `enabled` | delivered |
 
-So `notifier.ts` copies this bundle to `~/Applications/Swttch.app` on first use
+So `notifier.ts` copies this bundle to `~/Applications/Swttch Notifier.app` on first use
 and runs the copy, never the one in the plugin's resource directory.
+
+### Quarantine
+
+The copy is unquarantined before anything else touches it. macOS flags anything
+that came from the internet, and that flag travels from the downloaded
+marketplace zip into the plugin jar and into every file unpacked out of it.
+Gatekeeper answers a quarantined ad-hoc-signed binary by **killing it** and
+offering to move it to the Bin — measured end to end from a zip marked the way
+Safari marks a download. Nothing is logged; the process is simply gone.
+
+No local build is ever quarantined, so no amount of development testing shows
+this. It only appears for users who installed the plugin the normal way, which
+is all of them.
+
+**The real fix is a Developer ID signature plus notarisation**, which would make
+the flag harmless rather than removed. Until this plugin ships with one, clearing
+it is what makes desktop notifications work at all.
+
+### LaunchServices
 
 A freshly copied bundle also has to be announced to LaunchServices, and the
 backend **waits** for that to finish: macOS takes the banner's icon from what

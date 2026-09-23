@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'child_process';
+import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'fs';
 import { homedir } from 'os';
 import { dirname, join } from 'path';
@@ -117,7 +117,7 @@ export const WINDOWS_APP_ID = 'Swttch';
  * than something the user has never heard of, and leaves a user's own copy of
  * terminal-notifier alone.
  */
-const MAC_APP_BUNDLE = 'Swttch.app';
+const MAC_APP_BUNDLE = 'Swttch Notifier.app';
 
 /**
  * Bundle identifier of that notifier, which is also the row the user sees in
@@ -334,8 +334,42 @@ export function installMacNotifier(vendorApp: string, installedApp: string): str
     rmSync(staging, { recursive: true, force: true });
   }
 
+  clearQuarantine(installedApp);
   registerWithLaunchServices(installedApp);
   return existsSync(installedExec) ? installedExec : null;
+}
+
+/**
+ * Strip the quarantine flag macOS puts on anything that arrived from the
+ * internet.
+ *
+ * Without this the notifier does not run at all for anyone who installed the
+ * plugin the normal way. The flag travels from the downloaded marketplace zip
+ * into the plugin jar and on into every file unpacked out of it, and Gatekeeper
+ * answers a quarantined ad-hoc-signed binary by killing it and offering to move
+ * it to the Bin — measured end to end, from a zip marked the way Safari marks a
+ * download. Nothing is logged; the process is simply gone.
+ *
+ * This is our own file, taken out of a plugin the user chose to install, and
+ * copied by that plugin into their Applications folder. Clearing the flag says
+ * exactly that: it did not come from the internet independently of the thing
+ * they already trusted.
+ *
+ * The real fix is a Developer ID signature and notarisation, which would make
+ * the flag harmless instead of removed. Until the plugin has that, this is what
+ * makes desktop notifications work outside a development checkout.
+ */
+function clearQuarantine(installedApp: string): void {
+  try {
+    spawnSync('xattr', ['-dr', 'com.apple.quarantine', installedApp], {
+      stdio: 'ignore',
+      timeout: 5000,
+    });
+  } catch {
+    // A missing xattr binary is not worth failing over: on a machine where the
+    // bundle was never quarantined (a checkout, a local build) there is nothing
+    // to clear anyway.
+  }
 }
 
 /**
@@ -459,15 +493,41 @@ function isExpectedExit(platform: NodeJS.Platform, code: number): boolean {
  * of through the returned promise. A caller that only wants the banner raised
  * can ignore it entirely.
  */
+/**
+ * The notifier still listening for a click, per group.
+ *
+ * A notifier given a click button stays alive for the whole click window, so a
+ * session that finishes ten turns while its user is away would leave ten
+ * processes behind — nine of them waiting on banners macOS has already replaced,
+ * since a new banner in the same group supersedes the previous one. Only the
+ * newest can still be clicked, so only the newest is worth keeping.
+ *
+ * Keyed by group (the panel id). Notifications without one are not tracked:
+ * nothing supersedes them, so there is nothing to retire.
+ */
+const liveNotifiers = new Map<string, ChildProcess>();
+
+/** Test seam: forget the tracked processes without killing anything. */
+export function resetLiveNotifiers(): void {
+  liveNotifiers.clear();
+}
+
 function launch(
   command: string,
   args: string[],
   onOutcome?: (outcome: NotifierOutcome) => void,
+  groupId?: string,
 ): Promise<void> {
   return new Promise<void>((resolve) => {
     try {
       // stdout is piped rather than ignored because macOS reports a click on it.
       const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'ignore'] });
+      if (groupId !== undefined) {
+        // Retire the previous one for this group: its banner has just been
+        // replaced, so it is waiting for a click that can no longer happen.
+        liveNotifiers.get(groupId)?.kill();
+        liveNotifiers.set(groupId, child);
+      }
       let stdout = '';
       // A notifier that never ran reports nothing, and an exit code produced by
       // the failure to launch is not the user having answered anything. Callers
@@ -484,6 +544,11 @@ function launch(
       });
       child.on('spawn', () => resolve());
       child.on('close', (code) => {
+        // Only drop the entry if it is still ours; a newer notifier for this
+        // group may have replaced it already.
+        if (groupId !== undefined && liveNotifiers.get(groupId) === child) {
+          liveNotifiers.delete(groupId);
+        }
         if (neverRan) return;
         if (code !== null && !isExpectedExit(process.platform, code)) {
           console.error('[node-backend]', `notifier ${command} exited with ${code}`);
@@ -517,7 +582,7 @@ export function showOsNotification(
       console.error('[node-backend]', 'showOsNotification skipped: macOS notifier unavailable');
       return Promise.resolve();
     }
-    return launch(exec, buildMacNotifierArgs(options), onOutcome);
+    return launch(exec, buildMacNotifierArgs(options), onOutcome, options.groupId);
   }
   if (process.platform === 'win32') {
     const exe = windowsNotifierExe();
@@ -525,7 +590,7 @@ export function showOsNotification(
       console.error('[node-backend]', `showOsNotification skipped: ${exe} is missing`);
       return Promise.resolve();
     }
-    return launch(exe, buildWindowsNotifierArgs(options), onOutcome);
+    return launch(exe, buildWindowsNotifierArgs(options), onOutcome, options.groupId);
   }
-  return launch('notify-send', buildLinuxNotifierArgs(options), onOutcome);
+  return launch('notify-send', buildLinuxNotifierArgs(options), onOutcome, options.groupId);
 }

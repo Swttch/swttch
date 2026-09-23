@@ -23,6 +23,7 @@ vi.mock('os', async (importOriginal) => {
 });
 
 const {
+  resetLiveNotifiers,
   readBundleIdentifier,
   macNotifierBundleId,
   isClickToFocus,
@@ -236,8 +237,8 @@ describe('installMacNotifier', () => {
   });
 
   it('copies the bundle and returns an executable path', () => {
-    const vendor = makeBundle(join(work, 'vendor', 'Swttch.app'), '3.1.0', '17');
-    const installed = join(work, 'Applications', 'Swttch.app');
+    const vendor = makeBundle(join(work, 'vendor', 'Swttch Notifier.app'), '3.1.0', '17');
+    const installed = join(work, 'Applications', 'Swttch Notifier.app');
 
     const exec = installMacNotifier(vendor, installed);
 
@@ -247,8 +248,8 @@ describe('installMacNotifier', () => {
   });
 
   it('leaves an installed copy of the same release untouched', () => {
-    const vendor = makeBundle(join(work, 'vendor', 'Swttch.app'), '3.1.0', '17');
-    const installed = makeBundle(join(work, 'Applications', 'Swttch.app'), '3.1.0', '17');
+    const vendor = makeBundle(join(work, 'vendor', 'Swttch Notifier.app'), '3.1.0', '17');
+    const installed = makeBundle(join(work, 'Applications', 'Swttch Notifier.app'), '3.1.0', '17');
     const sentinel = join(installed, 'Contents', 'sentinel.txt');
     writeFileSync(sentinel, 'user file');
 
@@ -258,8 +259,8 @@ describe('installMacNotifier', () => {
   });
 
   it('replaces an installed copy of an older release', () => {
-    const vendor = makeBundle(join(work, 'vendor', 'Swttch.app'), '3.1.0', '17');
-    const installed = makeBundle(join(work, 'Applications', 'Swttch.app'), '3.0.0', '16');
+    const vendor = makeBundle(join(work, 'vendor', 'Swttch Notifier.app'), '3.1.0', '17');
+    const installed = makeBundle(join(work, 'Applications', 'Swttch Notifier.app'), '3.0.0', '16');
     const stale = join(installed, 'Contents', 'stale.txt');
     writeFileSync(stale, 'from the old release');
 
@@ -272,8 +273,8 @@ describe('installMacNotifier', () => {
   });
 
   it('leaves no staging directory behind', () => {
-    const vendor = makeBundle(join(work, 'vendor', 'Swttch.app'), '3.1.0', '17');
-    const installed = join(work, 'Applications', 'Swttch.app');
+    const vendor = makeBundle(join(work, 'vendor', 'Swttch Notifier.app'), '3.1.0', '17');
+    const installed = join(work, 'Applications', 'Swttch Notifier.app');
 
     installMacNotifier(vendor, installed);
 
@@ -351,7 +352,7 @@ describe('showOsNotification', () => {
       const installedExec = join(
         home,
         'Applications',
-        'Swttch.app',
+        'Swttch Notifier.app',
         'Contents',
         'MacOS',
         'terminal-notifier',
@@ -364,7 +365,7 @@ describe('showOsNotification', () => {
       );
       // The copy comes from the shipped bundle, never from the plugin resource
       // dir being run in place.
-      expect(existsSync(join(vendorDir(), 'Swttch.app'))).toBe(true);
+      expect(existsSync(join(vendorDir(), 'Swttch Notifier.app'))).toBe(true);
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -491,7 +492,7 @@ describe('a notifier the user deleted', () => {
   it('reinstalls instead of holding a path that no longer exists', () => {
     const home = mkdtempSync(join(tmpdir(), 'ccg-gone-'));
     homeOverride = home;
-    const installed = join(home, 'Applications', 'Swttch.app');
+    const installed = join(home, 'Applications', 'Swttch Notifier.app');
     try {
       resetMacNotifierCache();
       setPlatform('darwin');
@@ -616,7 +617,7 @@ describe('macNotifierBundleId', () => {
    * string that happened to match today would pass a weaker test.
    */
   it('agrees with the bundle that ships in vendor', () => {
-    const shipped = readBundleIdentifier(join(vendorDir(), 'Swttch.app', 'Contents', 'Info.plist'));
+    const shipped = readBundleIdentifier(join(vendorDir(), 'Swttch Notifier.app', 'Contents', 'Info.plist'));
     expect(macNotifierBundleId()).toBe(shipped);
   });
 });
@@ -648,6 +649,150 @@ describe('LaunchServices registration', () => {
         (call) => String(call[0]).endsWith('lsregister'),
       );
       expect(registered).toBe(true);
+    } finally {
+      homeOverride = null;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * One live notifier per session, not one per notification.
+ *
+ * A notifier with a click button stays alive for the whole click window. A
+ * session that finishes ten turns while its user is away would leave ten of
+ * them behind — and nine are waiting on banners macOS has already replaced,
+ * because a new banner in the same group supersedes the previous one. Only the
+ * newest can still be clicked.
+ */
+describe('live notifier bookkeeping', () => {
+  function spawnable() {
+    const child = new EventEmitter() as EventEmitter & { kill: () => void };
+    child.kill = vi.fn();
+    return child;
+  }
+
+  it('retires the previous notifier for the same session', () => {
+    resetLiveNotifiers();
+    setPlatform('linux');
+    const first = spawnable();
+    const second = spawnable();
+    spawnMock.mockReturnValueOnce(first as never).mockReturnValueOnce(second as never);
+
+    void showOsNotification({ title: 't', body: '1', groupId: 'panel-7' });
+    void showOsNotification({ title: 't', body: '2', groupId: 'panel-7' });
+
+    expect(first.kill).toHaveBeenCalledTimes(1);
+    expect(second.kill).not.toHaveBeenCalled();
+  });
+
+  // Two sessions are two conversations; a banner from one must not silence the
+  // other's.
+  it('leaves another session\'s notifier alone', () => {
+    resetLiveNotifiers();
+    setPlatform('linux');
+    const a = spawnable();
+    const b = spawnable();
+    spawnMock.mockReturnValueOnce(a as never).mockReturnValueOnce(b as never);
+
+    void showOsNotification({ title: 't', body: 'a', groupId: 'panel-a' });
+    void showOsNotification({ title: 't', body: 'b', groupId: 'panel-b' });
+
+    expect(a.kill).not.toHaveBeenCalled();
+    expect(b.kill).not.toHaveBeenCalled();
+  });
+
+  // Nothing supersedes an ungrouped banner, so there is nothing to retire.
+  it('does not retire anything for a notification with no session', () => {
+    resetLiveNotifiers();
+    setPlatform('linux');
+    const first = spawnable();
+    const second = spawnable();
+    spawnMock.mockReturnValueOnce(first as never).mockReturnValueOnce(second as never);
+
+    void showOsNotification({ title: 't', body: '1' });
+    void showOsNotification({ title: 't', body: '2' });
+
+    expect(first.kill).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A notifier that exits on its own is gone; killing it later would be killing
+   * whatever process id the OS has since handed out.
+   */
+  it('forgets a notifier that exited, without retiring its replacement', () => {
+    resetLiveNotifiers();
+    setPlatform('linux');
+    const first = spawnable();
+    const second = spawnable();
+    spawnMock.mockReturnValueOnce(first as never).mockReturnValueOnce(second as never);
+
+    void showOsNotification({ title: 't', body: '1', groupId: 'panel-7' });
+    first.emit('close', 0);
+    void showOsNotification({ title: 't', body: '2', groupId: 'panel-7' });
+
+    // Already gone, so no kill was needed for it.
+    expect(first.kill).not.toHaveBeenCalled();
+    expect(second.kill).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Clearing the quarantine flag on the installed copy.
+ *
+ * Without it desktop notifications do not work for anyone who installed the
+ * plugin the normal way. The flag travels from the downloaded marketplace zip
+ * into the plugin jar and into every file unpacked out of it; Gatekeeper answers
+ * a quarantined ad-hoc-signed binary by killing it and offering to move it to
+ * the Bin. Measured end to end from a zip marked the way Safari marks a
+ * download — and nothing is logged when it happens, the process is just gone.
+ *
+ * Every local build is unquarantined already, so no amount of development
+ * testing would have shown this.
+ */
+describe('quarantine on a downloaded plugin', () => {
+  it('clears the flag on the copy it installs', () => {
+    const home = mkdtempSync(join(tmpdir(), 'ccg-quar-'));
+    homeOverride = home;
+    try {
+      resetMacNotifierCache();
+      setPlatform('darwin');
+      spawnMock.mockReturnValue(new EventEmitter() as never);
+
+      void showOsNotification({ title: 't', body: 'b' });
+
+      const cleared = spawnSyncMock.mock.calls.find((call) => call[0] === 'xattr');
+      expect(cleared).toBeDefined();
+      expect(cleared?.[1]).toEqual([
+        '-dr',
+        'com.apple.quarantine',
+        join(home, 'Applications', 'Swttch Notifier.app'),
+      ]);
+    } finally {
+      homeOverride = null;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * Order matters: LaunchServices reads the bundle, and reading a quarantined
+   * bundle is what the flag exists to prevent.
+   */
+  it('clears the flag before announcing the bundle to LaunchServices', () => {
+    const home = mkdtempSync(join(tmpdir(), 'ccg-quar-order-'));
+    homeOverride = home;
+    try {
+      resetMacNotifierCache();
+      setPlatform('darwin');
+      spawnMock.mockReturnValue(new EventEmitter() as never);
+
+      void showOsNotification({ title: 't', body: 'b' });
+
+      const commands = spawnSyncMock.mock.calls.map((call) => String(call[0]));
+      const xattrAt = commands.indexOf('xattr');
+      const lsregisterAt = commands.findIndex((c) => c.endsWith('lsregister'));
+      expect(xattrAt).toBeGreaterThanOrEqual(0);
+      expect(lsregisterAt).toBeGreaterThan(xattrAt);
     } finally {
       homeOverride = null;
       rmSync(home, { recursive: true, force: true });
