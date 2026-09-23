@@ -233,26 +233,34 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     document.documentElement.setAttribute('dir', uiDirection === UiDirection.RTL ? 'rtl' : 'ltr');
   }, [settings]);
 
-  // External changes pushed by the backend: patch the merged cache and
-  // invalidate every GET_SETTINGS variant so scope reads re-sync.
+  // External changes pushed by the backend: treat SETTINGS_CHANGED purely as a
+  // signal that something changed, and invalidate every GET_SETTINGS variant so
+  // each webview re-fetches the value for its own workingDir.
+  //
+  // The push payload itself is not trusted for a cache write. A single save can
+  // trigger two SETTINGS_CHANGED pushes: the save handler's own push carries the
+  // correct merged value for the saving tab's workingDir, but a second push
+  // follows ~300ms later from the settings file watcher
+  // (backend/src/core/features/settings-watcher.ts), which recomputes the merged
+  // settings without a workingDir and so sends global-only settings with an empty
+  // `overrides` array. Patching the merged cache with that payload used to erase
+  // the "project overrides this key" markers a moment after they were shown,
+  // reproducing the flash issue #344 fixed. Re-fetching instead always asks the
+  // backend for this tab's own workingDir, so the value landing in the cache is
+  // always correct for it regardless of which push (or whose workingDir) caused
+  // the invalidation.
   useEffect(() => {
     if (!isConnected) return;
-    const unsubscribe = subscribe(MessageType.SETTINGS_CHANGED, (message) => {
-      const payload = message.payload as Record<string, unknown>;
-      const newSettings = payload?.settings as SettingsState | undefined;
-      const newOverrides = payload?.overrides as string[] | undefined;
-      if (newSettings) {
-        queryClient.setQueryData<SettingsResponse>(
-          [MessageType.GET_SETTINGS, 'merged', workingDirectory],
-          (old) => ({ ...old, settings: newSettings, ...(newOverrides ? { overrides: newOverrides } : {}) }),
-        );
-      }
-      // Mark scope variants stale without an immediate refetch — they re-sync on
-      // next access, so an external change never triggers a redundant GET.
-      queryClient.invalidateQueries({ queryKey: [MessageType.GET_SETTINGS], refetchType: 'none' });
+    const unsubscribe = subscribe(MessageType.SETTINGS_CHANGED, () => {
+      // Invalidate every GET_SETTINGS variant, including the merged one and the
+      // scope queries (what most rows actually read through scopeSettings) —
+      // with staleTime: Infinity and window-focus/reconnect refetching both off,
+      // a screen that is already mounted has no other trigger and would
+      // otherwise keep showing stale data indefinitely.
+      queryClient.invalidateQueries({ queryKey: [MessageType.GET_SETTINGS] });
     });
     return unsubscribe;
-  }, [isConnected, subscribe, queryClient, workingDirectory]);
+  }, [isConnected, subscribe, queryClient]);
 
   // Optimistically patch the merged cache, persist via bridge, and mirror to
   // localStorage. When the bridge is unavailable, fall back to localStorage only.
