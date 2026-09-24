@@ -3,8 +3,10 @@ import {
   buildCheckpointingEnv,
   buildClaudeArgs,
   isWorkflowRunning,
+  needsRestartForEffort,
   needsRestartForMode,
   readReportedMode,
+  resolveEffortFlag,
   stopWorkflowsForSession,
 } from '../claude-process';
 
@@ -70,6 +72,90 @@ describe('buildClaudeArgs', () => {
 
   it('omits --model for the "default" alias (redundant with the CLI default)', () => {
     expect(buildClaudeArgs('--resume', 's', 'ask_before_edit', 'default')).not.toContain('--model');
+  });
+
+  // #474: the whole point of the flag. Without the pair reaching argv, a session the
+  // user set to Max runs at the model's default effort instead.
+  it('pins the given effort level via --effort (adjacent value)', () => {
+    const args = buildClaudeArgs('--resume', 's', 'ask_before_edit', undefined, 'max');
+    const i = args.indexOf('--effort');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(args[i + 1]).toBe('max');
+  });
+
+  it('omits --effort when no level is given, so the CLI reads its own settings', () => {
+    expect(buildClaudeArgs('--resume', 's', 'ask_before_edit')).not.toContain('--effort');
+    expect(buildClaudeArgs('--resume', 's', 'ask_before_edit', undefined, undefined)).not.toContain(
+      '--effort',
+    );
+  });
+
+  it('carries a pinned model and a pinned effort level in the same argv', () => {
+    const args = buildClaudeArgs('--resume', 's', 'plan', 'opus[1m]', 'max');
+    expect(args[args.indexOf('--model') + 1]).toBe('opus[1m]');
+    expect(args[args.indexOf('--effort') + 1]).toBe('max');
+    expect(args[args.indexOf('--permission-mode') + 1]).toBe('plan');
+  });
+});
+
+describe('resolveEffortFlag', () => {
+  // The reported bug: `effortLevel: "max"` is dropped by the settings file's own
+  // schema, so the flag is the only way the choice reaches the session (#474).
+  it('passes max as a flag, because the settings file drops it', () => {
+    expect(resolveEffortFlag({ effortLevel: 'max' })).toBe('max');
+  });
+
+  // Keeping low…xhigh on the settings file is deliberate: that is the path a
+  // terminal user is on, and it already works. Handing them to the flag would pin
+  // every session for the life of its process for no gain.
+  it('passes no flag for the levels the settings file already honors', () => {
+    expect(resolveEffortFlag({ effortLevel: 'low' })).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 'medium' })).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 'high' })).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 'xhigh' })).toBeUndefined();
+  });
+
+  it('passes no flag when no level is set at all', () => {
+    expect(resolveEffortFlag({})).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: null })).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: '' })).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 7 })).toBeUndefined();
+  });
+
+  // Ultracode is `xhigh` plus a flag of its own, and xhigh is a level the settings
+  // file holds — so ultracode must never pick up an `--effort`. Measured: the
+  // ultracode instructions survive `--effort xhigh` but disappear under
+  // `--effort max`, so the level, not the flag, is what keeps ultracode alive.
+  it('passes no flag for an ultracode session, leaving its xhigh where it is', () => {
+    expect(resolveEffortFlag({ effortLevel: 'xhigh', ultracode: true })).toBeUndefined();
+  });
+
+  // A level the CLI grows onto the flag before the settings file — as `max` was —
+  // needs no second fix here.
+  it('passes any other level through rather than dropping it a second time', () => {
+    expect(resolveEffortFlag({ effortLevel: 'something-new' })).toBe('something-new');
+  });
+});
+
+describe('needsRestartForEffort', () => {
+  it('reuses the live process when the level it is pinned to is the one wanted', () => {
+    expect(needsRestartForEffort('max', 'max')).toBe(false);
+  });
+
+  // The unflagged case is the common one: both sides mean "the settings file holds
+  // the level", so moving between low…xhigh must not tear down a working CLI.
+  it('reuses the live process when neither side pins a level', () => {
+    expect(needsRestartForEffort(null, undefined)).toBe(false);
+  });
+
+  it('restarts when the user reaches a flagged level mid-chat', () => {
+    expect(needsRestartForEffort(null, 'max')).toBe(true);
+  });
+
+  // The reported bug with its two ends swapped: `--effort` pins the process it
+  // launched, so a CLI started at max keeps answering at max until it is replaced.
+  it('restarts when the user leaves a flagged level mid-chat', () => {
+    expect(needsRestartForEffort('max', undefined)).toBe(true);
   });
 });
 

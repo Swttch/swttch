@@ -65,6 +65,22 @@ interface SessionRecord {
    */
   inputMode: string | null;
   /**
+   * Effort level passed to the LIVE process as `--effort`, or null when the spawn
+   * passed no such flag and left the CLI to read `effortLevel` from its own
+   * settings file.
+   *
+   * Recorded for the same reason as `inputMode`: `--effort` only applies at spawn,
+   * and a level it pins stays pinned for the life of the process. So a level the
+   * user picks afterwards cannot reach a running CLI, and without remembering what
+   * the process actually started under, the change would be silently dropped —
+   * the slider would read `Max` while the session kept answering at `high` (#474).
+   *
+   * Null when no process has been spawned yet, and also when one was spawned with
+   * no flag; the two cases need no telling apart, because both mean "this process
+   * has no pinned level" and a spawn with no flag is what the null asks for.
+   */
+  effortLevel: string | null;
+  /**
    * Saved account the LIVE process authenticated as. Credentials are read at spawn
    * from one shared slot, so a switch made for ANOTHER session does not reach this
    * one: the process keeps running as whoever it started as until it is restarted.
@@ -833,6 +849,7 @@ export class ConnectionManager {
         workingDir: workingDir ?? '',
         activity: SessionActivity.Idle,
         inputMode: null,
+        effortLevel: null,
         accountId: null,
       };
       this.sessionRegistry.set(sessionId, session);
@@ -848,6 +865,9 @@ export class ConnectionManager {
     // The recorded permission mode describes the LIVE process, so it dies with it.
     // Leaving a stale mode behind would make the next spawn look like a no-op change.
     if (!proc) session.inputMode = null;
+    // Same for the pinned effort level: `--effort` pins the process it launched, so
+    // once that process is gone nothing is pinned any more.
+    if (!proc) session.effortLevel = null;
     // Same for the account: no process means nothing is authenticated as anyone.
     if (!proc) session.accountId = null;
   }
@@ -865,6 +885,20 @@ export class ConnectionManager {
   /** Permission mode the session's live CLI is actually running under, if any. */
   getInputMode(sessionId: string): string | null {
     return this.sessionRegistry.get(sessionId)?.inputMode ?? null;
+  }
+
+  /**
+   * Record the effort level the session's live CLI process was pinned to with
+   * `--effort`, or null when the spawn passed no such flag.
+   */
+  setEffortLevel(sessionId: string, effortLevel: string | null): void {
+    const session = this.getOrCreateSession(sessionId);
+    session.effortLevel = effortLevel;
+  }
+
+  /** Effort level the session's live CLI is pinned to, or null when it is not pinned. */
+  getEffortLevel(sessionId: string): string | null {
+    return this.sessionRegistry.get(sessionId)?.effortLevel ?? null;
   }
 
   /** Record the saved account the session's live CLI process was spawned as. */
