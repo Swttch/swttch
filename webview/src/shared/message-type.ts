@@ -186,10 +186,10 @@ export enum MessageType {
   SET_WHATS_NEW_SEEN = 'SET_WHATS_NEW_SEEN',
 
   // -- Onboarding checklist (first-run setup steps) --
-  /** Ask whether the user has already closed the onboarding checklist. Kept in profile.json rather than the webview, because a JetBrains webview is served from a new origin on every launch and its localStorage starts empty (#453) — a dismissal stored there would only hold until the next IDE restart. Answers {dismissed}. inbound webview→backend */
-  GET_ONBOARDING_DISMISSED = 'GET_ONBOARDING_DISMISSED',
-  /** Record that the checklist was closed, so it does not come back on the next launch. Takes {dismissed} and answers with the value that was stored. inbound webview→backend */
-  SET_ONBOARDING_DISMISSED = 'SET_ONBOARDING_DISMISSED',
+  /** Ask when the onboarding checklist card was closed, which is the only thing that decides whether it is raised: never closed means raise it once, closed at any point means never again. Kept in profile.json rather than the webview, because a JetBrains webview is served from a new origin on every launch and its localStorage starts empty (#453) — a record stored there would only hold until the next IDE restart. Answers {dismissedAt} as an ISO 8601 string or null. inbound webview→backend */
+  GET_ONBOARDING_DISMISSED_AT = 'GET_ONBOARDING_DISMISSED_AT',
+  /** Record that the onboarding checklist card was closed, so it is never raised again. Takes no payload: closing is one act with one meaning, and the moment is the backend's to read. Answers {dismissedAt} with the moment recorded. inbound webview→backend */
+  DISMISS_ONBOARDING = 'DISMISS_ONBOARDING',
 
   // -- Sponsor / license --
   /** The webview reports that one feature's sponsor gate was shown or followed, as {gate, step, from?}. Purely a measurement signal: the offer is raised and acted on entirely in the webview and reaches the backend no other way. The gate and step become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a per-feature conversion rate is a question about people. Never carries text the user typed. inbound webview→backend */

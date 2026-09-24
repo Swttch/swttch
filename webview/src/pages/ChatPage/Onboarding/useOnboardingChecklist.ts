@@ -10,34 +10,48 @@ import { runKitInstall } from '@/utils/runKitInstall';
 import { MessageType } from '@/shared';
 import { SettingKey } from '@/types/settings';
 import { openDockEditor } from './openDockEditor';
-import { isBlocking } from './isBlocking';
 import { ActionKind, StepStatus, type ChecklistStep } from './types';
 
 export interface OnboardingChecklistState {
   steps: ChecklistStep[];
-  /** The user closed the card. Read from the backend, so it survives a restart. */
-  dismissed: boolean;
   /**
-   * A required step is KNOWN to be unsatisfied.
+   * When the card was closed, null if it never was, and undefined while the
+   * answer is still on its way.
    *
-   * Deliberately narrower than "not all steps are done" — see {@link isBlocking}.
+   * This is the ONLY thing that decides whether the card is raised. How far the
+   * steps got does not enter into it: a card closed with everything unfinished
+   * is just as closed as one closed with everything done.
+   *
+   * The three values are three different things and the middle one is the only
+   * one that raises the card. Reading "not yet answered" as "never closed" would
+   * flash the card at every install that already closed it, once per launch.
    */
-  blocking: boolean;
+  dismissedAt: string | null | undefined;
+  /**
+   * Every step is done, optional ones included.
+   *
+   * Nothing is gated on this. It is what the card's "Get started" button waits
+   * for, and that button is one of two ways to close the card — the other being
+   * the close button, which never waits for anything.
+   */
+  allDone: boolean;
+  /** Record that the card was closed, so it is never raised again. */
   dismiss: () => void;
 }
 
 /**
- * The four things that have to be true before the chat can do anything, and how
+ * The four things worth having in place before the chat is at its best, and how
  * far along this machine is.
  *
  * Every status is asked for fresh. None of it is recorded, because none of it is
  * history — the kit can be removed in a terminal and the CLI can be signed out
  * between two launches, and a remembered "installed" would then be the app
  * telling the user something that stopped being true. The one thing that IS
- * recorded is the dismissal, and that lives in `~/.claude-code-gui/profile.json`
- * rather than the webview: a JetBrains webview is served from a new origin on
- * every launch, so anything kept on the page starts empty after a restart and
- * the close button would only hold until the IDE was reopened (#453).
+ * recorded is that the card was closed, and that lives in
+ * `~/.claude-code-gui/profile.json` rather than the webview: a JetBrains webview
+ * is served from a new origin on every launch, so anything kept on the page
+ * starts empty after a restart and the close button would only hold until the
+ * IDE was reopened (#453).
  *
  * Every check is the one the rest of the app already uses, not a second opinion:
  * the account query behind AuthContext, the kit query behind the Voice input
@@ -48,30 +62,37 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
   const { isConnected, send } = useBridgeContext();
   const queryClient = useQueryClient();
 
-  const dismissedQuery = useQuery<boolean, Error>({
-    queryKey: [MessageType.GET_ONBOARDING_DISMISSED],
+  const dismissedAtQuery = useQuery<string | null, Error>({
+    queryKey: [MessageType.GET_ONBOARDING_DISMISSED_AT],
     enabled: isConnected,
     queryFn: async () => {
-      const r = (await send(MessageType.GET_ONBOARDING_DISMISSED)) as { dismissed?: unknown };
-      return r?.dismissed === true;
+      const r = (await send(MessageType.GET_ONBOARDING_DISMISSED_AT)) as { dismissedAt?: unknown };
+      return typeof r?.dismissedAt === 'string' && r.dismissedAt.length > 0 ? r.dismissedAt : null;
     },
   });
 
-  const dismissMutation = useMutation<boolean, Error, void>({
+  const dismissMutation = useMutation<string | null, Error, void>({
     mutationFn: async () => {
-      const r = (await send(MessageType.SET_ONBOARDING_DISMISSED, { dismissed: true })) as {
-        dismissed?: unknown;
-      };
-      return r?.dismissed === true;
+      const r = (await send(MessageType.DISMISS_ONBOARDING)) as { dismissedAt?: unknown };
+      return typeof r?.dismissedAt === 'string' ? r.dismissedAt : null;
     },
     // Close on the click, not on the round trip. The record has to reach disk to
     // survive a restart, but the user asking for the card to go is not waiting
-    // on that.
+    // on that. The moment written here is replaced by the backend's own on the
+    // way back; what matters to this screen is only that it is no longer null.
     onMutate: () => {
-      queryClient.setQueryData([MessageType.GET_ONBOARDING_DISMISSED], true);
+      queryClient.setQueryData(
+        [MessageType.GET_ONBOARDING_DISMISSED_AT],
+        new Date().toISOString(),
+      );
+    },
+    onSuccess: (dismissedAt) => {
+      queryClient.setQueryData([MessageType.GET_ONBOARDING_DISMISSED_AT], dismissedAt);
     },
     onError: () => {
-      void queryClient.invalidateQueries({ queryKey: [MessageType.GET_ONBOARDING_DISMISSED] });
+      void queryClient.invalidateQueries({
+        queryKey: [MessageType.GET_ONBOARDING_DISMISSED_AT],
+      });
     },
   });
 
@@ -140,11 +161,23 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
       },
       {
         id: 'installKit',
-        status: kit.loading
-          ? StepStatus.CHECKING
-          : kit.info?.installed
+        // Optional, and the row's own hint has always said why: "Chat works
+        // without it". The kit carries account switching, the usage panel and
+        // dictation, none of which a prompt goes through. Marked required it
+        // turned a convenience into a gate on the composer, and every user who
+        // had simply never installed it lost the chat they were already using
+        // (#482).
+        optional: true,
+        // Three answers, not two. `useExtendKit` reports `installed: null` both
+        // for a kit that is genuinely absent and for a lookup that never came
+        // back, and reading the second as the first is the shape of #178.
+        status: kit.info
+          ? kit.info.installed
             ? StepStatus.DONE
-            : StepStatus.TODO,
+            : StepStatus.TODO
+          : kit.failed
+            ? StepStatus.UNKNOWN
+            : StepStatus.CHECKING,
         actions: [
           {
             kind: ActionKind.PERFORM,
@@ -177,8 +210,8 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
     account.data,
     account.isError,
     account.isFetching,
-    kit.loading,
-    kit.info?.installed,
+    kit.info,
+    kit.failed,
     kit.installing,
     kit.install,
     settings,
@@ -190,10 +223,22 @@ export function useOnboardingChecklist(): OnboardingChecklistState {
     navigateToLogin,
   ]);
 
+  /**
+   * Every step is done, optional ones included.
+   *
+   * `DONE` only. A step still being checked, or one whose lookup came back
+   * unanswered, is not a finished step.
+   *
+   * Nothing is gated on this and it closes nothing by itself. The card is closed
+   * by the user pressing something, and this only decides whether one of the two
+   * things to press is available yet.
+   */
+  const allDone = steps.every((step) => step.status === StepStatus.DONE);
+
   return {
     steps,
-    dismissed: dismissedQuery.data === true,
-    blocking: isBlocking(steps),
+    dismissedAt: dismissedAtQuery.data,
+    allDone,
     dismiss,
   };
 }

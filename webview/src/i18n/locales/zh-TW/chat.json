@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "開始設定",
-    "dismiss": "關閉",
+    "close": "關閉",
     "optional": "選用",
     "unknown": "未確認",
     "checking": "檢查中…",
@@ -453,6 +453,8 @@
     "reveal": "查看",
     "recheck": "重新檢查",
     "login": "登入",
+    "getStarted": "開始使用",
+    "getStartedHint": "若要略過檢查清單，請點擊關閉按鈕。",
     "steps": {
       "installCli": {
         "label": "安裝 Claude Code CLI",

@@ -450,7 +450,7 @@
   },
   "onboarding": {
     "title": "Настройка",
-    "dismiss": "Закрыть",
+    "close": "Закрыть",
     "optional": "необязательно",
     "unknown": "не подтверждено",
     "checking": "Проверка…",
@@ -459,6 +459,8 @@
     "reveal": "Показать",
     "recheck": "Проверить",
     "login": "Войти",
+    "getStarted": "Начать",
+    "getStartedHint": "Чтобы пропустить контрольный список, нажмите кнопку закрытия.",
     "steps": {
       "installCli": {
         "label": "Установить Claude Code CLI",

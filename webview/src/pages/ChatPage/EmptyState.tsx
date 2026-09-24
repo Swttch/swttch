@@ -57,12 +57,12 @@ export const EmptyState = () => {
   const revealGame = useRef<() => void>();
 
   /**
-   * Setup takes this screen over while it has something to ask for.
+   * Setup takes this screen over on the one run it is raised.
    *
    * Clawd and the rotating tip are what the empty state says when there is
-   * nothing to do — which is exactly what is not true before the CLI is
-   * installed and signed in. So the checklist stands in their place rather
-   * than stacking under them, and they come back once it is done or closed.
+   * nothing to do — which is exactly what is not true on a first run. So the
+   * checklist stands in their place rather than stacking under them, and they
+   * come back once it is closed.
    */
   const onboarding = useOnboarding();
   const showChecklist = onboarding.visible;
@@ -94,7 +94,11 @@ export const EmptyState = () => {
                 line, where an announcement carries prose that simply wraps. */}
             {showChecklist ? (
               <div className="w-full max-w-[30rem]">
-                <OnboardingChecklist steps={onboarding.steps} onDismiss={onboarding.dismiss} />
+                <OnboardingChecklist
+                  steps={onboarding.steps}
+                  allDone={onboarding.allDone}
+                  onDismiss={onboarding.dismiss}
+                />
               </div>
             ) : (
               <>

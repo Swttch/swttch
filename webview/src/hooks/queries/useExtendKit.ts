@@ -122,6 +122,16 @@ export function useExtendKit(options?: { enabled?: boolean }) {
   return {
     info: query.data,
     loading: query.isLoading,
+    /**
+     * The lookup was asked and came back with nothing usable.
+     *
+     * Without this, a caller reading `info` alone cannot tell a kit that is
+     * genuinely absent from a lookup that failed, because both leave `info`
+     * empty. The onboarding checklist has to tell them apart: one is a step to
+     * do, the other is our own failed question and must not be shown to the user
+     * as their problem (#178).
+     */
+    failed: query.isError,
     install: useCallback(() => mutation.mutateAsync(), [mutation]),
     installing: mutation.isPending,
     uninstall: useCallback(() => removal.mutateAsync(), [removal]),

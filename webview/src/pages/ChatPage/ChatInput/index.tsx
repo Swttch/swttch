@@ -93,6 +93,7 @@ import {
 } from '@/hooks/useTelemetryConsent';
 import { getCaretOffset, setCaretOffset, CaretDirection } from '@/utils/domSelection';
 import { MessageType } from '@/shared';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useTranslation } from '@/i18n';
 
 /**
@@ -117,6 +118,7 @@ export function ChatInput() {
   const { textareaRef } = useChatInputFocus();
   const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
+  const onboarding = useOnboarding();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage } = chatStream;
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
@@ -327,7 +329,18 @@ export function ChatInput() {
     return () => window.removeEventListener(THINKING_TOGGLE_EVENT, handler);
   }, [claudeSettings.alwaysThinkingEnabled, updateClaudeSetting]);
 
-  const disabled = sessionState === SessionState.Error || !workingDirectory;
+  /**
+   * Nothing typed here could go anywhere yet.
+   *
+   * The onboarding card is one of the three, and it is in here rather than left
+   * to the dimming the chat screen paints over this box. Dimming stops the
+   * mouse and nothing else: the caret can still be in the box from before, Tab
+   * still reaches it, and what is typed still lands. Off means off, so it goes
+   * through the same switch the other two use — which is what actually reaches
+   * `contentEditable` (#482).
+   */
+  const disabled =
+    sessionState === SessionState.Error || !workingDirectory || onboarding.visible;
 
   // IME composition truth (ref-only) shared between this keydown handler and the
   // RichInput editor. Under JCEF the native `isComposing` flag is unreliable.

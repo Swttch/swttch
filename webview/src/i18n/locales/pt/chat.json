@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "Preparação",
-    "dismiss": "Fechar",
+    "close": "Fechar",
     "optional": "opcional",
     "unknown": "não confirmado",
     "checking": "A verificar…",
@@ -453,6 +453,8 @@
     "reveal": "Ver",
     "recheck": "Verificar",
     "login": "Entrar",
+    "getStarted": "Começar",
+    "getStartedHint": "Para ignorar a lista, clique no botão de fechar.",
     "steps": {
       "installCli": {
         "label": "Instalar a CLI do Claude Code",
