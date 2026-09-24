@@ -96,9 +96,36 @@ export function isClickToFocus(outcome: NotifierOutcome): boolean {
     // 3 timed out, 1 suppressed by Focus Assist.
     return outcome.code === 0 || outcome.code === 4;
   }
-  // notify-send reports nothing about clicks.
-  return false;
+  // Linux. notify-send prints the KEY of the action the user picked, and
+  // nothing at all for any other ending. Measured against libnotify 0.8.1 and
+  // dunst 1.9.0:
+  //
+  //   clicked the banner body   stdout "default", exit 0
+  //   invoked via dunstctl      stdout "default", exit 0
+  //   dismissed the banner      stdout "",        exit 0
+  //   --expire-time ran out     stdout "",        exit 0
+  //
+  // The exit code is 0 in every one of those, so it cannot tell them apart and
+  // is not consulted. A non-empty stdout is the whole signal.
+  //
+  // This returned a flat false until the Linux branch learned to pass
+  // --action; without that flag notify-send exits the moment the banner is
+  // drawn and there is no click to report.
+  return outcome.stdout.length > 0;
 }
+
+/**
+ * The sender name the user reads on the banner, on every OS that lets us say it.
+ *
+ * macOS takes it from the bundle's CFBundleName, Windows from the
+ * AppUserModelID below, and Linux from notify-send's --app-name. One constant
+ * so the three cannot drift apart.
+ *
+ * "Swttch Notifier" rather than plain "Swttch": a desktop app is planned under
+ * the name Swttch itself, and this sender would then be indistinguishable from
+ * that app in the user's eyes.
+ */
+export const NOTIFIER_APP_NAME = 'Swttch Notifier';
 
 /**
  * AppUserModelID handed to ntfytoast on Windows, and the name of the Start Menu
@@ -118,7 +145,7 @@ export function isClickToFocus(outcome: NotifierOutcome): boolean {
  * "Swttch Notifier"` installs cleanly (exit 0) and a toast fired with
  * `-appID "Swttch Notifier"` displays normally (exit 3, ordinary timeout).
  */
-export const WINDOWS_APP_ID = 'Swttch Notifier';
+export const WINDOWS_APP_ID = NOTIFIER_APP_NAME;
 
 /**
  * Icon drawn on the Windows toast, handed to ntfytoast with `-p`.
@@ -261,6 +288,24 @@ export function windowsNotifierIcon(): string {
   return join(vendorDir(), WINDOWS_ICON_FILE);
 }
 
+/**
+ * The picture the Linux banner wears, handed to notify-send with --icon.
+ *
+ * Deliberately the very same PNG the Windows toast uses, not a copy under a
+ * Linux-flavoured name. It is the same logo at a size both accept (256x256),
+ * it is already shipped and already extracted onto the user's machine for
+ * Windows, and a second identical file would be one more thing for a build
+ * step to forget — the failure mode recorded in SPEC section 9, where
+ * something present in the jar never reached the user because the extractor
+ * copies by name.
+ *
+ * Measured against dunst 1.9.0: an absolute path to this PNG draws the logo at
+ * the left of the banner.
+ */
+export function linuxNotifierIcon(): string {
+  return join(vendorDir(), WINDOWS_ICON_FILE);
+}
+
 // ── Argument construction ───────────────────────────────────────────────────
 
 export function buildMacNotifierArgs(options: OsNotificationOptions): string[] {
@@ -336,10 +381,148 @@ export function buildWindowsNotifierArgs(
   return args;
 }
 
-export function buildLinuxNotifierArgs(options: OsNotificationOptions): string[] {
-  // notify-send takes title and body as separate args, so nothing needs escaping.
-  // libnotify reports no click back to us, so the click options are dropped.
-  return [options.title, options.body];
+/**
+ * The action key asked of notify-send, and therefore the word it prints when
+ * the user activates the banner.
+ *
+ * "default" is the freedesktop-specified key meaning "the notification itself
+ * was activated", so a daemon can wire it to a click on the body rather than
+ * to a separate button. Measured against dunst 1.9.0: clicking the body prints
+ * `default` and exits 0.
+ *
+ * It is deliberately NOT the translated label. The label changes with the
+ * user's locale; keying click detection on a word that moves would break the
+ * return path in twelve languages at once.
+ */
+const LINUX_ACTION_KEY = 'default';
+
+/**
+ * Turn our string group id (a panel id like "panel-7") into the integer
+ * notify-send's --replace-id demands.
+ *
+ * Why a hash and not the id notify-send reports: `--print-id` exists, but with
+ * `--action` in play its output is buffered until the process exits, which is
+ * AFTER the user clicks. Measured — a probe read an empty stdout 1.2 seconds
+ * into a banner that was plainly on screen, then got "14\ndefault" at once when
+ * the click landed. An id that only arrives after the banner is finished with
+ * cannot be used to replace that banner. Choosing the number ourselves needs no
+ * round trip at all, and a chosen id the daemon has never seen is accepted:
+ * firing twice with the same one replaced in place, and a different one stacked
+ * beside it.
+ *
+ * The result is forced into the top of the positive range because the daemon
+ * hands out small sequential ids to everyone else on the bus, and a collision
+ * would mean our banner silently replacing some other application's.
+ *
+ * --replace-id is parsed as a SIGNED 32-bit integer: 2147483647 is accepted and
+ * 2147483648 is refused with "out of range" (measured, libnotify 0.8.1).
+ *
+ * ── GNOME Shell does not honour this, and is left that way on purpose ──────
+ * Measured against GNOME Shell 43.9 by calling Notify over D-Bus directly with
+ * replaces_id = 1073741870 twice: the server answered `1` and then `2`. It
+ * ignores an id it did not hand out and mints a fresh one, so the second
+ * notification never replaces the first.
+ *
+ * What the user sees there is not a pile of banners — GNOME shows one at a
+ * time and queues the rest — but the queued one carries the OLDER state, and
+ * the "one banner per session" contract (SPEC 2.5) is not kept on that daemon.
+ *
+ * Not worked around. The only way to learn GNOME's id is to read what Notify
+ * returns, and notify-send's `--print-id` buffers its output until the process
+ * exits whenever `--action` is in play (measured, SPEC 6.2) — which is after
+ * the banner it would have replaced is already finished with. Getting the id
+ * in time means calling D-Bus directly and reimplementing the click wait, a
+ * far larger change than this costs the user. dunst, which does honour a
+ * chosen id, keeps the contract.
+ */
+export function linuxReplacesId(groupId: string): number {
+  // FNV-1a, 32-bit. Chosen for being short enough to read and verify here; no
+  // cryptographic property is wanted or claimed.
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < groupId.length; i++) {
+    hash ^= groupId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  // [0x40000000, 0x7FFFFFFF] — above anything a daemon allocates, below the
+  // signed limit that libnotify refuses. Never 0, which means "do not replace".
+  return 0x40000000 + (hash % 0x40000000);
+}
+
+export function buildLinuxNotifierArgs(
+  options: OsNotificationOptions,
+  iconPath: string = linuxNotifierIcon(),
+): string[] {
+  const args = ['--app-name', NOTIFIER_APP_NAME];
+
+  if (options.groupId) {
+    // The Linux half of the "one banner per session" contract (2.5). Killing
+    // the previous notifier does NOT take its banner down here — measured, the
+    // banner stayed on screen after the process died — so replacement is what
+    // actually retires it, and the kill only stops a process waiting for a
+    // click that can no longer happen.
+    args.push('--replace-id', String(linuxReplacesId(options.groupId)));
+  }
+
+  if (existsSync(iconPath)) {
+    // Only when the file is really there. A path that leads nowhere costs the
+    // picture silently — measured, exit 0 and a banner with no icon — and a
+    // banner without a logo still calls the user back.
+    args.push('--icon', iconPath);
+  }
+
+  if (options.clickActionTitle) {
+    // What keeps the process alive to hear the click: --action implies --wait.
+    // Without it notify-send exits the instant the banner is drawn and the
+    // click reaches nobody, which is exactly what this branch used to do.
+    args.push('--action', `${LINUX_ACTION_KEY}=${options.clickActionTitle}`);
+    // Bound that wait. --expire-time is in MILLISECONDS, and 0 means never.
+    // An unbounded banner would leave a process per abandoned session for the
+    // rest of the backend's life. On expiry the process exits 0 with an empty
+    // stdout, which is how isClickToFocus tells "gave up" from "was clicked".
+    args.push(
+      '--expire-time',
+      options.clickTimeoutSeconds !== undefined
+        ? String(options.clickTimeoutSeconds * 1000)
+        : '0',
+    );
+  } else {
+    // Nothing to wait for, so the banner outlives the process. 0 = never
+    // expire, honoured by dunst (measured: still on screen at 21s while a
+    // default-urgency banner beside it had gone at 10s). This banner exists to
+    // reach someone who walked away from the machine.
+    args.push('--expire-time', '0');
+  }
+
+  // Tell the daemon not to ring a chime of its own. The webview already plays
+  // the sound the user picked, so anything the daemon adds is a second one.
+  //
+  // Whether this matters depends entirely on WHICH daemon is running, which is
+  // why it is sent unconditionally rather than gated on anything:
+  //
+  //   dunst 1.9.0      plays nothing either way (measured: peak amplitude
+  //                    0.000000 across three banners, urgency critical
+  //                    included, recorded off a PulseAudio null sink), and
+  //                    accepts the hint with exit 0 and a normal banner
+  //   GNOME Shell 43.9 DOES ring, once per notification (measured: two banners
+  //                    -> BURST COUNT = 2, peak 0.298), and goes silent with
+  //                    this hint (BURST COUNT = 0)
+  //
+  // So on GNOME, which is what most Linux users are running, the sound doubled
+  // up before this line existed. Same defect Windows had, where -silent fixed
+  // it; Linux needed a hint instead of a flag, and needed it for a daemon the
+  // first round of checking never ran.
+  //
+  // `suppress-sound` is in the freedesktop notification spec, so a daemon that
+  // does not implement it is required to ignore it rather than fail.
+  args.push('--hint=boolean:suppress-sound:true');
+
+  // "--" before the text, always. notify-send parses options anywhere on the
+  // line, so a title or body that begins with a dash is read as a flag and the
+  // WHOLE notification is lost: `notify-send -t 1500 "-t is not an option"
+  // body` exits 1 with "Cannot parse integer value" and draws nothing. Bodies
+  // here carry user text.
+  args.push('--', options.title, options.body);
+  return args;
 }
 
 // ── macOS install ───────────────────────────────────────────────────────────

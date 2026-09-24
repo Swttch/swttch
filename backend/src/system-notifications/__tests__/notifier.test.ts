@@ -28,6 +28,7 @@ const {
   macNotifierBundleId,
   isClickToFocus,
   buildLinuxNotifierArgs,
+  linuxReplacesId,
   buildMacNotifierArgs,
   buildWindowsNotifierArgs,
   installMacNotifier,
@@ -299,16 +300,117 @@ describe('buildWindowsNotifierArgs', () => {
   });
 });
 
+/**
+ * Everything asserted here was measured on Debian 12 aarch64 against libnotify
+ * 0.8.1 and dunst 1.9.0, in the standing bench at ignore/linux-desktop.
+ */
 describe('buildLinuxNotifierArgs', () => {
-  it('passes title and body as the only two arguments', () => {
-    expect(buildLinuxNotifierArgs({ title: 't', body: 'b', groupId: 'g' })).toEqual(['t', 'b']);
+  const noIcon = '/definitely/not/here.png';
+
+  it('names the sender, so the banner says who is calling', () => {
+    const args = buildLinuxNotifierArgs({ title: 't', body: 'b' }, noIcon);
+    expect(args.slice(0, 2)).toEqual(['--app-name', 'Swttch Notifier']);
   });
 
-  it('drops the click button, since libnotify reports no click at all', () => {
-    const args = buildLinuxNotifierArgs({ title: 't', body: 'b', clickActionTitle: 'Open' });
-    expect(args).not.toContain('Open');
-    expect(args).not.toContain('-action');
+  /**
+   * The Linux counterpart of the Windows `-silent` flag.
+   *
+   * Measured on the GNOME bench (GNOME Shell 43.9): two notifications produced
+   * two chimes of its own, peak 0.298, on top of the one the webview plays —
+   * and the same two went silent once this hint was attached. dunst 1.9.0 never
+   * chimes either way and accepts the hint with exit 0.
+   *
+   * Unconditional on purpose. The daemon is not knowable from here, GNOME is
+   * what most users run, and the spec requires a daemon that does not
+   * implement the hint to ignore it.
+   */
+  it('asks the daemon to stay silent, or GNOME chimes on top of our own sound', () => {
+    const withAction = buildLinuxNotifierArgs(
+      { title: 't', body: 'b', clickActionTitle: 'Open session' },
+      noIcon,
+    );
+    const withoutAction = buildLinuxNotifierArgs({ title: 't', body: 'b' }, noIcon);
+
+    for (const args of [withAction, withoutAction]) {
+      expect(args).toContain('--hint=boolean:suppress-sound:true');
+    }
   });
+
+  it('asks for the action, which is the only reason a click is ever reported', () => {
+    const args = buildLinuxNotifierArgs(
+      { title: 't', body: 'b', clickActionTitle: 'Open session' },
+      noIcon,
+    );
+    // The KEY must stay "default" even though the label is translated: click
+    // detection reads the key back, and a key that moved with the locale would
+    // break the return path in every language at once.
+    expect(args).toContain('--action');
+    expect(args[args.indexOf('--action') + 1]).toBe('default=Open session');
+  });
+
+  it('bounds the wait, so an ignored banner does not leave a process forever', () => {
+    const args = buildLinuxNotifierArgs(
+      { title: 't', body: 'b', clickActionTitle: 'Open', clickTimeoutSeconds: 600 },
+      noIcon,
+    );
+    // --expire-time is milliseconds.
+    expect(args[args.indexOf('--expire-time') + 1]).toBe('600000');
+  });
+
+  it('never expires when nobody is waiting for a click', () => {
+    const args = buildLinuxNotifierArgs({ title: 't', body: 'b' }, noIcon);
+    expect(args[args.indexOf('--expire-time') + 1]).toBe('0');
+    expect(args).not.toContain('--action');
+  });
+
+  it('turns the group id into the integer --replace-id demands', () => {
+    const args = buildLinuxNotifierArgs({ title: 't', body: 'b', groupId: 'panel-7' }, noIcon);
+    const value = args[args.indexOf('--replace-id') + 1];
+    // Passing the string through unchanged makes notify-send exit 1 and draw
+    // NOTHING ("Cannot parse integer value"), so the banner would be lost.
+    expect(value).toBe(String(linuxReplacesId('panel-7')));
+    expect(Number.isInteger(Number(value))).toBe(true);
+  });
+
+  it('omits --replace-id when there is no group to replace', () => {
+    expect(buildLinuxNotifierArgs({ title: 't', body: 'b' }, noIcon)).not.toContain('--replace-id');
+  });
+
+  it('attaches the icon only when the file is really there', () => {
+    expect(buildLinuxNotifierArgs({ title: 't', body: 'b' }, noIcon)).not.toContain('--icon');
+    const real = buildLinuxNotifierArgs({ title: 't', body: 'b' }, __filename);
+    expect(real[real.indexOf('--icon') + 1]).toBe(__filename);
+  });
+
+  it('puts -- before the text, or a body starting with a dash loses the banner', () => {
+    const args = buildLinuxNotifierArgs({ title: '-t 5', body: '-u critical' }, noIcon);
+    expect(args.slice(-3)).toEqual(['--', '-t 5', '-u critical']);
+  });
+});
+
+describe('linuxReplacesId', () => {
+  it('is stable, so the same panel keeps replacing its own banner', () => {
+    expect(linuxReplacesId('panel-7')).toBe(linuxReplacesId('panel-7'));
+  });
+
+  it('separates panels, so one session never overwrites another', () => {
+    expect(linuxReplacesId('panel-7')).not.toBe(linuxReplacesId('panel-8'));
+  });
+
+  it.each(['', 'panel-7', 'panel-8', 'a'.repeat(200), '한글-패널', '💥'])(
+    'stays inside the signed range libnotify accepts for %p',
+    (groupId) => {
+      const id = linuxReplacesId(groupId);
+      // Measured: 2147483647 is accepted, 2147483648 is refused as "out of
+      // range". 0 is not a replacement request at all.
+      expect(id).toBeGreaterThan(0);
+      expect(id).toBeLessThanOrEqual(2147483647);
+      expect(Number.isInteger(id)).toBe(true);
+      // Above the small sequential ids the daemon hands the rest of the bus,
+      // so our banner cannot replace another application's.
+      expect(id).toBeGreaterThanOrEqual(0x40000000);
+    },
+  );
 });
 
 describe('readBundleVersion', () => {
@@ -409,7 +511,9 @@ describe('showOsNotification', () => {
 
     await showOsNotification({ title: 't', body: 'b' });
 
-    expect(spawnMock).toHaveBeenCalledWith('notify-send', ['t', 'b'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const [command, args] = spawnMock.mock.calls[0];
+    expect(command).toBe('notify-send');
+    expect(args.slice(-3)).toEqual(['--', 't', 'b']);
   });
 
   it('never raises an osascript or powershell script any more', async () => {
@@ -695,9 +799,29 @@ describe('isClickToFocus', () => {
     });
   });
 
-  it('never focuses on Linux, where libnotify reports no click', () => {
-    setPlatform('linux');
-    expect(isClickToFocus({ code: 0, stdout: '@ACTIONCLICKED' })).toBe(false);
+  /**
+   * Measured against libnotify 0.8.1 with dunst 1.9.0. Every one of these ends
+   * with exit code 0, so the code cannot tell them apart and stdout is the
+   * whole signal.
+   */
+  describe('on Linux', () => {
+    it('focuses when notify-send prints the action key back', () => {
+      setPlatform('linux');
+      expect(isClickToFocus({ code: 0, stdout: 'default' })).toBe(true);
+    });
+
+    it('does not focus when the banner was dismissed (empty stdout, exit 0)', () => {
+      setPlatform('linux');
+      expect(isClickToFocus({ code: 0, stdout: '' })).toBe(false);
+    });
+
+    it('does not focus when --expire-time ran out (empty stdout, exit 0)', () => {
+      setPlatform('linux');
+      // Same shape as a dismissal. Reading exit code 0 as "the user clicked"
+      // would take the user to a session they never asked for, every time a
+      // banner simply timed out.
+      expect(isClickToFocus({ code: 0, stdout: '' })).toBe(false);
+    });
   });
 });
 
