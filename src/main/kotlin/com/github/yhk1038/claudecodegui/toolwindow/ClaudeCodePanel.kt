@@ -144,6 +144,22 @@ class ClaudeCodePanel(
     // before the browser exists). Invoked from the page-driven bridge.
     private var requestRepaintNudge: (() -> Unit)? = null
 
+    /**
+     * The IDE balloon currently announcing that this session wants attention.
+     *
+     * Kept so it can be retired when the announcement has been answered somewhere
+     * else — by a click on the desktop banner, which arrives through
+     * `focusSession` from the backend rather than through the balloon's own
+     * action. The two are one event with two faces (balloon for a user inside the
+     * IDE, OS banner for one who walked away), and answering either answers both.
+     *
+     * Only one is held per panel: a newer notification supersedes the older, which
+     * is the same rule the OS banner follows with its group id (SPEC 2.5).
+     *
+     * Touched only on the EDT, where every notification path here already runs.
+     */
+    private var attentionBalloon: Notification? = null
+
     // One-shot guard so re-attach (tab move/split) does NOT re-schedule realization.
     private val realizationGate = RealizationGate()
 
@@ -2300,11 +2316,28 @@ class ClaudeCodePanel(
                             override fun actionPerformed(e: AnActionEvent, n: Notification) {
                                 revealThisSession()
                                 n.expire()
+                                // Answered through the balloon itself; drop the handle so
+                                // a later banner click does not expire an already-dead one.
+                                if (attentionBalloon === n) attentionBalloon = null
                             }
                         })
                     }
 
                     notification.notify(project)
+                    // Hold on to it so a click on the DESKTOP banner can retire it.
+                    //
+                    // The two are one event with two faces: the balloon for a user who
+                    // is in the IDE, the OS banner for one who is not. Answering either
+                    // answers both. Without this the balloon stays after the banner has
+                    // been clicked and acted on, still offering "Open session" for a
+                    // session already on screen, and a second turn stacks another one —
+                    // two were seen at once covering the settings dialog.
+                    //
+                    // Only the newest is kept: an older balloon for the same panel has
+                    // already been superseded by this notification, the same way the OS
+                    // banner is replaced rather than stacked (SPEC 2.5).
+                    attentionBalloon?.expire()
+                    attentionBalloon = notification
                     logger.info(
                         "Showed attention notification: $title " +
                             "(ideFocused=$ideFocused, activateBundleId=$activateBundleId)"
@@ -2328,6 +2361,11 @@ class ClaudeCodePanel(
                 ApplicationManager.getApplication().invokeLater {
                     raiseIdeWindow()
                     revealThisSession()
+                    // The banner and the balloon announce the same thing, so acting on
+                    // one answers the other. Leaving it up means the user arrives at the
+                    // session they asked for and is still being asked to open it.
+                    attentionBalloon?.expire()
+                    attentionBalloon = null
                 }
             }
         }
@@ -2381,7 +2419,7 @@ class ClaudeCodePanel(
             logger.warn("focusSession: no IDE frame for this project; nothing to raise")
             return
         }
-        val steps = WindowRaisePlan.stepsFor(SystemInfo.isMac)
+        val steps = WindowRaisePlan.stepsFor(SystemInfo.isMac, SystemInfo.isLinux)
         logger.info("focusSession: raising the window, plan=$steps")
         WindowRaisePlan.run(
             steps = steps,

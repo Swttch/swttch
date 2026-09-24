@@ -15,25 +15,43 @@ import org.junit.jupiter.api.Test
  * sequence stopped at [RaiseStep.ASK] every time, and the two steps that were
  * measured to actually raise the window never ran.
  *
- * Hence two invariants, and nothing about success anywhere in them:
- *  - on Windows and Linux every step runs, in order;
+ * Hence these invariants, and nothing about success anywhere in them:
+ *  - on Windows every step runs, in order;
  *  - on macOS only the first one runs, because that platform was measured to
  *    need nothing more and the other two would show as a window flickering for
- *    no reason.
+ *    no reason;
+ *  - on Linux only the first one runs, for a harder reason: MINIMISE_CYCLE was
+ *    measured to leave the window `Iconic` there, so escalating hides the very
+ *    window the click asked for.
  */
 class WindowRaisePlanTest {
 
     @Test
-    fun `off macOS the plan is all three steps, quietest first`() {
+    fun `on Windows the plan is all three steps, quietest first`() {
         assertEquals(
             listOf(RaiseStep.ASK, RaiseStep.TOPMOST_FLICKER, RaiseStep.MINIMISE_CYCLE),
-            WindowRaisePlan.stepsFor(isMac = false),
+            WindowRaisePlan.stepsFor(isMac = false, isLinux = false),
         )
     }
 
     @Test
     fun `on macOS the plan is the first step alone`() {
         assertEquals(listOf(RaiseStep.ASK), WindowRaisePlan.stepsFor(isMac = true))
+    }
+
+    /**
+     * Measured in the Linux bench (Debian 12, Xvfb, openbox): the restore inside
+     * MINIMISE_CYCLE does not take, and the IDE is left `Iconic / IsUnMapped`
+     * after the user clicked the banner. Escalating there does not merely fail
+     * to help, it hides the window the click asked for.
+     */
+    @Test
+    fun `on Linux the plan stops before the step that leaves the window minimised`() {
+        val linux = WindowRaisePlan.stepsFor(isMac = false, isLinux = true)
+        assertEquals(listOf(RaiseStep.ASK), linux)
+        assertTrue(RaiseStep.MINIMISE_CYCLE !in linux) {
+            "MINIMISE_CYCLE leaves the Linux window iconified; it must not be planned there"
+        }
     }
 
     /**
@@ -140,7 +158,7 @@ class WindowRaisePlanTest {
     @Test
     fun `every platform asks properly before it escalates`() {
         val mac = WindowRaisePlan.stepsFor(isMac = true)
-        val other = WindowRaisePlan.stepsFor(isMac = false)
+        val other = WindowRaisePlan.stepsFor(isMac = false, isLinux = false)
         assertEquals(RaiseStep.ASK, other.first())
         assertTrue(other.take(mac.size) == mac) {
             "the macOS plan should be the start of the other platforms' plan, got $mac and $other"

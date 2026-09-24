@@ -71,10 +71,38 @@ object WindowRaisePlan {
      * escalations are Windows manoeuvres that would show up there as a window
      * flickering for no reason.
      *
-     * Every other platform gets all three, in order.
+     * Linux stops after the first one too, but for a harder reason than taste:
+     * [RaiseStep.MINIMISE_CYCLE] is not free there, it is destructive.
+     *
+     * Measured in the standing Linux bench (Debian 12 aarch64, Xvfb, openbox,
+     * ignore/linux-desktop) driving the real path — banner clicked, backend
+     * logged `click=true`, `focusSession` ran the full three-step plan:
+     *
+     *   focusSession: tried ASK             (state=0)   <- window was restored
+     *   focusSession: tried TOPMOST_FLICKER (state=0)   <- still restored
+     *   focusSession: restored the window after MINIMISE_CYCLE
+     *   focusSession: tried MINIMISE_CYCLE  (state=1)   <- ICONIFIED again
+     *
+     * and the window manager, asked afterwards through the X property
+     * `_NET_ACTIVE_WINDOW` rather than through AWT, answered `0x0` with the IDE
+     * window `Iconic / IsUnMapped`. The restore inside MINIMISE_CYCLE did not
+     * take. The user clicks the banner and the IDE disappears — strictly worse
+     * than doing nothing, and the opposite of what the click asked for.
+     *
+     * The same measurement shows ASK is enough here: the window was iconified
+     * before the click and `state=0` right after ASK, so it was ASK that
+     * brought it back.
+     *
+     * Verified against openbox. Other window managers may refuse a raise where
+     * openbox granted one; what must NOT be concluded from that is "add the
+     * escalations back for Linux", because being left minimised is a worse
+     * outcome than being left behind another window.
+     *
+     * Windows still gets all three: that is where the escalations were measured
+     * to work, and where AWT's own "am I in front" answer is known to lie.
      */
-    fun stepsFor(isMac: Boolean): List<RaiseStep> =
-        if (isMac) {
+    fun stepsFor(isMac: Boolean, isLinux: Boolean = false): List<RaiseStep> =
+        if (isMac || isLinux) {
             listOf(RaiseStep.ASK)
         } else {
             listOf(RaiseStep.ASK, RaiseStep.TOPMOST_FLICKER, RaiseStep.MINIMISE_CYCLE)
