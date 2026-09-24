@@ -413,6 +413,30 @@ class RpcWebSocketClient(
                     if (ideRoot != null) put("ideRoot", ideRoot) else put("ideRoot", JsonNull)
                 }
             }
+            "SHOW_NOTIFICATION" -> {
+                val title = params["title"]?.jsonPrimitive?.content
+                    ?: throw IllegalArgumentException("Missing 'title' param")
+                val body = params["body"]?.jsonPrimitive?.content ?: ""
+                val panelId = params["panelId"]?.jsonPrimitive?.content
+                val outcome = rpcHandler.showNotification(title, body, panelId)
+                buildJsonObject {
+                    put("shown", outcome.shown)
+                    put("ideFocused", outcome.ideFocused)
+                    // Sent only when there is something to raise. The backend reads an
+                    // absent field as "show the banner without a click target", which is
+                    // what every host but macOS wants.
+                    outcome.activateBundleId?.let { put("activateBundleId", it) }
+                }
+            }
+            "FOCUS_SESSION" -> {
+                // The user clicked a desktop notification. The backend cannot raise the
+                // right window itself — it does not know which one raised the banner, and
+                // asking macOS to activate us by bundle identifier picks whichever window
+                // it lists first. We do know, so we do it.
+                val panelId = params["panelId"]?.jsonPrimitive?.contentOrNull
+                rpcHandler.focusSession(panelId)
+                buildJsonObject { }
+            }
             else -> {
                 throw IllegalArgumentException("Unknown RPC method: $method")
             }

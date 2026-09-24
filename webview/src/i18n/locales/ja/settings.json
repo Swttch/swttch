@@ -118,6 +118,27 @@
         "steer": "今すぐ反映"
       }
     },
+    "notifications": {
+      "title": "通知",
+      "sound": {
+        "label": "サウンド",
+        "ariaLabel": "通知サウンド",
+        "off": "オフ",
+        "description": "セッションが応答を終えたとき、または確認を待っているときに実行されます。サウンドを選ぶと一度試聴できます。",
+        "loadingDescription": "システムサウンドを読み込み中...",
+        "emptyDescription": "システムサウンドが見つかりませんでした。通知を無音にするには「オフ」を選択してください。",
+        "errorDescription": "システムサウンドを読み込めませんでした: {{error}}"
+      },
+      "volume": {
+        "label": "音量",
+        "description": "通知音の大きさです。1が最小、10が最大です。"
+      },
+      "banner": {
+        "label": "バナー",
+        "description": "他の場所を見ているときに、画面に通知を表示します。そのセッションを見ているときには表示されません。",
+        "fadeHint": "バナーがすぐ消えますか？<action>ここで</action>変更できます。"
+      }
+    },
     "shortcutInput": {
       "recording": "キーを押してください…",
       "unset": "未設定",
@@ -351,18 +372,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "通知",
-      "sound": {
-        "label": "サウンド",
-        "ariaLabel": "通知サウンド",
-        "off": "オフ",
-        "description": "デスクトップ通知が表示されたときに再生される音です。サウンドを選択するとプレビューが一度再生されます。",
-        "loadingDescription": "システムサウンドを読み込み中...",
-        "emptyDescription": "システムサウンドが見つかりませんでした。通知を無音にするには「オフ」を選択してください。",
-        "errorDescription": "システムサウンドを読み込めませんでした: {{error}}"
-      }
-    },
     "permissions": {
       "title": "権限",
       "revokeHint": "取り消すには、ブラウザの設定を変更してください。",

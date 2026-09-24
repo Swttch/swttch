@@ -2,11 +2,13 @@ package com.github.yhk1038.claudecodegui.toolwindow
 
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
+import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.TabActivity
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
 import com.github.yhk1038.claudecodegui.hosting.ToolWindowHost
 import com.github.yhk1038.claudecodegui.notifications.JcefRuntimeNotifier
+import com.github.yhk1038.claudecodegui.platform.HostAppBundleId
 import com.github.yhk1038.claudecodegui.services.ClaudeCodeBrowserService
 import com.github.yhk1038.claudecodegui.services.AcceptedRange
 import com.github.yhk1038.claudecodegui.services.DiffService
@@ -25,7 +27,12 @@ import com.intellij.ide.dnd.DnDManager
 import com.intellij.ide.dnd.DnDTarget
 import com.intellij.ide.dnd.FileCopyPasteUtil
 import com.intellij.ide.dnd.TransferableWrapper
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationAction
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -38,8 +45,10 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.psi.PsiElement
 import com.intellij.util.ui.UIUtil
 import javax.swing.UIManager
@@ -134,6 +143,22 @@ class ClaudeCodePanel(
     // (windowed rendering has no ghosts to clear, and there is nothing to nudge
     // before the browser exists). Invoked from the page-driven bridge.
     private var requestRepaintNudge: (() -> Unit)? = null
+
+    /**
+     * The IDE balloon currently announcing that this session wants attention.
+     *
+     * Kept so it can be retired when the announcement has been answered somewhere
+     * else — by a click on the desktop banner, which arrives through
+     * `focusSession` from the backend rather than through the balloon's own
+     * action. The two are one event with two faces (balloon for a user inside the
+     * IDE, OS banner for one who walked away), and answering either answers both.
+     *
+     * Only one is held per panel: a newer notification supersedes the older, which
+     * is the same rule the OS banner follows with its group id (SPEC 2.5).
+     *
+     * Touched only on the EDT, where every notification path here already runs.
+     */
+    private var attentionBalloon: Notification? = null
 
     // One-shot guard so re-attach (tab move/split) does NOT re-schedule realization.
     private val realizationGate = RealizationGate()
@@ -2247,6 +2272,243 @@ class ClaudeCodePanel(
                 // panel before this is ever reached.
                 return project.basePath
             }
+
+            override suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome {
+                // panelId already routed us to the right panel (see NodeBackendService
+                // Router), so we act on our own tabId here.
+                val result = CompletableDeferred<NotificationOutcome>()
+                ApplicationManager.getApplication().invokeLater {
+                    // Gate here, not in the webview: JCEF's document.hidden is unreliable
+                    // for editor-tab / app-focus changes (works in 2024.2, not 2026.1).
+                    // Suppress only when the user is actually looking at THIS session —
+                    // its editor tab is the selected editor AND the IDE window is focused
+                    // (the same signal the unread tab badge uses).
+                    val fem = FileEditorManager.getInstance(project)
+                    val thisTabSelected = fem.selectedEditors.any {
+                        (it.file as? ClaudeCodeVirtualFile)?.tabId == tabId
+                    }
+                    val ideFocused = WindowManager.getInstance().getFrame(project)?.isActive == true
+                    // Which app a click on the OS banner should raise. Reported in every
+                    // outcome because it describes this IDE, not this one notification.
+                    val activateBundleId = HostAppBundleId.get()
+                    if (thisTabSelected && ideFocused) {
+                        logger.info("Skipping notification (user viewing this session): $title")
+                        result.complete(
+                            NotificationOutcome(
+                                shown = false,
+                                ideFocused = ideFocused,
+                                activateBundleId = activateBundleId,
+                            )
+                        )
+                        return@invokeLater
+                    }
+
+                    // IDE balloon (visible when the IDE is in the foreground) + Event Log
+                    // entry with a one-click jump back to the session. When the IDE is in
+                    // the background the backend also raises a real OS notification (it
+                    // reads ideFocused from this result), since the balloon would be hidden.
+                    val notification = NotificationGroupManager.getInstance()
+                        .getNotificationGroup("claude-code-gui.attention")
+                        .createNotification(title, body, NotificationType.INFORMATION)
+
+                    if (ClaudeCodeVirtualFile.isTabOpen(project, tabId)) {
+                        notification.addAction(object : NotificationAction("Open session") {
+                            override fun actionPerformed(e: AnActionEvent, n: Notification) {
+                                revealThisSession()
+                                n.expire()
+                                // Answered through the balloon itself; drop the handle so
+                                // a later banner click does not expire an already-dead one.
+                                if (attentionBalloon === n) attentionBalloon = null
+                            }
+                        })
+                    }
+
+                    notification.notify(project)
+                    // Hold on to it so a click on the DESKTOP banner can retire it.
+                    //
+                    // The two are one event with two faces: the balloon for a user who
+                    // is in the IDE, the OS banner for one who is not. Answering either
+                    // answers both. Without this the balloon stays after the banner has
+                    // been clicked and acted on, still offering "Open session" for a
+                    // session already on screen, and a second turn stacks another one —
+                    // two were seen at once covering the settings dialog.
+                    //
+                    // Only the newest is kept: an older balloon for the same panel has
+                    // already been superseded by this notification, the same way the OS
+                    // banner is replaced rather than stacked (SPEC 2.5).
+                    attentionBalloon?.expire()
+                    attentionBalloon = notification
+                    logger.info(
+                        "Showed attention notification: $title " +
+                            "(ideFocused=$ideFocused, activateBundleId=$activateBundleId)"
+                    )
+                    result.complete(
+                        NotificationOutcome(
+                            shown = true,
+                            ideFocused = ideFocused,
+                            activateBundleId = activateBundleId,
+                        )
+                    )
+                }
+                return result.await()
+            }
+
+            override suspend fun focusSession(panelId: String?) {
+                // The user clicked the desktop banner. Same destination as the IDE
+                // balloon's "Open session", plus raising the window — unlike the
+                // balloon, this click arrives while the user is in another
+                // application entirely.
+                ApplicationManager.getApplication().invokeLater {
+                    raiseIdeWindow()
+                    revealThisSession()
+                    // The banner and the balloon announce the same thing, so acting on
+                    // one answers the other. Leaving it up means the user arrives at the
+                    // session they asked for and is still being asked to open it.
+                    attentionBalloon?.expire()
+                    attentionBalloon = null
+                }
+            }
+        }
+    }
+
+    /**
+     * Bring this chat session to the front of the IDE.
+     *
+     * Goes through the same door every other "reveal this chat" entry point
+     * uses, so the session is revealed wherever it actually lives. Opening the
+     * editor file directly ignored the host setting: a session mounted in the
+     * tool window got a SECOND copy of itself in a new editor tab instead of the
+     * tool window coming forward.
+     *
+     * Shared by the IDE balloon's "Open session" action and by a click on the
+     * desktop banner, because the two mean the same thing to the user.
+     */
+    private fun revealThisSession() {
+        OpenClaudeCodeAction.openTab(project, tabId)
+    }
+
+    /**
+     * Bring this IDE window in front of whatever application the user is in.
+     *
+     * A background application is not allowed to push aside the one the user
+     * chose, so `toFront()` returns as if it had worked and the window stays
+     * where it is. Measured on Windows 11 26200.9457: the whole of
+     * [RaiseStep.ASK] moved nothing, while the same machine let five different
+     * native calls raise the same window on demand. The operating system is not
+     * the obstacle there; the AWT path is.
+     *
+     * So there is no one call to make and no return value worth reading. There
+     * is a plan of ways of asking — [WindowRaisePlan] — and every step of it is
+     * carried out, because nothing available here can tell whether one worked.
+     * `frame.isActive` cannot: it reads true on Windows while the window is
+     * still behind the browser.
+     *
+     * The log names each step as it is tried, and never claims the window
+     * arrived. This path crosses three processes and fails silently at every
+     * hop, so how far the sequence got is the only thing a later reader has to
+     * go on, and the only honest answer to "did it arrive" comes from asking the
+     * operating system directly, outside this plugin.
+     *
+     * Deliberately not `ProjectUtil.focusProjectWindow`, which does the same job:
+     * it lives in an `impl` package, and the marketplace's Plugin Verifier
+     * rejects internal API.
+     */
+    private fun raiseIdeWindow() {
+        val frame = WindowManager.getInstance().getFrame(project)
+        if (frame == null) {
+            logger.warn("focusSession: no IDE frame for this project; nothing to raise")
+            return
+        }
+        val steps = WindowRaisePlan.stepsFor(SystemInfo.isMac, SystemInfo.isLinux)
+        logger.info("focusSession: raising the window, plan=$steps")
+        WindowRaisePlan.run(
+            steps = steps,
+            perform = { step -> performRaiseStep(frame, step) },
+            settle = { next ->
+                val timer = javax.swing.Timer(RAISE_STEP_GAP_MS) { next() }
+                timer.isRepeats = false
+                timer.start()
+            },
+            afterSettling = { step ->
+                // isActive is recorded as a hint for whoever reads this log, and
+                // it is NOT an answer to "is the window in front". Windows
+                // answers a foreground request it refuses by highlighting the
+                // taskbar button, and AWT reports that state as active too — a
+                // measured run logged active=true while GetForegroundWindow
+                // answered `chrome`. Judging the raise by this value is what
+                // stopped the sequence at ASK in the round of review before
+                // this one, so that the two steps that were measured to work
+                // never ran at all.
+                logger.info(
+                    "focusSession: tried $step " +
+                        "(isActive=${frame.isActive}, state=${frame.state}; " +
+                        "isActive does not mean the window is in front)"
+                )
+            },
+        )
+    }
+
+    /** Carry [step] out on [frame]. Nothing here reports whether it was enough. */
+    private fun performRaiseStep(frame: javax.swing.JFrame, step: RaiseStep) {
+        when (step) {
+            RaiseStep.ASK -> {
+                // A minimised window stays minimised however loudly it is asked to rise.
+                if (frame.state == java.awt.Frame.ICONIFIED) {
+                    frame.state = java.awt.Frame.NORMAL
+                }
+                try {
+                    val desktop = java.awt.Desktop.getDesktop()
+                    val supported =
+                        desktop.isSupported(java.awt.Desktop.Action.APP_REQUEST_FOREGROUND)
+                    // Whether the platform offers the call at all is itself a
+                    // finding worth keeping: where it does not, this step is only
+                    // toFront(), and toFront() alone raises nothing on Windows.
+                    logger.info("focusSession: APP_REQUEST_FOREGROUND supported=$supported")
+                    // true: raise every window of this app, not just the frontmost
+                    // one, so the project window below is not left behind another.
+                    if (supported) desktop.requestForeground(true)
+                } catch (ex: Exception) {
+                    // Headless, or a platform without the action. The later steps
+                    // still have something to try.
+                    logger.debug("requestForeground unavailable", ex)
+                }
+                frame.toFront()
+                frame.requestFocus()
+            }
+
+            RaiseStep.TOPMOST_FLICKER -> {
+                if (frame.isAlwaysOnTopSupported) {
+                    try {
+                        frame.isAlwaysOnTop = true
+                        frame.toFront()
+                    } finally {
+                        // Given back whatever happened above. A window left pinned
+                        // over every other application would be a worse defect than
+                        // the one being fixed here.
+                        frame.isAlwaysOnTop = false
+                    }
+                } else {
+                    logger.info("focusSession: always-on-top is unsupported here; nothing to flicker")
+                }
+            }
+
+            RaiseStep.MINIMISE_CYCLE -> {
+                frame.state = java.awt.Frame.ICONIFIED
+                // Restored in a later turn of the event loop, not this one: the
+                // window manager is told about a state change when the turn ends,
+                // so setting both here would cancel them out and it would never
+                // see a minimise to restore from.
+                ApplicationManager.getApplication().invokeLater {
+                    frame.state = java.awt.Frame.NORMAL
+                    frame.toFront()
+                    frame.requestFocus()
+                    // Logged on its own because this half runs in a different turn
+                    // from the half above: without it, a log that ends at the
+                    // minimise cannot be told apart from a restore that never ran,
+                    // and the difference is a window left minimised.
+                    logger.info("focusSession: restored the window after MINIMISE_CYCLE")
+                }
+            }
         }
     }
 
@@ -2376,6 +2638,20 @@ class ClaudeCodePanel(
          * quick enough that the user never sees the stuck screen.
          */
         private const val INDEXING_POLL_INTERVAL_MS = 2_000L
+
+        /**
+         * How long the event loop is left to run between two steps of a window
+         * raise.
+         *
+         * Not a wait for an answer — there is no answer to wait for. It is the
+         * gap the window manager needs between one manoeuvre and the next: it is
+         * told about a state change when a turn of the event loop ends, so steps
+         * fired back to back in one turn arrive as a single change and cancel
+         * each other out. Long enough for each step to land; short enough that
+         * the whole sequence finishes while the user is still looking at the
+         * banner they clicked.
+         */
+        private const val RAISE_STEP_GAP_MS = 250
 
         /**
          * How long the placeholder may sit on INDEXING_WAIT before the panel explains the

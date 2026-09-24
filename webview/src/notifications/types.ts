@@ -27,18 +27,22 @@ export interface NotificationTemplate {
 }
 
 /**
- * Sentinel value indicating "no sound on notification".
+ * Sentinel the sound dropdown uses for its "Off" row.
  *
- * Any other string value is interpreted as a backend-issued `soundId`
- * (see `SystemSound.id` and the `PLAY_SYSTEM_SOUND` RPC).
+ * It exists only inside the settings row, because a `<Select>` needs a string
+ * for every option and "no sound" is one of the options. It is never stored and
+ * never sent: the stored form of "no sound" is `null` in the
+ * `notificationSound` plugin setting, and the wire carries no sound name at all.
+ *
+ * Any other string value is a backend-issued `soundId` (see `SystemSound.id`).
  */
 export const SOUND_OFF = 'off' as const;
 
 /**
- * The user's notification-sound preference.
+ * What the sound dropdown currently shows.
  *
- * - `'off'`              → suppress sound entirely (no `PLAY_SYSTEM_SOUND` call)
- * - any other string     → backend `soundId` to play on each notification
+ * - `'off'`          → the Off row is selected; the setting is stored as null
+ * - any other string → a backend `soundId`
  */
 export type SoundSelection = typeof SOUND_OFF | string;
 

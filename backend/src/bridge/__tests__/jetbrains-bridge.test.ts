@@ -295,6 +295,77 @@ describe('JetBrainsBridge.pushHostMode project targeting', () => {
   });
 });
 
+// The bundle identifier decides where a click on the OS banner lands. The IDE
+// is the only side that knows it, so it has to survive the JSON-RPC hop intact.
+describe('JetBrainsBridge.showNotification', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(settings, 'readSettingsFile').mockResolvedValue({ hostMode: 'editor-tab' });
+  });
+
+  /** A bridge with one connected client whose connect-time push has been drained. */
+  async function connectOneClient() {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+    await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
+    ws.send.mockClear();
+    return { bridge, ws };
+  }
+
+  /** Answer the request the bridge just sent with [result], as the IDE would. */
+  async function answerWith(
+    ws: ReturnType<typeof createMockWs>,
+    result: Record<string, unknown>,
+  ): Promise<void> {
+    await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
+    ws.emitMessage({ jsonrpc: '2.0', id: sentMessage(ws)?.id, result });
+  }
+
+  it('carries the IDE bundle identifier back to the caller', async () => {
+    const { bridge, ws } = await connectOneClient();
+
+    const outcome = bridge.showNotification({ title: 'My session', body: 'Response complete' });
+    await answerWith(ws, {
+      shown: true,
+      ideFocused: false,
+      activateBundleId: 'com.jetbrains.WebStorm',
+    });
+
+    await expect(outcome).resolves.toEqual({
+      shown: true,
+      ideFocused: false,
+      activateBundleId: 'com.jetbrains.WebStorm',
+    });
+  });
+
+  it('leaves the identifier undefined when the IDE omits it (any host but macOS)', async () => {
+    const { bridge, ws } = await connectOneClient();
+
+    const outcome = bridge.showNotification({ title: 'My session', body: 'Response complete' });
+    await answerWith(ws, { shown: true, ideFocused: false });
+
+    await expect(outcome).resolves.toEqual({
+      shown: true,
+      ideFocused: false,
+      activateBundleId: undefined,
+    });
+  });
+
+  it('drops an empty identifier instead of handing it to the notifier', async () => {
+    const { bridge, ws } = await connectOneClient();
+
+    const outcome = bridge.showNotification({ title: 'My session', body: 'Response complete' });
+    await answerWith(ws, { shown: true, ideFocused: false, activateBundleId: '' });
+
+    await expect(outcome).resolves.toEqual({
+      shown: true,
+      ideFocused: false,
+      activateBundleId: undefined,
+    });
+  });
+});
+
 describe('redactRpcLog', () => {
   const req = (method: string, params: Record<string, unknown>) =>
     ({ jsonrpc: '2.0' as const, id: 'rpc-7', method, params });
@@ -331,5 +402,34 @@ describe('redactRpcLog', () => {
   it('leaves a request without secrets structurally intact', () => {
     const r = req('GET_IDE_ROOT', { workingDir: '//wsl.localhost/Ubuntu/home/yhk/proj' });
     expect(redactRpcLog(r)).toBe(JSON.stringify(r));
+  });
+});
+
+/**
+ * The IDE routes a JSON-RPC message by whether it carries an `id`.
+ *
+ * A message without one never reaches the RPC dispatcher: it is handed to a
+ * separate notification callback instead. So anything the IDE answers in its
+ * dispatcher has to be sent AS A REQUEST, however empty the answer is.
+ *
+ * This is not theoretical. focusSession was written as a notification, the IDE
+ * never heard it, and clicking a desktop banner did nothing at all — with no
+ * error anywhere, because dropping a notification nobody handles is normal.
+ */
+describe('JetBrainsBridge.focusSession', () => {
+  it('sends a request, since a notification would never reach the IDE dispatcher', () => {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+
+    void bridge.focusSession({ panelId: 'panel-7' }).catch(() => {});
+
+    expect(ws.send).toHaveBeenCalledTimes(1);
+    const sent = JSON.parse((ws.send as ReturnType<typeof vi.fn>).mock.calls[0][0] as string);
+    expect(sent.method).toBe('FOCUS_SESSION');
+    expect(sent.params).toEqual({ panelId: 'panel-7' });
+    // The id is the whole point: without it the IDE files this under
+    // notifications and the dispatcher never sees it.
+    expect(sent.id).toBeTruthy();
   });
 });

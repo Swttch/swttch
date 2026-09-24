@@ -990,3 +990,80 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   transition: left 0.15s;
 }
+
+/* ---------------------------------------------------------------------------
+ * Volume slider (Settings → General → Notifications)
+ *
+ * The platform range input, restyled — not the Effort slider's hand-built
+ * track. Volume is the one control users already know from every other app,
+ * and the native input brings the keyboard, pointer and accessibility
+ * behaviour of that control for free.
+ *
+ * The filled portion is painted as a gradient over the track rather than as a
+ * second element, because `::-webkit-slider-runnable-track` cannot hold a
+ * child. `--volume-fill` is set from the element's own value by the component.
+ * Firefox has `::-moz-range-progress` for the same job and ignores it.
+ * ------------------------------------------------------------------------ */
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.volume-slider:focus {
+  outline: none;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent-primary) 0,
+    var(--accent-primary) var(--volume-fill, 50%),
+    var(--border-default) var(--volume-fill, 50%),
+    var(--border-default) 100%
+  );
+}
+
+.volume-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-default);
+}
+
+.volume-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-primary);
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.volume-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+}
+
+.volume-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+}

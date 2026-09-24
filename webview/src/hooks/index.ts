@@ -8,6 +8,7 @@ export { useContext } from './useContext';
 export { useDocumentTitle } from './useDocumentTitle';
 export { useStaticDocumentTitle } from './useStaticDocumentTitle';
 export { useAwaitingNotifications } from './useAwaitingNotifications';
+export { useNotificationSound, useNotificationSoundMigration } from './useNotificationSound';
 export { useNavigateToLogin, useLoginReturn } from './useNavigateToLogin';
 export type { LoadedMessage } from './useChatStream';
 export type { AttachedContext } from './useContext';

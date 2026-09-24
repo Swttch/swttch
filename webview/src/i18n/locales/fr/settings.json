@@ -118,6 +118,27 @@
         "steer": "Orienter"
       }
     },
+    "notifications": {
+      "title": "Notifications",
+      "sound": {
+        "label": "Son",
+        "ariaLabel": "Son de notification",
+        "off": "Désactivé",
+        "description": "Retentit lorsqu'une session termine sa réponse ou s'arrête pour attendre votre confirmation. Sélectionner un son le prévisualise une fois.",
+        "loadingDescription": "Chargement des sons système...",
+        "emptyDescription": "Aucun son système détecté. Sélectionnez Désactivé pour couper les notifications.",
+        "errorDescription": "Impossible de charger les sons système : {{error}}"
+      },
+      "volume": {
+        "label": "Volume",
+        "description": "Le volume du son de notification, de 1 à 10."
+      },
+      "banner": {
+        "label": "Bannière",
+        "description": "Affiche une notification à l'écran lorsque vous regardez ailleurs. Elle n'apparaît pas lorsque vous consultez cette session.",
+        "fadeHint": "La bannière disparaît trop vite ? <action>Modifiez-la ici</action>."
+      }
+    },
     "shortcutInput": {
       "recording": "Appuyez sur une touche…",
       "unset": "Non défini",
@@ -355,18 +376,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "Notifications",
-      "sound": {
-        "label": "Son",
-        "ariaLabel": "Son de notification",
-        "off": "Désactivé",
-        "description": "Son joué lorsqu'une notification de bureau se déclenche. Sélectionner un son le prévisualise une fois.",
-        "loadingDescription": "Chargement des sons système...",
-        "emptyDescription": "Aucun son système détecté. Sélectionnez Désactivé pour couper les notifications.",
-        "errorDescription": "Impossible de charger les sons système : {{error}}"
-      }
-    },
     "permissions": {
       "title": "Autorisations",
       "revokeHint": "Pour révoquer, modifiez les paramètres de votre navigateur.",

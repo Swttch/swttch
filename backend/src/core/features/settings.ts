@@ -78,6 +78,9 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   composerNewlineShortcut: null,
   composerNewlineShortcutCustom: null,
   composerFollowUpBehavior: null,
+  notificationBanner: null,
+  notificationSound: null,
+  notificationSoundVolume: 5,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
   attachEditorContext: true,
@@ -139,6 +142,9 @@ const COMMENT_MAP: Record<string, string> = {
   composerNewlineShortcut: '줄을 바꾸는 키: "shiftEnter" | "enter" | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerNewlineShortcutCustom: 'composerNewlineShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Shift+Enter")',
   composerFollowUpBehavior: '턴이 도는 중에 보낸 메시지의 처리: "queue"(턴이 끝날 때까지 대기) | "steer"(현재 턴을 중단하고 이 메시지로 새 턴 시작). null이면 queue',
+  notificationBanner: '세션이 턴을 마치거나 확인을 기다릴 때, 그 세션을 보고 있지 않으면 화면에 알림 배너를 띄울지. null은 아직 묻지 않았다는 뜻이며, 첫 알림에서 운영체제 권한을 요청하고 그 결과가 여기 기록된다. 알림음은 이 설정과 무관하게 울린다(알림음은 별도 설정)',
+  notificationSound: '세션이 턴을 마치거나 확인을 기다릴 때 낼 소리의 id(LIST_SYSTEM_SOUNDS가 돌려주는 값, 예: "Glass"). null이면 소리를 내지 않는다. 배너와 무관하게 실행된다. 값은 소리를 낼 때마다 여기서 읽으므로 설정을 바꾸면 그 다음 턴부터 바로 적용된다',
+  notificationSoundVolume: '알림음의 음량(1~10, 미설정 시 5). 한 눈금의 절대 크기는 운영체제마다 다르다 — 맥은 1이 원음이고 10이 원음의 10배(afplay 게인), 윈도우와 리눅스는 증폭이 안 되므로 10이 원음이고 1이 그 10분의 1이다',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
@@ -431,6 +437,14 @@ function validateSetting(key: string, value: unknown): string | null {
       }
       break;
     case 'autoOpenDiffOnPermission':
+    // null means "never asked" — the first notification requests OS permission
+    // and writes the answer here, so null has to survive a round trip rather
+    // than being rejected as "not a boolean".
+    case 'notificationBanner':
+      if (value !== null && typeof value !== 'boolean') {
+        return 'notificationBanner must be a boolean or null';
+      }
+      break;
     case 'chatPagination':
     case 'includeNestedSessions':
     case 'softWrap':
@@ -446,6 +460,29 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'uiLanguage':
       if (value !== null && typeof value !== 'string') {
         return 'uiLanguage must be a string or null';
+      }
+      break;
+    // The id of an OS sound as reported by LIST_SYSTEM_SOUNDS, or null for
+    // silence. The set of valid ids is per-machine (macOS aiff, Windows wav,
+    // Linux ogg), so it cannot be enumerated here; an id that no longer exists
+    // surfaces at play time as "Unknown sound id" rather than blocking the save.
+    case 'notificationSound':
+      if (value !== null && typeof value !== 'string') {
+        return 'notificationSound must be a string or null';
+      }
+      break;
+    // How loud, on a 1-10 scale. Out-of-range values are rejected here rather
+    // than clamped, so a typo in the settings file is told about instead of
+    // silently becoming something else. Zero is not a step: silencing the
+    // notification is what choosing no sound is for.
+    case 'notificationSoundVolume':
+      if (
+        typeof value !== 'number' ||
+        !Number.isInteger(value) ||
+        value < 1 ||
+        value > 10
+      ) {
+        return 'notificationSoundVolume must be an integer between 1 and 10';
       }
       break;
     case 'voice': {

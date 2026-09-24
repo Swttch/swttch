@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SoundsApi } from '../SoundsApi';
 import type { BridgeClient } from '../../bridge/BridgeClient';
+import type { ApiConfig } from '../../ClaudeCodeApi';
 import { MessageType } from '@/shared';
 
 function createMockBridge() {
@@ -12,11 +13,13 @@ function createMockBridge() {
 
 describe('SoundsApi', () => {
   let bridge: ReturnType<typeof createMockBridge>;
+  let config: ApiConfig;
   let api: SoundsApi;
 
   beforeEach(() => {
     bridge = createMockBridge();
-    api = new SoundsApi(bridge);
+    config = {};
+    api = new SoundsApi(bridge, () => config);
   });
 
   describe('list()', () => {
@@ -60,6 +63,35 @@ describe('SoundsApi', () => {
       vi.mocked(bridge.request).mockRejectedValueOnce(new Error('scan failed'));
 
       await expect(api.list()).rejects.toThrow('scan failed');
+    });
+  });
+
+  describe('playNotificationSound()', () => {
+    // The request names no sound. Naming one is what let a screen that had read
+    // the preference at mount keep ringing it after the user changed it.
+    it('sends a PLAY_NOTIFICATION_SOUND request carrying no sound name', async () => {
+      vi.mocked(bridge.request).mockResolvedValueOnce({ status: 'ok' });
+
+      await api.playNotificationSound();
+
+      expect(bridge.request).toHaveBeenCalledWith(MessageType.PLAY_NOTIFICATION_SOUND, {});
+    });
+
+    it('names the working directory so a project-scoped choice applies', async () => {
+      config = { workingDir: '/work/project' };
+      vi.mocked(bridge.request).mockResolvedValueOnce({ status: 'ok' });
+
+      await api.playNotificationSound();
+
+      expect(bridge.request).toHaveBeenCalledWith(MessageType.PLAY_NOTIFICATION_SOUND, {
+        workingDir: '/work/project',
+      });
+    });
+
+    it('propagates backend errors', async () => {
+      vi.mocked(bridge.request).mockRejectedValueOnce(new Error('unknown sound'));
+
+      await expect(api.playNotificationSound()).rejects.toThrow('unknown sound');
     });
   });
 

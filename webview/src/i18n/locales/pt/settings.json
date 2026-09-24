@@ -118,6 +118,27 @@
         "steer": "Orientar"
       }
     },
+    "notifications": {
+      "title": "Notificações",
+      "sound": {
+        "label": "Som",
+        "ariaLabel": "Som de Notificação",
+        "off": "Desativado",
+        "description": "Toca quando uma sessão termina a resposta ou para à espera da sua confirmação. Selecionar um som o reproduz uma vez como prévia.",
+        "loadingDescription": "Carregando sons do sistema...",
+        "emptyDescription": "Nenhum som do sistema detectado. Selecione Desativado para silenciar as notificações.",
+        "errorDescription": "Não foi possível carregar os sons do sistema: {{error}}"
+      },
+      "volume": {
+        "label": "Volume",
+        "description": "O quão alto o som de notificação toca, de 1 a 10."
+      },
+      "banner": {
+        "label": "Banner",
+        "description": "Mostra uma notificação na tela enquanto você está olhando para outro lugar. Não aparece enquanto você está vendo aquela sessão.",
+        "fadeHint": "O aviso some rápido demais? <action>Mude aqui</action>."
+      }
+    },
     "shortcutInput": {
       "recording": "Pressione uma tecla…",
       "unset": "Não definido",
@@ -355,18 +376,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "Notificações",
-      "sound": {
-        "label": "Som",
-        "ariaLabel": "Som de Notificação",
-        "off": "Desativado",
-        "description": "Som reproduzido quando uma notificação da área de trabalho é disparada. Selecionar um som o reproduz uma vez como prévia.",
-        "loadingDescription": "Carregando sons do sistema...",
-        "emptyDescription": "Nenhum som do sistema detectado. Selecione Desativado para silenciar as notificações.",
-        "errorDescription": "Não foi possível carregar os sons do sistema: {{error}}"
-      }
-    },
     "permissions": {
       "title": "Permissões",
       "revokeHint": "Para revogar, altere nas configurações do seu navegador.",

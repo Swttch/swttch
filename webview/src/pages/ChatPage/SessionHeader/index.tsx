@@ -8,7 +8,6 @@ import { useMarkSessionRead } from '@/hooks/useMarkSessionRead';
 import { useReportSessionActivity } from '@/hooks/useReportSessionActivity';
 import { useSessionContext } from '@/contexts/SessionContext';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
-import { useNotificationSound } from '@/notifications';
 
 interface SessionHeaderProps {
   /**
@@ -24,12 +23,10 @@ interface SessionHeaderProps {
 export function SessionHeader({ isAwaitingUser }: SessionHeaderProps) {
   const { currentSession, currentSessionId } = useSessionContext();
   const { isStreaming, error } = useChatStreamContext();
-  const { selection } = useNotificationSound();
   useDocumentTitle(
     currentSession?.title || null,
     currentSessionId === null,
     isStreaming,
-    selection,
     error,
     isAwaitingUser,
   );

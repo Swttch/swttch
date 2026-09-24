@@ -118,6 +118,27 @@
         "steer": "Steer"
       }
     },
+    "notifications": {
+      "title": "Notifications",
+      "sound": {
+        "label": "Sound",
+        "ariaLabel": "Notification Sound",
+        "off": "Off",
+        "description": "Plays when a session finishes its response or stops to wait for your confirmation. Choosing a sound previews it once.",
+        "loadingDescription": "Loading system sounds...",
+        "emptyDescription": "No system sounds detected. Select Off to silence notifications.",
+        "errorDescription": "Couldn't load system sounds: {{error}}"
+      },
+      "volume": {
+        "label": "Volume",
+        "description": "How loud the notification sound plays, from 1 to 10."
+      },
+      "banner": {
+        "label": "Banner",
+        "description": "Shows a notification on screen while you are looking elsewhere. It does not appear while you are viewing that session.",
+        "fadeHint": "Banner disappearing too fast? <action>Change it here</action>."
+      }
+    },
     "shortcutInput": {
       "recording": "Press a key…",
       "unset": "Not set",
@@ -355,18 +376,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "Notifications",
-      "sound": {
-        "label": "Sound",
-        "ariaLabel": "Notification Sound",
-        "off": "Off",
-        "description": "Sound played when a desktop notification fires. Selecting a sound previews it once.",
-        "loadingDescription": "Loading system sounds...",
-        "emptyDescription": "No system sounds detected. Select Off to silence notifications.",
-        "errorDescription": "Couldn't load system sounds: {{error}}"
-      }
-    },
     "permissions": {
       "title": "Permissions",
       "revokeHint": "To revoke, change in your browser settings.",

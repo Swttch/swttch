@@ -491,6 +491,30 @@ if ($dialog.ShowDialog() -eq 'OK') {
     // disabled without an IDE attached, so this is only a backstop.
   }
 
+  async showNotification(_params: {
+    title: string;
+    body: string;
+    workingDir?: string;
+    panelId?: string;
+  }): Promise<{ shown: boolean; ideFocused: boolean; activateBundleId?: string }> {
+    // no-op: browser mode raises notifications via the webview's own
+    // Notification API, so the backend is never asked to show one. Report
+    // ideFocused=true so the caller never raises an OS notification here.
+    // activateBundleId stays undefined: there is no IDE to bring forward, and
+    // the browser's own notification already focuses its tab when clicked.
+    return { shown: false, ideFocused: true, activateBundleId: undefined };
+  }
+
+  async focusSession(_params: { panelId?: string }): Promise<void> {
+    // Nothing for the backend to raise: in browser mode the banner was drawn by
+    // the browser itself, from the webview's own Notification API, and clicking
+    // one already focuses the tab that created it. The backend is never the one
+    // that raised it, so it is never the one asked to bring it back.
+    //
+    // Not a gap in this environment's abilities — the work is simply done
+    // before it ever reaches here.
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     // The terminal is opened *in* this project, so its choice is resolved per
     // project too — global still applies when the project sets none (issue #7).

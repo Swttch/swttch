@@ -134,6 +134,13 @@
             displayType="STICKY_BALLOON"
             displayName="JCEF Runtime"/>
 
+        <!-- Notification group for "agent needs your attention" / "response complete"
+             events raised when the IDE window is not focused (see ClaudeCodePanel). -->
+        <notificationGroup
+            id="claude-code-gui.attention"
+            displayType="BALLOON"
+            displayName="Claude Code Attention"/>
+
         <!-- Tab icon badge for unread streaming completions -->
         <fileIconPatcher
             implementation="com.github.yhk1038.claudecodegui.editor.ClaudeCodeFileIconPatcher"/>

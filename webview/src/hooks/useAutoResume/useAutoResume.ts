@@ -19,8 +19,8 @@ import { SettingKey } from '@/types/settings';
 import { useAutoResumeOverride } from '@/contexts/AutoResumeOverrideContext';
 import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { useAccounts } from '@/hooks/queries/useAccounts';
-import { notify } from '@/notifications';
-import { NotificationKind, SOUND_OFF } from '@/notifications/types';
+import { showNotificationBanner } from '@/notifications';
+import { NotificationKind } from '@/notifications/types';
 import toast from 'react-hot-toast';
 import { i18n } from '@/i18n';
 import { ensureSponsor } from '@/utils/ensureSponsor';
@@ -138,6 +138,9 @@ export function useAutoResume(): UseAutoResumeResult {
   // Modeled on Cursor's thinking/fast-mode: the global setting seeds each
   // session, but a session can flip it on the fly without touching the global.
   const globalDefault = settings[SettingKey.AUTO_RESUME_ON_LIMIT] ?? false;
+  // Anything other than an explicit `false` counts as on, so a settings file
+  // written before this key existed still shows the countdown banner.
+  const bannerEnabled = settings[SettingKey.NOTIFICATION_BANNER] !== false;
   const autoResumeEnabled = getOverride(currentSessionId) ?? globalDefault;
 
   // Reservations come from ScheduledMessagesContext — the SAME list the
@@ -331,7 +334,7 @@ export function useAutoResume(): UseAutoResumeResult {
     if (!reservationsError && !reservationsLoading && messages.length > 0 && !rawLimit && scheduled) cancelReservation(false);
   }, [reservationsError, reservationsLoading, messages, rawLimit, scheduled, cancelReservation]);
 
-  // ── Countdown tick + one-shot browser notification at reset ─────────────────
+  // ── Countdown tick + one-shot banner at reset ──────────────────────────────
   const resetsAtMs = useMemo(
     () => (scheduled ? Date.parse(scheduled.sendAt) - 30_000 : NaN),
     [scheduled],
@@ -356,9 +359,15 @@ export function useAutoResume(): UseAutoResumeResult {
     }
     if (countdownSeconds !== null && !notifiedRef.current) {
       notifiedRef.current = true;
-      notify(NotificationKind.AUTO_RESUME_COUNTDOWN, { sessionTitle: null }, SOUND_OFF);
+      // Banner only, and only if the user left banners on. This one has never
+      // carried a sound: it announces something that is about to start rather
+      // than a turn that just ended, and it arrives while the user is by
+      // definition not being waited on.
+      if (bannerEnabled) {
+        showNotificationBanner(NotificationKind.AUTO_RESUME_COUNTDOWN, { sessionTitle: null });
+      }
     }
-  }, [scheduled, countdownSeconds]);
+  }, [scheduled, countdownSeconds, bannerEnabled]);
 
   const action: AutoResumeAction | null = useMemo(() => {
     // The button shows for everyone; sponsor gating happens on click (see

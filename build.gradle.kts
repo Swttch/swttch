@@ -402,10 +402,12 @@ tasks {
         inputs.file(file("backend/dist/backend.mjs"))
         inputs.file(file("backend/dist/win-job-wrapper.ps1"))
         inputs.file(file("backend/dist/win-bash-env.sh"))
+        inputs.dir(file("backend/dist/vendor"))
         outputs.dir(file("src/main/resources/webview"))
         outputs.file(file("src/main/resources/backend/backend.mjs"))
         outputs.file(file("src/main/resources/backend/win-job-wrapper.ps1"))
         outputs.file(file("src/main/resources/backend/win-bash-env.sh"))
+        outputs.dir(file("src/main/resources/backend/vendor"))
         doLast {
             // WebView 정적 파일 동기화 (stale 파일 방지를 위해 기존 디렉토리 삭제 후 복사)
             file("src/main/resources/webview").deleteRecursively()
@@ -421,6 +423,27 @@ tasks {
                 from(file("backend/dist/win-bash-env.sh"))
                 into(file("src/main/resources/backend"))
             }
+            // Desktop-notification executables, shipped in a `vendor/` directory beside
+            // backend.mjs because that is where notifier.ts resolves them (see
+            // backend/src/system-notifications/vendor/README.md). Wiped first so a file
+            // dropped upstream does not linger. The macOS bundle's executable bit has to
+            // survive the copy — without it the bundle installs but cannot run.
+            // Keep all three copy sites (backend/esbuild.mjs, here, standalone tgz) in step.
+            // This only gets the files INTO the plugin jar. Getting them onto a user's
+            // machine is a fourth step — PluginResourceExtractor.extractBackend — which
+            // unpacks the whole `/backend/` tree and so needs no entry per file. It used
+            // to copy two names instead, and this directory reached nobody who installed
+            // from the Marketplace.
+            file("src/main/resources/backend/vendor").deleteRecursively()
+            copy {
+                from(file("backend/dist/vendor"))
+                into(file("src/main/resources/backend/vendor"))
+            }
+            // The bundle directory is named after the product, not after upstream's
+            // binary; setExecutable on a path that does not exist returns false and
+            // says nothing, so a stale name here ships a bundle that cannot run.
+            file("src/main/resources/backend/vendor/Swttch Notifier.app/Contents/MacOS/terminal-notifier")
+                .setExecutable(true, false)
         }
     }
 

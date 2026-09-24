@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import {
   NotificationKind,
-  notify,
-  type SoundSelection,
+  playNotificationSound,
+  shouldNotifyForBackgroundEvent,
+  showNotificationBanner,
 } from '@/notifications';
 import { APP_NAME } from '@/config/app';
 import { SessionActivity, resolveSessionActivity } from '@/shared';
@@ -23,10 +24,21 @@ import {
  *
  * Also swaps the browser favicon to an unread variant when streaming ends
  * while the tab is hidden, and restores it when the tab becomes visible. In
- * the same condition, fires an OS desktop notification (no-op in JCEF, where
- * the Notification API is unavailable). When the stream ends with an error,
- * fires STREAM_ERROR instead of SESSION_COMPLETE so the user can tell at a
- * glance whether the response succeeded.
+ * the same condition, raises the desktop notification banner. When the stream
+ * ends with an error, the banner says STREAM_ERROR instead of SESSION_COMPLETE
+ * so the user can tell at a glance whether the response succeeded.
+ *
+ * The notification SOUND is not part of that condition. It announces that the
+ * turn just ended, which is worth hearing while watching the session too, so it
+ * plays on every streaming-end transition regardless of where the user is
+ * looking and regardless of whether the banner is allowed. Which sound that is
+ * is not decided here either — the backend reads the saved preference when it
+ * plays it, so this hook cannot ring a stale one.
+ *
+ * Nor does this hook know whether the user wants banners. It reports only that
+ * the user is elsewhere; the backend reads that switch as the request lands.
+ * That is why nothing here needs re-reading when the setting changes in an
+ * overlay drawn on top of this very screen.
  *
  * This hook owns the favicon outright. Every path that changes it lives here,
  * so the one that runs last is decided by the order the effects are declared
@@ -39,7 +51,6 @@ import {
  *   null, the cached tab title is preserved (mid-load protection: avoids flashing "Claude Code"
  *   while EditorTabStateService restores the real title).
  * @param isStreaming - Whether a Claude response is currently streaming.
- * @param soundSelection - The user's notification-sound preference (see `useNotificationSound`).
  * @param error - The current stream error (or null) from `useChatStreamContext`.
  * @param isAwaitingUser - Whether the CLI has stopped and is waiting for the user to answer
  *   a tool permission, a plan approval, or an AskUserQuestion card. The turn has not ended,
@@ -49,7 +60,6 @@ export function useDocumentTitle(
   title: string | null,
   isResetSession: boolean,
   isStreaming: boolean,
-  soundSelection: SoundSelection,
   error: Error | null,
   isAwaitingUser: boolean,
 ) {
@@ -58,14 +68,10 @@ export function useDocumentTitle(
   // Keep latest values in refs so the streaming-end effect always sees them
   // without rebinding on every render.
   const titleRef = useRef(title);
-  const soundSelectionRef = useRef(soundSelection);
   const errorRef = useRef(error);
   useEffect(() => {
     titleRef.current = title;
   }, [title]);
-  useEffect(() => {
-    soundSelectionRef.current = soundSelection;
-  }, [soundSelection]);
   useEffect(() => {
     errorRef.current = error;
   }, [error]);
@@ -144,15 +150,31 @@ export function useDocumentTitle(
     return () => stopWorkingFavicon();
   }, [isStreaming, isAwaitingUser]);
 
-  // Detect streaming end while tab is hidden → show unread favicon + desktop notification
+  // The end of a turn, told twice over.
+  //
+  // The sound goes first and goes out unconditionally: it says "that just
+  // finished", which is as true for someone watching the response land as for
+  // someone who walked away. It used to hang off the end of the banner, so a
+  // visible tab — the one case where the user is definitely there to hear it —
+  // was also the case where nothing played.
+  //
+  // The unread badge and the banner stay behind the "is the user elsewhere"
+  // check, because both of them exist to be found later. The banner is
+  // additionally the user's to switch off; the sound is not covered by that
+  // switch, and has its own Off in the sound list.
+  //
+  // In JCEF the IDE host focus-gates the banner itself (see
+  // shouldNotifyForBackgroundEvent).
   useEffect(() => {
-    if (!isStreaming && wasStreamingRef.current && document.hidden) {
-      setUnreadFavicon();
-      notify(
-        errorRef.current ? NotificationKind.STREAM_ERROR : NotificationKind.SESSION_COMPLETE,
-        { sessionTitle: titleRef.current },
-        soundSelectionRef.current,
-      );
+    if (!isStreaming && wasStreamingRef.current) {
+      playNotificationSound();
+      if (shouldNotifyForBackgroundEvent()) {
+        setUnreadFavicon();
+        void showNotificationBanner(
+          errorRef.current ? NotificationKind.STREAM_ERROR : NotificationKind.SESSION_COMPLETE,
+          { sessionTitle: titleRef.current },
+        );
+      }
     }
     wasStreamingRef.current = isStreaming;
   }, [isStreaming]);

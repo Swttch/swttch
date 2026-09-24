@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "预约的任务将在30秒后恢复。"
-  }
+  },
+  "openSession": "打开会话"
 }

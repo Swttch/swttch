@@ -3,6 +3,7 @@ package com.github.yhk1038.claudecodegui.services
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
+import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.PluginResourceExtractor
 import com.github.yhk1038.claudecodegui.bridge.RpcWebSocketClient
 import com.github.yhk1038.claudecodegui.bridge.WslPathResolver
@@ -293,6 +294,23 @@ class NodeBackendService : Disposable {
                 any()?.requiresRestart() ?: run { warn("requiresRestart"); true }
 
             override suspend fun getIdeRoot(workingDir: String?): String? = basePath.ifBlank { null }
+
+            override suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome {
+                // Route to the originating panel so its "Open session" action returns
+                // to the right tab; fall back to any panel when the id is unknown
+                // (e.g. the tab was closed between send and completion).
+                val handler = panelId?.let { handlers[it] } ?: any()
+                return handler?.showNotification(title, body, panelId)
+                    ?: run { warn("showNotification"); NotificationOutcome(shown = false, ideFocused = true) }
+            }
+
+            override suspend fun focusSession(panelId: String?) {
+                // Same routing as showNotification: back to the panel that raised
+                // the banner, or any panel when its tab has since been closed —
+                // the user still asked to come back to this IDE.
+                val handler = panelId?.let { handlers[it] } ?: any()
+                handler?.focusSession(panelId) ?: warn("focusSession")
+            }
         }
 
         @Synchronized

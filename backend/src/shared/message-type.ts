@@ -554,8 +554,20 @@ export enum MessageType {
   // -- System sounds --
   /** List available system notification sounds. */
   LIST_SYSTEM_SOUNDS = 'LIST_SYSTEM_SOUNDS',
-  /** Play a system notification sound. */
+  /** Play one named system sound, carrying { soundId }. Used for the settings preview, where the point is to hear the sound the user is pointing at right now. inbound webview->backend */
   PLAY_SYSTEM_SOUND = 'PLAY_SYSTEM_SOUND',
+  /** Play the notification sound, carrying { workingDir? } and NO sound name. The backend reads the `notificationSound` plugin setting when the request arrives, so every screen rings whatever is saved at that moment instead of whatever it happened to read when it mounted. inbound webview->backend */
+  PLAY_NOTIFICATION_SOUND = 'PLAY_NOTIFICATION_SOUND',
+
+  // -- Host-native desktop notifications --
+  /** Ask the host (IDE) to raise a native desktop notification, carrying { title, body, workingDir?, panelId? }. inbound webview→backend */
+  SHOW_NOTIFICATION = 'SHOW_NOTIFICATION',
+  /** Tell the IDE that a desktop notification's banner was clicked, carrying { panelId? }, so it raises that window and reveals that session. Node→Kotlin */
+  FOCUS_SESSION = 'FOCUS_SESSION',
+  /** Ask whether the OS keeps our banners on screen: replies { persistence: 'persistent' | 'transient' | 'unknown' }. inbound webview→backend */
+  GET_BANNER_PERSISTENCE = 'GET_BANNER_PERSISTENCE',
+  /** Open the OS settings page where the banner-persistence switch lives. inbound webview→backend */
+  OPEN_NOTIFICATION_SETTINGS = 'OPEN_NOTIFICATION_SETTINGS',
 
   // -- Native drag & drop --
   /** Flush buffered native-drop entries for the active drag. */

@@ -118,6 +118,27 @@
         "steer": "引導"
       }
     },
+    "notifications": {
+      "title": "通知",
+      "sound": {
+        "label": "音效",
+        "ariaLabel": "通知音效",
+        "off": "關閉",
+        "description": "工作階段完成回覆或停下來等待你確認時播放。選擇音效時會試播一次。",
+        "loadingDescription": "正在載入系統音效...",
+        "emptyDescription": "未偵測到系統音效。選擇「關閉」以將通知靜音。",
+        "errorDescription": "無法載入系統音效:{{error}}"
+      },
+      "volume": {
+        "label": "音量",
+        "description": "音效的大小，從 1 到 10。"
+      },
+      "banner": {
+        "label": "橫幅",
+        "description": "當你在看別處時，於畫面顯示通知。正在檢視該工作階段時不會出現。",
+        "fadeHint": "橫幅消失太快？<action>在這裡</action>變更。"
+      }
+    },
     "shortcutInput": {
       "recording": "請按鍵…",
       "unset": "未設定",
@@ -351,18 +372,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "通知",
-      "sound": {
-        "label": "音效",
-        "ariaLabel": "通知音效",
-        "off": "關閉",
-        "description": "桌面通知觸發時播放的音效。選擇音效時會試播一次。",
-        "loadingDescription": "正在載入系統音效...",
-        "emptyDescription": "未偵測到系統音效。選擇「關閉」以將通知靜音。",
-        "errorDescription": "無法載入系統音效:{{error}}"
-      }
-    },
     "permissions": {
       "title": "權限",
       "revokeHint": "如需撤銷,請在瀏覽器設定中變更。",

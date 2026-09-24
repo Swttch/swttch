@@ -44,6 +44,25 @@ describe('resolvePanelId', () => {
       vi.spyOn(crypto, 'randomUUID').mockReturnValue(GEN_UUID_1);
       expect(resolvePanelId()).toBe(GEN_UUID_1);
     });
+
+    /**
+     * The URL is not a place the id can be left. The IDE opens the page at
+     * `/sessions/new?…&panelId=…`, the first message creates a session, and
+     * `navigateToSession` rebuilds the URL out of `workingDir` and `rootDir`
+     * alone. Reading it again after that point finds nothing and mints a
+     * stranger, so the panel would be known to the backend under the id it
+     * connected with and to everything else under another one.
+     */
+    it('keeps the id after navigation has taken it off the URL', () => {
+      setSearch('/sessions/new?panelId=jcef-uuid&workingDir=/repo');
+      expect(resolvePanelId()).toBe('jcef-uuid');
+      const uuidSpy = vi.spyOn(crypto, 'randomUUID');
+
+      setSearch('/sessions/abc?workingDir=/repo');
+
+      expect(resolvePanelId()).toBe('jcef-uuid');
+      expect(uuidSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('browser (window.open copies URL + sessionStorage)', () => {

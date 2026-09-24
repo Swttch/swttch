@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "La tarea programada se reanudará en 30 segundos."
-  }
+  },
+  "openSession": "Abrir sesión"
 }

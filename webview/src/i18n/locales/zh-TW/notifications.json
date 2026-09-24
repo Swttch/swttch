@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "預約的工作將在30秒後恢復。"
-  }
+  },
+  "openSession": "開啟工作階段"
 }

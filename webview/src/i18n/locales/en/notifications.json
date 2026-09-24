@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "Scheduled task resumes in 30 seconds."
-  }
+  },
+  "openSession": "Open session"
 }

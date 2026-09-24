@@ -17,6 +17,25 @@ import java.io.File
 import java.io.InputStreamReader
 
 /**
+ * Result of an RpcHandler.showNotification call.
+ *
+ * - [shown]: the IDE balloon was actually displayed (false when suppressed
+ *   because the user is already viewing the session).
+ * - [ideFocused]: the IDE window was focused at the time. When false and [shown]
+ *   is true, the backend additionally raises a real OS notification, since an
+ *   in-IDE balloon is hidden behind other apps.
+ * - [activateBundleId]: the macOS bundle identifier of this IDE, which the
+ *   backend hands to the macOS notifier so that clicking the banner brings the
+ *   IDE forward. Null on every host but macOS, where the concept does not exist,
+ *   and null when no panel answered the call at all.
+ */
+data class NotificationOutcome(
+    val shown: Boolean,
+    val ideFocused: Boolean,
+    val activateBundleId: String? = null,
+)
+
+/**
  * Manages the Node.js backend process lifecycle.
  *
  * Responsibilities:
@@ -304,6 +323,36 @@ class NodeProcessManager(
          * traversal in the working-directory dropdown.
          */
         suspend fun getIdeRoot(workingDir: String?): String?
+        /**
+         * Raise a host-native desktop notification for an "attention needed" /
+         * "response complete" event. Called when the webview cannot raise its own
+         * browser notification (JCEF has no Notification API). [panelId] identifies
+         * the originating session tab so the request is routed to the right panel
+         * and its "Open session" action returns there.
+         *
+         * Returns whether the IDE balloon was actually shown (vs suppressed because
+         * the user is already viewing the session) and whether the IDE window is
+         * focused — the backend uses the latter to decide whether to additionally
+         * raise a real OS notification (an IDE balloon is hidden when the IDE is in
+         * the background).
+         */
+        suspend fun showNotification(title: String, body: String, panelId: String?): NotificationOutcome
+
+        /**
+         * Bring this IDE forward and reveal the session a clicked notification
+         * belongs to.
+         *
+         * Called when the backend is told a desktop banner was clicked. The
+         * backend cannot do this itself: it does not know which of several open
+         * windows raised the banner, and the macOS notifier's own "activate app
+         * by bundle identifier" picks whichever window the OS lists first — the
+         * wrong one as soon as a user has two projects open, and no window at
+         * all for a sandbox IDE macOS does not recognise as that app.
+         *
+         * [panelId] names the chat panel to reveal, absent when the notification
+         * did not belong to one.
+         */
+        suspend fun focusSession(panelId: String?)
     }
 
     /**

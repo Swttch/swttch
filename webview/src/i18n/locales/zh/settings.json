@@ -118,6 +118,27 @@
         "steer": "引导"
       }
     },
+    "notifications": {
+      "title": "通知",
+      "sound": {
+        "label": "提示音",
+        "ariaLabel": "通知提示音",
+        "off": "关闭",
+        "description": "会话完成回复或停下来等待你确认时播放。选择一个提示音会试听一次。",
+        "loadingDescription": "正在加载系统提示音...",
+        "emptyDescription": "未检测到系统提示音。选择“关闭”以静音通知。",
+        "errorDescription": "无法加载系统提示音:{{error}}"
+      },
+      "volume": {
+        "label": "音量",
+        "description": "提示音的大小，从 1 到 10。"
+      },
+      "banner": {
+        "label": "横幅",
+        "description": "当你在看别处时，在屏幕上显示通知。正在查看该会话时不会出现。",
+        "fadeHint": "横幅消失太快？<action>在这里</action>更改。"
+      }
+    },
     "shortcutInput": {
       "recording": "请按键…",
       "unset": "未设置",
@@ -351,18 +372,6 @@
     }
   },
   "browser": {
-    "notifications": {
-      "title": "通知",
-      "sound": {
-        "label": "提示音",
-        "ariaLabel": "通知提示音",
-        "off": "关闭",
-        "description": "桌面通知触发时播放的提示音。选择一个提示音会试听一次。",
-        "loadingDescription": "正在加载系统提示音...",
-        "emptyDescription": "未检测到系统提示音。选择“关闭”以静音通知。",
-        "errorDescription": "无法加载系统提示音:{{error}}"
-      }
-    },
     "permissions": {
       "title": "权限",
       "revokeHint": "如需撤销,请在浏览器设置中更改。",

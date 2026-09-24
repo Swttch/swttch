@@ -113,7 +113,15 @@ vi.mock('../contexts/ScheduledMessagesContext', () => ({
   useScheduledMessages: () => ({ reservations: resumeReservations, hasError: resumeReservationsError, isLoading: false, refetch: refetchReservationsMock }),
 }));
 vi.mock('../utils/ensureSponsor', () => ({ ensureSponsor: vi.fn().mockResolvedValue(true) }));
-vi.mock('../notifications', () => ({ notify: vi.fn() }));
+// Only the two functions that reach the OS are stubbed. The rest of the module
+// (SOUND_OFF, the templates, the visibility gate, …) is kept, because a
+// whole-factory mock would delete every other export and this suite renders
+// components that read them.
+vi.mock('../notifications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../notifications')>()),
+  playNotificationSound: vi.fn(),
+  showNotificationBanner: vi.fn(),
+}));
 vi.mock('../api/ClaudeCodeApi', () => ({ api: {}, getApi: () => ({}), ClaudeCodeApi: class {} }));
 
 function TestAutoResumeComponent() {

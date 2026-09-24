@@ -20,6 +20,7 @@ import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
+import { useNotificationSoundMigration } from './hooks/useNotificationSound';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
 import { OPEN_TUNNEL_EVENT, OPEN_ASSETS_EVENT } from './pages/ChatPage/SessionHeader/dock/actions';
 import { isDev } from './config/environment';
@@ -38,6 +39,10 @@ function AppContent() {
   useUsageStreamRefresh();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.
   useSettingsOverlayNavigation();
+  // Carries a notification sound picked before the setting moved into the
+  // plugin settings file. Runs here, not in the settings row, so a user who
+  // never opens settings keeps the sound they already chose.
+  useNotificationSoundMigration();
   // The IDE's "Rename Session..." tab menu asks us to prompt; it cannot draw a
   // usable field over the browser itself.
   const tabRename = useTabRenamePrompt();

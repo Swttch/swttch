@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { SOUND_OFF } from '@/notifications';
 import {
   FAVICON_DEFAULT,
   hasUnreadFavicon,
@@ -76,7 +75,7 @@ describe('useDocumentTitle – waiting for the user', () => {
   function renderAwaiting(initial: { streaming: boolean; awaiting: boolean }) {
     return renderHook(
       ({ streaming, awaiting }) =>
-        useDocumentTitle('Session A', false, streaming, SOUND_OFF, null, awaiting),
+        useDocumentTitle('Session A', false, streaming, null, awaiting),
       { initialProps: initial },
     );
   }

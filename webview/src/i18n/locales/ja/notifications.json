@@ -16,5 +16,6 @@
   },
   "autoResumeCountdown": {
     "body": "予約したタスクは30秒後に再開されます。"
-  }
+  },
+  "openSession": "セッションを開く"
 }
