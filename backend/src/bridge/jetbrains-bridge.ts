@@ -29,10 +29,35 @@ export type NotificationHandler = (method: string, params: Record<string, unknow
 interface PendingRequest {
   resolve: (value: Record<string, unknown>) => void;
   reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  /** Absent for the methods below, which have no deadline to run out. */
+  timer?: ReturnType<typeof setTimeout>;
+  /** The client the request went to, so its disconnect can settle the promise. */
+  client: WebSocket;
+  method: string;
 }
 
 const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Methods whose answer arrives only after a person has finished with a dialog.
+ *
+ * These get no deadline. The IDE opens a modal file chooser and returns nothing
+ * until the user picks something, and a person browsing for a file routinely
+ * takes longer than the timeout the other methods live under. When the deadline
+ * fired we dropped the pending request, so the paths Kotlin sent back on OK
+ * arrived at a caller that no longer existed and the attachment never appeared
+ * — the chooser had opened and closed normally, which is what made it look like
+ * the picker worked and the UI simply ignored it (#481).
+ *
+ * No timeout rather than a longer one: any number we pick here is a guess about
+ * how long a person is allowed to take, and being wrong brings the same bug
+ * back. What actually ends these requests is the IDE answering or the client
+ * disconnecting, and both are handled.
+ */
+const HUMAN_INTERACTIVE_METHODS = new Set<string>([
+  MessageType.PICK_FILES,
+  MessageType.SAVE_FILE,
+]);
 
 /**
  * Bridge that communicates with IDE hosts via WebSocket JSON-RPC.
@@ -204,6 +229,18 @@ export class JetBrainsBridge implements Bridge {
       this.rpcClients.delete(ws);
       this.clientRoots.delete(ws);
       this.reportHostCount();
+
+      // Settle whatever this client still owed us. The deadline used to do this
+      // for every method, but the ones that wait on a person no longer carry
+      // one, so a closed IDE would otherwise leave those callers waiting for an
+      // answer that can never arrive.
+      for (const [id, pending] of this.pendingRequests) {
+        if (pending.client !== ws) continue;
+        clearTimeout(pending.timer);
+        this.pendingRequests.delete(id);
+        pending.reject(new Error(`IDE disconnected before answering ${pending.method} (id=${id})`));
+      }
+
       console.error('[node-backend]', 'RPC client disconnected');
     });
   }
@@ -243,12 +280,14 @@ export class JetBrainsBridge implements Bridge {
 
       const id = `rpc-${++this.idCounter}`;
 
-      const timer = setTimeout(() => {
-        this.pendingRequests.delete(id);
-        reject(new Error(`JSON-RPC request ${method} (id=${id}) timed out after ${REQUEST_TIMEOUT_MS}ms`));
-      }, REQUEST_TIMEOUT_MS);
+      const timer = HUMAN_INTERACTIVE_METHODS.has(method)
+        ? undefined
+        : setTimeout(() => {
+            this.pendingRequests.delete(id);
+            reject(new Error(`JSON-RPC request ${method} (id=${id}) timed out after ${REQUEST_TIMEOUT_MS}ms`));
+          }, REQUEST_TIMEOUT_MS);
 
-      this.pendingRequests.set(id, { resolve, reject, timer });
+      this.pendingRequests.set(id, { resolve, reject, timer, client, method });
 
       const request: JsonRpcRequest = {
         jsonrpc: '2.0',
