@@ -34,9 +34,11 @@ const {
   macNotifierNeedsInstall,
   readBundleVersion,
   resetMacNotifierCache,
+  resetWindowsAppIdCache,
   showOsNotification,
   vendorDir,
   windowsNotifierExe,
+  windowsNotifierIcon,
   WINDOWS_APP_ID,
 } = await import('../notifier');
 
@@ -79,7 +81,14 @@ beforeEach(() => {
   spawnSyncMock.mockClear();
   spawnMock.mockImplementation(() => spawnsFine());
   resetMacNotifierCache();
+  resetWindowsAppIdCache();
 });
+
+/** The one spawnSync call that registers our AppUserModelID with Windows. */
+function isAppIdInstall(call: unknown[]): boolean {
+  const args = call[1] as readonly string[] | undefined;
+  return args?.[0] === '-install';
+}
 
 afterEach(() => {
   Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
@@ -156,8 +165,12 @@ describe('buildMacNotifierArgs', () => {
   });
 });
 
+/**
+ * Every expectation here is pinned to a measurement taken on Windows 11 build
+ * 26200.9457 against the vendored ntfytoast.exe, not to its help text.
+ */
 describe('buildWindowsNotifierArgs', () => {
-  it('always registers an AppUserModelID', () => {
+  it('always names the sending application', () => {
     const args = buildWindowsNotifierArgs({ title: 't', body: 'b' });
     expect(args.slice(args.indexOf('-appID'), args.indexOf('-appID') + 2)).toEqual([
       '-appID',
@@ -165,8 +178,29 @@ describe('buildWindowsNotifierArgs', () => {
     ]);
   });
 
-  it('maps title, body and groupId onto ntfytoast flags', () => {
-    expect(buildWindowsNotifierArgs({ title: "It's done", body: 'all good', groupId: 'panel-7' })).toEqual([
+  /**
+   * WINDOWS_APP_ID contains a space ("Swttch Notifier"). Node's spawn does not
+   * go through a shell, so argv entries are passed to ntfytoast verbatim and a
+   * space inside one does not split it into two — but that has to hold for
+   * WHATEVER the branded name happens to be, not just be true by accident of
+   * this particular string, so it is asserted directly rather than folded into
+   * the array-equality check above.
+   */
+  it('keeps the app id as one argv entry even though it contains a space', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b' });
+    expect(WINDOWS_APP_ID).toContain(' ');
+    expect(args[args.indexOf('-appID') + 1]).toBe(WINDOWS_APP_ID);
+  });
+
+  it('maps title, body, group and button onto ntfytoast flags', () => {
+    expect(
+      buildWindowsNotifierArgs({
+        title: "It's done",
+        body: 'all good',
+        groupId: 'panel-7',
+        clickActionTitle: 'Open session',
+      }),
+    ).toEqual([
       '-t',
       "It's done",
       '-m',
@@ -175,13 +209,93 @@ describe('buildWindowsNotifierArgs', () => {
       WINDOWS_APP_ID,
       '-id',
       'panel-7',
+      '-b',
+      'Open session',
+      '-p',
+      windowsNotifierIcon(),
+      '-silent',
+      '-d',
+      'long',
     ]);
   });
 
-  it('drops the macOS-only click button, which ntfytoast reports by exit code', () => {
-    const args = buildWindowsNotifierArgs({ title: 't', body: 'b', clickActionTitle: 'Open' });
-    expect(args).not.toContain('-action');
-    expect(args).not.toContain('Open');
+  /**
+   * The button is not decoration. A toast whose only target is its body reports
+   * a body click as code 3 — indistinguishable from nobody having touched it —
+   * whereas the button press arrives as code 4 with the label on stdout, which
+   * is what isClickToFocus reads to take the user back to their session.
+   */
+  it('carries the translated click button the caller supplies', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b', clickActionTitle: 'Open session' });
+    expect(args[args.indexOf('-b') + 1]).toBe('Open session');
+  });
+
+  it('omits the button when the caller has nothing to raise', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b' });
+    expect(args).not.toContain('-b');
+    expect(args).not.toContain('-id');
+  });
+
+  /**
+   * Windows takes the toast's picture from the notification rather than from
+   * the sending application, so an unpassed icon means the generic Windows one
+   * and nothing about the banner says it came from us.
+   */
+  it('dresses the toast in the icon shipped beside the notifier', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b' });
+    expect(args[args.indexOf('-p') + 1]).toBe(windowsNotifierIcon());
+    expect(existsSync(windowsNotifierIcon())).toBe(true);
+  });
+
+  // What ntfytoast does with a picture path that leads nowhere is not measured,
+  // and a toast wearing the default icon still calls the user back — a toast
+  // that failed to appear does not.
+  it('omits the picture when the file is not there', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b' }, '/nowhere/absent.png');
+    expect(args).not.toContain('-p');
+    expect(args).not.toContain('/nowhere/absent.png');
+  });
+
+  /**
+   * The sound belongs to the webview, which rings the one the user chose
+   * through the backend. Without -silent, Windows adds its own on top and the
+   * user hears two, one of them not theirs. The browser banner is silenced for
+   * exactly the same reason.
+   */
+  it('silences ntfytoast, since the sound is played separately', () => {
+    expect(buildWindowsNotifierArgs({ title: 't', body: 'b' })).toContain('-silent');
+  });
+
+  /**
+   * 25.5 seconds instead of the default 7. This banner exists to reach someone
+   * who walked away from the machine.
+   */
+  it('keeps the toast up for the long duration rather than the default', () => {
+    const args = buildWindowsNotifierArgs({ title: 't', body: 'b' });
+    expect(args.slice(args.indexOf('-d'), args.indexOf('-d') + 2)).toEqual(['-d', 'long']);
+  });
+
+  /**
+   * -persistent does hold the toast until it is dismissed, and then ends the
+   * process with code -1 (Failed) after 60 seconds. That is an ordinary ending
+   * we would have to log as a failure, which is how a real failure stops being
+   * noticed.
+   */
+  it('never asks for a persistent toast, which ends in a failure code', () => {
+    expect(buildWindowsNotifierArgs({ title: 't', body: 'b' })).not.toContain('-persistent');
+  });
+
+  // ntfytoast takes the two named durations and no count of seconds, so the
+  // macOS click window has nowhere to go here.
+  it('drops the click timeout, which ntfytoast takes in no form', () => {
+    const args = buildWindowsNotifierArgs({
+      title: 't',
+      body: 'b',
+      clickActionTitle: 'Open session',
+      clickTimeoutSeconds: 600,
+    });
+    expect(args).not.toContain('-timeout');
+    expect(args).not.toContain('600');
   });
 });
 
@@ -413,6 +527,17 @@ describe('notifier exit codes', () => {
   // an error for them would put a line in the log every time a banner expired.
   it.each([0, 1, 2, 3, 4, 5])('win32: stays quiet for user-outcome code %i', (code) => {
     expect(launchAndClose('win32', code)).toEqual([]);
+  });
+
+  /**
+   * 4294967295 is 0xFFFFFFFF: Node's unsigned rendering of the Windows exit
+   * code -1, which ntfytoast's own `-h` output labels `Failed`. Measured twice
+   * coming out of an entirely ordinary `-d long` toast, about 60 seconds after
+   * the banner appeared, so it belongs among the quiet outcomes above rather
+   * than being logged as a failure every time a banner runs its course.
+   */
+  it('win32: stays quiet for the unsigned -1 a quietly-ending toast reports', () => {
+    expect(launchAndClose('win32', 4294967295)).toEqual([]);
   });
 
   // terminal-notifier's table is different: 0 delivered, 4 timed out waiting on
@@ -649,6 +774,93 @@ describe('LaunchServices registration', () => {
         (call) => String(call[0]).endsWith('lsregister'),
       );
       expect(registered).toBe(true);
+    } finally {
+      homeOverride = null;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * Registering our AppUserModelID with Windows, which is what LaunchServices
+ * registration is on macOS: the step that makes the OS treat the toast as ours.
+ *
+ * Measured on Windows 11 26200.9457. With `-appID "Swttch Notifier"` and
+ * nothing having registered that id, the banner appears but the button asked
+ * for with `-b` is
+ * not drawn, and a click on the banner body ends the process with code 3
+ * (TimedOut) instead of 4 (ButtonPressed) — so the click never reaches us and
+ * the user never gets back to their session. Installing the Start Menu shortcut
+ * that carries the id is what fixes both.
+ */
+describe('Windows AppUserModelID registration', () => {
+  it('installs the Start Menu shortcut before raising the first toast', async () => {
+    setPlatform('win32');
+    let registeredBeforeSpawn = false;
+    spawnMock.mockImplementation(() => {
+      registeredBeforeSpawn = spawnSyncMock.mock.calls.some(isAppIdInstall);
+      return spawnsFine();
+    });
+
+    await showOsNotification({ title: 't', body: 'b' });
+
+    // Ordering is the point: a registration that lands after the toast is a
+    // registration the toast did not benefit from.
+    expect(registeredBeforeSpawn).toBe(true);
+    const install = spawnSyncMock.mock.calls.find(isAppIdInstall);
+    expect(install?.[0]).toBe(windowsNotifierExe());
+    expect(install?.[1]).toEqual([
+      '-install',
+      WINDOWS_APP_ID,
+      windowsNotifierExe(),
+      WINDOWS_APP_ID,
+    ]);
+  });
+
+  // Rewriting a shortcut that is already there costs a process launch per
+  // banner and changes nothing.
+  it('registers once per process rather than once per banner', async () => {
+    setPlatform('win32');
+
+    await showOsNotification({ title: 't', body: '1' });
+    await showOsNotification({ title: 't', body: '2' });
+
+    expect(spawnSyncMock.mock.calls.filter(isAppIdInstall)).toHaveLength(1);
+    expect(spawnMock).toHaveBeenCalledTimes(2);
+  });
+
+  // Without the registration the banner still appears, which is most of what
+  // the user came for. Losing it over a failed shortcut would trade the whole
+  // notification for part of one.
+  it('raises the banner anyway when the registration fails', async () => {
+    setPlatform('win32');
+    spawnSyncMock.mockImplementationOnce(() => {
+      throw new Error('EACCES');
+    });
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await showOsNotification({ title: 't', body: 'b' });
+
+    spy.mockRestore();
+    expect(spawnMock).toHaveBeenCalledWith(
+      windowsNotifierExe(),
+      buildWindowsNotifierArgs({ title: 't', body: 'b' }),
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+  });
+
+  // The shortcut is a Windows concept; running it anywhere else would be one
+  // stray process launch per backend start.
+  it('does not run on the other platforms', async () => {
+    setPlatform('darwin');
+    const home = mkdtempSync(join(tmpdir(), 'ccg-noinstall-'));
+    homeOverride = home;
+    try {
+      await showOsNotification({ title: 't', body: 'b' });
+      setPlatform('linux');
+      await showOsNotification({ title: 't', body: 'b' });
+
+      expect(spawnSyncMock.mock.calls.filter(isAppIdInstall)).toEqual([]);
     } finally {
       homeOverride = null;
       rmSync(home, { recursive: true, force: true });

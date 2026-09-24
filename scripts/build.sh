@@ -218,9 +218,15 @@ case "${1:-}" in
     # beside backend.mjs, so the directory name has to survive into the tarball
     # unchanged. The macOS bundle only works if its executable bit comes along.
     # Keep all three copy sites (backend/esbuild.mjs, gradle syncWebviewResources,
-    # here) in step.
+    # here) in step. The standalone tarball is unpacked as-is, so this IS the last
+    # step for standalone; the plugin has a fourth one on the user's machine
+    # (PluginResourceExtractor.extractBackend) which unpacks the whole /backend/
+    # tree and needs no entry per file. See backend/src/system-notifications/vendor/README.md.
     cp -R "$ROOT/backend/dist/vendor" "$stage/vendor"
-    chmod +x "$stage/vendor/terminal-notifier.app/Contents/MacOS/terminal-notifier"
+    # The bundle directory is named after the product, not after upstream's binary.
+    # Under `set -e` a stale name here does not ship a broken tarball, it fails the
+    # build outright.
+    chmod +x "$stage/vendor/Swttch Notifier.app/Contents/MacOS/terminal-notifier"
     cp -R "$ROOT/webview/dist/." "$stage/webview/"
     out="$ROOT/dist/claude-code-gui-standalone-v$version.tgz"
     tar -czf "$out" -C "$stage" account-cli.mjs backend.mjs win-job-wrapper.ps1 win-bash-env.sh vendor webview

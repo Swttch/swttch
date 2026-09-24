@@ -4,7 +4,17 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.net.URLClassLoader
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
+
+/**
+ * Loaded out of a synthetic plugin JAR so that a test can hand the extractor a real
+ * `resourceAnchor` whose classloader sees that JAR and nothing else. The class is empty on
+ * purpose: it is never instantiated, only used as the thing `getResource` is asked through.
+ */
+class JarResourceAnchor
 
 class PluginResourceExtractorTest {
 
@@ -188,6 +198,127 @@ class PluginResourceExtractorTest {
         extractor(base) { wv, bd -> completeUnpack(wv, bd) }.resolve()
 
         assertFalse(File(base, ".discard-abc").exists(), "a discarded dir should be reaped on a later run")
+    }
+
+    // ── The whole /backend/ tree has to survive extraction ──────────────────
+    //
+    // These exercise the REAL unpack (no `unpack` fake) against a synthetic plugin JAR,
+    // because the defect they guard against lived entirely in that code path: extractBackend
+    // copied `backend.mjs` and `win-job-wrapper.ps1` by name, so `vendor/` — the desktop
+    // notification executables — and `win-bash-env.sh` never reached a user's disk. Nothing
+    // failed loudly, and development never runs this path at all (the Gradle sandbox serves
+    // the resources straight off the filesystem), so only a test over a real JAR catches it.
+
+    /** Every resource the plugin JAR carries under `backend/`, with the content to verify. */
+    private val backendJarEntries = mapOf(
+        "backend/backend.mjs" to "// backend",
+        "backend/win-job-wrapper.ps1" to "# win32 job object wrapper",
+        "backend/win-bash-env.sh" to "# BASH_ENV",
+        "backend/vendor/README.md" to "# vendored notifiers",
+        "backend/vendor/ntfytoast.exe" to "MZ windows notifier",
+        "backend/vendor/ntfytoast-LICENSE.txt" to "MIT",
+        "backend/vendor/windows-toast-icon.png" to "PNG toast icon",
+        "backend/vendor/terminal-notifier-LICENSE.txt" to "MIT",
+        "backend/vendor/Swttch Notifier.app/Contents/Info.plist" to "<plist/>",
+        "backend/vendor/Swttch Notifier.app/Contents/MacOS/terminal-notifier" to "macos notifier binary",
+        "backend/vendor/Swttch Notifier.app/Contents/Resources/icon.icns" to "icns",
+    )
+
+    /** The minimum webview side, so the extraction passes its completeness check. */
+    private val webviewJarEntries = mapOf(
+        "webview/index.html" to "<html></html>",
+        "webview/assets/index-abc123.js" to "// bundle",
+    )
+
+    private fun writePluginJar(jar: File, entries: Map<String, String>) {
+        jar.parentFile?.mkdirs()
+        JarOutputStream(jar.outputStream().buffered()).use { out ->
+            // Directory entries, the way the real plugin JAR has them. They are what the
+            // extraction has to SKIP: a directory entry carries no bytes, and writing one out
+            // as a file would occupy the path its children need.
+            entries.keys
+                .flatMap { name -> name.split('/').dropLast(1).scan("") { acc, part -> "$acc$part/" } }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .sorted()
+                .forEach { out.putNextEntry(ZipEntry(it)); out.closeEntry() }
+            entries.forEach { (name, content) ->
+                out.putNextEntry(ZipEntry(name))
+                out.write(content.toByteArray())
+                out.closeEntry()
+            }
+            // The anchor class itself, so a classloader over this JAR alone can load it and
+            // the extractor's `getResource` calls resolve to `jar:` URLs inside it.
+            val anchorPath = JarResourceAnchor::class.java.name.replace('.', '/') + ".class"
+            out.putNextEntry(ZipEntry(anchorPath))
+            out.write(
+                JarResourceAnchor::class.java.getResourceAsStream("JarResourceAnchor.class")!!
+                    .use { it.readBytes() }
+            )
+            out.closeEntry()
+        }
+    }
+
+    /**
+     * Extract from a synthetic plugin JAR and return the backend dir that was produced.
+     * The classloader gets no parent so it cannot fall through to the test classpath —
+     * whatever the extractor finds, it found in the JAR.
+     */
+    private fun extractFromJar(base: File, jar: File): File {
+        URLClassLoader(arrayOf(jar.toURI().toURL()), null).use { loader ->
+            val anchor = loader.loadClass(JarResourceAnchor::class.java.name)
+            val result = PluginResourceExtractor(
+                baseDir = base,
+                version = "1.2.3",
+                resourceAnchor = anchor,
+            ).resolve()
+            return result.backendFile.parentFile
+        }
+    }
+
+    @Test
+    fun `extracts every backend resource the JAR carries, not a fixed list of names`(
+        @TempDir base: File,
+        @TempDir jarDir: File,
+    ) {
+        val jar = File(jarDir, "plugin.jar")
+        writePluginJar(jar, backendJarEntries + webviewJarEntries)
+
+        val backendDir = extractFromJar(base, jar)
+
+        val missing = backendJarEntries.keys.filterNot {
+            File(backendDir, it.removePrefix("backend/")).isFile
+        }
+        assertTrue(
+            missing.isEmpty(),
+            "these /backend/ resources were in the JAR but not extracted: $missing",
+        )
+        backendJarEntries.forEach { (entry, content) ->
+            assertEquals(
+                content,
+                File(backendDir, entry.removePrefix("backend/")).readText(),
+                "extracted content differs for $entry",
+            )
+        }
+    }
+
+    @Test
+    fun `marks the extracted macOS notifier bundle executable`(
+        @TempDir base: File,
+        @TempDir jarDir: File,
+    ) {
+        // A JAR carries no executable bit, so without an explicit re-mark the bundle is
+        // present but cannot run — and notifier.ts reports that the same way it reports
+        // everything else: not at all.
+        val jar = File(jarDir, "plugin.jar")
+        writePluginJar(jar, backendJarEntries + webviewJarEntries)
+
+        val backendDir = extractFromJar(base, jar)
+
+        assertTrue(
+            File(backendDir, "vendor/Swttch Notifier.app/Contents/MacOS/terminal-notifier").canExecute(),
+            "the macOS notifier bundle's binary must be executable after extraction",
+        )
     }
 
     @Test

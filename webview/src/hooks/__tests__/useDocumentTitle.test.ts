@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { NotificationKind } from '@/notifications';
+import { _resetRuntimeCache } from '@/config/environment';
 
 const playSoundMock = vi.fn();
 const showBannerMock = vi.fn();
@@ -244,6 +245,95 @@ describe('useDocumentTitle – the end-of-turn sound is independent of the banne
 
     rerender({ streaming: true });
     expect(playSoundMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The IDE keeps raising banners after its URL stops saying it is the IDE.
+//
+// This is the defect found on a Windows 11 machine on 2026-09-24: the banner
+// arrived for the very first turn and never again. The backend log showed
+// PLAY_NOTIFICATION_SOUND arriving with no SHOW_NOTIFICATION beside it, which
+// says the gate between the two calls had turned false.
+//
+// It had. The IDE opens the page at /sessions/new?...&panelId=..., the first
+// message creates a session, and `navigateToSession` rebuilds the URL with
+// `workingDir` alone. The host check read `panelId` off that URL, so from the
+// second turn onwards it called JCEF a browser and deferred to
+// `document.hidden`, which JCEF leaves false however far away the user is.
+//
+// Every test below therefore runs with NO panelId on the URL and with the tab
+// reporting itself visible — the state the machine was actually in — and pins
+// the sound and the banner to each other, because the log's evidence was one
+// going out without the other.
+// ---------------------------------------------------------------------------
+describe('useDocumentTitle – in the IDE after the URL has lost its panelId', () => {
+  beforeEach(() => {
+    (window as unknown as { __JCEF__?: boolean }).__JCEF__ = true;
+    _resetRuntimeCache();
+    window.history.replaceState({}, '', '/sessions/abc?workingDir=/repo');
+    setHidden(false);
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { __JCEF__?: boolean }).__JCEF__;
+    _resetRuntimeCache();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('raises the banner alongside the sound when a turn ends', () => {
+    const { rerender } = renderHook(
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, null, false),
+      { initialProps: { streaming: true } },
+    );
+
+    playSoundMock.mockReset();
+    showBannerMock.mockReset();
+    rerender({ streaming: false });
+
+    expect(playSoundMock).toHaveBeenCalledTimes(1);
+    expect(showBannerMock).toHaveBeenCalledTimes(1);
+    expect(showBannerMock).toHaveBeenCalledWith(NotificationKind.SESSION_COMPLETE, {
+      sessionTitle: 'Session A',
+    });
+  });
+
+  it('raises the error banner alongside the sound when a turn fails', () => {
+    const err = new Error('boom');
+    const { rerender } = renderHook(
+      ({ streaming, error }) => useDocumentTitle('Session A', false, streaming, error, false),
+      { initialProps: { streaming: true, error: null as Error | null } },
+    );
+
+    playSoundMock.mockReset();
+    showBannerMock.mockReset();
+    rerender({ streaming: false, error: err });
+
+    expect(playSoundMock).toHaveBeenCalledTimes(1);
+    expect(showBannerMock).toHaveBeenCalledTimes(1);
+    expect(showBannerMock).toHaveBeenCalledWith(NotificationKind.STREAM_ERROR, {
+      sessionTitle: 'Session A',
+    });
+  });
+
+  it('keeps raising it turn after turn, which is where the defect started', () => {
+    // The first turn worked in the field and every later one did not, so one
+    // transition is not enough to catch this. Three in a row are asserted.
+    const { rerender } = renderHook(
+      ({ streaming }) => useDocumentTitle('Session A', false, streaming, null, false),
+      { initialProps: { streaming: true } },
+    );
+
+    playSoundMock.mockReset();
+    showBannerMock.mockReset();
+
+    for (let turn = 0; turn < 3; turn += 1) {
+      rerender({ streaming: false });
+      rerender({ streaming: true });
+    }
+
+    expect(playSoundMock).toHaveBeenCalledTimes(3);
+    expect(showBannerMock).toHaveBeenCalledTimes(3);
   });
 });
 

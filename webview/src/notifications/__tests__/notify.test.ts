@@ -75,10 +75,18 @@ function uninstallNotificationMock() {
   delete (globalThis as unknown as { Notification?: unknown }).Notification;
 }
 
-// showNotificationBanner() detects the IDE (JCEF) by the panelId in the page
-// URL, NOT by the presence of window.Notification.
-function setPanelId(id: string | null) {
-  window.history.replaceState({}, '', id ? `/?panelId=${id}` : '/');
+// showNotificationBanner() detects the IDE (JCEF) by the marker Kotlin injects
+// into the page, NOT by the presence of window.Notification and NOT by anything
+// on the URL. Each test that wants the IDE path plants that marker.
+//
+// No cache to clear here: beforeEach calls vi.resetModules(), so every dynamic
+// import below re-evaluates the environment module along with notify.ts.
+function setIdeRuntime(present: boolean) {
+  if (present) {
+    (window as unknown as { __JCEF__?: boolean }).__JCEF__ = true;
+  } else {
+    delete (window as unknown as { __JCEF__?: boolean }).__JCEF__;
+  }
 }
 
 beforeEach(() => {
@@ -109,14 +117,14 @@ beforeEach(() => {
   focusSpy = vi.fn<() => void>();
   window.focus = focusSpy as unknown as typeof window.focus;
 
-  // Default to standalone (no panelId); IDE tests opt in via setPanelId.
-  setPanelId(null);
+  // Default to standalone; IDE tests opt in via setIdeRuntime.
+  setIdeRuntime(false);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
   uninstallNotificationMock();
-  setPanelId(null);
+  setIdeRuntime(false);
   window.focus = originalFocus;
 });
 
@@ -176,8 +184,8 @@ describe('playNotificationSound()', () => {
 });
 
 describe('showNotificationBanner()', () => {
-  it('delegates to api.notifications.show when panelId is present (IDE)', async () => {
-    setPanelId('panel-1');
+  it('delegates to api.notifications.show in the IDE', async () => {
+    setIdeRuntime(true);
     uninstallNotificationMock();
     const { showNotificationBanner } = await import('../notify');
     await showNotificationBanner(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' });
@@ -193,9 +201,9 @@ describe('showNotificationBanner()', () => {
   });
 
   it('delegates to the host in the IDE even when window.Notification exists (CEF #2951)', async () => {
-    // Recent JCEF exposes a present-but-broken Notification object; panelId must
-    // win so we never take the dead browser path inside the IDE.
-    setPanelId('panel-1');
+    // Recent JCEF exposes a present-but-broken Notification object; the runtime
+    // marker must win so we never take the dead browser path inside the IDE.
+    setIdeRuntime(true);
     installNotificationMock('granted');
     const { showNotificationBanner } = await import('../notify');
     await showNotificationBanner(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' });
@@ -203,8 +211,25 @@ describe('showNotificationBanner()', () => {
     expect(constructorSpy).not.toHaveBeenCalled();
   });
 
+  /**
+   * The IDE opens the page with a `panelId` on the URL and drops it on the first
+   * navigation, which is the moment the first session is created. While the host
+   * was judged by that parameter, every later turn took the browser path inside
+   * JCEF and tried to draw a `Notification` that does nothing there.
+   */
+  it('takes the IDE path with a URL that carries no panelId', async () => {
+    setIdeRuntime(true);
+    window.history.replaceState({}, '', '/sessions/abc?workingDir=/repo');
+    installNotificationMock('granted');
+    const { showNotificationBanner } = await import('../notify');
+    await showNotificationBanner(NotificationKind.SESSION_COMPLETE, { sessionTitle: 'My Session' });
+    expect(showNotificationMock).toHaveBeenCalledTimes(1);
+    expect(constructorSpy).not.toHaveBeenCalled();
+    window.history.replaceState({}, '', '/');
+  });
+
   it('falls back to APP_NAME on the IDE path when sessionTitle is null', async () => {
-    setPanelId('panel-1');
+    setIdeRuntime(true);
     uninstallNotificationMock();
     const { showNotificationBanner } = await import('../notify');
     await showNotificationBanner(NotificationKind.STREAM_ERROR, { sessionTitle: null });
@@ -222,7 +247,7 @@ describe('showNotificationBanner()', () => {
     expect(constructorSpy).toHaveBeenCalledTimes(1);
     expect(playNotificationSoundMock).not.toHaveBeenCalled();
 
-    setPanelId('panel-1');
+    setIdeRuntime(true);
     await showNotificationBanner(NotificationKind.SESSION_COMPLETE, { sessionTitle: 't' });
     // Twice now: both paths ask the backend, and neither rings anything.
     expect(showNotificationMock).toHaveBeenCalledTimes(2);

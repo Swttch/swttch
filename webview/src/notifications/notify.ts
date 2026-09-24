@@ -1,6 +1,6 @@
 import { api } from '@/api/ClaudeCodeApi';
 import { NOTIFICATION_TEMPLATES } from './templates';
-import { isIdeHost } from './host';
+import { isJetBrains } from '@/config/environment';
 import { NotificationKind, type NotificationContext } from './types';
 import { i18n } from '@/i18n';
 
@@ -99,7 +99,12 @@ export async function showNotificationBanner(
 
   // In the IDE the host has already shown it; there is nothing left to draw
   // here, and the JCEF Notification object would fail silently anyway.
-  if (isIdeHost()) return;
+  //
+  // The question is put to the runtime, never to the page URL and never to
+  // `'Notification' in window` — both of those answer it wrongly inside JCEF,
+  // and neither says so. See `shouldNotifyForBackgroundEvent` for what each one
+  // gets wrong.
+  if (isJetBrains()) return;
 
   if (!('Notification' in window) || Notification.permission !== 'granted') {
     // Browser without notification permission/API — nothing to show.

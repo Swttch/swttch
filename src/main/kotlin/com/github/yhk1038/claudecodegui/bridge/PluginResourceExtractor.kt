@@ -19,7 +19,7 @@ import java.util.UUID
 data class ExtractedResources(val webviewDir: File, val backendFile: File)
 
 /**
- * Extracts the plugin's bundled `webview/` static files and `backend.mjs` from the
+ * Extracts the plugin's bundled `webview/` and `backend/` resource trees from the
  * plugin JAR into a **version-scoped** directory, at most once per
  * (IDE product, plugin version). Replaces the previous per-project-root extraction
  * in [NodeProcessManager] that caused issue #149.
@@ -351,18 +351,111 @@ class PluginResourceExtractor(
         extractWebview(webviewTarget)
     }
 
+    /**
+     * Unpack the WHOLE `/backend/` resource tree onto the user's machine.
+     *
+     * ## Why a tree walk and not a list of file names
+     *
+     * This used to copy exactly two resources by name — `backend.mjs` and
+     * `win-job-wrapper.ps1` — while the plugin JAR carried a good deal more beside them:
+     * `win-bash-env.sh`, and the whole `vendor/` directory holding the desktop-notification
+     * executables (`ntfytoast.exe`, the macOS `Swttch Notifier.app` bundle, their licences,
+     * the toast icon). Everything the three build paths (`backend/esbuild.mjs`, the
+     * `syncWebviewResources` Gradle task, the `standalone-tgz` case in `scripts/build.sh`)
+     * carefully carried into the JAR stopped here and never reached a user's disk. Desktop
+     * notifications had therefore never worked for anyone who installed the plugin from the
+     * Marketplace, and `win-bash-env.sh` — which predates them — had never arrived either.
+     *
+     * Nothing surfaced the gap. `notifier.ts` swallows every failure by design, `win-job.ts`
+     * degrades to a plain spawn, and development never runs this code at all: `run-ide` sets
+     * `claude.dev.mode`, so [resolveDevResources] hands back the source tree and [resolve]
+     * returns before any extraction happens. Only a real install takes this path.
+     *
+     * Listing names is what made that possible, so the list is gone rather than extended.
+     * Anything a build path drops into `/backend/` now follows on its own.
+     *
+     * The anchor is a *file* resource rather than the `/backend/` directory for the same
+     * reason [locateWebviewJar] anchors on `index.html`: IntelliJ's PluginClassLoader
+     * resolves file resources reliably and directory resources not at all (#52).
+     */
     private fun extractBackend(backendDirTarget: File) {
-        val stream = resourceAnchor.getResourceAsStream("/backend/$BACKEND_ENTRY")
-            ?: throw IllegalStateException("Backend resource /backend/$BACKEND_ENTRY not found in plugin")
-        val target = File(backendDirTarget, BACKEND_ENTRY)
+        val anchor = resourceAnchor.getResource("/$BACKEND_SUBDIR/$BACKEND_ENTRY")
+            ?: throw IllegalStateException("Backend resource /$BACKEND_SUBDIR/$BACKEND_ENTRY not found in plugin")
+        val copied = when (anchor.protocol) {
+            // Production: the plugin JAR.
+            "jar" -> jarBehind(anchor)?.let { extractTreeFromJar(backendDirTarget, it, "$BACKEND_SUBDIR/") }
+            // Dev / IDE runtime: resources live on the filesystem, not in a JAR. The anchor
+            // file's parent IS the backend resource dir, so no directory resource is needed.
+            "file" -> fileBehind(anchor)?.parentFile?.let { copyTree(it, backendDirTarget) }
+            else -> null
+        }
+        if (copied == null) {
+            // Neither shape resolved, so the siblings cannot be enumerated. Copy the one
+            // resource we can still reach by name and say out loud what is now missing:
+            // the backend boots, but everything it resolves relative to itself (`vendor/`,
+            // the wrapper scripts) is absent. Failing outright instead would trade a
+            // degraded feature for no plugin at all.
+            logger.warn(
+                "Could not enumerate the /$BACKEND_SUBDIR/ resource tree from $anchor " +
+                    "(protocol=${anchor.protocol}); extracting $BACKEND_ENTRY alone. " +
+                    "Desktop notifications and the win32 wrappers will be unavailable."
+            )
+            copyResource("/$BACKEND_SUBDIR/$BACKEND_ENTRY", File(backendDirTarget, BACKEND_ENTRY))
+        } else {
+            logger.info("Extracted $copied backend entries from $anchor")
+        }
+        restoreBundleExecutableBits(backendDirTarget)
+    }
+
+    /**
+     * Re-mark macOS app-bundle executables as executable after an extraction.
+     *
+     * A JAR carries no POSIX permission bits that [java.util.jar.JarFile] exposes, so every
+     * file unpacked out of one lands without the executable bit. The macOS notifier is an
+     * app bundle, and a bundle whose binary cannot be executed fails exactly the way
+     * everything else in `notifier.ts` fails: silently, with the banner simply never
+     * appearing. The distributable-building paths (`syncWebviewResources`,
+     * `standalone-tgz`) each do the same thing for their own output.
+     *
+     * The rule is the bundle *layout* — by macOS convention `<name>.app/Contents/MacOS/`
+     * holds the executables — rather than a file name, so renaming the binary or adding a
+     * second bundle needs no change here. That is the same reasoning as the tree walk above.
+     *
+     * The warning is gated on [File.canExecute] rather than on [File.setExecutable]'s return
+     * value because Windows has no execute bit to set: `setExecutable` reports failure there
+     * while `canExecute` still answers true, which would make every Windows install log a
+     * warning about a file it is never going to run.
+     */
+    private fun restoreBundleExecutableBits(root: File) {
+        root.walkTopDown()
+            .filter { it.isFile && it.parentFile?.name == "MacOS" && it.parentFile?.parentFile?.name == "Contents" }
+            .forEach { binary ->
+                binary.setExecutable(true, false)
+                if (!binary.canExecute()) {
+                    logger.warn("Could not mark ${binary.absolutePath} executable; that app bundle cannot run")
+                }
+            }
+    }
+
+    private fun copyResource(resourcePath: String, target: File) {
+        val stream = resourceAnchor.getResourceAsStream(resourcePath)
+            ?: throw IllegalStateException("Resource $resourcePath not found in plugin")
         target.parentFile?.mkdirs()
         stream.use { input -> target.outputStream().use { input.copyTo(it) } }
-        // win32 Job Object wrapper, shipped beside backend.mjs (win-job.ts resolves it
-        // there). Best-effort: if the asset is missing, win-job.ts falls back to a plain
-        // spawn (degraded orphan guard), so its absence must not abort extraction.
-        resourceAnchor.getResourceAsStream("/backend/$WIN_JOB_WRAPPER")?.use { input ->
-            File(backendDirTarget, WIN_JOB_WRAPPER).outputStream().use { input.copyTo(it) }
+    }
+
+    /** Copy every file under [sourceDir] into [targetDir], keeping the relative layout. */
+    private fun copyTree(sourceDir: File, targetDir: File): Int {
+        var count = 0
+        sourceDir.walkTopDown().filter { it.isFile }.forEach { file ->
+            val out = File(targetDir, file.relativeTo(sourceDir).path)
+            out.parentFile?.mkdirs()
+            file.inputStream().use { input -> out.outputStream().use { input.copyTo(it) } }
+            // Unlike a JAR, a source directory does carry the bit; keep it.
+            if (file.canExecute()) out.setExecutable(true, false)
+            count++
         }
+        return count
     }
 
     private fun extractWebview(webviewTarget: File) {
@@ -377,12 +470,7 @@ class PluginResourceExtractor(
             try {
                 val dir = File(webviewUrl.toURI())
                 if (dir.isDirectory) {
-                    dir.walkTopDown().filter { it.isFile }.forEach { file ->
-                        val rel = file.relativeTo(dir).path
-                        val out = File(webviewTarget, rel)
-                        out.parentFile?.mkdirs()
-                        file.inputStream().use { input -> out.outputStream().use { input.copyTo(it) } }
-                    }
+                    copyTree(dir, webviewTarget)
                     return
                 }
             } catch (e: Exception) {
@@ -408,31 +496,51 @@ class PluginResourceExtractor(
     private fun locateWebviewJar(): File? {
         val fileUrl = resourceAnchor.getResource("/webview/index.html") ?: return null
         if (fileUrl.protocol != "jar") return null
-        return try {
-            val connection = fileUrl.openConnection() as? java.net.JarURLConnection ?: return null
-            val jar = File(connection.jarFileURL.toURI())
-            if (jar.isFile) jar else null
-        } catch (e: Exception) {
-            logger.debug("Could not resolve webview JAR from $fileUrl: ${e.message}")
-            null
-        }
+        return jarBehind(fileUrl)
+    }
+
+    /** The JAR file a `jar:` resource URL lives in, or null when it cannot be opened. */
+    private fun jarBehind(url: java.net.URL): File? = try {
+        val connection = url.openConnection() as? java.net.JarURLConnection
+        val jar = connection?.let { File(it.jarFileURL.toURI()) }
+        if (jar?.isFile == true) jar else null
+    } catch (e: Exception) {
+        logger.debug("Could not resolve JAR from $url: ${e.message}")
+        null
+    }
+
+    /** The on-disk file a `file:` resource URL points at, or null when the URL is unusable. */
+    private fun fileBehind(url: java.net.URL): File? = try {
+        File(url.toURI()).takeIf { it.isFile }
+    } catch (e: Exception) {
+        logger.debug("Could not resolve file from $url: ${e.message}")
+        null
     }
 
     private fun extractWebviewFromJar(targetDir: File, jarFile: File) {
+        val count = extractTreeFromJar(targetDir, jarFile, "webview/")
+        logger.info("Extracted $count webview entries from JAR: ${jarFile.absolutePath}")
+    }
+
+    /**
+     * Copy every JAR entry under [prefix] into [targetDir], keeping the relative layout.
+     * Shared by the webview and backend extractions so neither can grow a private idea of
+     * what "everything in this directory" means.
+     */
+    private fun extractTreeFromJar(targetDir: File, jarFile: File, prefix: String): Int {
         var count = 0
         java.util.jar.JarFile(jarFile).use { jar ->
             val entries = jar.entries()
             while (entries.hasMoreElements()) {
                 val entry = entries.nextElement()
-                if (!entry.name.startsWith("webview/") || entry.isDirectory) continue
-                val rel = entry.name.removePrefix("webview/")
-                val out = File(targetDir, rel)
+                if (!entry.name.startsWith(prefix) || entry.isDirectory) continue
+                val out = File(targetDir, entry.name.removePrefix(prefix))
                 out.parentFile?.mkdirs()
                 jar.getInputStream(entry).use { input -> out.outputStream().use { input.copyTo(it) } }
                 count++
             }
         }
-        logger.info("Extracted $count webview entries from JAR: ${jarFile.absolutePath}")
+        return count
     }
 
     private fun extractAssetsFromClasspath(targetDir: File) {
@@ -510,8 +618,11 @@ class PluginResourceExtractor(
         private const val ROOT_DIR_NAME = "claude-code-gui"
         private const val WEBVIEW_SUBDIR = "webview"
         private const val BACKEND_SUBDIR = "backend"
+        // There is deliberately no list of the other files in `/backend/` here. Everything
+        // beside backend.mjs — the win32 wrapper scripts, the `vendor/` notification assets —
+        // is carried by the tree walk in extractBackend, because a list is what let the whole
+        // vendor directory go missing on every real install.
         private const val BACKEND_ENTRY = "backend.mjs"
-        private const val WIN_JOB_WRAPPER = "win-job-wrapper.ps1"
         /** Name of the `.lock` file older versions created; only ever deleted now (issue #308). */
         private const val LEGACY_LOCK_NAME = ".lock"
 

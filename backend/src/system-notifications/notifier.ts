@@ -42,6 +42,8 @@ export interface OsNotificationOptions {
    * It has to give up eventually: the process stays alive the whole time, and a
    * banner nobody ever touches would otherwise leave one behind for the rest of
    * the session.
+   *
+   * macOS only. ntfytoast takes no such value — see buildWindowsNotifierArgs.
    */
   clickTimeoutSeconds?: number;
 }
@@ -99,11 +101,36 @@ export function isClickToFocus(outcome: NotifierOutcome): boolean {
 }
 
 /**
- * AppUserModelID handed to ntfytoast on Windows. ntfytoast creates the Start
- * Menu shortcut named after it, and Windows shows that name as the toast's
- * sender — so this string is user-visible branding, not an internal id.
+ * AppUserModelID handed to ntfytoast on Windows, and the name of the Start Menu
+ * shortcut that carries it (see installWindowsAppId). Windows shows that name as
+ * the toast's sender, so this string is user-visible branding rather than an
+ * internal id.
+ *
+ * "Swttch Notifier" rather than plain "Swttch": a desktop app is planned for the
+ * future under the name Swttch itself, and this toast sender would then be
+ * indistinguishable from that app in the user's eyes (and, on Windows, in the
+ * Start Menu). A name reserved for notifications keeps the two apart before the
+ * desktop app exists to collide with it. Matches the macOS bundle, whose
+ * CFBundleName is already "Swttch Notifier" for the same reason.
+ *
+ * A space inside an AppUserModelID is not a Windows restriction: measured on
+ * Windows 11 build 26200.9457, `ntfytoast -install "Swttch Notifier" <exe>
+ * "Swttch Notifier"` installs cleanly (exit 0) and a toast fired with
+ * `-appID "Swttch Notifier"` displays normally (exit 3, ordinary timeout).
  */
-export const WINDOWS_APP_ID = 'Swttch';
+export const WINDOWS_APP_ID = 'Swttch Notifier';
+
+/**
+ * Icon drawn on the Windows toast, handed to ntfytoast with `-p`.
+ *
+ * Windows, unlike macOS, takes the picture from the notification itself instead
+ * of from the sending application, so this is a plain file we ship rather than
+ * something buried in a bundle. It is the same logo as the macOS bundle's
+ * icon.icns, converted to the format the toast accepts: PNG, no larger than
+ * 1024x1024 and under 200 kB (measured on Windows 11 26200.9457 — this file is
+ * 256x256 and 25 kB). Both the toast's header and its body show it.
+ */
+const WINDOWS_ICON_FILE = 'windows-toast-icon.png';
 
 /**
  * Bundle directory name of the macOS notifier, in ./vendor and in ~/Applications
@@ -113,9 +140,9 @@ export const WINDOWS_APP_ID = 'Swttch';
  * the banner wear our icon: macOS takes a notification's icon from the bundle
  * that sent it and offers no way to override it per notification, so a custom
  * bundle is the documented way to have one (see vendor/README.md). It also
- * gives us our own row in System Settings > Notifications, named Swttch rather
- * than something the user has never heard of, and leaves a user's own copy of
- * terminal-notifier alone.
+ * gives us our own row in System Settings > Notifications, named Swttch
+ * Notifier rather than something the user has never heard of, and leaves a
+ * user's own copy of terminal-notifier alone.
  */
 const MAC_APP_BUNDLE = 'Swttch Notifier.app';
 
@@ -229,6 +256,11 @@ export function windowsNotifierExe(): string {
   return join(vendorDir(), 'ntfytoast.exe');
 }
 
+/** The picture the Windows toast wears, shipped beside the notifier. */
+export function windowsNotifierIcon(): string {
+  return join(vendorDir(), WINDOWS_ICON_FILE);
+}
+
 // ── Argument construction ───────────────────────────────────────────────────
 
 export function buildMacNotifierArgs(options: OsNotificationOptions): string[] {
@@ -249,12 +281,58 @@ export function buildMacNotifierArgs(options: OsNotificationOptions): string[] {
   return args;
 }
 
-export function buildWindowsNotifierArgs(options: OsNotificationOptions): string[] {
+/**
+ * Everything below is measured on Windows 11 build 26200.9457 against the
+ * ntfytoast.exe vendored here (SHA-256 6cfcd1a6…c6c9f), not read off its
+ * documentation.
+ *
+ * [iconPath] is a parameter rather than a constant so a test can hand over a
+ * path that leads nowhere, the same way installMacNotifier takes its two
+ * directories.
+ */
+export function buildWindowsNotifierArgs(
+  options: OsNotificationOptions,
+  iconPath: string = windowsNotifierIcon(),
+): string[] {
   const args = ['-t', options.title, '-m', options.body.length > 0 ? options.body : ' '];
-  // -appID is what registers the AppUserModelID; without it Windows may drop
-  // the toast entirely. activateBundleId is a macOS concept and is ignored here.
+  // Which application Windows files the toast under. NOT what registers the
+  // AppUserModelID — its own help says "Don't create a shortcut but use the
+  // provided app id" — so the registration is done once, separately, by
+  // installWindowsAppId. Without that registration the toast still appears, but
+  // the -b button below is not drawn and no click is reported back.
+  // activateBundleId is a macOS concept and is ignored here.
   args.push('-appID', WINDOWS_APP_ID);
   if (options.groupId) args.push('-id', options.groupId);
+  if (options.clickActionTitle) {
+    // The same button the macOS banner gets, from the same translated label.
+    // Unlike macOS, it is not what keeps the process listening — ntfytoast waits
+    // for the toast either way and answers with its exit code — but it is what
+    // gives the user something to aim at, and pressing it exits 4 with the label
+    // on stdout.
+    args.push('-b', options.clickActionTitle);
+  }
+  if (existsSync(iconPath)) {
+    // Only when the file is really there. What ntfytoast does with a picture
+    // path that leads nowhere is not measured, and a toast wearing the default
+    // Windows icon still calls the user back; a toast that failed to appear does
+    // not.
+    args.push('-p', iconPath);
+  }
+  // The sound is not ntfytoast's to play: the webview rings the one the user
+  // chose, through the backend, on its own schedule and its own setting
+  // (playNotificationSound). Leaving this off means the user hears two sounds,
+  // one of them not the one they picked. The browser banner is silenced for
+  // exactly the same reason.
+  args.push('-silent');
+  // 25.5 seconds on screen instead of the default 7. This banner exists to
+  // reach someone who walked away from the machine, and 7 seconds does not.
+  // NOT `-persistent`, which does keep the toast up until it is dismissed but
+  // ends the process with exit code -1 (Failed) after 60 seconds — an ordinary
+  // ending we would have to log as a failure or else stop noticing real ones.
+  args.push('-d', 'long');
+  // clickTimeoutSeconds is dropped here, and that is not an oversight: ntfytoast
+  // takes no duration in seconds, only the two named lengths above. Written down
+  // so the next reader does not go and measure it again.
   return args;
 }
 
@@ -429,6 +507,78 @@ export function resetMacNotifierCache(): void {
   macNotifierExec = undefined;
 }
 
+// ── Windows registration ────────────────────────────────────────────────────
+
+/**
+ * Teach Windows our AppUserModelID, by letting ntfytoast put a Start Menu
+ * shortcut carrying it in place.
+ *
+ * This is the Windows counterpart of installMacNotifier plus
+ * registerWithLaunchServices: the OS will not treat a toast as fully ours until
+ * it knows who "ours" is, and until then it silently drops the interactive half
+ * of the notification.
+ *
+ * Measured on Windows 11 26200.9457. Firing a toast with `-appID "Swttch
+ * Notifier"` alone, on a machine where nothing had registered that id, produces
+ * a banner with NO
+ * button on it even though `-b "Open session"` was passed, and clicking the
+ * banner body ends the process with code 3 (TimedOut) rather than 4
+ * (ButtonPressed) — so the click never comes back to us and the user never
+ * returns to their session. After this shortcut exists, the same command draws
+ * the button and a press exits 4 with the label on stdout.
+ *
+ * Waited on with spawnSync, for the reason registerWithLaunchServices is:
+ * whatever races the first banner loses, and the first banner is the one the
+ * user looks hardest at. Waiting is still not quite enough — the round of
+ * notifications fired immediately after the shortcut appeared came out without
+ * the button, and only the next round had it. Windows evidently takes a moment
+ * longer to pick the shortcut up than the process takes to exit, and there is no
+ * measured signal to wait on for that, so this is written down rather than
+ * papered over with a sleep of a length nobody has justified.
+ *
+ * Failure is not fatal: without the registration the banner itself still
+ * appears, which is most of what the user came for.
+ */
+export function installWindowsAppId(exe: string): void {
+  // `-install <shortcut name> <application> <appID>`. The shortcut is named
+  // after the app id on purpose: the name is what the user sees in their Start
+  // Menu and as the toast's sender, and one string for both is one thing to
+  // keep true.
+  spawnSync(exe, ['-install', WINDOWS_APP_ID, exe, WINDOWS_APP_ID], {
+    stdio: 'ignore',
+    timeout: 5000,
+  });
+}
+
+/**
+ * Registered once per backend process, like the macOS install. Retrying it for
+ * every banner would cost a process launch to rewrite a shortcut that is already
+ * there.
+ */
+let windowsAppIdRegistered = false;
+
+function ensureWindowsAppId(exe: string): void {
+  if (windowsAppIdRegistered) return;
+  // Marked done before the attempt, not after: a registration that throws will
+  // throw again on the next banner, and a notification is not the place to keep
+  // paying for it.
+  windowsAppIdRegistered = true;
+  try {
+    installWindowsAppId(exe);
+  } catch (err) {
+    console.error(
+      '[node-backend]',
+      'Windows AppUserModelID registration failed:',
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
+/** Test seam: drop the once-per-process registration decision. */
+export function resetWindowsAppIdCache(): void {
+  windowsAppIdRegistered = false;
+}
+
 // ── Launching ───────────────────────────────────────────────────────────────
 
 /**
@@ -457,8 +607,19 @@ export interface NotifierOutcome {
  * Treating any non-zero code as an error would log a failure every single time
  * a banner quietly expires, which is the normal ending for almost every
  * notification we raise.
+ *
+ * 4294967295 (0xFFFFFFFF) belongs in this set too, even though ntfytoast's own
+ * `-h` output calls it `Failed : -1`. Node reports a Windows process exit code
+ * as an unsigned 32-bit number, so the process's actual exit code of -1 arrives
+ * here as 4294967295 rather than -1. And this one is not the failure its name
+ * suggests: it has been measured twice coming out of an entirely ordinary
+ * notification, both times about 60 seconds after the banner appeared — once
+ * while probing `-persistent` (never shipped, see buildWindowsNotifierArgs),
+ * and once from the plain `-d long` toast this backend actually sends. Why 60
+ * seconds is not known; only the two measurements are. Logging it as a failure
+ * would bury real ones under a line that appears at the end of ordinary use.
  */
-const WINDOWS_USER_OUTCOME_CODES = new Set([0, 1, 2, 3, 4, 5]);
+const WINDOWS_USER_OUTCOME_CODES = new Set([0, 1, 2, 3, 4, 5, 4294967295]);
 
 /**
  * Exit codes terminal-notifier uses (TNExit* in its AppDelegate.m).
@@ -590,6 +751,9 @@ export function showOsNotification(
       console.error('[node-backend]', `showOsNotification skipped: ${exe} is missing`);
       return Promise.resolve();
     }
+    // Before the first toast, never after: an unregistered AppUserModelID costs
+    // the button and the click report, which is half of what this feature is.
+    ensureWindowsAppId(exe);
     return launch(exe, buildWindowsNotifierArgs(options), onOutcome, options.groupId);
   }
   return launch('notify-send', buildLinuxNotifierArgs(options), onOutcome, options.groupId);

@@ -90,7 +90,9 @@ copyFileSync('src/core/win-job-wrapper.ps1', 'dist/win-job-wrapper.ps1');
 // start (win-job.ts `utf8BashEnv`). It is what keeps CJK console output from reaching
 // the chat as U+FFFD, and utf8BashEnv stays SILENT when the file is absent — so a
 // distributable that forgets to carry it degrades invisibly. Keep all three copy
-// sites (here, gradle syncResources, standalone tgz) in step.
+// sites (here, gradle syncResources, standalone tgz) in step. The IDE's fourth
+// step — unpacking the plugin JAR onto the user's machine — takes the whole
+// `/backend/` tree and needs no entry per file; see vendor/README.md.
 copyFileSync('src/core/win-bash-env.sh', 'dist/win-bash-env.sh');
 
 // The bundled desktop-notification executables (macOS terminal-notifier.app,
@@ -102,6 +104,10 @@ copyFileSync('src/core/win-bash-env.sh', 'dist/win-bash-env.sh');
 // `vendor/README.md` explains what these are; it is copied along with them so
 // the answer travels with the files.
 // Keep all three copy sites (here, gradle syncResources, standalone tgz) in step.
+// The IDE's fourth step — unpacking the plugin JAR onto the user's machine —
+// takes the whole `/backend/` tree, so a file added to vendor/ follows there on
+// its own. It did not always: it used to copy two names and this directory never
+// reached a single Marketplace install. See vendor/README.md.
 rmSync('dist/vendor', { recursive: true, force: true });
 cpSync('src/system-notifications/vendor', 'dist/vendor', { recursive: true });
 

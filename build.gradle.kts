@@ -429,12 +429,20 @@ tasks {
             // dropped upstream does not linger. The macOS bundle's executable bit has to
             // survive the copy — without it the bundle installs but cannot run.
             // Keep all three copy sites (backend/esbuild.mjs, here, standalone tgz) in step.
+            // This only gets the files INTO the plugin jar. Getting them onto a user's
+            // machine is a fourth step — PluginResourceExtractor.extractBackend — which
+            // unpacks the whole `/backend/` tree and so needs no entry per file. It used
+            // to copy two names instead, and this directory reached nobody who installed
+            // from the Marketplace.
             file("src/main/resources/backend/vendor").deleteRecursively()
             copy {
                 from(file("backend/dist/vendor"))
                 into(file("src/main/resources/backend/vendor"))
             }
-            file("src/main/resources/backend/vendor/terminal-notifier.app/Contents/MacOS/terminal-notifier")
+            // The bundle directory is named after the product, not after upstream's
+            // binary; setExecutable on a path that does not exist returns false and
+            // says nothing, so a stale name here ships a bundle that cannot run.
+            file("src/main/resources/backend/vendor/Swttch Notifier.app/Contents/MacOS/terminal-notifier")
                 .setExecutable(true, false)
         }
     }

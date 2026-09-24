@@ -335,6 +335,38 @@ describe('showNotificationHandler', () => {
     expect(bridge.focusSession).toHaveBeenCalledWith({ panelId: 'panel-9' });
   });
 
+  /**
+   * The same click, reported the Windows way.
+   *
+   * ntfytoast says nothing on stdout that macOS would recognise: pressing the
+   * button exits 4 and prints the button's own label. Reading that with the
+   * macOS dictionary — "anything that is not @CLOSED or @TIMEOUT" — would work
+   * by accident here, which is why the platform is set explicitly: the branch
+   * that has to answer is the win32 one, and it answers by exit code alone.
+   */
+  it('asks the host to come forward when the Windows toast button is pressed', async () => {
+    setPlatform('win32');
+    try {
+      const connections = createMockConnections();
+      const bridge = createMockBridge({ shown: true, ideFocused: false });
+      mockOsNotify.mockImplementation(async (_options, onOutcome) => {
+        onOutcome?.({ code: 4, stdout: 'Open session' });
+      });
+      const message: IPCMessage = {
+        type: 'SHOW_NOTIFICATION',
+        payload: { title: 'My session', body: 'Response complete', panelId: 'panel-win' },
+        timestamp: 0,
+        requestId: 'req-win-click',
+      };
+
+      await showNotificationHandler('conn-1', message, connections, bridge);
+
+      expect(bridge.focusSession).toHaveBeenCalledWith({ panelId: 'panel-win' });
+    } finally {
+      setPlatform(REAL_PLATFORM);
+    }
+  });
+
   // Turning away from a banner is a decision too. Pulling the IDE in front of
   // whatever they turned to instead would be the opposite of helpful.
   it('leaves the user alone when the banner was dismissed', async () => {

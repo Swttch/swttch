@@ -1,4 +1,5 @@
 import { BridgeClient } from '../bridge/BridgeClient';
+import { resolvePanelId } from '../bridge/resolvePanelId';
 import type { ApiConfig } from '../ClaudeCodeApi';
 import { MessageType } from '@/shared';
 
@@ -29,10 +30,16 @@ interface ShowNotificationResponse {
  * draw one, so the reply is the page's permission to do it itself.
  *
  * `workingDir` routes the request to the IDE host serving that project root when
- * several IDEs share one backend. `panelId` (the per-tab id embedded in the page
- * URL by the IDE) then selects the exact panel inside that IDE, so the host shows
- * the notification for — and its "Open session" action returns to — the right
- * session tab.
+ * several IDEs share one backend. `panelId` then selects the exact panel inside
+ * that IDE, so the host shows the notification for — and its "Open session" action
+ * returns to — the right session tab. It is also what groups the banner, so a panel
+ * that notifies twice replaces its own previous banner instead of stacking one.
+ *
+ * `panelId` comes from `resolvePanelId`, the same answer the WebSocket connection
+ * was opened with, and never from the page URL directly. The URL carries it only
+ * until the first message creates a session, after which every banner went out
+ * with no panel on it at all — the host could not tell which tab to return to, and
+ * the notifier was handed no group to replace.
  */
 export class NotificationsApi {
   constructor(
@@ -66,12 +73,20 @@ export class NotificationsApi {
    * turned them off.
    *
    * `workingDir` defaults to the API's configured working directory and `panelId`
-   * to the one in the page URL, so the IDE host can route to the exact session tab.
+   * to this panel's own id, so the IDE host can route to the exact session tab.
    */
   async show(params: {
     title: string;
     body: string;
     workingDir?: string;
+    /**
+     * Which panel the banner belongs to. Defaults to this one.
+     *
+     * A caller only passes it to raise a banner on behalf of another panel;
+     * nothing does that today, and the slot exists so that such a caller cannot
+     * be made to work by reading the URL again.
+     */
+    panelId?: string;
     /**
      * Label for the desktop banner's button, already translated.
      *
@@ -83,7 +98,7 @@ export class NotificationsApi {
     clickActionTitle?: string;
   }): Promise<boolean> {
     const workingDir = params.workingDir ?? this.getConfig().workingDir;
-    const panelId = new URLSearchParams(window.location.search).get('panelId');
+    const panelId = params.panelId ?? resolvePanelId();
     const response = await this.bridge.request<ShowNotificationResponse>(
       MessageType.SHOW_NOTIFICATION,
       {
