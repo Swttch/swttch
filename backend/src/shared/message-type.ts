@@ -572,6 +572,10 @@ export enum MessageType {
   // -- Native drag & drop --
   /** Flush buffered native-drop entries for the active drag. */
   NATIVE_DROP_FLUSH = 'NATIVE_DROP_FLUSH',
+  /** CEF saw a file drag ENTER the panel, carrying { panelId, entries }. Buffered rather than attached, because the pointer is still holding the file and may leave again; the page's flush is what releases it. Kotlin→Node */
+  NATIVE_DROP = 'NATIVE_DROP',
+  /** A file drop already LANDED, at the Swing or IDE layer rather than in the page, carrying { panelId, entries }. Attached immediately: on Windows the page never receives a drop event, so there is no flush coming to release a buffer. Kotlin→Node */
+  NATIVE_DROP_DELIVER = 'NATIVE_DROP_DELIVER',
 
   // -- Panel focus routing --
   /** The webview reports its IDE panel (JCEF tab) gained window focus, carrying { panelId }, so the backend routes panel-scoped pushes (editor-context / ide-selection) to only the last-focused panel instead of every open Claude panel. inbound webview→backend */

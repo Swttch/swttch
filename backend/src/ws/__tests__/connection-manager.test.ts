@@ -981,4 +981,45 @@ describe('ConnectionManager — the session remembers its working directory', ()
 
     expect(cm.getSession('sess-3')?.workingDir).toBe('/tmp/project');
   });
+
+  describe('native drop', () => {
+    const entries = [{ path: '/tmp/a.txt', type: 'file' as const }];
+
+    /** The NATIVE_DROP_ENTRIES payloads this connection was sent. */
+    function deliveries(ws: ReturnType<typeof createMockWs>) {
+      const send = (ws as unknown as { send: ReturnType<typeof vi.fn> }).send;
+      return send.mock.calls
+        .map((c) => JSON.parse(c[0] as string) as { type: string; payload: unknown })
+        .filter((m) => m.type === MessageType.NATIVE_DROP_ENTRIES);
+    }
+
+    it('hands a landed drop straight to the panel, with no flush in between', () => {
+      const ws = createMockWs();
+      cm.addConnection(ws, ClientEnv.JETBRAINS, 'panel-1');
+
+      expect(cm.deliverNativeDrop('panel-1', entries)).toBe(true);
+      expect(deliveries(ws)).toHaveLength(1);
+      expect(deliveries(ws)[0].payload).toEqual({ entries });
+    });
+
+    it('leaves nothing behind for a later flush to attach a second time', () => {
+      const ws = createMockWs();
+      const connId = cm.addConnection(ws, ClientEnv.JETBRAINS, 'panel-1');
+
+      // CEF buffered the same files on drag-enter; the drop then landed on the
+      // Swing layer. Without the clear, the page's flush would replay them.
+      cm.setNativeDropStash('panel-1', entries);
+      cm.deliverNativeDrop('panel-1', entries);
+
+      expect(cm.takeNativeDropStash(connId)).toBeNull();
+    });
+
+    it('reports the panel it could not find rather than sending into the void', () => {
+      const ws = createMockWs();
+      cm.addConnection(ws, ClientEnv.JETBRAINS, 'panel-1');
+
+      expect(cm.deliverNativeDrop('panel-does-not-exist', entries)).toBe(false);
+      expect(deliveries(ws)).toHaveLength(0);
+    });
+  });
 });

@@ -864,7 +864,7 @@ class ClaudeCodePanel(
                 if (droppedPath.isNullOrBlank()) return true
                 val file = File(droppedPath)
                 logger.debug("Intercepted JCEF file:// navigation as native drop: $droppedPath (isDir=${file.isDirectory})")
-                dispatchNativeDrop(listOf(DroppedFile(file.absolutePath, file.isDirectory)))
+                dispatchNativeDrop(listOf(DroppedFile(file.absolutePath, file.isDirectory)), alreadyDropped = true)
                 return true
             }
         }, b.cefBrowser)
@@ -1489,7 +1489,7 @@ class ClaudeCodePanel(
                         event.dropComplete(false)
                         return
                     }
-                    dispatchNativeDrop(droppedFiles)
+                    dispatchNativeDrop(droppedFiles, alreadyDropped = true)
                     event.dropComplete(true)
                 } catch (e: Exception) {
                     logger.warn("Native Swing drop failed", e)
@@ -1524,7 +1524,7 @@ class ClaudeCodePanel(
             override fun drop(event: DnDEvent) {
                 logger.debug("[NativeDrop] IDE DnDTarget fired (attached=${event.attachedObject?.javaClass?.name})")
                 val droppedFiles = extractDroppedFiles(event.attachedObject)
-                dispatchNativeDrop(droppedFiles)
+                dispatchNativeDrop(droppedFiles, alreadyDropped = true)
             }
 
             override fun cleanUpOnLeave() {}
@@ -1645,8 +1645,18 @@ class ClaudeCodePanel(
             .toList()
     }
 
-    private fun dispatchNativeDrop(files: List<DroppedFile>) {
-        logger.debug("[NativeDrop] dispatchNativeDrop panelId=$panelId, ${files.size} files: ${files.map { it.path }}")
+    /**
+     * Hand dropped paths to the backend.
+     *
+     * [alreadyDropped] separates the two moments this is called from. CEF tells
+     * us about a drag when it ENTERS the panel, and the file is still in the
+     * air then, so those paths are buffered until the page reports the release.
+     * Every other caller here runs after the release has happened, and on
+     * Windows no page-level drop event follows to empty that buffer — the paths
+     * would sit there until the next drag overwrote them (#481).
+     */
+    private fun dispatchNativeDrop(files: List<DroppedFile>, alreadyDropped: Boolean = false) {
+        logger.debug("[NativeDrop] dispatchNativeDrop panelId=$panelId, alreadyDropped=$alreadyDropped, ${files.size} files: ${files.map { it.path }}")
         if (files.isEmpty()) return
         val params = buildJsonObject {
             put("panelId", JsonPrimitive(panelId))
@@ -1659,7 +1669,8 @@ class ClaudeCodePanel(
                 }
             }
         }
-        backendService.sendNotification(project.basePath ?: "", "NATIVE_DROP", params)
+        val method = if (alreadyDropped) "NATIVE_DROP_DELIVER" else "NATIVE_DROP"
+        backendService.sendNotification(project.basePath ?: "", method, params)
     }
 
     // ─── WebView loading ────────────────────────────────────────────
