@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "セットアップ",
-    "dismiss": "閉じる",
+    "close": "閉じる",
     "optional": "任意",
     "unknown": "未確認",
     "checking": "確認中…",
@@ -453,6 +453,8 @@
     "reveal": "表示",
     "recheck": "再確認",
     "login": "ログイン",
+    "getStarted": "はじめる",
+    "getStartedHint": "チェックリストをスキップするには、閉じるボタンをクリックしてください。",
     "steps": {
       "installCli": {
         "label": "Claude Code CLI をインストール",

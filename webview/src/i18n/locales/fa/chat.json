@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "راه‌اندازی",
-    "dismiss": "بستن",
+    "close": "بستن",
     "optional": "اختیاری",
     "unknown": "تأیید نشده",
     "checking": "در حال بررسی…",
@@ -453,6 +453,8 @@
     "reveal": "نمایش",
     "recheck": "بررسی دوباره",
     "login": "ورود",
+    "getStarted": "شروع کنید",
+    "getStartedHint": "برای رد کردن چک‌لیست، روی دکمه بستن کلیک کنید.",
     "steps": {
       "installCli": {
         "label": "نصب Claude Code CLI",

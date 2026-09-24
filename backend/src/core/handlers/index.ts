@@ -38,8 +38,8 @@ import { setAnnouncementsEnabledHandler } from './setAnnouncementsEnabled';
 import { getRunnerBestScoreHandler, setRunnerBestScoreHandler } from './runnerBestScore';
 import { getWhatsNewHandler, setWhatsNewSeenHandler } from './whatsNew';
 import {
-  getOnboardingDismissedHandler,
-  setOnboardingDismissedHandler,
+  getOnboardingDismissedAtHandler,
+  dismissOnboardingHandler,
 } from './onboarding';
 import { getSponsorUrlHandler } from './getSponsorUrl';
 import { verifyLicenseHandler } from './verifyLicense';
@@ -297,12 +297,12 @@ export async function handleMessage(
       await setWhatsNewSeenHandler(connectionId, message, connections, bridge);
       break;
 
-    case MessageType.GET_ONBOARDING_DISMISSED:
-      await getOnboardingDismissedHandler(connectionId, message, connections, bridge);
+    case MessageType.GET_ONBOARDING_DISMISSED_AT:
+      await getOnboardingDismissedAtHandler(connectionId, message, connections, bridge);
       break;
 
-    case MessageType.SET_ONBOARDING_DISMISSED:
-      await setOnboardingDismissedHandler(connectionId, message, connections, bridge);
+    case MessageType.DISMISS_ONBOARDING:
+      await dismissOnboardingHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SPONSOR_URL:
       await getSponsorUrlHandler(connectionId, message, connections, bridge);

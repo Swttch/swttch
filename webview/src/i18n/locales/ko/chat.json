@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "시작 준비",
-    "dismiss": "닫기",
+    "close": "닫기",
     "optional": "선택",
     "unknown": "확인되지 않음",
     "checking": "확인 중…",
@@ -453,6 +453,8 @@
     "reveal": "보기",
     "recheck": "재확인",
     "login": "로그인",
+    "getStarted": "시작하기",
+    "getStartedHint": "체크리스트를 건너뛰려면 닫기 버튼을 클릭하세요.",
     "steps": {
       "installCli": {
         "label": "Claude Code CLI 설치",

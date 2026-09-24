@@ -444,7 +444,7 @@
   },
   "onboarding": {
     "title": "Einrichtung",
-    "dismiss": "Schließen",
+    "close": "Schließen",
     "optional": "optional",
     "unknown": "nicht bestätigt",
     "checking": "Wird geprüft…",
@@ -453,6 +453,8 @@
     "reveal": "Anzeigen",
     "recheck": "Erneut prüfen",
     "login": "Anmelden",
+    "getStarted": "Loslegen",
+    "getStartedHint": "Um die Checkliste zu überspringen, klicken Sie auf die Schaltfläche zum Schließen.",
     "steps": {
       "installCli": {
         "label": "Claude Code CLI installieren",

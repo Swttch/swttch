@@ -43,7 +43,7 @@ function profileWithSeenVersion(whatsNewSeenVersion: string | null): ProfileData
     runnerBestScore: 0,
     voicePrompt: { status: 'pending', askedAt: null, decidedAt: null } as ProfileData['voicePrompt'],
     whatsNewSeenVersion,
-    onboardingDismissed: false,
+    onboardingDismissedAt: null,
   };
 }
 

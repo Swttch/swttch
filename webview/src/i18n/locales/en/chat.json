@@ -448,7 +448,7 @@
   },
   "onboarding": {
     "title": "Get set up",
-    "dismiss": "Close",
+    "close": "Close",
     "optional": "optional",
     "unknown": "not confirmed",
     "checking": "Checking…",
@@ -457,6 +457,8 @@
     "reveal": "Show",
     "recheck": "Re-check",
     "login": "Sign in",
+    "getStarted": "Get started",
+    "getStartedHint": "To skip the checklist, click the close button.",
     "steps": {
       "installCli": {
         "label": "Install the Claude Code CLI",

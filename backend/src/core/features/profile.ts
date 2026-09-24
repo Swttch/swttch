@@ -72,19 +72,37 @@ export interface ProfileData {
    */
   whatsNewSeenVersion: string | null;
   /**
-   * 사용자가 온보딩 체크리스트를 닫았는지. 기본값 false.
+   * When the onboarding checklist card was closed (ISO 8601), or null while it
+   * has never been closed.
    *
-   * 웹뷰가 아니라 여기에 두는 이유는 `whatsNewSeenVersion`과 같다. JetBrains 모드의
-   * 웹뷰 주소는 `http://localhost:<매번 새로 할당되는 포트>`라서 IDE를 재시작할 때마다
-   * origin이 바뀌고 `localStorage`가 통째로 빈 채로 시작된다(#453). 거기에 두면
-   * 닫아도 다음 실행에 다시 떠서, 닫기 버튼이 그 실행에서만 듣는 말이 된다.
+   * The card is a once-per-install thing, so this is the ONLY value that decides
+   * whether it is raised: null means raise it, anything else means never again.
+   * How far the individual steps got does not enter into it — a card closed with
+   * every step unfinished is just as closed as one closed with all of them done.
    *
-   * 항목의 완료 여부는 여기 담지 않는다. 그건 기록이 아니라 지금 기계의 상태이고,
-   * 매번 새로 물어야 맞는 답이 나온다 — 킷을 터미널에서 지운 사람에게 "설치됨"으로
-   * 남아 있으면 그 기록이 사용자를 속인다.
+   * It lives here rather than in the webview for the same reason as
+   * `whatsNewSeenVersion`. A JetBrains-mode webview is served from
+   * `http://localhost:<a port picked afresh at every launch>`, so the origin
+   * changes on every IDE restart and `localStorage` starts empty (#453). Kept
+   * there, the record would be gone by the next launch and the close button
+   * would only hold for the run it was pressed in.
+   *
+   * Per-step completion is NOT kept here. That is the state of the machine right
+   * now rather than history, and only a fresh lookup answers it correctly — a
+   * stored "installed" would go on lying to someone who removed the kit in a
+   * terminal.
    */
-  onboardingDismissed: boolean;
+  onboardingDismissedAt: string | null;
 }
+
+/**
+ * The key v0.32.2 kept the same fact under, as a boolean.
+ *
+ * It recorded THAT the card was closed but not when. A profile carrying it gets
+ * the moment of the migration instead — the point of the record is that the card
+ * was closed at all, and inventing a truer timestamp is not possible.
+ */
+const LEGACY_ONBOARDING_DISMISSED_KEY = 'onboardingDismissed';
 
 function createDefaultProfile(): ProfileData {
   return {
@@ -95,7 +113,7 @@ function createDefaultProfile(): ProfileData {
     runnerBestScore: 0,
     voicePrompt: { status: VoicePromptStatus.PENDING, askedAt: null, decidedAt: null },
     whatsNewSeenVersion: null,
-    onboardingDismissed: false,
+    onboardingDismissedAt: null,
   };
 }
 
@@ -143,9 +161,11 @@ function createUnreadableProfile(): ProfileData {
     // installed version is not known here, so the suppression for the What's new
     // popup lives where the comparison happens (see whats-new.ts).
     whatsNewSeenVersion: null,
-    // Suppresses the onboarding checklist, which the user may well have closed
-    // already and cannot close again in a way that sticks.
-    onboardingDismissed: true,
+    // Suppresses the onboarding card, which the user may well have closed
+    // already and cannot close again in a way that sticks. Any moment does
+    // that, since only "is it null" is ever asked; this one is never written to
+    // disk, so it cannot become a closing time the user did not have.
+    onboardingDismissedAt: new Date().toISOString(),
   };
 }
 
@@ -182,13 +202,30 @@ export function normalizeWhatsNewSeenVersion(value: unknown): string | null {
 }
 
 /**
- * boolean이 아닌 값(누락/손상)은 false로 보정한다.
+ * Anything that is not a non-empty string (absent or corrupted) is repaired to
+ * null.
  *
- * 필드가 통째로 없는 기존 사용자는 "닫지 않았다"로 시작한다. 체크리스트를 도입하기
- * 전에는 닫을 기회 자체가 없었으므로 그것이 사실이다.
+ * A profile that predates the field starts as "never closed", which is the
+ * truth: there was no card to close. Such a machine sees the card once, and
+ * closing it is what writes the record.
  */
-export function normalizeOnboardingDismissed(value: unknown): boolean {
-  return value === true;
+export function normalizeOnboardingDismissedAt(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+/**
+ * Read the current key first, and fall back to the boolean v0.32.2 wrote.
+ *
+ * A profile that only has the old key differs from what `needsRewrite` below
+ * compares against, so that one rewrite is the move to the new key. Either way
+ * the card does not come back for someone who already closed it, so even a
+ * failed write costs them nothing.
+ */
+function readOnboardingDismissedAt(parsed: Partial<ProfileData>): string | null {
+  const current = normalizeOnboardingDismissedAt(parsed.onboardingDismissedAt);
+  if (current !== null) return current;
+  const legacy = (parsed as Record<string, unknown>)[LEGACY_ONBOARDING_DISMISSED_KEY];
+  return legacy === true ? new Date().toISOString() : null;
 }
 
 /** ISO 문자열이 아닌 값(누락/손상)은 null로 보정한다. */
@@ -301,7 +338,7 @@ export async function loadProfile(): Promise<ProfileLoad> {
     const runnerBestScore = normalizeRunnerBestScore(parsed.runnerBestScore);
     const voicePrompt = normalizeVoicePrompt(parsed.voicePrompt);
     const whatsNewSeenVersion = normalizeWhatsNewSeenVersion(parsed.whatsNewSeenVersion);
-    const onboardingDismissed = normalizeOnboardingDismissed(parsed.onboardingDismissed);
+    const onboardingDismissedAt = readOnboardingDismissedAt(parsed);
 
     const profile: ProfileData = {
       uuid:
@@ -315,7 +352,7 @@ export async function loadProfile(): Promise<ProfileLoad> {
       runnerBestScore,
       voicePrompt,
       whatsNewSeenVersion,
-      onboardingDismissed,
+      onboardingDismissedAt,
     };
 
     // 누락/손상 필드를 보정했으면 파일을 다시 써서 정규화한다.
@@ -334,9 +371,11 @@ export async function loadProfile(): Promise<ProfileLoad> {
       // 곧 기본값 null이다. undefined와 null을 같게 봐야 이 필드를 도입했다는 이유만으로
       // 모든 기존 사용자의 파일을 한 번씩 다시 쓰지 않는다.
       (parsed.whatsNewSeenVersion ?? null) !== whatsNewSeenVersion ||
-      // 같은 이유로 undefined와 false를 같게 본다. 필드를 도입했다는 것만으로
+      // 같은 이유로 undefined와 null을 같게 본다. 필드를 도입했다는 것만으로
       // 모든 기존 사용자의 파일을 한 번씩 다시 쓰지 않는다.
-      (parsed.onboardingDismissed ?? false) !== onboardingDismissed;
+      // A profile that only has v0.32.2's boolean key differs here, so that one
+      // rewrite is what moves it onto the current key.
+      (parsed.onboardingDismissedAt ?? null) !== onboardingDismissedAt;
     if (needsRewrite) {
       await writeProfile(profile);
     }
@@ -545,25 +584,32 @@ export async function setWhatsNewSeenVersion(version: string): Promise<string | 
   return profile.whatsNewSeenVersion;
 }
 
-/** 온보딩 체크리스트를 닫은 적이 있는지 읽는다. */
-export async function getOnboardingDismissed(): Promise<boolean> {
+/** When the onboarding checklist card was closed, or null if it never was. */
+export async function getOnboardingDismissedAt(): Promise<string | null> {
   const profile = await ensureProfile();
-  return profile.onboardingDismissed;
+  return profile.onboardingDismissedAt;
 }
 
 /**
- * 체크리스트를 닫았다는 사실을 기록한다.
+ * Record that the onboarding checklist card was closed, now.
  *
- * 되돌리는 경로(false로 쓰기)도 열어둔다. 지금 UI에는 다시 여는 버튼이 없지만,
- * 한 번 닫으면 영영 못 여는 값을 파일에 남기는 것은 사용자 자산을 일방통행으로
- * 만드는 일이다.
+ * The clock is read here rather than taken from the caller: the record exists to
+ * be compared against nothing at all (null or not), and a webview's clock is one
+ * more thing that can be wrong about a file the user owns.
+ *
+ * An already-closed card keeps its original moment. Closing it twice is not a
+ * thing that happens — it is never raised again — and if it somehow did, the
+ * first time is the one worth keeping.
  */
-export async function setOnboardingDismissed(dismissed: boolean): Promise<boolean> {
+export async function dismissOnboarding(): Promise<string | null> {
   const profile = await updateProfile('closing the onboarding checklist', (current) => {
-    current.onboardingDismissed = normalizeOnboardingDismissed(dismissed);
+    // Already closed: nothing to write, so nothing is written. `updateProfile`
+    // takes null as "leave the file alone".
+    if (current.onboardingDismissedAt !== null) return null;
+    current.onboardingDismissedAt = new Date().toISOString();
     return current;
   });
-  return profile.onboardingDismissed;
+  return profile.onboardingDismissedAt;
 }
 
 /** 러너 게임 최고 점수를 읽는다(기록이 없으면 0). */

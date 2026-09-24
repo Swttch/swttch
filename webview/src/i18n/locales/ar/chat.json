@@ -456,7 +456,7 @@
   },
   "onboarding": {
     "title": "الإعداد",
-    "dismiss": "إغلاق",
+    "close": "إغلاق",
     "optional": "اختياري",
     "unknown": "غير مؤكد",
     "checking": "جارٍ التحقق…",
@@ -465,6 +465,8 @@
     "reveal": "عرض",
     "recheck": "إعادة الفحص",
     "login": "تسجيل الدخول",
+    "getStarted": "ابدأ",
+    "getStartedHint": "لتخطي قائمة المهام، انقر على زر الإغلاق.",
     "steps": {
       "installCli": {
         "label": "تثبيت واجهة Claude Code",

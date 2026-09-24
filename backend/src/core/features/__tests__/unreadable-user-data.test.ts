@@ -42,7 +42,7 @@ import {
   setTelemetryConsent,
   setAnnouncementsEnabled,
   setDismissedAnnouncement,
-  setOnboardingDismissed,
+  dismissOnboarding,
   setRunnerBestScore,
   setVoicePromptDecision,
   setWhatsNewSeenVersion,
@@ -71,7 +71,7 @@ const RECORDED_PROFILE = {
     decidedAt: '2026-08-18T03:00:05.000Z',
   },
   whatsNewSeenVersion: '0.32.2',
-  onboardingDismissed: true,
+  onboardingDismissedAt: '2026-08-18T03:00:10.000Z',
 };
 
 /** Every shape that parses to something we cannot read fields off, plus the two that do not parse. */
@@ -127,7 +127,7 @@ describe('profile.json that exists but cannot be read', () => {
     expect(profile.telemetryConsent.decidedAt).toBeNull();
     expect(profile.announcementsEnabled).toBe(false);
     expect(profile.voicePrompt.status).toBe(VoicePromptStatus.DECLINED);
-    expect(profile.onboardingDismissed).toBe(true);
+    expect(profile.onboardingDismissedAt).not.toBeNull();
   });
 
   it('never reports PENDING consent, which is what put the banner back', async () => {
@@ -173,7 +173,7 @@ describe('the writers that used to overwrite an unreadable profile', () => {
     ['setTelemetryConsent', () => setTelemetryConsent(true)],
     ['setAnnouncementsEnabled', () => setAnnouncementsEnabled(false)],
     ['setDismissedAnnouncement', () => setDismissedAnnouncement('ann-9')],
-    ['setOnboardingDismissed', () => setOnboardingDismissed(true)],
+    ['dismissOnboarding', () => dismissOnboarding()],
     ['setRunnerBestScore', () => setRunnerBestScore(99999)],
     ['setVoicePromptDecision', () => setVoicePromptDecision(true)],
     ['setWhatsNewSeenVersion', () => setWhatsNewSeenVersion('9.9.9')],
