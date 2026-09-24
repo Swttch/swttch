@@ -98,15 +98,59 @@ export function readReportedMode(event: Record<string, unknown>): string | null 
 }
 
 /**
+ * Effort levels the CLI's settings file accepts under `effortLevel`.
+ *
+ * Measured against 2.1.261 and 2.1.278: that key is validated against
+ * `enum(["low","medium","high","xhigh"]).catch(undefined)`, so a level outside
+ * this set is dropped where it is read, without a warning, and the session falls
+ * back to the model's default effort. The `--effort` flag, by contrast, is
+ * documented in `claude --help` and names five levels — `low, medium, high,
+ * xhigh, max`.
+ *
+ * `max` is therefore the one step of the slider the settings file has no room
+ * for: picking it filled the dots on screen and changed nothing about the
+ * session, which is what #474 reported.
+ *
+ * Written as "what the file takes" rather than "max is special" on purpose. The
+ * two vocabularies are the CLI's to grow, and a level added to the flag before
+ * the file — as `max` was — needs no second fix here.
+ */
+const SETTINGS_FILE_EFFORT_LEVELS = new Set(['low', 'medium', 'high', 'xhigh']);
+
+/**
+ * The level this spawn has to pass as `--effort`, or undefined to let the CLI
+ * read `effortLevel` from its own settings files exactly as it does for someone
+ * running `claude` in a terminal.
+ *
+ * Only the levels the settings file cannot hold are passed as a flag. Passing
+ * every level would work too, but it would take low…xhigh off the path a
+ * terminal user is on and pin each of them for the life of the process, so the
+ * flag is reserved for the levels that have nowhere else to go.
+ *
+ * An unreadable value is passed through rather than guessed at: the CLI answers
+ * an unknown level with `Warning: Unknown --effort value '…' — ignoring it and
+ * using the default effort`, which is the same default a dropped setting lands
+ * on, and says so out loud instead of silently.
+ */
+export function resolveEffortFlag(settings: Record<string, unknown>): string | undefined {
+  const level = settings.effortLevel;
+  if (typeof level !== 'string' || level === '') return undefined;
+  if (SETTINGS_FILE_EFFORT_LEVELS.has(level)) return undefined;
+  return level;
+}
+
+/**
  * Build the argv for spawning the Claude CLI in interactive print mode.
  * Extracted as a pure function so the flag composition (session flag,
- * permission mode, pinned model) is unit-testable without spawning a process.
+ * permission mode, pinned model, pinned effort) is unit-testable without
+ * spawning a process.
  */
 export function buildClaudeArgs(
   sessionFlag: string,
   targetSessionId: string,
   inputMode: string | undefined,
   model?: string,
+  effortLevel?: string,
 ): string[] {
   const args: string[] = [
     '-p',
@@ -138,6 +182,15 @@ export function buildClaudeArgs(
   // it to avoid handing the CLI a no-op alias.
   if (model && model !== 'default') {
     args.push('--model', model);
+  }
+
+  // Carry the effort level the settings file cannot hold. `--effort` is a
+  // documented flag (`claude --help`), it outranks `effortLevel` in the settings
+  // file, and it is the same flag a terminal user would type — so this is the
+  // official route to `max` rather than a way around one. See resolveEffortFlag,
+  // which decides when a level needs it.
+  if (effortLevel) {
+    args.push('--effort', effortLevel);
   }
 
   return args;
@@ -233,6 +286,37 @@ export function needsRestartForMode(
 }
 
 /**
+ * Whether a live CLI pinned to `liveEffort` can serve a message that wants
+ * `requestedEffort`, or has to be restarted first.
+ *
+ * Both sides name the `--effort` flag the spawn passed, with null / undefined
+ * meaning "no flag was passed, so the CLI read its own settings". Comparing the
+ * flag rather than the user's chosen level is what keeps low…xhigh off this
+ * path: moving between two levels the settings file holds changes no flag, so
+ * it restarts nothing, exactly as before.
+ *
+ * Both directions across the boundary do need a restart:
+ *
+ * - into a flagged level (nothing → `max`) because a running CLI has no way to
+ *   be told, and
+ * - out of one (`max` → nothing) because `--effort` pins the process it
+ *   launched. Leaving that CLI in place would keep answering at `max` while the
+ *   slider showed something lower, which is the reported bug with its two ends
+ *   swapped.
+ *
+ * Unlike a permission mode, the level is read from the settings file at every
+ * spawn rather than carried on the message, so there is no "this message asks
+ * for nothing in particular" case to exempt: undefined here is an answer, and it
+ * means the settings file holds the level.
+ */
+export function needsRestartForEffort(
+  liveEffort: string | null,
+  requestedEffort: string | undefined,
+): boolean {
+  return liveEffort !== (requestedEffort ?? null);
+}
+
+/**
  * Terminate a session's live CLI so the next message respawns it with current
  * spawn-time settings and credentials, and wait until it is really gone.
  *
@@ -292,10 +376,13 @@ export async function restartClaudeSessionProcess(
 }
 
 /**
- * 세션에 대한 claude -p 프로세스가 없으면 새로 spawn한다.
- * 이미 살아있는 프로세스가 있으면 아무 것도 하지 않는다.
- * 단, 요청된 권한 모드가 살아있는 프로세스의 모드와 다르면
- * 그 모드로 재시작한다(--permission-mode는 spawn 시점 플래그이므로).
+ * Spawn a `claude -p` process for the session unless one is already alive, in
+ * which case the live one is reused and nothing else happens.
+ *
+ * With one exception: a live process is restarted when the requested permission
+ * mode, or the effort level, differs from what that process is actually running
+ * under. `--permission-mode` and `--effort` both apply only at spawn, so a value
+ * picked afterwards reaches the CLI no other way.
  */
 export async function ensureClaudeProcess(
   connections: ConnectionManager,
@@ -325,16 +412,31 @@ export async function ensureClaudeProcess(
     return;
   }
 
+  // Load this project's CLAUDE_CONFIG_DIR (project > global) onto process.env, so the
+  // CLI resolves the right Claude data dir for THIS workingDir (#123) — and so the
+  // settings read below answers from that same dir rather than a different project's.
+  //
+  // Done before the reuse decision, not just before the spawn, because that decision
+  // now depends on the settings: an effort level the settings file cannot hold has to
+  // be compared against what the live process is pinned to.
+  await Claude.applyConfigDir(workingDir);
+  const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
+  const effortLevel = resolveEffortFlag(claudeSettings);
+
   const existingSession = connections.getSession(targetSessionId);
   if (existingSession?.process) {
-    // `--permission-mode` is a spawn-time flag: a live CLI keeps whatever mode it
-    // started with, and no official CLI command changes it in place. So when the user
-    // picks a different mode mid-chat, honoring it means restarting the process under
-    // the new flag — otherwise the choice is silently dropped and the CLI's next
-    // `system/init` pushes the old mode back onto the webview, which looks like the
-    // mode flipping itself off (#172). Same mode → reuse as before.
+    // `--permission-mode` and `--effort` are both spawn-time flags: a live CLI keeps
+    // whatever it started with, and no official CLI command changes either in place.
+    // So when the user picks a different one mid-chat, honoring it means restarting
+    // the process under the new flag — otherwise the choice is silently dropped. For
+    // the mode, the CLI's next `system/init` then pushes the old value back onto the
+    // webview, which looks like the mode flipping itself off (#172); for the effort,
+    // nothing pushes anything back and the slider simply lies (#474). Unchanged → reuse.
     const liveMode = connections.getInputMode(targetSessionId);
-    if (!needsRestartForMode(liveMode, inputMode)) {
+    const liveEffort = connections.getEffortLevel(targetSessionId);
+    const modeChanged = needsRestartForMode(liveMode, inputMode);
+    const effortChanged = needsRestartForEffort(liveEffort, effortLevel);
+    if (!modeChanged && !effortChanged) {
       console.error(
         '[node-backend]',
         `Reusing existing process for session ${targetSessionId} (PID: ${existingSession.process.pid})`,
@@ -342,9 +444,15 @@ export async function ensureClaudeProcess(
       return;
     }
 
+    // Both can change at once, so the log names every reason rather than the first
+    // one found — a restart blamed on half its cause is a restart nobody can explain.
+    const reasons = [
+      modeChanged && `permission mode (${liveMode} -> ${inputMode})`,
+      effortChanged && `effort level (${liveEffort} -> ${effortLevel ?? null})`,
+    ].filter(Boolean);
     console.error(
       '[node-backend]',
-      `Permission mode changed (${liveMode} -> ${inputMode}) for session ${targetSessionId}; ` +
+      `Changed ${reasons.join(' and ')} for session ${targetSessionId}; ` +
         `restarting CLI (PID: ${existingSession.process.pid})`,
     );
     await restartClaudeSessionProcess(connections, targetSessionId, existingSession.process);
@@ -389,17 +497,9 @@ export async function ensureClaudeProcess(
   console.error('[node-backend]', `Working directory: ${workingDir}`);
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
-  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model);
+  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel);
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
-
-  // Load this project's CLAUDE_CONFIG_DIR (project > global) onto process.env before
-  // spawning, so the CLI resolves the right Claude data dir for THIS workingDir. (#123)
-  await Claude.applyConfigDir(workingDir);
-
-  // Read after applyConfigDir: the merge resolves against the config dir this
-  // project uses, so reading earlier could answer from a different one.
-  const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
 
   // spawnAuthed strips inherited OAuth tokens (e.g. from Claude Desktop spawning the IDE) so
   // the CLI falls through to its refreshable keychain auth. Centralized in Claude so chat and
@@ -466,6 +566,13 @@ export async function ensureClaudeProcess(
   // from its own settings, and it reports that choice on `system/init`, which is
   // what fills the record in.
   connections.setInputMode(targetSessionId, inputMode ?? null);
+  // Remember the effort level this process is pinned to, for the same reason and with
+  // the same ordering constraint. Null when no `--effort` was passed, which is what a
+  // later spawn with no flag compares equal to. Nothing updates this from the stream:
+  // unlike the permission mode, the CLI never reports its effort on any event we
+  // receive — measured across `system/init`, `assistant`, `rate_limit_event`,
+  // `result` and `control_response`, none of them carries one (#474).
+  connections.setEffortLevel(targetSessionId, effortLevel ?? null);
   // Remember which saved account this process authenticated as. The credential slot
   // is shared backend-wide, so by the time this session hits a usage limit the
   // registry may name a different account entirely — one another session switched
