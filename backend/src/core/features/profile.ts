@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { randomUUID } from 'crypto';
-import { atomicWriteFile } from './atomic-json';
+import { atomicWriteFile, refusedWriteMessage } from './atomic-json';
 
 // ─── User profile (global, telemetry-independent) ────────────────────────────
 // `~/.claude-code-gui/profile.json` holds a per-install pseudonymous uuid and the
@@ -99,6 +99,56 @@ function createDefaultProfile(): ProfileData {
   };
 }
 
+/**
+ * What callers get while `profile.json` exists but cannot be read.
+ *
+ * This is NOT {@link createDefaultProfile}, and the difference is the whole
+ * point. A default profile says "this user has decided nothing yet", which for
+ * every field here means "ask them again". Asking again is the wrong move twice
+ * over: the question may already have been answered, and the answer cannot be
+ * saved anyway, because every writer below refuses while the file is unreadable.
+ * The user would be asked at every launch and their reply would go nowhere.
+ *
+ * So the rule for this shape is: **do not ask a question whose answer we cannot
+ * store, and do not act on a permission we cannot read.** Every field takes the
+ * value that keeps quiet.
+ *
+ * Nothing here is ever written to disk. It exists only to answer reads for as
+ * long as the file stays unreadable, and the moment the file becomes readable
+ * again the user's real values come back untouched.
+ */
+function createUnreadableProfile(): ProfileData {
+  return {
+    // Fresh and in-memory only. Telemetry is off below, so this is never
+    // transmitted; a fixed placeholder would instead make every install with an
+    // unreadable profile look like one machine in the admin console.
+    uuid: randomUUID(),
+    // The two wrong answers: PENDING re-opens the consent banner (the symptom
+    // this file is being changed to stop), and ACCEPTED would transmit on a
+    // permission we did not actually read. DENIED sends nothing and asks nothing.
+    // `decidedAt` stays null because no decision was read, let alone made.
+    telemetryConsent: { status: ConsentStatus.DENIED, decidedAt: null },
+    // Unused while announcements are off, and an empty list is the truth: we
+    // read no dismissals.
+    dismissedAnnouncementIds: [],
+    // We cannot tell which announcements the user already closed, so delivering
+    // any of them would re-show dismissed ones.
+    announcementsEnabled: false,
+    // No score was read. The setter refuses to write, so this 0 cannot overwrite
+    // a real best score.
+    runnerBestScore: 0,
+    // Suppresses the one-time voice question rather than asking it again.
+    voicePrompt: { status: VoicePromptStatus.DECLINED, askedAt: null, decidedAt: null },
+    // "No version was read" rather than "no popup has ever been shown". The
+    // installed version is not known here, so the suppression for the What's new
+    // popup lives where the comparison happens (see whats-new.ts).
+    whatsNewSeenVersion: null,
+    // Suppresses the onboarding checklist, which the user may well have closed
+    // already and cannot close again in a way that sticks.
+    onboardingDismissed: true,
+  };
+}
+
 /** 문자열이 아닌 값을 걸러내 보정한다. 배열이 아니면 빈 배열로 취급한다. */
 export function normalizeDismissedAnnouncementIds(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
@@ -170,20 +220,80 @@ async function writeProfile(profile: ProfileData): Promise<void> {
 }
 
 /**
- * profile.json을 읽어 반환한다. 파일이나 필드가 없거나 손상됐으면 보정해 다시 저장한다.
- * uuid는 동의 여부와 무관하게 항상 보장된다(없으면 생성). 서버 시작 시 1회 호출한다.
+ * What a profile read found.
+ *
+ * `unreadable` means the file is there and we could not use it, which is the one
+ * case that must never lead to a write. `profile` is filled in both cases so
+ * every caller has something to answer with; on `unreadable` it is the
+ * keep-quiet shape from {@link createUnreadableProfile} and not the user's data.
  */
-export async function ensureProfile(): Promise<ProfileData> {
+export type ProfileLoad =
+  | { status: 'ok'; profile: ProfileData }
+  | { status: 'unreadable'; reason: string; profile: ProfileData };
+
+/**
+ * Remembers the reason last logged for an unreadable profile, so the log records
+ * the fact once instead of once per read.
+ *
+ * Reads are frequent: the announcement gate, the voice prompt, the onboarding
+ * flag and the consent state each call through here on ordinary requests, so
+ * logging every read would bury the one line that matters under hundreds of
+ * copies. Refused WRITES are logged every time, because each one is a user
+ * action that did not take effect. Cleared on a successful read, so a file that
+ * breaks again after being fixed is reported again.
+ */
+let lastUnreadableReason: string | null = null;
+
+/**
+ * Read profile.json, reporting "exists but could not be read" as its own outcome
+ * rather than as an empty profile.
+ *
+ * The distinction is the reason this function exists. An ABSENT file has nothing
+ * to lose, so it is created with defaults exactly as before. A file that exists
+ * and fails to parse is the user's data that we merely failed to read, and
+ * replacing it destroys their telemetry decision, their runner best score, the
+ * announcements they dismissed and the version they last saw What's new for.
+ * That is not a hypothetical: an empty profile.json makes `JSON.parse('')` throw
+ * and the old code went straight to overwriting it.
+ *
+ * This is the rule `atomic-json.ts` already sets out for every JSON file we do
+ * not own (issue #386): "cannot be read" is not "is empty", and the answer is to
+ * refuse the write. profile.json is ours to create but the contents are the
+ * user's, so the same rule applies.
+ */
+export async function loadProfile(): Promise<ProfileLoad> {
   if (!existsSync(PROFILE_FILE)) {
     const profile = createDefaultProfile();
     await writeProfile(profile);
-    return profile;
+    lastUnreadableReason = null;
+    return { status: 'ok', profile };
   }
 
+  let raw: string;
   try {
-    const raw = await readFile(PROFILE_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<ProfileData>;
+    raw = await readFile(PROFILE_FILE, 'utf-8');
+  } catch (err) {
+    return await reportUnreadable(err instanceof Error ? err.message : String(err));
+  }
 
+  let parsed: Partial<ProfileData>;
+  try {
+    // An empty file lands here: JSON.parse('') throws, and that is the exact
+    // shape that erased a real user's consent record.
+    const value: unknown = JSON.parse(raw);
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      // Valid JSON is not the same thing as a profile. `null`, `[1,2]` and
+      // `"text"` all parse, and none of them is something to read fields off.
+      return await reportUnreadable(`expected a JSON object, found ${describeParsed(value)}`);
+    }
+    parsed = value as Partial<ProfileData>;
+  } catch (err) {
+    return await reportUnreadable(err instanceof Error ? err.message : String(err));
+  }
+
+  lastUnreadableReason = null;
+
+  {
     const dismissedAnnouncementIds = normalizeDismissedAnnouncementIds(
       parsed.dismissedAnnouncementIds,
     );
@@ -230,13 +340,82 @@ export async function ensureProfile(): Promise<ProfileData> {
     if (needsRewrite) {
       await writeProfile(profile);
     }
-    return profile;
-  } catch {
-    // JSON 파싱 실패 등 손상: 새 프로필로 복구한다(기존 uuid는 보존 불가).
-    const profile = createDefaultProfile();
-    await writeProfile(profile);
-    return profile;
+    return { status: 'ok', profile };
   }
+}
+
+function describeParsed(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'an array';
+  return `a ${typeof value}`;
+}
+
+/**
+ * Log the read failure at most once per reason, then answer with the quiet shape.
+ *
+ * Every failure path in {@link loadProfile} ends here, so this one function is
+ * what decides that an unreadable profile is reported rather than replaced. It is
+ * async so that all three call sites read the same whether or not the decision
+ * ever needs to touch the disk.
+ */
+async function reportUnreadable(reason: string): Promise<ProfileLoad> {
+  if (lastUnreadableReason !== reason) {
+    lastUnreadableReason = reason;
+    console.error(
+      '[node-backend]',
+      `could not read ${PROFILE_FILE} (${reason}); leaving it untouched and treating this ` +
+        'install as having made no decisions until it can be read',
+    );
+  }
+  return { status: 'unreadable', reason, profile: createUnreadableProfile() };
+}
+
+/**
+ * Read profile.json. An absent file is created with defaults, and missing or
+ * corrupt FIELDS are normalized and saved back. The uuid is always present
+ * regardless of the consent decision (generated when absent). Called once when
+ * the server starts.
+ *
+ * A file that exists and cannot be read is NOT overwritten. The value returned
+ * then is not the user's data but the keep-quiet shape from
+ * {@link createUnreadableProfile}, and the failure is logged. A caller that needs
+ * to know about the failure itself uses {@link loadProfile} directly.
+ */
+export async function ensureProfile(): Promise<ProfileData> {
+  return (await loadProfile()).profile;
+}
+
+/**
+ * Run a read-modify-write over profile.json, refusing the write when the file
+ * exists but could not be read.
+ *
+ * Every setter goes through here rather than calling `writeProfile` itself. Left
+ * to themselves they would each read, mutate and save, and a failed read would
+ * put a default profile plus one changed field on disk — the same destruction as
+ * before, one step later. Routing them through one function means a new setter
+ * gets the refusal for free instead of having to remember it.
+ *
+ * `mutate` returning `null` means "nothing to change" and skips the write, which
+ * is how the setters that only save on a real change express that.
+ */
+async function updateProfile(
+  action: string,
+  mutate: (profile: ProfileData) => ProfileData | null,
+): Promise<ProfileData> {
+  const load = await loadProfile();
+  if (load.status === 'unreadable') {
+    // Logged on every refusal, unlike the read failure above: each one is a
+    // thing the user asked for that did not happen.
+    console.error(
+      '[node-backend]',
+      `${refusedWriteMessage(PROFILE_FILE, load.reason)} — ${action} was not saved`,
+    );
+    return load.profile;
+  }
+  const next = mutate(load.profile);
+  if (next === null) return load.profile;
+  await writeProfile(next);
+  return next;
 }
 
 /** 현재 프로필을 읽는다(없으면 생성). */
@@ -246,13 +425,13 @@ export async function readProfile(): Promise<ProfileData> {
 
 /** 텔레메트리 수락(accept)/거부(deny)를 타임스탬프와 함께 기록한다. */
 export async function setTelemetryConsent(accepted: boolean): Promise<ProfileData> {
-  const profile = await ensureProfile();
-  profile.telemetryConsent = {
-    status: accepted ? ConsentStatus.ACCEPTED : ConsentStatus.DENIED,
-    decidedAt: new Date().toISOString(),
-  };
-  await writeProfile(profile);
-  return profile;
+  return updateProfile('the telemetry consent decision', (profile) => {
+    profile.telemetryConsent = {
+      status: accepted ? ConsentStatus.ACCEPTED : ConsentStatus.DENIED,
+      decidedAt: new Date().toISOString(),
+    };
+    return profile;
+  });
 }
 
 /** 음성 입력 질문의 현재 응답 상태를 읽는다. */
@@ -266,10 +445,11 @@ export async function getVoicePrompt(): Promise<VoicePrompt> {
  * 이미 응답한 뒤라면 다시 묻지 않으므로 아무것도 하지 않는다.
  */
 export async function markVoicePromptAsked(): Promise<VoicePrompt> {
-  const profile = await ensureProfile();
-  if (profile.voicePrompt.status !== VoicePromptStatus.PENDING) return profile.voicePrompt;
-  profile.voicePrompt = { ...profile.voicePrompt, askedAt: new Date().toISOString() };
-  await writeProfile(profile);
+  const profile = await updateProfile('the time the voice question was shown', (current) => {
+    if (current.voicePrompt.status !== VoicePromptStatus.PENDING) return null;
+    current.voicePrompt = { ...current.voicePrompt, askedAt: new Date().toISOString() };
+    return current;
+  });
   return profile.voicePrompt;
 }
 
@@ -280,13 +460,14 @@ export async function markVoicePromptAsked(): Promise<VoicePrompt> {
  * 별개다. 그래서 accepted는 설치 결과가 아니라 버튼을 누른 사실을 남긴다.
  */
 export async function setVoicePromptDecision(accepted: boolean): Promise<VoicePrompt> {
-  const profile = await ensureProfile();
-  profile.voicePrompt = {
-    status: accepted ? VoicePromptStatus.ACCEPTED : VoicePromptStatus.DECLINED,
-    askedAt: profile.voicePrompt.askedAt,
-    decidedAt: new Date().toISOString(),
-  };
-  await writeProfile(profile);
+  const profile = await updateProfile('the answer to the voice question', (current) => {
+    current.voicePrompt = {
+      status: accepted ? VoicePromptStatus.ACCEPTED : VoicePromptStatus.DECLINED,
+      askedAt: current.voicePrompt.askedAt,
+      decidedAt: new Date().toISOString(),
+    };
+    return current;
+  });
   return profile.voicePrompt;
 }
 
@@ -298,14 +479,15 @@ export async function setVoicePromptDecision(accepted: boolean): Promise<VoicePr
  * 이미 응답이 있으면 그 응답이 우선이므로 건드리지 않는다.
  */
 export async function acceptVoicePromptForInstalledKit(): Promise<VoicePrompt> {
-  const profile = await ensureProfile();
-  if (profile.voicePrompt.status !== VoicePromptStatus.PENDING) return profile.voicePrompt;
-  profile.voicePrompt = {
-    status: VoicePromptStatus.ACCEPTED,
-    askedAt: null,
-    decidedAt: new Date().toISOString(),
-  };
-  await writeProfile(profile);
+  const profile = await updateProfile('the voice answer implied by an installed kit', (current) => {
+    if (current.voicePrompt.status !== VoicePromptStatus.PENDING) return null;
+    current.voicePrompt = {
+      status: VoicePromptStatus.ACCEPTED,
+      askedAt: null,
+      decidedAt: new Date().toISOString(),
+    };
+    return current;
+  });
   return profile.voicePrompt;
 }
 
@@ -324,13 +506,13 @@ const MAX_DISMISSED_ANNOUNCEMENT_IDS = 500;
  * 갱신된(또는 기존과 동일한) 전체 목록을 반환한다.
  */
 export async function setDismissedAnnouncement(id: string): Promise<string[]> {
-  const profile = await ensureProfile();
-  if (!profile.dismissedAnnouncementIds.includes(id)) {
-    profile.dismissedAnnouncementIds = [...profile.dismissedAnnouncementIds, id].slice(
+  const profile = await updateProfile(`dismissing announcement ${id}`, (current) => {
+    if (current.dismissedAnnouncementIds.includes(id)) return null;
+    current.dismissedAnnouncementIds = [...current.dismissedAnnouncementIds, id].slice(
       -MAX_DISMISSED_ANNOUNCEMENT_IDS,
     );
-    await writeProfile(profile);
-  }
+    return current;
+  });
   return profile.dismissedAnnouncementIds;
 }
 
@@ -342,10 +524,10 @@ export async function getAnnouncementsEnabled(): Promise<boolean> {
 
 /** 공지 수신 on/off를 기록한다. */
 export async function setAnnouncementsEnabled(enabled: boolean): Promise<ProfileData> {
-  const profile = await ensureProfile();
-  profile.announcementsEnabled = enabled;
-  await writeProfile(profile);
-  return profile;
+  return updateProfile('the announcements on/off setting', (profile) => {
+    profile.announcementsEnabled = enabled;
+    return profile;
+  });
 }
 
 /** "What's new" 팝업을 마지막으로 띄운 버전을 읽는다(띄운 적이 없으면 null). */
@@ -356,9 +538,10 @@ export async function getWhatsNewSeenVersion(): Promise<string | null> {
 
 /** "What's new" 팝업을 띄운 버전을 기록한다. */
 export async function setWhatsNewSeenVersion(version: string): Promise<string | null> {
-  const profile = await ensureProfile();
-  profile.whatsNewSeenVersion = normalizeWhatsNewSeenVersion(version);
-  await writeProfile(profile);
+  const profile = await updateProfile('the version What\'s new was shown for', (current) => {
+    current.whatsNewSeenVersion = normalizeWhatsNewSeenVersion(version);
+    return current;
+  });
   return profile.whatsNewSeenVersion;
 }
 
@@ -376,9 +559,10 @@ export async function getOnboardingDismissed(): Promise<boolean> {
  * 만드는 일이다.
  */
 export async function setOnboardingDismissed(dismissed: boolean): Promise<boolean> {
-  const profile = await ensureProfile();
-  profile.onboardingDismissed = normalizeOnboardingDismissed(dismissed);
-  await writeProfile(profile);
+  const profile = await updateProfile('closing the onboarding checklist', (current) => {
+    current.onboardingDismissed = normalizeOnboardingDismissed(dismissed);
+    return current;
+  });
   return profile.onboardingDismissed;
 }
 
@@ -395,10 +579,10 @@ export async function getRunnerBestScore(): Promise<number> {
  */
 export async function setRunnerBestScore(score: number): Promise<number> {
   const best = normalizeRunnerBestScore(score);
-  const profile = await ensureProfile();
-  if (best > profile.runnerBestScore) {
-    profile.runnerBestScore = best;
-    await writeProfile(profile);
-  }
+  const profile = await updateProfile('the runner best score', (current) => {
+    if (best <= current.runnerBestScore) return null;
+    current.runnerBestScore = best;
+    return current;
+  });
   return profile.runnerBestScore;
 }

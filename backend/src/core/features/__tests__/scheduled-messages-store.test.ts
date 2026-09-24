@@ -108,14 +108,26 @@ describe('scheduled-messages-store', () => {
     expect((await readSchedulesForSession('sess-a')).map((m) => m.id)).toEqual(['r1']);
   });
 
-  it('survives a corrupt store file by falling back to empty', async () => {
+  it('reads a corrupt store file as empty, because a list has to render something', async () => {
     await addSchedule(makeMsg('sess-a', 'r1'));
     const storeFile = join(tempHome, '.claude-code-gui', 'scheduled-messages.json');
     await writeFile(storeFile, '{not json', 'utf-8');
     expect(await readAllSchedules()).toEqual({});
-    // A subsequent add recovers cleanly on top of the reset.
-    await addSchedule(makeMsg('sess-b', 'r2'));
-    expect((await readSchedulesForSession('sess-b')).map((m) => m.id)).toEqual(['r2']);
+  });
+
+  it('refuses to add a reservation on top of a corrupt store, leaving the file untouched', async () => {
+    // The previous behaviour here was "recover cleanly on top of the reset",
+    // which is the destructive half of a read-modify-write: the file holds every
+    // session's reservations, so adding one on top of an empty read silently
+    // cancels all the others. The corrupt bytes stay exactly as they are, and the
+    // caller is told the reservation was not made.
+    await addSchedule(makeMsg('sess-a', 'r1'));
+    const storeFile = join(tempHome, '.claude-code-gui', 'scheduled-messages.json');
+    await writeFile(storeFile, '{not json', 'utf-8');
+
+    await expect(addSchedule(makeMsg('sess-b', 'r2'))).rejects.toThrow(/refusing to overwrite/);
+
+    expect(await readFile(storeFile, 'utf-8')).toBe('{not json');
   });
 
   it('persists to ~/.claude-code-gui/scheduled-messages.json', async () => {

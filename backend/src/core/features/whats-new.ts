@@ -1,5 +1,5 @@
 import { getPluginVersion } from '../handlers/getVersion';
-import { getWhatsNewSeenVersion, setWhatsNewSeenVersion } from './profile';
+import { loadProfile, setWhatsNewSeenVersion } from './profile';
 
 /**
  * "What's new" 팝업을 이번 실행에서 띄울지를 백엔드가 시작하는 순간에 정한다.
@@ -34,11 +34,23 @@ let pendingVersion: string | null = null;
  * 알려주는 것이 이 팝업의 목적이기 때문이다.
  *
  * 프로필을 읽지 못해도 시작을 막지 않는다. 그 경우 이번 실행에서는 띄우지 않는다.
+ *
+ * That last sentence reads the STATUS of `loadProfile()` rather than only its
+ * value, and it has to. An unreadable profile answers `whatsNewSeenVersion: null`,
+ * and null differs from every installed version, so comparing the value alone
+ * would open the popup on every launch. The write that would record it is refused
+ * for as long as the file stays unreadable, so the next launch opens it again.
+ * Telling "could not read it" apart from "nothing recorded" is what ends the loop.
  */
 export async function resolveWhatsNewOnStartup(): Promise<string | null> {
   try {
     const installedVersion = getPluginVersion();
-    const seenVersion = await getWhatsNewSeenVersion();
+    const load = await loadProfile();
+    if (load.status === 'unreadable') {
+      pendingVersion = null;
+      return pendingVersion;
+    }
+    const seenVersion = load.profile.whatsNewSeenVersion;
     pendingVersion = installedVersion !== seenVersion ? installedVersion : null;
   } catch {
     pendingVersion = null;

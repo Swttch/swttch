@@ -8,6 +8,7 @@
     "strict": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "vitest.setup.ts"
   ]
 }

@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { randomUUID } from 'crypto';
 import type { ScheduledMessage } from '../../shared';
+import { refusedWriteMessage } from './atomic-json';
 
 /**
  * Persistence for scheduled-message reservations (the "send later" engine).
@@ -46,21 +47,58 @@ async function writeAtomic0600(target: string, content: string): Promise<void> {
   }
 }
 
-/** Read the whole store, returning an empty map when absent or unparseable. */
-export async function readAllSchedules(): Promise<ScheduledMessagesFile> {
+/**
+ * What a read of the reservation store found.
+ *
+ * Told apart for the same reason `atomic-json.ts` gives for issue #386: the file
+ * holds every session's reservations at once, so an unreadable one read as an
+ * empty map turns the next {@link addSchedule} into "this install has exactly one
+ * reservation" and silently cancels everything the user had queued.
+ */
+type SchedulesReadForUpdate =
+  | { status: 'ok'; schedules: ScheduledMessagesFile }
+  | { status: 'unreadable'; reason: string };
+
+async function readAllSchedulesForUpdate(): Promise<SchedulesReadForUpdate> {
   const path = storePath();
-  if (!existsSync(path)) return {};
+  // Absent is not unreadable: nothing is there to lose.
+  if (!existsSync(path)) return { status: 'ok', schedules: {} };
+
+  let raw: unknown;
   try {
-    const raw = JSON.parse(await readFile(path, 'utf-8')) as Partial<ScheduledMessagesFile>;
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
-    const out: ScheduledMessagesFile = {};
-    for (const [sessionId, list] of Object.entries(raw)) {
-      if (Array.isArray(list)) out[sessionId] = list;
-    }
-    return out;
-  } catch {
+    raw = JSON.parse(await readFile(path, 'utf-8'));
+  } catch (err) {
+    return { status: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
+  }
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { status: 'unreadable', reason: 'scheduled-messages.json did not contain an object' };
+  }
+
+  const out: ScheduledMessagesFile = {};
+  for (const [sessionId, list] of Object.entries(raw as Partial<ScheduledMessagesFile>)) {
+    if (Array.isArray(list)) out[sessionId] = list;
+  }
+  return { status: 'ok', schedules: out };
+}
+
+/**
+ * Read the whole store, returning an empty map when absent or unparseable.
+ *
+ * Right for a READER, destructive as the read half of a read-modify-write, so
+ * {@link addSchedule} uses the reporting variant instead. The failure is logged
+ * here: reservations that vanish with nothing in the log look like a bug in the
+ * timer engine rather than a file that could not be parsed.
+ */
+export async function readAllSchedules(): Promise<ScheduledMessagesFile> {
+  const read = await readAllSchedulesForUpdate();
+  if (read.status === 'unreadable') {
+    console.error(
+      '[node-backend]',
+      `could not read ${storePath()} (${read.reason}); reporting no reservations`,
+    );
     return {};
   }
+  return read.schedules;
 }
 
 /** Overwrite the whole store (0600). */
@@ -74,9 +112,29 @@ export async function readSchedulesForSession(sessionId: string): Promise<Schedu
   return all[sessionId] ?? [];
 }
 
-/** Append one reservation to its session's array and persist. */
+/**
+ * Append one reservation to its session's array and persist.
+ *
+ * Throws when the file exists and could not be read, rather than writing this one
+ * reservation over every other session's. The caller is `scheduleMessage()`,
+ * whose handler answers the webview with an error, so the user is told the
+ * reservation was not made instead of being shown a reservation that silently
+ * replaced their others.
+ *
+ * The three functions below do not need this: each one bails out when the
+ * session's list is absent, which an unreadable file always is, so none of them
+ * can write on a failed read.
+ */
 export async function addSchedule(msg: ScheduledMessage): Promise<void> {
-  const all = await readAllSchedules();
+  const read = await readAllSchedulesForUpdate();
+  if (read.status === 'unreadable') {
+    const message =
+      `${refusedWriteMessage(storePath(), read.reason)} — ` +
+      `the reservation for session ${msg.sessionId} was not saved`;
+    console.error('[node-backend]', message);
+    throw new Error(message);
+  }
+  const all = read.schedules;
   const list = all[msg.sessionId] ?? [];
   list.push(msg);
   all[msg.sessionId] = list;

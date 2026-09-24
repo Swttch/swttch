@@ -25,6 +25,14 @@ import { dirname, resolve } from 'path';
  * These files are the user's, not ours. They hold their MCP servers, their
  * status line, their plugin list and their CLI preferences, so the correct
  * answer to "I could not read it" is to refuse the write, not to replace it.
+ *
+ * Files whose format is not plain JSON, or whose writer must set its own
+ * permission bits, cannot route through {@link updateJsonFile}. They still owe
+ * the same behaviour, so they reuse {@link readJsonForUpdate} for the read half
+ * and {@link refusedWriteMessage} for the refusal. `~/.claude-code-gui/settings.js`
+ * (a JS module), `accounts.json` and `scheduled-messages.json` (both 0600) are
+ * the three, and `profile.json` states the same refusal in its own words because
+ * it refuses per named action rather than per write.
  */
 
 /** What a read for a read-modify-write found. */
@@ -42,6 +50,17 @@ export type JsonUpdateResult = { status: 'ok' } | { status: 'error'; error: stri
 export type JsonMutate = (
   current: Record<string, unknown>,
 ) => Record<string, unknown> | null;
+
+/**
+ * The sentence every refused write says.
+ *
+ * Shared rather than written out at each site so one `grep` for "refusing to
+ * overwrite" finds every place this rule is enforced, and so a reader who has
+ * seen the log line once recognises it wherever it comes from.
+ */
+export function refusedWriteMessage(filePath: string, reason: string): string {
+  return `refusing to overwrite ${filePath}: it exists but could not be read (${reason})`;
+}
 
 function describeValue(value: unknown): string {
   if (value === null) return 'null';
@@ -192,7 +211,7 @@ export function updateJsonFile(filePath: string, mutate: JsonMutate): Promise<Js
 async function doUpdateJsonFile(filePath: string, mutate: JsonMutate): Promise<JsonUpdateResult> {
   const read = await readJsonForUpdate(filePath);
   if (read.status === 'unreadable') {
-    const error = `refusing to overwrite ${filePath}: it exists but could not be read (${read.reason})`;
+    const error = refusedWriteMessage(filePath, read.reason);
     console.error('[node-backend]', error);
     return { status: 'error', error };
   }

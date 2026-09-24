@@ -2,7 +2,7 @@ import { readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { atomicWriteFile, updateJsonFile } from './atomic-json';
+import { atomicWriteFile, updateJsonFile, refusedWriteMessage } from './atomic-json';
 import { normalizeSettingValue } from './path-settings';
 import {
   DiffSurface,
@@ -220,13 +220,35 @@ function stripJsComments(src: string): string {
   return out;
 }
 
-export async function readSettingsFile(): Promise<Record<string, unknown>> {
+/**
+ * What a read of the global settings file found.
+ *
+ * `unreadable` exists so the read half of a read-modify-write can tell "the user
+ * has no value for this" apart from "we could not read the user's values". The
+ * two look identical once the failure has been replaced by DEFAULT_SETTINGS, and
+ * saving one key on top of that substitution writes the defaults over everything
+ * the user had set. That is the same defect issue #386 fixed for JSON files; the
+ * project-scope branch of {@link saveSettingToScope} already cites it.
+ */
+type SettingsReadForUpdate =
+  | { status: 'ok'; settings: Record<string, unknown> }
+  | { status: 'unreadable'; reason: string };
+
+/**
+ * Read and parse `~/.claude-code-gui/settings.js`, reporting a failure instead of
+ * substituting defaults.
+ *
+ * An ABSENT file is created with defaults and reported as `ok`, because there is
+ * nothing to lose by writing it — the same rule `readJsonForUpdate` states for an
+ * empty file.
+ */
+async function readSettingsFileForUpdate(): Promise<SettingsReadForUpdate> {
   try {
     if (!existsSync(SETTINGS_FILE)) {
       // Create with defaults
       await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
       await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(DEFAULT_SETTINGS));
-      return { ...DEFAULT_SETTINGS };
+      return { status: 'ok', settings: { ...DEFAULT_SETTINGS } };
     }
 
     const raw = await readFile(SETTINGS_FILE, 'utf-8');
@@ -244,14 +266,36 @@ export async function readSettingsFile(): Promise<Record<string, unknown>> {
     // Remove trailing commas before closing braces/brackets
     stripped = stripped.replace(/,\s*([\]}])/g, '$1');
 
-    const parsed = JSON.parse(stripped) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(stripped);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      // Parsing is not the same as having read a settings object: `null`, a list
+      // and a bare string all parse, and none of them is something to save a key
+      // onto.
+      return { status: 'unreadable', reason: 'settings.js did not contain an object' };
+    }
 
     // Merge with defaults so missing keys get default values
-    return { ...DEFAULT_SETTINGS, ...parsed };
+    return { status: 'ok', settings: { ...DEFAULT_SETTINGS, ...parsed } };
   } catch (err) {
-    console.error('[node-backend]', 'Failed to read settings file, using defaults:', err);
+    return { status: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * Read the effective global settings, substituting defaults when the file cannot
+ * be read.
+ *
+ * Substituting is right for a READER — a screen has to render something — and
+ * destructive as the read half of a read-modify-write. Writers therefore use
+ * {@link readSettingsFileForUpdate} instead and refuse.
+ */
+export async function readSettingsFile(): Promise<Record<string, unknown>> {
+  const read = await readSettingsFileForUpdate();
+  if (read.status === 'unreadable') {
+    console.error('[node-backend]', 'Failed to read settings file, using defaults:', read.reason);
     return { ...DEFAULT_SETTINGS };
   }
+  return read.settings;
 }
 
 export interface SaveResult {
@@ -676,7 +720,17 @@ async function doSaveSettingToFile(key: string, value: unknown): Promise<SaveRes
   }
 
   try {
-    const current = await readSettingsFile();
+    // Not readSettingsFile(): that answers an unreadable file with
+    // DEFAULT_SETTINGS, and writing the whole object back would then replace
+    // every value the user had set with a default. Saving one key must never be
+    // able to clear the rest (issue #386).
+    const read = await readSettingsFileForUpdate();
+    if (read.status === 'unreadable') {
+      const error = refusedWriteMessage(SETTINGS_FILE, read.reason);
+      console.error('[node-backend]', `${error} — ${key} was not saved`);
+      return { status: 'error', error };
+    }
+    const current = read.settings;
     current[key] = normalized;
     await mkdir(join(homedir(), '.claude-code-gui'), { recursive: true });
     await atomicWriteFile(SETTINGS_FILE, generateSettingsContent(current));
