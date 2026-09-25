@@ -18,6 +18,35 @@ interface LogEntry {
 }
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'] as const;
+
+/**
+ * Ordering for the "at least this level" comparison, mirroring
+ * `backend/src/logging/log-level.ts`. `log` and `info` share a rank there for the
+ * same reason they do here: the two carry the same weight in this codebase.
+ */
+const SEVERITY: Record<string, number> = {
+  debug: 10,
+  log: 20,
+  info: 20,
+  warn: 30,
+  error: 40,
+};
+
+/**
+ * Levels below this are kept in the local history but never shipped to the
+ * backend, so they never reach the log file.
+ *
+ * The webview used to forward every console call regardless of level. With one
+ * line per streamed token on a busy turn, that was half of the 9,146 B/s written
+ * to `~/.claude-code-gui/logs/` in issue #477. DEBUG is where the per-token lines
+ * now live, and `ccgLogs.setLevel('debug')` turns them back on for a session when
+ * something actually needs them.
+ *
+ * Not persisted deliberately: a JetBrains webview gets a different origin on every
+ * launch, so anything stored in `localStorage` would start empty anyway.
+ */
+const DEFAULT_MIN_LEVEL = 'log';
+
 const MAX_QUEUE_SIZE = 500;
 /**
  * Investigation-only ring buffer (see `window.ccgLogs`). Not sent anywhere.
@@ -47,6 +76,32 @@ export class LogForwarder {
   private disposed: boolean = false;
   private originalConsole: Record<string, (...args: unknown[]) => void> = {};
   private sessionId: string | null = null;
+  private minLevel: string = DEFAULT_MIN_LEVEL;
+
+  /** Whether a line at this level is shipped to the backend. */
+  private isForwarded(level: string): boolean {
+    const rank = SEVERITY[level];
+    const floor = SEVERITY[this.minLevel] ?? SEVERITY[DEFAULT_MIN_LEVEL];
+    // An unrecognised level is forwarded rather than dropped — losing a line we
+    // failed to classify is worse than writing one extra line.
+    if (rank === undefined) return true;
+    return rank >= floor;
+  }
+
+  /**
+   * Raise or lower the forwarding floor for this session.
+   *
+   * Reachable from the browser console as `ccgLogs.setLevel('debug')`, which is
+   * how a per-token trace gets turned back on while investigating something.
+   */
+  setLevel(level: string): string {
+    const normalized = level.trim().toLowerCase();
+    if (!(normalized in SEVERITY)) {
+      return `unknown level: ${level} (use one of ${Object.keys(SEVERITY).join(', ')})`;
+    }
+    this.minLevel = normalized;
+    return `forwarding levels >= ${normalized}`;
+  }
 
   start(): void {
     this.interceptConsole();
@@ -86,6 +141,7 @@ export class LogForwarder {
    *   ccgLogs.copy('[Bridge]')  only lines containing the filter
    *   ccgLogs.text()            same, returned as a string
    *   ccgLogs.clear()           reset the buffer
+   *   ccgLogs.setLevel('debug') also forward DEBUG lines to the log file
    */
   private exposeInvestigationApi(): void {
     (window as unknown as { ccgLogs: unknown }).ccgLogs = {
@@ -95,6 +151,7 @@ export class LogForwarder {
         this.clearHistory();
         return 'cleared';
       },
+      setLevel: (level: string) => this.setLevel(level),
       copy: async (filter?: string) => {
         const text = this.getHistoryText(filter);
         try {
@@ -183,16 +240,21 @@ export class LogForwarder {
             }
           })
           .join(' ');
-        this.buffer.push({
-          level: method as unknown as LogLevel,
-          source: 'webview',
-          sessionId: this.sessionId,
-          message,
-          timestamp: Date.now(),
-        });
+        // Below the floor the line stays local: it is still in the history for
+        // `ccgLogs`, but it is never sent to the backend and so never written to
+        // the log file.
+        if (this.isForwarded(method)) {
+          this.buffer.push({
+            level: method as unknown as LogLevel,
+            source: 'webview',
+            sessionId: this.sessionId,
+            message,
+            timestamp: Date.now(),
+          });
 
-        if (this.buffer.length > MAX_QUEUE_SIZE) {
-          this.buffer = this.buffer.slice(-MAX_QUEUE_SIZE);
+          if (this.buffer.length > MAX_QUEUE_SIZE) {
+            this.buffer = this.buffer.slice(-MAX_QUEUE_SIZE);
+          }
         }
 
         this.history.push({

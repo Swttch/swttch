@@ -206,7 +206,16 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       session.setSessionState(SessionState.Error);
     },
     onSystemMessage: (data: Record<string, unknown>) => {
-      console.log('[ChatStreamContext] System message:', data);
+      // Kind only, at DEBUG. Logging the whole message wrote a single 6.5 MB line
+      // every time a session started, because a SessionStart hook's entire stdout
+      // arrives inside it — measured while verifying the fix for issue #477. The
+      // identifying fields are what a reader of the log actually needs; the body
+      // is available through the transcript.
+      console.debug(
+        '[ChatStreamContext] System message:',
+        data.subtype ?? data.type,
+        data.hook_name ?? '',
+      );
     },
     onControlRequestResult: (result) => {
       // Reloading plugins changes which slash commands and agents exist, so pull

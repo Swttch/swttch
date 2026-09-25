@@ -641,9 +641,13 @@ class NodeProcessManager(
                 continue
             }
 
-            // After PORT is read, log any subsequent stdout lines
+            // After PORT is read, stdout carries no protocol — only whatever the
+            // backend happened to print. At INFO that is one idea.log line per
+            // backend console.log, on a channel nothing reads. The pre-PORT branch
+            // above stays at INFO because a boot that never reaches PORT is
+            // diagnosed from exactly those lines.
             if (line.isBlank()) continue
-            logger.info("[Node.js stdout] $line")
+            logger.debug("[Node.js stdout] $line")
         }
     }
 
@@ -655,8 +659,14 @@ class NodeProcessManager(
             val line = reader.readLine() ?: break
             if (line.isNotBlank()) {
                 rememberStderr(line)
+                // The IDE already captures what we print to stderr and writes it to
+                // idea.log as "STDERR - ...". Logging the same line again through the
+                // platform logger put a second, identical copy next to it for every
+                // line the backend emitted — the duplication reported in issue #477.
+                // Kept at DEBUG rather than deleted, because a maintainer chasing a
+                // startup problem may want the class-attributed copy back.
                 System.err.println("[Node.js] $line")
-                logger.info("[Node.js] $line")
+                logger.debug("[Node.js] $line")
             }
         }
     }
