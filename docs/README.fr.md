@@ -79,7 +79,7 @@ La même interface Claude Code GUI que vous aimez dans Cursor et VS Code, mainte
   - Il s'agit d'une implémentation communautaire indépendante, sans lien avec la fonctionnalité native officielle Remote Control de Claude (support prévu à l'avenir)
 
 - **Prevention de mise en veille**
-  - Prevention de mise en veille sur macOS (caffeinate), Linux (systemd-inhibit) et Windows (powercfg)
+  - Prevention de mise en veille sur macOS (caffeinate), Linux (systemd-inhibit) et Windows (SetThreadExecutionState)
 
 ### Synchronisation bidirectionnelle des paramètres
 

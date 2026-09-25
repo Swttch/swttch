@@ -78,7 +78,7 @@ Cursor と VS Code で親しまれている Claude Code GUI が、JetBrains IDE 
   - コミュニティ独自実装であり、Claude の Remote Control ネイティブ公式機能とは無関係（将来対応予定）
 
 - **スリープ防止**
-  - macOS（caffeinate）、Linux（systemd-inhibit）、Windows（powercfg）でのスリープ防止
+  - macOS（caffeinate）、Linux（systemd-inhibit）、Windows（SetThreadExecutionState）でのスリープ防止
 
 ### 設定の双方向同期
 

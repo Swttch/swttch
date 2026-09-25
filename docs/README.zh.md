@@ -78,7 +78,7 @@
   - 此为社区自主实现版本，与 Claude 的 Remote Control 原生官方功能无关（未来计划支持）
 
 - **防休眠**
-  - 支持 macOS（caffeinate）、Linux（systemd-inhibit）、Windows（powercfg）防休眠
+  - 支持 macOS（caffeinate）、Linux（systemd-inhibit）、Windows（SetThreadExecutionState）防休眠
 
 ### 设置双向同步
 

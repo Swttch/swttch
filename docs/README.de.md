@@ -79,7 +79,7 @@ Die Claude Code GUI, die in Cursor und VS Code beliebt ist, ist jetzt auch in Je
   - Community-eigene Implementierung, unabhängig von Claude's Remote Control als nativem offiziellen Feature (künftige Unterstützung geplant)
 
 - **Schlafverhinderung**
-  - Verhindert den Ruhezustand unter macOS (caffeinate), Linux (systemd-inhibit) und Windows (powercfg)
+  - Verhindert den Ruhezustand unter macOS (caffeinate), Linux (systemd-inhibit) und Windows (SetThreadExecutionState)
 
 ### Bidirektionale Einstellungssynchronisierung
 
