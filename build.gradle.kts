@@ -188,27 +188,18 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.32.2 - Remote Development support, and an indicator for the messages you sent</h3>
+            <h3>0.33.0 - Desktop notifications, and fixes for the message box and more</h3>
             <ul>
-                <li>Add IDE port forwarding so the backend is reachable in Remote Development (#472 by @iljac, reported by @lenar and @alexandrezia)</li>
-                <li>Add an indicator for the messages you sent (#469, reported by @ylz4647)</li>
-                <li>Fix the account pool stalling when several sessions hit their limit at once (#470)</li>
-            </ul>
-            <h3>0.32.1 - Improved proxy and environment variable delivery, improved settings UI, and more</h3>
-            <ul>
-                <li>Add a setting to choose the newline key (#468, reported by @alxakx)</li>
-                <li>Add a setting to queue a message sent mid-turn or interrupt the turn with it (#468)</li>
-                <li>Apply the whole env block of settings.json instead of a fixed list of names (#466, reported by @VijitCoder)</li>
-                <li>Fix dictation to accept an account authenticated with CLAUDE_CODE_OAUTH_TOKEN (#466, reported by @VijitCoder)</li>
-                <li>Fix the chat panel never opening while stuck on Waiting for project indexing... (#465, reported by @renshengkuduan-go)</li>
-                <li>Fix the endless spinner on an authentication failure, and show which credential was rejected (#461, reported by @evilone79)</li>
-                <li>Stop the tab from spinning while a session waits for your answer, and mark it unread instead (#460)</li>
-            </ul>
-            <h3>0.32.0 - Ask another session, and a working indicator on the tab</h3>
-            <ul>
-                <li>Add @@ in the chat input to ask another running session (#447)</li>
-                <li>Add a working indicator on the chat tab while a session runs (#451, reported by @andreiGl)</li>
-                <li>Fix the usage panel's proxy setting, live updates, per-model weekly limits, and API key accounts (#450, reported by @lemniscat)</li>
+                <li>Add desktop notifications on macOS, Windows and Linux (#105, reported by @egorshubin and @benomatis)</li>
+                <li>Add a message input queue</li>
+                <li>Fix the behavior of the follow-up message setting</li>
+                <li>Fix broken file attachment (#487, reported by @junightCode)</li>
+                <li>Fix the Max effort level never being applied (#486, reported by @AlfredQin)</li>
+                <li>Fix excessive logging and the log size cap not being enforced (#488, reported by @benomatis)</li>
+                <li>Fix ccb failing to run on Windows when the node path contains a space (#478, reported by @mmoore99)</li>
+                <li>Fix the message box being disabled (#484, reported by @mzbik)</li>
+                <li>Fix settings changes not syncing live to other tabs</li>
+                <li>Fix the profile being overwritten with defaults when it cannot be read</li>
             </ul>
         """.trimIndent()
     }
