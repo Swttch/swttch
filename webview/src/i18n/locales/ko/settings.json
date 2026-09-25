@@ -232,6 +232,13 @@
       "label": "자동 줄바꿈",
       "description": "diff와 도구 출력의 긴 줄을 가로 스크롤 대신 접어서 보여줍니다."
     },
+    "hideToolCalls": {
+      "label": "도구 호출 숨기기",
+      "description": "명령 실행과 조회 카드를 숨긴다. 파일 변경, 질문, 계획은 계속 보인다."
+    },
+    "chat": {
+      "sectionTitle": "채팅"
+    },
     "scrolling": {
       "sectionTitle": "스크롤",
       "autoScrollThreshold": {

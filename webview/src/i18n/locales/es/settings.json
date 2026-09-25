@@ -232,6 +232,13 @@
       "label": "Ajuste de línea",
       "description": "Plegar las líneas largas de los diffs y salidas de herramientas en vez de desplazarse en horizontal."
     },
+    "hideToolCalls": {
+      "label": "Ocultar llamadas a herramientas",
+      "description": "Oculta las tarjetas de los comandos y las lecturas. Los cambios de archivos, las preguntas y los planes siguen visibles."
+    },
+    "chat": {
+      "sectionTitle": "Chat"
+    },
     "scrolling": {
       "sectionTitle": "Desplazamiento",
       "autoScrollThreshold": {

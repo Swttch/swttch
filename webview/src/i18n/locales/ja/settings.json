@@ -232,6 +232,13 @@
       "label": "ソフトラップ",
       "description": "差分やツール出力の長い行を横スクロールせずに折り返します。"
     },
+    "hideToolCalls": {
+      "label": "ツール呼び出しを隠す",
+      "description": "コマンドや読み取りのカードを隠します。ファイルの変更、質問、プランは表示されたままです。"
+    },
+    "chat": {
+      "sectionTitle": "チャット"
+    },
     "scrolling": {
       "sectionTitle": "スクロール",
       "autoScrollThreshold": {

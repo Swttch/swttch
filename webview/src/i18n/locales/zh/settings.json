@@ -232,6 +232,13 @@
       "label": "软换行",
       "description": "折叠差异和工具输出中的长行，而不是横向滚动。"
     },
+    "hideToolCalls": {
+      "label": "隐藏工具调用",
+      "description": "隐藏命令和读取操作的卡片。文件改动、提问和计划仍会显示。"
+    },
+    "chat": {
+      "sectionTitle": "聊天"
+    },
     "scrolling": {
       "sectionTitle": "滚动",
       "autoScrollThreshold": {

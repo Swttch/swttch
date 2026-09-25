@@ -66,6 +66,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   hostMode: 'editor-tab',
   openSettingsAs: 'overlay',
   chatPagination: true,
+  hideToolCalls: false,
   includeNestedSessions: false,
   uiDirection: 'ltr',
   // GUI-only keys migrated out of the native ~/.claude/settings.json (not part of
@@ -132,6 +133,7 @@ const COMMENT_MAP: Record<string, string> = {
   hostMode: '채팅을 띄우는 자리: "editor-tab" | "tool-window"',
   openSettingsAs: '설정 화면을 여는 방식: "overlay" | "new-tab"',
   chatPagination: '채팅 기록을 페이지 단위로 로드(스크롤 시 이전 메시지 추가). false면 전체를 한 번에 로드',
+  hideToolCalls: '명령 실행·조회처럼 과정에 해당하는 도구 카드를 채팅에서 숨긴다(CLI의 focus view와 같은 자리). 파일 변경(Edit/Write)과 질문·계획처럼 사용자를 향한 것은 계속 보인다',
   includeNestedSessions: '세션 목록에 하위 작업 디렉터리의 세션까지 포함. false면 현재 디렉터리의 세션만',
   uiDirection: 'UI 미러링(레이아웃 방향): "ltr" | "rtl"',
   uiLanguage: 'GUI 인터페이스 표시 언어(예: "korean"). null이면 영어. Claude 응답 언어(language)와 무관',
@@ -446,6 +448,7 @@ function validateSetting(key: string, value: unknown): string | null {
       }
       break;
     case 'chatPagination':
+    case 'hideToolCalls':
     case 'includeNestedSessions':
     case 'softWrap':
       if (typeof value !== 'boolean') {

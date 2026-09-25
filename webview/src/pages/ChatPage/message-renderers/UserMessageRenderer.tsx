@@ -22,6 +22,7 @@ import { useCliConfig } from '@/contexts/CliConfigContext';
 import { modelChangeTarget } from '@/types/models';
 import { ModelInfo } from '@/types/slashCommand';
 import { useTranslation } from '@/i18n';
+import { useHideToolCalls } from './hideToolCalls';
 
 interface UserMessageRendererProps {
   message: LoadedMessageDto;
@@ -33,6 +34,7 @@ const INTERRUPTED_FOR_TOOL_USE_TEXT = '[Request interrupted by user for tool use
 export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ message }) => {
   const { controlResponse } = useCliConfig();
   const { t } = useTranslation('chatTools');
+  const hideToolCalls = useHideToolCalls();
   const parsedContent = parseUserContent(getTextContent(message));
 
   // A peer Claude session's report, injected mid-turn — not something the
@@ -168,6 +170,10 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // for a result whose tool card is not on screen, so it deliberately stays
   // simple — the rich per-tool renderers need the tool_use that is missing here.
   if (!parsedContent.text.trim() && unmergedToolResultText) {
+    // Hiding the tool cards and leaving this one would show the loudest output
+    // of all: a whole `Bash` result as raw text, with no card left to say which
+    // tool produced it.
+    if (hideToolCalls) return null;
     return (
       <IfVisible extra={allContexts.length > 0} debugId={debugId}>
         <div className="group pt-2 pb-4 px-4 space-y-2.5">

@@ -232,6 +232,13 @@
       "label": "Soft Wrap",
       "description": "Fold long lines in diffs and tool output instead of scrolling sideways."
     },
+    "hideToolCalls": {
+      "label": "Hide tool calls",
+      "description": "Hide the cards for commands and lookups. File changes, questions and plans stay visible."
+    },
+    "chat": {
+      "sectionTitle": "Chat"
+    },
     "scrolling": {
       "sectionTitle": "Scrolling",
       "autoScrollThreshold": {
