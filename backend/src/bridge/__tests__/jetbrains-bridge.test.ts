@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JetBrainsBridge, parseProjectRoots, redactRpcLog } from '../jetbrains-bridge';
 import { MessageType } from '../../shared';
 import * as settings from '../../core/features/settings';
@@ -431,5 +431,56 @@ describe('JetBrainsBridge.focusSession', () => {
     // The id is the whole point: without it the IDE files this under
     // notifications and the dispatcher never sees it.
     expect(sent.id).toBeTruthy();
+  });
+});
+
+describe('JetBrainsBridge request deadlines', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  /** The JSON-RPC id the bridge put on its first outgoing request. */
+  function sentId(ws: ReturnType<typeof createMockWs>): string {
+    return (JSON.parse(ws.send.mock.calls[0][0] as string) as { id: string }).id;
+  }
+
+  it('lets a file chooser outlive the deadline the other methods live under', async () => {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+
+    let settled = false;
+    const pending = bridge.pickFiles({ mode: 'files', multiple: true });
+    void pending.then(() => { settled = true; }, () => { settled = true; });
+
+    // Six times the old deadline. Browsing for a file takes as long as it takes.
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(settled).toBe(false);
+
+    // And the answer still lands when the person finally picks something. This
+    // is the half that #481 lost: the chooser returned to nobody.
+    ws.emitMessage({ jsonrpc: '2.0', id: sentId(ws), result: { paths: ['/tmp/a.txt'] } });
+    await expect(pending).resolves.toEqual({ paths: ['/tmp/a.txt'] });
+  });
+
+  it('still times out a method that does not wait on a person', async () => {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+
+    const pending = bridge.openFile('/tmp/a.txt');
+    const rejects = expect(pending).rejects.toThrow(/timed out/);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await rejects;
+  });
+
+  it('gives up a waiting chooser when the IDE disconnects', async () => {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+
+    const pending = bridge.pickFiles({ mode: 'files', multiple: true });
+    const rejects = expect(pending).rejects.toThrow(/disconnected/);
+    ws.emitClose();
+    await rejects;
   });
 });

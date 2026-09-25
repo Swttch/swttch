@@ -353,13 +353,26 @@ async function main() {
     reportBackendError(error, context);
   });
 
-  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification('NATIVE_DROP', (_method, params) => {
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP, (_method, params) => {
     const panelId = typeof params.panelId === 'string' ? params.panelId : '';
     const entries = parseNativeDropEntries(params.entries);
     if (!panelId || entries.length === 0) return;
     const stashed = connections.setNativeDropStash(panelId, entries);
     if (!stashed) {
       console.error('[node-backend]', `[NATIVE_DROP] stash failed — no connection for panelId=${panelId}`);
+    }
+  });
+
+  // The drop already happened, somewhere the page could not see it. Buffering
+  // would strand the paths: the flush that empties the buffer is sent by the
+  // page's own drop handler, and on Windows that handler never runs (#481).
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.NATIVE_DROP_DELIVER, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    const entries = parseNativeDropEntries(params.entries);
+    if (!panelId || entries.length === 0) return;
+    const delivered = connections.deliverNativeDrop(panelId, entries);
+    if (!delivered) {
+      console.error('[node-backend]', `[NATIVE_DROP_DELIVER] no connection for panelId=${panelId}`);
     }
   });
 

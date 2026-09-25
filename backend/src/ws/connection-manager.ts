@@ -355,6 +355,30 @@ export class ConnectionManager {
   }
 
   /**
+   * Hand dropped paths to the panel now, for drops the page never sees.
+   *
+   * The stash exists because CEF tells us about a drag on *enter*, so holding
+   * the paths until the page reports the release is what keeps a chip from
+   * appearing while the file is still hovering. A drop that arrives at the
+   * Swing or IDE layer is the opposite case: the release already happened, and
+   * on Windows no page-level drop event ever follows to release the stash, so
+   * waiting for one means waiting forever (#481).
+   *
+   * Clears the stash on the way out. Otherwise a platform where both layers see
+   * the same drop would attach the file twice — once from here and once when
+   * the page's flush replays what CEF left behind.
+   */
+  deliverNativeDrop(panelId: string, entries: NativeDropEntry[]): boolean {
+    const connectionId = this.panelIdIndex.get(panelId);
+    if (!connectionId) return false;
+    const record = this.clientMap.get(connectionId);
+    if (!record) return false;
+    record.nativeDropStash = null;
+    this.sendTo(connectionId, MessageType.NATIVE_DROP_ENTRIES, { entries });
+    return true;
+  }
+
+  /**
    * Resolve a panelId (assigned by Kotlin on JCEF browser creation) back to its
    * webview connection. Panel ↔ connection is 1:1 since each panel hosts one
    * JCEF browser that opens one /ws socket.
