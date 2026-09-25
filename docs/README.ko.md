@@ -78,7 +78,7 @@ Cursor와 VS Code에서 사랑받는 Claude Code GUI를 이제 JetBrains IDE에�
   - 커뮤니티 자체 구현 버전이며, Claude의 Remote Control 네이티브 공식 기능과는 무관 (향후 지원 예정)
 
 - **잠들기 방지**
-  - macOS(caffeinate), Linux(systemd-inhibit), Windows(powercfg) 잠들기 방지
+  - macOS(caffeinate), Linux(systemd-inhibit), Windows(SetThreadExecutionState) 잠들기 방지
 
 ### 설정 양방향 동기화
 

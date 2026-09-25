@@ -79,7 +79,7 @@ La misma interfaz gráfica de Claude Code que amas en Cursor y VS Code, ahora di
   - Esta es una implementación propia de la comunidad, no relacionada con la función nativa oficial Remote Control de Claude (soporte previsto en el futuro)
 
 - **Prevención de suspensión**
-  - Prevención de suspensión en macOS (caffeinate), Linux (systemd-inhibit) y Windows (powercfg)
+  - Prevención de suspensión en macOS (caffeinate), Linux (systemd-inhibit) y Windows (SetThreadExecutionState)
 
 ### Sincronización Bidireccional de Configuración
 

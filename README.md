@@ -85,7 +85,7 @@ The same Claude Code GUI you love in Cursor and VS Code, now available in JetBra
   - Community-built feature, unrelated to Claude's native Remote Control (planned for future support)
 
 - **Sleep prevention**
-  - macOS (caffeinate), Linux (systemd-inhibit), Windows (powercfg)
+  - macOS (caffeinate), Linux (systemd-inhibit), Windows (SetThreadExecutionState)
 
 ### Bidirectional Settings Sync
 
