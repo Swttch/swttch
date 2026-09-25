@@ -104,7 +104,11 @@ export class Bridge {
       timestamp: Date.now(),
     };
 
-    console.log('[Bridge] Sending request:', type, payload);
+    // Type only, at DEBUG. The payload carries whatever the user is sending —
+    // the prompt itself, and the base64 of any image they attached — so logging
+    // it put both in plaintext on disk, which is what issue #477 asked us to
+    // stop doing.
+    console.debug('[Bridge] Sending request:', type);
 
     // 연결 미완료 시 대기 (instanceof 체크 없이 인터페이스 메서드 사용)
     if (!this.connector.isConnected) {
@@ -209,7 +213,13 @@ export class Bridge {
    * - 그 외: 타입별 구독 핸들러에 dispatch
    */
   private handleMessage(message: IPCMessage): void {
-    console.log('[Bridge] Received message:', message.type, message);
+    // Type only, at DEBUG. This used to log the whole message at LOG level, which
+    // meant every streamed token had its entire payload serialised by the log
+    // forwarder and shipped to the backend to be written to disk — a line per
+    // token on both sides, and the webview's half of the 9,146 B/s measured in
+    // issue #477. The payload is still reachable when investigating, through the
+    // per-handler logs and `window.ccgLogs`.
+    console.debug('[Bridge] Received message:', message.type);
 
     // ACK 처리 (기존 useBridge.ts 33-43행)
     if (message.type === MessageType.ACK) {

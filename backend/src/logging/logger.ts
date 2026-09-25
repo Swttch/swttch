@@ -1,5 +1,6 @@
 import { FileLogger } from './file-logger';
 import { LogWebSocketServer, LogEntry } from './log-ws';
+import { isLevelEnabled } from './log-level';
 
 const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'] as const;
 type ConsoleMethod = (typeof CONSOLE_METHODS)[number];
@@ -51,6 +52,14 @@ export class Logger {
         try {
           const level = LEVEL_MAP[method];
 
+          // Levels below the configured floor are neither written nor broadcast.
+          // Checked before the message is assembled, because assembling it means
+          // JSON.stringify-ing every non-string argument — on a streaming turn
+          // that is once per token, which is the cost issue #477 measured.
+          if (!isLevelEnabled(level)) {
+            return;
+          }
+
           // 첫 번째 인자가 '[xxx]' 패턴이면 source로 추출
           let source: string;
           let messageArgs: unknown[];
@@ -82,6 +91,12 @@ export class Logger {
 
   handleWebViewLogs(entries: LogEntry[]): void {
     for (const entry of entries) {
+      // The webview applies the same floor before sending, but an older webview
+      // served from a cached bundle may not. Filtering here too means the backend
+      // decides what lands on disk regardless of which webview is talking to it.
+      if (!isLevelEnabled(entry.level)) {
+        continue;
+      }
       const line = this.formatLine(entry.level, entry.source, entry.sessionId, entry.message, entry.timestamp);
       this.fileLogger.write(line);
       if (this.logWs) {

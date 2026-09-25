@@ -18,6 +18,7 @@ import { loadPromptHistoryHandler } from './loadPromptHistory';
 import { deleteSessionHandler } from './deleteSession';
 import { rewindCodeHandler } from './rewindCode';
 import { forkSessionHandler } from './forkSession';
+import { logDebug } from '../../logging/log-level';
 import { renameSessionHandler } from './renameSession';
 import { getAgentTranscriptHandler } from './getAgentTranscript';
 import { watchBackgroundTaskOutputHandler, unwatchBackgroundTaskOutputHandler } from './watchBackgroundTaskOutput';
@@ -191,7 +192,11 @@ export async function handleMessage(
   bridge: Bridge,
   bridges: Record<ClientEnv, Bridge>,
 ): Promise<void> {
-  console.error('[node-backend]', `Received: ${message.type}`);
+  // One line per inbound message, and every one of them was recorded at ERROR
+  // because stderr is the only channel the IDE reads (stdout carries the PORT
+  // handshake). Routine traffic — GET_USAGE polls, PANEL_FOCUSED on every click —
+  // made "filter the log by ERROR" meaningless. It belongs at DEBUG.
+  logDebug('[node-backend]', `Received: ${message.type}`);
 
   // Project the active context's CLAUDE_CONFIG_DIR onto process.env up front, so every
   // handler that reads Claude data (sessions, projects) or spawns a child (claude/ccb)

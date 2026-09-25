@@ -17,6 +17,7 @@ import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
+import { isDebugEnabled, logDebug } from '../logging/log-level';
 import { readRegistry } from './features/account-store';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
@@ -608,7 +609,14 @@ export async function ensureClaudeProcess(
     // single backend error reporting point so this async path converges with the rest.
     try {
       const chunk = data.toString();
-      console.error('[node-backend]', `RAW stdout: ${chunk.trimEnd()}`);
+      // One line per streamed token, carrying the whole event — the single largest
+      // contributor to the 9,146 B/s of log traffic measured in issue #477, and the
+      // reason full prompts and responses sat in plaintext on disk. It stays
+      // available behind CCG_LOG_LEVEL=debug, where it is genuinely needed, and
+      // costs nothing when that is off: the template literal is not even built.
+      if (isDebugEnabled()) {
+        logDebug('[node-backend]', `RAW stdout: ${chunk.trimEnd()}`);
+      }
 
       const currentBuffer = connections.getBuffer(targetSessionId);
       const newBuffer = currentBuffer + chunk;
@@ -621,7 +629,8 @@ export async function ensureClaudeProcess(
 
         try {
           const event = JSON.parse(line) as Record<string, unknown>;
-          console.error('[node-backend]', `JSON event type: ${event.type}`);
+          // Also per token, and it restates what the line above already carries.
+          logDebug('[node-backend]', `JSON event type: ${event.type}`);
           handleStreamEvent(targetSessionId, event, connections, bridge, workingDir);
         } catch {
           // Non-JSON line is expected noise (not an error) in stream-json mode — only log.
@@ -778,11 +787,18 @@ export function sendMessageToProcess(
       message: { role: 'user', content: messageContent },
     }) + '\n';
 
-  // Truncate log to avoid flooding with base64 data
-  const logPreview = stdinMessage.length > 200
-    ? stdinMessage.substring(0, 200) + `... (${stdinMessage.length} bytes total)`
-    : stdinMessage.trimEnd();
-  console.error('[node-backend]', `Sending to stdin: ${logPreview}`);
+  // The size is the part worth keeping by default: it says a turn started and how
+  // big it was, without putting what the user typed on disk. The 200-character cap
+  // below already kept base64 from flooding the file, but a prompt's opening 200
+  // characters are still the prompt — issue #477 asked us to stop writing those in
+  // plaintext, so the preview moved behind CCG_LOG_LEVEL=debug.
+  console.error('[node-backend]', `Sending to stdin: ${stdinMessage.length} bytes`);
+  if (isDebugEnabled()) {
+    const logPreview = stdinMessage.length > 200
+      ? stdinMessage.substring(0, 200) + `... (${stdinMessage.length} bytes total)`
+      : stdinMessage.trimEnd();
+    logDebug('[node-backend]', `stdin payload: ${logPreview}`);
+  }
   session.process.stdin.write(stdinMessage);
   // The session's activity is NOT set here, though it used to be.
   //

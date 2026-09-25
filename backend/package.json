@@ -16,6 +16,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "bowser": "^2.14.1",
     "https-proxy-agent": "^9.1.0",
+    "rotating-file-stream": "^3.2.10",
     "socks-proxy-agent": "^10.1.0",
     "ws": "^8.18.0"
   },
