@@ -103,6 +103,10 @@ async function getCachedCliVersion(): Promise<string> {
   return cachedCliVersion ?? '';
 }
 
+export function resetCachedCliVersion(): void {
+  cachedCliVersion = undefined;
+}
+
 // Standalone(브라우저) 모드에서 webview가 연결 시 전달하는 navigator.userAgent를 보관한다.
 // 브라우저 환경엔 env로 주입할 주체(Kotlin)가 없으므로 webview가 알려준다.
 let browserClient = '';

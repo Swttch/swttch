@@ -1,4 +1,5 @@
 import { updateInstalledExtendKit } from './core/extend-kit-update';
+import { startCliAutoUpdate } from './core/cli-auto-update';
 import { execFileSync, execSync } from 'child_process';
 import { selectKillablePids } from './core/port-utils';
 import { startWebSocketServer, type BridgeMap } from './ws/ws-server';
@@ -573,6 +574,7 @@ async function main() {
   void updateInstalledExtendKit().then(updated => {
     if (updated) connections.broadcastToAll(MessageType.EXTEND_KIT_UPDATED, {});
   });
+  startCliAutoUpdate(() => connections.broadcastToAll(MessageType.CLI_UPDATED, {}));
 
   // Restore tunnel/sleep state from previous session
   restoreTunnelState();

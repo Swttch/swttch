@@ -276,6 +276,8 @@ export enum MessageType {
   GET_CLI_UPDATE_INFO = 'GET_CLI_UPDATE_INFO',
   /** Run the install-method-specific update command for the Claude Code CLI. inbound webview→backend */
   UPDATE_CLI = 'UPDATE_CLI',
+  /** The CLI version changed since the last background update check. outbound backend→webview */
+  CLI_UPDATED = 'CLI_UPDATED',
 
   // -- Authentication --
   /** Begin the CLI login flow (produces a login URL). */

@@ -22,7 +22,7 @@ const UPDATE_MAX_BUFFER = 10 * 1024 * 1024;
  * the shared runner the extend-kit installer uses too, so update and install
  * resolve a launcher identically.
  */
-async function runUpdateSpec(command: string, args: string[]): Promise<{ ok: boolean; output: string }> {
+export async function runUpdateSpec(command: string, args: string[]): Promise<{ ok: boolean; output: string }> {
   if (command === 'claude') {
     try {
       // shell:false → on win32, Claude.exec resolves the `claude` launcher to an
