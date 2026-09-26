@@ -41,6 +41,25 @@ Once you're on the newest release, the button is replaced by a static **Up to da
 
 If the CLI was installed in a way that has **no safe, non-interactive update path** — a Linux system package manager (`apt`/`dnf`/`apk`, which need `sudo`), or a location we can't attribute to a known installer — **no Update control is shown.** This is deliberate: it's safer to show nothing than to run the wrong command and leave you with a duplicate installation. Update those the way you installed them.
 
+## Background update
+
+Claude Code updates itself in the background, but only inside an interactive `claude` session in a terminal. The plugin runs the CLI as `claude -p`, where that updater never starts, so a CLI you only use through the plugin stayed on the same version until you ran `claude update` yourself.
+
+The backend now does what the interactive CLI would. Shortly after it starts, and every 30 minutes after that, it runs `claude update` when both of these are true:
+
+- The CLI was installed with the native installer.
+- `claude doctor` reports `Auto-updates: enabled`.
+
+The second check is the CLI's own verdict, so the plugin does not re-implement it: `DISABLE_AUTOUPDATER`, `DISABLE_UPDATES` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` turn it off when set in the environment the IDE hands the backend, or in the `env` of your user settings (`~/.claude/settings.json`) or managed settings. A project's `.claude/settings.json` and `.claude/settings.local.json` are not consulted, because the CLI is shared by every project and the check does not run inside one. `claude update` itself follows your `autoUpdatesChannel` and `minimumVersion`.
+
+As with the interactive CLI, running sessions keep their version and the new one is used from the next session on. Open tabs refresh the version shown in Settings → About; tabs of other open projects follow at their own backend's next check.
+
+What it does not do:
+
+- It never updates npm, pnpm, yarn, volta, Homebrew or WinGet installs, and it does not act on `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE`. Use the Update control above for those. With the native installer, `claude update` applies the release channel and version limits itself; a package manager would need the plugin to rebuild that, and since one backend runs per open project, several could start the same global install at once.
+- There is no plugin setting for it. To turn it off, turn off Claude Code's own auto-updates, for example with `"env": {"DISABLE_AUTOUPDATER": "1"}` in `~/.claude/settings.json`, which applies however the IDE was started. A variable exported only in your shell profile may not reach an IDE launched from the desktop.
+- If the check or the update fails (offline, for instance), the backend logs it and tries again at the next check.
+
 ## How versions are checked
 
 Available versions come from the **npm registry** (`npm view @anthropic-ai/claude-code dist-tags`), which is the canonical source for the stable/latest release numbers regardless of how you installed. The check runs quietly when you open About; the current version comes from `claude --version`.
@@ -55,7 +74,8 @@ Available versions come from the **npm registry** (`npm view @anthropic-ai/claud
 The backend now checks the installed **`@swttch/extend-kit` dependency** once at
 startup and updates it to the latest release in the background when a newer
 version exists. This companion supplies usage-battery and voice-input commands.
-This startup check does not update the plugin or the Claude Code CLI itself.
+This startup check does not update the plugin; the Claude Code CLI has its own
+background update, described above.
 
 If you have never installed the companion, startup skips it. Install it first
 using the existing usage or voice-input controls when you want those features.
