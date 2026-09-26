@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { MessageType } from '@/shared';
@@ -41,8 +41,13 @@ interface UseVersionInfoReturn {
  * so the version is fetched once and `refresh()` (invalidate) updates every consumer.
  */
 export function useVersionInfo(): UseVersionInfoReturn {
-  const { isConnected, send } = useBridgeContext();
+  const { isConnected, send, subscribe } = useBridgeContext();
   const queryClient = useQueryClient();
+
+  useEffect(() => subscribe(MessageType.CLI_UPDATED, () => {
+    void queryClient.invalidateQueries({ queryKey: [MessageType.GET_VERSION] });
+    void queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLI_UPDATE_INFO] });
+  }), [subscribe, queryClient]);
 
   const query = useQuery<VersionInfo, Error>({
     queryKey: [MessageType.GET_VERSION],

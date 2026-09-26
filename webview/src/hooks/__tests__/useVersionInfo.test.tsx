@@ -75,6 +75,22 @@ describe('useVersionInfo', () => {
     expect(keys).toContain(MessageType.GET_VERSION);
   });
 
+  it('refetches the version after a background CLI update', async () => {
+    mockSend.mockResolvedValue(okResponse);
+    const { invalidateSpy } = renderHook();
+    await waitFor(() => expect(current?.cliVersion).toBe('2.1.179'));
+
+    const callback = mockSubscribe.mock.calls.find((c) => c[0] === MessageType.CLI_UPDATED)?.[1] as () => void;
+    expect(callback).toBeTypeOf('function');
+    mockSend.mockResolvedValue({ ...okResponse, cliVersion: '2.1.180' });
+    invalidateSpy.mockClear();
+    act(() => callback());
+
+    const keys = invalidateSpy.mock.calls.map((c) => (c[0] as { queryKey: unknown[] }).queryKey[0]);
+    expect(keys).toContain(MessageType.GET_CLI_UPDATE_INFO);
+    await waitFor(() => expect(current?.cliVersion).toBe('2.1.180'));
+  });
+
   it('keeps placeholder values when the response is not ok', async () => {
     mockSend.mockResolvedValue({ status: 'error', error: 'boom' });
     renderHook();
