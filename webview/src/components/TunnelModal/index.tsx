@@ -189,7 +189,19 @@ export function TunnelModal(props: Props) {
               />
             </div>
             {preventSleep && (
-              <p className="mt-2 text-xs text-text-tertiary">{t('tunnelModal.sleepGuardHint')}</p>
+              <ul className="mt-3 space-y-1.5 rounded-md bg-surface-pressed/40 px-3 py-2.5 text-xs text-text-secondary">
+                {([1, 2, 3, 4] as const).map((n) => (
+                  <li key={n} className="flex gap-2">
+                    <span aria-hidden className="text-sm leading-none text-accent-primary">•</span>
+                    <span>
+                      <strong className="font-semibold text-text-primary">
+                        {t(`tunnelModal.sleepGuardHint${n}Lead`)}
+                      </strong>{' '}
+                      {t(`tunnelModal.sleepGuardHint${n}Rest`)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>

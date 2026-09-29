@@ -81,13 +81,15 @@ describe('the sleep prevention hint', () => {
     status = { ...baseStatus, preventSleep: true };
     render(<TunnelModal onClose={vi.fn()} />);
 
-    expect(screen.getByText('tunnelModal.sleepGuardHint')).toBeInTheDocument();
+    for (const n of [1, 2, 3, 4]) {
+      expect(screen.getByText(`tunnelModal.sleepGuardHint${n}Lead`)).toBeInTheDocument();
+    }
   });
 
   it('is absent while sleep prevention is off', () => {
     status = { ...baseStatus, preventSleep: false };
     render(<TunnelModal onClose={vi.fn()} />);
 
-    expect(screen.queryByText('tunnelModal.sleepGuardHint')).not.toBeInTheDocument();
+    expect(screen.queryByText('tunnelModal.sleepGuardHint1Lead')).not.toBeInTheDocument();
   });
 });
