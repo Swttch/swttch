@@ -52,6 +52,10 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
     // scrolls smoothly (matching the Claude Code extension) instead of jumping.
     const animatedTokens = useAnimatedThinkingTokens(isThinking ? estimatedTokens : undefined);
     const tokenText = formatThinkingTokens(animatedTokens);
+    // Models often stream a thinking block with no text at all. Expanding it
+    // would reveal nothing, so the label only looks and acts clickable once
+    // some thinking text has arrived (#496).
+    const hasThinkingText = thinking.trim() !== '';
 
     // Handle streaming animation
     useEffect(() => {
@@ -68,7 +72,9 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
         <ToolWrapper message={message} className="!mt-0">
             <div className={`text-text-primary/40 streaming-message ${className}`}>
                 <div>
-                    <div className="mb-0.5 cursor-pointer" onClick={toggleThinkingExpanded}>
+                    <div
+                        className={`mb-0.5 ${hasThinkingText ? 'cursor-pointer' : ''}`}
+                        onClick={hasThinkingText ? toggleThinkingExpanded : undefined}>
                         <div className="italic text-text-primary/50 flex items-center gap-1">
                             {label}
                             {tokenText && (
