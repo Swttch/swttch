@@ -163,6 +163,7 @@
     "typicalTime": "Normalmente ~1 min (instalación: ~3 min)",
     "preventSleep": "Evitar suspensión",
     "keepAwake": "Evita que este equipo entre en suspensión por sí solo",
+    "sleepGuardHint": "La prevención de suspensión solo dura mientras Swttch está en ejecución, para no modificar los ajustes del sistema de su equipo. Al cerrar Swttch, también termina la prevención. Si cierra Swttch con ella activada, se volverá a activar la próxima vez que inicie Swttch.",
     "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
     "regeneratePairing": "Volver a generar el código"
   },

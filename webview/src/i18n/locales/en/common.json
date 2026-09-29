@@ -163,6 +163,7 @@
     "typicalTime": "Typically ~1 min (install: ~3 min)",
     "preventSleep": "Prevent Sleep",
     "keepAwake": "Stops this computer from going to sleep on its own",
+    "sleepGuardHint": "Sleep prevention lasts only while Swttch is running, so that it never has to change your computer's system settings. When Swttch quits, sleep prevention ends with it. If you quit Swttch while it is on, it turns back on the next time Swttch starts.",
     "pairingHint": "Scan to link a device. The QR carries a one-time code that expires shortly — regenerate it if it stops working.",
     "regeneratePairing": "Regenerate code"
   },

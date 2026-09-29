@@ -1,4 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process';
+import { homedir } from 'os';
+import { join } from 'path';
+import { readJsonForUpdate, updateJsonFile } from './atomic-json';
 
 export interface SleepGuardStatus {
   enabled: boolean;
@@ -332,19 +335,48 @@ export async function disableSleepGuard(): Promise<void> {
 }
 
 /**
- * Called on backend startup, when a previous backend may have died holding a guard.
+ * What the user last chose for the sleep switch, kept apart from whether a helper
+ * is running right now.
  *
- * It restores nothing, and that is the whole point. Every platform's guard is now a
- * process we hold, and a process does not outlive the backend that spawned it, so
- * there is no leftover state for a new backend to adopt. The win32 branch used to
- * read the active power plan here and call an AC timeout of 0 "ours" — a reading a
- * user who set "Never sleep" himself can never win (#485). A guard we cannot prove
- * we own is not ours, so startup claims nothing.
+ *   ~/.claude-code-gui/sleep-guard.json
+ *     { "enabled": true }
+ *
+ * The guard itself only lasts as long as the backend, because it is a helper that
+ * dies with it. The user's CHOICE has to outlive that, so the next backend can put
+ * the guard back. Only the user's own click writes this file: the exit handlers
+ * below stop the helper without touching it, so a backend that shuts down (idle,
+ * IDE closed, killed) leaves the choice standing.
+ */
+function intentPath(): string {
+  return join(process.env.CCG_HOME || join(homedir(), '.claude-code-gui'), 'sleep-guard.json');
+}
+
+/** Record the user's choice. Never throws: a failed write only costs the restore. */
+export async function persistSleepGuardIntent(enabled: boolean): Promise<void> {
+  const outcome = await updateJsonFile(intentPath(), () => ({ enabled }));
+  if (outcome.status === 'error') {
+    console.error('[node-backend]', 'Could not save the sleep guard choice:', outcome.error);
+  }
+}
+
+/**
+ * Called on backend startup. Puts the guard back if the user had it on.
+ *
+ * The evidence is the user's own recorded choice, never the state of the system:
+ * the win32 code used to read the power plan here and call an AC timeout of 0
+ * "ours", a reading a user who set "Never sleep" themselves can never win (#485).
+ * A missing or unreadable file means the user has not asked for the guard.
  */
 export async function restoreSleepGuardState(): Promise<void> {
-  // Intentionally empty. Kept as the startup seam so the rule above has one place
-  // to live, and so a future guard that DOES survive a restart has somewhere to be
-  // adopted from — with proof of ownership, which the power plan cannot give.
+  const read = await readJsonForUpdate(intentPath());
+  if (read.status !== 'ok' || read.data.enabled !== true) return;
+
+  try {
+    await enableSleepGuard();
+    console.error('[node-backend]', 'Restored sleep guard from the saved choice');
+  } catch (err) {
+    console.error('[node-backend]', 'Could not restore sleep guard:', err);
+  }
 }
 
 export function getSleepGuardStatus(): SleepGuardStatus {

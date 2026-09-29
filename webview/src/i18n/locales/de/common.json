@@ -163,6 +163,7 @@
     "typicalTime": "Typischerweise ~1 Min. (Installation: ~3 Min.)",
     "preventSleep": "Ruhezustand verhindern",
     "keepAwake": "Verhindert, dass dieser Computer von selbst in den Ruhezustand wechselt",
+    "sleepGuardHint": "Die Ruhezustandssperre gilt nur, solange Swttch läuft, damit die Systemeinstellungen Ihres Computers nicht geändert werden müssen. Wenn Swttch beendet wird, endet auch die Sperre. Wenn Sie Swttch im eingeschalteten Zustand beenden, wird sie beim nächsten Start von Swttch wieder eingeschaltet.",
     "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
     "regeneratePairing": "Code neu erzeugen"
   },

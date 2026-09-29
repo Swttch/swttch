@@ -163,6 +163,7 @@
     "typicalTime": "通常約 1 分鐘(安裝:約 3 分鐘)",
     "preventSleep": "防止休眠",
     "keepAwake": "防止這台電腦自動進入睡眠",
+    "sleepGuardHint": "為了不修改電腦的系統設定，防止睡眠僅在 Swttch 執行期間有效。因此 Swttch 結束後，防止睡眠也會隨之解除。若在開啟狀態下結束 Swttch，下次啟動 Swttch 時會自動重新開啟。",
     "pairingHint": "掃描即可連結裝置。QR 碼包含很快過期的一次性代碼，若失效請重新產生。",
     "regeneratePairing": "重新產生代碼"
   },

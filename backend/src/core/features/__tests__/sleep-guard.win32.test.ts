@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
+import { mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 /**
  * #485. What the win32 sleep guard is allowed to do to the user's power plan:
@@ -186,8 +189,12 @@ async function drainMicrotasks(): Promise<void> {
 }
 
 let platformSpy: ReturnType<typeof vi.spyOn>;
+let ccgHome: string;
 
 beforeEach(() => {
+  // The saved sleep choice lives under CCG_HOME; keep it away from the real one.
+  ccgHome = mkdtempSync(join(tmpdir(), 'ccg-sleep-'));
+  process.env.CCG_HOME = ccgHome;
   vi.clearAllMocks();
   powerPlan = { ac: 0, dc: 600 };
   commandLines = [];
@@ -215,6 +222,8 @@ beforeEach(() => {
 
 afterEach(() => {
   platformSpy.mockRestore();
+  delete process.env.CCG_HOME;
+  rmSync(ccgHome, { recursive: true, force: true });
 });
 
 describe('win32 sleep guard and a power setting the user made', () => {

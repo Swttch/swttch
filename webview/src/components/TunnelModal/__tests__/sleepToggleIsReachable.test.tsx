@@ -75,3 +75,19 @@ describe('the sleep prevention switch', () => {
     expect(sleepSwitch()).toBeDisabled();
   });
 });
+
+describe('the sleep prevention hint', () => {
+  it('appears while sleep prevention is on, so the limit is stated where it is chosen', () => {
+    status = { ...baseStatus, preventSleep: true };
+    render(<TunnelModal onClose={vi.fn()} />);
+
+    expect(screen.getByText('tunnelModal.sleepGuardHint')).toBeInTheDocument();
+  });
+
+  it('is absent while sleep prevention is off', () => {
+    status = { ...baseStatus, preventSleep: false };
+    render(<TunnelModal onClose={vi.fn()} />);
+
+    expect(screen.queryByText('tunnelModal.sleepGuardHint')).not.toBeInTheDocument();
+  });
+});

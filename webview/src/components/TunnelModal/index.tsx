@@ -176,16 +176,21 @@ export function TunnelModal(props: Props) {
 
           {/* Sleep prevention toggle. Independent of the tunnel: it is reachable
               whether the tunnel is on or off, and only its own switch moves it. */}
-          <div className="flex items-center justify-between border-t border-border-default pt-4">
-            <div>
-              <div className="text-sm text-text-primary">{t('tunnelModal.preventSleep')}</div>
-              <div className="text-xs text-text-tertiary">{t('tunnelModal.keepAwake')}</div>
+          <div className="border-t border-border-default pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-text-primary">{t('tunnelModal.preventSleep')}</div>
+                <div className="text-xs text-text-tertiary">{t('tunnelModal.keepAwake')}</div>
+              </div>
+              <ToggleSwitch
+                checked={preventSleep}
+                onChange={handleSleepToggle}
+                disabled={sleepLoading}
+              />
             </div>
-            <ToggleSwitch
-              checked={preventSleep}
-              onChange={handleSleepToggle}
-              disabled={sleepLoading}
-            />
+            {preventSleep && (
+              <p className="mt-2 text-xs text-text-tertiary">{t('tunnelModal.sleepGuardHint')}</p>
+            )}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { disableSleepGuard } from '../features/sleep-guard';
+import { disableSleepGuard, persistSleepGuardIntent } from '../features/sleep-guard';
 import { MessageType } from '../../shared';
 
 export async function sleepGuardDisableHandler(
@@ -12,6 +12,8 @@ export async function sleepGuardDisableHandler(
 ): Promise<void> {
   try {
     await disableSleepGuard();
+    // The user's own click is the only thing that records a choice.
+    await persistSleepGuardIntent(false);
     connections.sendTo(connectionId, MessageType.ACK, {
       requestId: message.requestId,
       status: 'ok',
