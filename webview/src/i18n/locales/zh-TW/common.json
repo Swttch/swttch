@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "防止睡眠也會隨之解除。",
     "sleepGuardHint3Lead": "再次啟動 Swttch 後",
     "sleepGuardHint3Rest": "會自動重新開啟。",
-    "sleepGuardHint4Lead": "系統設定",
-    "sleepGuardHint4Rest": "不會被修改。",
+    "sleepGuardHint4Lead": "闔上蓋子也不會睡眠，",
+    "sleepGuardHint4Rest": "為此變更的系統設定會在關閉或結束 Swttch 時恢復原狀。",
+    "sleepGuardChangedSetting": "蓋子相關的設定被其他程式變更了。Swttch 會記住該值，並在關閉時恢復為該值。",
+    "sleepGuardChangedScheme": "你切換了電源計畫，目前的計畫未套用此設定。Swttch 變更過的計畫會在關閉時恢復原狀。",
     "pairingHint": "掃描即可連結裝置。QR 碼包含很快過期的一次性代碼，若失效請重新產生。",
     "regeneratePairing": "重新產生代碼"
   },

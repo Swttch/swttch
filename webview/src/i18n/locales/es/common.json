@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "la prevención también termina.",
     "sleepGuardHint3Lead": "Al iniciar Swttch de nuevo,",
     "sleepGuardHint3Rest": "se activa otra vez automáticamente.",
-    "sleepGuardHint4Lead": "Los ajustes del sistema",
-    "sleepGuardHint4Rest": "no se modifican.",
+    "sleepGuardHint4Lead": "Cerrar la tapa no lo suspende,",
+    "sleepGuardHint4Rest": "y cualquier ajuste del sistema cambiado para ello vuelve a su valor original al desactivarlo o cerrar Swttch.",
+    "sleepGuardChangedSetting": "Otra aplicación cambió el ajuste de la tapa. Swttch conserva ese valor y lo restaura al desactivarlo.",
+    "sleepGuardChangedScheme": "Cambió de plan de energía, así que el plan actual no tiene este ajuste. El plan que Swttch modificó vuelve a la normalidad al desactivarlo.",
     "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
     "regeneratePairing": "Volver a generar el código"
   },

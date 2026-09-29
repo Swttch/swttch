@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "endet auch die Sperre.",
     "sleepGuardHint3Lead": "Beim nächsten Start von Swttch",
     "sleepGuardHint3Rest": "wird sie automatisch wieder eingeschaltet.",
-    "sleepGuardHint4Lead": "Die Systemeinstellungen",
-    "sleepGuardHint4Rest": "bleiben unverändert.",
+    "sleepGuardHint4Lead": "Das Zuklappen versetzt den Rechner nicht in den Ruhezustand,",
+    "sleepGuardHint4Rest": "und jede dafür geänderte Systemeinstellung wird beim Ausschalten oder Beenden von Swttch zurückgesetzt.",
+    "sleepGuardChangedSetting": "Eine andere App hat die Deckeleinstellung geändert. Swttch merkt sich diesen Wert und stellt ihn beim Ausschalten wieder her.",
+    "sleepGuardChangedScheme": "Sie haben den Energiesparplan gewechselt, daher gilt die Einstellung im neuen Plan nicht. Der von Swttch geänderte Plan wird beim Ausschalten zurückgesetzt.",
     "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
     "regeneratePairing": "Code neu erzeugen"
   },

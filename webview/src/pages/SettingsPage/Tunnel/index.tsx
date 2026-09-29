@@ -23,6 +23,7 @@ export function TunnelSettings() {
     installing,
     preventSleep,
     sleepLoading,
+    sleepExternalChange,
     error,
     errorCode,
     handleTunnelToggle,
@@ -145,7 +146,7 @@ export function TunnelSettings() {
         <SettingRow
           label={sleepCopy.label}
           description={sleepCopy.description}
-          below={preventSleep ? <SleepPreventionHint /> : undefined}
+          below={preventSleep ? <SleepPreventionHint externalChange={sleepExternalChange} /> : undefined}
         >
           <SleepPreventionSwitch
             checked={preventSleep}

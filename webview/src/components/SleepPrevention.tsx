@@ -1,5 +1,6 @@
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useTranslation } from '@/i18n';
+import type { SleepExternalChange } from '@/hooks/useTunnelStatus';
 
 /**
  * The sleep prevention setting, shared by every place that shows it (the remote
@@ -34,9 +35,11 @@ export function SleepPreventionSwitch(props: SwitchProps) {
 }
 
 /** What the user needs to know about the limits, shown while the switch is on. */
-export function SleepPreventionHint() {
+export function SleepPreventionHint(props: { externalChange?: SleepExternalChange }) {
+  const { externalChange = 'none' } = props;
   const { t } = useTranslation('common');
   return (
+    <>
     <ul className="mt-3 space-y-1.5 rounded-md bg-surface-pressed/40 px-3 py-2.5 text-xs text-text-secondary">
       {([1, 2, 3, 4] as const).map((n) => (
         <li key={n} className="flex gap-2">
@@ -50,5 +53,11 @@ export function SleepPreventionHint() {
         </li>
       ))}
     </ul>
+    {externalChange !== 'none' && (
+      <p role="status" className="mt-2 rounded-md border border-border-default px-3 py-2 text-xs text-text-primary">
+        {externalChange === 'scheme' ? t('tunnelModal.sleepGuardChangedScheme') : t('tunnelModal.sleepGuardChangedSetting')}
+      </p>
+    )}
+    </>
   );
 }

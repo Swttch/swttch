@@ -28,6 +28,7 @@ export function TunnelModal(props: Props) {
     installing,
     preventSleep,
     sleepLoading,
+    sleepExternalChange,
     error,
     errorCode,
     handleTunnelToggle,
@@ -190,7 +191,7 @@ export function TunnelModal(props: Props) {
                 onChange={handleSleepToggle}
               />
             </div>
-            {preventSleep && <SleepPreventionHint />}
+            {preventSleep && <SleepPreventionHint externalChange={sleepExternalChange} />}
           </div>
         </div>
       </div>

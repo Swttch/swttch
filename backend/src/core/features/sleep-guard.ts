@@ -1,15 +1,39 @@
 import { spawn, type ChildProcess } from 'child_process';
-import { homedir } from 'os';
-import { join } from 'path';
 import { readJsonForUpdate, updateJsonFile } from './atomic-json';
+import {
+  acquireLid,
+  createLidStrategy,
+  installMacPmsetRule,
+  LidAuthorizationRequired,
+  pollLid,
+  releaseLid,
+  stateFilePath,
+} from './lid-guard';
+
+/** Why the lid setting no longer matches what we set, if it does not. */
+export type SleepGuardExternalChange = 'none' | 'setting' | 'scheme';
 
 export interface SleepGuardStatus {
   enabled: boolean;
   platform: string;
+  /** Someone else changed the system setting we hold; the user is told, we do not fight. */
+  externalChange: SleepGuardExternalChange;
 }
 
 let sleepGuardEnabled = false;
 let inhibitProcess: ChildProcess | null = null;
+let lidHeld = false;
+let lidPollTimer: ReturnType<typeof setInterval> | null = null;
+let externalChange: SleepGuardExternalChange = 'none';
+let statusListener: ((status: SleepGuardStatus) => void) | null = null;
+
+/** The lid setting is read again this often, and only while the guard is on. */
+const LID_POLL_MS = 30_000;
+
+/** Called when the status changes without the user's own click (an outsider edited the setting). */
+export function onSleepGuardStatusChange(listener: (status: SleepGuardStatus) => void): void {
+  statusListener = listener;
+}
 
 /**
  * win32 sleep guard: a helper process that HOLDS a sleep request, the same shape
@@ -182,7 +206,17 @@ function stopInhibitProcess(label: string): void {
   inhibitProcess = null;
 }
 
-export async function enableSleepGuard(): Promise<void> {
+export interface EnableOptions {
+  /**
+   * May a dialog asking for the administrator's permission be shown. True for the
+   * user's own click. False for a restore at startup: a password prompt nobody
+   * asked for is worse than a switch that stays off until they turn it on.
+   */
+  allowPrompt?: boolean;
+}
+
+export async function enableSleepGuard(options: EnableOptions = {}): Promise<void> {
+  const { allowPrompt = true } = options;
   const platform = process.platform;
 
   try {
@@ -231,7 +265,7 @@ export async function enableSleepGuard(): Promise<void> {
       const proc = spawn(
         'systemd-inhibit',
         [
-          '--what=sleep',
+          '--what=sleep:handle-lid-switch',
           '--who=Claude Code GUI',
           '--why=Sleep prevention is on',
           'tail',
@@ -302,10 +336,62 @@ export async function enableSleepGuard(): Promise<void> {
       return;
     }
 
+    await holdLidSetting(allowPrompt);
     sleepGuardEnabled = true;
   } catch (err) {
+    // Half on is worse than off: a helper holding sleep off while the lid still
+    // puts the machine to sleep is a switch that lies.
+    stopInhibitProcess('sleep guard');
     console.error('[node-backend]', 'Failed to enable sleep guard:', err);
     throw err;
+  }
+}
+
+/**
+ * Take the lid close setting (macOS, Windows). On macOS the first time needs the
+ * user's permission, asked through macOS's own dialog.
+ */
+async function holdLidSetting(allowPrompt: boolean): Promise<void> {
+  const strategy = createLidStrategy(process.platform);
+  if (!strategy || lidHeld) return;
+
+  try {
+    acquireLid(strategy);
+  } catch (err) {
+    if (!(err instanceof LidAuthorizationRequired) || process.platform !== 'darwin' || !allowPrompt) throw err;
+    await installMacPmsetRule();
+    acquireLid(strategy);
+  }
+  lidHeld = true;
+  externalChange = 'none';
+
+  lidPollTimer = setInterval(() => {
+    const outcome = pollLid(strategy);
+    const next: SleepGuardExternalChange =
+      outcome === 'external-changed' ? 'setting' : outcome === 'scheme-changed' ? 'scheme' : externalChange;
+    if (next !== externalChange) {
+      externalChange = next;
+      statusListener?.(getSleepGuardStatus());
+    }
+  }, LID_POLL_MS);
+  // Polling must not keep the backend alive on its own.
+  lidPollTimer.unref();
+}
+
+/** Put the lid close setting back, synchronously, so an `exit` handler can call it. */
+function releaseLidSetting(): void {
+  if (lidPollTimer) {
+    clearInterval(lidPollTimer);
+    lidPollTimer = null;
+  }
+  const strategy = createLidStrategy(process.platform);
+  if (!strategy || !lidHeld) return;
+  lidHeld = false;
+  externalChange = 'none';
+  try {
+    releaseLid(strategy);
+  } catch (err) {
+    console.error('[node-backend]', 'Failed to release the lid close setting:', err);
   }
 }
 
@@ -327,6 +413,7 @@ export async function disableSleepGuard(): Promise<void> {
       return;
     }
 
+    releaseLidSetting();
     sleepGuardEnabled = false;
   } catch (err) {
     console.error('[node-backend]', 'Failed to disable sleep guard:', err);
@@ -348,12 +435,12 @@ export async function disableSleepGuard(): Promise<void> {
  * IDE closed, killed) leaves the choice standing.
  */
 function intentPath(): string {
-  return join(process.env.CCG_HOME || join(homedir(), '.claude-code-gui'), 'sleep-guard.json');
+  return stateFilePath();
 }
 
 /** Record the user's choice. Never throws: a failed write only costs the restore. */
 export async function persistSleepGuardIntent(enabled: boolean): Promise<void> {
-  const outcome = await updateJsonFile(intentPath(), () => ({ enabled }));
+  const outcome = await updateJsonFile(intentPath(), (current) => ({ ...current, enabled }));
   if (outcome.status === 'error') {
     console.error('[node-backend]', 'Could not save the sleep guard choice:', outcome.error);
   }
@@ -372,7 +459,7 @@ export async function restoreSleepGuardState(): Promise<void> {
   if (read.status !== 'ok' || read.data.enabled !== true) return;
 
   try {
-    await enableSleepGuard();
+    await enableSleepGuard({ allowPrompt: false });
     console.error('[node-backend]', 'Restored sleep guard from the saved choice');
   } catch (err) {
     console.error('[node-backend]', 'Could not restore sleep guard:', err);
@@ -383,6 +470,7 @@ export function getSleepGuardStatus(): SleepGuardStatus {
   return {
     enabled: sleepGuardEnabled,
     platform: process.platform,
+    externalChange,
   };
 }
 
@@ -391,6 +479,7 @@ export function getSleepGuardStatus(): SleepGuardStatus {
 process.on('exit', () => {
   if (sleepGuardEnabled) {
     stopInhibitProcess('sleep guard');
+    releaseLidSetting();
     sleepGuardEnabled = false;
   }
 });
@@ -398,6 +487,7 @@ process.on('exit', () => {
 process.on('SIGTERM', () => {
   if (sleepGuardEnabled) {
     stopInhibitProcess('sleep guard');
+    releaseLidSetting();
     sleepGuardEnabled = false;
   }
 });

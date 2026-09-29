@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "a prevenção também termina.",
     "sleepGuardHint3Lead": "Ao iniciar o Swttch de novo,",
     "sleepGuardHint3Rest": "ela volta a ser ativada automaticamente.",
-    "sleepGuardHint4Lead": "As configurações do sistema",
-    "sleepGuardHint4Rest": "não são alteradas.",
+    "sleepGuardHint4Lead": "Fechar a tampa não o suspende,",
+    "sleepGuardHint4Rest": "e qualquer configuração do sistema alterada para isso volta ao valor original ao desativar ou encerrar o Swttch.",
+    "sleepGuardChangedSetting": "Outro aplicativo alterou a configuração da tampa. O Swttch guarda esse valor e o restaura ao desativar.",
+    "sleepGuardChangedScheme": "Você trocou o plano de energia, então o plano atual não tem esta configuração. O plano que o Swttch alterou volta ao normal ao desativar.",
     "pairingHint": "Escaneie para parear um dispositivo. O QR traz um código de uso único que expira em breve. Gere outro se parar de funcionar.",
     "regeneratePairing": "Gerar novo código"
   },

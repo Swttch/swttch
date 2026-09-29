@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "防休眠也会随之解除。",
     "sleepGuardHint3Lead": "再次启动 Swttch 后",
     "sleepGuardHint3Rest": "会自动重新开启。",
-    "sleepGuardHint4Lead": "系统设置",
-    "sleepGuardHint4Rest": "不会被修改。",
+    "sleepGuardHint4Lead": "合上盖子也不会睡眠，",
+    "sleepGuardHint4Rest": "为此更改的系统设置会在关闭或退出 Swttch 时恢复原状。",
+    "sleepGuardChangedSetting": "盖子相关的设置被其他程序更改了。Swttch 会记住该值，并在关闭时恢复为该值。",
+    "sleepGuardChangedScheme": "你切换了电源计划，当前计划未应用此设置。Swttch 更改过的计划会在关闭时恢复原状。",
     "pairingHint": "扫描即可连接设备。二维码包含很快过期的一次性代码，若失效请重新生成。",
     "regeneratePairing": "重新生成代码"
   },

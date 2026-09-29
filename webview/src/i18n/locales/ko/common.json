@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "절전 방지도 함께 풀립니다.",
     "sleepGuardHint3Lead": "Swttch를 다시 실행하면",
     "sleepGuardHint3Rest": "자동으로 다시 켜집니다.",
-    "sleepGuardHint4Lead": "시스템 설정은",
-    "sleepGuardHint4Rest": "바꾸지 않습니다.",
+    "sleepGuardHint4Lead": "덮개를 닫아도 잠들지 않게 하며,",
+    "sleepGuardHint4Rest": "이를 위해 바꾼 시스템 설정은 끄거나 Swttch를 종료하면 원래대로 돌아갑니다.",
+    "sleepGuardChangedSetting": "다른 곳에서 덮개 설정이 바뀌었습니다. Swttch는 그 값을 기억해 두었다가 끄면 그 값으로 되돌립니다.",
+    "sleepGuardChangedScheme": "전원 계획을 바꾸셔서 지금 계획에는 이 설정이 적용되어 있지 않습니다. Swttch가 바꿨던 계획은 끄면 원래대로 돌아갑니다.",
     "pairingHint": "스캔하면 기기가 연결됩니다. QR에는 곧 만료되는 일회용 코드가 들어 있으니, 동작하지 않으면 다시 생성해주세요.",
     "regeneratePairing": "코드 다시 생성"
   },

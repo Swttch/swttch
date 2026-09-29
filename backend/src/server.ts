@@ -13,7 +13,7 @@ import { claimSponsorByInstall } from './core/features/license-claim';
 import { trackEvent, reportBackendError } from './core/features/telemetry';
 import { restoreTunnelState } from './core/features/tunnel-manager';
 import { tunnelPairing } from './core/features/tunnel-pairing';
-import { restoreSleepGuardState } from './core/features/sleep-guard';
+import { onSleepGuardStatusChange, restoreSleepGuardState } from './core/features/sleep-guard';
 import { registerAutoResumeHook } from './core/features/auto-resume';
 import { isJetBrainsMode, serverPort, serverHost, webviewDir } from './config/environment';
 import { parseResolveDiffParams, resolveDiffReview } from './core/features/resolveDiff';
@@ -576,6 +576,8 @@ async function main() {
 
   // Restore tunnel/sleep state from previous session
   restoreTunnelState();
+  // An outsider editing the lid setting we hold is reported to every open window.
+  onSleepGuardStatusChange((status) => connections.broadcastToAll(MessageType.SLEEP_GUARD_STATUS, { ...status }));
   restoreSleepGuardState().catch(() => {});
 
   // Start watching all settings files for external changes

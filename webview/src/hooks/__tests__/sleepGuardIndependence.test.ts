@@ -105,3 +105,26 @@ describe('sleep prevention is independent of the tunnel', () => {
     expect(sentTypes()).toContain(MessageType.SLEEP_GUARD_ENABLE);
   });
 });
+
+describe('the notice that someone else changed the lid setting', () => {
+  it('comes from the status the backend reports at start', async () => {
+    send.mockResolvedValue({
+      status: 'ok', tunnel: { enabled: false, url: null },
+      sleepGuard: { enabled: true, externalChange: 'scheme' }, cloudflaredAvailable: true,
+    });
+    const { result } = renderHook(() => useTunnelStatus());
+
+    await waitFor(() => expect(result.current.sleepExternalChange).toBe('scheme'));
+  });
+
+  it('ignores a value it does not know rather than showing a notice for it', async () => {
+    send.mockResolvedValue({
+      status: 'ok', tunnel: { enabled: false, url: null },
+      sleepGuard: { enabled: true, externalChange: 'something-new' }, cloudflaredAvailable: true,
+    });
+    const { result } = renderHook(() => useTunnelStatus());
+
+    await waitFor(() => expect(result.current.preventSleep).toBe(true));
+    expect(result.current.sleepExternalChange).toBe('none');
+  });
+});

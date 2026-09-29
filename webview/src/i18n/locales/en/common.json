@@ -169,8 +169,10 @@
     "sleepGuardHint2Rest": "sleep prevention ends too.",
     "sleepGuardHint3Lead": "Start Swttch again",
     "sleepGuardHint3Rest": "and it turns back on automatically.",
-    "sleepGuardHint4Lead": "Your system settings",
-    "sleepGuardHint4Rest": "are never changed.",
+    "sleepGuardHint4Lead": "Closing the lid does not put it to sleep,",
+    "sleepGuardHint4Rest": "and any system setting changed for that goes back to what it was when you turn this off or quit Swttch.",
+    "sleepGuardChangedSetting": "Another app changed the lid setting. Swttch keeps that value and puts it back when you turn this off.",
+    "sleepGuardChangedScheme": "You switched power plans, so the new plan does not have this setting. The plan Swttch changed goes back to normal when you turn this off.",
     "pairingHint": "Scan to link a device. The QR carries a one-time code that expires shortly — regenerate it if it stops working.",
     "regeneratePairing": "Regenerate code"
   },

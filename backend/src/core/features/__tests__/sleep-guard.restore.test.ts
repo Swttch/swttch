@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { EventEmitter } from 'events';
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+
+vi.mock('child_process', () => ({
+  exec: vi.fn(), execSync: vi.fn(), execFile: vi.fn(), execFileSync: vi.fn(),
+  spawn: vi.fn(), spawnSync: vi.fn(),
+}));
+
+import { spawn as cpSpawn, spawnSync as cpSpawnSync } from 'child_process';
+import { createFakeOs, loadSleepGuard, type FakeOs } from './fake-os';
 
 /**
  * The guard lasts only as long as the backend, but the user's choice must outlive
@@ -11,42 +18,9 @@ import { join } from 'path';
  * down for any reason must not rewrite that record.
  */
 
-vi.mock('child_process', () => ({
-  exec: vi.fn(),
-  execSync: vi.fn(),
-  execFile: vi.fn(),
-  execFileSync: vi.fn(),
-  spawn: vi.fn(),
-  spawnSync: vi.fn(),
-}));
-
-import { spawn as cpSpawn } from 'child_process';
-
-const mockSpawn = vi.mocked(cpSpawn);
-
-class FakeProcess extends EventEmitter {
-  pid = 4321;
-  unref = vi.fn();
-  kill = vi.fn();
-}
-
-type Mod = typeof import('../sleep-guard');
-type Handler = () => void;
-
+let os: FakeOs;
 let ccgHome: string;
-let platformSpy: ReturnType<typeof vi.spyOn>;
-
-async function load(): Promise<{ mod: Mod; handlers: Map<string, Handler[]> }> {
-  vi.resetModules();
-  const handlers = new Map<string, Handler[]>();
-  const onSpy = vi.spyOn(process, 'on').mockImplementation(((event: string, h: Handler) => {
-    handlers.set(event, [...(handlers.get(event) ?? []), h]);
-    return process;
-  }) as never);
-  const mod = await import('../sleep-guard');
-  onSpy.mockRestore();
-  return { mod, handlers };
-}
+let restore: () => void;
 
 const file = (): string => join(ccgHome, 'sleep-guard.json');
 
@@ -54,16 +28,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   ccgHome = mkdtempSync(join(tmpdir(), 'ccg-sleep-'));
   process.env.CCG_HOME = ccgHome;
-  platformSpy = vi.spyOn(process, 'platform', 'get');
-  platformSpy.mockReturnValue('darwin');
-  mockSpawn.mockImplementation((() => new FakeProcess()) as never);
+  os = createFakeOs({ spawn: vi.mocked(cpSpawn), spawnSync: vi.mocked(cpSpawnSync) });
 });
 
 afterEach(() => {
-  platformSpy.mockRestore();
+  restore?.();
   delete process.env.CCG_HOME;
   rmSync(ccgHome, { recursive: true, force: true });
 });
+
+async function load() {
+  const loaded = await loadSleepGuard('darwin');
+  restore = loaded.restorePlatform;
+  return loaded;
+}
 
 describe('restoring the sleep guard after the backend restarts', () => {
   it('puts the guard back when the user had it on', async () => {
@@ -72,8 +50,23 @@ describe('restoring the sleep guard after the backend restarts', () => {
 
     await mod.restoreSleepGuardState();
 
-    expect(mockSpawn).toHaveBeenCalledTimes(1);
     expect(mod.getSleepGuardStatus().enabled).toBe(true);
+    expect(os.sleepDisabled).toBe(1);
+  });
+
+  it('never shows a permission dialog nobody asked for', async () => {
+    writeFileSync(file(), JSON.stringify({ enabled: true }));
+    os.authorized = false;
+    const { mod } = await load();
+
+    await mod.restoreSleepGuardState();
+
+    // The switch stays off until the user turns it on, which is when a dialog is expected.
+    expect(os.dialogs).toBe(0);
+    expect(mod.getSleepGuardStatus().enabled).toBe(false);
+    expect(os.sleepDisabled).toBe(0);
+    // The saved choice stays, so the next start (once authorized) restores it.
+    expect(JSON.parse(readFileSync(file(), 'utf8')).enabled).toBe(true);
   });
 
   it('leaves it off when the user had it off', async () => {
@@ -82,8 +75,8 @@ describe('restoring the sleep guard after the backend restarts', () => {
 
     await mod.restoreSleepGuardState();
 
-    expect(mockSpawn).not.toHaveBeenCalled();
     expect(mod.getSleepGuardStatus().enabled).toBe(false);
+    expect(os.sleepDisabled).toBe(0);
   });
 
   it('leaves it off when the user never chose', async () => {
@@ -91,7 +84,6 @@ describe('restoring the sleep guard after the backend restarts', () => {
 
     await mod.restoreSleepGuardState();
 
-    expect(mockSpawn).not.toHaveBeenCalled();
     expect(mod.getSleepGuardStatus().enabled).toBe(false);
   });
 
@@ -101,39 +93,45 @@ describe('restoring the sleep guard after the backend restarts', () => {
 
     await mod.restoreSleepGuardState();
 
-    expect(mockSpawn).not.toHaveBeenCalled();
+    expect(mod.getSleepGuardStatus().enabled).toBe(false);
   });
 });
 
 describe('what records the choice', () => {
-  it('the user turning it on and off is recorded', async () => {
+  it('the user turning it on and off is recorded, next to the rest of the state', async () => {
     const { mod } = await load();
+    await mod.enableSleepGuard();
 
     await mod.persistSleepGuardIntent(true);
-    expect(JSON.parse(readFileSync(file(), 'utf8'))).toEqual({ enabled: true });
+    const on = JSON.parse(readFileSync(file(), 'utf8'));
+    expect(on.enabled).toBe(true);
+    // Recording the choice must not erase what the lid setting needs to be put back.
+    expect(on.external).toEqual({ disableSleep: 0 });
 
     await mod.persistSleepGuardIntent(false);
-    expect(JSON.parse(readFileSync(file(), 'utf8'))).toEqual({ enabled: false });
+    expect(JSON.parse(readFileSync(file(), 'utf8')).enabled).toBe(false);
   });
 
   it('a backend shutting down does not rewrite the choice', async () => {
     writeFileSync(file(), JSON.stringify({ enabled: true }));
-    const { mod, handlers } = await load();
+    const { mod, runHandlers } = await load();
     await mod.restoreSleepGuardState();
 
-    for (const h of handlers.get('exit') ?? []) h();
-    for (const h of handlers.get('SIGTERM') ?? []) h();
-    await new Promise((r) => setTimeout(r, 20));
+    runHandlers('exit');
+    runHandlers('SIGTERM');
 
-    expect(JSON.parse(readFileSync(file(), 'utf8'))).toEqual({ enabled: true });
+    expect(JSON.parse(readFileSync(file(), 'utf8')).enabled).toBe(true);
+    // ...while the system setting it changed is put back.
+    expect(os.sleepDisabled).toBe(0);
   });
 
-  it('enabling or disabling the guard by itself does not write the file', async () => {
+  it('turning the guard on or off by itself does not record a choice', async () => {
     const { mod } = await load();
 
     await mod.enableSleepGuard();
     await mod.disableSleepGuard();
 
-    expect(existsSync(file())).toBe(false);
+    expect(JSON.parse(readFileSync(file(), 'utf8')).enabled).toBeUndefined();
+    expect(existsSync(file())).toBe(true);
   });
 });

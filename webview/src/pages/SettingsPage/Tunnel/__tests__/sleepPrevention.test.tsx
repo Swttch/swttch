@@ -22,6 +22,7 @@ const baseStatus = {
   installing: false,
   preventSleep: false,
   sleepLoading: false,
+  sleepExternalChange: 'none' as 'none' | 'setting' | 'scheme',
   error: null,
   errorCode: null,
   handleTunnelToggle: vi.fn(),
@@ -66,5 +67,12 @@ describe('Settings > Tunnel > sleep prevention', () => {
     status = { ...baseStatus, preventSleep: false };
     render(<TunnelSettings />);
     expect(screen.queryByText('tunnelModal.sleepGuardHint1Lead')).not.toBeInTheDocument();
+  });
+
+  it('shows the same notice as the modal when the lid setting was changed elsewhere', () => {
+    status = { ...baseStatus, preventSleep: true, sleepExternalChange: 'setting' };
+    render(<TunnelSettings />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('tunnelModal.sleepGuardChangedSetting');
   });
 });

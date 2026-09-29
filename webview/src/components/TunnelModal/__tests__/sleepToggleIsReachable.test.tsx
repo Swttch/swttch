@@ -21,6 +21,7 @@ const baseStatus = {
   installing: false,
   preventSleep: false,
   sleepLoading: false,
+  sleepExternalChange: 'none' as 'none' | 'setting' | 'scheme',
   error: null,
   errorCode: null,
   handleTunnelToggle: vi.fn(),
@@ -91,5 +92,28 @@ describe('the sleep prevention hint', () => {
     render(<TunnelModal onClose={vi.fn()} />);
 
     expect(screen.queryByText('tunnelModal.sleepGuardHint1Lead')).not.toBeInTheDocument();
+  });
+});
+
+describe('the notice that someone else changed the lid setting', () => {
+  it('names a changed setting while the switch is on', () => {
+    status = { ...baseStatus, preventSleep: true, sleepExternalChange: 'setting' };
+    render(<TunnelModal onClose={vi.fn()} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('tunnelModal.sleepGuardChangedSetting');
+  });
+
+  it('names a switched power plan while the switch is on', () => {
+    status = { ...baseStatus, preventSleep: true, sleepExternalChange: 'scheme' };
+    render(<TunnelModal onClose={vi.fn()} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('tunnelModal.sleepGuardChangedScheme');
+  });
+
+  it('is absent when nothing changed', () => {
+    status = { ...baseStatus, preventSleep: true, sleepExternalChange: 'none' };
+    render(<TunnelModal onClose={vi.fn()} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
