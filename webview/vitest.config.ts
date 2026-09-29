@@ -1,9 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { readPluginName } from './pluginName';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __PLUGIN_NAME__: JSON.stringify(readPluginName()),
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

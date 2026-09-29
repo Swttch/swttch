@@ -34,8 +34,10 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.colors.EditorColorsManager
@@ -2283,10 +2285,22 @@ class ClaudeCodePanel(
                             project,
                             configurableClass
                         ) { configurable ->
-                            try {
-                                val method = configurable.javaClass.getMethod("enableSearch", String::class.java)
-                                method.invoke(configurable, "Claude Code with GUI")
-                            } catch (_: Exception) {}
+                            val searchable = configurable as? SearchableConfigurable
+                                ?: return@showSettingsDialog
+                            val query = PLUGIN_SEARCH_QUERY ?: return@showSettingsDialog
+                            // Before the page has UI, enableSearch only queues the query, and in
+                            // practice that queued query never reached the search box (#491).
+                            // So the query is applied again once the dialog is on screen, where
+                            // enableSearch returns the search itself as a Runnable to be run.
+                            // The old code discarded that Runnable.
+                            searchable.enableSearch(query)
+                            ApplicationManager.getApplication().invokeLater({
+                                try {
+                                    searchable.enableSearch(query)?.run()
+                                } catch (e: Exception) {
+                                    logger.warn("Failed to fill the Plugins search box", e)
+                                }
+                            }, ModalityState.any())
                         }
                         logger.info("Opened Plugins settings dialog for plugin update")
                     } catch (e: Exception) {
@@ -2649,6 +2663,17 @@ class ClaudeCodePanel(
     // ─── Lifecycle ──────────────────────────────────────────────────
 
     companion object {
+        /**
+         * The marketplace name of this plugin, typed into the Plugins settings search box.
+         * Read from plugin-info.properties, which the build fills from `pluginName` in
+         * gradle.properties, so the name has a single source. Null if the resource is missing.
+         */
+        private val PLUGIN_SEARCH_QUERY: String? by lazy {
+            ClaudeCodePanel::class.java.getResourceAsStream("/plugin-info.properties")?.use { stream ->
+                java.util.Properties().apply { load(stream) }.getProperty("name")?.takeIf { it.isNotBlank() }
+            }
+        }
+
         /**
          * Upper bound on how long the panel waits for the backend to report its port
          * before surfacing a retryable error. Generous enough to absorb a slow shell-PATH

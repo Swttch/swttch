@@ -11,7 +11,8 @@
     "released": "v{{version}} publiée !",
     "restartRequired": "Redémarrage de l'IDE requis",
     "update": "Mettre à jour",
-    "skip": "Ignorer"
+    "skip": "Ignorer",
+    "cacheHint": "Vous ne voyez pas la nouvelle version ? C'est le cache de l'IDE. Redémarrez l'IDE."
   },
   "whatsNew": {
     "title": "Nouveautés",

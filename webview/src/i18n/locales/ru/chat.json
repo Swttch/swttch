@@ -11,7 +11,8 @@
     "released": "Вышла версия v{{version}}!",
     "restartRequired": "Требуется перезапуск IDE",
     "update": "Обновить",
-    "skip": "Пропустить"
+    "skip": "Пропустить",
+    "cacheHint": "Не видите новую версию? Это кэш IDE. Перезапустите IDE."
   },
   "whatsNew": {
     "title": "Что нового",

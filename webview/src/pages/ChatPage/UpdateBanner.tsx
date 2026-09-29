@@ -21,12 +21,15 @@ export function UpdateBanner() {
   const { title, items } = parseLatestReleaseNotes(latestNotes, latestVersion);
   const showActions = !isBrowser();
   const hasItems = items.length > 0;
+  // The footer (plugin name + IDE cache hint) only makes sense inside the IDE,
+  // where the Plugins settings is what actually installs the update.
+  const hasDrawer = hasItems || showActions;
 
   return (
       /* `relative` anchors the hover drawer below; `z-30` lifts this banner (and
          therefore the drawer) above the sibling banners that follow it in the
          BannerArea stack, which are z-20 and would otherwise paint over it. */
-      <div className={`group relative w-full z-30 border-t ${hasItems ? '' : 'border-b'} border-banner-info-border bg-banner-info-bg`}>
+      <div className={`group relative w-full z-30 border-t ${hasDrawer ? '' : 'border-b'} border-banner-info-border bg-banner-info-bg`}>
         <div className="px-4 py-1.5 flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <span className="text-text-primary text-[0.8461rem]">
@@ -54,7 +57,7 @@ export function UpdateBanner() {
           )}
         </div>
 
-        {hasItems && (
+        {hasDrawer && (
           /* Hover drawer. It hangs outside the banner's own box (absolute) so
              the BannerArea ResizeObserver keeps measuring the collapsed title
              row only: letting the banner itself grow would push the entire chat
@@ -63,11 +66,19 @@ export function UpdateBanner() {
              hard-coding a number the list would eventually outgrow. */
           <div className="absolute top-full start-0 w-full grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out group-hover:grid-rows-[1fr] group-focus-within:grid-rows-[1fr] border-b border-banner-info-border bg-banner-info-bg">
             <div className="overflow-hidden">
-              <ul className="list-disc ps-9 pe-4 pt-0.5 pb-2 space-y-0.5 text-text-secondary text-[0.7692rem]">
-                {items.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
+              {hasItems && (
+                <ul className="list-disc ps-9 pe-4 pt-0.5 pb-2 space-y-0.5 text-text-secondary text-[0.7692rem]">
+                  {items.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              )}
+              {showActions && (
+                <div className="ps-4 pe-4 pt-1 pb-1.5 border-t border-banner-info-border text-text-tertiary text-[0.6923rem]">
+                  <div className="font-medium">{__PLUGIN_NAME__}</div>
+                  <div>{t('updateBanner.cacheHint')}</div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -11,7 +11,8 @@
     "released": "v{{version}} がリリースされました!",
     "restartRequired": "IDEの再起動が必要です",
     "update": "更新",
-    "skip": "スキップ"
+    "skip": "スキップ",
+    "cacheHint": "新しいバージョンが表示されない場合は IDE のキャッシュが原因です。IDE を再起動してください。"
   },
   "whatsNew": {
     "title": "新機能",

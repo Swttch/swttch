@@ -11,7 +11,8 @@
     "released": "v{{version}} 已發布！",
     "restartRequired": "需要重新啟動 IDE",
     "update": "更新",
-    "skip": "略過"
+    "skip": "略過",
+    "cacheHint": "看不到新版本？這是 IDE 快取造成的，請重新啟動 IDE。"
   },
   "whatsNew": {
     "title": "新功能",

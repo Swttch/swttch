@@ -11,7 +11,8 @@
     "released": "تم إصدار v{{version}}!",
     "restartRequired": "يلزم إعادة تشغيل IDE",
     "update": "تحديث",
-    "skip": "تخطي"
+    "skip": "تخطي",
+    "cacheHint": "لا ترى الإصدار الجديد؟ السبب ذاكرة التخزين المؤقت في IDE. أعد تشغيل IDE."
   },
   "whatsNew": {
     "title": "ما الجديد",

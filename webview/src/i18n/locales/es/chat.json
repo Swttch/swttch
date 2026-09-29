@@ -11,7 +11,8 @@
     "released": "¡v{{version}} disponible!",
     "restartRequired": "Se requiere reiniciar el IDE",
     "update": "Actualizar",
-    "skip": "Omitir"
+    "skip": "Omitir",
+    "cacheHint": "¿No ves la nueva versión? Es por la caché del IDE. Reinicia el IDE."
   },
   "whatsNew": {
     "title": "Novedades",

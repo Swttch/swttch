@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { readPluginName } from './pluginName';
 
 const backendPort = process.env.BACKEND_PORT ?? '19836';
 
@@ -20,6 +21,7 @@ export default defineConfig(({ mode }) => {
   return {
   envPrefix: ENV_PREFIX,
   define: {
+    __PLUGIN_NAME__: JSON.stringify(readPluginName()),
     // Re-expose the prefix-filtered env as import.meta.env.* (vite's own mode is
     // left unchanged, so we inject explicitly).
     ...Object.fromEntries(

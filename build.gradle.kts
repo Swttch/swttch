@@ -161,7 +161,7 @@ kover {
 intellijPlatform {
     pluginConfiguration {
         id = "com.github.yhk1038.claude-code-gui"
-        name = "Claude Code with GUI"
+        name = providers.gradleProperty("pluginName")
         version = project.version.toString()
         description = providers.provider {
             // 마켓플레이스 전용 소개 문서(영어 원본)를 그대로 HTML로 변환.
@@ -491,9 +491,11 @@ tasks {
         // without touching internal PluginManager APIs (which were marked
         // @ApiStatus.Internal in IntelliJ 2026.2). See NodeBackendService.getPluginVersion().
         val pluginVer = providers.gradleProperty("pluginVersion").get()
+        val pluginName = providers.gradleProperty("pluginName").get()
         inputs.property("pluginVersion", pluginVer)
+        inputs.property("pluginName", pluginName)
         filesMatching("plugin-info.properties") {
-            expand("version" to pluginVer)
+            expand("version" to pluginVer, "name" to pluginName)
         }
     }
 }

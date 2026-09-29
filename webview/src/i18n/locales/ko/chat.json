@@ -11,7 +11,8 @@
     "released": "v{{version}} 출시!",
     "restartRequired": "IDE 재시작 필요",
     "update": "업데이트",
-    "skip": "건너뛰기"
+    "skip": "건너뛰기",
+    "cacheHint": "새 버전이 안 보이면 IDE 캐시 때문이에요. IDE를 재시작해 주세요."
   },
   "whatsNew": {
     "title": "새로운 기능",
