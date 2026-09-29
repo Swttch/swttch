@@ -29,7 +29,7 @@ describe('handleStatusRequest', () => {
     expect(result.body).toEqual({
       keepAlive: false,
       connections: { total: 0, panels: 0, tunnels: 0, browsers: 0 },
-      sessions: { total: 0, streaming: 0 },
+      sessions: { total: 0, streaming: 0, orphaned: 0 },
     });
   });
 
@@ -46,7 +46,31 @@ describe('handleStatusRequest', () => {
     expect(handleStatusRequest(cm).body).toEqual({
       keepAlive: true,
       connections: { total: 3, panels: 1, tunnels: 1, browsers: 1 },
-      sessions: { total: 2, streaming: 1 },
+      sessions: { total: 2, streaming: 1, orphaned: 0 },
+    });
+  });
+
+  it('reports a stranded CLI as orphaned instead of as a healthy stream', () => {
+    // The status this endpoint served is what made issue #479 invisible: the
+    // reporter's backend was holding a CLI whose client had rebooted, and the
+    // snapshot answered `streaming: 1`, so everything downstream — the status
+    // card, anyone reading the endpoint during triage — believed a session was
+    // in flight. The turn nobody can see is now named for what it is.
+    const proc = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+    const connId = cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://localhost:63412');
+    cm.subscribe(connId, 'sess-1');
+    cm.setProcess('sess-1', proc);
+    cm.setSessionActivity('sess-1', SessionActivity.Running);
+
+    expect(handleStatusRequest(cm).body).toMatchObject({
+      sessions: { total: 1, streaming: 1, orphaned: 0 },
+    });
+
+    cm.removeConnection(connId);
+
+    expect(handleStatusRequest(cm).body).toMatchObject({
+      connections: { total: 0, panels: 0, tunnels: 0, browsers: 0 },
+      sessions: { total: 1, streaming: 0, orphaned: 1 },
     });
   });
 });

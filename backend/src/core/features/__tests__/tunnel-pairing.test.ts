@@ -6,6 +6,7 @@ import {
   PAIRING_MAX_ATTEMPTS,
   PAIRING_LOCKOUT_MS,
   INITIAL_PAIR_CODE_TTL_MS,
+  MAX_LIVE_LOCAL_CODES,
 } from '../tunnel-pairing';
 
 // Unit tests for the short-lived one-time pairing store that backs the
@@ -194,6 +195,90 @@ describe('TunnelPairingStore.seedCode — launcher-provided initial local code',
   it('INITIAL_PAIR_CODE_TTL_MS is more generous than the tunnel code TTL', () => {
     // The seeded local code tolerates a slow first load; it stays single-use.
     expect(INITIAL_PAIR_CODE_TTL_MS).toBeGreaterThan(PAIRING_CODE_TTL_MS);
+  });
+});
+
+describe('TunnelPairingStore.issueLocalCode — a code per webview load', () => {
+  it('keeps every issued local code redeemable, each exactly once', () => {
+    // One code per backend START meant the second panel of a restored split, and
+    // every later reload, had nothing left to redeem and could not pair until the
+    // backend was restarted (issue #479). One code per LOAD is the fix, and it
+    // only works if minting one does not revoke the others.
+    const { store } = makeStore();
+    const first = store.issueLocalCode();
+    const second = store.issueLocalCode();
+    expect(second).not.toBe(first);
+
+    expect(store.redeem(first)).toEqual({ ok: true, token: TOKEN });
+    expect(store.redeem(second)).toEqual({ ok: true, token: TOKEN });
+    // Still single-use apiece.
+    expect(store.redeem(second)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('does not revoke the code the launcher seeded at startup', () => {
+    const { store } = makeStore();
+    store.seedCode('launcher-initial-code');
+    store.issueLocalCode();
+
+    expect(store.redeem('launcher-initial-code')).toEqual({ ok: true, token: TOKEN });
+  });
+
+  it('gives each local code its own expiry', () => {
+    const { store, advance } = makeStore();
+    const early = store.issueLocalCode();
+    advance(INITIAL_PAIR_CODE_TTL_MS - 1_000);
+    const late = store.issueLocalCode();
+
+    advance(2_000);
+
+    expect(store.redeem(early)).toEqual({ ok: false, reason: 'expired' });
+    expect(store.redeem(late)).toEqual({ ok: true, token: TOKEN });
+  });
+
+  it('holds no more than MAX_LIVE_LOCAL_CODES, dropping the oldest first', () => {
+    const { store } = makeStore();
+    const codes = Array.from({ length: MAX_LIVE_LOCAL_CODES + 1 }, () => store.issueLocalCode());
+
+    expect(store.liveCodeCount()).toBe(MAX_LIVE_LOCAL_CODES);
+    // The oldest was evicted; everything since then still pairs.
+    expect(store.redeem(codes[0])).toEqual({ ok: false, reason: 'invalid' });
+    expect(store.redeem(codes[codes.length - 1])).toEqual({ ok: true, token: TOKEN });
+  });
+
+  it('burns every live code when the lockout engages', () => {
+    const { store } = makeStore();
+    const local = store.issueLocalCode();
+    const tunnel = store.issueCode();
+    for (let i = 0; i < PAIRING_MAX_ATTEMPTS; i++) store.redeem('wrong');
+
+    expect(store.liveCodeCount()).toBe(0);
+    // Refused while locked, and still gone once the cooldown lifts.
+    expect(store.redeem(local)).toEqual({ ok: false, reason: 'locked' });
+    expect(store.redeem(tunnel)).toEqual({ ok: false, reason: 'locked' });
+  });
+});
+
+describe('TunnelPairingStore — tunnel rotation versus local codes', () => {
+  it('rotating the QR revokes the previous QR only', () => {
+    // Re-issuing the tunnel code is the operator saying the old QR is not to be
+    // trusted. It says nothing about the panels they have open, and taking those
+    // codes away would strand a panel that is loading at that moment.
+    const { store } = makeStore();
+    const panel = store.issueLocalCode();
+    const firstQr = store.issueCode();
+    const secondQr = store.issueCode();
+
+    expect(store.redeem(firstQr)).toEqual({ ok: false, reason: 'invalid' });
+    expect(store.redeem(panel)).toEqual({ ok: true, token: TOKEN });
+    expect(store.redeem(secondQr)).toEqual({ ok: true, token: TOKEN });
+  });
+
+  it('minting a local code leaves the operator\'s QR alone', () => {
+    const { store } = makeStore();
+    const qr = store.issueCode();
+    store.issueLocalCode();
+
+    expect(store.redeem(qr)).toEqual({ ok: true, token: TOKEN });
   });
 });
 

@@ -260,10 +260,18 @@ class BackendStatusPopup(private val project: Project) {
         return "${stats.total} $noun: ${parts.joinToString(", ")}"
     }
 
+    /**
+     * The session line. A session holding a CLI with nobody attached is named
+     * when there is one: it is a state the user can act on (the backend is about
+     * to end it, or something is wrong), and the card used to describe those
+     * sessions as healthy streaming ones, which is what hid the failure in #479.
+     */
     private fun formatSessions(stats: BackendStatusClient.SessionStats): String {
         if (stats.total == 0) return "No sessions"
         val noun = if (stats.total == 1) "session" else "sessions"
-        return "${stats.total} $noun, ${stats.streaming} actively streaming"
+        val line = "${stats.total} $noun, ${stats.streaming} actively streaming"
+        if (stats.orphaned == 0) return line
+        return "$line, ${stats.orphaned} with no client attached"
     }
 
     companion object {

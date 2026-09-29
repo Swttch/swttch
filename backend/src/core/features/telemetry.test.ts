@@ -245,6 +245,7 @@ describe('trackActivity (활동 단일 진입점)', () => {
   it('제외 타입(시스템/폴링/자동 조회)은 활동으로 전송하지 않는다', async () => {
     const { trackActivity, fetchMock, flushTelemetry } = await loadTelemetry(accepted, 'test-key');
     const excluded = [
+      MessageType.HEARTBEAT,
       MessageType.CLIENT_INFO, MessageType.CLIENT_ERROR, MessageType.GET_ACCOUNT, MessageType.GET_USAGE, MessageType.PANEL_FOCUSED,
       MessageType.GET_TELEMETRY_CONSENT, MessageType.GET_CLI_CONFIG, MessageType.GET_IDE_ROOT, MessageType.GET_VERSION,
       MessageType.GET_CLI_UPDATE_INFO,

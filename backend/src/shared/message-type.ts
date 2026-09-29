@@ -640,6 +640,20 @@ export enum MessageType {
   ERROR = 'ERROR',
   /** Backend announces it is ready to accept requests. */
   BRIDGE_READY = 'BRIDGE_READY',
+  /**
+   * Periodic "the backend is still here" beat, sent to every connection on the
+   * backend's liveness tick. payload: { intervalMs: number } — how often the
+   * next one is due, so a client sizes its own silence deadline from the
+   * interval the backend is actually running rather than from a copied constant.
+   *
+   * Exists for the direction a WebSocket ping frame cannot serve: a browser
+   * answers pings below the JavaScript API, so the page itself learns nothing
+   * from them and a socket whose return path has died still reads as connected.
+   * A client that has seen one of these knows the backend speaks them, and can
+   * treat a long silence as a dead socket instead of waiting forever for events
+   * that can no longer arrive (issue #479). outbound backend→webview
+   */
+  HEARTBEAT = 'HEARTBEAT',
 
   // -- Streaming (Claude CLI process → webview) --
   /** A streamed assistant turn has started. */

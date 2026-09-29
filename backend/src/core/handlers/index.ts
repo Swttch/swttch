@@ -720,6 +720,13 @@ export async function handleMessage(
     case MessageType.GET_MCP_SERVER_TOOLS:
       await getMcpServerToolsHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.HEARTBEAT:
+      // The client answering the backend's beat. Its only job was to arrive:
+      // the liveness tracker counts any frame on the socket as a sign of life
+      // (backend/src/ws/connection-heartbeat.ts), which is what keeps a client
+      // behind a hop that drops WebSocket control frames from being mistaken
+      // for one that vanished. Named here so it is not logged as unknown.
+      break;
     default:
       console.error('[node-backend]', `Unknown message type: ${message.type}`);
   }

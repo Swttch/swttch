@@ -13,6 +13,16 @@ import {
 import { resolvePanelId } from './resolvePanelId';
 import { MessageType } from '@/shared';
 
+/**
+ * Backend beats missed before this page calls its socket dead.
+ *
+ * Mirrors the backend's own tolerance (backend/src/ws/connection-heartbeat.ts):
+ * three silent rounds, so at the backend's default 30s beat the page waits a
+ * minute and a half before giving up on a socket. Being slow costs a late
+ * reconnect; being hasty costs a reconnect the user did not need.
+ */
+const HEARTBEAT_MISSES_BEFORE_STALE = 3;
+
 export class WebSocketConnector implements Connector {
   private ws: WebSocket | null = null;
   private connected = false;
@@ -21,6 +31,20 @@ export class WebSocketConnector implements Connector {
   private messageHandlers = new Set<RawMessageHandler>();
   private connectionChangeHandlers = new Set<ConnectionChangeHandler>();
   private disposed = false;
+  /**
+   * When anything last arrived on the current socket, and the watchdog reading
+   * it. A socket whose return path has died stays `readyState === OPEN` here —
+   * nothing tells the page, and every hook that would end a turn waits for
+   * events that can no longer arrive (issue #479). Silence is the only evidence
+   * available, so it is measured.
+   *
+   * The watchdog is armed ONLY after the first HEARTBEAT arrives. A backend that
+   * does not send them (an older standalone runtime) is quiet by design, and
+   * mistaking that for a dead socket would drop a perfectly good connection
+   * every couple of minutes.
+   */
+  private lastFrameAt = 0;
+  private livenessTimer: ReturnType<typeof setInterval> | null = null;
 
   get isConnected(): boolean {
     return this.connected;
@@ -107,6 +131,7 @@ export class WebSocketConnector implements Connector {
       console.log('[WebSocketConnector] Connected');
       this.isConnecting = false;
       this.connected = true;
+      this.lastFrameAt = Date.now();
       // The handshake passed the backend's token gate, so this token is valid —
       // persist it (validate-then-store) so a page reload reconnects without
       // re-redeeming a pairing code (the ?pair= code is single-use / already
@@ -127,8 +152,32 @@ export class WebSocketConnector implements Connector {
     };
 
     ws.onmessage = (event) => {
+      // Anything at all proves the socket still carries traffic, so the clock
+      // restarts before the payload is even looked at.
+      this.lastFrameAt = Date.now();
       try {
         const message: IPCMessage = JSON.parse(event.data);
+        // The backend's "still here" beat. It carries the interval it is running
+        // at, and it is not application traffic, so it stops here instead of
+        // being fanned out to every handler in the app.
+        if (message.type === MessageType.HEARTBEAT) {
+          const intervalMs = (message.payload as { intervalMs?: unknown } | undefined)?.intervalMs;
+          if (typeof intervalMs === 'number' && intervalMs > 0) this.watchLiveness(intervalMs);
+          // Answer it, so the backend's own liveness check never rests on a
+          // WebSocket ping frame surviving every hop between us. A tunnel adds
+          // hops we do not control, and a hop that forwards application data
+          // while dropping control frames would make this page — sitting here
+          // perfectly alive — look like the client that vanished, and take its
+          // session's CLI down with it.
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({ type: MessageType.HEARTBEAT, payload: {}, timestamp: Date.now() }));
+            } catch {
+              // Nothing to do: the next round asks again.
+            }
+          }
+          return;
+        }
         this.messageHandlers.forEach(handler => {
           try {
             handler(message);
@@ -143,6 +192,7 @@ export class WebSocketConnector implements Connector {
 
     ws.onclose = () => {
       console.log('[WebSocketConnector] Disconnected');
+      this.stopLivenessWatch();
       this.isConnecting = false;
       this.ws = null;
       this.connected = false;
@@ -161,6 +211,64 @@ export class WebSocketConnector implements Connector {
         onFirstConnect = undefined;
       }
     };
+  }
+
+  /**
+   * Start (or re-size) the watchdog that gives up on a silent socket.
+   *
+   * Driven by the backend's beat rather than by a constant of our own: the
+   * backend says how often the next one is due, and the page waits
+   * [HEARTBEAT_MISSES_BEFORE_STALE] of those before concluding the socket is
+   * gone. Re-arming on every beat is what lets a backend change its interval
+   * without the page having to be told twice.
+   */
+  private watchLiveness(intervalMs: number): void {
+    const deadlineMs = intervalMs * HEARTBEAT_MISSES_BEFORE_STALE;
+    this.stopLivenessWatch();
+    this.livenessTimer = setInterval(() => {
+      if (!this.ws || this.disposed) return;
+      if (Date.now() - this.lastFrameAt <= deadlineMs) return;
+      console.warn(
+        `[WebSocketConnector] No frame from the backend for ${Math.round(deadlineMs / 1000)}s — ` +
+          'treating the socket as dead and reconnecting.'
+      );
+      this.abandonSocket();
+    }, intervalMs);
+  }
+
+  private stopLivenessWatch(): void {
+    if (this.livenessTimer === null) return;
+    clearInterval(this.livenessTimer);
+    this.livenessTimer = null;
+  }
+
+  /**
+   * Drop a socket the backend has stopped answering on, and reconnect.
+   *
+   * Its handlers are detached first because `close()` on a half-open socket can
+   * sit in CLOSING until the browser's own timeout: the late `onclose` would
+   * then land after a new socket is already up and schedule a second reconnect
+   * on top of it. Reconnecting is safe to be wrong about — the new connection
+   * re-subscribes and the backend's grace period is still running — which is why
+   * the page may act on suspicion here while the backend may not.
+   */
+  private abandonSocket(): void {
+    const stale = this.ws;
+    if (!stale) return;
+    this.stopLivenessWatch();
+    stale.onclose = null;
+    stale.onmessage = null;
+    stale.onerror = null;
+    try {
+      stale.close();
+    } catch {
+      // Already unusable; the point was to stop listening to it.
+    }
+    this.ws = null;
+    this.connected = false;
+    this.isConnecting = false;
+    this.notifyConnectionChange(false);
+    this.scheduleReconnect();
   }
 
   /**
@@ -186,6 +294,7 @@ export class WebSocketConnector implements Connector {
 
   disconnect(): void {
     this.disposed = true;
+    this.stopLivenessWatch();
 
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);

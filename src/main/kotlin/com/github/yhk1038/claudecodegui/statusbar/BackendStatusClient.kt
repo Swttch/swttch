@@ -30,7 +30,14 @@ object BackendStatusClient {
     @Serializable
     data class SessionStats(
         val total: Int,
+        /** Sessions with a turn in flight AND a client attached to see it. */
         val streaming: Int,
+        /**
+         * Sessions holding a live CLI with no client attached. Defaulted so a
+         * backend that predates the field still parses: the plugin and the backend
+         * ship together, but a user can be pointed at an older standalone runtime.
+         */
+        val orphaned: Int = 0,
     )
 
     @Serializable

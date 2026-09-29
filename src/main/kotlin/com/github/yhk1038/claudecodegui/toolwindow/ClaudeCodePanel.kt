@@ -1676,6 +1676,29 @@ class ClaudeCodePanel(
     // ─── WebView loading ────────────────────────────────────────────
 
     /**
+     * The pairing code THIS load hands to the webview, minted fresh for it.
+     *
+     * A pairing code is single-use, and until this existed exactly one was minted
+     * per backend START and reused in every panel URL that backend ever served.
+     * The first load consumed it; every later load depended on finding a token
+     * the first one had already validated and stored. When that store is empty —
+     * a panel whose host reconnected on a different port, a cleared JCEF cache, a
+     * first panel opened after the code's lifetime ran out — the load had nothing
+     * left to redeem and could not pair again until the backend was restarted. A
+     * reload that should have recovered by itself became a dead panel instead
+     * (issue #479).
+     *
+     * Falls back to the spawn-time code when the mint cannot be reached, which is
+     * no worse than the old behaviour: that is exactly the code the URL used to
+     * carry. Blocks on a short loopback round-trip, so it MUST stay off the EDT —
+     * [loadWebView] runs on a background dispatcher. The code is NEVER logged.
+     */
+    private fun pairCodeForThisLoad(): String? {
+        val base = project.basePath ?: ""
+        return backendService.issueLocalPairCode(base) ?: backendService.initialPairCode(base)
+    }
+
+    /**
      * Load the WebView URL from the Node.js backend.
      * Called once the backend has printed its PORT.
      */
@@ -1703,7 +1726,7 @@ class ClaudeCodePanel(
             // it at POST /pair for the stable auth token (which it then attaches as the
             // `ccg-auth` subprotocol) — the token itself is NEVER placed in the URL.
             // NEVER logged — buildWebViewUrl is not passed to any logger below.
-            pairCode = backendService.initialPairCode(project.basePath ?: ""),
+            pairCode = pairCodeForThisLoad(),
         )
         // Redact the pairing code (and any token) from any log — they are secrets.
         val loggedUrl = redactUrlSecrets(url)

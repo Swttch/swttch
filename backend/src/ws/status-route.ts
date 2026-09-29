@@ -25,7 +25,13 @@ export function handleStatusRequest(connections: ConnectionManager): StatusRoute
       connections: connections.getConnectionStats(),
       sessions: {
         total: connections.getSessionCount(),
+        // Only sessions a client is attached to. A turn nobody can see is not
+        // work in flight, and reporting it as such is what let a backend holding
+        // a stranded CLI keep describing itself as healthy (issue #479).
         streaming: connections.getStreamingSessionCount(),
+        // Sessions holding a live CLI with no client attached — the shape of that
+        // same failure, named so it can be seen instead of inferred.
+        orphaned: connections.getOrphanSessionCount(),
       },
     },
   };

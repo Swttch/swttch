@@ -648,22 +648,71 @@ export class ConnectionManager {
       );
 
       if (session.subscribers.size === 0) {
-        console.error(
-          '[node-backend]',
-          `Session ${sessionId} has no subscribers, scheduling cleanup in ${SESSION_CLEANUP_GRACE_MS}ms`,
-        );
-        const timer = setTimeout(() => {
-          this.cleanupTimers.delete(sessionId);
-          const currentSession = this.sessionRegistry.get(sessionId);
-          if (currentSession && currentSession.subscribers.size === 0) {
-            this.cleanupSession(sessionId);
-          }
-        }, SESSION_CLEANUP_GRACE_MS);
-        this.cleanupTimers.set(sessionId, timer);
+        this.scheduleSessionCleanup(sessionId);
       }
     }
 
     client.subscribedSessionId = null;
+  }
+
+  /**
+   * Arm the grace timer that ends a session nobody is attached to.
+   *
+   * The grace is what lets a tab come back: a [subscribe] within the window
+   * cancels the timer and the CLI never notices. After it, the session's CLI is
+   * killed, because a CLI with no client can no longer be reached by anyone —
+   * it is reading a pipe whose other end has no reader.
+   *
+   * Idempotent: an already-armed session keeps its original deadline rather than
+   * having it pushed forward, so repeated arming can never postpone a cleanup
+   * indefinitely.
+   */
+  private scheduleSessionCleanup(sessionId: string): void {
+    if (this.cleanupTimers.has(sessionId)) return;
+    console.error(
+      '[node-backend]',
+      `Session ${sessionId} has no subscribers, scheduling cleanup in ${SESSION_CLEANUP_GRACE_MS}ms`,
+    );
+    const timer = setTimeout(() => {
+      this.cleanupTimers.delete(sessionId);
+      const currentSession = this.sessionRegistry.get(sessionId);
+      if (currentSession && currentSession.subscribers.size === 0) {
+        this.cleanupSession(sessionId);
+      }
+    }, SESSION_CLEANUP_GRACE_MS);
+    this.cleanupTimers.set(sessionId, timer);
+  }
+
+  /**
+   * Arm the cleanup of every session left with a running CLI and no client.
+   *
+   * [unsubscribe] already arms one for the ordinary path, where a tab says it is
+   * leaving. This is the answer for the paths where nothing says anything: a
+   * client that vanished without closing its socket is only noticed later, by
+   * the heartbeat, and a session whose subscriber set emptied through any route
+   * that did not pass through [unsubscribe] would otherwise hold its CLI
+   * forever. Called on the heartbeat tick, so "or at least on a timeout" holds
+   * without depending on which event delivered the news.
+   *
+   * Only sessions with a live process are swept: a record with no process costs
+   * nothing and is what an open-but-never-used chat tab looks like.
+   *
+   * Returns how many timers this sweep armed.
+   */
+  sweepOrphanSessions(): number {
+    let armed = 0;
+    for (const session of this.sessionRegistry.values()) {
+      if (session.subscribers.size > 0) continue;
+      if (!session.process) continue;
+      if (this.cleanupTimers.has(session.sessionId)) continue;
+      console.error(
+        '[node-backend]',
+        `Session ${session.sessionId} has a running CLI with no client attached`,
+      );
+      this.scheduleSessionCleanup(session.sessionId);
+      armed++;
+    }
+    return armed;
   }
 
   // ─── Accessors ──────────────────────────────────────────────────────────────
@@ -693,17 +742,43 @@ export class ConnectionManager {
   }
 
   /**
-   * Number of sessions with a turn in flight.
+   * Number of sessions with a turn in flight AND a client attached to see it.
    *
    * A session blocked on a permission prompt still counts: the turn has not
    * ended, it is waiting on the user, and the callers of this (the status card,
    * the exit-confirm modal) are asking "is there work that would be lost".
+   *
+   * A session with no subscriber does NOT count, however busy its last report
+   * said it was. Nobody can see that turn, nobody can answer its prompts, and
+   * the session is already on its way to being cleaned up — so counting it
+   * answers the callers' question with a yes that is not true. It is also what
+   * made the reported failure invisible: a backend holding a stranded CLI kept
+   * reporting a healthy streaming session, and every reader downstream believed
+   * it (issue #479). What those sessions need is [getOrphanSessionCount], which
+   * says the true thing about them.
    */
   getStreamingSessionCount(): number {
     let count = 0;
     for (const session of this.sessionRegistry.values()) {
+      if (session.subscribers.size === 0) continue;
       if (session.activity === SessionActivity.Running) count++;
       else if (session.activity === SessionActivity.Awaiting) count++;
+    }
+    return count;
+  }
+
+  /**
+   * Number of sessions holding a live CLI with no client attached.
+   *
+   * Normally zero, and briefly non-zero while a session sits in its cleanup
+   * grace after the last tab left. A count that stays up is the shape of the
+   * reported defect, so it is reported rather than hidden: the failure was hard
+   * to see precisely because the status endpoint had no word for it.
+   */
+  getOrphanSessionCount(): number {
+    let count = 0;
+    for (const session of this.sessionRegistry.values()) {
+      if (session.subscribers.size === 0 && session.process) count++;
     }
     return count;
   }

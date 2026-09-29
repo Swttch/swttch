@@ -296,6 +296,10 @@ export function trackEvent(
 // 약한 행동 신호라 의도적으로 유지한다.
 const ACTIVITY_EXCLUDED_TYPES = new Set<string>([
   // 시스템 / 에러 / 폴링성 자동 트래픽
+  // The client answering the backend's liveness beat. It arrives every interval
+  // for as long as a tab is open, whether or not anybody is at the keyboard, so
+  // counting it as activity would report an abandoned tab as continuous use.
+  MessageType.HEARTBEAT,
   MessageType.CLIENT_INFO,           // 순수 WS 연결 핸드셰이크
   MessageType.CLIENT_ERROR,          // 에러 보고(reportBackendError 경로)
   MessageType.TRACK_TELEMETRY_CONSENT_BANNER, // 배너 노출/닫기 보고 — 자신이 telemetry_consent로 이미 남는다

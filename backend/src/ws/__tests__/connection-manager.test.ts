@@ -159,6 +159,90 @@ describe('ConnectionManager', () => {
     });
   });
 
+  describe('sweepOrphanSessions', () => {
+    const CLEANUP_GRACE = 30_000;
+    const killTree = Claude.killTree as unknown as ReturnType<typeof vi.fn>;
+
+    function makeProcess() {
+      return { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+    }
+
+    beforeEach(() => {
+      killTree.mockClear();
+    });
+
+    it('ends a CLI whose client vanished without ever unsubscribing', () => {
+      // The shape of issue #479: the socket died in a way that produced no
+      // `close`, so nothing said the tab was gone and the grace timer that
+      // normally ends the session was never armed. The sweep is what makes the
+      // reap happen on a timeout instead of on an event that never comes.
+      const proc = makeProcess();
+      const session = cm.getOrCreateSession('sess-1');
+      cm.setProcess('sess-1', proc);
+      expect(session.subscribers.size).toBe(0);
+
+      expect(cm.sweepOrphanSessions()).toBe(1);
+
+      vi.advanceTimersByTime(CLEANUP_GRACE + 1);
+      expect(killTree).toHaveBeenCalledWith(proc);
+    });
+
+    it('leaves a session alone while a tab is still attached to it', () => {
+      const proc = makeProcess();
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setProcess('sess-1', proc);
+
+      expect(cm.sweepOrphanSessions()).toBe(0);
+
+      vi.advanceTimersByTime(CLEANUP_GRACE * 10);
+      expect(killTree).not.toHaveBeenCalled();
+    });
+
+    it('spares a session with no CLI to end', () => {
+      cm.getOrCreateSession('sess-1');
+
+      expect(cm.sweepOrphanSessions()).toBe(0);
+
+      vi.advanceTimersByTime(CLEANUP_GRACE + 1);
+      expect(killTree).not.toHaveBeenCalled();
+    });
+
+    it('does not push an already-running grace period further out', () => {
+      // Sweeps repeat on every heartbeat tick. If each one re-armed the timer,
+      // a session would be swept forever and never actually cleaned up.
+      const proc = makeProcess();
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setProcess('sess-1', proc);
+      cm.removeConnection(connId);
+
+      vi.advanceTimersByTime(CLEANUP_GRACE - 1_000);
+      expect(cm.sweepOrphanSessions()).toBe(0);
+      expect(killTree).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1_001);
+      expect(killTree).toHaveBeenCalledWith(proc);
+    });
+
+    it('keeps the CLI when a tab comes back inside the grace period', () => {
+      // The whole reason for a grace rather than an immediate kill: a client
+      // that reconnects is a client that never left, and its session must
+      // survive being noticed as gone.
+      const proc = makeProcess();
+      cm.getOrCreateSession('sess-1');
+      cm.setProcess('sess-1', proc);
+      cm.sweepOrphanSessions();
+
+      vi.advanceTimersByTime(CLEANUP_GRACE - 1);
+      cm.subscribe(cm.addConnection(createMockWs()), 'sess-1');
+
+      vi.advanceTimersByTime(CLEANUP_GRACE * 10);
+      expect(killTree).not.toHaveBeenCalled();
+      expect(cm.getProcess('sess-1')).toBe(proc);
+    });
+  });
+
   // `--permission-mode` only applies when the CLI is spawned, so the mode a live
   // process actually runs under has to be remembered to notice a later change (#172).
   describe('session permission mode', () => {
@@ -247,8 +331,13 @@ describe('ConnectionManager', () => {
   });
 
   describe('session activity / session counters', () => {
+    /** A session with a tab watching it — what the streaming counter is about. */
+    function watchedSession(sessionId: string): void {
+      cm.subscribe(cm.addConnection(createMockWs()), sessionId);
+    }
+
     it('counts sessions and the ones with a turn in flight', () => {
-      cm.getOrCreateSession('sess-1');
+      watchedSession('sess-1');
       cm.getOrCreateSession('sess-2');
       expect(cm.getSessionCount()).toBe(2);
       expect(cm.getStreamingSessionCount()).toBe(0);
@@ -263,17 +352,52 @@ describe('ConnectionManager', () => {
     it('counts a session blocked on the user as still in flight', () => {
       // The turn has not ended; it is waiting for an answer. Callers of this
       // counter are asking whether there is work that would be lost.
-      cm.getOrCreateSession('sess-1');
+      watchedSession('sess-1');
       cm.setSessionActivity('sess-1', SessionActivity.Awaiting);
 
       expect(cm.getStreamingSessionCount()).toBe(1);
     });
 
     it('does not count a finished turn nobody has read yet', () => {
-      cm.getOrCreateSession('sess-1');
+      watchedSession('sess-1');
       cm.setSessionActivity('sess-1', SessionActivity.Done);
 
       expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('does not call a session streaming when no client is attached to it', () => {
+      // The reported failure was invisible because of this counter: a backend
+      // holding a CLI whose client had vanished kept describing the session as
+      // streaming, and everything downstream believed it (issue #479). Nobody
+      // can see that turn or answer its prompts, so the honest answer is zero.
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setSessionActivity('sess-1', SessionActivity.Running);
+      expect(cm.getStreamingSessionCount()).toBe(1);
+
+      cm.removeConnection(connId);
+
+      expect(cm.getStreamingSessionCount()).toBe(0);
+    });
+
+    it('counts a session holding a live CLI with no client as orphaned', () => {
+      const proc = { pid: 4242, kill: vi.fn() } as unknown as import('child_process').ChildProcess;
+      const connId = cm.addConnection(createMockWs());
+      cm.subscribe(connId, 'sess-1');
+      cm.setProcess('sess-1', proc);
+      expect(cm.getOrphanSessionCount()).toBe(0);
+
+      cm.removeConnection(connId);
+
+      expect(cm.getOrphanSessionCount()).toBe(1);
+    });
+
+    it('does not call a client-less session orphaned when it has no CLI', () => {
+      // An open-but-never-used chat tab leaves a record behind and costs
+      // nothing; only a running process is worth reporting.
+      cm.getOrCreateSession('sess-1');
+
+      expect(cm.getOrphanSessionCount()).toBe(0);
     });
 
     it('ignores an activity change for an unknown session', () => {

@@ -5,6 +5,7 @@ import { timingSafeEqual } from 'crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { authToken } from '../config/environment';
 import { ConnectionManager } from './connection-manager';
+import { ConnectionHeartbeat, type HeartbeatSocket } from './connection-heartbeat';
 import { handleEditorContextRequest } from './editor-context-route';
 import { handleIdeSelectionRequest } from './ide-selection-route';
 import { handleStatusRequest } from './status-route';
@@ -168,6 +169,8 @@ interface WebSocketServerHandle {
   close: () => void;
   port: number;
   logWs?: LogWebSocketServer;
+  /** Liveness tracker for the /ws control channel. Exposed for tests/diagnostics. */
+  heartbeat: ConnectionHeartbeat;
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -302,6 +305,31 @@ export function startWebSocketServer(
     const wss = new WebSocketServer({ noServer: true, handleProtocols: selectAuthSubprotocol });
     const rpcWss = new WebSocketServer({ noServer: true, handleProtocols: selectAuthSubprotocol });
 
+    /**
+     * Liveness for the control channel. A client that vanishes without closing
+     * its socket produces no `close` event, so nothing below it ever runs and
+     * the session's CLI child outlives the client that asked for it (#479). The
+     * heartbeat is what turns that silence into the `close` the teardown chain
+     * is already built on.
+     *
+     * Its tick doubles as the backend's regular sweep: it tells every live
+     * client the backend is still here, and it arms the cleanup of any session
+     * left with a running CLI and nobody attached.
+     */
+    const heartbeat = new ConnectionHeartbeat({
+      onDead: () => {
+        console.error(
+          '[node-backend]',
+          'Connection stopped answering; terminating it so its session can be cleaned up',
+        );
+      },
+      onTick: () => {
+        connections.broadcastToAll(MessageType.HEARTBEAT, { intervalMs: heartbeat.interval });
+        connections.sweepOrphanSessions();
+      },
+    });
+    heartbeat.start();
+
     // WebSocket 연결 핸들러 — 한 번만 등록
     wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
       // Parse client environment + optional panelId from query: /ws?env=jetbrains&panelId=...
@@ -320,6 +348,14 @@ export function startWebSocketServer(
         request.headers.origin ?? null,
       );
       console.error('[node-backend]', `Client connected: ${connectionId}`);
+
+      // From here on this socket has to keep proving it is there, so a client
+      // that disappears without a FIN still reaches the `close` handler below.
+      // The cast narrows `ws` to the four members the heartbeat touches; the
+      // listener signatures are wider on ws's own `on`, which is why it is not
+      // a plain assignment.
+      const liveness = ws as unknown as HeartbeatSocket;
+      heartbeat.track(liveness);
 
       // 연결 준비 신호 전송
       connections.sendTo(connectionId, MessageType.BRIDGE_READY);
@@ -352,6 +388,7 @@ export function startWebSocketServer(
 
       ws.on('close', () => {
         console.error('[node-backend]', `Client disconnected: ${connectionId}`);
+        heartbeat.untrack(liveness);
         // An interactive `claude auth login` waiting on stdin won't exit on its
         // own once the webview is gone — kill it so it can't linger as a zombie.
         cancelLogin(connectionId);
@@ -583,7 +620,9 @@ export function startWebSocketServer(
         connections,
         port: assignedPort,
         logWs,
+        heartbeat,
         close: () => {
+          heartbeat.stop();
           logWs?.close();
           rpcWss.close();
           wss.close();

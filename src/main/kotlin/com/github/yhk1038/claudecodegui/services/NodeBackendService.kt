@@ -139,9 +139,12 @@ class NodeBackendService : Disposable {
         /**
          * Fresh single-use INITIAL pairing code for THIS root's backend, regenerated on
          * every spawn ([start]). Injected into the node process (CCG_INITIAL_PAIR_CODE)
-         * so the backend seeds its pairing store with it, and embedded as `?pair=` in the
-         * JCEF load URL so the webview redeems it once (POST /pair) for [authToken]. This
-         * keeps the auth token out of every URL. NEVER logged.
+         * so the backend seeds its pairing store with it; a webview redeems a code once
+         * (POST /pair) for [authToken], which keeps the auth token out of every URL.
+         *
+         * The FALLBACK code, not the usual one: each panel load mints its own through
+         * [issueLocalPairCode] so a reload can pair again, and this one is what the URL
+         * carries when that mint cannot be reached (see ClaudeCodePanel). NEVER logged.
          */
         @Volatile
         var initialPairCode: String = ""
@@ -634,11 +637,13 @@ class NodeBackendService : Disposable {
     fun authToken(projectBasePath: String): String? = backends[projectBasePath]?.authToken
 
     /**
-     * The fresh single-use initial pairing code of the backend serving
-     * [projectBasePath], or null when no backend is registered for that root. The JCEF
-     * load URL embeds this as `?pair=`; the webview redeems it once at POST /pair for
-     * the stable auth token, keeping the token out of every URL. Regenerated on each
-     * spawn. Never logged by callers.
+     * The single-use pairing code seeded into the backend serving [projectBasePath] at
+     * spawn, or null when no backend is registered for that root. A webview redeems a
+     * code once at POST /pair for the stable auth token, keeping the token out of every
+     * URL. Regenerated on each spawn. Never logged by callers.
+     *
+     * The JCEF load URL prefers a code minted for that one load ([issueLocalPairCode]),
+     * so this is the fallback for when the mint cannot be reached.
      */
     fun initialPairCode(projectBasePath: String): String? = backends[projectBasePath]?.initialPairCode
 
@@ -648,10 +653,13 @@ class NodeBackendService : Disposable {
      * Blocks on a short loopback HTTP round-trip — callers MUST invoke this OFF the
      * EDT.
      *
-     * Used by the status-bar card's "Open in browser" action: the system browser
+     * Used by the status-bar card's "Open in browser" action — the system browser
      * (a separate storage partition from JCEF) has no auth token, so the card
      * embeds this code as `?pair=<code>` in the loopback URL and the browser
-     * redeems it once at POST /pair for the real token. The code is NEVER logged.
+     * redeems it once at POST /pair for the real token — and by every JCEF panel
+     * load, so a panel that reloads can pair again instead of being stranded on a
+     * code the first load already consumed (issue #479). Minting one never revokes
+     * another live code. The code is NEVER logged.
      */
     fun issueLocalPairCode(projectBasePath: String): String? {
         val port = portOf(projectBasePath) ?: return null
