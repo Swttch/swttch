@@ -397,11 +397,6 @@
       "estimatedTime": "Isso geralmente leva ~1 min (se a instalação for necessária, leva cerca de 3 min).",
       "pairingHint": "Escaneie para parear um dispositivo. O QR traz um código de uso único que expira em breve. Gere outro se parar de funcionar.",
       "regeneratePairing": "Gerar novo código"
-    },
-    "sleepPrevention": {
-      "title": "Prevenção de Suspensão",
-      "label": "Impedir Suspensão",
-      "description": "Mantém sua máquina ativa enquanto o túnel estiver ativo, mesmo com a tampa fechada."
     }
   },
   "cli": {

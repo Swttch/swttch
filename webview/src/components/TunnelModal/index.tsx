@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { XMarkIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { QRCodeSVG } from 'qrcode.react';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
+import { SleepPreventionSwitch, SleepPreventionHint, useSleepPreventionCopy } from '@/components/SleepPrevention';
 import { Portal } from '@/components/Portal';
 import { TunnelStatusNotice } from '@/components/TunnelStatusNotice';
 import { useTunnelStatus } from '@/hooks';
@@ -14,6 +15,7 @@ interface Props {
 export function TunnelModal(props: Props) {
   const { onClose } = props;
   const { t } = useTranslation('common');
+  const sleepCopy = useSleepPreventionCopy();
   const {
     tunnelEnabled,
     tunnelUrl,
@@ -174,35 +176,21 @@ export function TunnelModal(props: Props) {
             </div>
           )}
 
-          {/* Sleep prevention toggle. Independent of the tunnel: it is reachable
-              whether the tunnel is on or off, and only its own switch moves it. */}
+          {/* Sleep prevention, shared with the Settings page. Independent of the
+              tunnel: only its own switch moves it. */}
           <div className="border-t border-border-default pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-text-primary">{t('tunnelModal.preventSleep')}</div>
-                <div className="text-xs text-text-tertiary">{t('tunnelModal.keepAwake')}</div>
+                <div className="text-sm text-text-primary">{sleepCopy.label}</div>
+                <div className="text-xs text-text-tertiary">{sleepCopy.description}</div>
               </div>
-              <ToggleSwitch
+              <SleepPreventionSwitch
                 checked={preventSleep}
+                loading={sleepLoading}
                 onChange={handleSleepToggle}
-                disabled={sleepLoading}
               />
             </div>
-            {preventSleep && (
-              <ul className="mt-3 space-y-1.5 rounded-md bg-surface-pressed/40 px-3 py-2.5 text-xs text-text-secondary">
-                {([1, 2, 3, 4] as const).map((n) => (
-                  <li key={n} className="flex gap-2">
-                    <span aria-hidden className="text-sm leading-none text-accent-primary">•</span>
-                    <span>
-                      <strong className="font-semibold text-text-primary">
-                        {t(`tunnelModal.sleepGuardHint${n}Lead`)}
-                      </strong>{' '}
-                      {t(`tunnelModal.sleepGuardHint${n}Rest`)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {preventSleep && <SleepPreventionHint />}
           </div>
         </div>
       </div>

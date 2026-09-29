@@ -397,11 +397,6 @@
       "estimatedTime": "This typically takes ~1 min (If installation is required, it takes about 3 mins.)",
       "pairingHint": "Scan to link a device. The QR carries a one-time code that expires shortly — regenerate it if it stops working.",
       "regeneratePairing": "Regenerate code"
-    },
-    "sleepPrevention": {
-      "title": "Sleep Prevention",
-      "label": "Prevent Sleep",
-      "description": "Keep your machine awake while the tunnel is active, even with the lid closed."
     }
   },
   "cli": {

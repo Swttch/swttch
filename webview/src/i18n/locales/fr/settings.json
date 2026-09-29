@@ -397,11 +397,6 @@
       "estimatedTime": "Cela prend généralement ~1 min (si une installation est requise, environ 3 min).",
       "pairingHint": "Scannez pour appairer un appareil. Le QR contient un code à usage unique qui expire rapidement. Régénérez-le s'il cesse de fonctionner.",
       "regeneratePairing": "Régénérer le code"
-    },
-    "sleepPrevention": {
-      "title": "Prévention de la mise en veille",
-      "label": "Empêcher la mise en veille",
-      "description": "Garde votre machine éveillée tant que le tunnel est actif, même avec le capot fermé."
     }
   },
   "cli": {

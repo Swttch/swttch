@@ -393,11 +393,6 @@
       "estimatedTime": "보통 약 1분이 걸립니다. (설치가 필요한 경우 약 3분이 걸립니다.)",
       "pairingHint": "스캔하면 기기가 연결됩니다. QR에는 곧 만료되는 일회용 코드가 들어 있으니, 동작하지 않으면 다시 생성해주세요.",
       "regeneratePairing": "코드 다시 생성"
-    },
-    "sleepPrevention": {
-      "title": "절전 방지",
-      "label": "절전 방지",
-      "description": "덮개를 닫아도 터널이 활성화된 동안 기기가 잠들지 않도록 합니다."
     }
   },
   "cli": {

@@ -393,11 +393,6 @@
       "estimatedTime": "通常大约需要 1 分钟(如需安装,大约需要 3 分钟)。",
       "pairingHint": "扫描即可连接设备。二维码包含很快过期的一次性代码，若失效请重新生成。",
       "regeneratePairing": "重新生成代码"
-    },
-    "sleepPrevention": {
-      "title": "防止休眠",
-      "label": "防止休眠",
-      "description": "隧道处于活动状态时保持设备唤醒,即使合上盖子也是如此。"
     }
   },
   "cli": {

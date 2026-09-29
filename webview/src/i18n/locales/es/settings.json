@@ -397,11 +397,6 @@
       "estimatedTime": "Esto suele tardar ~1 min (si se requiere instalación, toma unos 3 min).",
       "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
       "regeneratePairing": "Volver a generar el código"
-    },
-    "sleepPrevention": {
-      "title": "Prevención de suspensión",
-      "label": "Evitar suspensión",
-      "description": "Mantiene tu equipo activo mientras el túnel está en uso, incluso con la tapa cerrada."
     }
   },
   "cli": {
