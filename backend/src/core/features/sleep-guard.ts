@@ -188,9 +188,13 @@ export async function enableSleepGuard(): Promise<void> {
         sleepGuardEnabled = true;
         return;
       }
-      // caffeinate -s: prevent system sleep (including lid close)
-      // caffeinate -i: prevent idle sleep
-      const proc = spawn('caffeinate', ['-s', '-i'], {
+      // caffeinate -s: prevent system sleep (including lid close). Documented as
+      //   valid only on AC power, so -i carries the battery case.
+      // caffeinate -i: prevent idle sleep, on any power source.
+      // caffeinate -w: release the assertion once the given pid exits. Without it
+      //   a backend killed outright leaves caffeinate behind, reparented to init
+      //   and "asserting forever" — a machine held awake by nobody (#485).
+      const proc = spawn('caffeinate', ['-s', '-i', '-w', String(process.pid)], {
         stdio: 'ignore',
         detached: true,
       });
@@ -214,14 +218,23 @@ export async function enableSleepGuard(): Promise<void> {
         sleepGuardEnabled = true;
         return;
       }
+      // The inhibitor lasts exactly as long as the command systemd-inhibit runs,
+      // so that command is "wait for the backend to exit" rather than "sleep
+      // forever". `sleep infinity` meant a backend killed outright left the
+      // inhibitor behind and the machine could never sleep again (#485).
+      //
+      // `--why` is what `systemd-inhibit --list` shows the user, so it names the
+      // feature rather than the tunnel: sleep prevention is independent of it.
       const proc = spawn(
         'systemd-inhibit',
         [
           '--what=sleep',
           '--who=Claude Code GUI',
-          '--why=Tunnel active',
-          'sleep',
-          'infinity',
+          '--why=Sleep prevention is on',
+          'tail',
+          `--pid=${process.pid}`,
+          '-f',
+          '/dev/null',
         ],
         {
           stdio: 'ignore',

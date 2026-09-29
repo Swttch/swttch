@@ -162,7 +162,7 @@
     "connecting": "Conectando…",
     "typicalTime": "Normalmente ~1 min (instalação: ~3 min)",
     "preventSleep": "Impedir Suspensão",
-    "keepAwake": "Manter ativo enquanto o túnel estiver em uso",
+    "keepAwake": "Impede que este computador entre em suspensão sozinho",
     "pairingHint": "Escaneie para parear um dispositivo. O QR traz um código de uso único que expira em breve. Gere outro se parar de funcionar.",
     "regeneratePairing": "Gerar novo código"
   },

@@ -162,7 +162,7 @@
     "connecting": "正在連線…",
     "typicalTime": "通常約 1 分鐘(安裝:約 3 分鐘)",
     "preventSleep": "防止休眠",
-    "keepAwake": "隧道啟用時保持喚醒",
+    "keepAwake": "防止這台電腦自動進入睡眠",
     "pairingHint": "掃描即可連結裝置。QR 碼包含很快過期的一次性代碼，若失效請重新產生。",
     "regeneratePairing": "重新產生代碼"
   },

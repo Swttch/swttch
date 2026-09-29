@@ -162,7 +162,7 @@
     "connecting": "Connecting…",
     "typicalTime": "Typically ~1 min (install: ~3 min)",
     "preventSleep": "Prevent Sleep",
-    "keepAwake": "Keep awake while tunnel is active",
+    "keepAwake": "Stops this computer from going to sleep on its own",
     "pairingHint": "Scan to link a device. The QR carries a one-time code that expires shortly — regenerate it if it stops working.",
     "regeneratePairing": "Regenerate code"
   },

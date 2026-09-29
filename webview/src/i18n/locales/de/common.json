@@ -162,7 +162,7 @@
     "connecting": "Wird verbunden…",
     "typicalTime": "Typischerweise ~1 Min. (Installation: ~3 Min.)",
     "preventSleep": "Ruhezustand verhindern",
-    "keepAwake": "Wachbleiben, solange der Tunnel aktiv ist",
+    "keepAwake": "Verhindert, dass dieser Computer von selbst in den Ruhezustand wechselt",
     "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
     "regeneratePairing": "Code neu erzeugen"
   },

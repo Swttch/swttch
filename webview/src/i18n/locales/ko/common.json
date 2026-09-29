@@ -162,7 +162,7 @@
     "connecting": "연결 중…",
     "typicalTime": "보통 약 1분 (설치 시: 약 3분)",
     "preventSleep": "절전 방지",
-    "keepAwake": "터널이 활성화된 동안 절전 방지",
+    "keepAwake": "이 컴퓨터가 저절로 절전 모드로 들어가지 않게 합니다",
     "pairingHint": "스캔하면 기기가 연결됩니다. QR에는 곧 만료되는 일회용 코드가 들어 있으니, 동작하지 않으면 다시 생성해주세요.",
     "regeneratePairing": "코드 다시 생성"
   },

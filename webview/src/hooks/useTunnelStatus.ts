@@ -154,12 +154,13 @@ export function useTunnelStatus(): TunnelStatus {
       await startTunnelNow();
     } else {
       setAwaitingInstallConsent(false);
-      if (preventSleep) {
-        await send(MessageType.SLEEP_GUARD_DISABLE, {}).catch(() => {});
-      }
+      // Sleep prevention is NOT touched here. The two toggles are independent
+      // features, and only the user's own click may move the sleep one. Stopping
+      // the tunnel used to turn sleep prevention off silently, which is a decision
+      // that was never the tunnel's to make.
       await send(MessageType.TUNNEL_STOP, {}).catch(() => {});
     }
-  }, [cloudflaredAvailable, startTunnelNow, preventSleep, send]);
+  }, [cloudflaredAvailable, startTunnelNow, send]);
 
   const confirmInstallAndStart = useCallback(async () => {
     setAwaitingInstallConsent(false);

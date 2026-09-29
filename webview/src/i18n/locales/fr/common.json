@@ -162,7 +162,7 @@
     "connecting": "Connexion…",
     "typicalTime": "Généralement ~1 min (installation : ~3 min)",
     "preventSleep": "Empêcher la mise en veille",
-    "keepAwake": "Rester éveillé tant que le tunnel est actif",
+    "keepAwake": "Empêche cet ordinateur de se mettre en veille de lui-même",
     "pairingHint": "Scannez pour appairer un appareil. Le QR contient un code à usage unique qui expire rapidement. Régénérez-le s'il cesse de fonctionner.",
     "regeneratePairing": "Régénérer le code"
   },
