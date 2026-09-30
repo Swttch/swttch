@@ -43,22 +43,46 @@ If the CLI was installed in a way that has **no safe, non-interactive update pat
 
 ## Background update
 
-Claude Code updates itself in the background, but only inside an interactive `claude` session in a terminal. The plugin runs the CLI as `claude -p`, where that updater never starts, so a CLI you only use through the plugin stayed on the same version until you ran `claude update` yourself.
+Claude Code updates itself in the background, but only inside an interactive `claude` session in a terminal. The plugin runs the CLI as `claude -p`, where that updater never starts, so a CLI you only use through the plugin stayed on the same version until you updated it yourself.
 
-The backend now does what the interactive CLI would. Shortly after it starts, and every 30 minutes after that, it runs `claude update` when both of these are true:
+The backend now does what the interactive CLI would, and it does it by pressing the Update button above for you. It sends itself the same two requests the About screen sends when you click Update: first the one that reads the installed version and the stable and latest releases, then the update request itself, with the version to install. Both enter the backend the way a click does, so every install method the button can update is updated the same way, with the same command: the native installer, npm, pnpm, yarn, volta, Homebrew and WinGet.
 
-- The CLI was installed with the native installer.
-- `claude doctor` reports `Auto-updates: enabled`.
+It updates when all of these are true:
 
-The second check is the CLI's own verdict, so the plugin does not re-implement it: `DISABLE_AUTOUPDATER`, `DISABLE_UPDATES` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` turn it off when set in the environment the IDE hands the backend, or in the `env` of your user settings (`~/.claude/settings.json`) or managed settings. A project's `.claude/settings.json` and `.claude/settings.local.json` are not consulted, because the CLI is shared by every project and the check does not run inside one. `claude update` itself follows your `autoUpdatesChannel` and `minimumVersion`.
+- Claude Code's own auto-updates are on (see the switch below).
+- The release on your update channel is newer than the installed version. A CLI ahead of the `stable` channel is never moved back.
+- The Update button would be shown for this install method.
 
-As with the interactive CLI, running sessions keep their version and the new one is used from the next session on. Open tabs refresh the version shown in Settings → About; tabs of other open projects follow at their own backend's next check.
+### When it checks
+
+The interactive CLI looks for an update when it is launched, and the plugin's counterpart of launching `claude` is a chat starting one. So the backend checks shortly after it starts and whenever a chat starts `claude`, at most once every 30 minutes. There is no timer: a backend nobody is chatting in does not reach the registry or run an update on its own, and the check runs beside the chat rather than in front of it, so a chat never waits for it.
+
+### Running sessions are not interrupted
+
+An update never stops a chat that is already running. The running `claude` keeps the version it started with, and the next chat starts the new one. Open tabs refresh the version shown in Settings → About.
+
+This holds because every install method ships `claude` as a single executable, and on macOS and Linux an update replaces that file rather than rewriting it, so a process already running from it is unaffected. Windows cannot replace an executable while it runs, so there an npm, pnpm, yarn, volta or WinGet update waits until no `claude.exe` is running anywhere, from any project or terminal, and happens at the first check after that. A native install on Windows updates through `claude update`, which installs each version side by side and needs no such wait.
+
+One backend runs per open project, so only one of them updates at a time; the others see the update and skip theirs.
+
+### Turning it on or off, and choosing a channel
+
+Settings → About has an **Auto-update Claude Code** row with a switch and, beside it, an update channel. Both are Claude Code's own settings, not plugin ones, and the row carries the badge that marks Claude Code settings:
+
+- Turning the switch off writes `"env": {"DISABLE_AUTOUPDATER": "1"}` into your user settings file (`~/.claude/settings.json`, or the one under `CLAUDE_CONFIG_DIR`). Turning it on removes that key again, leaving the rest of the file as it was.
+- The channel is `autoUpdatesChannel` in the same file. **Latest** gets every release as soon as it is published, and is what Claude Code uses when nothing is set, so choosing it removes the key. **Stable** gets releases that have been out for a while. `rc` is listed only when your settings already name it. The channel can be changed only while auto-updates are on.
+
+Because these are the same settings, they also govern `claude` updating itself in the terminal, and the row follows the file when you edit it by hand.
+
+If something the switch does not own keeps auto-updates off, the switch is shown off and cannot be changed, and hovering it says where the setting comes from: a variable in the environment (a shell profile, for instance), another variable such as `DISABLE_UPDATES` or `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` in `settings.json`, managed settings an administrator controls, or `"autoUpdates": false` in `~/.claude.json`. These are read by the same rules `claude doctor` applies.
+
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` limits Claude Code to the traffic a prompt needs, which also turns Claude Code's auto-updates off. It has its own switch, **Block nonessential traffic** at the bottom of the General section under Settings → General, so it can be lifted without a terminal, even when it was exported in a shell profile: the switch then writes an empty value into `settings.json`, which Claude Code applies over the environment. When that is what keeps auto-updates off, the tooltip here points to it. Only managed settings cannot be changed from the plugin.
 
 What it does not do:
 
-- It never updates npm, pnpm, yarn, volta, Homebrew or WinGet installs, and it does not act on `CLAUDE_CODE_PACKAGE_MANAGER_AUTO_UPDATE`. Use the Update control above for those. With the native installer, `claude update` applies the release channel and version limits itself; a package manager would need the plugin to rebuild that, and since one backend runs per open project, several could start the same global install at once.
-- There is no plugin setting for it. To turn it off, turn off Claude Code's own auto-updates, for example with `"env": {"DISABLE_AUTOUPDATER": "1"}` in `~/.claude/settings.json`, which applies however the IDE was started. A variable exported only in your shell profile may not reach an IDE launched from the desktop.
-- If the check or the update fails (offline, for instance), the backend logs it and tries again at the next check.
+- It keeps no setting of its own. A variable exported only in your shell profile may not reach an IDE launched from the desktop; the switch writes to the settings file, which applies however the IDE was started.
+- A project's `.claude/settings.json` is not consulted, because the CLI is shared by every project.
+- If the check or the update fails (offline, for instance), the backend logs it and tries again the next time a chat starts `claude` after the 30 minutes have passed.
 
 ## How versions are checked
 

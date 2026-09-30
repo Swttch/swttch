@@ -10,7 +10,7 @@
 - [Multi-Account Management](./002-multi_account_management/en.md) — 여러 Claude 계정을 저장하고 전환하며, 계정별 사용량을 한 화면에서 비교하는 멀티 계정 기능 ([#134](https://github.com/Swttch/swttch/pull/134))
 - [MCP Server Management](./003-mcp_server_management/en.md) — GUI에서 MCP 서버를 조회·추가·편집·제거·활성화·재연결하는 MCP 서버 관리 패널 ([#136](https://github.com/Swttch/swttch/pull/136))
 - [Settings Overlay](./004-settings_overlay/en.md) — 설정을 현재 채팅 위 오버레이로 열어 진행 중인 세션을 잃지 않게 하고, 여는 방식(오버레이/새 탭)을 선택할 수 있는 기능 ([#137](https://github.com/Swttch/swttch/pull/137))
-- [Claude Code CLI Version & Update](./005-cli_version_update/en.md) — 설치 방식에 맞는 CLI 업데이트, Claude Code 자동 업데이트가 켜져 있을 때 네이티브 CLI의 백그라운드 업데이트, 이미 설치된 extend-kit 의존성의 시작 시 자동 업데이트.
+- [Claude Code CLI Version & Update](./005-cli_version_update/en.md) — 설치 방식에 맞는 CLI 업데이트, Claude Code 자동 업데이트가 켜져 있을 때 업데이트 버튼과 같은 요청으로 하는 백그라운드 업데이트(정보 화면의 스위치·업데이트 채널), 이미 설치된 extend-kit 의존성의 시작 시 자동 업데이트.
 - [Effort & Fast Mode](./006-effort_and_fast_mode/en.md) — 모델별로 추론 깊이(Effort 슬라이더·Ultracode)와 빠른 출력(Fast mode)을 조절하는 Model 섹션 컨트롤. 지원하지 않는 모델에서는 숨기지 않고 비활성+툴팁으로 안내 ([#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152))
 - [Native rendering for JetBrains IDE MCP tools](./007-jetbrains_mcp_native_rendering/en.md) — IDE 내장 MCP 도구(`mcp__idea__…` 등) 호출을 raw JSON 대신 전용 채팅 카드로 렌더링하고, `file:line` 이동·인간화된 권한 다이얼로그·중립 declined 상태·프로젝트 확인 칩·정직한 상태 점을 제공하는 기능 ([#147](https://github.com/Swttch/swttch/pull/147))
 - [Usage breakdown in the account modal](./008-usage_report/en.md) — `/usage`를 사용량 모달로 연결하고, `claude -p "/usage"`의 상세 분석(기간별 요청/세션 수·인사이트·상위 skills/subagents/plugins/MCP)을 커서처럼 UI로 렌더링. 계정 전환에 반응 ([#148](https://github.com/Swttch/swttch/issues/148))
