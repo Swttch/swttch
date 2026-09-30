@@ -487,7 +487,12 @@ function ChatPageContent() {
         {/* Named so a collapsed review can sit clear of it: the review is drawn
             in a portal and cannot see this from where it is, so it measures it.
             See CHAT_FOOTER_ID. */}
-        <div id={CHAT_FOOTER_ID} className="sticky w-full start-0 bottom-0 z-10">
+        {/* Never taller than the chat area. A prompt panel pinned here grows
+            upward, and nothing can scroll back to what went past the top, its
+            collapse button first of all. Capping the footer at the scroll
+            container lets each panel shrink its own middle and scroll there,
+            with no height worked out by hand, at any zoom or window size. */}
+        <div id={CHAT_FOOTER_ID} className="sticky w-full start-0 bottom-0 z-10 flex flex-col max-h-full">
           {showScrollButton && (
               <button
                   onClick={scrollToBottom}

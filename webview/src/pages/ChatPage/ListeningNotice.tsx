@@ -27,7 +27,7 @@ export function ListeningNotice() {
 
   if (dictation.isRecording) {
     return (
-      <div className="max-w-[44rem] mx-auto px-4 pt-2">
+      <div className="w-full max-w-[44rem] mx-auto px-4 pt-2">
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] bg-surface-raised border border-border-subtle text-[0.9230rem] text-text-secondary">
           <span className="text-accent-primary shrink-0">
             <AudioLevelBars level={dictation.level} />
@@ -47,7 +47,7 @@ export function ListeningNotice() {
 
   if (dictation.stoppedBySilence) {
     return (
-      <div className="max-w-[44rem] mx-auto px-4 pt-2">
+      <div className="w-full max-w-[44rem] mx-auto px-4 pt-2">
         <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] bg-surface-raised border border-border-subtle text-[0.9230rem] text-text-secondary">
           <span className="min-w-0 flex-1">{t('chatInput.dictation.stoppedBySilence')}</span>
           <button

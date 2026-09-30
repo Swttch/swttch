@@ -113,3 +113,19 @@ describe('ApprovalPanel — collapse / expand', () => {
     expect(onOptionSelect).toHaveBeenCalledWith(0);
   });
 });
+
+// #492: a panel taller than the chat area pushed its top, and the collapse
+// button with it, out of reach. Only the options may scroll; the heading with
+// the collapse button and the footer stay outside the scrolling region.
+describe('ApprovalPanel — what scrolls when the panel does not fit', () => {
+  it('scrolls the options, never the heading, the collapse button or the footer', () => {
+    renderPanel();
+
+    const region = screen.getByText('Yes, for this session').closest('.overflow-y-auto');
+
+    expect(region).not.toBeNull();
+    expect(region).not.toContainElement(screen.getByText('Run this command?'));
+    expect(region).not.toContainElement(screen.getByRole('button', { name: 'Collapse' }));
+    expect(region).not.toContainElement(screen.getByRole('button', { name: 'Esc to cancel' }));
+  });
+});

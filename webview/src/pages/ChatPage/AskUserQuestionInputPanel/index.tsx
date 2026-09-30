@@ -97,12 +97,18 @@ export const AskUserQuestionInputPanel = (props: Props) => {
     );
   }
 
+  /*
+   * The panel takes no more height than the chat footer gives it (see
+   * CHAT_FOOTER_ID in ChatPage). The tab bar with the collapse button and the
+   * footer keep their size; only the question and its options between them
+   * shrink, and scroll when they no longer fit.
+   */
   return (
-    <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
+    <div className="w-full max-w-[44rem] mx-auto px-4 pb-[14px] pt-2 min-h-0 flex flex-col">
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="relative rounded-lg border bg-surface-raised border-border-default outline-none"
+        className="relative rounded-lg border bg-surface-raised border-border-default outline-none min-h-0 flex flex-col"
       >
         {/* Tab bar */}
         <div className="px-3 pt-2">
@@ -116,24 +122,27 @@ export const AskUserQuestionInputPanel = (props: Props) => {
             </div>
             <CollapseToggle collapsed={false} onToggle={toggleCollapsed} />
           </div>
+        </div>
+
+        <div className="min-h-0 overflow-y-auto">
           {questionText && (
-            <div className="mt-4">
+            <div className="px-3 pt-4">
               <p className="text-text-primary text-[1rem]">{questionText}</p>
             </div>
           )}
-        </div>
 
-        {/* Options */}
-        <OptionList
-          options={form.allOptionsFor(form.currentIndex)}
-          selected={form.currentField?.selected ?? []}
-          multiSelect={form.currentQuestion.multiSelect}
-          isOtherSelected={form.isOtherSelected(form.currentIndex)}
-          otherText={form.currentField?.otherText ?? ''}
-          onSelect={(label) => form.selectOption(form.currentIndex, label, form.currentQuestion.multiSelect)}
-          onOtherTextChange={(text) => form.setOtherText(form.currentIndex, text)}
-          onOtherKeyDown={handleOtherKeyDown}
-        />
+          {/* Options */}
+          <OptionList
+            options={form.allOptionsFor(form.currentIndex)}
+            selected={form.currentField?.selected ?? []}
+            multiSelect={form.currentQuestion.multiSelect}
+            isOtherSelected={form.isOtherSelected(form.currentIndex)}
+            otherText={form.currentField?.otherText ?? ''}
+            onSelect={(label) => form.selectOption(form.currentIndex, label, form.currentQuestion.multiSelect)}
+            onOtherTextChange={(text) => form.setOtherText(form.currentIndex, text)}
+            onOtherKeyDown={handleOtherKeyDown}
+          />
+        </div>
 
         {/* Footer */}
         <Footer

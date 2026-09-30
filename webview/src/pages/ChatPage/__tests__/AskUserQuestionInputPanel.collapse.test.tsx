@@ -96,3 +96,19 @@ describe('AskUserQuestionInputPanel — collapse / expand', () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 });
+
+// #492: a panel taller than the chat area pushed its top, and the collapse
+// button with it, out of reach. Only the question and options may scroll; the
+// collapse button and the footer stay outside the scrolling region.
+describe('AskUserQuestionInputPanel — what scrolls when the panel does not fit', () => {
+  it('scrolls the question and options, never the collapse button or the footer', () => {
+    renderPanel();
+
+    const region = screen.getByText('PostgreSQL').closest('.overflow-y-auto');
+
+    expect(region).not.toBeNull();
+    expect(region).toContainElement(screen.getByText('Which database should we use?'));
+    expect(region).not.toContainElement(screen.getByRole('button', { name: 'Collapse' }));
+    expect(region).not.toContainElement(screen.getByRole('button', { name: 'Esc to cancel' }));
+  });
+});
