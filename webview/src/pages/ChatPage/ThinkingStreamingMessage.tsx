@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {Streamdown} from 'streamdown';
+import {ChevronRightIcon} from '@heroicons/react/20/solid';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
 import './streaming.css';
@@ -79,6 +80,14 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                             {label}
                             {tokenText && (
                                 <span className="not-italic tabular-nums opacity-80">· {tokenText}</span>
+                            )}
+                            {hasThinkingText && (
+                                <ChevronRightIcon
+                                    data-testid="thinking-chevron"
+                                    // Collapsed points reading-forward; expanded points down.
+                                    // Same rotate/mirror pairing as SendFoldToggle for RTL.
+                                    className={`w-3.5 h-3.5 shrink-0 transition-transform rtl:-scale-x-100 ${isThinkingExpanded ? 'rotate-90 rtl:-rotate-90' : ''}`}
+                                />
                             )}
                         </div>
                     </div>
