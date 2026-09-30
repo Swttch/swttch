@@ -2,6 +2,7 @@ import type { ChildProcess } from 'child_process';
 import type { ConnectionManager } from '../ws/connection-manager';
 import type { Bridge } from '../bridge/bridge-interface';
 import { Claude } from './claude';
+import { triggerCliAutoUpdate } from './cli-auto-update';
 import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
@@ -607,6 +608,10 @@ export async function ensureClaudeProcess(
 
   // 성공적으로 spawn됨 → 다음 재시작 시 --resume 사용
   spawnedSessions.add(targetSessionId);
+
+  // Launching `claude` is when the interactive CLI looks for an update, so a chat launching
+  // one is when the backend does. Fire-and-forget and throttled: it never holds up this spawn.
+  triggerCliAutoUpdate();
 
   // SessionRecord에 프로세스 저장
   connections.setProcess(targetSessionId, proc);

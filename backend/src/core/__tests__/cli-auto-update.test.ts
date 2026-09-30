@@ -1,121 +1,249 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, rm, writeFile, mkdir, utimes } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { CliUpdateChannel, MessageType, PackageManager, UpdateMode, type CliUpdateInfo } from '../../shared';
 
-const mocks = vi.hoisted(() => ({ paths: vi.fn(), exec: vi.fn(), update: vi.fn(), resetTelemetry: vi.fn() }));
-vi.mock('../handlers/getCliUpdateInfo', () => ({ resolveClaudePaths: mocks.paths }));
-vi.mock('../handlers/updateCli', () => ({ runUpdateSpec: mocks.update }));
+const mocks = vi.hoisted(() => ({
+  state: vi.fn(),
+  resetTelemetry: vi.fn(),
+  execFile: vi.fn(),
+}));
+vi.mock('../features/cli-auto-update-setting', () => ({ readCliAutoUpdateState: mocks.state }));
 vi.mock('../features/telemetry', () => ({ resetCachedCliVersion: mocks.resetTelemetry }));
-vi.mock('../claude', () => ({ Claude: { exec: mocks.exec } }));
+vi.mock('../claude', () => ({ Claude: { applyConfigDir: vi.fn(async () => {}) } }));
+vi.mock('child_process', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('child_process')>()),
+  execFile: mocks.execFile,
+}));
 
-const doctor = (autoUpdates: string) => ({
-  stdout: `Running: native (2.1.223)\nConfig install method: native\nAuto-updates: ${autoUpdates}\nAuto-update channel: latest\n`,
-  stderr: '',
-});
-const updated = { ok: true, output: 'Current version: 2.1.223\nChecking for updates to latest version...\nSuccessfully updated from 2.1.223 to version 2.1.283' };
-const upToDate = (version: string) => ({ ok: true, output: `Current version: ${version}\nChecking for updates to latest version...\nClaude Code is up to date (${version})` });
+const MINUTE = 60 * 1000;
 
-beforeEach(() => {
+function info(overrides: Partial<CliUpdateInfo> = {}): CliUpdateInfo & { status: string } {
+  return {
+    status: 'ok',
+    cliVersion: '2.1.280',
+    packageManager: PackageManager.VOLTA,
+    updateMode: UpdateMode.VERSIONED,
+    stable: '2.1.280',
+    latest: '2.1.285',
+    updatable: true,
+    ...overrides,
+  };
+}
+
+/** Stands in for the backend's router: answers the two messages the About screen sends. */
+function router(current: CliUpdateInfo & { status: string } = info()) {
+  let installed = current.cliVersion;
+  const send = vi.fn(async (type: MessageType, payload: Record<string, unknown> = {}): Promise<Record<string, unknown>> => {
+    if (type === MessageType.GET_CLI_UPDATE_INFO) return { ...current, cliVersion: installed };
+    if (type === MessageType.UPDATE_CLI) {
+      installed = (payload.version as string | undefined) ?? current.latest;
+      return { status: 'ok', newVersion: installed };
+    }
+    throw new Error(`unexpected ${type}`);
+  });
+  return {
+    send,
+    setInstalled(version: string) { installed = version; },
+    updates: () => send.mock.calls.filter(([type]) => type === MessageType.UPDATE_CLI),
+  };
+}
+
+let home: string;
+const realPlatform = process.platform;
+
+beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
-  mocks.paths.mockResolvedValue(['/home/dev/.local/bin/claude', '/home/dev/.local/share/claude/versions/2.1.223']);
-  mocks.exec.mockResolvedValue(doctor('enabled'));
-  mocks.update.mockResolvedValue(updated);
+  home = await mkdtemp(join(tmpdir(), 'cli-auto-update-'));
+  process.env.CCG_HOME = home;
+  mocks.state.mockResolvedValue({ enabled: true, lock: null, settingsPath: '~/.claude/settings.json', channel: CliUpdateChannel.LATEST });
 });
-afterEach(() => { vi.useRealTimers(); });
+
+afterEach(async () => {
+  vi.useRealTimers();
+  delete process.env.CCG_HOME;
+  Object.defineProperty(process, 'platform', { value: realPlatform });
+  await rm(home, { recursive: true, force: true });
+});
 
 async function load() { return import('../cli-auto-update'); }
 
-describe('isAutoUpdateEnabled', () => {
-  it('accepts only the enabled verdict', async () => {
-    const { isAutoUpdateEnabled } = await load();
-    expect(isAutoUpdateEnabled(doctor('enabled').stdout)).toBe(true);
-    expect(isAutoUpdateEnabled('Auto-updates: enabled\r\nAuto-update channel: stable\r\n')).toBe(true);
-    expect(isAutoUpdateEnabled(doctor('disabled (set by env: DISABLE_AUTOUPDATER)').stdout)).toBe(false);
-    expect(isAutoUpdateEnabled(doctor('disabled (config)').stdout)).toBe(false);
-    expect(isAutoUpdateEnabled(doctor('Managed by package manager').stdout)).toBe(false);
-    expect(isAutoUpdateEnabled('Running: native (2.1.223)\n')).toBe(false);
-  });
-});
+async function checkOnce(send: (type: MessageType, payload?: Record<string, unknown>) => Promise<Record<string, unknown>>) {
+  const module = await load();
+  module.startCliAutoUpdate(send, vi.fn());
+  return module.checkCliAutoUpdate();
+}
 
-describe('parseUpdateOutput', () => {
-  it('reads the active version and whether this run installed it', async () => {
-    const { parseUpdateOutput } = await load();
-    expect(parseUpdateOutput(updated.output)).toEqual({ version: '2.1.283', installed: true });
-    expect(parseUpdateOutput(upToDate('2.1.283').output)).toEqual({ version: '2.1.283', installed: false });
-    expect(parseUpdateOutput('Another Claude process (PID 42) is currently running. Please try again in a moment.')).toBeNull();
-    expect(parseUpdateOutput('Updates are disabled by your administrator.')).toBeNull();
+describe('targetVersion', () => {
+  it('follows the channel and never downgrades', async () => {
+    const { targetVersion } = await load();
+    expect(targetVersion(info(), CliUpdateChannel.LATEST)).toBe('2.1.285');
+    expect(targetVersion(info(), CliUpdateChannel.STABLE)).toBeNull();
+    expect(targetVersion(info({ cliVersion: '2.1.270' }), CliUpdateChannel.STABLE)).toBe('2.1.280');
+    expect(targetVersion(info({ cliVersion: '2.1.285' }), CliUpdateChannel.LATEST)).toBeNull();
+    expect(targetVersion(info({ cliVersion: null }), CliUpdateChannel.LATEST)).toBeNull();
   });
 });
 
 describe('checkCliAutoUpdate', () => {
-  it('updates a native install when claude doctor reports auto-updates enabled', async () => {
-    expect(await (await load()).checkCliAutoUpdate()).toBe(true);
-    expect(mocks.exec).toHaveBeenCalledWith(['doctor'], expect.objectContaining({ timeout: expect.any(Number) }));
-    expect(mocks.update).toHaveBeenCalledWith('claude', ['update']);
+  it('sends what the Update button sends: the info request, then UPDATE_CLI with the version', async () => {
+    const r = router();
+    expect(await checkOnce(r.send)).toBe(true);
+    expect(r.send.mock.calls.map(([type]) => type)).toEqual([MessageType.GET_CLI_UPDATE_INFO, MessageType.UPDATE_CLI]);
+    expect(r.send).toHaveBeenLastCalledWith(MessageType.UPDATE_CLI, { version: '2.1.285' });
     expect(mocks.resetTelemetry).toHaveBeenCalledOnce();
   });
+
   it.each([
-    'disabled (set by env: DISABLE_AUTOUPDATER)',
-    'disabled (set by env: DISABLE_UPDATES)',
-    'disabled (set by env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC)',
-    'disabled (config)',
-  ])('leaves the CLI alone when auto-updates are %s', async verdict => {
-    mocks.exec.mockResolvedValue(doctor(verdict));
-    expect(await (await load()).checkCliAutoUpdate()).toBe(false);
-    expect(mocks.update).not.toHaveBeenCalled();
+    [PackageManager.NPM], [PackageManager.PNPM], [PackageManager.YARN], [PackageManager.VOLTA],
+  ])('updates a %s install to a concrete version', async (packageManager) => {
+    const r = router(info({ packageManager, updateMode: UpdateMode.VERSIONED }));
+    await checkOnce(r.send);
+    expect(r.updates()).toEqual([[MessageType.UPDATE_CLI, { version: '2.1.285' }]]);
   });
+
   it.each([
-    ['npm', '/home/dev/.npm-global/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe'],
-    ['Homebrew', '/opt/homebrew/Caskroom/claude-code/2.1.223/claude'],
-  ])('leaves %s installs to the manual update', async (_name, path) => {
-    mocks.paths.mockResolvedValue([path, path]);
-    expect(await (await load()).checkCliAutoUpdate()).toBe(false);
-    expect(mocks.update).not.toHaveBeenCalled();
+    [PackageManager.NATIVE], [PackageManager.HOMEBREW], [PackageManager.WINGET],
+  ])('updates a %s install with no version, as the button does', async (packageManager) => {
+    const r = router(info({ packageManager, updateMode: UpdateMode.SIMPLE }));
+    await checkOnce(r.send);
+    expect(r.updates()).toEqual([[MessageType.UPDATE_CLI, {}]]);
   });
-  it('reports nothing while the version stays the same', async () => {
-    const { checkCliAutoUpdate } = await load();
-    mocks.update.mockResolvedValue(upToDate('2.1.283'));
-    expect(await checkCliAutoUpdate()).toBe(false);
-    expect(await checkCliAutoUpdate()).toBe(false);
-    expect(mocks.resetTelemetry).not.toHaveBeenCalled();
+
+  it('updates to stable when autoUpdatesChannel is stable', async () => {
+    mocks.state.mockResolvedValue({ enabled: true, lock: null, settingsPath: '', channel: CliUpdateChannel.STABLE });
+    const r = router(info({ cliVersion: '2.1.270' }));
+    await checkOnce(r.send);
+    expect(r.updates()).toEqual([[MessageType.UPDATE_CLI, { version: '2.1.280' }]]);
   });
+
+  it('asks nothing when Claude Code auto-updates are off', async () => {
+    mocks.state.mockResolvedValue({ enabled: false, lock: null, settingsPath: '', channel: CliUpdateChannel.LATEST });
+    const r = router();
+    expect(await checkOnce(r.send)).toBe(false);
+    expect(r.send).not.toHaveBeenCalled();
+  });
+
+  it('does not update an install the button cannot update, or one already current', async () => {
+    const none = router(info({ packageManager: PackageManager.UNKNOWN, updateMode: UpdateMode.NONE }));
+    expect(await checkOnce(none.send)).toBe(false);
+    expect(none.updates()).toEqual([]);
+    const current = router(info({ cliVersion: '2.1.285' }));
+    expect(await checkOnce(current.send)).toBe(false);
+    expect(current.updates()).toEqual([]);
+  });
+
   it('reports a version installed elsewhere since the last check', async () => {
-    const { checkCliAutoUpdate } = await load();
-    mocks.update.mockResolvedValue(upToDate('2.1.283'));
-    expect(await checkCliAutoUpdate()).toBe(false);
-    mocks.update.mockResolvedValue(upToDate('2.1.284'));
-    expect(await checkCliAutoUpdate()).toBe(true);
+    const r = router(info({ cliVersion: '2.1.285' }));
+    const module = await load();
+    module.startCliAutoUpdate(r.send, vi.fn());
+    expect(await module.checkCliAutoUpdate()).toBe(false);
+    r.setInstalled('2.1.286');
+    expect(await module.checkCliAutoUpdate()).toBe(true);
+    expect(r.updates()).toEqual([]);
   });
-  it('survives a failing doctor or update', async () => {
-    const { checkCliAutoUpdate } = await load();
-    mocks.exec.mockRejectedValueOnce(new Error('timed out'));
-    expect(await checkCliAutoUpdate()).toBe(false);
-    expect(mocks.update).not.toHaveBeenCalled();
-    mocks.update.mockResolvedValueOnce({ ok: false, output: 'Failed to check for updates' });
-    expect(await checkCliAutoUpdate()).toBe(false);
+
+  it('survives a failing request', async () => {
+    const send = vi.fn(async () => ({ status: 'error', error: 'offline' }));
+    expect(await checkOnce(send)).toBe(false);
   });
+
+  it('leaves the update to a backend that already holds the lock', async () => {
+    await writeFile(join(home, 'cli-auto-update.lock'), '4242');
+    const r = router();
+    expect(await checkOnce(r.send)).toBe(false);
+    expect(r.updates()).toEqual([]);
+  });
+
+  it('takes over a lock left by a backend that died mid-update', async () => {
+    const lock = join(home, 'cli-auto-update.lock');
+    await mkdir(home, { recursive: true });
+    await writeFile(lock, '4242');
+    const old = new Date(Date.now() - 11 * MINUTE);
+    await utimes(lock, old, old);
+    const r = router();
+    expect(await checkOnce(r.send)).toBe(true);
+  });
+
+  it('on Windows, waits for every claude.exe to exit before a package-manager update', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    mocks.execFile.mockImplementation((_cmd, _args, _opts, callback) => callback(null, 'claude.exe  1234 Console 1 200,000 K\r\n'));
+    const r = router();
+    expect(await checkOnce(r.send)).toBe(false);
+    expect(r.updates()).toEqual([]);
+
+    mocks.execFile.mockImplementation((_cmd, _args, _opts, callback) => callback(null, 'INFO: No tasks are running which match the specified criteria.\r\n'));
+    const idle = router();
+    expect(await checkOnce(idle.send)).toBe(true);
+  });
+
+  it('on Windows, lets a native install update while claude.exe runs', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    mocks.execFile.mockImplementation((_cmd, _args, _opts, callback) => callback(null, 'claude.exe  1234\r\n'));
+    const r = router(info({ packageManager: PackageManager.NATIVE, updateMode: UpdateMode.SIMPLE }));
+    expect(await checkOnce(r.send)).toBe(true);
+    expect(mocks.execFile).not.toHaveBeenCalled();
+  });
+
   it('shares one run between overlapping checks', async () => {
-    const { checkCliAutoUpdate } = await load();
-    const first = checkCliAutoUpdate();
-    expect(checkCliAutoUpdate()).toBe(first);
+    const r = router();
+    const module = await load();
+    module.startCliAutoUpdate(r.send, vi.fn());
+    const first = module.checkCliAutoUpdate();
+    expect(module.checkCliAutoUpdate()).toBe(first);
     expect(await first).toBe(true);
-    expect(mocks.update).toHaveBeenCalledOnce();
+    expect(r.updates()).toHaveLength(1);
   });
 });
 
-describe('startCliAutoUpdate', () => {
-  it('checks shortly after start, then every 30 minutes, and reports each update', async () => {
+describe('startCliAutoUpdate and triggerCliAutoUpdate', () => {
+  it('ignores a trigger before the server has started it', async () => {
+    (await load()).triggerCliAutoUpdate();
+    await Promise.resolve();
+    expect(mocks.state).not.toHaveBeenCalled();
+  });
+
+  it('checks once shortly after start, then never again on its own', async () => {
     vi.useFakeTimers();
-    const onUpdated = vi.fn();
-    (await load()).startCliAutoUpdate(onUpdated);
+    const r = router();
+    const announce = vi.fn();
+    (await load()).startCliAutoUpdate(r.send, announce);
     await vi.advanceTimersByTimeAsync(9_999);
-    expect(mocks.update).not.toHaveBeenCalled();
+    expect(r.send).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
-    expect(onUpdated).toHaveBeenCalledOnce();
-    mocks.update.mockResolvedValue(upToDate('2.1.283'));
-    await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
-    expect(mocks.update).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(30 * 60 * 1000);
-    expect(mocks.update).toHaveBeenCalledTimes(3);
-    expect(onUpdated).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(announce).toHaveBeenCalledOnce());
+    // An idle backend: hours pass, nothing spawns `claude`.
+    await vi.advanceTimersByTimeAsync(6 * 60 * MINUTE);
+    expect(r.send).toHaveBeenCalledTimes(2);
+  });
+
+  it('checks when a chat spawns claude, at most once per 30 minutes', async () => {
+    vi.useFakeTimers();
+    const r = router();
+    const { startCliAutoUpdate, triggerCliAutoUpdate } = await load();
+    startCliAutoUpdate(r.send, vi.fn());
+    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.waitFor(() => expect(r.send).toHaveBeenCalledTimes(2));
+
+    await vi.advanceTimersByTimeAsync(29 * MINUTE);
+    triggerCliAutoUpdate();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mocks.state).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1 * MINUTE);
+    triggerCliAutoUpdate();
+    await vi.waitFor(() => expect(mocks.state).toHaveBeenCalledTimes(2));
+  });
+
+  it('returns before the check finishes, so a spawn never waits on it', async () => {
+    const { startCliAutoUpdate, triggerCliAutoUpdate } = await load();
+    let answer: (value: Record<string, unknown>) => void = () => {};
+    const send = vi.fn(() => new Promise<Record<string, unknown>>(resolve => { answer = resolve; }));
+    startCliAutoUpdate(send, vi.fn());
+    expect(triggerCliAutoUpdate()).toBeUndefined();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledOnce());
+    answer({ ...info(), cliVersion: '2.1.285' });
   });
 });

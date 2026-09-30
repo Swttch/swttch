@@ -142,6 +142,7 @@ export interface ConnectionStats {
 
 export class ConnectionManager {
   private connectionMap = new Map<string, WebSocket>();
+  private loopbacks = new Map<string, (type: string, payload: Record<string, unknown>) => void>();
   private clientMap = new Map<string, ClientRecord>();
   private sessionRegistry = new Map<string, SessionRecord>();
   private cleanupTimers = new Map<string, NodeJS.Timeout>();
@@ -479,9 +480,32 @@ export class ConnectionManager {
     }
   }
 
+  // ─── Loopback ───────────────────────────────────────────────────────────────
+
+  /**
+   * A connection with no socket, for the backend to send itself a request exactly as a
+   * webview would. Replies addressed to it go to `onMessage` instead of a WebSocket. It is
+   * never a client: it is not counted, not broadcast to, and holds no session.
+   */
+  openLoopback(onMessage: (type: string, payload: Record<string, unknown>) => void): string {
+    const connectionId = `loopback-${this.nextId++}`;
+    this.loopbacks.set(connectionId, onMessage);
+    return connectionId;
+  }
+
+  closeLoopback(connectionId: string): void {
+    this.loopbacks.delete(connectionId);
+  }
+
   // ─── Messaging ──────────────────────────────────────────────────────────────
 
   sendTo(connectionId: string, type: string, payload: Record<string, unknown> = {}): void {
+    const loopback = this.loopbacks.get(connectionId);
+    if (loopback) {
+      loopback(type, payload);
+      return;
+    }
+
     const ws = this.connectionMap.get(connectionId);
     if (!ws) return;
 
