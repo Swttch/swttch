@@ -490,6 +490,28 @@ describe('settings', () => {
       expect(bad.error).toContain('ultracode must be a boolean or null');
     });
 
+    it('should accept boolean or null notificationBanner and reject other types', async () => {
+      expect((await saveSettingToFile('notificationBanner', true)).status).toBe('ok');
+      expect((await saveSettingToFile('notificationBanner', false)).status).toBe('ok');
+      // Null is a real value: it says the OS permission was never asked.
+      expect((await saveSettingToFile('notificationBanner', null)).status).toBe('ok');
+      const bad = await saveSettingToFile('notificationBanner', 'on');
+      expect(bad.status).toBe('error');
+      expect(bad.error).toContain('notificationBanner must be a boolean or null');
+    });
+
+    // autoOpenDiffOnPermission once fell through into the notificationBanner
+    // case, which let null in and named the wrong key in the error (issue #504).
+    it('should accept only a boolean autoOpenDiffOnPermission', async () => {
+      expect((await saveSettingToFile('autoOpenDiffOnPermission', true)).status).toBe('ok');
+      expect((await saveSettingToFile('autoOpenDiffOnPermission', false)).status).toBe('ok');
+      for (const value of [null, 'yes']) {
+        const bad = await saveSettingToFile('autoOpenDiffOnPermission', value);
+        expect(bad.status).toBe('error');
+        expect(bad.error).toBe('autoOpenDiffOnPermission must be a boolean');
+      }
+    });
+
     // dockLayout holds the header dock arrangement: `order` is the row order of
     // every overflow-menu item, `visible` names which of them also sit outside
     // as icons. The backend validates the SHAPE only and deliberately does not

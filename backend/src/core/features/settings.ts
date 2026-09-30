@@ -436,7 +436,6 @@ function validateSetting(key: string, value: unknown): string | null {
         return `browserDiffPresentation must be one of ${BROWSER_DIFF_PRESENTATIONS.map((p) => `"${p}"`).join(', ')}`;
       }
       break;
-    case 'autoOpenDiffOnPermission':
     // null means "never asked" — the first notification requests OS permission
     // and writes the answer here, so null has to survive a round trip rather
     // than being rejected as "not a boolean".
@@ -445,6 +444,7 @@ function validateSetting(key: string, value: unknown): string | null {
         return 'notificationBanner must be a boolean or null';
       }
       break;
+    case 'autoOpenDiffOnPermission':
     case 'chatPagination':
     case 'includeNestedSessions':
     case 'softWrap':
