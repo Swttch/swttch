@@ -141,6 +141,28 @@ export function resolveEffortFlag(settings: Record<string, unknown>): string | u
 }
 
 /**
+ * The value this spawn has to pass as `--thinking-display`, or undefined to pass
+ * nothing and leave the display to the API's default.
+ *
+ * `showThinkingSummaries` is the documented setting a terminal user turns on to
+ * see thinking summaries. The CLI reads it only in its interactive REPL: there,
+ * with no `--thinking-display` flag, `true` asks the API for `summarized` and
+ * anything else leaves the default. A headless caller like us reaches a
+ * different branch that never reads the setting, so it had no effect in the
+ * plugin. Measured against 2.1.284: `-p` with `showThinkingSummaries: true`
+ * still got empty thinking blocks, while `--thinking-display summarized` got the
+ * summary streamed as thinking deltas (#496).
+ *
+ * So the flag repeats the decision the CLI makes for a terminal user from the
+ * same setting, rather than adding one of ours. The official Agent SDK passes
+ * the same flag for its documented `thinking.display` option. Nothing is passed
+ * when the setting is off, matching the REPL, which also leaves the default then.
+ */
+export function resolveThinkingDisplayFlag(settings: Record<string, unknown>): string | undefined {
+  return settings.showThinkingSummaries === true ? 'summarized' : undefined;
+}
+
+/**
  * Build the argv for spawning the Claude CLI in interactive print mode.
  * Extracted as a pure function so the flag composition (session flag,
  * permission mode, pinned model, pinned effort) is unit-testable without
@@ -152,6 +174,7 @@ export function buildClaudeArgs(
   inputMode: string | undefined,
   model?: string,
   effortLevel?: string,
+  thinkingDisplay?: string,
 ): string[] {
   const args: string[] = [
     '-p',
@@ -192,6 +215,12 @@ export function buildClaudeArgs(
   // which decides when a level needs it.
   if (effortLevel) {
     args.push('--effort', effortLevel);
+  }
+
+  // Carry `showThinkingSummaries` to a CLI that does not read it in `-p` mode.
+  // See resolveThinkingDisplayFlag.
+  if (thinkingDisplay) {
+    args.push('--thinking-display', thinkingDisplay);
   }
 
   return args;
@@ -318,6 +347,22 @@ export function needsRestartForEffort(
 }
 
 /**
+ * Whether the session's live CLI has to be restarted so the next message runs
+ * under the thinking display the settings now ask for.
+ *
+ * `--thinking-display` is read once at spawn, like `--effort`, so turning
+ * `showThinkingSummaries` on or off mid-chat reaches a running CLI only through a
+ * restart. The value is read from the settings file at every spawn, so undefined
+ * is an answer here too: it means no flag.
+ */
+export function needsRestartForThinkingDisplay(
+  liveDisplay: string | null,
+  requestedDisplay: string | undefined,
+): boolean {
+  return liveDisplay !== (requestedDisplay ?? null);
+}
+
+/**
  * Terminate a session's live CLI so the next message respawns it with current
  * spawn-time settings and credentials, and wait until it is really gone.
  *
@@ -423,11 +468,13 @@ export async function ensureClaudeProcess(
   await Claude.applyConfigDir(workingDir);
   const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
   const effortLevel = resolveEffortFlag(claudeSettings);
+  const thinkingDisplay = resolveThinkingDisplayFlag(claudeSettings);
 
   const existingSession = connections.getSession(targetSessionId);
   if (existingSession?.process) {
-    // `--permission-mode` and `--effort` are both spawn-time flags: a live CLI keeps
-    // whatever it started with, and no official CLI command changes either in place.
+    // `--permission-mode`, `--effort` and `--thinking-display` are all spawn-time
+    // flags: a live CLI keeps whatever it started with, and no official CLI command
+    // changes any of them in place.
     // So when the user picks a different one mid-chat, honoring it means restarting
     // the process under the new flag — otherwise the choice is silently dropped. For
     // the mode, the CLI's next `system/init` then pushes the old value back onto the
@@ -435,9 +482,11 @@ export async function ensureClaudeProcess(
     // nothing pushes anything back and the slider simply lies (#474). Unchanged → reuse.
     const liveMode = connections.getInputMode(targetSessionId);
     const liveEffort = connections.getEffortLevel(targetSessionId);
+    const liveThinkingDisplay = connections.getThinkingDisplay(targetSessionId);
     const modeChanged = needsRestartForMode(liveMode, inputMode);
     const effortChanged = needsRestartForEffort(liveEffort, effortLevel);
-    if (!modeChanged && !effortChanged) {
+    const thinkingDisplayChanged = needsRestartForThinkingDisplay(liveThinkingDisplay, thinkingDisplay);
+    if (!modeChanged && !effortChanged && !thinkingDisplayChanged) {
       console.error(
         '[node-backend]',
         `Reusing existing process for session ${targetSessionId} (PID: ${existingSession.process.pid})`,
@@ -450,6 +499,7 @@ export async function ensureClaudeProcess(
     const reasons = [
       modeChanged && `permission mode (${liveMode} -> ${inputMode})`,
       effortChanged && `effort level (${liveEffort} -> ${effortLevel ?? null})`,
+      thinkingDisplayChanged && `thinking display (${liveThinkingDisplay} -> ${thinkingDisplay ?? null})`,
     ].filter(Boolean);
     console.error(
       '[node-backend]',
@@ -498,7 +548,7 @@ export async function ensureClaudeProcess(
   console.error('[node-backend]', `Working directory: ${workingDir}`);
   console.error('[node-backend]', `Session: ${targetSessionId} (${sessionFlag})`);
 
-  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel);
+  const args = buildClaudeArgs(sessionFlag, targetSessionId, inputMode, model, effortLevel, thinkingDisplay);
 
   console.error('[node-backend]', `Command: ${Claude.command} ${args.join(' ')}`);
 
@@ -574,6 +624,9 @@ export async function ensureClaudeProcess(
   // receive — measured across `system/init`, `assistant`, `rate_limit_event`,
   // `result` and `control_response`, none of them carries one (#474).
   connections.setEffortLevel(targetSessionId, effortLevel ?? null);
+  // Same for the thinking display: `--thinking-display` holds for the life of the
+  // process, so a later spawn compares against what this one started under.
+  connections.setThinkingDisplay(targetSessionId, thinkingDisplay ?? null);
   // Remember which saved account this process authenticated as. The credential slot
   // is shared backend-wide, so by the time this session hits a usage limit the
   // registry may name a different account entirely — one another session switched

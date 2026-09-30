@@ -434,6 +434,11 @@
       "syncToDefault": {
         "label": "Sync model changes to default",
         "description": "When switching models, also update the CLI default so new sessions keep using it — matching how the CLI's /model works. Off keeps the change to the current session only."
+      },
+      "thinkingSection": "Thinking",
+      "showThinkingSummaries": {
+        "label": "Show thinking summaries",
+        "description": "Ask Claude for a summary of its thinking and show it inside the thinking block. Saved as showThinkingSummaries, the same setting the Claude Code CLI uses."
       }
     },
     "path": {

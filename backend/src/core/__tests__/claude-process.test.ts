@@ -5,8 +5,10 @@ import {
   isWorkflowRunning,
   needsRestartForEffort,
   needsRestartForMode,
+  needsRestartForThinkingDisplay,
   readReportedMode,
   resolveEffortFlag,
+  resolveThinkingDisplayFlag,
   stopWorkflowsForSession,
 } from '../claude-process';
 
@@ -156,6 +158,36 @@ describe('needsRestartForEffort', () => {
   // launched, so a CLI started at max keeps answering at max until it is replaced.
   it('restarts when the user leaves a flagged level mid-chat', () => {
     expect(needsRestartForEffort('max', undefined)).toBe(true);
+  });
+});
+
+describe('thinking display', () => {
+  // A terminal user turns `showThinkingSummaries` on to see thinking summaries,
+  // and the CLI honours it only in its interactive REPL. In `-p` mode it is never
+  // read, so the flag carries the same decision (#496).
+  it('asks for summarized thinking when showThinkingSummaries is on', () => {
+    expect(resolveThinkingDisplayFlag({ showThinkingSummaries: true })).toBe('summarized');
+  });
+
+  it('passes nothing when the setting is off or unset, leaving the API default', () => {
+    expect(resolveThinkingDisplayFlag({ showThinkingSummaries: false })).toBeUndefined();
+    expect(resolveThinkingDisplayFlag({})).toBeUndefined();
+    expect(resolveThinkingDisplayFlag({ showThinkingSummaries: 'true' })).toBeUndefined();
+  });
+
+  it('puts --thinking-display in the argv only when a value is given', () => {
+    const args = buildClaudeArgs('--resume', 's', 'plan', undefined, undefined, 'summarized');
+    expect(args[args.indexOf('--thinking-display') + 1]).toBe('summarized');
+    expect(buildClaudeArgs('--resume', 's', 'plan')).not.toContain('--thinking-display');
+  });
+
+  // `--thinking-display` holds for the life of the process, so flipping the
+  // setting mid-chat reaches the CLI only through a restart, in either direction.
+  it('restarts only when the setting changed since the live process started', () => {
+    expect(needsRestartForThinkingDisplay(null, undefined)).toBe(false);
+    expect(needsRestartForThinkingDisplay('summarized', 'summarized')).toBe(false);
+    expect(needsRestartForThinkingDisplay(null, 'summarized')).toBe(true);
+    expect(needsRestartForThinkingDisplay('summarized', undefined)).toBe(true);
   });
 });
 

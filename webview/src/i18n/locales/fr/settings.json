@@ -434,6 +434,11 @@
       "syncToDefault": {
         "label": "Synchroniser les changements de modèle avec le réglage par défaut",
         "description": "Lors du changement de modèle, met aussi à jour le modèle par défaut du CLI afin que les nouvelles sessions continuent de l'utiliser — comme le fait /model dans le CLI. Désactivé, le changement ne s'applique qu'à la session actuelle"
+      },
+      "thinkingSection": "Réflexion",
+      "showThinkingSummaries": {
+        "label": "Afficher les résumés de réflexion",
+        "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion. Enregistré sous showThinkingSummaries, le même réglage que celui de la CLI Claude Code."
       }
     },
     "path": {

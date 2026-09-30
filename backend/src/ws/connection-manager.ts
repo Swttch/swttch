@@ -81,6 +81,13 @@ interface SessionRecord {
    */
   effortLevel: string | null;
   /**
+   * Thinking display passed to the LIVE process as `--thinking-display`, or null
+   * when the spawn passed no such flag. Recorded for the same reason as
+   * `effortLevel`: the flag only applies at spawn, so turning
+   * `showThinkingSummaries` on or off mid-chat needs a restart to reach the CLI.
+   */
+  thinkingDisplay: string | null;
+  /**
    * Saved account the LIVE process authenticated as. Credentials are read at spawn
    * from one shared slot, so a switch made for ANOTHER session does not reach this
    * one: the process keeps running as whoever it started as until it is restarted.
@@ -949,6 +956,7 @@ export class ConnectionManager {
         activity: SessionActivity.Idle,
         inputMode: null,
         effortLevel: null,
+        thinkingDisplay: null,
         accountId: null,
       };
       this.sessionRegistry.set(sessionId, session);
@@ -967,6 +975,8 @@ export class ConnectionManager {
     // Same for the pinned effort level: `--effort` pins the process it launched, so
     // once that process is gone nothing is pinned any more.
     if (!proc) session.effortLevel = null;
+    // And the thinking display, pinned the same way.
+    if (!proc) session.thinkingDisplay = null;
     // Same for the account: no process means nothing is authenticated as anyone.
     if (!proc) session.accountId = null;
   }
@@ -998,6 +1008,20 @@ export class ConnectionManager {
   /** Effort level the session's live CLI is pinned to, or null when it is not pinned. */
   getEffortLevel(sessionId: string): string | null {
     return this.sessionRegistry.get(sessionId)?.effortLevel ?? null;
+  }
+
+  /**
+   * Record the thinking display the session's live CLI process was started with
+   * as `--thinking-display`, or null when the spawn passed no such flag.
+   */
+  setThinkingDisplay(sessionId: string, thinkingDisplay: string | null): void {
+    const session = this.getOrCreateSession(sessionId);
+    session.thinkingDisplay = thinkingDisplay;
+  }
+
+  /** Thinking display the session's live CLI was started with, or null when none was passed. */
+  getThinkingDisplay(sessionId: string): string | null {
+    return this.sessionRegistry.get(sessionId)?.thinkingDisplay ?? null;
   }
 
   /** Record the saved account the session's live CLI process was spawned as. */

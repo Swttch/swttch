@@ -49,6 +49,12 @@ export interface ClaudeSettingsState {
   fileCheckpointingEnabled?: boolean;
   env?: Record<string, string>; // official key: environment variables for Claude sessions
   alwaysThinkingEnabled: boolean; // extended thinking always on
+  /**
+   * Official key: return thinking as a readable summary. The CLI honours it by
+   * itself only in its interactive REPL, so the backend reads it to decide on
+   * `--thinking-display summarized` for our headless spawn (#496).
+   */
+  showThinkingSummaries?: boolean;
   fastMode: boolean; // official Claude settings key: fast output mode (Opus models only). CLI reads it from settings.json directly
   fileSuggestion?: FileSuggestionConfig | null; // custom command that builds the @ file-mention index (null/absent = built-in)
   permissions?: PermissionsConfig;

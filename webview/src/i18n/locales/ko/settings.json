@@ -430,6 +430,11 @@
       "syncToDefault": {
         "label": "세션에서 모델 변경 시 기본 모델 설정도 함께 변경",
         "description": "모델을 바꿀 때 CLI 기본 모델도 함께 갱신해서 새 세션에도 이어지게 함 — CLI의 /model과 동일한 동작. 끄면 현재 세션에만 적용됨"
+      },
+      "thinkingSection": "생각",
+      "showThinkingSummaries": {
+        "label": "생각 요약 보기",
+        "description": "Claude에게 생각 내용의 요약을 요청해서 생각 블록 안에 보여줌. Claude Code CLI와 같은 설정인 showThinkingSummaries로 저장됨"
       }
     },
     "path": {

@@ -430,6 +430,11 @@
       "syncToDefault": {
         "label": "将模型更改同步到默认设置",
         "description": "切换模型时同时更新 CLI 默认模型，使新会话继续使用该模型——与 CLI 的 /model 行为一致。关闭时更改仅应用于当前会话"
+      },
+      "thinkingSection": "思考",
+      "showThinkingSummaries": {
+        "label": "显示思考摘要",
+        "description": "请求 Claude 提供思考内容的摘要,并显示在思考块中。保存为 showThinkingSummaries,与 Claude Code CLI 使用的设置相同。"
       }
     },
     "path": {

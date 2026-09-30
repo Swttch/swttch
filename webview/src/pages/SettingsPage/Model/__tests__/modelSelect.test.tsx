@@ -25,7 +25,8 @@ vi.mock('@/contexts/SettingsContext', () => ({
 vi.mock('@/contexts/ClaudeSettingsContext', () => ({
   // Rows read project-override info through this; null = nothing overridden.
   useClaudeSettingsOrNull: () => null,
-  useClaudeSettings: () => ({ settings: mockClaudeSettings, updateSetting: updateClaudeSettingMock }),
+  // The page also holds the thinking switch, which reads the scope being edited.
+  useClaudeSettings: () => ({ settings: mockClaudeSettings, scopeSettings: mockClaudeSettings, updateSetting: updateClaudeSettingMock }),
 }));
 vi.mock('@/contexts/CliConfigContext', () => ({
   useCliConfig: () => ({ controlResponse: { response: { response: { models: mockModels } } } }),

@@ -430,6 +430,11 @@
       "syncToDefault": {
         "label": "モデルの変更をデフォルト設定にも反映",
         "description": "モデルを切り替えたときにCLIのデフォルトモデルも更新し、新しいセッションにも引き継がれるようにする — CLIの/modelと同じ動作。オフの場合は現在のセッションのみに適用される"
+      },
+      "thinkingSection": "思考",
+      "showThinkingSummaries": {
+        "label": "思考の要約を表示",
+        "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。Claude Code CLI と同じ設定 showThinkingSummaries として保存されます。"
       }
     },
     "path": {
