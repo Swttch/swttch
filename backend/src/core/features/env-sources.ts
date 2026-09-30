@@ -36,7 +36,7 @@ import { readJsonFileSafe } from './claude-settings';
  * is no longer in play — the same resolution `mcp-manager` uses for the config
  * it writes, so both agree on which file is "the" global config.
  */
-function userClaudeJsonPath(): string {
+export function userClaudeJsonPath(): string {
   return join(process.env.CLAUDE_CONFIG_DIR ?? homedir(), '.claude.json');
 }
 

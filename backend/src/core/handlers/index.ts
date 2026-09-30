@@ -79,6 +79,12 @@ import { openDevToolsHandler } from './openDevTools';
 import { getVersionHandler } from './getVersion';
 import { getCliUpdateInfoHandler } from './getCliUpdateInfo';
 import { updateCliHandler } from './updateCli';
+import {
+  getCliAutoUpdateHandler,
+  setCliAutoUpdateHandler,
+  getNonessentialTrafficHandler,
+  setNonessentialTrafficHandler,
+} from './cliAutoUpdate';
 import { installCcbHandler } from './installCcb';
 import { uninstallCcbHandler } from './uninstallCcb';
 import {
@@ -420,6 +426,18 @@ export async function handleMessage(
       break;
     case MessageType.UPDATE_CLI:
       await updateCliHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_CLI_AUTO_UPDATE:
+      await getCliAutoUpdateHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_CLI_AUTO_UPDATE:
+      await setCliAutoUpdateHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_NONESSENTIAL_TRAFFIC:
+      await getNonessentialTrafficHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_NONESSENTIAL_TRAFFIC:
+      await setNonessentialTrafficHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.UNINSTALL_CCB:
       await uninstallCcbHandler(connectionId, message, connections, bridge);

@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Show thinking summaries",
       "description": "Ask Claude for a summary of its thinking and show it inside the thinking block.\nKey: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Block nonessential traffic",
+      "description": "Limits Claude Code to the traffic a prompt needs.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "Turned on in managed settings ({{path}}), which an administrator controls.",
+      "saveFailed": "Could not save the setting"
     }
   },
   "diffView": {
@@ -373,10 +380,25 @@
       "updating": "Updating…",
       "channel": {
         "stable": "Stable",
-        "latest": "Latest"
+        "latest": "Latest",
+        "rc": "Release candidate"
       },
       "updateSuccess": "Claude Code v{{value}} Updated",
       "updateFailed": "Update failed"
+    },
+    "cliAutoUpdate": {
+      "label": "Auto-update Claude Code",
+      "description": "Lets Claude Code update itself in the background.",
+      "keys": "env: DISABLE_AUTOUPDATER (inverted) & key: autoUpdatesChannel",
+      "channelLabel": "Update channel",
+      "lock": {
+        "environment": "Turned off by {{variable}} set in the environment, such as a shell profile. Unset it there to turn this on.",
+        "userSettings": "Turned off by {{variable}} in {{path}}. Remove it there to turn this on.",
+        "managedSettings": "Turned off by {{variable}} in managed settings ({{path}}), which an administrator controls.",
+        "globalConfig": "Turned off by \"autoUpdates\": false in {{path}}. Remove it there to turn this on.",
+        "nonessentialTraffic": "Turned off by Block nonessential traffic in Settings → General. Turn that off to turn this on."
+      },
+      "saveFailed": "Could not save the setting"
     }
   },
   "browser": {

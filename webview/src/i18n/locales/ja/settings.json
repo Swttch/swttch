@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "思考の要約を表示",
       "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。\nキー: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "不要な通信をブロック",
+      "description": "Claude Code の通信を、プロンプトへの応答に必要なものだけに制限します。",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "管理者が管理するマネージド設定（{{path}}）でオンになっているため変更できません。",
+      "saveFailed": "設定を保存できませんでした"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "更新中…",
       "channel": {
         "stable": "安定版",
-        "latest": "最新版"
+        "latest": "最新版",
+        "rc": "リリース候補"
       },
       "updateSuccess": "Claude Code v{{value}} に更新しました",
       "updateFailed": "更新に失敗しました"
+    },
+    "cliAutoUpdate": {
+      "label": "Claude Code の自動アップデート",
+      "description": "Claude Code がバックグラウンドで自身をアップデートします。",
+      "keys": "env: DISABLE_AUTOUPDATER（反転） & キー: autoUpdatesChannel",
+      "channelLabel": "アップデートチャネル",
+      "lock": {
+        "environment": "シェルプロファイルなどの環境変数 {{variable}} によりオフになっています。オンにするにはそちらで解除してください。",
+        "userSettings": "{{path}} の {{variable}} によりオフになっています。オンにするにはそちらで削除してください。",
+        "managedSettings": "管理者が管理するマネージド設定（{{path}}）の {{variable}} によりオフになっています。",
+        "globalConfig": "{{path}} の \"autoUpdates\": false によりオフになっています。オンにするにはそちらで削除してください。",
+        "nonessentialTraffic": "設定 → 一般の「不要な通信をブロック」がオンのためオフになっています。オンにするにはその設定をオフにしてください。"
+      },
+      "saveFailed": "設定を保存できませんでした"
     }
   },
   "browser": {

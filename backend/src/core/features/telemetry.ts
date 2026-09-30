@@ -316,6 +316,8 @@ const ACTIVITY_EXCLUDED_TYPES = new Set<string>([
   MessageType.GET_IDE_ROOT,          // IDE 루트 자동 조회
   MessageType.GET_VERSION,           // 버전 자동 표시(About 리로드 클릭만 능동)
   MessageType.GET_CLI_UPDATE_INFO,   // CLI 업데이트 가능 여부 자동 조회(About 마운트 시)
+  MessageType.GET_CLI_AUTO_UPDATE,   // Read automatically when About mounts
+  MessageType.GET_NONESSENTIAL_TRAFFIC, // Read automatically when Privacy mounts
   MessageType.GET_PLUGIN_UPDATES,    // 업데이트 확인(폴링성)
   MessageType.GET_TUNNEL_STATUS,     // 터널 상태(폴링성)
   MessageType.GET_TUNNEL_PREREQS,    // 터널 사전조건 조회

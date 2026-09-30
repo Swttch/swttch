@@ -12,6 +12,7 @@ import { OpenSettingsRow } from './OpenSettingsRow';
 import { ChatPaginationRow } from './ChatPaginationRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { ShowThinkingSummariesRow } from './ShowThinkingSummariesRow';
+import { NonessentialTrafficRow } from './NonessentialTrafficRow';
 
 /**
  * The settings that are about the app as a whole rather than about one surface
@@ -36,8 +37,9 @@ export function BasicsSection() {
       <HostModeRow />
       <OpenSettingsRow />
       <ChatPaginationRow />
-      <ClaudeConfigDirRow />
       <ShowThinkingSummariesRow />
+      <ClaudeConfigDirRow />
+      <NonessentialTrafficRow />
     </SettingSection>
   );
 }

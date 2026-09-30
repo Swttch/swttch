@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "نمایش خلاصه‌های تفکر",
       "description": "از Claude خلاصه‌ای از تفکرش را می‌خواهد و آن را داخل بلوک تفکر نشان می‌دهد.\nکلید: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "مسدود کردن ترافیک غیرضروری",
+      "description": "ارتباطات Claude Code را به آنچه برای پاسخ لازم است محدود می‌کند.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "در تنظیمات مدیریت‌شده ({{path}}) روشن شده است که مدیر سیستم آن را کنترل می‌کند.",
+      "saveFailed": "ذخیره تنظیم ممکن نشد"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "در حال به‌روزرسانی…",
       "channel": {
         "stable": "پایدار",
-        "latest": "آخرین نسخه"
+        "latest": "آخرین نسخه",
+        "rc": "نسخهٔ نامزد انتشار"
       },
       "updateSuccess": "Claude Code v{{value}} به‌روزرسانی شد",
       "updateFailed": "به‌روزرسانی ناموفق بود"
+    },
+    "cliAutoUpdate": {
+      "label": "به‌روزرسانی خودکار Claude Code",
+      "description": "به Claude Code اجازه می‌دهد در پس‌زمینه خودش را به‌روز کند.",
+      "keys": "env: DISABLE_AUTOUPDATER (معکوس) & کلید: autoUpdatesChannel",
+      "channelLabel": "کانال به‌روزرسانی",
+      "lock": {
+        "environment": "با {{variable}} در محیط، مانند پروفایل شل، خاموش شده است. برای روشن کردن، آن را از همان‌جا حذف کنید.",
+        "userSettings": "با {{variable}} در {{path}} خاموش شده است. برای روشن کردن، آن را از همان‌جا حذف کنید.",
+        "managedSettings": "با {{variable}} در تنظیمات مدیریت‌شده ({{path}}) خاموش شده است که مدیر سیستم آن را کنترل می‌کند.",
+        "globalConfig": "با \"autoUpdates\": false در {{path}} خاموش شده است. برای روشن کردن، آن را از همان‌جا حذف کنید.",
+        "nonessentialTraffic": "با «مسدود کردن ترافیک غیرضروری» در تنظیمات ← عمومی خاموش شده است. برای روشن کردن این مورد، آن را خاموش کنید."
+      },
+      "saveFailed": "ذخیره تنظیم ممکن نشد"
     }
   },
   "browser": {

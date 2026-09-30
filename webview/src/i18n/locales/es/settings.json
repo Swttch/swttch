@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Mostrar resúmenes del razonamiento",
       "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento.\nClave: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Bloquear tráfico no esencial",
+      "description": "Limita Claude Code al tráfico que necesita una solicitud.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "Activado en la configuración administrada ({{path}}), que controla un administrador.",
+      "saveFailed": "No se pudo guardar la configuración"
     }
   },
   "diffView": {
@@ -373,10 +380,25 @@
       "updating": "Actualizando…",
       "channel": {
         "stable": "Estable",
-        "latest": "Más reciente"
+        "latest": "Más reciente",
+        "rc": "Versión candidata"
       },
       "updateSuccess": "Claude Code v{{value}} actualizado",
       "updateFailed": "La actualización falló"
+    },
+    "cliAutoUpdate": {
+      "label": "Actualizar Claude Code automáticamente",
+      "description": "Permite que Claude Code se actualice solo en segundo plano.",
+      "keys": "env: DISABLE_AUTOUPDATER (invertido) & clave: autoUpdatesChannel",
+      "channelLabel": "Canal de actualización",
+      "lock": {
+        "environment": "Desactivado por {{variable}} en el entorno, por ejemplo en un perfil de shell. Elimínala allí para activarlo.",
+        "userSettings": "Desactivado por {{variable}} en {{path}}. Elimínala allí para activarlo.",
+        "managedSettings": "Desactivado por {{variable}} en la configuración administrada ({{path}}), que controla un administrador.",
+        "globalConfig": "Desactivado por \"autoUpdates\": false en {{path}}. Elimínalo allí para activarlo.",
+        "nonessentialTraffic": "Desactivado por «Bloquear tráfico no esencial» en Configuración → General. Desactívalo para activar esto."
+      },
+      "saveFailed": "No se pudo guardar la configuración"
     }
   },
   "browser": {

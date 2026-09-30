@@ -278,6 +278,14 @@ export enum MessageType {
   UPDATE_CLI = 'UPDATE_CLI',
   /** The CLI version changed since the last background update check. outbound backend→webview */
   CLI_UPDATED = 'CLI_UPDATED',
+  /** Read whether Claude Code's own auto-updates are on, and what keeps them off if the toggle cannot. inbound webview→backend */
+  GET_CLI_AUTO_UPDATE = 'GET_CLI_AUTO_UPDATE',
+  /** Turn Claude Code's own auto-updates on or off through `env.DISABLE_AUTOUPDATER` in the user settings file (`{ enabled }`). inbound webview→backend */
+  SET_CLI_AUTO_UPDATE = 'SET_CLI_AUTO_UPDATE',
+  /** Read whether Claude Code is limited to essential traffic (`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`). inbound webview→backend */
+  GET_NONESSENTIAL_TRAFFIC = 'GET_NONESSENTIAL_TRAFFIC',
+  /** Limit Claude Code to essential traffic or lift the limit, in the user settings file (`{ disabled }`). inbound webview→backend */
+  SET_NONESSENTIAL_TRAFFIC = 'SET_NONESSENTIAL_TRAFFIC',
 
   // -- Authentication --
   /** Begin the CLI login flow (produces a login URL). */

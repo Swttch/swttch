@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Afficher les résumés de réflexion",
       "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion.\nClé: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Bloquer le trafic non essentiel",
+      "description": "Limite Claude Code au trafic nécessaire pour répondre.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "Activé dans les paramètres gérés ({{path}}), contrôlés par un administrateur.",
+      "saveFailed": "Impossible d’enregistrer le paramètre"
     }
   },
   "diffView": {
@@ -373,10 +380,25 @@
       "updating": "Mise à jour…",
       "channel": {
         "stable": "Stable",
-        "latest": "Dernière version"
+        "latest": "Dernière version",
+        "rc": "Version candidate"
       },
       "updateSuccess": "Claude Code v{{value}} mis à jour",
       "updateFailed": "Échec de la mise à jour"
+    },
+    "cliAutoUpdate": {
+      "label": "Mettre à jour Claude Code automatiquement",
+      "description": "Laisse Claude Code se mettre à jour en arrière-plan.",
+      "keys": "env : DISABLE_AUTOUPDATER (inversé) & clé : autoUpdatesChannel",
+      "channelLabel": "Canal de mise à jour",
+      "lock": {
+        "environment": "Désactivé par {{variable}} dans l’environnement, par exemple un profil de shell. Supprimez-la à cet endroit pour l’activer.",
+        "userSettings": "Désactivé par {{variable}} dans {{path}}. Supprimez-la à cet endroit pour l’activer.",
+        "managedSettings": "Désactivé par {{variable}} dans les paramètres gérés ({{path}}), contrôlés par un administrateur.",
+        "globalConfig": "Désactivé par \"autoUpdates\": false dans {{path}}. Supprimez-le à cet endroit pour l’activer.",
+        "nonessentialTraffic": "Désactivé par « Bloquer le trafic non essentiel » dans Paramètres → Général. Désactivez-le pour activer ceci."
+      },
+      "saveFailed": "Impossible d’enregistrer le paramètre"
     }
   },
   "browser": {

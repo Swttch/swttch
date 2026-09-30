@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Zusammenfassungen des Denkens anzeigen",
       "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an.\nSchlüssel: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Nicht notwendigen Datenverkehr blockieren",
+      "description": "Beschränkt Claude Code auf den Datenverkehr, den eine Anfrage braucht.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "In den verwalteten Einstellungen ({{path}}) eingeschaltet, die ein Administrator steuert.",
+      "saveFailed": "Einstellung konnte nicht gespeichert werden"
     }
   },
   "diffView": {
@@ -373,10 +380,25 @@
       "updating": "Wird aktualisiert…",
       "channel": {
         "stable": "Stabil",
-        "latest": "Neueste"
+        "latest": "Neueste",
+        "rc": "Release Candidate"
       },
       "updateSuccess": "Claude Code v{{value}} aktualisiert",
       "updateFailed": "Aktualisierung fehlgeschlagen"
+    },
+    "cliAutoUpdate": {
+      "label": "Claude Code automatisch aktualisieren",
+      "description": "Claude Code aktualisiert sich im Hintergrund selbst.",
+      "keys": "env: DISABLE_AUTOUPDATER (invertiert) & Schlüssel: autoUpdatesChannel",
+      "channelLabel": "Update-Kanal",
+      "lock": {
+        "environment": "Durch {{variable}} in der Umgebung ausgeschaltet, etwa in einem Shell-Profil. Entferne die Variable dort, um dies einzuschalten.",
+        "userSettings": "Durch {{variable}} in {{path}} ausgeschaltet. Entferne den Eintrag dort, um dies einzuschalten.",
+        "managedSettings": "Durch {{variable}} in den verwalteten Einstellungen ({{path}}) ausgeschaltet, die ein Administrator steuert.",
+        "globalConfig": "Durch \"autoUpdates\": false in {{path}} ausgeschaltet. Entferne den Eintrag dort, um dies einzuschalten.",
+        "nonessentialTraffic": "Durch „Nicht notwendigen Datenverkehr blockieren“ unter Einstellungen → Allgemein ausgeschaltet. Schalte das aus, um dies einzuschalten."
+      },
+      "saveFailed": "Einstellung konnte nicht gespeichert werden"
     }
   },
   "browser": {

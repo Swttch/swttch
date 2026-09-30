@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Показывать сводки размышлений",
       "description": "Запрашивает у Claude сводку его размышлений и показывает её в блоке размышлений.\nКлюч: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Блокировать необязательный трафик",
+      "description": "Ограничивает Claude Code трафиком, необходимым для ответа.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "Включено в управляемых настройках ({{path}}), которые контролирует администратор.",
+      "saveFailed": "Не удалось сохранить настройку"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "Обновление…",
       "channel": {
         "stable": "Стабильная",
-        "latest": "Последняя"
+        "latest": "Последняя",
+        "rc": "Релиз-кандидат"
       },
       "updateSuccess": "Claude Code обновлён до v{{value}}",
       "updateFailed": "Не удалось обновить"
+    },
+    "cliAutoUpdate": {
+      "label": "Автообновление Claude Code",
+      "description": "Claude Code обновляется сам в фоновом режиме.",
+      "keys": "env: DISABLE_AUTOUPDATER (инвертировано) & ключ: autoUpdatesChannel",
+      "channelLabel": "Канал обновлений",
+      "lock": {
+        "environment": "Выключено переменной {{variable}} в окружении, например в профиле оболочки. Удалите её там, чтобы включить.",
+        "userSettings": "Выключено переменной {{variable}} в {{path}}. Удалите её там, чтобы включить.",
+        "managedSettings": "Выключено переменной {{variable}} в управляемых настройках ({{path}}), которые контролирует администратор.",
+        "globalConfig": "Выключено параметром \"autoUpdates\": false в {{path}}. Удалите его там, чтобы включить.",
+        "nonessentialTraffic": "Выключено параметром «Блокировать необязательный трафик» в Настройки → Общие. Выключите его, чтобы включить это."
+      },
+      "saveFailed": "Не удалось сохранить настройку"
     }
   },
   "browser": {

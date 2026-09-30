@@ -4,6 +4,7 @@ import { APP_NAME, REPO_URL, ISSUES_URL } from '@/config/app';
 import { useVersionInfo } from '@/hooks/useVersionInfo';
 import { useTranslation } from '@/i18n';
 import { CliUpdateControl } from './CliUpdateControl';
+import { CliAutoUpdateRow } from './CliAutoUpdateRow';
 
 export function AboutSettings() {
   const { t } = useTranslation('settings');
@@ -35,6 +36,8 @@ export function AboutSettings() {
             </button>
           </div>
         </SettingRow>
+
+        <CliAutoUpdateRow />
 
         {/* Both rows exist so a bug report can be filled in without hunting through
             IDE menus — see issue #320. */}

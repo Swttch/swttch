@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "Mostrar resumos do raciocínio",
       "description": "Pede ao Claude um resumo do raciocínio e o mostra dentro do bloco de raciocínio.\nChave: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "Bloquear tráfego não essencial",
+      "description": "Limita o Claude Code ao tráfego de que uma solicitação precisa.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "Ativado nas configurações gerenciadas ({{path}}), controladas por um administrador.",
+      "saveFailed": "Não foi possível salvar a configuração"
     }
   },
   "diffView": {
@@ -373,10 +380,25 @@
       "updating": "Atualizando…",
       "channel": {
         "stable": "Estável",
-        "latest": "Mais recente"
+        "latest": "Mais recente",
+        "rc": "Versão candidata"
       },
       "updateSuccess": "Claude Code v{{value}} Atualizado",
       "updateFailed": "Falha na atualização"
+    },
+    "cliAutoUpdate": {
+      "label": "Atualizar o Claude Code automaticamente",
+      "description": "Permite que o Claude Code se atualize em segundo plano.",
+      "keys": "env: DISABLE_AUTOUPDATER (invertido) & chave: autoUpdatesChannel",
+      "channelLabel": "Canal de atualização",
+      "lock": {
+        "environment": "Desativado por {{variable}} no ambiente, como em um perfil de shell. Remova-a lá para ativar.",
+        "userSettings": "Desativado por {{variable}} em {{path}}. Remova-a lá para ativar.",
+        "managedSettings": "Desativado por {{variable}} nas configurações gerenciadas ({{path}}), controladas por um administrador.",
+        "globalConfig": "Desativado por \"autoUpdates\": false em {{path}}. Remova-o lá para ativar.",
+        "nonessentialTraffic": "Desativado por “Bloquear tráfego não essencial” em Configurações → Geral. Desative-o para ativar isto."
+      },
+      "saveFailed": "Não foi possível salvar a configuração"
     }
   },
   "browser": {

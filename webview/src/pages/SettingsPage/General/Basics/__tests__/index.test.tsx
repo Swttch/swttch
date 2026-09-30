@@ -51,6 +51,7 @@ vi.mock('../ChatPaginationRow', () => ({ ChatPaginationRow: () => null }));
 vi.mock('../UiDirectionRow', () => ({ UiDirectionRow: () => null }));
 vi.mock('../ClaudeConfigDirRow', () => ({ ClaudeConfigDirRow: () => null }));
 vi.mock('../FileSuggestionRow', () => ({ FileSuggestionRow: () => null }));
+vi.mock('../NonessentialTrafficRow', () => ({ NonessentialTrafficRow: () => null }));
 // The auto-resume row gates on sponsor status (react-query).
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({
   useSponsorStatus: () => ({ isSponsor: false }),

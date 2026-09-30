@@ -2,6 +2,7 @@ export * from './account';
 export * from './active-session';
 export * from './announcement';
 export * from './cli-update';
+export * from './cli-auto-update';
 export * from './client-env';
 export * from './composer-shortcut';
 export * from './control-request-command';

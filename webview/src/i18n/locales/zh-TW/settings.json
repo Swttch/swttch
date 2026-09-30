@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "顯示思考摘要",
       "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。\n鍵: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "封鎖非必要流量",
+      "description": "將 Claude Code 的網路通訊限制為回應提示所必需的部分。",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "已在由管理員控制的受管理設定（{{path}}）中開啟，無法變更。",
+      "saveFailed": "無法儲存設定"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "正在更新…",
       "channel": {
         "stable": "穩定版",
-        "latest": "最新版"
+        "latest": "最新版",
+        "rc": "候選版本"
       },
       "updateSuccess": "Claude Code v{{value}} 已更新",
       "updateFailed": "更新失敗"
+    },
+    "cliAutoUpdate": {
+      "label": "自動更新 Claude Code",
+      "description": "讓 Claude Code 在背景自行更新。",
+      "keys": "env: DISABLE_AUTOUPDATER（反轉） & 鍵: autoUpdatesChannel",
+      "channelLabel": "更新頻道",
+      "lock": {
+        "environment": "已被環境變數 {{variable}}（例如 shell 設定檔）關閉。請在該處取消設定以開啟。",
+        "userSettings": "已被 {{path}} 中的 {{variable}} 關閉。請在該處移除以開啟。",
+        "managedSettings": "已被受管理設定（{{path}}）中的 {{variable}} 關閉，該設定由管理員控制。",
+        "globalConfig": "已被 {{path}} 中的 \"autoUpdates\": false 關閉。請在該處移除以開啟。",
+        "nonessentialTraffic": "已被設定 → 一般中的「封鎖非必要流量」關閉。請關閉該設定以開啟此項。"
+      },
+      "saveFailed": "無法儲存設定"
     }
   },
   "browser": {

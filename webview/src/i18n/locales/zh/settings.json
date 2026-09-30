@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "显示思考摘要",
       "description": "请求 Claude 提供思考内容的摘要,并显示在思考块中。\n键: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "阻止非必要流量",
+      "description": "将 Claude Code 的网络通信限制为响应提示所必需的部分。",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "已在由管理员控制的托管设置（{{path}}）中开启，无法更改。",
+      "saveFailed": "无法保存设置"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "正在更新…",
       "channel": {
         "stable": "稳定版",
-        "latest": "最新版"
+        "latest": "最新版",
+        "rc": "候选版本"
       },
       "updateSuccess": "Claude Code v{{value}} 更新完成",
       "updateFailed": "更新失败"
+    },
+    "cliAutoUpdate": {
+      "label": "自动更新 Claude Code",
+      "description": "让 Claude Code 在后台自行更新。",
+      "keys": "env: DISABLE_AUTOUPDATER（反转） & 键: autoUpdatesChannel",
+      "channelLabel": "更新渠道",
+      "lock": {
+        "environment": "已被环境变量 {{variable}}（例如 shell 配置文件）关闭。请在那里取消设置以开启。",
+        "userSettings": "已被 {{path}} 中的 {{variable}} 关闭。请在那里删除以开启。",
+        "managedSettings": "已被托管设置（{{path}}）中的 {{variable}} 关闭，该设置由管理员控制。",
+        "globalConfig": "已被 {{path}} 中的 \"autoUpdates\": false 关闭。请在那里删除以开启。",
+        "nonessentialTraffic": "已被设置 → 通用中的“阻止非必要流量”关闭。请关闭该设置以开启此项。"
+      },
+      "saveFailed": "无法保存设置"
     }
   },
   "browser": {

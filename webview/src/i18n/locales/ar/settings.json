@@ -185,6 +185,13 @@
     "showThinkingSummaries": {
       "label": "عرض ملخصات التفكير",
       "description": "يطلب من Claude ملخصًا لتفكيره ويعرضه داخل كتلة التفكير.\nالمفتاح: showThinkingSummaries"
+    },
+    "nonessentialTraffic": {
+      "label": "حظر حركة البيانات غير الضرورية",
+      "description": "يقصر Claude Code على حركة البيانات التي يحتاجها الرد.",
+      "keys": "env: CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+      "managed": "مُشغَّل في الإعدادات المُدارة ({{path}}) التي يتحكم بها المسؤول.",
+      "saveFailed": "تعذّر حفظ الإعداد"
     }
   },
   "diffView": {
@@ -369,10 +376,25 @@
       "updating": "جارٍ التحديث…",
       "channel": {
         "stable": "مستقر",
-        "latest": "الأحدث"
+        "latest": "الأحدث",
+        "rc": "إصدار مرشح"
       },
       "updateSuccess": "تم تحديث Claude Code v{{value}}",
       "updateFailed": "فشل التحديث"
+    },
+    "cliAutoUpdate": {
+      "label": "التحديث التلقائي لـ Claude Code",
+      "description": "يتيح لـ Claude Code تحديث نفسه في الخلفية.",
+      "keys": "env: DISABLE_AUTOUPDATER (معكوس) & المفتاح: autoUpdatesChannel",
+      "channelLabel": "قناة التحديث",
+      "lock": {
+        "environment": "متوقف بسبب {{variable}} في البيئة، مثل ملف تعريف الصدفة. أزلها من هناك لتشغيله.",
+        "userSettings": "متوقف بسبب {{variable}} في {{path}}. أزلها من هناك لتشغيله.",
+        "managedSettings": "متوقف بسبب {{variable}} في الإعدادات المُدارة ({{path}}) التي يتحكم بها المسؤول.",
+        "globalConfig": "متوقف بسبب \"autoUpdates\": false في {{path}}. أزله من هناك لتشغيله.",
+        "nonessentialTraffic": "متوقف بسبب «حظر حركة البيانات غير الضرورية» في الإعدادات ← عام. أوقفه لتشغيل هذا."
+      },
+      "saveFailed": "تعذّر حفظ الإعداد"
     }
   },
   "browser": {
