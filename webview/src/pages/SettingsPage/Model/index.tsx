@@ -1,5 +1,4 @@
 import { DefaultsSection } from './Defaults';
-import { ThinkingSection } from './Thinking';
 import { useTranslation } from '@/i18n';
 
 /** The Model page: a heading and the sections under it. */
@@ -11,7 +10,6 @@ export function ModelSettings() {
       <h2 className="text-xl font-semibold text-text-primary mb-6">{t('nav.model')}</h2>
 
       <DefaultsSection />
-      <ThinkingSection />
     </div>
   );
 }

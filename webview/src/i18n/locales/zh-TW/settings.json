@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "達到用量上限時自動恢復",
       "description": "當您達到工作階段上限時，在額度重置後自動恢復。這是新工作階段的預設值；每個工作階段仍可個別切換。"
+    },
+    "showThinkingSummaries": {
+      "label": "顯示思考摘要",
+      "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。儲存為 showThinkingSummaries,與 Claude Code CLI 使用的設定相同。"
     }
   },
   "diffView": {
@@ -430,11 +434,6 @@
       "syncToDefault": {
         "label": "將模型變更同步至預設設定",
         "description": "切換模型時同時更新 CLI 預設模型，讓新工作階段繼續使用該模型——與 CLI 的 /model 行為一致。關閉時變更僅套用於目前工作階段"
-      },
-      "thinkingSection": "思考",
-      "showThinkingSummaries": {
-        "label": "顯示思考摘要",
-        "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。儲存為 showThinkingSummaries,與 Claude Code CLI 使用的設定相同。"
       }
     },
     "path": {

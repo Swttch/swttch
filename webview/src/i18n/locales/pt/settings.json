@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "Retomada automática no limite de uso",
       "description": "Quando você atingir o limite da sessão, a retomada ocorrerá automaticamente após a redefinição da cota. Este é o padrão para novas sessões; cada sessão ainda pode alterná-lo."
+    },
+    "showThinkingSummaries": {
+      "label": "Mostrar resumos do raciocínio",
+      "description": "Pede ao Claude um resumo do raciocínio e o mostra dentro do bloco de raciocínio. Salvo como showThinkingSummaries, a mesma configuração usada pela CLI do Claude Code."
     }
   },
   "diffView": {
@@ -434,11 +438,6 @@
       "syncToDefault": {
         "label": "Sincronizar as mudanças de modelo com o padrão",
         "description": "Ao trocar de modelo, também atualiza o modelo padrão da CLI para que novas sessões continuem usando-o — igual ao funcionamento do /model da CLI. Desativado, a mudança fica só na sessão atual"
-      },
-      "thinkingSection": "Raciocínio",
-      "showThinkingSummaries": {
-        "label": "Mostrar resumos do raciocínio",
-        "description": "Pede ao Claude um resumo do raciocínio e o mostra dentro do bloco de raciocínio. Salvo como showThinkingSummaries, a mesma configuração usada pela CLI do Claude Code."
       }
     },
     "path": {

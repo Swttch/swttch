@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "Auto-Fortsetzung bei Nutzungslimit",
       "description": "Wenn Sie Ihr Sitzungslimit erreichen, wird nach dem Zurücksetzen des Kontingents automatisch fortgesetzt. Dies ist die Voreinstellung für neue Sitzungen; jede Sitzung kann es weiterhin umschalten."
+    },
+    "showThinkingSummaries": {
+      "label": "Zusammenfassungen des Denkens anzeigen",
+      "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an. Wird als showThinkingSummaries gespeichert, dieselbe Einstellung, die die Claude Code CLI verwendet."
     }
   },
   "diffView": {
@@ -434,11 +438,6 @@
       "syncToDefault": {
         "label": "Modelländerungen mit der Standardeinstellung synchronisieren",
         "description": "Beim Wechseln des Modells wird auch das CLI-Standardmodell aktualisiert, damit neue Sitzungen es weiter verwenden — genau wie /model in der CLI. Ausgeschaltet gilt die Änderung nur für die aktuelle Sitzung"
-      },
-      "thinkingSection": "Denken",
-      "showThinkingSummaries": {
-        "label": "Zusammenfassungen des Denkens anzeigen",
-        "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an. Wird als showThinkingSummaries gespeichert, dieselbe Einstellung, die die Claude Code CLI verwendet."
       }
     },
     "path": {

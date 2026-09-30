@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "Reanudación automática al alcanzar el límite de uso",
       "description": "Cuando alcances el límite de sesión, se reanudará automáticamente una vez que se reinicie el límite. Es el valor predeterminado para las sesiones nuevas; cada sesión puede cambiarlo."
+    },
+    "showThinkingSummaries": {
+      "label": "Mostrar resúmenes del razonamiento",
+      "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento. Se guarda como showThinkingSummaries, la misma opción que usa la CLI de Claude Code."
     }
   },
   "diffView": {
@@ -434,11 +438,6 @@
       "syncToDefault": {
         "label": "Sincronizar los cambios de modelo con el valor predeterminado",
         "description": "Al cambiar de modelo, también actualiza el modelo predeterminado de la CLI para que las nuevas sesiones sigan usándolo — igual que /model en la CLI. Desactivado, el cambio solo se aplica a la sesión actual"
-      },
-      "thinkingSection": "Razonamiento",
-      "showThinkingSummaries": {
-        "label": "Mostrar resúmenes del razonamiento",
-        "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento. Se guarda como showThinkingSummaries, la misma opción que usa la CLI de Claude Code."
       }
     },
     "path": {

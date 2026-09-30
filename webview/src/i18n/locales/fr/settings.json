@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "Reprise automatique à la limite d'utilisation",
       "description": "Lorsque vous atteignez la limite de session, la reprise s'effectue automatiquement une fois le quota réinitialisé. C'est la valeur par défaut pour les nouvelles sessions ; chaque session peut toujours la modifier."
+    },
+    "showThinkingSummaries": {
+      "label": "Afficher les résumés de réflexion",
+      "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion. Enregistré sous showThinkingSummaries, le même réglage que celui de la CLI Claude Code."
     }
   },
   "diffView": {
@@ -434,11 +438,6 @@
       "syncToDefault": {
         "label": "Synchroniser les changements de modèle avec le réglage par défaut",
         "description": "Lors du changement de modèle, met aussi à jour le modèle par défaut du CLI afin que les nouvelles sessions continuent de l'utiliser — comme le fait /model dans le CLI. Désactivé, le changement ne s'applique qu'à la session actuelle"
-      },
-      "thinkingSection": "Réflexion",
-      "showThinkingSummaries": {
-        "label": "Afficher les résumés de réflexion",
-        "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion. Enregistré sous showThinkingSummaries, le même réglage que celui de la CLI Claude Code."
       }
     },
     "path": {

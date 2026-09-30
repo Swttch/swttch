@@ -11,6 +11,7 @@ import { HostModeRow } from './HostModeRow';
 import { OpenSettingsRow } from './OpenSettingsRow';
 import { ChatPaginationRow } from './ChatPaginationRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
+import { ShowThinkingSummariesRow } from './ShowThinkingSummariesRow';
 
 /**
  * The settings that are about the app as a whole rather than about one surface
@@ -36,6 +37,7 @@ export function BasicsSection() {
       <OpenSettingsRow />
       <ChatPaginationRow />
       <ClaudeConfigDirRow />
+      <ShowThinkingSummariesRow />
     </SettingSection>
   );
 }

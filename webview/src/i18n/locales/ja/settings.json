@@ -181,6 +181,10 @@
     "autoResumeOnLimit": {
       "label": "使用上限到達時に自動再開",
       "description": "セッションの上限に達した際、上限リセット後に自動的に再開します。新しいセッションの既定値で、各セッションで切り替え可能です。"
+    },
+    "showThinkingSummaries": {
+      "label": "思考の要約を表示",
+      "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。Claude Code CLI と同じ設定 showThinkingSummaries として保存されます。"
     }
   },
   "diffView": {
@@ -430,11 +434,6 @@
       "syncToDefault": {
         "label": "モデルの変更をデフォルト設定にも反映",
         "description": "モデルを切り替えたときにCLIのデフォルトモデルも更新し、新しいセッションにも引き継がれるようにする — CLIの/modelと同じ動作。オフの場合は現在のセッションのみに適用される"
-      },
-      "thinkingSection": "思考",
-      "showThinkingSummaries": {
-        "label": "思考の要約を表示",
-        "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。Claude Code CLI と同じ設定 showThinkingSummaries として保存されます。"
       }
     },
     "path": {

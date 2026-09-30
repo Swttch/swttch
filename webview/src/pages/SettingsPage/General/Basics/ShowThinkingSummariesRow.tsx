@@ -4,7 +4,7 @@ import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
 import { useIsOverriddenByProject } from '@/utils/settingsScope';
-import { CLAUDE_SETTINGS_DOC_HREF } from '../../General/Basics/docs';
+import { CLAUDE_SETTINGS_DOC_HREF } from './docs';
 
 /**
  * Whether Claude's thinking comes back as a readable summary (#496).
@@ -22,8 +22,8 @@ export function ShowThinkingSummariesRow() {
 
   return (
     <SettingRow
-      label={t('cli.model.showThinkingSummaries.label')}
-      description={t('cli.model.showThinkingSummaries.description')}
+      label={t('general.showThinkingSummaries.label')}
+      description={t('general.showThinkingSummaries.description')}
       isOverridden={isOverridden('showThinkingSummaries')}
       badge={
         <SettingBadge
@@ -35,7 +35,7 @@ export function ShowThinkingSummariesRow() {
       <ToggleSwitch
         checked={showThinkingSummaries}
         onChange={(checked) => void updateSetting('showThinkingSummaries', checked)}
-        ariaLabel={t('cli.model.showThinkingSummaries.label')}
+        ariaLabel={t('general.showThinkingSummaries.label')}
       />
     </SettingRow>
   );
