@@ -169,13 +169,13 @@
       "description": "Загружать более старые сообщения при прокрутке. При отключении вся переписка загружается сразу."
     },
     "configDir": {
-      "description": "Домашний каталог для конфигурации Claude. Аналог переменной окружения CLAUDE_CONFIG_DIR.",
+      "description": "Домашний каталог для конфигурации Claude.\nпеременная окружения env",
       "placeholder": "По умолчанию (~/.claude)",
       "active": "Активно: {{value}}",
       "projectUnavailable": "Откройте проект, чтобы задать значение для проекта."
     },
     "fileSuggestion": {
-      "description": "Пользовательская команда, формирующая индекс файлов @. То же, что параметр fileSuggestion в settings.json.",
+      "description": "Пользовательская команда, формирующая индекс файлов @.\nКлюч: fileSuggestion",
       "placeholder": "напр.: git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "Показывать сводки размышлений",
-      "description": "Запрашивает у Claude сводку его размышлений и показывает её в блоке размышлений. Сохраняется как showThinkingSummaries — та же настройка, что и в Claude Code CLI."
+      "description": "Запрашивает у Claude сводку его размышлений и показывает её в блоке размышлений.\nКлюч: showThinkingSummaries"
     }
   },
   "diffView": {

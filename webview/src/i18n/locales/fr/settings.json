@@ -169,13 +169,13 @@
       "description": "Charger les anciens messages au fur et à mesure du défilement. Désactivé charge toute la conversation en une seule fois."
     },
     "configDir": {
-      "description": "Répertoire personnel pour la configuration de Claude. Identique à la variable d'environnement CLAUDE_CONFIG_DIR.",
+      "description": "Répertoire personnel pour la configuration de Claude.\nvariable d'environnement env",
       "placeholder": "Par défaut (~/.claude)",
       "active": "Actif : {{value}}",
       "projectUnavailable": "Ouvrez un projet pour définir une valeur de projet."
     },
     "fileSuggestion": {
-      "description": "Commande personnalisée qui construit l'index de fichiers @. Identique au paramètre fileSuggestion dans settings.json.",
+      "description": "Commande personnalisée qui construit l'index de fichiers @.\nClé: fileSuggestion",
       "placeholder": "ex. : git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "Afficher les résumés de réflexion",
-      "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion. Enregistré sous showThinkingSummaries, le même réglage que celui de la CLI Claude Code."
+      "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion.\nClé: showThinkingSummaries"
     }
   },
   "diffView": {

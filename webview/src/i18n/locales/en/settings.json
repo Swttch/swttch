@@ -169,13 +169,13 @@
       "description": "Load older messages as you scroll. Off loads the whole conversation at once."
     },
     "configDir": {
-      "description": "Home directory for Claude's config. Same as the CLAUDE_CONFIG_DIR environment variable.",
+      "description": "Home directory for Claude's config.\nenv environment variable",
       "placeholder": "Default (~/.claude)",
       "active": "Active: {{value}}",
       "projectUnavailable": "Open a project to set a project value."
     },
     "fileSuggestion": {
-      "description": "Custom command that builds the @ file index. Same as the fileSuggestion setting in settings.json.",
+      "description": "Custom command that builds the @ file index.\nKey: fileSuggestion",
       "placeholder": "e.g. git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "Show thinking summaries",
-      "description": "Ask Claude for a summary of its thinking and show it inside the thinking block. Saved as showThinkingSummaries, the same setting the Claude Code CLI uses."
+      "description": "Ask Claude for a summary of its thinking and show it inside the thinking block.\nKey: showThinkingSummaries"
     }
   },
   "diffView": {

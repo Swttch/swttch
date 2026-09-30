@@ -169,13 +169,13 @@
       "description": "Ältere Nachrichten werden beim Scrollen nachgeladen. Bei Deaktivierung wird die gesamte Unterhaltung auf einmal geladen."
     },
     "configDir": {
-      "description": "Home-Verzeichnis für Claudes Konfiguration. Entspricht der Umgebungsvariable CLAUDE_CONFIG_DIR.",
+      "description": "Home-Verzeichnis für Claudes Konfiguration.\nenv-Umgebungsvariable",
       "placeholder": "Standard (~/.claude)",
       "active": "Aktiv: {{value}}",
       "projectUnavailable": "Öffne ein Projekt, um einen Projektwert festzulegen."
     },
     "fileSuggestion": {
-      "description": "Benutzerdefinierter Befehl, der den @-Dateiindex erstellt. Entspricht der Einstellung fileSuggestion in settings.json.",
+      "description": "Benutzerdefinierter Befehl, der den @-Dateiindex erstellt.\nSchlüssel: fileSuggestion",
       "placeholder": "z. B. git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "Zusammenfassungen des Denkens anzeigen",
-      "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an. Wird als showThinkingSummaries gespeichert, dieselbe Einstellung, die die Claude Code CLI verwendet."
+      "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an.\nSchlüssel: showThinkingSummaries"
     }
   },
   "diffView": {

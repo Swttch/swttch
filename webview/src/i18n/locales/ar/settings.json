@@ -169,13 +169,13 @@
       "description": "تحميل الرسائل الأقدم أثناء التمرير. الإيقاف يحمّل المحادثة بأكملها دفعة واحدة."
     },
     "configDir": {
-      "description": "الدليل الرئيسي لإعدادات Claude. مماثل لمتغيّر البيئة CLAUDE_CONFIG_DIR.",
+      "description": "الدليل الرئيسي لإعدادات Claude.\nمتغيّر البيئة env",
       "placeholder": "الافتراضي (~/.claude)",
       "active": "نشط: {{value}}",
       "projectUnavailable": "افتح مشروعًا لتعيين قيمة خاصة بالمشروع."
     },
     "fileSuggestion": {
-      "description": "أمر مخصّص يبني فهرس ملفات @. مطابق لإعداد fileSuggestion في settings.json.",
+      "description": "أمر مخصّص يبني فهرس ملفات @.\nالمفتاح: fileSuggestion",
       "placeholder": "مثال: git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "عرض ملخصات التفكير",
-      "description": "يطلب من Claude ملخصًا لتفكيره ويعرضه داخل كتلة التفكير. يُحفظ باسم showThinkingSummaries، وهو الإعداد نفسه الذي يستخدمه Claude Code CLI."
+      "description": "يطلب من Claude ملخصًا لتفكيره ويعرضه داخل كتلة التفكير.\nالمفتاح: showThinkingSummaries"
     }
   },
   "diffView": {

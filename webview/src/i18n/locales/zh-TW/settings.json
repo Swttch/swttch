@@ -169,13 +169,13 @@
       "description": "捲動時載入較舊的訊息。關閉時會一次載入整個對話。"
     },
     "configDir": {
-      "description": "Claude 設定所在的主目錄。與 CLAUDE_CONFIG_DIR 環境變數相同。",
+      "description": "Claude 設定所在的主目錄。\nenv 環境變數",
       "placeholder": "預設(~/.claude)",
       "active": "使用中:{{value}}",
       "projectUnavailable": "開啟專案以設定專案層級的值。"
     },
     "fileSuggestion": {
-      "description": "用於建立 @ 檔案索引的自訂命令。與 settings.json 中的 fileSuggestion 設定相同。",
+      "description": "用於建立 @ 檔案索引的自訂命令。\n鍵: fileSuggestion",
       "placeholder": "例如：git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "顯示思考摘要",
-      "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。儲存為 showThinkingSummaries,與 Claude Code CLI 使用的設定相同。"
+      "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。\n鍵: showThinkingSummaries"
     }
   },
   "diffView": {

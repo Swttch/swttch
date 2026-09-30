@@ -169,13 +169,13 @@
       "description": "Carga mensajes antiguos a medida que te desplazas. Desactivado carga toda la conversación de una vez."
     },
     "configDir": {
-      "description": "Directorio base para la configuración de Claude. Igual que la variable de entorno CLAUDE_CONFIG_DIR.",
+      "description": "Directorio base para la configuración de Claude.\nvariable de entorno env",
       "placeholder": "Predeterminado (~/.claude)",
       "active": "Activo: {{value}}",
       "projectUnavailable": "Abre un proyecto para definir un valor de proyecto."
     },
     "fileSuggestion": {
-      "description": "Comando personalizado que crea el índice de archivos @. Igual que el ajuste fileSuggestion en settings.json.",
+      "description": "Comando personalizado que crea el índice de archivos @.\nClave: fileSuggestion",
       "placeholder": "p. ej., git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "Mostrar resúmenes del razonamiento",
-      "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento. Se guarda como showThinkingSummaries, la misma opción que usa la CLI de Claude Code."
+      "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento.\nClave: showThinkingSummaries"
     }
   },
   "diffView": {

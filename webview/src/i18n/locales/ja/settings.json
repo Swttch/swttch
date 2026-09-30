@@ -169,13 +169,13 @@
       "description": "スクロールに合わせて過去のメッセージを読み込みます。オフにすると会話全体を一度に読み込みます。"
     },
     "configDir": {
-      "description": "Claudeの設定用ホームディレクトリ。CLAUDE_CONFIG_DIR 環境変数と同じです。",
+      "description": "Claudeの設定用ホームディレクトリ。\nenv 環境変数",
       "placeholder": "デフォルト(~/.claude)",
       "active": "有効: {{value}}",
       "projectUnavailable": "プロジェクト値を設定するにはプロジェクトを開いてください。"
     },
     "fileSuggestion": {
-      "description": "@ ファイル一覧を生成するカスタムコマンド。settings.json の fileSuggestion 設定と同じです。",
+      "description": "@ ファイル一覧を生成するカスタムコマンド。\nキー: fileSuggestion",
       "placeholder": "例: git ls-files --recurse-submodules"
     },
     "autoResumeOnLimit": {
@@ -184,7 +184,7 @@
     },
     "showThinkingSummaries": {
       "label": "思考の要約を表示",
-      "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。Claude Code CLI と同じ設定 showThinkingSummaries として保存されます。"
+      "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。\nキー: showThinkingSummaries"
     }
   },
   "diffView": {
