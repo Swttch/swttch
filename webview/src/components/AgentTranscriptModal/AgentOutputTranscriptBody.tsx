@@ -6,6 +6,7 @@ import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
 import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
 import { mergeToolResults } from '@/pages/ChatPage/mergeToolResults';
+import { mergeSplitThinkingMessages } from '@/pages/ChatPage/mergeSplitThinkingMessages';
 import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
 import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
 
@@ -55,7 +56,7 @@ export function AgentOutputTranscriptBody(props: Props) {
       })
       .filter((entry): entry is Record<string, unknown> => entry !== null);
     const converted = entries.map((entry) => toInstance(LoadedMessageDto, entry));
-    return mergeToolResults(converted);
+    return mergeToolResults(mergeSplitThinkingMessages(converted));
   }, [text]);
 
   // Same auto-scroll contract as the main chat and BackgroundTaskOutputBody:

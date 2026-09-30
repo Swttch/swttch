@@ -40,6 +40,7 @@ import { SettingKey } from '@/types/settings';
 import { clampAutoScrollThreshold, nextAutoFollow, shouldShowScrollToBottom, AUTO_SCROLL_THRESHOLD_DEFAULT, AUTO_SCROLL_BOTTOM_EPS } from '@/utils/autoScroll';
 import { useApi } from '../../contexts/ApiContext';
 import { mergeToolResults } from './mergeToolResults';
+import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
 import { isOlderPagePrepend, findNewestUserUuid } from './paging';
 import { useTranslation } from '@/i18n';
@@ -224,9 +225,10 @@ function ChatPageContent() {
 
   // restoreQueuedMessages runs first: it turns the CLI's queue bookkeeping back
   // into the user messages it never wrote to the session file, so mergeToolResults
-  // sees the same shape it would for any other conversation.
+  // sees the same shape it would for any other conversation. mergeSplitThinkingMessages
+  // rejoins a thinking stretch one response wrote as two session entries (#496).
   const mergedMessages = useMemo(
-    () => mergeToolResults(restoreQueuedMessages(messages)),
+    () => mergeToolResults(mergeSplitThinkingMessages(restoreQueuedMessages(messages))),
     [messages],
   );
 

@@ -6,6 +6,7 @@ import { ToolRenderer } from './ToolRenderer';
 import { AuthErrorRenderer } from './AuthErrorRenderer';
 import { LimitReachedRenderer } from './LimitReachedRenderer';
 import { mergeAdjacentTextBlocks } from './mergeAdjacentTextBlocks';
+import { mergeAdjacentThinkingBlocks } from './mergeAdjacentThinkingBlocks';
 import {ThinkingStreamingMessage} from "@/pages/ChatPage/ThinkingStreamingMessage.tsx";
 import { parseContextUsage } from '@/utils/parseContextUsage';
 import { ContextUsageCard } from './components/ContextUsageCard';
@@ -22,7 +23,10 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
   // Merge adjacent text blocks so a single logical block streamed as multiple
   // text blocks renders as one markdown document (issue #155). Non-text blocks
   // (tool_use/thinking) stay as boundaries, preserving legitimate splits.
-  const blocks = mergeAdjacentTextBlocks(isContentBlockArray(content) ? content : []);
+  // Adjacent thinking blocks are one response's split stretch of thinking (#496).
+  const blocks = mergeAdjacentThinkingBlocks(
+    mergeAdjacentTextBlocks(isContentBlockArray(content) ? content : []),
+  );
   const hasContent = blocks.length > 0 || typeof content === 'string';
 
   // Skip rendering if message has no meaningful content (e.g. interrupted empty responses)
