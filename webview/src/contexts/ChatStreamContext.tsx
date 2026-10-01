@@ -276,9 +276,6 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // - model: 카탈로그에서 식별되면 원본 그대로 채택한다(원본 보존). 식별하지 못하면
   //   기존 선택을 덮어쓰지 않는다 — "못 알아봤다"를 "기본값이다"로 해석하면 사용자가
   //   고른 모델이 조용히 버려진다(#217). 판단은 reconcileSessionModel이 담당.
-  // - permissionMode: CLI가 실제 적용한 모드. auto를 요청했어도 미지원이면 CLI가
-  //   default로 강등하고 그 결과를 여기로 통보한다. 화면 모드를 진실에 맞추고,
-  //   강등이면 인풋배너로 안내한다.
   useEffect(() => {
     if (!chatStream.systemInit) return;
     const init = chatStream.systemInit as Record<string, unknown>;
@@ -286,6 +283,19 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     const rawModel = (init.model as string | null) ?? null;
     const catalog = controlResponse?.response?.response?.models ?? [];
     setSessionModel((prev) => reconcileSessionModel(rawModel, prev, catalog));
+  }, [chatStream.systemInit, controlResponse]);
+
+  // - permissionMode: CLI가 실제 적용한 모드. auto를 요청했어도 미지원이면 CLI가
+  //   default로 강등하고 그 결과를 여기로 통보한다. 화면 모드를 진실에 맞추고,
+  //   강등이면 인풋배너로 안내한다.
+  //
+  //   Kept apart from the model effect above on purpose (#497): this report is a fact
+  //   about the moment systemInit arrived. Running it again when controlResponse
+  //   changes (opening the slash panel re-fetches it) would overwrite a mode the user
+  //   picked since, and has not sent yet, with that stale report.
+  useEffect(() => {
+    if (!chatStream.systemInit) return;
+    const init = chatStream.systemInit as Record<string, unknown>;
 
     const pm = init.permissionMode as string | undefined;
     const effectiveMode = pm ? CLI_FLAG_TO_INPUT_MODE[pm] : undefined;
@@ -295,7 +305,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         session.notifyAutoFallback();
       }
     }
-  }, [chatStream.systemInit, controlResponse, session.syncEffectiveMode, session.notifyAutoFallback]);
+  }, [chatStream.systemInit, session.syncEffectiveMode, session.notifyAutoFallback]);
 
   // The fork note a send action left on the navigation to this new session
   // (issue #356). Read through a ref so `sendMessage` does not have to list the
