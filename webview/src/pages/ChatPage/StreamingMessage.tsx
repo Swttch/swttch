@@ -14,6 +14,13 @@ interface StreamingMessageProps {
     isStreaming: boolean;
     className?: string;
     message?: import('../../types').LoadedMessageDto;
+    /**
+     * Drawn under the text, inside the same column, for a caller that hangs a
+     * line of its own there (the assistant reply's `MessageFooter`). Giving one
+     * also tightens the wrapper's bottom padding, so the line takes the room
+     * the padding used to.
+     */
+    footer?: React.ReactNode;
 }
 
 export const StreamingMessage: React.FC<StreamingMessageProps> = ({
@@ -21,6 +28,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     isStreaming,
     className = '',
     message,
+    footer,
 }) => {
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
     const markdownRef = useRef<HTMLDivElement>(null);
@@ -43,7 +51,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     }, [isStreaming]);
 
     return (
-        <ToolWrapper message={message} className="!mt-0">
+        <ToolWrapper message={message} className="!mt-0" groupClassName={footer ? '!pb-2' : undefined}>
             <div className={`streaming-message ${className}`}>
                 <div ref={markdownRef} className={`markdown-content ${shouldAnimate ? 'streaming-animate' : ''}`}>
                     <Streamdown
@@ -61,6 +69,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
                     </Streamdown>
                     <CodeBlockWrapControls containerRef={markdownRef} content={content} />
                 </div>
+                {footer}
             </div>
         </ToolWrapper>
     );

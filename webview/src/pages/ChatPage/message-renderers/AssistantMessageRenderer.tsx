@@ -10,6 +10,8 @@ import { mergeAdjacentThinkingBlocks } from './mergeAdjacentThinkingBlocks';
 import {ThinkingStreamingMessage} from "@/pages/ChatPage/ThinkingStreamingMessage.tsx";
 import { parseContextUsage } from '@/utils/parseContextUsage';
 import { ContextUsageCard } from './components/ContextUsageCard';
+import { MessageFooter } from './components/MessageFooter';
+import { useLastEntryUuid } from '../LastEntryContext';
 
 interface AssistantMessageRendererProps {
   message: LoadedMessageDto;
@@ -20,6 +22,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
   message,
 }) => {
   const content = message.message?.content;
+  const isLastEntry = useLastEntryUuid() === message.uuid;
   // Merge adjacent text blocks so a single logical block streamed as multiple
   // text blocks renders as one markdown document (issue #155). Non-text blocks
   // (tool_use/thinking) stay as boundaries, preserving legitimate splits.
@@ -52,6 +55,24 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
     return <LimitReachedRenderer message={message} />;
   }
 
+  /*
+    Copy and the send time under each stretch of reply text.
+
+    Fork is left out. Forking from a user send branches off before it, carrying
+    its prompt; a reply has no prompt to carry, and branching after it is not
+    something the backend offers yet.
+
+    Nothing while the text is still streaming: it would copy half a reply, and
+    the time on a streaming entry is the webview's own clock until the CLI's
+    recorded entry replaces it.
+
+    Always shown, hover or not, on the text the chat ends on: the last block
+    of the last entry. Text followed by a tool card in the same entry is not
+    where the chat ends, so it waits for a hover like the rest.
+  */
+  const replyFooter = (text: string, isLastBlock: boolean) =>
+      message.isStreaming ? undefined : <MessageFooter className="relative -left-4" copyText={text} timestamp={message.timestamp} alwaysDisplay={isLastEntry && isLastBlock} />;
+
   return (
       <>
         {hasContent ? (
@@ -62,6 +83,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                       isStreaming={message.isStreaming ?? false}
                       className="text-text-primary text-[1rem] leading-relaxed"
                       message={message}
+                      footer={replyFooter(content, true)}
                   />
               ) : (
                   blocks.map((block, index) => {
@@ -102,6 +124,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
                               isStreaming={message.isStreaming ?? false}
                               className="text-text-primary text-[1rem] leading-relaxed"
                               message={message}
+                              footer={replyFooter(block.text, index === blocks.length - 1)}
                           />
                       );
                     }

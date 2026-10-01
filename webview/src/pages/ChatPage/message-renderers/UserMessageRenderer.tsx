@@ -27,6 +27,7 @@ import { MessageFooter } from './components/MessageFooter';
 import { useSectionKey } from '../SectionFoldContext';
 import { useSendActionsValue } from '../SendActionsContext';
 import { useScrollFoldValue } from '../ScrollFoldContext';
+import { useLastEntryUuid } from '../LastEntryContext';
 
 interface UserMessageRendererProps {
   message: LoadedMessageDto;
@@ -46,6 +47,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // Held here rather than inside `MessageBox`, because the footer below the
   // bubble changes with it too.
   const [expanded, setExpanded] = useState(false);
+  const isLastEntry = useLastEntryUuid() === message.uuid;
 
   // A peer Claude session's report, injected mid-turn — not something the
   // user typed. Route it before any of the plain-text paths below, which
@@ -240,6 +242,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
               }
               timestamp={message.timestamp}
               expanded={expanded}
+              alwaysDisplay={isLastEntry}
             />
 
             <SendActionMenu copyText={stripSessionMentionTags(parsedContent.text)} />

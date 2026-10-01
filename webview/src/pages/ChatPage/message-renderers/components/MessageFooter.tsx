@@ -14,6 +14,8 @@ import { useScrollFoldValue } from '../../ScrollFoldContext';
  * `onFork` out, and the slot is simply not there.
  */
 interface MessageFooterProps {
+  className?: string;
+
   /** Text the copy button writes to the clipboard. Omit to hide the button. */
   copyText?: string;
   /** Called by the fork button. Omit to hide the button. */
@@ -29,6 +31,12 @@ interface MessageFooterProps {
    * with the expanded bubble.
    */
   expanded?: boolean;
+  /**
+   * Show the footer without waiting for a hover. Set on whatever the chat ends
+   * on, so the latest exchange always has its copy button and time in view.
+   * A pinned, folded send still drops it — folding outranks this.
+   */
+  alwaysDisplay?: boolean;
 }
 
 /*
@@ -60,7 +68,7 @@ function ForkIcon({ className }: { className?: string }) {
 const buttonClass =
   'flex items-center justify-center w-6 h-6 rounded text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors cursor-pointer';
 
-export function MessageFooter({ copyText, onFork, timestamp, expanded = false }: MessageFooterProps) {
+export function MessageFooter({ className = '', copyText, onFork, timestamp, expanded = false, alwaysDisplay = false }: MessageFooterProps) {
   const { t, i18n } = useTranslation('chat');
   const time = timestamp ? formatMessageTimestamp(timestamp, i18n.language) : '';
   // Set while the send is pinned to the top and folded by the scroll. The
@@ -102,7 +110,7 @@ export function MessageFooter({ copyText, onFork, timestamp, expanded = false }:
     // The click stops here: `ChatMessageArea` logs the raw entry on any click
     // that reaches it, which is not what pressing one of these buttons asked for.
     <div
-      className={`${folded ? (expanded ? '' : 'hidden') : 'invisible group-hover:visible'} transition-all inline-flex items-center gap-1 text-xs text-text-secondary mt-2`}
+      className={`${className} ${folded ? (expanded ? '' : 'hidden') : (alwaysDisplay ? '' : 'invisible group-hover:visible')} transition-all inline-flex items-center gap-1 text-xs text-text-secondary mt-2`}
       onClick={e => e.stopPropagation()}
     >
       {copyText !== undefined && (

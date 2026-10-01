@@ -15,6 +15,7 @@ import { LoadedMessageDto } from '../../types';
 import { StickySendHeader } from './StickySendHeader';
 import { SectionFoldContext, SectionKeyContext } from './SectionFoldContext';
 import { SendActionsContext } from './SendActionsContext';
+import { LastEntryContext, lastEntryUuid } from './LastEntryContext';
 import { useSendActions } from './useSendActions';
 import { useSectionFold } from './useSectionFold';
 import { CollapsedReplyNotice } from './CollapsedReplyNotice';
@@ -121,6 +122,7 @@ export function ChatMessageArea(props: Props) {
       */}
       <SectionFoldContext.Provider value={fold}>
       <SendActionsContext.Provider value={sendActions}>
+      <LastEntryContext.Provider value={lastEntryUuid(mergedMessages)}>
       {sections.map(section => {
         /*
           A headless opening section takes its header from the send index. The
@@ -215,6 +217,7 @@ export function ChatMessageArea(props: Props) {
         </div>
         );
       })}
+      </LastEntryContext.Provider>
       </SendActionsContext.Provider>
       </SectionFoldContext.Provider>
       {isStreaming && <StreamingIndicator countdownSeconds={disconnectCountdown} apiRetry={apiRetry} />}
