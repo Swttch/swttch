@@ -18,6 +18,14 @@ interface MessageBoxProps {
    * (click) behaves identically either way: both grow to `80vh` and scroll.
    */
   variant?: 'default' | 'compact';
+  /**
+   * Hand the expand state to the caller instead of keeping it here, for a
+   * caller whose other parts change with it — the user send shows its
+   * `MessageFooter` once a folded, pinned bubble is expanded. Give both or
+   * neither; with neither the box keeps the state itself, as before.
+   */
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 /**
@@ -46,8 +54,10 @@ interface MessageBoxProps {
  * looks detached but keeps its place in the flow. `StickySendHeader` makes up
  * the difference outside itself; see the spacer there.
  */
-export const MessageBox: React.FC<MessageBoxProps> = ({ children, collapsible = true, className, variant = 'default' }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const MessageBox: React.FC<MessageBoxProps> = ({ children, collapsible = true, className, variant = 'default', expanded, onExpandedChange }) => {
+  const [ownExpanded, setOwnExpanded] = useState(false);
+  const isExpanded = expanded ?? ownExpanded;
+  const setIsExpanded = onExpandedChange ?? setOwnExpanded;
   const fold = useScrollFoldValue();
   const folding = collapsible && !isExpanded && fold !== null;
 

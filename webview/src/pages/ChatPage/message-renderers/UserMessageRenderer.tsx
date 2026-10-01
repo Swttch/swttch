@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LoadedMessageDto, getTextContent, isContentBlockArray } from '../../../types';
 import type { ImageBlockDto, ToolResultBlockDto } from '../../../dto/message/ContentBlockDto';
 import { ContentBlockType } from '../../../dto/message/ContentBlockDto';
@@ -23,6 +23,10 @@ import { modelChangeTarget } from '@/types/models';
 import { ModelInfo } from '@/types/slashCommand';
 import { useTranslation } from '@/i18n';
 import { useHideToolCalls } from './hideToolCalls';
+import { MessageFooter } from './components/MessageFooter';
+import { useSectionKey } from '../SectionFoldContext';
+import { useSendActionsValue } from '../SendActionsContext';
+import { useScrollFoldValue } from '../ScrollFoldContext';
 
 interface UserMessageRendererProps {
   message: LoadedMessageDto;
@@ -34,8 +38,14 @@ const INTERRUPTED_FOR_TOOL_USE_TEXT = '[Request interrupted by user for tool use
 export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ message }) => {
   const { controlResponse } = useCliConfig();
   const { t } = useTranslation('chatTools');
+  const sectionKey = useSectionKey();
+  const sendActions = useSendActionsValue();
   const hideToolCalls = useHideToolCalls();
   const parsedContent = parseUserContent(getTextContent(message));
+  const folded = useScrollFoldValue() !== null;
+  // Held here rather than inside `MessageBox`, because the footer below the
+  // bubble changes with it too.
+  const [expanded, setExpanded] = useState(false);
 
   // A peer Claude session's report, injected mid-turn — not something the
   // user typed. Route it before any of the plain-text paths below, which
@@ -194,7 +204,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
 
   return (
     <IfVisible extra={imageBlocks.length > 0 || allContexts.length > 0} debugId={debugId}>
-      <div className="group pt-2 pb-4 px-4 space-y-2.5">
+      <div className={`group ${folded ? 'pt-2 pb-4' : 'py-2'} px-4 space-y-2.5`}>
         <div className="flex items-start">
           {/*
             `relative` so the menu can hang off the bubble's own top-right
@@ -207,7 +217,7 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
           <div className="relative min-w-0">
             {/* Folds the reply below this send; see `SendFoldToggle`. */}
             <SendFoldToggle />
-            <MessageBox>
+            <MessageBox expanded={expanded} onExpandedChange={setExpanded}>
               <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">
                 {tokenizeMessagePaths(parsedContent.text).map((seg, idx) =>
                   seg.mention ? (
@@ -220,6 +230,17 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
                 )}
               </div>
             </MessageBox>
+
+            <MessageFooter
+              copyText={stripSessionMentionTags(parsedContent.text)}
+              onFork={
+                sendActions && sectionKey !== null && sendActions.canFork(sectionKey)
+                  ? () => sendActions.forkConversation(sectionKey)
+                  : undefined
+              }
+              timestamp={message.timestamp}
+              expanded={expanded}
+            />
 
             <SendActionMenu copyText={stripSessionMentionTags(parsedContent.text)} />
           </div>

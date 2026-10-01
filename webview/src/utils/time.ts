@@ -39,3 +39,33 @@ export function getMessagePreview(content: string, maxLength: number = 50): stri
   if (cleaned.length <= maxLength) return cleaned;
   return cleaned.substring(0, maxLength).trim() + '...';
 }
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The time a message was sent, as shown under it (issue #498).
+ *
+ * Within a week the weekday is enough to place it: "(Thursday) 12:13 PM".
+ * Past that a weekday repeats, so the date leads: "June 27 (Mon) 5:08 PM".
+ * Each piece comes from `Intl` in the UI language, so every locale reads in
+ * its own words with the same shape. Returns '' for an absent or unparseable
+ * timestamp, so the caller can draw nothing.
+ */
+export function formatMessageTimestamp(
+  timestamp: string | undefined,
+  locale: string,
+  now: Date = new Date(),
+): string {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
+  if (now.getTime() - date.getTime() < WEEK_MS) {
+    const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(date);
+    return `(${weekday}) ${time}`;
+  }
+  const monthDay = new Intl.DateTimeFormat(locale, { month: 'long', day: 'numeric' }).format(date);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+  return `${monthDay} (${weekday}) ${time}`;
+}
