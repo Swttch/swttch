@@ -3,6 +3,8 @@ import {ContextPills} from "@/pages/ChatPage/message-renderers";
 import type {LoadedMessageDto} from "@/types";
 import {Tooltip} from "@/components";
 import {cn} from "@/utils/cn.ts";
+import {formatMessageTimestamp} from "@/utils/time";
+import {useTranslation} from "@/i18n";
 import {ToolUseBlockDto} from "@/dto/message/ContentBlockDto";
 import {useToolStatus, useToolDeclined, type ToolStatus} from "./toolStatus";
 import {useSoftWrapToggle} from "@/pages/ChatPage/message-renderers/components/useSoftWrapToggle";
@@ -63,6 +65,7 @@ export const ToolWrapper = (props: {
     const contextStatus = useToolStatus();
     const status = forceStatus ?? contextStatus;
     const declined = useToolDeclined();
+    const {i18n} = useTranslation();
     // A decline reads as an error, the way it does in the CLI. It is a decision
     // rather than a fault, but a muted bullet put it in the same visual class as
     // a tool that ran and returned nothing interesting.
@@ -84,7 +87,16 @@ export const ToolWrapper = (props: {
                   that draws one, so the attribute belongs here rather than on
                   each of the ~190 renderers that mount it.
                 */}
-                <span data-message-bullet className={cn('mt-[3px] text-[0.6923rem]', bulletColor)}>●</span>
+                {/*
+                  Hovering the bullet shows when the entry was recorded, in the
+                  same format as the time in `MessageFooter` (issue #498). A
+                  tool card has no footer, so the bullet is where its time
+                  lives. No timestamp, no tooltip: `Tooltip` draws nothing for
+                  empty content.
+                */}
+                <Tooltip content={formatMessageTimestamp(message?.timestamp, i18n.language)}>
+                    <span data-message-bullet className={cn('mt-[3px] text-[0.6923rem] cursor-default', bulletColor)}>●</span>
+                </Tooltip>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
