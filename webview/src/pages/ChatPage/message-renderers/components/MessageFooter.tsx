@@ -1,6 +1,7 @@
 import toast from 'react-hot-toast';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
+import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { formatMessageTimestamp } from '@/utils/time';
 import { useScrollFoldValue } from '../../ScrollFoldContext';
 
@@ -70,8 +71,22 @@ export function MessageFooter({ copyText, onFork, timestamp, expanded = false }:
   // so the footer comes back with it, and stays shown rather than waiting for
   // a hover: the click already said where the attention is.
   const folded = useScrollFoldValue() !== null;
+  const { confirmDialog, confirm } = useConfirmDialog();
 
   if (copyText === undefined && !onFork && !time) return null;
+
+  // Asked first, because forking opens a new session and moves the user into
+  // it. A button that sits under every message, one pointer move away from
+  // copy, is too easy to press by accident for that to happen on one click.
+  const handleFork = async () => {
+    if (!onFork) return;
+    const ok = await confirm({
+      title: t('sendActions.forkConfirmTitle'),
+      message: t('sendActions.forkConfirmMessage'),
+      confirmLabel: t('sendActions.forkConfirmButton'),
+    });
+    if (ok) onFork();
+  };
 
   // Same feedback as the copy entry in `SendActionMenu`: a failed clipboard
   // write is reported, since the user would otherwise paste something else.
@@ -107,7 +122,7 @@ export function MessageFooter({ copyText, onFork, timestamp, expanded = false }:
         <Tooltip content={t('sendActions.forkConversation')} placement="top">
           <button
             type="button"
-            onClick={onFork}
+            onClick={handleFork}
             aria-label={t('sendActions.forkConversation')}
             className={buttonClass}
           >
@@ -117,6 +132,8 @@ export function MessageFooter({ copyText, onFork, timestamp, expanded = false }:
       )}
 
       {time && <span className="px-1">{time}</span>}
+
+      {confirmDialog}
     </div>
   );
 }
