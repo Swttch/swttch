@@ -280,7 +280,7 @@
       "truncated": "Affichage des {{count}} entrées les plus récentes.",
       "starting": "Démarrage de la tâche…",
       "updating": "Mise à jour…",
-      "jumpToBottom": "Aller en bas",
+      "refreshFailed": "Impossible d'actualiser cette transcription. Affichage de la dernière version chargée.",
       "copyCommand": "Copier la commande",
       "resize": "Glisser pour redimensionner",
       "noOutputYet": "Pas encore de sortie.",

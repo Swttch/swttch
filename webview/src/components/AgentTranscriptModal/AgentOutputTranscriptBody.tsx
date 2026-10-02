@@ -1,22 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowPathIcon, ArrowDownIcon } from '@heroicons/react/24/outline';
+import { useMemo } from 'react';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { toInstance } from '@/dto/common';
 import { LoadedMessageDto } from '@/types';
 import { mergeToolResults } from '@/pages/ChatPage/mergeToolResults';
 import { mergeSplitThinkingMessages } from '@/pages/ChatPage/mergeSplitThinkingMessages';
+import { findNewestUserUuid } from '@/pages/ChatPage/paging';
 import { MessageBubble } from '@/pages/ChatPage/MessageBubble';
 import { StreamingIndicator } from '@/pages/ChatPage/StreamingIndicator';
+import { ScrollToBottomButton } from '@/components/ScrollToBottomButton';
+import { agentRearmKey } from './agentRearmKey';
+import { useGlideOnSend } from './useGlideOnSend';
+import { DETAIL_STORAGE_KEY } from './detailScroll';
 
 interface Props {
   task: WorkflowTask;
   outputFile: string | undefined;
+  /**
+   * How many messages the user has sent from this modal. Each one switches
+   * following back on, the way sending in the main chat does.
+   */
+  sendCount: number;
 }
-
-/** How close to the bottom (px) counts as "already at the bottom" for auto-scroll. */
-const BOTTOM_THRESHOLD_PX = 24;
 
 /**
  * Detail body for a single backgrounded Agent/Task call (task_type
@@ -32,7 +40,7 @@ const BOTTOM_THRESHOLD_PX = 24;
  * bytes, so parsing the pushed text into entries is a frontend-only concern.
  */
 export function AgentOutputTranscriptBody(props: Props) {
-  const { task, outputFile } = props;
+  const { task, outputFile, sendCount } = props;
   const { t } = useTranslation('chat');
   const isRunning = task.status === 'running';
 
@@ -59,40 +67,21 @@ export function AgentOutputTranscriptBody(props: Props) {
     return mergeToolResults(mergeSplitThinkingMessages(converted));
   }, [text]);
 
-  // Same auto-scroll contract as the main chat and BackgroundTaskOutputBody:
-  // follow new content while already at the bottom, stop the instant the
-  // reader scrolls up to read something, and resume once they scroll back
-  // down themselves (never yanked there by a push arriving mid-read).
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const wasAtBottomRef = useRef(true);
-  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (wasAtBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-      setShowJumpToBottom(false);
-    } else {
-      setShowJumpToBottom(true);
-    }
-  }, [text]);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_THRESHOLD_PX;
-    wasAtBottomRef.current = atBottom;
-    if (atBottom) setShowJumpToBottom(false);
-  };
-
-  const jumpToBottom = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    wasAtBottomRef.current = true;
-    setShowJumpToBottom(false);
-  };
+  // The same auto-scroll as the main chat; see useAutoScroll.
+  //
+  // The placeholders below take the scrolling area's place, but only before
+  // the first entry: a push only ever brings the whole file as it is now, so
+  // for one output file the text never goes back to loading or to empty.
+  const newestUserUuid = useMemo(() => findNewestUserUuid(messages), [messages]);
+  const { scrollRef, showScrollButton, scrollToBottom } = useAutoScroll({
+    resetKey: outputFile,
+    storageKey: DETAIL_STORAGE_KEY,
+    hasContent: messages.length > 0,
+    isStreaming: isRunning,
+    rearmKey: agentRearmKey(newestUserUuid, sendCount),
+    repositionOnRemount: true,
+  });
+  useGlideOnSend(sendCount, scrollToBottom);
 
   if (!outputFile || loading) {
     return (
@@ -109,7 +98,7 @@ export function AgentOutputTranscriptBody(props: Props) {
 
   return (
     <div className="relative flex-1 min-h-0">
-      <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={scrollRef} className="h-full overflow-y-auto px-4 py-3 space-y-3">
         {messages.map((message) => (
           <MessageBubble key={message.uuid ?? `${message.type}-${message.timestamp}`} message={message} />
         ))}
@@ -119,14 +108,8 @@ export function AgentOutputTranscriptBody(props: Props) {
         {isRunning && <StreamingIndicator />}
       </div>
 
-      {showJumpToBottom && (
-        <button
-          onClick={jumpToBottom}
-          className="absolute bottom-3 start-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-raised border border-border-default shadow-lg text-[0.8461rem] text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
-        >
-          <ArrowDownIcon className="w-3.5 h-3.5" />
-          {t('backgroundTasks.transcriptModal.jumpToBottom')}
-        </button>
+      {showScrollButton && (
+        <ScrollToBottomButton onClick={scrollToBottom} placementClassName="bottom-3 start-1/2 -translate-x-1/2" />
       )}
     </div>
   );

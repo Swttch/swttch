@@ -280,7 +280,7 @@
       "truncated": "仅显示最近 {{count}} 条记录。",
       "starting": "正在启动任务…",
       "updating": "正在更新…",
-      "jumpToBottom": "跳转到底部",
+      "refreshFailed": "无法刷新此记录。正在显示上次加载的内容。",
       "copyCommand": "复制命令",
       "resize": "拖动以调整大小",
       "noOutputYet": "尚无输出。",

@@ -280,7 +280,7 @@
       "truncated": "僅顯示最近 {{count}} 筆記錄。",
       "starting": "正在啟動任務…",
       "updating": "正在更新…",
-      "jumpToBottom": "跳至底部",
+      "refreshFailed": "無法重新整理此記錄。正在顯示上次載入的內容。",
       "copyCommand": "複製指令",
       "resize": "拖曳以調整大小",
       "noOutputYet": "尚無輸出。",

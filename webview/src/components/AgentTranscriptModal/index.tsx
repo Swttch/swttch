@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { XMarkIcon, StopCircleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '@/components/Portal';
@@ -50,6 +50,17 @@ export function AgentTranscriptModal(props: Props) {
   const isRunning = task.status === 'running';
   const now = useNow(isRunning);
   const { cancelTask, sendToAgent, stopAgent } = useBackgroundTaskActions();
+  // Counts the messages sent from this modal, so the transcript above the
+  // composer can start following again the moment one goes out, the way the
+  // main chat does when you send. See agentRearmKey.
+  const [sendCount, setSendCount] = useState(0);
+  const sendAndFollow = useCallback(
+    (agentId: string, message: string) => {
+      sendToAgent(agentId, message);
+      setSendCount((n) => n + 1);
+    },
+    [sendToAgent],
+  );
   const { inputMode } = useSessionContext();
   const unreachableAgents = useUnreachableAgents();
   const { height: heightOffset, startResize, wasJustResizing } = useVerticalResize({
@@ -183,13 +194,13 @@ export function AgentTranscriptModal(props: Props) {
               // There is no picker because there is one agent, not many.
               <div className="flex flex-1 min-h-0 flex-col">
                 <DetailHeader source={task} />
-                <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} />
+                <AgentOutputTranscriptBody task={task} outputFile={resolvedOutputFile} sendCount={sendCount} />
                 {agentAddress && (
                   <AgentComposer
                     agentId={agentAddress}
                     isRunning={isRunning}
                     inputMode={inputMode}
-                    onSend={sendToAgent}
+                    onSend={sendAndFollow}
                     // A backgrounded Agent IS its task, so stopping it by its
                     // own address stops this agent and nothing else.
                     onStop={() => stopAgent(agentAddress, task.name)}
@@ -228,10 +239,15 @@ export function AgentTranscriptModal(props: Props) {
                   {selectedAgent && (
                     <DetailHeader source={selectedAgent} transcriptDir={task.transcriptDir} />
                   )}
+                  {/* Keyed by agent so each agent gets its own scroll state:
+                      without it, picking another agent kept the previous
+                      one's position and following state. */}
                   <AgentTranscriptBody
+                    key={selectedAgent?.agentId}
                     transcriptDir={task.transcriptDir}
                     agent={selectedAgent}
                     taskStatus={task.status}
+                    sendCount={sendCount}
                   />
                   {/* The same composer the single-agent view gets. A workflow
                       agent is reachable by its runtime agentId even though the
@@ -249,7 +265,7 @@ export function AgentTranscriptModal(props: Props) {
                       // finished while the run around it goes on.
                       isRunning={agentDisplayStatus(selectedAgent.state, task.status) === 'running'}
                       inputMode={inputMode}
-                      onSend={sendToAgent}
+                      onSend={sendAndFollow}
                       // Stops this agent by its own id, not the workflow it
                       // belongs to: resuming one starts it again as a task
                       // under that id, which is what there is to stop.

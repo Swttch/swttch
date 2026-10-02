@@ -280,7 +280,7 @@
       "truncated": "最新の{{count}}件を表示しています。",
       "starting": "タスクを開始しています…",
       "updating": "更新中…",
-      "jumpToBottom": "最新へ移動",
+      "refreshFailed": "トランスクリプトを更新できませんでした。最後に読み込んだ内容を表示しています。",
       "copyCommand": "コマンドをコピー",
       "resize": "ドラッグしてサイズ変更",
       "noOutputYet": "まだ出力がありません。",

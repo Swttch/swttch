@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createTestQueryClient } from '@/hooks/queries/__tests__/testQueryClient';
+import { installRafQueue, stubScrollBox, type RafQueue } from '@/hooks/__tests__/scrollTestKit';
 import type { WorkflowTask } from '@/shared';
 
 const sendMock = vi.fn();
@@ -23,8 +24,9 @@ vi.mock('@/contexts/CliConfigContext', () => ({
 // button's own wiring is exercised directly below; here it only needs to not
 // throw on mount.
 const cancelTaskMock = vi.fn();
+const sendToAgentMock = vi.fn();
 vi.mock('@/hooks/useBackgroundTaskActions', () => ({
-  useBackgroundTaskActions: () => ({ cancelTask: cancelTaskMock }),
+  useBackgroundTaskActions: () => ({ cancelTask: cancelTaskMock, sendToAgent: sendToAgentMock }),
 }));
 
 // The composer under each transcript reads the session's mode (for the send
@@ -405,5 +407,79 @@ describe('AgentTranscriptModal: who gets a composer', () => {
     sendMock.mockResolvedValue({ status: 'ok', entries: [], truncated: false });
     renderModal(makeTask({ agents: [{ agentId: 'a1', reconstructed: true }] }));
     expect(composer()).not.toBeNull();
+  });
+});
+
+describe('AgentTranscriptModal scrolling', () => {
+  let raf: RafQueue;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    raf = installRafQueue();
+    // Each agent answers with its own transcript.
+    sendMock.mockImplementation((_type: string, payload: { agentId: string }) =>
+      Promise.resolve({
+        status: 'ok',
+        entries: [
+          { type: 'user', uuid: `${payload.agentId}-u`, message: { role: 'user', content: `prompt for ${payload.agentId}` } },
+          { type: 'assistant', uuid: `${payload.agentId}-m`, message: { role: 'assistant', content: [{ type: 'text', text: `${payload.agentId} reply` }] } },
+        ],
+        truncated: false,
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function transcriptBox() {
+    return stubScrollBox(document.querySelector('.overflow-y-auto.space-y-3') as HTMLElement, { scrollHeight: 2000, clientHeight: 400 });
+  }
+
+  // Picking another agent used to keep the same body mounted, so the first
+  // agent's position and following state carried over to the second.
+  it('gives each agent its own scroll state', async () => {
+    renderModal(makeTask({ status: 'running' }));
+    await screen.findByText('a1 reply');
+    const first = transcriptBox();
+    raf.flushFrames(2);
+    first.userScrollTo(300);
+    raf.flushFrames();
+    expect(screen.getByText('Scroll to bottom')).toBeInTheDocument();
+
+    fireEvent.click(agentChip('Agent Two'));
+    // Nothing of the first agent's is shown as the second one's.
+    expect(screen.queryByText('a1 reply')).not.toBeInTheDocument();
+    await screen.findByText('a2 reply');
+    const second = transcriptBox();
+    raf.flushFrames(2);
+
+    expect(second.el).not.toBe(first.el);
+    expect(second.el.scrollTop).toBe(1600);
+    expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
+  });
+
+  it('follows the transcript again when a message is sent to the agent', async () => {
+    renderModal(makeTask({ status: 'running' }));
+    await screen.findByText('a1 reply');
+    const box = transcriptBox();
+    raf.flushFrames(2);
+    box.userScrollTo(300);
+    raf.flushFrames();
+    expect(screen.getByText('Scroll to bottom')).toBeInTheDocument();
+
+    const editor = document.querySelector('[contenteditable]') as HTMLElement;
+    editor.textContent = 'look at the other file too';
+    fireEvent.input(editor);
+    fireEvent.keyDown(editor, { key: 'Enter' });
+    expect(sendToAgentMock).toHaveBeenCalledWith('a1', 'look at the other file too');
+    raf.flushFrames();
+
+    expect(screen.queryByText('Scroll to bottom')).not.toBeInTheDocument();
+    box.setScrollHeight(2400);
+    raf.flushFrames();
+    expect(box.el.scrollTop).toBe(2000);
   });
 });

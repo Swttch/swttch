@@ -3,7 +3,7 @@ import { useBridge } from './useBridge';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
 
-interface AgentTranscriptData {
+export interface AgentTranscriptData {
   entries: Record<string, unknown>[];
   truncated: boolean;
 }

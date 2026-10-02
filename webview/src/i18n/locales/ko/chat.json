@@ -280,7 +280,7 @@
       "truncated": "최근 {{count}}개 항목만 표시합니다.",
       "starting": "작업 시작하는 중…",
       "updating": "업데이트 중…",
-      "jumpToBottom": "맨 아래로 이동",
+      "refreshFailed": "기록을 새로 불러오지 못했습니다. 마지막으로 불러온 내용을 보여주고 있습니다.",
       "copyCommand": "명령어 복사",
       "resize": "드래그해서 크기 조절",
       "noOutputYet": "아직 출력이 없습니다.",

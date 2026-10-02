@@ -280,7 +280,7 @@
       "truncated": "Zeigt die letzten {{count}} Einträge.",
       "starting": "Aufgabe wird gestartet…",
       "updating": "Wird aktualisiert…",
-      "jumpToBottom": "Nach unten springen",
+      "refreshFailed": "Das Protokoll konnte nicht aktualisiert werden. Angezeigt wird der zuletzt geladene Stand.",
       "copyCommand": "Befehl kopieren",
       "resize": "Zum Ändern der Größe ziehen",
       "noOutputYet": "Noch keine Ausgabe.",

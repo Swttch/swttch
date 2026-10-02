@@ -280,7 +280,7 @@
       "truncated": "Showing the most recent {{count}} entries.",
       "starting": "Starting task…",
       "updating": "Updating…",
-      "jumpToBottom": "Jump to bottom",
+      "refreshFailed": "Couldn't refresh this transcript. Showing the last version that loaded.",
       "copyCommand": "Copy command",
       "resize": "Drag to resize",
       "noOutputYet": "No output yet.",

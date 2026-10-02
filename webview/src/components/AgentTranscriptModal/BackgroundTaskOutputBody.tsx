@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowPathIcon, ArrowDownIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowPathIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import type { WorkflowTask } from '@/shared';
 import { useBackgroundTaskOutput } from '@/hooks/useBackgroundTaskOutput';
+import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { parseAnsi } from '@/utils/ansi';
+import { frontTrimKeptLength, frontTrimScrollTop, heightAfter } from '@/utils/frontTrim';
+import { ScrollToBottomButton } from '@/components/ScrollToBottomButton';
+import { DETAIL_STORAGE_KEY } from './detailScroll';
 
 interface Props {
   task: WorkflowTask;
   outputFile: string | undefined;
 }
-
-/** How close to the bottom (px) counts as "already at the bottom" for auto-scroll. */
-const BOTTOM_THRESHOLD_PX = 24;
 
 /**
  * A copy-to-run shell command for the task's own output file: `tail -f` while
@@ -66,41 +67,53 @@ export function BackgroundTaskOutputBody(props: Props) {
 
   const { text, truncated, loading } = useBackgroundTaskOutput(outputFile);
   const segments = useMemo(() => parseAnsi(text), [text]);
+  // The text as drawn, colour codes removed: the characters the pane holds.
+  const shownText = useMemo(() => segments.map((segment) => segment.text).join(''), [segments]);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  // Whether the user was already at (or near) the bottom right before this
-  // render's text landed — decided once per text change, not tracked as its
-  // own piece of state, so a manual scroll-up during a live tail isn't
-  // fought by an effect re-pulling the view back down.
-  const wasAtBottomRef = useRef(true);
-  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  // The same auto-scroll as the main chat; see useAutoScroll. The scrolling
+  // area stays mounted through loading and an empty log, so no state here
+  // takes its place.
+  const { scrollRef, showScrollButton, scrollToBottom, prevScrollTopRef, lastScrollHeightRef, autoFollowRef } =
+    useAutoScroll({
+      resetKey: outputFile,
+      storageKey: DETAIL_STORAGE_KEY,
+      repositionOnRemount: true,
+      hasContent: shownText.length > 0,
+      isStreaming: isRunning,
+      // A Bash task cannot be sent anything.
+      rearmKey: null,
+    });
 
-  useEffect(() => {
+  // Keep the reader on the line they were reading when the backend cuts the
+  // log from the front (see frontTrim.ts). The counterpart of the main chat
+  // holding its place when an older page is put in above: here text leaves
+  // from above, so the view moves up by the height that left. Not needed while
+  // following, which keeps the view at the bottom anyway.
+  const preRef = useRef<HTMLPreElement>(null);
+  const prevShownTextRef = useRef('');
+  useLayoutEffect(() => {
+    const prev = prevShownTextRef.current;
+    prevShownTextRef.current = shownText;
     const el = scrollRef.current;
-    if (!el) return;
-    if (wasAtBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-      setShowJumpToBottom(false);
-    } else {
-      setShowJumpToBottom(true);
-    }
-  }, [text]);
-
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_THRESHOLD_PX;
-    wasAtBottomRef.current = atBottom;
-    if (atBottom) setShowJumpToBottom(false);
-  };
-
-  const jumpToBottom = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-    wasAtBottomRef.current = true;
-    setShowJumpToBottom(false);
-  };
+    const pre = preRef.current;
+    if (!el || !pre || autoFollowRef.current) return;
+    const kept = frontTrimKeptLength(prev, shownText);
+    if (kept === null) return;
+    const appended = heightAfter(pre, kept, shownText.length);
+    if (appended === null) return;
+    const top = frontTrimScrollTop({
+      prevScrollTop: prevScrollTopRef.current,
+      prevScrollHeight: lastScrollHeightRef.current,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      appendedHeight: appended,
+    });
+    if (top === null) return;
+    el.scrollTop = top;
+    // Sync scroll baselines
+    prevScrollTopRef.current = el.scrollTop;
+    lastScrollHeightRef.current = el.scrollHeight;
+  }, [shownText, scrollRef, autoFollowRef, prevScrollTopRef, lastScrollHeightRef]);
 
   if (!outputFile) {
     // The command just started — its immediate tool_result (which carries the
@@ -139,7 +152,7 @@ export function BackgroundTaskOutputBody(props: Props) {
             of the 414px the parent actually renders at, so the scrollbar
             never engaged and the command box above got pushed off-screen by
             a "scrolling" pane that was actually just growing forever. */}
-        <div ref={scrollRef} onScroll={handleScroll} className="absolute inset-0 overflow-y-auto">
+        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto">
           {loading ? (
             <div className="h-full flex items-center justify-center gap-2 text-text-primary/50 text-[0.9230rem]">
               <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -175,7 +188,7 @@ export function BackgroundTaskOutputBody(props: Props) {
                   background below it that reads as a rendering glitch rather
                   than "empty terminal" — filling the pane makes it look like
                   what it is, a shell window with a few lines in it. */}
-              <pre className="min-h-full rounded-md bg-black/90 border border-border-subtle p-3 whitespace-pre-wrap break-words font-mono text-[0.8461rem] text-emerald-400/90 leading-relaxed">
+              <pre ref={preRef} className="min-h-full rounded-md bg-black/90 border border-border-subtle p-3 whitespace-pre-wrap break-words font-mono text-[0.8461rem] text-emerald-400/90 leading-relaxed">
                 {/* Every tool a developer backgrounds writes colour, and as
                     plain text those codes bury the output they decorate. The
                     pane is dressed as a terminal, so it renders them. */}
@@ -193,14 +206,8 @@ export function BackgroundTaskOutputBody(props: Props) {
           )}
         </div>
 
-        {showJumpToBottom && (
-          <button
-            onClick={jumpToBottom}
-            className="absolute bottom-3 start-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-raised border border-border-default shadow-lg text-[0.8461rem] text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
-          >
-            <ArrowDownIcon className="w-3.5 h-3.5" />
-            {t('backgroundTasks.transcriptModal.jumpToBottom')}
-          </button>
+        {showScrollButton && (
+          <ScrollToBottomButton onClick={scrollToBottom} placementClassName="bottom-3 start-1/2 -translate-x-1/2" />
         )}
       </div>
     </div>
