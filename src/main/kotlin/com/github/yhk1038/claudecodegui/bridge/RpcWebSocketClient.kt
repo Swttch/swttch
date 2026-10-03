@@ -7,8 +7,11 @@ import kotlinx.serialization.json.*
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.WebSocket
+import java.nio.ByteBuffer
+import java.time.Duration
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The Sec-WebSocket-Protocol marker paired with the per-launch auth token on the
@@ -16,6 +19,9 @@ import java.util.concurrent.CompletableFuture
  * webview's AUTH_SUBPROTOCOL (webview authToken.ts) — one wire value everywhere.
  */
 internal const val AUTH_SUBPROTOCOL = "ccg-auth"
+
+/** Upper bound for one /rpc connection attempt; a hung attempt counts as a failure. */
+private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(5)
 
 /**
  * WebSocket client that connects to the Node.js backend's /rpc endpoint.
@@ -58,8 +64,17 @@ class RpcWebSocketClient(
     private val logger = Logger.getInstance(RpcWebSocketClient::class.java)
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
+    @Volatile
     private var webSocket: WebSocket? = null
     private var reconnectJob: Job? = null
+
+    /**
+     * Listener of the most recent connection attempt. Kept so a new attempt and
+     * [dispose] can stop that connection's liveness loop; each listener owns its own
+     * tracker and loop, so stopping one can never touch another connection's.
+     */
+    @Volatile
+    private var currentListener: RpcWebSocketListener? = null
 
     @Volatile
     private var disposed = false
@@ -99,8 +114,18 @@ class RpcWebSocketClient(
     private fun connectInternal(port: Int) {
         if (disposed) return
 
-        val client = HttpClient.newHttpClient()
+        // A new attempt supersedes whatever the previous connection was doing.
+        currentListener?.stopLiveness()
+
+        // Bound the attempt so a connect that hangs (nothing answering on the other end,
+        // e.g. the WSL VM is gone) fails and is counted toward the restart threshold
+        // instead of waiting forever.
+        val client = HttpClient.newBuilder()
+            .connectTimeout(CONNECT_TIMEOUT)
+            .build()
         val uri = URI.create("ws://127.0.0.1:$port/rpc")
+        val listener = RpcWebSocketListener(port)
+        currentListener = listener
 
         logger.info("Connecting to RPC WebSocket: $uri")
 
@@ -110,15 +135,19 @@ class RpcWebSocketClient(
         // back only the `ccg-auth` marker. When the token is empty (tests) we skip
         // the subprotocol entirely.
         val builder = client.newWebSocketBuilder()
+            // The HttpClient timeout bounds the TCP connect; this one also bounds the
+            // opening handshake, for a peer that accepts the connection but never answers.
+            .connectTimeout(CONNECT_TIMEOUT)
         if (authToken.isNotEmpty()) {
             builder.subprotocols(AUTH_SUBPROTOCOL, authToken)
         }
         builder
-            .buildAsync(uri, RpcWebSocketListener(port))
+            .buildAsync(uri, listener)
             .thenAccept { ws ->
                 webSocket = ws
                 consecutiveFailures = 0
                 logger.info("RPC WebSocket connected to port $port")
+                listener.startLiveness(ws)
                 // Re-advertise project roots on every (re)connection so the backend
                 // can route cross-IDE requests to this host. Safe to call after the
                 // socket is assigned; reconnects re-register automatically.
@@ -142,6 +171,12 @@ class RpcWebSocketClient(
             }
     }
 
+    /**
+     * Synchronized because it is reached from the WebSocket listener thread (onClose,
+     * onError) and from the liveness coroutine; without the lock two callers could each
+     * launch a job and one would escape cancellation, opening two connections.
+     */
+    @Synchronized
     private fun scheduleReconnect(port: Int, delayMs: Long = 3000) {
         if (disposed) return
         reconnectJob?.cancel()
@@ -154,15 +189,103 @@ class RpcWebSocketClient(
         }
     }
 
+    /**
+     * One listener per connection attempt. It owns that connection's liveness tracker
+     * and loop, and [ended] makes sure exactly one of onClose, onError and the liveness
+     * verdict hands the connection over to [scheduleReconnect].
+     */
     private inner class RpcWebSocketListener(private val port: Int) : WebSocket.Listener {
         private val messageBuffer = StringBuilder()
+
+        /** Set once this connection is over, by whichever path noticed first. */
+        private val ended = AtomicBoolean(false)
+
+        @Volatile
+        private var tracker: RpcLivenessTracker? = null
+
+        @Volatile
+        private var livenessJob: Job? = null
+
+        /**
+         * Start asking the backend, on a timer, whether it is still there. Called once the
+         * connection is established. The backend's `ws` server answers a ping with a pong
+         * by itself, so no backend code takes part in this.
+         */
+        fun startLiveness(ws: WebSocket) {
+            if (disposed || ended.get()) return
+            val connectionTracker = RpcLivenessTracker()
+            tracker = connectionTracker
+            livenessJob?.cancel()
+            livenessJob = scope.launch {
+                while (isActive) {
+                    delay(connectionTracker.intervalMs)
+                    when (connectionTracker.tick()) {
+                        RpcLivenessTracker.Verdict.SEND_PING -> {
+                            try {
+                                ws.sendPing(ByteBuffer.allocate(0))
+                            } catch (e: Exception) {
+                                // A failed ping is not a verdict; the silence rule decides.
+                                logger.debug("RPC WebSocket ping failed: ${e.message}")
+                            }
+                        }
+                        RpcLivenessTracker.Verdict.DEAD -> {
+                            declareDead(ws, connectionTracker.silenceLimitMs)
+                            return@launch
+                        }
+                    }
+                }
+            }
+        }
+
+        fun stopLiveness() {
+            livenessJob?.cancel()
+            livenessJob = null
+        }
+
+        /**
+         * The backend has been silent for longer than the silence limit while the socket
+         * never reported closing: the half-open case of issue #516. Drop the socket and
+         * enter the same reconnect path a close would have, so the existing failure count
+         * and backend restart take over from here.
+         */
+        private fun declareDead(ws: WebSocket, silenceLimitMs: Long) {
+            if (!ended.compareAndSet(false, true)) return
+            logger.warn(
+                "RPC WebSocket silent for over ${silenceLimitMs / 1000}s without a close; " +
+                    "treating the connection as dead and reconnecting"
+            )
+            try {
+                ws.abort()
+            } catch (e: Exception) {
+                logger.debug("Error aborting RPC WebSocket: ${e.message}")
+            }
+            if (this@RpcWebSocketClient.webSocket === ws) {
+                this@RpcWebSocketClient.webSocket = null
+            }
+            // abort() is not guaranteed to call onError/onClose, and even when it does
+            // [ended] makes them return early, so the reconnect is scheduled here.
+            scheduleReconnect(port)
+        }
 
         override fun onOpen(webSocket: WebSocket) {
             logger.info("RPC WebSocket opened")
             webSocket.request(1)
         }
 
+        override fun onPong(webSocket: WebSocket, message: ByteBuffer): CompletionStage<*>? {
+            tracker?.markAlive()
+            webSocket.request(1)
+            return null
+        }
+
+        override fun onPing(webSocket: WebSocket, message: ByteBuffer): CompletionStage<*>? {
+            tracker?.markAlive()
+            // The default implementation answers with a pong and requests the next frame.
+            return super.onPing(webSocket, message)
+        }
+
         override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
+            tracker?.markAlive()
             logger.info("[DEBUG:onText] received data.length=${data.length}, last=$last, preview='${data.toString().take(80)}'")
             messageBuffer.append(data)
             if (last) {
@@ -176,6 +299,9 @@ class RpcWebSocketClient(
 
         override fun onClose(webSocket: WebSocket, statusCode: Int, reason: String): CompletionStage<*> {
             logger.info("RPC WebSocket closed: $statusCode $reason")
+            stopLiveness()
+            // Already handed over by the liveness verdict: that path scheduled the reconnect.
+            if (!ended.compareAndSet(false, true)) return CompletableFuture.completedFuture(null)
             this@RpcWebSocketClient.webSocket = null
             scheduleReconnect(port)
             return CompletableFuture.completedFuture(null)
@@ -183,6 +309,8 @@ class RpcWebSocketClient(
 
         override fun onError(webSocket: WebSocket, error: Throwable) {
             logger.warn("RPC WebSocket error: ${error.message}")
+            stopLiveness()
+            if (!ended.compareAndSet(false, true)) return
             this@RpcWebSocketClient.webSocket = null
             scheduleReconnect(port)
         }
@@ -469,6 +597,7 @@ class RpcWebSocketClient(
     override fun dispose() {
         disposed = true
         reconnectJob?.cancel()
+        currentListener?.stopLiveness()
         try {
             webSocket?.sendClose(WebSocket.NORMAL_CLOSURE, "IDE shutting down")
         } catch (e: Exception) {
