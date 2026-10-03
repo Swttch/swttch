@@ -22,7 +22,7 @@ import { isDebugEnabled, logDebug } from '../logging/log-level';
 import { readRegistry } from './features/account-store';
 import { getProjectSessionsPath } from './features/getProjectSessionsPath';
 import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
-import { noteCliSessionTitle } from './features/cliSessionTitleTracker';
+import { renamedSessionTitle } from './features/sessionRenamedReply';
 import { MessageType, SessionActivity } from '../shared';
 import { ingestRateLimitWindows } from './handlers/getUsage';
 
@@ -1267,27 +1267,22 @@ function handleStreamEvent(
   }
 
   // 백엔드 고유 사이드이펙트 (WebView 전달과 무관한 서버 내부 로직)
-  if (eventType === 'system' && event.subtype === 'session_title_changed') {
-    // `/rename` inside the CLI. Undocumented signal, so it only speeds up what
-    // the transcript's custom-title entry already says on the next list read.
-    // The CLI also sends it on every process start with the unchanged name, which
-    // must not be mistaken for a rename.
-    const title = event.title;
-    const renamedId = typeof event.session_id === 'string' && event.session_id ? event.session_id : targetSessionId;
-    if (typeof title === 'string' && title && noteCliSessionTitle(renamedId, title)) {
-      getProjectSessionsPath(workingDir)
-        .then((sessionsDir) => removeSessionTitleOverride(sessionsDir, renamedId))
-        .then(() => {
-          // The CLI rename is newer than any GUI rename, so the GUI override goes.
-          connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
-            action: 'rename',
-            session: { sessionId: renamedId, title },
-          });
-        })
-        .catch((err) => {
-          console.error('[node-backend]', 'Failed to apply CLI session rename:', err);
+  // `/rename` inside the CLI. It only speeds up what the transcript's
+  // custom-title entry already says on the next list read.
+  const renamedTitle = renamedSessionTitle(event);
+  if (renamedTitle !== null) {
+    getProjectSessionsPath(workingDir)
+      .then((sessionsDir) => removeSessionTitleOverride(sessionsDir, targetSessionId))
+      .then(() => {
+        // The CLI rename is newer than any GUI rename, so the GUI override goes.
+        connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
+          action: 'rename',
+          session: { sessionId: targetSessionId, title: renamedTitle },
         });
-    }
+      })
+      .catch((err) => {
+        console.error('[node-backend]', 'Failed to apply CLI session rename:', err);
+      });
   }
 
   if (eventType === 'result') {
