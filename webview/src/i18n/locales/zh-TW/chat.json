@@ -110,6 +110,9 @@
       "hint": "@ 引用檔案，/ 命令，!! 插入提示詞，@@ 詢問其他工作階段，{{send}} 傳送",
       "steerMessage": "調整目前的工作..."
     },
+    "renameSuggestion": {
+      "hint": "(按 Tab 補全)"
+    },
     "queuedMessages": {
       "cancel": "從佇列中移除"
     },

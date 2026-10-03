@@ -110,6 +110,9 @@
       "hint": "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, {{send}} to send",
       "steerMessage": "Steer the current run..."
     },
+    "renameSuggestion": {
+      "hint": "(Tab to accept)"
+    },
     "queuedMessages": {
       "cancel": "Remove from queue"
     },

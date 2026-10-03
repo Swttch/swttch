@@ -54,6 +54,7 @@ import {
   type InsertPromptDetail,
 } from '@/commandPalette/sections/context/items';
 import { replaceRangeWithText } from './RichInput/replaceRangeWithText';
+import { renameSuggestion } from './renameSuggestion';
 import {
   wrapChipForTranscript,
   readFirstSessionMention,
@@ -116,7 +117,7 @@ export function ChatInput() {
   // question must read the same here as it does inside the library.
   const { t: tCommon } = useTranslation('common');
   const { textareaRef } = useChatInputFocus();
-  const { currentSessionId, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
+  const { currentSessionId, currentSession, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
   const onboarding = useOnboarding();
   const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage } = chatStream;
@@ -887,10 +888,25 @@ export function ChatInput() {
     agentMention.detectAgent(newValue, caret);
   }, [onChange, palette, mention, promptLibrary, agentMention, textareaRef]);
 
+  // Right after `/rename ` the session's current title is previewed after the
+  // caret, the way unsettled dictation is, and Tab turns it into real text.
+  const renameGhost = renameSuggestion(value, currentSession?.title);
+
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
     // Feed the IME truth: keyCode 229 means the IME is still processing this
     // keystroke, so mark composition active before any Enter decision runs.
     ime.noteKeyDown(e.nativeEvent.keyCode);
+
+    // Accept the previewed title. Ahead of every panel below because the slash
+    // panel is still open on `/rename ` and would claim Tab to pick a command.
+    // Written through the browser's editing pipeline so one undo takes it back.
+    if (renameGhost && e.key === 'Tab' && !e.shiftKey && !(ime.isComposing() || e.nativeEvent.isComposing)) {
+      e.preventDefault();
+      const el = textareaRef.current;
+      if (el && replaceRangeWithText(el, value.length, value.length, renameGhost)) return;
+      onChange(value + renameGhost);
+      return;
+    }
 
     // 받아쓰기 토글은 여기서 처리하지 않는다. useGlobalShortcut이 window의
     // capture 단계에서 먼저 가로채므로, 포커스가 어디에 있든 동작한다.
@@ -1053,7 +1069,7 @@ export function ChatInput() {
         if (target) setCaretOffset(target, applied.length);
       });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef]);
+  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so images keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1366,6 +1382,8 @@ export function ChatInput() {
             ariaLabel={t('chatInput.ariaLabel')}
             highlightTokens={recipient ? [...pathTokens, recipient.token] : pathTokens}
             interimRange={dictation.interimRange}
+            ghostText={renameGhost}
+            ghostHint={renameGhost ? t('chatInput.renameSuggestion.hint') : null}
           />
           {voiceEnabled && (
             <MicButton

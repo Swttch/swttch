@@ -110,6 +110,9 @@
       "hint": "@ ファイル参照、/ コマンド、!! プロンプト挿入、@@ 他のセッションに問い合わせ、{{send}} で送信",
       "steerMessage": "現在の作業を調整します..."
     },
+    "renameSuggestion": {
+      "hint": "(Tabで補完)"
+    },
     "queuedMessages": {
       "cancel": "キューから削除"
     },

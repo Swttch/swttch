@@ -110,6 +110,9 @@
       "hint": "@ para archivos, / para comandos, !! para insertar prompts, @@ para preguntar a otra sesión, {{send}} para enviar",
       "steerMessage": "Ajustar la ejecución actual..."
     },
+    "renameSuggestion": {
+      "hint": "(Tab para completar)"
+    },
     "queuedMessages": {
       "cancel": "Quitar de la cola"
     },

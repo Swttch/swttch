@@ -110,6 +110,9 @@
       "hint": "@ 引用文件，/ 命令，!! 插入提示词，@@ 询问其他会话，{{send}} 发送",
       "steerMessage": "调整当前任务..."
     },
+    "renameSuggestion": {
+      "hint": "(按 Tab 补全)"
+    },
     "queuedMessages": {
       "cancel": "从队列中移除"
     },

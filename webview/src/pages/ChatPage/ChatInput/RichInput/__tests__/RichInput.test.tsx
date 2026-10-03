@@ -462,3 +462,43 @@ describe('RichInput — mirror/editable wrap parity (issue #329)', () => {
     }
   });
 });
+
+describe('RichInput — ghost text', () => {
+  it('paints the suggestion in the mirror after the text', () => {
+    const { container } = render(<RichInput value="/rename " ghostText="My session" onChange={() => {}} />);
+    const mirror = container.querySelector('.richInputMirror');
+
+    expect(mirror?.textContent).toBe('/rename My session');
+    expect(mirror?.querySelector('[data-testid=richInputGhost]')?.textContent).toBe('My session');
+  });
+
+  it('keeps the suggestion out of the value the user would send', () => {
+    const { getByRole } = render(<RichInput value="/rename " ghostText="My session" onChange={() => {}} />);
+
+    expect(getByRole('textbox').textContent).toBe('/rename ');
+  });
+
+  it('paints the hint after the suggestion, as a separate element', () => {
+    const { container } = render(
+      <RichInput value="/rename " ghostText="My session" ghostHint="(Tab to accept)" onChange={() => {}} />,
+    );
+    const mirror = container.querySelector('.richInputMirror');
+
+    expect(mirror?.querySelector('[data-testid=richInputGhostHint]')?.textContent).toBe('(Tab to accept)');
+    expect(mirror?.querySelector('[data-testid=richInputGhost]')?.textContent).toBe('My session');
+  });
+
+  it('paints no hint when there is no suggestion to accept', () => {
+    const { container } = render(
+      <RichInput value="/rename " ghostHint="(Tab to accept)" onChange={() => {}} />,
+    );
+
+    expect(container.querySelector('[data-testid=richInputGhostHint]')).toBeNull();
+  });
+
+  it('paints nothing extra without a suggestion', () => {
+    const { container } = render(<RichInput value="/rename " onChange={() => {}} />);
+
+    expect(container.querySelector('[data-testid=richInputGhost]')).toBeNull();
+  });
+});

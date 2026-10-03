@@ -43,6 +43,18 @@ interface Props {
    */
   interimRange?: { start: number; end: number } | null;
   /**
+   * A suggestion painted after the text, in the same provisional style as
+   * `interimRange`, but NOT part of `value`: nothing is sent, copied or counted
+   * until the parent accepts it by writing it into the value.
+   */
+  ghostText?: string | null;
+  /**
+   * A short note on how to accept `ghostText`, painted right after it in a
+   * quieter style so it reads as a label rather than as part of the suggestion.
+   * Ignored when there is no `ghostText`.
+   */
+  ghostHint?: string | null;
+  /**
    * IME composition state, optionally owned by the parent (ChatInput) so its
    * keydown handler and this editor agree on a single source of truth. Under
    * JCEF the native `isComposing` flag is unreliable; this ref-only hook is
@@ -108,6 +120,8 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
     ariaLabel,
     highlightTokens = [],
     interimRange = null,
+    ghostText = null,
+    ghostHint = null,
     ime: imeProp,
   } = props;
 
@@ -289,6 +303,18 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
               <span key={i}>{seg.text}</span>
             ),
           )
+        )}
+        {ghostText && (
+          <>
+            <span data-testid="richInputGhost" className="italic text-text-tertiary">
+              {ghostText}
+            </span>
+            {ghostHint && (
+              <span data-testid="richInputGhostHint" className="ml-1.5 whitespace-nowrap text-[0.85em] text-text-tertiary opacity-60">
+                {ghostHint}
+              </span>
+            )}
+          </>
         )}
         {trailingNewline && '\n'}
       </div>

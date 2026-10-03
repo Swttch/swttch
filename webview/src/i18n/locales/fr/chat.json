@@ -110,6 +110,9 @@
       "hint": "@ pour les fichiers, / pour les commandes, !! pour insérer des prompts, @@ pour interroger une autre session, {{send}} pour envoyer",
       "steerMessage": "Ajuster l’exécution en cours..."
     },
+    "renameSuggestion": {
+      "hint": "(Tab pour valider)"
+    },
     "queuedMessages": {
       "cancel": "Retirer de la file d’attente"
     },
