@@ -18,6 +18,8 @@ import type { SlashCommandInfo } from '@/types/slashCommand';
 import { CommandPaletteServices } from './types';
 import { CommandPaletteRegistry } from './CommandPaletteRegistry';
 import { KeyboardRegistry } from './KeyboardRegistry';
+import { isNewTabShortcut } from './isNewTabShortcut';
+import { isMac } from '@/config/environment';
 import { applyModelCapabilityFlags } from './applyModelCapabilityFlags';
 import {
   ContextSection,
@@ -179,7 +181,7 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
     // Register non-command keyboard shortcuts
     keyboardReg.register({
       id: 'new-tab',
-      match: (e: KeyboardEvent) => (e.metaKey || e.ctrlKey) && e.key === 'n',
+      match: (e: KeyboardEvent) => isNewTabShortcut(e, isMac()),
       execute: async () => {
         const newTabButton = document.getElementById('new-tab-button');
         if (newTabButton) newTabButton.click();

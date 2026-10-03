@@ -31,7 +31,7 @@ import { removeContainersById } from './core/mcp-container-reclaimer';
 import { startParentWatchdog, resolveWatchedPid } from './core/parent-watchdog';
 import { startHostLivenessWatchdog } from './core/host-liveness';
 import { createLifecycleJournal } from './logging/lifecycle-journal';
-import { ClientEnv, MessageType } from './shared';
+import { ClientEnv, MessageType, parseEmacsTextKeyPress } from './shared';
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
 
@@ -398,6 +398,29 @@ async function main() {
     // conversation's and would seed the field with the wrong value.
     const currentName = typeof params.currentName === 'string' ? params.currentName : '';
     connections.sendTo(connectionId, MessageType.TAB_RENAME_REQUESTED, { currentName });
+  });
+
+  // A macOS Emacs-style text key (Ctrl+A/B/D/E/F/H/K/L/N/O/P/T/V/Y) pressed in a
+  // chat tab. JCEF off-screen rendering reports every Ctrl+letter to the page as
+  // Ctrl+A, so the IDE reads the real letter and the Shift state from its own key
+  // event and names them here as { key, shift }; the tab's own webview moves the
+  // caret or edits the text. A shift that is absent or not a boolean reads as
+  // false. Not stashed when the panel is absent, like TAB_RENAME_REQUESTED: a key
+  // press nobody is looking at must not replay into a field later.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.EMACS_TEXT_KEY_PRESSED, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    if (!panelId) return;
+    const press = parseEmacsTextKeyPress(params);
+    if (!press) {
+      console.error('[node-backend]', `[EMACS_TEXT_KEY_PRESSED] dropped: unknown key=${String(params.key)}`);
+      return;
+    }
+    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    if (!connectionId) {
+      console.error('[node-backend]', `[EMACS_TEXT_KEY_PRESSED] no connection for panelId=${panelId}`);
+      return;
+    }
+    connections.sendTo(connectionId, MessageType.EMACS_TEXT_KEY_PRESSED, { key: press.key, shift: press.shift });
   });
 
   // Parent-death watchdog — installed after `shutdown` is defined (below), since

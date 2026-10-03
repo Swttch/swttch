@@ -14,6 +14,7 @@ export * from './workflow';
 export * from './tool-decision';
 export * from './error-code';
 export * from './dictation';
+export * from './emacs-text-key';
 export * from './hunk';
 export * from './working-dir-path';
 export * from './mergeEdits';

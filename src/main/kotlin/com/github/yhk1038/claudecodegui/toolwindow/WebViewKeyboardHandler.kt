@@ -16,6 +16,14 @@ import org.cef.misc.BoolRef
  * go through IntelliJ's action system at all, so a key released here cannot be
  * rebound by the user in Settings → Keymap — which is why the policy releases as
  * little as it can get away with.
+ *
+ * The macOS Emacs-style text keys (Ctrl+A/B/D/E/F/H/K/L/N/O/P/T/V/Y, issue #506)
+ * are deliberately not handled here. They never reach this handler: a shortcut
+ * action registered on the browser component ([EmacsTextKeyShortcutGuard]) is
+ * performed by the IDE's key dispatcher first and consumes the AWT event, so
+ * CEF never sees the key. Reading them here was tried and was wrong twice over:
+ * the guard starved it, and the CEF `character` it had to rely on collides with
+ * other physical keys (a plain Forward Delete was reported as a Ctrl+letter).
  */
 class WebViewKeyboardHandler : CefKeyboardHandlerAdapter() {
 

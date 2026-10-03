@@ -17,6 +17,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useZoomControls } from './hooks/useZoomControls';
 import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
+import { useEmacsTextKeys } from './hooks/useEmacsTextKeys';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
@@ -33,6 +34,10 @@ function AppContent() {
   // Cmd+Arrow moves the caret to the line's or text's edge in every text field.
   // JCEF's off-screen rendering drops the macOS binding these keys rely on.
   useCaretBoundaryKeys();
+  // The macOS Ctrl+letter text keys (Ctrl+A/E, Ctrl+K/Y and the rest) move the
+  // caret and edit the macOS way. Under the same rendering the page sees every
+  // Ctrl+letter as Ctrl+A, so the IDE names the letter instead.
+  useEmacsTextKeys();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
   // The CLI reports the usage windows as a turn runs; take them instead of polling.

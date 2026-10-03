@@ -287,8 +287,17 @@ export function setSelectionRange(
   }
 }
 
-/** How far one caret move reaches: to the visual line's edge, or the text's. */
+/**
+ * How far one caret move reaches. Each value is a `Selection.modify`
+ * granularity, so the enum can be handed to the engine as it stands.
+ */
 export enum CaretBoundary {
+  /** One character, which is what Ctrl+B and Ctrl+F ask for. */
+  Character = 'character',
+  /** One *visual* row up or down, keeping the column: Ctrl+P and Ctrl+N. */
+  Row = 'line',
+  /** The start or end of the paragraph (the run between hard newlines): Ctrl+A and Ctrl+E. */
+  Paragraph = 'paragraphboundary',
   /** The edge of the *visual* row, which is where a soft wrap folded it. */
   Line = 'lineboundary',
   /** The start or end of the whole text. */
@@ -302,7 +311,8 @@ export enum CaretDirection {
 }
 
 /**
- * Move (or extend the selection to) the line's or document's edge.
+ * Move (or extend the selection by) one caret step: a character, a visual row,
+ * or out to a line, paragraph or document edge.
  *
  * macOS gives Cmd+Arrow to the composer everywhere else, but under off-screen
  * rendering Chromium never performs it. Cmd+Arrow is not one of Chromium's own
@@ -313,7 +323,16 @@ export enum CaretDirection {
  * working through the same builds because word-wise movement *is* built into
  * Chromium, which is the asymmetry that gives this away.
  *
- * That makes the composer, not the browser, responsible for these four keys
+ * The Emacs-style Ctrl keys on macOS (Ctrl+B/F/P/N/A/E) fail for the same
+ * reason: they arrive as the selectors `moveBackward:`, `moveForward:`,
+ * `moveUp:`, `moveDown:`, `moveToBeginningOfParagraph:` and
+ * `moveToEndOfParagraph:`, which OSR never receives. They also reach the page
+ * damaged: OSR reports every Ctrl+letter as Ctrl+A, so the page cannot tell
+ * which one was pressed. Cmd+Arrow is therefore read from the DOM keydown
+ * (useCaretBoundaryKeys), while the Ctrl letters are read by the IDE, which
+ * still sees the real one, and arrive over the bridge (useEmacsTextKeys).
+ *
+ * That makes the composer, not the browser, responsible for these keys
  * whenever the IDE runs JCEF out of process — the default since 2025.1, and so
  * what most users are on.
  *
