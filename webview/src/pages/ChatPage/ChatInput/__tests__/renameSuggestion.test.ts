@@ -6,6 +6,15 @@ describe('renameSuggestion', () => {
     expect(renameSuggestion('/rename ', 'My session')).toBe('My session');
   });
 
+  it('offers it when the command was typed with the Korean layout still on', () => {
+    expect(renameSuggestion('/ㄱㄷㅜㅁㅡㄷ ', 'My session')).toBe('My session');
+    expect(renameSuggestion('/ㄱ두믇 ', 'My session')).toBe('My session');
+  });
+
+  it('does not offer it for a different command typed with the Korean layout', () => {
+    expect(renameSuggestion('/ㅡㅐㅇ디 ', 'My session')).toBeNull();
+  });
+
   it('does not offer anything before the space is typed', () => {
     expect(renameSuggestion('/rename', 'My session')).toBeNull();
   });

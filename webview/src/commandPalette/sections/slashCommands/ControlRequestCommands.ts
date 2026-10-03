@@ -1,5 +1,6 @@
 import { SlashCommand } from '../../types';
 import { CONTROL_REQUEST_COMMANDS, type ControlRequestCommand } from '@/shared';
+import { restoreCommandName } from '../../hangulKeys';
 
 /**
  * Palette entries for the slash commands the CLI hides from us.
@@ -34,7 +35,7 @@ export class ControlRequestSlashCommand extends SlashCommand {
 
   async execute(): Promise<void> {
     const { chatStream, session } = this.getServices();
-    const currentInput = chatStream.input.trim();
+    const currentInput = restoreCommandName(chatStream.input.trim(), this.label);
     // Keep the user's arguments when they typed the command out (`/btw why?`);
     // fall back to the bare command when it was picked from the palette.
     const message = currentInput.startsWith(this.label) ? currentInput : this.label;

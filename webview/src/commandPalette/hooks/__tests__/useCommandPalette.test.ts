@@ -612,6 +612,70 @@ describe('useCommandPalette', () => {
   // The cached list stays visible until the refetch resolves.
   // ──────────────────────────────────────────────────────
 
+  describe('query typed with the Korean layout still on', () => {
+    const sections: PanelSection[] = [
+      {
+        id: PanelSectionId.SlashCommands,
+        title: 'Slash Commands',
+        showDividerAbove: false,
+        items: [
+          {
+            id: 'cli-rename',
+            label: '/rename',
+            type: PanelItemType.Command,
+            name: '/rename',
+            description: 'Rename the current conversation',
+            action: vi.fn(),
+          } as CommandItem,
+          {
+            id: 'cli-model',
+            label: '/model',
+            type: PanelItemType.Command,
+            name: '/model',
+            description: 'Switch the model',
+            action: vi.fn(),
+          } as CommandItem,
+          {
+            id: 'switch-model',
+            label: '모델 전환',
+            type: PanelItemType.Action,
+            action: vi.fn(),
+          } as ActionItem,
+        ],
+      },
+    ];
+
+    /** What the panel lists after the user has typed `typed` into the box. */
+    function itemIdsAfterTyping(typed: string): string[] {
+      setupMockRegistry(sections);
+      const { result } = renderHook(() => useCommandPalette({ onChange, textareaRef }));
+      act(() => {
+        result.current.detectSlashCommand(typed);
+      });
+      return result.current.filteredSections.flatMap(s => s.items).map(i => i.id);
+    }
+
+    it('finds the command by the keys the letters stand for', () => {
+      expect(itemIdsAfterTyping('/ㄱㄷ')).toEqual(['cli-rename']);
+    });
+
+    it('finds the command from syllables the input method already joined', () => {
+      expect(itemIdsAfterTyping('/ㄱ두믇')).toEqual(['cli-rename']);
+    });
+
+    it('still finds an item by the Korean text itself', () => {
+      expect(itemIdsAfterTyping('/모델')).toEqual(['switch-model']);
+    });
+
+    it('keeps the command once its arguments are being typed', () => {
+      expect(itemIdsAfterTyping('/ㄱ두믇 새 이름')).toEqual(['cli-rename']);
+    });
+
+    it('finds nothing for Hangul whose keys match no command', () => {
+      expect(itemIdsAfterTyping('/ㅋㅋㅋ')).toEqual([]);
+    });
+  });
+
   describe('panel-open refresh (issue #176)', () => {
     it('refreshes CLI config when the panel opens via the slash button', () => {
       const { result } = renderHook(() =>

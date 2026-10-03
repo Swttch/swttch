@@ -1,6 +1,7 @@
 import { SlashCommand } from '../../types';
 import type { SlashCommandInfo } from '@/types/slashCommand';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
+import { restoreCommandName } from '../../hangulKeys';
 
 /**
  * The CLI advertises `/model` in its command list but rejects it in stream-json
@@ -34,7 +35,7 @@ export class ModelSlashCommand extends SlashCommand {
 
   async execute(): Promise<void> {
     const { chatStream } = this.getServices();
-    const input = chatStream.input.trim();
+    const input = restoreCommandName(chatStream.input.trim(), this.label);
     // "/model sonnet" -> "sonnet"; "/model" (or palette click) -> undefined
     const arg = input.startsWith(this.label)
       ? input.slice(this.label.length).trim()

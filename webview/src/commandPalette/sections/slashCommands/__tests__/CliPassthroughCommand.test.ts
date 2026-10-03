@@ -113,4 +113,16 @@ describe('CliPassthroughCommand.execute', () => {
 
     expect(sendMessage).toHaveBeenCalledWith('/dummy some args', InputModeValues.BYPASS);
   });
+
+  it('sends the real command name with its args when the name was typed on the Korean layout', async () => {
+    const { services, sendMessage } = makeServices({
+      inputMode: InputModeValues.BYPASS,
+      input: '/ㅇㅕㅡㅡㅛ 새 이름',
+    });
+    const cmd = makeCommand(services);
+
+    await cmd.execute();
+
+    expect(sendMessage).toHaveBeenCalledWith('/dummy 새 이름', InputModeValues.BYPASS);
+  });
 });

@@ -1,5 +1,6 @@
 import { SlashCommand } from '../../types';
 import type { SlashCommandInfo } from '@/types/slashCommand';
+import { restoreCommandName } from '../../hangulKeys';
 
 export class CliPassthroughCommand extends SlashCommand {
   readonly id: string;
@@ -22,7 +23,7 @@ export class CliPassthroughCommand extends SlashCommand {
 
   async execute(): Promise<void> {
     const { chatStream, session } = this.getServices();
-    const currentInput = chatStream.input.trim();
+    const currentInput = restoreCommandName(chatStream.input.trim(), this.label);
     // Send full input (with args) when the user typed this command directly,
     // otherwise send just the command name (e.g. clicked from palette).
     const message = currentInput.startsWith(this.label) ? currentInput : this.label;

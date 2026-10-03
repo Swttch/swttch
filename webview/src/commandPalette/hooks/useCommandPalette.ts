@@ -4,6 +4,7 @@ import { useCommandPaletteRegistry } from '../CommandPaletteProvider';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { isCaretInMentionToken } from '@/utils/isCaretInMentionToken';
 import { findSlashCommandToken } from '@/utils/findSlashCommandToken';
+import { hangulToQwerty } from '../hangulKeys';
 
 interface UseCommandPaletteOptions {
   onChange: (value: string) => void;
@@ -46,15 +47,23 @@ export function useCommandPalette({ onChange, textareaRef, onCompleteInline }: U
   const filteredSections = useMemo(() => {
     const query = filterQuery.toLowerCase();
     const hasQuery = query.length > 0;
+    // The same query as the keys it was typed with: "ㄱㄷ" with the Korean
+    // layout still on is "re". Both are searched, because a Korean query is
+    // also a real one against the translated labels ("모델 전환").
+    const keyQuery = hangulToQwerty(filterQuery).toLowerCase();
+    const queries = keyQuery === query ? [query] : [query, keyQuery];
 
     // Rank a match so a name (label) hit beats a description-only hit, and an
     // earlier name position (prefix) beats a later one — otherwise "/model"
     // ranks below "/claude-api" just because its description mentions "model".
     // Lower is better; items are already filtered so a match always exists.
     const matchRank = (item: PanelItem): number => {
-      const labelIdx = item.label.toLowerCase().indexOf(query);
-      if (labelIdx !== -1) return labelIdx;
-      if (item.keywords?.some(k => k.toLowerCase().includes(query))) return 500;
+      const label = item.label.toLowerCase();
+      const labelIdx = Math.min(
+        ...queries.map(q => label.indexOf(q)).map(idx => (idx === -1 ? Infinity : idx)),
+      );
+      if (labelIdx !== Infinity) return labelIdx;
+      if (item.keywords?.some(k => queries.some(q => k.toLowerCase().includes(q)))) return 500;
       return 1000; // description-only match
     };
 
@@ -67,17 +76,17 @@ export function useCommandPalette({ onChange, textareaRef, onCompleteInline }: U
             // Argument mode: the command is settled ("/model sonnet"), so only
             // the exact command name stays — no fuzzy/description matches.
             if (argMode) {
-              return item.label.toLowerCase() === `/${query}`;
+              return queries.some(q => item.label.toLowerCase() === `/${q}`);
             }
-            const matchesLabel = item.label.toLowerCase().includes(query);
+            const matchesLabel = queries.some(q => item.label.toLowerCase().includes(q));
             const matchesKeyword = item.keywords?.some(keyword =>
-              keyword.toLowerCase().includes(query),
+              queries.some(q => keyword.toLowerCase().includes(q)),
             );
             // Slash commands carry a CLI-provided description; match on it too
             // so e.g. "/review" surfaces on "github pull request" (issue #167).
             const matchesDescription =
               item.type === PanelItemType.Command &&
-              (item as CommandItem).description.toLowerCase().includes(query);
+              queries.some(q => (item as CommandItem).description.toLowerCase().includes(q));
             return matchesLabel || (matchesKeyword ?? false) || matchesDescription;
           }
           return true;
