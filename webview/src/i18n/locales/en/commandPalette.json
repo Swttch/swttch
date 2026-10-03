@@ -73,6 +73,7 @@
     "copyFrontLog": "Copy plugin front log",
     "copyFrontLogDone": "Front-end log copied ({{count}} lines)",
     "copyFrontLogFailed": "No front-end log to copy",
+    "keyboardShortcuts": "Keyboard shortcuts",
     "viewHelpDocs": "View help docs",
     "restartPlugin": "Restart plugin",
     "restartConfirm": {

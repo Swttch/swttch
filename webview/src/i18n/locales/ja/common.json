@@ -334,5 +334,54 @@
     "addCategory": "カテゴリを追加",
     "deleteCategoryTitle": "カテゴリを削除",
     "deleteCategoryMessage": "「{{name}}」を削除しますか？プロンプトは残り、未分類になります。"
+  },
+  "helpModal": {
+    "title": "ヘルプ",
+    "tabsLabel": "ヘルプのセクション",
+    "tabs": {
+      "shortcuts": "ショートカット"
+    },
+    "groups": {
+      "general": "一般",
+      "chatInput": "チャット入力",
+      "textEditing": "テキスト編集",
+      "emacs": "Controlキーで編集"
+    },
+    "groupNotes": {
+      "emacs": "同じキーがMacのすべてのテキスト入力欄で使えます。"
+    },
+    "shortcuts": {
+      "openHelp": "このヘルプを開く/閉じる",
+      "newTab": "新しいチャットタブを開く",
+      "openSettings": "設定を開く",
+      "openModelMenu": "モデルを選ぶ",
+      "rotateModel": "次のモデルに切り替える",
+      "clearConversation": "会話をクリア",
+      "refreshSessionList": "セッション一覧が開いているときに更新",
+      "zoomIn": "拡大",
+      "zoomOut": "縮小",
+      "zoomReset": "ズームをリセット",
+      "openClaudeCode": "IDEからClaude Codeを開く",
+      "sendMessage": "メッセージを送信",
+      "insertNewline": "改行する",
+      "cyclePermissionMode": "権限モードを切り替える",
+      "recallPrompt": "最初の行または最後の行で、前後のプロンプトを呼び出す",
+      "toggleDictation": "音声入力を開始/停止",
+      "insertEditorPath": "エディタのファイルと選択中の行をチャットに送る",
+      "lineEdges": "行の先頭または末尾に移動",
+      "textStart": "テキストの先頭に移動",
+      "textEnd": "テキストの末尾に移動",
+      "wordMove": "1単語前または後ろに移動",
+      "emacsParagraphEdges": "段落の先頭または末尾に移動",
+      "emacsCharacterMove": "1文字前または後ろに移動",
+      "emacsLineMove": "1行上または下に移動",
+      "emacsDelete": "カーソルの後ろまたは前の1文字を削除",
+      "emacsKill": "段落の末尾まで削除",
+      "emacsYank": "Ctrl+Kで削除した内容を貼り付け",
+      "emacsTranspose": "カーソルの前後の2文字を入れ替える",
+      "emacsOpenLine": "カーソルの後ろに新しい行を挿入",
+      "emacsPageDown": "1画面下に移動",
+      "emacsCenter": "カーソルが中央に来るようにスクロール"
+    }
   }
 }

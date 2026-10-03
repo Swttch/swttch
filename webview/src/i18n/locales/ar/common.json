@@ -338,5 +338,54 @@
     "addCategory": "إضافة فئة",
     "deleteCategoryTitle": "حذف الفئة",
     "deleteCategoryMessage": "هل تريد حذف \"{{name}}\"؟ ستبقى مطالباتها وتصبح بدون فئة."
+  },
+  "helpModal": {
+    "title": "المساعدة",
+    "tabsLabel": "أقسام المساعدة",
+    "tabs": {
+      "shortcuts": "الاختصارات"
+    },
+    "groups": {
+      "general": "عام",
+      "chatInput": "إدخال المحادثة",
+      "textEditing": "تحرير النص",
+      "emacs": "التحرير باستخدام مفاتيح Control"
+    },
+    "groupNotes": {
+      "emacs": "تعمل المفاتيح نفسها في كل حقول النص على macOS."
+    },
+    "shortcuts": {
+      "openHelp": "فتح هذه المساعدة أو إغلاقها",
+      "newTab": "فتح علامة تبويب محادثة جديدة",
+      "openSettings": "فتح الإعدادات",
+      "openModelMenu": "اختيار النموذج",
+      "rotateModel": "التبديل إلى النموذج التالي",
+      "clearConversation": "مسح المحادثة",
+      "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",
+      "zoomIn": "تكبير",
+      "zoomOut": "تصغير",
+      "zoomReset": "إعادة ضبط التكبير",
+      "openClaudeCode": "فتح Claude Code من IDE",
+      "sendMessage": "إرسال الرسالة",
+      "insertNewline": "بدء سطر جديد",
+      "cyclePermissionMode": "تبديل وضع الأذونات",
+      "recallPrompt": "استدعاء مطالبة سابقة أو لاحقة من السطر الأول أو الأخير",
+      "toggleDictation": "بدء الإدخال الصوتي أو إيقافه",
+      "insertEditorPath": "إرسال ملف المحرر والأسطر المحددة إلى المحادثة",
+      "lineEdges": "الانتقال إلى بداية السطر أو نهايته",
+      "textStart": "الانتقال إلى بداية النص",
+      "textEnd": "الانتقال إلى نهاية النص",
+      "wordMove": "الرجوع كلمة واحدة أو التقدم كلمة واحدة",
+      "emacsParagraphEdges": "الانتقال إلى بداية الفقرة أو نهايتها",
+      "emacsCharacterMove": "الرجوع حرفًا واحدًا أو التقدم حرفًا واحدًا",
+      "emacsLineMove": "الانتقال سطرًا لأعلى أو لأسفل",
+      "emacsDelete": "حذف الحرف الذي بعد المؤشر أو الذي قبله",
+      "emacsKill": "الحذف حتى نهاية الفقرة",
+      "emacsYank": "لصق ما حذفه Ctrl+K",
+      "emacsTranspose": "تبديل الحرفين المحيطين بالمؤشر",
+      "emacsOpenLine": "فتح سطر جديد بعد المؤشر",
+      "emacsPageDown": "النزول شاشة واحدة",
+      "emacsCenter": "التمرير لوضع المؤشر في المنتصف"
+    }
   }
 }

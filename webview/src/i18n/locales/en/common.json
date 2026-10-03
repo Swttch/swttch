@@ -334,5 +334,54 @@
     "addCategory": "Add category",
     "deleteCategoryTitle": "Delete category",
     "deleteCategoryMessage": "Remove \"{{name}}\"? Its prompts are kept and become uncategorised."
+  },
+  "helpModal": {
+    "title": "Help",
+    "tabsLabel": "Help sections",
+    "tabs": {
+      "shortcuts": "Shortcuts"
+    },
+    "groups": {
+      "general": "General",
+      "chatInput": "Chat input",
+      "textEditing": "Text editing",
+      "emacs": "Edit with Control keys"
+    },
+    "groupNotes": {
+      "emacs": "The same keys work in every Mac text field."
+    },
+    "shortcuts": {
+      "openHelp": "Open or close this help",
+      "newTab": "Open a new chat tab",
+      "openSettings": "Open settings",
+      "openModelMenu": "Choose the model",
+      "rotateModel": "Switch to the next model",
+      "clearConversation": "Clear the conversation",
+      "refreshSessionList": "Refresh the session list while it is open",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomReset": "Reset the zoom",
+      "openClaudeCode": "Open Claude Code from the IDE",
+      "sendMessage": "Send the message",
+      "insertNewline": "Start a new line",
+      "cyclePermissionMode": "Switch the permission mode",
+      "recallPrompt": "Bring back an earlier or later prompt from the first or last line",
+      "toggleDictation": "Start or stop voice input",
+      "insertEditorPath": "Send the editor's file and selected lines to the chat",
+      "lineEdges": "Jump to the start or end of the line",
+      "textStart": "Jump to the start of the text",
+      "textEnd": "Jump to the end of the text",
+      "wordMove": "Move back or forward one word",
+      "emacsParagraphEdges": "Jump to the start or end of the paragraph",
+      "emacsCharacterMove": "Move back or forward one character",
+      "emacsLineMove": "Move up or down one line",
+      "emacsDelete": "Delete the character after or before the caret",
+      "emacsKill": "Delete to the end of the paragraph",
+      "emacsYank": "Paste what Ctrl+K deleted",
+      "emacsTranspose": "Swap the two characters around the caret",
+      "emacsOpenLine": "Open a new line after the caret",
+      "emacsPageDown": "Move down one screen",
+      "emacsCenter": "Scroll to put the caret in the middle"
+    }
   }
 }

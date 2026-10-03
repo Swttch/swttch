@@ -334,5 +334,54 @@
     "addCategory": "Kategorie hinzufügen",
     "deleteCategoryTitle": "Kategorie löschen",
     "deleteCategoryMessage": "„{{name}}“ löschen? Die Prompts bleiben und werden ohne Kategorie."
+  },
+  "helpModal": {
+    "title": "Hilfe",
+    "tabsLabel": "Hilfebereiche",
+    "tabs": {
+      "shortcuts": "Tastenkürzel"
+    },
+    "groups": {
+      "general": "Allgemein",
+      "chatInput": "Chat-Eingabe",
+      "textEditing": "Textbearbeitung",
+      "emacs": "Mit Control-Tasten bearbeiten"
+    },
+    "groupNotes": {
+      "emacs": "Dieselben Tasten funktionieren in jedem Textfeld auf dem Mac."
+    },
+    "shortcuts": {
+      "openHelp": "Diese Hilfe öffnen oder schließen",
+      "newTab": "Neuen Chat-Tab öffnen",
+      "openSettings": "Einstellungen öffnen",
+      "openModelMenu": "Modell auswählen",
+      "rotateModel": "Zum nächsten Modell wechseln",
+      "clearConversation": "Unterhaltung löschen",
+      "refreshSessionList": "Sitzungsliste aktualisieren, solange sie geöffnet ist",
+      "zoomIn": "Vergrößern",
+      "zoomOut": "Verkleinern",
+      "zoomReset": "Zoom zurücksetzen",
+      "openClaudeCode": "Claude Code über die IDE öffnen",
+      "sendMessage": "Nachricht senden",
+      "insertNewline": "Neue Zeile beginnen",
+      "cyclePermissionMode": "Berechtigungsmodus wechseln",
+      "recallPrompt": "Früheren oder späteren Prompt aus der ersten oder letzten Zeile zurückholen",
+      "toggleDictation": "Spracheingabe starten oder beenden",
+      "insertEditorPath": "Datei und markierte Zeilen des Editors an den Chat senden",
+      "lineEdges": "Zum Anfang oder Ende der Zeile springen",
+      "textStart": "Zum Anfang des Textes springen",
+      "textEnd": "Zum Ende des Textes springen",
+      "wordMove": "Ein Wort zurück oder vor springen",
+      "emacsParagraphEdges": "Zum Anfang oder Ende des Absatzes springen",
+      "emacsCharacterMove": "Ein Zeichen zurück oder vor gehen",
+      "emacsLineMove": "Eine Zeile nach oben oder unten gehen",
+      "emacsDelete": "Zeichen nach oder vor dem Textcursor löschen",
+      "emacsKill": "Bis zum Ende des Absatzes löschen",
+      "emacsYank": "Einfügen, was Ctrl+K gelöscht hat",
+      "emacsTranspose": "Die beiden Zeichen um den Textcursor vertauschen",
+      "emacsOpenLine": "Nach dem Textcursor eine neue Zeile öffnen",
+      "emacsPageDown": "Einen Bildschirm nach unten gehen",
+      "emacsCenter": "Scrollen, bis der Textcursor in der Mitte steht"
+    }
   }
 }

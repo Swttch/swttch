@@ -19,6 +19,7 @@ import { useZoomControls } from './hooks/useZoomControls';
 import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { useEmacsTextKeys } from './hooks/useEmacsTextKeys';
 import { ZoomIndicator } from './components/ZoomIndicator';
+import { HelpModalHost } from './components/HelpModal';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { useNotificationSoundMigration } from './hooks/useNotificationSound';
@@ -81,6 +82,7 @@ function AppContent() {
     <>
       <I18nLocaleSync />
       <ZoomIndicator />
+      <HelpModalHost />
       {isDev() && <div className="fixed w-full top-0 border-t-2 border-t-fuchsia-500 z-50" />}
       <Routes location={backgroundLocation ?? location}>
         <Route path="/" element={<ProjectSelectorPage />} />

@@ -73,6 +73,7 @@
     "copyFrontLog": "کپی گزارش رابط کاربری پلاگین",
     "copyFrontLogDone": "گزارش رابط کاربری کپی شد ({{count}} خط)",
     "copyFrontLogFailed": "گزارش رابط کاربری برای کپی وجود ندارد",
+    "keyboardShortcuts": "میان‌برهای صفحه‌کلید",
     "viewHelpDocs": "مشاهده مستندات راهنما",
     "restartPlugin": "راه‌اندازی مجدد پلاگین",
     "restartConfirm": {

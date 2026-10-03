@@ -334,5 +334,54 @@
     "addCategory": "카테고리 추가",
     "deleteCategoryTitle": "카테고리 삭제",
     "deleteCategoryMessage": "\"{{name}}\"을 삭제할까요? 프롬프트는 남고 미분류가 됩니다."
+  },
+  "helpModal": {
+    "title": "도움말",
+    "tabsLabel": "도움말 구역",
+    "tabs": {
+      "shortcuts": "단축키"
+    },
+    "groups": {
+      "general": "일반",
+      "chatInput": "채팅 입력",
+      "textEditing": "텍스트 편집",
+      "emacs": "Control 키로 편집"
+    },
+    "groupNotes": {
+      "emacs": "맥의 모든 입력창과 같은 키예요."
+    },
+    "shortcuts": {
+      "openHelp": "이 도움말 열기 또는 닫기",
+      "newTab": "새 채팅 탭 열기",
+      "openSettings": "설정 열기",
+      "openModelMenu": "모델 고르기",
+      "rotateModel": "다음 모델로 바꾸기",
+      "clearConversation": "대화 비우기",
+      "refreshSessionList": "세션 목록이 열려 있을 때 새로고침",
+      "zoomIn": "확대",
+      "zoomOut": "축소",
+      "zoomReset": "확대 비율 되돌리기",
+      "openClaudeCode": "IDE에서 Claude Code 열기",
+      "sendMessage": "메시지 보내기",
+      "insertNewline": "줄 바꾸기",
+      "cyclePermissionMode": "권한 모드 바꾸기",
+      "recallPrompt": "첫 줄 또는 마지막 줄에서 이전 또는 다음 프롬프트 불러오기",
+      "toggleDictation": "음성 입력 시작 또는 중지",
+      "insertEditorPath": "에디터의 파일과 선택한 줄을 채팅으로 보내기",
+      "lineEdges": "줄의 처음 또는 끝으로 이동",
+      "textStart": "글의 맨 앞으로 이동",
+      "textEnd": "글의 맨 끝으로 이동",
+      "wordMove": "한 단어 앞 또는 뒤로 이동",
+      "emacsParagraphEdges": "문단의 처음 또는 끝으로 이동",
+      "emacsCharacterMove": "한 글자 앞 또는 뒤로 이동",
+      "emacsLineMove": "한 줄 위 또는 아래로 이동",
+      "emacsDelete": "커서 뒤 또는 앞의 글자 지우기",
+      "emacsKill": "문단 끝까지 지우기",
+      "emacsYank": "Ctrl+K로 지운 내용 붙여넣기",
+      "emacsTranspose": "커서 양옆의 두 글자 맞바꾸기",
+      "emacsOpenLine": "커서 뒤에 새 줄 열기",
+      "emacsPageDown": "한 화면 아래로 이동",
+      "emacsCenter": "커서가 가운데 오도록 스크롤"
+    }
   }
 }

@@ -73,6 +73,7 @@
     "copyFrontLog": "複製外掛前端記錄",
     "copyFrontLogDone": "已複製前端記錄（{{count}} 行）",
     "copyFrontLogFailed": "沒有可複製的前端記錄",
+    "keyboardShortcuts": "鍵盤快速鍵",
     "viewHelpDocs": "檢視說明文件",
     "restartPlugin": "重新啟動外掛",
     "restartConfirm": {

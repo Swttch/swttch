@@ -334,5 +334,54 @@
     "addCategory": "Añadir categoría",
     "deleteCategoryTitle": "Eliminar categoría",
     "deleteCategoryMessage": "¿Eliminar «{{name}}»? Sus prompts se conservan y quedan sin categoría."
+  },
+  "helpModal": {
+    "title": "Ayuda",
+    "tabsLabel": "Secciones de ayuda",
+    "tabs": {
+      "shortcuts": "Atajos"
+    },
+    "groups": {
+      "general": "General",
+      "chatInput": "Entrada del chat",
+      "textEditing": "Edición de texto",
+      "emacs": "Editar con las teclas Control"
+    },
+    "groupNotes": {
+      "emacs": "Las mismas teclas funcionan en cualquier campo de texto del Mac."
+    },
+    "shortcuts": {
+      "openHelp": "Abrir o cerrar esta ayuda",
+      "newTab": "Abrir una pestaña de chat nueva",
+      "openSettings": "Abrir los ajustes",
+      "openModelMenu": "Elegir el modelo",
+      "rotateModel": "Cambiar al siguiente modelo",
+      "clearConversation": "Borrar la conversación",
+      "refreshSessionList": "Actualizar la lista de sesiones mientras está abierta",
+      "zoomIn": "Acercar el zoom",
+      "zoomOut": "Alejar el zoom",
+      "zoomReset": "Restablecer el zoom",
+      "openClaudeCode": "Abrir Claude Code desde el IDE",
+      "sendMessage": "Enviar el mensaje",
+      "insertNewline": "Empezar una línea nueva",
+      "cyclePermissionMode": "Cambiar el modo de permisos",
+      "recallPrompt": "Recuperar un prompt anterior o posterior desde la primera o la última línea",
+      "toggleDictation": "Iniciar o detener la entrada de voz",
+      "insertEditorPath": "Enviar al chat el archivo del editor y las líneas seleccionadas",
+      "lineEdges": "Saltar al inicio o al final de la línea",
+      "textStart": "Saltar al inicio del texto",
+      "textEnd": "Saltar al final del texto",
+      "wordMove": "Moverse una palabra hacia atrás o hacia delante",
+      "emacsParagraphEdges": "Saltar al inicio o al final del párrafo",
+      "emacsCharacterMove": "Moverse un carácter hacia atrás o hacia delante",
+      "emacsLineMove": "Subir o bajar una línea",
+      "emacsDelete": "Borrar el carácter posterior o anterior al cursor",
+      "emacsKill": "Borrar hasta el final del párrafo",
+      "emacsYank": "Pegar lo que borró Ctrl+K",
+      "emacsTranspose": "Intercambiar los dos caracteres que rodean el cursor",
+      "emacsOpenLine": "Abrir una línea nueva después del cursor",
+      "emacsPageDown": "Bajar una pantalla",
+      "emacsCenter": "Desplazar para dejar el cursor en el centro"
+    }
   }
 }

@@ -73,6 +73,7 @@
     "copyFrontLog": "プラグインのフロントログをコピー",
     "copyFrontLogDone": "フロントログをコピーしました ({{count}} 行)",
     "copyFrontLogFailed": "コピーできるフロントログがありません",
+    "keyboardShortcuts": "キーボードショートカット",
     "viewHelpDocs": "ヘルプドキュメントを表示",
     "restartPlugin": "プラグインを再起動",
     "restartConfirm": {

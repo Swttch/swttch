@@ -334,5 +334,54 @@
     "addCategory": "Ajouter une catégorie",
     "deleteCategoryTitle": "Supprimer la catégorie",
     "deleteCategoryMessage": "Supprimer « {{name}} » ? Ses prompts sont conservés et deviennent sans catégorie."
+  },
+  "helpModal": {
+    "title": "Aide",
+    "tabsLabel": "Sections d'aide",
+    "tabs": {
+      "shortcuts": "Raccourcis"
+    },
+    "groups": {
+      "general": "Général",
+      "chatInput": "Saisie du chat",
+      "textEditing": "Édition du texte",
+      "emacs": "Modifier avec les touches Control"
+    },
+    "groupNotes": {
+      "emacs": "Les mêmes touches fonctionnent dans tous les champs de texte du Mac."
+    },
+    "shortcuts": {
+      "openHelp": "Ouvrir ou fermer cette aide",
+      "newTab": "Ouvrir un nouvel onglet de chat",
+      "openSettings": "Ouvrir les paramètres",
+      "openModelMenu": "Choisir le modèle",
+      "rotateModel": "Passer au modèle suivant",
+      "clearConversation": "Effacer la conversation",
+      "refreshSessionList": "Actualiser la liste des sessions quand elle est ouverte",
+      "zoomIn": "Zoom avant",
+      "zoomOut": "Zoom arrière",
+      "zoomReset": "Réinitialiser le zoom",
+      "openClaudeCode": "Ouvrir Claude Code depuis l'IDE",
+      "sendMessage": "Envoyer le message",
+      "insertNewline": "Passer à la ligne",
+      "cyclePermissionMode": "Changer le mode d'autorisation",
+      "recallPrompt": "Rappeler un prompt précédent ou suivant depuis la première ou la dernière ligne",
+      "toggleDictation": "Démarrer ou arrêter la saisie vocale",
+      "insertEditorPath": "Envoyer au chat le fichier de l'éditeur et les lignes sélectionnées",
+      "lineEdges": "Aller au début ou à la fin de la ligne",
+      "textStart": "Aller au début du texte",
+      "textEnd": "Aller à la fin du texte",
+      "wordMove": "Reculer ou avancer d'un mot",
+      "emacsParagraphEdges": "Aller au début ou à la fin du paragraphe",
+      "emacsCharacterMove": "Reculer ou avancer d'un caractère",
+      "emacsLineMove": "Monter ou descendre d'une ligne",
+      "emacsDelete": "Supprimer le caractère après ou avant le curseur",
+      "emacsKill": "Supprimer jusqu'à la fin du paragraphe",
+      "emacsYank": "Coller ce que Ctrl+K a supprimé",
+      "emacsTranspose": "Échanger les deux caractères autour du curseur",
+      "emacsOpenLine": "Insérer une nouvelle ligne après le curseur",
+      "emacsPageDown": "Descendre d'un écran",
+      "emacsCenter": "Faire défiler pour placer le curseur au milieu"
+    }
   }
 }

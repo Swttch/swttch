@@ -73,6 +73,7 @@
     "copyFrontLog": "نسخ سجل واجهة الإضافة",
     "copyFrontLogDone": "تم نسخ سجل الواجهة ({{count}} سطر)",
     "copyFrontLogFailed": "لا يوجد سجل واجهة لنسخه",
+    "keyboardShortcuts": "اختصارات لوحة المفاتيح",
     "viewHelpDocs": "عرض وثائق المساعدة",
     "restartPlugin": "إعادة تشغيل الإضافة",
     "restartConfirm": {

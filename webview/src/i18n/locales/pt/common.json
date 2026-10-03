@@ -334,5 +334,54 @@
     "addCategory": "Adicionar categoria",
     "deleteCategoryTitle": "Excluir categoria",
     "deleteCategoryMessage": "Excluir \"{{name}}\"? Os prompts são mantidos e ficam sem categoria."
+  },
+  "helpModal": {
+    "title": "Ajuda",
+    "tabsLabel": "Seções da ajuda",
+    "tabs": {
+      "shortcuts": "Atalhos"
+    },
+    "groups": {
+      "general": "Geral",
+      "chatInput": "Campo do chat",
+      "textEditing": "Edição de texto",
+      "emacs": "Editar com as teclas Control"
+    },
+    "groupNotes": {
+      "emacs": "As mesmas teclas funcionam em qualquer campo de texto do Mac."
+    },
+    "shortcuts": {
+      "openHelp": "Abrir ou fechar esta ajuda",
+      "newTab": "Abrir uma nova aba de chat",
+      "openSettings": "Abrir as configurações",
+      "openModelMenu": "Escolher o modelo",
+      "rotateModel": "Mudar para o próximo modelo",
+      "clearConversation": "Limpar a conversa",
+      "refreshSessionList": "Atualizar a lista de sessões enquanto ela estiver aberta",
+      "zoomIn": "Aumentar o zoom",
+      "zoomOut": "Diminuir o zoom",
+      "zoomReset": "Restaurar o zoom",
+      "openClaudeCode": "Abrir o Claude Code a partir da IDE",
+      "sendMessage": "Enviar a mensagem",
+      "insertNewline": "Começar uma nova linha",
+      "cyclePermissionMode": "Alternar o modo de permissão",
+      "recallPrompt": "Trazer de volta um prompt anterior ou posterior, a partir da primeira ou da última linha",
+      "toggleDictation": "Iniciar ou parar a entrada por voz",
+      "insertEditorPath": "Enviar ao chat o arquivo do editor e as linhas selecionadas",
+      "lineEdges": "Ir para o início ou o fim da linha",
+      "textStart": "Ir para o início do texto",
+      "textEnd": "Ir para o fim do texto",
+      "wordMove": "Voltar ou avançar uma palavra",
+      "emacsParagraphEdges": "Ir para o início ou o fim do parágrafo",
+      "emacsCharacterMove": "Voltar ou avançar um caractere",
+      "emacsLineMove": "Subir ou descer uma linha",
+      "emacsDelete": "Apagar o caractere depois ou antes do cursor de texto",
+      "emacsKill": "Apagar até o fim do parágrafo",
+      "emacsYank": "Colar o que o Ctrl+K apagou",
+      "emacsTranspose": "Trocar de lugar os dois caracteres ao redor do cursor de texto",
+      "emacsOpenLine": "Abrir uma nova linha depois do cursor de texto",
+      "emacsPageDown": "Descer uma tela",
+      "emacsCenter": "Rolar para deixar o cursor de texto no meio da tela"
+    }
   }
 }

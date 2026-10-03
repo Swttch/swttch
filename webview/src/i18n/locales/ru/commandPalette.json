@@ -73,6 +73,7 @@
     "copyFrontLog": "Скопировать журнал фронтенда плагина",
     "copyFrontLogDone": "Журнал фронтенда скопирован ({{count}} строк)",
     "copyFrontLogFailed": "Нет журнала фронтенда для копирования",
+    "keyboardShortcuts": "Горячие клавиши",
     "viewHelpDocs": "Открыть справочную документацию",
     "restartPlugin": "Перезапустить плагин",
     "restartConfirm": {

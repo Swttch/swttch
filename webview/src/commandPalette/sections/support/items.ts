@@ -2,6 +2,8 @@ import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
 import { i18n } from '@/i18n';
 import { copyFrontendLogs } from '@/utils/copyFrontendLogs';
+import { HelpShortcutHint } from '@/components/HelpModal/HelpShortcutHint';
+import { OPEN_HELP_EVENT } from '@/components/HelpModal/events';
 import { StaticItem } from '../../types';
 import { enKeyword } from '../../enKeyword';
 
@@ -27,7 +29,20 @@ export const getSupportItems = (): StaticItem[] => [
       }
     },
   }),
-  new StaticItem('help-docs', i18n.t('commandPalette:support.viewHelpDocs'), {
+  new StaticItem('keyboard-shortcuts', i18n.t('commandPalette:support.keyboardShortcuts'), {
+    disabled: false,
+    keywords: [
+      enKeyword('commandPalette:support.keyboardShortcuts'),
+      'help',
+      'hotkeys',
+      'keys',
+    ],
+    valueComponent: HelpShortcutHint,
+    action: async () => {
+      window.dispatchEvent(new CustomEvent(OPEN_HELP_EVENT));
+    },
+  }),
+  new StaticItem('help-docs',i18n.t('commandPalette:support.viewHelpDocs'), {
     disabled: false,
     keywords: [enKeyword('commandPalette:support.viewHelpDocs')],
     action: async () => {

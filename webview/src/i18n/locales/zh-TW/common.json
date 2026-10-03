@@ -334,5 +334,54 @@
     "addCategory": "新增分類",
     "deleteCategoryTitle": "刪除分類",
     "deleteCategoryMessage": "要刪除「{{name}}」嗎？提示詞會保留並變為未分類。"
+  },
+  "helpModal": {
+    "title": "說明",
+    "tabsLabel": "說明區段",
+    "tabs": {
+      "shortcuts": "快速鍵"
+    },
+    "groups": {
+      "general": "一般",
+      "chatInput": "聊天輸入框",
+      "textEditing": "文字編輯",
+      "emacs": "使用 Control 鍵編輯"
+    },
+    "groupNotes": {
+      "emacs": "相同的按鍵在 Mac 的所有文字欄位中都有效。"
+    },
+    "shortcuts": {
+      "openHelp": "開啟或關閉此說明",
+      "newTab": "開啟新的聊天分頁",
+      "openSettings": "開啟設定",
+      "openModelMenu": "選擇模型",
+      "rotateModel": "切換到下一個模型",
+      "clearConversation": "清除對話",
+      "refreshSessionList": "在工作階段清單開啟時重新整理清單",
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "zoomReset": "重設縮放",
+      "openClaudeCode": "從 IDE 開啟 Claude Code",
+      "sendMessage": "傳送訊息",
+      "insertNewline": "換行",
+      "cyclePermissionMode": "切換權限模式",
+      "recallPrompt": "在第一行或最後一行時，叫出前一則或後一則提示詞",
+      "toggleDictation": "開始或停止語音輸入",
+      "insertEditorPath": "將編輯器中的檔案與選取的行傳送到聊天",
+      "lineEdges": "跳到該行的開頭或結尾",
+      "textStart": "跳到文字的開頭",
+      "textEnd": "跳到文字的結尾",
+      "wordMove": "向前或向後移動一個字詞",
+      "emacsParagraphEdges": "跳到段落的開頭或結尾",
+      "emacsCharacterMove": "向前或向後移動一個字元",
+      "emacsLineMove": "向上或向下移動一行",
+      "emacsDelete": "刪除游標之後或之前的字元",
+      "emacsKill": "刪除到段落結尾",
+      "emacsYank": "貼上 Ctrl+K 刪除的內容",
+      "emacsTranspose": "對調游標前後的兩個字元",
+      "emacsOpenLine": "在游標之後插入新的一行",
+      "emacsPageDown": "向下移動一個畫面",
+      "emacsCenter": "捲動畫面，讓游標位於中間"
+    }
   }
 }

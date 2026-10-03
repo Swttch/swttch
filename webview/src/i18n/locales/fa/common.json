@@ -334,5 +334,54 @@
     "addCategory": "افزودن دسته",
     "deleteCategoryTitle": "حذف دسته",
     "deleteCategoryMessage": "«{{name}}» حذف شود؟ پرامپت‌هایش می‌مانند و بدون دسته می‌شوند."
+  },
+  "helpModal": {
+    "title": "راهنما",
+    "tabsLabel": "بخش‌های راهنما",
+    "tabs": {
+      "shortcuts": "میان‌برها"
+    },
+    "groups": {
+      "general": "عمومی",
+      "chatInput": "ورودی گفتگو",
+      "textEditing": "ویرایش متن",
+      "emacs": "ویرایش با کلیدهای Control"
+    },
+    "groupNotes": {
+      "emacs": "همین کلیدها در همهٔ کادرهای متنی Mac کار می‌کنند."
+    },
+    "shortcuts": {
+      "openHelp": "باز یا بستن این راهنما",
+      "newTab": "باز کردن تب گفتگوی جدید",
+      "openSettings": "باز کردن تنظیمات",
+      "openModelMenu": "انتخاب مدل",
+      "rotateModel": "رفتن به مدل بعدی",
+      "clearConversation": "پاک کردن گفتگو",
+      "refreshSessionList": "تازه‌سازی فهرست نشست‌ها هنگام باز بودن آن",
+      "zoomIn": "بزرگ‌نمایی",
+      "zoomOut": "کوچک‌نمایی",
+      "zoomReset": "بازنشانی بزرگ‌نمایی",
+      "openClaudeCode": "باز کردن Claude Code از IDE",
+      "sendMessage": "ارسال پیام",
+      "insertNewline": "شروع خط جدید",
+      "cyclePermissionMode": "تغییر حالت مجوز",
+      "recallPrompt": "آوردن پرامپت قبلی یا بعدی از خط اول یا آخر",
+      "toggleDictation": "شروع یا توقف ورودی صوتی",
+      "insertEditorPath": "ارسال فایل و خطوط انتخاب‌شدهٔ ویرایشگر به گفتگو",
+      "lineEdges": "رفتن به ابتدا یا انتهای خط",
+      "textStart": "رفتن به ابتدای متن",
+      "textEnd": "رفتن به انتهای متن",
+      "wordMove": "حرکت یک کلمه به عقب یا جلو",
+      "emacsParagraphEdges": "رفتن به ابتدا یا انتهای پاراگراف",
+      "emacsCharacterMove": "حرکت یک نویسه به عقب یا جلو",
+      "emacsLineMove": "حرکت یک خط به بالا یا پایین",
+      "emacsDelete": "حذف نویسهٔ بعد یا قبل از نشانگر متن",
+      "emacsKill": "حذف تا انتهای پاراگراف",
+      "emacsYank": "چسباندن آنچه Ctrl+K حذف کرده بود",
+      "emacsTranspose": "جابه‌جا کردن دو نویسهٔ دوروبر نشانگر متن",
+      "emacsOpenLine": "باز کردن خط جدید بعد از نشانگر متن",
+      "emacsPageDown": "حرکت یک صفحه‌نمایش به پایین",
+      "emacsCenter": "اسکرول برای قرار گرفتن نشانگر متن در وسط"
+    }
   }
 }

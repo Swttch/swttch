@@ -73,6 +73,7 @@
     "copyFrontLog": "Copier le journal front-end du plugin",
     "copyFrontLogDone": "Journal front-end copié ({{count}} lignes)",
     "copyFrontLogFailed": "Aucun journal front-end à copier",
+    "keyboardShortcuts": "Raccourcis clavier",
     "viewHelpDocs": "Consulter la documentation d'aide",
     "restartPlugin": "Redémarrer le plugin",
     "restartConfirm": {
