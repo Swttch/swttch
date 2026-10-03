@@ -107,6 +107,9 @@ interface SessionContextValue {
  */
 export const SESSION_PAGE_SIZE = 30;
 
+/** How the CLI's reply to `/rename` begins; the reply is English whatever the UI language. */
+const SESSION_RENAMED_REPLY_PREFIX = 'Session renamed to:';
+
 /**
  * Newest first, with rows the list does not show removed.
  *
@@ -529,6 +532,25 @@ export function SessionProvider({ children }: SessionProviderProps) {
     });
     return unsubscribe;
   }, [subscribe, loadSessions, mergeSession]);
+
+  // `/rename` ends with the CLI saying "Session renamed to: <name>" as a reply.
+  // That reply is the proof the name was recorded, so it is the moment to ask for
+  // the list again; refreshing earlier would read the transcript before the name
+  // is in it.
+  useEffect(() => {
+    const unsubscribe = subscribe(MessageType.CLI_EVENT, (message) => {
+      const event = (message.payload ?? {}) as {
+        type?: string;
+        message?: { content?: Array<{ type?: string; text?: string }> };
+      };
+      if (event.type !== 'assistant') return;
+      const renamed = event.message?.content?.some(
+        block => block.type === 'text' && block.text?.startsWith(SESSION_RENAMED_REPLY_PREFIX),
+      );
+      if (renamed) void loadSessions();
+    });
+    return unsubscribe;
+  }, [subscribe, loadSessions]);
 
   const resetToNewSession = useCallback(() => {
     // URL change is the SSOT — SessionLoader reacts to clear state + reset

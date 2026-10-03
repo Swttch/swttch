@@ -60,6 +60,10 @@ export class LoadedMessageDto {
 
   message_id?: string;
 
+  // system-specific: a `local_command` entry keeps what a slash command printed
+  // here, wrapped in <local-command-stdout>, rather than in `message`.
+  content?: string;
+
   // result-specific
   subtype?: string;
   result?: unknown;

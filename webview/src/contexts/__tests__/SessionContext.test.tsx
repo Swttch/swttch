@@ -6,7 +6,8 @@ import type { SessionMetaDto } from '../../dto/session/SessionDto';
 import { MessageType } from '@/shared';
 
 // Mock contexts
-const mockSubscribe = vi.fn(() => vi.fn());
+type SubscribedHandler = (message: { payload?: object }) => void;
+const mockSubscribe = vi.fn((_type: string, _handler: SubscribedHandler) => vi.fn());
 // Resolves, because the real `send` returns a Promise (useBridge) and callers
 // chain onto it. A bare vi.fn() returning undefined let a caller that awaits or
 // catches blow up here while working in the app.
@@ -1192,6 +1193,49 @@ describe('SessionContext', () => {
    * did nothing until the next message respawned the CLI — which is why a plan
    * approved with auto-accept kept asking for every edit of that same turn.
    */
+  describe('session list refresh after /rename', () => {
+    async function renderAndGetCliEventHandler(): Promise<SubscribedHandler> {
+      render(
+        <SessionProvider>
+          <TestConsumer onMount={() => {}} />
+        </SessionProvider>
+      );
+      await waitFor(() => {
+        expect(mockSubscribe.mock.calls.some(([type]) => type === MessageType.CLI_EVENT)).toBe(true);
+      });
+      const calls = mockSubscribe.mock.calls.filter(([type]) => type === MessageType.CLI_EVENT);
+      return calls[calls.length - 1][1];
+    }
+
+    function assistantSays(text: string) {
+      return { payload: { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text }] } } };
+    }
+
+    it('reloads the list when the CLI replies that the session was renamed', async () => {
+      const handler = await renderAndGetCliEventHandler();
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler(assistantSays('Session renamed to: My new name'));
+      });
+
+      await waitFor(() => expect(mockSessionsIndex).toHaveBeenCalledTimes(1));
+    });
+
+    it('leaves the list alone for any other reply', async () => {
+      const handler = await renderAndGetCliEventHandler();
+      mockSessionsIndex.mockClear();
+
+      await act(async () => {
+        handler(assistantSays('Here is what I found.'));
+        handler({ payload: { type: 'system', subtype: 'init' } });
+        handler({ payload: undefined });
+      });
+
+      expect(mockSessionsIndex).not.toHaveBeenCalled();
+    });
+  });
+
   describe('inputMode - 사용자가 고른 모드를 CLI에 전달 (#393)', () => {
     function modeMessages() {
       return mockSend.mock.calls.filter(([type]) => type === MessageType.SET_PERMISSION_MODE);

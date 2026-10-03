@@ -648,4 +648,68 @@ describe('extractSessionInfo', () => {
       expect(result.lastTimestamp).toBe('2025-06-01T00:00:00Z');
     });
   });
+
+  describe('custom-title (CLI /rename)', () => {
+    const user = JSON.stringify({
+      uuid: 'u1',
+      parentUuid: null,
+      type: 'user',
+      timestamp: '2025-01-01T00:00:00Z',
+      message: { content: [{ type: 'text', text: 'First prompt' }] },
+    });
+    const assistant = JSON.stringify({
+      uuid: 'u2',
+      parentUuid: 'u1',
+      type: 'assistant',
+      timestamp: '2025-01-01T00:01:00Z',
+      message: { content: [{ type: 'text', text: 'Reply' }] },
+    });
+    const customTitle = (value: string | number) =>
+      JSON.stringify({ type: 'custom-title', customTitle: value, sessionId: 's1' });
+
+    it('uses a single custom-title in the head as the title', async () => {
+      const filePath = await writeJsonl([customTitle('Renamed'), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Renamed');
+    });
+
+    it('uses the last custom-title when the head holds several', async () => {
+      const filePath = await writeJsonl([customTitle('First'), customTitle('Second'), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Second');
+    });
+
+    it('prefers a custom-title in the tail window over the one in the head', async () => {
+      // The forward scan stops at the first prompt, so only the tail sees the later rename.
+      const filePath = await writeJsonl([customTitle('Old name'), user, assistant, customTitle('Newest name')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newest name');
+    });
+
+    it('prefers the newest custom-title when the tail holds several', async () => {
+      const filePath = await writeJsonl([user, assistant, customTitle('Older'), customTitle('Newer')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newer');
+    });
+
+    it('ranks custom-title above summary', async () => {
+      const summary = JSON.stringify({ type: 'summary', leafUuid: 'u2', summary: 'Auto summary' });
+      const filePath = await writeJsonl([summary, customTitle('Renamed'), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Renamed');
+    });
+
+    it('ignores empty and non-string custom-title values', async () => {
+      const filePath = await writeJsonl([customTitle('Kept'), customTitle(''), customTitle(42), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Kept');
+    });
+
+    it('keeps the existing behaviour when there is no custom-title', async () => {
+      const summary = JSON.stringify({ type: 'summary', leafUuid: 'u2', summary: 'Auto summary' });
+
+      expect((await extractSessionInfo(await writeJsonl([user, assistant, summary]))).title).toBe('Auto summary');
+      expect((await extractSessionInfo(await writeJsonl([user, assistant]))).title).toBe('First prompt');
+    });
+  });
 });

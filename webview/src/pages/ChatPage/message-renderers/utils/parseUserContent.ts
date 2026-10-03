@@ -17,7 +17,7 @@ import { Context, ContextType } from '../../../../types';
  *   모델이 이미 자기 말로 완료를 알리므로 원문 XML은 사용자에게 새 정보가 없다.
  * - <local-command-caveat>...</local-command-caveat> → hasLocalCommandCaveat: true
  * - <command-message>...</command-message>
- * - <command-args>...</command-args>
+ * - <command-args>...</command-args> (tags removed, content kept)
  * - <local-command-stdout> (태그만 제거, 내용 보존)
  */
 /**
@@ -81,10 +81,16 @@ export function parseUserContent(content: string): {
   const hasLocalCommandCaveat = /<local-command-caveat>/.test(content);
   cleanText = cleanText.replace(/<local-command-caveat>[\s\S]*?<\/local-command-caveat>/g, '');
 
-  // Step G: <command-message>, <command-args> 태그+내용 제거, <local-command-stdout> 태그만 제거(내용 보존)
+  // Step G: drop <command-message> with its content; drop only the tags of
+  // <command-args> and <local-command-stdout>, keeping what they hold.
+  //
+  // The arguments are what the user typed after the command name (`/rename My
+  // name`). The live send shows them because the webview draws the text it was
+  // given; a transcript stores them only inside the tag, so dropping the tag's
+  // content made a reloaded `/rename My name` read as a bare `/rename`.
   const hasLocalCommandStdout = /<local-command-stdout>/.test(content);
   cleanText = cleanText.replace(/<command-message>[\s\S]*?<\/command-message>/g, '');
-  cleanText = cleanText.replace(/<command-args>[\s\S]*?<\/command-args>/g, '');
+  cleanText = cleanText.replace(/<\/?command-args>/g, '');
   cleanText = cleanText.replace(/<\/?local-command-stdout>/g, '');
 
   // Step H: command가 감지되면 남은 텍스트에서 리터럴 /commandName 제거

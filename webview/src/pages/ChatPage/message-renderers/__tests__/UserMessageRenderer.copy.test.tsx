@@ -117,16 +117,11 @@ describe('UserMessageRenderer — copying a send (issue #412)', () => {
   });
 
   /*
-   * This shape is constructed, not observed: across all 45 slash-command
-   * entries in the local session files, none carries text outside the three
-   * tags, and the ones that do carry arguments put them in `<command-args>`,
-   * which `parseUserContent` strips. Those are all `/model`, which never
-   * reaches this branch anyway — it is routed to a notification line above.
-   *
-   * The case is kept because the bubble itself has the same branch: it draws
-   * `parsedContent.text` after the command name when there is any. Copying has
-   * to follow whatever the bubble draws, so the two have to agree here even
-   * while no entry we have seen exercises it.
+   * This shape is constructed, not observed: the CLI keeps what the user typed
+   * after the name inside `<command-args>`, not outside the three tags. The
+   * case is kept because the bubble draws `parsedContent.text` after the
+   * command name when there is any. Copying has to follow whatever the bubble
+   * draws, so the two have to agree on text found anywhere in the entry.
    */
   it('includes what the bubble draws after the command name, when there is any', () => {
     renderSend(

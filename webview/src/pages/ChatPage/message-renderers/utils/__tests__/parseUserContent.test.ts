@@ -85,6 +85,28 @@ describe('parseUserContent', () => {
     expect(result.text).toBe('Set model to claude-opus-4-8[1m]');
   });
 
+  it('keeps both the command name and its arguments for a stored slash command', () => {
+    const content =
+      '<command-name>/rename</command-name>\n' +
+      '            <command-message>rename</command-message>\n' +
+      '            <command-args>Issue #384 - reconnect problem</command-args>';
+    const result = parseUserContent(content);
+
+    expect(result.commandName).toBe('rename');
+    expect(result.text).toBe('Issue #384 - reconnect problem');
+  });
+
+  it('leaves empty text for a slash command without arguments', () => {
+    const content =
+      '<command-name>/clear</command-name>\n' +
+      '            <command-message>clear</command-message>\n' +
+      '            <command-args></command-args>';
+    const result = parseUserContent(content);
+
+    expect(result.commandName).toBe('clear');
+    expect(result.text).toBe('');
+  });
+
   it('local-command-stdout이 없으면 플래그가 거짓이다', () => {
     const result = parseUserContent('일반 사용자 메시지');
 

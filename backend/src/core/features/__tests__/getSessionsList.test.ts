@@ -50,7 +50,7 @@ function baseName(file: string): string {
 function tailTimestamps(byFile: Record<string, string | null>) {
   mockScanTail.mockImplementation(async (file: string) => {
     const name = baseName(file);
-    return { lastTimestamp: byFile[name] ?? null, summary: null };
+    return { lastTimestamp: byFile[name] ?? null, summary: null, customTitle: null };
   });
 }
 

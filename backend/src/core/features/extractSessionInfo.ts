@@ -110,6 +110,8 @@ interface HeadScan {
   lastTimestamp: string | null;
   title: string | null;
   summary: string | null;
+  /** The last `/rename` seen in the part of the file the scan read. */
+  customTitle: string | null;
   messageCount: number;
   hasUserOrAssistant: boolean;
   isSidechain: boolean;
@@ -136,6 +138,7 @@ function scanHead(file: string): Promise<HeadScan> {
     let lastTimestamp: string | null = null;
     let firstUserPrompt: string | null = null;
     let firstSummary: string | null = null;
+    let lastCustomTitle: string | null = null;
     let hasUserOrAssistant = false;
     let sidechainGateSeen = false;
     let isSidechainFromGate = false;
@@ -160,6 +163,7 @@ function scanHead(file: string): Promise<HeadScan> {
         lastTimestamp,
         title: firstUserPrompt,
         summary: firstSummary,
+        customTitle: lastCustomTitle,
         messageCount,
         hasUserOrAssistant,
         isSidechain: isSidechainFromGate,
@@ -205,6 +209,16 @@ function scanHead(file: string): Promise<HeadScan> {
         if (firstSummary === null) {
           const summary = (entry.summary as string) ?? null;
           if (summary) firstSummary = summary;
+        }
+        return;
+      }
+
+      // `/rename` leaves a custom-title entry with no timestamp. The CLI appends
+      // a new one per rename, so the last one seen wins. Like a summary it is
+      // recorded and the scan reads on.
+      if (type === 'custom-title') {
+        if (typeof entry.customTitle === 'string' && entry.customTitle) {
+          lastCustomTitle = entry.customTitle;
         }
         return;
       }
@@ -256,6 +270,7 @@ function scanHead(file: string): Promise<HeadScan> {
 export interface TailScan {
   lastTimestamp: string | null;
   summary: string | null;
+  customTitle: string | null;
 }
 
 /**
@@ -269,9 +284,9 @@ export async function scanTail(file: string): Promise<TailScan> {
   const handle = await open(file, 'r');
   try {
     const { size } = await handle.stat();
-    if (size === 0) return { lastTimestamp: null, summary: null };
+    if (size === 0) return { lastTimestamp: null, summary: null, customTitle: null };
 
-    let result: TailScan = { lastTimestamp: null, summary: null };
+    let result: TailScan = { lastTimestamp: null, summary: null, customTitle: null };
 
     for (const windowSize of TAIL_WINDOW_SIZES) {
       const length = Math.min(windowSize, size);
@@ -296,6 +311,7 @@ function readWindow(buffer: Buffer): TailScan {
   const lines = buffer.toString('utf-8').split('\n');
   let lastTimestamp: string | null = null;
   let summary: string | null = null;
+  let customTitle: string | null = null;
 
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
@@ -318,6 +334,14 @@ function readWindow(buffer: Buffer): TailScan {
       continue;
     }
 
+    // Walking backwards, the first custom-title met is the newest rename.
+    if (type === 'custom-title') {
+      if (customTitle === null && typeof entry.customTitle === 'string' && entry.customTitle) {
+        customTitle = entry.customTitle;
+      }
+      continue;
+    }
+
     // Same rule as the forward scan: only a counted entry moves the clock.
     if (lastTimestamp === null && type && COUNTED_TYPES.has(type)) {
       const timestamp = (entry.timestamp as string) ?? null;
@@ -325,7 +349,7 @@ function readWindow(buffer: Buffer): TailScan {
     }
   }
 
-  return { lastTimestamp, summary };
+  return { lastTimestamp, summary, customTitle };
 }
 
 export async function extractSessionInfo(file: string): Promise<SessionInfo> {
@@ -343,7 +367,7 @@ export async function extractSessionInfo(file: string): Promise<SessionInfo> {
 
   // Reading to the end already produced every value, so opening the file a
   // second time would only re-read bytes the scan has seen.
-  const tail = head.readToEnd ? { lastTimestamp: null, summary: null } : await scanTail(file);
+  const tail = head.readToEnd ? { lastTimestamp: null, summary: null, customTitle: null } : await scanTail(file);
 
   // The scan stops early only once a real user prompt has settled the title, so
   // any session that stopped early demonstrably holds a conversation. That is
@@ -360,7 +384,10 @@ export async function extractSessionInfo(file: string): Promise<SessionInfo> {
     };
   }
 
-  const title = head.summary ?? tail.summary ?? head.title ?? 'No title';
+  // A rename made in the CLI outranks everything. The tail holds the newest one
+  // when the scan stopped early, and the head's last value covers the rest.
+  const title =
+    tail.customTitle ?? head.customTitle ?? head.summary ?? tail.summary ?? head.title ?? 'No title';
 
   return {
     title,
