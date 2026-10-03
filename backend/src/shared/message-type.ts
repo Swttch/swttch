@@ -795,6 +795,19 @@ export enum MessageType {
    */
   EMACS_TEXT_KEY_PRESSED = 'EMACS_TEXT_KEY_PRESSED',
   /**
+   * Node↔Kotlin notification, then outbound backend→webview. The user pressed
+   * the IDE's Undo or Redo keystroke (Cmd+Z / Cmd+Shift+Z on macOS; Ctrl+Z /
+   * Ctrl+Shift+Z and Ctrl+Y elsewhere) while this tab's webview had focus.
+   * Carries { command }: 'undo' or 'redo' (see EditHistoryCommand); Kotlin also
+   * sends { panelId } so the backend can route it to that panel only. It
+   * exists because the IDE's keymap runs its own Undo/Redo action before the
+   * page sees the keystroke whenever the IDE has an undoable change, so a file
+   * move elsewhere in the IDE was undone instead of the text in the prompt
+   * (issue #495). The IDE now claims the keystroke for the webview, and the
+   * webview applies the command to the focused text field.
+   */
+  EDIT_HISTORY_COMMAND_REQUESTED = 'EDIT_HISTORY_COMMAND_REQUESTED',
+  /**
    * The webview reports the name the user confirmed for this tab, carrying
    * { name }. An empty name clears the manual name, returning the tab to
    * following its conversation title. The IDE side owns the value: it is what

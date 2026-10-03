@@ -15,6 +15,7 @@ export * from './tool-decision';
 export * from './error-code';
 export * from './dictation';
 export * from './emacs-text-key';
+export * from './edit-history-command';
 export * from './hunk';
 export * from './working-dir-path';
 export * from './mergeEdits';

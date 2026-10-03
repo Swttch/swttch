@@ -31,7 +31,7 @@ import { removeContainersById } from './core/mcp-container-reclaimer';
 import { startParentWatchdog, resolveWatchedPid } from './core/parent-watchdog';
 import { startHostLivenessWatchdog } from './core/host-liveness';
 import { createLifecycleJournal } from './logging/lifecycle-journal';
-import { ClientEnv, MessageType, parseEmacsTextKeyPress } from './shared';
+import { ClientEnv, MessageType, parseEditHistoryCommand, parseEmacsTextKeyPress } from './shared';
 import type { NativeDropEntry } from './core/types';
 import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
 
@@ -421,6 +421,28 @@ async function main() {
       return;
     }
     connections.sendTo(connectionId, MessageType.EMACS_TEXT_KEY_PRESSED, { key: press.key, shift: press.shift });
+  });
+
+  // The IDE's Undo or Redo keystroke pressed in a chat tab (issue #495). The
+  // IDE's keymap would run its own Undo/Redo before the page saw the key, so the
+  // IDE claims it and names the command here as { command }; the tab's own
+  // webview applies it to the focused text field. Not stashed when the panel is
+  // absent, like EMACS_TEXT_KEY_PRESSED: an undo nobody is looking at must not
+  // replay into a field later.
+  (bridges[ClientEnv.JETBRAINS] as JetBrainsBridge).onNotification(MessageType.EDIT_HISTORY_COMMAND_REQUESTED, (_method, params) => {
+    const panelId = typeof params.panelId === 'string' ? params.panelId : '';
+    if (!panelId) return;
+    const command = parseEditHistoryCommand(params.command);
+    if (!command) {
+      console.error('[node-backend]', `[EDIT_HISTORY_COMMAND_REQUESTED] dropped: unknown command=${String(params.command)}`);
+      return;
+    }
+    const connectionId = connections.getConnectionIdByPanelId(panelId);
+    if (!connectionId) {
+      console.error('[node-backend]', `[EDIT_HISTORY_COMMAND_REQUESTED] no connection for panelId=${panelId}`);
+      return;
+    }
+    connections.sendTo(connectionId, MessageType.EDIT_HISTORY_COMMAND_REQUESTED, { command });
   });
 
   // Parent-death watchdog — installed after `shutdown` is defined (below), since

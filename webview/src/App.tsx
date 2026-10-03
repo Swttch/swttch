@@ -18,6 +18,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useZoomControls } from './hooks/useZoomControls';
 import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { useEmacsTextKeys } from './hooks/useEmacsTextKeys';
+import { useEditHistoryCommands } from './hooks/useEditHistoryCommands';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { HelpModalHost } from './components/HelpModal';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
@@ -39,6 +40,7 @@ function AppContent() {
   // caret and edit the macOS way. Under the same rendering the page sees every
   // Ctrl+letter as Ctrl+A, so the IDE names the letter instead.
   useEmacsTextKeys();
+  useEditHistoryCommands();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
   // The CLI reports the usage windows as a turn runs; take them instead of polling.
