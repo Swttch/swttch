@@ -60,7 +60,7 @@ describe('loadBackgroundTaskOutput', () => {
     }
   });
 
-  it('follows a symlink whose target resolves under the Claude config dir\'s projects root (a backgrounded Agent/Task\'s advertised output path, issue #383)', async () => {
+  it('follows a symlink whose target resolves under the Claude config dir\'s projects root (a backgrounded Agent/Task\'s advertised output path, issue #383)', async (ctx) => {
     vi.stubEnv('CLAUDE_CODE_TMPDIR', tmpDir);
     const configDir = realpathSync(await mkdtemp(join(os.tmpdir(), 'lbto-config-')));
     vi.stubEnv('CLAUDE_CONFIG_DIR', configDir);
@@ -72,7 +72,16 @@ describe('loadBackgroundTaskOutput', () => {
 
       const outputFile = join(tmpDir, 'tasks', 'a1.output');
       await mkdir(join(tmpDir, 'tasks'), { recursive: true });
-      await symlink(realTranscript, outputFile);
+      try {
+        await symlink(realTranscript, outputFile);
+      } catch (error) {
+        // Windows lets only an elevated process, or one with Developer Mode on, create a
+        // symlink. Without that right there is no link to follow, so there is nothing to test.
+        if (process.platform === 'win32' && (error as NodeJS.ErrnoException).code === 'EPERM') {
+          ctx.skip();
+        }
+        throw error;
+      }
 
       const { loadBackgroundTaskOutput } = await import('../loadBackgroundTaskOutput');
       const result = await loadBackgroundTaskOutput({ outputFile });

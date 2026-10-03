@@ -38,10 +38,18 @@ const mockExtractInfo = vi.mocked(extractSessionInfo);
 const mockScanTail = vi.mocked(scanTail);
 const mockReadOverrides = vi.mocked(readSessionTitleOverrides);
 
+/**
+ * The last segment of a path built by `path.join`, which is a backslash path on Windows.
+ * Splitting on "/" alone found no fixture for any file there.
+ */
+function baseName(file: string): string {
+  return file.split(/[\\/]/).pop() ?? file;
+}
+
 /** Give each file the timestamp the ordering pass will read from its tail. */
 function tailTimestamps(byFile: Record<string, string | null>) {
   mockScanTail.mockImplementation(async (file: string) => {
-    const name = file.split('/').pop() ?? file;
+    const name = baseName(file);
     return { lastTimestamp: byFile[name] ?? null, summary: null };
   });
 }
@@ -49,7 +57,7 @@ function tailTimestamps(byFile: Record<string, string | null>) {
 /** Give each session the info the title pass will read from its head. */
 function headInfo(byId: Record<string, Partial<ReturnType<typeof info>>>) {
   mockExtractInfo.mockImplementation(async (file: string) => {
-    const id = (file.split('/').pop() ?? file).replace(/\.jsonl$/, '');
+    const id = baseName(file).replace(/\.jsonl$/, '');
     const found = byId[id];
     if (!found) throw new Error(`no fixture for ${id}`);
     return info(found);
@@ -233,7 +241,7 @@ describe('getSessionsList', () => {
     it('does not open the transcripts beyond the requested page', async () => {
       await getSessionsList('/test', { limit: 2 });
 
-      const opened = mockExtractInfo.mock.calls.map((c) => String(c[0]).split('/').pop());
+      const opened = mockExtractInfo.mock.calls.map((c) => baseName(String(c[0])));
       expect(opened).not.toContain('e.jsonl');
       expect(mockExtractInfo.mock.calls.length).toBeLessThan(five.length);
     });

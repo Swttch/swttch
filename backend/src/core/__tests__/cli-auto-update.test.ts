@@ -58,6 +58,11 @@ beforeEach(async () => {
   vi.clearAllMocks();
   home = await mkdtemp(join(tmpdir(), 'cli-auto-update-'));
   process.env.CCG_HOME = home;
+  // The Windows branch of the check asks `tasklist` whether claude.exe is running, and
+  // `execFile` is mocked here. Left at the real platform, every test run on Windows waited
+  // for an answer the mock never gave and timed out; the tests that are about Windows set
+  // it themselves.
+  Object.defineProperty(process, 'platform', { value: 'linux' });
   mocks.state.mockResolvedValue({ enabled: true, lock: null, settingsPath: '~/.claude/settings.json', channel: CliUpdateChannel.LATEST });
 });
 

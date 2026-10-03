@@ -61,11 +61,14 @@ describe('runLauncher', () => {
   it('carries the launcher spec through to the executed argv on every platform', async () => {
     mockExecFile.mockImplementation(fakeExecFile({ stdout: 'ok' }));
     await runLauncher('npm', ['install', '-g', 'pkg'], OPTS);
-    // win32 wraps in `cmd.exe /d /s /c npm install ...`; unix runs npm directly.
-    // Either way the launcher + args appear verbatim in the executed argv.
+    // Unix runs `npm` directly. Windows runs node on npm's own CLI script (or goes through
+    // cmd.exe), so something sits between the launcher and the arguments there. Either way the
+    // launcher is named in the executed argv and the arguments follow it verbatim and in order.
     const file = mockExecFile.mock.calls[0][0] as string;
     const args = mockExecFile.mock.calls[0][1] as string[];
-    expect([file, ...args].join(' ')).toContain('npm install -g pkg');
+    const argv = [file, ...args];
+    expect(argv.join(' ')).toMatch(/npm/i);
+    expect(argv.slice(-3)).toEqual(['install', '-g', 'pkg']);
   });
 
   it.runIf(process.platform !== 'win32')(

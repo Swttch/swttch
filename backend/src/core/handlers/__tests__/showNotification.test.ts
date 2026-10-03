@@ -370,21 +370,28 @@ describe('showNotificationHandler', () => {
   // Turning away from a banner is a decision too. Pulling the IDE in front of
   // whatever they turned to instead would be the opposite of helpful.
   it('leaves the user alone when the banner was dismissed', async () => {
-    const connections = createMockConnections();
-    const bridge = createMockBridge({ shown: true, ideFocused: false });
-    mockOsNotify.mockImplementation(async (_options, onOutcome) => {
-      onOutcome?.({ code: 0, stdout: '@CLOSED' });
-    });
-    const message: IPCMessage = {
-      type: 'SHOW_NOTIFICATION',
-      payload: { title: 'My session', body: 'Response complete', panelId: 'panel-9' },
-      timestamp: 0,
-      requestId: 'req-10',
-    };
+    // "@CLOSED" is how macOS reports a dismissed banner. Windows reads exit code 0 as a click on
+    // the toast, so on a Windows host the same outcome pulled the IDE forward and the test failed.
+    setPlatform('darwin');
+    try {
+      const connections = createMockConnections();
+      const bridge = createMockBridge({ shown: true, ideFocused: false });
+      mockOsNotify.mockImplementation(async (_options, onOutcome) => {
+        onOutcome?.({ code: 0, stdout: '@CLOSED' });
+      });
+      const message: IPCMessage = {
+        type: 'SHOW_NOTIFICATION',
+        payload: { title: 'My session', body: 'Response complete', panelId: 'panel-9' },
+        timestamp: 0,
+        requestId: 'req-10',
+      };
 
-    await showNotificationHandler('conn-1', message, connections, bridge);
+      await showNotificationHandler('conn-1', message, connections, bridge);
 
-    expect(bridge.focusSession).not.toHaveBeenCalled();
+      expect(bridge.focusSession).not.toHaveBeenCalled();
+    } finally {
+      setPlatform(REAL_PLATFORM);
+    }
   });
 
   it('does NOT raise an OS notification when the IDE is focused', async () => {

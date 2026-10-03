@@ -22,6 +22,19 @@ vi.mock('os', async (importOriginal) => {
   return { ...real, homedir: () => homeOverride ?? real.homedir() };
 });
 
+// The macOS install only calls `lsregister` when that binary exists, and it exists on a Mac
+// alone. The tests below pretend to be on darwin, so on any other host the call was skipped
+// and the tests that wait for it failed. Only that one path is answered; every other path is
+// asked of the real filesystem.
+vi.mock('fs', async (importOriginal) => {
+  const real = await importOriginal<typeof import('fs')>();
+  return {
+    ...real,
+    existsSync: (path: Parameters<typeof real.existsSync>[0]) =>
+      String(path).endsWith('/lsregister') || real.existsSync(path),
+  };
+});
+
 const {
   resetLiveNotifiers,
   readBundleIdentifier,
@@ -460,7 +473,10 @@ describe('installMacNotifier', () => {
 
     expect(exec).toBe(join(installed, 'Contents', 'MacOS', 'terminal-notifier'));
     expect(readFileSync(exec as string, 'utf-8')).toContain('exit 0');
-    expect(statSync(exec as string).mode & 0o111).toBe(0o111);
+    // Windows has no execute bits to carry over, so there the mode is not the file's to keep.
+    if (process.platform !== 'win32') {
+      expect(statSync(exec as string).mode & 0o111).toBe(0o111);
+    }
   });
 
   it('leaves an installed copy of the same release untouched', () => {

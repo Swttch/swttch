@@ -64,12 +64,23 @@ const {
   ExtendKitMissingError,
 } = await import('../extend-kit');
 
+const realAppData = process.env.APPDATA;
+const realExecPath = process.execPath;
+
 beforeEach(async () => {
   resetExtendKitCache();
   ccbPath = '/global/bin/ccb';
   capabilityProbes = 0;
   capabilityFailure = null;
   globalRoot = await mkdtemp(join(tmpdir(), 'ccg-kit-caps-'));
+  // On Windows the kit is also looked for in %APPDATA%\npm\node_modules. A machine that really
+  // has the kit installed there answered the "not installed" cases with its own copy, so the
+  // fixture must not share the host's folder.
+  process.env.APPDATA = join(globalRoot, 'no-appdata');
+  // The folders next to the running Node are searched too (<prefix>/node_modules on Windows,
+  // <prefix>/lib/node_modules elsewhere), and a machine whose npm prefix is its Node folder has
+  // the real kit there. Point the Node at an empty place so only the fixture can answer.
+  Object.defineProperty(process, 'execPath', { value: join(globalRoot, 'no-node', 'node'), configurable: true });
   const packageDir = join(globalRoot, '@swttch', 'extend-kit');
   await mkdir(join(packageDir, 'bin'), { recursive: true });
   await writeFile(join(packageDir, 'package.json'), JSON.stringify({ version: '0.7.3', bin: { ccb: 'bin/ccb.js' } }));
@@ -77,6 +88,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  if (realAppData === undefined) delete process.env.APPDATA;
+  else process.env.APPDATA = realAppData;
+  Object.defineProperty(process, 'execPath', { value: realExecPath, configurable: true });
   await rm(globalRoot, { recursive: true, force: true });
 });
 

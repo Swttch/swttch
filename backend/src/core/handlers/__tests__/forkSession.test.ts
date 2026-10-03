@@ -179,7 +179,9 @@ describe('forkSessionHandler', () => {
     expect((await readdir(dir)).filter((name) => name.includes('.tmp'))).toEqual([]);
   });
 
-  it('reports a write failure instead of announcing a branch that is not there', async () => {
+  // A read-only directory is how this test makes the write fail. Windows ignores the mode bits of
+  // a directory, so the write succeeds there and there is no failure left to report.
+  it.skipIf(process.platform === 'win32')('reports a write failure instead of announcing a branch that is not there', async () => {
     const dir = await writeSession('origin', [user('u1', 'a'), assistant('a1', 'b'), user('u2', 'c')]);
     await chmod(dir, 0o500); // readable, not writable
     const connections = createMockConnections();
