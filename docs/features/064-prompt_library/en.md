@@ -436,26 +436,32 @@ failing silently.
 
 Earlier versions kept prompts in `~/.claude-code-gui/prompts.json` (global) and
 `<project>/.claude-code-gui/prompts.json` (project). This version moves those
-files into the new store **once**, the first time the library is opened. You do
-not have to do anything.
+files into the new store **once**, when the plugin starts for the first time
+after the update. You do not have to do anything.
 
 - The shared prompts and categories go first, the projects after.
 - Names, contents and both times are not changed by a single character, and the
   order on every screen is the one it had just before. Earlier versions listed
   new prompts first, so they are still first after the move.
-- The projects it already knows are checked together in the background. Then one
-  pass through the whole home folder finds the project files that remain, so you
-  do not need to open every old project once. Opening a project checks it again,
-  as a safety net for anything the other two missed.
-- On macOS the `Desktop`, `Documents` and `Downloads` folders are not searched,
-  because reading inside them from a background process can make a permission
-  dialog appear out of nowhere. Projects in them are moved when you open them.
+- The projects it looks in are the ones the plugin knows: every folder you have
+  used Claude Code in, and every folder the plugin was asked about. Nothing walks
+  through your home folder, so macOS does not ask for access to `Desktop`,
+  `Documents` or `Downloads` out of nowhere.
+- While the move runs, the library waits for it. If it takes more than a second a
+  banner says your data is being updated. If it is quicker you see nothing.
 - **The old files are neither deleted nor edited.** They stay as they were and
   serve as a backup.
-- If the move fails, you see the "could not load" screen rather than an empty
-  library, and the next opening tries again.
+- If the move fails, the library and the project list show an error instead of an
+  empty list, a banner names the step that failed, and the next start tries again
+  from that step.
+- If some old files cannot be read (no permission, or the file is damaged), the
+  rest is moved and a banner lists the folders. Those prompts stay in the old
+  file; import it to bring them over.
 - Once a move is done it is never repeated, so prompts you delete do not come
   back.
+- Prompts of a folder that has never had a Claude Code session and that the
+  plugin never opened are not found, because nothing knows that folder. They stay
+  in the old file, and import brings them over.
 
 If you go back to an earlier version, its files still read fine. Whatever you
 changed while you were back there does not follow into the new store; to bring
@@ -466,11 +472,13 @@ stored-file shape as it is.
 
 | What | Where |
 |------|-------|
-| Prompts (global and every project) | `~/.claude-code-gui/entities/prompt/prompt_items.entity.json` |
-| Categories | `~/.claude-code-gui/entities/prompt/prompt_categories.entity.json` |
-| Which category a prompt is in, and at what place | `~/.claude-code-gui/entities/prompt/prompt_category_item_links.entity.json` |
+| Prompts (global and every project) | `~/.claude-code-gui/entities/prompt/prompt_items.entity.jsonl` |
+| Categories | `~/.claude-code-gui/entities/prompt/prompt_categories.entity.jsonl` |
+| Which category a prompt is in, and at what place | `~/.claude-code-gui/entities/prompt/prompt_category_item_links.entity.jsonl` |
+| The project folders the plugin knows | `~/.claude-code-gui/entities/project/projects.entity.jsonl` |
 | Id counters and the record of the move | `~/.claude-code-gui/entities/system/` |
 
-All of them are plain JSON and safe to read. A project prompt is a row whose
-`cwd` holds the project folder's path. `CCG_HOME` moves the whole location, if
-you have set it.
+All of them are plain text with one JSON object per line, and safe to read. A
+project prompt is a row whose `projectId` is the number of a project in
+`projects.entity.jsonl`, and that file holds the project folder's path.
+`CCG_HOME` moves the whole location, if you have set it.
