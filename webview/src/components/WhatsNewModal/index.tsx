@@ -52,9 +52,10 @@ export function WhatsNewModal(props: Props) {
   const release = releases[index];
 
   // Focus trap for the lifetime of the modal, mirroring McpModal: the chat
-  // input underneath re-focuses its textarea whenever activeElement falls back
-  // to document.body, which happens on any click inside a non-focusable area
-  // here. Remember the opener, pull focus back if it escapes, restore on close.
+  // input underneath re-focuses its textarea when the window regains focus
+  // while activeElement is document.body, where focus lands after a click on a
+  // non-focusable area here. Remember the opener, pull focus back if it
+  // escapes, restore on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();

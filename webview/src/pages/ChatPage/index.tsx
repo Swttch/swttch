@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { DictationProvider } from './ChatInput/DictationProvider';
 import { ListeningNotice } from './ListeningNotice';
@@ -28,7 +28,6 @@ import {
 import { PromptLibraryModal } from '@/components/PromptLibraryModal';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
-import { useChatInputFocus } from '../../contexts/ChatInputFocusContext';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useScheduledDelivery';
 import { useSessionContext } from '../../contexts/SessionContext';
@@ -118,7 +117,6 @@ function ChatPageContent() {
 
   const api = useApi();
   const onboarding = useOnboarding();
-  const { textareaRef, focus: focusInput } = useChatInputFocus();
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
@@ -284,43 +282,11 @@ function ChatPageContent() {
     }
   }, [rememberScrollPosition, oldestLoadedUuid, loadMore]);
 
-  // 빈 영역 클릭 시 textarea로 포커스 이동
-  // mousedown 시점에 확인해야 포커스 이동 전 activeElement를 비교할 수 있음
-  const handleContainerMouseDown = useCallback((e: React.MouseEvent) => {
-    /*
-     * Read the composed path, not `e.target`.
-     *
-     * The review diff draws its editable side inside a shadow root, and the
-     * platform retargets `e.target` to the host element — `<diffs-container>`,
-     * which matches none of the selectors below. So a click meant to put the
-     * caret in a proposed edit read as a click on empty space: this handler
-     * called preventDefault and moved focus to the composer, and the proposed
-     * side could never be typed into. `closest()` cannot see past a shadow
-     * boundary; the path holds the real element.
-     *
-     * Same fix, same reason as isTypingTarget in useApprovalKeyboard — that one
-     * was for keystrokes leaking into the approval panel, this one for the click
-     * that should have focused the editor in the first place.
-     */
-    const path = typeof e.nativeEvent.composedPath === 'function'
-      ? e.nativeEvent.composedPath()
-      : [e.target];
-    const CONTROLS = 'button, a, input, textarea, select, [role="button"], [contenteditable]';
-    for (const node of path) {
-      if (!(node instanceof HTMLElement)) continue;
-      if (node.matches(CONTROLS)) return;
-    }
-    if (document.activeElement === textareaRef.current) {
-      // 이미 포커스 상태 → 브라우저가 포커스를 빼앗지 못하게 방지
-      // e.preventDefault();
-      return;
-    }
-    e.preventDefault();
-    focusInput();
-  }, [textareaRef, focusInput]);
-
+  // No mousedown handler on this container on purpose (#513): cancelling the
+  // default of a mousedown stops the browser from starting a word or drag
+  // selection anywhere in the chat.
   return (
-    <div className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0" onMouseDown={handleContainerMouseDown}>
+    <div className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0">
       {/*
         Header - Minimal
 

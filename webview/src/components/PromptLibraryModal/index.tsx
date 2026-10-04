@@ -348,9 +348,9 @@ export function PromptLibraryModal({ onClose, initialView = 'list', initialEdit 
   };
 
   // Focus trap for the lifetime of the modal, mirroring McpModal: the composer
-  // underneath runs auto-focus timers that pull focus back to itself whenever
-  // activeElement falls to document.body, which happens the moment a
-  // non-focusable area inside this modal is clicked.
+  // underneath runs auto-focus timers that pull focus back to itself, and the
+  // window-focus one fires while activeElement is document.body, where focus
+  // lands after a click on a non-focusable area inside this modal.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();

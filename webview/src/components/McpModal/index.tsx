@@ -35,12 +35,13 @@ export function McpModal(props: Props) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Focus trap for the lifetime of the modal. The chat input underneath runs
-  // auto-focus timers (window focus, visibility change, …) that pull focus to
-  // its textarea whenever activeElement falls back to document.body — which
-  // happens the moment a non-focusable area inside this modal is clicked.
-  // Without a trap, clicking a result card or empty space yanks focus to the
-  // background composer. Mirrors ConfirmDialog: remember the opener, pull focus
-  // back if it escapes while open, and restore it on close.
+  // auto-focus timers (session change, window focus, …) that pull focus to
+  // its textarea, and the window-focus one fires while activeElement is
+  // document.body — where focus lands after a click on a non-focusable area
+  // inside this modal. Without a trap, coming back to the window after such a
+  // click yanks focus to the background composer. Mirrors ConfirmDialog:
+  // remember the opener, pull focus back if it escapes while open, and
+  // restore it on close.
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();

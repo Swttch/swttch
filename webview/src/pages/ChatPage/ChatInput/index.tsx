@@ -10,6 +10,8 @@ import { InputFrame } from './InputFrame';
 import { MicButton } from './MicButton';
 import { useDictationContext } from './DictationProvider';
 import { useNavigateToLogin } from '@/hooks';
+import { useOnWindowFocus } from '@/hooks/useOnWindowFocus';
+import { ComposerFocusPolicy } from './composerFocusPolicy';
 import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useChatInputFocus } from '../../../contexts/ChatInputFocusContext';
 import { useInputHistory } from './hooks/useInputHistory';
@@ -772,34 +774,18 @@ export function ChatInput() {
     }
   }, [currentSessionId, disabled, textareaRef]);
 
-  // Focus textarea when window/document gains focus.
-  // Only restore focus when nothing else is already focused (activeElement is
-  // body). The left session panel runs in a separate JCEF window; switching
-  // between the two fires window 'focus' here repeatedly, and unconditionally
-  // grabbing focus would let the editor tab keep stealing it back from the
-  // panel — a focus ping-pong. Guarding on document.body keeps the
-  // "return-to-IDE restores the input" intent without the tug-of-war.
-  useEffect(() => {
-    const handleFocus = () => {
-      if (document.activeElement === document.body) {
-        textareaRef.current?.focus();
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        handleFocus();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [textareaRef]);
+  // Focus the textarea when the window regains focus, and after a plain click
+  // (#513). Nothing here reacts to a mouse press: a press is where a word or
+  // drag selection starts, and cancelling it broke selection. See
+  // ComposerFocusPolicy for the rules, including why only `body` holding the
+  // focus lets the composer take it (the focus ping-pong between the editor tab
+  // and the other JCEF window).
+  const focusPolicyRef = useRef<ComposerFocusPolicy | null>(null);
+  if (focusPolicyRef.current === null) {
+    focusPolicyRef.current = new ComposerFocusPolicy(document, () => textareaRef.current?.focus());
+  }
+  useEffect(() => focusPolicyRef.current!.attach(), []);
+  useOnWindowFocus(() => focusPolicyRef.current!.restoreOnWindowFocus());
 
   // 세션 전환 시 ChatInput 로컬 상태 리셋
   const prevChatInputSessionRef = useRef(currentSessionId);
