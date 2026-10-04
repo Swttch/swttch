@@ -5,6 +5,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
 import { getClaudeConfigDir } from '../features/claudeConfigDir';
+import { hideProject } from '../features/projectPreferences';
 import { MessageType } from '../../shared';
 import { Claude } from '../claude';
 
@@ -62,6 +63,15 @@ export async function deleteProjectHandler(
     // force: true means a project already gone from ~/.claude/projects (or
     // never written there) is not an error — there is nothing left to do.
     await rm(sessionsDir, { recursive: true, force: true });
+
+    // The list is the program's own table, so removing the CLI's records is not
+    // enough to make the project disappear from it. Failing to hide it must not
+    // fail a delete that has already happened.
+    try {
+      await hideProject(path);
+    } catch (err) {
+      console.error('[node-backend]', `could not take ${path} off the project list:`, err);
+    }
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });
   } catch (err) {

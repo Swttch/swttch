@@ -1,24 +1,29 @@
 import { AbstractEntityCollection } from '../AbstractEntityCollection';
 import { RawRow } from '../Column';
-import { defaultSequences } from '../defaultSequences';
+import { defaultTableMetadata } from '../defaultTableMetadata';
 import { SystemMigration } from './SystemMigration.entity';
 
 export class SystemMigrationCollection extends AbstractEntityCollection<SystemMigration> {
   readonly domain = 'system';
   readonly table = 'system_migrations';
   protected readonly columns = SystemMigration.COLUMNS;
+  protected readonly schemaVersion = 1;
 
   constructor() {
-    super(defaultSequences());
+    super(defaultTableMetadata());
   }
 
   protected hydrate(row: RawRow): SystemMigration {
     return SystemMigration.fromRow(row);
   }
 
-  /** Whether [name] has already been run for [cwd] (null for the shared data). */
-  async hasRun(name: string, cwd: string | null): Promise<boolean> {
-    return (await this.where((migration) => migration.name === name && migration.belongsTo(cwd)))
-      .length > 0;
+  /** The names of every migration that has run. */
+  async names(): Promise<Set<string>> {
+    return new Set((await this.all()).map((migration) => migration.name));
+  }
+
+  /** Whether the migration called [name] has run. */
+  async hasRun(name: string): Promise<boolean> {
+    return (await this.names()).has(name);
   }
 }

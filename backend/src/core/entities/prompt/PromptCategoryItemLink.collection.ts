@@ -1,15 +1,16 @@
 import { AbstractEntityCollection } from '../AbstractEntityCollection';
 import { RawRow } from '../Column';
-import { defaultSequences } from '../defaultSequences';
+import { defaultTableMetadata } from '../defaultTableMetadata';
 import { PromptCategoryItemLink } from './PromptCategoryItemLink.entity';
 
 export class PromptCategoryItemLinkCollection extends AbstractEntityCollection<PromptCategoryItemLink> {
   readonly domain = 'prompt';
   readonly table = 'prompt_category_item_links';
   protected readonly columns = PromptCategoryItemLink.COLUMNS;
+  protected readonly schemaVersion = 1;
 
   constructor() {
-    super(defaultSequences());
+    super(defaultTableMetadata());
   }
 
   protected hydrate(row: RawRow): PromptCategoryItemLink {

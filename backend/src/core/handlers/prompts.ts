@@ -3,13 +3,8 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { resolveWslCwd } from '../wsl-path';
+import { retryUnreadPromptFolders } from '../features/unread-folder-retry';
 import { readFile } from 'fs/promises';
-import { getProjectsList } from '../features/getProjectsList';
-import {
-  ensureGlobalMigrated,
-  ensureProjectMigrated,
-} from '../features/prompt-migration';
-import { startBackgroundMigration } from '../features/prompt-migration-sweep';
 import {
   readPrompts,
   readPromptOrderByCategory,
@@ -93,7 +88,7 @@ function sendError(
   });
 }
 
-async function getPromptsHandlerRaw(
+export async function getPromptsHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -111,6 +106,9 @@ async function getPromptsHandlerRaw(
   }
 
   try {
+    // Old files that could not be read before are read again now, when the user wants them.
+    // Old files that could not be read before are read again now, when the user wants them.
+    await retryUnreadPromptFolders(scope, projectPath);
     const prompts = await readPrompts(scope, projectPath);
     // The wire carries the map as a JSON object, which is built here, at the edge.
     const orderByCategory = Object.fromEntries(await readPromptOrderByCategory(scope, projectPath));
@@ -135,7 +133,7 @@ function readIdList(value: unknown): string[] {
 }
 
 /** Save a new order for one scope's prompts, or for the prompts inside one category. */
-async function reorderPromptsHandlerRaw(
+export async function reorderPromptsHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -155,7 +153,7 @@ async function reorderPromptsHandlerRaw(
   sendOk(connections, connectionId, message, { scope });
 }
 
-async function createPromptHandlerRaw(
+export async function createPromptHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -175,7 +173,7 @@ async function createPromptHandlerRaw(
   sendOk(connections, connectionId, message, { scope, prompt: result.prompt });
 }
 
-async function updatePromptHandlerRaw(
+export async function updatePromptHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -196,7 +194,7 @@ async function updatePromptHandlerRaw(
   sendOk(connections, connectionId, message, { scope, prompt: result.prompt });
 }
 
-async function deletePromptHandlerRaw(
+export async function deletePromptHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -221,7 +219,7 @@ async function deletePromptHandlerRaw(
  * path serves an IDE tab and a browser tab. A cancelled dialog answers with a
  * null path rather than an error: the user saying no is not a failure.
  */
-async function exportPromptsHandlerRaw(
+export async function exportPromptsHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -260,7 +258,7 @@ async function exportPromptsHandlerRaw(
  * Nothing is written here. The preview is what lets the user choose a conflict
  * strategy knowing how many prompts it applies to.
  */
-async function previewPromptImportHandlerRaw(
+export async function previewPromptImportHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -308,7 +306,7 @@ async function previewPromptImportHandlerRaw(
 }
 
 /** Apply a previewed import with the strategy the user chose. */
-async function importPromptsHandlerRaw(
+export async function importPromptsHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -366,7 +364,7 @@ async function importPromptsHandlerRaw(
  * sidebar draws the whole list and a diff would only give it a second way to be
  * wrong.
  */
-async function getPromptCategoriesHandlerRaw(
+export async function getPromptCategoriesHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -381,7 +379,7 @@ async function getPromptCategoriesHandlerRaw(
 }
 
 /** Save a new order for the category column. */
-async function reorderPromptCategoriesHandlerRaw(
+export async function reorderPromptCategoriesHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -395,7 +393,7 @@ async function reorderPromptCategoriesHandlerRaw(
   sendOk(connections, connectionId, message, { categories: result.categories });
 }
 
-async function createPromptCategoryHandlerRaw(
+export async function createPromptCategoryHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -410,7 +408,7 @@ async function createPromptCategoryHandlerRaw(
   sendOk(connections, connectionId, message, { categories: result.categories });
 }
 
-async function renamePromptCategoryHandlerRaw(
+export async function renamePromptCategoryHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -426,7 +424,7 @@ async function renamePromptCategoryHandlerRaw(
   sendOk(connections, connectionId, message, { categories: result.categories });
 }
 
-async function deletePromptCategoryHandlerRaw(
+export async function deletePromptCategoryHandler(
   connectionId: string,
   message: IPCMessage,
   connections: ConnectionManager,
@@ -440,49 +438,3 @@ async function deletePromptCategoryHandlerRaw(
   }
   sendOk(connections, connectionId, message, { categories: result.categories });
 }
-
-/**
- * Every library request first makes sure the old `prompts.json` files have been
- * moved into the entity files, the shared one before any project's.
- *
- * A move that fails answers with the error instead of letting the request run:
- * reading an unmoved library would show an empty list that looks like every
- * prompt was lost, and writing to it would bury the old ones. The next request
- * tries the move again.
- */
-type Handler = (
-  connectionId: string,
-  message: IPCMessage,
-  connections: ConnectionManager,
-  bridge: Bridge,
-) => Promise<void>;
-
-function afterMigration(handler: Handler): Handler {
-  return async (connectionId, message, connections, bridge) => {
-    try {
-      await ensureGlobalMigrated();
-      const projectPath = readProjectPath(message);
-      if (readScope(message) === 'project' && projectPath) await ensureProjectMigrated(projectPath);
-      startBackgroundMigration(async () => (await getProjectsList()).map((project) => project.path));
-    } catch (err) {
-      console.error('[node-backend]', 'Failed to move the prompt library:', err);
-      sendError(connections, connectionId, message, err instanceof Error ? err.message : String(err));
-      return;
-    }
-    await handler(connectionId, message, connections, bridge);
-  };
-}
-
-export const getPromptsHandler = afterMigration(getPromptsHandlerRaw);
-export const reorderPromptsHandler = afterMigration(reorderPromptsHandlerRaw);
-export const createPromptHandler = afterMigration(createPromptHandlerRaw);
-export const updatePromptHandler = afterMigration(updatePromptHandlerRaw);
-export const deletePromptHandler = afterMigration(deletePromptHandlerRaw);
-export const exportPromptsHandler = afterMigration(exportPromptsHandlerRaw);
-export const previewPromptImportHandler = afterMigration(previewPromptImportHandlerRaw);
-export const importPromptsHandler = afterMigration(importPromptsHandlerRaw);
-export const getPromptCategoriesHandler = afterMigration(getPromptCategoriesHandlerRaw);
-export const reorderPromptCategoriesHandler = afterMigration(reorderPromptCategoriesHandlerRaw);
-export const createPromptCategoryHandler = afterMigration(createPromptCategoryHandlerRaw);
-export const renamePromptCategoryHandler = afterMigration(renamePromptCategoryHandlerRaw);
-export const deletePromptCategoryHandler = afterMigration(deletePromptCategoryHandlerRaw);

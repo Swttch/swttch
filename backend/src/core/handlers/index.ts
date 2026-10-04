@@ -54,6 +54,9 @@ import {
   cancelSponsorSubscriptionHandler,
 } from './sponsorAccount';
 import { getProjectsHandler } from './getProjects';
+import { getMigrationStatusHandler } from './getMigrationStatus';
+import { retryUnreadFoldersHandler } from './retryUnreadFolders';
+import { retryMigrationsHandler } from './retryMigrations';
 import { setProjectFavoriteHandler } from './projectFavorite';
 import { deleteProjectHandler } from './deleteProject';
 import { setProjectMetaHandler } from './projectMeta';
@@ -352,6 +355,15 @@ export async function handleMessage(
       break;
     case MessageType.GET_PROJECTS:
       await getProjectsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_MIGRATION_STATUS:
+      await getMigrationStatusHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.RETRY_UNREAD_FOLDERS:
+      await retryUnreadFoldersHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.RETRY_MIGRATIONS:
+      await retryMigrationsHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SET_PROJECT_FAVORITE:
       await setProjectFavoriteHandler(connectionId, message, connections, bridge);

@@ -1,5 +1,4 @@
 import { BASE_COLUMNS, Column } from './Column';
-import { normalizeCwd } from './normalizeCwd';
 
 /**
  * One row of one table, as a program object.
@@ -19,14 +18,20 @@ export abstract class AbstractEntity {
   /** Whole number from 1, handed out by the sequence and never reused. 0 until the row is inserted. */
   id: number;
   /**
-   * The project directory this row belongs to, normalized, or null for a row
-   * that belongs to no project and is shared by all of them.
+   * The number of the project (a row of `projects`) this row belongs to, or null
+   * for a row that belongs to no project and is shared by all of them. A row of
+   * `projects` itself is always null here.
+   *
+   * A number and not the directory: the directory is the project's own business
+   * and can be corrected in one place, while every row that points at the project
+   * keeps pointing at it. Outside the entity files a project is still named by its
+   * path, and turning one into the other is `ProjectCollection`'s job.
    */
-  cwd: string | null;
+  projectId: number | null;
 
-  protected constructor(id: number, cwd: string | null) {
+  protected constructor(id: number, projectId: number | null) {
     this.id = id;
-    this.cwd = cwd;
+    this.projectId = projectId;
   }
 
   /** The columns of this entity's table, in the order they are written. */
@@ -39,7 +44,7 @@ export abstract class AbstractEntity {
 
   /** True for a row shared by every project. */
   get isGlobal(): boolean {
-    return this.cwd === null;
+    return this.projectId === null;
   }
 
   /** True once the collection has numbered this row. */
@@ -47,20 +52,15 @@ export abstract class AbstractEntity {
     return this.id > 0;
   }
 
-  /** Whether this row belongs to [cwd], which must already be normalized. */
-  belongsTo(cwd: string | null): boolean {
-    return this.cwd === cwd;
+  /** Whether this row belongs to the project numbered [projectId], or to none when it is null. */
+  belongsTo(projectId: number | null): boolean {
+    return this.projectId === projectId;
   }
 
   /** Give a row that has none its number. Refuses to renumber a row. */
   assignId(id: number): void {
     if (this.isInserted) throw new Error(`row ${this.id} already has its number`);
     this.id = id;
-  }
-
-  /** Settle the spelling of [cwd] so rows of one project always compare equal. */
-  normalizeOwnCwd(): void {
-    if (this.cwd !== null) this.cwd = normalizeCwd(this.cwd);
   }
 
   /**

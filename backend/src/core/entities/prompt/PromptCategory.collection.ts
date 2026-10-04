@@ -1,15 +1,16 @@
 import { AbstractEntityCollection } from '../AbstractEntityCollection';
 import { RawRow } from '../Column';
-import { defaultSequences } from '../defaultSequences';
+import { defaultTableMetadata } from '../defaultTableMetadata';
 import { PromptCategory } from './PromptCategory.entity';
 
 export class PromptCategoryCollection extends AbstractEntityCollection<PromptCategory> {
   readonly domain = 'prompt';
   readonly table = 'prompt_categories';
   protected readonly columns = PromptCategory.COLUMNS;
+  protected readonly schemaVersion = 1;
 
   constructor() {
-    super(defaultSequences());
+    super(defaultTableMetadata());
   }
 
   protected hydrate(row: RawRow): PromptCategory {

@@ -5,7 +5,7 @@ import { Column, RawRow } from '../Column';
  * One category (`prompt_categories`).
  *
  * Categories belong to no project: one set is shared by the shared prompts and by
- * every project's, so `cwd` is always null here.
+ * every project's, so `projectId` is always null here.
  */
 export class PromptCategory extends AbstractEntity {
   static readonly COLUMNS = AbstractEntity['columnsWith'](
@@ -17,7 +17,7 @@ export class PromptCategory extends AbstractEntity {
 
   constructor(
     id: number,
-    cwd: string | null,
+    projectId: number | null,
     /** Identity that survives leaving this machine; see {@link PromptItem.uuid}. */
     public uuid: string,
     public name: string,
@@ -26,7 +26,7 @@ export class PromptCategory extends AbstractEntity {
     /** Creation time in epoch milliseconds. */
     public createdAt: number,
   ) {
-    super(id, cwd);
+    super(id, projectId);
   }
 
   /** A category that has not been inserted yet, so it has no number. */
@@ -37,7 +37,7 @@ export class PromptCategory extends AbstractEntity {
   static fromRow(row: RawRow): PromptCategory {
     return new PromptCategory(
       row.int('id'),
-      row.nullableString('cwd'),
+      row.nullableInt('projectId'),
       row.string('uuid'),
       row.string('name'),
       row.int('priority'),
@@ -52,7 +52,7 @@ export class PromptCategory extends AbstractEntity {
   toJSON() {
     return {
       id: this.id,
-      cwd: this.cwd,
+      projectId: this.projectId,
       uuid: this.uuid,
       name: this.name,
       priority: this.priority,

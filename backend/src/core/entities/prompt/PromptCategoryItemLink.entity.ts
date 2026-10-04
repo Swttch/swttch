@@ -5,7 +5,7 @@ import { Column, RawRow } from '../Column';
  * One item sitting in one category (`prompt_category_item_links`).
  *
  * The many-to-many join between categories and items, carrying the item's place
- * in that category. `cwd` is copied from the item when the link is made and
+ * in that category. `projectId` is copied from the item when the link is made and
  * never changed on its own, so the links of one project can be found, and
  * removed with it, without opening the items.
  */
@@ -18,7 +18,7 @@ export class PromptCategoryItemLink extends AbstractEntity {
 
   constructor(
     id: number,
-    cwd: string | null,
+    projectId: number | null,
     public categoryId: number,
     public itemId: number,
     /**
@@ -27,18 +27,23 @@ export class PromptCategoryItemLink extends AbstractEntity {
      */
     public priority: number,
   ) {
-    super(id, cwd);
+    super(id, projectId);
   }
 
   /** A link that has not been inserted yet, so it has no number. */
-  static draft(cwd: string | null, categoryId: number, itemId: number, priority: number): PromptCategoryItemLink {
-    return new PromptCategoryItemLink(0, cwd, categoryId, itemId, priority);
+  static draft(
+    projectId: number | null,
+    categoryId: number,
+    itemId: number,
+    priority: number,
+  ): PromptCategoryItemLink {
+    return new PromptCategoryItemLink(0, projectId, categoryId, itemId, priority);
   }
 
   static fromRow(row: RawRow): PromptCategoryItemLink {
     return new PromptCategoryItemLink(
       row.int('id'),
-      row.nullableString('cwd'),
+      row.nullableInt('projectId'),
       row.int('categoryId'),
       row.int('itemId'),
       row.int('priority'),
@@ -52,7 +57,7 @@ export class PromptCategoryItemLink extends AbstractEntity {
   toJSON() {
     return {
       id: this.id,
-      cwd: this.cwd,
+      projectId: this.projectId,
       categoryId: this.categoryId,
       itemId: this.itemId,
       priority: this.priority,

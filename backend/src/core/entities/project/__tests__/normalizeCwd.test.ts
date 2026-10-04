@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, realpathSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { normalizeCwd } from '../normalizeCwd';
+import { canSymlink } from '../../__tests__/canSymlink';
 
 /**
  * Every entity row carries a `cwd`, and rows are found again by comparing it with
@@ -35,7 +36,7 @@ describe('normalizeCwd', () => {
   });
 
   // The same folder reached through a link must be the same project.
-  it('follows a symbolic link to the real folder', () => {
+  it.skipIf(!canSymlink)('follows a symbolic link to the real folder', () => {
     mkdirSync(join(root, 'real'));
     symlinkSync(join(root, 'real'), join(root, 'link'));
 
@@ -51,6 +52,26 @@ describe('normalizeCwd', () => {
   // says nothing about a project.
   it('refuses a relative path', () => {
     expect(() => normalizeCwd('some/project')).toThrow(/absolute/);
+  });
+
+  // A transcript written on Windows names its directory the way Windows does, and
+  // the program may read it somewhere that is not Windows. Nothing here can settle
+  // that spelling, so it is kept and not mistaken for a relative path.
+  it.skipIf(process.platform === 'win32')('keeps a Windows path as it was written when this is not Windows', () => {
+    expect(normalizeCwd('C:\\Users\\me\\app')).toBe('C:\\Users\\me\\app');
+    expect(normalizeCwd('\\\\server\\share\\app')).toBe('\\\\server\\share\\app');
+  });
+
+  // `resolve` would put the current drive in front of it and name another folder.
+  it('keeps a POSIX path as it was written on Windows, without putting a drive in front', () => {
+    const real = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      expect(normalizeCwd('/home/user/app')).toBe('/home/user/app');
+      expect(normalizeCwd('/mnt/c/Users/me')).toBe('/mnt/c/Users/me');
+    } finally {
+      Object.defineProperty(process, 'platform', { value: real });
+    }
   });
 
   it('refuses an empty path', () => {

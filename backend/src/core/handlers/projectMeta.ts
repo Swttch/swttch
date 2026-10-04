@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { setProjectMeta } from '../features/projects-store';
+import { describeProject } from '../features/projectPreferences';
 import { MessageType } from '../../shared';
 
 /**
@@ -23,7 +23,7 @@ export async function setProjectMetaHandler(
     description?: unknown;
   };
 
-  const { ok, projectMeta } = await setProjectMeta(typeof path === 'string' ? path : '', {
+  const { ok, projectMeta } = await describeProject(typeof path === 'string' ? path : '', {
     name: typeof name === 'string' ? name : undefined,
     description: typeof description === 'string' ? description : undefined,
   });

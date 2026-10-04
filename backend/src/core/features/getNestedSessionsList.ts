@@ -1,5 +1,6 @@
 import { isInsideWorkingDir, isSameWorkingDir } from '../../shared';
 import { getProjectsList } from './getProjectsList';
+import { syncProjectsList } from './syncProjectsList';
 import {
   collectSortKeys,
   resolvePage,
@@ -19,12 +20,19 @@ import {
  * Ordering is settled across ALL directories before any transcript is opened,
  * which is what lets a page be the globally newest N rather than the newest N
  * of whichever directory happened to be read first.
+ *
+ * The directories under [rootDir] come from the project list. The first page
+ * brings that list up to date with the CLI's records, so a directory a session
+ * was started in a moment ago shows up. The pages after it read the list as it
+ * stands: a user paging through the sessions pays for one scan, not one per page,
+ * and the set of directories does not shift under them while they page.
  */
 export async function getNestedSessionsList(
   rootDir: string,
   options: SessionListOptions = {},
 ): Promise<SessionListPage> {
-  const projects = await getProjectsList();
+  const isFirstPage = (options.offset ?? 0) === 0;
+  const projects = isFirstPage ? await syncProjectsList() : await getProjectsList();
   const nested = projects.map((p) => p.path).filter((p) => isInsideWorkingDir(p, rootDir));
 
   // Deduplicate: the root can also appear in the projects list, and on a

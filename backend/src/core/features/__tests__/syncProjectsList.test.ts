@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { getProjectsList } from '../getProjectsList';
+import { syncProjectsList } from '../syncProjectsList';
+
+// This test file predates the table: it covers how the CLI's records are read.
+// The list that comes back is now the project table's, brought up to date by that
+// reading, so every call here goes through the sync.
+const getProjectsList = syncProjectsList;
 
 /**
  * Resolving a project costs one transcript, not the whole folder.
@@ -15,20 +20,28 @@ import { getProjectsList } from '../getProjectsList';
  */
 describe('getProjectsList', () => {
   const originalConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  const originalCcgHome = process.env.CCG_HOME;
   let configDir: string;
+  let ccgHome: string;
   let projectsDir: string;
 
   beforeEach(() => {
     configDir = mkdtempSync(join(tmpdir(), 'ccg-projects-list-'));
+    // The table of projects persists between calls, so each test gets its own.
+    ccgHome = mkdtempSync(join(tmpdir(), 'ccg-projects-home-'));
     projectsDir = join(configDir, 'projects');
     mkdirSync(projectsDir, { recursive: true });
     process.env.CLAUDE_CONFIG_DIR = configDir;
+    process.env.CCG_HOME = ccgHome;
   });
 
   afterEach(() => {
     if (originalConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
     else process.env.CLAUDE_CONFIG_DIR = originalConfigDir;
+    if (originalCcgHome === undefined) delete process.env.CCG_HOME;
+    else process.env.CCG_HOME = originalCcgHome;
     rmSync(configDir, { recursive: true, force: true });
+    rmSync(ccgHome, { recursive: true, force: true });
   });
 
   /** Write a transcript and pin its mtime, since selection is by mtime. */

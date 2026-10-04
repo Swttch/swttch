@@ -123,11 +123,18 @@ function errorCode(err: unknown): string | undefined {
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-async function renameWithRetry(from: string, to: string): Promise<void> {
+/**
+ * Run a file operation again, a few times and after a short wait, when it fails the
+ * way Windows fails an operation on a file another process has open for a moment
+ * (`EPERM`, `EACCES`, `EBUSY`). Any other failure, and the last of these, is thrown.
+ *
+ * Not for operations whose failure is an answer: `ENOENT` (it is not there) and
+ * `EEXIST` (someone else made it first) are never retried.
+ */
+export async function retryTransient<T>(run: () => Promise<T>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
-      await rename(from, to);
-      return;
+      return await run();
     } catch (err) {
       const code = errorCode(err);
       if (attempt >= RENAME_RETRY_DELAYS_MS.length || !code || !RETRYABLE_RENAME_CODES.has(code)) {
@@ -136,6 +143,10 @@ async function renameWithRetry(from: string, to: string): Promise<void> {
       await delay(RENAME_RETRY_DELAYS_MS[attempt]);
     }
   }
+}
+
+function renameWithRetry(from: string, to: string): Promise<void> {
+  return retryTransient(() => rename(from, to));
 }
 
 /**
@@ -188,6 +199,28 @@ export async function atomicWriteFile(filePath: string, content: string): Promis
 const updateChains = new Map<string, Promise<unknown>>();
 
 /**
+ * Run [task] once every task already queued for [filePath] has finished, and
+ * before any queued after it.
+ *
+ * The chain {@link updateJsonFile} uses, for writers that are not a whole-file
+ * read-modify-write (an append to a line-per-row file, say) but must not
+ * interleave with one. A task that throws does not stall the ones behind it.
+ */
+export function runExclusive<T>(filePath: string, task: () => Promise<T>): Promise<T> {
+  const key = resolve(filePath);
+  const previous = updateChains.get(key) ?? Promise.resolve();
+  const run = previous.then(task);
+  updateChains.set(
+    key,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return run;
+}
+
+/**
  * Read a JSON file, apply `mutate`, and save the result atomically.
  *
  * A file that exists but cannot be read aborts the update: it is reported as an
@@ -210,103 +243,6 @@ export function updateJsonFile(filePath: string, mutate: JsonMutate): Promise<Js
 
 async function doUpdateJsonFile(filePath: string, mutate: JsonMutate): Promise<JsonUpdateResult> {
   const read = await readJsonForUpdate(filePath);
-  if (read.status === 'unreadable') {
-    const error = refusedWriteMessage(filePath, read.reason);
-    console.error('[node-backend]', error);
-    return { status: 'error', error };
-  }
-
-  try {
-    const next = mutate(read.data);
-    if (next === null) return { status: 'ok' };
-    await atomicWriteFile(filePath, JSON.stringify(next, null, 2) + '\n');
-    return { status: 'ok' };
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    console.error('[node-backend]', `failed to update ${filePath}:`, err);
-    return { status: 'error', error };
-  }
-}
-
-/**
- * The array-rooted twins of {@link readJsonForUpdate} and {@link updateJsonFile}.
- *
- * Entity files (`~/.claude-code-gui/entities/<domain>/<table>.entity.json`) are a
- * JSON array of rows, not an object, so the object-only functions above would
- * call every one of them unreadable. The rule they enforce is the same and is
- * kept: a file that exists but cannot be read is never replaced, and the write
- * goes through the same atomic rename on the same per-path chain.
- */
-export type JsonArrayReadForUpdate =
-  | { status: 'ok'; data: unknown[] }
-  | { status: 'unreadable'; reason: string };
-
-/**
- * Mutate the parsed rows in place or return a replacement.
- * Returning `null` means "nothing to change" and skips the write entirely.
- */
-export type JsonArrayMutate = (current: unknown[]) => unknown[] | null;
-
-/**
- * Read an array-rooted JSON file as the read half of a read-modify-write.
- *
- * Absent and empty files are an empty array, since there is nothing in them to
- * lose. Valid JSON that is not an array (an object, `null`, a string) is
- * unreadable rather than empty, for the reason the object version gives.
- */
-export async function readJsonArrayForUpdate(filePath: string): Promise<JsonArrayReadForUpdate> {
-  if (!existsSync(filePath)) return { status: 'ok', data: [] };
-
-  let raw: string;
-  try {
-    raw = await readFile(filePath, 'utf-8');
-  } catch (err) {
-    return { status: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
-  }
-
-  if (raw.trim() === '') return { status: 'ok', data: [] };
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    return { status: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
-  }
-
-  if (!Array.isArray(parsed)) {
-    return { status: 'unreadable', reason: `expected a JSON array, found ${describeValue(parsed)}` };
-  }
-  return { status: 'ok', data: parsed };
-}
-
-/**
- * Read an array-rooted JSON file, apply `mutate`, and save the result atomically.
- *
- * A file that exists but cannot be read aborts the update: it is reported as an
- * error and left exactly as it was found.
- */
-export function updateJsonArrayFile(
-  filePath: string,
-  mutate: JsonArrayMutate,
-): Promise<JsonUpdateResult> {
-  const key = resolve(filePath);
-  const previous = updateChains.get(key) ?? Promise.resolve();
-  const run = previous.then(() => doUpdateJsonArrayFile(filePath, mutate));
-  updateChains.set(
-    key,
-    run.then(
-      () => undefined,
-      () => undefined,
-    ),
-  );
-  return run;
-}
-
-async function doUpdateJsonArrayFile(
-  filePath: string,
-  mutate: JsonArrayMutate,
-): Promise<JsonUpdateResult> {
-  const read = await readJsonArrayForUpdate(filePath);
   if (read.status === 'unreadable') {
     const error = refusedWriteMessage(filePath, read.reason);
     console.error('[node-backend]', error);

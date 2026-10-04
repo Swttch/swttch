@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 // The handler settles the Claude data directory to the global one before it deletes, so the
@@ -12,6 +12,8 @@ vi.mock('../../claude', () => ({
 }));
 
 import { deleteProjectHandler } from '../deleteProject';
+import { ProjectCollection } from '../../entities/project/Project.collection';
+import { syncProjectsList } from '../../features/syncProjectsList';
 import { MessageType } from '../../../shared';
 import type { IPCMessage } from '../../types';
 import type { ConnectionManager } from '../../../ws/connection-manager';
@@ -25,20 +27,27 @@ import type { Bridge } from '../../../bridge/bridge-interface';
  */
 describe('deleteProjectHandler', () => {
   const originalConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  const originalCcgHome = process.env.CCG_HOME;
   let configDir: string;
+  let ccgHome: string;
   let projectsDir: string;
 
   beforeEach(() => {
     configDir = mkdtempSync(join(tmpdir(), 'ccg-delete-project-'));
+    ccgHome = mkdtempSync(join(tmpdir(), 'ccg-delete-project-home-'));
     projectsDir = join(configDir, 'projects');
     mkdirSync(projectsDir, { recursive: true });
     process.env.CLAUDE_CONFIG_DIR = configDir;
+    process.env.CCG_HOME = ccgHome;
   });
 
   afterEach(() => {
     if (originalConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
     else process.env.CLAUDE_CONFIG_DIR = originalConfigDir;
+    if (originalCcgHome === undefined) delete process.env.CCG_HOME;
+    else process.env.CCG_HOME = originalCcgHome;
     rmSync(configDir, { recursive: true, force: true });
+    rmSync(ccgHome, { recursive: true, force: true });
   });
 
   function sessionsFolderFor(workingDir: string): string {
@@ -112,6 +121,28 @@ describe('deleteProjectHandler', () => {
       MessageType.ACK,
       expect.objectContaining({ status: 'ok' }),
     );
+  });
+
+  // The picker's list is the program's own table, so removing the CLI's records
+  // does not make the project leave it. The row stays (prompts point at it) and is
+  // only taken off the list.
+  it('takes the project off the list but keeps its row', async () => {
+    // The real path, as the CLI records it: the table settles on that spelling.
+    const workingDir = realpathSync(mkdtempSync(join(tmpdir(), 'ccg-delete-project-dir-')));
+    try {
+      const folder = sessionsFolderFor(workingDir);
+      mkdirSync(folder, { recursive: true });
+      writeFileSync(join(folder, 'a.jsonl'), JSON.stringify({ cwd: workingDir }));
+      expect((await syncProjectsList(true)).map((entry) => entry.path)).toEqual([workingDir]);
+      const id = (await new ProjectCollection().findByPath(workingDir))?.id;
+
+      await callHandler({ path: workingDir });
+
+      expect(await syncProjectsList(true)).toEqual([]);
+      expect((await new ProjectCollection().findByPath(workingDir))?.id).toBe(id);
+    } finally {
+      rmSync(workingDir, { recursive: true, force: true });
+    }
   });
 
   it('reports an error and deletes nothing when path is missing', async () => {

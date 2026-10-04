@@ -10,7 +10,6 @@ vi.mock('os', async (importOriginal) => {
   const original = await importOriginal<typeof import('os')>();
   return { ...original, homedir: () => fakeHome.dir };
 });
-vi.mock('../../features/prompt-migration-sweep', () => ({ startBackgroundMigration: vi.fn() }));
 
 import { MessageType } from '../../../shared';
 import type { ConnectionManager } from '../../../ws/connection-manager';
@@ -21,7 +20,6 @@ import {
   importPromptsHandler,
   previewPromptImportHandler,
 } from '../prompts';
-import { resetMigrationMemory } from '../../features/prompt-migration';
 import {
   createPrompt,
   readPromptOrderByCategory,
@@ -69,7 +67,6 @@ describe('exporting and importing the prompt library', () => {
     ccgHome = mkdtempSync(join(tmpdir(), `ccg-${name}-`));
     fakeHome.dir = mkdtempSync(join(tmpdir(), `ccg-${name}-user-`));
     process.env.CCG_HOME = ccgHome;
-    resetMigrationMemory();
   };
 
   beforeEach(() => {

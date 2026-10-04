@@ -1,7 +1,7 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { setProjectFavorite } from '../features/projects-store';
+import { pinProject } from '../features/projectPreferences';
 import { MessageType } from '../../shared';
 
 /**
@@ -19,7 +19,7 @@ export async function setProjectFavoriteHandler(
   _bridge: Bridge,
 ): Promise<void> {
   const { path, favorite } = (message.payload ?? {}) as { path?: unknown; favorite?: unknown };
-  const { ok, favoritePaths } = await setProjectFavorite(
+  const { ok, favoritePaths } = await pinProject(
     typeof path === 'string' ? path : '',
     favorite === true,
   );

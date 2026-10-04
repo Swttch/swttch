@@ -9,14 +9,15 @@ import { SystemMigration } from '../system/SystemMigration.entity';
 import { PromptItemCollection } from '../prompt/PromptItem.collection';
 import { PromptCategoryCollection } from '../prompt/PromptCategory.collection';
 import { PromptCategoryItemLinkCollection } from '../prompt/PromptCategoryItemLink.collection';
-import { SystemSequenceCollection } from '../system/SystemSequence.collection';
+import { ProjectCollection } from '../project/Project.collection';
+import { TableMetadataCollection } from '../system/TableMetadata.collection';
 import { SystemMigrationCollection } from '../system/SystemMigration.collection';
 
 const NOW = 1_700_000_000_000;
 
 /** What a row of `prompt_items` looks like in its file. A fixture for planting files by hand. */
 const itemAttributes = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
-  cwd: null,
+  projectId: null,
   uuid: 'uuid-1',
   name: 'review',
   content: 'Review the diff.',
@@ -30,7 +31,7 @@ const itemAttributes = (overrides: Record<string, unknown> = {}): Record<string,
 const draftItem = (overrides: Record<string, unknown> = {}): PromptItem => {
   const a = itemAttributes(overrides);
   return PromptItem.draft(
-    a.cwd as string | null,
+    a.projectId as number | null,
     a.uuid as string,
     a.name as string,
     a.content as string,
@@ -57,13 +58,20 @@ describe('entities', () => {
   });
 
   const fileOf = (domain: string, table: string) =>
-    join(home, 'entities', domain, `${table}.entity.json`);
+    join(home, 'entities', domain, `${table}.entity.jsonl`);
+  const textOf = (domain: string, table: string) => readFileSync(fileOf(domain, table), 'utf-8');
+  /** The lines of a table's file, each parsed. */
   const readRows = (domain: string, table: string) =>
-    JSON.parse(readFileSync(fileOf(domain, table), 'utf-8')) as Record<string, unknown>[];
+    textOf(domain, table)
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
   const plant = (domain: string, table: string, content: string) => {
     mkdirSync(join(home, 'entities', domain), { recursive: true });
     writeFileSync(fileOf(domain, table), content, 'utf-8');
   };
+  /** Rows as the lines of a file, the way the program writes them. */
+  const asLines = (rows: unknown[]) => rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
 
   describe('where each table lives', () => {
     // Entity, table and file are one thing named three ways, and the folder is the
@@ -72,35 +80,26 @@ describe('entities', () => {
       [new PromptItemCollection(), 'prompt', 'prompt_items'],
       [new PromptCategoryCollection(), 'prompt', 'prompt_categories'],
       [new PromptCategoryItemLinkCollection(), 'prompt', 'prompt_category_item_links'],
-      [new SystemSequenceCollection(), 'system', 'system_sequences'],
+      [new ProjectCollection(), 'project', 'projects'],
+      [new TableMetadataCollection(), 'system', 'table_metadatas'],
       [new SystemMigrationCollection(), 'system', 'system_migrations'],
-    ])('keeps %o in %s/%s.entity.json', (collection, domain, table) => {
+    ])('keeps %o in %s/%s.entity.jsonl', (collection, domain, table) => {
       expect(collection.filePath).toBe(fileOf(domain, table));
       expect(collection.domain).toBe(domain);
       expect(collection.table).toBe(table);
     });
-
-    it('prefixes every table with its domain', () => {
-      for (const [collection, domain] of [
-        [new PromptItemCollection(), 'prompt'],
-        [new SystemMigrationCollection(), 'system'],
-      ] as const) {
-        expect(collection.table.startsWith(`${domain}_`)).toBe(true);
-      }
-    });
   });
 
   describe('creating a row', () => {
-    it('numbers rows from 1 and writes a JSON array', async () => {
+    it('numbers rows from 1 and writes one line of JSON per row', async () => {
       const items = new PromptItemCollection();
 
       const first = await items.insert(draftItem({ uuid: 'a', name: 'one' }));
       const second = await items.insert(draftItem({ uuid: 'b', name: 'two' }));
 
       expect([first.id, second.id]).toEqual([1, 2]);
-      const rows = readRows('prompt', 'prompt_items');
-      expect(Array.isArray(rows)).toBe(true);
-      expect(rows.map((row) => row.name)).toEqual(['one', 'two']);
+      expect(textOf('prompt', 'prompt_items').split('\n')).toHaveLength(3); // two lines and the final break
+      expect(readRows('prompt', 'prompt_items').map((row) => row.name)).toEqual(['one', 'two']);
     });
 
     // "The highest id plus one" would hand a deleted row's id to the next row, and
@@ -127,39 +126,43 @@ describe('entities', () => {
       expect(category.id).toBe(1);
     });
 
-    it('records the last id of each table in the sequence file', async () => {
+    it('records each table in the table metadata file', async () => {
       const items = new PromptItemCollection();
       await items.insert(draftItem());
       await items.insert(draftItem({ uuid: 'b' }));
 
-      const sequences = readRows('system', 'system_sequences');
-      expect(sequences).toHaveLength(1);
-      expect(sequences[0]).toMatchObject({ tableName: 'prompt_items', lastId: 2, cwd: null });
+      const records = readRows('system', 'table_metadatas');
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        tableName: 'prompt_items',
+        domain: 'prompt',
+        lastId: 2,
+        rowCount: 2,
+        lineCount: 2,
+        schemaVersion: 1,
+        projectId: null,
+      });
     });
 
-    // A file someone filled by hand has ids the sequence never handed out.
+    // A file someone filled by hand has ids the table's record never handed out.
     it('starts above the highest id already in the file', async () => {
-      plant(
-        'prompt',
-        'prompt_items',
-        JSON.stringify([{ ...itemAttributes({ uuid: 'old' }), id: 7 }]),
-      );
+      plant('prompt', 'prompt_items', asLines([{ ...itemAttributes({ uuid: 'old' }), id: 7 }]));
 
       const created = await new PromptItemCollection().insert(draftItem({ uuid: 'new' }));
 
       expect(created.id).toBe(8);
+      expect(readRows('system', 'table_metadatas')[0]).toMatchObject({ rowCount: 2, lineCount: 2 });
     });
 
-    it('normalizes the cwd before writing it', async () => {
+    it('stores the number of the project on a project prompt, not its directory', async () => {
       const project = join(home, 'project');
       mkdirSync(project);
+      const projectId = await new ProjectCollection().idOf(`${project}/`);
 
-      const created = await new PromptItemCollection().insert(
-        draftItem({ cwd: `${project}/` }),
-      );
+      await new PromptItemCollection().insert(draftItem({ projectId }));
 
-      expect(created.cwd).toBe(project);
-      expect(readRows('prompt', 'prompt_items')[0].cwd).toBe(project);
+      expect(readRows('prompt', 'prompt_items')[0].projectId).toBe(projectId);
+      expect(textOf('prompt', 'prompt_items')).not.toContain(project);
     });
 
     it('numbers ten rows created at once without a repeat or a loss', async () => {
@@ -218,10 +221,10 @@ describe('entities', () => {
     it('writes nothing when every candidate is already there', async () => {
       const items = new PromptItemCollection();
       await items.insert(draftItem({ uuid: 'a' }));
-      const before = readFileSync(fileOf('prompt', 'prompt_items'), 'utf-8');
+      const before = textOf('prompt', 'prompt_items');
 
       expect(await items.insertMissing([draftItem({ uuid: 'a' })], sameUuid)).toEqual([]);
-      expect(readFileSync(fileOf('prompt', 'prompt_items'), 'utf-8')).toBe(before);
+      expect(textOf('prompt', 'prompt_items')).toBe(before);
     });
 
     it('answers nothing for no candidates', async () => {
@@ -258,26 +261,75 @@ describe('entities', () => {
       expect(JSON.parse(JSON.stringify(created))).toEqual({ ...itemAttributes(), id: 1 });
     });
 
-    it('reads a missing cwd as null', async () => {
-      const { cwd: _cwd, ...withoutCwd } = { ...itemAttributes(), id: 1 } as Record<string, unknown>;
-      plant('prompt', 'prompt_items', JSON.stringify([withoutCwd]));
+    it('reads a missing projectId as null', async () => {
+      const { projectId: _projectId, ...without } = { ...itemAttributes(), id: 1 } as Record<string, unknown>;
+      plant('prompt', 'prompt_items', asLines([without]));
 
       const [item] = await new PromptItemCollection().all();
 
-      expect(item.cwd).toBeNull();
+      expect(item.projectId).toBeNull();
       expect(item.isGlobal).toBe(true);
     });
 
     it('lists one project\'s prompts, or the shared ones, in the library\'s order', async () => {
       const project = join(home, 'project');
       mkdirSync(project);
+      const projectId = await new ProjectCollection().idOf(project);
       const items = new PromptItemCollection();
       await items.insert(draftItem({ uuid: 'a', name: 'b-shared', priority: 2 }));
       await items.insert(draftItem({ uuid: 'b', name: 'a-shared', priority: 1 }));
-      await items.insert(draftItem({ uuid: 'c', name: 'project', cwd: project, priority: 1 }));
+      await items.insert(draftItem({ uuid: 'c', name: 'project', projectId, priority: 1 }));
 
       expect((await items.inScope(null)).map((item) => item.name)).toEqual(['a-shared', 'b-shared']);
-      expect((await items.inScope(`${project}/`)).map((item) => item.name)).toEqual(['project']);
+      expect((await items.inScope(projectId)).map((item) => item.name)).toEqual(['project']);
+    });
+  });
+
+  describe('reading a window of rows', () => {
+    const fill = async (count: number) => {
+      const items = new PromptItemCollection();
+      for (let i = 1; i <= count; i++) await items.insert(draftItem({ uuid: `u${i}`, name: `n${i}` }));
+      return items;
+    };
+
+    it('answers the rows from an offset, at most a limit of them, with the total', async () => {
+      const items = await fill(5);
+
+      const page = await items.page(1, 2);
+
+      expect(page.entities.map((item) => item.name)).toEqual(['n2', 'n3']);
+      expect(page.total).toBe(5);
+      expect(page.hasMore).toBe(true);
+    });
+
+    it('says there is nothing after the last window', async () => {
+      const items = await fill(5);
+
+      const page = await items.page(4, 10);
+
+      expect(page.entities.map((item) => item.name)).toEqual(['n5']);
+      expect(page.hasMore).toBe(false);
+    });
+
+    it('windows only the rows a predicate accepts, and counts those', async () => {
+      const items = await fill(5);
+
+      const page = await items.page(0, 2, (item) => item.priority === 1);
+
+      expect(page.total).toBe(5);
+      const none = await items.page(0, 2, (item) => item.name === 'n3');
+      expect(none.entities.map((item) => item.name)).toEqual(['n3']);
+      expect(none.total).toBe(1);
+    });
+
+    it('counts rows from the table record and follows inserts and deletes', async () => {
+      const items = await fill(3);
+      expect(await items.count()).toBe(3);
+
+      await items.delete(2);
+
+      expect(await items.count()).toBe(2);
+      expect(await items.count((item) => item.name === 'n1')).toBe(1);
     });
   });
 
@@ -317,30 +369,145 @@ describe('entities', () => {
       expect(await items.delete(created.id)).toBe(false);
       expect(await items.all()).toEqual([]);
     });
+
+    it('drops the lines a change replaced when it rewrites the file', async () => {
+      const items = new PromptItemCollection();
+      const created = await items.insert(draftItem());
+      await items.insert(draftItem({ uuid: 'b' }));
+      await items.delete(created.id);
+
+      expect(readRows('prompt', 'prompt_items')).toHaveLength(1);
+      expect(readRows('system', 'table_metadatas')[0]).toMatchObject({ rowCount: 1, lineCount: 1, lastId: 2 });
+    });
+  });
+
+  describe('which line is the row', () => {
+    const row = (id: number, overrides: Record<string, unknown> = {}) => ({
+      ...itemAttributes({ uuid: `u${id}` }),
+      id,
+      ...overrides,
+    });
+
+    it('takes the later of two lines with the same id', async () => {
+      plant('prompt', 'prompt_items', asLines([row(1, { name: 'before' }), row(1, { name: 'after' })]));
+
+      const items = await new PromptItemCollection().all();
+
+      expect(items.map((item) => [item.id, item.name])).toEqual([[1, 'after']]);
+    });
+
+    it('treats a line that says an id is deleted as removing the row', async () => {
+      plant('prompt', 'prompt_items', asLines([row(1), row(2), { id: 1, deleted: true }]));
+
+      expect((await new PromptItemCollection().all()).map((item) => item.id)).toEqual([2]);
+    });
+
+    // The line that deletes a row is not a row that failed the column check, so it
+    // is not kept as one: a rewrite leaves neither the row nor the line behind.
+    it('leaves neither a deleted row nor the line that deleted it after a rewrite', async () => {
+      plant('prompt', 'prompt_items', asLines([row(1), row(2), { id: 1, deleted: true }]));
+      const items = new PromptItemCollection();
+
+      const [kept] = await items.all();
+      kept.name = 'touched';
+      await items.save(kept);
+
+      expect(readRows('prompt', 'prompt_items').map((line) => line.id)).toEqual([2]);
+      expect(textOf('prompt', 'prompt_items')).not.toContain('deleted');
+    });
+
+    it('lists rows in the order their id first appeared', async () => {
+      plant('prompt', 'prompt_items', asLines([row(2), row(1), row(2, { name: 'again' })]));
+
+      const items = await new PromptItemCollection().all();
+
+      expect(items.map((item) => [item.id, item.name])).toEqual([
+        [2, 'again'],
+        [1, 'review'],
+      ]);
+    });
+
+    // A number that was ever used must never be handed out again, a deleted row's
+    // included.
+    it('counts the id of a deleted row when numbering the next one', async () => {
+      plant('prompt', 'prompt_items', asLines([row(1), row(5), { id: 5, deleted: true }]));
+
+      const created = await new PromptItemCollection().insert(draftItem({ uuid: 'new' }));
+
+      expect(created.id).toBe(6);
+    });
+
+    it('skips blank lines and the carriage return of a Windows editor', async () => {
+      const text = [JSON.stringify(row(1)), '', JSON.stringify(row(2))].join('\r\n') + '\r\n';
+      plant('prompt', 'prompt_items', text);
+
+      expect((await new PromptItemCollection().all()).map((item) => item.id)).toEqual([1, 2]);
+    });
+  });
+
+  describe('a line that is not JSON', () => {
+    const good = { ...itemAttributes({ uuid: 'good' }), id: 1 };
+
+    // One damaged line costs that line and nothing else. The file as a whole is not
+    // "unreadable", and the next rewrite puts the line back as it was.
+    it('is set aside, and the rows around it are read', async () => {
+      plant('prompt', 'prompt_items', `${JSON.stringify(good)}\nthis is not json\n`);
+
+      expect((await new PromptItemCollection().all()).map((item) => item.uuid)).toEqual(['good']);
+    });
+
+    it('is written back untouched when the file is rewritten', async () => {
+      plant('prompt', 'prompt_items', `this is not json\n${JSON.stringify(good)}\n`);
+      const items = new PromptItemCollection();
+
+      const [kept] = await items.all();
+      kept.name = 'touched';
+      await items.save(kept);
+
+      expect(textOf('prompt', 'prompt_items')).toContain('this is not json');
+      expect((await items.all())[0].name).toBe('touched');
+    });
+
+    // A process that died while writing leaves the last line cut short.
+    it('is what a last line cut short is, and the next row starts on a fresh line', async () => {
+      plant('prompt', 'prompt_items', `${JSON.stringify(good)}\n{"id":2,"uuid":"cu`);
+      const items = new PromptItemCollection();
+      expect((await items.all()).map((item) => item.uuid)).toEqual(['good']);
+
+      const created = await items.insert(draftItem({ uuid: 'next' }));
+
+      // A cut line is not JSON, so nothing in it can be read, its id included. In a
+      // real crash the table's record had handed out that number before the write
+      // began, which is what keeps it from being used again.
+      expect(created.id).toBe(2);
+      expect((await items.all()).map((item) => item.uuid)).toEqual(['good', 'next']);
+      expect(textOf('prompt', 'prompt_items')).toContain('{"id":2,"uuid":"cu\n');
+    });
+
+    it('does not stop a row from being added to a file that holds one', async () => {
+      plant('prompt', 'prompt_items', 'garbage\n');
+
+      const created = await new PromptItemCollection().insert(draftItem());
+
+      expect(created.id).toBe(1);
+      expect(textOf('prompt', 'prompt_items').startsWith('garbage\n')).toBe(true);
+    });
   });
 
   describe('a file that cannot be read', () => {
     // Answering "empty" would look like every row was lost, and the next write
-    // would then replace the file with that.
+    // would then replace the file with that. A path that is a directory cannot be
+    // read as a file; so can no other kind of damage be told apart from missing.
     it('refuses to read rather than answering empty', async () => {
-      plant('prompt', 'prompt_items', '[{"id":1}{"id":2}]'); // what a torn write leaves
+      mkdirSync(fileOf('prompt', 'prompt_items'), { recursive: true });
 
       await expect(new PromptItemCollection().all()).rejects.toBeInstanceOf(EntityFileUnreadableError);
     });
 
-    it('leaves the file exactly as it found it when asked to write', async () => {
-      const torn = '[{"id":1}{"id":2}]';
-      plant('prompt', 'prompt_items', torn);
+    it('leaves what it found as it was when asked to write', async () => {
+      mkdirSync(fileOf('prompt', 'prompt_items'), { recursive: true });
 
       await expect(new PromptItemCollection().insert(draftItem())).rejects.toBeInstanceOf(Error);
-
-      expect(readFileSync(fileOf('prompt', 'prompt_items'), 'utf-8')).toBe(torn);
-    });
-
-    it('treats a file whose root is an object as unreadable, not as empty', async () => {
-      plant('prompt', 'prompt_items', '{"prompts":[]}');
-
-      await expect(new PromptItemCollection().all()).rejects.toBeInstanceOf(EntityFileUnreadableError);
     });
 
     it('treats an empty file as no rows', async () => {
@@ -354,60 +521,57 @@ describe('entities', () => {
     const good = { ...itemAttributes({ uuid: 'good' }), id: 1 };
 
     it('skips a malformed row when reading', async () => {
-      plant('prompt', 'prompt_items', JSON.stringify([good, { id: 2, name: 7 }]));
+      plant('prompt', 'prompt_items', asLines([good, { id: 2, name: 7 }]));
 
       expect((await new PromptItemCollection().all()).map((item) => item.uuid)).toEqual(['good']);
     });
 
     // Reading must not quietly edit a store. A row from a newer version, or one a
-    // person mangled by hand, has to survive our next save.
-    it('writes a skipped row back untouched when it saves', async () => {
+    // person mangled by hand, has to survive our next rewrite.
+    it('writes a skipped row back untouched when it rewrites the file', async () => {
       const mangled = { id: 2, name: 7, note: 'keep me' };
-      plant('prompt', 'prompt_items', JSON.stringify([good, mangled]));
+      plant('prompt', 'prompt_items', asLines([good, mangled]));
+      const items = new PromptItemCollection();
 
-      await new PromptItemCollection().insert(draftItem({ uuid: 'new' }));
+      const [first] = await items.all();
+      first.name = 'touched';
+      await items.save(first);
 
       const rows = readRows('prompt', 'prompt_items');
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(2);
       expect(rows).toContainEqual(mangled);
     });
 
-    it('skips a second row that reuses an id, and keeps it too', async () => {
-      const clash = { ...itemAttributes({ uuid: 'clash' }), id: 1 };
-      plant('prompt', 'prompt_items', JSON.stringify([good, clash]));
-
-      const items = new PromptItemCollection();
-      expect((await items.all()).map((item) => item.uuid)).toEqual(['good']);
-
-      const [kept] = await items.all();
-      kept.name = 'touched';
-      await items.save(kept);
-      expect(readRows('prompt', 'prompt_items')).toContainEqual(clash);
-    });
-
     it('skips a row whose id is not a positive whole number', async () => {
-      plant(
-        'prompt',
-        'prompt_items',
-        JSON.stringify([good, { ...good, id: 0 }, { ...good, id: 1.5 }, { ...good, id: -3 }]),
-      );
+      plant('prompt', 'prompt_items', asLines([good, { ...good, id: 0 }, { ...good, id: 1.5 }, { ...good, id: -3 }]));
 
       expect(await new PromptItemCollection().all()).toHaveLength(1);
     });
   });
 
   describe('the migration record', () => {
-    it('knows whether a migration has run for a project, or for the shared data', async () => {
-      const project = join(home, 'project');
-      mkdirSync(project);
+    it('knows which migrations have run', async () => {
       const migrations = new SystemMigrationCollection();
-      await migrations.insert(
-        SystemMigration.draft(project, 'prompts-to-entities', '/old/prompts.json', 3, 0, 0, 0, NOW),
-      );
+      await migrations.insert(SystemMigration.draft('20260101000000_first', '0.34.0', NOW, 12, 'moved 3 prompts'));
+      await migrations.insert(SystemMigration.draft('20260101000100_second', '0.34.0', NOW, 4, 'registered 2 projects'));
 
-      expect(await migrations.hasRun('prompts-to-entities', project)).toBe(true);
-      expect(await migrations.hasRun('prompts-to-entities', null)).toBe(false);
-      expect(await migrations.hasRun('another', project)).toBe(false);
+      expect(await migrations.hasRun('20260101000000_first')).toBe(true);
+      expect(await migrations.hasRun('another')).toBe(false);
+      expect([...(await migrations.names())].sort()).toEqual(['20260101000000_first', '20260101000100_second']);
+    });
+
+    it('keeps what a migration did, for a person to read', async () => {
+      const migrations = new SystemMigrationCollection();
+      await migrations.insert(SystemMigration.draft('20260101000000_first', '0.34.0', NOW, 12, 'moved 3 prompts'));
+
+      expect(readRows('system', 'system_migrations')[0]).toMatchObject({
+        name: '20260101000000_first',
+        appVersion: '0.34.0',
+        ranAt: NOW,
+        elapsedMs: 12,
+        summary: 'moved 3 prompts',
+        projectId: null,
+      });
     });
   });
 });

@@ -7,6 +7,14 @@ import { startWebSocketServer, type BridgeMap } from './ws/ws-server';
 import { BrowserBridge } from './bridge/browser-bridge';
 import { JetBrainsBridge } from './bridge/jetbrains-bridge';
 import { handleMessage } from './core/handlers/index';
+import { getPluginVersion } from './core/handlers/getVersion';
+import { MigrationContext } from './core/entities/migration/Migration';
+import { MigrationRunner } from './core/entities/migration/MigrationRunner';
+import { StartupMigrations } from './core/entities/migration/StartupMigrations';
+import { migrationStatus } from './core/features/migration-status';
+import { unreadFolderRetry } from './core/features/unread-folder-retry';
+import { migrationRetry } from './core/features/migration-retry';
+import { MIGRATIONS } from './core/migrations/registry';
 import { initSettingsWatcher, stopSettingsWatcher } from './core/features/settings-watcher';
 import { migrateSettingsToCorrectStore } from './core/features/settings-migration';
 import { ensureProfile } from './core/features/profile';
@@ -305,8 +313,23 @@ async function main() {
     logger.handleWebViewLogs(entries);
   });
 
+  // The data migrations of this version. The gate that holds entity requests back
+  // is closed here, BEFORE the server accepts its first message, or a request could
+  // read the old data in the gap. The run itself starts after the port is open, so a
+  // long one does not eat the time whoever started this backend waits for the port.
+  const startupMigrations = new StartupMigrations(
+    new MigrationRunner(MIGRATIONS, getPluginVersion(), new MigrationContext(), migrationStatus),
+    unreadFolderRetry,
+  );
+
   // 3. 서버 시작 (logWs 전달)
   const { port, close, connections } = await startServerWithRetry(bridges, logWs);
+
+  // Tell every open window when the migrations take long, fail, or leave old files
+  // unread. A window that opens later asks with GET_MIGRATION_STATUS.
+  migrationStatus.attach((payload) => connections.broadcastToAll(MessageType.MIGRATION_STATUS, { ...payload }));
+  migrationRetry.attach(startupMigrations);
+  void startupMigrations.start();
 
   // Register the AUTO_RESUME pre-send gate on the scheduled-message engine once,
   // now that the ConnectionManager (needed to broadcast poll progress) exists.

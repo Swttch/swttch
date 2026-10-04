@@ -4,8 +4,8 @@ import { Column, RawRow } from '../Column';
 /**
  * One saved prompt (`prompt_items`).
  *
- * A row with a `cwd` is a project prompt and shows only in that project; a row
- * with none is shared by every project. Which categories it sits in, and where in
+ * A row with a `projectId` is a project prompt and shows only in that project; a
+ * row with none is shared by every project. Which categories it sits in, and where in
  * each, is not stored here but in the links (`prompt_category_item_links`).
  */
 export class PromptItem extends AbstractEntity {
@@ -20,7 +20,7 @@ export class PromptItem extends AbstractEntity {
 
   constructor(
     id: number,
-    cwd: string | null,
+    projectId: number | null,
     /**
      * Identity that survives leaving this machine. The numeric `id` means nothing
      * on another computer, so exported files name a prompt by this instead. A
@@ -36,12 +36,12 @@ export class PromptItem extends AbstractEntity {
     /** Last edit time in epoch milliseconds. Equals `createdAt` until the first edit. */
     public updatedAt: number,
   ) {
-    super(id, cwd);
+    super(id, projectId);
   }
 
   /** A prompt that has not been inserted yet, so it has no number. */
   static draft(
-    cwd: string | null,
+    projectId: number | null,
     uuid: string,
     name: string,
     content: string,
@@ -49,13 +49,13 @@ export class PromptItem extends AbstractEntity {
     createdAt: number,
     updatedAt: number,
   ): PromptItem {
-    return new PromptItem(0, cwd, uuid, name, content, priority, createdAt, updatedAt);
+    return new PromptItem(0, projectId, uuid, name, content, priority, createdAt, updatedAt);
   }
 
   static fromRow(row: RawRow): PromptItem {
     return new PromptItem(
       row.int('id'),
-      row.nullableString('cwd'),
+      row.nullableInt('projectId'),
       row.string('uuid'),
       row.string('name'),
       row.string('content'),
@@ -72,7 +72,7 @@ export class PromptItem extends AbstractEntity {
   toJSON() {
     return {
       id: this.id,
-      cwd: this.cwd,
+      projectId: this.projectId,
       uuid: this.uuid,
       name: this.name,
       content: this.content,

@@ -2,66 +2,54 @@ import { AbstractEntity } from '../AbstractEntity';
 import { Column, RawRow } from '../Column';
 
 /**
- * The record that a piece of old data has been moved (`system_migrations`).
+ * The record that a migration has run (`system_migrations`).
  *
- * Written LAST, after the rows it describes. A move that is interrupted leaves no
- * record and so is run again, and one that finished is never run a second time,
- * which is what stops rows the user has since deleted from coming back.
+ * Written LAST, after everything the migration did. A run that is interrupted
+ * leaves no record and so is run again, and one that finished is never run a
+ * second time, which is what stops rows the user has since deleted from coming
+ * back. `name` is the migration's file name without its extension, and the set of
+ * names here is what decides which migrations are still to run.
  */
 export class SystemMigration extends AbstractEntity {
   static readonly COLUMNS = AbstractEntity['columnsWith'](
     new Column('name', 'string'),
-    new Column('sourceFile', 'string'),
-    new Column('promptCount', 'int'),
-    new Column('categoryCount', 'int'),
-    new Column('linkCount', 'int'),
-    new Column('skippedCount', 'int'),
+    new Column('appVersion', 'string'),
     new Column('ranAt', 'number'),
+    new Column('elapsedMs', 'int'),
+    new Column('summary', 'string'),
   );
 
   constructor(
     id: number,
-    cwd: string | null,
-    /** What was moved, e.g. `prompts-to-entities`. */
+    projectId: number | null,
+    /** The migration's file name without its extension, e.g. `20261004120000_create-projects`. */
     public name: string,
-    /** The file the rows were read from. It is left exactly as it was. */
-    public sourceFile: string,
-    public promptCount: number,
-    public categoryCount: number,
-    public linkCount: number,
-    /** Rows in the source that could not be read, or pointed at nothing. */
-    public skippedCount: number,
+    /** The version of the program that ran it. */
+    public appVersion: string,
     /** When it finished, in epoch milliseconds. */
     public ranAt: number,
+    /** How long it took, in milliseconds. */
+    public elapsedMs: number,
+    /** What it did, in a sentence for a person: counts of rows moved, rows skipped. */
+    public summary: string,
   ) {
-    super(id, cwd);
+    super(id, projectId);
   }
 
   /** A record that has not been inserted yet, so it has no number. */
-  static draft(
-    cwd: string | null,
-    name: string,
-    sourceFile: string,
-    promptCount: number,
-    categoryCount: number,
-    linkCount: number,
-    skippedCount: number,
-    ranAt: number,
-  ): SystemMigration {
-    return new SystemMigration(0, cwd, name, sourceFile, promptCount, categoryCount, linkCount, skippedCount, ranAt);
+  static draft(name: string, appVersion: string, ranAt: number, elapsedMs: number, summary: string): SystemMigration {
+    return new SystemMigration(0, null, name, appVersion, ranAt, elapsedMs, summary);
   }
 
   static fromRow(row: RawRow): SystemMigration {
     return new SystemMigration(
       row.int('id'),
-      row.nullableString('cwd'),
+      row.nullableInt('projectId'),
       row.string('name'),
-      row.string('sourceFile'),
-      row.int('promptCount'),
-      row.int('categoryCount'),
-      row.int('linkCount'),
-      row.int('skippedCount'),
+      row.string('appVersion'),
       row.number('ranAt'),
+      row.int('elapsedMs'),
+      row.string('summary'),
     );
   }
 
@@ -72,14 +60,12 @@ export class SystemMigration extends AbstractEntity {
   toJSON() {
     return {
       id: this.id,
-      cwd: this.cwd,
+      projectId: this.projectId,
       name: this.name,
-      sourceFile: this.sourceFile,
-      promptCount: this.promptCount,
-      categoryCount: this.categoryCount,
-      linkCount: this.linkCount,
-      skippedCount: this.skippedCount,
+      appVersion: this.appVersion,
       ranAt: this.ranAt,
+      elapsedMs: this.elapsedMs,
+      summary: this.summary,
     };
   }
 }

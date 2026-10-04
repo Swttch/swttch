@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, realpathSync, statSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
@@ -15,6 +15,8 @@ import {
   PROMPT_CONTENT_MAX_LENGTH,
 } from '../prompts';
 import { createCategory, deleteCategory } from '../prompt-category-registry';
+import { ProjectCollection } from '../../entities/project/Project.collection';
+import type { Project } from '../../entities/project/Project.entity';
 import { PromptItemCollection } from '../../entities/prompt/PromptItem.collection';
 import { PromptCategoryItemLinkCollection } from '../../entities/prompt/PromptCategoryItemLink.collection';
 
@@ -27,7 +29,7 @@ describe('prompt library store', () => {
   let home: string;
   let projectDir: string;
   let previousHome: string | undefined;
-  const itemsFile = () => join(home, 'entities', 'prompt', 'prompt_items.entity.json');
+  const itemsFile = () => join(home, 'entities', 'prompt', 'prompt_items.entity.jsonl');
 
   beforeEach(() => {
     previousHome = process.env.CCG_HOME;
@@ -43,15 +45,21 @@ describe('prompt library store', () => {
     rmSync(projectDir, { recursive: true, force: true });
   });
 
+  /** The rows of the items file, one parsed line each. */
   const readRows = () =>
-    JSON.parse(readFileSync(itemsFile(), 'utf-8')) as Array<{
+    readFileSync(itemsFile(), 'utf-8')
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => JSON.parse(line)) as Array<{
       id: number;
-      cwd: string | null;
+      projectId: number | null;
       uuid: string;
       name: string;
       content: string;
       priority: number;
     }>;
+
+  const rowsOf = (projects: Project[]) => projects.map((project) => project.path);
 
   const ok = async (scope: 'global' | 'project', name: string, categories?: string[]) => {
     const result = await createPrompt(
@@ -73,8 +81,7 @@ describe('prompt library store', () => {
     });
 
     it('refuses to call an unreadable file an empty library', async () => {
-      mkdirSync(join(home, 'entities', 'prompt'), { recursive: true });
-      writeFileSync(itemsFile(), '[{"id":1}][{"id":2}]', 'utf-8');
+      mkdirSync(itemsFile(), { recursive: true }); // a path that is a folder cannot be read as a file
       await expect(readPrompts('global')).rejects.toThrow(/could not be read/);
     });
 
@@ -120,12 +127,19 @@ describe('prompt library store', () => {
       expect(readRows()[0]?.content).toBe('머지했어 확인하고 로컬 정리해');
     });
 
-    it('writes the project in the cwd column and nothing in the global rows', async () => {
+    it('writes the number of the project in the projectId column and nothing in the global rows', async () => {
       await ok('project', 'mine');
       await ok('global', 'shared');
       const rows = readRows();
-      expect(rows.find((row) => row.name === 'mine')?.cwd).not.toBeNull();
-      expect(rows.find((row) => row.name === 'shared')?.cwd).toBeNull();
+      expect(typeof rows.find((row) => row.name === 'mine')?.projectId).toBe('number');
+      expect(rows.find((row) => row.name === 'shared')?.projectId).toBeNull();
+    });
+
+    it('registers the directory of a project prompt as a project', async () => {
+      await ok('project', 'mine');
+      const projects = await new ProjectCollection().all();
+      expect(projects).toHaveLength(1);
+      expect(rowsOf(projects)[0]).toBe(realpathSync(projectDir));
     });
 
     it('trims the name but leaves the content exactly as the user typed it', async () => {
@@ -169,14 +183,13 @@ describe('prompt library store', () => {
       expect((await createPrompt('project', projectDir, 'name', longContent)).status).toBe('error');
     });
 
-    it('refuses to write when the store exists but cannot be parsed', async () => {
-      mkdirSync(join(home, 'entities', 'prompt'), { recursive: true });
-      writeFileSync(itemsFile(), '[][]', 'utf-8'); // what a torn write leaves behind
+    it('refuses to write when the store exists but cannot be read', async () => {
+      mkdirSync(itemsFile(), { recursive: true }); // a path that is a folder cannot be read as a file
       const result = await createPrompt('project', projectDir, 'name', 'body');
       expect(result.status).toBe('error');
-      // The unreadable file is still there, unreplaced — refusing the write is
-      // the whole point, because overwriting it would delete every saved prompt.
-      expect(readFileSync(itemsFile(), 'utf-8')).toBe('[][]');
+      // The unreadable path is still there, unreplaced: refusing the write is the
+      // whole point, because replacing it would delete every saved prompt.
+      expect(statSync(itemsFile()).isDirectory()).toBe(true);
     });
 
     it('creates the entity folder when nothing has been saved yet', async () => {
@@ -365,13 +378,10 @@ describe('prompt library store', () => {
 
     it('survives a row it cannot read without losing it', async () => {
       const a = await ok('global', 'a');
-      const rows = readRows();
-      writeFileSync(itemsFile(), JSON.stringify([...rows, { id: 'x', note: 'from a newer version' }]), 'utf-8');
+      const stranger = { id: 'x', note: 'from a newer version' };
+      writeFileSync(itemsFile(), readFileSync(itemsFile(), 'utf-8') + JSON.stringify(stranger) + '\n', 'utf-8');
       await reorderPrompts('global', undefined, [a.id]);
-      expect(JSON.parse(readFileSync(itemsFile(), 'utf-8'))).toContainEqual({
-        id: 'x',
-        note: 'from a newer version',
-      });
+      expect(readRows()).toContainEqual(stranger);
     });
   });
 

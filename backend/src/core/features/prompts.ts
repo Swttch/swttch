@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { normalizeCwd } from '../entities/normalizeCwd';
 import { EntityChange } from '../entities/AbstractEntityCollection';
+import { ProjectCollection } from '../entities/project/Project.collection';
 import { PromptCategoryCollection } from '../entities/prompt/PromptCategory.collection';
 import { PromptCategoryItemLinkCollection } from '../entities/prompt/PromptCategoryItemLink.collection';
 import { PromptCategoryItemLink } from '../entities/prompt/PromptCategoryItemLink.entity';
@@ -21,7 +21,9 @@ import { PromptItem } from '../entities/prompt/PromptItem.entity';
  * Rows live in the entity files under the user data directory (see
  * core/entities): prompts in `prompt_items`, categories in `prompt_categories`
  * and the many-to-many between them in `prompt_category_item_links`. A prompt of
- * the global scope has no `cwd`; a project prompt carries its project's.
+ * the global scope has no `projectId`; a project prompt carries its project's.
+ * A project is named by its path everywhere outside the entity files, and
+ * {@link resolveScopeProject} is where a request's path becomes that number.
  *
  * Everything this module hands out is the WIRE shape the webview has always been
  * given: ids are the `uuid` column, and a prompt's `categories` are category
@@ -182,17 +184,18 @@ export function parseCategoryRecords(value: unknown): PromptCategory[] {
   return categories;
 }
 
-type ScopeCwd = { status: 'ok'; cwd: string | null } | { status: 'error'; error: string };
+type ScopeProject = { status: 'ok'; projectId: number | null } | { status: 'error'; error: string };
 
 /**
- * The `cwd` a scope's rows carry: null for global, the normalized project
- * directory for project scope, or an error when project scope names no project.
+ * The `projectId` a scope's rows carry: null for global, the number of the
+ * project at [projectPath] for project scope (a directory seen for the first time
+ * is registered here), or an error when project scope names no project.
  */
-export function resolveScopeCwd(scope: PromptScope, projectPath?: string): ScopeCwd {
-  if (scope === 'global') return { status: 'ok', cwd: null };
+export async function resolveScopeProject(scope: PromptScope, projectPath?: string): Promise<ScopeProject> {
+  if (scope === 'global') return { status: 'ok', projectId: null };
   if (!projectPath) return { status: 'error', error: 'projectPath required for project scope' };
   try {
-    return { status: 'ok', cwd: normalizeCwd(projectPath) };
+    return { status: 'ok', projectId: await new ProjectCollection().idOf(projectPath) };
   } catch (err) {
     return { status: 'error', error: err instanceof Error ? err.message : String(err) };
   }
@@ -206,11 +209,11 @@ class ScopeSnapshot {
     private readonly categoriesOfItem: Map<number, string[]>,
   ) {}
 
-  static async read(cwd: string | null): Promise<ScopeSnapshot> {
+  static async read(projectId: number | null): Promise<ScopeSnapshot> {
     const [items, categories, links] = await Promise.all([
-      new PromptItemCollection().inScope(cwd),
+      new PromptItemCollection().inScope(projectId),
       new PromptCategoryCollection().all(),
-      new PromptCategoryItemLinkCollection().where((link) => link.belongsTo(cwd)),
+      new PromptCategoryItemLinkCollection().where((link) => link.belongsTo(projectId)),
     ]);
 
     const categoryUuidById = new Map(categories.map((category) => [category.id, category.uuid]));
@@ -249,9 +252,9 @@ class ScopeSnapshot {
  * that the library could not be loaded instead.
  */
 export async function readPrompts(scope: PromptScope, projectPath?: string): Promise<SavedPrompt[]> {
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return [];
-  return (await ScopeSnapshot.read(resolved.cwd)).wirePrompts();
+  return (await ScopeSnapshot.read(resolved.projectId)).wirePrompts();
 }
 
 /**
@@ -262,13 +265,13 @@ export async function readPromptOrderByCategory(
   scope: PromptScope,
   projectPath?: string,
 ): Promise<Map<string, string[]>> {
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return new Map();
 
   const [items, categories, links] = await Promise.all([
-    new PromptItemCollection().inScope(resolved.cwd),
+    new PromptItemCollection().inScope(resolved.projectId),
     new PromptCategoryCollection().all(),
-    new PromptCategoryItemLinkCollection().where((link) => link.belongsTo(resolved.cwd)),
+    new PromptCategoryItemLinkCollection().where((link) => link.belongsTo(resolved.projectId)),
   ]);
   const itemUuidById = new Map(items.map((item) => [item.id, item.uuid]));
 
@@ -297,25 +300,25 @@ function validateNameAndContent(name: string, content: string): string | null {
   return null;
 }
 
-/** Move every item of [cwd] down [by] places, making room at the top. */
-async function makeRoomAtTop(items: PromptItemCollection, cwd: string | null, by: number): Promise<void> {
+/** Move every item of [projectId] down [by] places, making room at the top. */
+async function makeRoomAtTop(items: PromptItemCollection, projectId: number | null, by: number): Promise<void> {
   await items.mutate((entities) => {
-    const inScope = entities.filter((item) => item.belongsTo(cwd));
+    const inScope = entities.filter((item) => item.belongsTo(projectId));
     if (inScope.length === 0) return EntityChange.keep(entities, undefined);
     for (const item of inScope) item.priority += by;
     return EntityChange.write(entities, undefined);
   });
 }
 
-/** Move every link into [categoryId] within [cwd] down [by] places, making room at the top. */
+/** Move every link into [categoryId] within [projectId] down [by] places, making room at the top. */
 async function makeRoomInCategory(
   links: PromptCategoryItemLinkCollection,
-  cwd: string | null,
+  projectId: number | null,
   categoryId: number,
   by: number,
 ): Promise<void> {
   await links.mutate((entities) => {
-    const inCategory = entities.filter((link) => link.belongsTo(cwd) && link.categoryId === categoryId);
+    const inCategory = entities.filter((link) => link.belongsTo(projectId) && link.categoryId === categoryId);
     if (inCategory.length === 0) return EntityChange.keep(entities, undefined);
     for (const link of inCategory) link.priority += by;
     return EntityChange.write(entities, undefined);
@@ -325,12 +328,12 @@ async function makeRoomInCategory(
 /** File [itemId] under [categoryId] at the top of that category's own order. */
 async function fileOnTop(
   links: PromptCategoryItemLinkCollection,
-  cwd: string | null,
+  projectId: number | null,
   categoryId: number,
   itemId: number,
 ): Promise<void> {
-  await makeRoomInCategory(links, cwd, categoryId, 1);
-  await links.insert(PromptCategoryItemLink.draft(cwd, categoryId, itemId, 1));
+  await makeRoomInCategory(links, projectId, categoryId, 1);
+  await links.insert(PromptCategoryItemLink.draft(projectId, categoryId, itemId, 1));
 }
 
 /** The internal ids of the categories among [uuids] that exist, in the order given. */
@@ -343,19 +346,19 @@ async function existingCategoryIds(uuids: string[]): Promise<number[]> {
 
 /** Add one prompt at the top of its scope, filed at the top of each category it names. */
 async function addAtTop(
-  cwd: string | null,
+  projectId: number | null,
   prompt: SavedPrompt,
   categoryUuids: string[],
 ): Promise<PromptItem> {
   const items = new PromptItemCollection();
   const links = new PromptCategoryItemLinkCollection();
 
-  await makeRoomAtTop(items, cwd, 1);
+  await makeRoomAtTop(items, projectId, 1);
   const item = await items.insert(
-    PromptItem.draft(cwd, prompt.id, prompt.name, prompt.content, 1, prompt.createdAt, prompt.updatedAt),
+    PromptItem.draft(projectId, prompt.id, prompt.name, prompt.content, 1, prompt.createdAt, prompt.updatedAt),
   );
   for (const categoryId of await existingCategoryIds(categoryUuids)) {
-    await fileOnTop(links, cwd, categoryId, item.id);
+    await fileOnTop(links, projectId, categoryId, item.id);
   }
   return item;
 }
@@ -370,17 +373,17 @@ export async function createPrompt(
 ): Promise<PromptResult> {
   const validationError = validateNameAndContent(name, content);
   if (validationError) return { status: 'error', error: validationError };
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return resolved;
 
   try {
     const now = Date.now();
     const item = await addAtTop(
-      resolved.cwd,
+      resolved.projectId,
       new SavedPrompt(randomUUID(), name.trim(), content, now, now),
       parseCategoryIds(categories),
     );
-    return { status: 'ok', prompt: (await ScopeSnapshot.read(resolved.cwd)).toWire(item) };
+    return { status: 'ok', prompt: (await ScopeSnapshot.read(resolved.projectId)).toWire(item) };
   } catch (err) {
     return failure('Failed to write prompts:', err);
   }
@@ -401,28 +404,28 @@ export async function updatePrompt(
   if (!VALID_ID_PATTERN.test(id)) return { status: 'error', error: `Invalid prompt id: ${id}` };
   const validationError = validateNameAndContent(name, content);
   if (validationError) return { status: 'error', error: validationError };
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return resolved;
 
   try {
     const items = new PromptItemCollection();
-    const existing = (await items.inScope(resolved.cwd)).find((item) => item.uuid === id);
+    const existing = (await items.inScope(resolved.projectId)).find((item) => item.uuid === id);
     if (!existing) return { status: 'error', error: `Prompt not found: ${id}` };
 
     existing.name = name.trim();
     existing.content = content;
     existing.updatedAt = Date.now();
     await items.save(existing);
-    await replaceFiling(resolved.cwd, existing.id, parseCategoryIds(categories));
+    await replaceFiling(resolved.projectId, existing.id, parseCategoryIds(categories));
 
-    return { status: 'ok', prompt: (await ScopeSnapshot.read(resolved.cwd)).toWire(existing) };
+    return { status: 'ok', prompt: (await ScopeSnapshot.read(resolved.projectId)).toWire(existing) };
   } catch (err) {
     return failure('Failed to write prompts:', err);
   }
 }
 
 /** Make [itemId] sit in exactly the categories named by [uuids], keeping the places it already has. */
-async function replaceFiling(cwd: string | null, itemId: number, uuids: string[]): Promise<void> {
+async function replaceFiling(projectId: number | null, itemId: number, uuids: string[]): Promise<void> {
   const links = new PromptCategoryItemLinkCollection();
   const wanted = await existingCategoryIds(uuids);
   const current = await links.ofItem(itemId);
@@ -440,7 +443,7 @@ async function replaceFiling(cwd: string | null, itemId: number, uuids: string[]
   }
   const filed = new Set(current.map((link) => link.categoryId));
   for (const categoryId of wanted) {
-    if (!filed.has(categoryId)) await fileOnTop(links, cwd, categoryId, itemId);
+    if (!filed.has(categoryId)) await fileOnTop(links, projectId, categoryId, itemId);
   }
 }
 
@@ -451,12 +454,12 @@ export async function deletePrompt(
   id: string,
 ): Promise<PromptDeleteResult> {
   if (!VALID_ID_PATTERN.test(id)) return { status: 'error', error: `Invalid prompt id: ${id}` };
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return resolved;
 
   try {
     const items = new PromptItemCollection();
-    const existing = (await items.inScope(resolved.cwd)).find((item) => item.uuid === id);
+    const existing = (await items.inScope(resolved.projectId)).find((item) => item.uuid === id);
     if (!existing) return { status: 'error', error: `Prompt not found: ${id}` };
     await removeItems(items, new Set([existing.id]));
     return { status: 'ok' };
@@ -500,12 +503,12 @@ export async function reorderPrompts(
   orderedIds: string[],
   categoryId?: string,
 ): Promise<{ status: 'ok' } | { status: 'error'; error: string }> {
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return resolved;
 
   try {
     const items = new PromptItemCollection();
-    const inScope = await items.inScope(resolved.cwd);
+    const inScope = await items.inScope(resolved.projectId);
     const internalIdByUuid = new Map(inScope.map((item) => [item.uuid, item.id]));
     const named = orderedIds
       .map((uuid) => internalIdByUuid.get(uuid))
@@ -516,7 +519,7 @@ export async function reorderPrompts(
       await items.mutate((entities) => {
         for (const item of entities) {
           const place = rank.get(item.id);
-          if (item.belongsTo(resolved.cwd) && place !== undefined) item.priority = place;
+          if (item.belongsTo(resolved.projectId) && place !== undefined) item.priority = place;
         }
         return EntityChange.write(entities, undefined);
       });
@@ -527,7 +530,7 @@ export async function reorderPrompts(
     if (!category) return { status: 'error', error: `Category not found: ${categoryId}` };
 
     const links = new PromptCategoryItemLinkCollection();
-    const inCategory = (await links.inCategory(category.id)).filter((link) => link.belongsTo(resolved.cwd));
+    const inCategory = (await links.inCategory(category.id)).filter((link) => link.belongsTo(resolved.projectId));
     const linkByItem = new Map(inCategory.map((link) => [link.itemId, link.id]));
     const namedLinks = named
       .map((itemId) => linkByItem.get(itemId))
@@ -565,15 +568,15 @@ export async function mutatePromptStore(
   mutate: (prompts: SavedPrompt[]) => SavedPrompt[] | string,
   categoryOrder: () => Map<string, string[]> = () => new Map(),
 ): Promise<{ status: 'ok' } | { status: 'error'; error: string }> {
-  const resolved = resolveScopeCwd(scope, projectPath);
+  const resolved = await resolveScopeProject(scope, projectPath);
   if (resolved.status === 'error') return resolved;
 
   try {
-    const snapshot = await ScopeSnapshot.read(resolved.cwd);
+    const snapshot = await ScopeSnapshot.read(resolved.projectId);
     const current = snapshot.wirePrompts();
     const next = mutate(current);
     if (typeof next === 'string') return { status: 'error', error: next };
-    await bringInLine(resolved.cwd, snapshot, current, next, categoryOrder());
+    await bringInLine(resolved.projectId, snapshot, current, next, categoryOrder());
     return { status: 'ok' };
   } catch (err) {
     return failure('Failed to write prompts:', err);
@@ -590,7 +593,7 @@ export async function mutatePromptStore(
  * them.
  */
 async function bringInLine(
-  cwd: string | null,
+  projectId: number | null,
   snapshot: ScopeSnapshot,
   current: SavedPrompt[],
   next: SavedPrompt[],
@@ -629,18 +632,18 @@ async function bringInLine(
       item.updatedAt = prompt.updatedAt;
       await items.save(item);
     }
-    if (!sameFiling) await replaceFiling(cwd, item.id, prompt.categories ?? []);
+    if (!sameFiling) await replaceFiling(projectId, item.id, prompt.categories ?? []);
   }
 
   if (added.length === 0) return;
 
   // Room for all of them at once, then each takes the place its position in the
   // incoming list gives it, so the file's order survives the import.
-  await makeRoomAtTop(items, cwd, added.length);
+  await makeRoomAtTop(items, projectId, added.length);
   const createdIdByUuid = new Map<string, number>();
   for (const [index, prompt] of added.entries()) {
     const item = await items.insert(
-      PromptItem.draft(cwd, prompt.id, prompt.name, prompt.content, index + 1, prompt.createdAt, prompt.updatedAt),
+      PromptItem.draft(projectId, prompt.id, prompt.name, prompt.content, index + 1, prompt.createdAt, prompt.updatedAt),
     );
     createdIdByUuid.set(prompt.id, item.id);
   }
@@ -666,10 +669,10 @@ async function bringInLine(
     // A stable sort: those the order does not mention keep their incoming order.
     const ordered = [...promptIds].sort((a, b) => rank(a) - rank(b));
 
-    await makeRoomInCategory(links, cwd, categoryId, ordered.length);
+    await makeRoomInCategory(links, projectId, categoryId, ordered.length);
     await links.insertMissing(
       ordered.map((id, index) =>
-        PromptCategoryItemLink.draft(cwd, categoryId, createdIdByUuid.get(id) as number, index + 1),
+        PromptCategoryItemLink.draft(projectId, categoryId, createdIdByUuid.get(id) as number, index + 1),
       ),
       (stored, candidate) => stored.categoryId === candidate.categoryId && stored.itemId === candidate.itemId,
     );
