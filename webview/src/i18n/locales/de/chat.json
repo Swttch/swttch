@@ -14,6 +14,14 @@
     "skip": "Überspringen",
     "cacheHint": "Neue Version nicht sichtbar? Das liegt am IDE-Cache. Starte die IDE neu."
   },
+  "dataUpdate": {
+    "running": "Ihre Daten werden aktualisiert. Das dauert einen Moment.",
+    "failed": "Deine Daten konnten nicht aktualisiert werden ({{name}}), daher lassen sich Prompts und Projekte nicht laden. Beim Zurückkehren zu diesem Fenster wird es automatisch erneut versucht.",
+    "retry": "Erneut versuchen",
+    "retrying": "Neuer Versuch läuft…",
+    "unreadable": "Einige alte Dateien konnten nicht gelesen werden: {{folders}}. Erlaube den Zugriff auf diese Ordner in den Systemeinstellungen. Sie werden danach automatisch erneut gelesen.",
+    "dismiss": "Schließen"
+  },
   "whatsNew": {
     "title": "Neuigkeiten",
     "promo": "Dieses Plugin ist quelloffen und entsteht durch die Beiträge seiner Nutzerinnen und Nutzer.",

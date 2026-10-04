@@ -8,6 +8,7 @@ import { PermissionBanner } from './PermissionBanner';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
 import { BannerArea } from './BannerArea';
+import { MigrationBanner } from './MigrationBanner';
 import { UpdateBanner } from './UpdateBanner';
 import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
@@ -334,6 +335,7 @@ function ChatPageContent() {
       </div>
 
       <BannerArea>
+        <MigrationBanner />
         <UpdateBanner />
         <ConnectionLostBanner />
         <AuthErrorBanner />

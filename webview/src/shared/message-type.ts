@@ -838,6 +838,20 @@ export enum MessageType {
   /** Sleep-guard state changed. */
   SLEEP_GUARD_STATUS = 'SLEEP_GUARD_STATUS',
 
+  // -- Data migration status --
+  /** Ask for the current state of the data migrations run at backend start. Inbound (webview to backend). */
+  GET_MIGRATION_STATUS = 'GET_MIGRATION_STATUS',
+  /** Read again the old folders a migration could not read, because access may just have been allowed. Sent when the window becomes active while some are unread. Inbound (webview to backend). */
+  RETRY_UNREAD_FOLDERS = 'RETRY_UNREAD_FOLDERS',
+  /** Run the data migrations again after a run failed, in the running backend. Sent by the "Try again" button of the failure notice, and when the window becomes active while a run is failed. Answers once the run is over; its outcome reaches the window through MIGRATION_STATUS. Inbound (webview to backend). */
+  RETRY_MIGRATIONS = 'RETRY_MIGRATIONS',
+  /**
+   * State of the data migrations: running (and taking long enough to be worth
+   * showing), failed, or done with some old files that could not be read. Outbound,
+   * pushed to every client and sent in answer to GET_MIGRATION_STATUS.
+   */
+  MIGRATION_STATUS = 'MIGRATION_STATUS',
+
   // -- Settings change push --
   /** GUI settings changed on disk/externally; clients should refresh. */
   SETTINGS_CHANGED = 'SETTINGS_CHANGED',

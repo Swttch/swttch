@@ -18,7 +18,7 @@ const defaultCategories: Array<{ id: string; name: string; createdAt: number; pr
   { id: 'c1', name: 'review', createdAt: 1 },
 ];
 let categoriesAck = defaultCategories;
-const sendMock = vi.fn((type: string, payload?: Record<string, unknown>) => {
+const defaultSend = (type: string, payload?: Record<string, unknown>): Promise<unknown> => {
   if (type === MessageType.GET_PROMPTS) {
     return Promise.resolve(
       payload?.scope === 'project'
@@ -30,7 +30,8 @@ const sendMock = vi.fn((type: string, payload?: Record<string, unknown>) => {
     return Promise.resolve({ categories: categoriesAck });
   }
   return Promise.resolve({ status: 'ok' });
-});
+};
+const sendMock = vi.fn(defaultSend);
 
 // One object for every render: the store reloads whenever the bridge it was given
 // changes, so a fresh object per call would reload for ever.
@@ -48,6 +49,7 @@ describe('usePromptStore', () => {
   beforeEach(() => {
     resetPromptOrder();
     sendMock.mockClear();
+    sendMock.mockImplementation(defaultSend);
     workingDirectory = '/work';
     categoriesAck = defaultCategories;
   });
@@ -57,6 +59,51 @@ describe('usePromptStore', () => {
     await waitFor(() => expect(rendered.result.current.loading).toBe(false));
     return rendered;
   }
+
+  // The backend answers a library it cannot read with an error, as a reply and not
+  // as a rejection. Drawing that reply's empty list shows a library that looks wiped.
+  describe('a library the backend could not read', () => {
+    const failing = (scopeThatFails: 'global' | 'project') => {
+      sendMock.mockImplementation((type: string, payload?: Record<string, unknown>) => {
+        if (type === MessageType.GET_PROMPTS) {
+          const scope = payload?.scope === 'project' ? 'project' : 'global';
+          return Promise.resolve(
+            scope === scopeThatFails
+              ? { status: 'error', error: 'migration 20261004120200_import-legacy-prompts failed: boom', scope, prompts: [] }
+              : { status: 'ok', scope, prompts: [prompt(`${scope}-1`)], orderByCategory: {} },
+          );
+        }
+        if (type === MessageType.GET_PROMPT_CATEGORIES) return Promise.resolve({ categories: defaultCategories });
+        return Promise.resolve({ status: 'ok' });
+      });
+    };
+
+    it('shows the "could not load" state instead of an empty library', async () => {
+      failing('global');
+
+      const { result } = await loaded();
+
+      expect(result.current.error).toMatch(/import-legacy-prompts failed/);
+      expect(result.current.globalPrompts).toEqual([]);
+    });
+
+    it('does so when only the project half failed, and shows neither half', async () => {
+      failing('project');
+
+      const { result } = await loaded();
+
+      expect(result.current.error).not.toBeNull();
+      expect(result.current.globalPrompts).toEqual([]);
+    });
+
+    it('does not fill the order caches from the empty list', async () => {
+      failing('global');
+
+      await loaded();
+
+      expect(getPromptOrder()).toEqual({ global: [], project: [] });
+    });
+  });
 
   // The backend owns the order. What the screens draw is a cache of it, filled
   // from the replies, so a reload shows the order that is actually saved.

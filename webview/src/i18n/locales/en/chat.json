@@ -14,6 +14,14 @@
     "skip": "Skip",
     "cacheHint": "Don't see the new version? That's the IDE cache. Restart the IDE."
   },
+  "dataUpdate": {
+    "running": "Updating your data. This takes a moment.",
+    "failed": "Your data could not be updated ({{name}}), so prompts and projects cannot be loaded. It is tried again when you return to this window.",
+    "retry": "Try again",
+    "retrying": "Trying again…",
+    "unreadable": "Some old files could not be read: {{folders}}. Allow access to these folders in your system settings. They are read again automatically.",
+    "dismiss": "Close"
+  },
   "whatsNew": {
     "title": "What's New",
     "promo": "This plugin is open source, built with contributions from its users.",

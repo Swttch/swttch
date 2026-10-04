@@ -139,6 +139,14 @@ export function ProjectSelectorPage() {
 
         // Subscribe to PROJECTS_LIST response
         const unsubscribe = subscribe(MessageType.PROJECTS_LIST, (message) => {
+          // A list the backend could not read is not an empty one: say so instead
+          // of showing "No projects", which would look like every project was lost.
+          if (message.payload?.error) {
+            setError(t('errors.loadFailed'));
+            setIsLoading(false);
+            unsubscribe();
+            return;
+          }
           const projectsList = (message.payload?.projects as Project[]) || [];
           setProjects(projectsList);
           setHomeDir((message.payload?.homeDir as string | undefined) ?? null);

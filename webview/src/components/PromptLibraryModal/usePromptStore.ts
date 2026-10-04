@@ -119,6 +119,12 @@ export function usePromptStore(): PromptStore {
     // column, which is only known once the categories have been read.
     Promise.all([Promise.all(requests), categoriesRead])
       .then(([acks]) => {
+        // An unreadable library answers with an error, not with a rejection. Drawing
+        // its empty list (and filling the order caches from it) would show a library
+        // that looks wiped, so it takes the "could not load" path instead.
+        const failed = acks.find((ack) => ack?.status === 'error');
+        if (failed) throw new Error(failed.error ?? 'Failed to load prompts');
+
         for (const ack of acks) {
           hydratePromptOrder(ack.scope, (ack.prompts ?? []).map((prompt) => prompt.id), ack.orderByCategory ?? {});
         }

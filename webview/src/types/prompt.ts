@@ -49,6 +49,14 @@ export interface ScopedPrompt extends SavedPrompt {
 
 /** The reply to GET_PROMPTS. */
 export interface GetPromptsAck {
+  /**
+   * `error` when the backend could not read the library (an entity file that cannot
+   * be read, or a data migration that failed). An ACK is delivered as a reply even
+   * then, so a caller has to look at this: the list in it is empty, and drawing it
+   * would show a library that looks wiped.
+   */
+  status?: 'ok' | 'error';
+  error?: string;
   scope: PromptScope;
   /** In the library's own ("All") order. */
   prompts: SavedPrompt[];

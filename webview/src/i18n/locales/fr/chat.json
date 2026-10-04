@@ -14,6 +14,14 @@
     "skip": "Ignorer",
     "cacheHint": "Vous ne voyez pas la nouvelle version ? C'est le cache de l'IDE. Redémarrez l'IDE."
   },
+  "dataUpdate": {
+    "running": "Mise à jour de vos données. Cela prend un instant.",
+    "failed": "Vos données n'ont pas pu être mises à jour ({{name}}), donc les prompts et les projets ne peuvent pas être chargés. Une nouvelle tentative a lieu automatiquement quand vous revenez à cette fenêtre.",
+    "retry": "Réessayer",
+    "retrying": "Nouvelle tentative…",
+    "unreadable": "Certains anciens fichiers n'ont pas pu être lus : {{folders}}. Autorisez l'accès à ces dossiers dans les réglages système. Ils seront relus automatiquement.",
+    "dismiss": "Fermer"
+  },
   "whatsNew": {
     "title": "Nouveautés",
     "promo": "Ce plugin est open source et se construit grâce aux contributions de ses utilisateurs.",

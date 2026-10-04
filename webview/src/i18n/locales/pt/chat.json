@@ -14,6 +14,14 @@
     "skip": "Pular",
     "cacheHint": "Não está vendo a nova versão? É o cache do IDE. Reinicie o IDE."
   },
+  "dataUpdate": {
+    "running": "Atualizando seus dados. Isso leva um instante.",
+    "failed": "Não foi possível atualizar seus dados ({{name}}), então os prompts e os projetos não podem ser carregados. Uma nova tentativa é feita automaticamente quando você volta a esta janela.",
+    "retry": "Tentar novamente",
+    "retrying": "Tentando novamente…",
+    "unreadable": "Alguns arquivos antigos não puderam ser lidos: {{folders}}. Permita o acesso a essas pastas nas configurações do sistema. Elas serão lidas novamente de forma automática.",
+    "dismiss": "Fechar"
+  },
   "whatsNew": {
     "title": "Novidades",
     "promo": "Este plugin é open source e é construído com as contribuições de quem o usa.",

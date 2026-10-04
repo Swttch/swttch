@@ -331,6 +331,10 @@ export function usePromptLibrary(params: UsePromptLibraryParams): UsePromptLibra
 
     Promise.all(requests)
       .then((acks) => {
+        // An unreadable library answers with an error, not with a rejection. Its empty
+        // list must not be drawn, nor fill the order caches: the panel keeps what it had.
+        if (acks.some((ack) => ack?.status === 'error')) throw new Error('Failed to load prompts');
+
         for (const ack of acks) {
           hydratePromptOrder(ack.scope, (ack.prompts ?? []).map((prompt) => prompt.id), ack.orderByCategory ?? {});
         }

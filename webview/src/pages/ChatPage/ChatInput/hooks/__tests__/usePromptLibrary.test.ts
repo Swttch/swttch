@@ -24,10 +24,13 @@ let projectPrompts: SavedPrompt[] = [];
 let categories: PromptCategory[] = [];
 // What the backend says about the order inside each category, per scope.
 let orderByCategory: Record<string, Record<string, string[]>> = {};
+// When set, GET_PROMPTS answers as the backend does for a library it cannot read.
+let failNextReads = false;
 
 const sendMock = vi.fn((type: string, payload?: Record<string, unknown>) => {
   if (type === MessageType.GET_PROMPTS) {
     const scope = payload?.scope;
+    if (failNextReads) return Promise.resolve({ status: 'error', error: 'could not be read', scope, prompts: [] });
     return Promise.resolve({
       scope,
       prompts: scope === 'project' ? projectPrompts : globalPrompts,
@@ -98,6 +101,7 @@ function makeParams(value: string) {
 describe('usePromptLibrary', () => {
   beforeEach(() => {
     orderByCategory = {};
+    failNextReads = false;
     // The arranged order is shared with the library modal and outlives a render.
     resetPromptOrder();
     sendMock.mockClear();
@@ -267,6 +271,23 @@ describe('usePromptLibrary', () => {
       ]),
     );
     expect(sendMock.mock.calls.length).toBeGreaterThan(callsAfterFirstOpen);
+  });
+
+  // The backend answers a library it cannot read with an error reply, not a
+  // rejection. Its empty list must not replace what the panel had, and the order the
+  // user arranged must not be overwritten with it.
+  it('keeps the prompts it had when a later read comes back as an error', async () => {
+    const params = makeParams('!!');
+    const { result } = renderLibrary(params);
+    act(() => result.current.detectPrompt('!!', 2));
+    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+
+    act(() => result.current.detectPrompt('', 0));
+    failNextReads = true;
+    act(() => result.current.detectPrompt('!!', 2));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.rows.map(r => (r.kind === 'prompt' ? r.prompt.id : 'create'))).toEqual(['p1', 'g1', 'create']);
   });
 
   it('does not read the store again on each keystroke of the same token', async () => {

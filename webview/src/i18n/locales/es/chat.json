@@ -14,6 +14,14 @@
     "skip": "Omitir",
     "cacheHint": "¿No ves la nueva versión? Es por la caché del IDE. Reinicia el IDE."
   },
+  "dataUpdate": {
+    "running": "Actualizando tus datos. Tardará un momento.",
+    "failed": "No se pudieron actualizar tus datos ({{name}}), así que no se pueden cargar los prompts ni los proyectos. Se vuelve a intentar automáticamente cuando regresas a esta ventana.",
+    "retry": "Reintentar",
+    "retrying": "Reintentando…",
+    "unreadable": "No se pudieron leer algunos archivos antiguos: {{folders}}. Permite el acceso a estas carpetas en los ajustes del sistema. Se volverán a leer automáticamente.",
+    "dismiss": "Cerrar"
+  },
   "whatsNew": {
     "title": "Novedades",
     "promo": "Este complemento es de código abierto y se construye con las contribuciones de quienes lo usan.",
