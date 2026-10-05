@@ -24,7 +24,9 @@ import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { SessionState } from '@/types';
 import { useAttachments } from './hooks/useAttachments';
+import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
 import { clipboardCarriesImage } from './clipboardCarriesImage';
+import { clipboardIsEmpty } from './clipboardIsEmpty';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
 import { IdeSelectionTag } from './IdeSelectionTag';
@@ -169,6 +171,7 @@ export function ChatInput() {
     handleDrop,
     setIsDragOver,
   } = useAttachments();
+  const pasteFromHost = useHostClipboardPaste({ workingDirectory, addImageAttachment });
 
   const {
     settings: claudeSettings,
@@ -1137,9 +1140,20 @@ export function ChatInput() {
       return;
     }
 
+    // A paste that carries nothing at all is how the clipboard looks to this
+    // browser on a Wayland desktop that has not handed it over (#278). The default
+    // paste would insert nothing, so cancel it and finish the paste with what the
+    // IDE host reads off the clipboard. A clipboard that really is empty gets the
+    // same empty answer back, and nothing happens, as it would have anyway.
+    if (clipboardIsEmpty(e.clipboardData)) {
+      e.preventDefault();
+      void pasteFromHost(e.currentTarget);
+      return;
+    }
+
     // Text falls through untouched: the default paste inserts it, records the
     // undo entry, and fires `input`, which handleRichChange picks up.
-  }, [handlePaste]);
+  }, [handlePaste, pasteFromHost]);
 
   const hasValue = !!value.trim() || attachments.length > 0;
 

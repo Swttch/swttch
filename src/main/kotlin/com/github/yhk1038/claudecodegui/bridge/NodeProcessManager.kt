@@ -304,6 +304,17 @@ class NodeProcessManager(
          * either way: an unplaced selection costs the user one copy.
          */
         suspend fun setPrimarySelection(text: String)
+
+        /**
+         * What the system clipboard holds right now, read on behalf of a chat
+         * panel whose own browser found its clipboard empty (#278).
+         *
+         * On a Wayland desktop the embedded browser is a separate X11 process that
+         * is not handed the clipboard of the IDE window, while this process reads
+         * it. A host that cannot reach the clipboard answers with
+         * [ClipboardContents.EMPTY], which costs the user one paste.
+         */
+        suspend fun getClipboard(): ClipboardContents
         /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
         suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)

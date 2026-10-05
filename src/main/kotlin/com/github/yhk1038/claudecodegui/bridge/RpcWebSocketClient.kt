@@ -492,6 +492,23 @@ class RpcWebSocketClient(
                 parsePrimarySelectionText(params)?.let { rpcHandler.setPrimarySelection(it) }
                 buildJsonObject {}
             }
+            "GET_CLIPBOARD" -> {
+                val contents = rpcHandler.getClipboard()
+                buildJsonObject {
+                    // Null fields are written out rather than left absent, so the backend reads
+                    // "not on the clipboard" from an answer that names each part.
+                    if (contents.text != null) put("text", contents.text) else put("text", JsonNull)
+                    val image = contents.image
+                    if (image != null) {
+                        putJsonObject("image") {
+                            put("mimeType", image.mimeType)
+                            put("base64", image.base64)
+                        }
+                    } else {
+                        put("image", JsonNull)
+                    }
+                }
+            }
             "OPEN_SETTINGS" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
                 // Which settings page the tab should land on; absent → landing page.
