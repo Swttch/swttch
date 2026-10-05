@@ -1,5 +1,6 @@
 import { readLicense, saveLicense, reportActivation } from './license';
 import type { LicenseVerifyResult } from './license';
+import { canonicalSponsorKey } from './sponsor-key';
 
 /**
  * Keeps the locally stored sponsor key honest.
@@ -66,6 +67,12 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
 
     const result = await verify(license.licenseKey);
 
+    // A key entered from the payment provider's order page verifies but is not
+    // the credential to keep. Whenever www names the real one, store that, so an
+    // install holding the wrong kind corrects itself on this very check without
+    // the user doing anything. Blank or absent answers leave the stored key alone.
+    const licenseKey = canonicalSponsorKey(result.sponsorKey, license.licenseKey);
+
     // `valid:false` with an `error` means "could not ask" (transport/HTTP
     // failure), not "not a sponsor" — see verifyLicenseRemote. Only an answer
     // that actually reached www may revoke.
@@ -77,7 +84,7 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
       // and let getSponsorStatus decide what an inactive key still unlocks.
       // Clearing remains what an explicit Deactivate does.
       await saveLicense({
-        licenseKey: license.licenseKey,
+        licenseKey,
         // www names the reason (expired/refunded) when it knows it. Falling back
         // to "expired" keeps the stored status definitely-not-active, which is
         // what entitlement is judged on.
@@ -96,7 +103,7 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
     // refresh the cached plan details (an upgrade or a switch to yearly shows up
     // here rather than waiting for the user to re-enter their key).
     await saveLicense({
-      licenseKey: license.licenseKey,
+      licenseKey,
       status: result.status ?? license.status,
       verifiedAt: new Date().toISOString(),
       tier: result.tier ?? license.tier ?? null,
@@ -109,7 +116,7 @@ export async function revalidateStoredLicense(verify: LicenseVerifier): Promise<
     // reported when a key was entered or auto-picked up, so an install that
     // activated before device labels existed would never get one — and would sit
     // nameless in the sponsor's own device list forever.
-    void reportActivation(license.licenseKey);
+    void reportActivation(licenseKey);
   } catch {
     // Re-validation is best-effort; a failure must never revoke or throw.
   }

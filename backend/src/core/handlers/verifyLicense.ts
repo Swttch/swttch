@@ -2,6 +2,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { verifyLicenseRemote, saveLicense, reportActivation } from '../features/license';
+import { canonicalSponsorKey } from '../features/sponsor-key';
 import { MessageType, ErrorCode } from '../../shared';
 
 /**
@@ -41,8 +42,12 @@ export async function verifyLicenseHandler(
   const result = await verifyLicenseRemote(licenseKey);
 
   if (result.valid) {
+    // The payment provider's key verifies too, but www names the real sponsor key
+    // in its answer. Keep that one, so a key typed from the order page is stored
+    // as the credential it stands for. Without an answer, the typed key stays.
+    const storedKey = canonicalSponsorKey(result.sponsorKey, licenseKey);
     await saveLicense({
-      licenseKey,
+      licenseKey: storedKey,
       status: result.status ?? null,
       // Stamped at write time. Date.now-based ISO is fine in the backend runtime.
       verifiedAt: new Date().toISOString(),
@@ -51,7 +56,7 @@ export async function verifyLicenseHandler(
       interval: result.interval ?? null,
     });
     // Report this install's activation to www (fire-and-forget; must not delay the ACK).
-    void reportActivation(licenseKey);
+    void reportActivation(storedKey);
   }
 
   connections.sendTo(connectionId, MessageType.ACK, {

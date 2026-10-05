@@ -160,6 +160,62 @@ describe('revalidateStoredLicense', () => {
     expect(mockReportActivation).not.toHaveBeenCalled();
   });
 
+  // A key copied from the payment provider's order page verifies, but it is not
+  // the credential to keep. The check is where an install holding one learns the
+  // right key, so it corrects itself without the user doing anything.
+  describe('correcting a stored key to the canonical sponsor key', () => {
+    const LS_KEY = 'AEEB8648-9F1E-44DD-817B-FC47A4004C57';
+    const SPONSOR_KEY = 'CCG-053EEB4C-A210-4862-9AA0-A47006550EC6';
+    const stored = () => ({ ...storedLicense(hoursAgo(999)), licenseKey: LS_KEY });
+
+    it('replaces the stored key with the one www names', async () => {
+      mockReadLicense.mockResolvedValue(stored());
+      mockVerifyRemote.mockResolvedValue({ valid: true, status: 'active', sponsorKey: SPONSOR_KEY });
+
+      await revalidateStoredLicense(mockVerifyRemote);
+
+      // It asked with the key it had, and stored the one it was told.
+      expect(mockVerifyRemote).toHaveBeenCalledWith(LS_KEY);
+      expect(mockSaveLicense).toHaveBeenCalledWith(
+        expect.objectContaining({ licenseKey: SPONSOR_KEY, status: 'active' }),
+      );
+      expect(mockReportActivation).toHaveBeenCalledWith(SPONSOR_KEY);
+    });
+
+    it('also corrects the key when the license has ended', async () => {
+      mockReadLicense.mockResolvedValue(stored());
+      mockVerifyRemote.mockResolvedValue({ valid: false, status: 'refunded', sponsorKey: SPONSOR_KEY });
+
+      await revalidateStoredLicense(mockVerifyRemote);
+
+      expect(mockSaveLicense).toHaveBeenCalledWith(
+        expect.objectContaining({ licenseKey: SPONSOR_KEY, status: 'refunded' }),
+      );
+    });
+
+    it.each([
+      ['no sponsorKey at all (an older www)', {}],
+      ['a blank sponsorKey', { sponsorKey: '   ' }],
+    ])('keeps the stored key when the answer carries %s', async (_label, extra) => {
+      mockReadLicense.mockResolvedValue(stored());
+      mockVerifyRemote.mockResolvedValue({ valid: true, status: 'active', ...extra });
+
+      await revalidateStoredLicense(mockVerifyRemote);
+
+      expect(mockSaveLicense).toHaveBeenCalledWith(expect.objectContaining({ licenseKey: LS_KEY }));
+      expect(mockReportActivation).toHaveBeenCalledWith(LS_KEY);
+    });
+
+    it('stores nothing when the check could not reach www', async () => {
+      mockReadLicense.mockResolvedValue(stored());
+      mockVerifyRemote.mockResolvedValue({ valid: false, error: 'fetch failed' });
+
+      await revalidateStoredLicense(mockVerifyRemote);
+
+      expect(mockSaveLicense).not.toHaveBeenCalled();
+    });
+  });
+
   // Losing entitlement must not erase the fact that this person once paid. The
   // key is the credential the billing history is fetched with, so deleting it
   // would take their receipts with it — and they have no copy to re-enter, since

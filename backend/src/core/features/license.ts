@@ -38,6 +38,12 @@ function wwwApiBase(): string {
 export interface LicenseVerifyResult {
   valid: boolean;
   status?: string;
+  /**
+   * The canonical sponsor key of the license that answered, whichever key was
+   * asked with. Differs from the asked key when the payment provider's key was
+   * entered; see `canonicalSponsorKey`. Absent from an older www.
+   */
+  sponsorKey?: string;
   /** Which paid tier this key grants, as reported by www. */
   tier?: string;
   /** Billing cadence ("monthly" | "yearly"); absent until a subscription resolves it. */
@@ -149,6 +155,7 @@ export async function verifyLicenseRemote(sponsorKey: string): Promise<LicenseVe
     const json = JSON.parse(res.body) as {
       valid?: boolean;
       status?: string;
+      sponsorKey?: string | null;
       tier?: string;
       interval?: string;
       price?: { amount?: number; currency?: string };
@@ -162,6 +169,8 @@ export async function verifyLicenseRemote(sponsorKey: string): Promise<LicenseVe
     return {
       valid: json.valid === true,
       status: typeof json.status === 'string' ? json.status : undefined,
+      // null while www has not minted one for this license yet.
+      sponsorKey: typeof json.sponsorKey === 'string' ? json.sponsorKey : undefined,
       tier: typeof json.tier === 'string' ? json.tier : undefined,
       interval: typeof json.interval === 'string' ? json.interval : undefined,
       price,

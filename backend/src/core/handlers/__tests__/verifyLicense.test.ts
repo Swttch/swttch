@@ -8,6 +8,7 @@ import { MessageType, ErrorCode } from '../../../shared';
 const verifyLicenseRemote = vi.fn(async (_key: string) => ({ valid: false }) as {
   valid: boolean;
   status?: string;
+  sponsorKey?: string;
   tier?: string;
   interval?: string;
   error?: string;
@@ -106,5 +107,34 @@ describe('verifyLicenseHandler failure classification', () => {
     expect(saveLicense).toHaveBeenCalledWith(
       expect.objectContaining({ licenseKey: 'CCG-KEY', tier: 'allround', interval: 'monthly' }),
     );
+  });
+
+  // A key copied from the payment provider's order page verifies, but the
+  // credential to keep is the sponsor key www names in its answer.
+  it('stores the canonical sponsor key when a payment provider key was typed', async () => {
+    verifyLicenseRemote.mockResolvedValue({
+      valid: true,
+      status: 'active',
+      sponsorKey: 'CCG-REAL',
+    });
+    const connections = makeConnections();
+
+    await verifyLicenseHandler('c1', makeMessage('AEEB8648-LS-KEY'), connections, bridge);
+
+    expect(verifyLicenseRemote).toHaveBeenCalledWith('AEEB8648-LS-KEY');
+    expect(saveLicense).toHaveBeenCalledWith(expect.objectContaining({ licenseKey: 'CCG-REAL' }));
+    expect(reportActivation).toHaveBeenCalledWith('CCG-REAL');
+  });
+
+  it('keeps the typed key when www names none', async () => {
+    verifyLicenseRemote.mockResolvedValue({ valid: true, status: 'active' });
+    const connections = makeConnections();
+
+    await verifyLicenseHandler('c1', makeMessage('AEEB8648-LS-KEY'), connections, bridge);
+
+    expect(saveLicense).toHaveBeenCalledWith(
+      expect.objectContaining({ licenseKey: 'AEEB8648-LS-KEY' }),
+    );
+    expect(reportActivation).toHaveBeenCalledWith('AEEB8648-LS-KEY');
   });
 });
