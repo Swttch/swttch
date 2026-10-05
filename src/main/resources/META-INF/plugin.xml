@@ -16,7 +16,7 @@
       plugins it declares a dependency on, so removing the line would make the
       reflective lookups fail even where the terminal plugin IS present.
     -->
-    <depends optional="true">org.jetbrains.plugins.terminal</depends>
+    <depends optional="true" config-file="claudecode-terminal.xml">org.jetbrains.plugins.terminal</depends>
     <depends optional="true" config-file="claudecode-jcef.xml">com.intellij.modules.jcef</depends>
 
     <resource-bundle>messages.ClaudeCodeBundle</resource-bundle>

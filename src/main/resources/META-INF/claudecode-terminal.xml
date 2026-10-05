@@ -1,0 +1,13 @@
+<idea-plugin>
+    <!--
+      Loaded when org.jetbrains.plugins.terminal is available.
+
+      Currently we do not declare any terminal-specific extensions here — the
+      terminal plugin is consumed through reflective lookups inside try/catch
+      (see ClaudeCodePanel.createTerminalTab / sendCommandToTerminal).
+
+      This file exists to satisfy the optional <depends> contract: the Plugin
+      Verifier reports a configuration defect when an optional dependency does
+      not specify "config-file".
+    -->
+</idea-plugin>
