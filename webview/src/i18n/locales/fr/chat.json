@@ -337,6 +337,7 @@
     "workflowNotice": "Les workflows dynamiques exécutent de nombreux sous-agents en parallèle et peuvent consommer une grande partie de votre limite d'utilisation. Arrêtez-les à tout moment depuis le panneau des tâches.",
     "yes": "Oui",
     "no": "Non",
+    "enableSessionOption": "Activer",
     "allowMcpTool": "Autoriser {{tool}} ?",
     "editWithFile": "Effectuer cette modification sur {{file}} ?",
     "editNoFile": "Effectuer cette modification ?",
@@ -360,6 +361,11 @@
       "mcp": "Oui, autoriser tous les {{scope}} pour cette session",
       "default": "Oui, autoriser tous les {{tool}} pour cette session"
     }
+  },
+  "allowAllCommands": {
+    "confirmTitle": "Activer « Autoriser toutes les commandes dans cette session » ?",
+    "confirmMessage": "Même en mode bypass, ce panneau d’approbation a été envoyé par le modèle lui-même pour vous avertir d’un risque.\n\nUne fois activé, l’interface enverra automatiquement une réponse d’autorisation, sans afficher le panneau d’approbation, chaque fois que le modèle enverra un tel avertissement dans cette session.\n\nAutrement dit, vous approuverez automatiquement des avertissements envoyés directement par le modèle. Soyez conscient du risque.\n\nVous pouvez le désactiver avec « Autoriser toutes les commandes dans cette session » dans le panneau des commandes slash.",
+    "confirmLabel": "Activer"
   },
   "loginCta": {
     "signed": "Connecté",

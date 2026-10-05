@@ -55,6 +55,11 @@ vi.mock('@/contexts/SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: 'session-1' }),
 }));
 
+let mockAllowAll = false;
+vi.mock('@/contexts/AllowAllCommandsContext', () => ({
+  useAllowAllCommands: () => ({ isEnabled: () => mockAllowAll, setEnabled: vi.fn() }),
+}));
+
 let mockBridge: ReturnType<typeof createMockBridge>['bridge'];
 let mockEmit: ReturnType<typeof createMockBridge>['emit'];
 
@@ -69,7 +74,12 @@ vi.mock('@/api/bridge/BridgeClient', () => ({
 /** Emit a CLI_EVENT control_request for a Bash tool. */
 function emitBashRequest(
   emit: typeof mockEmit,
-  opts: { controlRequestId?: string; toolUseId?: string; command?: string } = {},
+  opts: {
+    controlRequestId?: string;
+    toolUseId?: string;
+    command?: string;
+    suppressAlwaysAllowRule?: boolean;
+  } = {},
 ) {
   const {
     controlRequestId = 'ctrl-1',
@@ -85,6 +95,9 @@ function emitBashRequest(
       tool_name: 'Bash',
       tool_use_id: toolUseId,
       input: { command },
+      ...(opts.suppressAlwaysAllowRule !== undefined && {
+        suppress_always_allow_rule: opts.suppressAlwaysAllowRule,
+      }),
     },
   });
 }
@@ -122,6 +135,54 @@ describe('usePendingPermissions', () => {
     const mock = createMockBridge();
     mockBridge = mock.bridge;
     mockEmit = mock.emit;
+    mockAllowAll = false;
+  });
+
+  describe('requests the CLI will not keep a rule for', () => {
+    it('records the CLI marker on the pending request', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+
+      act(() => emitBashRequest(mockEmit, { suppressAlwaysAllowRule: true }));
+
+      expect(result.current.pending?.suppressAlwaysAllowRule).toBe(true);
+    });
+
+    it('treats a request without the marker as one the CLI will keep a rule for', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+
+      act(() => emitBashRequest(mockEmit));
+
+      expect(result.current.pending?.suppressAlwaysAllowRule).toBe(false);
+    });
+
+    it('answers it without a panel once "Allow all command in this session" is on', () => {
+      mockAllowAll = true;
+      const { result } = renderHook(() => usePendingPermissions());
+
+      act(() => emitBashRequest(mockEmit, { suppressAlwaysAllowRule: true }));
+
+      expect(mockApprove).toHaveBeenCalledWith('tool-1', 'ctrl-1', { command: 'ls -la' });
+      expect(result.current.pending).toBeNull();
+    });
+
+    it('still shows the panel for a request the CLI can remember, even with it on', () => {
+      mockAllowAll = true;
+      const { result } = renderHook(() => usePendingPermissions());
+
+      act(() => emitBashRequest(mockEmit));
+
+      expect(mockApprove).not.toHaveBeenCalled();
+      expect(result.current.pending?.controlRequestId).toBe('ctrl-1');
+    });
+
+    it('shows the panel when it is off', () => {
+      const { result } = renderHook(() => usePendingPermissions());
+
+      act(() => emitBashRequest(mockEmit, { suppressAlwaysAllowRule: true }));
+
+      expect(mockApprove).not.toHaveBeenCalled();
+      expect(result.current.pending?.controlRequestId).toBe('ctrl-1');
+    });
   });
 
   describe('deny with reason', () => {

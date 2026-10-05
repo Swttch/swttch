@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "Dieses Modell unterstützt keine Aufwandsstufen",
     "fastModeUnsupportedReason": "Der Schnellmodus ist nur bei Opus-Modellen verfügbar",
     "toggleAutoResume": "Auto-Fortsetzung bei Limit umschalten",
+    "toggleAllowAllCommands": "Alle Befehle in dieser Sitzung erlauben",
     "autoResumeSponsorOnlyReason": "Auto-Fortsetzung bei Limit ist nur für Sponsoren verfügbar"
   },
   "customize": {

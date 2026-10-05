@@ -10,6 +10,9 @@ import { PendingPermission } from '../../hooks/usePendingPermissions';
 import { parseWorkflowName } from '@/utils/workflowName';
 import { humanizeMcpToolName, mcpToolSessionScopeLabel } from './message-renderers/ToolRenderers/Mcp/humanize';
 import { useTranslation } from '@/i18n';
+import { useSessionContext } from '@/contexts/SessionContext';
+import { useEnableAllowAllCommands } from '@/hooks/useEnableAllowAllCommands';
+import { InputModeValues } from '@/types/chatInput';
 import { FILE_EDIT_TOOLS } from '@/shared';
 
 interface Props {
@@ -186,17 +189,60 @@ export function PermissionBanner(props: Props) {
   const subtitle = isWorkflow ? (permission.input.description as string | undefined) : undefined;
   const notice = isWorkflow ? t('permissionBanner.workflowNotice') : undefined;
 
-  const options: OptionItem[] = useMemo(() => [
-    { key: '1', label: t('permissionBanner.yes') },
-    { key: '2', label: getSessionLabel(t, permission.toolName) },
-    { key: '3', label: t('permissionBanner.no') },
-  ], [t, permission.toolName]);
+  /*
+   * What "allow for the session" can honestly promise for this request.
+   *
+   * When the CLI will not keep a rule for it (`suppressAlwaysAllowRule`), the
+   * option would approve once and then ask again on the next command, which
+   * reads as the button not working. So it is either:
+   *
+   * - answerable, once the user has turned on "Allow all command in this
+   *   session" — the GUI then answers those requests itself;
+   * - shown disabled with an Enable link, in bypass mode, where the user has
+   *   already chosen not to be asked and can reasonably choose this too;
+   * - left out, in every other mode.
+   */
+  const { inputMode } = useSessionContext();
+  const allowAll = useEnableAllowAllCommands();
+  const suppressed = permission.suppressAlwaysAllowRule;
+  const sessionOption = !suppressed || allowAll.enabled
+    ? 'enabled'
+    : inputMode === InputModeValues.BYPASS
+      ? 'locked'
+      : 'hidden';
+
+  const options: OptionItem[] = useMemo(() => {
+    const yes = { key: '1', label: t('permissionBanner.yes') };
+    const no = (key: string) => ({ key, label: t('permissionBanner.no') });
+    if (sessionOption === 'hidden') return [yes, no('2')];
+    const session = { key: '2', label: getSessionLabel(t, permission.toolName) };
+    if (sessionOption === 'enabled') return [yes, session, no('3')];
+    return [
+      yes,
+      {
+        ...session,
+        disabled: true,
+        trailing: (
+          <button
+            type="button"
+            onClick={() => void allowAll.enable()}
+            className="text-[1rem] font-medium text-accent-claude underline underline-offset-2 transition-opacity hover:opacity-80"
+          >
+            {t('permissionBanner.enableSessionOption')}
+          </button>
+        ),
+      },
+      no('3'),
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t, permission.toolName, sessionOption, allowAll.enable]);
 
   const handleOptionSelect = useCallback((index: number) => {
+    const denyIndex = sessionOption === 'hidden' ? 1 : 2;
     if (index === 0) onApprove();
+    else if (index === denyIndex) onDeny();
     else if (index === 1) onApproveForSession();
-    else if (index === 2) onDeny();
-  }, [onApprove, onApproveForSession, onDeny]);
+  }, [onApprove, onApproveForSession, onDeny, sessionOption]);
 
   /**
    * Cancelling is "stop what you are doing", not "no to this one file".
@@ -225,6 +271,7 @@ export function PermissionBanner(props: Props) {
 
   return (
     <ApprovalPanel
+      keyboardPaused={allowAll.confirmOpen}
       title={title}
       collapsedTitle={t(parts.key, { ...parts.values, file: parts.file })}
       subtitle={subtitle}

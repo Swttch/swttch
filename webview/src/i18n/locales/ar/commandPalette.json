@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "هذا النموذج لا يدعم مستويات الجهد",
     "fastModeUnsupportedReason": "الوضع السريع متاح فقط في نماذج Opus",
     "toggleAutoResume": "تبديل الاستئناف التلقائي عند الحد",
+    "toggleAllowAllCommands": "السماح بجميع الأوامر في هذه الجلسة",
     "autoResumeSponsorOnlyReason": "الاستئناف التلقائي عند الحد متاح للرعاة فقط"
   },
   "customize": {

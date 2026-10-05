@@ -337,6 +337,7 @@
     "workflowNotice": "动态工作流会并行运行多个子智能体,可能消耗大量用量额度。您可以随时从任务面板停止它们。",
     "yes": "是",
     "no": "否",
+    "enableSessionOption": "启用",
     "allowMcpTool": "允许 {{tool}}?",
     "editWithFile": "对 {{file}} 执行此编辑?",
     "editNoFile": "执行此编辑?",
@@ -360,6 +361,11 @@
       "mcp": "是,本次会话中允许所有 {{scope}}",
       "default": "是,本次会话中允许所有 {{tool}}"
     }
+  },
+  "allowAllCommands": {
+    "confirmTitle": "“在本次会话中允许所有命令”要启用吗？",
+    "confirmMessage": "即使处于绕过模式，这个批准面板也是模型为提醒你注意风险而主动发送的。\n\n启用后，本次会话中每当模型发出这类警告，GUI 都会不显示批准面板，直接自动发送允许响应。\n\n也就是说，你将自动批准模型直接发出的警告。请了解其中的风险。\n\n你可以在斜杠命令面板中通过“在本次会话中允许所有命令”关闭此设置。",
+    "confirmLabel": "启用"
   },
   "loginCta": {
     "signed": "已登录",

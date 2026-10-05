@@ -3,6 +3,25 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { PermissionBanner } from '../PermissionBanner';
 import type { PendingPermission } from '../../../hooks/usePendingPermissions';
 
+// The mode the session is in and whether "Allow all command in this session" is
+// on are state the panel only reads; the tests set them per case.
+let mockInputMode = 'ask_before_edit';
+vi.mock('../../../contexts/SessionContext', () => ({
+  useSessionContext: () => ({ inputMode: mockInputMode, currentSessionId: 'session-1' }),
+}));
+
+let mockAllowAll = false;
+const mockSetAllowAll = vi.fn();
+const mockRequestEnable = vi.fn(async () => true);
+vi.mock('../../../contexts/AllowAllCommandsContext', () => ({
+  useAllowAllCommands: () => ({
+    isEnabled: () => mockAllowAll,
+    setEnabled: mockSetAllowAll,
+    requestEnable: mockRequestEnable,
+    confirmOpen: false,
+  }),
+}));
+
 const mockStop = vi.fn();
 vi.mock('../../../contexts/ChatStreamContext', () => ({
   useChatStreamContext: () => ({ stop: mockStop }),
@@ -36,6 +55,7 @@ const mockPermission: PendingPermission = {
   input: { command: 'ls' },
   riskLevel: 'high',
   description: 'Execute: ls',
+  suppressAlwaysAllowRule: false,
 };
 
 beforeEach(() => {
@@ -43,6 +63,10 @@ beforeEach(() => {
   openDiffReview.mockClear();
   autoOpen.mockClear();
   openResult = { kind: 'opened' };
+  mockInputMode = 'ask_before_edit';
+  mockAllowAll = false;
+  mockSetAllowAll.mockClear();
+  mockRequestEnable.mockClear();
 });
 
 describe('PermissionBanner', () => {
@@ -273,6 +297,7 @@ describe('PermissionBanner — MCP tool humanization', () => {
       input,
       riskLevel: 'high',
       description: '',
+      suppressAlwaysAllowRule: false,
     };
   }
 
@@ -330,6 +355,7 @@ const writePermission: PendingPermission = {
   input: { file_path: '/tmp/ccg-demo/src/cart.js', content: 'x' },
   riskLevel: 'medium',
   description: 'Write file: /tmp/ccg-demo/src/cart.js',
+  suppressAlwaysAllowRule: false,
 };
 
 function renderBanner(
@@ -416,5 +442,69 @@ describe('PermissionBanner — the file name links to the review', () => {
     renderBanner(writePermission, onOpenDiffOverlay);
 
     expect(autoOpen).toHaveBeenCalledWith(writePermission.toolUseId, onOpenDiffOverlay);
+  });
+});
+
+describe('PermissionBanner — a request the CLI will not keep a rule for', () => {
+  const suppressed: PendingPermission = { ...mockPermission, suppressAlwaysAllowRule: true };
+  const SESSION_LABEL = 'Yes, allow all commands this session';
+
+  function renderSuppressed() {
+    const onApprove = vi.fn();
+    const onApproveForSession = vi.fn();
+    const onDeny = vi.fn();
+    render(
+      <PermissionBanner
+        permission={suppressed}
+        onApprove={onApprove}
+        onApproveForSession={onApproveForSession}
+        onDeny={onDeny}
+      />,
+    );
+    return { onApprove, onApproveForSession, onDeny };
+  }
+
+  it('leaves the session option out outside bypass mode, and No takes its number', () => {
+    // Offering it would approve once and ask again on the next command.
+    const { onDeny } = renderSuppressed();
+
+    expect(screen.queryByText(SESSION_LABEL)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('No'));
+    expect(onDeny).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the session option disabled, with an Enable link, in bypass mode', () => {
+    mockInputMode = 'bypass';
+    const { onApproveForSession } = renderSuppressed();
+
+    fireEvent.click(screen.getByText(SESSION_LABEL));
+
+    expect(screen.getByRole('button', { name: 'Enable' })).toBeInTheDocument();
+    expect(onApproveForSession).not.toHaveBeenCalled();
+  });
+
+  it('asks for the warning, and turns nothing on itself, when Enable is clicked', () => {
+    // The warning and what it switches on belong to the provider, which the
+    // slash command panel shares; the panel here only asks.
+    mockInputMode = 'bypass';
+    renderSuppressed();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+    expect(mockRequestEnable).toHaveBeenCalledTimes(1);
+    expect(mockSetAllowAll).not.toHaveBeenCalled();
+  });
+
+  it('answers the session option once "Allow all command in this session" is on', () => {
+    mockInputMode = 'bypass';
+    mockAllowAll = true;
+    const { onApproveForSession } = renderSuppressed();
+
+    fireEvent.click(screen.getByText(SESSION_LABEL));
+
+    expect(onApproveForSession).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Enable' })).not.toBeInTheDocument();
   });
 });

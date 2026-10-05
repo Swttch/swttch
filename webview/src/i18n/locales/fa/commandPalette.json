@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "این مدل از سطوح تلاش پشتیبانی نمی‌کند",
     "fastModeUnsupportedReason": "حالت سریع فقط در مدل‌های Opus در دسترس است",
     "toggleAutoResume": "تغییر از‌سرگیری خودکار هنگام محدودیت",
+    "toggleAllowAllCommands": "اجازه همه فرمان‌ها در این نشست",
     "autoResumeSponsorOnlyReason": "از‌سرگیری خودکار هنگام محدودیت فقط برای حامیان در دسترس است"
   },
   "customize": {

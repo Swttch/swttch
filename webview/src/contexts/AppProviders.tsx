@@ -23,6 +23,7 @@ import { WorkingDirProvider, useWorkingDir, readWorkingDirFromUrl } from './Work
 import { WorkflowStateProvider } from './WorkflowStateContext';
 import { ScheduledMessagesProvider } from './ScheduledMessagesContext';
 import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
+import { AllowAllCommandsProvider } from './AllowAllCommandsContext';
 import { CommandPaletteProvider } from '../commandPalette/CommandPaletteProvider';
 import { useApi } from './ApiContext';
 import { SessionState } from '../types';
@@ -319,7 +320,9 @@ export function AppProviders({ children }: AppProvidersProps) {
                       <WorkflowStateProvider>
                         <ScheduledMessagesProvider>
                           <AutoResumeOverrideProvider>
-                            <ChatProviderBridge>{children}</ChatProviderBridge>
+                            <AllowAllCommandsProvider>
+                              <ChatProviderBridge>{children}</ChatProviderBridge>
+                            </AllowAllCommandsProvider>
                           </AutoResumeOverrideProvider>
                         </ScheduledMessagesProvider>
                       </WorkflowStateProvider>

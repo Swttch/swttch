@@ -5,6 +5,7 @@ export * from './ThinkingItem';
 export * from './AccountUsageItem';
 export * from './ToggleFastModeItem';
 export * from './ToggleAutoResumeItem';
+export * from './ToggleAllowAllCommandsItem';
 
 import { StaticItem } from '../../types';
 import { createSwitchModelItem } from './SwitchModelItem';
@@ -13,6 +14,7 @@ import { createThinkingItem } from './ThinkingItem';
 import { createAccountUsageItem } from './AccountUsageItem';
 import { createToggleFastModeItem } from './ToggleFastModeItem';
 import { createToggleAutoResumeItem } from './ToggleAutoResumeItem';
+import { createToggleAllowAllCommandsItem } from './ToggleAllowAllCommandsItem';
 
 /**
  * Built on demand (not a module-eval constant) so the item labels resolve
@@ -26,4 +28,5 @@ export const getModelItems = (): StaticItem[] => [
   createAccountUsageItem(),
   createToggleFastModeItem(),
   createToggleAutoResumeItem(),
+  createToggleAllowAllCommandsItem(),
 ];

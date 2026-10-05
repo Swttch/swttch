@@ -337,6 +337,7 @@
     "workflowNotice": "Dynamische Workflows führen viele Subagenten parallel aus und können einen großen Teil deines Nutzungslimits verbrauchen. Stoppe sie jederzeit über das Aufgabenpanel.",
     "yes": "Ja",
     "no": "Nein",
+    "enableSessionOption": "Aktivieren",
     "allowMcpTool": "{{tool}} erlauben?",
     "editWithFile": "Diese Änderung an {{file}} vornehmen?",
     "editNoFile": "Diese Änderung vornehmen?",
@@ -360,6 +361,11 @@
       "mcp": "Ja, alle {{scope}} in dieser Sitzung erlauben",
       "default": "Ja, alle {{tool}} in dieser Sitzung erlauben"
     }
+  },
+  "allowAllCommands": {
+    "confirmTitle": "„Alle Befehle in dieser Sitzung erlauben“ aktivieren?",
+    "confirmMessage": "Obwohl Sie sich im Bypass-Modus befinden, wurde dieses Genehmigungsfenster vom Modell selbst gesendet, um Sie vor einem Risiko zu warnen.\n\nNach der Aktivierung sendet die GUI in dieser Sitzung jedes Mal, wenn das Modell eine solche Warnung schickt, automatisch eine Erlaubnis, ohne das Genehmigungsfenster anzuzeigen.\n\nSie genehmigen damit also automatisch Warnungen, die das Modell direkt sendet. Bitte beachten Sie das Risiko.\n\nSie können dies über „Alle Befehle in dieser Sitzung erlauben“ im Slash-Befehl-Panel wieder ausschalten.",
+    "confirmLabel": "Aktivieren"
   },
   "loginCta": {
     "signed": "Angemeldet",

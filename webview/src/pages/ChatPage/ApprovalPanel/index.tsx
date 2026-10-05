@@ -32,11 +32,16 @@ interface Props {
   textareaPlaceholder?: string;
   onTextSubmit?: (text: string) => void;
   onCancel: () => void;
+  /**
+   * Stop answering from the keyboard, e.g. while a dialog opened from this panel
+   * is up: Enter and digits would otherwise answer the panel underneath it.
+   */
+  keyboardPaused?: boolean;
 }
 
 export function ApprovalPanel(props: Props) {
   const { t } = useTranslation('chat');
-  const { title, collapsedTitle, subtitle, notice, preview, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel } = props;
+  const { title, collapsedTitle, subtitle, notice, preview, options, onOptionSelect, textareaPlaceholder = t('approvalPanel.defaultTextareaPlaceholder'), onTextSubmit, onCancel, keyboardPaused = false } = props;
 
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [feedbackText, setFeedbackText] = useState('');
@@ -55,9 +60,11 @@ export function ApprovalPanel(props: Props) {
   }, [feedbackText, autoResize]);
 
   const handleOptionClick = useCallback((index: number) => {
+    // A disabled row is on screen to explain itself, not to be answered.
+    if (options[index]?.disabled) return;
     setFocusedIndex(index);
     onOptionSelect(index);
-  }, [onOptionSelect]);
+  }, [onOptionSelect, options]);
 
   const handleTextSubmit = useCallback(() => {
     const text = feedbackText.trim();
@@ -74,7 +81,7 @@ export function ApprovalPanel(props: Props) {
     handleOptionClick,
     handleTextSubmit,
     onCancel,
-    selectionDisabled: collapsed,
+    selectionDisabled: collapsed || keyboardPaused,
   });
 
   useEffect(() => {

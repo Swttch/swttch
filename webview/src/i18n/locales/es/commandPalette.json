@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "Este modelo no admite niveles de esfuerzo",
     "fastModeUnsupportedReason": "El modo rápido solo está disponible en los modelos Opus",
     "toggleAutoResume": "Alternar reanudación automática al alcanzar el límite",
+    "toggleAllowAllCommands": "Permitir todos los comandos en esta sesión",
     "autoResumeSponsorOnlyReason": "La reanudación automática al alcanzar el límite es solo para patrocinadores"
   },
   "customize": {

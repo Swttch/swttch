@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "このモデルはエフォートレベルに対応していません",
     "fastModeUnsupportedReason": "高速モードはOpusモデルでのみ利用できます",
     "toggleAutoResume": "上限到達時の自動再開を切り替え",
+    "toggleAllowAllCommands": "このセッションですべてのコマンドを許可",
     "autoResumeSponsorOnlyReason": "上限到達時の自動再開はスポンサー限定です"
   },
   "customize": {

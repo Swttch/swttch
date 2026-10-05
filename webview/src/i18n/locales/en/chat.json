@@ -341,6 +341,7 @@
     "workflowNotice": "Dynamic workflows run many subagents in parallel and can use a lot of your usage limit. Stop them any time from the tasks panel.",
     "yes": "Yes",
     "no": "No",
+    "enableSessionOption": "Enable",
     "allowMcpTool": "Allow {{tool}}?",
     "editWithFile": "Make this edit to {{file}}?",
     "editNoFile": "Make this edit?",
@@ -364,6 +365,11 @@
       "mcp": "Yes, allow all {{scope}} this session",
       "default": "Yes, allow all {{tool}} this session"
     }
+  },
+  "allowAllCommands": {
+    "confirmTitle": "Enable “Allow all command in this session”?",
+    "confirmMessage": "Even though you are in bypass mode, this approval panel was sent by the model itself to warn you about a risk.\n\nOnce enabled, the GUI will send an allow response automatically, without showing the approval panel, every time the model sends such a warning in this session.\n\nIn other words, you will be automatically approving warnings the model sends directly. Please be aware of the risk.\n\nYou can turn this off with “Allow all command in this session” in the slash command panel.",
+    "confirmLabel": "Enable"
   },
   "loginCta": {
     "signed": "Signed",

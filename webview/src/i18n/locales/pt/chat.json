@@ -337,6 +337,7 @@
     "workflowNotice": "Fluxos de trabalho dinâmicos executam muitos subagentes em paralelo e podem consumir boa parte do seu limite de uso. Pare-os a qualquer momento no painel de tarefas.",
     "yes": "Sim",
     "no": "Não",
+    "enableSessionOption": "Ativar",
     "allowMcpTool": "Permitir {{tool}}?",
     "editWithFile": "Fazer esta edição em {{file}}?",
     "editNoFile": "Fazer esta edição?",
@@ -360,6 +361,11 @@
       "mcp": "Sim, permitir todo(a) {{scope}} nesta sessão",
       "default": "Sim, permitir todo(a) {{tool}} nesta sessão"
     }
+  },
+  "allowAllCommands": {
+    "confirmTitle": "Ativar “Permitir todos os comandos nesta sessão”?",
+    "confirmMessage": "Mesmo no modo bypass, este painel de aprovação foi enviado pelo próprio modelo para avisar você sobre um risco.\n\nDepois de ativado, o GUI enviará automaticamente uma resposta de permissão, sem mostrar o painel de aprovação, toda vez que o modelo enviar esse tipo de aviso nesta sessão.\n\nOu seja, você estará aprovando automaticamente avisos que o modelo envia diretamente. Esteja ciente do risco.\n\nVocê pode desativar isso em “Permitir todos os comandos nesta sessão” no painel de comandos de barra.",
+    "confirmLabel": "Ativar"
   },
   "loginCta": {
     "signed": "Conectado",

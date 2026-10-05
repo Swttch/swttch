@@ -3,6 +3,8 @@ import { useApi } from '@/contexts/ApiContext';
 import { getBridgeClient } from '@/api/bridge/BridgeClient';
 import type { CliControlRequestEvent } from '@/types';
 import { MessageType } from '@/shared';
+import { useAllowAllCommands } from '@/contexts/AllowAllCommandsContext';
+import { useSessionContext } from '@/contexts/SessionContext';
 
 export type PermissionRiskLevel = 'low' | 'medium' | 'high';
 
@@ -13,6 +15,11 @@ export interface PendingPermission {
   input: Record<string, unknown>;
   riskLevel: PermissionRiskLevel;
   description: string;
+  /**
+   * The CLI said it will not keep a rule granted with this approval, so the
+   * "allow for the session" answer must not be offered.
+   */
+  suppressAlwaysAllowRule: boolean;
 }
 
 function assessRiskLevel(toolName: string, input: Record<string, unknown>): PermissionRiskLevel {
@@ -68,6 +75,14 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
   const [requests, setRequests] = useState<PendingPermission[]>([]);
   const processedIdsRef = useRef<Set<string>>(new Set());
 
+  // Read through a ref so the CLI_EVENT subscription below is not torn down and
+  // re-made every time the user flips the setting: a request that arrives in
+  // that gap would be missed by both the old and the new subscriber.
+  const { currentSessionId } = useSessionContext();
+  const { isEnabled: isAllowAllCommandsEnabled } = useAllowAllCommands();
+  const autoAnswerRef = useRef(false);
+  autoAnswerRef.current = isAllowAllCommandsEnabled(currentSessionId);
+
   /*
    * There is no session-permission cache here any more.
    *
@@ -104,6 +119,18 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
 
       if (!controlRequestId || processedIdsRef.current.has(controlRequestId)) return;
 
+      const suppressAlwaysAllowRule = request.suppress_always_allow_rule === true;
+
+      // The user turned on "Allow all command in this session", so the safety
+      // prompts the CLI will never remember a rule for are answered here. Only
+      // those: an ordinary request still gets its panel, because the CLI can
+      // keep the rule for it and asking again is its call.
+      if (suppressAlwaysAllowRule && autoAnswerRef.current) {
+        processedIdsRef.current.add(controlRequestId);
+        api.tools.approve(toolUseId, controlRequestId, input);
+        return;
+      }
+
       setRequests(prev => [...prev, {
         controlRequestId,
         toolName,
@@ -111,10 +138,11 @@ export function usePendingPermissions(): UsePendingPermissionsReturn {
         input,
         riskLevel: assessRiskLevel(toolName, input),
         description: generateDescription(toolName, input),
+        suppressAlwaysAllowRule,
       }]);
     });
     return unsubscribe;
-  }, []);
+  }, [api.tools]);
 
   // A request answered in the IDE's diff review is settled — drop its prompt
   // here rather than leaving a question the CLI has already moved on from, which

@@ -53,6 +53,7 @@
     "effortUnsupportedReason": "此模型不支援強度等級",
     "fastModeUnsupportedReason": "快速模式僅適用於 Opus 模型",
     "toggleAutoResume": "切換達到上限時自動恢復",
+    "toggleAllowAllCommands": "在本次工作階段中允許所有命令",
     "autoResumeSponsorOnlyReason": "達到上限時自動恢復僅供贊助者使用"
   },
   "customize": {
