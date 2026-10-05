@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { AccountListItem } from '@/shared';
+import { Route } from '@/router/routes';
 
-const { mockSwitchTo, mockNavigate } = vi.hoisted(() => ({ mockSwitchTo: vi.fn(), mockNavigate: vi.fn() }));
+const { mockSwitchTo, mockNavigate, mockOpenSettingsAt } = vi.hoisted(() => ({
+  mockSwitchTo: vi.fn(),
+  mockNavigate: vi.fn(),
+  mockOpenSettingsAt: vi.fn(),
+}));
 let loggedIn: boolean | null = true;
 let accounts: AccountListItem[] = [];
 let activeEmail: string | null = null;
 
 vi.mock('@/contexts', () => ({ useAuthContext: () => ({ loggedIn, refetch: vi.fn() }) }));
 vi.mock('@/router/useRouter', () => ({ useRouter: () => ({ navigate: mockNavigate }) }));
+vi.mock('@/utils/openSettingsAt', () => ({ openSettingsAt: mockOpenSettingsAt }));
 vi.mock('@/hooks/queries/useAccounts', () => ({
   useAccounts: () => ({
     accounts, activeEmail, isLoading: false, error: null, refetch: vi.fn(),
@@ -30,6 +36,7 @@ describe('AccountSwitcher', () => {
   beforeEach(() => {
     mockSwitchTo.mockReset();
     mockNavigate.mockReset();
+    mockOpenSettingsAt.mockReset();
     loggedIn = true;
     activeEmail = 'bek@x.com';
     accounts = [acc('acc-1', 'bek@x.com', true, 'Bek'), acc('acc-2', 'io@x.com', false, 'IO')];
@@ -77,5 +84,15 @@ describe('AccountSwitcher', () => {
     fireEvent.click(screen.getByTitle('Accounts'));
     fireEvent.click(screen.getByText('Add account'));
     expect(mockNavigate).toHaveBeenCalled();
+  });
+
+  // #493: a bare navigate() dropped backgroundLocation, so Settings opened as a full
+  // page and its close button landed on /sessions/new instead of the running session.
+  it('opens Settings → Account through openSettingsAt, not a bare navigate', () => {
+    render(<AccountSwitcher />);
+    fireEvent.click(screen.getByTitle('Accounts'));
+    fireEvent.click(screen.getByText('Manage accounts'));
+    expect(mockOpenSettingsAt).toHaveBeenCalledWith(Route.SETTINGS_ACCOUNT);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from '@/router/useRouter';
 import { Route } from '@/router/routes';
 import { useAccounts } from '@/hooks/queries/useAccounts';
+import { openSettingsAt } from '@/utils/openSettingsAt';
 import { AccountAvatar } from './AccountAvatar';
 import { useTranslation } from '@/i18n';
 import type { TFunction } from 'i18next';
@@ -60,6 +61,14 @@ export function AccountSwitcherMenu(props: Props) {
   const go = (route: Route) => {
     onClose();
     navigate(route);
+  };
+
+  // Settings must go through openSettingsAt: a bare navigate() drops the
+  // backgroundLocation, so the page replaces the session and its close button
+  // lands on /sessions/new instead of returning to the running session (#493).
+  const openSettings = (route: Route) => {
+    onClose();
+    void openSettingsAt(route);
   };
 
   return (
@@ -120,7 +129,7 @@ export function AccountSwitcherMenu(props: Props) {
           {t('sessionHeader.accountSwitcher.addAccount')}
         </button>
         <button
-          onClick={() => go(Route.SETTINGS_ACCOUNT)}
+          onClick={() => openSettings(Route.SETTINGS_ACCOUNT)}
           className="w-full flex items-center gap-2 px-3 py-2 text-[0.8461rem] text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
         >
           <Cog6ToothIcon className="w-4 h-4" />
