@@ -18,6 +18,18 @@
     -->
     <depends optional="true" config-file="claudecode-terminal.xml">org.jetbrains.plugins.terminal</depends>
     <depends optional="true" config-file="claudecode-jcef.xml">com.intellij.modules.jcef</depends>
+    <!--
+      Version Control moved out of the core plugin into its own bundled plugin in
+      2026.3 (263), so a plugin using its API must declare the dependency or its
+      classloader cannot see `ChangeListManager`
+      (IdeSelectionDispatcher.isVcsIgnored). Optional: that call already falls back
+      to "not ignored" when VCS is unavailable. Declared by plugin id, not by the
+      `com.intellij.modules.vcs` alias: the alias resolved to a single sibling
+      module and left `ChangeListManager` unresolved in the 263 verifier. Before 263
+      no such plugin exists and the classes come from the core plugin, so on 242 to
+      262 this simply stays unresolved and changes nothing.
+    -->
+    <depends optional="true" config-file="claudecode-vcs.xml">com.intellij.platform.vcs</depends>
 
     <resource-bundle>messages.ClaudeCodeBundle</resource-bundle>
 

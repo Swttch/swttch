@@ -1,0 +1,12 @@
+<idea-plugin>
+    <!--
+      Loaded when com.intellij.modules.vcs is available.
+
+      Currently we do not declare any VCS-specific extensions here — the VCS API
+      is consumed directly from Kotlin code (see IdeSelectionDispatcher).
+
+      This file exists to satisfy the optional <depends> contract, and the
+      dependency itself is what lets the plugin classloader see the VCS classes
+      on 2026.3 and later, where they live in a separate plugin.
+    -->
+</idea-plugin>
