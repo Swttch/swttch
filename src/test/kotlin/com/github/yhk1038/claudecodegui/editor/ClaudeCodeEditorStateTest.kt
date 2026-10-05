@@ -60,6 +60,36 @@ class ClaudeCodeEditorStateTest {
     }
 
     @Test
+    fun `the provider declares the readState signature that 2026_3 dispatches to`() {
+        // The Lazy overload cannot be marked `override` (we compile against 2024.2,
+        // which lacks it), so nothing but this test notices if its signature drifts
+        // from FileEditorProvider.readState(Element, Project, kotlin.Lazy) in 263.
+        // A drift would silently fall back to "no state" on 2026.3 and later.
+        val lazyOverload = ClaudeCodeEditorProvider::class.java.getDeclaredMethod(
+            "readState",
+            Element::class.java,
+            com.intellij.openapi.project.Project::class.java,
+            Lazy::class.java,
+        )
+        assertEquals(com.intellij.openapi.fileEditor.FileEditorState::class.java, lazyOverload.returnType)
+
+        val element = Element("provider")
+        ClaudeCodeEditorState.writeTo(ClaudeCodeEditorState("/sessions/abc"), element)
+        val restored = ClaudeCodeEditorProvider().readState(
+            element,
+            fakeProject(),
+            lazy<com.intellij.openapi.vfs.VirtualFile?> { error("the file must never be looked up") },
+        )
+        assertEquals("/sessions/abc", (restored as ClaudeCodeEditorState).path)
+    }
+
+    private fun fakeProject(): com.intellij.openapi.project.Project =
+        java.lang.reflect.Proxy.newProxyInstance(
+            javaClass.classLoader,
+            arrayOf(com.intellij.openapi.project.Project::class.java),
+        ) { _, _, _ -> null } as com.intellij.openapi.project.Project
+
+    @Test
     fun `two panes on different conversations never merge into one state`() {
         // Merging is for states close enough to count as one navigation step. Two
         // panes showing two conversations are not that — treating them as mergeable
