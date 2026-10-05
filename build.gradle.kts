@@ -188,7 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.33.3 - Add Mac editing keys and prompt reordering, fix session approval and selection</h3>
+            <h3>0.33.4 - Add line numbers to Edit cards, fix the accounts screen and pasting</h3>
+            <ul>
+                <li>Add line numbers to Edit cards, and open the file at that line (#523, reported by @CraftedFury)</li>
+                <li>Fix returning from Manage accounts clearing the current session's chat view (#522, reported by @EndiButler)</li>
+                <li>Fix pasting external text into the chat input on Fedora KDE (Wayland) (#524, reported by @ruanclaudio)</li>
+                <li>Improve compatibility with IDE 2026.3 (#525)</li>
+            </ul>
+            <h3>0.33.3 -Add Mac editing keys and prompt reordering, fix session approval and selection</h3>
             <ul>
                 <li>Add macOS Control-key editing shortcuts to the message box (#506, reported by @metasim)</li>
                 <li>Fix Ctrl+Z in the message box undoing in the IDE instead of the text (#495, reported by @cheack)</li>
