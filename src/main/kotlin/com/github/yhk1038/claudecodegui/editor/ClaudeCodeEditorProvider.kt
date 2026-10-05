@@ -76,6 +76,29 @@ class ClaudeCodeEditorProvider : FileEditorProvider, DumbAware {
         file: VirtualFile,
     ): FileEditorState = ClaudeCodeEditorState.readFrom(sourceElement)
 
+    /**
+     * The same restore under the signature 2026.3 (263) moved to. The platform
+     * deprecated the [VirtualFile] overload above in favour of this one, which
+     * receives the file lazily so a provider that never needs it never pays for
+     * the lookup. Ours never needs it, so [file] is not touched.
+     *
+     * Deliberately NOT marked `override`. We compile against 2024.2 (sinceBuild
+     * 242), where this overload does not exist, so `override` would not compile.
+     * Declared without it, the method has the identical JVM signature
+     * (`readState(Element, Project, kotlin.Lazy)`) and the 263 platform dispatches
+     * to it all the same. The compiler cannot check that match, which is what
+     * `ClaudeCodeEditorStateTest` pins.
+     *
+     * The [VirtualFile] overload must stay: 242 through 262 only ever call that
+     * one. It is the single remaining use of the deprecated API, and goes when
+     * sinceBuild passes 262.
+     */
+    fun readState(
+        sourceElement: Element,
+        project: Project,
+        file: Lazy<VirtualFile?>,
+    ): FileEditorState = ClaudeCodeEditorState.readFrom(sourceElement)
+
     override fun writeState(state: FileEditorState, project: Project, targetElement: Element) =
         ClaudeCodeEditorState.writeTo(state, targetElement)
 }

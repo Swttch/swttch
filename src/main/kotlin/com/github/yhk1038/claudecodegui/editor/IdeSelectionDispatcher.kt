@@ -305,12 +305,16 @@ object IdeSelectionDispatcher {
      * extra ReadAction wrapper.
      *
      * Returns false when VCS is not configured for the project or when any
-     * unexpected error occurs.
+     * unexpected error occurs. That includes the VCS plugin being absent or
+     * disabled: since 2026.3 it is a separate plugin, so the class itself can be
+     * missing, which surfaces as a [LinkageError] and not an [Exception].
      */
     private fun isVcsIgnored(project: Project, vFile: VirtualFile): Boolean {
         return try {
             ChangeListManager.getInstance(project).isIgnoredFile(vFile)
         } catch (_: Exception) {
+            false
+        } catch (_: LinkageError) {
             false
         }
     }
