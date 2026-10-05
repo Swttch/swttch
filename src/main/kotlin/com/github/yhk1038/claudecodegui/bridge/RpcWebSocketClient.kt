@@ -286,7 +286,7 @@ class RpcWebSocketClient(
 
         override fun onText(webSocket: WebSocket, data: CharSequence, last: Boolean): CompletionStage<*> {
             tracker?.markAlive()
-            logger.info("[DEBUG:onText] received data.length=${data.length}, last=$last, preview='${data.toString().take(80)}'")
+            logger.info("[DEBUG:onText] received data.length=${data.length}, last=$last")
             messageBuffer.append(data)
             if (last) {
                 val message = messageBuffer.toString()
@@ -321,7 +321,7 @@ class RpcWebSocketClient(
      * Parse, dispatch to rpcHandler, and send response back.
      */
     private fun handleMessage(ws: WebSocket, message: String) {
-        logger.info("[DEBUG:handleMessage] entered, message.length=${message.length}, blank=${message.isBlank()}, preview='${message.take(100)}'")
+        logger.info("[DEBUG:handleMessage] entered, message.length=${message.length}, blank=${message.isBlank()}")
         if (message.isBlank()) return
 
         scope.launch {
@@ -346,7 +346,9 @@ class RpcWebSocketClient(
                     return@launch
                 }
 
-                logger.info("[DEBUG:handleMessage] method=$method, id=$id, params=$params")
+                // The params of SET_PRIMARY_SELECTION are the text the user selected, which must not reach the log.
+                val loggedParams = if (method == "SET_PRIMARY_SELECTION") "<redacted>" else params.toString()
+                logger.info("[DEBUG:handleMessage] method=$method, id=$id, params=$loggedParams")
 
                 // Past the notification guard above, this is a request with a non-null id,
                 // so every path replies (success result or error) exactly once.
@@ -484,6 +486,12 @@ class RpcWebSocketClient(
                 rpcHandler.setTabName(panelId, name)
                 buildJsonObject {}
             }
+            "SET_PRIMARY_SELECTION" -> {
+                // Text that is missing, empty or not a string is a selection with nothing in it, and
+                // that must leave the buffer as it is rather than raise an error for every report.
+                parsePrimarySelectionText(params)?.let { rpcHandler.setPrimarySelection(it) }
+                buildJsonObject {}
+            }
             "OPEN_SETTINGS" -> {
                 val workingDir = params["workingDir"]?.jsonPrimitive?.content ?: ""
                 // Which settings page the tab should land on; absent → landing page.
@@ -607,6 +615,14 @@ class RpcWebSocketClient(
         logger.info("RpcWebSocketClient disposed")
     }
 }
+
+/**
+ * Extracts the selected `text` from SET_PRIMARY_SELECTION params, or null when it
+ * is missing, empty or not a string. Kept top-level and internal so it can be
+ * unit-tested without a live WebSocket (see PrimarySelectionParamsTest).
+ */
+internal fun parsePrimarySelectionText(params: JsonObject): String? =
+    (params["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
 
 /**
  * Extracts the "paths" string array from REFRESH_FILES params, skipping any

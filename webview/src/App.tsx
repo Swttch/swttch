@@ -22,6 +22,7 @@ import { useEditHistoryCommands } from './hooks/useEditHistoryCommands';
 import { ZoomIndicator } from './components/ZoomIndicator';
 import { HelpModalHost } from './components/HelpModal';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
+import { usePrimarySelectionReporter } from './hooks/usePrimarySelectionReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { useNotificationSoundMigration } from './hooks/useNotificationSound';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
@@ -43,6 +44,9 @@ function AppContent() {
   useEditHistoryCommands();
   // Tell the backend which panel is active so panel-scoped pushes route here.
   usePanelFocusReporter();
+  // The IDE's embedded browser (2026.2+) no longer fills the Linux PRIMARY
+  // selection, so what the user selects is reported for the host to fill it.
+  usePrimarySelectionReporter();
   // The CLI reports the usage windows as a turn runs; take them instead of polling.
   useUsageStreamRefresh();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.

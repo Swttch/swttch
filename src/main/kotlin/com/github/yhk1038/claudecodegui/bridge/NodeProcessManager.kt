@@ -292,6 +292,18 @@ class NodeProcessManager(
          * built — chat panels mount lazily (issue #301).
          */
         suspend fun setTabName(panelId: String, name: String)
+
+        /**
+         * Put [text], what the user just selected in a chat panel, into the system
+         * selection: the Linux PRIMARY selection that a middle click pastes from
+         * (#513).
+         *
+         * The webview reports it because the IDE's embedded browser (2026.2 and
+         * later) runs in a process of its own and no longer fills that buffer. A
+         * platform with no such buffer ignores the call, and nothing is answered
+         * either way: an unplaced selection costs the user one copy.
+         */
+        suspend fun setPrimarySelection(text: String)
         /** @param path settings page to land on (e.g. "/settings/sponsor"); null → landing page. */
         suspend fun openSettings(workingDir: String, path: String? = null)
         suspend fun openTerminal(workingDir: String)

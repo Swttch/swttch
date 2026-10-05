@@ -532,6 +532,13 @@ export class JetBrainsBridge implements Bridge {
     // comment existed.
     await this.request(MessageType.FOCUS_SESSION, params);
   }
+
+  async setPrimarySelection(params: { text: string; workingDir?: string }): Promise<void> {
+    // A request for the same reason as focusSession: a message with no `id` never
+    // reaches the IDE's RPC dispatcher, so a notification would be dropped here.
+    // `workingDir` is what picks the IDE when several share this backend.
+    await this.request(MessageType.SET_PRIMARY_SELECTION, params);
+  }
 }
 
 /**
@@ -555,6 +562,12 @@ export function parseProjectRoots(params: Record<string, unknown> | undefined): 
  * masked too as defense in depth.
  */
 export function redactRpcLog(request: JsonRpcRequest): string {
+  if (request.method === MessageType.SET_PRIMARY_SELECTION) {
+    // The text is whatever the user selected in the chat, so only its length is logged (#513).
+    const text = request.params?.['text'];
+    const length = typeof text === 'string' ? text.length : 0;
+    return JSON.stringify({ ...request, params: { ...request.params, text: `<redacted:${length} chars>` } });
+  }
   return JSON.stringify(request).replace(/([?&](?:pair|token)=)[^"&\\]+/gi, '$1<redacted>');
 }
 

@@ -819,6 +819,17 @@ export enum MessageType {
    * mounted. inbound webview→backend, then Node↔Kotlin
    */
   SET_TAB_NAME = 'SET_TAB_NAME',
+  /**
+   * The webview reports the text the user just selected, carrying { text,
+   * workingDir }, so the host can put it into the Linux PRIMARY selection (the
+   * buffer a middle click pastes from). Reported by the webview because the
+   * embedded browser of IDE 2026.2 and later runs in its own process and no
+   * longer fills that buffer itself; the browser bridge has nothing to do, as
+   * a browser fills it on its own. Fire-and-forget: nothing is answered, and a
+   * selection that cannot be placed is simply not placed. inbound
+   * webview→backend, then Node↔Kotlin
+   */
+  SET_PRIMARY_SELECTION = 'SET_PRIMARY_SELECTION',
   /** The project list payload in response to GET_PROJECTS. */
   PROJECTS_LIST = 'PROJECTS_LIST',
 

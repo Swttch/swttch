@@ -228,4 +228,31 @@ export interface Bridge {
    * case where doing nothing is the honest answer.
    */
   focusSession(params: { panelId?: string }): Promise<void>;
+
+  /**
+   * Put [text], what the user just selected on screen, into the Linux PRIMARY
+   * selection: the buffer that a middle click pastes from, which fills as soon
+   * as something is selected, without a copy.
+   *
+   * A Bridge capability because WHO fills that buffer differs per environment
+   * (#513):
+   *
+   *   JetBrains:  the IDE's embedded browser used to fill it. From IDE 2026.2 the
+   *               browser runs in a process of its own and does not, so a word
+   *               selected in the chat reached no buffer at all. The host fills
+   *               it, from the text the webview reports.
+   *   Standalone: a real browser fills the buffer itself, exactly as it does for
+   *               any other page, so there is nothing left to do. That makes the
+   *               no-op honest: the question "would this user lose something
+   *               without it" has the answer no.
+   *
+   * [workingDir] routes the request to the IDE host serving that project when
+   * several IDEs share one backend; the buffer must be filled on the machine the
+   * user is looking at.
+   *
+   * Best-effort by contract. Nothing is promised to the caller: a platform with
+   * no such buffer (macOS, Windows) or a host that cannot reach it ignores the
+   * request, and a selection that was not placed costs the user one copy.
+   */
+  setPrimarySelection(params: { text: string; workingDir?: string }): Promise<void>;
 }

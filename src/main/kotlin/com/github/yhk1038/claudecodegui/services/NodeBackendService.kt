@@ -267,6 +267,10 @@ class NodeBackendService : Disposable {
                 any()?.setTabName(panelId, name) ?: warn("setTabName")
             }
 
+            override suspend fun setPrimarySelection(text: String) {
+                any()?.setPrimarySelection(text) ?: warn("setPrimarySelection")
+            }
+
             override suspend fun openSettings(workingDir: String, path: String?) {
                 any()?.openSettings(workingDir, path) ?: warn("openSettings")
             }

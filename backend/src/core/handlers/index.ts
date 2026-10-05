@@ -75,6 +75,7 @@ import { createSessionHandler } from './createSession';
 import { openNewTabHandler } from './openNewTab';
 import { openSessionHandler } from './openSession';
 import { setTabNameHandler } from './setTabName';
+import { setPrimarySelectionHandler } from './setPrimarySelection';
 import { openSettingsHandler } from './openSettings';
 import { restartBackendHandler } from './restartBackend';
 import { openTerminalHandler } from './openTerminal';
@@ -418,6 +419,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_TAB_NAME:
       await setTabNameHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_PRIMARY_SELECTION:
+      await setPrimarySelectionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.OPEN_SETTINGS:
       await openSettingsHandler(connectionId, message, connections, bridge);

@@ -370,6 +370,13 @@ describe('redactRpcLog', () => {
   const req = (method: string, params: Record<string, unknown>) =>
     ({ jsonrpc: '2.0' as const, id: 'rpc-7', method, params });
 
+  it('keeps the text of a SET_PRIMARY_SELECTION out of the log and reports only its length', () => {
+    const out = redactRpcLog(req(MessageType.SET_PRIMARY_SELECTION, { text: 'my secret words', workingDir: '/p' }));
+    expect(out).not.toContain('secret');
+    expect(out).toContain('<redacted:15 chars>');
+    expect(out).toContain('"workingDir":"/p"');
+  });
+
   it('masks the pairing code carried in an OPEN_URL url', () => {
     const url =
       'http://localhost:33741/sessions/abc?workingDir=%2F%2Fwsl.localhost%2FUbuntu&pair=23C0UmxnhcediFn6MRYLr_a-I9kDBtxt';
@@ -431,6 +438,38 @@ describe('JetBrainsBridge.focusSession', () => {
     // The id is the whole point: without it the IDE files this under
     // notifications and the dispatcher never sees it.
     expect(sent.id).toBeTruthy();
+  });
+});
+
+describe('JetBrainsBridge.setPrimarySelection', () => {
+  it('sends a request carrying the selected text, since a notification would never reach the IDE dispatcher', () => {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+
+    void bridge.setPrimarySelection({ text: 'model', workingDir: '/proj' }).catch(() => {});
+
+    expect(ws.send).toHaveBeenCalledTimes(1);
+    const sent = sentMessage(ws);
+    expect(sent?.method).toBe(MessageType.SET_PRIMARY_SELECTION);
+    expect(sent?.params).toEqual({ text: 'model', workingDir: '/proj' });
+    expect(sent?.id).toBeTruthy();
+  });
+
+  it('goes to the IDE that serves the project, so the buffer is filled on the screen being used', () => {
+    const bridge = new JetBrainsBridge();
+    const wsA = createMockWs();
+    const wsB = createMockWs();
+    bridge.addRpcClient(wsA as never);
+    bridge.addRpcClient(wsB as never);
+    registerRoots(wsA, ['/projA']);
+    registerRoots(wsB, ['/projB']);
+
+    void bridge.setPrimarySelection({ text: 'model', workingDir: '/projB/src' }).catch(() => {});
+
+    expect(wsB.send).toHaveBeenCalledTimes(1);
+    expect(wsA.send).not.toHaveBeenCalled();
+    expect(sentMethod(wsB)).toBe(MessageType.SET_PRIMARY_SELECTION);
   });
 });
 

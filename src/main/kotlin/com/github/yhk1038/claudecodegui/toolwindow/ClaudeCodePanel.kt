@@ -3,6 +3,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
+import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.TabActivity
 import com.github.yhk1038.claudecodegui.editor.IdeSelectionDispatcher
@@ -116,6 +117,9 @@ class ClaudeCodePanel(
 ) : JPanel(BorderLayout()), Disposable {
 
     private val logger = Logger.getInstance(ClaudeCodePanel::class.java)
+
+    // Fills the Linux PRIMARY selection with what the webview reports as selected (#513).
+    private val systemSelectionWriter = SystemSelectionWriter()
 
     // Browser is owned by ClaudeCodeBrowserService, NOT by this panel.
     // This allows the browser to survive dispose-recreate cycles during tab move/split.
@@ -2233,6 +2237,16 @@ class ClaudeCodePanel(
                     ClaudeCodeVirtualFile.findExisting(panelId)?.setDisplayName(resolved)
                     ToolWindowHost.relabelTab(project, panelId, resolved)
                     logger.info("Tab named (panelId=$panelId, name='$name')")
+                }
+            }
+
+            override suspend fun setPrimarySelection(text: String) {
+                // On the EDT like the rest of the IDE's clipboard work. Debug level: this
+                // runs for every selection, and an unplaced one is not worth a line above it.
+                ApplicationManager.getApplication().invokeLater {
+                    if (!systemSelectionWriter.write(text)) {
+                        logger.debug("System selection not set (no such buffer here, or it refused)")
+                    }
                 }
             }
 

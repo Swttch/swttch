@@ -515,6 +515,16 @@ if ($dialog.ShowDialog() -eq 'OK') {
     // before it ever reaches here.
   }
 
+  async setPrimarySelection(_params: { text: string; workingDir?: string }): Promise<void> {
+    // Nothing for the backend to fill: a real browser puts whatever the user
+    // selects into the PRIMARY selection on its own, for every page it shows.
+    // The IDE needs this call only because its embedded browser (2026.2 and
+    // later, running in a process of its own) stopped doing that (#513).
+    //
+    // Not a gap: a standalone user loses nothing without it, which is what
+    // separates this no-op from a feature that was merely left out here.
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     // The terminal is opened *in* this project, so its choice is resolved per
     // project too — global still applies when the project sets none (issue #7).
