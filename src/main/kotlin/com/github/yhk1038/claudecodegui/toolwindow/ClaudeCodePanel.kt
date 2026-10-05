@@ -1,8 +1,10 @@
 package com.github.yhk1038.claudecodegui.toolwindow
 
 import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
+import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
+import com.github.yhk1038.claudecodegui.bridge.SystemClipboardReader
 import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.TabActivity
@@ -120,6 +122,7 @@ class ClaudeCodePanel(
 
     // Fills the Linux PRIMARY selection with what the webview reports as selected (#513).
     private val systemSelectionWriter = SystemSelectionWriter()
+    private val systemClipboardReader = SystemClipboardReader()
 
     // Browser is owned by ClaudeCodeBrowserService, NOT by this panel.
     // This allows the browser to survive dispose-recreate cycles during tab move/split.
@@ -2250,6 +2253,19 @@ class ClaudeCodePanel(
                 }
             }
 
+            override suspend fun getClipboard(): ClipboardContents {
+                // On the EDT like the rest of the IDE's clipboard work: on a Wayland desktop
+                // a window may read the clipboard only while it has the keyboard focus, and
+                // the user pressed paste inside this window a moment ago. A deadline keeps
+                // a clipboard that never answers from leaving the paste waiting for good.
+                val result = CompletableDeferred<ClipboardContents>()
+                ApplicationManager.getApplication().invokeLater {
+                    result.complete(systemClipboardReader.read())
+                }
+                return withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { result.await() }
+                    ?: ClipboardContents.EMPTY.also { logger.warn("Clipboard read timed out") }
+            }
+
             override suspend fun openSettings(workingDir: String, path: String?) {
                 ApplicationManager.getApplication().invokeLater {
                     val targetProject = findProjectByBasePath(workingDir) ?: project
@@ -2751,6 +2767,13 @@ class ClaudeCodePanel(
          * `wsl.exe` start, while still bounding the formerly-unbounded wait. See issue #97.
          */
         private const val BACKEND_START_TIMEOUT_MS = 30_000L
+
+        /**
+         * How long a paste waits for the system clipboard to be read (#278). A read is
+         * instant when it works; this only ends the wait for a clipboard that never
+         * answers, which would otherwise leave the paste hanging with nothing shown.
+         */
+        private const val CLIPBOARD_READ_TIMEOUT_MS = 3_000L
 
         /**
          * How long the placeholder may stay over the browser before it is cleared

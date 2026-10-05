@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { JetBrainsBridge, parseProjectRoots, redactRpcLog } from '../jetbrains-bridge';
+import { JetBrainsBridge, parseClipboardResult, parseProjectRoots, redactRpcLog } from '../jetbrains-bridge';
 import { MessageType } from '../../shared';
 import * as settings from '../../core/features/settings';
 
@@ -470,6 +470,50 @@ describe('JetBrainsBridge.setPrimarySelection', () => {
     expect(wsB.send).toHaveBeenCalledTimes(1);
     expect(wsA.send).not.toHaveBeenCalled();
     expect(sentMethod(wsB)).toBe(MessageType.SET_PRIMARY_SELECTION);
+  });
+});
+
+describe('JetBrainsBridge.getClipboard', () => {
+  it('sends a request naming the project, and goes to the IDE that serves it', () => {
+    const bridge = new JetBrainsBridge();
+    const wsA = createMockWs();
+    const wsB = createMockWs();
+    bridge.addRpcClient(wsA as never);
+    bridge.addRpcClient(wsB as never);
+    registerRoots(wsA, ['/projA']);
+    registerRoots(wsB, ['/projB']);
+
+    void bridge.getClipboard({ workingDir: '/projB/src' }).catch(() => {});
+
+    expect(wsA.send).not.toHaveBeenCalled();
+    expect(wsB.send).toHaveBeenCalledTimes(1);
+    const sent = sentMessage(wsB);
+    expect(sent?.method).toBe(MessageType.GET_CLIPBOARD);
+    expect(sent?.params).toEqual({ workingDir: '/projB/src' });
+    expect(sent?.id).toBeTruthy();
+  });
+});
+
+describe('parseClipboardResult', () => {
+  it('reads the text and the image the IDE answered with', () => {
+    expect(
+      parseClipboardResult({ text: 'hello', image: { mimeType: 'image/png', base64: 'AAAA' } }),
+    ).toEqual({ text: 'hello', image: { mimeType: 'image/png', base64: 'AAAA' } });
+  });
+
+  it('counts a missing or empty field as "not on the clipboard"', () => {
+    expect(parseClipboardResult({})).toEqual({ text: null, image: null });
+    expect(parseClipboardResult({ text: '', image: null })).toEqual({ text: null, image: null });
+  });
+
+  it('drops an image that lacks a type or its bytes, so the webview never builds a broken attachment', () => {
+    expect(parseClipboardResult({ image: { mimeType: 'image/png' } }).image).toBeNull();
+    expect(parseClipboardResult({ image: { base64: 'AAAA' } }).image).toBeNull();
+    expect(parseClipboardResult({ image: 'AAAA' }).image).toBeNull();
+  });
+
+  it('ignores fields of the wrong type', () => {
+    expect(parseClipboardResult({ text: 42, image: 7 })).toEqual({ text: null, image: null });
   });
 });
 

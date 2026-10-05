@@ -2,7 +2,7 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | **Español** | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_Última actualización: 2026-08-22_
+_Última actualización: 2026-10-05_
 
 ## Síntomas
 
@@ -20,21 +20,43 @@ Esto no se limita al texto. **Las imágenes, como las capturas de pantalla, fall
 
 ## Entornos afectados
 
-Ocurre en Linux, en una sesión de Wayland, sobre el escritorio KDE Plasma.
+Ocurre en Linux, en una sesión de Wayland, cuando el propio IDE se ejecuta como un programa nativo de Wayland.
 
-Hasta ahora se ha confirmado en Fedora 44, Ubuntu 26.04 y CachyOS.
+El ajuste predeterminado `-Dawt.toolkit.name=auto` puede elegir ese modo, y `WLToolkit` lo fuerza.
+
+Hasta ahora se ha reportado en Fedora 44, Ubuntu 26.04 y CachyOS, todos con el escritorio KDE Plasma.
+
+Reprodujimos el mismo síntoma en una sesión de prueba con el compositor sway, tanto con el IDE 2025.3.4 como con el IDE 2026.2.3.
 
 Una persona cambió a GNOME y el problema desapareció.
 
 ## Causa
 
-Al parecer, el portapapeles no está conectado entre el soporte de Wayland del JetBrains Runtime (Project Wakefield) y JCEF, de modo que el IDE y JCEF acaban mirando portapapeles distintos.
+La pantalla del plugin la dibuja JCEF, el motor de navegador que va dentro del IDE.
 
-La interfaz del plugin se dibuja sobre JCEF, y por eso se ve afectada.
+En los IDE que probamos (2025.3.4 y 2026.2.3), JCEF se ejecuta como un proceso aparte, y ese proceso llega a la pantalla a través de XWayland, la capa de compatibilidad para programas X11.
+
+La ventana del IDE es una ventana nativa de Wayland.
+
+El texto copiado fuera del plugin está en el portapapeles de Wayland.
+
+XWayland entrega el portapapeles de Wayland a los programas X11 solo mientras una ventana X11 tiene el foco.
+
+La ventana del IDE es una ventana de Wayland, así que esa entrega nunca ocurre y JCEF ve un portapapeles vacío.
+
+El texto copiado dentro del plugin queda en el portapapeles de X11, y por eso ese texto se pega sin problemas.
+
+Medimos esa entrega en tres compositores: sway, KWin 5.27.5 y KWin 6.7.5 (Plasma 6.7, la misma serie que en Fedora 44).
+
+En los tres, un programa X11 no podía leer el portapapeles de Wayland mientras una ventana de Wayland tenía el foco, y sí podía leerlo mientras una ventana X11 tenía el foco.
+
+Con `-Dawt.toolkit.name=XToolkit`, la propia ventana del IDE pasa a ser una ventana X11, de modo que el portapapeles se entrega y pegar funciona.
 
 El mismo síntoma se ha reportado en otros plugins de JetBrains que usan JCEF.
 
-Como el portapapeles se pierde antes de llegar al plugin, todavía no hemos encontrado la forma de corregirlo solo con el código del plugin.
+El propio proceso del IDE sí puede leer ese portapapeles, así que las versiones nuevas del plugin se lo piden al IDE cada vez que un pegado llega vacío, y entonces pegar funciona sin ningún ajuste.
+
+Si usas una versión anterior, o un pegado sigue fallando, usa el ajuste de abajo.
 
 ## Cómo solucionarlo
 
@@ -57,6 +79,12 @@ Por eso, **la pantalla puede verse borrosa si usas un escalado fraccionario como
 Es una solución temporal, no un arreglo real.
 
 Si el desenfoque te molesta más que el problema de pegado, puedes revertir el ajuste.
+
+Una persona con Arch Linux (omarchy) reportó que, con este ajuste, las ventanas flotantes del IDE, como los menús emergentes, aparecen en un lugar equivocado.
+
+No pudimos reproducirlo en sway, donde los menús y los emergentes se abrieron en el lugar correcto incluso con un escalado del 150 %.
+
+Si te ocurre, cuéntanos qué escritorio o compositor usas.
 
 ## Cuándo dejará de ocurrir
 

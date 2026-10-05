@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
 import com.github.yhk1038.claudecodegui.bridge.BackendRebooter
+import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.ExtractedResources
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
@@ -270,6 +271,9 @@ class NodeBackendService : Disposable {
             override suspend fun setPrimarySelection(text: String) {
                 any()?.setPrimarySelection(text) ?: warn("setPrimarySelection")
             }
+
+            override suspend fun getClipboard(): ClipboardContents =
+                any()?.getClipboard() ?: run { warn("getClipboard"); ClipboardContents.EMPTY }
 
             override suspend fun openSettings(workingDir: String, path: String?) {
                 any()?.openSettings(workingDir, path) ?: warn("openSettings")

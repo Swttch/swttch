@@ -539,6 +539,37 @@ export class JetBrainsBridge implements Bridge {
     // `workingDir` is what picks the IDE when several share this backend.
     await this.request(MessageType.SET_PRIMARY_SELECTION, params);
   }
+
+  async getClipboard(params: {
+    workingDir?: string;
+  }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }> {
+    const result = await this.request(MessageType.GET_CLIPBOARD, params);
+    return parseClipboardResult(result);
+  }
+}
+
+/**
+ * Read the `text` and `image` out of a GET_CLIPBOARD answer. A field that is
+ * missing, empty or of the wrong shape counts as "not on the clipboard", so an
+ * older IDE that does not know the method (and answers with an error) or a host
+ * that sends something odd costs the user one paste instead of raising a fault.
+ */
+export function parseClipboardResult(
+  result: Record<string, unknown>,
+): { text: string | null; image: { mimeType: string; base64: string } | null } {
+  const text = result['text'];
+  const image = result['image'];
+  const imageFields =
+    typeof image === 'object' && image !== null ? (image as Record<string, unknown>) : null;
+  const mimeType = imageFields?.['mimeType'];
+  const base64 = imageFields?.['base64'];
+  return {
+    text: typeof text === 'string' && text.length > 0 ? text : null,
+    image:
+      typeof mimeType === 'string' && mimeType.length > 0 && typeof base64 === 'string' && base64.length > 0
+        ? { mimeType, base64 }
+        : null,
+  };
 }
 
 /**

@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_Last updated: 2026-08-22_
+_Last updated: 2026-10-05_
 
 ## Symptoms
 
@@ -20,21 +20,43 @@ This is not limited to text. **Images such as screenshots fail the same way.**
 
 ## Affected environments
 
-This happens on Linux, in a Wayland session, on the KDE Plasma desktop.
+This happens on Linux, in a Wayland session, when the IDE itself runs as a native Wayland program.
 
-So far it has been confirmed on Fedora 44, Ubuntu 26.04, and CachyOS.
+The default `-Dawt.toolkit.name=auto` setting can pick that mode, and `WLToolkit` forces it.
+
+So far it has been reported on Fedora 44, Ubuntu 26.04, and CachyOS, all on the KDE Plasma desktop.
+
+We reproduced the same symptom in a test session on the sway compositor, with IDE 2025.3.4 and with IDE 2026.2.3.
 
 One reporter switched to GNOME and the problem went away.
 
 ## Cause
 
-The clipboard does not appear to be connected between the JetBrains Runtime's Wayland support (Project Wakefield) and JCEF, so the IDE and JCEF end up looking at separate clipboards.
+The plugin's screen is drawn by JCEF, the browser engine inside the IDE.
 
-The plugin's UI is drawn on JCEF, which is why it is affected.
+In the IDEs we tested (2025.3.4 and 2026.2.3), JCEF runs as a separate process, and that process reaches the display through XWayland, the compatibility layer for X11 programs.
+
+The IDE window itself is a native Wayland window.
+
+Text copied outside the plugin sits on the Wayland clipboard.
+
+XWayland hands the Wayland clipboard to X11 programs only while an X11 window has the focus.
+
+The IDE window is a Wayland window, so that handover never happens, and JCEF sees an empty clipboard.
+
+Text copied inside the plugin lands on the X11 clipboard, which is why that text pastes fine.
+
+We measured this handover on three compositors: sway, KWin 5.27.5, and KWin 6.7.5 (Plasma 6.7, the same series as on Fedora 44).
+
+On all three, an X11 program could not read the Wayland clipboard while a Wayland window had the focus, and could read it while an X11 window had the focus.
+
+With `-Dawt.toolkit.name=XToolkit`, the IDE window itself becomes an X11 window, so the clipboard is handed over and pasting works.
 
 The same symptom is reported in other JetBrains plugins that use JCEF.
 
-Because the clipboard is handed over before it ever reaches the plugin, we have not found a way to fix this in the plugin's own code.
+The IDE process itself can read that clipboard, so newer plugin versions ask the IDE for it whenever a paste arrives empty, and the paste then works without any setting.
+
+If you are on an older version, or a paste still fails, use the setting below.
 
 ## How to fix it
 
@@ -57,6 +79,12 @@ So **the screen may look blurry if you use fractional scaling such as 125% or 15
 It is a temporary workaround, not a real fix.
 
 If the blurriness bothers you more than the paste problem, you can revert the setting.
+
+One user on Arch Linux (omarchy) reported that with this setting the IDE's floating windows, such as popups, appear in the wrong place.
+
+We could not reproduce that on sway, where menus and popups opened in the right place even at 150% scaling.
+
+If you see it, please tell us which desktop or compositor you use.
 
 ## When will this go away
 

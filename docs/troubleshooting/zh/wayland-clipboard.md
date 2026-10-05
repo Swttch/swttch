@@ -2,7 +2,7 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | **中文** | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_最后更新：2026-08-22_
+_最后更新：2026-10-05_
 
 ## 症状
 
@@ -20,21 +20,43 @@ _最后更新：2026-08-22_
 
 ## 受影响的环境
 
-在 Linux 的 Wayland 会话中使用 KDE Plasma 桌面时会出现。
+在 Linux 的 Wayland 会话中，当 IDE 本身作为原生 Wayland 程序运行时会出现。
 
-目前已在 Fedora 44、Ubuntu 26.04 和 CachyOS 上确认。
+默认的 `-Dawt.toolkit.name=auto` 设置可能会选择这种方式，指定 `WLToolkit` 则会强制使用它。
+
+目前已在 Fedora 44、Ubuntu 26.04 和 CachyOS 上收到报告，全部是 KDE Plasma 桌面。
+
+我们在 sway 合成器上的测试会话中，使用 IDE 2025.3.4 和 IDE 2026.2.3 都复现了同样的症状。
 
 有报告称切换到 GNOME 后问题消失。
 
 ## 原因
 
-JetBrains Runtime 的 Wayland 支持（Project Wakefield）与 JCEF 之间的剪贴板似乎没有打通，导致 IDE 和 JCEF 各自看到不同的剪贴板。
+插件界面由 JCEF 绘制，JCEF 是 IDE 内部的浏览器引擎。
 
-插件界面绘制在 JCEF 之上，因此受到影响。
+在我们测试的 IDE（2025.3.4 和 2026.2.3）中，JCEF 作为单独的进程运行，该进程通过 XWayland（面向 X11 程序的兼容层）连接到显示。
+
+IDE 窗口本身是原生的 Wayland 窗口。
+
+在插件外部复制的文本位于 Wayland 剪贴板中。
+
+只有在某个 X11 窗口拥有焦点期间，XWayland 才会把 Wayland 剪贴板交给 X11 程序。
+
+IDE 窗口是 Wayland 窗口，所以这种交接不会发生，JCEF 看到的是空的剪贴板。
+
+在插件内部复制的文本会进入 X11 剪贴板，所以可以正常粘贴。
+
+我们在 sway、KWin 5.27.5 和 KWin 6.7.5（与 Fedora 44 同属 Plasma 6.7 系列）三种合成器上测量了这种交接。
+
+三者都是：Wayland 窗口拥有焦点时，X11 程序读不到 Wayland 剪贴板；X11 窗口拥有焦点时，则可以读到。
+
+使用 `-Dawt.toolkit.name=XToolkit` 后，IDE 窗口本身变成 X11 窗口，剪贴板得以交接，粘贴随之恢复正常。
 
 其他使用 JCEF 的 JetBrains 插件也报告了同样的症状。
 
-由于剪贴板在到达插件之前就已经断开，我们尚未找到仅靠插件代码修复的方法。
+IDE 进程本身可以读取这个剪贴板，所以新版插件每当粘贴到达时内容为空，就会请求 IDE 代为读取剪贴板，这样无需任何设置即可粘贴。
+
+如果您使用的是旧版本，或者粘贴仍然失败，请使用下面的设置。
 
 ## 解决方法
 
@@ -57,6 +79,12 @@ JetBrains Runtime 的 Wayland 支持（Project Wakefield）与 JCEF 之间的剪
 这是临时的规避方法，并不是真正的修复。
 
 如果模糊比粘贴问题更让您困扰，可以把设置改回去。
+
+有一位使用 Arch Linux（omarchy）的用户报告，启用这项设置后，IDE 的弹出菜单等浮动窗口会出现在错误的位置。
+
+我们在 sway 上没有复现这个问题。即使在 150% 缩放下，菜单和弹出窗口也都出现在正确的位置。
+
+如果您遇到了这种情况，请告诉我们您使用的桌面或合成器。
 
 ## 什么时候会解决
 

@@ -2,7 +2,7 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | **Français**
 
-_Dernière mise à jour : 2026-08-22_
+_Dernière mise à jour : 2026-10-05_
 
 ## Symptômes
 
@@ -20,21 +20,43 @@ Cela ne concerne pas que le texte. **Les images, comme les captures d'écran, é
 
 ## Environnements concernés
 
-Cela se produit sous Linux, dans une session Wayland, sur le bureau KDE Plasma.
+Cela se produit sous Linux, dans une session Wayland, lorsque l'IDE lui-même s'exécute comme un programme Wayland natif.
 
-Cela a été confirmé jusqu'ici sur Fedora 44, Ubuntu 26.04 et CachyOS.
+Le réglage par défaut `-Dawt.toolkit.name=auto` peut choisir ce mode, et `WLToolkit` le force.
+
+Cela a été signalé jusqu'ici sur Fedora 44, Ubuntu 26.04 et CachyOS, toujours sur le bureau KDE Plasma.
+
+Nous avons reproduit le même symptôme dans une session de test avec le compositeur sway, avec l'IDE 2025.3.4 comme avec l'IDE 2026.2.3.
 
 Une personne est passée à GNOME et le problème a disparu.
 
 ## Cause
 
-Le presse-papiers ne semble pas relié entre la prise en charge de Wayland par le JetBrains Runtime (Project Wakefield) et JCEF, si bien que l'IDE et JCEF regardent des presse-papiers distincts.
+L'écran du plugin est dessiné par JCEF, le moteur de navigateur intégré à l'IDE.
 
-L'interface du plugin est dessinée sur JCEF, ce qui explique qu'elle soit touchée.
+Dans les IDE que nous avons testés (2025.3.4 et 2026.2.3), JCEF s'exécute dans un processus séparé, et ce processus atteint l'affichage par XWayland, la couche de compatibilité pour les programmes X11.
+
+La fenêtre de l'IDE est elle-même une fenêtre Wayland native.
+
+Le texte copié en dehors du plugin se trouve dans le presse-papiers Wayland.
+
+XWayland ne transmet le presse-papiers Wayland aux programmes X11 que tant qu'une fenêtre X11 a le focus.
+
+La fenêtre de l'IDE est une fenêtre Wayland, cette transmission n'a donc jamais lieu et JCEF voit un presse-papiers vide.
+
+Le texte copié à l'intérieur du plugin arrive dans le presse-papiers X11, ce qui explique que ce texte se colle sans problème.
+
+Nous avons mesuré cette transmission sur trois compositeurs : sway, KWin 5.27.5 et KWin 6.7.5 (Plasma 6.7, la même série que sur Fedora 44).
+
+Sur les trois, un programme X11 ne pouvait pas lire le presse-papiers Wayland tant qu'une fenêtre Wayland avait le focus, et pouvait le lire tant qu'une fenêtre X11 avait le focus.
+
+Avec `-Dawt.toolkit.name=XToolkit`, la fenêtre de l'IDE devient elle-même une fenêtre X11 : le presse-papiers est transmis et le collage fonctionne.
 
 Le même symptôme est signalé dans d'autres plugins JetBrains qui utilisent JCEF.
 
-Comme le presse-papiers est rompu avant même d'atteindre le plugin, nous n'avons pas encore trouvé de moyen de corriger cela dans le seul code du plugin.
+Le processus de l'IDE lui-même peut lire ce presse-papiers, donc les versions récentes du plugin le demandent à l'IDE chaque fois qu'un collage arrive vide, et le collage fonctionne alors sans aucun réglage.
+
+Si vous utilisez une version plus ancienne, ou si un collage échoue encore, utilisez le réglage ci-dessous.
 
 ## Comment le corriger
 
@@ -57,6 +79,12 @@ Par conséquent, **l'affichage peut paraître flou si vous utilisez une mise à 
 C'est un contournement temporaire, pas une vraie correction.
 
 Si le flou vous gêne plus que le problème de collage, vous pouvez revenir en arrière.
+
+Une personne sous Arch Linux (omarchy) a signalé qu'avec ce réglage, les fenêtres flottantes de l'IDE, comme les menus contextuels, apparaissent au mauvais endroit.
+
+Nous n'avons pas pu le reproduire sous sway, où les menus et les fenêtres contextuelles s'ouvraient au bon endroit, même avec une mise à l'échelle de 150 %.
+
+Si vous le constatez, dites-nous quel bureau ou quel compositeur vous utilisez.
 
 ## Quand cela disparaîtra-t-il
 

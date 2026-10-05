@@ -255,4 +255,33 @@ export interface Bridge {
    * request, and a selection that was not placed costs the user one copy.
    */
   setPrimarySelection(params: { text: string; workingDir?: string }): Promise<void>;
+
+  /**
+   * What is on the system clipboard right now: its text, and an image if it holds
+   * one. Each is null when the clipboard has none of it.
+   *
+   * Asked when a paste reached the chat input with nothing on the webview's own
+   * clipboard (#278). A Bridge capability because WHO can read the clipboard
+   * differs per environment:
+   *
+   *   JetBrains:  on a Wayland desktop the embedded browser is a separate X11
+   *               process, and the desktop hands the clipboard of a Wayland
+   *               window (the IDE) to X11 programs only while one of THEM has
+   *               the focus, so the browser sees an empty clipboard while the IDE
+   *               process reads the real one. The host reads it for the webview.
+   *   Standalone: a real browser reads its own clipboard, and its paste event
+   *               carries what the user copied, so a request never reaches here
+   *               with anything to find. The honest answer is "nothing", and a
+   *               standalone user loses nothing without it.
+   *
+   * [workingDir] routes the request to the IDE host serving that project when
+   * several IDEs share one backend; the clipboard to read is the one on the
+   * machine the user is looking at.
+   *
+   * Best-effort by contract: a host that cannot reach the clipboard answers with
+   * nothing, which costs the user one paste.
+   */
+  getClipboard(params: {
+    workingDir?: string;
+  }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }>;
 }
