@@ -1321,6 +1321,10 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             uuid: (cliEvent as any).uuid || generateMessageId(),
             timestamp: cliTimestamp ?? new Date().toISOString(),
             message: userMsg as unknown as LoadedMessageDto['message'],
+            // The stream names it `tool_use_result`, the saved session `toolUseResult`.
+            // The renderers read the saved name, so a live tool card carries what a
+            // reloaded one does (the Edit card's line numbers come from it, #508).
+            toolUseResult: (cliEvent as any).tool_use_result,
             sourceToolUseID,
             isSynthetic: (cliEvent as any).isSynthetic === true ? true : undefined,
             isCompactSummary: (cliEvent as any).isCompactSummary === true ? true : undefined,

@@ -4,9 +4,11 @@ import type { Bridge } from './bridge-interface';
 import { readMergedSettings } from '../core/features/settings';
 import { Claude } from '../core/claude';
 import { detectInstalledEditors } from '../core/features/detectEditors';
+import { resolveOpenAtLine } from '../core/features/appDetection/openAtLine';
 import {
   parseCustomIntegrationArguments,
   expandTargetPathArgument,
+  expandLineArguments,
   TargetPathArgument,
 } from '../core/features/appDetection/customIntegration';
 
@@ -19,9 +21,10 @@ export const OPEN_FILES_WITH_CUSTOM = '$custom';
  * operations are no-ops since there is no IDE host.
  */
 export class BrowserBridge implements Bridge {
-  // line/column are accepted for interface parity but can't be honored by the OS
-  // opener (xdg-open/open/explorer) — line focus is a JetBrains-mode feature.
-  async openFile(path: string, _line?: number, _column?: number, workingDir?: string): Promise<void> {
+  // The OS opener (xdg-open/open/explorer) only takes a path, so a line is honored
+  // by asking the chosen editor itself (see resolveOpenAtLine). Without a chosen
+  // editor, or with one that has no way to take a line, the file opens at the top.
+  async openFile(path: string, line?: number, column?: number, workingDir?: string): Promise<void> {
     // Per-project first, global as the fallback: which editor opens a file is an
     // ordinary per-project choice, the same one a terminal user makes (issue #7).
     const { settings } = await readMergedSettings(workingDir);
@@ -34,7 +37,7 @@ export class BrowserBridge implements Bridge {
     // 1) Custom editor: a user-provided executable/app + argument template.
     if (openFilesWith === OPEN_FILES_WITH_CUSTOM && custom?.path) {
       const argv = parseCustomIntegrationArguments(custom.arguments || TargetPathArgument);
-      const args = expandTargetPathArgument(argv, path);
+      const args = expandLineArguments(expandTargetPathArgument(argv, path), line, column);
       return this.launchApp(custom.path, args);
     }
 
@@ -43,6 +46,11 @@ export class BrowserBridge implements Bridge {
       const editors = await detectInstalledEditors();
       const match = editors.find((e) => e.name === openFilesWith);
       if (match) {
+        if (line !== undefined && line > 0) {
+          const atLine = await resolveOpenAtLine(match.id, match.path, path, line, column);
+          if (atLine?.kind === 'url') return this.launchOsDefault(atLine.url);
+          if (atLine?.kind === 'exec') return this.spawnDetached(atLine.command, atLine.args);
+        }
         return this.launchApp(match.path, [path]);
       }
       // Uninstalled/renamed → fall through to the OS default opener.
@@ -76,6 +84,21 @@ export class BrowserBridge implements Bridge {
         }
       }
     });
+  }
+
+  /** Run an editor's launcher directly, detached so it outlives the backend. */
+  private spawnDetached(command: string, args: string[]): Promise<void> {
+    try {
+      const child = spawn(command, args, { stdio: 'ignore', detached: true });
+      // A launcher that is missing reports it on the child, not by throwing.
+      child.on('error', (err) => {
+        console.error('[node-backend]', 'Failed to open file:', err.message);
+      });
+      child.unref();
+    } catch (e) {
+      console.error('[node-backend]', 'Failed to open file:', (e as Error).message);
+    }
+    return Promise.resolve();
   }
 
   /** Open a path with the OS default handler. */

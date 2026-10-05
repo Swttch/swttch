@@ -32,6 +32,15 @@ The setting lives at **Settings → CLI**, at the top.
   **Arguments** field whose `%TARGET_PATH%` token is replaced with the file
   path — the same shape as GitHub Desktop's external-editor UI.
 
+**Opening at a line (#508).** A clicked line number in an Edit card opens the
+file at that line in the editor you picked: VS Code, VS Code Insiders, VSCodium,
+Cursor and Windsurf through their URL scheme, JetBrains IDEs through their
+launcher's `--line`, and Sublime Text and Zed as `path:line`. A custom editor
+can use the `%LINE%` and `%COLUMN%` tokens in its arguments (for example
+`--line %LINE% %TARGET_PATH%`); both are `1` when the file is opened without a
+position. An editor with no way to take a line, and **System default**, open
+the file at the top.
+
 The Terminal App picker in the same tab now lists the terminals it actually
 finds (e.g. Terminal, iTerm2), the same way.
 

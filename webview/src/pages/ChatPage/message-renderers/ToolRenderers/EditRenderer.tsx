@@ -18,10 +18,10 @@ class EditToolUseDto extends ToolUseBlockDto {
 }
 
 interface StructuredPatch {
-    oldStart: number;
-    oldLines: number;
-    newStart: number;
-    newLines: number;
+    oldStart?: number;
+    oldLines?: number;
+    newStart?: number;
+    newLines?: number;
     lines: string[];
 }
 
@@ -38,6 +38,10 @@ enum DiffLineType {
 interface DiffLine {
     type: DiffLineType;
     content: string;
+    // Line numbers in the file before and after the edit. A removed line has
+    // only the old one, an added line only the new one, a context line both.
+    oldNo?: number;
+    newNo?: number;
 }
 
 function parseLine(line: string): DiffLine {
@@ -47,9 +51,21 @@ function parseLine(line: string): DiffLine {
 }
 
 function fromStructuredPatch(patches: StructuredPatch[]): DiffLine[] {
-    return patches.flatMap((patch) => patch.lines.map(parseLine));
+    return patches.flatMap((patch) => {
+        let oldNo = patch.oldStart;
+        let newNo = patch.newStart;
+        return patch.lines.map((raw) => {
+            const line = parseLine(raw);
+            if (line.type !== DiffLineType.Add && oldNo !== undefined) line.oldNo = oldNo++;
+            if (line.type !== DiffLineType.Delete && newNo !== undefined) line.newNo = newNo++;
+            return line;
+        });
+    });
 }
 
+// The fallback diff compares only `old_string` against `new_string`, so its
+// hunk headers count from the top of that snippet, not of the file. Those
+// numbers would point at the wrong lines, so this path carries none.
 function fromDiffText(diffText: string): DiffLine[] {
     return diffText.split('\n')
         .filter((line) => !line.startsWith('---') && !line.startsWith('+++') && !line.startsWith('@@'))
@@ -67,6 +83,24 @@ const prefixMap: Record<DiffLineType, string> = {
     [DiffLineType.Delete]: '-',
     [DiffLineType.Context]: ' ',
 };
+
+function LineNumber({line, digits, path}: {line: DiffLine; digits: number; path: string}) {
+    // A removed line is gone from the edited file, so its number cannot be
+    // jumped to; only lines that still exist are links.
+    const jumpTo = path && line.newNo !== undefined ? line.newNo : undefined;
+    return (
+        <span
+            className={cn(
+                "inline-block text-right select-none pr-2 opacity-60",
+                jumpTo !== undefined && "cursor-pointer hover:underline hover:opacity-100",
+            )}
+            style={{minWidth: `${digits + 1}ch`}}
+            onClick={jumpTo !== undefined ? () => getAdapter().openFile(path, jumpTo) : undefined}
+        >
+            {line.newNo ?? line.oldNo}
+        </span>
+    );
+}
 
 export function EditRenderer(props: RendererProps) {
     const {t} = useTranslation('chatTools');
@@ -113,6 +147,7 @@ export function EditRenderer(props: RendererProps) {
     }, [result, oldString, newString]);
 
     const showDiff = containerWidth >= 400 && diffLines.length > 0;
+    const gutterDigits = diffLines.reduce((max, line) => Math.max(max, String(line.newNo ?? line.oldNo ?? '').length), 0);
 
     return (
         <ToolWrapper message={props.message}>
@@ -135,6 +170,7 @@ export function EditRenderer(props: RendererProps) {
                             <div className="diff-body">
                                 {diffLines.map((line, i) => (
                                     <div key={i} className={`diff-body-line ${lineStyles[line.type]}`}>
+                                        {gutterDigits > 0 && <LineNumber line={line} digits={gutterDigits} path={path}/>}
                                         <div className={`${prefixMap[line.type].trim() ? 'inline-flex' : 'inline-block'} items-center justify-center w-4 select-none bg-surface-pressed/20`}>{prefixMap[line.type]}</div>
                                         {line.content}
                                     </div>
