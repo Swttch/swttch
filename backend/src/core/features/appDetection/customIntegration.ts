@@ -60,6 +60,26 @@ export function expandTargetPathArgument(
   );
 }
 
+/** Tokens in a custom editor's arguments replaced by the line and column to open at (#508). */
+export const LineArgument = '%LINE%';
+export const ColumnArgument = '%COLUMN%';
+
+/**
+ * Replace {@link LineArgument} and {@link ColumnArgument} in argv. A file opened
+ * without a position starts at line 1, column 1, which is where an editor puts
+ * the cursor anyway, so a template like `--line %LINE% %TARGET_PATH%` works for
+ * both a plain open and a jump.
+ */
+export function expandLineArguments(
+  argv: readonly string[],
+  line = 1,
+  column = 1,
+): string[] {
+  return argv.map((arg) =>
+    arg.split(LineArgument).join(String(line)).split(ColumnArgument).join(String(column)),
+  );
+}
+
 /** Whether argv references the target-path placeholder at all. */
 export function hasTargetPathArgument(argv: readonly string[]): boolean {
   return argv.some((a) => a.includes(TargetPathArgument));

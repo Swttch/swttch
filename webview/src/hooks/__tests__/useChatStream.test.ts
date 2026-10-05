@@ -680,6 +680,26 @@ describe('useChatStream', () => {
     });
   });
 
+  describe('tool_use_result on a tool result event (issue #508)', () => {
+    it('carries the stream\'s tool_use_result under the saved session\'s toolUseResult name', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+      const structuredPatch = [{ oldStart: 2, newStart: 2, lines: [' a', '-b', '+c'] }];
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, {
+          type: 'user',
+          uuid: 'tool-result-1',
+          message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'ok' }] },
+          tool_use_result: { structuredPatch },
+        });
+      });
+
+      const msg = result.current.messages.find(m => m.uuid === 'tool-result-1');
+      expect(msg?.toolUseResult).toEqual({ structuredPatch });
+    });
+  });
+
   describe('SERVICE_ERROR 구독', () => {
     it('에러 수신 시 error 상태가 설정된다', () => {
       const { bridge, emit } = createMockBridge();

@@ -31,6 +31,13 @@
   `%TARGET_PATH%` 토큰이 실제 파일 경로로 치환됩니다 — GitHub Desktop의 외부 에디터
   UI와 같은 형태입니다.
 
+**줄로 열기 (#508).** Edit 카드의 줄 번호를 누르면 고른 에디터에서 그 줄로 파일이
+열립니다. VS Code·VS Code Insiders·VSCodium·Cursor·Windsurf는 URL 스킴으로,
+JetBrains IDE는 런처의 `--line`으로, Sublime Text와 Zed는 `경로:줄`로 엽니다.
+직접 지정한 에디터는 인수에 `%LINE%`, `%COLUMN%` 토큰을 쓸 수 있습니다(예:
+`--line %LINE% %TARGET_PATH%`). 위치 없이 파일을 열 때 두 값은 `1`입니다. 줄을
+받을 방법이 없는 에디터와 **시스템 기본**은 파일 맨 위를 엽니다.
+
 같은 탭의 터미널 앱 picker도 이제 실제로 감지된 터미널(예: Terminal, iTerm2)을 같은
 방식으로 나열합니다.
 
