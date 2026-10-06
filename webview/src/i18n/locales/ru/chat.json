@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "Прикрепить файл",
-      "slashCommands": "Слэш-команды",
       "stopGenerating": "Остановить генерацию",
       "sendMessage": "Отправить сообщение"
     },
     "attachMenu": {
-      "image": "Изображение",
-      "file": "Файл",
-      "folder": "Папка"
+      "filesOrPhotos": "Добавить файлы или фото",
+      "folder": "Добавить папку",
+      "slashCommands": "Слэш-команды"
     },
     "attachmentPreview": {
       "fullSize": "Полный размер"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "Контекст {{used}} / {{total}} ({{percent}}%)",
+      "pending": "Контекст {{used}} · Общий размер появится после следующего ответа",
       "remaining": "Осталось {{percent}}% контекста до авто-сжатия.",
-      "tokensUsed": "Использовано токенов: {{tokens}}",
-      "clickToCompact": "Нажмите, чтобы сжать сейчас.",
-      "used": "Использовано {{percent}}%"
+      "clickToCompact": "Нажмите, чтобы сжать сейчас."
     },
     "dragOverlay": {
       "dropHere": "Перетащите файлы или папки сюда"
@@ -106,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "Режимы",
-      "toSwitch": "переключить",
-      "effort": "Усилия"
+      "toSwitch": "переключить"
     },
     "modelTag": {
       "switchModel": "Сменить модель ({{hint}})",
@@ -333,6 +330,10 @@
   },
   "modelSwitch": {
     "selectModel": "Выберите модель",
+    "effort": "Усилия",
+    "hintOpen": "Открыть панель",
+    "hintMoveModel": "Выбор модели",
+    "hintChangeEffort": "Изменить усилия",
     "loadingModels": "Загрузка моделей…",
     "setModelTo": "Модель изменена на {{model}}"
   },

@@ -130,6 +130,7 @@ import { updatePluginHandler } from './updatePlugin';
 import { getClaudeSettingsHandler } from './getClaudeSettings';
 import { saveClaudeSettingsHandler } from './saveClaudeSettings';
 import { setModelHandler } from './setModel';
+import { setEffortHandler } from './setEffort';
 import { setPermissionModeHandler } from './setPermissionMode';
 import { probeFableAvailabilityHandler } from './probeFableAvailability';
 import { getWorkingDirHandler } from './getWorkingDir';
@@ -180,6 +181,7 @@ import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
 import { getMcpServersHandler } from './getMcpServersHandler';
+import { getContextUsageHandler } from './getContextUsageHandler';
 import { getActiveSessionsHandler } from './getActiveSessions';
 import {
   getSessionActivityHandler,
@@ -589,6 +591,9 @@ export async function handleMessage(
     case MessageType.SET_MODEL:
       setModelHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.SET_EFFORT:
+      await setEffortHandler(connectionId, message, connections, bridge);
+      break;
     case MessageType.SET_PERMISSION_MODE:
       setPermissionModeHandler(connectionId, message, connections, bridge);
       break;
@@ -723,6 +728,9 @@ export async function handleMessage(
       break;
     case MessageType.SPONSOR_GATE_ACTIVITY:
       sponsorGateActivityHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_CONTEXT_USAGE:
+      await getContextUsageHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_MCP_SERVERS:
       await getMcpServersHandler(connectionId, message, connections, bridge);

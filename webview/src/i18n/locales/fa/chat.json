@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "پیوست فایل",
-      "slashCommands": "دستورهای اسلش",
       "stopGenerating": "توقف تولید",
       "sendMessage": "ارسال پیام"
     },
     "attachMenu": {
-      "image": "تصویر",
-      "file": "فایل",
-      "folder": "پوشه"
+      "filesOrPhotos": "افزودن فایل یا عکس",
+      "folder": "افزودن پوشه",
+      "slashCommands": "دستورهای اسلش"
     },
     "attachmentPreview": {
       "fullSize": "اندازه کامل"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "زمینه {{used}} / {{total}} ({{percent}}%)",
+      "pending": "زمینه {{used}} · اندازه کل پس از پاسخ بعدی نمایش داده می‌شود",
       "remaining": "{{percent}}٪ از زمینه تا فشرده‌سازی خودکار باقی مانده است.",
-      "tokensUsed": "{{tokens}} توکن استفاده شده",
-      "clickToCompact": "برای فشرده‌سازی اکنون کلیک کنید.",
-      "used": "{{percent}}٪ استفاده شده"
+      "clickToCompact": "برای فشرده‌سازی اکنون کلیک کنید."
     },
     "dragOverlay": {
       "dropHere": "فایل‌ها یا پوشه‌ها را اینجا رها کنید"
@@ -106,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "حالت‌ها",
-      "toSwitch": "برای تغییر",
-      "effort": "تلاش"
+      "toSwitch": "برای تغییر"
     },
     "modelTag": {
       "switchModel": "تغییر مدل ({{hint}})",
@@ -329,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "یک مدل انتخاب کنید",
+    "effort": "تلاش",
+    "hintOpen": "باز کردن پنل",
+    "hintMoveModel": "جابه‌جایی بین مدل‌ها",
+    "hintChangeEffort": "تغییر تلاش",
     "loadingModels": "در حال بارگذاری مدل‌ها…",
     "setModelTo": "مدل روی {{model}} تنظیم شد"
   },

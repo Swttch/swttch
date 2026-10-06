@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
+import { useChatStreamContext } from '@/contexts/ChatStreamContext';
+import { useBridge } from '@/hooks/useBridge';
+import { MessageType } from '@/shared';
 import { useCurrentModel } from '@/hooks/useCurrentModel';
 import {
   EFFORT_AUTO,
@@ -24,8 +27,10 @@ export interface UseEffortReturn {
   /** Whether ultracode is currently engaged. */
   ultracodeEnabled: boolean;
   cycle: () => void;
-  setLevel: (key: string) => void;
-  enableUltracode: () => void;
+  /** Resolves once the level is stored; rejects if the write failed (the settings cache has already rolled back). */
+  setLevel: (key: string) => Promise<void>;
+  /** Same contract as `setLevel`. */
+  enableUltracode: () => Promise<void>;
 }
 
 /**
@@ -50,54 +55,86 @@ export interface UseEffortReturn {
  * Note on persistence: the CLI describes `ultracode` as a per-session flag, but
  * the settings file is a documented way to set it, so a value written here stays
  * on until the slider clears it.
+ *
+ * Two more things keep the slider honest about the session it belongs to.
+ *
+ * - A change is written to the settings file (what a CLI spawned later reads) and
+ *   also told to the CLI that is running now (SET_EFFORT). The file alone never
+ *   reaches a running CLI, which reads it only at startup.
+ * - After a reply, the level the CLI says it ran at (EFFORT_APPLIED) is what the
+ *   slider shows, ahead of the stored setting, until the user moves the slider
+ *   again. The optimistic value is what was asked for; this is what happened.
  */
 export function useEffort(): UseEffortReturn {
   const { settings, updateSetting } = useClaudeSettings();
   const { controlResponse } = useCliConfig();
   const currentModel = useCurrentModel();
+  const { appliedEffort, clearAppliedEffort } = useChatStreamContext();
+  const { send } = useBridge();
 
   const { supportsEffort, levels } = getModelEffortConfig(controlResponse, currentModel);
-  const current = parseEffortLevel(settings.effortLevel, levels);
+  // What the last reply ran at wins over what was stored; null until there is a reply.
+  const reportedLevel = appliedEffort ?? null;
+  const current = parseEffortLevel(reportedLevel ?? settings.effortLevel, levels);
 
   const ultracodeAvailable =
     supportsEffort && isUltracodeAvailable(levels, settings.disableWorkflows);
-  const ultracodeEnabled = ultracodeAvailable && settings.ultracode === true;
+  // Ultracode runs at its xhigh floor. A reply that ran at another level means it is not in effect.
+  const ultracodeEnabled =
+    ultracodeAvailable && settings.ultracode === true &&
+    (reportedLevel === null || reportedLevel === ULTRACODE_EFFORT);
 
   const def: EffortLevelDef = ultracodeEnabled
     ? { key: 'ultracode', label: ULTRACODE_LABEL, filledDots: levels.length, totalDots: levels.length }
     : getEffortDef(current, levels);
 
-  const enableUltracode = useCallback(() => {
-    if (!ultracodeAvailable) return;
-    // Order mirrors Cursor: pin xhigh effort first, then raise the flag.
-    void (async () => {
-      await updateSetting('effortLevel', ULTRACODE_EFFORT);
-      await updateSetting('ultracode', true);
-    })();
-  }, [ultracodeAvailable, updateSetting]);
+  /**
+   * Tells the CLI that is running now. The change is already stored, which is all a CLI
+   * spawned later needs, so a failure here must not undo it or surface as an error.
+   */
+  const tellRunningCli = useCallback(async (change: { effortLevel?: string | null; ultracode?: boolean }) => {
+    try {
+      await send(MessageType.SET_EFFORT, change);
+    } catch (error) {
+      console.warn('[useEffort] Could not tell the running CLI about the effort change:', error);
+    }
+  }, [send]);
 
-  const setLevel = useCallback((key: string) => {
+  const enableUltracode = useCallback(async () => {
+    if (!ultracodeAvailable) return;
+    // The user has chosen: the last reply's level no longer describes what the slider asks for.
+    clearAppliedEffort?.();
+    // Order mirrors Cursor: pin xhigh effort first, then raise the flag.
+    await updateSetting('effortLevel', ULTRACODE_EFFORT);
+    await updateSetting('ultracode', true);
+    await tellRunningCli({ effortLevel: ULTRACODE_EFFORT, ultracode: true });
+  }, [ultracodeAvailable, updateSetting, clearAppliedEffort, tellRunningCli]);
+
+  const setLevel = useCallback(async (key: string) => {
     if (!supportsEffort) return;
-    void (async () => {
-      // Clear the ultracode flag first if it was engaged, mirroring Cursor's
-      // setEffortLevel (which writes ultracode:null before the new level).
-      if (settings.ultracode === true) {
-        await updateSetting('ultracode', null);
-      }
-      // `auto` is the plugin-side sentinel — persist it as `null` (CLI default).
-      await updateSetting('effortLevel', key === EFFORT_AUTO ? null : key);
-    })();
-  }, [supportsEffort, settings.ultracode, updateSetting]);
+    clearAppliedEffort?.();
+    // Clear the ultracode flag first if it was engaged, mirroring Cursor's
+    // setEffortLevel (which writes ultracode:null before the new level).
+    const ultracodeWasOn = settings.ultracode === true;
+    if (ultracodeWasOn) {
+      await updateSetting('ultracode', null);
+    }
+    // `auto` is the plugin-side sentinel — persist it as `null` (CLI default).
+    const level = key === EFFORT_AUTO ? null : key;
+    await updateSetting('effortLevel', level);
+    await tellRunningCli(ultracodeWasOn ? { effortLevel: level, ultracode: false } : { effortLevel: level });
+  }, [supportsEffort, settings.ultracode, updateSetting, clearAppliedEffort, tellRunningCli]);
 
   const cycle = useCallback(() => {
     if (!supportsEffort) return;
-    const step = nextEffortStep(settings.effortLevel, ultracodeEnabled, levels, ultracodeAvailable);
+    const step = nextEffortStep(reportedLevel ?? settings.effortLevel, ultracodeEnabled, levels, ultracodeAvailable);
+    // Fire and forget: a failed write has already rolled the settings cache back.
     if (step.kind === 'ultracode') {
-      enableUltracode();
+      void enableUltracode().catch(() => undefined);
     } else {
-      setLevel(step.key);
+      void setLevel(step.key).catch(() => undefined);
     }
-  }, [supportsEffort, settings.effortLevel, ultracodeEnabled, levels, ultracodeAvailable, enableUltracode, setLevel]);
+  }, [supportsEffort, reportedLevel, settings.effortLevel, ultracodeEnabled, levels, ultracodeAvailable, enableUltracode, setLevel]);
 
   return {
     supportsEffort,

@@ -181,7 +181,6 @@ export function ChatInput() {
   const { settings: appSettings } = useSettings();
 
   const { cycle: cycleEffort } = useEffort();
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showModelSwitch, setShowModelSwitch] = useState(false);
   const [modelSwitchQuery, setModelSwitchQuery] = useState<string | null>(null);
   const [showModePanel, setShowModePanel] = useState(false);
@@ -283,15 +282,6 @@ export function ChatInput() {
       window.removeEventListener('drop', handleWindowDrop);
     };
   }, [handleDrop, bridge, setIsDragOver]);
-
-  // 커맨드 팔레트 "Attach file..." 항목 연동
-  useEffect(() => {
-    const handleAttachFromPalette = () => {
-      setShowAttachMenu(true);
-    };
-    window.addEventListener('command-palette:attach-files', handleAttachFromPalette);
-    return () => window.removeEventListener('command-palette:attach-files', handleAttachFromPalette);
-  }, []);
 
   // 커맨드 팔레트 "Schedule a message" 항목 연동: 예약 전송 팝오버를 연다.
   // 열기는 누구나 가능하고, 후원자 게이트는 팝오버 제출 시점에 걸린다.
@@ -1483,6 +1473,12 @@ export function ChatInput() {
         )}
         </>}
         barStart={<>
+            {/* Add menu (attach + slash commands), left of the permission mode tag */}
+            <AttachMenu
+              addFileAttachment={addFileAttachment}
+              addFolderAttachment={addFolderAttachment}
+              onSlashCommand={palette.handleSlashButtonClick}
+            />
             {/* On mobile the wrapper drops `relative` so the panel anchors to the
                 input box (like the model panel) and can span its full width;
                 on desktop it stays a compact panel above the mode tag. */}
@@ -1498,7 +1494,6 @@ export function ChatInput() {
               )}
               <InputModeTag mode={mode} onClick={() => setShowModePanel((v) => !v)} />
             </div>
-            <ContextWindowTag onClick={handleCompact} disabled={isStreaming} />
             {/* IDE 컨텍스트 태그: 현재 열린 파일/선택을 표시하고 포함 여부를 토글 */}
             <IdeSelectionTag />
         </>}
@@ -1506,21 +1501,13 @@ export function ChatInput() {
             {/* 모델 태그는 좁아지면 말줄임되고(min-w-0 — 프레임이 준다), 액션
                 버튼은 항상 온전히 남아야 하므로 shrink-0으로 보호한다 (issue #217). */}
             <ModelTag />
+            <ContextWindowTag onClick={handleCompact} disabled={isStreaming} />
             <div className="relative shrink-0">
-            <AttachMenu
-              addImageAttachment={addImageAttachment}
-              addFileAttachment={addFileAttachment}
-              addFolderAttachment={addFolderAttachment}
-              isOpen={showAttachMenu}
-              onClose={() => setShowAttachMenu(false)}
-            />
             <ActionButtons
               mode={mode}
               isActive={isActive}
               disabled={disabled}
               hasValue={hasValue}
-              onAttach={() => setShowAttachMenu(prev => !prev)}
-              onSlashCommand={palette.handleSlashButtonClick}
               onSubmit={() => submitComposer()}
               onStop={onStop}
             />

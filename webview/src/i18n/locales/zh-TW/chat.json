@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "附加檔案",
-      "slashCommands": "斜線指令",
       "stopGenerating": "停止產生",
       "sendMessage": "傳送訊息"
     },
     "attachMenu": {
-      "image": "圖片",
-      "file": "檔案",
-      "folder": "資料夾"
+      "filesOrPhotos": "新增檔案或照片",
+      "folder": "新增資料夾",
+      "slashCommands": "斜線指令"
     },
     "attachmentPreview": {
       "fullSize": "原始大小"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "上下文 {{used}} / {{total}} ({{percent}}%)",
+      "pending": "上下文 {{used}} · 總大小將在下一次回覆後顯示",
       "remaining": "距離自動壓縮還剩 {{percent}}% 的上下文。",
-      "tokensUsed": "已使用 {{tokens}} 個 token",
-      "clickToCompact": "點選以立即壓縮。",
-      "used": "已使用 {{percent}}%"
+      "clickToCompact": "點選以立即壓縮。"
     },
     "dragOverlay": {
       "dropHere": "將檔案或資料夾拖放到此處"
@@ -106,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "模式",
-      "toSwitch": "切換",
-      "effort": "強度"
+      "toSwitch": "切換"
     },
     "modelTag": {
       "switchModel": "切換模型（{{hint}}）",
@@ -329,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "選擇模型",
+    "effort": "強度",
+    "hintOpen": "開啟面板",
+    "hintMoveModel": "切換模型",
+    "hintChangeEffort": "調整強度",
     "loadingModels": "正在載入模型…",
     "setModelTo": "已將模型設為 {{model}}"
   },

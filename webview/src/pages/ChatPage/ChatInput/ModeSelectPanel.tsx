@@ -1,8 +1,6 @@
 import { InputMode, INPUT_MODES } from '../../../types/chatInput';
 import { ModeIcon } from './ModeIcon';
 import { CheckIcon } from '@heroicons/react/16/solid';
-import { EffortSlider, EffortIcon } from '@/components/EffortSlider';
-import { useEffort } from '@/hooks/useEffort';
 import { isMobile } from '@/config/environment';
 import { useTranslation } from '@/i18n';
 
@@ -14,13 +12,13 @@ interface Props {
 
 /**
  * 모드 선택 패널. 입력창 모드 태그 클릭 시 위로 떠서, 가용한 권한 모드를
- * 아이콘+라벨+설명과 함께 보여준다(커서 확장 레이아웃 기준). 구분선 아래에는
- * 슬래시 커맨드 패널과 동일한 Effort 슬라이더를 둔다(모델이 effort를 지원할 때만).
+ * 아이콘+라벨+설명과 함께 보여준다(커서 확장 레이아웃 기준).
  * 현재 모드는 하이라이트 + 체크로 표시한다.
+ *
+ * The effort slider now lives in the model panel (ModelSwitchOverlay): effort is a property of the model.
  */
 export function ModeSelectPanel(props: Props) {
   const { modes, currentMode, onSelect } = props;
-  const { supportsEffort, def } = useEffort();
   const { t } = useTranslation('chat');
 
   return (
@@ -58,22 +56,6 @@ export function ModeSelectPanel(props: Props) {
           </button>
         );
       })}
-
-      {/* 구분선 아래 Effort 슬라이더 (모델이 effort 지원 시). 슬래시 커맨드 패널과 동일 컴포넌트. */}
-      {supportsEffort && (
-        <>
-          <div className="mx-1 my-1 border-t border-border-subtle" />
-          <div className="mx-1 flex items-center gap-2.5 rounded-md px-2.5 py-2">
-            <span className="flex-shrink-0 text-text-secondary">
-              <EffortIcon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1 text-[0.9rem] font-medium text-text-primary">
-              {t('chatInput.modeSelectPanel.effort')} <span className="font-normal text-text-tertiary">({def.label})</span>
-            </div>
-            <EffortSlider />
-          </div>
-        </>
-      )}
     </div>
   );
 }

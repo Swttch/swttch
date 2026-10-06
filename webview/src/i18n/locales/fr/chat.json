@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "Joindre un fichier",
-      "slashCommands": "Commandes slash",
       "stopGenerating": "Arrêter la génération",
       "sendMessage": "Envoyer le message"
     },
     "attachMenu": {
-      "image": "Image",
-      "file": "Fichier",
-      "folder": "Dossier"
+      "filesOrPhotos": "Ajouter des fichiers ou des photos",
+      "folder": "Ajouter le dossier",
+      "slashCommands": "Commandes slash"
     },
     "attachmentPreview": {
       "fullSize": "Taille réelle"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "Contexte {{used}} / {{total}} ({{percent}}%)",
+      "pending": "Contexte {{used}} · La taille totale s'affiche après la prochaine réponse",
       "remaining": "{{percent}} % du contexte restant avant la compaction automatique.",
-      "tokensUsed": "{{tokens}} tokens utilisés",
-      "clickToCompact": "Cliquez pour compacter maintenant.",
-      "used": "{{percent}} % utilisé"
+      "clickToCompact": "Cliquez pour compacter maintenant."
     },
     "dragOverlay": {
       "dropHere": "Déposez les fichiers ou dossiers ici"
@@ -106,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "Modes",
-      "toSwitch": "pour changer",
-      "effort": "Effort"
+      "toSwitch": "pour changer"
     },
     "modelTag": {
       "switchModel": "Changer de modèle ({{hint}})",
@@ -329,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "Sélectionner un modèle",
+    "effort": "Effort",
+    "hintOpen": "Ouvrir le panneau",
+    "hintMoveModel": "Changer de modèle",
+    "hintChangeEffort": "Modifier l'effort",
     "loadingModels": "Chargement des modèles…",
     "setModelTo": "Modèle défini sur {{model}}"
   },

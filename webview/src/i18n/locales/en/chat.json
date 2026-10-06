@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "Attach file",
-      "slashCommands": "Slash commands",
       "stopGenerating": "Stop generating",
       "sendMessage": "Send message"
     },
     "attachMenu": {
-      "image": "Image",
-      "file": "File",
-      "folder": "Folder"
+      "filesOrPhotos": "Add files or photos",
+      "folder": "Add folder",
+      "slashCommands": "Slash commands"
     },
     "attachmentPreview": {
       "fullSize": "Full size"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "Context {{used}} / {{total}} ({{percent}}%)",
+      "pending": "Context {{used}} · The total size shows after the next reply",
       "remaining": "{{percent}}% of context remaining until auto-compact.",
-      "tokensUsed": "{{tokens}} tokens used",
-      "clickToCompact": "Click to compact now.",
-      "used": "{{percent}}% used"
+      "clickToCompact": "Click to compact now."
     },
     "dragOverlay": {
       "dropHere": "Drop files or folders here"
@@ -106,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "Modes",
-      "toSwitch": "to switch",
-      "effort": "Effort"
+      "toSwitch": "to switch"
     },
     "modelTag": {
       "switchModel": "Switch model ({{hint}})",
@@ -333,6 +330,10 @@
   },
   "modelSwitch": {
     "selectModel": "Select a model",
+    "effort": "Effort",
+    "hintOpen": "Open panel",
+    "hintMoveModel": "Move model",
+    "hintChangeEffort": "Change effort",
     "loadingModels": "Loading models…",
     "setModelTo": "Set model to {{model}}"
   },

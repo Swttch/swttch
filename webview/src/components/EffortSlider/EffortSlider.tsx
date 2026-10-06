@@ -6,6 +6,12 @@ import { indexFromOffset } from './geometry';
 
 interface Props {
   className?: string;
+  /**
+   * The step to draw instead of the stored one, for a caller that applies steps
+   * after a delay and wants the slider to move right away. Pointer input still
+   * writes immediately and is not routed through this.
+   */
+  index?: number;
 }
 
 // The thumb's travel, expressed for CSS calc(). This is `stepSpan()` from
@@ -28,7 +34,7 @@ const SPAN = '(100% - var(--thumb-size) - 2 * var(--thumb-inset))';
  * drop it in unconditionally.
  */
 export function EffortSlider(props: Props) {
-  const { className } = props;
+  const { className, index: indexOverride } = props;
   const { t } = useTranslation('common');
   const {
     supportsEffort,
@@ -49,9 +55,13 @@ export function EffortSlider(props: Props) {
   // Total steps = real levels + (ultracode ? 1 trailing step : 0).
   const count = levels.length + (ultracodeAvailable ? 1 : 0);
   const ultracodeIndex = ultracodeAvailable ? count - 1 : -1;
-  const currentIndex = ultracodeEnabled
+  const storedIndex = ultracodeEnabled
     ? ultracodeIndex
     : Math.max(0, levels.findIndex((l) => l.key === current));
+  const currentIndex = indexOverride === undefined
+    ? storedIndex
+    : Math.max(0, Math.min(count - 1, indexOverride));
+  const showsUltracode = ultracodeIndex >= 0 && currentIndex === ultracodeIndex;
   const ratio = count > 1 ? currentIndex / (count - 1) : 0;
 
   const thumbLeft = `calc(var(--thumb-inset) + ${ratio} * ${SPAN})`;
@@ -77,12 +87,13 @@ export function EffortSlider(props: Props) {
   };
 
   const applyIndex = (i: number) => {
+    // A failed write has already rolled the settings cache back, so there is nothing to undo here.
     if (i === ultracodeIndex) {
-      enableUltracode();
+      void enableUltracode().catch(() => undefined);
       return;
     }
     const level = levels[i];
-    if (level) setLevel(level.key);
+    if (level) void setLevel(level.key).catch(() => undefined);
   };
 
   const handlePointerDown = (e: PointerEvent<HTMLButtonElement>) => {
@@ -107,7 +118,7 @@ export function EffortSlider(props: Props) {
 
   const rootClass = [
     'effort-slider',
-    ultracodeEnabled && 'effort-slider--ultracode',
+    showsUltracode && 'effort-slider--ultracode',
     className,
   ]
     .filter(Boolean)

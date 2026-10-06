@@ -1,111 +1,164 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import Tippy from '@tippyjs/react/headless';
+import type { Instance } from 'tippy.js';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { basename } from './basename';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-import { ImageAttachSource } from '@/types';
 
 interface Props {
-  addImageAttachment: (file: File, source: ImageAttachSource) => Promise<void>;
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
   addFolderAttachment: (absolutePath: string, folderName: string) => void;
-  isOpen: boolean;
-  onClose: () => void;
+  onSlashCommand: () => void;
 }
 
+const ICON_PROPS = {
+  className: 'w-[15px] h-[15px] shrink-0',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+
+function PlusIcon() {
+  return (
+    <svg {...ICON_PROPS} className="w-[15px] h-[15px]" strokeWidth={2}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function PaperclipIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </svg>
+  );
+}
+
+function SlashSquareIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <rect x="3" y="3" width="18" height="18" rx="3" />
+      <path d="M15 8 9 16" />
+    </svg>
+  );
+}
+
+interface ItemProps {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}
+
+function MenuItem({ icon, label, onClick }: ItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-start text-sm font-normal text-text-primary hover:bg-surface-pressed whitespace-nowrap"
+    >
+      <span className="text-text-secondary flex">{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+/**
+ * The composer's "+" button. Hovering (or focusing, or tapping) it unfolds the
+ * add menu above it: files or photos, a folder, and the slash command panel.
+ * Modelled on Claude Desktop's composer menu.
+ *
+ * Files and photos share one native picker. A picked photo is attached by path
+ * like any other file; the CLI reads it from there. Photos that arrive by paste
+ * or drop still become inline image attachments.
+ */
 export function AttachMenu(props: Props) {
-  const {
-    addImageAttachment,
-    addFileAttachment,
-    addFolderAttachment,
-    isOpen,
-    onClose,
-  } = props;
+  const { addFileAttachment, addFolderAttachment, onSlashCommand } = props;
 
   const { t } = useTranslation('chat');
   const bridge = useBridgeContext();
-  const menuRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const tippyRef = useRef<Instance | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // 외부 클릭 시 메뉴 닫기
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
+  const hide = useCallback(() => tippyRef.current?.hide(), []);
 
-  const handleAttachImage = useCallback(() => {
-    onClose();
-    fileInputRef.current?.click();
-  }, [onClose]);
-
-  const handleAttachFiles = useCallback(async () => {
-    onClose();
+  const pickFiles = useCallback(async () => {
     const response = await bridge.send(MessageType.PICK_FILES, { mode: 'files', multiple: true }) as { paths: string[] } | null;
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFileAttachment(p, basename(p));
     }
-  }, [bridge, addFileAttachment, onClose]);
+  }, [bridge, addFileAttachment]);
 
-  const handleAttachFolders = useCallback(async () => {
-    onClose();
+  const pickFolders = useCallback(async () => {
     const response = await bridge.send(MessageType.PICK_FILES, { mode: 'folders', multiple: true }) as { paths: string[] } | null;
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFolderAttachment(p, basename(p));
     }
-  }, [bridge, addFolderAttachment, onClose]);
+  }, [bridge, addFolderAttachment]);
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    for (const file of Array.from(files)) {
-      await addImageAttachment(file, ImageAttachSource.Button);
-    }
-    e.target.value = ''; // reset for re-selection
-  }, [addImageAttachment]);
+  // The command palette's "Attach file..." item opens the file picker directly, without the menu.
+  useEffect(() => {
+    const handleAttachFromPalette = () => { void pickFiles(); };
+    window.addEventListener('command-palette:attach-files', handleAttachFromPalette);
+    return () => window.removeEventListener('command-palette:attach-files', handleAttachFromPalette);
+  }, [pickFiles]);
 
   return (
-    <div ref={menuRef}>
-      {isOpen && (
-        <div className="absolute bottom-full end-0 mb-1 w-40 py-1 bg-surface-overlay border border-border-default rounded-md shadow-lg z-30">
-          <button onClick={handleAttachImage} className="w-full px-3 py-1.5 text-start text-xs text-text-secondary hover:bg-surface-hover flex items-center gap-2">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-            </svg>
-            {t('chatInput.attachMenu.image')}
-          </button>
-          <button onClick={handleAttachFiles} className="w-full px-3 py-1.5 text-start text-xs text-text-secondary hover:bg-surface-hover flex items-center gap-2">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/>
-            </svg>
-            {t('chatInput.attachMenu.file')}
-          </button>
-          <button onClick={handleAttachFolders} className="w-full px-3 py-1.5 text-start text-xs text-text-secondary hover:bg-surface-hover flex items-center gap-2">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-            {t('chatInput.attachMenu.folder')}
-          </button>
+    <Tippy
+      placement="top-start"
+      interactive
+      trigger="mouseenter focus click"
+      delay={[80, 120]}
+      offset={[0, 6]}
+      appendTo={() => document.body}
+      onCreate={(instance) => { tippyRef.current = instance; }}
+      onShow={() => setIsOpen(true)}
+      onHide={() => setIsOpen(false)}
+      render={(attrs) => (
+        <div
+          className="z-50 min-w-[190px] p-1 bg-surface-overlay border border-border-default rounded-xl shadow-lg"
+          role="menu"
+          {...attrs}
+        >
+          <MenuItem
+            icon={<PaperclipIcon />}
+            label={t('chatInput.attachMenu.filesOrPhotos')}
+            onClick={() => { hide(); void pickFiles(); }}
+          />
+          <MenuItem
+            icon={<FolderIcon />}
+            label={t('chatInput.attachMenu.folder')}
+            onClick={() => { hide(); void pickFolders(); }}
+          />
+          <MenuItem
+            icon={<SlashSquareIcon />}
+            label={t('chatInput.attachMenu.slashCommands')}
+            onClick={() => { hide(); onSlashCommand(); }}
+          />
         </div>
       )}
-
-      {/* Hidden file input - 항상 렌더링 */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/gif,image/webp"
-        multiple
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-    </div>
+    >
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        className={`flex items-center justify-center w-6 h-6 shrink-0 rounded-md text-text-secondary hover:bg-surface-hover ${isOpen ? 'bg-surface-hover' : ''}`}
+      >
+        <PlusIcon />
+      </button>
+    </Tippy>
   );
 }

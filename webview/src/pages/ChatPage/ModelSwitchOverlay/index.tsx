@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { CheckIcon } from '@heroicons/react/24/outline';
+import { EffortIcon, EffortSlider } from '@/components/EffortSlider';
+import { useEscapeLayer } from '@/hooks/useEscapeLayer';
+import { useEffortStepper } from '@/hooks/useEffortStepper';
+import { getCaretOffset, setCaretOffset } from '@/utils/domSelection';
 import { useChatStreamContext } from '@/contexts/ChatStreamContext';
 import { useCliConfig } from '@/contexts/CliConfigContext';
 import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
@@ -35,6 +39,18 @@ const MAX_PANEL_HEIGHT = 320;
 const MIN_PANEL_HEIGHT = 120;
 /** Breathing room kept between the panel and the top of the window. */
 const VIEWPORT_PADDING = 8;
+
+/** One entry of the header's key guide: the keys, then what they do. */
+function ShortcutHint({ keys, label }: { keys: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <kbd className="inline-flex items-center px-1.5 py-0.5 bg-surface-tooltip rounded text-text-secondary text-xs font-mono">
+        {keys}
+      </kbd>
+      <span>{label}</span>
+    </span>
+  );
+}
 
 interface ModelSwitchOverlayProps {
   onClose: () => void;
@@ -76,27 +92,56 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
     void probeFableAvailability(workingDirectory ?? undefined);
   }, [shouldProbe, workingDirectory, probeFableAvailability]);
 
+  // Escape belongs to this panel while it is open, and the composer must not see it:
+  // there it means "stop the stream" (see useEscapeLayer).
+  useEscapeLayer(() => {
+    onClose();
+    return true;
+  });
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    };
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  const handleSelect = useCallback(async (value: string) => {
+  // Focus moves into the panel when it opens (arrow keys work from there) and goes
+  // back to whatever held it before when the panel closes. That may well not be the
+  // composer, so it is recorded here rather than assumed.
+  // Recorded before the first focus move, together with the caret: focusing a
+  // contenteditable puts the caret at the start, so where it was has to be kept.
+  const [previous] = useState(() => {
+    const active = document.activeElement;
+    const element = active instanceof HTMLElement ? active : null;
+    return { element, caret: element?.isContentEditable ? getCaretOffset(element) : null };
+  });
+  const restoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // StrictMode runs this effect as mount, cleanup, mount. The cleanup below schedules the
+    // hand-back, so a mount that follows it means the panel never closed: cancel it.
+    if (restoreTimerRef.current) {
+      clearTimeout(restoreTimerRef.current);
+      restoreTimerRef.current = null;
+    }
+    const { element: target, caret } = previous;
+    panelRef.current?.focus({ preventScroll: true });
+    return () => {
+      // Deferred, not done inside the key press that closed the panel: an Enter that
+      // reaches a freshly focused composer would send the message.
+      restoreTimerRef.current = setTimeout(() => {
+        restoreTimerRef.current = null;
+        if (!target || !target.isConnected) return;
+        target.focus({ preventScroll: true });
+        if (caret !== null) setCaretOffset(target, caret);
+      }, 0);
+    };
+  }, [previous]);
+
+  const handleSelect = useCallback(async (value: string, closeAfter = false) => {
     // Instant local feedback (same label & dedup behavior as the rotate path):
     // the CLI's `/model` echo only appears on the next send, so this shows the
     // change immediately; UserMessageRenderer dedupes the echo against it.
@@ -111,7 +156,9 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
 
     await switchModel(value);
 
-    onClose();
+    // Choosing a model leaves the panel open so the effort can be set right after.
+    // Only "/model <name>", which names the model up front and shows no choice, closes it.
+    if (closeAfter) onClose();
   }, [models, appendMessage, t, switchModel, onClose]);
 
   // "/model <name>": resolve the typed name to a model and switch immediately.
@@ -125,8 +172,62 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
     // Exact/family match only (no default fallback): if the named model isn't
     // available we leave the picker open instead of switching to Opus/default.
     const info = findModelForSelection(models, autoSelectQuery);
-    if (info) void handleSelect(info.value);
+    if (info) void handleSelect(info.value, true);
   }, [autoSelectQuery, models, handleSelect]);
+
+  // Keyboard focus is only a highlight: the row looks hovered, Enter acts as a click.
+  // It starts on the running model and follows the mouse when the mouse moves.
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  useEffect(() => {
+    if (focusedIndex !== null || models.length === 0) return;
+    const at = currentInfo ? models.indexOf(currentInfo) : -1;
+    setFocusedIndex(at >= 0 ? at : 0);
+  }, [focusedIndex, models, currentInfo]);
+
+  const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const moveFocus = (delta: -1 | 1) => {
+    if (models.length === 0) return;
+    const next = Math.max(0, Math.min(models.length - 1, (focusedIndex ?? 0) + delta));
+    setFocusedIndex(next);
+    // jsdom does not implement scrollIntoView.
+    rowRefs.current[next]?.scrollIntoView?.({ block: 'nearest' });
+  };
+
+  const effort = useEffortStepper();
+
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    // Composing text (IME) or a modified key is not ours.
+    if (e.nativeEvent.isComposing || e.metaKey || e.ctrlKey || e.altKey) return;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        moveFocus(1);
+        return;
+      case 'ArrowUp':
+        e.preventDefault();
+        moveFocus(-1);
+        return;
+      case 'ArrowLeft':
+        if (!effort.supportsEffort) return;
+        e.preventDefault();
+        effort.stepBy(-1);
+        return;
+      case 'ArrowRight':
+        if (!effort.supportsEffort) return;
+        e.preventDefault();
+        effort.stepBy(1);
+        return;
+      case 'Enter': {
+        const row = focusedIndex === null ? undefined : models[focusedIndex];
+        if (!row) return;
+        e.preventDefault();
+        // A held Enter must not fire a switch per repeat.
+        if (e.repeat) return;
+        void handleSelect(row.value);
+        return;
+      }
+    }
+  };
 
   // How tall the panel may grow. It opens upward from the composer, so the
   // ceiling is whatever room is left above the composer — not a constant. A
@@ -153,7 +254,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   // Once the list scrolls, the current model is off-screen whenever it sits
   // past the visible rows — the picker would open showing no ticked row and
   // hide which model is running. Bring it into view on open.
-  const selectedRowRef = useRef<HTMLButtonElement>(null);
+  const selectedRowRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     // scrollIntoView is unimplemented in jsdom; guard so tests don't throw.
     selectedRowRef.current?.scrollIntoView?.({ block: 'nearest' });
@@ -163,7 +264,11 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
   return (
     <div
       ref={panelRef}
+      // Focusable by script only: the panel takes focus on open so the arrow keys land here.
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
       style={{
+        outline: 'none',
         position: 'absolute',
         bottom: '100%',
         left: '0',
@@ -186,12 +291,15 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
         border: '1px solid var(--divider-color, #3c3c3c)',
       }}
     >
-      {/* Header */}
-      <div className="flex-shrink-0 pt-1 pb-1.5 px-3 text-[0.9230rem] text-text-tertiary flex items-center justify-between">
-        <span>{t('modelSwitch.selectModel')}</span>
-        <kbd className="inline-flex items-center px-1.5 py-0.5 bg-surface-tooltip rounded text-text-secondary text-xs font-mono">
-          {isMac ? '⌘⇧M' : 'Ctrl+Shift+M'}
-        </kbd>
+      {/* Header: the title, and the keys that work in this panel, in the order a user needs
+          them. The arrows for effort are listed only when the model has effort levels. */}
+      <div className="flex-shrink-0 pt-1 pb-1.5 px-3 text-[0.9230rem] text-text-tertiary flex items-center justify-between gap-3">
+        <span className="flex-shrink-0">{t('modelSwitch.selectModel')}</span>
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[0.7692rem]">
+          <ShortcutHint keys={isMac ? '⌘⇧M' : 'Ctrl+Shift+M'} label={t('modelSwitch.hintOpen')} />
+          <ShortcutHint keys="↑↓" label={t('modelSwitch.hintMoveModel')} />
+          {effort.supportsEffort && <ShortcutHint keys="←→" label={t('modelSwitch.hintChangeEffort')} />}
+        </div>
       </div>
 
       {/* Model list */}
@@ -204,6 +312,7 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
           // Sonnet model" and "Custom Haiku model" — and comparing values ticks
           // both rows.
           const selected = m === currentInfo;
+          const focused = i === focusedIndex;
           // Written from the row rather than read off it: a remapped slot
           // advertises a model it does not run (see resolveModelRowText).
           const { title, blurb } = resolveModelRowText(m);
@@ -213,19 +322,33 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
               // this list — a proxy catalog can list one id in two slots, and a
               // duplicated key makes React reuse the wrong row.
               key={i}
-              ref={selected ? selectedRowRef : undefined}
-              onClick={() => void handleSelect(m.value)}
+              ref={(el) => {
+                rowRefs.current[i] = el;
+                if (selected) selectedRowRef.current = el;
+              }}
+              // Rows never take focus, by Tab or by click: it stays on the panel so Enter
+              // and the arrow keys always reach one handler.
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseMove={() => { if (!focused) setFocusedIndex(i); }}
+              onClick={() => { setFocusedIndex(i); void handleSelect(m.value); }}
+              // The focused row (arrow keys, or the mouse, which moves the focus) gets the same
+              // highlight as the command palette's active row: --surface-selected is clearly
+              // visible where --surface-hover differs from the panel by only 5 of 255. The running
+              // model keeps its own fill and its check while the focus is elsewhere.
               className={`w-full relative flex items-center justify-between px-2 py-1 rounded-md text-start transition-colors ${
-                selected ? 'bg-surface-pressed' : 'hover:bg-surface-hover'
+                focused
+                  ? 'bg-[var(--surface-selected)]'
+                  : selected ? 'bg-surface-pressed' : 'hover:bg-[var(--surface-selected)]'
               }`}
             >
               <span className="flex flex-col min-w-0">
                 <span className="flex items-center gap-1.5 min-w-0">
-                  <span className="leading-tight text-[1rem] truncate text-text-primary">
+                  <span className={`leading-tight text-[1rem] truncate ${focused ? 'text-[var(--text-on-selected)]' : 'text-text-primary'}`}>
                     {title}
                   </span>
                 </span>
-                <span className="leading-normal text-[0.8461rem] truncate text-text-secondary/80">
+                <span className={`leading-normal text-[0.8461rem] truncate ${focused ? 'text-[var(--text-on-selected)] opacity-80' : 'text-text-secondary/80'}`}>
                   {blurb}
                 </span>
               </span>
@@ -236,6 +359,24 @@ export function ModelSwitchOverlay({ onClose, autoSelectQuery }: ModelSwitchOver
           );
         })}
       </div>
+
+      {/* Effort for the model above. Left and right arrows step it; the slider draws the
+          step at once while the write waits for the key presses to stop. */}
+      {effort.supportsEffort && (
+        // border-subtle is 2 of 255 away from the panel's own colour and draws nothing; the
+        // divider has to be visible to mark the effort off from the models above it.
+        <div className="flex-shrink-0 mx-1 mb-1 border-t border-border-default pt-1">
+          <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
+            <span className="flex-shrink-0 text-text-secondary">
+              <EffortIcon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1 text-[1rem] text-text-primary">
+              {t('modelSwitch.effort')} <span className="text-text-tertiary">({effort.label})</span>
+            </div>
+            <EffortSlider index={effort.index} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
