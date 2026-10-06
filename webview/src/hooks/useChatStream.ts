@@ -140,6 +140,8 @@ export interface UseChatStreamReturn {
   resetStreamState: () => void;
   systemInit: Record<string, unknown> | null;
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
+  /** Fills in a window size learned outside a turn (the `/context` report). Never overwrites one the CLI already reported. */
+  applyContextWindow: (contextWindow: number) => void;
 }
 
 
@@ -626,6 +628,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       }, 2000);
     }
   }, [isStreaming, bridge.isConnected, generateMessageId, appendMessage, startStreaming, scheduleFlush, endStreaming, flushPendingDeltas, updateMessage]);
+
+  const applyContextWindow = useCallback((contextWindow: number) => {
+    if (!(contextWindow > 0)) return;
+    setContextWindowUsage(prev => (prev && prev.contextWindow <= 0 ? { ...prev, contextWindow } : prev));
+  }, []);
 
   // Clear messages
   const clearMessages = useCallback(() => {
@@ -1515,5 +1522,6 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     resetStreamState,
     systemInit,
     contextWindowUsage,
+    applyContextWindow,
   };
 }

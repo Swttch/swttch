@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "إرفاق ملف",
-      "slashCommands": "أوامر الشرطة المائلة",
       "stopGenerating": "إيقاف التوليد",
       "sendMessage": "إرسال الرسالة"
     },
     "attachMenu": {
-      "image": "صورة",
-      "file": "ملف",
-      "folder": "مجلد"
+      "filesOrPhotos": "إضافة ملفات أو صور",
+      "folder": "إضافة مجلد",
+      "slashCommands": "أوامر الشرطة المائلة"
     },
     "attachmentPreview": {
       "fullSize": "الحجم الكامل"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "السياق {{used}} / {{total}} ({{percent}}%)",
+      "pending": "السياق {{used}} · يظهر الحجم الإجمالي بعد الرد التالي",
       "remaining": "{{percent}}% من السياق متبقٍّ حتى الضغط التلقائي.",
-      "tokensUsed": "تم استخدام {{tokens}} رمز",
-      "clickToCompact": "انقر للضغط الآن.",
-      "used": "{{percent}}% مستخدَم"
+      "clickToCompact": "انقر للضغط الآن."
     },
     "dragOverlay": {
       "dropHere": "أفلت الملفات أو المجلدات هنا"

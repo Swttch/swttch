@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "Anexar arquivo",
-      "slashCommands": "Comandos de barra",
       "stopGenerating": "Parar geração",
       "sendMessage": "Enviar mensagem"
     },
     "attachMenu": {
-      "image": "Imagem",
-      "file": "Arquivo",
-      "folder": "Pasta"
+      "filesOrPhotos": "Adicionar arquivos ou fotos",
+      "folder": "Adicionar pasta",
+      "slashCommands": "Comandos de barra"
     },
     "attachmentPreview": {
       "fullSize": "Tamanho completo"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "Contexto {{used}} / {{total}} ({{percent}}%)",
+      "pending": "Contexto {{used}} · O tamanho total aparece após a próxima resposta",
       "remaining": "{{percent}}% de contexto restante até a compactação automática.",
-      "tokensUsed": "{{tokens}} tokens usados",
-      "clickToCompact": "Clique para compactar agora.",
-      "used": "{{percent}}% usado"
+      "clickToCompact": "Clique para compactar agora."
     },
     "dragOverlay": {
       "dropHere": "Solte arquivos ou pastas aqui"

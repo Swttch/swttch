@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "ファイルを添付",
-      "slashCommands": "スラッシュコマンド",
       "stopGenerating": "生成を停止",
       "sendMessage": "メッセージを送信"
     },
     "attachMenu": {
-      "image": "画像",
-      "file": "ファイル",
-      "folder": "フォルダ"
+      "filesOrPhotos": "ファイルまたは写真を追加",
+      "folder": "フォルダを追加",
+      "slashCommands": "スラッシュコマンド"
     },
     "attachmentPreview": {
       "fullSize": "原寸大"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "コンテキスト {{used}} / {{total}} ({{percent}}%)",
+      "pending": "コンテキスト {{used}} · 全体のサイズは次の応答のあとに表示されます",
       "remaining": "自動圧縮まで残り {{percent}}% のコンテキストがあります。",
-      "tokensUsed": "{{tokens}} トークンを使用",
-      "clickToCompact": "クリックして今すぐ圧縮します。",
-      "used": "{{percent}}% 使用済み"
+      "clickToCompact": "クリックして今すぐ圧縮します。"
     },
     "dragOverlay": {
       "dropHere": "ここにファイルまたはフォルダをドロップ"

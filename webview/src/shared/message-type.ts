@@ -461,6 +461,10 @@ export enum MessageType {
   /** Detect the path to the `node` binary. */
   GET_DETECTED_NODE_PATH = 'GET_DETECTED_NODE_PATH',
 
+  // -- Context window --
+  /** Ask for the `/context` report of a saved session, run as a one-shot CLI that writes nothing to the session file. Carries the context window size before the session has had a reply. inbound webview→backend */
+  GET_CONTEXT_USAGE = 'GET_CONTEXT_USAGE',
+
   // -- MCP server management --
   /** List all MCP servers with status, scope, and config. inbound webview→backend */
   GET_MCP_SERVERS = 'GET_MCP_SERVERS',

@@ -18,6 +18,9 @@ import { pickWin32Launcher } from './which-launcher';
 import { spawnWin32JobCli, utf8BashEnv } from './win-job';
 import { decodeConsoleOutput } from './console-encoding';
 
+/** `exec` options: node's own, plus a flag for one-shot callers that feed the CLI no input. */
+type ExecOptions = ExecFileOptions & { closeStdin?: boolean };
+
 export class Claude {
   private static cliPath: string | null = null;
   private static initialized = false;
@@ -247,7 +250,7 @@ export class Claude {
     }
   }
 
-  static async exec(args: string[], options?: ExecFileOptions): Promise<{ stdout: string; stderr: string }> {
+  static async exec(args: string[], options?: ExecOptions): Promise<{ stdout: string; stderr: string }> {
     // Settle which Claude data directory this run belongs to, before the child exists to
     // inherit it. Done here rather than at each call site because at each call site it was
     // not done: of the sixteen places that run `claude` or `ccb`, eleven never called
@@ -284,7 +287,7 @@ export class Claude {
   private static runExecFile(
     command: string,
     args: string[],
-    options?: ExecFileOptions,
+    options?: ExecOptions,
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       // encoding:'buffer' — on win32 this runs through cmd.exe, whose own messages (and any
@@ -333,6 +336,9 @@ export class Claude {
         child,
         typeof execOptions.cwd === 'string' ? execOptions.cwd : undefined,
       );
+      // `claude -p` waits a few seconds for piped input before it carries on, and
+      // execFile leaves stdin open. A caller with nothing to feed it says so.
+      if (options?.closeStdin) child.stdin?.end();
     });
   }
 

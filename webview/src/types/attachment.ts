@@ -12,7 +12,11 @@ export enum AttachmentType {
  * backend would only ever learn that *an* image was attached.
  */
 export enum ImageAttachSource {
-  /** The paperclip menu's "Image" item, via a hidden file input. */
+  /**
+   * A picker button that hands back an image `File`. The composer's "+" menu no
+   * longer uses it (it attaches picked photos by path), but the value stays so
+   * the wire contract and the reported history keep their meaning.
+   */
   Button = 'button',
   /** Cmd/Ctrl+V with an image on the clipboard. */
   Paste = 'paste',

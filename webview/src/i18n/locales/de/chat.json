@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "Datei anhängen",
-      "slashCommands": "Slash-Befehle",
       "stopGenerating": "Generierung stoppen",
       "sendMessage": "Nachricht senden"
     },
     "attachMenu": {
-      "image": "Bild",
-      "file": "Datei",
-      "folder": "Ordner"
+      "filesOrPhotos": "Dateien oder Fotos hinzufügen",
+      "folder": "Ordner hinzufügen",
+      "slashCommands": "Slash-Befehle"
     },
     "attachmentPreview": {
       "fullSize": "Vollbild"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "Kontext {{used}} / {{total}} ({{percent}}%)",
+      "pending": "Kontext {{used}} · Die Gesamtgröße wird nach der nächsten Antwort angezeigt",
       "remaining": "{{percent}}% des Kontexts verbleiben bis zur automatischen Komprimierung.",
-      "tokensUsed": "{{tokens}} Tokens verwendet",
-      "clickToCompact": "Klicken, um jetzt zu komprimieren.",
-      "used": "{{percent}}% verwendet"
+      "clickToCompact": "Klicken, um jetzt zu komprimieren."
     },
     "dragOverlay": {
       "dropHere": "Dateien oder Ordner hier ablegen"

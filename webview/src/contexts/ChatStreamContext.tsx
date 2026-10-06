@@ -112,6 +112,7 @@ interface ChatStreamContextType {
 
   // Context window usage
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
+  applyContextWindow: (contextWindow: number) => void;
 
   // Pagination
   hasMoreOlder: boolean;
@@ -714,6 +715,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
 
     // Context window usage
     contextWindowUsage: chatStream.contextWindowUsage,
+    applyContextWindow: chatStream.applyContextWindow,
 
     // Pagination
     hasMoreOlder,
@@ -729,6 +731,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStream.disconnectCountdown,
     chatStream.apiRetry,
     chatStream.contextWindowUsage,
+    chatStream.applyContextWindow,
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,

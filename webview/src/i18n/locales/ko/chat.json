@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "파일 첨부",
-      "slashCommands": "슬래시 명령어",
       "stopGenerating": "생성 중지",
       "sendMessage": "메시지 보내기"
     },
     "attachMenu": {
-      "image": "이미지",
-      "file": "파일",
-      "folder": "폴더"
+      "filesOrPhotos": "파일 또는 사진 추가",
+      "folder": "폴더 추가",
+      "slashCommands": "슬래시 명령어"
     },
     "attachmentPreview": {
       "fullSize": "원본 크기"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "컨텍스트 {{used}} / {{total}} ({{percent}}%)",
+      "pending": "컨텍스트 {{used}} · 전체 크기는 다음 응답 뒤에 표시돼요",
       "remaining": "자동 압축까지 컨텍스트 {{percent}}% 남음.",
-      "tokensUsed": "토큰 {{tokens}}개 사용",
-      "clickToCompact": "클릭하면 지금 압축합니다.",
-      "used": "{{percent}}% 사용됨"
+      "clickToCompact": "클릭하면 지금 압축합니다."
     },
     "dragOverlay": {
       "dropHere": "파일이나 폴더를 여기에 드롭하세요"

@@ -56,15 +56,13 @@
   },
   "chatInput": {
     "actionButtons": {
-      "attachFile": "附加文件",
-      "slashCommands": "斜杠命令",
       "stopGenerating": "停止生成",
       "sendMessage": "发送消息"
     },
     "attachMenu": {
-      "image": "图片",
-      "file": "文件",
-      "folder": "文件夹"
+      "filesOrPhotos": "添加文件或照片",
+      "folder": "添加文件夹",
+      "slashCommands": "斜杠命令"
     },
     "attachmentPreview": {
       "fullSize": "原始大小"
@@ -76,10 +74,10 @@
       }
     },
     "contextWindow": {
+      "title": "上下文 {{used}} / {{total}} ({{percent}}%)",
+      "pending": "上下文 {{used}} · 总大小将在下一次回复后显示",
       "remaining": "距自动压缩还剩 {{percent}}% 的上下文。",
-      "tokensUsed": "已使用 {{tokens}} 个 token",
-      "clickToCompact": "点击立即压缩。",
-      "used": "已使用 {{percent}}%"
+      "clickToCompact": "点击立即压缩。"
     },
     "dragOverlay": {
       "dropHere": "将文件或文件夹拖放到此处"
