@@ -4,7 +4,7 @@
 > 수정 이력은 이 파일을 고쳐 적지 말고 `git log -- docs/principle-exceptions/474-effort-apply-flag-settings.md`로 확인한다.
 
 - 관련 이슈: [#474](https://github.com/Swttch/swttch/issues/474) (`max`만 반영되던 문제. 이 문서는 같은 문제의 일반형을 다룬다)
-- 관련 PR: 아직 없음
+- 관련 PR: [#527](https://github.com/Swttch/swttch/pull/527)
 
 ## 어떤 원칙을 위반하는가
 
