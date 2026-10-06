@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "模式",
-      "toSwitch": "切换",
-      "effort": "强度"
+      "toSwitch": "切换"
     },
     "modelTag": {
       "switchModel": "切换模型({{hint}})",
@@ -327,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "选择模型",
+    "effort": "强度",
+    "hintOpen": "打开面板",
+    "hintMoveModel": "切换模型",
+    "hintChangeEffort": "调整强度",
     "loadingModels": "正在加载模型…",
     "setModelTo": "已将模型设置为 {{model}}"
   },

@@ -65,15 +65,16 @@ interface SessionRecord {
    */
   inputMode: string | null;
   /**
-   * Effort level passed to the LIVE process as `--effort`, or null when the spawn
-   * passed no such flag and left the CLI to read `effortLevel` from its own
-   * settings file.
+   * Effort level the LIVE process was told to run at (`--effort` at spawn, or a later
+   * SET_EFFORT), or null when it was told none and runs the model's default.
    *
-   * Recorded for the same reason as `inputMode`: `--effort` only applies at spawn,
-   * and a level it pins stays pinned for the life of the process. So a level the
-   * user picks afterwards cannot reach a running CLI, and without remembering what
-   * the process actually started under, the change would be silently dropped —
-   * the slider would read `Max` while the session kept answering at `high` (#474).
+   * Recorded for the same reason as `inputMode`: without remembering what the
+   * process is running under, a level the user picks afterwards could be silently
+   * dropped — the slider would read `Max` while the session kept answering at
+   * `high` (#474). The record follows the process: a level told to the running CLI
+   * (SET_EFFORT) moves it to what a fresh spawn would pass, and a level that could
+   * not be delivered sets it to a value that matches no request, so the next
+   * message restarts the CLI.
    *
    * Null when no process has been spawned yet, and also when one was spawned with
    * no flag; the two cases need no telling apart, because both mean "this process

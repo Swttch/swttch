@@ -101,20 +101,30 @@ describe('buildClaudeArgs', () => {
 });
 
 describe('resolveEffortFlag', () => {
-  // The reported bug: `effortLevel: "max"` is dropped by the settings file's own
-  // schema, so the flag is the only way the choice reaches the session (#474).
+  // The first level to show the gap: `effortLevel: "max"` is dropped by the settings
+  // file's own schema, so the flag was the only way the choice reached the session (#474).
   it('passes max as a flag, because the settings file drops it', () => {
     expect(resolveEffortFlag({ effortLevel: 'max' })).toBe('max');
   });
 
-  // Keeping low…xhigh on the settings file is deliberate: that is the path a
-  // terminal user is on, and it already works. Handing them to the flag would pin
-  // every session for the life of its process for no gain.
-  it('passes no flag for the levels the settings file already honors', () => {
-    expect(resolveEffortFlag({ effortLevel: 'low' })).toBeUndefined();
-    expect(resolveEffortFlag({ effortLevel: 'medium' })).toBeUndefined();
-    expect(resolveEffortFlag({ effortLevel: 'high' })).toBeUndefined();
-    expect(resolveEffortFlag({ effortLevel: 'xhigh' })).toBeUndefined();
+  // Every level goes as the flag, not only max. Measured on CLI 2.1.291: with
+  // `"effortLevel": "high"` in the user's ~/.claude/settings.json, a Sonnet 5.5 session
+  // answered at `medium` in every turn, because the CLI reads a user-scope effortLevel as
+  // a legacy value that only some models take. The settings file alone does not decide the
+  // level for every model; the flag does, and it outranks the settings.
+  it('passes every level the user chose as the flag, since the settings file does not reach every model', () => {
+    expect(resolveEffortFlag({ effortLevel: 'low' })).toBe('low');
+    expect(resolveEffortFlag({ effortLevel: 'medium' })).toBe('medium');
+    expect(resolveEffortFlag({ effortLevel: 'high' })).toBe('high');
+    expect(resolveEffortFlag({ effortLevel: 'xhigh' })).toBe('xhigh');
+  });
+
+  // `claude -p --effort high` on CLI 2.0.22 exits with `error: unknown option '--effort'`, so for
+  // a CLI that does not list the flag the level is left out, max included.
+  it('passes no flag at all to a CLI that does not take --effort', () => {
+    expect(resolveEffortFlag({ effortLevel: 'high' }, false)).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 'max' }, false)).toBeUndefined();
+    expect(resolveEffortFlag({ effortLevel: 'high' }, true)).toBe('high');
   });
 
   it('passes no flag when no level is set at all', () => {
@@ -124,12 +134,11 @@ describe('resolveEffortFlag', () => {
     expect(resolveEffortFlag({ effortLevel: 7 })).toBeUndefined();
   });
 
-  // Ultracode is `xhigh` plus a flag of its own, and xhigh is a level the settings
-  // file holds — so ultracode must never pick up an `--effort`. Measured: the
-  // ultracode instructions survive `--effort xhigh` but disappear under
-  // `--effort max`, so the level, not the flag, is what keeps ultracode alive.
-  it('passes no flag for an ultracode session, leaving its xhigh where it is', () => {
-    expect(resolveEffortFlag({ effortLevel: 'xhigh', ultracode: true })).toBeUndefined();
+  // Ultracode is `xhigh` plus a flag of its own. Measured: the ultracode instructions
+  // survive `--effort xhigh` but disappear under `--effort max`, so an ultracode session
+  // takes its xhigh as the flag like any other level and keeps ultracode alive.
+  it('passes the xhigh of an ultracode session as the flag too', () => {
+    expect(resolveEffortFlag({ effortLevel: 'xhigh', ultracode: true })).toBe('xhigh');
   });
 
   // A level the CLI grows onto the flag before the settings file — as `max` was —
@@ -140,24 +149,27 @@ describe('resolveEffortFlag', () => {
 });
 
 describe('needsRestartForEffort', () => {
-  it('reuses the live process when the level it is pinned to is the one wanted', () => {
+  it('reuses the live process when the level it was told is the one wanted', () => {
     expect(needsRestartForEffort('max', 'max')).toBe(false);
+    expect(needsRestartForEffort('high', 'high')).toBe(false);
   });
 
-  // The unflagged case is the common one: both sides mean "the settings file holds
-  // the level", so moving between low…xhigh must not tear down a working CLI.
-  it('reuses the live process when neither side pins a level', () => {
+  // Both sides mean "no level is stored, run the model's default".
+  it('reuses the live process when neither side names a level', () => {
     expect(needsRestartForEffort(null, undefined)).toBe(false);
   });
 
-  it('restarts when the user reaches a flagged level mid-chat', () => {
+  // A level picked mid-chat normally reaches the running CLI by SET_EFFORT, which moves
+  // the recorded level with it. When that did not happen the two sides differ, and the
+  // restart starts the new CLI with `--effort` set to the level the user picked.
+  it('restarts when the user reaches a different level mid-chat and the running CLI was not told', () => {
     expect(needsRestartForEffort(null, 'max')).toBe(true);
+    expect(needsRestartForEffort('low', 'high')).toBe(true);
   });
 
-  // The reported bug with its two ends swapped: `--effort` pins the process it
-  // launched, so a CLI started at max keeps answering at max until it is replaced.
-  it('restarts when the user leaves a flagged level mid-chat', () => {
+  it('restarts when the user returns to no level mid-chat and the running CLI was not told', () => {
     expect(needsRestartForEffort('max', undefined)).toBe(true);
+    expect(needsRestartForEffort('high', undefined)).toBe(true);
   });
 });
 

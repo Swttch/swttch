@@ -131,6 +131,9 @@ export function ModelTag() {
       // The label may be ellipsized, so carry the full model name in the
       // tooltip — that is where a truncated custom name stays readable.
       title={`${label} — ${t('chatInput.modelTag.switchModel', { hint: rotateHint })}`}
+      // Pressing the tag must not take focus from where it was: the panel it opens hands
+      // focus back to that element when it closes, and it should not be this button.
+      onMouseDown={(e) => e.preventDefault()}
       onClick={handleClick}
     >
       {/* Custom catalogs carry long model names, so cap the width and ellipsize

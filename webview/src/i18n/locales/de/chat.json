@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "Modi",
-      "toSwitch": "zum Wechseln",
-      "effort": "Aufwand"
+      "toSwitch": "zum Wechseln"
     },
     "modelTag": {
       "switchModel": "Modell wechseln ({{hint}})",
@@ -327,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "Modell auswählen",
+    "effort": "Aufwand",
+    "hintOpen": "Panel öffnen",
+    "hintMoveModel": "Modell wählen",
+    "hintChangeEffort": "Aufwand ändern",
     "loadingModels": "Modelle werden geladen…",
     "setModelTo": "Modell auf {{model}} setzen"
   },

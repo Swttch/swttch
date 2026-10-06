@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "モード",
-      "toSwitch": "で切り替え",
-      "effort": "エフォート"
+      "toSwitch": "で切り替え"
     },
     "modelTag": {
       "switchModel": "モデルを切り替え ({{hint}})",
@@ -327,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "モデルを選択",
+    "effort": "エフォート",
+    "hintOpen": "パネルを開く",
+    "hintMoveModel": "モデルを移動",
+    "hintChangeEffort": "エフォートを変更",
     "loadingModels": "モデルを読み込み中…",
     "setModelTo": "モデルを {{model}} に設定"
   },

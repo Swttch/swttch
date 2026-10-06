@@ -130,6 +130,7 @@ import { updatePluginHandler } from './updatePlugin';
 import { getClaudeSettingsHandler } from './getClaudeSettings';
 import { saveClaudeSettingsHandler } from './saveClaudeSettings';
 import { setModelHandler } from './setModel';
+import { setEffortHandler } from './setEffort';
 import { setPermissionModeHandler } from './setPermissionMode';
 import { probeFableAvailabilityHandler } from './probeFableAvailability';
 import { getWorkingDirHandler } from './getWorkingDir';
@@ -589,6 +590,9 @@ export async function handleMessage(
       break;
     case MessageType.SET_MODEL:
       setModelHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_EFFORT:
+      await setEffortHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SET_PERMISSION_MODE:
       setPermissionModeHandler(connectionId, message, connections, bridge);

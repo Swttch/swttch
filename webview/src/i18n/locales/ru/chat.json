@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "Режимы",
-      "toSwitch": "переключить",
-      "effort": "Усилия"
+      "toSwitch": "переключить"
     },
     "modelTag": {
       "switchModel": "Сменить модель ({{hint}})",
@@ -331,6 +330,10 @@
   },
   "modelSwitch": {
     "selectModel": "Выберите модель",
+    "effort": "Усилия",
+    "hintOpen": "Открыть панель",
+    "hintMoveModel": "Выбор модели",
+    "hintChangeEffort": "Изменить усилия",
     "loadingModels": "Загрузка моделей…",
     "setModelTo": "Модель изменена на {{model}}"
   },

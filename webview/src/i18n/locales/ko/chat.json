@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "모드",
-      "toSwitch": "전환",
-      "effort": "Effort"
+      "toSwitch": "전환"
     },
     "modelTag": {
       "switchModel": "모델 전환 ({{hint}})",
@@ -327,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "모델 선택",
+    "effort": "Effort",
+    "hintOpen": "패널 열기",
+    "hintMoveModel": "모델 이동",
+    "hintChangeEffort": "Effort 변경",
     "loadingModels": "모델 불러오는 중…",
     "setModelTo": "모델을 {{model}}(으)로 설정"
   },

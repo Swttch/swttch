@@ -34,6 +34,7 @@ JetBrains IDE용 Claude Code GUI 플러그인. Cursor의 Claude Code 확장과 �
 
 - [MCP 서버 목록 조회에 미문서화 `control_request{subtype:"mcp_status"}`를 쓴다](./docs/principle-exceptions/363-mcp-status-control-request.md) — 위 2번·3번 위반. 공식 `claude mcp list` 경로를 폴백으로 항상 살려두는 조건으로 채택했다 ([#363](https://github.com/Swttch/swttch/issues/363))
 - [리와인드와 포크를 `--help`에 없는 CLI 플래그로 구현한다](./docs/principle-exceptions/356-rewind-and-fork-hidden-cli-flags.md) — 위 2번 위반. `/rewind`가 비대화형을 지원하지 않아 대안이 없다. 폴백이 없으므로 플래그가 사라지면 기능을 되살리려 하지 말고 메뉴를 감춘다 ([#356](https://github.com/Swttch/swttch/issues/356))
+- [실행 중인 CLI의 effort 변경에 미문서화 `control_request{subtype:"apply_flag_settings"}`를 먼저 쓴다](./docs/principle-exceptions/474-effort-apply-flag-settings.md) — 위 2번 위반이고, 4번의 "공식 명령 폴백"을 보장은 하되 순서는 뒤로 둔다. 요청이 안 먹으면 공식 `/effort`로 대체되고, 그것도 안 되면 다음 메시지에서 CLI를 다시 띄운다 ([#474](https://github.com/Swttch/swttch/issues/474))
 
 ## 아키텍처
 

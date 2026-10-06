@@ -43,3 +43,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   MCP 서버 목록 조회에 미문서화 `control_request{subtype:"mcp_status"}`를 1순위로 사용
 - [356-rewind-and-fork-hidden-cli-flags.md](./356-rewind-and-fork-hidden-cli-flags.md) —
   리와인드와 포크를 `--help`에 없는 CLI 플래그(`--rewind-files`, `--resume-session-at`)로 구현
+- [474-effort-apply-flag-settings.md](./474-effort-apply-flag-settings.md) —
+  실행 중인 CLI의 effort 변경에 미문서화 `control_request{subtype:"apply_flag_settings"}`를 먼저 사용

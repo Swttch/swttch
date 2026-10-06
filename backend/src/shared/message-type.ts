@@ -142,6 +142,19 @@ export enum MessageType {
   SAVE_CLAUDE_CONFIG_DIR = 'SAVE_CLAUDE_CONFIG_DIR',
   /** Set the active model for the session/CLI. */
   SET_MODEL = 'SET_MODEL',
+  /**
+   * Tell the session's LIVE CLI to run at a new effort level (and/or turn ultracode on or off) from the
+   * next request on. Needed because the CLI reads the effort setting only when it starts, so a level
+   * written to the settings file never reaches a CLI that is already running. The ACK says how it was
+   * delivered (`via`). inbound webview→backend
+   */
+  SET_EFFORT = 'SET_EFFORT',
+  /**
+   * The effort level the CLI actually ran the turn that just ended at, read from the `effort` and
+   * `perTurnEffort` fields it wrote on its assistant entry in the transcript. The live stdout events
+   * carry no such field. Sent once per model turn on `result`. outbound backend→webview
+   */
+  EFFORT_APPLIED = 'EFFORT_APPLIED',
   /** Ask a LIVE CLI to switch its permission mode right now, so a mode picked
    *  while Claude is already working takes effect for the rest of that turn
    *  instead of only on the next spawn (#393). Best-effort: a CLI that is not

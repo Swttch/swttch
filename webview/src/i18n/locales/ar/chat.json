@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "الأوضاع",
-      "toSwitch": "للتبديل",
-      "effort": "الجهد"
+      "toSwitch": "للتبديل"
     },
     "modelTag": {
       "switchModel": "تبديل النموذج ({{hint}})",
@@ -335,6 +334,10 @@
   },
   "modelSwitch": {
     "selectModel": "اختر نموذجًا",
+    "effort": "الجهد",
+    "hintOpen": "فتح اللوحة",
+    "hintMoveModel": "التنقل بين النماذج",
+    "hintChangeEffort": "تغيير الجهد",
     "loadingModels": "جارٍ تحميل النماذج…",
     "setModelTo": "تعيين النموذج إلى {{model}}"
   },

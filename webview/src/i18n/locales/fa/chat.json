@@ -104,8 +104,7 @@
     },
     "modeSelectPanel": {
       "modes": "حالت‌ها",
-      "toSwitch": "برای تغییر",
-      "effort": "تلاش"
+      "toSwitch": "برای تغییر"
     },
     "modelTag": {
       "switchModel": "تغییر مدل ({{hint}})",
@@ -327,6 +326,10 @@
   },
   "modelSwitch": {
     "selectModel": "یک مدل انتخاب کنید",
+    "effort": "تلاش",
+    "hintOpen": "باز کردن پنل",
+    "hintMoveModel": "جابه‌جایی بین مدل‌ها",
+    "hintChangeEffort": "تغییر تلاش",
     "loadingModels": "در حال بارگذاری مدل‌ها…",
     "setModelTo": "مدل روی {{model}} تنظیم شد"
   },

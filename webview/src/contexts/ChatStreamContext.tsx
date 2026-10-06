@@ -114,6 +114,13 @@ interface ChatStreamContextType {
   contextWindowUsage: { totalTokens: number; contextWindow: number; maxOutputTokens: number } | null;
   applyContextWindow: (contextWindow: number) => void;
 
+  // The effort level the CLI reported running the current session's last turn at
+  // (EFFORT_APPLIED). Null before the first reply, after the user moves the slider,
+  // and after switching sessions. The stored setting is what the user asked for;
+  // this is what the model actually ran at.
+  appliedEffort: string | null;
+  clearAppliedEffort: () => void;
+
   // Pagination
   hasMoreOlder: boolean;
   oldestLoadedUuid: string | null;
@@ -382,6 +389,30 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridge.isConnected, bridge.subscribe]);
+
+  // The effort level the CLI says the last reply ran at. The slider moves optimistically
+  // when the user changes it; when a reply arrives, this is what it really ran at, and
+  // that wins over what was asked for until the user moves the slider again.
+  const [appliedEffort, setAppliedEffort] = useState<string | null>(null);
+  const clearAppliedEffort = useCallback(() => setAppliedEffort(null), []);
+
+  // Matched on sessionId, since a push for a session this connection has left must not
+  // repaint the one it is showing now.
+  useEffect(() => {
+    if (!bridge.isConnected) return;
+
+    return bridge.subscribe(MessageType.EFFORT_APPLIED, (message: IPCMessage) => {
+      const payload = message.payload as { sessionId?: string; effort?: string | null } | undefined;
+      if (!payload?.sessionId || payload.sessionId !== sessionRef.current.currentSessionId) return;
+      setAppliedEffort(typeof payload.effort === 'string' ? payload.effort : null);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridge.isConnected, bridge.subscribe]);
+
+  // Another session's last reply says nothing about this one.
+  useEffect(() => {
+    setAppliedEffort(null);
+  }, [session.currentSessionId]);
 
   // Whether a live QUEUED_MESSAGES_CHANGED push has already landed for the
   // fetch below's session since that fetch started. GET_QUEUED_MESSAGES asks
@@ -716,6 +747,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     // Context window usage
     contextWindowUsage: chatStream.contextWindowUsage,
     applyContextWindow: chatStream.applyContextWindow,
+    appliedEffort,
+    clearAppliedEffort,
 
     // Pagination
     hasMoreOlder,
@@ -732,6 +765,8 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     chatStream.apiRetry,
     chatStream.contextWindowUsage,
     chatStream.applyContextWindow,
+    appliedEffort,
+    clearAppliedEffort,
     chatStreamResetStreamState,
     chatStreamClearMessages,
     chatStreamLoadMessages,

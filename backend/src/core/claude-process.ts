@@ -16,6 +16,8 @@ import { rememberPreview, resolveDiffPreview } from './features/diffPreview';
 import { readMergedSettings } from './features/settings';
 import { readMergedClaudeSettings } from './features/claude-settings';
 import { readLastRecordedSend } from './features/lastRecordedSend';
+import { readLastRecordedEffort } from './features/lastRecordedEffort';
+import { cliTakesEffortFlag } from './features/cli-flag-support';
 import { findLiveCliForSession, killRegisteredCli, registerCliProcess, unregisterCliProcess } from './cli-registry';
 import { settleControlResponse } from './control-response-waiter';
 import { isDebugEnabled, logDebug } from '../logging/log-level';
@@ -103,44 +105,41 @@ export function readReportedMode(event: Record<string, unknown>): string | null 
 }
 
 /**
- * Effort levels the CLI's settings file accepts under `effortLevel`.
+ * The level this spawn passes as `--effort`, or undefined to pass nothing and let
+ * the CLI use the model's default effort.
  *
- * Measured against 2.1.261 and 2.1.278: that key is validated against
- * `enum(["low","medium","high","xhigh"]).catch(undefined)`, so a level outside
- * this set is dropped where it is read, without a warning, and the session falls
- * back to the model's default effort. The `--effort` flag, by contrast, is
- * documented in `claude --help` and names five levels — `low, medium, high,
- * xhigh, max`.
+ * Every level the user chose goes as the flag. It used to be only the levels the
+ * settings file cannot hold (`max`), on the belief that the CLI reads `effortLevel`
+ * from its settings files for the rest. That is not so for every model. Measured on
+ * CLI 2.1.291: with `"effortLevel": "high"` in the user's `~/.claude/settings.json`, a
+ * session on Sonnet 5.5 answered at `medium` in every turn and said so in the
+ * transcript. The CLI reads a user-scope `effortLevel` as a legacy value that only
+ * some models take, while a project or local `effortLevel`, a per-model
+ * `modelSettings.<model>.effortLevel` and the `--effort` flag all apply. So the slider
+ * moved, the settings file changed, and nothing about the session did.
  *
- * `max` is therefore the one step of the slider the settings file has no room
- * for: picking it filled the dots on screen and changed nothing about the
- * session, which is what #474 reported.
- *
- * Written as "what the file takes" rather than "max is special" on purpose. The
- * two vocabularies are the CLI's to grow, and a level added to the flag before
- * the file — as `max` was — needs no second fix here.
- */
-const SETTINGS_FILE_EFFORT_LEVELS = new Set(['low', 'medium', 'high', 'xhigh']);
-
-/**
- * The level this spawn has to pass as `--effort`, or undefined to let the CLI
- * read `effortLevel` from its own settings files exactly as it does for someone
- * running `claude` in a terminal.
- *
- * Only the levels the settings file cannot hold are passed as a flag. Passing
- * every level would work too, but it would take low…xhigh off the path a
- * terminal user is on and pin each of them for the life of the process, so the
- * flag is reserved for the levels that have nowhere else to go.
+ * `--effort` is documented in `claude --help`, names five levels (`low, medium, high,
+ * xhigh, max`), outranks the settings, and does not pin the process: `/effort` and the
+ * session-scoped `apply_flag_settings` still change it afterwards, which is how a
+ * level picked mid-chat reaches a running CLI (features/effort-runtime.ts). It is the
+ * one route that makes the level on screen the level the CLI runs, for every model,
+ * without reproducing how the CLI resolves its settings files, which is its to change.
+ * (`max` was the first level to show the gap: the file cannot hold it at all, #474.)
  *
  * An unreadable value is passed through rather than guessed at: the CLI answers
  * an unknown level with `Warning: Unknown --effort value '…' — ignoring it and
  * using the default effort`, which is the same default a dropped setting lands
  * on, and says so out loud instead of silently.
  */
-export function resolveEffortFlag(settings: Record<string, unknown>): string | undefined {
+export function resolveEffortFlag(
+  settings: Record<string, unknown>,
+  cliTakesEffortFlag = true,
+): string | undefined {
   const level = settings.effortLevel;
   if (typeof level !== 'string' || level === '') return undefined;
-  if (SETTINGS_FILE_EFFORT_LEVELS.has(level)) return undefined;
+  // A CLI that predates the flag rejects it outright (`error: unknown option '--effort'`,
+  // measured on 2.0.22) and the chat never starts, so for such a CLI the level is left out.
+  if (!cliTakesEffortFlag) return undefined;
   return level;
 }
 
@@ -212,11 +211,11 @@ export function buildClaudeArgs(
     args.push('--model', model);
   }
 
-  // Carry the effort level the settings file cannot hold. `--effort` is a
-  // documented flag (`claude --help`), it outranks `effortLevel` in the settings
-  // file, and it is the same flag a terminal user would type — so this is the
-  // official route to `max` rather than a way around one. See resolveEffortFlag,
-  // which decides when a level needs it.
+  // Carry the effort level the user chose. `--effort` is a documented flag
+  // (`claude --help`), it outranks `effortLevel` in the settings files, and it is the
+  // same flag a terminal user would type, so this is the official route rather than a
+  // way around one. The settings files alone do not decide the level for every model;
+  // see resolveEffortFlag.
   if (effortLevel) {
     args.push('--effort', effortLevel);
   }
@@ -264,6 +263,10 @@ export function buildCheckpointingEnv(
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
+
+// The transcript entry whose effort level was last sent to the webview, by session, so the same
+// response is never reported twice (EFFORT_APPLIED).
+const lastReportedEffortEntry = new Map<string, string>();
 
 // Sessions whose CLI we are killing on purpose so the next message respawns it.
 // The exit is ours, not a failure, so the close handler must not surface it as an
@@ -324,24 +327,26 @@ export function needsRestartForMode(
  * `requestedEffort`, or has to be restarted first.
  *
  * Both sides name the `--effort` flag the spawn passed, with null / undefined
- * meaning "no flag was passed, so the CLI read its own settings". Comparing the
- * flag rather than the user's chosen level is what keeps low…xhigh off this
- * path: moving between two levels the settings file holds changes no flag, so
- * it restarts nothing, exactly as before.
+ * meaning "no flag was passed, so the CLI runs the model's default". A level
+ * picked mid-chat reaches the running CLI another way, below, and when it does the
+ * recorded flag moves with it.
  *
- * Both directions across the boundary do need a restart:
+ * A running CLI can be told a new level without restarting (measured on CLI
+ * 2.1.291: `apply_flag_settings`, and the official `/effort` command behind it as
+ * the fallback; see features/effort-runtime.ts). When that works, the recorded
+ * flag moves to the level the settings now name, so the two sides agree and
+ * nothing restarts, `max` included.
  *
- * - into a flagged level (nothing → `max`) because a running CLI has no way to
- *   be told, and
- * - out of one (`max` → nothing) because `--effort` pins the process it
- *   launched. Leaving that CLI in place would keep answering at `max` while the
- *   slider showed something lower, which is the reported bug with its two ends
- *   swapped.
+ * The restart stays as the net under it. A change that could not be delivered is
+ * recorded as {@link EFFORT_LEVEL_UNKNOWN}, which equals no request, so the next
+ * message restarts the CLI and it starts with `--effort` set to the stored level.
+ * A restart is slower, never wrong: the same rule that keeps the whole feature
+ * from depending on a subtype the CLI does not document.
  *
- * Unlike a permission mode, the level is read from the settings file at every
- * spawn rather than carried on the message, so there is no "this message asks
- * for nothing in particular" case to exempt: undefined here is an answer, and it
- * means the settings file holds the level.
+ * Unlike a permission mode, the level is passed at every spawn rather than carried
+ * on the message, so there is no "this message asks for nothing in particular"
+ * case to exempt: undefined here is an answer, and it means no level is stored, so
+ * the CLI runs the model's default.
  */
 export function needsRestartForEffort(
   liveEffort: string | null,
@@ -349,6 +354,13 @@ export function needsRestartForEffort(
 ): boolean {
   return liveEffort !== (requestedEffort ?? null);
 }
+
+/**
+ * Recorded as a session's effort level when a change could not be delivered to its
+ * live CLI. It is not a level the CLI accepts, so it equals no request and
+ * [needsRestartForEffort] answers "restart" until the process is respawned.
+ */
+export const EFFORT_LEVEL_UNKNOWN = '<unknown>';
 
 /**
  * Whether the session's live CLI has to be restarted so the next message runs
@@ -467,23 +479,31 @@ export async function ensureClaudeProcess(
   // settings read below answers from that same dir rather than a different project's.
   //
   // Done before the reuse decision, not just before the spawn, because that decision
-  // now depends on the settings: an effort level the settings file cannot hold has to
-  // be compared against what the live process is pinned to.
+  // now depends on the settings: the effort level the user chose has to be compared
+  // against what the live process was told.
   await Claude.applyConfigDir(workingDir);
   const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
-  const effortLevel = resolveEffortFlag(claudeSettings);
+  // Asked of the CLI only when there is a level to pass, so a user who never touched effort
+  // does not pay a `claude --help` for it.
+  const effortLevel = resolveEffortFlag(
+    claudeSettings,
+    resolveEffortFlag(claudeSettings) === undefined ? true : await cliTakesEffortFlag(),
+  );
   const thinkingDisplay = resolveThinkingDisplayFlag(claudeSettings);
 
   const existingSession = connections.getSession(targetSessionId);
   if (existingSession?.process) {
     // `--permission-mode`, `--effort` and `--thinking-display` are all spawn-time
     // flags: a live CLI keeps whatever it started with, and no official CLI command
-    // changes any of them in place.
+    // changes the mode or the thinking display in place.
     // So when the user picks a different one mid-chat, honoring it means restarting
     // the process under the new flag — otherwise the choice is silently dropped. For
     // the mode, the CLI's next `system/init` then pushes the old value back onto the
-    // webview, which looks like the mode flipping itself off (#172); for the effort,
-    // nothing pushes anything back and the slider simply lies (#474). Unchanged → reuse.
+    // webview, which looks like the mode flipping itself off (#172). Unchanged → reuse.
+    // The effort is the exception to "no command changes it": `/effort` does, and the
+    // session is told by SET_EFFORT as the user moves the slider (effort-runtime.ts),
+    // which moves the recorded level too. Only a change that could not be delivered
+    // reaches the comparison below as a difference, and then the restart is the net (#474).
     const liveMode = connections.getInputMode(targetSessionId);
     const liveEffort = connections.getEffortLevel(targetSessionId);
     const liveThinkingDisplay = connections.getThinkingDisplay(targetSessionId);
@@ -1322,6 +1342,36 @@ function handleStreamEvent(
         text: recorded.text,
       });
     });
+
+    /*
+     * Hand the webview the effort level this turn really ran at.
+     *
+     * The slider is set from what the user picked, and what the CLI then does
+     * about it is not always the same (a level the model does not take, an
+     * environment override, a change that never reached a running process). The
+     * live events do not say; the assistant entry the CLI just wrote does. Read
+     * after `result`, for the same reason as the send above: that is when it is on
+     * disk. Failure is silent by design: the slider keeps showing the level chosen.
+     *
+     * Only for a turn that asked the model something. A local command such as
+     * `/effort` also ends in a `result`, with `num_turns` of 0, and the newest
+     * assistant entry is then an older turn's, which would report a level that was
+     * just changed away from.
+     */
+    if (typeof event.num_turns === 'number' && event.num_turns > 0) {
+      void readLastRecordedEffort(targetSessionId, workingDir).then((recorded) => {
+        if (!recorded) return;
+        // The entry may not have reached the disk yet, which would hand back the
+        // previous response's; a repeat of what was already sent says nothing new.
+        if (lastReportedEffortEntry.get(targetSessionId) === recorded.uuid) return;
+        lastReportedEffortEntry.set(targetSessionId, recorded.uuid);
+        connections.broadcastToSession(targetSessionId, MessageType.EFFORT_APPLIED, {
+          sessionId: targetSessionId,
+          effort: recorded.effort,
+          perTurnEffort: recorded.perTurnEffort,
+        });
+      });
+    }
 
     // 인증 에러 진단 (비동기, 실패해도 무시)
     // Reads `is_error`/`result`/`api_error_status` rather than the `error.message` this

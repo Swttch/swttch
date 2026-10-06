@@ -33,7 +33,7 @@ export interface RecordedSend {
 const TAIL_BYTES = 2 * 1024 * 1024;
 
 /** Read the last [TAIL_BYTES] of a file as text, or the whole file if smaller. */
-async function readTail(path: string): Promise<string> {
+export async function readTail(path: string): Promise<string> {
   const { size } = await stat(path);
   const start = Math.max(0, size - TAIL_BYTES);
   const chunks: Buffer[] = [];
