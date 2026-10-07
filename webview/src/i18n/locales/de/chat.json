@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "Keine Internetverbindung. Warte auf Netzwerk{{dots}}",
-    "reconnecting": "Backend getrennt. Verbinde erneut{{dots}}"
+    "reconnecting": "Backend getrennt. Verbinde erneut{{dots}}",
+    "forwarding": {
+      "disabled": "Die Portweiterleitung ist in Ihrem Client ausgeschaltet, daher erreicht dieses Panel das Backend nicht. Schalten Sie sie in der Ansicht „Port Forwarding“ ein.",
+      "notAssigned": "Ihr Client hat den weitergeleiteten Port noch nicht geöffnet. Das Plugin fragt weiter nach und lädt dieses Panel neu, sobald er offen ist.",
+      "unavailable": "Der Backend-Port konnte nicht an Ihren Rechner weitergeleitet werden. Den Grund finden Sie im IDE-Log auf dem Remote-Host."
+    }
   },
   "updateBanner": {
     "released": "v{{version}} veröffentlicht!",

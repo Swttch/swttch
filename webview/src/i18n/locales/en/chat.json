@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "No internet connection. Waiting for network{{dots}}",
-    "reconnecting": "Backend disconnected. Reconnecting{{dots}}"
+    "reconnecting": "Backend disconnected. Reconnecting{{dots}}",
+    "forwarding": {
+      "disabled": "Port Forwarding is turned off in your client, so this panel cannot reach the backend. Turn it on in the Port Forwarding view.",
+      "notAssigned": "Your client has not opened the forwarded port yet. The plugin keeps asking and reloads this panel once it does.",
+      "unavailable": "The backend port could not be forwarded to your machine. The reason is in the IDE log on the remote host."
+    }
   },
   "updateBanner": {
     "released": "v{{version}} released!",

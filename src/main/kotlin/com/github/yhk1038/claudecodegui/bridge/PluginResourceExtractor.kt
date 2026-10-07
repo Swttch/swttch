@@ -782,7 +782,7 @@ class PluginResourceExtractor(
             File(File(PathManager.getSystemDir().toFile(), "plugins"), ROOT_DIR_NAME)
 
         /** Plugin version from the runtime descriptor; the version-scope key. */
-        private fun defaultVersion(): String =
+        internal fun defaultVersion(): String =
             resolvePluginVersion(PluginId.getId(PLUGIN_ID)) ?: "unknown"
 
         /**

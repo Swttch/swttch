@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "沒有網際網路連線。正在等待網路{{dots}}",
-    "reconnecting": "後端連線已中斷。正在重新連線{{dots}}"
+    "reconnecting": "後端連線已中斷。正在重新連線{{dots}}",
+    "forwarding": {
+      "disabled": "用戶端已關閉連接埠轉送，因此此面板無法連線到後端。請在「連接埠轉送」檢視中將其開啟。",
+      "notAssigned": "用戶端尚未開啟轉送的連接埠。外掛程式會持續重試，開啟後會重新載入此面板。",
+      "unavailable": "無法將後端連接埠轉送到您的電腦。原因記錄在遠端主機的 IDE 記錄中。"
+    }
   },
   "updateBanner": {
     "released": "v{{version}} 已發布！",
