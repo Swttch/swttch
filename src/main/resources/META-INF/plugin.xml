@@ -115,6 +115,12 @@
         <postStartupActivity
             implementation="com.github.yhk1038.claudecodegui.startup.ChatHostRestoreActivity"/>
 
+        <!-- On the JetBrains Client half of Remote Development only: once per plugin
+             version, say that the chat runs on the remote host and what to do when it
+             says "Backend disconnected" (issue #473). -->
+        <postStartupActivity
+            implementation="com.github.yhk1038.claudecodegui.startup.ThinClientNoticeActivity"/>
+
         <!-- Register passive auto-selection listeners (tab switch + text selection)
              that push the active file/selection to /internal/ide-selection -->
         <postStartupActivity
@@ -145,6 +151,13 @@
             id="claude-code-gui.jcef-runtime"
             displayType="STICKY_BALLOON"
             displayName="JCEF Runtime"/>
+
+        <!-- Notification group for the one-time "the plugin runs on the remote host"
+             notice shown on a JetBrains Client (see ThinClientNotifier). -->
+        <notificationGroup
+            id="claude-code-gui.remote-dev"
+            displayType="BALLOON"
+            displayName="Claude Code Remote Development"/>
 
         <!-- Notification group for "agent needs your attention" / "response complete"
              events raised when the IDE window is not focused (see ClaudeCodePanel). -->

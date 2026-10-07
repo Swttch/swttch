@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "Sin conexión a internet. Esperando la red{{dots}}",
-    "reconnecting": "Backend desconectado. Reconectando{{dots}}"
+    "reconnecting": "Backend desconectado. Reconectando{{dots}}",
+    "forwarding": {
+      "disabled": "El reenvío de puertos está desactivado en su cliente, por lo que este panel no puede alcanzar el backend. Actívelo en la vista Port Forwarding.",
+      "notAssigned": "Su cliente todavía no ha abierto el puerto reenviado. El plugin sigue pidiéndolo y recarga este panel cuando lo abra.",
+      "unavailable": "No se pudo reenviar el puerto del backend a su equipo. El motivo está en el registro del IDE en el host remoto."
+    }
   },
   "updateBanner": {
     "released": "¡v{{version}} disponible!",

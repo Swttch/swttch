@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "Sem conexão com a internet. Aguardando a rede{{dots}}",
-    "reconnecting": "Backend desconectado. Reconectando{{dots}}"
+    "reconnecting": "Backend desconectado. Reconectando{{dots}}",
+    "forwarding": {
+      "disabled": "O encaminhamento de portas está desativado no seu cliente, então este painel não alcança o backend. Ative-o na visualização Port Forwarding.",
+      "notAssigned": "O seu cliente ainda não abriu a porta encaminhada. O plugin continua pedindo e recarrega este painel quando ela abrir.",
+      "unavailable": "Não foi possível encaminhar a porta do backend para a sua máquina. O motivo está no log do IDE no host remoto."
+    }
   },
   "updateBanner": {
     "released": "v{{version}} lançada!",

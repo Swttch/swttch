@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "Aucune connexion Internet. En attente du réseau{{dots}}",
-    "reconnecting": "Backend déconnecté. Reconnexion{{dots}}"
+    "reconnecting": "Backend déconnecté. Reconnexion{{dots}}",
+    "forwarding": {
+      "disabled": "Le transfert de port est désactivé dans votre client, ce panneau ne peut donc pas joindre le backend. Activez-le dans la vue Port Forwarding.",
+      "notAssigned": "Votre client n'a pas encore ouvert le port transféré. Le plugin continue de le demander et recharge ce panneau dès qu'il l'ouvre.",
+      "unavailable": "Le port du backend n'a pas pu être transféré vers votre machine. La raison figure dans le journal de l'IDE sur l'hôte distant."
+    }
   },
   "updateBanner": {
     "released": "v{{version}} publiée !",

@@ -8,6 +8,8 @@ import { SessionListScaleProvider, SessionListScale } from '@/components/Session
 import { getAdapter } from '@/adapters';
 import { useTranslation } from '@/i18n';
 import { MessageType } from '@/shared';
+import { useBridgeContext } from '@/contexts/BridgeContext';
+import { ConnectionLostBanner } from '@/pages/ChatPage/ConnectionLostBanner';
 import { ScopeTabs, SessionScope } from './ScopeTabs';
 
 /**
@@ -21,6 +23,7 @@ import { ScopeTabs, SessionScope } from './ScopeTabs';
 export function SessionPanelPage() {
   const { t } = useTranslation('sessionPanel');
   const { openNewTab, loadSessions, sessionsServiceError, isLoading } = useSessionContext();
+  const { isConnected } = useBridgeContext();
   const {
     currentSessionId,
     searchQuery,
@@ -55,6 +58,12 @@ export function SessionPanelPage() {
   return (
     <SessionListScaleProvider scale={SessionListScale.Regular}>
       <div className="flex flex-col h-screen bg-surface-base text-text-primary">
+        {/* This panel is the only thing on screen in the IDE's side tool window, so
+            when the backend cannot be reached nothing else says so. The chat page
+            has the same banner; without it here the panel read as an empty
+            history (issue #473). Renders nothing while connected. */}
+        <ConnectionLostBanner />
+
         <div className="flex-shrink-0 px-2 pt-2">
           <button
             onClick={openNewTab}
@@ -93,13 +102,18 @@ export function SessionPanelPage() {
               {/* Same reasoning as the session dropdown: until a list arrives,
                   neither "no sessions" nor "no matches" is something the panel
                   knows to be true. */}
-              {isLoading
-                ? t('common:sessionList.loadingSessions')
-                : sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
-                  ? t('empty.wslHostMismatch')
-                  : searchQuery.trim()
-                    ? t('empty.noMatches')
-                    : t('empty.noSessions')}
+              {/* Nor is it something the panel knows while the backend is out of
+                  reach: no list has arrived because none can, and the banner
+                  above says so. */}
+              {!isConnected
+                ? null
+                : isLoading
+                  ? t('common:sessionList.loadingSessions')
+                  : sessionsServiceError?.type === MessageType.WSL_HOST_MISMATCH
+                    ? t('empty.wslHostMismatch')
+                    : searchQuery.trim()
+                      ? t('empty.noMatches')
+                      : t('empty.noSessions')}
             </div>
           )
         ) : (

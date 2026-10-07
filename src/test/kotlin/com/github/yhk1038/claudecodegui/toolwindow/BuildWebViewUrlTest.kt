@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.toolwindow
 
+import com.github.yhk1038.claudecodegui.remotedev.ForwardFallback
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -286,6 +287,37 @@ class BuildWebViewUrlTest {
             )
             assertTrue(url.contains("workingDir=%2Fproject%2Fdir"), "expected the tab's dir in: $url")
             assertEquals(1, url.count { it == '?' })
+        }
+    }
+
+    @Nested
+    inner class ForwardingParam {
+        @Test
+        fun `a local IDE or a granted forward adds no forwarding param`() {
+            val url = buildWebViewUrl(
+                port = 1234,
+                pathSegment = "/sessions/new",
+                workingDir = null,
+                panelId = "p1",
+                isBright = false,
+            )
+            assertFalse(url.contains("forwarding="), "expected no forwarding param in: $url")
+        }
+
+        @Test
+        fun `a forward that did not happen is named in the url`() {
+            ForwardFallback.entries.forEach { reason ->
+                val url = buildWebViewUrl(
+                    port = 1234,
+                    pathSegment = "/sessions/new",
+                    workingDir = null,
+                    panelId = "p1",
+                    isBright = false,
+                    forwardFallback = reason,
+                )
+                assertTrue(url.contains("forwarding=${reason.wire}"), "expected forwarding=${reason.wire} in: $url")
+                assertEquals(1, url.count { it == '?' })
+            }
         }
     }
 }

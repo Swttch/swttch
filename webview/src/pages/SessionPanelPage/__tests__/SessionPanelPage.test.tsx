@@ -30,6 +30,12 @@ vi.mock('@/contexts/SessionContext', () => ({
   useSessionContextOrNull: mockUseSessionContext,
 }));
 
+const { bridge } = vi.hoisted(() => ({ bridge: { isConnected: true } }));
+
+vi.mock('@/contexts/BridgeContext', () => ({
+  useBridgeContext: () => bridge,
+}));
+
 vi.mock('@/adapters', () => ({
   getAdapter: () => ({ openSession: mockOpenSession }),
 }));
@@ -55,6 +61,7 @@ function listResult(overrides = {}) {
 describe('SessionPanelPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    bridge.isConnected = true;
     mockOpenSession.mockResolvedValue(undefined);
     mockUseSessionContext.mockReturnValue({
       openNewTab: mockOpenNewTab,
@@ -142,5 +149,36 @@ describe('SessionPanelPage', () => {
 
     expect(screen.getByText('Loading sessions...')).toBeDefined();
     expect(screen.queryByText('No sessions yet')).toBeNull();
+  });
+
+  // Under Remote Development a panel whose backend port was not forwarded draws
+  // its shell and never connects. With no list arriving, "No sessions yet" told
+  // the user their history was empty when the truth was that nothing could be
+  // read (issue #473).
+  describe('when the backend cannot be reached', () => {
+    beforeEach(() => {
+      bridge.isConnected = false;
+      mockUseSessionList.mockReturnValue(listResult({ filteredSessions: [], groupedSessions: emptyGroups }));
+    });
+
+    it('does not claim there are no sessions', () => {
+      render(<SessionPanelPage />);
+
+      expect(screen.queryByText('No sessions yet')).toBeNull();
+    });
+
+    it('says the backend is disconnected', () => {
+      render(<SessionPanelPage />);
+
+      expect(screen.getByText(/Backend disconnected/)).toBeDefined();
+    });
+
+    it('shows no banner while connected', () => {
+      bridge.isConnected = true;
+
+      render(<SessionPanelPage />);
+
+      expect(screen.queryByText(/Backend disconnected/)).toBeNull();
+    });
   });
 });

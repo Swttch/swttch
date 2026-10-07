@@ -80,14 +80,70 @@ Backend port is reachable from the client on 46655
 clients — so in a monolith IDE the lookup ends immediately, no forwarding happens,
 and the webview gets the backend's own port exactly as before.
 
-**Failure is never fatal.** Anything unexpected — the API missing, the client not
-binding its end in time, a call throwing — falls back to the host port. That is
-correct locally and no worse than the previous behaviour anywhere else.
+**Failure is never fatal, and it is never silent.** Anything unexpected — the API
+missing, Port Forwarding switched off, the client not binding its end in time, a
+call throwing — falls back to the host port. That is correct locally and no worse
+than the previous behaviour anywhere else. Under Remote Development the host port
+is a dead address, so a fallback there is reported three ways, covered in the next
+section.
 
 One limit is worth knowing. **If the IDE declines to forward the port, the plugin
-does not override it.** It asks once each time the panel opens, and falls back to
-the unforwarded port when the answer is no. Nothing in the plugin's own settings
-changes that.
+does not override it.** Nothing in the plugin's own settings changes that.
+
+## When the banner still says "Backend disconnected"
+
+The page can draw its shell without a forward, because the IDE relays the page's
+HTTP, but it cannot connect, because the IDE does not relay WebSocket. A panel
+whose port was not forwarded therefore looks exactly like a backend that is down
+([#473](https://github.com/Swttch/swttch/issues/473)). Three things tell them apart.
+
+**The banner names the reason** after "Backend disconnected. Reconnecting…":
+
+| Reason | What it means | What to do |
+|---|---|---|
+| `disabled` | Port Forwarding is switched off in your client | Switch it on in the client's Port Forwarding view |
+| `not-assigned` | The IDE accepted the forward, but your client has not opened its end | Nothing; the plugin keeps asking |
+| `api-unavailable`, `failed` | The IDE's forwarding API is missing or threw | Read the remote host's IDE log |
+
+**The remote host's IDE log carries the same reason**, with a line that starts
+
+```
+Backend port 46655 was not forwarded to the client (disabled)
+```
+
+**The plugin asks again by itself** for the two reasons that time or the user can
+clear (`disabled`, `not-assigned`): after 5, 15, 30 and 60 seconds. The moment the
+IDE grants the forward, the panel reloads onto it. The other two reasons are not
+retried, because a changed API does not change by waiting.
+
+**The plugin follows the clients, too.** A remote host keeps running while clients
+come and go, and a forwarded port belongs to the client it was made for. On a host
+started by the Remote Development launcher, the plugin checks every 2 seconds which
+clients are attached, and loads the panel again when that changes. Two cases that
+used to leave a panel on "Backend disconnected" until it was reopened by hand are
+covered this way, both measured on PhpStorm 2026.2.3:
+
+- the host starts first and restores its panels before any client attaches
+  (the log says `No remote client is connected yet`), and
+- a client disconnects and comes back while the host keeps running.
+
+**The side panel says so, too.** The session list in the side tool window shows the
+same banner. While the backend cannot be reached it no longer says "No sessions
+yet", because no list can arrive and an empty history is not what is wrong.
+
+Two situations produce the banner without any of the above:
+
+- **The plugin on the remote host is older than v0.32.2.** The host's copy is the
+  one that forwards, so a newer plugin on your own machine changes nothing. Update
+  the plugin on the remote host and restart its IDE. The IDE gives a plugin no public
+  way to read the other half's version, so the client cannot check for itself;
+  instead, the first time a JetBrains Client with the plugin installed opens a
+  project after each update, it shows a one-time notice, **Swttch runs on the remote
+  host**, that names its own version and says to bring the host to the same one.
+- **Two clients are connected to the same remote IDE.** The port is forwarded to
+  the first client only, and a panel opened from the other cannot connect. The plugin
+  cannot tell which client a panel belongs to, so it logs the situation instead of
+  guessing.
 
 ## Installing on the client does not help
 

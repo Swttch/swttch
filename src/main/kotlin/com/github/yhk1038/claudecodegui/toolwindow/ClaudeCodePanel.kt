@@ -1777,9 +1777,20 @@ class ClaudeCodePanel(
         // in JetBrains Client, where `localhost` is the user's own loopback. Ask for
         // a port reachable from there; locally, and wherever forwarding is
         // unavailable, this is the backend's own port and nothing changes (#292).
-        val webViewPort = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.resolve(port)
+        // The clients attached BEFORE the port is resolved, so one that attaches while this
+        // runs still counts as a change the watcher below reacts to.
+        val attachedAtLoad = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.attachedClients()
+        val clientPort = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.resolve(port)
+        if (com.github.yhk1038.claudecodegui.remotedev.RemoteDevHost.isRunningAsHost()) {
+            reloadWhenClientsChange(port, attachedAtLoad)
+        }
+        // A forward that did not happen is not final: the user can switch Port
+        // Forwarding on in the client, and a client that was slow to bind its end
+        // gets there. Ask again by itself rather than leave the panel on a dead
+        // address until someone reopens it (issue #473).
+        clientPort.fallback?.let { retryForwardingLater(port, it) }
         val url = buildWebViewUrl(
-            port = webViewPort,
+            port = clientPort.port,
             pathSegment = initialPath ?: "/sessions/new",
             workingDir = project.basePath,
             panelId = panelId,
@@ -1790,6 +1801,7 @@ class ClaudeCodePanel(
             // `ccg-auth` subprotocol) — the token itself is NEVER placed in the URL.
             // NEVER logged — buildWebViewUrl is not passed to any logger below.
             pairCode = pairCodeForThisLoad(),
+            forwardFallback = clientPort.fallback,
         )
         // Redact the pairing code (and any token) from any log — they are secrets.
         val loggedUrl = redactUrlSecrets(url)
@@ -1836,6 +1848,75 @@ class ClaudeCodePanel(
             armLoadingOverlayFallback()
             revalidate()
             repaint()
+        }
+    }
+
+    /** The one watcher of which remote clients are attached; a second would double every reload. */
+    private var clientWatch: kotlinx.coroutines.Job? = null
+
+    /**
+     * On a Remote Development host, loads the page again whenever the set of attached
+     * clients changes, so the URL always names a port forwarded to the client that is
+     * there NOW (issue #473).
+     *
+     * The host starts first and restores its panels, and clients attach, leave and come
+     * back after that. A page built for one client is on a dead address for the next, and
+     * both cases were measured on PhpStorm 2026.2.3: a panel restored before any client
+     * attached, and a panel left behind by a client that reconnected, each stayed on
+     * "Backend disconnected" until reopened by hand. Stops when the panel closes or the
+     * backend moves off [hostPort], which loads the page again by itself.
+     */
+    private fun reloadWhenClientsChange(hostPort: Int, attachedAtLoad: Set<Int>) {
+        if (clientWatch?.isActive == true) return
+        clientWatch = scope.launch {
+            com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.watchAttachedClients(
+                pollMs = CLIENT_WATCH_POLL_MS,
+                initial = attachedAtLoad,
+                isStillWanted = {
+                    !isPanelDisposed && !project.isDisposed &&
+                        backendService.portOf(project.basePath ?: "") == hostPort
+                },
+            ) {
+                logger.info("The attached remote clients changed; loading the panel again for backend port $hostPort")
+                loadWebView(hostPort)
+            }
+        }
+    }
+
+    /** The one chain of re-asks for a forward that did not happen; a second would double the log and the reloads. */
+    private var forwardRetry: kotlinx.coroutines.Job? = null
+
+    /**
+     * Ask the IDE again, on a growing delay, to forward [hostPort], and reload the
+     * page onto the forwarded port the moment it is granted.
+     *
+     * Only for reasons that time or the user can clear ([ForwardFallback.isWorthRetrying]).
+     * Stops when the panel closes, or when the backend has moved off [hostPort]: a
+     * restart loads the page again on its own and a retry here would race it.
+     */
+    private fun retryForwardingLater(
+        hostPort: Int,
+        reason: com.github.yhk1038.claudecodegui.remotedev.ForwardFallback,
+    ) {
+        if (!reason.isWorthRetrying || forwardRetry?.isActive == true) return
+        forwardRetry = scope.launch {
+            val outcome = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.retryUntilForwarded(
+                delaysMs = FORWARD_RETRY_DELAYS_MS.asSequence(),
+                isStillWanted = {
+                    !isPanelDisposed && !project.isDisposed &&
+                        backendService.portOf(project.basePath ?: "") == hostPort
+                },
+                resolve = { com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder.resolve(hostPort) },
+            )
+            when (outcome) {
+                com.github.yhk1038.claudecodegui.remotedev.RetryOutcome.FORWARDED -> {
+                    logger.info("Backend port $hostPort is forwarded now; reloading the panel onto it")
+                    loadWebView(hostPort)
+                }
+                com.github.yhk1038.claudecodegui.remotedev.RetryOutcome.GAVE_UP ->
+                    logger.warn("Backend port $hostPort was still not forwarded after ${FORWARD_RETRY_DELAYS_MS.size} retries; giving up until the panel is reopened")
+                com.github.yhk1038.claudecodegui.remotedev.RetryOutcome.NO_LONGER_WANTED -> Unit
+            }
         }
     }
 
@@ -2769,6 +2850,23 @@ class ClaudeCodePanel(
         private const val BACKEND_START_TIMEOUT_MS = 30_000L
 
         /**
+         * How long to wait before each re-ask for a port forward the IDE did not grant
+         * (issue #473). Spread out because the first reasons to retry are a client that
+         * is slow to bind its end (seconds) and a user switching Port Forwarding on
+         * (minutes), and each ask is a round trip through the EDT.
+         */
+        private val FORWARD_RETRY_DELAYS_MS = longArrayOf(5_000L, 15_000L, 30_000L, 60_000L)
+
+        /**
+         * How often a Remote Development host looks at which clients are attached
+         * (issue #473). Clients come and go for as long as the host runs, so the look has
+         * no end; it stops when the panel closes or the backend moves. Only a host started
+         * by the Remote Development launcher ever looks, and a look is a service query with
+         * no EDT hop and no forward created.
+         */
+        private const val CLIENT_WATCH_POLL_MS = 2_000L
+
+        /**
          * How long a paste waits for the system clipboard to be read (#278). A read is
          * instant when it works; this only ends the wait for a clipboard that never
          * answers, which would otherwise leave the paste hanging with nothing shown.
@@ -2886,6 +2984,10 @@ class ClaudeCodePanel(
  *                    connections as the `ccg-auth` subprotocol. The auth token itself
  *                    is NEVER placed in a URL. MUST still be redacted (see
  *                    [redactUrlSecrets]) before the URL is ever logged.
+ *   - `forwarding` — why the port in this URL is not a forwarded one (omitted when
+ *                    it is, and in a local IDE). The webview reads it so its
+ *                    connection banner can name the reason instead of saying only
+ *                    that the backend is disconnected (issue #473).
  */
 internal fun buildWebViewUrl(
     port: Int,
@@ -2894,6 +2996,7 @@ internal fun buildWebViewUrl(
     panelId: String,
     isBright: Boolean,
     pairCode: String? = null,
+    forwardFallback: com.github.yhk1038.claudecodegui.remotedev.ForwardFallback? = null,
 ): String {
     // A path that already names a working directory keeps it, and a path that
     // already carries a query is continued with `&`.
@@ -2916,7 +3019,8 @@ internal fun buildWebViewUrl(
     val pairParam = pairCode?.takeIf { it.isNotBlank() }?.let {
         "pair=${java.net.URLEncoder.encode(it, "UTF-8")}"
     }
-    val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam).joinToString("&")
+    val forwardingParam = forwardFallback?.let { "forwarding=${it.wire}" }
+    val query = listOfNotNull(workingDirParam, panelParam, themeParam, pairParam, forwardingParam).joinToString("&")
     val separator = if (pathSegment.contains('?')) "&" else "?"
     return "http://localhost:$port$pathSegment$separator$query"
 }

@@ -5,7 +5,12 @@
   },
   "connectionLost": {
     "offline": "无网络连接。正在等待网络{{dots}}",
-    "reconnecting": "后端连接已断开。正在重新连接{{dots}}"
+    "reconnecting": "后端连接已断开。正在重新连接{{dots}}",
+    "forwarding": {
+      "disabled": "客户端已关闭端口转发，因此此面板无法连接到后端。请在“端口转发”视图中将其开启。",
+      "notAssigned": "客户端尚未打开转发的端口。插件会持续重试，端口打开后会重新加载此面板。",
+      "unavailable": "无法将后端端口转发到您的电脑。原因记录在远程主机的 IDE 日志中。"
+    }
   },
   "updateBanner": {
     "released": "v{{version}} 已发布!",
