@@ -1834,9 +1834,11 @@ class ClaudeCodePanel(
             // timer attaching it at 20s and the load finishing 4s later. So the
             // browser is attached immediately and the placeholder is layered over
             // it instead.
-            // "(SSH)" only where the page really crosses a remote link: a local IDE
-            // renders the browser itself and has nothing to say about SSH.
-            setLoadingPhase(if (h.isOsr) LoadingPhase.LOADING_UI_REMOTE else LoadingPhase.LOADING_UI)
+            // "(SSH)" only where the page really crosses a remote link: a local IDE has
+            // nothing to say about SSH, whether or not its JCEF is out of process. The
+            // clients are the ones seen before the port was resolved; one that attaches
+            // after that changes the set and loads the page again with its own label.
+            setLoadingPhase(LoadingPhase.pageOnItsWay(attachedAtLoad))
             // loadURL waits for a size. Starting it here would let the very first
             // panel lay the page out at 0x0 — the tool window has not been placed
             // yet at this point, so Swing has not given the stage a size — and the
