@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "不支援的檔案類型：{{type}}",
-        "tooLarge": "檔案過大：{{size}}MB（上限 {{max}}MB）"
+        "tooLarge": "檔案過大：{{size}}MB（上限 {{max}}MB）",
+        "uploadFailed": "無法附加「{{name}}」"
       }
     },
     "contextWindow": {

@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "نوع ملف غير مدعوم: {{type}}",
-        "tooLarge": "الملف كبير جدًا: {{size}} ميغابايت (الحد الأقصى {{max}} ميغابايت)"
+        "tooLarge": "الملف كبير جدًا: {{size}} ميغابايت (الحد الأقصى {{max}} ميغابايت)",
+        "uploadFailed": "تعذّر إرفاق «{{name}}»"
       }
     },
     "contextWindow": {

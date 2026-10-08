@@ -146,6 +146,37 @@ export class FolderAttachment extends Attachment {
   }
 }
 
+/**
+ * A file or folder whose bytes are still travelling to the backend. It is not an
+ * attachment yet: it has no saved path, so it is never sent with a message. It
+ * becomes a {@link FileAttachment} or {@link FolderAttachment} when the upload ends.
+ */
+export class PendingUpload {
+  readonly id: string;
+  readonly label: string;
+  readonly isFolder: boolean;
+  readonly sentBytes: number;
+  readonly totalBytes: number;
+
+  constructor(params: { id?: string; label: string; isFolder: boolean; sentBytes?: number; totalBytes?: number }) {
+    this.id = params.id ?? crypto.randomUUID();
+    this.label = params.label;
+    this.isFolder = params.isFolder;
+    this.sentBytes = params.sentBytes ?? 0;
+    this.totalBytes = params.totalBytes ?? 0;
+  }
+
+  /** Whole percent already sent, or null while there is no size to measure against. */
+  get percent(): number | null {
+    if (this.totalBytes <= 0) return null;
+    return Math.min(100, Math.floor((this.sentBytes / this.totalBytes) * 100));
+  }
+
+  withProgress(sentBytes: number, totalBytes: number): PendingUpload {
+    return new PendingUpload({ id: this.id, label: this.label, isFolder: this.isFolder, sentBytes, totalBytes });
+  }
+}
+
 export abstract class AttachmentPayload {
   abstract readonly type: AttachmentType;
 }

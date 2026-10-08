@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "サポートされていないファイル形式です: {{type}}",
-        "tooLarge": "ファイルが大きすぎます: {{size}}MB (最大 {{max}}MB)"
+        "tooLarge": "ファイルが大きすぎます: {{size}}MB (最大 {{max}}MB)",
+        "uploadFailed": "「{{name}}」を添付できませんでした"
       }
     },
     "contextWindow": {

@@ -21,7 +21,8 @@ type MessageHandler = (message: IPCMessage) => void;
 interface PendingRequest {
   resolve: (payload?: any) => void;
   reject: (error: Error) => void;
-  timeoutId: ReturnType<typeof setTimeout>;
+  /** Null for a request that waits on a person and so never expires on a clock. */
+  timeoutId: ReturnType<typeof setTimeout> | null;
 }
 
 export class Bridge {
@@ -36,6 +37,7 @@ export class Bridge {
 
     // Connector의 연결 상태 변경을 Bridge 레벨에서도 전파
     this.connector.onConnectionChange((connected) => {
+      if (!connected) this.rejectUntimedRequests();
       this.connectionChangeHandlers.forEach(handler => {
         try {
           handler(connected);
@@ -61,12 +63,25 @@ export class Bridge {
   disconnect(): void {
     // pending 요청 전부 reject
     this.pending.forEach((pending, _requestId) => {
-      clearTimeout(pending.timeoutId);
+      if (pending.timeoutId !== null) clearTimeout(pending.timeoutId);
       pending.reject(new Error('Bridge disconnected'));
     });
     this.pending.clear();
 
     this.connector.disconnect();
+  }
+
+  /**
+   * A request without a clock has no other way to give up, so a lost connection
+   * is what ends it: the answer travels back over the socket that just closed
+   * and can never arrive, even after the socket reconnects.
+   */
+  private rejectUntimedRequests(): void {
+    this.pending.forEach((pending, requestId) => {
+      if (pending.timeoutId !== null) return;
+      this.pending.delete(requestId);
+      pending.reject(new Error('Bridge disconnected'));
+    });
   }
 
   get isConnected(): boolean {
@@ -86,6 +101,8 @@ export class Bridge {
 
   /**
    * 요청-응답 패턴. requestId 생성 + ACK/ERROR 매칭 + 30초 타임아웃.
+   * A request that waits on a person (a native file picker) passes `timeout: null`
+   * to drop the time limit; such a request fails only when the connection is lost.
    *
    * 기존 useBridge.send()와 동일한 동작:
    * - requestId 생성 후 pending Map에 등록
@@ -95,7 +112,7 @@ export class Bridge {
    *
    * 연결 미완료 시 connector.ensureReady()로 대기.
    */
-  async request<T = any>(type: string, payload: Record<string, unknown> = {}, options?: { timeout?: number }): Promise<T> {
+  async request<T = any>(type: string, payload: Record<string, unknown> = {}, options?: { timeout?: number | null }): Promise<T> {
     const requestId = this.generateRequestId();
     const message: IPCMessage = {
       type,
@@ -121,10 +138,11 @@ export class Bridge {
       }
     }
 
-    const timeoutMs = options?.timeout ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    // null is a deliberate "no limit"; undefined falls back to the default.
+    const timeoutMs = options?.timeout === undefined ? DEFAULT_REQUEST_TIMEOUT_MS : options.timeout;
 
     return new Promise<T>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
+      const timeoutId = timeoutMs === null ? null : setTimeout(() => {
         if (this.pending.has(requestId)) {
           this.pending.delete(requestId);
           const error = new Error(`Request ${requestId} (${type}) timed out`);
@@ -139,7 +157,7 @@ export class Bridge {
         this.connector.send(message);
       } catch (error) {
         this.pending.delete(requestId);
-        clearTimeout(timeoutId);
+        if (timeoutId !== null) clearTimeout(timeoutId);
         const err = error instanceof Error ? error : new Error(String(error));
         this.lastErrorValue = err;
         console.error('[Bridge] Error sending message:', error);
@@ -227,7 +245,7 @@ export class Bridge {
       if (requestId) {
         const pending = this.pending.get(requestId);
         if (pending) {
-          clearTimeout(pending.timeoutId);
+          if (pending.timeoutId !== null) clearTimeout(pending.timeoutId);
           this.pending.delete(requestId);
           pending.resolve(message.payload);
         }
@@ -250,7 +268,7 @@ export class Bridge {
       }
       const pending = this.pending.get(message.requestId);
       if (pending) {
-        clearTimeout(pending.timeoutId);
+        if (pending.timeoutId !== null) clearTimeout(pending.timeoutId);
         this.pending.delete(message.requestId);
         pending.reject(new Error(String(message.payload?.error || 'Unknown error')));
       }
