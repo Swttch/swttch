@@ -1,4 +1,5 @@
 import type { ImageAttachment } from '../../../../types';
+import { AttachmentNameTooltip } from './AttachmentNameTooltip';
 
 interface Props {
   attachment: ImageAttachment;
@@ -32,9 +33,11 @@ export function ImagePreview(props: Props) {
       >
         ×
       </button>
-      <div className="text-[0.7692rem] text-text-tertiary truncate max-w-[64px] mt-0.5 text-center">
-        {attachment.displayLabel}
-      </div>
+      <AttachmentNameTooltip name={attachment.displayLabel}>
+        <div className="text-[0.7692rem] text-text-tertiary truncate max-w-[64px] mt-0.5 text-center">
+          {attachment.displayLabel}
+        </div>
+      </AttachmentNameTooltip>
     </div>
   );
 }

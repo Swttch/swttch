@@ -1,4 +1,5 @@
 import type { PendingUpload } from '../../../../types';
+import { AttachmentNameTooltip } from './AttachmentNameTooltip';
 
 interface Props {
   upload: PendingUpload;
@@ -37,9 +38,11 @@ export function UploadChip(props: Props) {
           </>
         )}
       </svg>
-      <span className="text-[0.8461rem] text-text-secondary truncate max-w-[120px]">
-        {upload.isFolder ? `${upload.label}/` : upload.label}
-      </span>
+      <AttachmentNameTooltip name={upload.label}>
+        <span className="text-[0.8461rem] text-text-secondary truncate max-w-[120px]">
+          {upload.isFolder ? `${upload.label}/` : upload.label}
+        </span>
+      </AttachmentNameTooltip>
       {percent !== null && (
         <span className="text-[0.7692rem] text-text-tertiary tabular-nums shrink-0">{percent}%</span>
       )}

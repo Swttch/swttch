@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { AttachmentPreview } from '../index';
-import { ImageAttachment, FileAttachment, PendingUpload } from '@/types';
+import { ImageAttachment, FileAttachment, FolderAttachment, PendingUpload } from '@/types';
 
 /** A pixel's worth of base64, distinct per image so src comparisons are exact. */
 function image(tag: string): ImageAttachment {
@@ -140,5 +140,45 @@ describe('AttachmentPreview layout', () => {
 
     const row = screen.getByText('notes.txt').closest('.flex-wrap');
     expect(row).toHaveClass('items-start');
+  });
+});
+
+describe('AttachmentPreview names', () => {
+  const longName = 'a-very-long-recording-of-the-whole-afternoon.mov';
+
+  it('shows the whole file name and where it lives when the shortened name is hovered', async () => {
+    const file = new FileAttachment({ fileName: longName, absolutePath: '/Users/me/ignore/' + longName });
+    render(<AttachmentPreview attachments={[file]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText(longName));
+
+    await waitFor(() => expect(screen.getAllByText(longName)).toHaveLength(2));
+    expect(screen.getByText('/Users/me/ignore/' + longName)).toBeInTheDocument();
+  });
+
+  it('shows the whole name of a folder', async () => {
+    const folder = new FolderAttachment({ folderName: 'photos-of-the-trip', absolutePath: '/saved/photos-of-the-trip' });
+    render(<AttachmentPreview attachments={[folder]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText('photos-of-the-trip/'));
+
+    await waitFor(() => expect(screen.getByText('/saved/photos-of-the-trip/')).toBeInTheDocument());
+  });
+
+  it('shows the whole name under an image thumbnail too, which has no path to add', async () => {
+    const picture = new ImageAttachment({ fileName: 'admin-login-2026-10-08T00-00-00Z.png', mimeType: 'image/png', base64: 'AAA', size: 3 });
+    render(<AttachmentPreview attachments={[picture]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText('admin-login-2026-10-08T00-00-00Z.png'));
+
+    await waitFor(() => expect(screen.getAllByText('admin-login-2026-10-08T00-00-00Z.png')).toHaveLength(2));
+  });
+
+  it('uses no native title attribute, which the IDE browser never draws', () => {
+    const file = new FileAttachment({ fileName: longName, absolutePath: '/tmp/' + longName });
+    const folder = new FolderAttachment({ folderName: 'src', absolutePath: '/tmp/src' });
+    const { container } = render(<AttachmentPreview attachments={[file, folder]} onRemove={vi.fn()} />);
+
+    expect(container.querySelector('[title]')).toBeNull();
   });
 });
