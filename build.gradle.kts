@@ -188,54 +188,14 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.33.4 - Add line numbers to Edit cards, fix the accounts screen and pasting</h3>
+            <h3>0.34.0 - Reconnect Remote Development, guide for stalled screens, context usage, and a + menu</h3>
             <ul>
-                <li>Add line numbers to Edit cards, and open the file at that line (#523, reported by @CraftedFury)</li>
-                <li>Fix returning from Manage accounts clearing the current session's chat view (#522, reported by @EndiButler)</li>
-                <li>Fix pasting external text into the chat input on Fedora KDE (Wayland) (#524, reported by @ruanclaudio)</li>
-                <li>Improve compatibility with IDE 2026.3 (#525)</li>
-            </ul>
-            <h3>0.33.3 -Add Mac editing keys and prompt reordering, fix session approval and selection</h3>
-            <ul>
-                <li>Add macOS Control-key editing shortcuts to the message box (#506, reported by @metasim)</li>
-                <li>Fix Ctrl+Z in the message box undoing in the IDE instead of the text (#495, reported by @cheack)</li>
-                <li>Add a Cmd+/ shortcut help window (#515)</li>
-                <li>Add drag-and-drop reordering of saved prompts and categories (#519)</li>
-                <li>Add an "Allow all in this session" switch to the approval panel, and hide the session approval option that cannot be kept (#521)</li>
-                <li>Fix session names set with /rename not showing in the session list (#512, reported by @Tenneteu)</li>
-                <li>Fix slash commands typed with another language's input still on not being found (#512, reported by @Tenneteu)</li>
-                <li>Fix unstable text selection in the chat and the Linux selection buffer staying empty (#513, reported by @0vvland)</li>
-                <li>Fix the panel getting stuck on "Reconnecting" when the backend dies while an IDE dialog is open (#516)</li>
-            </ul>
-            <h3>0.33.2 -Add message timestamps, fix scrolling and permission mode</h3>
-            <ul>
-                <li>Add copy, fork and send time under each message (#498, reported by @hollandjake)</li>
-                <li>Fix background task details not scrolling like the main chat (#511, reported by @CraftedFury)</li>
-                <li>Fix an unsent permission mode being reverted when the slash panel opens (#497, reported by @TobbeLino)</li>
-            </ul>
-            <h3>0.33.1 - Hide tool calls, CLI auto-update, and more fixes</h3>
-            <ul>
-                <li>Add a setting to hide tool call cards in the chat (#476 by @antoine-le-calloch)</li>
-                <li>Add background auto-update for the Claude Code CLI (#494 by @antoine-le-calloch)</li>
-                <li>Add the showThinkingSummaries setting to show thinking summaries (#502)</li>
-                <li>Fix empty Thinking labels looking clickable, and add a chevron to labels that have text (#502, reported by @Kolterdyx)</li>
-                <li>Fix sleep prevention overwriting the user's power settings, and keep the machine awake with the lid closed (#489, reported by @HawkOnPK)</li>
-                <li>Fix question, permission and plan panels hiding the collapse button when too tall (#503, reported by @emiltsonev)</li>
-                <li>Fix the update banner not naming the plugin, and fill the Plugins search from the Update button (#501, reported by @alexandrezia)</li>
-                <li>Fix a leftover Claude CLI when the client vanishes without closing its socket (#500, reported by @iljac)</li>
-            </ul>
-            <h3>0.33.0 - Desktop notifications, and fixes for the message box and more</h3>
-            <ul>
-                <li>Add desktop notifications on macOS, Windows and Linux (#105, reported by @egorshubin and @benomatis)</li>
-                <li>Add a message input queue</li>
-                <li>Fix the behavior of the follow-up message setting</li>
-                <li>Fix broken file attachment (#487, reported by @junightCode)</li>
-                <li>Fix the Max effort level never being applied (#486, reported by @AlfredQin)</li>
-                <li>Fix excessive logging and the log size cap not being enforced (#488, reported by @benomatis)</li>
-                <li>Fix ccb failing to run on Windows when the node path contains a space (#478, reported by @mmoore99)</li>
-                <li>Fix the message box being disabled (#484, reported by @mzbik)</li>
-                <li>Fix settings changes not syncing live to other tabs</li>
-                <li>Fix the profile being overwritten with defaults when it cannot be read</li>
+                <li>Fix panels not connecting under Remote Development, and show why when they cannot (#473, reported by @alexandrezia)</li>
+                <li>Add a guide for screens that do not load or connect, and restart a backend that was left behind (#526, reported by @thiago-f-medeiros)</li>
+                <li>Add used/total to the context badge, and cut the percentage off instead of rounding it up (#328, #490, reported by @CraftedFury)</li>
+                <li>Add one + menu in place of the attach and slash buttons (#527)</li>
+                <li>Move Effort to the model panel, with keyboard control (#527)</li>
+                <li>Fix Effort changes not reaching the running CLI (#527, #474 reported by @AlfredQin)</li>
             </ul>
         """.trimIndent()
     }
