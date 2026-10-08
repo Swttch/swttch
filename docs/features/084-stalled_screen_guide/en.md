@@ -11,6 +11,7 @@ Three things changed for the moments when the Claude Code screen does not come u
 - If the screen has not finished loading **30 seconds** after it started, or the browser reports that it could not load it at all, a **guide** takes the place of "Loading the screen...". It has a **Restart** button, tells you to quit the IDE completely and open it again, and walks you through the **IDE setting** that fixes a built-in browser that cannot draw.
 - The **status bar** says **Swttch** in front of its dot, and the card it opens has **Reload** and **Restart**.
 - If the backend comes back on a different port, the screen **loads again by itself** instead of staying on the old address.
+- If the **backend is gone** while a tab is open, or the screen is up but **cannot connect to the backend** and only shows "Backend disconnected. Reconnecting...", the IDE **restarts the backend or loads the screen again by itself**, and shows the guide if that does not help.
 
 The loading text now says **"(SSH)"** only when the screen is really drawn by a Remote Development client. It used to say so in a local IDE too ([#526](https://github.com/Swttch/swttch/issues/526)).
 
@@ -83,6 +84,56 @@ Every width is worked out from the width of the tool window and worked out again
 
 If the browser reports that it could not load the screen (for example "This site can't be reached" because the backend does not answer), the guide appears **at once** and **stays**. Before, that error page counted as a finished load and took the guide away, leaving only the browser's own error page. It was found under Remote Development, where a stopped backend produces exactly that page.
 
+## When the screen is up but cannot reach the backend
+
+The screen loaded, but its own connection to the backend does not come up (or no longer does). All it can show is a line at the top, **"Backend disconnected. Reconnecting..."**, and it tries again every two seconds, forever. Before, nothing else happened: the status bar went red or stayed green, and there was nothing to press.
+
+Two different things leave a screen in that state, and each one has its own answer.
+
+### The backend is gone
+
+A real log on a developer machine shows it: the backend received a termination signal and exited cleanly (exit code 0) while a tab was open. The IDE read that as a retirement because of idle, stood its watchdog down, and waited for the next panel to open. The open tab kept asking the dead port, about 60,000 times over five days, until someone restarted something by hand.
+
+Now the IDE looks at what the exit leaves behind:
+
+| Situation | What the IDE does |
+|-----------|-------------------|
+| A tab is open and the backend had been working | Restarts the backend through **Restart** (below), so the tab is not left without one |
+| No tab is open | Leaves the backend retired. The next panel that opens starts it |
+| A tab is open but the backend exited before it ever came up | Does **not** start it again, because the same failure would repeat. The guide opens instead |
+
+Nothing here counts seconds. The two facts it needs are whether a tab is open and whether this backend ever came up far enough for the IDE's own connection to it to work. The second one is what ends a loop.
+
+Measured on the production build in a sandbox IDE (IntelliJ IDEA 2026.2): a termination signal (`kill`) brought the backend back in about **0.5 seconds**. A forced kill (`kill -9`) took about **9 seconds**: the IDE's connection to the backend has to fail three times in a row before it believes the backend is gone, because a single failed connection also happens when the backend is merely busy.
+
+### The backend is there but the screen is not connected
+
+The IDE asks the backend whether this panel is among the panels connected to it. The backend lists them.
+
+1. Not listed on two looks in a row: the IDE **loads the screen again by itself**. This builds the address and the pairing anew and leaves the other tabs alone.
+2. Still not listed on two looks in a row after the new screen has finished loading: the guide takes its place, with the title **"The screen is up, but it cannot reach the backend"**. It has the **Restart** card and the footer, and no settings card, because nothing about how the browser draws is wrong.
+3. When the IDE has stopped starting a backend that never came up, the guide opens at once. Loading the screen again cannot help a tab that has no backend.
+
+The guide goes away **by itself** the moment the screen connects. If you close it, it stays closed until the screen has connected once. A screen that is still loading, a backend that cannot be asked and a restart in progress count as "not known", never as "not connected".
+
+The look interval is the screen's own reconnect interval (two seconds). Two looks are enough because a screen whose backend has just come back has made one retry by the second look.
+
+This case was **not** reproduced in a production build, because a production build has no way to make the backend answer while refusing only the screen's connection. The rule above is covered by unit tests, not by a measurement.
+
+### One Restart
+
+Every restart goes through the same function, the one the status card's **Restart** runs: it tells the panels, restarts the backend (asking for the port it had before, so open tabs find it where they left it), and loads the screens again. These all call it:
+
+- the status card's Restart link
+- the guide's restart button
+- the recovery after a crash (a forced kill)
+- the recovery after a clean exit that left a tab behind
+- a restart the backend asks for itself
+
+A request that arrives while a restart of the same project is running is dropped, because the running one already does what was asked.
+
+Measured on the same production build: Restart on the card, `kill` and `kill -9` each wrote the same sequence in the log (restart requested for one panel, new backend on the same port, the screen loaded again), each started the backend once, and none was dropped as a duplicate.
+
 ## Reload and Restart in the status bar
 
 The status bar now says **Swttch** in front of its dot, so the widget shows whose it is. Clicking the name or the dot opens the same card as before, with two links more:
@@ -102,7 +153,7 @@ They live in the card because the card can be opened even when the screen is bla
 
 ## When the backend moves to another port
 
-A screen keeps asking the address it was loaded from. When the backend comes back on a new port, the screen is left talking to nothing. The plugin now looks at the backend's port every two seconds and, when it has changed on two looks in a row (so a restart that is still settling is not loaded twice), loads the screen again from the new one. You do not have to do anything. This was measured with a test build that moved the port of a running backend, and the screen loaded again from the new one.
+A screen keeps asking the address it was loaded from. When the backend comes back on a new port, the screen is left talking to nothing. The plugin now looks at the backend's port every two seconds and, when it has changed on two looks in a row (so a restart that is still settling is not loaded twice), loads the screen again from the new one. You do not have to do anything. This was **not** measured in a production build: a restart asks for the port it had before, so the port does not move on its own, and a port that cannot be reused is taken back from whatever holds it instead of being replaced by a new one.
 
 An ordinary restart from the IDE asks the backend for the port it had before, so the address usually stays the same and nothing needs loading again. This covers the cases where it did not.
 
@@ -115,6 +166,8 @@ An ordinary restart from the IDE asks the backend for the port it had before, so
 - **The second option can make heavy pages slower**, because the processor draws instead of the graphics chip.
 - **Under Remote Development** (PhpStorm 2026.2.3 as the host, JetBrains Client on macOS) the guide appears in the client, and its **Restart** button restarted the backend and loaded the screen again. **Two things were not measured there:** which IDE the **Open the settings file** button opens the file in, and whether the settings change the browser that runs in the client. The status bar card was **not shown in the client** at all, so Reload and Restart of the card are not available there; the guide's own Restart is.
 - **It was checked on a local IDE** (IntelliJ IDEA 2026.2.3 on Linux, on Arm), in both browser modes.
+- **The "not connected" check needs the backend to list its connected panels.** An older standalone runtime that does not can only tell that no panel at all is connected.
+- **It was not measured with several panels of one project at once, and not under Remote Development** for this case.
 - **A guide that covers a working screen** (the screen is fine but did not report that it finished) can be closed with the button above.
 
 ## See also

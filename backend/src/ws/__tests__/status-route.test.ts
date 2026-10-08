@@ -28,7 +28,7 @@ describe('handleStatusRequest', () => {
     expect(result.status).toBe(200);
     expect(result.body).toEqual({
       keepAlive: false,
-      connections: { total: 0, panels: 0, tunnels: 0, browsers: 0 },
+      connections: { total: 0, panels: 0, tunnels: 0, browsers: 0, panelIds: [] },
       sessions: { total: 0, streaming: 0, orphaned: 0 },
     });
   });
@@ -45,7 +45,7 @@ describe('handleStatusRequest', () => {
 
     expect(handleStatusRequest(cm).body).toEqual({
       keepAlive: true,
-      connections: { total: 3, panels: 1, tunnels: 1, browsers: 1 },
+      connections: { total: 3, panels: 1, tunnels: 1, browsers: 1, panelIds: ['panel-1'] },
       sessions: { total: 2, streaming: 1, orphaned: 0 },
     });
   });
@@ -69,7 +69,7 @@ describe('handleStatusRequest', () => {
     cm.removeConnection(connId);
 
     expect(handleStatusRequest(cm).body).toMatchObject({
-      connections: { total: 0, panels: 0, tunnels: 0, browsers: 0 },
+      connections: { total: 0, panels: 0, tunnels: 0, browsers: 0, panelIds: [] },
       sessions: { total: 1, streaming: 0, orphaned: 1 },
     });
   });

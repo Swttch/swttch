@@ -9,7 +9,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
  * restart that is still settling is not loaded twice, and nothing is judged while a restart is
  * known to be under way.
  */
-class StalePortJudge(private val looksNeeded: Int = 2) {
+class StalePortJudge(private val looksNeeded: Int = BackendWatch.LOOKS_NEEDED) {
 
     private var differentInARow = 0
 

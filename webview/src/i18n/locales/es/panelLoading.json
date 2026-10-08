@@ -17,6 +17,10 @@
   "stalled": {
     "title": "La pantalla tarda más de lo normal",
     "subtitle": "Prueba los pasos siguientes de arriba abajo. Detente en cuanto aparezca la pantalla.",
+    "disconnected": {
+      "title": "La pantalla está abierta, pero no llega al backend",
+      "subtitle": "Prueba los pasos siguientes de arriba abajo. Detente en cuanto se conecte."
+    },
     "restart": {
       "title": "Reiniciar el backend del plugin",
       "body": "Reinicia el plugin. Si hay otro trabajo en marcha en este proyecto, se detendrá.",

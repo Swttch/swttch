@@ -17,6 +17,10 @@
   "stalled": {
     "title": "Der Bildschirm braucht länger als gewöhnlich",
     "subtitle": "Probieren Sie die folgenden Schritte von oben nach unten. Hören Sie auf, sobald der Bildschirm erscheint.",
+    "disconnected": {
+      "title": "Der Bildschirm ist da, erreicht aber das Backend nicht",
+      "subtitle": "Probieren Sie die folgenden Schritte von oben nach unten. Hören Sie auf, sobald die Verbindung steht."
+    },
     "restart": {
       "title": "Plugin-Backend neu starten",
       "body": "Startet das Plugin neu. Läuft in diesem Projekt noch andere Arbeit, wird sie angehalten.",

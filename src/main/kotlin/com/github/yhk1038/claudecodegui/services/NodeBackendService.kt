@@ -58,6 +58,19 @@ class NodeBackendService : Disposable {
     private val backends = ConcurrentHashMap<String, BackendInstance>()
 
     /**
+     * What to do when the IDE decides a project's backend has to be restarted: the one function
+     * every restart goes through, set by the panel layer (see `ClaudePanelRegistry.wire`). The
+     * status card's Restart button calls it, and so does every recovery path in here, so a
+     * restart does the same thing wherever it starts. This slot is only the wiring: the service
+     * sits below the panel layer and cannot name it.
+     *
+     * Null only before the panel layer has been touched, which is before any panel exists; a
+     * restart then has no panel to tell and falls back to restarting the backend directly.
+     */
+    @Volatile
+    var restartFacade: ((projectBasePath: String) -> Unit)? = null
+
+    /**
      * Listeners notified (with the affected project root) whenever a backend's
      * lifecycle changes or the keep-alive toggle flips — the status-bar widget's
      * update signal. Called from arbitrary threads; listeners marshal to the EDT.
@@ -163,6 +176,22 @@ class NodeBackendService : Disposable {
 
         // panelId -> handler. The Claude Code editor tabs open under this root.
         val handlers = ConcurrentHashMap<String, NodeProcessManager.RpcHandler>()
+
+        /**
+         * Whether the current backend generation ever came up far enough for the IDE's own
+         * control channel to connect. Reset by every spawn. See [AutoRespawnJudge].
+         */
+        @Volatile
+        private var generationServed = false
+
+        /**
+         * True after a backend that left a tab behind exited before it ever came up, so the IDE
+         * stopped starting it. The tab then has no backend and will not get one by itself, which
+         * is what the panel's guide is for. Reset by the next spawn.
+         */
+        @Volatile
+        var respawnAbandoned = false
+            private set
 
         // panelId -> loading-progress listener. Panels register here so they can
         // reflect the backend's start sub-phases in their placeholder label (#97).
@@ -353,6 +382,8 @@ class NodeBackendService : Disposable {
                 portDeferred.cancel(CancellationException("Backend restarting"))
             }
             portDeferred = CompletableDeferred()
+            generationServed = false
+            respawnAbandoned = false
             // A WSL project root (UNC basePath) runs its backend inside the distro so
             // node/claude execute as Linux natives (issue #57); a native root runs locally.
             val wsl = WslPathResolver.parseUncPath(basePath)
@@ -376,7 +407,7 @@ class NodeBackendService : Disposable {
                 // (and not via dispose), respawn it on the same port. restart() is
                 // @Synchronized and runs stop()+start(), so it can't re-enter the start()
                 // that is still in progress, and lastPort is reused for a seamless reconnect.
-                onRestartRequested = { restart() },
+                onRestartRequested = { requestRestart() },
                 // Clean self-exit (idle shutdown): stand the RPC reconnect/restart
                 // watchdog down — otherwise it treats the silence as a crash and
                 // respawns the backend ~15 s after EVERY idle shutdown, forever.
@@ -422,12 +453,12 @@ class NodeBackendService : Disposable {
             val client = RpcWebSocketClient(
                 scope,
                 Router(),
-                onPersistentFailure = { restart() },
+                onPersistentFailure = { requestRestart() },
                 // Re-assert the desired keep-alive state on EVERY (re)connect — this
                 // covers fresh spawns, exit-75 respawns and RPC reconnects, and a
                 // `false` push arms the backend's idle timer when it has no /ws
                 // clients yet (closing the pre-existing prewarm leak).
-                onConnected = { registerRoot(); pushKeepAlive() },
+                onConnected = { generationServed = true; registerRoot(); pushKeepAlive() },
                 // Route RPC-handling failures to the single Kotlin reporting point. This
                 // backend is connected (the error came over its socket), so prefer it.
                 onError = { throwable, where -> reportError(throwable, where, basePath) },
@@ -519,21 +550,53 @@ class NodeBackendService : Disposable {
             start()
         }
 
+        /** Asks for a restart through the one function every restart goes through. See [restartFacade]. */
+        private fun requestRestart() {
+            val facade = restartFacade
+            if (facade == null) {
+                logger.info("No restart function registered yet; restarting the backend of '$basePath' directly")
+                restart()
+                return
+            }
+            facade(basePath)
+        }
+
         /**
-         * The backend exited cleanly by its own decision (idle self-shutdown, exit 0).
+         * The backend exited cleanly by its own decision (exit 0).
          * Dispose the RPC client so its reconnect loop cannot escalate into a full
          * backend restart — that loop is crash RECOVERY, and this exit is not a crash.
          * Guard: skip when a newer backend generation is already alive (a racing
          * restart owns the current rpcClient; its connect() manages it).
+         *
+         * Then decide what the exit leaves behind ([AutoRespawnJudge]): with no tab open the
+         * backend stays retired and the next panel open starts it; with a tab open the tab would
+         * be stranded on a dead port, so the backend is started again.
          */
         @Synchronized
         fun releaseRpcClientAfterIntentionalExit() {
             if (nodeProcessManager?.isAlive == true) return
             rpcClient?.dispose(); rpcClient = null
-            logger.info(
-                "Backend for '$basePath' retired (idle shutdown) — RPC watchdog stood down; " +
-                    "the next panel open / eager start respawns it",
-            )
+            when (AutoRespawnJudge.decide(tabsOpen = handlers.isNotEmpty(), generationServed = generationServed)) {
+                AutoRespawnJudge.Decision.RETIRE -> logger.info(
+                    "Backend for '$basePath' retired (idle shutdown) — RPC watchdog stood down; " +
+                        "the next panel open / eager start respawns it",
+                )
+                AutoRespawnJudge.Decision.RESPAWN -> {
+                    logger.info(
+                        "Backend for '$basePath' exited cleanly with ${handlers.size} tab(s) open; " +
+                            "restarting it so they are not left without one",
+                    )
+                    requestRestart()
+                }
+                AutoRespawnJudge.Decision.GIVE_UP -> {
+                    respawnAbandoned = true
+                    logger.warn(
+                        "Backend for '$basePath' exited before it came up with ${handlers.size} tab(s) open; " +
+                            "not starting it again by itself",
+                    )
+                    fireBackendStateChanged(basePath)
+                }
+            }
         }
 
         fun sendNotification(method: String, params: JsonObject) {
@@ -643,6 +706,9 @@ class NodeBackendService : Disposable {
      * obtains it by redeeming [initialPairCode]. Never logged by callers.
      */
     fun authToken(projectBasePath: String): String? = backends[projectBasePath]?.authToken
+
+    /** True when [projectBasePath]'s backend left a tab behind without ever coming up and the IDE stopped starting it. */
+    fun isRespawnAbandoned(projectBasePath: String): Boolean = backends[projectBasePath]?.respawnAbandoned == true
 
     /**
      * The single-use pairing code seeded into the backend serving [projectBasePath] at

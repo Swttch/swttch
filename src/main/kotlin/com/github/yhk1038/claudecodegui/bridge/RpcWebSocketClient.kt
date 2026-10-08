@@ -80,7 +80,7 @@ class RpcWebSocketClient(
     private var disposed = false
 
     private var consecutiveFailures = 0
-    private val MAX_FAILURES_BEFORE_RESTART = 5
+    private val MAX_FAILURES_BEFORE_RESTART = 3
 
     /**
      * Connect to the RPC WebSocket endpoint.

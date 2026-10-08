@@ -11,11 +11,29 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Every panel of a project shares one backend, so a restart of that backend has to reach
  * all of them: each one holds a page loaded from the old backend. The status-bar card has
  * no other way to find the panels, so it asks here.
+ *
+ * [restart] is the one restart. The status card's Restart, the guide's restart button, and every
+ * recovery path of the backend service (a crash, a clean exit that left a tab behind, a restart
+ * the backend asked for) all end up in it, so a restart does the same thing wherever it begins.
  */
 object ClaudePanelRegistry {
 
     private val logger = Logger.getInstance(ClaudePanelRegistry::class.java)
     private val panels = CopyOnWriteArrayList<ClaudeCodePanel>()
+    private val restartGate = RestartGate()
+
+    init {
+        wire()
+    }
+
+    /**
+     * Tells the backend service that [restart] is the function for every restart. The service is
+     * below this layer and cannot name it, so it keeps a slot that is filled here. Called from the
+     * first use of this object and again from project open, which is before any recovery can run.
+     */
+    fun wire() {
+        NodeBackendService.getInstance().restartFacade = ::restart
+    }
 
     fun register(panel: ClaudeCodePanel) {
         panels.addIfAbsent(panel)
@@ -51,6 +69,10 @@ object ClaudePanelRegistry {
      * The restart waits for the old process to go away, so it runs off the caller's thread.
      */
     fun restart(projectBasePath: String) {
+        if (!restartGate.enter(projectBasePath)) {
+            logger.info("Restart requested for the backend of '$projectBasePath' but one is already running; dropped")
+            return
+        }
         val targets = panelsOf(projectBasePath)
         logger.info("Restart requested for the backend of '$projectBasePath' (${targets.size} panel(s))")
         targets.forEach { it.markRestarting() }
@@ -61,6 +83,7 @@ object ClaudePanelRegistry {
                 logger.warn("Backend restart threw for '$projectBasePath'", e)
             }
             targets.forEach { it.awaitRestartedBackend() }
+            restartGate.leave(projectBasePath)
         }
     }
 }

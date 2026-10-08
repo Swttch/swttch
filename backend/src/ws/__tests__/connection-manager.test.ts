@@ -304,18 +304,18 @@ describe('ConnectionManager', () => {
   describe('getConnectionStats', () => {
     it('classifies panelId connections as panels regardless of origin', () => {
       cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-1', 'http://localhost:63412');
-      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 1, tunnels: 0, browsers: 0 });
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 1, tunnels: 0, browsers: 0, panelIds: ['panel-1'] });
     });
 
     it('classifies *.trycloudflare.com origins without panelId as tunnels', () => {
       cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://demo-tunnel.trycloudflare.com');
-      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 0, tunnels: 1, browsers: 0 });
+      expect(cm.getConnectionStats()).toEqual({ total: 1, panels: 0, tunnels: 1, browsers: 0, panelIds: [] });
     });
 
     it('classifies everything else as browsers (incl. missing origin)', () => {
       cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://127.0.0.1:63412');
       cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, null);
-      expect(cm.getConnectionStats()).toEqual({ total: 2, panels: 0, tunnels: 0, browsers: 2 });
+      expect(cm.getConnectionStats()).toEqual({ total: 2, panels: 0, tunnels: 0, browsers: 2, panelIds: [] });
     });
 
     it('counts a mixed set and tracks removals', () => {
@@ -323,10 +323,10 @@ describe('ConnectionManager', () => {
       cm.addConnection(createMockWs(), ClientEnv.JETBRAINS, 'panel-2', null);
       cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'https://x.trycloudflare.com');
       cm.addConnection(createMockWs(), ClientEnv.BROWSER, null, 'http://localhost:63412');
-      expect(cm.getConnectionStats()).toEqual({ total: 4, panels: 2, tunnels: 1, browsers: 1 });
+      expect(cm.getConnectionStats()).toEqual({ total: 4, panels: 2, tunnels: 1, browsers: 1, panelIds: ['panel-1', 'panel-2'] });
 
       cm.removeConnection(panel);
-      expect(cm.getConnectionStats()).toEqual({ total: 3, panels: 1, tunnels: 1, browsers: 1 });
+      expect(cm.getConnectionStats()).toEqual({ total: 3, panels: 1, tunnels: 1, browsers: 1, panelIds: ['panel-2'] });
     });
   });
 

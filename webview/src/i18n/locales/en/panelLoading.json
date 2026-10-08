@@ -17,6 +17,10 @@
   "stalled": {
     "title": "The screen is taking longer than usual",
     "subtitle": "Try these from the top. Stop as soon as the screen appears.",
+    "disconnected": {
+      "title": "The screen is up, but it cannot reach the backend",
+      "subtitle": "Try these from the top. Stop as soon as it connects."
+    },
     "restart": {
       "title": "Restart the plugin backend",
       "body": "Restarts the plugin. If other work is running in this project, it stops.",

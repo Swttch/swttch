@@ -14,6 +14,10 @@ object StalledHelpKeys {
     const val TITLE = "stalled.title"
     const val SUBTITLE = "stalled.subtitle"
 
+    /** The title and subtitle when the screen is up but cannot reach the backend. */
+    const val DISCONNECTED_TITLE = "stalled.disconnected.title"
+    const val DISCONNECTED_SUBTITLE = "stalled.disconnected.subtitle"
+
     const val RESTART_TITLE = "stalled.restart.title"
     const val RESTART_BODY = "stalled.restart.body"
     const val RESTART_BUTTON = "stalled.restart.button"
@@ -48,7 +52,7 @@ object StalledHelpKeys {
 
     /** Every key above. The catalog test holds the JSON to exactly this set plus the other keys Kotlin reads. */
     val ALL: Set<String> = setOf(
-        TITLE, SUBTITLE,
+        TITLE, SUBTITLE, DISCONNECTED_TITLE, DISCONNECTED_SUBTITLE,
         RESTART_TITLE, RESTART_BODY, RESTART_BUTTON, RESTART_RUNNING,
         QUIT_LEAD, QUIT_BODY,
         SETTINGS_TITLE, SETTINGS_INTRO, SETTINGS_OPEN_BUTTON, SETTINGS_COPY_BUTTON, SETTINGS_COPIED,

@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.startup
 
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
+import com.github.yhk1038.claudecodegui.toolwindow.ClaudePanelRegistry
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
@@ -24,6 +25,9 @@ class BackendProjectOpenListener : ProjectActivity {
         // Disposable.dispose() (the keep-alive clamp) is guaranteed to fire when
         // this project window closes.
         project.service<BackendProjectCloseService>()
+
+        // Before any backend can need a restart: the one restart function is registered with the service.
+        ClaudePanelRegistry.wire()
 
         val basePath = project.basePath ?: return
         NodeBackendService.getInstance().reassertKeepAliveOnProjectOpen(basePath)

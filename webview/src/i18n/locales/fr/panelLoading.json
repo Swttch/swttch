@@ -17,6 +17,10 @@
   "stalled": {
     "title": "L'écran met plus de temps que d'habitude",
     "subtitle": "Essayez les étapes ci-dessous de haut en bas. Arrêtez-vous dès que l'écran apparaît.",
+    "disconnected": {
+      "title": "L'écran est affiché, mais il n'atteint pas le backend",
+      "subtitle": "Essayez les étapes ci-dessous de haut en bas. Arrêtez-vous dès que la connexion est rétablie."
+    },
     "restart": {
       "title": "Redémarrer le backend du plugin",
       "body": "Redémarre le plugin. Si un autre travail est en cours dans ce projet, il s'arrête.",

@@ -72,6 +72,13 @@ class StalledHelpPanel(private val actions: StalledHelpActions) : JPanel(BorderL
 
     private var advice: List<JcefSwitchAdvice> = emptyList()
     private var restarting: Boolean = false
+
+    /**
+     * The screen is up but cannot reach its backend, as opposed to not having come up. The
+     * page then has no IDE options to change (nothing about how the browser draws is wrong),
+     * so the settings card is left out and the title says what is actually the matter.
+     */
+    private var disconnected: Boolean = false
     private var laidOutFor: Int = 0
 
     /** Whether the options card shows its body. Open from the start: it is where most users end up. */
@@ -120,8 +127,9 @@ class StalledHelpPanel(private val actions: StalledHelpActions) : JPanel(BorderL
     }
 
     /** Draws the guide for a screen that has just stalled, from its first line. */
-    fun renderFromTop(advice: List<JcefSwitchAdvice>, restarting: Boolean) {
+    fun renderFromTop(advice: List<JcefSwitchAdvice>, restarting: Boolean, disconnected: Boolean = false) {
         scrollToTopNext = true
+        this.disconnected = disconnected
         render(advice, restarting)
     }
 
@@ -154,12 +162,14 @@ class StalledHelpPanel(private val actions: StalledHelpActions) : JPanel(BorderL
             border = JBUI.Borders.empty(20, 0)
         }
 
-        column.add(textBlock(StalledHelpText.get(StalledHelpKeys.TITLE), m.columnWidth, bold = true, extraSize = 3f))
+        val titleKey = if (disconnected) StalledHelpKeys.DISCONNECTED_TITLE else StalledHelpKeys.TITLE
+        val subtitleKey = if (disconnected) StalledHelpKeys.DISCONNECTED_SUBTITLE else StalledHelpKeys.SUBTITLE
+        column.add(textBlock(StalledHelpText.get(titleKey), m.columnWidth, bold = true, extraSize = 3f))
         column.add(gap(4))
-        column.add(textBlock(StalledHelpText.get(StalledHelpKeys.SUBTITLE), m.columnWidth, muted = true))
+        column.add(textBlock(StalledHelpText.get(subtitleKey), m.columnWidth, muted = true))
         column.add(gap(14))
         column.add(restartCard(m))
-        if (advice.isNotEmpty()) {
+        if (advice.isNotEmpty() && !disconnected) {
             column.add(gap(10))
             column.add(settingsCard(m))
         }

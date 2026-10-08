@@ -20,6 +20,8 @@ object StalledDiagnostics {
         val backendLifecycle: String,
         val backendPortKnown: Boolean,
         val remoteClientAttached: Boolean,
+        /** The screen was up but not connected to the backend, as opposed to not having loaded. */
+        val disconnected: Boolean = false,
     )
 
     fun build(facts: Facts): String {
@@ -31,6 +33,7 @@ object StalledDiagnostics {
             appendLine("OS: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})")
             appendLine("Runtime: ${System.getProperty("java.vm.name")} ${System.getProperty("java.vm.version")}")
             appendLine("Display: session=${System.getenv("XDG_SESSION_TYPE") ?: "-"} toolkit=${java.awt.Toolkit.getDefaultToolkit().javaClass.simpleName}")
+            appendLine("Problem: ${if (facts.disconnected) "screen up, not connected to the backend" else "screen did not finish loading"}")
             appendLine("Browser: separateProcess=${facts.separateProcessBrowserInUse} remoteClientAttached=${facts.remoteClientAttached}")
             for (name in WATCHED_PROPERTIES) {
                 appendLine("Property: $name=${System.getProperty(name) ?: "(not set)"}")

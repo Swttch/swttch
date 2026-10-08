@@ -24,6 +24,7 @@ import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.github.yhk1038.claudecodegui.toolwindow.realization.PanelLoadingMessages
 import com.github.yhk1038.claudecodegui.toolwindow.realization.RealizationGate
 import com.github.yhk1038.claudecodegui.toolwindow.realization.StuckHintKeys
+import com.github.yhk1038.claudecodegui.statusbar.BackendStatusClient
 import com.github.yhk1038.claudecodegui.toolwindow.stalled.IdeMenuLabels
 import com.github.yhk1038.claudecodegui.toolwindow.stalled.JcefSwitchAdvice
 import com.github.yhk1038.claudecodegui.toolwindow.stalled.JcefSwitchAdvisor
@@ -298,6 +299,20 @@ class ClaudeCodePanel(
     /** The IDE options the guide last found still to be done; kept so a re-render needs no file read. */
     private var stalledAdvice: List<JcefSwitchAdvice> = emptyList()
 
+    // ─── Page up, backend not reachable ─────────────────────────────────
+    // The page loaded, but its own socket to the backend never connects (or no longer does):
+    // all it can show is its "reconnecting" line. See [ConnectionJudge] for what is done about it.
+    private val connectionJudge = ConnectionJudge()
+    private var connectionWatch: kotlinx.coroutines.Job? = null
+
+    /** Set for the one load that [connectionJudge] asked for, so that load does not count as someone else's. */
+    @Volatile
+    private var reloadedByConnectionWatch = false
+
+    /** The guide is up because the page is not connected, not because it did not load. */
+    @Volatile
+    private var connectionGuideUp = false
+
     /** True from the moment a restart is asked for until the page has been loaded again from the new backend. */
     @Volatile
     private var restarting = false
@@ -390,6 +405,7 @@ class ClaudeCodePanel(
 
     /** Moves the placeholder to [phase] and remembers it for [translatePlaceholder]. */
     /** True once [clearLoadingOverlay] has taken the placeholder off the browser. */
+    @Volatile
     private var loadingOverlayCleared = false
 
     /** Set when the main frame reported a load error, read by the next load-end report. */
@@ -573,6 +589,10 @@ class ClaudeCodePanel(
         openIssuePage = { BrowserUtil.browse(ISSUE_PAGE_URL) },
         dismiss = {
             logger.info("Stalled-screen guide closed by the user after ${waitedSeconds()}s")
+            if (connectionGuideUp) {
+                connectionGuideUp = false
+                connectionJudge.userDismissed()
+            }
             clearLoadingOverlay("guide closed by the user")
         },
     )
@@ -599,6 +619,7 @@ class ClaudeCodePanel(
                 backendPortKnown = backendService.portOf(base) != null,
                 remoteClientAttached = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder
                     .attachedClients().isNotEmpty(),
+                disconnected = connectionGuideUp,
             ),
         )
         CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(report))
@@ -663,6 +684,75 @@ class ClaudeCodePanel(
     }
 
     /**
+     * Watches whether the loaded page is connected to the backend, and steps in when it is not.
+     *
+     * The backend lists the panels connected to it, so the question put to it is plain: is this
+     * panel's id among them. A backend that cannot be asked, a page that is still loading and a
+     * restart in progress are all "not known", never "not connected".
+     */
+    private fun startConnectionWatch() {
+        if (connectionWatch?.isActive == true) return
+        connectionWatch = scope.launch {
+            while (!isPanelDisposed && !project.isDisposed) {
+                delay(BackendWatch.POLL_MS)
+                when (connectionJudge.judge(observeConnection())) {
+                    ConnectionJudge.Action.NONE -> Unit
+                    ConnectionJudge.Action.RELOAD -> {
+                        logger.info("The page has not been connected to the backend for a while; loading it again")
+                        reloadedByConnectionWatch = true
+                        reloadFromCurrentPort()
+                    }
+                    ConnectionJudge.Action.SHOW_GUIDE ->
+                        javax.swing.SwingUtilities.invokeLater { showConnectionHelp() }
+                    ConnectionJudge.Action.CLEAR_GUIDE -> {
+                        logger.info("The page is connected to the backend again; taking the guide away")
+                        connectionGuideUp = false
+                        clearLoadingOverlay("connected")
+                    }
+                }
+            }
+        }
+    }
+
+    /** What the backend says about this panel right now. See [ConnectionJudge.Observation]. */
+    private fun observeConnection(): ConnectionJudge.Observation {
+        if (restarting) return ConnectionJudge.Observation.UNKNOWN
+        // Only a page that has come up can be judged, and the guide over it counts as one.
+        if (!loadingOverlayCleared && !connectionGuideUp) return ConnectionJudge.Observation.UNKNOWN
+        val base = projectBasePath
+        // The IDE stopped starting a backend that never came up: there is nothing to ask.
+        if (backendService.isRespawnAbandoned(base)) return ConnectionJudge.Observation.BACKEND_GONE
+        val port = backendService.portOf(base) ?: return ConnectionJudge.Observation.UNKNOWN
+        val status = BackendStatusClient.fetch(port, backendService.authToken(base))
+            ?: return ConnectionJudge.Observation.UNKNOWN
+        val connected = status.connections.panelIds
+        // A backend that predates the list can only say how many are connected; none is
+        // still a page that is not.
+        val listed = if (connected != null) panelId in connected else status.connections.panels > 0
+        return if (listed) ConnectionJudge.Observation.CONNECTED else ConnectionJudge.Observation.NOT_CONNECTED
+    }
+
+    /**
+     * Puts the guide over a page that is up but not connected, in the placeholder's way: the
+     * browser goes back below the edge and the guide holds the panel until the page connects or
+     * the user closes it.
+     */
+    private fun showConnectionHelp() {
+        val stage = browserLayers ?: return
+        if (isPanelDisposed || project.isDisposed || !loadingOverlayCleared) return
+        loadingOverlayCleared = false
+        connectionGuideUp = true
+        stalledAdvice = emptyList()
+        val help = stalledHelp ?: StalledHelpPanel(stalledHelpActions()).also { stalledHelp = it }
+        help.renderFromTop(emptyList(), restarting, disconnected = true)
+        if (help.parent !== stage) stage.add(help)
+        stage.doLayout()
+        stage.revalidate()
+        stage.repaint()
+        logger.info("Guide shown: the page is up but not connected to the backend (${waitedSeconds()}s since it loaded)")
+    }
+
+    /**
      * Loads the page again by itself when the backend moves to another port.
      *
      * A page keeps asking the address it was loaded from, so a backend that came back on a
@@ -678,7 +768,7 @@ class ClaudeCodePanel(
         portWatch = scope.launch {
             val judge = StalePortJudge()
             while (!isPanelDisposed && !project.isDisposed) {
-                delay(PORT_WATCH_POLL_MS)
+                delay(BackendWatch.POLL_MS)
                 val loaded = lastLoadedHostPort
                 val port = judge.portToLoad(loaded, backendService.portOf(projectBasePath), restarting) ?: continue
                 logger.info("The backend moved from port $loaded to $port; loading the panel from the new one")
@@ -1007,6 +1097,8 @@ class ClaudeCodePanel(
                     frame.executeJavaScript(repaintNudgeBridgeScript(), frame.url, 0)
                     installImeWorkaround()
                     clearLoadingOverlay("load finished")
+                    connectionJudge.pageLoadFinished()
+                    startConnectionWatch()
                     logger.info("WebView loaded successfully")
                     // The webview (IDE-selection chip consumer) just reloaded, so
                     // any previously shown context chips are gone. Re-query the IDE's
@@ -2021,6 +2113,11 @@ class ClaudeCodePanel(
         // Remembered so the watcher can tell when the backend has since moved to another port.
         lastLoadedHostPort = port
         loadStartedAtMs = System.currentTimeMillis()
+        // A load the connection watch did not ask for (a restart, a port change) is a new page
+        // that gets the whole wait again. The watch's own reload keeps its place in the sequence.
+        if (!reloadedByConnectionWatch) connectionJudge.pageLoadedByOthers()
+        reloadedByConnectionWatch = false
+        connectionGuideUp = false
         watchBackendPort()
         System.err.println("[ClaudeCodePanel] loadWebView called for project: ${project.name}")
         System.err.println("[ClaudeCodePanel] project.basePath: ${project.basePath}")
@@ -3143,9 +3240,6 @@ class ClaudeCodePanel(
 
         /** The same wait after a restart: the user has just done what the guide said, so it waits longer before saying it again. */
         private const val LOAD_STALL_HELP_AFTER_RESTART_MS = 60_000L
-
-        /** How often the panel looks at whether the backend's port still is the one it loaded from. */
-        private const val PORT_WATCH_POLL_MS = 2_000L
 
         /** Where the stalled-screen guide sends a user whose screen still does not appear. */
         private const val ISSUE_PAGE_URL = "https://github.com/Swttch/swttch/issues/new"
