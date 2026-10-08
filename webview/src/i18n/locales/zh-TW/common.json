@@ -357,6 +357,7 @@
       "openModelMenu": "選擇模型",
       "rotateModel": "切換到下一個模型",
       "clearConversation": "清除對話",
+      "openSideQuestion": "提一個旁支問題 (/btw)",
       "refreshSessionList": "在工作階段清單開啟時重新整理清單",
       "zoomIn": "放大",
       "zoomOut": "縮小",

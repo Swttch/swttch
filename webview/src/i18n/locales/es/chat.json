@@ -710,5 +710,15 @@
     "sponsorHint": "Pasar a los recursos de otros mensajes es un pequeño detalle que reservamos a nuestros patrocinadores",
     "pinToDock": "Anclar al dock",
     "unpinFromDock": "Desanclar del dock"
+  },
+  "sideQuestion": {
+    "title": "Pregunta al margen",
+    "subtitle": "Se responde sin interrumpir la conversación principal y no se añade a ella.",
+    "placeholder": "Haz una pregunta rápida al margen…",
+    "empty": "Pregunta lo que quieras sobre lo que está pasando — el agente principal sigue trabajando.",
+    "thinking": "Pensando…",
+    "failed": "Claude no pudo responder a esta pregunta al margen. Inténtalo de nuevo.",
+    "clear": "Borrar preguntas al margen",
+    "close": "Cerrar"
   }
 }

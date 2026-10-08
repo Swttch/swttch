@@ -13,6 +13,8 @@ import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { SWITCH_MODEL_EVENT } from '@/pages/ChatPage/ModelSwitchOverlay';
 import { ROTATE_MODEL_EVENT } from '@/pages/ChatPage/ChatInput/ModelTag';
+import { TOGGLE_SIDE_QUESTION_EVENT } from '@/contexts/SideQuestionContext';
+import { isSideQuestionShortcut } from '@/components/SideQuestionModal/sideQuestionShortcut';
 import { TOGGLE_HELP_EVENT } from '@/components/HelpModal/events';
 import { isHelpShortcut } from '@/components/HelpModal/helpShortcut';
 import { PanelSection } from '@/types/commandPalette';
@@ -224,6 +226,15 @@ export function CommandPaletteProvider({ children }: CommandPaletteProviderProps
         (e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === '.' || e.key === '>'),
       execute: async () => {
         window.dispatchEvent(new CustomEvent(ROTATE_MODEL_EVENT));
+      },
+    });
+
+    // Cmd/Ctrl+Shift+B opens and closes the side-question (`/btw`) window.
+    keyboardReg.register({
+      id: 'toggle-side-question',
+      match: isSideQuestionShortcut,
+      execute: async () => {
+        window.dispatchEvent(new CustomEvent(TOGGLE_SIDE_QUESTION_EVENT));
       },
     });
 

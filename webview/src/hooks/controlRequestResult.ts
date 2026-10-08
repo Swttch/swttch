@@ -32,6 +32,8 @@ export interface ControlRequestResult {
   isError: boolean;
   /** Subtype the request was made with, e.g. `reload_plugins`. */
   subtype: string;
+  /** The request id we minted, so a caller can match the answer to its question. */
+  requestId: string;
 }
 
 /** Read the command subtype back out of a request id we minted. */
@@ -97,17 +99,17 @@ export function parseControlRequestResult(
   if (envelope?.subtype === 'error') {
     const error = envelope.error;
     const detail = typeof error === 'string' ? error : JSON.stringify(error ?? {});
-    return { text: `Command failed: ${detail}`, isError: true, subtype };
+    return { text: `Command failed: ${detail}`, isError: true, subtype, requestId };
   }
 
   const response = envelope?.response ?? {};
   if (subtype === 'reload_plugins') {
-    return { text: describeReloadPlugins(response), isError: false, subtype };
+    return { text: describeReloadPlugins(response), isError: false, subtype, requestId };
   }
   if (subtype === 'side_question') {
-    return { text: describeSideQuestion(response), isError: false, subtype };
+    return { text: describeSideQuestion(response), isError: false, subtype, requestId };
   }
   // A mapped command with no summariser yet — show the raw payload rather than
   // dropping the answer on the floor.
-  return { text: JSON.stringify(response, null, 2), isError: false, subtype };
+  return { text: JSON.stringify(response, null, 2), isError: false, subtype, requestId };
 }

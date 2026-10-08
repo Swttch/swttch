@@ -357,6 +357,7 @@
       "openModelMenu": "Escolher o modelo",
       "rotateModel": "Mudar para o próximo modelo",
       "clearConversation": "Limpar a conversa",
+      "openSideQuestion": "Fazer uma pergunta paralela (/btw)",
       "refreshSessionList": "Atualizar a lista de sessões enquanto ela estiver aberta",
       "zoomIn": "Aumentar o zoom",
       "zoomOut": "Diminuir o zoom",

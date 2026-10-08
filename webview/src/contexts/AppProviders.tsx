@@ -25,6 +25,7 @@ import { WorkflowStateProvider } from './WorkflowStateContext';
 import { ScheduledMessagesProvider } from './ScheduledMessagesContext';
 import { AutoResumeOverrideProvider } from './AutoResumeOverrideContext';
 import { AllowAllCommandsProvider } from './AllowAllCommandsContext';
+import { SideQuestionProvider } from './SideQuestionContext';
 import { CommandPaletteProvider } from '../commandPalette/CommandPaletteProvider';
 import { useApi } from './ApiContext';
 import { SessionState } from '../types';
@@ -304,6 +305,15 @@ function ChatProviderBridge(props: ChatProviderBridgeProps) {
   );
 }
 
+/**
+ * Scopes side questions (`/btw`) to the session on screen. Sits above the chat
+ * stream because that is where questions are dispatched and answers arrive.
+ */
+function SessionSideQuestionProvider({ children }: { children: ReactNode }) {
+  const { currentSessionId } = useSessionContext();
+  return <SideQuestionProvider currentSessionId={currentSessionId}>{children}</SideQuestionProvider>;
+}
+
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <BridgeProvider>
@@ -323,7 +333,9 @@ export function AppProviders({ children }: AppProvidersProps) {
                         <ScheduledMessagesProvider>
                           <AutoResumeOverrideProvider>
                             <AllowAllCommandsProvider>
-                              <ChatProviderBridge>{children}</ChatProviderBridge>
+                              <SessionSideQuestionProvider>
+                                <ChatProviderBridge>{children}</ChatProviderBridge>
+                              </SessionSideQuestionProvider>
                             </AllowAllCommandsProvider>
                           </AutoResumeOverrideProvider>
                         </ScheduledMessagesProvider>

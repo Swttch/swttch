@@ -21,7 +21,7 @@ export function isControlRequestCommandId(requestId: unknown): requestId is stri
   return typeof requestId === 'string' && requestId.startsWith(CONTROL_REQUEST_COMMAND_PREFIX);
 }
 
-/** Mint a request id for a command dispatch. Exported for tests. */
+/** Mint a request id for a command dispatch. */
 export function buildControlRequestId(
   command: ControlRequestCommand,
   unique: string,
@@ -66,12 +66,18 @@ export function useControlRequestCommand(bridge: ControlRequestSender) {
     async (
       trimmedInput: string,
       session: ControlRequestSessionContext,
+      /**
+       * Use this id instead of minting one. For a caller that has to record the
+       * request before it goes out — the answer can arrive before the send's
+       * own acknowledgement does. Must come from {@link buildControlRequestId}.
+       */
+      presetRequestId?: string,
     ): Promise<ControlRequestDispatchResult | null> => {
       const matched = matchControlRequestCommand(trimmedInput);
       if (!matched) return null;
 
       const { command, args } = matched;
-      const requestId = buildControlRequestId(command, crypto.randomUUID());
+      const requestId = presetRequestId ?? buildControlRequestId(command, crypto.randomUUID());
 
       try {
         const ack = await bridge.send<{ sent?: boolean }>(

@@ -359,6 +359,7 @@
       "openModelMenu": "Выбрать модель",
       "rotateModel": "Переключиться на следующую модель",
       "clearConversation": "Очистить беседу",
+      "openSideQuestion": "Задать побочный вопрос (/btw)",
       "refreshSessionList": "Обновить список сессий, пока он открыт",
       "zoomIn": "Увеличить масштаб",
       "zoomOut": "Уменьшить масштаб",

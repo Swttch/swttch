@@ -6,6 +6,7 @@ import { toInstance, LoadedMessageType, MessageRole } from '../dto/common';
 import { parsePartialJson } from '../utils/parsePartialJson';
 import { MessageType } from '@/shared';
 import { parseControlRequestResult } from './controlRequestResult';
+import { SIDE_QUESTION_SUBTYPE } from '../contexts/SideQuestionContext';
 import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
 
 /** Re-export for backwards compatibility */
@@ -773,10 +774,18 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       // Answers to the slash commands the CLI only accepts as a control_request
       // (`/reload-plugins`, `/btw` — #270). The CLI replies with structured data
       // instead of the report a terminal user would see, so render it as an
-      // ordinary assistant turn. Responses to anyone else's control traffic
+      // ordinary assistant turn — except `/btw`, whose answer goes to the
+      // side-question window. Responses to anyone else's control traffic
       // (permission prompts and the like) are matched out by request id.
       if (eventType === 'control_response') {
         const result = parseControlRequestResult(cliEvent as ControlResponseEvent);
+        // A side question (`/btw`) is answered in its own window, not in the
+        // conversation: it was never echoed here and never started the
+        // spinner, so there is nothing in the chat for it to settle.
+        if (result && result.subtype === SIDE_QUESTION_SUBTYPE) {
+          onControlRequestResultRef.current?.(result);
+          return;
+        }
         if (result) {
           appendMessage({
             type: LoadedMessageType.Assistant,

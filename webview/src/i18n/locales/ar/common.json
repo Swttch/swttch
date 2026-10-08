@@ -361,6 +361,7 @@
       "openModelMenu": "اختيار النموذج",
       "rotateModel": "التبديل إلى النموذج التالي",
       "clearConversation": "مسح المحادثة",
+      "openSideQuestion": "طرح سؤال جانبي (/btw)",
       "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",
       "zoomIn": "تكبير",
       "zoomOut": "تصغير",

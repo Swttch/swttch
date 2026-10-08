@@ -5,6 +5,7 @@ import type { LoadedMessageDto } from '../../types';
 import { ContextType, getTextContent, isAuthErrorMessage, isLimitErrorMessage } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { MessageType } from '@/shared';
+import { CONTROL_REQUEST_COMMAND_PREFIX } from '../useControlRequestCommand';
 
 // Mock requestAnimationFrame and cancelAnimationFrame
 const rafCallbacks: ((time: number) => void)[] = [];
@@ -138,6 +139,45 @@ describe('useChatStream', () => {
       });
 
       expect(result.current.messages[0].context).toEqual(context);
+    });
+  });
+
+  describe('control_response', () => {
+    const sideQuestionResponse = (requestId: string, body: Record<string, unknown>) => ({
+      type: 'control_response',
+      response: { subtype: 'success', request_id: requestId, response: body },
+    });
+
+    it('hands a side_question answer to onControlRequestResult without adding a chat message', () => {
+      const { bridge, emit } = createMockBridge();
+      const onControlRequestResult = vi.fn();
+      const { result } = renderHook(() => useChatStream({ bridge, onControlRequestResult }));
+      const requestId = `${CONTROL_REQUEST_COMMAND_PREFIX}side_question-abc-123`;
+
+      act(() => {
+        emit(MessageType.CLI_EVENT, sideQuestionResponse(requestId, { response: '4' }));
+      });
+
+      expect(onControlRequestResult).toHaveBeenCalledWith(
+        expect.objectContaining({ subtype: 'side_question', requestId, text: '4', isError: false }),
+      );
+      expect(result.current.messages).toHaveLength(0);
+    });
+
+    it('still renders other control command answers as an assistant message', () => {
+      const { bridge, emit } = createMockBridge();
+      const onControlRequestResult = vi.fn();
+      const { result } = renderHook(() => useChatStream({ bridge, onControlRequestResult }));
+
+      act(() => {
+        emit(
+          MessageType.CLI_EVENT,
+          sideQuestionResponse(`${CONTROL_REQUEST_COMMAND_PREFIX}reload_plugins-abc-123`, { plugins: [] }),
+        );
+      });
+
+      expect(result.current.messages).toHaveLength(1);
+      expect(onControlRequestResult).toHaveBeenCalledTimes(1);
     });
   });
 

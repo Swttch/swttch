@@ -357,6 +357,7 @@
       "openModelMenu": "Choose the model",
       "rotateModel": "Switch to the next model",
       "clearConversation": "Clear the conversation",
+      "openSideQuestion": "Ask a side question (/btw)",
       "refreshSessionList": "Refresh the session list while it is open",
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",

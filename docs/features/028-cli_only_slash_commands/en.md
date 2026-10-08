@@ -23,7 +23,9 @@ any of them failed to load. The command list refreshes at the same time, so
 commands and agents a reloaded plugin brings with it are immediately available.
 
 `/btw` takes your question as its argument (`/btw what does this flag do?`) and
-answers in the chat, leaving the main conversation where it was.
+shows the answer in its own window above the chat
+([the /btw side question window](../088-btw_side_question_window/en.md)),
+leaving the main conversation where it was.
 
 ## Why they were missing
 
@@ -41,7 +43,9 @@ channel it already uses to drive the CLI, so the command does what it does in th
 terminal.
 
 If that request can't be delivered, the command is sent as plain text instead —
-you then get the CLI's own answer rather than silence.
+you then get the CLI's own answer rather than silence. `/btw` is the exception:
+its question fails in the side-question window instead, because sending it to the
+chat would put it into the conversation it is meant to stay out of.
 
 ## What did not change
 

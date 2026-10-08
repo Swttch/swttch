@@ -137,6 +137,74 @@ describe('sendControlRequestHandler', () => {
     });
   });
 
+  // A session reopened from history is subscribed but has no CLI yet — it only
+  // starts on the next message. A side question asked first thing there must
+  // start that CLI rather than fall back to text in the main chat.
+  it('starts the CLI for a subscribed session that has no running process', async () => {
+    const write = vi.fn();
+    let started = false;
+    vi.mocked(ensureClaudeProcess).mockImplementationOnce(async () => {
+      started = true;
+    });
+    const connections = {
+      getClient: vi.fn(() => ({ subscribedSessionId: 'old-session' })),
+      getSession: vi.fn(() => (started ? { process: { stdin: { writable: true, write } } } : undefined)),
+      subscribe: vi.fn(),
+      sendTo: vi.fn(),
+    } as unknown as ConnectionManager;
+
+    await sendControlRequestHandler(
+      'conn-1',
+      message({
+        requestId: 'ccg-cmd-side_question-1',
+        request: { subtype: 'side_question', question: 'why?' },
+        sessionId: 'old-session',
+        workingDir: '/tmp/project',
+      }),
+      connections,
+      mockBridge,
+    );
+
+    expect(connections.subscribe).not.toHaveBeenCalled();
+    expect(ensureClaudeProcess).toHaveBeenCalledWith(
+      connections, 'conn-1', '/tmp/project', 'old-session', undefined, mockBridge, undefined,
+    );
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, {
+      requestId: 'req-1',
+      sent: true,
+    });
+  });
+
+  // A CLI that exists but can't take input right now (mid-spawn, stdin just
+  // closed) belongs to the main agent. Starting a CLI there would go through
+  // ensureClaudeProcess, which restarts a live process whose settings differ —
+  // a side question must never kill the agent it is asked alongside.
+  it('does not start or restart a CLI that exists but whose stdin is not writable', async () => {
+    vi.mocked(ensureClaudeProcess).mockClear();
+    const { connections, write } = createMockConnections({ sessionId: 'live-session', writable: false });
+
+    await sendControlRequestHandler(
+      'conn-1',
+      message({
+        requestId: 'ccg-cmd-side_question-1',
+        request: { subtype: 'side_question', question: 'why?' },
+        sessionId: 'live-session',
+        workingDir: '/tmp/project',
+        inputMode: 'plan',
+      }),
+      connections,
+      mockBridge,
+    );
+
+    expect(ensureClaudeProcess).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+    expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, {
+      requestId: 'req-1',
+      sent: false,
+    });
+  });
+
   it('acks with sent:false when there is no session and no workingDir to start one', async () => {
     const { connections, write } = createMockConnections({ sessionId: '' });
 

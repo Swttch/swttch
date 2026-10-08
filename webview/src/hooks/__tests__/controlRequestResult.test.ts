@@ -55,6 +55,12 @@ describe('parseControlRequestResult', () => {
     expect(result?.text).toBe('4');
   });
 
+  // The side-question window matches each answer to its question by this id.
+  it('carries the request id the answer belongs to', () => {
+    const result = parseControlRequestResult(response(btwId, { response: '4' }));
+    expect(result?.requestId).toBe(btwId);
+  });
+
   it('marks an error response', () => {
     const result = parseControlRequestResult({
       type: 'control_response',

@@ -357,6 +357,7 @@
       "openModelMenu": "Modell auswählen",
       "rotateModel": "Zum nächsten Modell wechseln",
       "clearConversation": "Unterhaltung löschen",
+      "openSideQuestion": "Nebenfrage stellen (/btw)",
       "refreshSessionList": "Sitzungsliste aktualisieren, solange sie geöffnet ist",
       "zoomIn": "Vergrößern",
       "zoomOut": "Verkleinern",

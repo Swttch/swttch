@@ -19,8 +19,14 @@ import {
   resolveFollowUpBehavior,
   invertFollowUpBehavior,
   type QueuedMessage,
+  type ControlRequestCommand,
 } from '@/shared';
-import { useControlRequestCommand } from '../hooks/useControlRequestCommand';
+import { useControlRequestCommand, buildControlRequestId } from '../hooks/useControlRequestCommand';
+import {
+  useOptionalSideQuestions,
+  SideQuestionStatus,
+  SIDE_QUESTION_SUBTYPE,
+} from './SideQuestionContext';
 import type { IdeSelectionPayload } from '../hooks/useIdeSelection';
 import { injectIdeContext, InjectedSelectionKey } from '../hooks/ideContextTag';
 import { matchesUsageCommand } from '@/commandPalette/sections/slashCommands/UsageCommand';
@@ -198,6 +204,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   // not re-prepended to every consecutive message (duplicate gate).
   const lastInjectedSelectionRef = useRef<InjectedSelectionKey | null>(null);
 
+  // Side questions (`/btw`) are shown in their own window rather than in this
+  // stream. Optional so this provider still renders in isolation (tests); the
+  // ref keeps the answer callback below from going stale.
+  const sideQuestions = useOptionalSideQuestions();
+  const sideQuestionsRef = useRef(sideQuestions);
+  sideQuestionsRef.current = sideQuestions;
+
   // Initialize useChatStream with bridge and callbacks
   const chatStream = useChatStream({
     bridge: {
@@ -230,6 +243,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       );
     },
     onControlRequestResult: (result) => {
+      if (result.subtype === SIDE_QUESTION_SUBTYPE) {
+        sideQuestionsRef.current?.settleQuestion(result.requestId, {
+          status: result.isError ? SideQuestionStatus.Failed : SideQuestionStatus.Answered,
+          answer: result.text,
+        });
+        return;
+      }
       // Reloading plugins changes which slash commands and agents exist, so pull
       // the CLI config again — otherwise the palette keeps offering the old set
       // until the next spawn (#270).
@@ -388,6 +408,32 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
       unsubscribeDiff();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridge.isConnected, bridge.subscribe]);
+
+  // The backend sends STREAM_END only when the CLI process ends or fails to
+  // start, never after a normal turn. A side question still waiting would have
+  // been answered by that process, so it never will be — fail it, the same way
+  // the main chat stops its spinner on this event.
+  //
+  // A deliberate restart (permission mode, effort, account) skips that
+  // STREAM_END; the replacement only announces itself with STREAM_START, sent
+  // once per spawn. The questions the old process received are lost with it.
+  useEffect(() => {
+    if (!bridge.isConnected) return;
+
+    const unsubscribeEnd = bridge.subscribe(MessageType.STREAM_END, () => {
+      const sessionId = sessionRef.current.currentSessionId;
+      if (sessionId) sideQuestionsRef.current?.failPending(sessionId);
+    });
+    const unsubscribeStart = bridge.subscribe(MessageType.STREAM_START, () => {
+      const sessionId = sessionRef.current.currentSessionId;
+      if (sessionId) sideQuestionsRef.current?.failDelivered(sessionId);
+    });
+
+    return () => {
+      unsubscribeEnd();
+      unsubscribeStart();
+    };
   }, [bridge.isConnected, bridge.subscribe]);
 
   // The effort level the CLI says the last reply ran at. The slider moves optimistically
@@ -583,11 +629,70 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [bridge, session]
   );
 
+  // Ask a side question (`/btw`) and show it in the side-question window.
+  //
+  // A bare `/btw` only opens the window, where the question is then typed: the
+  // CLI would answer an empty side question with its usage line, which tells
+  // the user nothing the window's own placeholder doesn't.
+  const runSideQuestion = useCallback(
+    (command: ControlRequestCommand, question: string, rawInput: string, inputMode: InputMode) => {
+      sideQuestionsRef.current?.open();
+      if (!question) return;
+
+      // Same session resolution as every other command — asking first thing in
+      // an empty chat starts a CLI rather than falling back to text.
+      let sessionId = session.currentSessionId;
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        session.addNewSession(sessionId, rawInput);
+        adoptAllowAllDraft?.(sessionId);
+      }
+
+      // Recorded before the request goes out: the answer travels on the CLI
+      // event stream and can land before the send's own acknowledgement does.
+      const requestId = buildControlRequestId(command, crypto.randomUUID());
+      sideQuestionsRef.current?.addQuestion({ requestId, sessionId, question });
+
+      dispatchControlRequestCommand(
+        rawInput.trim(),
+        {
+          sessionId,
+          workingDir: session.workingDirectory ?? '',
+          inputMode,
+          model: sessionModel ?? undefined,
+        },
+        requestId,
+      ).then(
+        (result) => {
+          // Unlike the other commands, no fallback to text: `/btw ...` sent to the
+          // chat would put the side question into the very conversation it is
+          // meant to stay out of, and the CLI refuses it there anyway (#270).
+          if (result?.sent) {
+            sideQuestionsRef.current?.markDelivered(requestId);
+          } else if (result) {
+            sideQuestionsRef.current?.settleQuestion(requestId, { status: SideQuestionStatus.Failed });
+          }
+        },
+        () => sideQuestionsRef.current?.settleQuestion(requestId, { status: SideQuestionStatus.Failed }),
+      );
+    },
+    [adoptAllowAllDraft, dispatchControlRequestCommand, session, sessionModel]
+  );
+
   // Run one of the slash commands the CLI won't take as text over stream-json.
   // Shared by the composer (typed) and the command palette (picked), so both
   // routes press the same button rather than drifting apart.
   const runControlRequestCommand = useCallback(
     (command: string, inputMode: InputMode) => {
+      // `/btw` belongs to its own window, not to the conversation: nothing is
+      // echoed into the chat and the main spinner is left alone, so the
+      // question can be asked — and answered — while the agent keeps working.
+      const matched = matchControlRequestCommand(command.trim());
+      if (matched && matched.command.subtype === SIDE_QUESTION_SUBTYPE) {
+        runSideQuestion(matched.command, matched.args, command, inputMode);
+        return;
+      }
+
       // Echo the command, but without opening an assistant turn: the CLI answers
       // a control_request with a single control_response and never sends the
       // `result` that ends a turn, so a streaming placeholder would spin forever.
@@ -614,7 +719,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
         if (result && !result.sent) sendMessage(command, inputMode);
       });
     },
-    [addCommandEcho, adoptAllowAllDraft, dispatchControlRequestCommand, sendMessage, session, sessionModel]
+    [addCommandEcho, adoptAllowAllDraft, dispatchControlRequestCommand, runSideQuestion, sendMessage, session, sessionModel]
   );
 
   // handleSubmit: convenience wrapper for form submission.

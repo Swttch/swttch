@@ -714,5 +714,15 @@
     "sponsorHint": "Moving to other messages’ assets is a little perk I keep for sponsors",
     "pinToDock": "Pin to dock",
     "unpinFromDock": "Unpin from dock"
+  },
+  "sideQuestion": {
+    "title": "Side question",
+    "subtitle": "Answered without interrupting the main conversation, and not added to it.",
+    "placeholder": "Ask a quick side question…",
+    "empty": "Ask anything about what is going on — the main agent keeps working.",
+    "thinking": "Thinking…",
+    "failed": "Couldn't get an answer from Claude for this side question. Try again.",
+    "clear": "Clear side questions",
+    "close": "Close"
   }
 }

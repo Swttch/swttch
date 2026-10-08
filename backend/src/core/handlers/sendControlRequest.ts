@@ -47,27 +47,36 @@ export async function sendControlRequestHandler(
     return;
   }
 
-  // Run against the subscribed session when there is one. In a chat that hasn't
-  // sent anything yet there is no CLI process, so spawn one the same way
-  // SEND_MESSAGE does — otherwise running a command as the very first action
-  // would find no stdin and fall back to text, which is exactly what the CLI
-  // refuses (#270).
+  // Run against the subscribed session when there is one. When no CLI is
+  // running for it, start one the same way SEND_MESSAGE does — otherwise the
+  // request finds no stdin and falls back to text, which is exactly what the
+  // CLI refuses (#270). That covers both a chat that hasn't sent anything yet
+  // and a session reopened from history, whose CLI only starts on the next
+  // message: a `/btw` asked first thing in a reopened session used to land in
+  // the main chat as text instead of in the side-question window.
+  //
+  // Only when there is no CLI at all, though. One that exists but can't take
+  // input right now is the main agent's: ensureClaudeProcess would restart it
+  // if its settings differ from this request's, killing the agent mid-turn. The
+  // request is reported as not sent instead.
   const client = connections.getClient(connectionId);
   let sessionId = client?.subscribedSessionId;
 
-  if (!sessionId) {
+  if (!sessionId || !connections.getSession(sessionId)?.process) {
     const workingDir = payload.workingDir;
     if (!workingDir) {
-      console.error('[node-backend]', 'SEND_CONTROL_REQUEST has no session and no workingDir');
+      console.error('[node-backend]', 'SEND_CONTROL_REQUEST has no running CLI and no workingDir');
       connections.sendTo(connectionId, MessageType.ACK, {
         requestId: message.requestId,
         sent: false,
       });
       return;
     }
-    sessionId = payload.sessionId || generateSessionId();
-    try {
+    if (!sessionId) {
+      sessionId = payload.sessionId || generateSessionId();
       connections.subscribe(connectionId, sessionId);
+    }
+    try {
       await ensureClaudeProcess(
         connections,
         connectionId,

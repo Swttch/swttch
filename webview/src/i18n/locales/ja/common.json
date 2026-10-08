@@ -357,6 +357,7 @@
       "openModelMenu": "モデルを選ぶ",
       "rotateModel": "次のモデルに切り替える",
       "clearConversation": "会話をクリア",
+      "openSideQuestion": "横から質問する (/btw)",
       "refreshSessionList": "セッション一覧が開いているときに更新",
       "zoomIn": "拡大",
       "zoomOut": "縮小",

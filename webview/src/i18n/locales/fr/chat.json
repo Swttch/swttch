@@ -710,5 +710,15 @@
     "sponsorHint": "Passer aux ressources d’autres messages est une petite attention réservée à nos sponsors",
     "pinToDock": "Épingler au dock",
     "unpinFromDock": "Détacher du dock"
+  },
+  "sideQuestion": {
+    "title": "Question en aparté",
+    "subtitle": "Répondue sans interrompre la conversation principale, et sans y être ajoutée.",
+    "placeholder": "Pose une question rapide en aparté…",
+    "empty": "Pose n'importe quelle question sur ce qui se passe — l'agent principal continue de travailler.",
+    "thinking": "Réflexion…",
+    "failed": "Claude n'a pas pu répondre à cette question en aparté. Réessaie.",
+    "clear": "Effacer les questions en aparté",
+    "close": "Fermer"
   }
 }

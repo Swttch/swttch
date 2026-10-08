@@ -40,6 +40,7 @@ vi.mock('../ScheduledMessagesPanel', () => ({
   ScheduledMessageEditOverlay: stub('schedEdit'),
 }));
 vi.mock('@/components/McpModal', () => ({ McpModal: stub('mcp') }));
+vi.mock('@/components/SideQuestionModal', () => ({ SideQuestionModal: stub('sideQuestion') }));
 vi.mock('../../DiffPage/DiffOverlay', () => ({ DiffOverlay: stub('diff') }));
 vi.mock('@/components/Announcements/placements', () => ({
   AnnouncementTopBannerSlot: stub('annTop'),
