@@ -13,5 +13,45 @@
     "stillIndexingAction": "Ohne Warten öffnen",
     "indexingDone": "Bereits abgeschlossen, aber die Seite reagiert nicht?",
     "indexingDoneAction": "Erneut versuchen"
+  },
+  "stalled": {
+    "title": "Der Bildschirm braucht länger als gewöhnlich",
+    "subtitle": "Probieren Sie die folgenden Schritte von oben nach unten. Hören Sie auf, sobald der Bildschirm erscheint.",
+    "disconnected": {
+      "title": "Der Bildschirm ist da, erreicht aber das Backend nicht",
+      "subtitle": "Probieren Sie die folgenden Schritte von oben nach unten. Hören Sie auf, sobald die Verbindung steht."
+    },
+    "restart": {
+      "title": "Plugin-Backend neu starten",
+      "body": "Startet das Plugin neu. Läuft in diesem Projekt noch andere Arbeit, wird sie angehalten.",
+      "button": "Neu starten",
+      "running": "Wird neu gestartet..."
+    },
+    "quit": {
+      "lead": "Wenn das nicht hilft,",
+      "body": "beenden Sie die IDE vollständig und öffnen Sie sie erneut."
+    },
+    "settings": {
+      "title": "Auch nach einem Neustart der IDE nichts zu sehen?",
+      "intro": "Es gibt zwei Möglichkeiten. Wenden Sie sie nacheinander an.",
+      "openButton": "Einstellungsdatei öffnen",
+      "copyButton": "Kopieren",
+      "copied": "Kopiert",
+      "pending": "Diese Zeilen stehen bereits in Ihrer Einstellungsdatei. Beenden Sie die IDE vollständig und öffnen Sie sie erneut, damit sie wirksam werden.",
+      "stepPasteMany": "Fügen Sie die folgenden Zeilen am Ende der Datei ein. Gibt es dort schon eine Zeile mit demselben Namen, ändern Sie diese Zeile.",
+      "stepPasteOne": "Fügen Sie die folgende Zeile am Ende der Datei ein. Gibt es dort schon eine Zeile mit demselben Namen, ändern Sie diese Zeile.",
+      "stepSave": "Speichern Sie mit {shortcut}, beenden Sie dann die IDE vollständig und öffnen Sie sie erneut.",
+      "processTitle": "Browser innerhalb der IDE",
+      "gpuTitle": "Ohne Grafikbeschleunigung",
+      "waylandNote": "Diese IDE läuft unter Wayland. Mit dieser Option öffnet sich der Claude-Code-Bildschirm in einem eigenen Fenster neben der IDE statt in ihr."
+    },
+    "report": {
+      "copyButton": "Informationen kopieren",
+      "issueButton": "Issue-Seite öffnen",
+      "hint": "Enthält keinen Code und keine Unterhaltung, nur Versionen und Einstellungen dieser IDE und dieses Computers."
+    },
+    "close": {
+      "button": "Anleitung schließen"
+    }
   }
 }

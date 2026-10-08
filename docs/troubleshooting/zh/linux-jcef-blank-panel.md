@@ -2,7 +2,7 @@
 
 🌐 [English](../en/linux-jcef-blank-panel.md) | [한국어](../ko/linux-jcef-blank-panel.md) | [日本語](../ja/linux-jcef-blank-panel.md) | **中文** | [Español](../es/linux-jcef-blank-panel.md) | [Deutsch](../de/linux-jcef-blank-panel.md) | [Français](../fr/linux-jcef-blank-panel.md)
 
-_最后更新: 2026-09-08_
+_最后更新: 2026-10-08_
 
 ## 症状
 
@@ -41,7 +41,7 @@ Markdown 预览是由 IDE 自己绘制的，与本插件无关。当两个画面
 
 JCEF 通过 GPU 进行渲染。当这条路径在某些驱动与会话的组合下无法工作时，浏览器本身会被正常创建，但一帧画面也绘制不出来，面板因此保持空白。
 
-我们目前还无法识别这种情况。当 JCEF 不可用，或者我们的后端启动失败时，我们会把占位内容替换成说明面板。但 JCEF 正常启动之后只是不绘制画面，从我们这一侧看起来就是成功的，所以你看到的是一个没有任何提示的空标签页。
+我们现在能识别其中的一部分。如果聊天画面在 30 秒后仍未加载完成，插件会在原处显示一个引导画面，里面有“重启”按钮和下面的 IDE 设置方法（[画面卡住时的引导](../../features/084-stalled_screen_guide/en.md)）。但 JCEF 加载完成之后只是不绘制画面的情况，从我们这一侧看起来仍然是成功的，所以你仍可能看到一个没有任何提示的空标签页。
 
 ## 解决方法
 

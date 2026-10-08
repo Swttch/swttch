@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.toolwindow.realization
 
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.StalledHelpKeys
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -28,7 +29,7 @@ class PanelLoadingMessagesTest {
             StuckHintKeys.STILL_INDEXING_ACTION,
             StuckHintKeys.INDEXING_DONE,
             StuckHintKeys.INDEXING_DONE_ACTION,
-        )
+        ) + StalledHelpKeys.ALL
 
     private val localesDir: File
         get() = File(System.getProperty("user.dir"), "webview/src/i18n/locales")

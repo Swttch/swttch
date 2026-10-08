@@ -13,5 +13,45 @@
     "stillIndexingAction": "不等待，直接開啟",
     "indexingDone": "索引已完成，但頁面沒有回應？",
     "indexingDoneAction": "重試"
+  },
+  "stalled": {
+    "title": "畫面載入比平常慢",
+    "subtitle": "請由上到下依序嘗試以下步驟。畫面出現後就可以停下。",
+    "disconnected": {
+      "title": "畫面已顯示，但無法連線到後端",
+      "subtitle": "請由上到下依序嘗試以下步驟。連線成功後就可以停下。"
+    },
+    "restart": {
+      "title": "重新啟動外掛程式後端",
+      "body": "重新啟動外掛程式。此專案中若有其他執行中的作業，會被中止。",
+      "button": "重新啟動",
+      "running": "正在重新啟動..."
+    },
+    "quit": {
+      "lead": "如果仍然不行，",
+      "body": "請完全結束 IDE，然後重新開啟。"
+    },
+    "settings": {
+      "title": "重新啟動 IDE 後仍然看不到？",
+      "intro": "有兩種方法，請逐一嘗試。",
+      "openButton": "開啟設定檔",
+      "copyButton": "複製",
+      "copied": "已複製",
+      "pending": "這些行已經在您的設定檔中。完全結束 IDE 並重新開啟後即可生效。",
+      "stepPasteMany": "將下面的行貼到檔案末尾。如果已經有同名的行，請直接修改該行。",
+      "stepPasteOne": "將下面這行貼到檔案末尾。如果已經有同名的行，請直接修改該行。",
+      "stepSave": "用 {shortcut} 儲存，然後完全結束 IDE 並重新開啟。",
+      "processTitle": "在 IDE 內執行瀏覽器",
+      "gpuTitle": "關閉圖形加速",
+      "waylandNote": "此 IDE 執行於 Wayland 上。使用此選項後，Claude Code 畫面會在 IDE 旁邊的獨立視窗中開啟，而不是在 IDE 內部。"
+    },
+    "report": {
+      "copyButton": "複製資訊",
+      "issueButton": "開啟問題頁面",
+      "hint": "不含程式碼和對話，只有此 IDE 與這台電腦的版本和設定。"
+    },
+    "close": {
+      "button": "關閉指南"
+    }
   }
 }

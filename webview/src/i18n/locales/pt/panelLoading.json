@@ -13,5 +13,45 @@
     "stillIndexingAction": "Abrir sem esperar",
     "indexingDone": "Já terminou, mas a página não está respondendo?",
     "indexingDoneAction": "Tentar novamente"
+  },
+  "stalled": {
+    "title": "A tela está demorando mais que o normal",
+    "subtitle": "Tente os passos abaixo de cima para baixo. Pare assim que a tela aparecer.",
+    "disconnected": {
+      "title": "A tela abriu, mas não consegue falar com o backend",
+      "subtitle": "Tente os passos abaixo de cima para baixo. Pare assim que conectar."
+    },
+    "restart": {
+      "title": "Reiniciar o backend do plugin",
+      "body": "Reinicia o plugin. Se houver outro trabalho em andamento neste projeto, ele será interrompido.",
+      "button": "Reiniciar",
+      "running": "Reiniciando..."
+    },
+    "quit": {
+      "lead": "Se isso não resolver,",
+      "body": "feche o IDE por completo e abra de novo."
+    },
+    "settings": {
+      "title": "Ainda não aparece depois de reiniciar o IDE?",
+      "intro": "Há duas maneiras. Aplique uma de cada vez.",
+      "openButton": "Abrir o arquivo de configurações",
+      "copyButton": "Copiar",
+      "copied": "Copiado",
+      "pending": "Estas linhas já estão no seu arquivo de configurações. Feche o IDE por completo e abra de novo para aplicá-las.",
+      "stepPasteMany": "Cole as linhas abaixo no fim do arquivo. Se já houver uma linha com o mesmo nome, altere essa linha.",
+      "stepPasteOne": "Cole a linha abaixo no fim do arquivo. Se já houver uma linha com o mesmo nome, altere essa linha.",
+      "stepSave": "Salve com {shortcut}, depois feche o IDE por completo e abra de novo.",
+      "processTitle": "Navegador dentro do IDE",
+      "gpuTitle": "Sem aceleração gráfica",
+      "waylandNote": "Este IDE está rodando no Wayland. Com esta opção, a tela do Claude Code abre em uma janela própria ao lado do IDE, em vez de dentro dele."
+    },
+    "report": {
+      "copyButton": "Copiar as informações",
+      "issueButton": "Abrir a página de issues",
+      "hint": "Não contém código nem conversas, apenas versões e configurações deste IDE e deste computador."
+    },
+    "close": {
+      "button": "Fechar o guia"
+    }
   }
 }

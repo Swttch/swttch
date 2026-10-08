@@ -563,7 +563,14 @@ class NodeProcessManager(
                     } catch (e: CancellationException) {
                         // Normal shutdown
                     } catch (e: Exception) {
-                        logger.error("Error reading Node.js stdout", e)
+                        if (disposed) {
+                            // dispose() and killNow() set this before they destroy the process, so
+                            // the pipe closing under the reader is the shutdown, not a fault. Logged
+                            // as an error it raised the IDE's red error badge on every restart.
+                            logger.info("Node.js stdout closed by shutdown: ${e.message}")
+                        } else {
+                            logger.error("Error reading Node.js stdout", e)
+                        }
                         if (!_portDeferred.isCompleted) {
                             _portDeferred.completeExceptionally(e)
                         }

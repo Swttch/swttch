@@ -35,6 +35,20 @@ enum class LoadingPhase(val key: String) {
 
     /** Text in the user's Interface Language. Cache-only lookup, safe on the EDT. */
     val message: String get() = PanelLoadingMessages.get(key)
+
+    companion object {
+        /**
+         * The phase for a page on its way, from the remote clients attached to the IDE
+         * (`ClientPortForwarder.attachedClients()`).
+         *
+         * "(SSH)" belongs only where a client on another machine draws the page. How the
+         * browser renders says nothing about that: out-of-process JCEF is the default in
+         * a local IDE too, so keying the label on it printed "(SSH)" for panels that were
+         * never anywhere near SSH (issue #526).
+         */
+        fun pageOnItsWay(attachedClients: Set<Int>): LoadingPhase =
+            if (attachedClients.isEmpty()) LOADING_UI else LOADING_UI_REMOTE
+    }
 }
 
 /**

@@ -139,6 +139,12 @@ export interface ConnectionStats {
   tunnels: number;
   /** Everything else: plain (local) browsers. */
   browsers: number;
+  /**
+   * The `panelId` of every connected IDE panel. The IDE asks this to tell WHICH of its panels
+   * is not connected: a page that is up but cannot reach this backend shows only a
+   * "reconnecting" banner, and the count alone cannot say whose it is.
+   */
+  panelIds: string[];
 }
 
 export class ConnectionManager {
@@ -755,11 +761,12 @@ export class ConnectionManager {
 
   /** Connection-count breakdown by client type (status endpoint / status-bar card). */
   getConnectionStats(): ConnectionStats {
-    const stats: ConnectionStats = { total: 0, panels: 0, tunnels: 0, browsers: 0 };
+    const stats: ConnectionStats = { total: 0, panels: 0, tunnels: 0, browsers: 0, panelIds: [] };
     for (const record of this.clientMap.values()) {
       stats.total++;
       if (record.panelId !== null) {
         stats.panels++;
+        stats.panelIds.push(record.panelId);
       } else if (record.origin?.endsWith('.trycloudflare.com')) {
         stats.tunnels++;
       } else {

@@ -24,6 +24,16 @@ import com.github.yhk1038.claudecodegui.toolwindow.realization.LoadingPhase
 import com.github.yhk1038.claudecodegui.toolwindow.realization.PanelLoadingMessages
 import com.github.yhk1038.claudecodegui.toolwindow.realization.RealizationGate
 import com.github.yhk1038.claudecodegui.toolwindow.realization.StuckHintKeys
+import com.github.yhk1038.claudecodegui.statusbar.BackendStatusClient
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.IdeMenuLabels
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.JcefSwitchAdvice
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.JcefSwitchAdvisor
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.StalledDiagnostics
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.StalledEnvironment
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.StalledHelpActions
+import com.github.yhk1038.claudecodegui.toolwindow.stalled.StalledHelpPanel
+import com.github.yhk1038.claudecodegui.platform.PlatformActionInvoker
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.dnd.DnDEvent
 import com.intellij.ide.dnd.DnDManager
@@ -75,6 +85,7 @@ import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
+import org.cef.handler.CefLoadHandler
 import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.handler.CefRequestHandlerAdapter
 import org.cef.network.CefRequest
@@ -269,6 +280,57 @@ class ClaudeCodePanel(
     // Error panel
     private var errorPanel: JPanel? = null
 
+    /** The project root whose backend this panel uses; what [ClaudePanelRegistry] groups panels by. */
+    internal val projectBasePath: String get() = project.basePath ?: ""
+
+    /**
+     * Whether this panel has a browser. A tab restored with the editor is a panel too, but it
+     * builds its browser only when it is first shown, so until then there is no page to load
+     * again and nothing for a restart to wait on. [loadWebView] needs the browser and is not
+     * to be called on such a panel.
+     */
+    internal val isRealized: Boolean get() = holder != null
+
+    // ─── Stalled-screen guide ───────────────────────────────────────────
+    // The one page shown over a screen that has not come up, with a restart button, how to
+    // quit the IDE completely, and the IDE options to change. See [StalledHelpPanel].
+    private var stalledHelp: StalledHelpPanel? = null
+
+    /** The IDE options the guide last found still to be done; kept so a re-render needs no file read. */
+    private var stalledAdvice: List<JcefSwitchAdvice> = emptyList()
+
+    // ─── Page up, backend not reachable ─────────────────────────────────
+    // The page loaded, but its own socket to the backend never connects (or no longer does):
+    // all it can show is its "reconnecting" line. See [ConnectionJudge] for what is done about it.
+    private val connectionJudge = ConnectionJudge()
+    private var connectionWatch: kotlinx.coroutines.Job? = null
+
+    /** Set for the one load that [connectionJudge] asked for, so that load does not count as someone else's. */
+    @Volatile
+    private var reloadedByConnectionWatch = false
+
+    /** The guide is up because the page is not connected, not because it did not load. */
+    @Volatile
+    private var connectionGuideUp = false
+
+    /** True from the moment a restart is asked for until the page has been loaded again from the new backend. */
+    @Volatile
+    private var restarting = false
+
+    private var restartsTried = 0
+
+    /** How long this load may take before the guide appears. Longer after a restart: a slow computer must not be sent round in circles. */
+    private var stallDelayMs = LOAD_STALL_HELP_MS
+
+    /** When the current load began, for the waited-seconds line of the report. */
+    private var loadStartedAtMs = 0L
+
+    /** The backend port the page was last loaded from, which [watchBackendPort] compares with the backend's current one. */
+    @Volatile
+    private var lastLoadedHostPort: Int? = null
+
+    private var portWatch: kotlinx.coroutines.Job? = null
+
     init {
         val jcef = browserService.jcefAvailability()
         if (!jcef.isUsable) {
@@ -284,6 +346,7 @@ class ClaudeCodePanel(
             // Show the indexing-wait placeholder so the user knows the tab is alive.
             setLoadingPhase(LoadingPhase.INDEXING_WAIT)
             add(loadingPanel, BorderLayout.CENTER)
+            ClaudePanelRegistry.register(this)
         }
     }
 
@@ -342,7 +405,12 @@ class ClaudeCodePanel(
 
     /** Moves the placeholder to [phase] and remembers it for [translatePlaceholder]. */
     /** True once [clearLoadingOverlay] has taken the placeholder off the browser. */
+    @Volatile
     private var loadingOverlayCleared = false
+
+    /** Set when the main frame reported a load error, read by the next load-end report. */
+    @Volatile
+    private var mainFrameLoadFailed = false
 
     /** The layered container holding the browser with the placeholder above it. */
     private var browserLayers: javax.swing.JPanel? = null
@@ -379,6 +447,8 @@ class ClaudeCodePanel(
                 val w = width
                 val h = height
                 loadingPanel.setBounds(0, 0, w, h)
+                // The stalled-screen guide takes the placeholder's place when it is up.
+                stalledHelp?.takeIf { it.parent === this }?.setBounds(0, 0, w, h)
                 // Below the bottom edge while loading, exactly in place once done.
                 browserComponent.setBounds(0, if (loadingOverlayCleared) 0 else h, w, h)
                 // First layout with a real size is the earliest moment the page can
@@ -389,6 +459,13 @@ class ClaudeCodePanel(
                 }
             }
         }
+        // A load starts with the placeholder up and the browser parked. The flag is per load:
+        // left set from an earlier one it would put the browser straight over the placeholder
+        // of every reload, and keep the stage of that reload from ever being cleared.
+        loadingOverlayCleared = false
+        // The stage of the load before this one is empty now (the browser and the placeholder
+        // move into the new one) but would stay in this panel as a stray child.
+        browserLayers?.let { remove(it) }
         browserLayers = stage
         remove(loadingPanel)
         loadingPanel.isOpaque = true
@@ -415,9 +492,10 @@ class ClaudeCodePanel(
     /**
      * Take the placeholder away and leave the browser holding the panel, once.
      *
-     * Called from the load handler on a healthy load, and from
-     * [armLoadingOverlayFallback] when that signal never arrives, so a page that
-     * fails to finish can never leave the user under a placeholder forever.
+     * Called from the load handler on a healthy load, and when the user closes the
+     * stalled-screen guide. A page that fails to finish never leaves the user under a
+     * placeholder forever: [armStalledHelp] puts the guide in its place, and the guide
+     * can be closed.
      */
     private fun clearLoadingOverlay(reason: String) {
         javax.swing.SwingUtilities.invokeLater {
@@ -428,6 +506,9 @@ class ClaudeCodePanel(
             // Move, do not resize: the browser already holds the final size, so
             // this only slides it up over the placeholder and drops the latter.
             layers.remove(loadingPanel)
+            stalledHelp?.let { layers.remove(it) }
+            // The page came up: the next load gets the ordinary wait again.
+            if (reason == "load finished") stallDelayMs = LOAD_STALL_HELP_MS
             layers.doLayout()
             layers.revalidate()
             layers.repaint()
@@ -440,21 +521,260 @@ class ClaudeCodePanel(
     }
 
     /**
-     * Clear the placeholder anyway if the load handler never reports.
+     * Put the stalled-screen guide up if the load handler has not reported by then.
      *
      * Tied to the stage it was armed for. A panel reloads into a new stage while
      * the previous one's alarm is still pending, and that alarm used to fire
      * against whatever stage was current — measured, a timer armed for one panel
-     * took the placeholder off the next one three seconds after it appeared,
-     * because [loadingOverlayCleared] resets per load but the alarm did not
+     * took the placeholder off the next one three seconds after it appeared
      * (issue #292).
+     *
+     * This used to clear the placeholder instead, which left the user on a blank
+     * browser with nothing to do. The guide stays up until the page loads or the user
+     * closes it, and closing it is what reveals a page that is in fact showing.
      */
-    private fun armLoadingOverlayFallback() {
+    private fun armStalledHelp() {
         val armedFor = browserLayers ?: return
         com.intellij.util.Alarm(com.intellij.util.Alarm.ThreadToUse.SWING_THREAD, this)
             .addRequest({
-                if (browserLayers === armedFor) clearLoadingOverlay("fallback timer")
-            }, LOADING_OVERLAY_FALLBACK_MS)
+                // A load error may have put the guide up already; do not draw it twice.
+                if (browserLayers === armedFor && stalledHelp?.parent !== armedFor) showStalledHelp(armedFor)
+            }, stallDelayMs.toInt())
+    }
+
+    /** The load failed outright, so waiting out the usual delay would only leave an error page. */
+    private fun showStalledHelpNow() {
+        javax.swing.SwingUtilities.invokeLater {
+            val stage = browserLayers ?: return@invokeLater
+            if (stalledHelp?.parent !== stage) showStalledHelp(stage)
+        }
+    }
+
+    /**
+     * Shows the guide in the placeholder's place. Reads the IDE's settings file, so the
+     * state of each option is worked out off the EDT first.
+     */
+    private fun showStalledHelp(stage: javax.swing.JPanel) {
+        if (isPanelDisposed || project.isDisposed || loadingOverlayCleared) return
+        val separateProcess = holder?.isOsr == true
+        scope.launch {
+            val advice = JcefSwitchAdvisor.advise(StalledEnvironment.read(separateProcess))
+            javax.swing.SwingUtilities.invokeLater {
+                // The load may have finished, or been replaced by another, while the file was read.
+                if (isPanelDisposed || loadingOverlayCleared || browserLayers !== stage) return@invokeLater
+                stalledAdvice = advice
+                val help = stalledHelp ?: StalledHelpPanel(stalledHelpActions()).also { stalledHelp = it }
+                help.renderFromTop(advice, restarting)
+                stage.remove(loadingPanel)
+                if (help.parent !== stage) stage.add(help)
+                stage.doLayout()
+                stage.revalidate()
+                stage.repaint()
+                logger.info(
+                    "Stalled-screen guide shown after ${waitedSeconds()}s" +
+                        " (separateProcessBrowser=$separateProcess, options=${advice.joinToString { "${it.switch}:${it.state}" }})"
+                )
+            }
+        }
+    }
+
+    private fun waitedSeconds(): Long =
+        if (loadStartedAtMs == 0L) 0 else (System.currentTimeMillis() - loadStartedAtMs) / 1000
+
+    private fun stalledHelpActions() = StalledHelpActions(
+        restart = { restartFromGuide() },
+        openSettingsFile = { openSettingsFile() },
+        copy = { text -> CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(text)) },
+        copyReport = { copyReport() },
+        openIssuePage = { BrowserUtil.browse(ISSUE_PAGE_URL) },
+        dismiss = {
+            logger.info("Stalled-screen guide closed by the user after ${waitedSeconds()}s")
+            if (connectionGuideUp) {
+                connectionGuideUp = false
+                connectionJudge.userDismissed()
+            }
+            clearLoadingOverlay("guide closed by the user")
+        },
+    )
+
+    /** Asks the IDE to open the same file its Help menu's "Edit Custom Properties" opens. */
+    private fun openSettingsFile() {
+        val opened = PlatformActionInvoker.invokeActionById(
+            IdeMenuLabels.EDIT_CUSTOM_PROPERTIES_ACTION_ID,
+            stalledHelp ?: this,
+            "ClaudeCodeStalledHelp",
+        )
+        logger.info("Stalled-screen guide: open the settings file (action found=$opened)")
+    }
+
+    private fun copyReport() {
+        val base = projectBasePath
+        val report = StalledDiagnostics.build(
+            StalledDiagnostics.Facts(
+                waitedSeconds = waitedSeconds(),
+                restartsTried = restartsTried,
+                separateProcessBrowserInUse = holder?.isOsr == true,
+                advice = stalledAdvice,
+                backendLifecycle = backendService.lifecycleOf(base)?.name ?: "none",
+                backendPortKnown = backendService.portOf(base) != null,
+                remoteClientAttached = com.github.yhk1038.claudecodegui.remotedev.ClientPortForwarder
+                    .attachedClients().isNotEmpty(),
+                disconnected = connectionGuideUp,
+            ),
+        )
+        CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(report))
+        logger.info("Stalled-screen guide: report copied (${report.length} chars)")
+    }
+
+    /**
+     * The guide's restart button, and the status-bar card's: restart the backend once for
+     * every panel of this project and load each of them again from the new one.
+     */
+    private fun restartFromGuide() {
+        if (restarting) return
+        restartsTried += 1
+        // A computer slow enough to need this guide must not be sent round in circles by a
+        // restart that gives the next load no longer than the last.
+        stallDelayMs = LOAD_STALL_HELP_AFTER_RESTART_MS
+        logger.info("Stalled-screen guide: restart asked for after ${waitedSeconds()}s (restart #$restartsTried)")
+        stalledHelp?.render(stalledAdvice, restarting = true)
+        ClaudePanelRegistry.restart(projectBasePath)
+    }
+
+    /** Called for every panel of the project when a restart of its backend begins. */
+    internal fun markRestarting() {
+        restarting = true
+        stalledHelp?.let { help ->
+            javax.swing.SwingUtilities.invokeLater { help.render(stalledAdvice, restarting = true) }
+        }
+    }
+
+    /** Called for every panel of the project once the restart has been asked of the backend: wait for its port, then load from it. */
+    internal fun awaitRestartedBackend() {
+        if (!isRealized) {
+            // Never shown, so nothing was loaded from the old backend and it waits on nothing.
+            restarting = false
+            return
+        }
+        scope.launch {
+            try {
+                awaitBackendAfterManualStart()
+            } finally {
+                restarting = false
+            }
+        }
+    }
+
+    /**
+     * Loads the page again from the backend's current port, building the address anew. The
+     * browser's own refresh would ask the old address again, which is the one thing that
+     * does not help when the port is what changed.
+     */
+    internal fun reloadFromCurrentPort() {
+        // Not shown yet: it loads from the backend's current port when it is first shown.
+        if (!isRealized) return
+        val port = backendService.portOf(projectBasePath)
+        if (port == null) {
+            logger.info("Reload asked for but the backend has no port; restarting it instead")
+            ClaudePanelRegistry.restart(projectBasePath)
+            return
+        }
+        logger.info("Reloading the panel from backend port $port")
+        loadWebView(port)
+    }
+
+    /**
+     * Watches whether the loaded page is connected to the backend, and steps in when it is not.
+     *
+     * The backend lists the panels connected to it, so the question put to it is plain: is this
+     * panel's id among them. A backend that cannot be asked, a page that is still loading and a
+     * restart in progress are all "not known", never "not connected".
+     */
+    private fun startConnectionWatch() {
+        if (connectionWatch?.isActive == true) return
+        connectionWatch = scope.launch {
+            while (!isPanelDisposed && !project.isDisposed) {
+                delay(BackendWatch.POLL_MS)
+                when (connectionJudge.judge(observeConnection())) {
+                    ConnectionJudge.Action.NONE -> Unit
+                    ConnectionJudge.Action.RELOAD -> {
+                        logger.info("The page has not been connected to the backend for a while; loading it again")
+                        reloadedByConnectionWatch = true
+                        reloadFromCurrentPort()
+                    }
+                    ConnectionJudge.Action.SHOW_GUIDE ->
+                        javax.swing.SwingUtilities.invokeLater { showConnectionHelp() }
+                    ConnectionJudge.Action.CLEAR_GUIDE -> {
+                        logger.info("The page is connected to the backend again; taking the guide away")
+                        connectionGuideUp = false
+                        clearLoadingOverlay("connected")
+                    }
+                }
+            }
+        }
+    }
+
+    /** What the backend says about this panel right now. See [ConnectionJudge.Observation]. */
+    private fun observeConnection(): ConnectionJudge.Observation {
+        if (restarting) return ConnectionJudge.Observation.UNKNOWN
+        // Only a page that has come up can be judged, and the guide over it counts as one.
+        if (!loadingOverlayCleared && !connectionGuideUp) return ConnectionJudge.Observation.UNKNOWN
+        val base = projectBasePath
+        // The IDE stopped starting a backend that never came up: there is nothing to ask.
+        if (backendService.isRespawnAbandoned(base)) return ConnectionJudge.Observation.BACKEND_GONE
+        val port = backendService.portOf(base) ?: return ConnectionJudge.Observation.UNKNOWN
+        val status = BackendStatusClient.fetch(port, backendService.authToken(base))
+            ?: return ConnectionJudge.Observation.UNKNOWN
+        val connected = status.connections.panelIds
+        // A backend that predates the list can only say how many are connected; none is
+        // still a page that is not.
+        val listed = if (connected != null) panelId in connected else status.connections.panels > 0
+        return if (listed) ConnectionJudge.Observation.CONNECTED else ConnectionJudge.Observation.NOT_CONNECTED
+    }
+
+    /**
+     * Puts the guide over a page that is up but not connected, in the placeholder's way: the
+     * browser goes back below the edge and the guide holds the panel until the page connects or
+     * the user closes it.
+     */
+    private fun showConnectionHelp() {
+        val stage = browserLayers ?: return
+        if (isPanelDisposed || project.isDisposed || !loadingOverlayCleared) return
+        loadingOverlayCleared = false
+        connectionGuideUp = true
+        stalledAdvice = emptyList()
+        val help = stalledHelp ?: StalledHelpPanel(stalledHelpActions()).also { stalledHelp = it }
+        help.renderFromTop(emptyList(), restarting, disconnected = true)
+        if (help.parent !== stage) stage.add(help)
+        stage.doLayout()
+        stage.revalidate()
+        stage.repaint()
+        logger.info("Guide shown: the page is up but not connected to the backend (${waitedSeconds()}s since it loaded)")
+    }
+
+    /**
+     * Loads the page again by itself when the backend moves to another port.
+     *
+     * A page keeps asking the address it was loaded from, so a backend that came back on a
+     * new port leaves it talking to nothing. The backend's port is the IDE's to know, so the
+     * IDE corrects the address; the page cannot. When to act is [StalePortJudge]'s call.
+     *
+     * A restart from the IDE asks for the port the backend had before, so this is a safety net
+     * for the cases where that does not hold (a client attached over Remote Development, a
+     * backend started by another path), not something an ordinary restart relies on.
+     */
+    private fun watchBackendPort() {
+        if (portWatch?.isActive == true) return
+        portWatch = scope.launch {
+            val judge = StalePortJudge()
+            while (!isPanelDisposed && !project.isDisposed) {
+                delay(BackendWatch.POLL_MS)
+                val loaded = lastLoadedHostPort
+                val port = judge.portToLoad(loaded, backendService.portOf(projectBasePath), restarting) ?: continue
+                logger.info("The backend moved from port $loaded to $port; loading the panel from the new one")
+                loadWebView(port)
+            }
+        }
     }
 
     private fun setLoadingPhase(phase: LoadingPhase) {
@@ -725,7 +1045,28 @@ class ClaudeCodePanel(
 
         // Inject scripts on page load
         b.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+            override fun onLoadError(
+                browser: CefBrowser,
+                frame: CefFrame,
+                errorCode: CefLoadHandler.ErrorCode,
+                errorText: String?,
+                failedUrl: String?,
+            ) {
+                // A navigation replaced by another reports ERR_ABORTED; that is not a failure.
+                if (frame.isMain && errorCode != CefLoadHandler.ErrorCode.ERR_ABORTED) {
+                    logger.warn("WebView failed to load: $errorCode ${errorText ?: ""}")
+                    mainFrameLoadFailed = true
+                }
+            }
+
             override fun onLoadEnd(browser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
+                // The browser calls this for its own error page too. That page is not the
+                // webview, so it must neither be treated as loaded nor take the guide away.
+                if (frame.isMain && mainFrameLoadFailed) {
+                    mainFrameLoadFailed = false
+                    showStalledHelpNow()
+                    return
+                }
                 if (frame.isMain) {
                     // Mark JCEF environment so detectRuntime() in environment.ts can detect
                     // the JetBrains environment and select JetBrainsAdapter over BrowserAdapter.
@@ -756,6 +1097,8 @@ class ClaudeCodePanel(
                     frame.executeJavaScript(repaintNudgeBridgeScript(), frame.url, 0)
                     installImeWorkaround()
                     clearLoadingOverlay("load finished")
+                    connectionJudge.pageLoadFinished()
+                    startConnectionWatch()
                     logger.info("WebView loaded successfully")
                     // The webview (IDE-selection chip consumer) just reloaded, so
                     // any previously shown context chips are gone. Re-query the IDE's
@@ -1767,6 +2110,15 @@ class ClaudeCodePanel(
      */
     // Called only from realizeBrowser() — holder and browser are non-null.
     private fun loadWebView(port: Int) {
+        // Remembered so the watcher can tell when the backend has since moved to another port.
+        lastLoadedHostPort = port
+        loadStartedAtMs = System.currentTimeMillis()
+        // A load the connection watch did not ask for (a restart, a port change) is a new page
+        // that gets the whole wait again. The watch's own reload keeps its place in the sequence.
+        if (!reloadedByConnectionWatch) connectionJudge.pageLoadedByOthers()
+        reloadedByConnectionWatch = false
+        connectionGuideUp = false
+        watchBackendPort()
         System.err.println("[ClaudeCodePanel] loadWebView called for project: ${project.name}")
         System.err.println("[ClaudeCodePanel] project.basePath: ${project.basePath}")
 
@@ -1809,7 +2161,8 @@ class ClaudeCodePanel(
         logger.info("Loading WebView from Node.js backend: $loggedUrl")
 
         javax.swing.SwingUtilities.invokeLater {
-            val h = holder!!
+            // The holder is gone if the panel was disposed between the call and this turn of the EDT.
+            val h = holder ?: return@invokeLater
             val b = h.browser
             // Paint the Swing component with the IDE surface color so the JCEF
             // native first paint is not white. Heavyweight (non-OSR) mode limits
@@ -1834,9 +2187,11 @@ class ClaudeCodePanel(
             // timer attaching it at 20s and the load finishing 4s later. So the
             // browser is attached immediately and the placeholder is layered over
             // it instead.
-            // "(SSH)" only where the page really crosses a remote link: a local IDE
-            // renders the browser itself and has nothing to say about SSH.
-            setLoadingPhase(if (h.isOsr) LoadingPhase.LOADING_UI_REMOTE else LoadingPhase.LOADING_UI)
+            // "(SSH)" only where the page really crosses a remote link: a local IDE has
+            // nothing to say about SSH, whether or not its JCEF is out of process. The
+            // clients are the ones seen before the port was resolved; one that attaches
+            // after that changes the set and loads the page again with its own label.
+            setLoadingPhase(LoadingPhase.pageOnItsWay(attachedAtLoad))
             // loadURL waits for a size. Starting it here would let the very first
             // panel lay the page out at 0x0 — the tool window has not been placed
             // yet at this point, so Swing has not given the stage a size — and the
@@ -1845,7 +2200,7 @@ class ClaudeCodePanel(
             // the first already have a size and load immediately.
             overlayLoadingOverBrowser(b.component, JcefHandlers.loadUrlLater(b, url))
             h.isLoaded = true
-            armLoadingOverlayFallback()
+            armStalledHelp()
             revalidate()
             repaint()
         }
@@ -1927,6 +2282,8 @@ class ClaudeCodePanel(
      */
     private fun showBackendError(errorMessage: String, diagnostics: String? = null) {
         remove(loadingPanel)
+        // A stage left by an earlier load would still be painted under the error.
+        browserLayers?.let { remove(it) }
 
         val staleBackendDetected = backendService.hasStaleBackend(project.basePath ?: "")
 
@@ -2874,12 +3231,18 @@ class ClaudeCodePanel(
         private const val CLIPBOARD_READ_TIMEOUT_MS = 3_000L
 
         /**
-         * How long the placeholder may stay over the browser before it is cleared
-         * regardless. Comfortably past a healthy load — the slowest measured over
-         * Remote Development was 4.2s — so it only fires when the load handler
-         * never reports at all.
+         * How long a page may take to finish loading before the stalled-screen guide
+         * replaces the placeholder. Well past a healthy load (4.2s over Remote Development)
+         * and past the 20s a first load took on an Arm Linux bench with a 9.9s freeze inside
+         * the IDE's own class loading, so a slow computer is not told it is broken.
          */
-        private const val LOADING_OVERLAY_FALLBACK_MS = 20_000
+        private const val LOAD_STALL_HELP_MS = 30_000L
+
+        /** The same wait after a restart: the user has just done what the guide said, so it waits longer before saying it again. */
+        private const val LOAD_STALL_HELP_AFTER_RESTART_MS = 60_000L
+
+        /** Where the stalled-screen guide sends a user whose screen still does not appear. */
+        private const val ISSUE_PAGE_URL = "https://github.com/Swttch/swttch/issues/new"
 
         /**
          * How often the panel asks whether project indexing has finished, instead of waiting
@@ -2928,6 +3291,7 @@ class ClaudeCodePanel(
 
     override fun dispose() {
         isPanelDisposed = true
+        ClaudePanelRegistry.unregister(this)
         // Detach browser component from this panel WITHOUT disposing the browser.
         // The browser is owned by ClaudeCodeBrowserService and survives tab move/split.
         // It will be reattached when a new ClaudeCodePanel is created for the same session.

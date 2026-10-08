@@ -13,5 +13,45 @@
     "stillIndexingAction": "Ouvrir sans attendre",
     "indexingDone": "L'indexation est terminée, mais la page ne répond pas ?",
     "indexingDoneAction": "Réessayer"
+  },
+  "stalled": {
+    "title": "L'écran met plus de temps que d'habitude",
+    "subtitle": "Essayez les étapes ci-dessous de haut en bas. Arrêtez-vous dès que l'écran apparaît.",
+    "disconnected": {
+      "title": "L'écran est affiché, mais il n'atteint pas le backend",
+      "subtitle": "Essayez les étapes ci-dessous de haut en bas. Arrêtez-vous dès que la connexion est rétablie."
+    },
+    "restart": {
+      "title": "Redémarrer le backend du plugin",
+      "body": "Redémarre le plugin. Si un autre travail est en cours dans ce projet, il s'arrête.",
+      "button": "Redémarrer",
+      "running": "Redémarrage..."
+    },
+    "quit": {
+      "lead": "Si cela ne suffit pas,",
+      "body": "quittez complètement l'IDE et rouvrez-le."
+    },
+    "settings": {
+      "title": "Toujours rien après le redémarrage de l'IDE ?",
+      "intro": "Il y a deux méthodes. Appliquez-les une par une.",
+      "openButton": "Ouvrir le fichier de réglages",
+      "copyButton": "Copier",
+      "copied": "Copié",
+      "pending": "Ces lignes sont déjà dans votre fichier de réglages. Quittez complètement l'IDE et rouvrez-le pour les appliquer.",
+      "stepPasteMany": "Collez les lignes ci-dessous à la fin du fichier. Si une ligne portant le même nom s'y trouve déjà, modifiez cette ligne.",
+      "stepPasteOne": "Collez la ligne ci-dessous à la fin du fichier. Si une ligne portant le même nom s'y trouve déjà, modifiez cette ligne.",
+      "stepSave": "Enregistrez avec {shortcut}, puis quittez complètement l'IDE et rouvrez-le.",
+      "processTitle": "Navigateur dans l'IDE",
+      "gpuTitle": "Sans accélération graphique",
+      "waylandNote": "Cet IDE s'exécute sous Wayland. Avec cette option, l'écran de Claude Code s'ouvre dans sa propre fenêtre à côté de l'IDE, et non à l'intérieur."
+    },
+    "report": {
+      "copyButton": "Copier les informations",
+      "issueButton": "Ouvrir la page des tickets",
+      "hint": "Ne contient ni code ni conversation, seulement les versions et réglages de cet IDE et de cet ordinateur."
+    },
+    "close": {
+      "button": "Fermer le guide"
+    }
   }
 }

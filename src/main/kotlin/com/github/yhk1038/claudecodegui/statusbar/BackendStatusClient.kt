@@ -25,6 +25,12 @@ object BackendStatusClient {
         val panels: Int,
         val tunnels: Int,
         val browsers: Int,
+        /**
+         * The `panelId` of every connected IDE panel. Null from a backend that predates the
+         * field (the plugin and the backend ship together, but a user can be pointed at an
+         * older standalone runtime), which is "not known" and not "none connected".
+         */
+        val panelIds: List<String>? = null,
     )
 
     @Serializable
