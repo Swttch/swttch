@@ -40,6 +40,13 @@ const SETTINGS_FILE = join(homedir(), '.claude-code-gui', 'settings.js');
 //     global scope. A value placed in a project file by hand still wins, exactly
 //     as it does for the two keys above.
 //
+//   - allowAllCommandsByDefault: it makes the GUI answer, on the user's behalf, the
+//     warnings the CLI itself raises about a risk. The project file lives inside
+//     the repository (.claude-code-gui/settings.json), so a cloned repo could ship
+//     it switched on and silence those warnings for whoever opens it. The editor
+//     writes to global scope only, and the webview ignores a value the project
+//     file supplies (a project can still turn it off, since off is the safe side).
+//
 // Note what is NOT a reason: "the Settings UI greys it out on the Project tab"
 // is a symptom, not a justification. #239 removed exactly that greying for five
 // keys after finding nothing about them required global scope. When a key looks
@@ -84,6 +91,7 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   notificationSoundVolume: 5,
   focusInputOnEditorContext: true,
   autoResumeOnLimit: false,
+  allowAllCommandsByDefault: false,
   attachEditorContext: true,
   autoOpenDiffOnPermission: true,
   diffSurface: DiffSurface.IDE,
@@ -149,6 +157,7 @@ const COMMENT_MAP: Record<string, string> = {
   notificationSoundVolume: '알림음의 음량(1~10, 미설정 시 5). 한 눈금의 절대 크기는 운영체제마다 다르다 — 맥은 1이 원음이고 10이 원음의 10배(afplay 게인), 윈도우와 리눅스는 증폭이 안 되므로 10이 원음이고 1이 그 10분의 1이다',
   focusInputOnEditorContext: 'true면 Alt+K로 파일 경로 삽입 후 채팅 입력창으로 포커스 이동',
   autoResumeOnLimit: '사용량 리밋 리셋 시 자동 재개(후원자 전용). 기본 off. 리밋 배너의 기본 동작을 seed',
+  allowAllCommandsByDefault: 'Sponsor-only. Whether every session starts with "Allow all command in this session" already on, so the GUI answers the CLI safety prompts itself. Off by default; a session can still turn it off for itself',
   attachEditorContext: '세션 시작 시 에디터 컨텍스트 칩을 활성 상태로 둘지. false면 칩은 뜨되 비활성으로 시작(세션 중 클릭 변경은 저장되지 않음)',
   autoOpenDiffOnPermission: '파일 편집 권한을 물을 때 diff를 저절로 열지. false면 승인 패널만 뜨고, 프롬프트의 파일명을 눌렀을 때만 diff가 열린다(변경 내용은 어느 쪽이든 보관되므로 나중에 눌러도 볼 수 있다)',
   diffSurface: '파일 편집 권한을 물을 때 변경 내용을 어디에 그릴지: "ide"(IDE 자체 diff 뷰어) | "built-in"(우리 diff 페이지). IDE 없이 실행 중이면 항상 "built-in"으로 동작한다',
@@ -533,6 +542,7 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'useCtrlEnterToSend':
     case 'focusInputOnEditorContext':
     case 'autoResumeOnLimit':
+    case 'allowAllCommandsByDefault':
     case 'attachEditorContext':
     case 'syncModelToDefault':
       if (typeof value !== 'boolean') {

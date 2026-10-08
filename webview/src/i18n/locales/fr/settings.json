@@ -350,14 +350,16 @@
     "heading": "Autorisations",
     "notSet": "Non défini (utiliser le paramètre global)",
     "bypassMode": {
-      "sectionTitle": "Mode contournement",
       "label": "Désactiver le mode contournement",
       "description": "Empêche l'activation du mode de contournement des autorisations"
     },
     "defaultMode": {
-      "sectionTitle": "Mode de saisie par défaut",
       "label": "Mode de saisie par défaut",
       "description": "Mode d'autorisation initial lors de l'ouverture d'une nouvelle session"
+    },
+    "allowAllCommands": {
+      "label": "Autoriser toutes les commandes dans toutes les sessions",
+      "description": "Chaque session démarre avec « Autoriser toutes les commandes dans cette session » déjà activé : les avertissements de risque envoyés par le modèle sont approuvés sans afficher le panneau d’approbation. Une session peut toujours le désactiver pour elle-même."
     }
   },
   "about": {

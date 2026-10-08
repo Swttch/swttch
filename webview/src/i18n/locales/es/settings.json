@@ -350,14 +350,16 @@
     "heading": "Permisos",
     "notSet": "Sin definir (usar global)",
     "bypassMode": {
-      "sectionTitle": "Modo de omisión",
       "label": "Desactivar modo de omisión",
       "description": "Evita que se active el modo de omisión de permisos"
     },
     "defaultMode": {
-      "sectionTitle": "Modo de entrada predeterminado",
       "label": "Modo de entrada predeterminado",
       "description": "Modo de permisos inicial al abrir una nueva sesión"
+    },
+    "allowAllCommands": {
+      "label": "Permitir todos los comandos en todas las sesiones",
+      "description": "Cada sesión empieza con “Permitir todos los comandos en esta sesión” ya activado, así que los avisos de riesgo que envía el modelo se aprueban sin mostrar el panel de aprobación. Una sesión puede seguir desactivándolo para sí misma."
     }
   },
   "about": {

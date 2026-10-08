@@ -1,8 +1,41 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/i18n';
 import { Portal } from '../Portal';
 import { useEscapeLayer } from '@/hooks/useEscapeLayer';
+
+/**
+ * A small opt-in under the message, in the manner of "remember me" on a sign-in
+ * form: it rides along with the answer rather than being a question of its own.
+ */
+export interface ConfirmCheckbox {
+  label: string;
+  /** Where the box starts. */
+  defaultChecked: boolean;
+  /** Shown beside the label, for a mark such as the sponsor badge. */
+  badge?: ReactNode;
+  /** A line of small text under the label that says what ticking the box does. */
+  hint?: string;
+  /**
+   * Asked before the box turns ON, never when it turns off. Resolving to false
+   * leaves it unchecked, which is how a gated option refuses without closing the
+   * dialog it sits in.
+   */
+  beforeCheck?: () => Promise<boolean>;
+  /**
+   * The box is shown but cannot be ticked, because the option behind it is
+   * closed to this user. It stays on screen on purpose, dimmed rather than
+   * hidden: an option nobody can see sells nothing.
+   *
+   * Pressing it, on the box or on its label, is the way forward instead of a
+   * dead end: `onLockedClick` runs and the dialog is cancelled, since a dialog
+   * holds the focus and would sit on top of wherever the click is meant to lead.
+   */
+  locked?: boolean;
+  onLockedClick?: () => void;
+  /** The locked box is on screen, which is the moment the offer it carries is shown. */
+  onLockedShown?: () => void;
+}
 
 interface Props {
   title: string;
@@ -10,6 +43,7 @@ interface Props {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
+  checkbox?: ConfirmCheckbox;
   /**
    * Closing without answering, when that is a distinct outcome from cancelling.
    *
@@ -20,7 +54,8 @@ interface Props {
    * which only appears when this is set — all land here instead.
    */
   onDismiss?: () => void;
-  onConfirm: () => void;
+  /** `checked` is the box's state at the moment of confirming; false when there is no box. */
+  onConfirm: (checked: boolean) => void;
   onCancel: () => void;
 }
 
@@ -32,6 +67,7 @@ export function ConfirmDialog(props: Props) {
     confirmLabel = t('confirmDialog.confirm'),
     cancelLabel = t('confirmDialog.cancel'),
     variant = 'default',
+    checkbox,
     onDismiss,
     onConfirm,
     onCancel,
@@ -41,6 +77,8 @@ export function ConfirmDialog(props: Props) {
   // dismissal; otherwise it stays what it has always been — a cancel.
   const close = onDismiss ?? onCancel;
 
+  const [checked, setChecked] = useState(checkbox?.defaultChecked ?? false);
+  const locked = checkbox?.locked === true;
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -91,6 +129,19 @@ export function ConfirmDialog(props: Props) {
     }
   };
 
+  // A locked box is on screen from the moment the dialog is. Reported once, at
+  // mount: this is not Tippy, which commits content while still closed.
+  const lockedShownRef = useRef(checkbox?.onLockedShown);
+  useEffect(() => {
+    if (locked) lockedShownRef.current?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCheckboxChange = async (next: boolean) => {
+    if (next && checkbox?.beforeCheck && !(await checkbox.beforeCheck())) return;
+    setChecked(next);
+  };
+
   const confirmButtonClass =
     variant === 'danger'
       ? 'px-4 py-2 rounded-lg text-sm font-medium bg-state-error-fg hover:bg-state-error-fg text-text-inverse transition-colors'
@@ -126,6 +177,39 @@ export function ConfirmDialog(props: Props) {
               write plain strings, and without this a `\n\n` collapses into a
               space — one wall of text where two were intended. */}
           <p className="text-sm text-text-secondary whitespace-pre-line">{message}</p>
+          {checkbox && (
+            <div className="flex flex-col gap-1">
+              <label
+                className={`flex items-center gap-2 text-xs text-text-secondary cursor-pointer select-none ${
+                  locked ? 'opacity-60' : ''
+                }`}
+                onClick={() => {
+                  if (!locked) return;
+                  checkbox?.onLockedClick?.();
+                  onCancel();
+                }}
+              >
+                {/* Natively disabled, so it looks and reads as disabled. A disabled
+                    control swallows presses, so it lets them through to the label,
+                    which is what leads on: pressing the box and pressing its text
+                    do the same thing. */}
+                <input
+                  type="checkbox"
+                  checked={locked ? false : checked}
+                  disabled={locked}
+                  onChange={(e) => void handleCheckboxChange(e.target.checked)}
+                  className={`h-3.5 w-3.5 cursor-pointer accent-accent-claude ${
+                    locked ? 'pointer-events-none' : ''
+                  }`}
+                />
+                <span>{checkbox.label}</span>
+                {checkbox.badge}
+              </label>
+              {/* Lined up under the label rather than the box: it explains the
+                  label, and starting at the box would read as a second item. */}
+              {checkbox.hint && <p className="ps-[1.375rem] text-xs text-text-tertiary">{checkbox.hint}</p>}
+            </div>
+          )}
           <div className="flex justify-end gap-2 mt-2">
             <button
               className="px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-tooltip transition-colors"
@@ -136,7 +220,7 @@ export function ConfirmDialog(props: Props) {
             <button
               ref={confirmButtonRef}
               className={confirmButtonClass}
-              onClick={onConfirm}
+              onClick={() => onConfirm(checked)}
             >
               {confirmLabel}
             </button>

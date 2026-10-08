@@ -13,10 +13,13 @@ import { useTranslation } from '@/i18n';
  * Labels come from the feature docs' own titles rather than the i18n bundle —
  * they name a document, and the document is what the link opens.
  */
-const BENEFITS: Array<{ folder: string; label: string }> = [
+const BENEFITS: Array<{ folder?: string; label: string }> = [
   { folder: '018-scheduled_messages', label: 'Scheduled messages' },
   { folder: '019-auto_resume_on_limit', label: 'Auto-resume on usage limit' },
   { folder: '059-assets', label: 'Step across a session’s assets' },
+  // No feature doc yet, so it is listed by name only: a link to a folder that
+  // does not exist would open a 404.
+  { label: 'Allow all command in all sessions' },
 ];
 
 export function SponsorBenefitsSection() {
@@ -31,16 +34,20 @@ export function SponsorBenefitsSection() {
 
       <ul className="mt-4 space-y-2">
         {BENEFITS.map((benefit) => (
-          <li key={benefit.folder}>
-            <a
-              href={featureDocUrl(benefit.folder)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-text-link transition-opacity hover:opacity-80"
-            >
-              {benefit.label}
-              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-            </a>
+          <li key={benefit.label}>
+            {benefit.folder ? (
+              <a
+                href={featureDocUrl(benefit.folder)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-text-link transition-opacity hover:opacity-80"
+              >
+                {benefit.label}
+                <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+              </a>
+            ) : (
+              <span className="text-sm text-text-primary">{benefit.label}</span>
+            )}
           </li>
         ))}
       </ul>

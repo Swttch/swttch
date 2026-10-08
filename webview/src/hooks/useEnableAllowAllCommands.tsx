@@ -18,7 +18,8 @@ interface UseEnableAllowAllCommandsReturn {
  *
  * Both entry points, the Enable link on a disabled approval option and the
  * toggle in the slash command panel, go through here, so neither can switch it
- * on without the user having read what it hands over.
+ * on without the user having read what it hands over. The Settings switch for
+ * the default across all sessions has its own warning and lives on the context.
  */
 export function useEnableAllowAllCommands(): UseEnableAllowAllCommandsReturn {
   const { currentSessionId } = useSessionContext();

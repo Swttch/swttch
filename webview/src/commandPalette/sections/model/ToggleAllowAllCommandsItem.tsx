@@ -11,9 +11,12 @@ export const ALLOW_ALL_COMMANDS_TOGGLE_EVENT = 'allow-all-commands-toggle';
  * Model-section toggle for answering the CLI's unskippable safety prompts
  * without showing the approval panel, placed at the bottom of the section.
  *
- * Session-local: it applies to the open conversation only and is off again in a
- * new one. Turning it on goes through the same warning as the Enable link on the
- * approval panel; turning it off needs none, since it only brings the panel back.
+ * Session-local: it applies to the open conversation only. A new conversation
+ * starts off, unless the sponsor-only default in Settings > Permissions is on,
+ * in which case turning it off here is this session's own choice. Turning it on
+ * goes through the same warning as the Enable link on the approval panel, which
+ * is also where that default can be set; turning it off needs none, since it
+ * only brings the panel back.
  */
 export const createToggleAllowAllCommandsItem = (): StaticItem =>
   new StaticItem('toggle-allow-all-commands', i18n.t('commandPalette:model.toggleAllowAllCommands'), {

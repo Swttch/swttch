@@ -35,10 +35,10 @@ export const ISSUES_URL = `${REPO_URL}/issues`;
 /**
  * Where a feature doc lives, given its folder name under `docs/features/`.
  *
- * The docs are per-language files in the repo, so the link targets the folder
- * and lets the reader pick their language there — cheaper and more honest than
- * guessing which translations exist for a given feature.
+ * The docs are per-language files in the repo, and the English one is the file
+ * every feature has, so the link opens it directly. A link to the folder showed
+ * a file listing instead of the doc, one more click before any text.
  */
 export function featureDocUrl(folder: string): string {
-  return `${REPO_URL}/tree/main/docs/features/${folder}`;
+  return `${REPO_URL}/blob/main/docs/features/${folder}/en.md`;
 }
