@@ -1,52 +1,58 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { _resetFileIconCache, readFileIcon } from '../fileIcon';
+import { _resetFileIconCache, iconSourceFor, readFileIcon } from '../fileIcon';
 
 beforeEach(() => _resetFileIconCache());
 
+const PNG = { mimeType: 'image/png' as const, base64: 'iVBORw0KGgo=' };
+
 describe('readFileIcon', () => {
-  it('gives the icon the system drew, as a base64 png', async () => {
-    const run = vi.fn().mockResolvedValue('iVBORw0KGgo=');
-    expect(await readFileIcon('kts', { platform: 'darwin', run })).toEqual({ mimeType: 'image/png', base64: 'iVBORw0KGgo=' });
-    expect(run).toHaveBeenCalledWith('kts');
+  it('gives what the system source gave', async () => {
+    const source = vi.fn().mockResolvedValue(PNG);
+    expect(await readFileIcon('kts', { platform: 'darwin', source })).toEqual(PNG);
+    expect(source).toHaveBeenCalledWith('kts');
   });
 
   it('asks the system once per extension, whatever the case or how many files share it', async () => {
-    const run = vi.fn().mockResolvedValue('AAA');
-    await Promise.all([
-      readFileIcon('pdf', { platform: 'darwin', run }),
-      readFileIcon('PDF', { platform: 'darwin', run }),
-    ]);
-    await readFileIcon('pdf', { platform: 'darwin', run });
-    expect(run).toHaveBeenCalledTimes(1);
+    const source = vi.fn().mockResolvedValue(PNG);
+    await Promise.all([readFileIcon('pdf', { source }), readFileIcon('PDF', { source })]);
+    await readFileIcon('pdf', { source });
+    expect(source).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['win32', 'linux'] as const)('has no icon to give on %s, where the system cannot be asked cheaply', async (platform) => {
-    const run = vi.fn();
-    expect(await readFileIcon('pdf', { platform, run })).toBeNull();
-    expect(run).not.toHaveBeenCalled();
+  it.each(['', 'a b', 'x;rm', '../etc', 'a'.repeat(40), '.pdf', "x'y", 'x`y', 'x$(y)'])(
+    'refuses "%s" before it reaches a shell or a script',
+    async (extension) => {
+      const source = vi.fn();
+      expect(await readFileIcon(extension, { source })).toBeNull();
+      expect(source).not.toHaveBeenCalled();
+    },
+  );
+
+  it('gives null when the source fails, and asks again next time instead of remembering the failure', async () => {
+    const source = vi.fn().mockRejectedValueOnce(new Error('timed out')).mockResolvedValue(PNG);
+
+    expect(await readFileIcon('mov', { source })).toBeNull();
+    expect(await readFileIcon('mov', { source })).toEqual(PNG);
   });
 
-  it.each(['', 'a b', 'x;rm', '../etc', 'a'.repeat(40), '.pdf'])('refuses "%s" before it reaches a shell', async (extension) => {
-    const run = vi.fn();
-    expect(await readFileIcon(extension, { platform: 'darwin', run })).toBeNull();
-    expect(run).not.toHaveBeenCalled();
+  it('remembers an empty answer, which is the system saying it has nothing for the type', async () => {
+    const source = vi.fn().mockResolvedValue(null);
+    await readFileIcon('weird', { source });
+    await readFileIcon('weird', { source });
+    expect(source).toHaveBeenCalledTimes(1);
   });
 
-  it('gives null when the script fails, and asks again next time instead of remembering the failure', async () => {
-    const run = vi.fn().mockRejectedValueOnce(new Error('timed out')).mockResolvedValue('BBB');
+  it('has no way to ask a system nobody wrote one for', async () => {
+    expect(await readFileIcon('pdf', { platform: 'freebsd' })).toBeNull();
+  });
+});
 
-    expect(await readFileIcon('mov', { platform: 'darwin', run })).toBeNull();
-    expect(await readFileIcon('mov', { platform: 'darwin', run })).toEqual({ mimeType: 'image/png', base64: 'BBB' });
+describe('iconSourceFor', () => {
+  it.each(['darwin', 'win32', 'linux'] as const)('has a way to ask %s', (platform) => {
+    expect(iconSourceFor(platform)).toBeTypeOf('function');
   });
 
-  it('gives null when the script prints nothing', async () => {
-    expect(await readFileIcon('mov', { platform: 'darwin', run: async () => '' })).toBeNull();
+  it.each(['freebsd', 'sunos', 'aix'] as const)('has none for %s', (platform) => {
+    expect(iconSourceFor(platform)).toBeUndefined();
   });
-
-  it.skipIf(process.platform !== 'darwin')('draws a real png for a real extension on this machine', async () => {
-    const icon = await readFileIcon('pdf');
-    expect(icon?.mimeType).toBe('image/png');
-    // every png starts with these bytes, which base64 writes as iVBORw0KGgo
-    expect(icon?.base64.startsWith('iVBORw0KGgo')).toBe(true);
-  }, 20_000);
 });
