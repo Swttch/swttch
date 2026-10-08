@@ -1,4 +1,5 @@
 import { FileKind, fileKindOf } from './fileType';
+import { useFileIcon } from './useFileIcon';
 
 /** Text color per kind, so a row of chips can be told apart before a name is read. */
 export const KIND_COLOR: Record<FileKind, string> = {
@@ -52,6 +53,14 @@ export function FileTypeIcon(props: { name: string; className?: string; colored?
   const { name, className = '', colored = true } = props;
   const kind = fileKindOf(name);
   const symbol = SYMBOL[kind];
+  const systemIcon = useFileIcon(name);
+
+  // Where the system can draw the icon (the Finder's own picture for this type) it
+  // wins: it is what the file looks like everywhere else on the machine. Until it
+  // arrives, and wherever it cannot be had, the icon drawn below stands in.
+  if (systemIcon) {
+    return <img src={systemIcon} alt="" aria-hidden="true" draggable={false} data-kind={kind} data-source="system" className={`object-contain ${className}`.trim()} />;
+  }
 
   return (
     <svg

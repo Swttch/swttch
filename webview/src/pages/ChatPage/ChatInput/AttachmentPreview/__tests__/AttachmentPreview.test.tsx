@@ -9,6 +9,8 @@ vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
 import { AttachmentPreview } from '../index';
 import { _resetFilePreviewCache } from '../loadFilePreview';
 import { _resetFileSizeCache } from '../useFileSize';
+import { _resetFileIconCache } from '../useFileIcon';
+import { MessageType } from '@/shared';
 import { ImageAttachment, FileAttachment, FolderAttachment, PendingUpload } from '@/types';
 
 /** A pixel's worth of base64, distinct per image so src comparisons are exact. */
@@ -20,12 +22,16 @@ function shownSrc(): string | null {
   return screen.getByAltText('Full size').getAttribute('src');
 }
 
+/** Only what was asked about a file's content or size; the icon requests are another matter. */
+const fileRequests = () => requestMock.mock.calls.filter(([type]) => type === MessageType.GET_FILE_PREVIEW);
+
 beforeEach(() => {
   cleanup();
   requestMock.mockReset();
   requestMock.mockResolvedValue({ kind: 'none' });
   _resetFilePreviewCache();
   _resetFileSizeCache();
+  _resetFileIconCache();
 });
 
 describe('AttachmentPreview viewer', () => {
@@ -195,7 +201,7 @@ describe('AttachmentPreview names', () => {
     fireEvent.mouseEnter(screen.getByText(longName));
 
     await waitFor(() => expect(screen.getByText('12.7MB')).toBeInTheDocument());
-    expect(requestMock).not.toHaveBeenCalled();
+    expect(fileRequests()).toHaveLength(0);
   });
 
   it('asks the backend for the size of a file picked by path, which carries none', async () => {
@@ -228,7 +234,7 @@ describe('AttachmentPreview names', () => {
     fireEvent.mouseEnter(screen.getByText('photos-of-the-trip/'));
 
     await waitFor(() => expect(screen.getByText('/saved/photos-of-the-trip/')).toBeInTheDocument());
-    expect(requestMock).not.toHaveBeenCalled();
+    expect(fileRequests()).toHaveLength(0);
   });
 
   it('writes the size of an inline image, which is already in hand', async () => {
@@ -375,7 +381,7 @@ describe('AttachmentPreview file previews', () => {
   it('keeps the icon when there is nothing to show', async () => {
     render(<AttachmentPreview attachments={[image('AAA'), file('report.pdf')]} onRemove={vi.fn()} />);
 
-    await waitFor(() => expect(requestMock).toHaveBeenCalled());
+    await waitFor(() => expect(fileRequests().length).toBeGreaterThan(0));
     expect(screen.getByText('PDF')).toBeInTheDocument();
     expect(screen.queryByText(/step one/)).toBeNull();
   });
@@ -383,7 +389,7 @@ describe('AttachmentPreview file previews', () => {
   it('asks about the file by its path, and reads its content only when it is shown as a card', async () => {
     const { rerender } = render(<AttachmentPreview attachments={[file('a.md')]} onRemove={vi.fn()} />);
     // A pill has no room for a preview: it may ask the size, never the content.
-    expect(requestMock.mock.calls.every(([, payload]) => payload.metadataOnly === true)).toBe(true);
+    expect(fileRequests().every(([, payload]) => payload.metadataOnly === true)).toBe(true);
 
     rerender(<AttachmentPreview attachments={[image('AAA'), file('a.md')]} onRemove={vi.fn()} />);
     await waitFor(() => expect(requestMock).toHaveBeenCalledWith(expect.any(String), { path: '/tmp/a.md' }));

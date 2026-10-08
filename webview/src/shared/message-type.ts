@@ -437,6 +437,8 @@ export enum MessageType {
   UPLOAD_FILE_CHUNK = 'UPLOAD_FILE_CHUNK',
   /** Ask what an attachment card can show of a file: its first lines, the picture, or a video's bytes. Answered with kind 'none' when the icon is all there is. */
   GET_FILE_PREVIEW = 'GET_FILE_PREVIEW',
+  /** Ask for the icon the operating system draws for a file extension. Answered with a base64 PNG, or with nothing where the system cannot be asked. */
+  GET_FILE_ICON = 'GET_FILE_ICON',
   /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */
   SAVE_FILE = 'SAVE_FILE',
   /** List recent/known projects. */

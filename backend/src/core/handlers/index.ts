@@ -126,6 +126,7 @@ import { getDetectedNodePathHandler } from './getDetectedNodePath';
 import { pickFilesHandler } from './pickFiles';
 import { uploadFileChunkHandler } from './uploadFileChunk';
 import { getFilePreviewHandler } from './getFilePreview';
+import { getFileIconHandler } from './getFileIcon';
 import { nativeDropFlushHandler } from './nativeDropFlush';
 import { getPluginUpdatesHandler } from './getPluginUpdates';
 import { updatePluginHandler } from './updatePlugin';
@@ -574,6 +575,9 @@ export async function handleMessage(
       break;
     case MessageType.PICK_FILES:
       await pickFilesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_FILE_ICON:
+      await getFileIconHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_FILE_PREVIEW:
       await getFilePreviewHandler(connectionId, message, connections, bridge);
