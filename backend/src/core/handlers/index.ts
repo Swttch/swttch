@@ -124,6 +124,7 @@ import { getAvailableEditorsHandler } from './getAvailableEditors';
 import { getDetectedCliPathHandler } from './getDetectedCliPath';
 import { getDetectedNodePathHandler } from './getDetectedNodePath';
 import { pickFilesHandler } from './pickFiles';
+import { uploadFileChunkHandler } from './uploadFileChunk';
 import { nativeDropFlushHandler } from './nativeDropFlush';
 import { getPluginUpdatesHandler } from './getPluginUpdates';
 import { updatePluginHandler } from './updatePlugin';
@@ -572,6 +573,9 @@ export async function handleMessage(
       break;
     case MessageType.PICK_FILES:
       await pickFilesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.UPLOAD_FILE_CHUNK:
+      await uploadFileChunkHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.NATIVE_DROP_FLUSH:
       await nativeDropFlushHandler(connectionId, message, connections, bridge);

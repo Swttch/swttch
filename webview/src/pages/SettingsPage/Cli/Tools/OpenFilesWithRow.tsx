@@ -94,7 +94,8 @@ export function OpenFilesWithRow() {
   };
 
   const handleChoose = async () => {
-    const res = await send(MessageType.PICK_FILES, { mode: 'files', multiple: false });
+    // A native dialog waits on the person, so the request has no clock.
+    const res = await send(MessageType.PICK_FILES, { mode: 'files', multiple: false }, { timeout: null });
     const picked = (res?.paths as string[] | undefined)?.[0];
     if (picked) {
       updateCustom({ path: picked });

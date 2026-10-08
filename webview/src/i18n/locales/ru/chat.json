@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "Неподдерживаемый тип файла: {{type}}",
-        "tooLarge": "Файл слишком большой: {{size}} МБ (макс. {{max}} МБ)"
+        "tooLarge": "Файл слишком большой: {{size}} МБ (макс. {{max}} МБ)",
+        "uploadFailed": "Не удалось прикрепить «{{name}}»"
       }
     },
     "contextWindow": {

@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "نوع فایل پشتیبانی نمی‌شود: {{type}}",
-        "tooLarge": "فایل بیش از حد بزرگ است: {{size}}MB (حداکثر {{max}}MB)"
+        "tooLarge": "فایل بیش از حد بزرگ است: {{size}}MB (حداکثر {{max}}MB)",
+        "uploadFailed": "پیوست کردن «{{name}}» ممکن نشد"
       }
     },
     "contextWindow": {

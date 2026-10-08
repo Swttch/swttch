@@ -433,6 +433,8 @@ export enum MessageType {
   LIST_PROJECT_FILES = 'LIST_PROJECT_FILES',
   /** Native multi-file picker. */
   PICK_FILES = 'PICK_FILES',
+  /** One chunk of a file the webview uploads because the browser cannot expose its disk path; the last chunk's ACK carries the saved absolute path. */
+  UPLOAD_FILE_CHUNK = 'UPLOAD_FILE_CHUNK',
   /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */
   SAVE_FILE = 'SAVE_FILE',
   /** List recent/known projects. */

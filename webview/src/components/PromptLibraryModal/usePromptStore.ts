@@ -234,7 +234,9 @@ export function usePromptStore(): PromptStore {
 
   const previewImport = useCallback(
     async (scope: PromptScope) =>
-      (await bridge.send(MessageType.PREVIEW_PROMPT_IMPORT, scopePayload(scope))) as PreviewImportAck,
+      // The backend opens the native file picker inside this request, so the
+      // request waits on the person and has no clock.
+      (await bridge.send(MessageType.PREVIEW_PROMPT_IMPORT, scopePayload(scope), { timeout: null })) as PreviewImportAck,
     [bridge, scopePayload],
   );
 

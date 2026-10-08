@@ -3,6 +3,13 @@ import { Attachment, ImageAttachment, FileAttachment, FolderAttachment, ATTACHME
 import { useTranslation } from '@/i18n';
 import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
+import { isJetBrains } from '@/config/environment';
+import { basename } from '../basename';
+import { readDroppedEntries, uploadFile } from './droppedFiles';
+
+function isInlineImageType(mimeType: string): boolean {
+  return ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as (typeof ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES)[number]);
+}
 
 /**
  * Tell the backend an image was attached, purely so telemetry can see it.
@@ -148,19 +155,39 @@ export function useAttachments(): UseAttachmentsReturn {
     e.preventDefault();
     setIsDragOver(false);
 
-    // Only handle images here. Native file/folder paths are routed through the
-    // NATIVE_DROP_FLUSH RPC (Kotlin CefDragHandler → backend stash → IPC), which
-    // gives canonical OS paths. Reading them off `dataTransfer` here causes
-    // duplicates: IDE project-tree drops put the user-project path in text/plain
-    // *and* deliver a sandbox-mirror path via CefDragHandler — two different
-    // strings for the same file, so the dedup guard can't collapse them.
-    const files = e.dataTransfer.files;
-    for (const file of Array.from(files)) {
-      if (file.type.startsWith('image/')) {
+    // Read before the first await: the browser empties the DataTransfer once
+    // this handler yields.
+    const dropped = readDroppedEntries(e.dataTransfer);
+
+    for (const { file, isDirectory } of dropped) {
+      // Pictures the model can read inline stay inline, in every environment.
+      if (!isDirectory && isInlineImageType(file.type)) {
         await addImageAttachment(file, ImageAttachSource.Drop);
+        continue;
+      }
+
+      // Everything else becomes a path chip, whatever its type. In the IDE the
+      // path comes from the NATIVE_DROP_FLUSH RPC (Kotlin CefDragHandler →
+      // backend stash → IPC), which gives canonical OS paths. Reading them off
+      // `dataTransfer` there would duplicate: IDE project-tree drops put the
+      // user-project path in text/plain *and* deliver a sandbox-mirror path via
+      // CefDragHandler — two different strings for the same file, so the dedup
+      // guard can't collapse them.
+      if (isJetBrains()) continue;
+
+      // A browser never reveals a dropped file's path, so the file is uploaded
+      // and the chip points at the saved copy.
+      try {
+        if (isDirectory) throw new Error('Folders cannot be dropped into a browser');
+        const savedPath = await uploadFile(file, (type, payload) => getBridge().request(type, payload));
+        addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
+      } catch (err) {
+        console.error('[useAttachments] Dropped file upload failed:', err);
+        setError(t('chatInput.attachments.errors.uploadFailed', { name: file.name }));
+        setTimeout(() => setError(null), 3000);
       }
     }
-  }, [addImageAttachment, setIsDragOver]);
+  }, [addImageAttachment, addFileAttachment, setIsDragOver, t]);
 
   return useMemo(() => ({
     attachments,

@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "Nicht unterstützter Dateityp: {{type}}",
-        "tooLarge": "Datei zu groß: {{size}}MB (max. {{max}}MB)"
+        "tooLarge": "Datei zu groß: {{size}}MB (max. {{max}}MB)",
+        "uploadFailed": "„{{name}}“ konnte nicht angehängt werden"
       }
     },
     "contextWindow": {

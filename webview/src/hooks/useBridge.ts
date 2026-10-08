@@ -5,7 +5,7 @@ type MessageHandler = (message: IPCMessage) => void;
 
 interface UseBridgeReturn {
   isConnected: boolean;
-  send: <T = any>(type: string, payload?: Record<string, unknown>, options?: { timeout?: number }) => Promise<T>;
+  send: <T = any>(type: string, payload?: Record<string, unknown>, options?: { timeout?: number | null }) => Promise<T>;
   /** Fire-and-forget. For streams the backend does not ack — see the impl note. */
   sendRaw: (type: string, payload?: Record<string, unknown>) => void;
   subscribe: (type: string, handler: MessageHandler) => () => void;
@@ -45,7 +45,7 @@ export function useBridge(): UseBridgeReturn {
 
   // send: Bridge.request() 위임 + 에러 시 lastError 업데이트
   const send = useCallback(
-    async <T = any>(type: string, payload: Record<string, unknown> = {}, options?: { timeout?: number }): Promise<T> => {
+    async <T = any>(type: string, payload: Record<string, unknown> = {}, options?: { timeout?: number | null }): Promise<T> => {
       try {
         return await bridge.request<T>(type, payload, options);
       } catch (error) {

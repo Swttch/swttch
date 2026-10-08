@@ -94,7 +94,9 @@ export function AttachMenu(props: Props) {
   const hide = useCallback(() => tippyRef.current?.hide(), []);
 
   const pickFiles = useCallback(async () => {
-    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'files', multiple: true }) as { paths: string[] } | null;
+    // A native dialog waits on the person, so the request has no clock: a pick
+    // made after any delay still becomes a chip.
+    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'files', multiple: true }, { timeout: null }) as { paths: string[] } | null;
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFileAttachment(p, basename(p));
@@ -102,7 +104,7 @@ export function AttachMenu(props: Props) {
   }, [bridge, addFileAttachment]);
 
   const pickFolders = useCallback(async () => {
-    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'folders', multiple: true }) as { paths: string[] } | null;
+    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'folders', multiple: true }, { timeout: null }) as { paths: string[] } | null;
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFolderAttachment(p, basename(p));

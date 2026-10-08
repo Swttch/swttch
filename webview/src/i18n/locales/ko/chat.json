@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "지원하지 않는 파일 형식: {{type}}",
-        "tooLarge": "파일이 너무 큽니다: {{size}}MB (최대 {{max}}MB)"
+        "tooLarge": "파일이 너무 큽니다: {{size}}MB (최대 {{max}}MB)",
+        "uploadFailed": "“{{name}}”을(를) 첨부하지 못했습니다"
       }
     },
     "contextWindow": {

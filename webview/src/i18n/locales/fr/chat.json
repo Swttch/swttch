@@ -75,7 +75,8 @@
     "attachments": {
       "errors": {
         "unsupportedType": "Type de fichier non pris en charge : {{type}}",
-        "tooLarge": "Fichier trop volumineux : {{size}} Mo (max {{max}} Mo)"
+        "tooLarge": "Fichier trop volumineux : {{size}} Mo (max {{max}} Mo)",
+        "uploadFailed": "Impossible de joindre « {{name}} »"
       }
     },
     "contextWindow": {
