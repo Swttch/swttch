@@ -127,3 +127,18 @@ describe('AttachmentPreview uploads', () => {
     expect(onCancelUpload).toHaveBeenCalledWith(pending.id);
   });
 });
+
+describe('AttachmentPreview layout', () => {
+  it('lets each chip keep its own height, so a thumbnail does not fatten the file chips beside it', () => {
+    // jsdom has no layout, so the cause is checked instead: a flex row stretches
+    // every child to the tallest one unless it aligns its items to the start.
+    const attachments = [
+      image('AAA'),
+      new FileAttachment({ fileName: 'notes.txt', absolutePath: '/tmp/notes.txt' }),
+    ];
+    render(<AttachmentPreview attachments={attachments} onRemove={vi.fn()} />);
+
+    const row = screen.getByText('notes.txt').closest('.flex-wrap');
+    expect(row).toHaveClass('items-start');
+  });
+});

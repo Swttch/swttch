@@ -32,7 +32,9 @@ export function AttachmentPreview(props: Props) {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 px-3 py-2">
+      {/* items-start: without it the row stretches every chip to the tallest one,
+          so a thumbnail makes the file chips beside it grow as tall as the picture. */}
+      <div className="flex flex-wrap items-start gap-2 px-3 py-2">
         {attachments.map((att) => {
           if (isImageAttachment(att)) {
             return (
