@@ -1,5 +1,8 @@
 import type { FileAttachment, FolderAttachment, PendingUpload } from '../../../../types';
 import { AttachmentTile, FileGlyph } from './AttachmentTile';
+import { extensionTag } from './fileType';
+import type { FilePreviewResult } from './loadFilePreview';
+import { useFilePreview } from './useFilePreview';
 
 /**
  * The card forms of the three non-image chips, used while the row is as tall as
@@ -7,12 +10,41 @@ import { AttachmentTile, FileGlyph } from './AttachmentTile';
  * reads as one line of equals instead of pills beside a picture.
  */
 
+/**
+ * What fills the square when the file has something to show of itself: the first
+ * lines of a text file as a tiny page, or a picture (the file itself, or a frame
+ * of a video). The extension stays on a corner so the kind is still readable.
+ */
+function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none' }>; tag: string }) {
+  const { preview, tag } = props;
+
+  return (
+    <>
+      {preview.kind === 'text' ? (
+        <pre className="w-full h-full overflow-hidden px-1 py-1 text-start font-mono text-[0.3846rem] leading-[0.4615rem] text-text-secondary whitespace-pre">
+          {preview.text}
+        </pre>
+      ) : (
+        <img src={preview.src} alt="" className="w-full h-full object-cover" />
+      )}
+      {tag && (
+        <span className="absolute bottom-0.5 end-0.5 rounded bg-surface-tooltip px-1 text-[0.6154rem] leading-[0.75rem] font-semibold text-text-secondary">
+          {tag}
+        </span>
+      )}
+    </>
+  );
+}
+
 export function FileTile(props: { attachment: FileAttachment; onRemove: (id: string) => void }) {
   const { attachment, onRemove } = props;
+  const preview = useFilePreview(attachment.absolutePath);
 
   return (
     <AttachmentTile name={attachment.fileName} path={attachment.absolutePath} onRemove={() => onRemove(attachment.id)}>
-      <FileGlyph name={attachment.fileName} />
+      {preview.kind === 'none'
+        ? <FileGlyph name={attachment.fileName} />
+        : <PreviewFace preview={preview} tag={extensionTag(attachment.fileName)} />}
     </AttachmentTile>
   );
 }

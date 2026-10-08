@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
+const { requestMock } = vi.hoisted(() => ({ requestMock: vi.fn() }));
+vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
+  getBridge: () => ({ request: requestMock, sendRaw: vi.fn() }),
+}));
+
 import { AttachmentPreview } from '../index';
+import { _resetFilePreviewCache } from '../loadFilePreview';
 import { ImageAttachment, FileAttachment, FolderAttachment, PendingUpload } from '@/types';
 
 /** A pixel's worth of base64, distinct per image so src comparisons are exact. */
@@ -12,7 +19,12 @@ function shownSrc(): string | null {
   return screen.getByAltText('Full size').getAttribute('src');
 }
 
-beforeEach(() => cleanup());
+beforeEach(() => {
+  cleanup();
+  requestMock.mockReset();
+  requestMock.mockResolvedValue({ kind: 'none' });
+  _resetFilePreviewCache();
+});
 
 describe('AttachmentPreview viewer', () => {
   it('opens the viewer on the thumbnail that was clicked', () => {
@@ -239,5 +251,48 @@ describe('AttachmentPreview cards', () => {
     fireEvent.click(screen.getAllByRole('button')[1]);
 
     expect(onCancelUpload).toHaveBeenCalledWith(pending.id);
+  });
+});
+
+describe('AttachmentPreview file previews', () => {
+  const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
+
+  it('starts every file card on its icon, before any answer has come', () => {
+    requestMock.mockReturnValue(new Promise(() => {}));
+    render(<AttachmentPreview attachments={[image('AAA'), file('clip.mov')]} onRemove={vi.fn()} />);
+
+    expect(screen.getByText('MOV')).toBeInTheDocument();
+  });
+
+  it('swaps in the first lines of a text file when the backend has them', async () => {
+    requestMock.mockResolvedValue({ kind: 'text', text: '# Plan\nstep one' });
+    render(<AttachmentPreview attachments={[image('AAA'), file('plan.md')]} onRemove={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText(/step one/)).toBeInTheDocument());
+    // the extension stays on a corner, so the kind is still readable
+    expect(screen.getByText('MD')).toBeInTheDocument();
+  });
+
+  it('draws a picture for a file that is one', async () => {
+    requestMock.mockResolvedValue({ kind: 'image', mimeType: 'image/svg+xml', base64: 'AAA' });
+    const { container } = render(<AttachmentPreview attachments={[image('AAA'), file('logo.svg')]} onRemove={vi.fn()} />);
+
+    await waitFor(() => expect(container.querySelector('img[src="data:image/svg+xml;base64,AAA"]')).not.toBeNull());
+  });
+
+  it('keeps the icon when there is nothing to show', async () => {
+    render(<AttachmentPreview attachments={[image('AAA'), file('report.pdf')]} onRemove={vi.fn()} />);
+
+    await waitFor(() => expect(requestMock).toHaveBeenCalled());
+    expect(screen.getByText('PDF')).toBeInTheDocument();
+    expect(screen.queryByText(/step one/)).toBeNull();
+  });
+
+  it('asks about the file by its path, and only when it is shown as a card', async () => {
+    const { rerender } = render(<AttachmentPreview attachments={[file('a.md')]} onRemove={vi.fn()} />);
+    expect(requestMock).not.toHaveBeenCalled();
+
+    rerender(<AttachmentPreview attachments={[image('AAA'), file('a.md')]} onRemove={vi.fn()} />);
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith(expect.any(String), { path: '/tmp/a.md' }));
   });
 });
