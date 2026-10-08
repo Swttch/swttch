@@ -36,12 +36,20 @@ const VIDEO_TYPES: Record<string, string> = {
   webm: 'video/webm',
 };
 
-/** Binary formats that would decode into noise, skipped without being read. */
-const BINARY_EXTENSIONS = new Set([
-  'pdf', 'doc', 'docx', 'odt', 'pages', 'xls', 'xlsx', 'ods', 'numbers', 'ppt', 'pptx', 'key', 'odp',
-  'zip', 'tar', 'gz', 'tgz', 'bz2', 'xz', '7z', 'rar', 'dmg', 'jar',
-  'mkv', 'avi', 'wmv', 'mp3', 'wav', 'm4a', 'flac', 'ogg', 'aac', 'aiff',
-  'heic', 'heif', 'tif', 'tiff', 'psd', 'exe', 'bin', 'so', 'dylib', 'class',
+/**
+ * The only files shown as their first lines: plain text, markup and the source
+ * languages everyone has met. This is a list of names, not a guess from the bytes,
+ * on purpose. Whether a file is text says little about whether its first lines are
+ * worth showing (a `.kts` or a `gradlew` is text and reads as noise at that size),
+ * and the Finder draws the same line: it previews the types the system has a
+ * generator for and shows the icon of the rest. Anything off this list, or with no
+ * extension, keeps its icon.
+ */
+const TEXT_EXTENSIONS = new Set([
+  'txt', 'md', 'markdown', 'mdx', 'log', 'json', 'jsonc', 'csv', 'tsv', 'patch', 'diff', 'xml', 'html', 'htm',
+  'css', 'scss', 'yml', 'yaml', 'toml', 'ini', 'conf', 'env', 'properties', 'sql',
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'py', 'rb', 'go', 'rs', 'java', 'kt', 'swift', 'c', 'h', 'cc', 'cpp',
+  'hpp', 'cs', 'php', 'sh', 'bash', 'zsh',
 ]);
 
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -85,7 +93,7 @@ async function previewOf(path: string, size: number): Promise<FilePreview> {
     return { kind: 'video', mimeType: videoType, base64: (await readFile(path)).toString('base64') };
   }
 
-  if (BINARY_EXTENSIONS.has(extension)) return NONE;
+  if (!TEXT_EXTENSIONS.has(extension)) return NONE;
 
   const handle = await open(path, 'r');
   try {

@@ -36,8 +36,24 @@ describe('readFilePreview', () => {
     expect(shown.every((line) => line.length <= 40)).toBe(true);
   });
 
-  it('reads a file with no extension when it is text', async () => {
-    expect(await readFilePreview(await fileWith('Makefile', 'all:\n\techo hi\n'))).toMatchObject({ kind: 'text' });
+  it.each(['a.txt', 'a.md', 'a.log', 'a.json', 'a.csv', 'a.patch', 'a.sh', 'a.py', 'a.ts', 'a.java', 'A.TXT'])(
+    'previews %s, a type everyone has met',
+    async (name) => {
+      expect(await readFilePreview(await fileWith(name, 'first line\nsecond line\n'))).toMatchObject({ kind: 'text' });
+    },
+  );
+
+  it.each(['build.gradle.kts', 'gradlew', 'Makefile', 'clean.bat', 'tool.applescript', 'sheet.gsheet', 'notes.unknownext'])(
+    'keeps the icon for %s even though it is plain text, as the Finder does for what it has no preview for',
+    async (name) => {
+      expect(await readFilePreview(await fileWith(name, 'plugins {\n  kotlin("jvm")\n}\n'))).toMatchObject({ kind: 'none' });
+    },
+  );
+
+  it('keeps the icon for a previewable name whose content is binary', async () => {
+    expect(await readFilePreview(await fileWith('renamed.txt', Buffer.from([0x50, 0x4b, 0x00, 0x01])))).toMatchObject({
+      kind: 'none',
+    });
   });
 
   it('keeps Korean text readable', async () => {
