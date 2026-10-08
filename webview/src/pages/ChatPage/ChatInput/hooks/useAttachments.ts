@@ -5,7 +5,7 @@ import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 import { isJetBrains } from '@/config/environment';
 import { basename } from '../basename';
-import { readDroppedEntries, uploadFile } from './droppedFiles';
+import { readDroppedEntries, uploadFile, type DroppedEntry } from './droppedFiles';
 
 function isInlineImageType(mimeType: string): boolean {
   return ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as (typeof ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES)[number]);
@@ -131,25 +131,56 @@ export function useAttachments(): UseAttachmentsReturn {
     setError(null);
   }, []);
 
-  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  /**
+   * Turn what a drop or a paste carried into attachments.
+   *
+   * Pictures the model can read inline stay inline, in every environment.
+   * Everything else becomes a path chip, whatever its type. In the IDE the path
+   * comes from the NATIVE_DROP_FLUSH RPC (Kotlin CefDragHandler → backend stash
+   * → IPC), which gives canonical OS paths. Reading them off `dataTransfer`
+   * there would duplicate: IDE project-tree drops put the user-project path in
+   * text/plain *and* deliver a sandbox-mirror path via CefDragHandler — two
+   * different strings for the same file, so the dedup guard can't collapse them.
+   */
+  const attachEntries = useCallback(async (entries: DroppedEntry[], source: ImageAttachSource) => {
+    for (const { file, isDirectory } of entries) {
+      if (!isDirectory && isInlineImageType(file.type)) {
+        await addImageAttachment(file, source);
+        continue;
+      }
+      if (isJetBrains()) continue;
 
-    const imageFiles: File[] = [];
-    for (const item of Array.from(items)) {
-      if (item.kind === 'file' && item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (file) imageFiles.push(file);
+      // A browser never reveals a file's path, so the file is uploaded and the
+      // chip points at the saved copy.
+      try {
+        if (isDirectory) throw new Error('Folders cannot be uploaded yet');
+        const savedPath = await uploadFile(file, (type, payload) => getBridge().request(type, payload));
+        addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
+      } catch (err) {
+        console.error('[useAttachments] File upload failed:', err);
+        setError(t('chatInput.attachments.errors.uploadFailed', { name: file.name }));
+        setTimeout(() => setError(null), 3000);
       }
     }
+  }, [addImageAttachment, addFileAttachment, t]);
 
-    if (imageFiles.length === 0) return; // 텍스트 붙여넣기는 기존 동작 유지
+  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLElement>) => {
+    if (!e.clipboardData) return;
 
-    e.preventDefault(); // 이미지가 있을 때만 기본 동작 차단
-    for (const file of imageFiles) {
-      await addImageAttachment(file, ImageAttachSource.Paste);
-    }
-  }, [addImageAttachment]);
+    // Read before the first await: the browser empties the clipboard data once
+    // this handler yields.
+    const entries = readDroppedEntries(e.clipboardData);
+
+    // Plain text carries no file at all and keeps the browser's own paste. A file
+    // the IDE would not attach inline is also left alone there, since the IDE gets
+    // its path some other way.
+    const attachable = entries.some(({ file, isDirectory }) =>
+      (!isDirectory && isInlineImageType(file.type)) || !isJetBrains());
+    if (!attachable) return;
+
+    e.preventDefault();
+    await attachEntries(entries, ImageAttachSource.Paste);
+  }, [attachEntries]);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -157,37 +188,8 @@ export function useAttachments(): UseAttachmentsReturn {
 
     // Read before the first await: the browser empties the DataTransfer once
     // this handler yields.
-    const dropped = readDroppedEntries(e.dataTransfer);
-
-    for (const { file, isDirectory } of dropped) {
-      // Pictures the model can read inline stay inline, in every environment.
-      if (!isDirectory && isInlineImageType(file.type)) {
-        await addImageAttachment(file, ImageAttachSource.Drop);
-        continue;
-      }
-
-      // Everything else becomes a path chip, whatever its type. In the IDE the
-      // path comes from the NATIVE_DROP_FLUSH RPC (Kotlin CefDragHandler →
-      // backend stash → IPC), which gives canonical OS paths. Reading them off
-      // `dataTransfer` there would duplicate: IDE project-tree drops put the
-      // user-project path in text/plain *and* deliver a sandbox-mirror path via
-      // CefDragHandler — two different strings for the same file, so the dedup
-      // guard can't collapse them.
-      if (isJetBrains()) continue;
-
-      // A browser never reveals a dropped file's path, so the file is uploaded
-      // and the chip points at the saved copy.
-      try {
-        if (isDirectory) throw new Error('Folders cannot be dropped into a browser');
-        const savedPath = await uploadFile(file, (type, payload) => getBridge().request(type, payload));
-        addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
-      } catch (err) {
-        console.error('[useAttachments] Dropped file upload failed:', err);
-        setError(t('chatInput.attachments.errors.uploadFailed', { name: file.name }));
-        setTimeout(() => setError(null), 3000);
-      }
-    }
-  }, [addImageAttachment, addFileAttachment, setIsDragOver, t]);
+    await attachEntries(readDroppedEntries(e.dataTransfer), ImageAttachSource.Drop);
+  }, [attachEntries, setIsDragOver]);
 
   return useMemo(() => ({
     attachments,

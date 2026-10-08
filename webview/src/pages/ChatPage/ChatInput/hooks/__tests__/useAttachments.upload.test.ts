@@ -1,0 +1,165 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { FileAttachment, ImageAttachment } from '@/types';
+
+const { requestMock, sendRawMock, isJetBrainsMock } = vi.hoisted(() => ({
+  requestMock: vi.fn(),
+  sendRawMock: vi.fn(),
+  isJetBrainsMock: vi.fn(),
+}));
+
+vi.mock('@/api/bridge/Bridge', () => ({
+  getBridge: () => ({ request: requestMock, sendRaw: sendRawMock }),
+}));
+vi.mock('@/config/environment', () => ({ isJetBrains: isJetBrainsMock }));
+
+import { useAttachments } from '../useAttachments';
+
+/** A backend that saves every upload under /saved and answers like the real handler. */
+function backendSavesUploads() {
+  requestMock.mockImplementation(async (_type: string, payload: Record<string, unknown>) =>
+    payload.last ? { path: `/saved/${payload.uploadId}/${payload.fileName}` } : {});
+}
+
+function file(name: string, type = '', body = 'data'): File {
+  return new File([body], name, { type });
+}
+
+function pasteOf(...files: File[]) {
+  const preventDefault = vi.fn();
+  const event = {
+    preventDefault,
+    clipboardData: {
+      items: files.map((f) => ({ kind: 'file', type: f.type, getAsFile: () => f })),
+    },
+  } as unknown as React.ClipboardEvent<HTMLElement>;
+  return { event, preventDefault };
+}
+
+function dropOf(...files: File[]) {
+  return {
+    preventDefault: vi.fn(),
+    dataTransfer: { files },
+  } as unknown as React.DragEvent;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  isJetBrainsMock.mockReturnValue(false);
+  backendSavesUploads();
+});
+
+describe('useAttachments in a browser', () => {
+  it('turns a pasted video into a file chip, as a dropped one does', async () => {
+    const { result } = renderHook(() => useAttachments());
+    const { event, preventDefault } = pasteOf(file('clip.mov', 'video/quicktime'));
+
+    await act(async () => {
+      await result.current.handlePaste(event);
+    });
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(result.current.attachments).toHaveLength(1);
+    const chip = result.current.attachments[0] as FileAttachment;
+    expect(chip).toBeInstanceOf(FileAttachment);
+    expect(chip.fileName).toBe('clip.mov');
+    expect(chip.absolutePath).toMatch(/^\/saved\/.+\/clip\.mov$/);
+  });
+
+  it('leaves a paste without any file to the browser, so text keeps its undo entry', async () => {
+    const { result } = renderHook(() => useAttachments());
+    const preventDefault = vi.fn();
+
+    await act(async () => {
+      await result.current.handlePaste({
+        preventDefault,
+        clipboardData: { items: [{ kind: 'string', type: 'text/plain' }] },
+      } as unknown as React.ClipboardEvent<HTMLElement>);
+    });
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps a pasted png inline and uploads nothing', async () => {
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handlePaste(pasteOf(file('shot.png', 'image/png')).event);
+    });
+
+    expect(result.current.attachments[0]).toBeInstanceOf(ImageAttachment);
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('attaches a picture type the model cannot read inline as a file chip instead of refusing it', async () => {
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('logo.svg', 'image/svg+xml')));
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.attachments[0]).toBeInstanceOf(FileAttachment);
+  });
+
+  it('attaches a file of a type nobody listed', async () => {
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('data.weird-extension')));
+    });
+
+    expect((result.current.attachments[0] as FileAttachment).fileName).toBe('data.weird-extension');
+  });
+
+  it('says which file failed when the upload does', async () => {
+    requestMock.mockResolvedValue({ status: 'error', error: 'disk full' });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
+    });
+
+    expect(result.current.attachments).toHaveLength(0);
+    expect(result.current.error).toContain('clip.mov');
+  });
+});
+
+describe('useAttachments in the IDE', () => {
+  beforeEach(() => isJetBrainsMock.mockReturnValue(true));
+
+  it('does not upload a dropped video, since the IDE hands the backend its real path', async () => {
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
+    });
+
+    expect(requestMock).not.toHaveBeenCalled();
+    expect(result.current.attachments).toHaveLength(0);
+  });
+
+  it('does not claim a pasted video, leaving the paste to the host', async () => {
+    const { result } = renderHook(() => useAttachments());
+    const { event, preventDefault } = pasteOf(file('clip.mov', 'video/quicktime'));
+
+    await act(async () => {
+      await result.current.handlePaste(event);
+    });
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('shows no unsupported-type error for a dropped svg, which the IDE attaches by path', async () => {
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('logo.svg', 'image/svg+xml')));
+    });
+
+    expect(result.current.error).toBeNull();
+  });
+});

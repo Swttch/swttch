@@ -25,7 +25,7 @@ import { useBridgeContext } from '@/contexts/BridgeContext';
 import { SessionState } from '@/types';
 import { useAttachments } from './hooks/useAttachments';
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
-import { clipboardCarriesImage } from './clipboardCarriesImage';
+import { clipboardCarriesFile } from './clipboardCarriesFile';
 import { clipboardIsEmpty } from './clipboardIsEmpty';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
@@ -1112,7 +1112,7 @@ export function ChatInput() {
     }
   }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
-  // Wrap the attachment paste handler so images keep their dedicated path while
+  // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.
   //
   // Text is deliberately NOT intercepted (issue #286). Cancelling the paste and
@@ -1124,8 +1124,8 @@ export function ChatInput() {
   // nothing on formatting and restores undo. The resulting `input` event feeds
   // handleRichChange, which keeps `value` in sync and runs both detectors.
   const handleRichPaste = useCallback((e: ReactClipboardEvent<HTMLDivElement>) => {
-    if (clipboardCarriesImage(e.clipboardData)) {
-      // Delegate image handling (it calls preventDefault internally).
+    if (clipboardCarriesFile(e.clipboardData)) {
+      // Delegate file handling (it calls preventDefault itself when it takes the paste).
       handlePaste(e);
       return;
     }

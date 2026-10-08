@@ -1,5 +1,5 @@
 /**
- * Whether a paste carries an image file, which the composer handles itself
+ * Whether a paste carries a file of any kind, which the composer handles itself
  * (turning it into an attachment) rather than letting it reach the editor.
  *
  * This is the composer's ONLY reason to intercept a paste. Text is deliberately
@@ -11,10 +11,8 @@
  *
  * Keep this predicate free of side effects: it decides, the caller acts.
  */
-export function clipboardCarriesImage(clipboardData: DataTransfer | null): boolean {
+export function clipboardCarriesFile(clipboardData: DataTransfer | null): boolean {
   const items = clipboardData?.items;
   if (!items) return false;
-  return Array.from(items).some(
-    item => item.kind === 'file' && item.type.startsWith('image/'),
-  );
+  return Array.from(items).some(item => item.kind === 'file');
 }

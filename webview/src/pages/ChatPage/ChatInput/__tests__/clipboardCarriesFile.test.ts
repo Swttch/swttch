@@ -1,5 +1,5 @@
 /**
- * Tests for clipboardCarriesImage, the composer's sole reason to intercept a
+ * Tests for clipboardCarriesFile, the composer's sole reason to intercept a
  * paste.
  *
  * The regression this guards (issue #286): the composer used to cancel EVERY
@@ -14,17 +14,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { clipboardCarriesImage } from '../clipboardCarriesImage';
+import { clipboardCarriesFile } from '../clipboardCarriesFile';
 
 /** Build a DataTransfer-shaped stub carrying the given items. */
 function clipboardWith(items: Array<{ kind: string; type: string }>): DataTransfer {
   return { items } as unknown as DataTransfer;
 }
 
-describe('clipboardCarriesImage', () => {
+describe('clipboardCarriesFile', () => {
   it('reports false for a plain-text paste, so the browser handles it and undo works', () => {
     const clipboard = clipboardWith([{ kind: 'string', type: 'text/plain' }]);
-    expect(clipboardCarriesImage(clipboard)).toBe(false);
+    expect(clipboardCarriesFile(clipboard)).toBe(false);
   });
 
   it('reports false for rich text, which plaintext-only strips on its own', () => {
@@ -32,39 +32,40 @@ describe('clipboardCarriesImage', () => {
       { kind: 'string', type: 'text/plain' },
       { kind: 'string', type: 'text/html' },
     ]);
-    expect(clipboardCarriesImage(clipboard)).toBe(false);
+    expect(clipboardCarriesFile(clipboard)).toBe(false);
   });
 
   it('reports true for a pasted image file, which becomes an attachment', () => {
     const clipboard = clipboardWith([{ kind: 'file', type: 'image/png' }]);
-    expect(clipboardCarriesImage(clipboard)).toBe(true);
+    expect(clipboardCarriesFile(clipboard)).toBe(true);
   });
 
-  it('reports true when an image rides alongside text', () => {
+  it('reports true when a file rides alongside text', () => {
     const clipboard = clipboardWith([
       { kind: 'string', type: 'text/plain' },
       { kind: 'file', type: 'image/jpeg' },
     ]);
-    expect(clipboardCarriesImage(clipboard)).toBe(true);
+    expect(clipboardCarriesFile(clipboard)).toBe(true);
   });
 
-  it('reports false for a non-image file, which the composer does not claim', () => {
-    const clipboard = clipboardWith([{ kind: 'file', type: 'application/pdf' }]);
-    expect(clipboardCarriesImage(clipboard)).toBe(false);
+  it.each(['application/pdf', 'video/quicktime', ''])('reports true for a file of type "%s", whatever it is', (type) => {
+    // Finder gives a copied folder or an unknown extension an empty type; none
+    // of them may be left to the editor, which would paste only the file name.
+    expect(clipboardCarriesFile(clipboardWith([{ kind: 'file', type }]))).toBe(true);
   });
 
   it('reports false for an image MIME type that is not an actual file', () => {
     // A dragged <img> can surface as a string entry; only real files become
     // attachments, so this must not divert the paste.
     const clipboard = clipboardWith([{ kind: 'string', type: 'image/png' }]);
-    expect(clipboardCarriesImage(clipboard)).toBe(false);
+    expect(clipboardCarriesFile(clipboard)).toBe(false);
   });
 
   it('reports false when the clipboard is null', () => {
-    expect(clipboardCarriesImage(null)).toBe(false);
+    expect(clipboardCarriesFile(null)).toBe(false);
   });
 
   it('reports false when the clipboard exposes no items', () => {
-    expect(clipboardCarriesImage({} as unknown as DataTransfer)).toBe(false);
+    expect(clipboardCarriesFile({} as unknown as DataTransfer)).toBe(false);
   });
 });
