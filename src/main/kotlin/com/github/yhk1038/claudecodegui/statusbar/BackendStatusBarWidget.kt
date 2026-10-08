@@ -56,7 +56,7 @@ class BackendStatusBarWidget(private val project: Project) : StatusBarWidget, St
             BackendDotState.DotState.GRAY -> JBColor(0x9AA7B0, 0x6E6E6E)
             BackendDotState.DotState.RED -> JBColor(0xDB5860, 0xC75450)
         }
-        return ColorIcon(ICON_SIZE, color)
+        return LabeledDotIcon(PRODUCT_NAME, ColorIcon(ICON_SIZE, color))
     }
 
     override fun getTooltipText(): String =
@@ -77,5 +77,8 @@ class BackendStatusBarWidget(private val project: Project) : StatusBarWidget, St
     companion object {
         const val WIDGET_ID = "ClaudeCodeGui.BackendStatus"
         private const val ICON_SIZE = 10
+
+        /** The name shown before the dot, so the widget says whose it is. */
+        private const val PRODUCT_NAME = "Swttch"
     }
 }

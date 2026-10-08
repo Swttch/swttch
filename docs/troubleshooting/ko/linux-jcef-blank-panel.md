@@ -2,7 +2,7 @@
 
 🌐 [English](../en/linux-jcef-blank-panel.md) | **한국어** | [日本語](../ja/linux-jcef-blank-panel.md) | [中文](../zh/linux-jcef-blank-panel.md) | [Español](../es/linux-jcef-blank-panel.md) | [Deutsch](../de/linux-jcef-blank-panel.md) | [Français](../fr/linux-jcef-blank-panel.md)
 
-_최종 업데이트: 2026-09-08_
+_최종 업데이트: 2026-10-08_
 
 ## 증상
 
@@ -41,7 +41,7 @@ Ubuntu 22.04 와 PhpStorm 2026.2.2 조합에서 확인됐고, NVIDIA 그래픽�
 
 JCEF 는 GPU 를 거쳐 화면을 그립니다. 드라이버와 세션 조합에 따라 이 경로가 동작하지 않으면, 브라우저는 정상적으로 만들어지는데 화면이 한 번도 그려지지 않아서 패널이 빈 채로 남습니다.
 
-저희는 아직 이 경우를 잡아내지 못하고 있습니다. JCEF 를 쓸 수 없을 때나 백엔드가 뜨지 못했을 때는 안내 패널로 바꿔 보여드리는데, JCEF 가 정상적으로 시작한 뒤 화면만 안 그려지는 것은 저희 쪽에서 성공으로 보입니다. 그래서 아무 메시지 없이 빈 탭만 남게 돼요.
+저희는 이 경우의 일부를 잡아냅니다. 채팅 화면이 30초가 지나도록 다 불러와지지 않으면, 그 자리에 안내 화면을 보여드립니다. 안내 화면에는 재시작 버튼과 아래의 IDE 설정 방법이 들어 있습니다([멈춘 화면 안내](../../features/084-stalled_screen_guide/ko.md)). 다만 JCEF 가 화면을 다 불러온 뒤에 그리지만 않는 경우는 저희 쪽에서 여전히 성공으로 보이기 때문에, 메시지 없는 빈 탭이 남을 수 있습니다.
 
 ## 해결 방법
 

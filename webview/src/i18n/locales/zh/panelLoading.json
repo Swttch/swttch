@@ -13,5 +13,41 @@
     "stillIndexingAction": "不等待，直接打开",
     "indexingDone": "索引已完成，但页面没有响应？",
     "indexingDoneAction": "重试"
+  },
+  "stalled": {
+    "title": "屏幕加载比平时慢",
+    "subtitle": "请从上到下依次尝试下面的步骤。屏幕出现后就可以停下。",
+    "restart": {
+      "title": "重启插件后端",
+      "body": "重新启动插件。如果此项目中有其他正在运行的任务，它们会停止。",
+      "button": "重启",
+      "running": "正在重启..."
+    },
+    "quit": {
+      "lead": "如果仍然不行，",
+      "body": "请完全退出 IDE，然后重新打开。"
+    },
+    "settings": {
+      "title": "重启 IDE 后仍然看不到？",
+      "intro": "有两种方法，请逐一尝试。",
+      "openButton": "打开设置文件",
+      "copyButton": "复制",
+      "copied": "已复制",
+      "pending": "这些行已经在您的设置文件中。完全退出 IDE 并重新打开后即可生效。",
+      "stepPasteMany": "把下面的行粘贴到文件末尾。如果已经有同名的行，请直接修改那一行。",
+      "stepPasteOne": "把下面这行粘贴到文件末尾。如果已经有同名的行，请直接修改那一行。",
+      "stepSave": "用 {shortcut} 保存，然后完全退出 IDE 并重新打开。",
+      "processTitle": "在 IDE 内运行浏览器",
+      "gpuTitle": "关闭图形加速",
+      "waylandNote": "此 IDE 运行在 Wayland 上。使用此选项后，Claude Code 画面会在 IDE 旁边的单独窗口中打开，而不是在 IDE 内部。"
+    },
+    "report": {
+      "copyButton": "复制信息",
+      "issueButton": "打开问题页面",
+      "hint": "不包含代码和对话，只有此 IDE 和这台电脑的版本与设置。"
+    },
+    "close": {
+      "button": "关闭指南"
+    }
   }
 }

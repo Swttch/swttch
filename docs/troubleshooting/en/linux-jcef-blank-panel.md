@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/linux-jcef-blank-panel.md) | [日本語](../ja/linux-jcef-blank-panel.md) | [中文](../zh/linux-jcef-blank-panel.md) | [Español](../es/linux-jcef-blank-panel.md) | [Deutsch](../de/linux-jcef-blank-panel.md) | [Français](../fr/linux-jcef-blank-panel.md)
 
-_Last updated: 2026-09-08_
+_Last updated: 2026-10-08_
 
 ## Symptoms
 
@@ -41,7 +41,7 @@ This plugin draws its chat UI on **JCEF** (Chromium Embedded Framework), which i
 
 JCEF renders through the GPU. When that path does not work on a given driver and session combination, the browser is created successfully but no frame is ever painted, so the panel stays empty.
 
-We do not catch this case yet. When JCEF is unusable, or when our backend fails to start, we replace the placeholder with a panel that explains what happened. A JCEF that starts normally and then never paints looks like success from our side, which is why you get a blank tab with no message.
+We catch part of this case. If the chat screen has not finished loading after 30 seconds, the plugin now shows a guide in its place, with a Restart button and the IDE settings below ([the stalled-screen guide](../../features/084-stalled_screen_guide/en.md)). A JCEF that finishes loading and then never paints still looks like success from our side, which is why you can still get a blank tab with no message.
 
 ## How to fix it
 

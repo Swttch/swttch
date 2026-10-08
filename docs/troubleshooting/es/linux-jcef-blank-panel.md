@@ -2,7 +2,7 @@
 
 🌐 [English](../en/linux-jcef-blank-panel.md) | [한국어](../ko/linux-jcef-blank-panel.md) | [日本語](../ja/linux-jcef-blank-panel.md) | [中文](../zh/linux-jcef-blank-panel.md) | **Español** | [Deutsch](../de/linux-jcef-blank-panel.md) | [Français](../fr/linux-jcef-blank-panel.md)
 
-_Última actualización: 2026-09-08_
+_Última actualización: 2026-10-08_
 
 ## Síntomas
 
@@ -41,7 +41,7 @@ Este complemento dibuja su interfaz de chat sobre **JCEF** (Chromium Embedded Fr
 
 JCEF renderiza a través de la GPU. Cuando esa ruta no funciona con una combinación concreta de controlador y sesión, el navegador se crea correctamente pero no se pinta ni un solo fotograma, así que el panel se queda vacío.
 
-Todavía no detectamos este caso. Cuando JCEF no se puede usar, o cuando nuestro backend no arranca, sustituimos el marcador de posición por un panel que explica lo ocurrido. Un JCEF que arranca con normalidad y luego nunca pinta parece un éxito desde nuestro lado, y por eso usted acaba con una pestaña vacía y sin ningún mensaje.
+Ahora detectamos una parte de este caso. Si la pantalla del chat no termina de cargarse pasados 30 segundos, el complemento muestra en su lugar una guía con un botón para reiniciar y los ajustes del IDE que se describen más abajo ([la guía de pantalla detenida](../../features/084-stalled_screen_guide/en.md)). Un JCEF que termina de cargar y luego nunca pinta sigue pareciendo un éxito desde nuestro lado, y por eso todavía puede quedar una pestaña vacía y sin ningún mensaje.
 
 ## Cómo solucionarlo
 

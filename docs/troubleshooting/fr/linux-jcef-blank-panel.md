@@ -2,7 +2,7 @@
 
 🌐 [English](../en/linux-jcef-blank-panel.md) | [한국어](../ko/linux-jcef-blank-panel.md) | [日本語](../ja/linux-jcef-blank-panel.md) | [中文](../zh/linux-jcef-blank-panel.md) | [Español](../es/linux-jcef-blank-panel.md) | [Deutsch](../de/linux-jcef-blank-panel.md) | **Français**
 
-_Dernière mise à jour : 2026-09-08_
+_Dernière mise à jour : 2026-10-08_
 
 ## Symptômes
 
@@ -41,7 +41,7 @@ Cette extension dessine son interface de discussion sur **JCEF** (Chromium Embed
 
 JCEF effectue son rendu via le GPU. Lorsque ce chemin ne fonctionne pas avec une combinaison donnée de pilote et de session, le navigateur est bien créé, mais aucune image n'est jamais dessinée, et le panneau reste vide.
 
-Nous ne détectons pas encore ce cas. Lorsque JCEF est inutilisable, ou lorsque notre backend ne démarre pas, nous remplaçons l'espace réservé par un panneau qui explique la situation. Un JCEF qui démarre normalement puis ne dessine jamais ressemble à une réussite de notre côté, et c'est pourquoi vous vous retrouvez avec un onglet vide et sans message.
+Nous détectons désormais une partie de ce cas. Si l'écran de discussion n'a pas fini de se charger après 30 secondes, l'extension affiche à sa place un guide avec un bouton de redémarrage et les réglages de l'IDE décrits plus bas ([le guide de l'écran bloqué](../../features/084-stalled_screen_guide/en.md)). Un JCEF qui finit de charger puis ne dessine jamais ressemble toujours à une réussite de notre côté, c'est pourquoi un onglet vide et sans message peut encore rester.
 
 ## Comment le résoudre
 

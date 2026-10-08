@@ -2,6 +2,7 @@ package com.github.yhk1038.claudecodegui.statusbar
 
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.github.yhk1038.claudecodegui.settings.ClaudeCodeSettingsConfigurable
+import com.github.yhk1038.claudecodegui.toolwindow.ClaudePanelRegistry
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ApplicationManager
@@ -34,6 +35,7 @@ import javax.swing.Timer
  * 3 connections: 2 × IDE panel, 1 × browser
  * 2 sessions, 1 actively streaming
  * [Open]  [Copy address]
+ * [Reload]  [Restart]
  * ```
  *
  * Kotlin-side state (lifecycle, port) renders immediately; the counter lines come
@@ -59,13 +61,36 @@ class BackendStatusPopup(private val project: Project) {
             showCopyFeedback()
         }
     }.apply {
-        // Reserve the width of the wider "Copied!" feedback text up front: the
-        // card is only re-laid-out by the periodic pack(), so a text that grows
-        // the link mid-flash would render clipped (looking like the label just
-        // vanished) until the next 2 s tick resized the whole card around it.
+        // Reserve the width of the wider of the two texts up front: the card is only
+        // re-laid-out by the periodic pack(), so a text that grows the link mid-flash
+        // would render clipped (looking like the label just vanished) until the next
+        // 2 s tick resized the whole card around it. The width of "Copied!" alone was
+        // reserved before, which is narrower than "Copy address" and cut it to "Copy ...".
         text = "Copied!"
-        preferredSize = preferredSize
+        val feedbackWidth = preferredSize.width
         text = "Copy address"
+        preferredSize = java.awt.Dimension(maxOf(preferredSize.width, feedbackWidth), preferredSize.height)
+    }
+
+    // "Reload" loads the open panels of this project again from the backend's current port and
+    // leaves the backend alone. "Restart" restarts the backend and then loads them again; work
+    // in another tab of the project may stop. Both are for a screen that has stopped
+    // responding, so they live here, where the card is reachable even when the screen is blank.
+    private val reloadLink: ActionLink = ActionLink("Reload") {
+        basePath?.let { ClaudePanelRegistry.reload(it) }
+    }.apply {
+        toolTipText = "Load this project's Claude Code screens again. Nothing is stopped."
+    }
+
+    private val restartLink: ActionLink = ActionLink("Restart") {
+        basePath?.let { ClaudePanelRegistry.restart(it) }
+        showRestartFeedback()
+    }.apply {
+        toolTipText = "Restart this project's backend and load its screens again. Work in progress may stop."
+        // Reserve the width of the feedback text, as the copy link does, so the card does not clip it.
+        text = "Restarting..."
+        preferredSize = preferredSize
+        text = "Restart"
     }
 
     @Volatile
@@ -147,6 +172,19 @@ class BackendStatusPopup(private val project: Project) {
         }
     }
 
+    /** Says the restart was taken up; the state line below follows the backend's own progress. */
+    private fun showRestartFeedback() {
+        restartLink.text = "Restarting..."
+        restartLink.isEnabled = false
+        Timer(RESTART_FEEDBACK_MS) {
+            restartLink.text = "Restart"
+            restartLink.isEnabled = true
+        }.apply {
+            isRepeats = false
+            start()
+        }
+    }
+
     private fun createPopup(): JBPopup {
         // First render from Kotlin-side state BEFORE the popup is built: the popup
         // is sized from the content's preferred size at creation, so empty labels
@@ -177,6 +215,13 @@ class BackendStatusPopup(private val project: Project) {
             add(copyLink)
         }
 
+        val recoverRow = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+            isOpaque = false
+            add(reloadLink)
+            add(restartLink)
+        }
+        reloadLink.isEnabled = basePath?.let { ClaudePanelRegistry.panelsOf(it).isNotEmpty() } == true
+
         val content = JPanel(VerticalLayout(JBUI.scale(6))).apply {
             border = JBUI.Borders.empty(10, 12)
             add(titleRow)
@@ -184,6 +229,7 @@ class BackendStatusPopup(private val project: Project) {
             add(connectionsLabel)
             add(sessionsLabel)
             add(urlRow)
+            add(recoverRow)
         }
 
         val popup = JBPopupFactory.getInstance()
@@ -232,6 +278,8 @@ class BackendStatusPopup(private val project: Project) {
             sessionsLabel.isVisible = sessionsText.isNotEmpty()
             // Open/Copy row is meaningful only while there's a URL to act on.
             openLink.parent?.isVisible = url != null
+            // Reload has something to load only while a panel of this project is open.
+            reloadLink.isEnabled = basePath?.let { ClaudePanelRegistry.panelsOf(it).isNotEmpty() } == true
             // Counter lines appear asynchronously and can be wider than the initial
             // content — grow the popup to fit instead of clipping the text. pack()
             // keeps the top-left corner, so a height change would detach the card
@@ -277,5 +325,6 @@ class BackendStatusPopup(private val project: Project) {
     companion object {
         private const val REFRESH_INTERVAL_MS = 2_000
         private const val COPY_FEEDBACK_MS = 1_500
+        private const val RESTART_FEEDBACK_MS = 4_000
     }
 }

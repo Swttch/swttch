@@ -2,7 +2,7 @@
 
 🌐 [English](../en/linux-jcef-blank-panel.md) | [한국어](../ko/linux-jcef-blank-panel.md) | [日本語](../ja/linux-jcef-blank-panel.md) | [中文](../zh/linux-jcef-blank-panel.md) | [Español](../es/linux-jcef-blank-panel.md) | **Deutsch** | [Français](../fr/linux-jcef-blank-panel.md)
 
-_Zuletzt aktualisiert: 2026-09-08_
+_Zuletzt aktualisiert: 2026-10-08_
 
 ## Symptome
 
@@ -41,7 +41,7 @@ Dieses Plugin zeichnet seine Chat-Oberfläche auf **JCEF** (Chromium Embedded Fr
 
 JCEF rendert über die GPU. Wenn dieser Weg bei einer bestimmten Kombination aus Treiber und Sitzung nicht funktioniert, wird der Browser zwar erfolgreich erzeugt, aber es wird nie ein Bild gezeichnet, und das Panel bleibt leer.
 
-Diesen Fall erkennen wir bisher nicht. Wenn JCEF nicht nutzbar ist oder unser Backend nicht startet, ersetzen wir den Platzhalter durch ein Panel, das die Lage erklärt. Ein JCEF, das normal startet und danach nie zeichnet, sieht von unserer Seite wie ein Erfolg aus. Deshalb bleibt Ihnen ein leerer Tab ohne jede Meldung.
+Einen Teil dieses Falls erkennen wir inzwischen. Ist der Chat-Bildschirm nach 30 Sekunden noch nicht fertig geladen, zeigt das Plugin an seiner Stelle eine Anleitung mit einer Schaltfläche zum Neustart und den unten beschriebenen IDE-Einstellungen ([die Anleitung für einen hängenden Bildschirm](../../features/084-stalled_screen_guide/en.md)). Ein JCEF, das fertig lädt und danach nie zeichnet, sieht von unserer Seite weiterhin wie ein Erfolg aus. Deshalb kann Ihnen weiterhin ein leerer Tab ohne jede Meldung bleiben.
 
 ## So beheben Sie es
 

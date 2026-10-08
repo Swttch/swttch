@@ -13,5 +13,41 @@
     "stillIndexingAction": "Open without waiting",
     "indexingDone": "Already finished, but the page isn't responding?",
     "indexingDoneAction": "Try again"
+  },
+  "stalled": {
+    "title": "The screen is taking longer than usual",
+    "subtitle": "Try these from the top. Stop as soon as the screen appears.",
+    "restart": {
+      "title": "Restart the plugin backend",
+      "body": "Restarts the plugin. If other work is running in this project, it stops.",
+      "button": "Restart",
+      "running": "Restarting..."
+    },
+    "quit": {
+      "lead": "If that does not help,",
+      "body": "quit the IDE completely and open it again."
+    },
+    "settings": {
+      "title": "Still not showing after restarting the IDE?",
+      "intro": "There are two ways. Apply them one at a time.",
+      "openButton": "Open the settings file",
+      "copyButton": "Copy",
+      "copied": "Copied",
+      "pending": "These lines are already in your settings file. Quit the IDE completely and open it again to apply them.",
+      "stepPasteMany": "Paste the lines below at the end of the file. If a line with the same name is already there, change that line.",
+      "stepPasteOne": "Paste the line below at the end of the file. If a line with the same name is already there, change that line.",
+      "stepSave": "Save with {shortcut}, then quit the IDE completely and open it again.",
+      "processTitle": "Browser inside the IDE",
+      "gpuTitle": "No graphics acceleration",
+      "waylandNote": "This IDE runs on Wayland. With this option, the Claude Code screen opens in its own window next to the IDE instead of inside it."
+    },
+    "report": {
+      "copyButton": "Copy the information",
+      "issueButton": "Open the issue page",
+      "hint": "Contains no code and no conversation, only versions and settings of this IDE and this computer."
+    },
+    "close": {
+      "button": "Close this guide"
+    }
   }
 }
