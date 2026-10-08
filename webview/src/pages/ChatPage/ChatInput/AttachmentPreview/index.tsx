@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
+import { DragDropProvider } from '@dnd-kit/react';
 import type { Attachment, PendingUpload } from '../../../../types';
 import { isImageAttachment, isFileAttachment, isFolderAttachment } from '../../../../types';
 import { ImageLightbox } from '@/components/ImageLightbox';
@@ -7,17 +8,21 @@ import { FileChip } from './FileChip';
 import { FolderChip } from './FolderChip';
 import { UploadChip } from './UploadChip';
 import { FileTile, FolderTile, UploadTile } from './Tiles';
+import { SortableChip } from './SortableChip';
+import { idsAfterDrag } from './attachmentOrder';
 
 interface Props {
   attachments: Attachment[];
   /** Files and folders still travelling to the backend; drawn after the finished ones. */
   uploads?: PendingUpload[];
   onRemove: (id: string) => void;
+  /** Called with the new order, as ids, once a chip has been dragged to a new place. */
+  onReorder?: (ids: string[]) => void;
   onCancelUpload?: (id: string) => void;
 }
 
 export function AttachmentPreview(props: Props) {
-  const { attachments, uploads = [], onRemove, onCancelUpload } = props;
+  const { attachments, uploads = [], onRemove, onReorder, onCancelUpload } = props;
 
   // Held here rather than inside ImagePreview: stepping to the next image needs
   // the whole set, and a single preview only knows itself. This is also what
@@ -36,40 +41,52 @@ export function AttachmentPreview(props: Props) {
   // square form; with no image they stay the compact pills.
   const asCards = images.length > 0;
 
+  // One attachment alone has nowhere to move, so it does not invite a drag.
+  const sortable = attachments.length > 1 && onReorder !== undefined;
+
+  const chipOf = (att: Attachment): ReactElement | null => {
+    if (isImageAttachment(att)) {
+      return <ImagePreview attachment={att} onRemove={onRemove} onOpen={() => setOpenedIndex(images.indexOf(att))} />;
+    }
+    if (isFileAttachment(att)) {
+      return asCards
+        ? <FileTile attachment={att} onRemove={onRemove} />
+        : <FileChip attachment={att} onRemove={onRemove} />;
+    }
+    if (isFolderAttachment(att)) {
+      return asCards
+        ? <FolderTile attachment={att} onRemove={onRemove} />
+        : <FolderChip attachment={att} onRemove={onRemove} />;
+    }
+    return null;
+  };
+
   return (
     <>
-      {/* items-start: without it the row stretches every chip to the tallest one,
-          so a thumbnail makes the file chips beside it grow as tall as the picture. */}
-      <div className="flex flex-wrap items-start gap-2 px-3 py-2">
-        {attachments.map((att) => {
-          if (isImageAttachment(att)) {
-            return (
-              <ImagePreview
-                key={att.id}
-                attachment={att}
-                onRemove={onRemove}
-                onOpen={() => setOpenedIndex(images.indexOf(att))}
-              />
+      <DragDropProvider
+        onDragEnd={(event) => {
+          const ids = onReorder && idsAfterDrag(attachments, event);
+          if (ids) onReorder(ids);
+        }}
+      >
+        {/* items-start: without it the row stretches every chip to the tallest one,
+            so a thumbnail makes the file chips beside it grow as tall as the picture. */}
+        <div className="flex flex-wrap items-start gap-2 px-3 py-2">
+          {attachments.map((att, index) => {
+            const chip = chipOf(att);
+            return chip && (
+              <SortableChip key={att.id} id={att.id} index={index} sortable={sortable}>
+                {chip}
+              </SortableChip>
             );
-          }
-          if (isFileAttachment(att)) {
-            return asCards
-              ? <FileTile key={att.id} attachment={att} onRemove={onRemove} />
-              : <FileChip key={att.id} attachment={att} onRemove={onRemove} />;
-          }
-          if (isFolderAttachment(att)) {
-            return asCards
-              ? <FolderTile key={att.id} attachment={att} onRemove={onRemove} />
-              : <FolderChip key={att.id} attachment={att} onRemove={onRemove} />;
-          }
-          return null;
-        })}
-        {onCancelUpload && uploads.map((upload) => (
-          asCards
-            ? <UploadTile key={upload.id} upload={upload} onCancel={onCancelUpload} />
-            : <UploadChip key={upload.id} upload={upload} onCancel={onCancelUpload} />
-        ))}
-      </div>
+          })}
+          {onCancelUpload && uploads.map((upload) => (
+            asCards
+              ? <UploadTile key={upload.id} upload={upload} onCancel={onCancelUpload} />
+              : <UploadChip key={upload.id} upload={upload} onCancel={onCancelUpload} />
+          ))}
+        </div>
+      </DragDropProvider>
 
       {/*
         Scoped to what is still in the composer. These images are not part of the

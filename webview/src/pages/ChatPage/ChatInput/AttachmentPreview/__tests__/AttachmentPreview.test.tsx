@@ -314,6 +314,70 @@ describe('AttachmentPreview cards', () => {
   });
 });
 
+describe('AttachmentPreview ordering', () => {
+  const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
+  const draggable = (container: HTMLElement) => Array.from(container.querySelectorAll('[data-attachment-id]')) as HTMLElement[];
+
+  it('puts every finished chip in a place that can be picked up, in the order it was attached', () => {
+    const a = file('a.md');
+    const b = file('b.md');
+    const { container } = render(<AttachmentPreview attachments={[a, b]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+
+    expect(draggable(container).map((el) => el.dataset.attachmentId)).toEqual([a.id, b.id]);
+  });
+
+  it('invites a drag only when there are two or more to put in order', () => {
+    const { container, rerender } = render(<AttachmentPreview attachments={[file('a.md')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+    expect(draggable(container)[0]).not.toHaveClass('cursor-grab');
+
+    rerender(<AttachmentPreview attachments={[file('a.md'), file('b.md')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+    expect(draggable(container)[0]).toHaveClass('cursor-grab');
+  });
+
+  it('does not invite a drag when nobody is listening for the new order', () => {
+    const { container } = render(<AttachmentPreview attachments={[file('a.md'), file('b.md')]} onRemove={vi.fn()} />);
+    expect(draggable(container)[0]).not.toHaveClass('cursor-grab');
+  });
+
+  it('keeps a travelling upload out of the order, since it is not an attachment yet', () => {
+    const pending = new PendingUpload({ label: 'clip.mov', isFolder: false, totalBytes: 10 });
+    const { container } = render(
+      <AttachmentPreview
+        attachments={[file('a.md'), file('b.md')]}
+        uploads={[pending]}
+        onRemove={vi.fn()}
+        onReorder={vi.fn()}
+        onCancelUpload={vi.fn()}
+      />,
+    );
+
+    expect(draggable(container)).toHaveLength(2);
+  });
+
+  it('keeps the browser from starting a picture drag of its own from a thumbnail', () => {
+    const { container } = render(<AttachmentPreview attachments={[image('AAA')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+    expect(container.querySelector('img')).toHaveAttribute('draggable', 'false');
+  });
+
+  it('still opens an image on a plain click inside its sortable wrapper', () => {
+    render(<AttachmentPreview attachments={[image('AAA'), image('BBB')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+
+    fireEvent.click(screen.getByAltText('BBB.png'));
+
+    expect(screen.getByAltText('Full size').getAttribute('src')).toBe('data:image/png;base64,BBB');
+  });
+
+  it('removes a chip from its x without any drag getting in the way', () => {
+    const onRemove = vi.fn();
+    const a = file('a.md');
+    render(<AttachmentPreview attachments={[a, file('b.md')]} onRemove={onRemove} onReorder={vi.fn()} />);
+
+    fireEvent.click(screen.getAllByRole('button')[0]);
+
+    expect(onRemove).toHaveBeenCalledWith(a.id);
+  });
+});
+
 describe('AttachmentPreview icons', () => {
   const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
   const kinds = (container: HTMLElement) =>

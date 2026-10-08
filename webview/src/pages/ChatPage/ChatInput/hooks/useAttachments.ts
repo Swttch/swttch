@@ -43,6 +43,23 @@ function reportImageAttached(source: ImageAttachSource, file: File): void {
   }
 }
 
+/**
+ * The attachments in the order `ids` names them.
+ *
+ * An id the list no longer holds is ignored, and an attachment `ids` does not name
+ * (one that landed while a chip was being dragged) keeps its place after the named
+ * ones, so a reorder can never lose an attachment.
+ */
+export function orderAttachmentsBy(attachments: Attachment[], ids: string[]): Attachment[] {
+  const byId = new Map(attachments.map((attachment) => [attachment.id, attachment]));
+  const named = ids.flatMap((id) => {
+    const attachment = byId.get(id);
+    byId.delete(id);
+    return attachment ? [attachment] : [];
+  });
+  return [...named, ...byId.values()];
+}
+
 export interface UseAttachmentsReturn {
   attachments: Attachment[];
   /** Files and folders still travelling to the backend; each becomes an attachment when it lands. */
@@ -51,6 +68,8 @@ export interface UseAttachmentsReturn {
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
   addFolderAttachment: (absolutePath: string, folderName: string) => void;
   removeAttachment: (id: string) => void;
+  /** Put the attachments in the order of `ids`, the way a drag of a chip decided it. */
+  reorderAttachments: (ids: string[]) => void;
   /** Stop an upload in flight and drop its chip. */
   cancelUpload: (id: string) => void;
   clearAttachments: () => void;
@@ -134,6 +153,10 @@ export function useAttachments(): UseAttachmentsReturn {
       }
       return [...prev, attachment];
     });
+  }, []);
+
+  const reorderAttachments = useCallback((ids: string[]) => {
+    setAttachments((prev) => orderAttachmentsBy(prev, ids));
   }, []);
 
   const removeAttachment = useCallback((id: string) => {
@@ -255,6 +278,7 @@ export function useAttachments(): UseAttachmentsReturn {
     addFileAttachment,
     addFolderAttachment,
     removeAttachment,
+    reorderAttachments,
     cancelUpload,
     clearAttachments,
     error,
@@ -262,5 +286,5 @@ export function useAttachments(): UseAttachmentsReturn {
     setIsDragOver,
     handlePaste,
     handleDrop,
-  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, cancelUpload, clearAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
+  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, reorderAttachments, cancelUpload, clearAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
 }

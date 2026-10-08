@@ -26,7 +26,7 @@ function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none'
           {preview.text}
         </pre>
       ) : (
-        <img src={preview.src} alt="" className="w-full h-full object-cover" />
+        <img src={preview.src} alt="" draggable={false} className="w-full h-full object-cover" />
       )}
       <span className="absolute top-0.5 start-0.5 flex rounded bg-surface-tooltip p-0.5">
         <FileTypeIcon name={name} className="w-3 h-3" />

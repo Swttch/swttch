@@ -255,6 +255,38 @@ describe('useAttachments while a file is travelling', () => {
   });
 });
 
+describe('useAttachments reordering', () => {
+  const names = (attachments: Array<{ displayLabel: string }>) => attachments.map((a) => a.displayLabel);
+
+  it('puts the attachments in the order it is given', () => {
+    const { result } = renderHook(() => useAttachments());
+    act(() => {
+      result.current.addFileAttachment('/tmp/a.md', 'a.md');
+      result.current.addFileAttachment('/tmp/b.md', 'b.md');
+      result.current.addFolderAttachment('/tmp/c', 'c');
+    });
+    const [a, b, c] = result.current.attachments;
+
+    act(() => result.current.reorderAttachments([c.id, a.id, b.id]));
+
+    expect(names(result.current.attachments)).toEqual(['c/', 'a.md', 'b.md']);
+  });
+
+  it('keeps an attachment that arrived while a drag was going on', () => {
+    const { result } = renderHook(() => useAttachments());
+    act(() => {
+      result.current.addFileAttachment('/tmp/a.md', 'a.md');
+      result.current.addFileAttachment('/tmp/b.md', 'b.md');
+    });
+    const [a, b] = result.current.attachments;
+    act(() => result.current.addFileAttachment('/tmp/late.md', 'late.md'));
+
+    act(() => result.current.reorderAttachments([b.id, a.id]));
+
+    expect(names(result.current.attachments)).toEqual(['b.md', 'a.md', 'late.md']);
+  });
+});
+
 describe('useAttachments in the IDE', () => {
   beforeEach(() => isJetBrainsMock.mockReturnValue(true));
 

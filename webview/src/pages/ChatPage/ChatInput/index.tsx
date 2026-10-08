@@ -165,6 +165,7 @@ export function ChatInput() {
     addFileAttachment,
     addFolderAttachment,
     removeAttachment,
+    reorderAttachments,
     cancelUpload,
     clearAttachments,
     error: attachmentError,
@@ -1469,6 +1470,7 @@ export function ChatInput() {
           attachments={attachments}
           uploads={uploads}
           onRemove={removeAttachment}
+          onReorder={reorderAttachments}
           onCancelUpload={cancelUpload}
         />
 
