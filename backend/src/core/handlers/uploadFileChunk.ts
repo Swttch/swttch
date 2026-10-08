@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm, stat, writeFile, appendFile } from 'fs/promises';
 import { homedir } from 'os';
-import { basename, join } from 'path';
+import { basename, dirname, join } from 'path';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
@@ -39,11 +39,25 @@ export function uploadsBaseDir(): string {
  * characters are dropped. Everything else, including Korean and spaces, stays.
  */
 export function sanitizeUploadFileName(raw: string): string {
-  const lastSegment = basename(raw.replace(/\\/g, '/'));
+  return cleanSegment(basename(raw.replace(/\\/g, '/'))) ?? 'file';
+}
+
+function cleanSegment(segment: string): string | null {
   // eslint-disable-next-line no-control-regex
-  const cleaned = lastSegment.replace(/[\u0000-\u001f\u007f]/g, '').trim();
-  if (!cleaned || cleaned === '.' || cleaned === '..') return 'file';
+  const cleaned = segment.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (!cleaned || cleaned === '.' || cleaned === '..') return null;
   return cleaned;
+}
+
+/**
+ * The path of a file inside a dropped folder, as the folder's own name followed
+ * by the subfolders down to the file. Every segment is cleaned on its own, and a
+ * segment that would climb out of the upload directory (`..`) or names nothing is
+ * dropped, so the result can only ever lead further in.
+ */
+export function sanitizeUploadRelativePath(raw: string): string[] {
+  const segments = raw.split(/[\\/]/).map(cleanSegment).filter((s): s is string => s !== null);
+  return segments.length > 0 ? segments : ['file'];
 }
 
 async function pruneStaleUploads(): Promise<void> {
@@ -83,6 +97,7 @@ export async function uploadFileChunkHandler(
   const payload = message.payload ?? {};
   const uploadId = payload.uploadId;
   const fileName = payload.fileName;
+  const relativePath = payload.relativePath;
   const offset = payload.offset;
   const base64 = payload.base64;
   const last = payload.last === true;
@@ -101,13 +116,22 @@ export async function uploadFileChunkHandler(
   }
 
   const dir = join(uploadsBaseDir(), uploadId);
-  const filePath = join(dir, sanitizeUploadFileName(fileName));
+  // A file inside a dropped folder names where it sits below the folder; a lone
+  // file is just its name. Either way the result stays inside this upload's directory.
+  const segments = typeof relativePath === 'string'
+    ? sanitizeUploadRelativePath(relativePath)
+    : [sanitizeUploadFileName(fileName)];
+  const filePath = join(dir, ...segments);
+  const rootPath = segments.length > 1 ? join(dir, segments[0]) : undefined;
   const bytes = Buffer.from(base64, 'base64');
 
   try {
     if (offset === 0) {
-      void pruneStaleUploads();
-      await mkdir(dir, { recursive: true });
+      // Only the first file of an upload clears old copies: a folder of a thousand
+      // files must not re-scan the whole directory a thousand times.
+      const startedUpload = (await mkdir(dir, { recursive: true })) !== undefined;
+      if (startedUpload) void pruneStaleUploads();
+      if (dirname(filePath) !== dir) await mkdir(dirname(filePath), { recursive: true });
       await writeFile(filePath, bytes);
     } else {
       // A chunk that does not continue exactly where the file ends means one went
@@ -124,6 +148,6 @@ export async function uploadFileChunkHandler(
 
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
-    ...(last ? { path: filePath } : {}),
+    ...(last ? { path: filePath, ...(rootPath ? { rootPath } : {}) } : {}),
   });
 }

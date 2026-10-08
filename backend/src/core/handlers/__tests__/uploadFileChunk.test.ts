@@ -16,6 +16,7 @@ interface Ack {
   status?: string;
   error?: string;
   path?: string;
+  rootPath?: string;
 }
 
 let ccgHome: string;
@@ -98,6 +99,60 @@ describe('uploadFileChunkHandler', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(await readdir(uploadsBaseDir())).toEqual([UPLOAD_ID]);
+  });
+});
+
+describe('uploading a folder', () => {
+  it('keeps each file where it sat below the folder and names the folder as the root', async () => {
+    const ack = await send({
+      uploadId: UPLOAD_ID,
+      fileName: 'a.txt',
+      relativePath: 'my folder/sub/a.txt',
+      offset: 0,
+      base64: b64('x'),
+      last: true,
+    });
+    const dir = join(uploadsBaseDir(), UPLOAD_ID);
+    expect(ack.path).toBe(join(dir, 'my folder', 'sub', 'a.txt'));
+    expect(ack.rootPath).toBe(join(dir, 'my folder'));
+    expect(await readFile(ack.path as string, 'utf-8')).toBe('x');
+  });
+
+  it('puts every file of the folder under the same root', async () => {
+    const first = await send({ uploadId: UPLOAD_ID, fileName: 'a.txt', relativePath: 'f/a.txt', offset: 0, base64: b64('1'), last: true });
+    const second = await send({ uploadId: UPLOAD_ID, fileName: 'b.txt', relativePath: 'f/inner/b.txt', offset: 0, base64: b64('2'), last: true });
+    expect(second.rootPath).toBe(first.rootPath);
+  });
+
+  it('cannot climb out of the upload directory through the relative path', async () => {
+    const ack = await send({
+      uploadId: UPLOAD_ID,
+      fileName: 'x.txt',
+      relativePath: 'f/../../../etc/x.txt',
+      offset: 0,
+      base64: b64('x'),
+      last: true,
+    });
+    expect(ack.path).toBe(join(uploadsBaseDir(), UPLOAD_ID, 'f', 'etc', 'x.txt'));
+  });
+
+  it('clears old copies once per upload, not once per file of the folder', async () => {
+    const staleDir = join(uploadsBaseDir(), 'stale-upload-1234');
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const makeStale = async () => {
+      await mkdir(staleDir, { recursive: true });
+      await utimes(staleDir, eightDaysAgo, eightDaysAgo);
+    };
+
+    await makeStale();
+    await send({ uploadId: UPLOAD_ID, fileName: 'a.txt', relativePath: 'f/a.txt', offset: 0, base64: b64('1'), last: true });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await readdir(uploadsBaseDir())).not.toContain('stale-upload-1234');
+
+    await makeStale();
+    await send({ uploadId: UPLOAD_ID, fileName: 'b.txt', relativePath: 'f/b.txt', offset: 0, base64: b64('2'), last: true });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await readdir(uploadsBaseDir())).toContain('stale-upload-1234');
   });
 });
 

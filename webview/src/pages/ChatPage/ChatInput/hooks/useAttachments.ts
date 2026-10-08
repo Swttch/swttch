@@ -5,7 +5,7 @@ import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 import { isJetBrains } from '@/config/environment';
 import { basename } from '../basename';
-import { readDroppedEntries, uploadFile, type DroppedEntry } from './droppedFiles';
+import { collectFolderFiles, readDroppedEntries, uploadFile, uploadFolder, type DroppedEntry } from './droppedFiles';
 
 function isInlineImageType(mimeType: string): boolean {
   return ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as (typeof ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES)[number]);
@@ -143,7 +143,7 @@ export function useAttachments(): UseAttachmentsReturn {
    * different strings for the same file, so the dedup guard can't collapse them.
    */
   const attachEntries = useCallback(async (entries: DroppedEntry[], source: ImageAttachSource) => {
-    for (const { file, isDirectory } of entries) {
+    for (const { file, isDirectory, directory } of entries) {
       if (!isDirectory && isInlineImageType(file.type)) {
         await addImageAttachment(file, source);
         continue;
@@ -152,17 +152,22 @@ export function useAttachments(): UseAttachmentsReturn {
 
       // A browser never reveals a file's path, so the file is uploaded and the
       // chip points at the saved copy.
+      const request = (type: string, payload: Record<string, unknown>) => getBridge().request(type, payload);
       try {
-        if (isDirectory) throw new Error('Folders cannot be uploaded yet');
-        const savedPath = await uploadFile(file, (type, payload) => getBridge().request(type, payload));
-        addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
+        if (directory) {
+          const savedPath = await uploadFolder(await collectFolderFiles(directory), request);
+          addFolderAttachment(savedPath, directory.name);
+        } else {
+          const savedPath = await uploadFile(file, request);
+          addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
+        }
       } catch (err) {
         console.error('[useAttachments] File upload failed:', err);
         setError(t('chatInput.attachments.errors.uploadFailed', { name: file.name }));
         setTimeout(() => setError(null), 3000);
       }
     }
-  }, [addImageAttachment, addFileAttachment, t]);
+  }, [addImageAttachment, addFileAttachment, addFolderAttachment, t]);
 
   const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLElement>) => {
     if (!e.clipboardData) return;

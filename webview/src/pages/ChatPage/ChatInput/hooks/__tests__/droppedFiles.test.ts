@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { MessageType } from '@/shared';
-import { readDroppedEntries, uploadFile, UPLOAD_CHUNK_BYTES } from '../droppedFiles';
+import { collectFolderFiles, readDroppedEntries, uploadFile, uploadFolder, UPLOAD_CHUNK_BYTES } from '../droppedFiles';
 
 interface Sent {
   type: string;
@@ -71,24 +71,120 @@ describe('readDroppedEntries', () => {
   it('tells a dropped folder from a dropped file', () => {
     const file = new File(['x'], 'a.mov');
     const folder = new File([], 'some-folder');
+    const listing = { isDirectory: true, name: 'some-folder' };
     const dataTransfer = {
       items: [
         { kind: 'file', getAsFile: () => file, webkitGetAsEntry: () => ({ isDirectory: false }) },
-        { kind: 'file', getAsFile: () => folder, webkitGetAsEntry: () => ({ isDirectory: true }) },
+        { kind: 'file', getAsFile: () => folder, webkitGetAsEntry: () => listing },
         { kind: 'string', getAsFile: () => null },
       ],
       files: [file, folder],
     } as unknown as DataTransfer;
 
     expect(readDroppedEntries(dataTransfer)).toEqual([
-      { file, isDirectory: false },
-      { file: folder, isDirectory: true },
+      { file, isDirectory: false, directory: null },
+      { file: folder, isDirectory: true, directory: listing },
     ]);
   });
 
   it('falls back to the file list when the engine exposes no items', () => {
     const file = new File(['x'], 'a.mov');
     const dataTransfer = { items: [], files: [file] } as unknown as DataTransfer;
-    expect(readDroppedEntries(dataTransfer)).toEqual([{ file, isDirectory: false }]);
+    expect(readDroppedEntries(dataTransfer)).toEqual([{ file, isDirectory: false, directory: null }]);
+  });
+});
+
+/** A folder listing the way the browser hands it out: files and subfolders, read in batches. */
+function fakeDirectory(name: string, children: Array<FileSystemEntry>, batchSize = 2): FileSystemDirectoryEntry {
+  return {
+    isDirectory: true,
+    isFile: false,
+    name,
+    createReader: () => {
+      let next = 0;
+      return {
+        readEntries: (ok: (batch: FileSystemEntry[]) => void) => {
+          const batch = children.slice(next, next + batchSize);
+          next += batchSize;
+          ok(batch);
+        },
+      };
+    },
+  } as unknown as FileSystemDirectoryEntry;
+}
+
+function fakeFile(name: string, body = 'x'): FileSystemFileEntry {
+  return {
+    isDirectory: false,
+    isFile: true,
+    name,
+    file: (ok: (file: File) => void) => ok(new File([body], name)),
+  } as unknown as FileSystemFileEntry;
+}
+
+describe('collectFolderFiles', () => {
+  it('walks every level and keeps where each file sat below the folder', async () => {
+    const folder = fakeDirectory('photos', [
+      fakeFile('a.png'),
+      fakeDirectory('2026', [fakeFile('b.png'), fakeDirectory('trip', [fakeFile('c.png')])]),
+      fakeFile('d.png'),
+    ]);
+
+    const found = await collectFolderFiles(folder);
+
+    expect(found.map((f) => f.relativePath).sort()).toEqual([
+      'photos/2026/b.png',
+      'photos/2026/trip/c.png',
+      'photos/a.png',
+      'photos/d.png',
+    ]);
+  });
+
+  it('keeps reading until the browser reports an empty batch, since it lists in pieces', async () => {
+    const names = Array.from({ length: 7 }, (_, i) => `f${i}.txt`);
+    const found = await collectFolderFiles(fakeDirectory('many', names.map((n) => fakeFile(n)), 3));
+    expect(found).toHaveLength(7);
+  });
+
+  it('finds nothing in an empty folder', async () => {
+    expect(await collectFolderFiles(fakeDirectory('empty', []))).toEqual([]);
+  });
+});
+
+describe('uploadFolder', () => {
+  it('sends every file under one upload and returns the folder root the backend names', async () => {
+    const sent: Array<Record<string, unknown>> = [];
+    const request = async (_type: string, payload: Record<string, unknown>) => {
+      sent.push(payload);
+      return payload.last ? { path: `/saved/${payload.relativePath}`, rootPath: '/saved/photos' } : {};
+    };
+    const files = [
+      { file: new File(['1'], 'a.png'), relativePath: 'photos/a.png' },
+      { file: new File(['2'], 'b.png'), relativePath: 'photos/2026/b.png' },
+    ];
+
+    const root = await uploadFolder(files, request);
+
+    expect(root).toBe('/saved/photos');
+    expect(sent.map((s) => s.relativePath)).toEqual(['photos/a.png', 'photos/2026/b.png']);
+    expect(new Set(sent.map((s) => s.uploadId)).size).toBe(1);
+  });
+
+  it('refuses a folder with no files, which would leave a chip pointing at nothing', async () => {
+    await expect(uploadFolder([], async () => ({}))).rejects.toThrow();
+  });
+
+  it('stops at the first file the backend refuses', async () => {
+    let calls = 0;
+    const request = async () => {
+      calls += 1;
+      return { status: 'error', error: 'disk full' };
+    };
+    const files = [
+      { file: new File(['1'], 'a.png'), relativePath: 'p/a.png' },
+      { file: new File(['2'], 'b.png'), relativePath: 'p/b.png' },
+    ];
+    await expect(uploadFolder(files, request)).rejects.toThrow('disk full');
+    expect(calls).toBe(1);
   });
 });

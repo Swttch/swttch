@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { FileAttachment, ImageAttachment } from '@/types';
+import { FileAttachment, FolderAttachment, ImageAttachment } from '@/types';
 
 const { requestMock, sendRawMock, isJetBrainsMock } = vi.hoisted(() => ({
   requestMock: vi.fn(),
@@ -111,6 +111,40 @@ describe('useAttachments in a browser', () => {
     });
 
     expect((result.current.attachments[0] as FileAttachment).fileName).toBe('data.weird-extension');
+  });
+
+  it('turns a dropped folder into a folder chip pointing at the saved copy', async () => {
+    requestMock.mockImplementation(async (_type: string, payload: Record<string, unknown>) =>
+      payload.last ? { path: `/saved/${payload.relativePath}`, rootPath: '/saved/photos' } : {});
+    const listing = {
+      isDirectory: true,
+      name: 'photos',
+      createReader: () => {
+        let done = false;
+        return {
+          readEntries: (ok: (batch: unknown[]) => void) => {
+            const wasDone = done;
+            done = true;
+            ok(wasDone ? [] : [{ isDirectory: false, name: 'a.png', file: (cb: (f: File) => void) => cb(file('a.png', 'image/png')) }]);
+          },
+        };
+      },
+    };
+    const folder = new File([], 'photos');
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop({
+        preventDefault: vi.fn(),
+        dataTransfer: { items: [{ kind: 'file', getAsFile: () => folder, webkitGetAsEntry: () => listing }] },
+      } as unknown as React.DragEvent);
+    });
+
+    expect(result.current.error).toBeNull();
+    const chip = result.current.attachments[0] as FolderAttachment;
+    expect(chip).toBeInstanceOf(FolderAttachment);
+    expect(chip.folderName).toBe('photos');
+    expect(chip.absolutePath).toBe('/saved/photos/');
   });
 
   it('says which file failed when the upload does', async () => {
