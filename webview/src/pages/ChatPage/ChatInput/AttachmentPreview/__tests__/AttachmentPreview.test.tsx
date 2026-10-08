@@ -308,6 +308,44 @@ describe('AttachmentPreview cards', () => {
   });
 });
 
+describe('AttachmentPreview icons', () => {
+  const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
+  const kinds = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('svg[data-kind]')).map((svg) => svg.getAttribute('data-kind'));
+
+  it('gives each compact chip the icon of its own extension, not one icon for all', () => {
+    const { container } = render(
+      <AttachmentPreview attachments={[file('clip.mov'), file('App.tsx'), file('report.pdf'), file('Makefile')]} onRemove={vi.fn()} />,
+    );
+
+    expect(kinds(container)).toEqual(['video', 'code', 'pdf', 'other']);
+  });
+
+  it('gives a travelling compact chip its extension icon too', () => {
+    const pending = new PendingUpload({ label: 'clip.mov', isFolder: false, totalBytes: 10 });
+    const { container } = render(
+      <AttachmentPreview attachments={[]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />,
+    );
+
+    expect(kinds(container)).toEqual(['video']);
+  });
+
+  it('puts the icon at the top left of a card that shows a preview', async () => {
+    requestMock.mockResolvedValue({ kind: 'text', text: '# Plan' });
+    const { container } = render(<AttachmentPreview attachments={[image('AAA'), file('plan.md')]} onRemove={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText(/# Plan/)).toBeInTheDocument());
+    const corner = container.querySelector('.top-0\\.5.start-0\\.5');
+    expect(corner?.querySelector('svg')?.getAttribute('data-kind')).toBe('text');
+  });
+
+  it('draws the big icon of the extension on a card that has no preview', () => {
+    const { container } = render(<AttachmentPreview attachments={[image('AAA'), file('data.xlsx')]} onRemove={vi.fn()} />);
+
+    expect(kinds(container)).toEqual(['spreadsheet']);
+  });
+});
+
 describe('AttachmentPreview file previews', () => {
   const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
 

@@ -1,54 +1,12 @@
 import type { ReactNode } from 'react';
 import { AttachmentNameTooltip } from './AttachmentNameTooltip';
-import { FileKind, extensionTag, fileKindOf } from './fileType';
-
-/** Text color per kind, so a row of cards can be told apart before a name is read. */
-const KIND_COLOR: Record<FileKind, string> = {
-  [FileKind.Pdf]: 'text-state-error-fg',
-  [FileKind.Document]: 'text-state-info-fg',
-  [FileKind.Spreadsheet]: 'text-state-success-fg',
-  [FileKind.Presentation]: 'text-state-warning-fg',
-  [FileKind.Text]: 'text-text-secondary',
-  [FileKind.Code]: 'text-accent-primary',
-  [FileKind.Archive]: 'text-state-warning-fg',
-  [FileKind.Video]: 'text-accent-claude',
-  [FileKind.Audio]: 'text-accent-claude',
-  [FileKind.Image]: 'text-state-success-fg',
-  [FileKind.Other]: 'text-text-tertiary',
-};
-
-const ICON_PROPS = {
-  className: 'w-7 h-7',
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.6,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-} as const;
-
-/** The page-with-a-folded-corner every file kind shares; the kind shows in its color and tag. */
-function PageIcon() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  );
-}
-
-function FolderIcon() {
-  return (
-    <svg {...ICON_PROPS}>
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
+import { FileTypeIcon, FolderIcon, KIND_COLOR } from './FileTypeIcon';
+import { extensionTag, fileKindOf } from './fileType';
 
 /**
- * The icon a file or folder card carries: the page glyph tinted by the kind of
- * file, with its extension beneath it. `caption` replaces the extension while
- * something else is worth saying there, like the share already uploaded.
+ * The icon a file or folder card carries: the file's own icon, large, with its
+ * extension beneath it. `caption` replaces the extension while something else is
+ * worth saying there, like the share already uploaded.
  */
 export function FileGlyph(props: { name?: string; isFolder?: boolean; caption?: string }) {
   const { name = '', isFolder = false, caption } = props;
@@ -57,7 +15,7 @@ export function FileGlyph(props: { name?: string; isFolder?: boolean; caption?: 
 
   return (
     <div className={`flex flex-col items-center gap-0.5 ${color}`}>
-      {isFolder ? <FolderIcon /> : <PageIcon />}
+      {isFolder ? <FolderIcon className="w-7 h-7" /> : <FileTypeIcon name={name} className="w-7 h-7" colored={false} />}
       <span className="h-2.5 text-[0.6154rem] leading-[0.625rem] font-semibold tabular-nums">{tag}</span>
     </div>
   );

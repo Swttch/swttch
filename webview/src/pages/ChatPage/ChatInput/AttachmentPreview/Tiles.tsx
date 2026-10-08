@@ -1,5 +1,6 @@
 import type { FileAttachment, FolderAttachment, PendingUpload } from '../../../../types';
 import { AttachmentTile, FileGlyph } from './AttachmentTile';
+import { FileTypeIcon } from './FileTypeIcon';
 import { extensionTag } from './fileType';
 import type { FilePreviewResult } from './loadFilePreview';
 import { useFilePreview } from './useFilePreview';
@@ -15,8 +16,8 @@ import { useFilePreview } from './useFilePreview';
  * lines of a text file as a tiny page, or a picture (the file itself, or a frame
  * of a video). The extension stays on a corner so the kind is still readable.
  */
-function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none' }>; tag: string }) {
-  const { preview, tag } = props;
+function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none' }>; name: string; tag: string }) {
+  const { preview, name, tag } = props;
 
   return (
     <>
@@ -27,6 +28,9 @@ function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none'
       ) : (
         <img src={preview.src} alt="" className="w-full h-full object-cover" />
       )}
+      <span className="absolute top-0.5 start-0.5 flex rounded bg-surface-tooltip p-0.5">
+        <FileTypeIcon name={name} className="w-3 h-3" />
+      </span>
       {tag && (
         <span className="absolute bottom-0.5 end-0.5 rounded bg-surface-tooltip px-1 text-[0.6154rem] leading-[0.75rem] font-semibold text-text-secondary">
           {tag}
@@ -49,7 +53,7 @@ export function FileTile(props: { attachment: FileAttachment; onRemove: (id: str
     >
       {preview.kind === 'none'
         ? <FileGlyph name={attachment.fileName} />
-        : <PreviewFace preview={preview} tag={extensionTag(attachment.fileName)} />}
+        : <PreviewFace preview={preview} name={attachment.fileName} tag={extensionTag(attachment.fileName)} />}
     </AttachmentTile>
   );
 }
