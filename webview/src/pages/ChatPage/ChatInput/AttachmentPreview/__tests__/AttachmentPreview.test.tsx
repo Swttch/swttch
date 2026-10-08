@@ -182,3 +182,62 @@ describe('AttachmentPreview names', () => {
     expect(container.querySelector('[title]')).toBeNull();
   });
 });
+
+describe('AttachmentPreview cards', () => {
+  const file = new FileAttachment({ fileName: 'clip.mov', absolutePath: '/tmp/clip.mov' });
+  const folder = new FolderAttachment({ folderName: 'photos', absolutePath: '/tmp/photos' });
+  const pending = new PendingUpload({ label: 'report.pdf', isFolder: false, sentBytes: 30, totalBytes: 100 });
+
+  it('keeps the compact pills while there is no image in the row', () => {
+    render(<AttachmentPreview attachments={[file, folder]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    // A pill carries its × inline; a card's × floats over its corner.
+    expect(document.querySelector('.w-16.h-16')).toBeNull();
+  });
+
+  it('turns every other chip into a card the size of the thumbnail once an image is in the row', () => {
+    render(<AttachmentPreview attachments={[image('AAA'), file, folder]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    // the thumbnail, the file, the folder and the upload
+    expect(document.querySelectorAll('.w-16.h-16')).toHaveLength(4);
+  });
+
+  it('tags a file card with its extension, so the kind is readable without opening the name', () => {
+    render(<AttachmentPreview attachments={[image('AAA'), file]} onRemove={vi.fn()} />);
+
+    expect(screen.getByText('MOV')).toBeInTheDocument();
+    expect(screen.getByText('clip.mov')).toBeInTheDocument();
+  });
+
+  it('writes the folder name with its slash and no extension tag', () => {
+    render(<AttachmentPreview attachments={[image('AAA'), folder]} onRemove={vi.fn()} />);
+
+    expect(screen.getByText('photos/')).toBeInTheDocument();
+  });
+
+  it('shows the share uploaded in place of the extension while the file travels', () => {
+    render(<AttachmentPreview attachments={[image('AAA')]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    expect(screen.getByText('30%')).toBeInTheDocument();
+    expect(screen.queryByText('PDF')).toBeNull();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30');
+  });
+
+  it('removes a card from its corner button', () => {
+    const onRemove = vi.fn();
+    render(<AttachmentPreview attachments={[image('AAA'), file]} onRemove={onRemove} />);
+
+    fireEvent.click(screen.getAllByRole('button')[1]);
+
+    expect(onRemove).toHaveBeenCalledWith(file.id);
+  });
+
+  it('cancels an upload card from its corner button', () => {
+    const onCancelUpload = vi.fn();
+    render(<AttachmentPreview attachments={[image('AAA')]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={onCancelUpload} />);
+
+    fireEvent.click(screen.getAllByRole('button')[1]);
+
+    expect(onCancelUpload).toHaveBeenCalledWith(pending.id);
+  });
+});

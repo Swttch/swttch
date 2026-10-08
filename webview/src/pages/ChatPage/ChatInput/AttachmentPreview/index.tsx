@@ -6,6 +6,7 @@ import { ImagePreview } from './ImagePreview';
 import { FileChip } from './FileChip';
 import { FolderChip } from './FolderChip';
 import { UploadChip } from './UploadChip';
+import { FileTile, FolderTile, UploadTile } from './Tiles';
 
 interface Props {
   attachments: Attachment[];
@@ -30,6 +31,11 @@ export function AttachmentPreview(props: Props) {
   // shift the index the viewer opens on.
   const images = attachments.filter(isImageAttachment);
 
+  // A thumbnail makes the row as tall as a 64px square. Beside it a one-line pill
+  // looks lost, so while any image is in the row the other chips take the same
+  // square form; with no image they stay the compact pills.
+  const asCards = images.length > 0;
+
   return (
     <>
       {/* items-start: without it the row stretches every chip to the tallest one,
@@ -47,15 +53,21 @@ export function AttachmentPreview(props: Props) {
             );
           }
           if (isFileAttachment(att)) {
-            return <FileChip key={att.id} attachment={att} onRemove={onRemove} />;
+            return asCards
+              ? <FileTile key={att.id} attachment={att} onRemove={onRemove} />
+              : <FileChip key={att.id} attachment={att} onRemove={onRemove} />;
           }
           if (isFolderAttachment(att)) {
-            return <FolderChip key={att.id} attachment={att} onRemove={onRemove} />;
+            return asCards
+              ? <FolderTile key={att.id} attachment={att} onRemove={onRemove} />
+              : <FolderChip key={att.id} attachment={att} onRemove={onRemove} />;
           }
           return null;
         })}
         {onCancelUpload && uploads.map((upload) => (
-          <UploadChip key={upload.id} upload={upload} onCancel={onCancelUpload} />
+          asCards
+            ? <UploadTile key={upload.id} upload={upload} onCancel={onCancelUpload} />
+            : <UploadChip key={upload.id} upload={upload} onCancel={onCancelUpload} />
         ))}
       </div>
 
