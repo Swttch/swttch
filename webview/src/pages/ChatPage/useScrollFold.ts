@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useState } from 'react';
+import { RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** The tallest a bubble gets before `MessageBox` caps it. */
 export const FOLD_MAX_HEIGHT = 280;
@@ -66,6 +66,14 @@ export interface ScrollFold {
   height: number | null;
   /** The bubble's height as it pinned — what the fold counts down from. */
   restingHeight: number;
+  /**
+   * How much shorter the bubble's wrapper gets around the message box when it
+   * folds, apart from the box itself: the footer row leaves and the padding
+   * changes, so the slot the header holds in the flow shrinks by this much on
+   * top of the box's own fold. Measured, never assumed — see the layout effect.
+   * Zero at rest, and until the folded layout has been read.
+   */
+  wrapLoss: number;
 }
 
 export function useScrollFold(
@@ -74,12 +82,12 @@ export function useScrollFold(
   bubbleRef: RefObject<HTMLElement | null>,
   sentinelRef: RefObject<HTMLElement | null>,
 ): ScrollFold {
-  const [fold, setFold] = useState<ScrollFold>({ height: null, restingHeight: FOLD_MAX_HEIGHT });
+  const [fold, setFold] = useState<ScrollFold>({ height: null, restingHeight: FOLD_MAX_HEIGHT, wrapLoss: 0 });
 
   useEffect(() => {
     // At rest the bubble is simply itself; nothing to track until it pins.
     if (!pinned) {
-      setFold({ height: null, restingHeight: FOLD_MAX_HEIGHT });
+      setFold({ height: null, restingHeight: FOLD_MAX_HEIGHT, wrapLoss: 0 });
       return;
     }
     const root = scrollRoot;
@@ -141,7 +149,7 @@ export function useScrollFold(
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setFold({ height: start - (root.scrollTop - origin), restingHeight: start });
+      setFold(prev => ({ height: start - (root.scrollTop - origin), restingHeight: start, wrapLoss: prev.wrapLoss }));
     };
 
     // Coalesce to one measurement per frame: a trackpad fires scroll events
@@ -159,6 +167,50 @@ export function useScrollFold(
       if (frame) cancelAnimationFrame(frame);
     };
   }, [scrollRoot, pinned, bubbleRef, sentinelRef]);
+
+  // The box is not the only thing that changes when the send folds. The footer
+  // row is taken out and the padding around the box changes (UserMessageRenderer
+  // reads the same fold for both), so the wrapper is a different height folded
+  // than unfolded for reasons the box's own height says nothing about.
+  //
+  // Left uncounted, that difference was the transcript getting shorter by the
+  // same amount the instant the send pinned, and longer again the instant it
+  // unpinned. A view following the bottom is pulled along with every change of
+  // length, which moved the sentinel back across the pin line, which flipped the
+  // fold, which changed the length: a loop of one flip per frame for as long as
+  // the sentinel sat within that distance of the line.
+  //
+  // Each layout is read where it has just been drawn, never at a moment chosen
+  // by the fold: a pinned commit with no fold is the unfolded layout, a commit
+  // with one is the folded layout, and those are the only two places the DOM is
+  // known to be in either state. An earlier version read the unfolded layout
+  // from the effect that starts the fold. When the pin line is crossed twice
+  // within a frame, that effect runs on top of a fold the previous crossing left
+  // behind, reads the folded layout, finds nothing lost, and the loop it was
+  // meant to end carries on.
+  //
+  // The two numbers are properties of the markup, not of the scroll position, so
+  // the unfolded one is kept from the last time it was seen. Reads happen only
+  // while this send is the pinned one, as a layout read per section on a
+  // transcript of thousands is exactly what the fold is built to avoid, and
+  // never once per frame.
+  const folded = fold.height !== null;
+  const unfoldedWrapRef = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (!pinned) return;
+    const bubble = bubbleRef.current;
+    if (!bubble) return;
+    const box = bubble.querySelector<HTMLElement>('[data-message-box]') ?? bubble;
+    const wrap = Math.max(bubble.getBoundingClientRect().height - box.getBoundingClientRect().height, 0);
+    if (!folded) {
+      unfoldedWrapRef.current = wrap;
+      return;
+    }
+    const unfolded = unfoldedWrapRef.current;
+    if (unfolded === null) return;
+    const wrapLoss = unfolded - wrap;
+    setFold(prev => (prev.wrapLoss === wrapLoss ? prev : { ...prev, wrapLoss }));
+  }, [pinned, folded, bubbleRef]);
 
   return fold;
 }
