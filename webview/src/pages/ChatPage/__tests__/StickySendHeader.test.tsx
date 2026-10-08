@@ -3,6 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StickySendHeader } from '../StickySendHeader';
 import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
+import { useScrollFoldValue } from '../ScrollFoldContext';
 
 /**
  * The global setup installs an IntersectionObserver stub that never fires (it
@@ -240,6 +241,89 @@ describe('StickySendHeader', () => {
 
     setPinned(false);
     expect(spacerHeight(container)).toBe(0);
+  });
+
+  it('keeps the transcript the same length across the fold, whatever the bubble wears around its box', () => {
+    // The real send does not hold the same things around its message box in
+    // both states: folded, the footer row is taken out and the padding changes
+    // (UserMessageRenderer). If the header's slot in the flow shrinks by that
+    // much when it pins, the transcript gets shorter, a view that follows the
+    // bottom is dragged along, the sentinel crosses the pin line the other way,
+    // the send unpins and grows back, and the whole thing repeats every frame.
+    // The slot has to come out the same length folded or not, so what the wrap
+    // lost is added back next to the box's own fold.
+    const BOX = 100;
+    // Image attachments and context chips sit in the wrapper in BOTH layouts.
+    // They must not be counted as lost when the send folds: the spacer would
+    // then hold open room that nothing took away.
+    const CHIPS = 30;
+    const UNFOLDED_WRAP = 16 + 24 + CHIPS; // padding + the footer slot (invisible, still there) + chips
+    const FOLDED_WRAP = 24 + CHIPS; // bigger padding, footer gone, chips unchanged
+
+    function Bubble() {
+      const fold = useScrollFoldValue();
+      const boxHeight = fold ? Math.min(Math.max(fold.height, FOLD_MIN_HEIGHT), fold.restingHeight) : undefined;
+      return (
+        <div data-test-wrap={fold ? 'folded' : 'unfolded'}>
+          <div data-message-box style={boxHeight === undefined ? undefined : { height: boxHeight }} />
+        </div>
+      );
+    }
+
+    // Heights come from what is actually rendered, not from a single number.
+    const heightOf = (el: HTMLElement): number => {
+      if (el.hasAttribute('data-message-box')) return el.style.height ? parseFloat(el.style.height) : BOX;
+      if (el.hasAttribute('data-test-wrap')) {
+        const box = el.querySelector<HTMLElement>('[data-message-box]')!;
+        return heightOf(box) + (el.getAttribute('data-test-wrap') === 'folded' ? FOLDED_WRAP : UNFOLDED_WRAP);
+      }
+      const wrap = el.firstElementChild as HTMLElement | null;
+      return wrap?.hasAttribute('data-test-wrap') ? heightOf(wrap) : 0;
+    };
+    Element.prototype.getBoundingClientRect = function () {
+      const el = this as HTMLElement;
+      const top = el.hasAttribute?.('data-send-sentinel') ? PINNED_TOP_INSET : 0;
+      const height = heightOf(el);
+      return { height, top, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+    };
+
+    const { container } = render(
+      <StickySendHeader onClick={() => {}}>
+        <Bubble />
+      </StickySendHeader>,
+      { container: inScrollContainer() },
+    );
+    const slot = () => {
+      const wrap = container.querySelector<HTMLElement>('[data-test-wrap]')!;
+      return heightOf(wrap.parentElement as HTMLElement) + spacerHeight(container);
+    };
+
+    setPinned(false);
+    const atRest = slot();
+    expect(atRest).toBe(BOX + UNFOLDED_WRAP);
+
+    setPinned(true);
+    expect(slot()).toBe(atRest);
+
+    scrollBy(60);
+    expect(slot()).toBe(atRest);
+
+    scrollBy(10_000);
+    expect(slot()).toBe(atRest);
+
+    // The line is crossed back and forth within a frame while the view is
+    // pulled along: unpin and re-pin land before the unpin has been through its
+    // own effects, so the re-pin renders on top of a fold that has not been
+    // cleared yet. Reading the unfolded layout "as it pins" then reads the
+    // folded one, finds nothing lost, and the transcript changes length with
+    // every crossing. Seen in the shipped build, where it flipped every frame.
+    for (let i = 0; i < 3; i++) {
+      act(() => {
+        fire?.(true); // unpinned
+        fire?.(false); // pinned again, same batch
+      });
+      expect(slot()).toBe(atRest);
+    }
   });
 
   it('disconnects its observer on unmount', () => {

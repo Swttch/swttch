@@ -136,6 +136,12 @@ describe('useScrollFold', () => {
     // oscillates frame to frame. Re-measuring during the scroll is how that
     // gets in — so every element is read as the send pins and never after, and
     // every frame beyond that is arithmetic on scrollTop.
+    //
+    // The bubble is read more than once as the fold comes on — its box, and what
+    // its wrapper wears around the box, unfolded and then folded (`wrapLoss`).
+    // That is still the pin and still not the scroll, which is the line this
+    // test holds: the count may be whatever the pin needs, and must not move
+    // while scrolling.
     const h = harness();
     const bubble = vi.fn(() => ({ height: FOLD_MAX_HEIGHT }) as DOMRect);
     const root = vi.fn(() => ({ top: 0 }) as DOMRect);
@@ -150,9 +156,11 @@ describe('useScrollFold', () => {
     h.scrollBy(100);
     h.scrollBy(100);
 
-    // One reading each as it pins, and not one more across two scrolled frames.
-    expect(onPin).toEqual([1, 1, 1]);
-    expect([bubble, root, sentinel].map(fn => fn.mock.calls.length)).toEqual([1, 1, 1]);
+    // The container and the sentinel are read once as it pins; the bubble as
+    // many times as the pin needs. Not one more of any across two scrolled frames.
+    expect(onPin.slice(1)).toEqual([1, 1]);
+    expect(onPin[0]).toBeGreaterThan(0);
+    expect([bubble, root, sentinel].map(fn => fn.mock.calls.length)).toEqual(onPin);
   });
 
   it('starts already folded by whatever the send had scrolled past before pinning', () => {

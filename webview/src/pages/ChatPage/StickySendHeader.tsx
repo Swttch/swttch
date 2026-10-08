@@ -72,7 +72,7 @@ export function StickySendHeader(props: Props) {
   }, []);
 
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const { height: foldHeight, restingHeight } = useScrollFold(scrollRoot, pinned, bubbleRef, sentinelRef);
+  const { height: foldHeight, restingHeight, wrapLoss } = useScrollFold(scrollRoot, pinned, bubbleRef, sentinelRef);
 
   // What the fold takes off the bubble is added back here, immediately after
   // the pinned element and outside it.
@@ -89,9 +89,16 @@ export function StickySendHeader(props: Props) {
   // render would force a reflow every frame and still be a frame behind. Both
   // sides floor at one line, or they would drift apart once the fold bottoms
   // out and the spacer would keep growing under a bubble that had stopped.
+  //
+  // The box is not all that folds: the footer row and the padding around the
+  // box change too (see `wrapLoss`), and the slot has to come out the same
+  // length folded or not. A transcript that changes length when this pins or
+  // unpins drags a view that follows the bottom along with it, and that moves
+  // the sentinel back across the line that decided to pin — the bubble then
+  // flips between folded and unfolded every frame.
   const spacer = foldHeight === null
     ? 0
-    : Math.max(restingHeight - Math.max(foldHeight, FOLD_MIN_HEIGHT), 0);
+    : Math.max(restingHeight - Math.max(foldHeight, FOLD_MIN_HEIGHT), 0) + Math.max(wrapLoss, 0);
 
   const scrollToSelf = () => {
     // The options are shared with the send index, so a jump lands the same way
