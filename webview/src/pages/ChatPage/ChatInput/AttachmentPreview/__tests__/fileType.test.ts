@@ -1,5 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { FileKind, extensionOf, extensionTag, fileKindOf } from '../fileType';
+import { FileKind, extensionOf, extensionTag, fileKindOf, isPictureName } from '../fileType';
+
+describe('isPictureName', () => {
+  it.each(['a.png', 'a.PNG', 'a.jpg', 'a.jpeg', 'a.gif', 'a.webp', 'a.svg', 'a.bmp', 'a.ico', 'a.avif', 'KakaoTalk_Photo 001.jpeg'])(
+    'counts %s as a picture a browser can draw',
+    (name) => expect(isPictureName(name)).toBe(true),
+  );
+
+  it.each(['a.heic', 'a.tiff', 'a.psd', 'a.pdf', 'png', 'a.png.txt', '.png', 'Makefile'])(
+    'does not count %s',
+    (name) => expect(isPictureName(name)).toBe(false),
+  );
+});
 
 describe('fileKindOf', () => {
   it.each([

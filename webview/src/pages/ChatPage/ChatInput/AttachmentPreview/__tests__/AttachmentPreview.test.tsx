@@ -314,6 +314,81 @@ describe('AttachmentPreview cards', () => {
   });
 });
 
+describe('AttachmentPreview picture files', () => {
+  const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/photos/' + name });
+  const answerWith = (picture: Record<string, string>) =>
+    requestMock.mockImplementation(async (_type: string, payload: { path?: string }) => {
+      const found = payload.path && picture[payload.path];
+      return found ? { kind: 'image', mimeType: 'image/jpeg', base64: found } : { kind: 'none' };
+    });
+  const cardsIn = (container: HTMLElement) => container.querySelectorAll('.w-16.h-16');
+
+  it('turns the row into cards for a picture picked by path, with no pasted picture in it', async () => {
+    answerWith({ '/photos/a.jpeg': 'AAA' });
+    const { container } = render(<AttachmentPreview attachments={[file('a.jpeg'), file('notes.txt')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+
+    // the picture file and the other file, both as cards
+    expect(cardsIn(container)).toHaveLength(2);
+  });
+
+  it('keeps pills for a file that is not a picture', () => {
+    const { container } = render(<AttachmentPreview attachments={[file('notes.txt'), file('report.pdf')]} onRemove={vi.fn()} onReorder={vi.fn()} />);
+    expect(cardsIn(container)).toHaveLength(0);
+  });
+
+  it('shows a picture file as a thumbnail alone, without the corner icon and extension a text card carries', async () => {
+    answerWith({ '/photos/a.jpeg': 'AAA' });
+    const { container } = render(<AttachmentPreview attachments={[file('a.jpeg')]} onRemove={vi.fn()} />);
+
+    await waitFor(() => expect(container.querySelector('img[src="data:image/jpeg;base64,AAA"]')).not.toBeNull());
+    expect(screen.queryByText('JPEG')).toBeNull();
+    expect(container.querySelector('.top-0\\.5.start-0\\.5')).toBeNull();
+  });
+
+  it('opens the viewer on a picture file, as it does for a pasted picture', async () => {
+    answerWith({ '/photos/a.jpeg': 'AAA' });
+    const { container } = render(<AttachmentPreview attachments={[file('a.jpeg')]} onRemove={vi.fn()} />);
+    await waitFor(() => expect(container.querySelector('img[src="data:image/jpeg;base64,AAA"]')).not.toBeNull());
+
+    fireEvent.click(screen.getByAltText('a.jpeg'));
+
+    await waitFor(() => expect(screen.getByAltText('Full size').getAttribute('src')).toBe('data:image/jpeg;base64,AAA'));
+  });
+
+  it('steps through pasted pictures and picture files together, in the order of the row', async () => {
+    answerWith({ '/photos/a.jpeg': 'FILE-A', '/photos/b.jpeg': 'FILE-B' });
+    const attachments = [file('a.jpeg'), image('PASTED'), file('notes.txt'), file('b.jpeg')];
+    const { container } = render(<AttachmentPreview attachments={attachments} onRemove={vi.fn()} />);
+    await waitFor(() => expect(container.querySelector('img[src="data:image/jpeg;base64,FILE-B"]')).not.toBeNull());
+
+    fireEvent.click(screen.getByAltText('a.jpeg'));
+    await waitFor(() => expect(screen.getByAltText('Full size').getAttribute('src')).toBe('data:image/jpeg;base64,FILE-A'));
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(screen.getByAltText('Full size').getAttribute('src')).toBe('data:image/png;base64,PASTED');
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    // the text file sits between two pictures and takes no place in the viewer
+    expect(screen.getByAltText('Full size').getAttribute('src')).toBe('data:image/jpeg;base64,FILE-B');
+  });
+
+  it('does nothing on a click when the picture never arrived, for example one too big to send', async () => {
+    answerWith({});
+    const { container } = render(<AttachmentPreview attachments={[file('huge.jpeg')]} onRemove={vi.fn()} />);
+    await waitFor(() => expect(requestMock).toHaveBeenCalled());
+
+    const card = container.querySelector('[data-attachment-id]') as HTMLElement;
+    fireEvent.click(card.querySelector('.w-16.h-16') as HTMLElement);
+
+    expect(screen.queryByAltText('Full size')).toBeNull();
+    // the card still tells what it is
+    expect(screen.getByText('JPEG')).toBeInTheDocument();
+  });
+
+  it('treats a picture no browser can draw as an ordinary file', () => {
+    const { container } = render(<AttachmentPreview attachments={[file('photo.heic')]} onRemove={vi.fn()} />);
+    expect(cardsIn(container)).toHaveLength(0);
+  });
+});
+
 describe('AttachmentPreview ordering', () => {
   const file = (name: string) => new FileAttachment({ fileName: name, absolutePath: '/tmp/' + name });
   const draggable = (container: HTMLElement) => Array.from(container.querySelectorAll('[data-attachment-id]')) as HTMLElement[];

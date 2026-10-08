@@ -52,7 +52,12 @@ const TEXT_EXTENSIONS = new Set([
   'hpp', 'cs', 'php', 'sh', 'bash', 'zsh',
 ]);
 
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+/**
+ * The same limit a picture has when it is pasted or dropped inline. A picture
+ * picked by path is shown and opened like one, so it must not give up at a size
+ * where the inline kind would still be accepted. Phone photos are mostly 2 to 8 MB.
+ */
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 32 * 1024 * 1024;
 /** How much of a file is read to find its first lines. */
 const TEXT_SNIFF_BYTES = 4096;

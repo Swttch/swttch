@@ -10,6 +10,8 @@ import { UploadChip } from './UploadChip';
 import { FileTile, FolderTile, UploadTile } from './Tiles';
 import { SortableChip } from './SortableChip';
 import { idsAfterDrag } from './attachmentOrder';
+import { isPictureName } from './fileType';
+import { usePictureSources } from './usePictureSources';
 
 interface Props {
   attachments: Attachment[];
@@ -28,29 +30,42 @@ export function AttachmentPreview(props: Props) {
   // the whole set, and a single preview only knows itself. This is also what
   // keeps the composer's viewer the same component the transcript opens.
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
+  const pictureSources = usePictureSources(attachments);
 
   if (attachments.length === 0 && uploads.length === 0) return null;
 
-  // Only images are reachable from the viewer, so their positions are counted
-  // among themselves — a file or folder chip sitting between two images must not
-  // shift the index the viewer opens on.
-  const images = attachments.filter(isImageAttachment);
+  // A picture is a picture however it got here: pasted or dropped (inline), or a
+  // picture file picked or dropped by path. Pictures are what the viewer steps
+  // through, in the order of the row.
+  const isPicture = (att: Attachment) => isImageAttachment(att) || (isFileAttachment(att) && isPictureName(att.fileName));
+  const pictures = attachments.filter(isPicture);
+
+  // What the viewer can show. A picture file whose picture has not arrived, or is
+  // too big to send, is left out, and a click on its card does nothing.
+  const viewable = pictures.flatMap((att) => {
+    const src = isImageAttachment(att) ? att.dataUrl : pictureSources[att.id];
+    return src ? [{ id: att.id, src }] : [];
+  });
+  const openPicture = (id: string) => {
+    const index = viewable.findIndex((picture) => picture.id === id);
+    if (index !== -1) setOpenedIndex(index);
+  };
 
   // A thumbnail makes the row as tall as a 64px square. Beside it a one-line pill
-  // looks lost, so while any image is in the row the other chips take the same
-  // square form; with no image they stay the compact pills.
-  const asCards = images.length > 0;
+  // looks lost, so while any picture is in the row the other chips take the same
+  // square form; with no picture they stay the compact pills.
+  const asCards = pictures.length > 0;
 
   // One attachment alone has nowhere to move, so it does not invite a drag.
   const sortable = attachments.length > 1 && onReorder !== undefined;
 
   const chipOf = (att: Attachment): ReactElement | null => {
     if (isImageAttachment(att)) {
-      return <ImagePreview attachment={att} onRemove={onRemove} onOpen={() => setOpenedIndex(images.indexOf(att))} />;
+      return <ImagePreview attachment={att} onRemove={onRemove} onOpen={() => openPicture(att.id)} />;
     }
     if (isFileAttachment(att)) {
       return asCards
-        ? <FileTile attachment={att} onRemove={onRemove} />
+        ? <FileTile attachment={att} onRemove={onRemove} onOpenPicture={() => openPicture(att.id)} />
         : <FileChip attachment={att} onRemove={onRemove} />;
     }
     if (isFolderAttachment(att)) {
@@ -95,7 +110,7 @@ export function AttachmentPreview(props: Props) {
       */}
       {openedIndex !== null && (
         <ImageLightbox
-          srcs={images.map((img) => img.dataUrl)}
+          srcs={viewable.map((picture) => picture.src)}
           initialIndex={openedIndex}
           onClose={() => setOpenedIndex(null)}
         />

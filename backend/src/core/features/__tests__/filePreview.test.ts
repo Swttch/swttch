@@ -88,6 +88,11 @@ describe('readFilePreview', () => {
     });
   });
 
+  it('sends a phone-sized picture of a few megabytes, so a picked photo is not left as an icon', async () => {
+    const path = await fileWith('phone-photo.jpeg', Buffer.alloc(4 * 1024 * 1024, 1));
+    expect(await readFilePreview(path)).toMatchObject({ kind: 'image', mimeType: 'image/jpeg' });
+  });
+
   it('leaves a picture over the limit on its icon', async () => {
     const path = await fileWith('huge.png', Buffer.alloc(MAX_IMAGE_BYTES + 1));
     expect(await readFilePreview(path)).toMatchObject({ kind: 'none' });

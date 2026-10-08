@@ -1,7 +1,7 @@
 import type { FileAttachment, FolderAttachment, PendingUpload } from '../../../../types';
 import { AttachmentTile, FileGlyph } from './AttachmentTile';
 import { FileTypeIcon } from './FileTypeIcon';
-import { extensionTag } from './fileType';
+import { extensionTag, isPictureName } from './fileType';
 import type { FilePreviewResult } from './loadFilePreview';
 import { useFilePreview } from './useFilePreview';
 
@@ -40,9 +40,21 @@ function PreviewFace(props: { preview: Exclude<FilePreviewResult, { kind: 'none'
   );
 }
 
-export function FileTile(props: { attachment: FileAttachment; onRemove: (id: string) => void }) {
-  const { attachment, onRemove } = props;
+interface FileTileProps {
+  attachment: FileAttachment;
+  onRemove: (id: string) => void;
+  /** Open the viewer on this picture. Only a picture file that has its picture can be opened. */
+  onOpenPicture?: () => void;
+}
+
+export function FileTile(props: FileTileProps) {
+  const { attachment, onRemove, onOpenPicture } = props;
   const preview = useFilePreview(attachment.absolutePath);
+
+  // A picture file looks like a picture pasted into the box: the thumbnail alone,
+  // with no corner marks, and a click that opens it. The corner marks are for the
+  // files whose face is only a hint of what is inside.
+  const asPicture = isPictureName(attachment.fileName) && preview.kind === 'image';
 
   return (
     <AttachmentTile
@@ -51,9 +63,19 @@ export function FileTile(props: { attachment: FileAttachment; onRemove: (id: str
       size={attachment.size}
       onRemove={() => onRemove(attachment.id)}
     >
-      {preview.kind === 'none'
-        ? <FileGlyph name={attachment.fileName} />
-        : <PreviewFace preview={preview} name={attachment.fileName} tag={extensionTag(attachment.fileName)} />}
+      {asPicture ? (
+        <img
+          src={preview.src}
+          alt={attachment.fileName}
+          draggable={false}
+          className="w-full h-full object-cover cursor-pointer"
+          onClick={onOpenPicture}
+        />
+      ) : preview.kind === 'none' ? (
+        <FileGlyph name={attachment.fileName} />
+      ) : (
+        <PreviewFace preview={preview} name={attachment.fileName} tag={extensionTag(attachment.fileName)} />
+      )}
     </AttachmentTile>
   );
 }

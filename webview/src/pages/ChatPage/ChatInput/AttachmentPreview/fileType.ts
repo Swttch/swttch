@@ -49,6 +49,20 @@ export function fileKindOf(fileName: string): FileKind {
   return KIND_BY_EXTENSION.get(extensionOf(fileName)) ?? FileKind.Other;
 }
 
+/**
+ * The picture files a browser can draw as they are. These are the ones that behave
+ * like an inline picture wherever they came from: a thumbnail, and a click that
+ * opens the viewer. heic and tiff are pictures too, but no browser draws them, so
+ * they stay file cards with an icon.
+ *
+ * The backend keeps the same list when it decides which files to send as pictures.
+ */
+const PICTURE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif']);
+
+export function isPictureName(fileName: string): boolean {
+  return PICTURE_EXTENSIONS.has(extensionOf(fileName));
+}
+
 /** The extension as a short upper-case tag for the icon, cut to what fits on it. */
 export function extensionTag(fileName: string): string {
   return extensionOf(fileName).slice(0, 4).toUpperCase();
