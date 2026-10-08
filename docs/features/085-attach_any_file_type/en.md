@@ -63,6 +63,8 @@ With no picture in the row, attachments are **compact chips**. Each has the **ic
 
 ### Cards
 
+**A picture counts as a picture however it arrived**: pasted or dropped into the box, or a picture file picked with **+** or dropped by path. Any of them turns the row into cards, shows as a **thumbnail**, and **opens the viewer on a click**, where the arrow keys step through every picture in the row in the order of the row. A picture file whose picture cannot be shown (it is over 10 MB, or it is gone) stays a card with its icon and does not open.
+
 As soon as a **picture** joins the row, the row is as tall as its thumbnail, and a thin pill beside it looks lost. So every other attachment, folders and travelling uploads included, takes the **same square shape**:
 
 ![The message box with eight square cards under the sentence. The first is a picture. The next three show a text preview, a video frame and a log preview. The rest show only an icon: a PDF, a spreadsheet, a Kotlin build file and a script with no extension.](./assets/attachment-cards.png)
@@ -72,7 +74,7 @@ Each card shows the file's **icon, or a preview** of it:
 | What the file is | What the card shows |
 |------------------|---------------------|
 | Text, in the list below | The **first 12 lines** (40 characters each) as a tiny page |
-| A picture the browser can draw: svg, bmp, ico, avif, and png, jpeg, gif, webp when attached by path | The picture. Up to **2 MB**. |
+| A picture file the browser can draw: png, jpeg, gif, webp, svg, bmp, ico, avif | The **picture itself**, as a thumbnail. Up to **10 MB**. |
 | A video: mov, mp4, m4v, webm | A **frame from the start**. Up to **32 MB**, and only if the browser can play that video. |
 | Anything else, or anything over those sizes | The file type's icon |
 
@@ -128,7 +130,7 @@ Claude gets the **paths of files and folders listed in the order you set**, and 
 - Dropping an **empty folder** into a browser fails: there is nothing to copy, and the line under the chips names it. Empty subfolders inside a folder are not kept.
 - A **huge folder** (think `node_modules`) is sent file by file and takes as long as that takes. Cancel it with the **×** on its chip.
 - Pasting a **folder** works only where the browser hands the folder over; if it does not, the line under the chips names it.
-- A video the browser cannot play, a picture over 2 MB and a video over 32 MB keep their icon. The file is still attached, only the preview is missing.
+- A video the browser cannot play, a picture over 10 MB and a video over 32 MB keep their icon. The file is still attached, only the preview is missing.
 - On Linux the system icon exists only if the machine has the shared MIME database and an icon theme. Some desktops know `.ts` as a Qt translation file, and its icon is the plain-text one.
 - On Windows the system icon is 32 pixels, so on a high-resolution screen it can look a little soft.
 - The kind of a file is judged by its **name**, never by opening it. A PDF renamed `.txt` gets a text icon and, because its content is not text, no preview.
