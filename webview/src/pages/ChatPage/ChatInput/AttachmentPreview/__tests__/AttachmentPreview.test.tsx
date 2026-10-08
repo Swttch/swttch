@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { AttachmentPreview } from '../index';
-import { ImageAttachment, FileAttachment } from '@/types';
+import { ImageAttachment, FileAttachment, PendingUpload } from '@/types';
 
 /** A pixel's worth of base64, distinct per image so src comparisons are exact. */
 function image(tag: string): ImageAttachment {
@@ -86,5 +86,44 @@ describe('AttachmentPreview viewer', () => {
     const { container } = render(<AttachmentPreview attachments={[]} onRemove={vi.fn()} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('AttachmentPreview uploads', () => {
+  const upload = (sent: number, total = 100, label = 'clip.mov', isFolder = false) =>
+    new PendingUpload({ label, isFolder, sentBytes: sent, totalBytes: total });
+
+  it('shows a file that is still travelling, with how much of it has gone', () => {
+    render(<AttachmentPreview attachments={[]} uploads={[upload(37)]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    expect(screen.getByText('clip.mov')).toBeInTheDocument();
+    expect(screen.getByText('37%')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '37');
+  });
+
+  it('writes a slash after the name of a folder, as its finished chip does', () => {
+    render(<AttachmentPreview attachments={[]} uploads={[upload(0, 0, 'photos', true)]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    expect(screen.getByText('photos/')).toBeInTheDocument();
+    // The size is not known while the folder is still being listed.
+    expect(screen.queryByText(/%/)).toBeNull();
+  });
+
+  it('draws the finished chips first and the travelling ones after them', () => {
+    const done = new FileAttachment({ fileName: 'notes.txt', absolutePath: '/tmp/notes.txt' });
+    render(<AttachmentPreview attachments={[done]} uploads={[upload(10)]} onRemove={vi.fn()} onCancelUpload={vi.fn()} />);
+
+    const names = [screen.getByText('notes.txt'), screen.getByText('clip.mov')];
+    expect(names[0].compareDocumentPosition(names[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('stops that one upload when its × is pressed', () => {
+    const onCancelUpload = vi.fn();
+    const pending = upload(10);
+    render(<AttachmentPreview attachments={[]} uploads={[pending]} onRemove={vi.fn()} onCancelUpload={onCancelUpload} />);
+
+    fireEvent.click(screen.getByRole('button'));
+
+    expect(onCancelUpload).toHaveBeenCalledWith(pending.id);
   });
 });

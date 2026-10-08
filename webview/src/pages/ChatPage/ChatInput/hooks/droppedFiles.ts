@@ -100,18 +100,40 @@ interface UploadAck {
 
 type Request = (type: string, payload: Record<string, unknown>) => Promise<UploadAck | undefined>;
 
+/** Thrown when the person removes a chip while its bytes are still travelling. */
+export class UploadCancelledError extends Error {
+  constructor() {
+    super('Upload cancelled');
+  }
+}
+
+/** What the caller wants to know about, and how it can stop, an upload in flight. */
+export interface UploadControl {
+  /** Called after every chunk the backend has stored: bytes sent so far of the bytes in total. */
+  onProgress?: (sentBytes: number, totalBytes: number) => void;
+  /** Asked before every chunk; true ends the upload with {@link UploadCancelledError}. */
+  isCancelled?: () => boolean;
+}
+
 /**
  * Send one file chunk by chunk. Each chunk waits for its ACK before the next goes
  * out, so a large recording never piles up in the socket. Returns the ACK of the
  * last chunk, which carries the saved path.
+ *
+ * `sentBefore` and `total` place this file inside a bigger transfer (a folder),
+ * so the progress it reports is the whole transfer's, not the file's.
  */
 async function sendFile(
   file: File,
   request: Request,
   upload: { uploadId: string; relativePath?: string },
+  control: UploadControl,
+  sentBefore: number,
+  total: number,
 ): Promise<UploadAck> {
   let offset = 0;
   for (;;) {
+    if (control.isCancelled?.()) throw new UploadCancelledError();
     const end = Math.min(offset + UPLOAD_CHUNK_BYTES, file.size);
     const last = end >= file.size;
     const ack = await request(MessageType.UPLOAD_FILE_CHUNK, {
@@ -123,6 +145,7 @@ async function sendFile(
       last,
     });
     if (ack?.status === 'error') throw new Error(ack.error ?? 'Upload failed');
+    control.onProgress?.(sentBefore + end, total);
     if (last) {
       if (!ack?.path) throw new Error('Upload finished without a saved path');
       return ack;
@@ -138,9 +161,14 @@ async function sendFile(
  * over the socket instead and the backend writes them under the user-data
  * directory.
  */
-export async function uploadFile(file: File, request: Request): Promise<string> {
-  const ack = await sendFile(file, request, { uploadId: crypto.randomUUID() });
+export async function uploadFile(file: File, request: Request, control: UploadControl = {}): Promise<string> {
+  const ack = await sendFile(file, request, { uploadId: crypto.randomUUID() }, control, 0, file.size);
   return ack.path as string;
+}
+
+/** Bytes a folder's files add up to, which is what its progress counts against. */
+export function totalBytesOf(files: FolderFile[]): number {
+  return files.reduce((sum, { file }) => sum + file.size, 0);
 }
 
 /**
@@ -148,13 +176,16 @@ export async function uploadFile(file: File, request: Request): Promise<string> 
  * copy of that folder. Its files keep their places below it, so the model can
  * walk the copy the way it would walk the original.
  */
-export async function uploadFolder(files: FolderFile[], request: Request): Promise<string> {
+export async function uploadFolder(files: FolderFile[], request: Request, control: UploadControl = {}): Promise<string> {
   if (files.length === 0) throw new Error('The folder has no files to upload');
   const uploadId = crypto.randomUUID();
+  const total = totalBytesOf(files);
+  let sentBefore = 0;
   let rootPath: string | undefined;
   for (const { file, relativePath } of files) {
-    const ack = await sendFile(file, request, { uploadId, relativePath });
+    const ack = await sendFile(file, request, { uploadId, relativePath }, control, sentBefore, total);
     rootPath = ack.rootPath ?? rootPath;
+    sentBefore += file.size;
   }
   if (!rootPath) throw new Error('Upload finished without a saved folder path');
   return rootPath;

@@ -160,10 +160,12 @@ export function ChatInput() {
 
   const {
     attachments,
+    uploads,
     addImageAttachment,
     addFileAttachment,
     addFolderAttachment,
     removeAttachment,
+    cancelUpload,
     clearAttachments,
     error: attachmentError,
     isDragOver,
@@ -581,6 +583,8 @@ export function ChatInput() {
    */
   const submitComposer = useCallback((invertFollowUp = false) => {
     if (disabled) return;
+    // A file still travelling has no path yet, so the message would leave without it.
+    if (uploads.length > 0) return;
     if (!value.trim() && attachments.length === 0) return;
 
     if (recipient) {
@@ -623,6 +627,7 @@ export function ChatInput() {
     disabled,
     value,
     attachments,
+    uploads,
     pushToHistory,
     recipient,
     sendToSession,
@@ -1110,7 +1115,7 @@ export function ChatInput() {
         if (target) setCaretOffset(target, applied.length);
       });
     }
-  }, [disabled, value, attachments.length, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
+  }, [disabled, value, attachments.length, submitComposer, onSubmit, pushToHistory, navigateUp, navigateDown, onChange, palette, mention, promptLibrary, cycleMode, clearAttachments, mode, appSettings.useCtrlEnterToSend, appSettings.composerSendShortcut, appSettings.composerSendShortcutCustom, appSettings.composerNewlineShortcut, appSettings.composerNewlineShortcutCustom, ime, handleRichChange, textareaRef, renameGhost]);
 
   // Wrap the attachment paste handler so files keep their dedicated path while
   // text goes through the browser's own editing pipeline.
@@ -1145,7 +1150,7 @@ export function ChatInput() {
     // undo entry, and fires `input`, which handleRichChange picks up.
   }, [handlePaste, pasteFromHost]);
 
-  const hasValue = !!value.trim() || attachments.length > 0;
+  const hasValue = (!!value.trim() || attachments.length > 0) && uploads.length === 0;
 
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
@@ -1462,7 +1467,9 @@ export function ChatInput() {
         {/* 첨부 미리보기 */}
         <AttachmentPreview
           attachments={attachments}
+          uploads={uploads}
           onRemove={removeAttachment}
+          onCancelUpload={cancelUpload}
         />
 
         {/* 에러 메시지 */}

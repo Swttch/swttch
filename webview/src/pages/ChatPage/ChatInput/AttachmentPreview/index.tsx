@@ -1,25 +1,29 @@
 import { useState } from 'react';
-import type { Attachment } from '../../../../types';
+import type { Attachment, PendingUpload } from '../../../../types';
 import { isImageAttachment, isFileAttachment, isFolderAttachment } from '../../../../types';
 import { ImageLightbox } from '@/components/ImageLightbox';
 import { ImagePreview } from './ImagePreview';
 import { FileChip } from './FileChip';
 import { FolderChip } from './FolderChip';
+import { UploadChip } from './UploadChip';
 
 interface Props {
   attachments: Attachment[];
+  /** Files and folders still travelling to the backend; drawn after the finished ones. */
+  uploads?: PendingUpload[];
   onRemove: (id: string) => void;
+  onCancelUpload?: (id: string) => void;
 }
 
 export function AttachmentPreview(props: Props) {
-  const { attachments, onRemove } = props;
+  const { attachments, uploads = [], onRemove, onCancelUpload } = props;
 
   // Held here rather than inside ImagePreview: stepping to the next image needs
   // the whole set, and a single preview only knows itself. This is also what
   // keeps the composer's viewer the same component the transcript opens.
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
 
-  if (attachments.length === 0) return null;
+  if (attachments.length === 0 && uploads.length === 0) return null;
 
   // Only images are reachable from the viewer, so their positions are counted
   // among themselves — a file or folder chip sitting between two images must not
@@ -48,6 +52,9 @@ export function AttachmentPreview(props: Props) {
           }
           return null;
         })}
+        {onCancelUpload && uploads.map((upload) => (
+          <UploadChip key={upload.id} upload={upload} onCancel={onCancelUpload} />
+        ))}
       </div>
 
       {/*

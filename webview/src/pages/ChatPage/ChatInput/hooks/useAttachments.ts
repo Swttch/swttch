@@ -1,11 +1,19 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { Attachment, ImageAttachment, FileAttachment, FolderAttachment, ATTACHMENT_LIMITS, ImageAttachSource } from '../../../../types';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { Attachment, ImageAttachment, FileAttachment, FolderAttachment, PendingUpload, ATTACHMENT_LIMITS, ImageAttachSource } from '../../../../types';
 import { useTranslation } from '@/i18n';
 import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 import { isJetBrains } from '@/config/environment';
 import { basename } from '../basename';
-import { collectFolderFiles, readDroppedEntries, uploadFile, uploadFolder, type DroppedEntry } from './droppedFiles';
+import {
+  collectFolderFiles,
+  readDroppedEntries,
+  totalBytesOf,
+  uploadFile,
+  uploadFolder,
+  UploadCancelledError,
+  type DroppedEntry,
+} from './droppedFiles';
 
 function isInlineImageType(mimeType: string): boolean {
   return ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES.includes(mimeType as (typeof ATTACHMENT_LIMITS.ALLOWED_IMAGE_MIME_TYPES)[number]);
@@ -37,21 +45,27 @@ function reportImageAttached(source: ImageAttachSource, file: File): void {
 
 export interface UseAttachmentsReturn {
   attachments: Attachment[];
+  /** Files and folders still travelling to the backend; each becomes an attachment when it lands. */
+  uploads: PendingUpload[];
   addImageAttachment: (file: File, source: ImageAttachSource) => Promise<void>;
   addFileAttachment: (absolutePath: string, fileName: string, size?: number) => void;
   addFolderAttachment: (absolutePath: string, folderName: string) => void;
   removeAttachment: (id: string) => void;
+  /** Stop an upload in flight and drop its chip. */
+  cancelUpload: (id: string) => void;
   clearAttachments: () => void;
   error: string | null;
   isDragOver: boolean;
   setIsDragOver: (v: boolean) => void;
-  handlePaste: (e: React.ClipboardEvent<HTMLElement>) => void;
-  handleDrop: (e: React.DragEvent) => void;
+  handlePaste: (e: React.ClipboardEvent<HTMLElement>) => Promise<void>;
+  handleDrop: (e: React.DragEvent) => Promise<void>;
 }
 
 export function useAttachments(): UseAttachmentsReturn {
   const { t } = useTranslation('chat');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploads, setUploads] = useState<PendingUpload[]>([]);
+  const cancelledUploads = useRef(new Set<string>());
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -143,31 +157,69 @@ export function useAttachments(): UseAttachmentsReturn {
    * different strings for the same file, so the dedup guard can't collapse them.
    */
   const attachEntries = useCallback(async (entries: DroppedEntry[], source: ImageAttachSource) => {
-    for (const { file, isDirectory, directory } of entries) {
-      if (!isDirectory && isInlineImageType(file.type)) {
-        await addImageAttachment(file, source);
+    const isInline = ({ file, isDirectory }: DroppedEntry) => !isDirectory && isInlineImageType(file.type);
+
+    // Every chip that will need an upload appears at once, so the person sees the
+    // whole drop and not only the file being sent at the moment.
+    const pending = new Map<DroppedEntry, PendingUpload>();
+    if (!isJetBrains()) {
+      for (const entry of entries.filter((e) => !isInline(e))) {
+        pending.set(entry, new PendingUpload({
+          label: entry.directory?.name ?? entry.file.name,
+          isFolder: entry.directory !== null,
+          totalBytes: entry.directory ? 0 : entry.file.size,
+        }));
+      }
+      if (pending.size > 0) setUploads((prev) => [...prev, ...pending.values()]);
+    }
+
+    const request = (type: string, payload: Record<string, unknown>) => getBridge().request(type, payload);
+
+    for (const entry of entries) {
+      if (isInline(entry)) {
+        await addImageAttachment(entry.file, source);
         continue;
       }
-      if (isJetBrains()) continue;
+      const upload = pending.get(entry);
+      if (!upload) continue; // the IDE supplies the path itself
+
+      const control = {
+        onProgress: (sentBytes: number, totalBytes: number) =>
+          setUploads((prev) => prev.map((u) => (u.id === upload.id ? u.withProgress(sentBytes, totalBytes) : u))),
+        isCancelled: () => cancelledUploads.current.has(upload.id),
+      };
 
       // A browser never reveals a file's path, so the file is uploaded and the
       // chip points at the saved copy.
-      const request = (type: string, payload: Record<string, unknown>) => getBridge().request(type, payload);
       try {
-        if (directory) {
-          const savedPath = await uploadFolder(await collectFolderFiles(directory), request);
-          addFolderAttachment(savedPath, directory.name);
+        if (control.isCancelled()) throw new UploadCancelledError();
+        if (entry.directory) {
+          const files = await collectFolderFiles(entry.directory);
+          control.onProgress(0, totalBytesOf(files));
+          const savedPath = await uploadFolder(files, request, control);
+          addFolderAttachment(savedPath, entry.directory.name);
         } else {
-          const savedPath = await uploadFile(file, request);
-          addFileAttachment(savedPath, file.name || basename(savedPath), file.size);
+          const savedPath = await uploadFile(entry.file, request, control);
+          addFileAttachment(savedPath, entry.file.name || basename(savedPath), entry.file.size);
         }
       } catch (err) {
-        console.error('[useAttachments] File upload failed:', err);
-        setError(t('chatInput.attachments.errors.uploadFailed', { name: file.name }));
-        setTimeout(() => setError(null), 3000);
+        // Removing the chip is the person's own choice, not a failure to report.
+        if (!(err instanceof UploadCancelledError)) {
+          console.error('[useAttachments] File upload failed:', err);
+          setError(t('chatInput.attachments.errors.uploadFailed', { name: upload.label }));
+          setTimeout(() => setError(null), 3000);
+        }
+      } finally {
+        cancelledUploads.current.delete(upload.id);
+        setUploads((prev) => prev.filter((u) => u.id !== upload.id));
       }
     }
   }, [addImageAttachment, addFileAttachment, addFolderAttachment, t]);
+
+  const cancelUpload = useCallback((id: string) => {
+    cancelledUploads.current.add(id);
+    setUploads((prev) => prev.filter((u) => u.id !== id));
+  }, []);
 
   const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLElement>) => {
     if (!e.clipboardData) return;
@@ -198,15 +250,17 @@ export function useAttachments(): UseAttachmentsReturn {
 
   return useMemo(() => ({
     attachments,
+    uploads,
     addImageAttachment,
     addFileAttachment,
     addFolderAttachment,
     removeAttachment,
+    cancelUpload,
     clearAttachments,
     error,
     isDragOver,
     setIsDragOver,
     handlePaste,
     handleDrop,
-  }), [attachments, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, clearAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
+  }), [attachments, uploads, addImageAttachment, addFileAttachment, addFolderAttachment, removeAttachment, cancelUpload, clearAttachments, error, isDragOver, setIsDragOver, handlePaste, handleDrop]);
 }

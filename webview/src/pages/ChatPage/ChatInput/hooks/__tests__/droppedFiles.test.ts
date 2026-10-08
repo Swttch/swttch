@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { MessageType } from '@/shared';
-import { collectFolderFiles, readDroppedEntries, uploadFile, uploadFolder, UPLOAD_CHUNK_BYTES } from '../droppedFiles';
+import {
+  collectFolderFiles,
+  readDroppedEntries,
+  uploadFile,
+  uploadFolder,
+  UploadCancelledError,
+  UPLOAD_CHUNK_BYTES,
+} from '../droppedFiles';
 
 interface Sent {
   type: string;
@@ -186,5 +193,62 @@ describe('uploadFolder', () => {
     ];
     await expect(uploadFolder(files, request)).rejects.toThrow('disk full');
     expect(calls).toBe(1);
+  });
+});
+
+describe('upload progress and cancellation', () => {
+  it('reports the bytes stored so far after every chunk', async () => {
+    const { request } = fakeBackend();
+    const progress: Array<[number, number]> = [];
+    const size = UPLOAD_CHUNK_BYTES * 2 + 10;
+
+    await uploadFile(new File([new Uint8Array(size)], 'big.bin'), request, {
+      onProgress: (sent, total) => progress.push([sent, total]),
+    });
+
+    expect(progress).toEqual([
+      [UPLOAD_CHUNK_BYTES, size],
+      [UPLOAD_CHUNK_BYTES * 2, size],
+      [size, size],
+    ]);
+  });
+
+  it('counts a folder as one transfer, not file by file', async () => {
+    const { request } = fakeBackend();
+    const progress: Array<[number, number]> = [];
+    const files = [
+      { file: new File(['12345'], 'a.txt'), relativePath: 'p/a.txt' },
+      { file: new File(['123'], 'b.txt'), relativePath: 'p/b.txt' },
+    ];
+
+    await uploadFolder(files, async (type, payload) => ({ ...(await request(type, payload)), rootPath: '/saved/p' }), {
+      onProgress: (sent, total) => progress.push([sent, total]),
+    });
+
+    expect(progress).toEqual([[5, 8], [8, 8]]);
+  });
+
+  it('stops before the next chunk once the person has removed the chip', async () => {
+    const { sent, request } = fakeBackend();
+    let cancelled = false;
+
+    await expect(
+      uploadFile(new File([new Uint8Array(UPLOAD_CHUNK_BYTES * 3)], 'big.bin'), request, {
+        onProgress: () => {
+          cancelled = true;
+        },
+        isCancelled: () => cancelled,
+      }),
+    ).rejects.toBeInstanceOf(UploadCancelledError);
+
+    expect(sent).toHaveLength(1);
+  });
+
+  it('sends nothing at all when it was cancelled before the first chunk', async () => {
+    const { sent, request } = fakeBackend();
+    await expect(uploadFile(new File(['x'], 'a.txt'), request, { isCancelled: () => true })).rejects.toBeInstanceOf(
+      UploadCancelledError,
+    );
+    expect(sent).toHaveLength(0);
   });
 });

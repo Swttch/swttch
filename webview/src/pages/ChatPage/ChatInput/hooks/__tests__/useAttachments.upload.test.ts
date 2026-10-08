@@ -161,6 +161,100 @@ describe('useAttachments in a browser', () => {
   });
 });
 
+describe('useAttachments while a file is travelling', () => {
+  /** A backend that holds every answer until the test lets it go. */
+  function heldBackend() {
+    const releases: Array<() => void> = [];
+    requestMock.mockImplementation((_type: string, payload: Record<string, unknown>) =>
+      new Promise((resolve) => {
+        releases.push(() => resolve(payload.last ? { path: `/saved/${payload.fileName}` } : {}));
+      }));
+    return { releaseNext: () => releases.shift()?.() };
+  }
+
+  const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+  it('lists the file as travelling until the backend has stored it, then swaps in the real chip', async () => {
+    const { releaseNext } = heldBackend();
+    const { result } = renderHook(() => useAttachments());
+
+    let dropping: Promise<void> = Promise.resolve();
+    act(() => {
+      dropping = result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
+    });
+    await flush();
+
+    expect(result.current.uploads.map((u) => u.label)).toEqual(['clip.mov']);
+    expect(result.current.attachments).toHaveLength(0);
+
+    await act(async () => {
+      releaseNext();
+      await dropping;
+    });
+
+    expect(result.current.uploads).toHaveLength(0);
+    expect(result.current.attachments).toHaveLength(1);
+  });
+
+  it('lists every dropped file at once, before the first one has finished', async () => {
+    heldBackend();
+    const { result } = renderHook(() => useAttachments());
+
+    act(() => {
+      void result.current.handleDrop(dropOf(file('a.mov', 'video/quicktime'), file('b.pdf', 'application/pdf')));
+    });
+    await flush();
+
+    expect(result.current.uploads.map((u) => u.label)).toEqual(['a.mov', 'b.pdf']);
+  });
+
+  it('stops the upload and says nothing when the person removes the chip', async () => {
+    const { releaseNext } = heldBackend();
+    const { result } = renderHook(() => useAttachments());
+    const big = new File([new Uint8Array(512 * 1024 * 2)], 'big.bin');
+
+    let dropping: Promise<void> = Promise.resolve();
+    act(() => {
+      dropping = result.current.handleDrop(dropOf(big));
+    });
+    await flush();
+    act(() => result.current.cancelUpload(result.current.uploads[0].id));
+    expect(result.current.uploads).toHaveLength(0);
+
+    await act(async () => {
+      releaseNext();
+      await dropping;
+    });
+
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(result.current.attachments).toHaveLength(0);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('drops the travelling chip when the upload fails', async () => {
+    requestMock.mockResolvedValue({ status: 'error', error: 'disk full' });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
+    });
+
+    expect(result.current.uploads).toHaveLength(0);
+  });
+
+  it('shows nothing travelling in the IDE, where no upload happens', async () => {
+    isJetBrainsMock.mockReturnValue(true);
+    const { result } = renderHook(() => useAttachments());
+
+    await act(async () => {
+      await result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
+    });
+
+    expect(result.current.uploads).toHaveLength(0);
+  });
+});
+
 describe('useAttachments in the IDE', () => {
   beforeEach(() => isJetBrainsMock.mockReturnValue(true));
 

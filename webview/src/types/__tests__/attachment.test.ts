@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FolderAttachment } from '../attachment';
+import { FolderAttachment, PendingUpload } from '../attachment';
 
 describe('FolderAttachment', () => {
   describe('absolutePath normalization', () => {
@@ -62,5 +62,28 @@ describe('FolderAttachment', () => {
       });
       expect(att.folderName).toBe('my-folder');
     });
+  });
+});
+
+describe('PendingUpload', () => {
+  it('reports the whole percent already sent', () => {
+    const upload = new PendingUpload({ label: 'clip.mov', isFolder: false, totalBytes: 200 });
+    expect(upload.withProgress(0, 200).percent).toBe(0);
+    expect(upload.withProgress(99, 200).percent).toBe(49);
+    expect(upload.withProgress(200, 200).percent).toBe(100);
+  });
+
+  it('has no percent while there is no size to measure against', () => {
+    // A folder is listed before its size is known, and an empty file has none.
+    expect(new PendingUpload({ label: 'photos', isFolder: true }).percent).toBeNull();
+    expect(new PendingUpload({ label: 'empty.txt', isFolder: false, totalBytes: 0 }).percent).toBeNull();
+  });
+
+  it('keeps its identity while progress moves, so the chip stays the same chip', () => {
+    const upload = new PendingUpload({ label: 'clip.mov', isFolder: false, totalBytes: 10 });
+    const moved = upload.withProgress(5, 10);
+    expect(moved.id).toBe(upload.id);
+    expect(moved.label).toBe('clip.mov');
+    expect(upload.sentBytes).toBe(0);
   });
 });
