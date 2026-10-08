@@ -72,6 +72,10 @@ interface Props {
   path?: string;
   /** The shown label, when it differs from the name (a folder carries a trailing slash). */
   label?: string;
+  /** Size in bytes when already known; otherwise the tooltip asks the backend by path. */
+  size?: number;
+  /** False for a folder, whose size is not told. */
+  withSize?: boolean;
   /** Share uploaded so far, 0 to 100, drawn as a bar along the square's lower edge. */
   progress?: number;
   onRemove: () => void;
@@ -85,7 +89,7 @@ interface Props {
  * pill. The label under the square is the same size as an image thumbnail's.
  */
 export function AttachmentTile(props: Props) {
-  const { children, name, path, label = name, progress, onRemove } = props;
+  const { children, name, path, label = name, size, withSize, progress, onRemove } = props;
 
   return (
     <div className="relative group">
@@ -105,7 +109,7 @@ export function AttachmentTile(props: Props) {
       >
         ×
       </button>
-      <AttachmentNameTooltip name={name} path={path}>
+      <AttachmentNameTooltip name={name} path={path} size={size} withSize={withSize}>
         <div className="text-[0.7692rem] text-text-tertiary truncate max-w-[64px] mt-0.5 text-center">
           {label}
         </div>

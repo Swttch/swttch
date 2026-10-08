@@ -41,7 +41,12 @@ export function FileTile(props: { attachment: FileAttachment; onRemove: (id: str
   const preview = useFilePreview(attachment.absolutePath);
 
   return (
-    <AttachmentTile name={attachment.fileName} path={attachment.absolutePath} onRemove={() => onRemove(attachment.id)}>
+    <AttachmentTile
+      name={attachment.fileName}
+      path={attachment.absolutePath}
+      size={attachment.size}
+      onRemove={() => onRemove(attachment.id)}
+    >
       {preview.kind === 'none'
         ? <FileGlyph name={attachment.fileName} />
         : <PreviewFace preview={preview} tag={extensionTag(attachment.fileName)} />}
@@ -57,6 +62,7 @@ export function FolderTile(props: { attachment: FolderAttachment; onRemove: (id:
       name={attachment.folderName}
       label={attachment.displayLabel}
       path={attachment.absolutePath}
+      withSize={false}
       onRemove={() => onRemove(attachment.id)}
     >
       <FileGlyph isFolder />
@@ -72,6 +78,8 @@ export function UploadTile(props: { upload: PendingUpload; onCancel: (id: string
     <AttachmentTile
       name={upload.label}
       label={upload.isFolder ? `${upload.label}/` : upload.label}
+      size={upload.isFolder ? undefined : upload.totalBytes}
+      withSize={!upload.isFolder}
       progress={percent ?? 0}
       onRemove={() => onCancel(upload.id)}
     >

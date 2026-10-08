@@ -67,35 +67,48 @@ function firstLines(bytes: Buffer): FilePreview {
   return joined === '' ? NONE : { kind: 'text', text: joined };
 }
 
-export async function readFilePreview(path: string): Promise<FilePreview> {
+/** A preview together with the file's size in bytes, which every answer for a real file carries. */
+export type FilePreviewAnswer = FilePreview & { size?: number };
+
+async function previewOf(path: string, size: number): Promise<FilePreview> {
+  const extension = extname(path).slice(1).toLowerCase();
+
+  const imageType = IMAGE_TYPES[extension];
+  if (imageType) {
+    if (size > MAX_IMAGE_BYTES) return NONE;
+    return { kind: 'image', mimeType: imageType, base64: (await readFile(path)).toString('base64') };
+  }
+
+  const videoType = VIDEO_TYPES[extension];
+  if (videoType) {
+    if (size > MAX_VIDEO_BYTES) return NONE;
+    return { kind: 'video', mimeType: videoType, base64: (await readFile(path)).toString('base64') };
+  }
+
+  if (BINARY_EXTENSIONS.has(extension)) return NONE;
+
+  const handle = await open(path, 'r');
+  try {
+    const buffer = Buffer.alloc(Math.min(TEXT_SNIFF_BYTES, size));
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    return firstLines(buffer.subarray(0, bytesRead));
+  } finally {
+    await handle.close();
+  }
+}
+
+/**
+ * What the file at `path` can show of itself, with its size.
+ *
+ * `metadataOnly` answers with the size alone and reads no content, for a chip that
+ * has no room for a preview but still names its size in a tooltip.
+ */
+export async function readFilePreview(path: string, options: { metadataOnly?: boolean } = {}): Promise<FilePreviewAnswer> {
   try {
     const info = await stat(path);
-    if (!info.isFile() || info.size === 0) return NONE;
-
-    const extension = extname(path).slice(1).toLowerCase();
-
-    const imageType = IMAGE_TYPES[extension];
-    if (imageType) {
-      if (info.size > MAX_IMAGE_BYTES) return NONE;
-      return { kind: 'image', mimeType: imageType, base64: (await readFile(path)).toString('base64') };
-    }
-
-    const videoType = VIDEO_TYPES[extension];
-    if (videoType) {
-      if (info.size > MAX_VIDEO_BYTES) return NONE;
-      return { kind: 'video', mimeType: videoType, base64: (await readFile(path)).toString('base64') };
-    }
-
-    if (BINARY_EXTENSIONS.has(extension)) return NONE;
-
-    const handle = await open(path, 'r');
-    try {
-      const buffer = Buffer.alloc(Math.min(TEXT_SNIFF_BYTES, info.size));
-      const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-      return firstLines(buffer.subarray(0, bytesRead));
-    } finally {
-      await handle.close();
-    }
+    if (!info.isFile()) return NONE;
+    if (options.metadataOnly || info.size === 0) return { ...NONE, size: info.size };
+    return { ...(await previewOf(path, info.size)), size: info.size };
   } catch {
     // Gone, unreadable or locked: the card keeps its icon.
     return NONE;

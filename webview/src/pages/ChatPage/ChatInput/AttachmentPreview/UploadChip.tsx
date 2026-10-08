@@ -38,7 +38,7 @@ export function UploadChip(props: Props) {
           </>
         )}
       </svg>
-      <AttachmentNameTooltip name={upload.label}>
+      <AttachmentNameTooltip name={upload.label} size={upload.isFolder ? undefined : upload.totalBytes} withSize={!upload.isFolder}>
         <span className="text-[0.8461rem] text-text-secondary truncate max-w-[120px]">
           {upload.isFolder ? `${upload.label}/` : upload.label}
         </span>

@@ -23,7 +23,7 @@ async function fileWith(name: string, content: string | Buffer): Promise<string>
 describe('readFilePreview', () => {
   it('returns the first lines of a text file, as a card shows them', async () => {
     const path = await fileWith('plan.md', '# Plan\n\nstep one\nstep two\n');
-    expect(await readFilePreview(path)).toEqual({ kind: 'text', text: '# Plan\n\nstep one\nstep two' });
+    expect(await readFilePreview(path)).toMatchObject({ kind: 'text', text: '# Plan\n\nstep one\nstep two' });
   });
 
   it('stops after twelve lines and cuts each line short', async () => {
@@ -42,17 +42,17 @@ describe('readFilePreview', () => {
 
   it('keeps Korean text readable', async () => {
     const preview = await readFilePreview(await fileWith('memo.txt', '안녕하세요\n두 번째 줄'));
-    expect(preview).toEqual({ kind: 'text', text: '안녕하세요\n두 번째 줄' });
+    expect(preview).toMatchObject({ kind: 'text', text: '안녕하세요\n두 번째 줄' });
   });
 
   it('has nothing to show for binary content, whatever the name says', async () => {
     const path = await fileWith('mystery.dat', Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00, 0x01]));
-    expect(await readFilePreview(path)).toEqual({ kind: 'none' });
+    expect(await readFilePreview(path)).toMatchObject({ kind: 'none' });
   });
 
   it('skips formats that would decode into noise without reading them', async () => {
-    expect(await readFilePreview(await fileWith('doc.pdf', '%PDF-1.4 looks like text'))).toEqual({ kind: 'none' });
-    expect(await readFilePreview(await fileWith('bundle.zip', 'PK looks like text'))).toEqual({ kind: 'none' });
+    expect(await readFilePreview(await fileWith('doc.pdf', '%PDF-1.4 looks like text'))).toMatchObject({ kind: 'none' });
+    expect(await readFilePreview(await fileWith('bundle.zip', 'PK looks like text'))).toMatchObject({ kind: 'none' });
   });
 
   it('returns a picture the browser can draw, as base64 with its type', async () => {
@@ -61,6 +61,7 @@ describe('readFilePreview', () => {
       kind: 'image',
       mimeType: 'image/svg+xml',
       base64: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString('base64'),
+      size: '<svg xmlns="http://www.w3.org/2000/svg"/>'.length,
     });
   });
 
@@ -73,7 +74,7 @@ describe('readFilePreview', () => {
 
   it('leaves a picture over the limit on its icon', async () => {
     const path = await fileWith('huge.png', Buffer.alloc(MAX_IMAGE_BYTES + 1));
-    expect(await readFilePreview(path)).toEqual({ kind: 'none' });
+    expect(await readFilePreview(path)).toMatchObject({ kind: 'none' });
   });
 
   it('hands over a video for the webview to take a frame from', async () => {
@@ -85,14 +86,28 @@ describe('readFilePreview', () => {
 
   it('leaves a video over the limit on its icon', async () => {
     const path = await fileWith('big.mp4', Buffer.alloc(MAX_VIDEO_BYTES + 1));
-    expect(await readFilePreview(path)).toEqual({ kind: 'none' });
+    expect(await readFilePreview(path)).toMatchObject({ kind: 'none' });
   });
 
   it('has nothing to show for an empty file, a folder, or a path that is gone', async () => {
-    expect(await readFilePreview(await fileWith('empty.txt', ''))).toEqual({ kind: 'none' });
+    expect(await readFilePreview(await fileWith('empty.txt', ''))).toEqual({ kind: 'none', size: 0 });
     const folder = join(dir, 'a-folder');
     await mkdir(folder);
     expect(await readFilePreview(folder)).toEqual({ kind: 'none' });
     expect(await readFilePreview(join(dir, 'nope.txt'))).toEqual({ kind: 'none' });
+  });
+
+  it('says how big the file is, whatever it shows', async () => {
+    expect(await readFilePreview(await fileWith('sized.txt', 'x'.repeat(1234)))).toMatchObject({ kind: 'text', size: 1234 });
+    expect(await readFilePreview(await fileWith('sized.pdf', 'x'.repeat(99)))).toEqual({ kind: 'none', size: 99 });
+    expect(await readFilePreview(await fileWith('sized.png', Buffer.alloc(MAX_IMAGE_BYTES + 1)))).toEqual({
+      kind: 'none',
+      size: MAX_IMAGE_BYTES + 1,
+    });
+  });
+
+  it('answers with the size alone when only metadata is wanted, reading no content', async () => {
+    const path = await fileWith('only-size.png', Buffer.from([1, 2, 3]));
+    expect(await readFilePreview(path, { metadataOnly: true })).toEqual({ kind: 'none', size: 3 });
   });
 });

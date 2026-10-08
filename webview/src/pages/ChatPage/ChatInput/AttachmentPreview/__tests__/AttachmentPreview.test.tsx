@@ -8,6 +8,7 @@ vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
 
 import { AttachmentPreview } from '../index';
 import { _resetFilePreviewCache } from '../loadFilePreview';
+import { _resetFileSizeCache } from '../useFileSize';
 import { ImageAttachment, FileAttachment, FolderAttachment, PendingUpload } from '@/types';
 
 /** A pixel's worth of base64, distinct per image so src comparisons are exact. */
@@ -24,6 +25,7 @@ beforeEach(() => {
   requestMock.mockReset();
   requestMock.mockResolvedValue({ kind: 'none' });
   _resetFilePreviewCache();
+  _resetFileSizeCache();
 });
 
 describe('AttachmentPreview viewer', () => {
@@ -186,6 +188,58 @@ describe('AttachmentPreview names', () => {
     await waitFor(() => expect(screen.getAllByText('admin-login-2026-10-08T00-00-00Z.png')).toHaveLength(2));
   });
 
+  it('writes the size at the right end of the name line when the chip already knows it', async () => {
+    const file = new FileAttachment({ fileName: longName, absolutePath: '/tmp/' + longName, size: 12_737_862 });
+    render(<AttachmentPreview attachments={[file]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText(longName));
+
+    await waitFor(() => expect(screen.getByText('12.7MB')).toBeInTheDocument());
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('asks the backend for the size of a file picked by path, which carries none', async () => {
+    requestMock.mockResolvedValue({ kind: 'none', size: 25_000 });
+    const file = new FileAttachment({ fileName: longName, absolutePath: '/tmp/' + longName });
+    render(<AttachmentPreview attachments={[file]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText(longName));
+
+    await waitFor(() => expect(screen.getByText('25KB')).toBeInTheDocument());
+    // A pill has no room for a preview, so only the size is asked for.
+    expect(requestMock).toHaveBeenCalledWith(expect.any(String), { path: '/tmp/' + longName, metadataOnly: true });
+  });
+
+  it('leaves the size out when the backend cannot say', async () => {
+    requestMock.mockResolvedValue({ kind: 'none' });
+    const file = new FileAttachment({ fileName: longName, absolutePath: '/tmp/gone.mov' });
+    render(<AttachmentPreview attachments={[file]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText(longName));
+
+    await waitFor(() => expect(screen.getAllByText(longName)).toHaveLength(2));
+    expect(screen.queryByText(/\d(B|KB|MB|GB)$/)).toBeNull();
+  });
+
+  it('tells no size for a folder', async () => {
+    const folder = new FolderAttachment({ folderName: 'photos-of-the-trip', absolutePath: '/saved/photos-of-the-trip' });
+    render(<AttachmentPreview attachments={[folder]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText('photos-of-the-trip/'));
+
+    await waitFor(() => expect(screen.getByText('/saved/photos-of-the-trip/')).toBeInTheDocument());
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('writes the size of an inline image, which is already in hand', async () => {
+    const picture = new ImageAttachment({ fileName: 'shot-with-a-long-name.png', mimeType: 'image/png', base64: 'AAA', size: 3_400 });
+    render(<AttachmentPreview attachments={[picture]} onRemove={vi.fn()} />);
+
+    fireEvent.mouseEnter(screen.getByText('shot-with-a-long-name.png'));
+
+    await waitFor(() => expect(screen.getByText('3.4KB')).toBeInTheDocument());
+  });
+
   it('uses no native title attribute, which the IDE browser never draws', () => {
     const file = new FileAttachment({ fileName: longName, absolutePath: '/tmp/' + longName });
     const folder = new FolderAttachment({ folderName: 'src', absolutePath: '/tmp/src' });
@@ -288,9 +342,10 @@ describe('AttachmentPreview file previews', () => {
     expect(screen.queryByText(/step one/)).toBeNull();
   });
 
-  it('asks about the file by its path, and only when it is shown as a card', async () => {
+  it('asks about the file by its path, and reads its content only when it is shown as a card', async () => {
     const { rerender } = render(<AttachmentPreview attachments={[file('a.md')]} onRemove={vi.fn()} />);
-    expect(requestMock).not.toHaveBeenCalled();
+    // A pill has no room for a preview: it may ask the size, never the content.
+    expect(requestMock.mock.calls.every(([, payload]) => payload.metadataOnly === true)).toBe(true);
 
     rerender(<AttachmentPreview attachments={[image('AAA'), file('a.md')]} onRemove={vi.fn()} />);
     await waitFor(() => expect(requestMock).toHaveBeenCalledWith(expect.any(String), { path: '/tmp/a.md' }));

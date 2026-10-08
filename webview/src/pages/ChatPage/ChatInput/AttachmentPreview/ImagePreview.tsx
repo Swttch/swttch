@@ -33,7 +33,7 @@ export function ImagePreview(props: Props) {
       >
         ×
       </button>
-      <AttachmentNameTooltip name={attachment.displayLabel}>
+      <AttachmentNameTooltip name={attachment.displayLabel} size={attachment.size}>
         <div className="text-[0.7692rem] text-text-tertiary truncate max-w-[64px] mt-0.5 text-center">
           {attachment.displayLabel}
         </div>

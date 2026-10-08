@@ -16,7 +16,10 @@ export async function getFilePreviewHandler(
   _bridge: Bridge,
 ): Promise<void> {
   const path = message.payload?.path;
-  const preview = typeof path === 'string' && path !== '' ? await readFilePreview(path) : { kind: 'none' as const };
+  const metadataOnly = message.payload?.metadataOnly === true;
+  const preview = typeof path === 'string' && path !== ''
+    ? await readFilePreview(path, { metadataOnly })
+    : { kind: 'none' as const };
 
   connections.sendTo(connectionId, MessageType.ACK, {
     requestId: message.requestId,
