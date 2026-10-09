@@ -194,6 +194,17 @@ describe('useScrollFold', () => {
     expect(result.current).toBe(FOLD_MAX_HEIGHT);
   });
 
+  it('measures how far the send has travelled from the top inset it is given', () => {
+    // With the top bar hidden the pinned edge is the container's own edge, not
+    // 40px below it. A send sitting 150px above that edge has travelled 150px;
+    // measured from the bar's line instead it would read as 190.
+    const passed = 150;
+    const h = harness(1000, FOLD_MAX_HEIGHT, -passed);
+    const { result } = renderHook(() => useScrollFold(h.root, true, h.bubbleRef, h.sentinelRef, 0).height);
+
+    expect(result.current).toBe(FOLD_MAX_HEIGHT - passed);
+  });
+
   it('opens whole when the sentinel has not reached the edge yet', () => {
     // A pin reported while the sentinel still sits below the line has travelled
     // nothing. Letting the distance go negative would inflate the bubble past

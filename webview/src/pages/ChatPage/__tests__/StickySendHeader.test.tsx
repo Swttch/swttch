@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { StickySendHeader } from '../StickySendHeader';
 import { FOLD_MAX_HEIGHT, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from '../useScrollFold';
 import { useScrollFoldValue } from '../ScrollFoldContext';
+import { TopBarProvider } from '@/contexts/TopBarContext';
 
 /**
  * The global setup installs an IntersectionObserver stub that never fires (it
@@ -12,10 +13,13 @@ import { useScrollFoldValue } from '../ScrollFoldContext';
  */
 let fire: ((isIntersecting: boolean) => void) | null = null;
 let disconnected = 0;
+/** The margin the pin observer was last built with. */
+let observedRootMargin: string | undefined;
 
 beforeEach(() => {
   fire = null;
   disconnected = 0;
+  observedRootMargin = undefined;
   // The fold coalesces to one measurement per frame; drive that clock so the
   // spacer settles synchronously.
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -27,7 +31,8 @@ beforeEach(() => {
     readonly root = null;
     readonly rootMargin = '';
     readonly thresholds: readonly number[] = [];
-    constructor(cb: IntersectionObserverCallback) {
+    constructor(cb: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      observedRootMargin = options?.rootMargin;
       fire = (isIntersecting: boolean) =>
         cb([{ isIntersecting } as IntersectionObserverEntry], this as IntersectionObserver);
     }
@@ -106,6 +111,22 @@ function spacerHeight(container: HTMLElement): number {
 const jumpLabel = /jump to this message/i;
 
 describe('StickySendHeader', () => {
+  it('keeps the band behind the top bar out of the viewport it watches for the pin', () => {
+    render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
+
+    expect(observedRootMargin).toBe('-40px 0px 0px 0px');
+  });
+
+  it('watches the whole viewport for the pin when the top bar is hidden, since nothing sits behind it', () => {
+    render(
+      <TopBarProvider displayed={false}>
+        <StickySendHeader onClick={() => {}}>msg</StickySendHeader>
+      </TopBarProvider>,
+    );
+
+    expect(observedRootMargin).toBe('0px 0px 0px 0px');
+  });
+
   it('hides the jump button while the message sits at rest', () => {
     render(<StickySendHeader onClick={() => {}}>msg</StickySendHeader>);
     // Offering a jump to where the user already is would be a control that

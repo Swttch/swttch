@@ -8,6 +8,7 @@ import type { SendSection } from '../groupIntoSendSections';
 import { sendText } from '../sendText';
 import { scrollToSend } from './scrollToSend';
 import { readingLineSectionKey } from './readingLine';
+import { useTopBar } from '@/contexts/TopBarContext';
 
 /**
  * How wide the rail is, in pixels.
@@ -358,6 +359,7 @@ export function SendIndex(props: Props) {
     frame is drawn, and nothing here can be seen more than once per frame.
   */
   const [readingKey, setReadingKey] = useState<string | null>(null);
+  const { topBarHeight } = useTopBar();
 
   useEffect(() => {
     const scroller = document.querySelector<HTMLElement>('[data-chat-scroll]');
@@ -366,7 +368,7 @@ export function SendIndex(props: Props) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setReadingKey(readingLineSectionKey());
+      setReadingKey(readingLineSectionKey(topBarHeight));
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -381,7 +383,7 @@ export function SendIndex(props: Props) {
       scroller.removeEventListener('scroll', onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [sections]);
+  }, [sections, topBarHeight]);
 
   /*
     The entry being read is the LAST one past the reading line, not the first.

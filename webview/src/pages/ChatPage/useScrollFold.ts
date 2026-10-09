@@ -1,4 +1,5 @@
 import { RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
 
 /** The tallest a bubble gets before `MessageBox` caps it. */
 export const FOLD_MAX_HEIGHT = 280;
@@ -25,14 +26,18 @@ export const FOLD_MIN_HEIGHT = 38;
  * Where the top edge of the chat actually is, measured down from the scroll
  * container's own top.
  *
- * The container carries a `pt-10` whose 40px sit behind the fixed session
- * header, so a message level with the container's top edge is not visible —
- * it is underneath that header. Everything that asks "has this scrolled past
- * the top?" has to ask about this line instead, which is why the sentinel's
- * observer and the fold's starting distance both read from here rather than
- * each carrying their own 40.
+ * The container's top padding sits behind the fixed top bar, so a message
+ * level with the container's top edge is not visible — it is underneath that
+ * bar. Everything that asks "has this scrolled past the top?" has to ask about
+ * this line instead, which is why the sentinel's observer and the fold's
+ * starting distance both read from here rather than each carrying their own 40.
+ *
+ * This is the line while the bar is drawn. With the bar hidden the padding is
+ * gone and the line moves up to the container's edge, so callers inside the
+ * page take the live value from `useTopBar` and hand it in as `topInset`;
+ * this constant is what that value is while nothing has hidden the bar.
  */
-export const PINNED_TOP_INSET = 40;
+export const PINNED_TOP_INSET = TOP_BAR_HEIGHT;
 
 /**
  * How much of a pinned send stays on screen, as it slides under the top edge.
@@ -81,6 +86,7 @@ export function useScrollFold(
   pinned: boolean,
   bubbleRef: RefObject<HTMLElement | null>,
   sentinelRef: RefObject<HTMLElement | null>,
+  topInset: number = PINNED_TOP_INSET,
 ): ScrollFold {
   const [fold, setFold] = useState<ScrollFold>({ height: null, restingHeight: FOLD_MAX_HEIGHT, wrapLoss: 0 });
 
@@ -140,7 +146,7 @@ export function useScrollFold(
     const sentinel = sentinelRef.current;
     const passed = sentinel
       ? Math.max(
-          root.getBoundingClientRect().top + PINNED_TOP_INSET - sentinel.getBoundingClientRect().top,
+          root.getBoundingClientRect().top + topInset - sentinel.getBoundingClientRect().top,
           0,
         )
       : 0;
@@ -166,7 +172,7 @@ export function useScrollFold(
       root.removeEventListener('scroll', onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [scrollRoot, pinned, bubbleRef, sentinelRef]);
+  }, [scrollRoot, pinned, bubbleRef, sentinelRef, topInset]);
 
   // The box is not the only thing that changes when the send folds. The footer
   // row is taken out and the padding around the box changes (UserMessageRenderer

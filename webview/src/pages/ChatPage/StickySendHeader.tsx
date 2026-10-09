@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ChevronDoubleUpIcon } from '@heroicons/react/20/solid';
 import { useTranslation } from '@/i18n';
-import { useScrollFold, FOLD_MIN_HEIGHT, PINNED_TOP_INSET } from './useScrollFold';
+import { useScrollFold, FOLD_MIN_HEIGHT } from './useScrollFold';
+import { useTopBar } from '@/contexts/TopBarContext';
 import { ScrollFoldContext } from './ScrollFoldContext';
 import { SEND_JUMP_SCROLL_MARGIN, SEND_SCROLL_OPTIONS } from './SendIndex/scrollToSend';
 
@@ -28,17 +29,18 @@ interface Props {
  * handler — this list can hold thousands of entries, and one listener per
  * section firing on every frame is the kind of cost we do not add.
  *
- * `rootMargin` cancels the scroll container's `pt-10`: that band of the
- * viewport is behind the fixed session header, so without it the sentinel
- * counts as visible while hidden underneath and the button flickers on at the
- * wrong moment. `PINNED_TOP_INSET` is where that band ends, and the fold reads
- * the same constant to decide how far the send has already travelled past it —
- * two numbers drifting apart would leave a send counted as pinned and as not
- * yet arrived at the same time.
+ * `rootMargin` cancels the scroll container's top padding: that band of the
+ * viewport is behind the fixed top bar, so without it the sentinel counts as
+ * visible while hidden underneath and the button flickers on at the wrong
+ * moment. The bar's height is where that band ends (zero once the bar is hidden,
+ * and then there is no band), and the fold reads the same number to decide how
+ * far the send has already travelled past it — two numbers drifting apart would
+ * leave a send counted as pinned and as not yet arrived at the same time.
  */
 export function StickySendHeader(props: Props) {
   const { children, onClick } = props;
   const { t } = useTranslation('chat');
+  const { topBarHeight } = useTopBar();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
@@ -65,14 +67,14 @@ export function StickySendHeader(props: Props) {
     // message container.
     const observer = new IntersectionObserver(
       ([entry]) => setPinned(!entry.isIntersecting),
-      { rootMargin: `-${PINNED_TOP_INSET}px 0px 0px 0px`, threshold: 0 },
+      { rootMargin: `${-topBarHeight}px 0px 0px 0px`, threshold: 0 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, []);
+  }, [topBarHeight]);
 
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const { height: foldHeight, restingHeight, wrapLoss } = useScrollFold(scrollRoot, pinned, bubbleRef, sentinelRef);
+  const { height: foldHeight, restingHeight, wrapLoss } = useScrollFold(scrollRoot, pinned, bubbleRef, sentinelRef, topBarHeight);
 
   // What the fold takes off the bubble is added back here, immediately after
   // the pinned element and outside it.

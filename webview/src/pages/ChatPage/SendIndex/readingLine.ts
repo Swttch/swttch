@@ -1,4 +1,4 @@
-import { READING_LINE_INSET } from './scrollToSend';
+import { readingLineInset } from './scrollToSend';
 
 /**
  * Which send the reader is on, read straight off the document.
@@ -15,17 +15,20 @@ import { READING_LINE_INSET } from './scrollToSend';
  * A binary search keeps the cost of measuring flat. The sentinels are in
  * document order, so their tops are ascending, and the last one above the line
  * is found in about ten reads however long the session is.
+ *
+ * `topInset` is the space the top bar takes, which the line is measured from.
  */
-export function readingLineSectionKey(): string | null {
+export function readingLineSectionKey(topInset: number): string | null {
   const sentinels = document.querySelectorAll<HTMLElement>('[data-send-sentinel]');
   if (sentinels.length === 0) return null;
 
+  const line = readingLineInset(topInset);
   let lo = 0;
   let hi = sentinels.length - 1;
   let found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (sentinels[mid].getBoundingClientRect().top < READING_LINE_INSET) {
+    if (sentinels[mid].getBoundingClientRect().top < line) {
       found = mid;
       lo = mid + 1;
     } else {

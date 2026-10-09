@@ -12,3 +12,4 @@ export { WorkingDirProvider, useWorkingDir } from './WorkingDirContext';
 export { CliConfigProvider, useCliConfig } from './CliConfigContext';
 export { FableProbeProvider, useFableProbe, shouldProbeFable } from './FableProbeContext';
 export * from './ChatInputStateContext';
+export { TopBarProvider, useTopBar, TOP_BAR_HEIGHT } from './TopBarContext';
