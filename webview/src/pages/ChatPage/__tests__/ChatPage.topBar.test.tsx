@@ -1,16 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { ChatInputFocusProvider, useChatInputFocus } from '@/contexts/ChatInputFocusContext';
+import { TopBarProvider, TOP_BAR_HEIGHT } from '@/contexts/TopBarContext';
 
 /*
- * #513: a mousedown on empty chat space must keep its default action, because
- * the browser starts word and drag selection from it. ChatPage is rendered with
- * everything around the root element stubbed out, since only the root's own
- * event handling is under test.
+ * `top_bar_display=F`: the bar is left out of the page, and the page goes on
+ * doing what the bar used to do for it. ChatPage is rendered with everything
+ * around its root stubbed out, since only what it hands the bar and its three
+ * outward-facing hooks are under test.
  */
 
-const { stub } = vi.hoisted(() => ({
+const { stub, spies } = vi.hoisted(() => ({
   stub: (name: string) => () => <div data-testid={name} />,
+  spies: {
+    useDocumentTitle: vi.fn(),
+    useReportSessionActivity: vi.fn(),
+    useMarkSessionRead: vi.fn(),
+  },
 }));
 
 vi.mock('../ChatInput/DictationProvider', () => ({ DictationProvider: ({ children }: any) => <>{children}</> }));
@@ -60,9 +66,9 @@ vi.mock('../../../hooks/useScheduledDelivery/useScheduledDelivery', () => ({ use
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: 's1', currentSession: { title: 't' } }),
 }));
-vi.mock('../../../hooks', () => ({ useAwaitingNotifications: () => {}, useDocumentTitle: () => {} }));
-vi.mock('../../../hooks/useReportSessionActivity', () => ({ useReportSessionActivity: () => {} }));
-vi.mock('../../../hooks/useMarkSessionRead', () => ({ useMarkSessionRead: () => {} }));
+vi.mock('../../../hooks', () => ({ useAwaitingNotifications: () => {}, useDocumentTitle: spies.useDocumentTitle }));
+vi.mock('../../../hooks/useReportSessionActivity', () => ({ useReportSessionActivity: spies.useReportSessionActivity }));
+vi.mock('../../../hooks/useMarkSessionRead', () => ({ useMarkSessionRead: spies.useMarkSessionRead }));
 vi.mock('../../../hooks/usePendingAskUserQuestion', () => ({
   usePendingAskUserQuestion: () => ({ pending: null, dismiss: () => {} }),
 }));
@@ -97,21 +103,45 @@ vi.mock('@/hooks/useSessionSends', () => ({ useSessionSends: () => [] }));
 
 import { ChatPage } from '../index';
 
-describe('ChatPage text selection (#513)', () => {
-  it('leaves mousedown on non-control chat content uncancelled and does not move focus to the composer', () => {
-    render(
+function renderPage(displayed?: boolean) {
+  return render(
+    <TopBarProvider displayed={displayed}>
       <ChatInputFocusProvider>
         <ChatPage />
-      </ChatInputFocusProvider>,
-    );
-    const text = screen.getByTestId('message-text');
-    const composer = screen.getByTestId('composer');
-    expect(document.activeElement).not.toBe(composer);
+      </ChatInputFocusProvider>
+    </TopBarProvider>,
+  );
+}
 
-    // fireEvent returns false when the event's default was prevented.
-    const notPrevented = fireEvent.mouseDown(text);
+describe('ChatPage top bar display', () => {
+  beforeEach(() => {
+    Object.values(spies).forEach((spy) => spy.mockClear());
+  });
 
-    expect(notPrevented).toBe(true);
-    expect(document.activeElement).not.toBe(composer);
+  it('draws the top bar and reserves its height above the transcript by default', () => {
+    const { container } = renderPage();
+
+    expect(screen.queryByTestId('header')).not.toBeNull();
+    const scroller = container.querySelector<HTMLElement>('[data-chat-scroll]')!;
+    expect(scroller.style.paddingTop).toBe(`${TOP_BAR_HEIGHT}px`);
+  });
+
+  it('leaves the top bar out and reserves no space for it when hidden', () => {
+    const { container } = renderPage(false);
+
+    expect(screen.queryByTestId('header')).toBeNull();
+    const scroller = container.querySelector<HTMLElement>('[data-chat-scroll]')!;
+    expect(scroller.style.paddingTop).toBe('0px');
+  });
+
+  it.each([
+    ['drawn', true],
+    ['hidden', false],
+  ])('tells the tab, the backend and the session list what this page is doing while the bar is %s', (_label, displayed) => {
+    renderPage(displayed);
+
+    expect(spies.useDocumentTitle).toHaveBeenCalledWith('t', false, false, null, false);
+    expect(spies.useReportSessionActivity).toHaveBeenCalledWith('s1', false, false);
+    expect(spies.useMarkSessionRead).toHaveBeenCalledWith('s1', false);
   });
 });

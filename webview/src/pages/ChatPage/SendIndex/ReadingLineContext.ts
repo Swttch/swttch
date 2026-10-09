@@ -11,7 +11,7 @@ export interface ReadingLineChannel {
    *
    * "Crossed" is not the same as "pinned", and the two are deliberately
    * separate observations of the same sentinel against different lines. See
-   * READING_LINE_INSET.
+   * readingLineInset.
    */
   reportPassed: (sectionKey: string, passed: boolean) => void;
 }

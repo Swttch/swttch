@@ -12,6 +12,7 @@ import { ZoomProvider } from './ZoomContext';
 import { SettingKey, NO_PAGINATION_LIMIT } from '@/types/settings';
 import { ClaudeSettingsProvider, useClaudeSettings } from './ClaudeSettingsContext';
 import { AuthProvider } from './AuthContext';
+import { TopBarProvider } from './TopBarContext';
 import { CliConfigProvider } from './CliConfigContext';
 import { FableProbeProvider } from './FableProbeContext';
 import { ChatInputFocusProvider } from './ChatInputFocusContext';
@@ -307,6 +308,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <BridgeProvider>
       <QueryClientProvider client={queryClient}>
+        <TopBarProvider>
         <BrowserRouter>
           <ApiProvider>
             <WorkingDirProvider>
@@ -336,6 +338,7 @@ export function AppProviders({ children }: AppProvidersProps) {
             </WorkingDirProvider>
           </ApiProvider>
         </BrowserRouter>
+        </TopBarProvider>
       </QueryClientProvider>
     </BridgeProvider>
   );

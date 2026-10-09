@@ -1,5 +1,3 @@
-import { PINNED_TOP_INSET } from '../useScrollFold';
-
 /**
  * Breathing room a jump leaves above the send it lands on, measured from the
  * inner edge of the scroll container's top padding.
@@ -22,11 +20,11 @@ export const SEND_JUMP_SCROLL_MARGIN = 64;
  * This is NOT the line that decides whether a send is pinned, and the two must
  * not be merged. They answer different questions:
  *
- *  - pinned (PINNED_TOP_INSET): has this send's header stuck to the top edge?
+ *  - pinned (the top inset): has this send's header stuck to the top edge?
  *  - reading (here): is this the send the reader is currently on?
  *
  * Built from the landing position on purpose. A jump parks the send this far
- * down (`PINNED_TOP_INSET + SEND_JUMP_SCROLL_MARGIN`), so a reading line at the
+ * down (`topInset + SEND_JUMP_SCROLL_MARGIN`), so a reading line at the
  * pinned inset would leave the send you just jumped to counted as NOT being
  * read — the marker would sit on its predecessor, "next" would walk back onto
  * the send you just left, and "previous" would skip two at a time.
@@ -34,8 +32,13 @@ export const SEND_JUMP_SCROLL_MARGIN = 64;
  * The extra 8px puts the line just past the landing position, so arriving is
  * enough to be counted as reading rather than depending on the scroll settling
  * exactly.
+ *
+ * `topInset` is the space the top bar takes (`useTopBar`), so the line moves up
+ * with the pinned edge when the bar is hidden instead of staying 40px low.
  */
-export const READING_LINE_INSET = PINNED_TOP_INSET + SEND_JUMP_SCROLL_MARGIN + 8;
+export function readingLineInset(topInset: number): number {
+  return topInset + SEND_JUMP_SCROLL_MARGIN + 8;
+}
 
 /**
  * How a jump lands on a send.

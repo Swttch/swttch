@@ -153,13 +153,13 @@ export function ChatMessageArea(props: Props) {
             the next section scrolling into place pushes this header out —
             the behaviour a flat list of siblings at `top: 0` cannot produce.
 
-            `top-0` pins to the inner edge of the scroll container's `pt-10`,
-            which lines up with the bottom of the fixed session header only
-            because that header is pinned to the same height (`h-10` in
-            `ChatPage`). It used to size itself from its contents — 34px, six
-            short of the padding — and those six pixels read as a slot of
-            earlier content sliding above the pinned message. Change one of
-            the two and the gap comes back.
+            `top-0` pins to the inner edge of the scroll container's top
+            padding, which lines up with the bottom of the fixed top bar only
+            because the bar and the padding are given the same height in
+            `ChatPage` (`topBarHeight`). It used to size itself from its
+            contents — 34px, six short of the padding — and those six pixels
+            read as a slot of earlier content sliding above the pinned message.
+            Change one of the two and the gap comes back.
           */}
           {section.head && (
             <StickySendHeader

@@ -15,6 +15,7 @@ import { isLoopbackHostname, isRemoteBlocked } from './api/bridge/authToken';
 import { usePairingStatus } from './hooks/usePairingStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { useTopBar } from './contexts/TopBarContext';
 import { useZoomControls } from './hooks/useZoomControls';
 import { useCaretBoundaryKeys } from './hooks/useCaretBoundaryKeys';
 import { useEmacsTextKeys } from './hooks/useEmacsTextKeys';
@@ -32,6 +33,8 @@ import 'katex/dist/katex.min.css';
 
 function AppContent() {
   useKeyboardShortcuts();
+  // Toasts drop in under the top bar, or at the top edge when it is hidden.
+  const { topBarHeight } = useTopBar();
   // CmdOrCtrl +/-/0 and CmdOrCtrl + wheel scale the whole UI (issue #169).
   useZoomControls();
   // Cmd+Arrow moves the caret to the line's or text's edge in every text field.
@@ -131,7 +134,7 @@ function AppContent() {
           nothing in normal local use. */}
       <Toaster
         position="top-center"
-        containerStyle={{ top: 40 }}
+        containerStyle={{ top: topBarHeight }}
         toastOptions={{
           style: {
             background: 'var(--surface-raised)',

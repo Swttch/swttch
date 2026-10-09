@@ -31,7 +31,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useScheduledDelivery';
 import { useSessionContext } from '../../contexts/SessionContext';
-import { useAwaitingNotifications } from '../../hooks';
+import { useAwaitingNotifications, useDocumentTitle } from '../../hooks';
+import { useMarkSessionRead } from '../../hooks/useMarkSessionRead';
+import { useReportSessionActivity } from '../../hooks/useReportSessionActivity';
+import { useTopBar } from '../../contexts/TopBarContext';
 import { usePendingAskUserQuestion } from '../../hooks/usePendingAskUserQuestion';
 import { usePendingPermissions } from '../../hooks/usePendingPermissions';
 import { usePendingPlanApproval } from '../../hooks/usePendingPlanApproval';
@@ -118,7 +121,8 @@ function ChatPageContent() {
   const api = useApi();
   const onboarding = useOnboarding();
   const { currentSessionId, currentSession } = useSessionContext();
-  const { messages, isStreaming, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
+  const { isTopBarDisplayed, topBarHeight } = useTopBar();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -145,6 +149,27 @@ function ChatPageContent() {
    * screen (issue #409).
    */
   const composerReplaced = isAwaitingUser;
+
+  // What this page tells the world around it: the tab's title and icon, the
+  // alert at the end of a turn, what the backend's session lists draw for this
+  // session, and the mark that it has been looked at.
+  //
+  // They live here, not in the top bar, because they are the page's doing. They
+  // used to sit in the bar only because the bar happens to be mounted for as
+  // long as the chat is showing a session — and a page whose bar is hidden
+  // (`top_bar_display=F`) must go on telling all four.
+  useDocumentTitle(
+    currentSession?.title || null,
+    currentSessionId === null,
+    isStreaming,
+    error,
+    isAwaitingUser,
+  );
+  // The session lists draw the same answer the favicon and the IDE tab draw
+  // (issue #456).
+  useReportSessionActivity(currentSessionId, isStreaming, isAwaitingUser);
+  // Looking at a session is what marks it read (issue #449).
+  useMarkSessionRead(currentSessionId, isStreaming);
 
   // Auto-follow, the "Scroll to bottom" button's visibility and the remembered
   // position; see useChatAutoScroll.
@@ -290,15 +315,19 @@ function ChatPageContent() {
       {/*
         Header - Minimal
 
-        `h-10` is load-bearing, not cosmetic: it must equal the scroll
-        container's `pt-10` below, which reserves the space this fixed header
-        covers. Left to size itself from its contents the header came out at
-        34px, and the 6px shortfall showed up as a sliver of scrolled content
-        above the sticky user message (issue #274).
+        The height is load-bearing, not cosmetic: it must equal the scroll
+        container's top padding below, which reserves the space this fixed
+        header covers. Both read `topBarHeight`, so they cannot differ — and
+        both go to zero together when the bar is hidden (`top_bar_display=F`).
+        Left to size itself from its contents the header came out at 34px, and
+        the 6px shortfall showed up as a sliver of scrolled content above the
+        sticky user message (issue #274).
       */}
-      <div className="fixed w-full top-0 bg-blend-darken bg-surface-base z-30 h-10">
-        <SessionHeader isAwaitingUser={isAwaitingUser} />
-      </div>
+      {isTopBarDisplayed && (
+        <div className="fixed w-full top-0 bg-blend-darken bg-surface-base z-30" style={{ height: topBarHeight }}>
+          <SessionHeader />
+        </div>
+      )}
 
       <BannerArea>
         <MigrationBanner />
@@ -332,8 +361,8 @@ function ChatPageContent() {
         ref={scrollContainerRef}
         data-chat-scroll
         onScroll={handleScroll}
-        style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH }}
-        className="flex flex-col flex-1 overflow-y-auto w-full h-screen pt-10 pb-0 bg-surface-base z-0"
+        style={{ paddingInlineEnd: SEND_INDEX_RAIL_WIDTH, paddingTop: topBarHeight }}
+        className="flex flex-col flex-1 overflow-y-auto w-full h-screen pb-0 bg-surface-base z-0"
       >
         <ChatMessageArea
           isStreaming={isStreaming && !isAwaitingUser}
