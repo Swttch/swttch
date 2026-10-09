@@ -69,7 +69,7 @@ If instead you open an **existing** session from the session list while the empt
 ## What it covers, and what it does not
 
 - **Only the safety questions that Claude Code will not remember.** Every other approval panel appears as before, including panels where "Yes, allow all commands this session" works. If you pick that option on an ordinary panel, Claude Code does remember it, as always.
-- **This session only.** The setting is kept in memory for the open conversation. A new conversation, a reload of the panel, or restarting the IDE starts with it off.
+- **This session only.** The setting is kept in memory for the open conversation. A new conversation, a reload of the panel, or restarting the IDE starts with it off. Sponsors can keep it on for every session instead: see [Allow all command in all sessions](../086-allow_all_commands_in_all_sessions/en.md).
 - **Each session has its own.** Turning it on in one conversation does not change another conversation, even one open in another tab.
 - **The command you are asked about is not checked by this app.** Turning it on means such commands run without you looking at them. Use it for sessions where you trust what Claude is doing.
 - **Older Claude Code versions.** The hiding and the Enable link depend on Claude Code telling the app that it will not remember the answer. If your version does not say so, the panel looks exactly as it did before this feature, with the second option always available.
