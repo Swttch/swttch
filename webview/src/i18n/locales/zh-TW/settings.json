@@ -346,14 +346,16 @@
     "heading": "權限",
     "notSet": "未設定(使用全域)",
     "bypassMode": {
-      "sectionTitle": "略過模式",
       "label": "停用略過模式",
       "description": "防止啟用略過權限模式"
     },
     "defaultMode": {
-      "sectionTitle": "預設輸入模式",
       "label": "預設輸入模式",
       "description": "開啟新工作階段時的初始權限模式"
+    },
+    "allowAllCommands": {
+      "label": "在所有工作階段中允許所有命令",
+      "description": "每個工作階段啟動時都已開啟「在本次工作階段中允許所有命令」，模型送出的風險警告會在不顯示核准面板的情況下被自動核准。每個工作階段仍可個別關閉。"
     }
   },
   "about": {

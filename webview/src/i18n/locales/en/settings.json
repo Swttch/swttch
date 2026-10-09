@@ -350,14 +350,16 @@
     "heading": "Permissions",
     "notSet": "Not set (use global)",
     "bypassMode": {
-      "sectionTitle": "Bypass Mode",
       "label": "Disable Bypass Mode",
       "description": "Prevent bypass permissions mode from being activated"
     },
     "defaultMode": {
-      "sectionTitle": "Default Input Mode",
       "label": "Default Input Mode",
       "description": "Initial permission mode when opening a new session"
+    },
+    "allowAllCommands": {
+      "label": "Allow all command in all sessions",
+      "description": "Every session starts with “Allow all command in this session” already on, so the risk warnings the model sends are approved without showing the approval panel. A session can still turn it off for itself."
     }
   },
   "about": {

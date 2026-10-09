@@ -401,6 +401,7 @@ describe('settings', () => {
         'useCtrlEnterToSend',
         'focusInputOnEditorContext',
         'autoResumeOnLimit',
+        'allowAllCommandsByDefault',
         'attachEditorContext',
       ]) {
         expect((await saveSettingToFile(key, true)).status).toBe('ok');
@@ -712,6 +713,7 @@ describe('settings', () => {
         notificationSoundVolume: 5,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        allowAllCommandsByDefault: false,
         attachEditorContext: true,
         autoOpenDiffOnPermission: true,
         diffSurface: DiffSurface.IDE,
@@ -851,6 +853,7 @@ export default {
         notificationSoundVolume: 5,
         focusInputOnEditorContext: true,
         autoResumeOnLimit: false,
+        allowAllCommandsByDefault: false,
         attachEditorContext: true,
         autoOpenDiffOnPermission: true,
         diffSurface: DiffSurface.IDE,

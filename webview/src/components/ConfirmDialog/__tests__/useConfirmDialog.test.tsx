@@ -96,3 +96,55 @@ describe('useConfirmDialog', () => {
     expect(resultTarget.dataset.result).toBe('false');
   });
 });
+
+describe('useConfirmDialog — confirmWithCheckbox', () => {
+  function CheckboxHost() {
+    const { confirmDialog, confirmWithCheckbox } = useConfirmDialog();
+
+    const show = async () => {
+      const result = await confirmWithCheckbox({
+        title: 'With box',
+        message: 'Tick it or not',
+        confirmLabel: 'Go',
+        checkbox: { label: 'Remember', defaultChecked: false },
+      });
+      document.getElementById('box-result')!.dataset.result = JSON.stringify(result);
+    };
+
+    return (
+      <>
+        <div id="box-result" />
+        <button onClick={show} data-testid="trigger-box">
+          Show
+        </button>
+        {confirmDialog}
+      </>
+    );
+  }
+
+  const read = () => document.getElementById('box-result')!.dataset.result;
+
+  it('reports the box when the question is confirmed', async () => {
+    render(<CheckboxHost />);
+    fireEvent.click(screen.getByTestId('trigger-box'));
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+    });
+
+    expect(read()).toBe('{"confirmed":true,"checked":true}');
+  });
+
+  it('reports the box as unchecked when the question is cancelled, however it was left', async () => {
+    render(<CheckboxHost />);
+    fireEvent.click(screen.getByTestId('trigger-box'));
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+
+    expect(read()).toBe('{"confirmed":false,"checked":false}');
+  });
+});

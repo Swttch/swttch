@@ -18,6 +18,8 @@ export enum SponsorGate {
   Schedule = 'schedule',
   /** Resuming automatically after a usage limit resets. */
   AutoResume = 'autoresume',
+  /** Keeping "Allow all command in this session" on beyond one session. */
+  AllowAllCommands = 'allowallcommands',
 }
 
 /**
@@ -65,10 +67,12 @@ export enum SponsorGateSurface {
   SchedulePopover = 'schedule_popover',
   /** A backend request refused because the user isn't a sponsor. */
   BackendRefusal = 'backend_refusal',
-  /** The auto-resume toggle in Settings. */
+  /** A feature's own toggle in Settings. */
   SettingsToggle = 'settings_toggle',
-  /** The auto-resume row in the command palette. */
+  /** A feature's own row in the command palette. */
   CommandPalette = 'command_palette',
   /** Auto-resume declining to run at the moment a usage limit was hit. */
   UsageLimit = 'usage_limit',
+  /** The "all sessions" checkbox in the Allow-all confirmation dialog. */
+  ConfirmDialog = 'confirm_dialog',
 }

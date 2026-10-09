@@ -346,14 +346,16 @@
     "heading": "权限",
     "notSet": "未设置(使用全局)",
     "bypassMode": {
-      "sectionTitle": "绕过模式",
       "label": "禁用绕过模式",
       "description": "防止激活绕过权限模式"
     },
     "defaultMode": {
-      "sectionTitle": "默认输入模式",
       "label": "默认输入模式",
       "description": "打开新会话时的初始权限模式"
+    },
+    "allowAllCommands": {
+      "label": "在所有会话中允许所有命令",
+      "description": "每个会话启动时都已开启“在本次会话中允许所有命令”，模型发出的风险警告会在不显示批准面板的情况下被自动批准。每个会话仍可单独关闭。"
     }
   },
   "about": {

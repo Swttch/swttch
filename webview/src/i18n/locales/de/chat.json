@@ -372,7 +372,11 @@
   "allowAllCommands": {
     "confirmTitle": "„Alle Befehle in dieser Sitzung erlauben“ aktivieren?",
     "confirmMessage": "Obwohl Sie sich im Bypass-Modus befinden, wurde dieses Genehmigungsfenster vom Modell selbst gesendet, um Sie vor einem Risiko zu warnen.\n\nNach der Aktivierung sendet die GUI in dieser Sitzung jedes Mal, wenn das Modell eine solche Warnung schickt, automatisch eine Erlaubnis, ohne das Genehmigungsfenster anzuzeigen.\n\nSie genehmigen damit also automatisch Warnungen, die das Modell direkt sendet. Bitte beachten Sie das Risiko.\n\nSie können dies über „Alle Befehle in dieser Sitzung erlauben“ im Slash-Befehl-Panel wieder ausschalten.",
-    "confirmLabel": "Aktivieren"
+    "confirmLabel": "Aktivieren",
+    "allSessionsLabel": "In allen Sitzungen aktivieren",
+    "confirmAllSessionsTitle": "„Alle Befehle erlauben“ in allen Sitzungen aktivieren?",
+    "confirmAllSessionsMessage": "Auch im Bypass-Modus sendet das Modell manchmal selbst eine Genehmigungsanfrage, um Sie vor einem Risiko zu warnen.\n\nNach der Aktivierung sendet die GUI in jeder Sitzung jedes Mal, wenn das Modell eine solche Warnung schickt, automatisch eine Erlaubnis, ohne das Genehmigungsfenster anzuzeigen.\n\nSie genehmigen damit also automatisch Warnungen, die das Modell direkt sendet. Bitte beachten Sie das Risiko.\n\nSie können dies unter „Einstellungen > Berechtigungen“ ausschalten. Um es nur für eine Sitzung auszuschalten, nutzen Sie „Alle Befehle in dieser Sitzung erlauben“ im Slash-Befehl-Panel.",
+    "allSessionsHint": "Jede Sitzung, die Sie ab jetzt öffnen, startet mit dieser Erlaubnis. Sie können sie unter „Einstellungen > Berechtigungen“ bei „Alle Befehle in allen Sitzungen erlauben“ ausschalten."
   },
   "loginCta": {
     "signed": "Angemeldet",

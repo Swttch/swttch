@@ -372,7 +372,11 @@
   "allowAllCommands": {
     "confirmTitle": "¿Activar “Permitir todos los comandos en esta sesión”?",
     "confirmMessage": "Aunque estés en modo bypass, este panel de aprobación lo envió el propio modelo para avisarte de un riesgo.\n\nUna vez activado, la GUI enviará automáticamente una respuesta de permiso, sin mostrar el panel de aprobación, cada vez que el modelo envíe un aviso así en esta sesión.\n\nEs decir, aprobarás automáticamente avisos que el modelo envía directamente. Ten en cuenta el riesgo.\n\nPuedes desactivarlo con “Permitir todos los comandos en esta sesión” en el panel de comandos de barra.",
-    "confirmLabel": "Activar"
+    "confirmLabel": "Activar",
+    "allSessionsLabel": "Activar en todas las sesiones",
+    "confirmAllSessionsTitle": "¿Activar “Permitir todos los comandos” en todas las sesiones?",
+    "confirmAllSessionsMessage": "Incluso en modo bypass, el modelo a veces envía por sí mismo una solicitud de aprobación para avisarte de un riesgo.\n\nUna vez activado, la GUI enviará automáticamente una respuesta de permiso, sin mostrar el panel de aprobación, cada vez que el modelo envíe un aviso así en cualquier sesión.\n\nEs decir, aprobarás automáticamente avisos que el modelo envía directamente. Ten en cuenta el riesgo.\n\nPuedes desactivarlo en “Configuración > Permisos”. Para desactivarlo solo en una sesión, usa “Permitir todos los comandos en esta sesión” en el panel de comandos de barra.",
+    "allSessionsHint": "Cada sesión que abras a partir de ahora empezará con esto permitido. Puedes desactivarlo en “Configuración > Permisos”, en “Permitir todos los comandos en todas las sesiones”."
   },
   "loginCta": {
     "signed": "Sesión iniciada",

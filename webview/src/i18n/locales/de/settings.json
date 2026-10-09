@@ -350,14 +350,16 @@
     "heading": "Berechtigungen",
     "notSet": "Nicht festgelegt (global verwenden)",
     "bypassMode": {
-      "sectionTitle": "Bypass-Modus",
       "label": "Bypass-Modus deaktivieren",
       "description": "Verhindert, dass der Bypass-Berechtigungsmodus aktiviert wird"
     },
     "defaultMode": {
-      "sectionTitle": "Standard-Eingabemodus",
       "label": "Standard-Eingabemodus",
       "description": "Anfänglicher Berechtigungsmodus beim Öffnen einer neuen Sitzung"
+    },
+    "allowAllCommands": {
+      "label": "Alle Befehle in allen Sitzungen erlauben",
+      "description": "Jede Sitzung startet mit bereits aktiviertem „Alle Befehle in dieser Sitzung erlauben“, sodass Risikowarnungen des Modells ohne Genehmigungsfenster automatisch genehmigt werden. Eine Sitzung kann es weiterhin für sich ausschalten."
     }
   },
   "about": {

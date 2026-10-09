@@ -372,7 +372,11 @@
   "allowAllCommands": {
     "confirmTitle": "Activer « Autoriser toutes les commandes dans cette session » ?",
     "confirmMessage": "Même en mode bypass, ce panneau d’approbation a été envoyé par le modèle lui-même pour vous avertir d’un risque.\n\nUne fois activé, l’interface enverra automatiquement une réponse d’autorisation, sans afficher le panneau d’approbation, chaque fois que le modèle enverra un tel avertissement dans cette session.\n\nAutrement dit, vous approuverez automatiquement des avertissements envoyés directement par le modèle. Soyez conscient du risque.\n\nVous pouvez le désactiver avec « Autoriser toutes les commandes dans cette session » dans le panneau des commandes slash.",
-    "confirmLabel": "Activer"
+    "confirmLabel": "Activer",
+    "allSessionsLabel": "Activer dans toutes les sessions",
+    "confirmAllSessionsTitle": "Activer « Autoriser toutes les commandes » dans toutes les sessions ?",
+    "confirmAllSessionsMessage": "Même en mode bypass, le modèle envoie parfois lui-même une demande d’approbation pour vous avertir d’un risque.\n\nUne fois activé, l’interface enverra automatiquement une réponse d’autorisation, sans afficher le panneau d’approbation, chaque fois que le modèle enverra un tel avertissement dans n’importe quelle session.\n\nAutrement dit, vous approuverez automatiquement des avertissements envoyés directement par le modèle. Soyez conscient du risque.\n\nVous pouvez le désactiver dans « Paramètres > Autorisations ». Pour le désactiver pour une seule session, utilisez « Autoriser toutes les commandes dans cette session » dans le panneau des commandes slash.",
+    "allSessionsHint": "Toute session que vous ouvrirez à partir de maintenant démarrera avec cette autorisation. Vous pouvez la désactiver dans « Paramètres > Autorisations », sous « Autoriser toutes les commandes dans toutes les sessions »."
   },
   "loginCta": {
     "signed": "Connecté",

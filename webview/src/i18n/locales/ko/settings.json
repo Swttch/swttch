@@ -346,14 +346,16 @@
     "heading": "권한",
     "notSet": "설정 안 함 (전역 설정 사용)",
     "bypassMode": {
-      "sectionTitle": "우회 모드",
       "label": "우회 모드 비활성화",
       "description": "권한 우회 모드가 활성화되지 않도록 합니다"
     },
     "defaultMode": {
-      "sectionTitle": "기본 입력 모드",
       "label": "기본 입력 모드",
       "description": "새 세션을 열 때의 초기 권한 모드"
+    },
+    "allowAllCommands": {
+      "label": "모든 세션에서 모든 명령어 허용",
+      "description": "모든 세션이 “이번 세션에서 모든 명령어 허용”이 켜진 채로 시작해서, 모델이 보내는 위험 경고를 승인 패널 없이 자동으로 승인합니다. 세션마다 따로 끌 수 있습니다."
     }
   },
   "about": {

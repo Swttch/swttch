@@ -165,6 +165,13 @@ export enum SettingKey {
   // Auto-resume on usage-limit reset (sponsor-only); seeds the limit banner default.
   AUTO_RESUME_ON_LIMIT = 'autoResumeOnLimit',
 
+  // Whether every session starts with "Allow all command in this session" already
+  // on (sponsor-only). A session can still turn it off for itself. Written to
+  // global scope only, and a value the project file supplies is ignored: that
+  // file lives in the repository, so honouring it would let a cloned repo switch
+  // off the CLI's own risk warnings. See the scope policy in backend settings.ts.
+  ALLOW_ALL_COMMANDS_BY_DEFAULT = 'allowAllCommandsByDefault',
+
   // Seeds the editor-context chip's state at the START of a session (/clear, reset,
   // new session). Like the model or permission mode, it is a starting value only:
   // clicking the chip mid-session changes that session alone and is never written
@@ -415,6 +422,7 @@ export interface SettingsState {
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: number;
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_RESUME_ON_LIMIT]: boolean;
+  [SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT]: boolean;
   [SettingKey.ATTACH_EDITOR_CONTEXT]: boolean;
   [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: boolean;
   [SettingKey.DIFF_SURFACE]: DiffSurface;
@@ -460,6 +468,7 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.NOTIFICATION_SOUND_VOLUME]: 5,
   [SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_RESUME_ON_LIMIT]: false,
+  [SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT]: false,
   [SettingKey.ATTACH_EDITOR_CONTEXT]: true,
   [SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION]: true,
   [SettingKey.DIFF_SURFACE]: DiffSurface.IDE,

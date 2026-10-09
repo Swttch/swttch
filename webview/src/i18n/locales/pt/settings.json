@@ -350,14 +350,16 @@
     "heading": "Permissões",
     "notSet": "Não definido (usar global)",
     "bypassMode": {
-      "sectionTitle": "Modo de Contorno",
       "label": "Desativar Modo de Contorno",
       "description": "Impede que o modo de contorno de permissões seja ativado"
     },
     "defaultMode": {
-      "sectionTitle": "Modo de Entrada Padrão",
       "label": "Modo de Entrada Padrão",
       "description": "Modo de permissão inicial ao abrir uma nova sessão"
+    },
+    "allowAllCommands": {
+      "label": "Permitir todos os comandos em todas as sessões",
+      "description": "Cada sessão começa com “Permitir todos os comandos nesta sessão” já ativado, então os avisos de risco enviados pelo modelo são aprovados sem mostrar o painel de aprovação. Uma sessão ainda pode desativá-lo para si mesma."
     }
   },
   "about": {
