@@ -1,6 +1,8 @@
 # Hide the top bar with `top_bar_display=F`
 
 > Languages: **English** · [한국어](./ko.md)
+>
+> Related: [#536](https://github.com/Swttch/swttch/pull/536)
 
 ## What's new
 

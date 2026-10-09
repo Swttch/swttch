@@ -1,6 +1,8 @@
 # `top_bar_display=F`로 상단바 숨기기
 
 > 언어: [English](./en.md) · **한국어**
+>
+> 관련: [#536](https://github.com/Swttch/swttch/pull/536)
 
 ## 새로워진 점
 
