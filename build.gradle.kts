@@ -188,7 +188,12 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
-            <h3>0.34.0 - Reconnect Remote Development, guide for stalled screens, context usage, and a + menu</h3>
+            <h3>0.34.1 - Better file attachments, and a fix for the flickering user message</h3>
+            <ul>
+                <li>Add attaching any file type, with icons, previews and reordering (#532)</li>
+                <li>Fix a pinned user message flickering while the chat follows the bottom (#533)</li>
+            </ul>
+            <h3>0.34.0 -Reconnect Remote Development, guide for stalled screens, context usage, and a + menu</h3>
             <ul>
                 <li>Fix panels not connecting under Remote Development, and show why when they cannot (#473, reported by @alexandrezia)</li>
                 <li>Add a guide for screens that do not load or connect, and restart a backend that was left behind (#526, reported by @thiago-f-medeiros)</li>
