@@ -66,6 +66,54 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // Issue #540: a handler that started before a disconnect resumes after the
+  // connection was removed and subscribes the dead id, leaving a ghost "open".
+  describe('subscribe from a removed connection (issue #540)', () => {
+    it('ignores a late subscribe and keeps the session closed', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+
+      cm.subscribe(connId, 'sess-1');
+
+      expect(cm.getSessionActivityPayload().open).not.toContain('sess-1');
+    });
+
+    it('does not leave a subscriber behind for the ghost id', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.removeConnection(connId);
+
+      cm.subscribe(connId, 'sess-1');
+
+      expect(cm.getOpenSessionIds()).toEqual([]);
+    });
+
+    it('still opens the session for a fresh connection after a ghost attempt', () => {
+      const gone = cm.addConnection(createMockWs());
+      cm.removeConnection(gone);
+      cm.subscribe(gone, 'sess-1');
+
+      const live = cm.addConnection(createMockWs());
+      cm.subscribe(live, 'sess-1');
+
+      expect(cm.getOpenSessionIds()).toEqual(['sess-1']);
+      cm.removeConnection(live);
+      expect(cm.getOpenSessionIds()).toEqual([]);
+    });
+
+    it('keeps the session open when only one of two clients closes', () => {
+      const a = cm.addConnection(createMockWs());
+      const b = cm.addConnection(createMockWs());
+      cm.subscribe(a, 'sess-1');
+      cm.subscribe(b, 'sess-1');
+
+      cm.removeConnection(a);
+      expect(cm.getOpenSessionIds()).toEqual(['sess-1']);
+
+      cm.removeConnection(b);
+      expect(cm.getOpenSessionIds()).toEqual([]);
+    });
+  });
+
   describe('broadcastToSession', () => {
     it('should send to all subscribers of a session', () => {
       const ws1 = createMockWs();

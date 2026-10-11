@@ -617,8 +617,23 @@ export class ConnectionManager {
     workingDir?: string,
   ): void {
     const client = this.clientMap.get(connectionId);
+    /*
+     * A connection that is already gone cannot subscribe. Handlers resolve
+     * asynchronously (loading a session takes a while), so one started before a
+     * disconnect can reach this call after [removeConnection] has finished its
+     * cleanup. Adding the id then would leave a subscriber that no later
+     * disconnect event can remove, and the session would show as open forever
+     * (issue #540).
+     */
+    if (!client) {
+      console.error(
+        '[node-backend]',
+        `Ignored subscribe from removed connection ${connectionId} (session ${sessionId})`,
+      );
+      return;
+    }
     // Already subscribed to the same session — no-op
-    if (client?.subscribedSessionId === sessionId) {
+    if (client.subscribedSessionId === sessionId) {
       return;
     }
 
@@ -659,9 +674,7 @@ export class ConnectionManager {
       );
     }
 
-    if (client) {
-      client.subscribedSessionId = sessionId;
-    }
+    client.subscribedSessionId = sessionId;
 
     console.error(
       '[node-backend]',
@@ -850,7 +863,14 @@ export class ConnectionManager {
   getOpenSessionIds(): string[] {
     const ids: string[] = [];
     for (const session of this.sessionRegistry.values()) {
-      if (session.subscribers.size > 0) ids.push(session.sessionId);
+      // Only a live connection counts: an id with no client behind it is a
+      // leftover, not a tab watching the session (issue #540).
+      for (const connId of session.subscribers) {
+        if (this.clientMap.has(connId)) {
+          ids.push(session.sessionId);
+          break;
+        }
+      }
     }
     return ids;
   }
