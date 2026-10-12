@@ -115,7 +115,8 @@
         "description": "在 {{appName}} 运行时让后续消息排队，或引导当前运行。按 {{shortcut}} 可对单条消息执行相反操作。",
         "descriptionNoShortcut": "在 {{appName}} 运行时让后续消息排队，或引导当前运行。",
         "queue": "排队",
-        "steer": "引导"
+        "steer": "引导",
+        "notSet": "未设置(使用全局)"
       }
     },
     "notifications": {

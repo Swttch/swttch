@@ -115,7 +115,8 @@
         "description": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。按 {{shortcut}} 可針對單則訊息執行相反操作。",
         "descriptionNoShortcut": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。",
         "queue": "加入佇列",
-        "steer": "引導"
+        "steer": "引導",
+        "notSet": "未設定(使用全域)"
       }
     },
     "notifications": {

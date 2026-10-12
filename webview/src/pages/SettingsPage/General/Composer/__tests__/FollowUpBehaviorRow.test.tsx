@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 const updateSettingMock = vi.fn();
+const resetToGlobalMock = vi.fn();
 
 // What the settings screen is handed: the open tab's own file (`scopeSettings`),
 // and the value in effect once global and project are merged (`settings`).
@@ -16,6 +17,7 @@ vi.mock('@/contexts/SettingsContext', () => ({
     scopeSettings: mockScopeSettings,
     settings: mockMergedSettings,
     updateSetting: updateSettingMock,
+    resetToGlobal: resetToGlobalMock,
   }),
 }));
 
@@ -30,6 +32,7 @@ const inheritedBadge = () => screen.queryByRole('img', { name: /Not set in this 
 
 beforeEach(() => {
   updateSettingMock.mockReset();
+  resetToGlobalMock.mockReset();
   mockScope = 'global';
   mockScopeSettings = {};
   mockMergedSettings = {};
@@ -85,7 +88,47 @@ describe('FollowUpBehaviorRow', () => {
     });
   });
 
+  // A project that stored its own value had no way to take it back from this
+  // row, so it stayed pinned to a choice the user may have made once and forgotten.
+  describe('taking the project value back', () => {
+    beforeEach(() => {
+      mockScope = 'project';
+    });
+
+    it('offers "Not set" while the project has its own value, and clears it', () => {
+      mockScopeSettings = { composerFollowUpBehavior: 'steer' };
+      mockMergedSettings = { composerFollowUpBehavior: 'steer' };
+      render(<FollowUpBehaviorRow />);
+
+      fireEvent.click(followUpSelect());
+      fireEvent.click(screen.getByRole('option', { name: 'Not set (use global)' }));
+
+      expect(resetToGlobalMock).toHaveBeenCalledWith('composerFollowUpBehavior');
+      expect(updateSettingMock).not.toHaveBeenCalled();
+    });
+
+    it('does not offer it while the project inherits, and choosing a value stores it', () => {
+      mockScopeSettings = {};
+      mockMergedSettings = { composerFollowUpBehavior: 'queue' };
+      render(<FollowUpBehaviorRow />);
+
+      fireEvent.click(followUpSelect());
+      expect(screen.queryByRole('option', { name: 'Not set (use global)' })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('option', { name: 'Queue' }));
+      expect(updateSettingMock).toHaveBeenCalledWith('composerFollowUpBehavior', 'queue');
+    });
+  });
+
   describe('on the global tab', () => {
+    it('never offers "Not set", because the global file is the end of the chain', () => {
+      mockScopeSettings = { composerFollowUpBehavior: 'queue' };
+      render(<FollowUpBehaviorRow />);
+
+      fireEvent.click(followUpSelect());
+      expect(screen.queryByRole('option', { name: 'Not set (use global)' })).not.toBeInTheDocument();
+    });
+
     it('shows steer for a user who never chose', () => {
       mockScopeSettings = { composerFollowUpBehavior: null };
       render(<FollowUpBehaviorRow />);

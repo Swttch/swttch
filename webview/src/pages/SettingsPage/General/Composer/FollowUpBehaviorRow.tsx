@@ -12,6 +12,9 @@ import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
 import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
+/** The value standing for "this project says nothing; follow the global one". */
+const NOT_SET_VALUE = '__NOT_SET__';
+
 /**
  * What a message typed while a turn is running does.
  *
@@ -23,7 +26,7 @@ import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsSc
 export function FollowUpBehaviorRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { updateSetting } = useSettings();
+  const { updateSetting, scope, resetToGlobal } = useSettings();
   const { displaySettings, isInherited } = useDisplaySettings();
 
   const stored = displaySettings as ComposerShortcutSettings;
@@ -33,7 +36,15 @@ export function FollowUpBehaviorRow() {
   // nothing left to add and no one-off invert to promise.
   const invertShortcut = invertKeyLabel(stored);
 
+  // "Not set" is how a project takes its own value back, so it is offered only
+  // while there is one to take back. Without it a project stays pinned to a
+  // choice made once.
+  const hasOwnValue = scope === 'project' && !isInherited(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR);
+
   const options: SelectOption[] = [
+    ...(hasOwnValue
+      ? [{ value: NOT_SET_VALUE, label: t('general.composer.followUp.notSet'), italic: true }]
+      : []),
     { value: FollowUpBehavior.Queue, label: t('general.composer.followUp.queue') },
     { value: FollowUpBehavior.Steer, label: t('general.composer.followUp.steer') },
   ];
@@ -56,9 +67,13 @@ export function FollowUpBehaviorRow() {
         value={behavior}
         options={options}
         ariaLabel={t('general.composer.followUp.label')}
-        onChange={(value) =>
-          void updateSetting(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR, value as FollowUpBehavior)
-        }
+        onChange={(value) => {
+          if (value === NOT_SET_VALUE) {
+            void resetToGlobal(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR);
+            return;
+          }
+          void updateSetting(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR, value as FollowUpBehavior);
+        }}
         className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
       />
     </SettingRow>

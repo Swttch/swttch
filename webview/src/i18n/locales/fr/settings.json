@@ -115,7 +115,8 @@
         "description": "Mettre les suivis en file d’attente pendant que {{appName}} s’exécute, ou orienter l’exécution en cours. Appuyer sur {{shortcut}} pour faire l’inverse pour un message.",
         "descriptionNoShortcut": "Mettre les suivis en file d’attente pendant que {{appName}} s’exécute, ou orienter l’exécution en cours.",
         "queue": "Mettre en file d’attente",
-        "steer": "Orienter"
+        "steer": "Orienter",
+        "notSet": "Non défini (utiliser le paramètre global)"
       }
     },
     "notifications": {

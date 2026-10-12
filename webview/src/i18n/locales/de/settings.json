@@ -115,7 +115,8 @@
         "description": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf. Drücke {{shortcut}}, um das Verhalten für eine Nachricht umzukehren.",
         "descriptionNoShortcut": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf.",
         "queue": "In Warteschlange stellen",
-        "steer": "Steuern"
+        "steer": "Steuern",
+        "notSet": "Nicht festgelegt (global verwenden)"
       }
     },
     "notifications": {

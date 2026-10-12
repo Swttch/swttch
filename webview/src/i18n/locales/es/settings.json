@@ -115,7 +115,8 @@
         "description": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual. Pulsa {{shortcut}} para hacer lo contrario en un solo mensaje.",
         "descriptionNoShortcut": "Pon en cola los mensajes de seguimiento mientras {{appName}} se ejecuta o redirige la ejecución actual.",
         "queue": "Poner en cola",
-        "steer": "Redirigir"
+        "steer": "Redirigir",
+        "notSet": "Sin definir (usar global)"
       }
     },
     "notifications": {

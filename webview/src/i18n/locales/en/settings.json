@@ -115,7 +115,8 @@
         "description": "Queue follow-ups while {{appName}} runs or steer the current run. Press {{shortcut}} to do the opposite for one message.",
         "descriptionNoShortcut": "Queue follow-ups while {{appName}} runs or steer the current run.",
         "queue": "Queue",
-        "steer": "Steer"
+        "steer": "Steer",
+        "notSet": "Not set (use global)"
       }
     },
     "notifications": {

@@ -115,7 +115,8 @@
         "description": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual. Pressione {{shortcut}} para fazer o oposto em uma mensagem.",
         "descriptionNoShortcut": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual.",
         "queue": "Enfileirar",
-        "steer": "Orientar"
+        "steer": "Orientar",
+        "notSet": "Não definido (usar global)"
       }
     },
     "notifications": {
