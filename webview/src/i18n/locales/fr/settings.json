@@ -683,6 +683,8 @@
     "claudeNativeLabel": "C",
     "projectOverride": "Le projet remplace cette valeur. La modifier ici n'a aucun effet",
     "projectOverrideLabel": "P",
+    "inherited": "Non défini dans ce projet. La valeur globale est utilisée",
+    "inheritedLabel": "G",
     "openDocs": "Ouvrir la doc"
   },
   "ide": {

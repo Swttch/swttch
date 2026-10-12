@@ -679,6 +679,8 @@
     "claudeNativeLabel": "原",
     "projectOverride": "專案設定會覆寫此值。在這裡修改不會生效",
     "projectOverrideLabel": "專",
+    "inherited": "此專案未設定，使用全域設定的值",
+    "inheritedLabel": "全",
     "openDocs": "開啟文件"
   },
   "ide": {

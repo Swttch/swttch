@@ -23,6 +23,13 @@ export enum SettingBadgeVariant {
    * on the project tab the value on screen is already the winning one.
    */
   ProjectOverride = 'projectOverride',
+  /**
+   * The project tab is open and the project says nothing about this key, so the
+   * value on screen is the global one (or the built-in default when global says
+   * nothing either). Shown on the project tab only, the mirror of
+   * {@link ProjectOverride}.
+   */
+  Inherited = 'inherited',
 }
 
 interface BadgeConfig {
@@ -49,6 +56,11 @@ const BADGE_CONFIG: Record<SettingBadgeVariant, BadgeConfig> = {
     labelKey: 'badges.projectOverrideLabel',
     tooltipKey: 'badges.projectOverride',
     className: 'bg-state-warning-bg text-state-warning-fg',
+  },
+  [SettingBadgeVariant.Inherited]: {
+    labelKey: 'badges.inheritedLabel',
+    tooltipKey: 'badges.inherited',
+    className: 'bg-surface-overlay text-text-secondary',
   },
 };
 
@@ -92,6 +104,8 @@ export function SettingBadge(props: Props) {
   return (
     <Tooltip content={content} interactive={hasLink}>
       <span
+        role="img"
+        aria-label={tooltipText}
         className={`inline-flex h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded px-1 text-[0.65rem] font-semibold leading-none ${config.className}`}
       >
         {t(config.labelKey)}

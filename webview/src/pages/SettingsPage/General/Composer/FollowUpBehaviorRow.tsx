@@ -10,7 +10,7 @@ import {
 import { invertKeyLabel } from '@/utils/composerShortcut';
 import { APP_NAME } from '@/config/app';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * What a message typed while a turn is running does.
@@ -23,9 +23,10 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function FollowUpBehaviorRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited } = useDisplaySettings();
 
-  const stored = scopeSettings as ComposerShortcutSettings;
+  const stored = displaySettings as ComposerShortcutSettings;
   const behavior = resolveFollowUpBehavior(stored);
 
   // Empty when the send key already carries every modifier, so there is
@@ -49,6 +50,7 @@ export function FollowUpBehaviorRow() {
           : t('general.composer.followUp.descriptionNoShortcut', { appName: APP_NAME })
       }
       isOverridden={isOverridden(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR)}
+      isInherited={isInherited(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR)}
     >
       <Select
         value={behavior}

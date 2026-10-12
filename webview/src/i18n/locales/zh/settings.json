@@ -679,6 +679,8 @@
     "claudeNativeLabel": "原",
     "projectOverride": "项目设置会覆盖此值。在这里修改不会生效",
     "projectOverrideLabel": "项",
+    "inherited": "此项目未设置，使用全局设置的值",
+    "inheritedLabel": "全",
     "openDocs": "打开文档"
   },
   "ide": {

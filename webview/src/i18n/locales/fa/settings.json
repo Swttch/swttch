@@ -679,6 +679,8 @@
     "claudeNativeLabel": "ک",
     "projectOverride": "تنظیمات پروژه این مقدار را بازنویسی می‌کند. تغییر آن در اینجا اثری ندارد",
     "projectOverrideLabel": "پ",
+    "inherited": "در این پروژه تنظیم نشده است. از مقدار سراسری استفاده می‌شود",
+    "inheritedLabel": "س",
     "openDocs": "باز کردن مستندات"
   },
   "ide": {

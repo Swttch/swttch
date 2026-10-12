@@ -679,6 +679,8 @@
     "claudeNativeLabel": "ク",
     "projectOverride": "プロジェクト設定がこの値を上書きします。ここで変更しても反映されません",
     "projectOverrideLabel": "プ",
+    "inherited": "このプロジェクトでは未設定です。グローバル設定の値を使用しています",
+    "inheritedLabel": "グ",
     "openDocs": "ドキュメントを開く"
   },
   "ide": {

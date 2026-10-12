@@ -679,6 +679,8 @@
     "claudeNativeLabel": "클",
     "projectOverride": "프로젝트 설정이 이 값을 덮어씁니다. 여기서 바꿔도 적용되지 않습니다",
     "projectOverrideLabel": "프",
+    "inherited": "이 프로젝트에는 설정되어 있지 않습니다. 전역 설정의 값을 사용합니다",
+    "inheritedLabel": "전",
     "openDocs": "문서 열기"
   },
   "ide": {

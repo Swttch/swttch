@@ -679,6 +679,8 @@
     "claudeNativeLabel": "ك",
     "projectOverride": "إعدادات المشروع تتجاوز هذه القيمة. تغييرها هنا لا يؤثر في شيء",
     "projectOverrideLabel": "م",
+    "inherited": "غير محدد في هذا المشروع. تُستخدم القيمة العامة",
+    "inheritedLabel": "ع",
     "openDocs": "فتح المستندات"
   },
   "ide": {
