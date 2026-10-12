@@ -16,6 +16,7 @@ const { stub } = vi.hoisted(() => ({
 vi.mock('../ChatInput/DictationProvider', () => ({ DictationProvider: ({ children }: any) => <>{children}</> }));
 vi.mock('../ListeningNotice', () => ({ ListeningNotice: stub('listening') }));
 vi.mock('../SessionHeader', () => ({ SessionHeader: stub('header') }));
+vi.mock('../useDesktopTabActions', () => ({ useDesktopTabActions: () => {} }));
 vi.mock('../ChatMessageArea', () => ({
   ChatMessageArea: () => <p data-testid="message-text">some chat text</p>,
 }));
