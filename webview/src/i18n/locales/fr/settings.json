@@ -230,13 +230,11 @@
       },
       "fontSize": {
         "label": "Taille de police",
-        "description": "Taille de police de base pour l'interface",
-        "notSetPlaceholder": "Non défini"
+        "description": "Taille de police de base pour l'interface"
       },
       "lineSpacing": {
         "label": "Interligne",
-        "description": "Hauteur de ligne du texte des messages",
-        "notSetPlaceholder": "Non défini"
+        "description": "Hauteur de ligne du texte des messages"
       }
     },
     "softWrap": {
@@ -254,8 +252,7 @@
       "sectionTitle": "Défilement",
       "autoScrollThreshold": {
         "label": "Distance de reprise du défilement automatique",
-        "description": "Si vous faites défiler au-delà de ce nombre de pixels depuis le bas, le défilement automatique se met en pause afin que vous puissiez lire librement. Il reprend dès que vous revenez dans cette distance. Plus la valeur est petite, plus vous devez revenir près du bas pour réactiver. Par défaut {{value}}.",
-        "notSetPlaceholder": "Non défini"
+        "description": "Si vous faites défiler au-delà de ce nombre de pixels depuis le bas, le défilement automatique se met en pause afin que vous puissiez lire librement. Il reprend dès que vous revenez dans cette distance. Plus la valeur est petite, plus vous devez revenir près du bas pour réactiver. Par défaut {{value}}."
       }
     }
   },
@@ -265,8 +262,7 @@
       "sectionTitle": "Débogage",
       "debugMode": {
         "label": "Mode débogage",
-        "description": "Activer la journalisation de débogage et les diagnostics",
-        "notSet": "Non défini (utiliser le paramètre global)"
+        "description": "Activer la journalisation de débogage et les diagnostics"
       },
       "logLevel": {
         "label": "Niveau de journalisation",

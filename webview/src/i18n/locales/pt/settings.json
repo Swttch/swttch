@@ -230,13 +230,11 @@
       },
       "fontSize": {
         "label": "Tamanho da Fonte",
-        "description": "Tamanho de fonte base da interface",
-        "notSetPlaceholder": "Não definido"
+        "description": "Tamanho de fonte base da interface"
       },
       "lineSpacing": {
         "label": "Espaçamento entre linhas",
-        "description": "Altura da linha do texto das mensagens de chat",
-        "notSetPlaceholder": "Não definido"
+        "description": "Altura da linha do texto das mensagens de chat"
       }
     },
     "softWrap": {
@@ -254,8 +252,7 @@
       "sectionTitle": "Rolagem",
       "autoScrollThreshold": {
         "label": "Distância para retomar a rolagem automática",
-        "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}.",
-        "notSetPlaceholder": "Não definido"
+        "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}."
       }
     }
   },
@@ -265,8 +262,7 @@
       "sectionTitle": "Depuração",
       "debugMode": {
         "label": "Modo de Depuração",
-        "description": "Ativar registro de depuração e diagnósticos",
-        "notSet": "Não definido (usar global)"
+        "description": "Ativar registro de depuração e diagnósticos"
       },
       "logLevel": {
         "label": "Nível de Registro",

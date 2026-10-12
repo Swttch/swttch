@@ -230,13 +230,11 @@
       },
       "fontSize": {
         "label": "Font Size",
-        "description": "Base font size for the interface",
-        "notSetPlaceholder": "Not set"
+        "description": "Base font size for the interface"
       },
       "lineSpacing": {
         "label": "Line Spacing",
-        "description": "Line height for chat message text",
-        "notSetPlaceholder": "Not set"
+        "description": "Line height for chat message text"
       }
     },
     "softWrap": {
@@ -254,8 +252,7 @@
       "sectionTitle": "Scrolling",
       "autoScrollThreshold": {
         "label": "Auto-scroll resume distance",
-        "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}.",
-        "notSetPlaceholder": "Not set"
+        "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}."
       }
     }
   },
@@ -265,8 +262,7 @@
       "sectionTitle": "Debugging",
       "debugMode": {
         "label": "Debug Mode",
-        "description": "Enable debug logging and diagnostics",
-        "notSet": "Not set (use global)"
+        "description": "Enable debug logging and diagnostics"
       },
       "logLevel": {
         "label": "Log Level",

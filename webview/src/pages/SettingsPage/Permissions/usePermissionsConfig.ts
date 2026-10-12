@@ -19,6 +19,15 @@ export function usePermissionsConfig() {
   const permissions = (scopeSettings.permissions ?? {}) as PermissionsConfig;
   /** What is actually in effect once scopes are merged, which decides behaviour. */
   const mergedPermissions = (settings.permissions ?? {}) as PermissionsConfig;
+  /**
+   * What a row should draw. On the project tab that is the merged value: a key the
+   * project leaves out is inherited from global, and drawing the project's own
+   * object instead shows an inherited key as unset (#547).
+   */
+  const displayedPermissions = scope === 'project' ? mergedPermissions : permissions;
+  /** Whether [key] on the project tab comes from global because the project has none. */
+  const isPermissionInherited = (key: keyof PermissionsConfig) =>
+    scope === 'project' && permissions[key] === undefined;
 
   const savePermissionsKey = async (key: keyof PermissionsConfig, value: unknown) => {
     const current = (scopeSettings.permissions ?? {}) as Record<string, unknown>;
@@ -32,5 +41,13 @@ export function usePermissionsConfig() {
     await updateSetting('permissions', updated as PermissionsConfig);
   };
 
-  return { permissions, mergedPermissions, savePermissionsKey, deletePermissionsKey, scope };
+  return {
+    permissions,
+    mergedPermissions,
+    displayedPermissions,
+    isPermissionInherited,
+    savePermissionsKey,
+    deletePermissionsKey,
+    scope,
+  };
 }

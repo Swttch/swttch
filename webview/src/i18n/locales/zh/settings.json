@@ -230,13 +230,11 @@
       },
       "fontSize": {
         "label": "字体大小",
-        "description": "界面的基础字体大小",
-        "notSetPlaceholder": "未设置"
+        "description": "界面的基础字体大小"
       },
       "lineSpacing": {
         "label": "行间距",
-        "description": "聊天消息文本的行高",
-        "notSetPlaceholder": "未设置"
+        "description": "聊天消息文本的行高"
       }
     },
     "softWrap": {
@@ -254,8 +252,7 @@
       "sectionTitle": "滚动",
       "autoScrollThreshold": {
         "label": "自动滚动恢复距离",
-        "description": "向上滚动超出距底部这个像素范围时,自动滚动会暂停,以便自由阅读。滚动回到该范围内即会恢复。数值越小,需要滚动得越靠近底部才会重新启用。默认值 {{value}}。",
-        "notSetPlaceholder": "未设置"
+        "description": "向上滚动超出距底部这个像素范围时,自动滚动会暂停,以便自由阅读。滚动回到该范围内即会恢复。数值越小,需要滚动得越靠近底部才会重新启用。默认值 {{value}}。"
       }
     }
   },
@@ -265,8 +262,7 @@
       "sectionTitle": "调试",
       "debugMode": {
         "label": "调试模式",
-        "description": "启用调试日志与诊断信息",
-        "notSet": "未设置(使用全局)"
+        "description": "启用调试日志与诊断信息"
       },
       "logLevel": {
         "label": "日志级别",
