@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -238,6 +238,60 @@ describe('loadSessionMessages', () => {
     expect(['u1', 'u2', 'a1', 'a2']).toContain(result.oldestUuid);
     // hasMore stays honest: there is older history before this fallback page.
     expect(result.hasMore).toBe(true);
+  });
+
+  // A reloaded session has to show what the live one showed (#535). The tool calls
+  // a subagent made are rebuilt from its own transcript file, and the file is found
+  // through the Agent call's result. A foreground agent's result is the framed
+  // report and carries no `agentId:` line, so the file is found through the
+  // `toolUseId` the CLI writes into the agent's `.meta.json` instead.
+  describe('subagent progress', () => {
+    async function writeAgent(sessionId: string, agentId: string, toolUseId: string): Promise<void> {
+      const dir = join(tmpDir, sessionId, 'subagents');
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, `agent-${agentId}.meta.json`), JSON.stringify({ toolUseId }));
+      await writeFile(join(dir, `agent-${agentId}.jsonl`), [
+        JSON.stringify({ type: 'assistant', uuid: 's1', timestamp: '2026-01-01T00:00:01.000Z', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'inner1', name: 'Read', input: {} }] } }),
+        JSON.stringify({ type: 'user', uuid: 's2', parentUuid: 's1', timestamp: '2026-01-01T00:00:02.000Z', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'inner1', content: 'ok' }] } }),
+      ].join('\n'));
+    }
+
+    function agentCall(toolUseId: string, resultText: string): string[] {
+      return [
+        JSON.stringify({ type: 'user', uuid: 'u1' }),
+        JSON.stringify({ type: 'assistant', uuid: 'a1', parentUuid: 'u1', message: { role: 'assistant', content: [{ type: 'tool_use', id: toolUseId, name: 'Agent', input: { description: 'check' } }] } }),
+        JSON.stringify({ type: 'user', uuid: 'u2', parentUuid: 'a1', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content: resultText }] } }),
+      ];
+    }
+
+    it('finds a subagent through its agentId line, as before', async () => {
+      await writeSession('sess-agent-line', agentCall('toolu_bg', 'launched\nagentId: abc123 (internal)'));
+      await writeAgent('sess-agent-line', 'abc123', 'toolu_bg');
+
+      const result = await loadSessionMessages('/work', 'sess-agent-line');
+
+      const progress = result.messages.filter(m => m.type === 'progress');
+      expect(progress.map(m => m.parentToolUseID)).toEqual(['toolu_bg', 'toolu_bg']);
+    });
+
+    it('finds a subagent whose result has no agentId line through its meta file', async () => {
+      await writeSession('sess-meta', agentCall('toolu_fg', '[Subagent hand-back] The text below is the final report'));
+      await writeAgent('sess-meta', 'def456', 'toolu_fg');
+
+      const result = await loadSessionMessages('/work', 'sess-meta');
+
+      const progress = result.messages.filter(m => m.type === 'progress');
+      expect(progress.map(m => m.parentToolUseID)).toEqual(['toolu_fg', 'toolu_fg']);
+    });
+
+    it('leaves out a meta file that points at a call this session does not hold', async () => {
+      await writeSession('sess-stranger', agentCall('toolu_fg', 'report'));
+      await writeAgent('sess-stranger', 'zzz999', 'toolu_elsewhere');
+
+      const result = await loadSessionMessages('/work', 'sess-stranger');
+
+      expect(result.messages.filter(m => m.type === 'progress')).toHaveLength(0);
+    });
   });
 
   // On reload, the composer should restore the session's actual mode rather than

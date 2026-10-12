@@ -1,4 +1,4 @@
-import { stat } from 'fs/promises';
+import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readJsonlEntries } from './readJsonlEntries';
@@ -100,6 +100,31 @@ function extractTaskAgentMappings(messages: SessionMessage[]): Map<string, strin
     }
   }
 
+  return toolUseToAgentId;
+}
+
+// Map Agent tool_use id -> agentId from the `.meta.json` the CLI writes beside each
+// subagent transcript. The Agent call's result only states `agentId:` for a
+// backgrounded agent; a foreground agent's result is the framed report and names
+// no id, so without this its tool calls vanish from a reloaded session (#535).
+async function readSubagentMetaMappings(subagentsDir: string): Promise<Map<string, string>> {
+  const toolUseToAgentId = new Map<string, string>();
+  let names: string[];
+  try {
+    names = await readdir(subagentsDir);
+  } catch {
+    return toolUseToAgentId;
+  }
+  for (const name of names) {
+    const match = /^agent-(.+)\.meta\.json$/.exec(name);
+    if (!match) continue;
+    try {
+      const meta = JSON.parse(await readFile(join(subagentsDir, name), 'utf-8')) as Record<string, unknown>;
+      if (typeof meta.toolUseId === 'string') toolUseToAgentId.set(meta.toolUseId, match[1]);
+    } catch {
+      // Unreadable or half-written meta file — this agent simply has no match
+    }
+  }
   return toolUseToAgentId;
 }
 
@@ -209,6 +234,11 @@ async function computeActiveChain(
     try {
       // Extract Task tool_use id -> agentId mappings from main messages
       const toolUseToAgentId = extractTaskAgentMappings(allMessages);
+      // The agentId line in the result wins; the meta file only fills in the calls
+      // whose result named no agent.
+      for (const [toolUseId, agentId] of await readSubagentMetaMappings(subagentsDir)) {
+        if (!toolUseToAgentId.has(toolUseId)) toolUseToAgentId.set(toolUseId, agentId);
+      }
 
       if (toolUseToAgentId.size > 0) {
         // Build a map from tool_use id -> index of the assistant message containing that Task tool_use
