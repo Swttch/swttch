@@ -1,4 +1,4 @@
-import { SettingRow } from '../../common';
+import { SettingRow, ScopeGuard } from '../../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, HostMode } from '@/types/settings';
@@ -18,7 +18,7 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
  */
 export function HostModeRow() {
   const isOverridden = useIsOverriddenByProject();
-  const { settings, updateSettingWithScope } = useSettings();
+  const { settings, updateSettingWithScope, scope } = useSettings();
   const { t } = useTranslation('settings');
 
   if (!isJetBrains()) return null;
@@ -36,13 +36,15 @@ export function HostModeRow() {
       description={t('general.hostMode.description')}
       isOverridden={isOverridden(SettingKey.HOST_MODE)}
     >
-      <Select
-        value={hostMode}
-        options={hostModeOptions}
-        ariaLabel={t('general.hostMode.label')}
-        className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
-        onChange={(value) => updateSettingWithScope(SettingKey.HOST_MODE, value as HostMode, 'global')}
-      />
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <Select
+          value={hostMode}
+          options={hostModeOptions}
+          ariaLabel={t('general.hostMode.label')}
+          className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+          onChange={(value) => updateSettingWithScope(SettingKey.HOST_MODE, value as HostMode, 'global')}
+        />
+      </ScopeGuard>
     </SettingRow>
   );
 }

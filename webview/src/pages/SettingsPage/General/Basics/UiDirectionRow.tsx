@@ -1,4 +1,4 @@
-import { SettingRow } from '../../common';
+import { SettingRow, ScopeGuard } from '../../common';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, UiDirection } from '@/types/settings';
@@ -12,20 +12,22 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
  */
 export function UiDirectionRow() {
   const isOverridden = useIsOverriddenByProject();
-  const { settings, updateSettingWithScope } = useSettings();
+  const { settings, updateSettingWithScope, scope } = useSettings();
   const { t } = useTranslation('settings');
 
   const enabled = settings[SettingKey.UI_DIRECTION] === UiDirection.RTL;
 
   return (
     <SettingRow label={t('general.uiDirection.label')} isOverridden={isOverridden(SettingKey.UI_DIRECTION)}>
-      <ToggleSwitch
-        checked={enabled}
-        onChange={(checked) =>
-          updateSettingWithScope(SettingKey.UI_DIRECTION, checked ? UiDirection.RTL : UiDirection.LTR, 'global')
-        }
-        ariaLabel={t('general.uiDirection.label')}
-      />
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <ToggleSwitch
+          checked={enabled}
+          onChange={(checked) =>
+            updateSettingWithScope(SettingKey.UI_DIRECTION, checked ? UiDirection.RTL : UiDirection.LTR, 'global')
+          }
+          ariaLabel={t('general.uiDirection.label')}
+        />
+      </ScopeGuard>
     </SettingRow>
   );
 }
