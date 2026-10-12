@@ -17,6 +17,10 @@
  * scroll position, whether following is on, whether the button is shown, every
  * localStorage read/write/delete, and every `scrollTo` call with its arguments.
  * The two recordings must be identical.
+ *
+ * One difference is intended and is kept out of the scripts, not out of the
+ * yardstick: since #530 the pull to the bottom waits while the reader keeps
+ * moving the view up (see `stops` below). The yardstick pulls at once.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
@@ -327,9 +331,15 @@ function compare(scenario: Scenario) {
   return { before, now };
 }
 
+// Since #530 the pull to the bottom waits while the reader keeps moving the view
+// up, which the yardstick (written before that) does not. A script in which the
+// reader moves the view and content then lands straight away would therefore
+// differ on purpose, so after every move the reader stops for longer than the
+// hold before anything else happens.
+const READER_STOPS_FRAMES = 40;
 const frames = (n = 1): Step => ({ name: `${n} frame(s)`, run: (c) => c.raf.flushFrames(n) });
 const grow = (h: number): Step => ({ name: `content grows to ${h}`, run: (c) => { c.box.setScrollHeight(h); c.raf.flushFrames(); } });
-const scrollTo = (top: number): Step => ({ name: `user scrolls to ${top}`, run: (c) => { c.box.userScrollTo(top); c.raf.flushFrames(); } });
+const scrollTo = (top: number): Step => ({ name: `user scrolls to ${top}`, run: (c) => { c.box.userScrollTo(top); c.raf.flushFrames(1 + READER_STOPS_FRAMES); } });
 const wait = (ms: number): Step => ({ name: `wait ${ms}ms`, run: () => { vi.advanceTimersByTime(ms); } });
 const props = (name: string, next: Partial<ChatProps>): Step => ({ name, run: (c) => { c.set(next); c.raf.flushFrames(); } });
 

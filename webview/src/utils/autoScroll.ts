@@ -17,6 +17,22 @@ export const AUTO_SCROLL_THRESHOLD_MAX = 1000;
  */
 export const AUTO_SCROLL_BOTTOM_EPS = 5;
 
+/**
+ * How long, in ms, the view is left where the reader put it after the reader
+ * last moved it up. Slow mouse-wheel notches arrive a few hundred milliseconds
+ * apart, so this has to be longer than the gap between two of them.
+ */
+export const AUTO_SCROLL_HOLD_MS = 500;
+
+/**
+ * Smallest upward move of the view in one frame, in px, that counts as the
+ * reader moving it. Anything smaller is rounding noise from a fractional
+ * scrollTop. This never decides whether auto-scroll is on, only whether the
+ * pull to the bottom waits (see `shouldPullToBottom`), so a stray frame of
+ * noise costs at most one hold time of not following.
+ */
+export const AUTO_SCROLL_UP_MOVE_EPS = 1;
+
 /** Clamp a user-supplied resume distance into the supported range. */
 export function clampAutoScrollThreshold(value: number): number {
   if (!Number.isFinite(value)) return AUTO_SCROLL_THRESHOLD_DEFAULT;
@@ -85,4 +101,53 @@ export function shouldShowScrollToBottom(
   if (!hasMessages) return false;
   if (distanceFromBottom <= threshold) return false;
   return true;
+}
+
+/**
+ * Whether the reader moved the view up since the last frame.
+ *
+ * `scrollDelta` is the change in scrollTop. The browser also lowers scrollTop
+ * by itself when the content gets shorter than the position it was holding; that
+ * is the content moving, not the reader, so a frame in which the content shrank
+ * is never the reader.
+ */
+export function isReaderMovingUp(scrollDelta: number, contentShrank: boolean): boolean {
+  if (contentShrank) return false;
+  return scrollDelta <= -AUTO_SCROLL_UP_MOVE_EPS;
+}
+
+/**
+ * Whether the reader moved the view down since the last frame. A reader who
+ * turns around and heads back to the bottom is no longer holding the view up,
+ * so the pull to the bottom stops waiting for them.
+ */
+export function isReaderMovingDown(scrollDelta: number): boolean {
+  return scrollDelta >= AUTO_SCROLL_UP_MOVE_EPS;
+}
+
+/**
+ * Whether this frame should pull the view down to the new bottom.
+ *
+ * Inside the resume distance the resting state is "following", and new content
+ * pulls the view to the bottom. That pull must not fight the reader's hand: a
+ * reader who is only starting to scroll up is inside the distance for the first
+ * few moves, each new line of an answer landing between two moves would undo
+ * the move before it, and the reader could only get out by moving past the
+ * distance faster than the answer grew (issue #530).
+ *
+ * So the pull waits while the reader keeps moving the view up
+ * (`msSinceReaderMovedUp` under `AUTO_SCROLL_HOLD_MS`). Whether following is on
+ * is decided elsewhere (`nextAutoFollow`) and is not touched by this: a reader
+ * who stops inside the distance is still following, and the next growth after
+ * the hold time pulls the view down as it always did.
+ */
+export function shouldPullToBottom(
+  following: boolean,
+  contentGrew: boolean,
+  distanceFromBottom: number,
+  msSinceReaderMovedUp: number,
+): boolean {
+  if (!following || !contentGrew) return false;
+  if (distanceFromBottom <= AUTO_SCROLL_BOTTOM_EPS) return false;
+  return msSinceReaderMovedUp >= AUTO_SCROLL_HOLD_MS;
 }

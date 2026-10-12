@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+  AUTO_SCROLL_HOLD_MS,
   clampAutoScrollThreshold,
+  isReaderMovingDown,
+  isReaderMovingUp,
   nextAutoFollow,
+  shouldPullToBottom,
   shouldShowScrollToBottom,
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   AUTO_SCROLL_THRESHOLD_MAX,
@@ -147,5 +151,73 @@ describe('auto-follow and the button agree at every distance', () => {
       const buttonShown = shouldShowScrollToBottom(following, true, dist, THRESHOLD);
       expect({ dist, buttonShown }).toEqual({ dist, buttonShown: !following });
     }
+  });
+});
+
+// Issue #530: while an answer streams in, every new line of text lands inside
+// the resume distance of a reader who is only just starting to scroll up, and
+// the pull to the bottom undid each small move before the next one arrived. The
+// reader could only leave by moving past the distance faster than the text grew.
+describe('isReaderMovingUp', () => {
+  it('is true when the view moved up', () => {
+    expect(isReaderMovingUp(-5, false)).toBe(true);
+    expect(isReaderMovingUp(-1, false)).toBe(true);
+  });
+
+  it('is false when the view stood still or moved down', () => {
+    expect(isReaderMovingUp(0, false)).toBe(false);
+    expect(isReaderMovingUp(12, false)).toBe(false);
+  });
+
+  it('ignores sub-pixel wobble', () => {
+    expect(isReaderMovingUp(-0.4, false)).toBe(false);
+  });
+
+  // The browser lowers scrollTop by itself when the content gets shorter than
+  // the position it was holding. Nobody scrolled.
+  it('is false when the content got shorter, whatever scrollTop did', () => {
+    expect(isReaderMovingUp(-100, true)).toBe(false);
+  });
+});
+
+describe('isReaderMovingDown', () => {
+  it('is true when the view moved down', () => {
+    expect(isReaderMovingDown(40)).toBe(true);
+    expect(isReaderMovingDown(1)).toBe(true);
+  });
+
+  it('is false when the view stood still, moved up, or only wobbled', () => {
+    expect(isReaderMovingDown(0)).toBe(false);
+    expect(isReaderMovingDown(-8)).toBe(false);
+    expect(isReaderMovingDown(0.4)).toBe(false);
+  });
+});
+
+describe('shouldPullToBottom', () => {
+  const FAR = 100;
+
+  it('pulls when following, the content grew and the view is not at the bottom', () => {
+    expect(shouldPullToBottom(true, true, FAR, Infinity)).toBe(true);
+  });
+
+  it('does not pull when not following', () => {
+    expect(shouldPullToBottom(false, true, FAR, Infinity)).toBe(false);
+  });
+
+  it('does not pull when nothing grew', () => {
+    expect(shouldPullToBottom(true, false, FAR, Infinity)).toBe(false);
+  });
+
+  it('does not pull when already at the bottom', () => {
+    expect(shouldPullToBottom(true, true, 0, Infinity)).toBe(false);
+  });
+
+  it('does not pull while the reader has just moved the view up', () => {
+    expect(shouldPullToBottom(true, true, FAR, 0)).toBe(false);
+    expect(shouldPullToBottom(true, true, FAR, AUTO_SCROLL_HOLD_MS - 1)).toBe(false);
+  });
+
+  it('pulls again once the reader has been still for the hold time', () => {
+    expect(shouldPullToBottom(true, true, FAR, AUTO_SCROLL_HOLD_MS)).toBe(true);
   });
 });

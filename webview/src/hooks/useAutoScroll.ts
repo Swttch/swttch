@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject, type R
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import {
-  AUTO_SCROLL_BOTTOM_EPS,
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   clampAutoScrollThreshold,
+  isReaderMovingDown,
+  isReaderMovingUp,
   nextAutoFollow,
+  shouldPullToBottom,
   shouldShowScrollToBottom,
 } from '@/utils/autoScroll';
 
@@ -127,6 +129,10 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
   // even after the user scrolled auto-follow off.
   const lastRearmKeyRef = useRef<string | null>(null);
 
+  // When the reader last moved the view up, on the animation-frame clock. The
+  // pull to the bottom waits while this is recent. -Infinity means "not lately".
+  const lastReaderUpAtRef = useRef(-Infinity);
+
   // Clean up timers on unmount
   useEffect(() => {
     return () => {
@@ -138,6 +144,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
   useEffect(() => {
     isInitialScrollDoneRef.current = false;
     autoFollowRef.current = true;
+    lastReaderUpAtRef.current = -Infinity;
   }, [resetKey]);
 
   // Re-arm auto-follow whenever the user sends something, even if they had
@@ -147,13 +154,16 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     if (rearmKey && rearmKey !== lastRearmKeyRef.current) {
       lastRearmKeyRef.current = rearmKey;
       autoFollowRef.current = true;
+      // Sending is the reader asking for the reply, so the pull must not wait on
+      // a move up made just before.
+      lastReaderUpAtRef.current = -Infinity;
     }
   }, [rearmKey]);
 
   // Drive auto-follow and scroll positioning from requestAnimationFrame
   useEffect(() => {
     let rafId = 0;
-    const tick = () => {
+    const tick = (now: number) => {
       const el = scrollRef.current;
       if (el) {
         if (repositionOnRemountRef.current && el !== positionedElRef.current) {
@@ -180,6 +190,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
             autoFollowRef.current = true;
           }
           isInitialScrollDoneRef.current = true;
+          lastReaderUpAtRef.current = -Infinity;
           prevScrollTopRef.current = el.scrollTop;
           lastScrollHeightRef.current = el.scrollHeight;
         } else {
@@ -193,7 +204,10 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
           setShowScrollButton(prev => (prev === show ? prev : show));
 
           const grew = el.scrollHeight !== lastScrollHeightRef.current;
-          if (next && grew && dist > AUTO_SCROLL_BOTTOM_EPS) {
+          const contentShrank = el.scrollHeight < lastScrollHeightRef.current;
+          if (isReaderMovingUp(delta, contentShrank)) lastReaderUpAtRef.current = now;
+          else if (isReaderMovingDown(delta)) lastReaderUpAtRef.current = -Infinity;
+          if (shouldPullToBottom(next, grew, dist, now - lastReaderUpAtRef.current)) {
             // Smooth scroll during streaming, instant otherwise
             el.scrollTo({
               top: el.scrollHeight,
@@ -235,6 +249,7 @@ export function useAutoScroll(options: UseAutoScrollOptions): UseAutoScroll {
     // (the log pane putting the reader back after text left from above) writes
     // the scroll position and cancels the glide, and the view stops part-way.
     autoFollowRef.current = true;
+    lastReaderUpAtRef.current = -Infinity;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, []);
 

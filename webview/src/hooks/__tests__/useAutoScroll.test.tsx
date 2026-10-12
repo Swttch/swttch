@@ -177,12 +177,139 @@ describe('useAutoScroll', () => {
       raf.flushFrames();
 
       box.userScrollTo(1400); // 200px up: past the default 80, inside 300
-      raf.flushFrames();
+      raf.flushFrames(40); // the reader stops; the view is left alone while they might still be moving it
       box.setScrollHeight(2200);
       raf.flushFrames();
 
       expect(box.el.scrollTop).toBe(1800);
       expect(buttonShown()).toBe(false);
+    });
+  });
+
+  // Issue #530: while an answer streams in, a reader who starts scrolling up is
+  // inside the resume distance for the first few moves, and every new line of
+  // text pulled the view back to the bottom before the next move arrived. The
+  // view is left alone for as long as the reader keeps moving it up.
+  describe('the reader moving up inside the resume distance (#530)', () => {
+    // One more line of the answer lands and the reader moves up a little, in the same frame.
+    function stream(box: ScrollBox, heightRef: { height: number }, steps: number, move = 10, growth = 5) {
+      for (let i = 0; i < steps; i++) {
+        heightRef.height += growth;
+        box.setScrollHeight(heightRef.height);
+        box.userScrollTo(box.el.scrollTop - move);
+        raf.flushFrames();
+      }
+    }
+
+    it('does not pull the view back down while the reader keeps moving it up', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+
+      stream(box, { height: 2000 }, 5);
+
+      expect(box.scrollToCalls).toEqual([]);
+      expect(box.el.scrollTop).toBe(1550);
+      expect(buttonShown()).toBe(false);
+    });
+
+    it('keeps the view for a pause shorter than the hold time', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const h = { height: 2000 };
+      stream(box, h, 5);
+
+      raf.flushFrames(10); // 160ms of stillness
+      h.height += 5;
+      box.setScrollHeight(h.height);
+      raf.flushFrames();
+
+      expect(box.scrollToCalls).toEqual([]);
+    });
+
+    it('pulls the view back to the bottom once the reader has stopped inside the distance', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const h = { height: 2000 };
+      stream(box, h, 5);
+
+      raf.flushFrames(40); // 640ms of stillness
+      h.height += 5;
+      box.setScrollHeight(h.height);
+      raf.flushFrames();
+
+      expect(box.lastScrollTo()).toEqual({ top: h.height, behavior: 'smooth' });
+      expect(box.el.scrollTop).toBe(h.height - 400);
+    });
+
+    it('stops waiting as soon as the reader turns around and moves down', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const h = { height: 2000 };
+      stream(box, h, 5);
+
+      box.userScrollTo(box.el.scrollTop + 10);
+      raf.flushFrames();
+      h.height += 5;
+      box.setScrollHeight(h.height);
+      raf.flushFrames();
+
+      expect(box.el.scrollTop).toBe(h.height - 400);
+    });
+
+    it('lets the reader leave: past the distance following stops and the button appears', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const h = { height: 2000 };
+
+      stream(box, h, 12);
+
+      expect(buttonShown()).toBe(true);
+      expect(box.scrollToCalls).toEqual([]);
+    });
+
+    it('stays where the reader left it after leaving, however long they stop', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+      const h = { height: 2000 };
+      stream(box, h, 12);
+      const stoppedAt = box.el.scrollTop;
+
+      raf.flushFrames(100);
+      h.height += 50;
+      box.setScrollHeight(h.height);
+      raf.flushFrames(3);
+
+      expect(box.el.scrollTop).toBe(stoppedAt);
+      expect(box.scrollToCalls).toEqual([]);
+    });
+
+    // The browser lowers scrollTop by itself when the content gets shorter than
+    // the position it was holding. That is not the reader.
+    it('does not take the content getting shorter for the reader moving up', () => {
+      const { box } = mountWithBox({ isStreaming: true });
+      raf.flushFrames();
+
+      box.setScrollHeight(1900); // scrollTop 1600 -> 1500
+      raf.flushFrames();
+      box.setScrollHeight(2000);
+      raf.flushFrames();
+
+      expect(box.el.scrollTop).toBe(1600);
+      expect(box.lastScrollTo()).toEqual({ top: 2000, behavior: 'smooth' });
+    });
+
+    it('follows again at once when the reader sends something, even right after moving up', () => {
+      const { box, rerender } = mountWithBox({ isStreaming: true, rearmKey: 'u1' });
+      raf.flushFrames();
+      const h = { height: 2000 };
+      stream(box, h, 3);
+
+      rerender({ isStreaming: true, rearmKey: 'u2' });
+      h.height += 5;
+      box.setScrollHeight(h.height);
+      raf.flushFrames();
+
+      expect(box.el.scrollTop).toBe(h.height - 400);
     });
   });
 
