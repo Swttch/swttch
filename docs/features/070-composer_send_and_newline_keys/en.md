@@ -97,14 +97,17 @@ something, Claude is working on it, and you type again.
 
 | Option | What your message does |
 | --- | --- |
-| **Queue** | Waits until the current turn finishes, then goes. This is the default, and it is what the app has always done. |
-| **Steer** | Ends the current turn now and gets answered instead. |
+| **Steer** | Hands your message to Claude right away. This is the default, and it is how the terminal CLI behaves when you type while it is working. |
+| **Queue** | Waits until the current turn finishes, then goes. |
 
-Steering is not a separate channel. It is the same interrupt the Stop button
-sends, and it is what a terminal user does by typing and pressing Escape: your
-message is already in the CLI's queue, so ending the turn makes the CLI pick it
-up and start a new one on it. The work done so far is still in the conversation,
-so Claude answers you knowing everything it had just found out.
+Steering interrupts nothing. Your message reaches the CLI the moment you send
+it, and the CLI takes it at the next point where it accepts input, the same as
+when you type into the terminal while it is working. Use the Stop button to end
+the turn itself.
+
+Queue is the app's own behavior. The app holds your message and sends it when
+the current turn ends. Held messages stack above the composer, and each one can
+be cancelled before it is sent.
 
 ### Doing the opposite for one message
 
@@ -184,8 +187,7 @@ whatever the send key is set to. Use the send button.
 commits a candidate, and that keystroke belongs to the composition. Press Enter
 again once the candidate is committed.
 
-**Steering ends the turn; it does not pause it.** There is no way to hand Claude
-a note while it keeps working — the CLI has no such channel, and inventing one
-would mean relying on something undocumented that could stop working without
-notice. What Steer does is what you could do by hand, faster: end the turn and
-ask again with everything already learned still in the conversation.
+**A setting you never chose reads as Steer.** Until you pick Queue yourself, a
+message you send while Claude is working goes straight to Claude. A project can
+set its own value, and a project that has not set one shows and uses the value
+from your global settings.

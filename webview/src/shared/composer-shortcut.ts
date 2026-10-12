@@ -31,18 +31,18 @@ export enum ComposerNewlineShortcut {
 /**
  * What happens to a message sent while a turn is already running.
  *
- * `Steer` is an interrupt, not a separate channel. The CLI queues whatever
- * arrives mid-turn, and an interrupt makes it end the current turn and start a
- * new one on the queued message — measured, not assumed: the interrupt's
- * `control_response` comes back with `still_queued: []` and a fresh
- * `system/init` follows. The same thing a terminal user does by typing and
- * pressing Escape.
+ * `Steer` is the plain stdin send. The message goes straight to the CLI, which
+ * picks it up at the next point it accepts input, exactly as when the same
+ * message is typed into the terminal CLI. Nothing is interrupted.
+ *
+ * `Queue` holds the message here instead: the backend keeps it and releases one
+ * per finished turn, so it reaches the CLI only after the current turn ends.
  */
 export enum FollowUpBehavior {
-  /** Hold it until the current turn finishes on its own. The default. */
-  Queue = 'queue',
-  /** End the current turn now and answer this instead. */
+  /** Hand it to the running turn now. The default, as in the terminal CLI. */
   Steer = 'steer',
+  /** Hold it until the current turn finishes on its own. Opt-in. */
+  Queue = 'queue',
 }
 
 /** Every accepted {@link FollowUpBehavior} value. */
@@ -64,22 +64,23 @@ export interface ComposerShortcutSettings {
   composerNewlineShortcutCustom?: string | null;
   /** The one setting that used to decide both, kept because users still have it. */
   useCtrlEnterToSend?: boolean | null;
-  /** Null until the user chooses, which reads as {@link FollowUpBehavior.Queue}. */
+  /** Null until the user chooses, which reads as {@link FollowUpBehavior.Steer}. */
   composerFollowUpBehavior?: FollowUpBehavior | string | null;
 }
 
 /**
  * What a mid-turn message does, with nothing left null.
  *
- * Queue is the default because it is what the app has always done, and because
- * the other one throws away work in progress: a user who has not asked for that
- * should never get it.
+ * Steer is the default because it is what the terminal CLI does and what this
+ * app did before the setting offered a choice. Defaulting to queue made a
+ * message typed mid-turn wait for the turn to end for everyone who never opened
+ * the setting (#547). Holding a message back is something a user asks for.
  */
 export function resolveFollowUpBehavior(settings: ComposerShortcutSettings): FollowUpBehavior {
   const stored = settings.composerFollowUpBehavior;
   return FOLLOW_UP_BEHAVIORS.includes(stored as string)
     ? (stored as FollowUpBehavior)
-    : FollowUpBehavior.Queue;
+    : FollowUpBehavior.Steer;
 }
 
 /** The other one. Used for the keystroke that inverts the setting once. */

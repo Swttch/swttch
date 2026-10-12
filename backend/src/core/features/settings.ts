@@ -151,7 +151,7 @@ const COMMENT_MAP: Record<string, string> = {
   composerSendShortcutCustom: 'composerSendShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Meta+Enter")',
   composerNewlineShortcut: '줄을 바꾸는 키: "shiftEnter" | "enter" | "custom". null이면 useCtrlEnterToSend를 따른다',
   composerNewlineShortcutCustom: 'composerNewlineShortcut이 "custom"일 때 쓰는 조합(저장형, 예: "Shift+Enter")',
-  composerFollowUpBehavior: '턴이 도는 중에 보낸 메시지의 처리: "queue"(턴이 끝날 때까지 대기) | "steer"(현재 턴을 중단하고 이 메시지로 새 턴 시작). null이면 queue',
+  composerFollowUpBehavior: '턴이 도는 중에 보낸 메시지의 처리: "steer"(CLI에 바로 전달하고 CLI가 다음 입력 지점에서 집는다. 터미널 CLI와 같다) | "queue"(턴이 끝날 때까지 백엔드가 쥐고 있다가 보낸다). null이면 steer',
   notificationBanner: '세션이 턴을 마치거나 확인을 기다릴 때, 그 세션을 보고 있지 않으면 화면에 알림 배너를 띄울지. null은 아직 묻지 않았다는 뜻이며, 첫 알림에서 운영체제 권한을 요청하고 그 결과가 여기 기록된다. 알림음은 이 설정과 무관하게 울린다(알림음은 별도 설정)',
   notificationSound: '세션이 턴을 마치거나 확인을 기다릴 때 낼 소리의 id(LIST_SYSTEM_SOUNDS가 돌려주는 값, 예: "Glass"). null이면 소리를 내지 않는다. 배너와 무관하게 실행된다. 값은 소리를 낼 때마다 여기서 읽으므로 설정을 바꾸면 그 다음 턴부터 바로 적용된다',
   notificationSoundVolume: '알림음의 음량(1~10, 미설정 시 5). 한 눈금의 절대 크기는 운영체제마다 다르다 — 맥은 1이 원음이고 10이 원음의 10배(afplay 게인), 윈도우와 리눅스는 증폭이 안 되므로 10이 원음이고 1이 그 10분의 1이다',

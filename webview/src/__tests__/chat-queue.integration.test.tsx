@@ -84,7 +84,7 @@ vi.mock('../contexts/ClaudeSettingsContext', () => ({
 }));
 
 // The setting under test: composerFollowUpBehavior, read by resolveFollowUpBehavior.
-let composerFollowUpBehavior: FollowUpBehavior = FollowUpBehavior.Queue;
+let composerFollowUpBehavior: FollowUpBehavior | null = FollowUpBehavior.Queue;
 vi.mock('../contexts/SettingsContext', () => ({
   useSettings: () => ({ settings: { get composerFollowUpBehavior() { return composerFollowUpBehavior; } } }),
 }));
@@ -187,6 +187,29 @@ describe('queued follow-up message integration', () => {
     // The composer clears immediately, same as an ordinary send — the message
     // moved from "being typed" to "queued", not to nowhere.
     expect(screen.getByTestId('input')).toHaveValue('');
+  });
+
+  // #547: a user who never opened the setting must not find their mid-turn
+  // messages waiting for the turn to end. The terminal CLI takes them at once,
+  // and so did this app before the setting existed.
+  it('sends SEND_MESSAGE mid-stream when the user never chose a follow-up behavior', async () => {
+    composerFollowUpBehavior = null;
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+    await startStreaming();
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'quick send' } });
+      fireEvent.click(screen.getByTestId('submit'));
+    });
+
+    await waitFor(() => {
+      expect(mockBridge.send).toHaveBeenCalledWith(MessageType.SEND_MESSAGE, expect.objectContaining({
+        sessionId: 'queue-session',
+        content: 'quick send',
+      }));
+    });
+    expect(mockBridge.send.mock.calls.some(call => call[0] === MessageType.QUEUE_MESSAGE)).toBe(false);
+    expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
   });
 
   // The setting's description promises a key that does the opposite for one
