@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SettingsHeader } from './SettingsHeader';
 import { SettingsSidebar } from './SettingsSidebar';
 import { ScopeTabs } from './ScopeTabs';
 import { SidebarMode, useSidebarLayout, CONTENT_FLOOR_STYLE } from './useSidebarLayout';
 import { useRouter, ROUTE_META } from '@/router';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 
 interface SettingsLayoutProps {
   children: ReactNode;
@@ -13,6 +15,19 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const { route } = useRouter();
   const meta = ROUTE_META[route];
   const showScopeTabs = meta?.scopeSupport === 'both';
+
+  // The scope the rows read and write is held by the settings stores and outlives
+  // the page that chose it. A page without the switch has one scope, the user's:
+  // leaving the stores on "project" there would read and save the project's file
+  // with nothing on screen to say so. A page that has the switch keeps whatever
+  // the user chose.
+  const { scope, setScope } = useSettings();
+  const { setScope: setClaudeScope } = useClaudeSettings();
+  useEffect(() => {
+    if (showScopeTabs || scope === 'global') return;
+    setScope('global');
+    setClaudeScope('global');
+  }, [showScopeTabs, scope, setScope, setClaudeScope]);
 
   const { mode, ref } = useSidebarLayout();
 
