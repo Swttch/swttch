@@ -49,6 +49,7 @@ const BUILT_IN_TOOLS = [
     'ReadMcpResourceTool',
     'ReadMcpResourceDirTool',
     'SendUserMessage',
+    'SubagentHandback',
 ];
 
 /**

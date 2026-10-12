@@ -37,6 +37,7 @@ import {EnterWorktreeRenderer} from "./EnterWorktreeRenderer.tsx";
 import {ExitWorktreeRenderer} from "./ExitWorktreeRenderer.tsx";
 import {McpResourceRenderer} from "./McpResourceRenderer.tsx";
 import {SendUserMessageRenderer} from "./SendUserMessageRenderer.tsx";
+import {SubagentHandbackRenderer} from "./SubagentHandbackRenderer.tsx";
 import {McpRenderers} from "./Mcp";
 
 interface ToolRendererProps {
@@ -86,6 +87,7 @@ export const ToolRendererMap = new Map<string, FC<ToolRendererProps>>([
     ['ReadMcpResourceTool', McpResourceRenderer],
     ['ReadMcpResourceDirTool', McpResourceRenderer],
     ['SendUserMessage', SendUserMessageRenderer],
+    ['SubagentHandback', SubagentHandbackRenderer],
 
     // Legacy tool names. The CLI keeps an alias table that normalizes these onto
     // the current names, so a session recorded under an older CLI — or a user
