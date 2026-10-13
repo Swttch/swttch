@@ -41,14 +41,15 @@ The **User Settings (Global)** tab shows your global file, with the built-in def
 | Badge | Where | Meaning |
 | --- | --- | --- |
 | **G** | Project tab | The project did not set this. The value on screen comes from your global settings, or from the built-in default when you have not set it globally either. Tooltip: "Not set in this project. The global value is used". |
+| **P** | Project tab | The project sets its own value for this, overriding your global one. Tooltip: "This project sets its own value, overriding the global one", with a **Reset to global** link at its right end. See [Taking a project's value back](#taking-a-projects-value-back). |
 | **P** | Global tab | The open project sets this too, so the row is dimmed and cannot be edited here. The value in effect is the project's. Tooltip: "The project overrides this. Changing it here has no effect". |
-| no badge | Either tab | The value shown was set on the tab you are looking at. |
+| no badge | Either tab | The value shown comes from the tab you are looking at and nothing overrides it. |
 
 The **C** (Claude Code native setting) and **S** (sponsor feature) badges are unchanged. See [Settings Badges](../017-settings_badges/en.md).
 
-![The same rows on the Project tab after the project chose Steer. Follow-up behavior reads "Steer" and has no badge, while Send shortcut and Newline shortcut still have the G badge.](./assets/project-tab-own-value.png)
+![The same rows on the Project tab after the project chose Steer. Follow-up behavior reads "Steer" and has a P badge, while Send shortcut and Newline shortcut still have the G badge.](./assets/project-tab-own-value.png)
 
-*Once the project chooses its own value, that row loses its **G** badge. The rows the project did not touch keep theirs.*
+*Once the project chooses its own value, that row's **G** badge becomes a **P** badge. The rows the project did not touch keep their **G**.*
 
 ![The Global tab with the project overriding Follow-up behavior. The row has a P badge and its dropdown is dimmed, reading "Queue".](./assets/global-tab-project-overrides.png)
 
@@ -60,7 +61,15 @@ Picking a value on the Project tab stores it in the project, even if it is the s
 
 ## Taking a project's value back
 
-Dropdowns that can be set per project offer **Not set (use global)** at the top of the list, but only while the project has a value of its own to take back. Choosing it removes the project's value, and the row goes back to showing what you set globally.
+Every row on the Project tab that holds a value of its own shows the **P** badge beside its label. Hover the badge and its tooltip says the project overrides the global value, with a **Reset to global** link at the right end. Clicking the link removes the project's value, the **P** badge turns back into **G**, and the row shows what you set globally.
+
+![The Project tab with the pointer on the P badge of Follow-up behavior. A tooltip reads "This project sets its own value, overriding the global one" and ends with a blue "Reset to global" link.](./assets/project-tab-reset-link.png)
+
+*Hover the **P** badge. The link sits at the right end of the tooltip, and the tooltip stays open while the pointer moves onto it.*
+
+This works the same for every kind of row: switches, text fields, dropdowns, number fields and the shortcut recorders.
+
+Dropdowns that can be set per project also offer **Not set (use global)** at the top of the list, but only while the project has a value of its own to take back. It does the same thing as the link.
 
 ![The Follow-up behavior dropdown open on the Project tab with its own value. The list reads "Not set (use global)", "Queue" and "Steer" with a check mark.](./assets/project-tab-not-set-option.png)
 
@@ -68,14 +77,11 @@ Dropdowns that can be set per project offer **Not set (use global)** at the top 
 
 This is offered on Follow-up behavior, Log level, Color theme, Interface language and Default permission mode. The number fields (font size, line spacing, scroll threshold) go back to the global value when you empty them.
 
-## What a project cannot take back from the screen
-
-Switches, text fields and the other dropdowns have no "take back" entry. Once a project stores a value for one of them, the screen offers no way to remove it. Delete that setting from the project's own file, `<project>/.claude-code-gui/settings.json`, and the row shows the global value again.
-
-Two more limits come from how the project file works:
+## Limits that come from the project file
 
 - **Sound cannot be set to Off for one project.** In the project file an empty value means "remove my override", so choosing Off on the Project tab removes the project's value instead of storing "off".
-- **The voice settings are stored together.** The spoken language, wait time and shortcut live in one block. When a project changes one of them, it stores all three as they were on screen at that moment, so the others do not silently change. A later change to your global voice settings then no longer reaches that project.
+- **The voice settings are stored together.** The spoken language, wait time and shortcut live in one block. When a project changes one of them, it stores all three as they were on screen at that moment, so the others do not silently change. A later change to your global voice settings then no longer reaches that project. For the same reason, **Reset to global** on one voice row takes back the whole block, and all the voice rows return to the global values together.
+- **A shortcut and its recorded combination go together.** **Reset to global** on the send or newline shortcut also removes the recorded "custom" combination the project stored beside it.
 
 ## Rows that only exist globally
 

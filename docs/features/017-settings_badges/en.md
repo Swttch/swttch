@@ -20,10 +20,11 @@ There are four badge variants today, each a tiny letter chip:
 | **Claude Code native** | `C` | Orange | This row edits a **real Claude Code CLI setting** | *Claude Code native setting* |
 | **Project override** | `P` | Yellow | On the global tab: the open project sets this too, so the project's value is the one in effect | *The project overrides this. Changing it here has no effect* |
 | **Inherited** | `G` | Gray | On the project tab: the project did not set this, so the value comes from your global settings | *Not set in this project. The global value is used* |
+| **Project value** | `P` | Yellow | On the project tab: the project sets its own value for this, overriding the global one | *This project sets its own value, overriding the global one*, followed by a **Reset to global** link |
 
 The **P** and **G** badges describe where a value comes from rather than what kind of setting it is. They are explained in [The project tab shows the setting that actually applies](../089-project_tab_shows_inherited_settings/en.md) and [Changing a global setting did nothing, and looked like it worked](../040-project_override_lock/en.md). The sections below cover **S** and **C**.
 
-They're intentionally small and unobtrusive — a quiet signal, not a banner. You never have to interact with them; they're just there to answer the question "what am I actually looking at?" when you want it answered.
+They're intentionally small and unobtrusive — a quiet signal, not a banner. You never have to interact with them, apart from the **Reset to global** link in the Project value badge's tooltip; they're just there to answer the question "what am I actually looking at?" when you want it answered.
 
 ## Sponsor badge (S)
 
