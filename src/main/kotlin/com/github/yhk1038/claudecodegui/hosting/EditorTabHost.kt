@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.hosting
 
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
+import com.github.yhk1038.claudecodegui.platform.EditorOpener
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
@@ -49,7 +50,7 @@ object EditorTabHost : ChatHost {
         val virtualFile = ClaudeCodeVirtualFile.getOrCreate(project, tabId, initialPath, initialTitle)
 
         // Already-open tab (same cached virtual file) → focus; otherwise open a new one.
-        fileEditorManager.requestOpenFile(virtualFile)
+        EditorOpener.requestOpenFile(fileEditorManager, virtualFile)
 
         // Persist tab state.
         EditorTabStateService.getInstance(project).addTab(tabId)

@@ -221,12 +221,14 @@ intellijPlatform {
             // Deprecations accumulate, so the upper-bound IU EAP below subsumes
             // intermediate release lines (e.g. 2024.3) for forward-compat checks.
             ide("IC", "2024.2.6")
-            // Upper bound: 2026.2 (262.*), forward-compat before we drop untilBuild (#50).
-            // This was pinned to the EAP "262.8117.19-EAP-SNAPSHOT" until JetBrains removed
-            // that build from both the snapshots and releases repositories (404), which
-            // made verifyPlugin unresolvable during the v0.33.1 release. 2026.2 is now a
-            // released line, so a released IU is the stable pin.
-            ide("IU", "2026.2")
+            // Upper bound: 2026.3 EAP (263.6800.24), forward-compat before we drop untilBuild (#50).
+            // 262 was the upper bound until the Marketplace's own verifier flagged
+            // FileEditorManager.requestOpenFile(VirtualFile) as missing on 263 — a line this
+            // gate never ran. The upper-bound IDE must therefore track the newest line.
+            // An EAP build can be withdrawn by JetBrains: the earlier pin
+            // "262.8117.19-EAP-SNAPSHOT" went 404 and made verifyPlugin unresolvable during the
+            // v0.33.1 release. When 2026.3 is released, replace this with ide("IU", "2026.3").
+            ide("IU", "263.6800.24")
         }
     }
 }

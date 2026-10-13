@@ -1,6 +1,7 @@
 package com.github.yhk1038.claudecodegui.services
 
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
+import com.github.yhk1038.claudecodegui.platform.EditorOpener
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -56,7 +57,7 @@ class DiffTabService(private val project: Project) {
                 initialPath = diffPathFor(toolUseId),
                 initialTitle = REVIEW_TAB_TITLE,
             )
-            FileEditorManager.getInstance(project).requestOpenFile(file)
+            EditorOpener.requestOpenFile(FileEditorManager.getInstance(project), file)
             logger.info("Opened diff review tab (toolUseId=$toolUseId)")
         }
     }
