@@ -1,5 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { readTopBarDisplayFromUrl, IS_DESKTOP_PARAM_KEY, TOP_BAR_DISPLAY_PARAM_KEY } from '../topBarDisplayParam';
+import {
+  readIsDesktopFromUrl,
+  readTopBarDisplayFromUrl,
+  IS_DESKTOP_PARAM_KEY,
+  TOP_BAR_DISPLAY_PARAM_KEY,
+} from '../topBarDisplayParam';
+
+describe('readIsDesktopFromUrl', () => {
+  it('is not the Desktop app when the parameter is absent', () => {
+    expect(readIsDesktopFromUrl('')).toBe(false);
+    expect(readIsDesktopFromUrl('?workingDir=%2Ftmp%2Fproject')).toBe(false);
+  });
+
+  it.each(['1', 'true', 'TRUE', 't', 'T', ' 1 '])('is the Desktop app for is_desktop=%s', (value) => {
+    expect(readIsDesktopFromUrl(`?is_desktop=${encodeURIComponent(value)}`)).toBe(true);
+  });
+
+  it.each(['0', 'false', 'f', '', 'no', 'yes', 'desktop'])(
+    'is not the Desktop app for is_desktop=%s, so a typo never makes it one',
+    (value) => {
+      expect(readIsDesktopFromUrl(`?is_desktop=${value}`)).toBe(false);
+    },
+  );
+
+  it('does not take the older top_bar_display=F for the Desktop app, because that only asked for the bar to be hidden', () => {
+    expect(readIsDesktopFromUrl('?top_bar_display=F')).toBe(false);
+  });
+});
 
 describe('readTopBarDisplayFromUrl', () => {
   it('names the parameter the way a CLI option is named', () => {

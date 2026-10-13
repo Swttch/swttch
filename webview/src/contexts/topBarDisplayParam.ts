@@ -3,8 +3,9 @@
  *
  * `is_desktop=1` is how the Desktop app tells the page it is the embedded chat
  * view of that app. Written like a CLI option, so the host only has to load
- * `...?is_desktop=1`. The page decides what that changes; today it is the top
- * bar, which the Desktop shell draws itself. Only the draw is switched off: the
+ * `...?is_desktop=1`. The page decides what that changes: the top bar, which the
+ * Desktop shell draws itself, and the room above the empty chat's logo that the
+ * bar used to leave. Only the draw of the bar is switched off: the
  * work the bar used to do on the page's behalf (title, favicon, alerts, activity
  * reports) belongs to the page and carries on.
  *
@@ -32,12 +33,19 @@ function normalized(params: URLSearchParams, key: string): string | null {
   return raw === null ? null : raw.trim().toLowerCase();
 }
 
+/**
+ * Whether the page is the chat view of the Desktop app, parsed from a URL's
+ * search string. Only `is_desktop` says so: the older `top_bar_display=F` asked
+ * for the bar to be hidden and nothing more, so it does not make a Desktop app.
+ */
+export function readIsDesktopFromUrl(search: string): boolean {
+  const isDesktop = normalized(new URLSearchParams(search), IS_DESKTOP_PARAM_KEY);
+  return isDesktop !== null && DESKTOP_VALUES.has(isDesktop);
+}
+
 /** Whether the top bar is drawn, parsed from a URL's search string. */
 export function readTopBarDisplayFromUrl(search: string): boolean {
-  const params = new URLSearchParams(search);
-  const isDesktop = normalized(params, IS_DESKTOP_PARAM_KEY);
-  const topBarDisplay = normalized(params, TOP_BAR_DISPLAY_PARAM_KEY);
-  if (isDesktop !== null && DESKTOP_VALUES.has(isDesktop)) return false;
-  if (topBarDisplay !== null && HIDING_VALUES.has(topBarDisplay)) return false;
-  return true;
+  if (readIsDesktopFromUrl(search)) return false;
+  const topBarDisplay = normalized(new URLSearchParams(search), TOP_BAR_DISPLAY_PARAM_KEY);
+  return topBarDisplay === null || !HIDING_VALUES.has(topBarDisplay);
 }
