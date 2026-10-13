@@ -247,7 +247,19 @@
       "description": "隐藏命令和读取操作的卡片。文件改动、提问和计划仍会显示。"
     },
     "chat": {
-      "sectionTitle": "聊天"
+      "sectionTitle": "聊天",
+      "spinnerVerbs": {
+        "description": "当转向进行中时，加载动画显示轮换的动词，如\"Accomplishing\"、\"Architecting\"或\"Baking\"。使用此键将您自己的动词添加到该轮换或用您的替换内置列表。",
+        "modeLabel": "模式",
+        "verbsLabel": "动词",
+        "append": "追加",
+        "replace": "替换",
+        "appendHint": "Claude Code 将您的动词添加到内置集合",
+        "replaceHint": "Claude Code 仅显示您的动词",
+        "placeholder": "输入动词后按 Enter",
+        "remove": "删除 {{name}}",
+        "edit": "编辑 {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "滚动",

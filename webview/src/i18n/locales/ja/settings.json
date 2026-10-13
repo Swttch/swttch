@@ -247,7 +247,19 @@
       "description": "コマンドや読み取りのカードを隠します。ファイルの変更、質問、プランは表示されたままです。"
     },
     "chat": {
-      "sectionTitle": "チャット"
+      "sectionTitle": "チャット",
+      "spinnerVerbs": {
+        "description": "ターンが進行中の間、スピナーは「Accomplishing」、「Architecting」、または「Baking」などのローテーション動詞を表示します。このキーを使用して、そのローテーションに独自の動詞を追加するか、組み込みリストを置き換えます。",
+        "modeLabel": "モード",
+        "verbsLabel": "動詞",
+        "append": "追加",
+        "replace": "置換",
+        "appendHint": "Claude Code は組み込みセットに動詞を追加します",
+        "replaceHint": "Claude Code はあなたの動詞のみを表示します",
+        "placeholder": "動詞を入力して Enter",
+        "remove": "{{name}} を削除",
+        "edit": "{{name}} を編集"
+      }
     },
     "scrolling": {
       "sectionTitle": "スクロール",

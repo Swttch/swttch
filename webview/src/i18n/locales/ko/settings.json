@@ -247,7 +247,19 @@
       "description": "명령 실행과 조회 카드를 숨긴다. 파일 변경, 질문, 계획은 계속 보인다."
     },
     "chat": {
-      "sectionTitle": "채팅"
+      "sectionTitle": "채팅",
+      "spinnerVerbs": {
+        "description": "턴이 진행 중인 동안 스피너는 \"Accomplishing\", \"Architecting\" 또는 \"Baking\"과 같은 회전 동사를 표시합니다. 이 키를 사용하여 해당 회전에 자신의 동사를 추가하거나 내장 목록을 당신의 것으로 바꿉니다.",
+        "modeLabel": "모드",
+        "verbsLabel": "동사",
+        "append": "추가",
+        "replace": "교체",
+        "appendHint": "Claude Code는 당신의 동사를 내장 집합에 추가합니다",
+        "replaceHint": "Claude Code는 당신의 동사만 표시합니다",
+        "placeholder": "동사를 입력하고 Enter",
+        "remove": "{{name}} 삭제",
+        "edit": "{{name}} 수정"
+      }
     },
     "scrolling": {
       "sectionTitle": "스크롤",

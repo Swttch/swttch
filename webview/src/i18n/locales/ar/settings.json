@@ -247,7 +247,19 @@
       "description": "يخفي بطاقات الأوامر وعمليات القراءة. تبقى تغييرات الملفات والأسئلة والخطط ظاهرة."
     },
     "chat": {
-      "sectionTitle": "المحادثة"
+      "sectionTitle": "المحادثة",
+      "spinnerVerbs": {
+        "description": "الأفعال التي يعرضها المؤشر أثناء عمل Claude. «إضافة» تضيفها إلى الأفعال المضمنة، و«استبدال» يعرض الأفعال المدخلة فقط.",
+        "modeLabel": "الوضع",
+        "verbsLabel": "الأفعال",
+        "append": "إضافة",
+        "replace": "استبدال",
+        "appendHint": "يضيف Claude Code أفعالك إلى المجموعة المضمنة",
+        "replaceHint": "يعرض Claude Code أفعالك فقط",
+        "placeholder": "اكتب فعلًا واضغط Enter",
+        "remove": "إزالة {{name}}",
+        "edit": "تعديل {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "التمرير",
