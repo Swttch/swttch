@@ -1,4 +1,4 @@
-# `top_bar_display=F`로 상단바 숨기기
+# `is_desktop=1`로 상단바 숨기기
 
 > 언어: [English](./en.md) · **한국어**
 >
@@ -6,7 +6,9 @@
 
 ## 새로워진 점
 
-브라우저에서 Claude Code 화면을 여는 주소에 **`top_bar_display=F`**를 붙이면 **상단바**를 아예 그리지 않습니다. 채팅이 창의 맨 위에서 시작하므로, 전보다 40픽셀 높이 올라옵니다.
+브라우저에서 Claude Code 화면을 여는 주소에 **`is_desktop=1`**을 붙이면 **상단바**를 아예 그리지 않습니다. 채팅이 창의 맨 위에서 시작하므로, 전보다 40픽셀 높이 올라옵니다.
+
+이름은 이 페이지가 무엇인지를 말합니다. 데스크탑 앱이 자기 창 안에 보여 주는 채팅 화면이라는 뜻입니다. 데스크탑 앱이 자기 머리글을 직접 그리므로, 페이지는 상단바를 빼고 빈 채팅의 "Claude Code" 로고 위쪽 여백을 되돌려 줍니다([빈 채팅의 로고](#빈-채팅의-로고) 참고). 바뀌는 것은 이 두 가지뿐입니다.
 
 명령줄의 옵션처럼 쓰는 방식입니다. 원하는 모양을 주소가 알려 주므로 설정을 바꿀 필요가 없습니다.
 
@@ -14,17 +16,17 @@
 
 ## 사용 방법
 
-**브라우저**(`ccg` 명령으로 여는 Standalone 모드)에서 쓰는 기능입니다. IDE의 도구 창 주소는 IDE가 직접 만들기 때문에, IDE 안에는 파라미터를 적을 자리가 없습니다.
+**브라우저**(`ccg` 명령으로 여는 Standalone 모드)와, 열어 주는 모든 채팅 화면에 이 파라미터를 붙이는 데스크탑 앱에서 쓰는 기능입니다. IDE의 도구 창 주소는 IDE가 직접 만들기 때문에, IDE 안에는 파라미터를 적을 자리가 없습니다.
 
 브라우저 주소창의 주소 끝에 파라미터를 붙입니다.
 
-- 주소에 이미 `?`가 있으면 맨 끝에 `&top_bar_display=F`를 붙입니다.
-- `?`가 없으면 `?top_bar_display=F`를 붙입니다.
+- 주소에 이미 `?`가 있으면 맨 끝에 `&is_desktop=1`을 붙입니다.
+- `?`가 없으면 `?is_desktop=1`을 붙입니다.
 
 예를 들면 다음과 같습니다.
 
 ```
-http://localhost:<포트>/sessions/new?workingDir=%2FUsers%2Fyou%2Fproject&top_bar_display=F
+http://localhost:<포트>/sessions/new?workingDir=%2FUsers%2Fyou%2Fproject&is_desktop=1
 ```
 
 그다음 Enter를 누릅니다.
@@ -35,19 +37,30 @@ http://localhost:<포트>/sessions/new?workingDir=%2FUsers%2Fyou%2Fproject&top_b
 
 ![상단바가 있는 채팅 화면. 첫 줄에 폴더 아이콘, 세션 제목 "Question 1: Please explain how the pinne...", 아래쪽 화살표, ⋮ 버튼이 있고, 그 아래에 "You're signed out of Claude Code."와 "Get notified when responses complete" 배너 두 개가 있다.](./assets/top-bar-shown.png)
 
-`top_bar_display=F`를 붙이면 그 줄이 없어집니다. 배너가 화면의 맨 위 가장자리에 붙고, 대화가 배너 바로 아래에서 시작합니다.
+`is_desktop=1`을 붙이면 그 줄이 없어집니다. 배너가 화면의 맨 위 가장자리에 붙고, 대화가 배너 바로 아래에서 시작합니다.
 
-![top_bar_display=F를 붙인 같은 채팅 화면. 첫 줄이 없고, "You're signed out of Claude Code."와 "Get notified when responses complete" 배너가 맨 위 가장자리에 붙어 있으며, 그 바로 아래에서 첫 메시지 "Question 1: Please explain how the pinned send header behaves when the page scrolls."가 시작한다.](./assets/top-bar-hidden.png)
+![is_desktop=1을 붙인 같은 채팅 화면. 첫 줄이 없고, "You're signed out of Claude Code."와 "Get notified when responses complete" 배너가 맨 위 가장자리에 붙어 있으며, 그 바로 아래에서 첫 메시지 "Question 1: Please explain how the pinned send header behaves when the page scrolls."가 시작한다.](./assets/top-bar-hidden.png)
 
 ## 값
 
 | 주소의 값 | 상단바 |
 |-----------|--------|
-| `F`, `f`, `false`, `FALSE`, `0` | 숨김 |
-| 그 밖의 모든 값: `T`, `true`, `1`, 빈 값, 오타 | 보임 |
+| `1`, `true`, `TRUE`, `t`, `T` | 숨김 |
+| 그 밖의 모든 값: `0`, `false`, `f`, 빈 값, 오타 | 보임 |
 | 주소에 파라미터가 없음 | 보임 |
 
-오타로는 상단바가 숨겨지지 않습니다. 상단바가 그대로 보이면 이름이 정확히 `top_bar_display`로, 소문자에 밑줄(`_`)로 적혔는지 확인해 주십시오.
+오타로는 상단바가 숨겨지지 않습니다. 상단바가 그대로 보이면 이름이 정확히 `is_desktop`으로, 소문자에 밑줄(`_`)로 적혔는지 확인해 주십시오.
+
+### 옛 이름 `top_bar_display=F`도 그대로 동작합니다
+
+이 이름이 생기기 전에는 같은 스위치를 `top_bar_display=F`로 적었습니다. 이미 설치된 데스크탑 앱은 지금도 그 이름으로 채팅 화면을 열기 때문에, 옛 이름도 계속 상단바를 숨깁니다.
+
+| 주소의 값 | 상단바 |
+|-----------|--------|
+| `top_bar_display=F`, `f`, `false`, `FALSE`, `0` | 숨김 |
+| `top_bar_display=`에 그 밖의 모든 값 | 보임 |
+
+두 이름이 주소에 함께 있으면, 둘 중 하나라도 숨기라고 하면 숨깁니다.
 
 ## 상단바와 함께 사라지는 것
 
@@ -60,6 +73,14 @@ http://localhost:<포트>/sessions/new?workingDir=%2FUsers%2Fyou%2Fproject&top_b
 그 줄 아래의 것들은 자리와 동작이 그대로입니다. 대화, 배너, 입력창, 오른쪽 가장자리의 보낸 메시지 인덱스, 긴 답변 위에 고정되는 보낸 메시지가 해당합니다.
 
 위에서 내려오는 알림(토스트)도 맨 위에서 40픽셀 아래가 아니라 맨 위 가장자리에 나타납니다.
+
+## 빈 채팅의 로고
+
+아직 메시지가 하나도 없는 채팅은 맨 위에 "Claude Code" 로고를 보여 줍니다. 상단바가 있을 때는 로고가 지금보다 40픽셀 아래에 있었고, 상단바가 없으면 위에 아무것도 없어서 로고가 맨 위 가장자리에 붙어 보입니다.
+
+주소에 **`is_desktop=1`**이 있으면 로고를 상단바 높이만큼 다시 내려, 상단바가 있을 때의 자리에 둡니다. 다른 것은 움직이지 않습니다. 대화가 시작된 뒤에는 대화가 여전히 맨 위에서 시작합니다.
+
+이 일은 `is_desktop=1`에서만 합니다. 옛 이름 `top_bar_display=F`로 상단바를 숨긴 브라우저는 로고가 원래 자리에 그대로 있습니다. 그 이름은 상단바를 숨기라는 뜻일 뿐, 누가 이 페이지를 보여 주는지는 말하지 않기 때문입니다.
 
 ## 계속 동작하는 것
 

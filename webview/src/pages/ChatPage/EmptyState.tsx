@@ -8,9 +8,11 @@ import { useTranslation } from '@/i18n';
 import { AnnouncementEmptyStateSlot } from '@/components/Announcements/placements';
 import { OnboardingChecklist } from './Onboarding';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { TOP_BAR_HEIGHT, useTopBar } from '@/contexts/TopBarContext';
 
 export const EmptyState = () => {
   const { t } = useTranslation('chat');
+  const { isDesktop } = useTopBar();
   const isMac = navigator.platform.toUpperCase().includes('MAC');
 
   const kbdClass = "inline-flex items-center px-1.5 py-0.5 bg-surface-tooltip rounded text-text-secondary text-xs font-mono";
@@ -74,6 +76,11 @@ export const EmptyState = () => {
 
   return (
     <div className="h-full flex flex-col">
+      {/* The Desktop app hides the top bar and draws its own header above the page,
+          so the logo gets back the room the bar used to leave above it. A row of
+          its own rather than a margin: this box is as tall as the page, and a
+          margin on it would make the page scroll by that much. */}
+      {isDesktop && <div style={{ height: TOP_BAR_HEIGHT }} aria-hidden="true" />}
       <div className="pt-4 flex justify-center">
         <img src={claudeCodeLogo} alt={APP_NAME} width={120} />
       </div>

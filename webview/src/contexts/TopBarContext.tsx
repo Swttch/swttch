@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { readTopBarDisplayFromUrl } from './topBarDisplayParam';
+import { readIsDesktopFromUrl, readTopBarDisplayFromUrl } from './topBarDisplayParam';
 
 /** How tall the top bar is when drawn. The one place this number is written. */
 export const TOP_BAR_HEIGHT = 40;
@@ -17,10 +17,15 @@ export interface TopBarValue {
    * of them together and a future change of height cannot leave one behind.
    */
   topBarHeight: number;
+  /**
+   * Whether the page is the chat view the Desktop app shows inside its own
+   * window (`is_desktop=1`). The Desktop app draws a header of its own above the
+   * page, so what sat against the page's top edge needs that room back.
+   */
+  isDesktop: boolean;
 }
 
-const DISPLAYED: TopBarValue = { isTopBarDisplayed: true, topBarHeight: TOP_BAR_HEIGHT };
-const HIDDEN: TopBarValue = { isTopBarDisplayed: false, topBarHeight: 0 };
+const DISPLAYED: TopBarValue = { isTopBarDisplayed: true, topBarHeight: TOP_BAR_HEIGHT, isDesktop: false };
 
 /**
  * Drawn is the default outside a provider, which is the ordinary case for the
@@ -31,11 +36,14 @@ const TopBarContext = createContext<TopBarValue>(DISPLAYED);
 interface TopBarProviderProps {
   /** Decides the answer instead of the URL; for a host that is not a page. */
   displayed?: boolean;
+  /** Decides whether this is the Desktop app instead of the URL; for a host that is not a page. */
+  desktop?: boolean;
   children: ReactNode;
 }
 
 /**
- * Holds whether the top bar is drawn, read once when the app starts.
+ * Holds whether the top bar is drawn and whether this is the Desktop app, read
+ * once when the app starts.
  *
  * Once, and from the address the page was opened with: a navigation inside the
  * app rewrites the query string, and a bar that came back the first time the
@@ -43,10 +51,11 @@ interface TopBarProviderProps {
  * the router for the same reason — nothing has had the chance to rewrite the
  * address yet when this reads it.
  */
-export function TopBarProvider({ displayed, children }: TopBarProviderProps) {
-  const [value] = useState(() => {
+export function TopBarProvider({ displayed, desktop, children }: TopBarProviderProps) {
+  const [value] = useState<TopBarValue>(() => {
     const isDisplayed = displayed ?? readTopBarDisplayFromUrl(window.location.search);
-    return isDisplayed ? DISPLAYED : HIDDEN;
+    const isDesktop = desktop ?? readIsDesktopFromUrl(window.location.search);
+    return { isTopBarDisplayed: isDisplayed, topBarHeight: isDisplayed ? TOP_BAR_HEIGHT : 0, isDesktop };
   });
   return <TopBarContext.Provider value={value}>{children}</TopBarContext.Provider>;
 }

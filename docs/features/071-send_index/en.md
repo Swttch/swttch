@@ -123,3 +123,14 @@ Shipped alongside: scrollbars across the app are now half as wide, their track
 is fully transparent, and in dark themes the thumb is darker than the surface it
 sits on rather than lighter. A pale bar down the edge of a dark transcript pulls
 the eye away from the conversation, and the rail now shares that edge.
+
+## The input box is not pushed aside
+
+The rail keeps clear of the conversation by leaving a 24 pixel strip at the end
+edge of the transcript. The input box is not held to that strip: it reaches over
+it, so it sits centred, with the same space on its start side and its end side.
+
+Earlier the input box gave up the same 24 pixels along with the transcript, so
+it sat a little off-centre with more space on its end side. Nothing else about
+it changed: it still floats over the bottom of the chat, and the conversation
+still runs on behind it and shows around it.

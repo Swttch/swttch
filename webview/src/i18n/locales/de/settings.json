@@ -247,7 +247,19 @@
       "description": "Blendet die Karten für Befehle und Lesezugriffe aus. Dateiänderungen, Fragen und Pläne bleiben sichtbar."
     },
     "chat": {
-      "sectionTitle": "Chat"
+      "sectionTitle": "Chat",
+      "spinnerVerbs": {
+        "description": "Während ein Turn läuft, zeigt der Spinner ein wechselndes Verb wie „Accomplishing“, „Architecting“ oder „Baking“. Verwenden Sie diesen Schlüssel, um dieser Rotation eigene Verben hinzuzufügen oder die integrierte Liste durch Ihre zu ersetzen.",
+        "modeLabel": "Modus",
+        "verbsLabel": "Verben",
+        "append": "Anhängen",
+        "replace": "Ersetzen",
+        "appendHint": "Claude Code fügt Ihre Verben zum integrierten Satz hinzu",
+        "replaceHint": "Claude Code zeigt nur Ihre Verben",
+        "placeholder": "Verb eingeben und Enter drücken",
+        "remove": "{{name}} entfernen",
+        "edit": "{{name}} bearbeiten"
+      }
     },
     "scrolling": {
       "sectionTitle": "Scrollen",

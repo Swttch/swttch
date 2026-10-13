@@ -247,7 +247,19 @@
       "description": "Oculta os cartões dos comandos e das leituras. As alterações de ficheiros, as perguntas e os planos continuam visíveis."
     },
     "chat": {
-      "sectionTitle": "Chat"
+      "sectionTitle": "Chat",
+      "spinnerVerbs": {
+        "description": "Enquanto um turno está em progresso, o spinner mostra um verbo rotativo como \"Accomplishing\", \"Architecting\", ou \"Baking\". Use esta chave para adicionar seus próprios verbos a essa rotação ou substituir a lista integrada pela sua.",
+        "modeLabel": "Modo",
+        "verbsLabel": "Verbos",
+        "append": "Acrescentar",
+        "replace": "Substituir",
+        "appendHint": "Claude Code adiciona seus verbos ao conjunto integrado",
+        "replaceHint": "Claude Code mostra apenas seus verbos",
+        "placeholder": "Digite um verbo e pressione Enter",
+        "remove": "Remover {{name}}",
+        "edit": "Editar {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "Rolagem",

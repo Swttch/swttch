@@ -247,7 +247,19 @@
       "description": "隱藏指令與讀取操作的卡片。檔案變更、提問與計畫仍會顯示。"
     },
     "chat": {
-      "sectionTitle": "聊天"
+      "sectionTitle": "聊天",
+      "spinnerVerbs": {
+        "description": "回合進行期間，旋轉指示器會顯示輪替的動詞，例如「Accomplishing」、「Architecting」或「Baking」。使用此設定鍵可將您自己的動詞加入該輪替，或以您的動詞取代內建清單。",
+        "modeLabel": "模式",
+        "verbsLabel": "動詞",
+        "append": "附加",
+        "replace": "取代",
+        "appendHint": "Claude Code 將您的動詞加入內建集合",
+        "replaceHint": "Claude Code 只顯示您的動詞",
+        "placeholder": "輸入動詞後按 Enter",
+        "remove": "刪除 {{name}}",
+        "edit": "編輯 {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "捲動",

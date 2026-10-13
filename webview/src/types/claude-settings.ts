@@ -30,6 +30,23 @@ export interface FileSuggestionConfig {
   command: string;
 }
 
+/** How `spinnerVerbs.verbs` combines with the verbs Claude Code ships with. */
+export enum SpinnerVerbsMode {
+  /** Add the user's verbs to the built-in set. */
+  Append = 'append',
+  /** Show only the user's verbs. */
+  Replace = 'replace',
+}
+
+/**
+ * Official key `spinnerVerbs`: the verbs the spinner rotates through while a turn runs.
+ * Mirrors the Claude CLI settings.json contract so a setting works identically in both.
+ */
+export interface SpinnerVerbsConfig {
+  mode: SpinnerVerbsMode;
+  verbs: string[];
+}
+
 export interface ClaudeSettingsState {
   model: string | null; // full model ID like 'claude-opus-4-6' or null for default
   effortLevel: string | null; // CLI effort level — values sourced from ModelInfo.supportedEffortLevels; null = auto
@@ -57,6 +74,7 @@ export interface ClaudeSettingsState {
   showThinkingSummaries?: boolean;
   fastMode: boolean; // official Claude settings key: fast output mode (Opus models only). CLI reads it from settings.json directly
   fileSuggestion?: FileSuggestionConfig | null; // custom command that builds the @ file-mention index (null/absent = built-in)
+  spinnerVerbs?: SpinnerVerbsConfig | null; // official key: verbs shown while a turn runs (null/absent = Claude's built-in set)
   permissions?: PermissionsConfig;
   [key: string]: unknown; // extensible for future settings
 }

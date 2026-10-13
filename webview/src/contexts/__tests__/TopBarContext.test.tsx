@@ -7,7 +7,7 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-function wrapperFor(props: { displayed?: boolean } = {}) {
+function wrapperFor(props: { displayed?: boolean; desktop?: boolean } = {}) {
   return ({ children }: { children: ReactNode }) => <TopBarProvider {...props}>{children}</TopBarProvider>;
 }
 
@@ -15,7 +15,7 @@ describe('TopBarProvider', () => {
   it('draws the bar, at its full height, outside any provider', () => {
     const { result } = renderHook(() => useTopBar());
 
-    expect(result.current).toEqual({ isTopBarDisplayed: true, topBarHeight: TOP_BAR_HEIGHT });
+    expect(result.current).toEqual({ isTopBarDisplayed: true, topBarHeight: TOP_BAR_HEIGHT, isDesktop: false });
   });
 
   it('draws the bar when the address does not ask otherwise', () => {
@@ -25,12 +25,48 @@ describe('TopBarProvider', () => {
     expect(result.current.topBarHeight).toBe(TOP_BAR_HEIGHT);
   });
 
-  it('hides the bar and takes no height for it when the address says top_bar_display=F', () => {
+  it('hides the bar, takes no height for it and knows it is the Desktop app when the address says is_desktop=1', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+
+    const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
+
+    expect(result.current).toEqual({ isTopBarDisplayed: false, topBarHeight: 0, isDesktop: true });
+  });
+
+  it('keeps knowing it is the Desktop app from the address the page was opened with', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+    const { result, rerender } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
+
+    window.history.replaceState(null, '', '/sessions/abc');
+    rerender();
+
+    expect(result.current.isDesktop).toBe(true);
+  });
+
+  it('lets a host that is not a page decide whether it is the Desktop app instead of the address', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+
+    const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor({ desktop: false }) });
+
+    expect(result.current.isDesktop).toBe(false);
+  });
+
+  it('keeps answering from the address the page was opened with when it said is_desktop=1', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+    const { result, rerender } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
+
+    window.history.replaceState(null, '', '/sessions/abc');
+    rerender();
+
+    expect(result.current.isTopBarDisplayed).toBe(false);
+  });
+
+  it('hides the bar and takes no height for it when the address says the older top_bar_display=F', () => {
     window.history.replaceState(null, '', '/?top_bar_display=F');
 
     const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
 
-    expect(result.current).toEqual({ isTopBarDisplayed: false, topBarHeight: 0 });
+    expect(result.current).toEqual({ isTopBarDisplayed: false, topBarHeight: 0, isDesktop: false });
   });
 
   it('keeps answering from the address the page was opened with, however the address changes after', () => {

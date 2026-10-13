@@ -1,8 +1,43 @@
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, act } from '@testing-library/react';
 import { StreamingIndicator } from '../index';
+import { ClaudeSettingsContext } from '@/contexts/ClaudeSettingsContext';
+import { i18n } from '@/i18n';
+import {
+  DEFAULT_CLAUDE_SETTINGS,
+  SpinnerVerbsMode,
+  type SpinnerVerbsConfig,
+} from '@/types/claude-settings';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+function settingsContext(spinnerVerbs: SpinnerVerbsConfig | null) {
+  const value: NonNullable<ComponentProps<typeof ClaudeSettingsContext.Provider>['value']> = {
+    settings: { ...DEFAULT_CLAUDE_SETTINGS, spinnerVerbs },
+    scopeSettings: {},
+    isLoading: false,
+    overrides: [],
+    scope: 'global',
+    setScope: vi.fn(),
+    updateSetting: vi.fn(),
+    updateSettingWithScope: vi.fn(),
+    resetToGlobal: vi.fn(),
+    refreshSettings: vi.fn(),
+  };
+  return (
+    <ClaudeSettingsContext.Provider value={value}>
+      <StreamingIndicator />
+    </ClaudeSettingsContext.Provider>
+  );
+}
+
+function renderWithSpinnerVerbs(spinnerVerbs: SpinnerVerbsConfig | null) {
+  return render(settingsContext(spinnerVerbs));
+}
 
 describe('StreamingIndicator', () => {
   it('연결이 살아 있으면 카운트다운을 그리지 않는다', () => {
@@ -53,5 +88,67 @@ describe('StreamingIndicator', () => {
   it('재시도가 없으면 아무것도 덧붙이지 않는다', () => {
     const { container } = render(<StreamingIndicator />);
     expect(container.textContent).not.toMatch(/retry/i);
+  });
+
+  describe('the spinnerVerbs setting (#548)', () => {
+    it('shows only the verb when replace is given a single verb', () => {
+      const { container } = renderWithSpinnerVerbs({
+        mode: SpinnerVerbsMode.Replace,
+        verbs: ['Processing'],
+      });
+      expect(container.querySelector('.font-mono')?.textContent).toBe('Processing...');
+    });
+
+    it('does not break when the verb is due to change and there is only one', async () => {
+      // The rotation excludes the previous verb; with one verb that left nothing to pick.
+      vi.useFakeTimers();
+      const { container } = renderWithSpinnerVerbs({
+        mode: SpinnerVerbsMode.Replace,
+        verbs: ['Processing'],
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      expect(container.querySelector('.font-mono')?.textContent).toBe('Processing...');
+    });
+
+    it('picks from a new list even long after a one-verb list stopped changing', async () => {
+      // With one verb the rotation picks the same word every time, and a timer chain that
+      // only rearms when the word changes died after its first tick: a file edited minutes
+      // into a turn was never picked up (found in the shipped build, #548).
+      vi.useFakeTimers();
+      // Time is let through a second at a time, each inside its own act: in a browser the
+      // page redraws after every timer, and only a redraw arms the next one. One long
+      // advance would skip those redraws and hide the chain breaking.
+      const pass = async (seconds: number) => {
+        for (let i = 0; i < seconds; i += 1) {
+          await act(async () => {
+            vi.advanceTimersByTime(1_000);
+          });
+        }
+      };
+      const { container, rerender } = renderWithSpinnerVerbs({
+        mode: SpinnerVerbsMode.Replace,
+        verbs: ['Processing'],
+      });
+      await pass(60);
+      expect(container.querySelector('.font-mono')?.textContent).toBe('Processing...');
+
+      rerender(settingsContext({ mode: SpinnerVerbsMode.Replace, verbs: ['Quokka-herding'] }));
+      await pass(10);
+
+      expect(container.querySelector('.font-mono')?.textContent).toBe('Quokka-herding...');
+    });
+
+    it('shows a built-in verb when the setting is absent', () => {
+      const { container } = renderWithSpinnerVerbs(null);
+      const text = container.querySelector('.font-mono')?.textContent ?? '';
+      // "Processing" is itself one of the built-in verbs, so the check is membership in
+      // the built-in list, not difference from the user's example.
+      const builtIn = i18n.t('chat:streamingIndicator.verbs', { returnObjects: true }) as string[];
+      expect(builtIn).toContain(text.replace(/\.\.\.$/, ''));
+    });
   });
 });

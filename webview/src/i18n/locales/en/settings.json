@@ -247,7 +247,19 @@
       "description": "Hide the cards for commands and lookups. File changes, questions and plans stay visible."
     },
     "chat": {
-      "sectionTitle": "Chat"
+      "sectionTitle": "Chat",
+      "spinnerVerbs": {
+        "description": "While a turn is in progress, the spinner shows a rotating verb such as \"Accomplishing\", \"Architecting\", or \"Baking\". Use this key to add your own verbs to that rotation or replace the built-in list with yours.",
+        "modeLabel": "Mode",
+        "verbsLabel": "Verbs",
+        "append": "Append",
+        "replace": "Replace",
+        "appendHint": "Claude Code adds your verbs to the built-in set",
+        "replaceHint": "Claude Code shows only your verbs",
+        "placeholder": "Type a verb and press Enter",
+        "remove": "Remove {{name}}",
+        "edit": "Edit {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "Scrolling",

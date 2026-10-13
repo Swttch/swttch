@@ -247,7 +247,19 @@
       "description": "Masque les cartes des commandes et des lectures. Les modifications de fichiers, les questions et les plans restent visibles."
     },
     "chat": {
-      "sectionTitle": "Chat"
+      "sectionTitle": "Chat",
+      "spinnerVerbs": {
+        "description": "Tandis qu'un tour est en cours, le spinner affiche un verbe rotatif tel que « Accomplishing », « Architecting », ou « Baking ». Utilisez cette clé pour ajouter vos propres verbes à cette rotation ou remplacer la liste intégrée par la vôtre.",
+        "modeLabel": "Mode",
+        "verbsLabel": "Verbes",
+        "append": "Ajouter",
+        "replace": "Remplacer",
+        "appendHint": "Claude Code ajoute vos verbes à l'ensemble intégré",
+        "replaceHint": "Claude Code affiche uniquement vos verbes",
+        "placeholder": "Saisissez un verbe puis Entrée",
+        "remove": "Retirer {{name}}",
+        "edit": "Modifier {{name}}"
+      }
     },
     "scrolling": {
       "sectionTitle": "Défilement",
