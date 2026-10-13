@@ -25,7 +25,25 @@ describe('TopBarProvider', () => {
     expect(result.current.topBarHeight).toBe(TOP_BAR_HEIGHT);
   });
 
-  it('hides the bar and takes no height for it when the address says top_bar_display=F', () => {
+  it('hides the bar and takes no height for it when the address says is_desktop=1', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+
+    const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
+
+    expect(result.current).toEqual({ isTopBarDisplayed: false, topBarHeight: 0 });
+  });
+
+  it('keeps answering from the address the page was opened with when it said is_desktop=1', () => {
+    window.history.replaceState(null, '', '/?is_desktop=1');
+    const { result, rerender } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
+
+    window.history.replaceState(null, '', '/sessions/abc');
+    rerender();
+
+    expect(result.current.isTopBarDisplayed).toBe(false);
+  });
+
+  it('hides the bar and takes no height for it when the address says the older top_bar_display=F', () => {
     window.history.replaceState(null, '', '/?top_bar_display=F');
 
     const { result } = renderHook(() => useTopBar(), { wrapper: wrapperFor() });
