@@ -389,7 +389,17 @@ function ChatPageContent() {
             collapse button first of all. Capping the footer at the scroll
             container lets each panel shrink its own middle and scroll there,
             with no height worked out by hand, at any zoom or window size. */}
-        <div id={CHAT_FOOTER_ID} className="sticky w-full start-0 bottom-0 z-10 flex flex-col max-h-full">
+        {/* It stays in here so the transcript runs on behind it and shows around
+            it. What it must not do is give up the room the container reserves
+            for the send index: the end margin takes that room back, and the
+            strip, stretched across the container, ends up centred instead of
+            sitting a rail's width off to the start side. No `w-full`: a fixed
+            width would hold the strip at the padded width and ignore the margin. */}
+        <div
+          id={CHAT_FOOTER_ID}
+          className="sticky start-0 bottom-0 z-10 flex flex-col max-h-full"
+          style={{ marginInlineEnd: -SEND_INDEX_RAIL_WIDTH }}
+        >
           {showScrollButton && (
               <button
                   onClick={scrollToBottom}

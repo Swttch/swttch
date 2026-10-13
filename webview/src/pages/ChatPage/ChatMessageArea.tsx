@@ -200,8 +200,14 @@ export function ChatMessageArea(props: Props) {
             since plenty of entries draw nothing.
           */}
           <div data-section-body style={{ display: fold.isCollapsed(section.key) ? 'none' : undefined }}>
-            {section.body.map(message => (
-              <div key={message.uuid} onClick={() => {
+            {section.body.map((message, index) => (
+              // `uuid` is optional on an entry, and some entries of the session
+              // file have none. Without a key React warns on every render; the
+              // position inside the section stands in. It holds still while a
+              // reply streams in at the end. Loading an older page in front of
+              // the opening section moves it, which only costs those rows a
+              // remount.
+              <div key={message.uuid ?? `${section.key}-body-${index}`} onClick={() => {
                 console.log(message, mergedMessages.indexOf(message), mergedMessages); // NEVER REMOVE THIS LINE
               }}>
                 <MessageBubble message={message} onRetry={onRetry} />
