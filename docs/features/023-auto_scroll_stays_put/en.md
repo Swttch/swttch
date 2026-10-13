@@ -59,7 +59,9 @@ bottom exactly as often as you actually sent something.
 **The configured distance is now the only boundary.** The hidden 2-pixel rule is gone.
 
 - **Within** the configured distance, the view keeps following. Nudge up and it settles
-  back to the bottom.
+  back to the bottom. (It settles back once you stop: while you are still moving the view
+  up, new text no longer pulls it down. See
+  [You can scroll up while an answer is still streaming in](../088-scroll_up_while_streaming/en.md).)
 - **Past** it, following stops and the "Scroll to bottom" button appears at the same moment.
 
 Auto-scroll being off and the button being visible are now the same thing. There is no

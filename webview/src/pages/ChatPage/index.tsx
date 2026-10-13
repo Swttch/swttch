@@ -3,6 +3,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { DictationProvider } from './ChatInput/DictationProvider';
 import { ListeningNotice } from './ListeningNotice';
 import { SessionHeader } from './SessionHeader';
+import { useDesktopTabActions } from './useDesktopTabActions';
 import { ChatMessageArea } from './ChatMessageArea';
 import { PermissionBanner } from './PermissionBanner';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
@@ -72,6 +73,7 @@ export function ChatPage() {
 }
 
 function ChatPageContent() {
+  useDesktopTabActions();
   const { t } = useTranslation('chat');
   // NOTE: no auth "gate" here. A failed/undetermined `auth status` must NOT bounce
   // the user to login (that caused #178's repeated reauth). A definitive logout

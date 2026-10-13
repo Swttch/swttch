@@ -2,7 +2,7 @@ import { SettingRow, ShortcutInput } from '../../common';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, VOICE_SHORTCUT_DEFAULT, type VoiceSettings } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * The key that starts and stops recording.
@@ -14,15 +14,18 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function ShortcutRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const voice = (scopeSettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
+  const voice = (displaySettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
 
   return (
     <SettingRow
       label={t('general.voice.shortcut.label')}
       description={t('general.voice.shortcut.description')}
       isOverridden={isOverridden('voice')}
+      isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
     >
       <ShortcutInput
         value={voice.shortcut ?? VOICE_SHORTCUT_DEFAULT}

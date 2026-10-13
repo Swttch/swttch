@@ -115,7 +115,8 @@
         "description": "Queue follow-ups while {{appName}} runs or steer the current run. Press {{shortcut}} to do the opposite for one message.",
         "descriptionNoShortcut": "Queue follow-ups while {{appName}} runs or steer the current run.",
         "queue": "Queue",
-        "steer": "Steer"
+        "steer": "Steer",
+        "notSet": "Not set (use global)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "Font Size",
-        "description": "Base font size for the interface",
-        "notSetPlaceholder": "Not set"
+        "description": "Base font size for the interface"
       },
       "lineSpacing": {
         "label": "Line Spacing",
-        "description": "Line height for chat message text",
-        "notSetPlaceholder": "Not set"
+        "description": "Line height for chat message text"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "Scrolling",
       "autoScrollThreshold": {
         "label": "Auto-scroll resume distance",
-        "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}.",
-        "notSetPlaceholder": "Not set"
+        "description": "Scrolling further than this many pixels from the bottom pauses auto-scroll so you can read freely. It resumes once you scroll back within that distance. Smaller means you must return closer to re-engage. Default {{value}}."
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "Debugging",
       "debugMode": {
         "label": "Debug Mode",
-        "description": "Enable debug logging and diagnostics",
-        "notSet": "Not set (use global)"
+        "description": "Enable debug logging and diagnostics"
       },
       "logLevel": {
         "label": "Log Level",
@@ -683,7 +680,11 @@
     "claudeNativeLabel": "C",
     "projectOverride": "The project overrides this. Changing it here has no effect",
     "projectOverrideLabel": "P",
-    "openDocs": "Open docs"
+    "inherited": "Not set in this project. The global value is used",
+    "inheritedLabel": "G",
+    "openDocs": "Open docs",
+    "projectValue": "This project sets its own value, overriding the global one",
+    "projectValueReset": "Reset to global"
   },
   "ide": {
     "sectionTitle": "IDE integration",

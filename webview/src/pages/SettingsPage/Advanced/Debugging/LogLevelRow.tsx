@@ -3,7 +3,7 @@ import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, LogLevel } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** The value standing for "this project says nothing; follow the global one". */
 const NOT_SET_VALUE = '__NOT_SET__';
@@ -12,14 +12,18 @@ const NOT_SET_VALUE = '__NOT_SET__';
 export function LogLevelRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
+  const { updateSetting, scope, resetToGlobal } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const raw = scopeSettings[SettingKey.LOG_LEVEL] as LogLevel | undefined;
-  const isNotSet = raw === undefined && scope === 'project';
-  const value = isNotSet ? NOT_SET_VALUE : (raw ?? LogLevel.INFO);
+  const value = (displaySettings[SettingKey.LOG_LEVEL] as LogLevel | undefined) ?? LogLevel.INFO;
+  const inherited = isInherited(SettingKey.LOG_LEVEL);
+  // "Not set" is how a project takes its own value back, so it is offered only
+  // while there is one to take back. Without one the dropdown shows the value
+  // the project inherits, and choosing a value stores it in the project.
+  const hasOwnValue = scope === 'project' && !inherited;
 
   const options: SelectOption[] = [
-    ...(scope === 'project'
+    ...(hasOwnValue
       ? [{ value: NOT_SET_VALUE, label: t('advanced.debugging.logLevel.notSet'), italic: true }]
       : []),
     { value: LogLevel.DEBUG, label: t('advanced.debugging.logLevel.debug') },
@@ -33,6 +37,8 @@ export function LogLevelRow() {
       label={t('advanced.debugging.logLevel.label')}
       description={t('advanced.debugging.logLevel.description')}
       isOverridden={isOverridden(SettingKey.LOG_LEVEL)}
+      isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.LOG_LEVEL)}
     >
       <Select
         value={value}
@@ -46,7 +52,7 @@ export function LogLevelRow() {
           updateSetting(SettingKey.LOG_LEVEL, next as LogLevel);
         }}
         className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isNotSet ? 'text-text-tertiary' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
       />
     </SettingRow>

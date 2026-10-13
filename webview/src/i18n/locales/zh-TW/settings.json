@@ -115,7 +115,8 @@
         "description": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。按 {{shortcut}} 可針對單則訊息執行相反操作。",
         "descriptionNoShortcut": "在 {{appName}} 執行時將後續訊息加入佇列，或引導目前的執行。",
         "queue": "加入佇列",
-        "steer": "引導"
+        "steer": "引導",
+        "notSet": "未設定(使用全域)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "字型大小",
-        "description": "介面的基礎字型大小",
-        "notSetPlaceholder": "未設定"
+        "description": "介面的基礎字型大小"
       },
       "lineSpacing": {
         "label": "行距",
-        "description": "聊天訊息文字的行高",
-        "notSetPlaceholder": "未設定"
+        "description": "聊天訊息文字的行高"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "捲動",
       "autoScrollThreshold": {
         "label": "自動捲動恢復距離",
-        "description": "向上捲動超出距離底部這個像素範圍時,自動捲動會暫停,讓您可以自由閱讀。捲回該範圍內即會恢復。數值越小,代表您必須捲得越靠近底部才會重新啟用。預設值為 {{value}}。",
-        "notSetPlaceholder": "未設定"
+        "description": "向上捲動超出距離底部這個像素範圍時,自動捲動會暫停,讓您可以自由閱讀。捲回該範圍內即會恢復。數值越小,代表您必須捲得越靠近底部才會重新啟用。預設值為 {{value}}。"
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "偵錯",
       "debugMode": {
         "label": "偵錯模式",
-        "description": "啟用偵錯記錄與診斷",
-        "notSet": "未設定(使用全域)"
+        "description": "啟用偵錯記錄與診斷"
       },
       "logLevel": {
         "label": "記錄層級",
@@ -679,7 +676,11 @@
     "claudeNativeLabel": "原",
     "projectOverride": "專案設定會覆寫此值。在這裡修改不會生效",
     "projectOverrideLabel": "專",
-    "openDocs": "開啟文件"
+    "inherited": "此專案未設定，使用全域設定的值",
+    "inheritedLabel": "全",
+    "openDocs": "開啟文件",
+    "projectValue": "此專案設定了自己的值，覆寫了全域設定",
+    "projectValueReset": "還原為全域"
   },
   "ide": {
     "sectionTitle": "IDE 整合",

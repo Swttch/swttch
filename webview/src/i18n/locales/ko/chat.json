@@ -712,13 +712,18 @@
     "unpinFromDock": "도크 고정 해제"
   },
   "sideQuestion": {
-    "title": "곁질문",
+    "title": "By the way",
     "subtitle": "메인 대화를 방해하지 않고 답하며, 대화에 추가되지 않습니다.",
-    "placeholder": "간단한 곁질문을 입력하세요…",
+    "placeholder": "간단한 곁가지 질문을 입력하세요…",
     "empty": "진행 중인 작업에 대해 무엇이든 물어보세요 — 메인 에이전트는 계속 작업합니다.",
     "thinking": "생각 중…",
-    "failed": "이 곁질문에 대한 Claude의 답변을 받지 못했습니다. 다시 시도하세요.",
-    "clear": "곁질문 지우기",
-    "close": "닫기"
+    "failed": "이 곁가지 질문에 대한 Claude의 답변을 받지 못했습니다. 다시 시도하세요.",
+    "clear": "곁가지 질문 지우기",
+    "close": "닫기",
+    "minimize": "최소화",
+    "maximize": "최대화",
+    "restoreSize": "원래 크기로",
+    "open": "열기",
+    "newAnswer": "새 답변"
   }
 }

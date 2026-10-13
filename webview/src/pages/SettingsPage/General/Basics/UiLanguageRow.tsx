@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, UiDirection } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { isRtlLanguage } from '@/i18n/languageMap';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** The value standing for "this project says nothing; follow the global one". */
 const NOT_SET_VALUE = '__NOT_SET__';
@@ -37,16 +37,17 @@ const LANGUAGE_OPTIONS = [
 export function UiLanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting, scope, resetToGlobal, updateSettingWithScope } =
-    useSettings();
+  const { updateSetting, scope, resetToGlobal, updateSettingWithScope } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const rawUiLanguage = scopeSettings.uiLanguage as string | undefined;
-  const isUiNotSet = rawUiLanguage === undefined && scope === 'project';
-  // Defaults to English when unset.
-  const currentUiLanguage = isUiNotSet ? NOT_SET_VALUE : ((rawUiLanguage as string) ?? 'english');
+  // Defaults to English when neither the project nor global sets one.
+  const currentUiLanguage = (displaySettings.uiLanguage as string | undefined) ?? 'english';
+  const inherited = isInherited(SettingKey.UI_LANGUAGE);
+  // Offered only while the project has its own value to take back; see LogLevelRow.
+  const hasOwnValue = scope === 'project' && !inherited;
 
   const languageOptions: SelectOption[] = [
-    ...(scope === 'project'
+    ...(hasOwnValue
       ? [{ value: NOT_SET_VALUE, label: t('general.language.notSet'), italic: true }]
       : []),
     ...LANGUAGE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
@@ -57,13 +58,15 @@ export function UiLanguageRow() {
       label={t('general.uiLanguage.label')}
       description={t('general.uiLanguage.description')}
       isOverridden={isOverridden(SettingKey.UI_LANGUAGE)}
+      isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.UI_LANGUAGE)}
     >
       <Select
         value={currentUiLanguage}
         options={languageOptions}
         ariaLabel={t('general.uiLanguage.label')}
         className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isUiNotSet ? 'text-text-tertiary' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
         onChange={(value) => {
           if (value === NOT_SET_VALUE) {
@@ -71,13 +74,9 @@ export function UiLanguageRow() {
             return;
           }
           // Direction auto-sync fires whenever the effective direction actually
-          // changes. When the previous value is NOT_SET (project scope
-          // inheriting global), isRtlLanguage(undefined) already resolves to
-          // false (LTR) — the same default the UI shows for NOT_SET — so
-          // treating it as LTR here keeps the comparison consistent instead of
-          // skipping the sync entirely.
-          const previousUiLanguage = currentUiLanguage === NOT_SET_VALUE ? undefined : currentUiLanguage;
-          const wasRtl = isRtlLanguage(previousUiLanguage);
+          // changes, so the comparison is against the language in effect now,
+          // inherited or not.
+          const wasRtl = isRtlLanguage(currentUiLanguage);
           const willBeRtl = isRtlLanguage(value);
           if (willBeRtl && !wasRtl) {
             updateSettingWithScope(SettingKey.UI_DIRECTION, UiDirection.RTL, 'global');

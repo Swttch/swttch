@@ -1,4 +1,4 @@
-import { SettingRow } from '../../common';
+import { SettingRow, ScopeGuard } from '../../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, OpenSettingsMode } from '@/types/settings';
@@ -12,7 +12,7 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
  */
 export function OpenSettingsRow() {
   const isOverridden = useIsOverriddenByProject();
-  const { settings, updateSettingWithScope } = useSettings();
+  const { settings, updateSettingWithScope, scope } = useSettings();
   const { t } = useTranslation('settings');
 
   const mode = settings[SettingKey.OPEN_SETTINGS_AS] ?? OpenSettingsMode.OVERLAY;
@@ -28,13 +28,15 @@ export function OpenSettingsRow() {
       description={t('general.openSettings.description')}
       isOverridden={isOverridden(SettingKey.OPEN_SETTINGS_AS)}
     >
-      <Select
-        value={mode}
-        options={openSettingsOptions}
-        ariaLabel={t('general.openSettings.label')}
-        className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
-        onChange={(value) => updateSettingWithScope(SettingKey.OPEN_SETTINGS_AS, value as OpenSettingsMode, 'global')}
-      />
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <Select
+          value={mode}
+          options={openSettingsOptions}
+          ariaLabel={t('general.openSettings.label')}
+          className="bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm text-text-primary"
+          onChange={(value) => updateSettingWithScope(SettingKey.OPEN_SETTINGS_AS, value as OpenSettingsMode, 'global')}
+        />
+      </ScopeGuard>
     </SettingRow>
   );
 }

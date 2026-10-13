@@ -3,7 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useClaudeDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 import { CLAUDE_SETTINGS_DOC_HREF } from './docs';
 
 /**
@@ -16,15 +16,18 @@ import { CLAUDE_SETTINGS_DOC_HREF } from './docs';
 export function ShowThinkingSummariesRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useClaudeSettings();
+  const { updateSetting } = useClaudeSettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
-  const showThinkingSummaries = (scopeSettings.showThinkingSummaries as boolean | undefined) ?? false;
+  const showThinkingSummaries = (displaySettings.showThinkingSummaries as boolean | undefined) ?? false;
 
   return (
     <SettingRow
       label={t('general.showThinkingSummaries.label')}
       description={t('general.showThinkingSummaries.description')}
       isOverridden={isOverridden('showThinkingSummaries')}
+      isInherited={isInherited('showThinkingSummaries')}
+      onResetToGlobal={resetFor('showThinkingSummaries')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

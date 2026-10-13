@@ -115,7 +115,8 @@
         "description": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual. Pressione {{shortcut}} para fazer o oposto em uma mensagem.",
         "descriptionNoShortcut": "Enfileire novas mensagens enquanto {{appName}} roda ou redirecione a execução atual.",
         "queue": "Enfileirar",
-        "steer": "Orientar"
+        "steer": "Orientar",
+        "notSet": "Não definido (usar global)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "Tamanho da Fonte",
-        "description": "Tamanho de fonte base da interface",
-        "notSetPlaceholder": "Não definido"
+        "description": "Tamanho de fonte base da interface"
       },
       "lineSpacing": {
         "label": "Espaçamento entre linhas",
-        "description": "Altura da linha do texto das mensagens de chat",
-        "notSetPlaceholder": "Não definido"
+        "description": "Altura da linha do texto das mensagens de chat"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "Rolagem",
       "autoScrollThreshold": {
         "label": "Distância para retomar a rolagem automática",
-        "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}.",
-        "notSetPlaceholder": "Não definido"
+        "description": "Rolar além desta quantidade de pixels a partir do final pausa a rolagem automática para que você possa ler livremente. Ela é retomada assim que você voltar para dentro dessa distância. Um valor menor significa que você precisa voltar mais perto para reengajar. Padrão {{value}}."
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "Depuração",
       "debugMode": {
         "label": "Modo de Depuração",
-        "description": "Ativar registro de depuração e diagnósticos",
-        "notSet": "Não definido (usar global)"
+        "description": "Ativar registro de depuração e diagnósticos"
       },
       "logLevel": {
         "label": "Nível de Registro",
@@ -683,7 +680,11 @@
     "claudeNativeLabel": "C",
     "projectOverride": "O projeto sobrescreve este valor. Alterá-lo aqui não tem efeito",
     "projectOverrideLabel": "J",
-    "openDocs": "Abrir documentação"
+    "inherited": "Não definido neste projeto. O valor global é usado",
+    "inheritedLabel": "G",
+    "openDocs": "Abrir documentação",
+    "projectValue": "Este projeto define o próprio valor e sobrescreve o global",
+    "projectValueReset": "Redefinir para global"
   },
   "ide": {
     "sectionTitle": "Integração com o IDE",

@@ -16,6 +16,8 @@ interface Props {
   /** Shown under the row when the chosen combination cannot be accepted. */
   error?: string;
   isOverridden?: boolean;
+  isInherited?: boolean;
+  onResetToGlobal?: () => void;
 }
 
 /**
@@ -42,10 +44,18 @@ export function ShortcutChoiceRow(props: Props) {
     onCustomChange,
     error,
     isOverridden,
+    isInherited,
+    onResetToGlobal,
   } = props;
 
   return (
-    <SettingRow label={label} description={description} isOverridden={isOverridden}>
+    <SettingRow
+      label={label}
+      description={description}
+      isOverridden={isOverridden}
+      isInherited={isInherited}
+      onResetToGlobal={onResetToGlobal}
+    >
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           {isCustom && (

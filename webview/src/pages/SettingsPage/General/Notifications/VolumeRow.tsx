@@ -6,6 +6,7 @@ import { SettingRow } from '../../common';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 export const MIN_VOLUME_STEP = 1;
 export const MAX_VOLUME_STEP = 10;
@@ -38,6 +39,8 @@ function clampStep(value: unknown): number {
 export function VolumeRow() {
   const { t } = useTranslation('settings');
   const { settings, updateSetting } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
+  const { isInherited, resetFor } = useDisplaySettings();
   const { selection } = useNotificationSound();
 
   const value = clampStep(settings[SettingKey.NOTIFICATION_SOUND_VOLUME]);
@@ -62,6 +65,9 @@ export function VolumeRow() {
   return (
     <SettingRow
       label={t('general.notifications.volume.label')}
+      isOverridden={isOverridden(SettingKey.NOTIFICATION_SOUND_VOLUME)}
+      isInherited={isInherited(SettingKey.NOTIFICATION_SOUND_VOLUME)}
+      onResetToGlobal={resetFor(SettingKey.NOTIFICATION_SOUND_VOLUME)}
       description={t('general.notifications.volume.description')}
     >
       <div className="flex items-center gap-3">

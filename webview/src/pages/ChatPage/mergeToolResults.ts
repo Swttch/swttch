@@ -74,7 +74,11 @@ export function mergeToolResults(messages: LoadedMessageDto[]): LoadedMessageDto
   // Phase 1.5: Attach progress entries to Task tool_use blocks
   for (const [parentId, progressEntries] of progressMap) {
     const toolUseBlock = toolUseMap.get(parentId);
-    if (toolUseBlock) {
+    // A backgrounded Agent runs beside the main thread, and its tool calls
+    // already stream into its own background-task card. Nesting them here as
+    // well interleaves them with the main agent's work (#535). A foreground
+    // Agent is what the main thread waits on, so it keeps the nested list.
+    if (toolUseBlock && toolUseBlock.input?.run_in_background !== true) {
       toolUseBlock.subAgentMessages = buildSubAgentMessages(progressEntries);
     }
   }

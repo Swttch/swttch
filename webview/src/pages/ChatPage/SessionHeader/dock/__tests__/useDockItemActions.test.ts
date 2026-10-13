@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { DockItemId } from '@/types/settings';
 import { OPEN_ASSETS_EVENT } from '../actions';
+import { TOGGLE_SIDE_QUESTION_EVENT } from '@/contexts/SideQuestionContext';
 
 const openNewTab = vi.fn();
 const tunnelActivate = vi.fn();
@@ -41,6 +42,19 @@ describe('useDockItemActions', () => {
 
     expect(listener).toHaveBeenCalledTimes(1);
     window.removeEventListener(OPEN_ASSETS_EVENT, listener);
+  });
+
+  // The same event the shortcut and the command palette raise, so the dock, the
+  // ⋮ menu, Mod+Shift+B and /btw all open (and close, and un-park) one window.
+  it('toggles the by-the-way window through the shared event', () => {
+    const listener = vi.fn();
+    window.addEventListener(TOGGLE_SIDE_QUESTION_EVENT, listener);
+    const { result } = renderHook(() => useDockItemActions());
+
+    result.current[DockItemId.SIDE_QUESTION]!();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    window.removeEventListener(TOGGLE_SIDE_QUESTION_EVENT, listener);
   });
 
   it('routes the new-tab item to the session context', () => {

@@ -3,7 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Drops the cards for the tools that only look or run, leaving the prompt, the
@@ -16,16 +16,19 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function HideToolCallsRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
       label={t('appearance.hideToolCalls.label')}
       description={t('appearance.hideToolCalls.description')}
       isOverridden={isOverridden(SettingKey.HIDE_TOOL_CALLS)}
+      isInherited={isInherited(SettingKey.HIDE_TOOL_CALLS)}
+      onResetToGlobal={resetFor(SettingKey.HIDE_TOOL_CALLS)}
     >
       <ToggleSwitch
-        checked={scopeSettings[SettingKey.HIDE_TOOL_CALLS] === true}
+        checked={displaySettings[SettingKey.HIDE_TOOL_CALLS] === true}
         onChange={(checked) => updateSetting(SettingKey.HIDE_TOOL_CALLS, checked)}
         ariaLabel={t('appearance.hideToolCalls.label')}
       />

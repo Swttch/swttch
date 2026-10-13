@@ -169,13 +169,17 @@ describe('useAttachments while a file is travelling', () => {
       new Promise((resolve) => {
         releases.push(() => resolve(payload.last ? { path: `/saved/${payload.fileName}` } : {}));
       }));
-    return { releaseNext: () => releases.shift()?.() };
+    return {
+      releaseNext: () => releases.shift()?.(),
+      /** The first chunk is read from the file before it is sent, so the request may not exist yet. */
+      firstChunkAsked: () => vi.waitFor(() => expect(requestMock).toHaveBeenCalled()),
+    };
   }
 
   const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
   it('lists the file as travelling until the backend has stored it, then swaps in the real chip', async () => {
-    const { releaseNext } = heldBackend();
+    const { releaseNext, firstChunkAsked } = heldBackend();
     const { result } = renderHook(() => useAttachments());
 
     let dropping: Promise<void> = Promise.resolve();
@@ -183,6 +187,7 @@ describe('useAttachments while a file is travelling', () => {
       dropping = result.current.handleDrop(dropOf(file('clip.mov', 'video/quicktime')));
     });
     await flush();
+    await firstChunkAsked();
 
     expect(result.current.uploads.map((u) => u.label)).toEqual(['clip.mov']);
     expect(result.current.attachments).toHaveLength(0);
@@ -197,19 +202,22 @@ describe('useAttachments while a file is travelling', () => {
   });
 
   it('lists every dropped file at once, before the first one has finished', async () => {
-    heldBackend();
+    const { firstChunkAsked } = heldBackend();
     const { result } = renderHook(() => useAttachments());
 
     act(() => {
       void result.current.handleDrop(dropOf(file('a.mov', 'video/quicktime'), file('b.pdf', 'application/pdf')));
     });
     await flush();
+    // This upload is never released. Waiting for its request keeps the chunk read from
+    // finishing during the next test and sending into that test's backend.
+    await firstChunkAsked();
 
     expect(result.current.uploads.map((u) => u.label)).toEqual(['a.mov', 'b.pdf']);
   });
 
   it('stops the upload and says nothing when the person removes the chip', async () => {
-    const { releaseNext } = heldBackend();
+    const { releaseNext, firstChunkAsked } = heldBackend();
     const { result } = renderHook(() => useAttachments());
     const big = new File([new Uint8Array(512 * 1024 * 2)], 'big.bin');
 
@@ -218,6 +226,7 @@ describe('useAttachments while a file is travelling', () => {
       dropping = result.current.handleDrop(dropOf(big));
     });
     await flush();
+    await firstChunkAsked();
     act(() => result.current.cancelUpload(result.current.uploads[0].id));
     expect(result.current.uploads).toHaveLength(0);
 

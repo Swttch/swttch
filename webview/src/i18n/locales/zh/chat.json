@@ -712,13 +712,18 @@
     "unpinFromDock": "取消固定"
   },
   "sideQuestion": {
-    "title": "旁支问题",
+    "title": "By the way",
     "subtitle": "回答时不会打断主对话，也不会加入主对话。",
     "placeholder": "问一个简短的旁支问题…",
     "empty": "可以询问当前进行中的任何事情 — 主代理会继续工作。",
     "thinking": "思考中…",
     "failed": "未能获得 Claude 对这个旁支问题的回答。请重试。",
     "clear": "清除旁支问题",
-    "close": "关闭"
+    "close": "关闭",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restoreSize": "还原大小",
+    "open": "打开",
+    "newAnswer": "新回答"
   }
 }

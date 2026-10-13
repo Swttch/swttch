@@ -3,24 +3,27 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useClaudeDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** Whether Claude snapshots a file before editing it, so a rewind can restore it. */
 export function FileCheckpointingRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useClaudeSettings();
+  const { updateSetting } = useClaudeSettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   // Claude's schema defaults this one to `true`, unlike the toggles around it —
   // an absent value means the feature is ON, so the fallback has to say so.
   const fileCheckpointingEnabled =
-    (scopeSettings.fileCheckpointingEnabled as boolean | undefined) ?? true;
+    (displaySettings.fileCheckpointingEnabled as boolean | undefined) ?? true;
 
   return (
     <SettingRow
       label={t('general.fileCheckpointing.label')}
       description={t('general.fileCheckpointing.description')}
       isOverridden={isOverridden('fileCheckpointingEnabled')}
+      isInherited={isInherited('fileCheckpointingEnabled')}
+      onResetToGlobal={resetFor('fileCheckpointingEnabled')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

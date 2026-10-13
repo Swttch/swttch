@@ -13,13 +13,18 @@ import { act, fireEvent } from '@testing-library/react';
  */
 
 export interface RafQueue {
-  /** Run `count` animation frames, one after another, inside `act`. */
-  flushFrames(count?: number): void;
+  /**
+   * Run `count` animation frames, one after another, inside `act`. Each frame is
+   * handed a timestamp, as a browser does, and the clock moves on by `frameMs`
+   * (16 by default) after every frame.
+   */
+  flushFrames(count?: number, frameMs?: number): void;
 }
 
 export function installRafQueue(): RafQueue {
   let queue = new Map<number, FrameRequestCallback>();
   let nextId = 0;
+  let clock = 0;
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
     nextId += 1;
     queue.set(nextId, cb);
@@ -29,13 +34,15 @@ export function installRafQueue(): RafQueue {
     queue.delete(id);
   });
   return {
-    flushFrames(count = 1) {
+    flushFrames(count = 1, frameMs = 16) {
       for (let i = 0; i < count; i++) {
         const callbacks = Array.from(queue.values());
         queue = new Map();
+        const stamp = clock;
         act(() => {
-          for (const cb of callbacks) cb(0);
+          for (const cb of callbacks) cb(stamp);
         });
+        clock += frameMs;
       }
     },
   };

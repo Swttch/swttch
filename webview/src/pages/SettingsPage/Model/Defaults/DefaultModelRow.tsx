@@ -9,13 +9,14 @@ import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useFableProbe, shouldProbeFable } from '@/contexts/FableProbeContext';
 import { DEFAULT_MODEL_ALIAS, resolveModelRowText, withFableFallback } from '@/types/models';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useClaudeDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** Which model a new session starts on. */
 export function DefaultModelRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
+  const { isInherited, resetFor } = useClaudeDisplaySettings();
   const { controlResponse } = useCliConfig();
   const { cliVersion } = useVersionInfo();
   const { probedAvailable, probedCanonicalModel, probeFableAvailability } = useFableProbe();
@@ -57,6 +58,8 @@ export function DefaultModelRow() {
       label={t('cli.model.label')}
       description={t('cli.model.description')}
       isOverridden={isOverridden('model')}
+      isInherited={isInherited('model')}
+      onResetToGlobal={resetFor('model')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

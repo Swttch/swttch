@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey, ThemeMode } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** The value standing for "this project says nothing; follow the global one". */
 const NOT_SET_VALUE = '__NOT_SET__';
@@ -13,14 +13,16 @@ const NOT_SET_VALUE = '__NOT_SET__';
 export function ColorThemeRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
+  const { updateSetting, scope, resetToGlobal } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const rawTheme = scopeSettings[SettingKey.THEME] as ThemeMode | undefined;
-  const isThemeNotSet = rawTheme === undefined && scope === 'project';
-  const themeValue = isThemeNotSet ? NOT_SET_VALUE : (rawTheme ?? ThemeMode.SYSTEM);
+  const themeValue = (displaySettings[SettingKey.THEME] as ThemeMode | undefined) ?? ThemeMode.SYSTEM;
+  const inherited = isInherited(SettingKey.THEME);
+  // Offered only while the project has its own value to take back; see LogLevelRow.
+  const hasOwnValue = scope === 'project' && !inherited;
 
   const themeOptions: SelectOption[] = [
-    ...(scope === 'project'
+    ...(hasOwnValue
       ? [{ value: NOT_SET_VALUE, label: t('appearance.theme.colorTheme.notSet'), italic: true }]
       : []),
     {
@@ -42,6 +44,8 @@ export function ColorThemeRow() {
       label={t('appearance.theme.colorTheme.label')}
       description={t('appearance.theme.colorTheme.description')}
       isOverridden={isOverridden(SettingKey.THEME)}
+      isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.THEME)}
     >
       <Select
         value={themeValue}
@@ -55,7 +59,7 @@ export function ColorThemeRow() {
           updateSetting(SettingKey.THEME, value as ThemeMode);
         }}
         className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isThemeNotSet ? 'text-text-tertiary' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
       />
     </SettingRow>

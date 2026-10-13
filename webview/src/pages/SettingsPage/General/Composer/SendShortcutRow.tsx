@@ -1,6 +1,5 @@
 import { ShortcutChoiceRow } from './ShortcutChoiceRow';
 import type { ComposerRowProps } from './types';
-import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import {
   ComposerSendShortcut,
@@ -9,15 +8,15 @@ import {
 } from '@/shared';
 import { isMac } from '@/config/environment';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** Which keystroke sends the prompt. */
 export function SendShortcutRow({ commit, error }: ComposerRowProps) {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const stored = scopeSettings as ComposerShortcutSettings;
+  const stored = displaySettings as ComposerShortcutSettings;
   const { send } = resolveComposerShortcuts(stored);
 
   // Both Ctrl and Cmd send on either platform, so the label names the one this
@@ -32,6 +31,8 @@ export function SendShortcutRow({ commit, error }: ComposerRowProps) {
       isCustom={send === ComposerSendShortcut.Custom}
       custom={stored.composerSendShortcutCustom ?? ''}
       isOverridden={isOverridden(SettingKey.COMPOSER_SEND_SHORTCUT)}
+      isInherited={isInherited(SettingKey.COMPOSER_SEND_SHORTCUT)}
+      onResetToGlobal={resetFor(SettingKey.COMPOSER_SEND_SHORTCUT, SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM)}
       error={error}
       options={[
         { value: ComposerSendShortcut.Enter, label: t('general.composer.send.enter') },

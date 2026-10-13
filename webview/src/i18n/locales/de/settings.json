@@ -115,7 +115,8 @@
         "description": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf. Drücke {{shortcut}}, um das Verhalten für eine Nachricht umzukehren.",
         "descriptionNoShortcut": "Stelle Folgenachrichten in die Warteschlange, während {{appName}} ausgeführt wird, oder steuere den aktuellen Durchlauf.",
         "queue": "In Warteschlange stellen",
-        "steer": "Steuern"
+        "steer": "Steuern",
+        "notSet": "Nicht festgelegt (global verwenden)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "Schriftgröße",
-        "description": "Basis-Schriftgröße für die Oberfläche",
-        "notSetPlaceholder": "Nicht festgelegt"
+        "description": "Basis-Schriftgröße für die Oberfläche"
       },
       "lineSpacing": {
         "label": "Zeilenabstand",
-        "description": "Zeilenhöhe für den Text von Chat-Nachrichten",
-        "notSetPlaceholder": "Nicht festgelegt"
+        "description": "Zeilenhöhe für den Text von Chat-Nachrichten"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "Scrollen",
       "autoScrollThreshold": {
         "label": "Wiederaufnahme-Abstand für automatisches Scrollen",
-        "description": "Wenn du weiter als diese Pixelanzahl vom unteren Rand nach oben scrollst, pausiert das automatische Scrollen, damit du ungestört lesen kannst. Es wird fortgesetzt, sobald du wieder in diesen Bereich zurückscrollst. Ein kleinerer Wert bedeutet, dass du näher zurückkehren musst, um es erneut zu aktivieren. Standard {{value}}.",
-        "notSetPlaceholder": "Nicht festgelegt"
+        "description": "Wenn du weiter als diese Pixelanzahl vom unteren Rand nach oben scrollst, pausiert das automatische Scrollen, damit du ungestört lesen kannst. Es wird fortgesetzt, sobald du wieder in diesen Bereich zurückscrollst. Ein kleinerer Wert bedeutet, dass du näher zurückkehren musst, um es erneut zu aktivieren. Standard {{value}}."
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "Debugging",
       "debugMode": {
         "label": "Debug-Modus",
-        "description": "Debug-Protokollierung und Diagnose aktivieren",
-        "notSet": "Nicht festgelegt (global verwenden)"
+        "description": "Debug-Protokollierung und Diagnose aktivieren"
       },
       "logLevel": {
         "label": "Protokollstufe",
@@ -683,7 +680,11 @@
     "claudeNativeLabel": "C",
     "projectOverride": "Das Projekt überschreibt diesen Wert. Eine Änderung hier hat keine Wirkung",
     "projectOverrideLabel": "P",
-    "openDocs": "Doku öffnen"
+    "inherited": "In diesem Projekt nicht festgelegt. Der globale Wert wird verwendet",
+    "inheritedLabel": "G",
+    "openDocs": "Doku öffnen",
+    "projectValue": "Dieses Projekt legt einen eigenen Wert fest und überschreibt den globalen",
+    "projectValueReset": "Auf global zurücksetzen"
   },
   "ide": {
     "sectionTitle": "IDE-Integration",

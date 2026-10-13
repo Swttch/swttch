@@ -434,7 +434,7 @@ describe('settings', () => {
       for (const mode of ['queue', 'steer']) {
         expect((await saveSettingToFile('composerFollowUpBehavior', mode)).status).toBe('ok');
       }
-      // Null is a real value: it says the user never chose, which reads as queue.
+      // Null is a real value: it says the user never chose, which reads as steer.
       expect((await saveSettingToFile('composerFollowUpBehavior', null)).status).toBe('ok');
 
       const bad = await saveSettingToFile('composerFollowUpBehavior', 'interrupt');

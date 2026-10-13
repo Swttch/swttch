@@ -9,15 +9,16 @@ import {
   type VoiceSettings,
 } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** How long a recording waits through silence before it stops on its own. */
 export function SilenceTimeoutRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const voice = (scopeSettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
+  const voice = (displaySettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
   const silenceTimeout = voice.silenceTimeout ?? VOICE_SILENCE_TIMEOUT_DEFAULT;
 
   return (
@@ -27,6 +28,8 @@ export function SilenceTimeoutRow() {
         max: VOICE_SILENCE_TIMEOUT_MAX,
       })}
       isOverridden={isOverridden('voice')}
+      isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
     >
       <input
         type="number"

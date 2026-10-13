@@ -18,7 +18,7 @@ A setting the project has already decided appears like this on the global tab.
 - The control on the right is dimmed and cannot be touched.
 - Hovering the badge tells you the project is overriding it.
 - The value is not hidden. You can still see what is stored globally.
-- The project tab is unchanged. What you see there is the value that actually applies.
+- The project tab shows the value that actually applies. A setting the project did not set shows the global value with a **G** badge. See [The project tab shows the setting that actually applies](../089-project_tab_shows_inherited_settings/en.md).
 
 ![Hovering the badge tells you why](./assets/badge-tooltip.png)
 

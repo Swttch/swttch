@@ -145,4 +145,59 @@ describe('mergeToolResults', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]).toBe(userMsg); // same reference → MessageBubble memo bailout holds
   });
+
+  describe('sub-agent progress under an Agent card (#535)', () => {
+    function agentCall(uuid: string, toolId: string, input: Record<string, unknown>): LoadedMessageDto {
+      return {
+        uuid,
+        type: LoadedMessageType.Assistant,
+        message: {
+          role: MessageRole.Assistant,
+          content: [{ type: 'tool_use', id: toolId, name: 'Agent', input }],
+        },
+        timestamp: '2026-01-01T00:00:00.000Z',
+      } as unknown as LoadedMessageDto;
+    }
+
+    function agentProgress(uuid: string, parentToolUseID: string): LoadedMessageDto {
+      return {
+        uuid,
+        type: LoadedMessageType.Progress,
+        parentToolUseID,
+        data: {
+          type: 'agent_progress',
+          message: {
+            type: 'assistant',
+            message: {
+              role: 'assistant',
+              content: [{ type: 'tool_use', id: `${uuid}-t`, name: 'Read', input: { file_path: 'a.md' } }],
+            },
+            uuid,
+            timestamp: '2026-01-01T00:00:02.000Z',
+          },
+        },
+        timestamp: '2026-01-01T00:00:02.000Z',
+      } as unknown as LoadedMessageDto;
+    }
+
+    it('nests the sub-agent tool calls under a foreground Agent card', () => {
+      const merged = mergeToolResults([
+        agentCall('a1', 'agent1', { description: 'sweep', prompt: 'go' }),
+        agentProgress('p1', 'agent1'),
+      ]);
+
+      const block = getToolUseBlock(merged.find(m => m.uuid === 'a1')!);
+      expect(block!.subAgentMessages).toHaveLength(1);
+    });
+
+    it('does not nest anything under a background Agent card', () => {
+      const merged = mergeToolResults([
+        agentCall('a1', 'agent1', { description: 'sweep', prompt: 'go', run_in_background: true }),
+        agentProgress('p1', 'agent1'),
+      ]);
+
+      const block = getToolUseBlock(merged.find(m => m.uuid === 'a1')!);
+      expect(block!.subAgentMessages).toBeUndefined();
+    });
+  });
 });

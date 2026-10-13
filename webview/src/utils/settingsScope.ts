@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
-import { useSettingsOrNull } from '@/contexts/SettingsContext';
-import { useClaudeSettingsOrNull } from '@/contexts/ClaudeSettingsContext';
+import { useSettings, useSettingsOrNull } from '@/contexts/SettingsContext';
+import { useClaudeSettings, useClaudeSettingsOrNull } from '@/contexts/ClaudeSettingsContext';
+import type { SettingsState } from '@/types/settings';
+import type { ClaudeSettingsState } from '@/types/claude-settings';
 
 /**
  * Whether a save leaves the effective value untouched because a project setting
@@ -50,4 +52,90 @@ export function useIsOverriddenByProject(): (key: string | undefined) => boolean
     },
     [scope, overrides, claudeOverrides],
   );
+}
+
+type Scope = 'global' | 'project';
+
+/**
+ * What the open settings tab should draw for a row.
+ *
+ * The global tab shows the global file, which the backend reads with the
+ * built-in defaults laid underneath. The project tab cannot show its own file:
+ * that file holds only the keys the project overrides, so a key it leaves out
+ * reads as "nothing" and a row falls back to its own constant. A project that
+ * says nothing about a key uses the global value, and that is what the tab has
+ * to show. The merged settings are exactly that chain, defaults then global
+ * then project, resolved key by key (#547).
+ *
+ * Scope is read as "global" when a caller gives none, so a screen that has no
+ * scope switch still gets the open tab's own values.
+ */
+export function pickDisplayedSettings<T extends object>(
+  scope: Scope | undefined,
+  scopeSettings: Partial<T>,
+  merged: Partial<T> | undefined,
+): Partial<T> {
+  return scope === 'project' ? { ...(merged ?? {}), ...scopeSettings } : scopeSettings;
+}
+
+/**
+ * Whether the value on screen is inherited: the project tab is open and the
+ * project's own file has nothing for [key]. Only the project tab can inherit,
+ * and a key stored as null counts as absent, which is how a removed override is
+ * written.
+ */
+export function isInheritedFromGlobal(
+  scope: Scope | undefined,
+  scopeSettings: object,
+  key: string,
+): boolean {
+  if (scope !== 'project') return false;
+  const own = (scopeSettings as Record<string, unknown>)[key];
+  return own === undefined || own === null;
+}
+
+/** What a row of one settings store draws, and whether that value is inherited. */
+export interface DisplayedSettings<T> {
+  displaySettings: Partial<T>;
+  isInherited: (key: string) => boolean;
+  /**
+   * The action behind the reset link on a row whose project value overrides the
+   * global one: it deletes [key] from the project file, plus any [alsoRemove]
+   * keys that only make sense next to it. Undefined when there is nothing to
+   * take back, which is also how a row learns not to draw the badge.
+   */
+  resetFor: (key: string, ...alsoRemove: string[]) => (() => void) | undefined;
+}
+
+function resetForKeys(
+  scope: Scope | undefined,
+  scopeSettings: object,
+  resetToGlobal: (key: never) => Promise<void>,
+) {
+  return (key: string, ...alsoRemove: string[]) => {
+    if (scope !== 'project' || isInheritedFromGlobal(scope, scopeSettings, key)) return undefined;
+    return () => {
+      for (const k of [key, ...alsoRemove]) void resetToGlobal(k as never);
+    };
+  };
+}
+
+/** {@link pickDisplayedSettings} for the app's own settings (settings.js). */
+export function useDisplaySettings(): DisplayedSettings<SettingsState> {
+  const { scope, scopeSettings, settings, resetToGlobal } = useSettings();
+  return {
+    displaySettings: pickDisplayedSettings<SettingsState>(scope, scopeSettings, settings),
+    isInherited: (key) => isInheritedFromGlobal(scope, scopeSettings, key),
+    resetFor: resetForKeys(scope, scopeSettings, resetToGlobal),
+  };
+}
+
+/** {@link pickDisplayedSettings} for Claude Code's own settings (settings.json). */
+export function useClaudeDisplaySettings(): DisplayedSettings<ClaudeSettingsState> {
+  const { scope, scopeSettings, settings, resetToGlobal } = useClaudeSettings();
+  return {
+    displaySettings: pickDisplayedSettings<ClaudeSettingsState>(scope, scopeSettings, settings),
+    isInherited: (key) => isInheritedFromGlobal(scope, scopeSettings, key),
+    resetFor: resetForKeys(scope, scopeSettings, resetToGlobal),
+  };
 }

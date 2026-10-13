@@ -5,6 +5,7 @@ import { useSessionContext } from '@/contexts/SessionContext';
 import { useWorkflowState } from '@/contexts/WorkflowStateContext';
 import { useScheduledMessages } from '@/contexts/ScheduledMessagesContext';
 import { OPEN_ACCOUNT_USAGE_EVENT } from '@/commandPalette/sections/model/AccountUsageItem';
+import { TOGGLE_SIDE_QUESTION_EVENT } from '@/contexts/SideQuestionContext';
 import { DockItemId } from '@/types/settings';
 import { useTunnelAction } from '../useTunnelAction';
 import { openAssetsModal } from './actions';
@@ -38,6 +39,12 @@ export function useDockItemActions(): DockItemActions {
 
   const openAssetsFromMenu = useCallback(() => openAssetsModal(AssetScreenSource.Overflow), []);
 
+  // The shortcut and the command palette raise this same event, so every way in
+  // opens, closes, or un-parks the one window.
+  const toggleSideQuestion = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(TOGGLE_SIDE_QUESTION_EVENT));
+  }, []);
+
   const openSettings = useCallback(() => {
     // Honours the user's "Open Settings as" preference (overlay vs dedicated tab)
     // — the same helper every other entry point into settings uses.
@@ -62,8 +69,9 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.TUNNEL]: tunnel.activate,
       [DockItemId.SETTINGS]: openSettings,
       [DockItemId.ASSETS]: openAssetsFromMenu,
+      [DockItemId.SIDE_QUESTION]: toggleSideQuestion,
       [DockItemId.NEW_TAB]: openNewTab,
     }),
-    [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab, openAssetsFromMenu],
+    [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab, openAssetsFromMenu, toggleSideQuestion],
   );
 }

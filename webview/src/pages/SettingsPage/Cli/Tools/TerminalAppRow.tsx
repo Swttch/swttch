@@ -7,7 +7,7 @@ import { SettingKey } from '@/types/settings';
 import { isJetBrains } from '@/config/environment';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 interface TerminalInfo {
   id: string;
@@ -36,6 +36,7 @@ export function TerminalAppRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const { send } = useBridge();
   const isJetBrainsEnv = isJetBrains();
 
@@ -77,6 +78,8 @@ export function TerminalAppRow() {
           : t('cli.terminal.app.description')
       }
       isOverridden={isOverridden(SettingKey.TERMINAL_APP)}
+      isInherited={isInherited(SettingKey.TERMINAL_APP)}
+      onResetToGlobal={resetFor(SettingKey.TERMINAL_APP)}
     >
       {isJetBrainsEnv ? (
         <span className="text-sm text-text-tertiary">{t('cli.terminal.app.jetbrainsValue')}</span>

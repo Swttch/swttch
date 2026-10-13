@@ -115,7 +115,8 @@
         "description": "{{appName}} 실행 중 후속 요청을 대기열에 추가하거나 현재 작업을 조정합니다. {{shortcut}} 키를 누르면 메시지 하나에 대해 반대 동작이 수행됩니다.",
         "descriptionNoShortcut": "{{appName}} 실행 중 후속 요청을 대기열에 추가하거나 현재 작업을 조정합니다.",
         "queue": "대기열에 추가",
-        "steer": "현재 작업 조정"
+        "steer": "현재 작업 조정",
+        "notSet": "설정 안 함 (전역 설정 사용)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "글꼴 크기",
-        "description": "인터페이스의 기본 글꼴 크기",
-        "notSetPlaceholder": "설정 안 함"
+        "description": "인터페이스의 기본 글꼴 크기"
       },
       "lineSpacing": {
         "label": "줄 간격",
-        "description": "채팅 메시지 텍스트의 줄 간격",
-        "notSetPlaceholder": "설정 안 함"
+        "description": "채팅 메시지 텍스트의 줄 간격"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "스크롤",
       "autoScrollThreshold": {
         "label": "자동 스크롤 재개 거리",
-        "description": "하단에서 이 픽셀 수를 넘어 위로 스크롤하면 자유롭게 읽을 수 있도록 자동 스크롤이 멈춥니다. 다시 이 범위 안으로 돌아오면 재개됩니다. 값이 작을수록 더 가까이 돌아와야 다시 활성화됩니다. 기본값 {{value}}.",
-        "notSetPlaceholder": "설정 안 함"
+        "description": "하단에서 이 픽셀 수를 넘어 위로 스크롤하면 자유롭게 읽을 수 있도록 자동 스크롤이 멈춥니다. 다시 이 범위 안으로 돌아오면 재개됩니다. 값이 작을수록 더 가까이 돌아와야 다시 활성화됩니다. 기본값 {{value}}."
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "디버깅",
       "debugMode": {
         "label": "디버그 모드",
-        "description": "디버그 로깅 및 진단을 활성화합니다",
-        "notSet": "설정 안 함 (전역 설정 사용)"
+        "description": "디버그 로깅 및 진단을 활성화합니다"
       },
       "logLevel": {
         "label": "로그 레벨",
@@ -679,7 +676,11 @@
     "claudeNativeLabel": "클",
     "projectOverride": "프로젝트 설정이 이 값을 덮어씁니다. 여기서 바꿔도 적용되지 않습니다",
     "projectOverrideLabel": "프",
-    "openDocs": "문서 열기"
+    "inherited": "이 프로젝트에는 설정되어 있지 않습니다. 전역 설정의 값을 사용합니다",
+    "inheritedLabel": "전",
+    "openDocs": "문서 열기",
+    "projectValue": "이 프로젝트가 자기 값을 정해 전역 설정을 덮어쓰고 있습니다",
+    "projectValueReset": "초기화"
   },
   "ide": {
     "sectionTitle": "IDE 연동",

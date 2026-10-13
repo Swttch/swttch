@@ -712,13 +712,18 @@
     "unpinFromDock": "Vom Dock lösen"
   },
   "sideQuestion": {
-    "title": "Nebenfrage",
+    "title": "By the way",
     "subtitle": "Wird beantwortet, ohne das Hauptgespräch zu unterbrechen, und nicht hinzugefügt.",
     "placeholder": "Kurze Nebenfrage stellen…",
     "empty": "Frag alles zum laufenden Geschehen — der Hauptagent arbeitet weiter.",
     "thinking": "Denkt nach…",
     "failed": "Claude konnte diese Nebenfrage nicht beantworten. Versuche es erneut.",
     "clear": "Nebenfragen löschen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "minimize": "Minimieren",
+    "maximize": "Maximieren",
+    "restoreSize": "Originalgröße",
+    "open": "Öffnen",
+    "newAnswer": "Neue Antwort"
   }
 }

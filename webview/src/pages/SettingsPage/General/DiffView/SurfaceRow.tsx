@@ -4,11 +4,14 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey, DiffSurface } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** Which viewer draws a proposed edit: the IDE's own, or our diff page. */
 export function SurfaceRow() {
   const { t } = useTranslation('settings');
   const { updateSetting, ideAttached } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
+  const { isInherited, resetFor } = useDisplaySettings();
 
   // What will actually happen, not what is stored: with no IDE hosting the
   // backend there is nothing to open a diff in, so the built-in surface is the
@@ -24,6 +27,9 @@ export function SurfaceRow() {
   return (
     <SettingRow
       label={t('diffView.surface.label')}
+      isOverridden={isOverridden(SettingKey.DIFF_SURFACE)}
+      isInherited={isInherited(SettingKey.DIFF_SURFACE)}
+      onResetToGlobal={resetFor(SettingKey.DIFF_SURFACE)}
       description={ideAttached ? t('diffView.surface.description') : t('diffView.surface.noIde')}
     >
       <Select

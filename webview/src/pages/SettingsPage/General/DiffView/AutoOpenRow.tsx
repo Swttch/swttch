@@ -4,6 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useAutoOpenDiffEnabled } from '@/hooks/useIdeDiffAvailable';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Whether a proposed edit opens for review without being asked for.
@@ -16,11 +17,16 @@ import { useTranslation } from '@/i18n';
 export function AutoOpenRow() {
   const { t } = useTranslation('settings');
   const { updateSetting } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
+  const { isInherited, resetFor } = useDisplaySettings();
   const autoOpen = useAutoOpenDiffEnabled();
 
   return (
     <SettingRow
       label={t('diffView.autoOpen.label')}
+      isOverridden={isOverridden(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
+      isInherited={isInherited(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
+      onResetToGlobal={resetFor(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
       description={t('diffView.autoOpen.description')}
     >
       <ToggleSwitch

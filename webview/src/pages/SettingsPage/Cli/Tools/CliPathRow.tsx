@@ -3,7 +3,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 import { useDetectedPath } from './useDetectedPath';
 
 /** Which `claude` executable the backend spawns. Empty means "find it yourself". */
@@ -11,6 +11,7 @@ export function CliPathRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const detected = useDetectedPath(MessageType.GET_DETECTED_CLI_PATH);
 
   const value = settings[SettingKey.CLI_PATH] || '';
@@ -20,6 +21,8 @@ export function CliPathRow() {
       label={t('cli.path.label')}
       description={t('cli.path.description')}
       isOverridden={isOverridden(SettingKey.CLI_PATH)}
+      isInherited={isInherited(SettingKey.CLI_PATH)}
+      onResetToGlobal={resetFor(SettingKey.CLI_PATH)}
     >
       <div className="flex flex-col items-end gap-1">
         <input

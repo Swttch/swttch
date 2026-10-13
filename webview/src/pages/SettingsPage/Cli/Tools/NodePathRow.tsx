@@ -3,7 +3,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { MessageType } from '@/shared';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 import { useDetectedPath } from './useDetectedPath';
 
 /** Which Node runs the backend. Takes effect on the next start, not this one. */
@@ -11,6 +11,7 @@ export function NodePathRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const detected = useDetectedPath(MessageType.GET_DETECTED_NODE_PATH);
 
   const value = settings[SettingKey.NODE_PATH] || '';
@@ -20,6 +21,8 @@ export function NodePathRow() {
       label={t('cli.nodePath.label')}
       description={t('cli.nodePath.description')}
       isOverridden={isOverridden(SettingKey.NODE_PATH)}
+      isInherited={isInherited(SettingKey.NODE_PATH)}
+      onResetToGlobal={resetFor(SettingKey.NODE_PATH)}
     >
       <div className="flex flex-col items-end gap-1">
         <input

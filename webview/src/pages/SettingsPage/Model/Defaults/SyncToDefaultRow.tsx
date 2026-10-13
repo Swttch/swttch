@@ -3,7 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Whether changing one session's model also moves the default every new session
@@ -13,12 +13,15 @@ export function SyncToDefaultRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
+  const { isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
       label={t('cli.model.syncToDefault.label')}
       description={t('cli.model.syncToDefault.description')}
       isOverridden={isOverridden(SettingKey.SYNC_MODEL_TO_DEFAULT)}
+      isInherited={isInherited(SettingKey.SYNC_MODEL_TO_DEFAULT)}
+      onResetToGlobal={resetFor(SettingKey.SYNC_MODEL_TO_DEFAULT)}
     >
       <ToggleSwitch
         checked={settings[SettingKey.SYNC_MODEL_TO_DEFAULT]}

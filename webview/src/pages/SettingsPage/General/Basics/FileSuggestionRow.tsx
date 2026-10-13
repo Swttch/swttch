@@ -4,7 +4,7 @@ import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
 import type { FileSuggestionConfig } from '@/types/claude-settings';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useClaudeDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Edits the Claude `fileSuggestion` command — the shell command that builds the
@@ -15,14 +15,15 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function FileSuggestionRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting } = useClaudeSettings();
+  const { updateSetting } = useClaudeSettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   const stored =
-    (scopeSettings.fileSuggestion as FileSuggestionConfig | null | undefined)?.command ?? '';
+    (displaySettings.fileSuggestion as FileSuggestionConfig | null | undefined)?.command ?? '';
   const [draft, setDraft] = useState(stored);
 
   // Re-sync the field with the stored value when the scope tab (and thus
-  // scopeSettings) changes underneath us.
+  // displaySettings) changes underneath us.
   useEffect(() => {
     setDraft(stored);
   }, [stored]);
@@ -38,6 +39,8 @@ export function FileSuggestionRow() {
       label="fileSuggestion"
       description={t('general.fileSuggestion.description')}
       isOverridden={isOverridden('fileSuggestion')}
+      isInherited={isInherited('fileSuggestion')}
+      onResetToGlobal={resetFor('fileSuggestion')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

@@ -8,30 +8,32 @@ import {
   LINE_HEIGHT_STEP,
 } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** How far apart the lines of a chat message sit, as a multiplier. */
 export function LineSpacingRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
+  const { updateSetting, scope, resetToGlobal } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const rawLineHeight = scopeSettings[SettingKey.LINE_HEIGHT] as number | undefined;
-  const isNotSet = rawLineHeight === undefined && scope === 'project';
+  const rawLineHeight = displaySettings[SettingKey.LINE_HEIGHT] as number | undefined;
+  const inherited = isInherited(SettingKey.LINE_HEIGHT);
 
   return (
     <SettingRow
       label={t('appearance.theme.lineSpacing.label')}
       description={t('appearance.theme.lineSpacing.description')}
       isOverridden={isOverridden(SettingKey.LINE_HEIGHT)}
+      isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.LINE_HEIGHT)}
     >
       <input
         type="number"
         min={LINE_HEIGHT_MIN}
         max={LINE_HEIGHT_MAX}
         step={LINE_HEIGHT_STEP}
-        value={isNotSet ? '' : (rawLineHeight ?? LINE_HEIGHT_DEFAULT)}
-        placeholder={isNotSet ? t('appearance.theme.lineSpacing.notSetPlaceholder') : undefined}
+        value={rawLineHeight ?? LINE_HEIGHT_DEFAULT}
         onChange={(e) => {
           const value = e.target.value;
           if (value === '') {
@@ -45,7 +47,7 @@ export function LineSpacingRow() {
           updateSetting(SettingKey.LINE_HEIGHT, parsed);
         }}
         className={`min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isNotSet ? 'text-text-tertiary italic' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
       />
     </SettingRow>

@@ -9,7 +9,7 @@ import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import { followSponsorOffer } from '@/utils/followSponsorOffer';
 import { reportSponsorGate } from '@/utils/reportSponsorGate';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Whether every session starts with "Allow all command in this session" on.
@@ -29,7 +29,8 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function AllowAllCommandsRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scope, scopeSettings } = useSettings();
+  const { scope } = useSettings();
+  const { displaySettings } = useDisplaySettings();
   const { requestEnableByDefault, disableByDefault, sponsorLocked } = useAllowAllCommands();
 
   // On screen as soon as the row is, and only where it can be pressed: the
@@ -42,7 +43,10 @@ export function AllowAllCommandsRow() {
     });
   }, [offerVisible]);
 
-  const checked = (scopeSettings[SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT] as boolean | undefined) ?? false;
+  // Drawn from what is in effect even on the project tab, where the control is
+  // inert: the project's own file is empty there, and an empty file read as "off"
+  // contradicted the global value the CLI actually runs on.
+  const checked = (displaySettings[SettingKey.ALLOW_ALL_COMMANDS_BY_DEFAULT] as boolean | undefined) ?? false;
 
   return (
     <SettingRow

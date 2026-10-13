@@ -2,7 +2,7 @@ import { SettingRow } from '../../common';
 import { SettingBadge, SettingBadgeVariant } from '@/components';
 import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useClaudeDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 import { CLAUDE_SETTINGS_DOC_HREF } from './docs';
 
 /**
@@ -16,15 +16,18 @@ import { CLAUDE_SETTINGS_DOC_HREF } from './docs';
 export function LanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useClaudeSettings();
+  const { updateSetting } = useClaudeSettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
-  const responseLanguage = (scopeSettings.language as string | undefined) ?? '';
+  const responseLanguage = (displaySettings.language as string | undefined) ?? '';
 
   return (
     <SettingRow
       label={t('general.language.label')}
       description={t('general.language.description')}
       isOverridden={isOverridden('language')}
+      isInherited={isInherited('language')}
+      onResetToGlobal={resetFor('language')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

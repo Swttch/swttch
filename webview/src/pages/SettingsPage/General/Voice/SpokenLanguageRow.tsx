@@ -2,11 +2,14 @@ import { useMemo } from 'react';
 import { SettingRow, DiffersFromOfficialHint } from '../../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useClaudeSettings } from '@/contexts/ClaudeSettingsContext';
 import { SettingKey, type VoiceSettings } from '@/types/settings';
 import { useTranslation } from '@/i18n';
 import i18n from '@/i18n/config';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import {
+  useClaudeDisplaySettings,
+  useDisplaySettings,
+  useIsOverriddenByProject,
+} from '@/utils/settingsScope';
 import {
   listDictationLanguages,
   languageSettingToCode,
@@ -26,16 +29,17 @@ const FOLLOW_VALUE = '__FOLLOW__';
 export function SpokenLanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useSettings();
-  const { scopeSettings: claudeScopeSettings } = useClaudeSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
+  const { displaySettings: claudeDisplaySettings } = useClaudeDisplaySettings();
 
-  const voice = (scopeSettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
+  const voice = (displaySettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
   const speechLanguage = voice.speechLanguage ?? null;
 
   // What "follow" currently resolves to, so the placeholder can name it instead
   // of leaving the user to guess which language they would get.
   const inherited =
-    languageSettingToCode(claudeScopeSettings.language as string | undefined) ?? i18n.language;
+    languageSettingToCode(claudeDisplaySettings.language as string | undefined) ?? i18n.language;
 
   const languageOptions: SelectOption[] = useMemo(() => {
     const all = listDictationLanguages(i18n.language);
@@ -64,6 +68,8 @@ export function SpokenLanguageRow() {
     <SettingRow
       label={t('general.voice.speechLanguage.label')}
       isOverridden={isOverridden('voice')}
+      isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
       description={
         <>
           {showsFallbackWarning

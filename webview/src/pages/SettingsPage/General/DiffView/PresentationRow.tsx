@@ -5,6 +5,7 @@ import { useResolvedDiffSurface } from '@/hooks/useIdeDiffAvailable';
 import { useDiffOverlayAllowed } from '@/hooks/useDiffOverlayAllowed';
 import { SettingKey, DiffSurface, BrowserDiffPresentation } from '@/types/settings';
 import { useTranslation } from '@/i18n';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * How our own diff page appears: a tab of its own, or a modal over the chat.
@@ -16,14 +17,16 @@ import { useTranslation } from '@/i18n';
  */
 export function PresentationRow() {
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const surface = useResolvedDiffSurface();
   // Whether an overlay is even possible here. Same rule the code that opens the
   // review applies, so the setting cannot offer something that will be ignored.
   const overlayAllowed = useDiffOverlayAllowed();
   const presentation =
-    (scopeSettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
+    (displaySettings[SettingKey.BROWSER_DIFF_PRESENTATION] as BrowserDiffPresentation | undefined) ??
     BrowserDiffPresentation.NEW_TAB;
 
   const presentationOptions: SelectOption[] = [
@@ -34,6 +37,9 @@ export function PresentationRow() {
   return (
     <SettingRow
       label={t('diffView.presentation.label')}
+      isOverridden={isOverridden(SettingKey.BROWSER_DIFF_PRESENTATION)}
+      isInherited={isInherited(SettingKey.BROWSER_DIFF_PRESENTATION)}
+      onResetToGlobal={resetFor(SettingKey.BROWSER_DIFF_PRESENTATION)}
       description={
         surface !== DiffSurface.BUILT_IN
           ? t('diffView.presentation.builtInOnly')

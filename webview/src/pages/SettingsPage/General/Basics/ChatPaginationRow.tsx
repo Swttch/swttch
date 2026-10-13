@@ -1,4 +1,4 @@
-import { SettingRow } from '../../common';
+import { SettingRow, ScopeGuard } from '../../common';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
@@ -12,7 +12,7 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
  */
 export function ChatPaginationRow() {
   const isOverridden = useIsOverriddenByProject();
-  const { settings, updateSettingWithScope } = useSettings();
+  const { settings, updateSettingWithScope, scope } = useSettings();
   const { t } = useTranslation('settings');
 
   const enabled = settings[SettingKey.CHAT_PAGINATION] ?? true;
@@ -23,11 +23,13 @@ export function ChatPaginationRow() {
       description={t('general.chatPagination.description')}
       isOverridden={isOverridden(SettingKey.CHAT_PAGINATION)}
     >
-      <ToggleSwitch
-        checked={enabled}
-        onChange={(checked) => updateSettingWithScope(SettingKey.CHAT_PAGINATION, checked, 'global')}
-        ariaLabel={t('general.chatPagination.label')}
-      />
+      <ScopeGuard supportedScope="global" currentScope={scope}>
+        <ToggleSwitch
+          checked={enabled}
+          onChange={(checked) => updateSettingWithScope(SettingKey.CHAT_PAGINATION, checked, 'global')}
+          ariaLabel={t('general.chatPagination.label')}
+        />
+      </ScopeGuard>
     </SettingRow>
   );
 }

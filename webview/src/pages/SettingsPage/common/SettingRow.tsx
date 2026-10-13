@@ -24,6 +24,26 @@ interface SettingRowProps {
    */
   isOverridden?: boolean;
   /**
+   * The project tab is open and the project says nothing about this key, so the
+   * value the control shows is the one inherited from global settings (or the
+   * built-in default when global says nothing either). The row marks it, so a
+   * value that was never set here is not read as one the project chose.
+   *
+   * The mirror of {@link isOverridden}: that one is for the global tab, this one
+   * for the project tab. {@link useDisplaySettings} supplies both the value and
+   * this flag.
+   */
+  isInherited?: boolean;
+  /**
+   * The project tab is open and the project sets this key itself, overriding the
+   * global value. Given, it makes the row wear the project-value badge, whose
+   * tooltip carries a reset link that runs this. A function rather than a flag
+   * because the badge must not offer a way back it does not have. It is the one
+   * way back that works for every control, switches and text fields included.
+   * {@link useDisplaySettings}'s `resetFor` supplies it.
+   */
+  onResetToGlobal?: () => void;
+  /**
    * Rendered under the whole row, spanning its width.
    *
    * For something that follows from the control rather than describing it — a
@@ -38,7 +58,7 @@ interface SettingRowProps {
 }
 
 export function SettingRow(props: SettingRowProps) {
-  const { label, description, badge, isOverridden, below, children } = props;
+  const { label, description, badge, isOverridden, isInherited, onResetToGlobal, below, children } = props;
   const { t } = useTranslation('settings');
 
   return (
@@ -52,6 +72,13 @@ export function SettingRow(props: SettingRowProps) {
           <label className="text-sm text-text-primary">{label}</label>
           {badge}
           {isOverridden && <SettingBadge variant={SettingBadgeVariant.ProjectOverride} />}
+          {isInherited && <SettingBadge variant={SettingBadgeVariant.Inherited} />}
+          {onResetToGlobal && (
+            <SettingBadge
+              variant={SettingBadgeVariant.ProjectValue}
+              action={{ label: t('badges.projectValueReset'), onClick: onResetToGlobal }}
+            />
+          )}
         </div>
         {description && <SettingDescription>{description}</SettingDescription>}
       </div>

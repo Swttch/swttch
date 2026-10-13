@@ -712,13 +712,18 @@
     "unpinFromDock": "Desafixar do dock"
   },
   "sideQuestion": {
-    "title": "Pergunta paralela",
+    "title": "By the way",
     "subtitle": "Respondida sem interromper a conversa principal e sem ser adicionada a ela.",
     "placeholder": "Faça uma pergunta paralela rápida…",
     "empty": "Pergunte o que quiser sobre o que está acontecendo — o agente principal continua trabalhando.",
     "thinking": "Pensando…",
     "failed": "O Claude não conseguiu responder a esta pergunta paralela. Tente novamente.",
     "clear": "Limpar perguntas paralelas",
-    "close": "Fechar"
+    "close": "Fechar",
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "restoreSize": "Restaurar tamanho",
+    "open": "Abrir",
+    "newAnswer": "Nova resposta"
   }
 }

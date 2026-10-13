@@ -7,6 +7,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { DEFAULT_VOLUME_STEP } from './VolumeRow';
 import { useTranslation } from '@/i18n';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Which sound a session makes when it finishes a turn or stops to ask
@@ -42,6 +43,8 @@ export function SoundRow() {
   const { selection, setSelection } = useNotificationSound();
   const { sounds, loading, error } = useSystemSounds();
   const { settings } = useSettings();
+  const isOverridden = useIsOverriddenByProject();
+  const { isInherited, resetFor } = useDisplaySettings();
   const stored = settings[SettingKey.NOTIFICATION_SOUND_VOLUME];
   // The default step until a value is saved, matching what the backend assumes
   // for a settings file that has no volume in it yet.
@@ -75,7 +78,13 @@ export function SoundRow() {
           : t('general.notifications.sound.description');
 
   return (
-    <SettingRow label={t('general.notifications.sound.label')} description={description}>
+    <SettingRow
+      label={t('general.notifications.sound.label')}
+      description={description}
+      isOverridden={isOverridden(SettingKey.NOTIFICATION_SOUND)}
+      isInherited={isInherited(SettingKey.NOTIFICATION_SOUND)}
+      onResetToGlobal={resetFor(SettingKey.NOTIFICATION_SOUND)}
+    >
       <Select
         value={selection}
         options={soundOptions}

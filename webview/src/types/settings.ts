@@ -230,6 +230,8 @@ export enum DockItemId {
   TUNNEL = 'tunnel',
   SETTINGS = 'settings',
   ASSETS = 'assets',
+  /** The "By the way" (`/btw`) window. A newly shipped item, so it lands in the ⋮ menu until it is pulled out. */
+  SIDE_QUESTION = 'sideQuestion',
   NEW_TAB = 'newTab',
   // Accounts are NOT a dock item: the switcher is a picker (a list of saved
   // accounts), not a single action, and always sits as its own icon to the

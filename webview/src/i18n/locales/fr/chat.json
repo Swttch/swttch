@@ -712,13 +712,18 @@
     "unpinFromDock": "Détacher du dock"
   },
   "sideQuestion": {
-    "title": "Question en aparté",
+    "title": "By the way",
     "subtitle": "Répondue sans interrompre la conversation principale, et sans y être ajoutée.",
     "placeholder": "Pose une question rapide en aparté…",
     "empty": "Pose n'importe quelle question sur ce qui se passe — l'agent principal continue de travailler.",
     "thinking": "Réflexion…",
     "failed": "Claude n'a pas pu répondre à cette question en aparté. Réessaie.",
     "clear": "Effacer les questions en aparté",
-    "close": "Fermer"
+    "close": "Fermer",
+    "minimize": "Réduire",
+    "maximize": "Agrandir",
+    "restoreSize": "Restaurer la taille",
+    "open": "Ouvrir",
+    "newAnswer": "Nouvelle réponse"
   }
 }

@@ -1,6 +1,5 @@
 import { ShortcutChoiceRow } from './ShortcutChoiceRow';
 import type { ComposerRowProps } from './types';
-import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import {
   ComposerNewlineShortcut,
@@ -8,15 +7,15 @@ import {
   type ComposerShortcutSettings,
 } from '@/shared';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /** Which keystroke breaks the line instead of sending. */
 export function NewlineShortcutRow({ commit, error }: ComposerRowProps) {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const stored = scopeSettings as ComposerShortcutSettings;
+  const stored = displaySettings as ComposerShortcutSettings;
   const { newline } = resolveComposerShortcuts(stored);
 
   return (
@@ -27,6 +26,8 @@ export function NewlineShortcutRow({ commit, error }: ComposerRowProps) {
       isCustom={newline === ComposerNewlineShortcut.Custom}
       custom={stored.composerNewlineShortcutCustom ?? ''}
       isOverridden={isOverridden(SettingKey.COMPOSER_NEWLINE_SHORTCUT)}
+      isInherited={isInherited(SettingKey.COMPOSER_NEWLINE_SHORTCUT)}
+      onResetToGlobal={resetFor(SettingKey.COMPOSER_NEWLINE_SHORTCUT, SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM)}
       error={error}
       options={[
         {

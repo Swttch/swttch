@@ -44,14 +44,33 @@ export interface SideQuestionExchange {
   /** The send was acknowledged: a CLI process has the question on its stdin. */
   delivered: boolean;
   askedAt: number;
+  /** When the question stopped waiting (answered or failed); null while it still waits. */
+  settledAt: number | null;
+}
+
+/** Where the window is: gone, on screen, or parked as a floating button in the corner. */
+export enum SideQuestionWindowMode {
+  Closed = 'closed',
+  Open = 'open',
+  Minimized = 'minimized',
 }
 
 interface SideQuestionContextValue {
   /** Exchanges for the session on screen, oldest first. */
   exchanges: SideQuestionExchange[];
+  mode: SideQuestionWindowMode;
+  /** The window is fully on screen (not closed, not parked). */
   isOpen: boolean;
+  /** The window is parked as a floating button in the corner. */
+  isMinimized: boolean;
+  /** An answer settled while the window was parked, so the button can say so. */
+  hasUnseen: boolean;
+  /** Show the window, bringing it back if it was parked. */
   open: () => void;
   close: () => void;
+  /** Park the window as a floating button in the corner. */
+  minimize: () => void;
+  /** Closed → open, open → closed, parked → open. */
   toggle: () => void;
   /** Record a question that has just been sent. */
   addQuestion: (entry: { requestId: string; sessionId: string; question: string }) => void;
@@ -77,17 +96,33 @@ interface SideQuestionProviderProps {
 
 export function SideQuestionProvider({ currentSessionId, children }: SideQuestionProviderProps) {
   const [all, setAll] = useState<SideQuestionExchange[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState(SideQuestionWindowMode.Closed);
+  // When the window was last parked; an answer settled after it is "unseen".
+  const [minimizedAt, setMinimizedAt] = useState<number | null>(null);
 
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => setIsOpen(false), []);
-  const toggle = useCallback(() => setIsOpen((v) => !v), []);
+  const open = useCallback(() => setMode(SideQuestionWindowMode.Open), []);
+  const close = useCallback(() => setMode(SideQuestionWindowMode.Closed), []);
+  const minimize = useCallback(() => {
+    setMinimizedAt(Date.now());
+    setMode(SideQuestionWindowMode.Minimized);
+  }, []);
+  const toggle = useCallback(
+    () => setMode((m) => (m === SideQuestionWindowMode.Open ? SideQuestionWindowMode.Closed : SideQuestionWindowMode.Open)),
+    [],
+  );
 
   const addQuestion = useCallback(
     (entry: { requestId: string; sessionId: string; question: string }) => {
       setAll((prev) => [
         ...prev,
-        { ...entry, answer: null, status: SideQuestionStatus.Pending, delivered: false, askedAt: Date.now() },
+        {
+          ...entry,
+          answer: null,
+          status: SideQuestionStatus.Pending,
+          delivered: false,
+          askedAt: Date.now(),
+          settledAt: null,
+        },
       ]);
     },
     [],
@@ -101,7 +136,7 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
       setAll((prev) =>
         prev.map((e) =>
           e.requestId === requestId && e.status === SideQuestionStatus.Pending
-            ? { ...e, status: outcome.status, answer: outcome.answer ?? e.answer }
+            ? { ...e, status: outcome.status, answer: outcome.answer ?? e.answer, settledAt: Date.now() }
             : e,
         ),
       );
@@ -117,7 +152,7 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
     setAll((prev) =>
       prev.map((e) =>
         e.sessionId === sessionId && e.status === SideQuestionStatus.Pending
-          ? { ...e, status: SideQuestionStatus.Failed }
+          ? { ...e, status: SideQuestionStatus.Failed, settledAt: Date.now() }
           : e,
       ),
     );
@@ -129,7 +164,7 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
     setAll((prev) =>
       prev.map((e) =>
         e.sessionId === sessionId && e.status === SideQuestionStatus.Pending && e.delivered
-          ? { ...e, status: SideQuestionStatus.Failed }
+          ? { ...e, status: SideQuestionStatus.Failed, settledAt: Date.now() }
           : e,
       ),
     );
@@ -152,11 +187,29 @@ export function SideQuestionProvider({ currentSessionId, children }: SideQuestio
     [all, currentSessionId],
   );
 
+  const isMinimized = mode === SideQuestionWindowMode.Minimized;
+  const hasUnseen =
+    isMinimized && minimizedAt !== null && exchanges.some((e) => e.settledAt !== null && e.settledAt >= minimizedAt);
+
   const value = useMemo<SideQuestionContextValue>(
     () => ({
-      exchanges, isOpen, open, close, toggle, addQuestion, settleQuestion, markDelivered, failPending, failDelivered, clear,
+      exchanges,
+      mode,
+      isOpen: mode === SideQuestionWindowMode.Open,
+      isMinimized,
+      hasUnseen,
+      open,
+      close,
+      minimize,
+      toggle,
+      addQuestion,
+      settleQuestion,
+      markDelivered,
+      failPending,
+      failDelivered,
+      clear,
     }),
-    [exchanges, isOpen, open, close, toggle, addQuestion, settleQuestion, markDelivered, failPending, failDelivered, clear],
+    [exchanges, mode, isMinimized, hasUnseen, open, close, minimize, toggle, addQuestion, settleQuestion, markDelivered, failPending, failDelivered, clear],
   );
 
   return <SideQuestionContext.Provider value={value}>{children}</SideQuestionContext.Provider>;

@@ -7,6 +7,7 @@ import {
   QueueListIcon,
   Battery50Icon,
   PhotoIcon,
+  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 import { DockItemId } from '@/types/settings';
 import { TokenBatteryButton } from '../TokenBatteryButton';
@@ -16,6 +17,7 @@ import { TunnelButton } from '../TunnelButton';
 import { SettingsButton } from '../SettingsButton';
 import { NewTabButton } from '../NewTabButton';
 import { AssetsButton } from '../AssetsButton';
+import { SideQuestionButton } from '../SideQuestionButton';
 
 /**
  * One entry per item that can live in the header dock or the ⋮ overflow menu.
@@ -82,6 +84,12 @@ export const DOCK_ITEMS: readonly DockItemDef[] = [
     labelKey: 'assets.title',
     icon: PhotoIcon,
     DockView: AssetsButton,
+  },
+  {
+    id: DockItemId.SIDE_QUESTION,
+    labelKey: 'sideQuestion.title',
+    icon: ChatBubbleLeftEllipsisIcon,
+    DockView: SideQuestionButton,
   },
   {
     id: DockItemId.NEW_TAB,

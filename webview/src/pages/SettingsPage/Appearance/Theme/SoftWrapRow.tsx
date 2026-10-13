@@ -3,7 +3,7 @@ import { ToggleSwitch } from '@/components/ToggleSwitch';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Folds long lines in diffs and tool input/output to the block's width rather
@@ -14,16 +14,19 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function SoftWrapRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
       label={t('appearance.softWrap.label')}
       description={t('appearance.softWrap.description')}
       isOverridden={isOverridden(SettingKey.SOFT_WRAP)}
+      isInherited={isInherited(SettingKey.SOFT_WRAP)}
+      onResetToGlobal={resetFor(SettingKey.SOFT_WRAP)}
     >
       <ToggleSwitch
-        checked={scopeSettings[SettingKey.SOFT_WRAP] === true}
+        checked={displaySettings[SettingKey.SOFT_WRAP] === true}
         onChange={(checked) => updateSetting(SettingKey.SOFT_WRAP, checked)}
         ariaLabel={t('appearance.softWrap.label')}
       />

@@ -2,11 +2,11 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [/reload-plugins and /btw in the GUI](../028-cli_only_slash_commands/en.md) · branch `feat/btw-side-panel`
+> Related: [/reload-plugins and /btw in the GUI](../028-cli_only_slash_commands/en.md) · [#543](https://github.com/Swttch/swttch/issues/543)
 
 ## What's new
 
-`/btw` side questions no longer land in the chat. They open in **their own window above the chat**, the same kind of window as the background-agent transcript. The question and its answer stay in that window, **nothing is echoed into the main chat**, and the main agent keeps working on whatever it was doing, so a side answer can no longer show up in the middle of its reply.
+`/btw` side questions no longer land in the chat. They open in **their own window floating above the chat**, titled **By the way** (what `/btw` stands for). The window does not dim or block the chat, so you keep working in the chat while it is open. The question and its answer stay in that window, **nothing is echoed into the main chat**, and the main agent keeps working on whatever it was doing, so a side answer can no longer show up in the middle of its reply.
 
 ## Asking a side question
 
@@ -32,13 +32,16 @@ The window has **its own message box**. Whatever you type there is sent as a sid
 
 | Action | How |
 |--------|-----|
-| Open | Type `/btw` (with or without a question) |
-| Toggle from anywhere | **Cmd+Shift+B** on macOS, **Ctrl+Shift+B** on Windows and Linux. Also listed in the shortcuts help |
-| Close | **Escape**, a click outside the window, or the close button |
+| Open | Type `/btw` (with or without a question), or pick **By the way** in the ⋮ menu. The eye toggle on its row in the ⋮ menu pulls it out into the header dock, like any other dock item |
+| Toggle from anywhere | **Cmd+Shift+B** on macOS, **Ctrl+Shift+B** on Windows and Linux. Also listed in the shortcuts help. While the window is parked as the corner button it brings the window back instead of closing it |
+| Close | The **close** button, or **Escape** while the window has focus. Escape pressed anywhere else still belongs to the chat |
+| Minimize | The **minus** button parks the window as a small round speech-bubble button in the bottom-right corner, just above the chat input. Hover it and a tooltip names it "By the way" and a small **X** appears at its top-right corner, which closes the window for good. Click the button to open the window again, where it was. A pulsing dot on the button means a question is still being answered, and a coloured dot means an answer arrived while it was parked (the X takes the dot's place while you hover) |
+| Maximize | The **expand** button (or a double-click on the title bar) fills the window, leaving 1rem on every side. The same button, or another double-click, goes back to the previous size and place |
+| Move | Drag the **title bar** |
+| Resize | Drag any of the **four edges or four corners** |
 | Clear | The **trash** button in the header empties the list |
-| Resize | Drag the **bottom edge** of the window |
 
-Closing the window does not lose anything. Reopen it and the questions are still there.
+Minimizing and maximizing glide instead of jumping, and while you drag the window it sits exactly under the pointer, also when the interface is zoomed. Closing the window does not lose any question: reopen it and they are still there (the window itself opens at its default size and place again).
 
 ## What is kept, and for how long
 

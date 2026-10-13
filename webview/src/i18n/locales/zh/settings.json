@@ -115,7 +115,8 @@
         "description": "在 {{appName}} 运行时让后续消息排队，或引导当前运行。按 {{shortcut}} 可对单条消息执行相反操作。",
         "descriptionNoShortcut": "在 {{appName}} 运行时让后续消息排队，或引导当前运行。",
         "queue": "排队",
-        "steer": "引导"
+        "steer": "引导",
+        "notSet": "未设置(使用全局)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "字体大小",
-        "description": "界面的基础字体大小",
-        "notSetPlaceholder": "未设置"
+        "description": "界面的基础字体大小"
       },
       "lineSpacing": {
         "label": "行间距",
-        "description": "聊天消息文本的行高",
-        "notSetPlaceholder": "未设置"
+        "description": "聊天消息文本的行高"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "滚动",
       "autoScrollThreshold": {
         "label": "自动滚动恢复距离",
-        "description": "向上滚动超出距底部这个像素范围时,自动滚动会暂停,以便自由阅读。滚动回到该范围内即会恢复。数值越小,需要滚动得越靠近底部才会重新启用。默认值 {{value}}。",
-        "notSetPlaceholder": "未设置"
+        "description": "向上滚动超出距底部这个像素范围时,自动滚动会暂停,以便自由阅读。滚动回到该范围内即会恢复。数值越小,需要滚动得越靠近底部才会重新启用。默认值 {{value}}。"
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "调试",
       "debugMode": {
         "label": "调试模式",
-        "description": "启用调试日志与诊断信息",
-        "notSet": "未设置(使用全局)"
+        "description": "启用调试日志与诊断信息"
       },
       "logLevel": {
         "label": "日志级别",
@@ -679,7 +676,11 @@
     "claudeNativeLabel": "原",
     "projectOverride": "项目设置会覆盖此值。在这里修改不会生效",
     "projectOverrideLabel": "项",
-    "openDocs": "打开文档"
+    "inherited": "此项目未设置，使用全局设置的值",
+    "inheritedLabel": "全",
+    "openDocs": "打开文档",
+    "projectValue": "此项目设置了自己的值，覆盖了全局设置",
+    "projectValueReset": "恢复为全局"
   },
   "ide": {
     "sectionTitle": "IDE 集成",

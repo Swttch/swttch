@@ -2,7 +2,7 @@ import { SettingRow } from '../../common';
 import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 import {
   AUTO_SCROLL_THRESHOLD_DEFAULT,
   AUTO_SCROLL_THRESHOLD_MIN,
@@ -14,10 +14,11 @@ import {
 export function AutoScrollThresholdRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting, scope, resetToGlobal } = useSettings();
+  const { updateSetting, scope, resetToGlobal } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const raw = scopeSettings[SettingKey.AUTO_SCROLL_THRESHOLD] as number | undefined;
-  const isNotSet = raw === undefined && scope === 'project';
+  const raw = displaySettings[SettingKey.AUTO_SCROLL_THRESHOLD] as number | undefined;
+  const inherited = isInherited(SettingKey.AUTO_SCROLL_THRESHOLD);
 
   return (
     <SettingRow
@@ -26,16 +27,15 @@ export function AutoScrollThresholdRow() {
         value: AUTO_SCROLL_THRESHOLD_DEFAULT,
       })}
       isOverridden={isOverridden(SettingKey.AUTO_SCROLL_THRESHOLD)}
+      isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.AUTO_SCROLL_THRESHOLD)}
     >
       <input
         type="number"
         min={AUTO_SCROLL_THRESHOLD_MIN}
         max={AUTO_SCROLL_THRESHOLD_MAX}
         step="1"
-        value={isNotSet ? '' : (raw ?? AUTO_SCROLL_THRESHOLD_DEFAULT)}
-        placeholder={
-          isNotSet ? t('appearance.scrolling.autoScrollThreshold.notSetPlaceholder') : undefined
-        }
+        value={raw ?? AUTO_SCROLL_THRESHOLD_DEFAULT}
         onChange={(e) => {
           const value = e.target.value;
           if (value === '') {
@@ -49,7 +49,7 @@ export function AutoScrollThresholdRow() {
           updateSetting(SettingKey.AUTO_SCROLL_THRESHOLD, clampAutoScrollThreshold(parsed));
         }}
         className={`min-w-32 max-w-64 bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isNotSet ? 'text-text-tertiary italic' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
       />
     </SettingRow>

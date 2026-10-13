@@ -22,8 +22,15 @@ const NOT_SET_VALUE = '__NOT_SET__';
 /** Which permission mode a new session opens in. */
 export function DefaultModeRow() {
   const { t } = useTranslation('settings');
-  const { permissions, mergedPermissions, savePermissionsKey, deletePermissionsKey, scope } =
-    usePermissionsConfig();
+  const {
+    displayedPermissions,
+    mergedPermissions,
+    isPermissionInherited,
+    resetPermissionFor,
+    savePermissionsKey,
+    deletePermissionsKey,
+    scope,
+  } = usePermissionsConfig();
   const { settings } = useClaudeSettings();
   const { controlResponse } = useCliConfig();
   const { sessionModel } = useChatStreamContext();
@@ -33,9 +40,12 @@ export function DefaultModeRow() {
   // user has configured is the best prediction of what a new session will use.
   const mergedModel = settings.model as string | undefined;
 
-  const rawDefaultMode = permissions.defaultMode;
-  const isNotSet = rawDefaultMode === undefined && scope === 'project';
-  const defaultModeValue = isNotSet ? NOT_SET_VALUE : resolveInitialInputMode(rawDefaultMode);
+  const rawDefaultMode = displayedPermissions.defaultMode;
+  const inherited = isPermissionInherited('defaultMode');
+  const defaultModeValue = resolveInitialInputMode(rawDefaultMode);
+  // "Not set" is how a project takes its own value back, so it is offered only
+  // while there is one to take back.
+  const hasOwnValue = scope === 'project' && !inherited;
 
   // Auto mode is offered here under the same rule the chat input's mode panel
   // uses (computed in ChatStreamContext): the current model's `supportsAutoMode`
@@ -58,7 +68,7 @@ export function DefaultModeRow() {
   const mergedBypassDisabled = mergedPermissions.disableBypassPermissionsMode === 'disable';
 
   const options: SelectOption[] = [
-    ...(scope === 'project'
+    ...(hasOwnValue
       ? [{ value: NOT_SET_VALUE, label: t('permissions.notSet'), italic: true }]
       : []),
     ...getAvailableModes(mergedBypassDisabled, showAuto).map((modeId) => ({
@@ -71,6 +81,8 @@ export function DefaultModeRow() {
     <SettingRow
       label={t('permissions.defaultMode.label')}
       description={t('permissions.defaultMode.description')}
+      isInherited={inherited}
+      onResetToGlobal={resetPermissionFor('defaultMode')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}
@@ -93,7 +105,7 @@ export function DefaultModeRow() {
           }
         }}
         className={`bg-surface-overlay border border-border-default rounded-lg px-3 py-1.5 text-sm ${
-          isNotSet ? 'text-text-tertiary' : 'text-text-primary'
+          inherited ? 'text-text-tertiary' : 'text-text-primary'
         }`}
       />
     </SettingRow>

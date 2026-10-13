@@ -712,13 +712,18 @@
     "unpinFromDock": "ドックの固定を解除"
   },
   "sideQuestion": {
-    "title": "サイド質問",
+    "title": "By the way",
     "subtitle": "メインの会話を中断せずに回答され、会話には追加されません。",
     "placeholder": "ちょっとした質問を入力…",
     "empty": "進行中の作業について何でも聞けます — メインのエージェントは作業を続けます。",
     "thinking": "考え中…",
     "failed": "このサイド質問に対する Claude の回答を取得できませんでした。もう一度お試しください。",
     "clear": "サイド質問をクリア",
-    "close": "閉じる"
+    "close": "閉じる",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "restoreSize": "元のサイズに戻す",
+    "open": "開く",
+    "newAnswer": "新しい回答"
   }
 }

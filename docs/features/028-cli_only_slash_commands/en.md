@@ -24,7 +24,7 @@ commands and agents a reloaded plugin brings with it are immediately available.
 
 `/btw` takes your question as its argument (`/btw what does this flag do?`) and
 shows the answer in its own window above the chat
-([the /btw side question window](../088-btw_side_question_window/en.md)),
+([the /btw side question window](../090-btw_side_question_window/en.md)),
 leaving the main conversation where it was.
 
 ## Why they were missing

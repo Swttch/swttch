@@ -7,6 +7,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { SettingKey } from '@/types/settings';
 import type { ComposerShortcutSettings } from '@/shared';
 import { conflictingBinding } from '@/utils/composerShortcut';
+import { useDisplaySettings } from '@/utils/settingsScope';
 import { useTranslation } from '@/i18n';
 
 /** Which row is currently refusing a change, so only that row shows the reason. */
@@ -21,10 +22,11 @@ type ConflictedRow = 'send' | 'newline' | null;
  */
 export function ComposerSection() {
   const { t } = useTranslation('settings');
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings } = useDisplaySettings();
   const [conflicted, setConflicted] = useState<ConflictedRow>(null);
 
-  const stored = scopeSettings as ComposerShortcutSettings;
+  const stored = displaySettings as ComposerShortcutSettings;
 
   /**
    * Save a change, unless it would leave both keys on the same combination.

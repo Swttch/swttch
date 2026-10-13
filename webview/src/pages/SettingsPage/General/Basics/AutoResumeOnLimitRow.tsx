@@ -6,7 +6,7 @@ import { SponsorGate, SponsorGateSurface } from '@/shared';
 import { ensureSponsor } from '@/utils/ensureSponsor';
 import { SettingKey } from '@/types/settings';
 import { useTranslation } from '@/i18n';
-import { useIsOverriddenByProject } from '@/utils/settingsScope';
+import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsScope';
 
 /**
  * Whether a session resumes by itself once a usage limit resets.
@@ -18,15 +18,18 @@ import { useIsOverriddenByProject } from '@/utils/settingsScope';
 export function AutoResumeOnLimitRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { scopeSettings, updateSetting } = useSettings();
+  const { updateSetting } = useSettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
-  const autoResumeOnLimit = (scopeSettings.autoResumeOnLimit as boolean | undefined) ?? false;
+  const autoResumeOnLimit = (displaySettings.autoResumeOnLimit as boolean | undefined) ?? false;
 
   return (
     <SettingRow
       label={t('general.autoResumeOnLimit.label')}
       description={t('general.autoResumeOnLimit.description')}
       isOverridden={isOverridden(SettingKey.AUTO_RESUME_ON_LIMIT)}
+      isInherited={isInherited(SettingKey.AUTO_RESUME_ON_LIMIT)}
+      onResetToGlobal={resetFor(SettingKey.AUTO_RESUME_ON_LIMIT)}
       badge={<SettingBadge variant={SettingBadgeVariant.Sponsor} />}
     >
       <ToggleSwitch

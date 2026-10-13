@@ -115,7 +115,8 @@
         "description": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。{{shortcut}} を押すと、1 件のメッセージだけ逆の動作になります。",
         "descriptionNoShortcut": "{{appName}} の実行中は、フォローアップをキューに追加するか、現在の実行に今すぐ反映できます。",
         "queue": "キューに追加",
-        "steer": "今すぐ反映"
+        "steer": "今すぐ反映",
+        "notSet": "未設定(グローバルを使用)"
       }
     },
     "notifications": {
@@ -230,13 +231,11 @@
       },
       "fontSize": {
         "label": "フォントサイズ",
-        "description": "インターフェースの基本フォントサイズ",
-        "notSetPlaceholder": "未設定"
+        "description": "インターフェースの基本フォントサイズ"
       },
       "lineSpacing": {
         "label": "行間",
-        "description": "チャットメッセージ本文の行の高さ",
-        "notSetPlaceholder": "未設定"
+        "description": "チャットメッセージ本文の行の高さ"
       }
     },
     "softWrap": {
@@ -254,8 +253,7 @@
       "sectionTitle": "スクロール",
       "autoScrollThreshold": {
         "label": "自動スクロール再開距離",
-        "description": "最下部からこのピクセル数を超えて上にスクロールすると、自由に読めるよう自動スクロールが停止します。この範囲内に戻ると再開します。値を小さくするほど、再開するには最下部に近づく必要があります。デフォルト {{value}}。",
-        "notSetPlaceholder": "未設定"
+        "description": "最下部からこのピクセル数を超えて上にスクロールすると、自由に読めるよう自動スクロールが停止します。この範囲内に戻ると再開します。値を小さくするほど、再開するには最下部に近づく必要があります。デフォルト {{value}}。"
       }
     }
   },
@@ -265,8 +263,7 @@
       "sectionTitle": "デバッグ",
       "debugMode": {
         "label": "デバッグモード",
-        "description": "デバッグログと診断を有効にします",
-        "notSet": "未設定(グローバルを使用)"
+        "description": "デバッグログと診断を有効にします"
       },
       "logLevel": {
         "label": "ログレベル",
@@ -679,7 +676,11 @@
     "claudeNativeLabel": "ク",
     "projectOverride": "プロジェクト設定がこの値を上書きします。ここで変更しても反映されません",
     "projectOverrideLabel": "プ",
-    "openDocs": "ドキュメントを開く"
+    "inherited": "このプロジェクトでは未設定です。グローバル設定の値を使用しています",
+    "inheritedLabel": "グ",
+    "openDocs": "ドキュメントを開く",
+    "projectValue": "このプロジェクトが独自の値を設定し、グローバル設定を上書きしています",
+    "projectValueReset": "グローバルに戻す"
   },
   "ide": {
     "sectionTitle": "IDE 連携",

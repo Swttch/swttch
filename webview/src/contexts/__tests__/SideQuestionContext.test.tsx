@@ -109,4 +109,65 @@ describe('SideQuestionContext', () => {
     });
     expect(result.current.isOpen).toBe(false);
   });
+
+  describe('minimizing', () => {
+    it('parks the window without losing the questions', () => {
+      const { result } = renderHook(() => useSideQuestions(), { wrapper: wrapperFor('s1') });
+      act(() => result.current.addQuestion({ requestId: 'r1', sessionId: 's1', question: 'why?' }));
+      act(() => result.current.open());
+
+      act(() => result.current.minimize());
+
+      expect(result.current.isOpen).toBe(false);
+      expect(result.current.isMinimized).toBe(true);
+      expect(result.current.exchanges).toHaveLength(1);
+    });
+
+    it('brings a parked window back when it is opened or toggled again', () => {
+      const { result } = renderHook(() => useSideQuestions(), { wrapper: wrapperFor('s1') });
+      act(() => result.current.open());
+      act(() => result.current.minimize());
+      act(() => result.current.open());
+      expect(result.current.isOpen).toBe(true);
+      expect(result.current.isMinimized).toBe(false);
+
+      act(() => result.current.minimize());
+      act(() => {
+        window.dispatchEvent(new CustomEvent(TOGGLE_SIDE_QUESTION_EVENT));
+      });
+      expect(result.current.isOpen).toBe(true);
+      expect(result.current.isMinimized).toBe(false);
+    });
+
+    it('closes a parked window for good', () => {
+      const { result } = renderHook(() => useSideQuestions(), { wrapper: wrapperFor('s1') });
+      act(() => result.current.open());
+      act(() => result.current.minimize());
+      act(() => result.current.close());
+      expect(result.current.isOpen).toBe(false);
+      expect(result.current.isMinimized).toBe(false);
+    });
+
+    it('flags an answer that arrived while parked, and clears the flag when the window comes back', () => {
+      const { result } = renderHook(() => useSideQuestions(), { wrapper: wrapperFor('s1') });
+      act(() => result.current.addQuestion({ requestId: 'r1', sessionId: 's1', question: 'why?' }));
+      act(() => result.current.open());
+      act(() => result.current.minimize());
+
+      act(() => result.current.settleQuestion('r1', { status: SideQuestionStatus.Answered, answer: 'because' }));
+      expect(result.current.hasUnseen).toBe(true);
+
+      act(() => result.current.open());
+      expect(result.current.hasUnseen).toBe(false);
+    });
+
+    it('does not flag an answer that arrived while the window was open', () => {
+      const { result } = renderHook(() => useSideQuestions(), { wrapper: wrapperFor('s1') });
+      act(() => result.current.addQuestion({ requestId: 'r1', sessionId: 's1', question: 'why?' }));
+      act(() => result.current.open());
+
+      act(() => result.current.settleQuestion('r1', { status: SideQuestionStatus.Answered, answer: 'because' }));
+      expect(result.current.hasUnseen).toBe(false);
+    });
+  });
 });
