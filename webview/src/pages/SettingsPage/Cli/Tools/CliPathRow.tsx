@@ -11,7 +11,7 @@ export function CliPathRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const detected = useDetectedPath(MessageType.GET_DETECTED_CLI_PATH);
 
   const value = settings[SettingKey.CLI_PATH] || '';
@@ -22,6 +22,7 @@ export function CliPathRow() {
       description={t('cli.path.description')}
       isOverridden={isOverridden(SettingKey.CLI_PATH)}
       isInherited={isInherited(SettingKey.CLI_PATH)}
+      onResetToGlobal={resetFor(SettingKey.CLI_PATH)}
     >
       <div className="flex flex-col items-end gap-1">
         <input

@@ -18,7 +18,7 @@ export function AutoOpenRow() {
   const { t } = useTranslation('settings');
   const { updateSetting } = useSettings();
   const isOverridden = useIsOverriddenByProject();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const autoOpen = useAutoOpenDiffEnabled();
 
   return (
@@ -26,6 +26,7 @@ export function AutoOpenRow() {
       label={t('diffView.autoOpen.label')}
       isOverridden={isOverridden(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
       isInherited={isInherited(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
+      onResetToGlobal={resetFor(SettingKey.AUTO_OPEN_DIFF_ON_PERMISSION)}
       description={t('diffView.autoOpen.description')}
     >
       <ToggleSwitch

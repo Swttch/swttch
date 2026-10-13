@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ComponentType } from 'react';
 import { render, screen } from '@testing-library/react';
 import enSettings from '@/i18n/locales/en/settings.json';
+import { projectValueBadge, resetFromBadge } from './projectValueBadge';
 
 /**
  * #547, across the whole settings screen: a project that says nothing about a
@@ -22,6 +23,7 @@ let mockClaudeOwn: Store = {};
 let mockClaudeMerged: Store = {};
 
 const noop = vi.fn();
+const { appReset, claudeReset } = vi.hoisted(() => ({ appReset: vi.fn(), claudeReset: vi.fn() }));
 
 vi.mock('@/contexts/SettingsContext', () => {
   const value = () => ({
@@ -31,7 +33,7 @@ vi.mock('@/contexts/SettingsContext', () => {
     overrides: [] as string[],
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: appReset,
     ideAttached: false,
     ideProduct: '',
   });
@@ -46,7 +48,7 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => {
     overrides: [] as string[],
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: claudeReset,
   });
   return { useClaudeSettings: value, useClaudeSettingsOrNull: value };
 });
@@ -104,6 +106,8 @@ function setStores(row: ToggleRow, own: Store, merged: Store) {
 }
 
 beforeEach(() => {
+  appReset.mockReset();
+  claudeReset.mockReset();
   mockScope = 'global';
   mockAppOwn = {};
   mockAppMerged = {};
@@ -127,6 +131,7 @@ describe.each(TOGGLE_ROWS)('$name', (row) => {
 
       expect(theSwitch()).toHaveAttribute('aria-checked', String(opposite));
       expect(inheritedBadge()).toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
 
     it('shows the built-in default when neither global nor project set one', () => {
@@ -135,14 +140,19 @@ describe.each(TOGGLE_ROWS)('$name', (row) => {
 
       expect(theSwitch()).toHaveAttribute('aria-checked', String(builtInDefault));
       expect(inheritedBadge()).toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
 
-    it("shows the project's own value, unmarked, when the project set one", () => {
+    it("shows the project's own value, unmarked, when the project set one", async () => {
       setStores(row, { [key]: opposite }, { [key]: opposite });
       render(<Row />);
 
       expect(theSwitch()).toHaveAttribute('aria-checked', String(opposite));
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).toBeInTheDocument();
+      await resetFromBadge();
+      const reset = row.store === 'claude' ? claudeReset : appReset;
+      expect(reset).toHaveBeenCalledWith(row.key);
     });
   });
 
@@ -153,6 +163,7 @@ describe.each(TOGGLE_ROWS)('$name', (row) => {
 
       expect(theSwitch()).toHaveAttribute('aria-checked', String(opposite));
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
   });
 });

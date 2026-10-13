@@ -98,22 +98,44 @@ export function isInheritedFromGlobal(
 export interface DisplayedSettings<T> {
   displaySettings: Partial<T>;
   isInherited: (key: string) => boolean;
+  /**
+   * The action behind the reset link on a row whose project value overrides the
+   * global one: it deletes [key] from the project file, plus any [alsoRemove]
+   * keys that only make sense next to it. Undefined when there is nothing to
+   * take back, which is also how a row learns not to draw the badge.
+   */
+  resetFor: (key: string, ...alsoRemove: string[]) => (() => void) | undefined;
+}
+
+function resetForKeys(
+  scope: Scope | undefined,
+  scopeSettings: object,
+  resetToGlobal: (key: never) => Promise<void>,
+) {
+  return (key: string, ...alsoRemove: string[]) => {
+    if (scope !== 'project' || isInheritedFromGlobal(scope, scopeSettings, key)) return undefined;
+    return () => {
+      for (const k of [key, ...alsoRemove]) void resetToGlobal(k as never);
+    };
+  };
 }
 
 /** {@link pickDisplayedSettings} for the app's own settings (settings.js). */
 export function useDisplaySettings(): DisplayedSettings<SettingsState> {
-  const { scope, scopeSettings, settings } = useSettings();
+  const { scope, scopeSettings, settings, resetToGlobal } = useSettings();
   return {
     displaySettings: pickDisplayedSettings<SettingsState>(scope, scopeSettings, settings),
     isInherited: (key) => isInheritedFromGlobal(scope, scopeSettings, key),
+    resetFor: resetForKeys(scope, scopeSettings, resetToGlobal),
   };
 }
 
 /** {@link pickDisplayedSettings} for Claude Code's own settings (settings.json). */
 export function useClaudeDisplaySettings(): DisplayedSettings<ClaudeSettingsState> {
-  const { scope, scopeSettings, settings } = useClaudeSettings();
+  const { scope, scopeSettings, settings, resetToGlobal } = useClaudeSettings();
   return {
     displaySettings: pickDisplayedSettings<ClaudeSettingsState>(scope, scopeSettings, settings),
     isInherited: (key) => isInheritedFromGlobal(scope, scopeSettings, key),
+    resetFor: resetForKeys(scope, scopeSettings, resetToGlobal),
   };
 }

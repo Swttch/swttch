@@ -10,7 +10,7 @@ export function AttachEditorContextRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   // Seeds the chip at the start of a session (#237). Only an explicit false
   // disables it, so `!== false` rather than the `?? true` the other toggles
@@ -23,6 +23,7 @@ export function AttachEditorContextRow() {
       description={t('ide.attachEditorContext.description')}
       isOverridden={isOverridden(SettingKey.ATTACH_EDITOR_CONTEXT)}
       isInherited={isInherited(SettingKey.ATTACH_EDITOR_CONTEXT)}
+      onResetToGlobal={resetFor(SettingKey.ATTACH_EDITOR_CONTEXT)}
     >
       <ToggleSwitch
         checked={attachEditorContext}

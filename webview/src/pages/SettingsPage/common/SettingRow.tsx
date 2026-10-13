@@ -35,6 +35,15 @@ interface SettingRowProps {
    */
   isInherited?: boolean;
   /**
+   * The project tab is open and the project sets this key itself, overriding the
+   * global value. Given, it makes the row wear the project-value badge, whose
+   * tooltip carries a reset link that runs this. A function rather than a flag
+   * because the badge must not offer a way back it does not have. It is the one
+   * way back that works for every control, switches and text fields included.
+   * {@link useDisplaySettings}'s `resetFor` supplies it.
+   */
+  onResetToGlobal?: () => void;
+  /**
    * Rendered under the whole row, spanning its width.
    *
    * For something that follows from the control rather than describing it — a
@@ -49,7 +58,7 @@ interface SettingRowProps {
 }
 
 export function SettingRow(props: SettingRowProps) {
-  const { label, description, badge, isOverridden, isInherited, below, children } = props;
+  const { label, description, badge, isOverridden, isInherited, onResetToGlobal, below, children } = props;
   const { t } = useTranslation('settings');
 
   return (
@@ -64,6 +73,12 @@ export function SettingRow(props: SettingRowProps) {
           {badge}
           {isOverridden && <SettingBadge variant={SettingBadgeVariant.ProjectOverride} />}
           {isInherited && <SettingBadge variant={SettingBadgeVariant.Inherited} />}
+          {onResetToGlobal && (
+            <SettingBadge
+              variant={SettingBadgeVariant.ProjectValue}
+              action={{ label: t('badges.projectValueReset'), onClick: onResetToGlobal }}
+            />
+          )}
         </div>
         {description && <SettingDescription>{description}</SettingDescription>}
       </div>

@@ -678,7 +678,9 @@
     "projectOverrideLabel": "م",
     "inherited": "غير محدد في هذا المشروع. تُستخدم القيمة العامة",
     "inheritedLabel": "ع",
-    "openDocs": "فتح المستندات"
+    "openDocs": "فتح المستندات",
+    "projectValue": "يحدد هذا المشروع قيمته الخاصة ويتجاوز القيمة العامة",
+    "projectValueReset": "إعادة التعيين إلى العام"
   },
   "ide": {
     "sectionTitle": "التكامل مع بيئة التطوير",

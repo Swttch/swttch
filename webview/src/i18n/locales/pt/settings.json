@@ -682,7 +682,9 @@
     "projectOverrideLabel": "J",
     "inherited": "Não definido neste projeto. O valor global é usado",
     "inheritedLabel": "G",
-    "openDocs": "Abrir documentação"
+    "openDocs": "Abrir documentação",
+    "projectValue": "Este projeto define o próprio valor e sobrescreve o global",
+    "projectValueReset": "Redefinir para global"
   },
   "ide": {
     "sectionTitle": "Integração com o IDE",

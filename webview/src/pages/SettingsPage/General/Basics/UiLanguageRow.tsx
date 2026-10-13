@@ -38,7 +38,7 @@ export function UiLanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal, updateSettingWithScope } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   // Defaults to English when neither the project nor global sets one.
   const currentUiLanguage = (displaySettings.uiLanguage as string | undefined) ?? 'english';
@@ -59,6 +59,7 @@ export function UiLanguageRow() {
       description={t('general.uiLanguage.description')}
       isOverridden={isOverridden(SettingKey.UI_LANGUAGE)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.UI_LANGUAGE)}
     >
       <Select
         value={currentUiLanguage}

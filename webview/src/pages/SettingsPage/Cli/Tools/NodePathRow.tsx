@@ -11,7 +11,7 @@ export function NodePathRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const detected = useDetectedPath(MessageType.GET_DETECTED_NODE_PATH);
 
   const value = settings[SettingKey.NODE_PATH] || '';
@@ -22,6 +22,7 @@ export function NodePathRow() {
       description={t('cli.nodePath.description')}
       isOverridden={isOverridden(SettingKey.NODE_PATH)}
       isInherited={isInherited(SettingKey.NODE_PATH)}
+      onResetToGlobal={resetFor(SettingKey.NODE_PATH)}
     >
       <div className="flex flex-col items-end gap-1">
         <input

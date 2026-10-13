@@ -19,7 +19,7 @@ export function AutoResumeOnLimitRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const autoResumeOnLimit = (displaySettings.autoResumeOnLimit as boolean | undefined) ?? false;
 
@@ -29,6 +29,7 @@ export function AutoResumeOnLimitRow() {
       description={t('general.autoResumeOnLimit.description')}
       isOverridden={isOverridden(SettingKey.AUTO_RESUME_ON_LIMIT)}
       isInherited={isInherited(SettingKey.AUTO_RESUME_ON_LIMIT)}
+      onResetToGlobal={resetFor(SettingKey.AUTO_RESUME_ON_LIMIT)}
       badge={<SettingBadge variant={SettingBadgeVariant.Sponsor} />}
     >
       <ToggleSwitch

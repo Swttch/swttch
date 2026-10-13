@@ -17,7 +17,7 @@ export function HideToolCallsRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
@@ -25,6 +25,7 @@ export function HideToolCallsRow() {
       description={t('appearance.hideToolCalls.description')}
       isOverridden={isOverridden(SettingKey.HIDE_TOOL_CALLS)}
       isInherited={isInherited(SettingKey.HIDE_TOOL_CALLS)}
+      onResetToGlobal={resetFor(SettingKey.HIDE_TOOL_CALLS)}
     >
       <ToggleSwitch
         checked={displaySettings[SettingKey.HIDE_TOOL_CALLS] === true}

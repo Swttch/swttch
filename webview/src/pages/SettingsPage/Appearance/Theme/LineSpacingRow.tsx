@@ -15,7 +15,7 @@ export function LineSpacingRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const rawLineHeight = displaySettings[SettingKey.LINE_HEIGHT] as number | undefined;
   const inherited = isInherited(SettingKey.LINE_HEIGHT);
@@ -26,6 +26,7 @@ export function LineSpacingRow() {
       description={t('appearance.theme.lineSpacing.description')}
       isOverridden={isOverridden(SettingKey.LINE_HEIGHT)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.LINE_HEIGHT)}
     >
       <input
         type="number"

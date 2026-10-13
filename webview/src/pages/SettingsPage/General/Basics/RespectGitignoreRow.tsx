@@ -11,7 +11,7 @@ export function RespectGitignoreRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   const respectGitignore = (displaySettings.respectGitignore as boolean | undefined) ?? false;
 
@@ -21,6 +21,7 @@ export function RespectGitignoreRow() {
       description={t('general.respectGitignore.description')}
       isOverridden={isOverridden('respectGitignore')}
       isInherited={isInherited('respectGitignore')}
+      onResetToGlobal={resetFor('respectGitignore')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

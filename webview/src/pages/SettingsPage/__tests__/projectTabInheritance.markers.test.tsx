@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ComponentType } from 'react';
 import { render, screen } from '@testing-library/react';
+import { projectValueBadge, resetFromBadge } from './projectValueBadge';
 
 /**
  * #547 for the rows that already draw the value in effect (they read the merged
@@ -25,6 +26,7 @@ let mockClaudeMerged: Store = {};
 let mockClaudeOverrides: string[] = [];
 
 const noop = vi.fn();
+const { appReset, claudeReset } = vi.hoisted(() => ({ appReset: vi.fn(), claudeReset: vi.fn() }));
 
 vi.mock('@/contexts/SettingsContext', () => {
   const value = () => ({
@@ -34,7 +36,7 @@ vi.mock('@/contexts/SettingsContext', () => {
     overrides: mockAppOverrides,
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: appReset,
     ideAttached: false,
     ideProduct: '',
   });
@@ -49,15 +51,17 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => {
     overrides: mockClaudeOverrides,
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: claudeReset,
   });
   return { useClaudeSettings: value, useClaudeSettingsOrNull: value };
 });
 
 // Rows that ask the backend for something while they mount.
-vi.mock('@/hooks/useBridge', () => ({
-  useBridge: () => ({ send: vi.fn().mockResolvedValue({ editors: [], terminals: [], path: null }) }),
-}));
+// One `send` for every render, as the real hook gives: useDetectedPath re-asks
+// whenever `send` changes, so a fresh function per render never stops asking.
+const { bridgeSend } = vi.hoisted(() => ({ bridgeSend: vi.fn() }));
+bridgeSend.mockResolvedValue({ editors: [], terminals: [], path: null });
+vi.mock('@/hooks/useBridge', () => ({ useBridge: () => ({ send: bridgeSend }) }));
 vi.mock('@/api/ClaudeCodeApi', () => ({
   api: {
     notifications: { bannerPersistence: () => Promise.resolve('unknown') },
@@ -137,6 +141,8 @@ function setStores(row: MergedRow, own: Store, merged: Store, overrides: string[
 }
 
 beforeEach(() => {
+  appReset.mockReset();
+  claudeReset.mockReset();
   mockScope = 'global';
   mockAppOwn = {};
   mockAppMerged = {};
@@ -155,15 +161,20 @@ describe.each(MERGED_ROWS)('$name', (row) => {
     render(<Row />);
 
     expect(inheritedBadge()).toBeInTheDocument();
+    expect(projectValueBadge()).not.toBeInTheDocument();
     expect(overrideBadge()).not.toBeInTheDocument();
   });
 
-  it('leaves a project-tab value the project set unmarked', () => {
+  it('leaves a project-tab value the project set unmarked', async () => {
     mockScope = 'project';
     setStores(row, { [key]: 'from-project' }, { [key]: 'from-project' }, [key]);
     render(<Row />);
 
     expect(inheritedBadge()).not.toBeInTheDocument();
+    expect(projectValueBadge()).toBeInTheDocument();
+    await resetFromBadge();
+    const reset = row.store === 'claude' ? claudeReset : appReset;
+    expect(reset).toHaveBeenCalledWith(row.key);
   });
 
   it('says on the global tab that a project overrides it', () => {
@@ -172,6 +183,7 @@ describe.each(MERGED_ROWS)('$name', (row) => {
 
     expect(overrideBadge()).toBeInTheDocument();
     expect(inheritedBadge()).not.toBeInTheDocument();
+    expect(projectValueBadge()).not.toBeInTheDocument();
   });
 
   it('shows no marker on the global tab when no project overrides it', () => {
@@ -180,5 +192,6 @@ describe.each(MERGED_ROWS)('$name', (row) => {
 
     expect(overrideBadge()).not.toBeInTheDocument();
     expect(inheritedBadge()).not.toBeInTheDocument();
+    expect(projectValueBadge()).not.toBeInTheDocument();
   });
 });

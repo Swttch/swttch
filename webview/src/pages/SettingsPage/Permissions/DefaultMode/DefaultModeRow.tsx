@@ -26,6 +26,7 @@ export function DefaultModeRow() {
     displayedPermissions,
     mergedPermissions,
     isPermissionInherited,
+    resetPermissionFor,
     savePermissionsKey,
     deletePermissionsKey,
     scope,
@@ -81,6 +82,7 @@ export function DefaultModeRow() {
       label={t('permissions.defaultMode.label')}
       description={t('permissions.defaultMode.description')}
       isInherited={inherited}
+      onResetToGlobal={resetPermissionFor('defaultMode')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

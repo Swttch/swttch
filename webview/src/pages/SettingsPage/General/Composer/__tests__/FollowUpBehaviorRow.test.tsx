@@ -26,6 +26,7 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => ({
 }));
 
 import { FollowUpBehaviorRow } from '../FollowUpBehaviorRow';
+import { projectValueBadge, resetFromBadge } from '../../../__tests__/projectValueBadge';
 
 const followUpSelect = () => screen.getByRole('button', { name: 'Follow-up behavior' });
 const inheritedBadge = () => screen.queryByRole('img', { name: /Not set in this project/ });
@@ -105,6 +106,25 @@ describe('FollowUpBehaviorRow', () => {
 
       expect(resetToGlobalMock).toHaveBeenCalledWith('composerFollowUpBehavior');
       expect(updateSettingMock).not.toHaveBeenCalled();
+    });
+
+    it('wears the project-value badge, whose reset link clears it', async () => {
+      mockScopeSettings = { composerFollowUpBehavior: 'queue' };
+      mockMergedSettings = { composerFollowUpBehavior: 'queue' };
+      render(<FollowUpBehaviorRow />);
+
+      expect(projectValueBadge()).toBeInTheDocument();
+      await resetFromBadge();
+
+      expect(resetToGlobalMock).toHaveBeenCalledWith('composerFollowUpBehavior');
+    });
+
+    it('wears no project-value badge while the project inherits', () => {
+      mockScopeSettings = {};
+      mockMergedSettings = { composerFollowUpBehavior: 'queue' };
+      render(<FollowUpBehaviorRow />);
+
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
 
     it('does not offer it while the project inherits, and choosing a value stores it', () => {

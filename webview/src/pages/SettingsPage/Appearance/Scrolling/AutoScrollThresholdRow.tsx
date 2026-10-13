@@ -15,7 +15,7 @@ export function AutoScrollThresholdRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const raw = displaySettings[SettingKey.AUTO_SCROLL_THRESHOLD] as number | undefined;
   const inherited = isInherited(SettingKey.AUTO_SCROLL_THRESHOLD);
@@ -28,6 +28,7 @@ export function AutoScrollThresholdRow() {
       })}
       isOverridden={isOverridden(SettingKey.AUTO_SCROLL_THRESHOLD)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.AUTO_SCROLL_THRESHOLD)}
     >
       <input
         type="number"

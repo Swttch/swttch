@@ -26,7 +26,7 @@ export function BannerRow() {
   const { t } = useTranslation('settings');
   const { settings, updateSetting } = useSettings();
   const isOverridden = useIsOverriddenByProject();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const enabled = settings[SettingKey.NOTIFICATION_BANNER] !== false;
 
   return (
@@ -34,6 +34,7 @@ export function BannerRow() {
       label={t('general.notifications.banner.label')}
       isOverridden={isOverridden(SettingKey.NOTIFICATION_BANNER)}
       isInherited={isInherited(SettingKey.NOTIFICATION_BANNER)}
+      onResetToGlobal={resetFor(SettingKey.NOTIFICATION_BANNER)}
       description={t('general.notifications.banner.description')}
       below={enabled ? <FadeHint /> : undefined}
     >

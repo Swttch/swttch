@@ -41,11 +41,21 @@ export function usePermissionsConfig() {
     await updateSetting('permissions', updated as PermissionsConfig);
   };
 
+  /**
+   * The action behind the reset link of a row whose project value overrides the
+   * global one. Undefined when there is nothing to take back.
+   */
+  const resetPermissionFor = (key: keyof PermissionsConfig) =>
+    scope === 'project' && !isPermissionInherited(key)
+      ? () => void deletePermissionsKey(key)
+      : undefined;
+
   return {
     permissions,
     mergedPermissions,
     displayedPermissions,
     isPermissionInherited,
+    resetPermissionFor,
     savePermissionsKey,
     deletePermissionsKey,
     scope,

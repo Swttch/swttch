@@ -13,7 +13,7 @@ import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsSc
 export function NewlineShortcutRow({ commit, error }: ComposerRowProps) {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const stored = displaySettings as ComposerShortcutSettings;
   const { newline } = resolveComposerShortcuts(stored);
@@ -27,6 +27,7 @@ export function NewlineShortcutRow({ commit, error }: ComposerRowProps) {
       custom={stored.composerNewlineShortcutCustom ?? ''}
       isOverridden={isOverridden(SettingKey.COMPOSER_NEWLINE_SHORTCUT)}
       isInherited={isInherited(SettingKey.COMPOSER_NEWLINE_SHORTCUT)}
+      onResetToGlobal={resetFor(SettingKey.COMPOSER_NEWLINE_SHORTCUT, SettingKey.COMPOSER_NEWLINE_SHORTCUT_CUSTOM)}
       error={error}
       options={[
         {

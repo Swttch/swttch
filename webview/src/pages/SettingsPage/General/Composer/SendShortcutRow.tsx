@@ -14,7 +14,7 @@ import { useDisplaySettings, useIsOverriddenByProject } from '@/utils/settingsSc
 export function SendShortcutRow({ commit, error }: ComposerRowProps) {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const stored = displaySettings as ComposerShortcutSettings;
   const { send } = resolveComposerShortcuts(stored);
@@ -32,6 +32,7 @@ export function SendShortcutRow({ commit, error }: ComposerRowProps) {
       custom={stored.composerSendShortcutCustom ?? ''}
       isOverridden={isOverridden(SettingKey.COMPOSER_SEND_SHORTCUT)}
       isInherited={isInherited(SettingKey.COMPOSER_SEND_SHORTCUT)}
+      onResetToGlobal={resetFor(SettingKey.COMPOSER_SEND_SHORTCUT, SettingKey.COMPOSER_SEND_SHORTCUT_CUSTOM)}
       error={error}
       options={[
         { value: ComposerSendShortcut.Enter, label: t('general.composer.send.enter') },

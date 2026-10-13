@@ -19,7 +19,7 @@ export function EnabledRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { scopeSettings, updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   // What is drawn is the value in effect, which on the project tab can come from
   // the global file. What is written spreads the tab's own object instead: the
@@ -40,6 +40,7 @@ export function EnabledRow() {
       description={t('general.voice.enabled.description')}
       isOverridden={isOverridden('voice')}
       isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

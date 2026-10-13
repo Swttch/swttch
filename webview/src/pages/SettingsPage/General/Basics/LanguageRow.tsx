@@ -17,7 +17,7 @@ export function LanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   const responseLanguage = (displaySettings.language as string | undefined) ?? '';
 
@@ -27,6 +27,7 @@ export function LanguageRow() {
       description={t('general.language.description')}
       isOverridden={isOverridden('language')}
       isInherited={isInherited('language')}
+      onResetToGlobal={resetFor('language')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

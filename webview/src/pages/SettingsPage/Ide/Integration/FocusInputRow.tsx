@@ -10,7 +10,7 @@ export function FocusInputRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const focusInputOnEditorContext = displaySettings[SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT] ?? true;
 
@@ -20,6 +20,7 @@ export function FocusInputRow() {
       description={t('ide.focusInputOnEditorContext.description')}
       isOverridden={isOverridden(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT)}
       isInherited={isInherited(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT)}
+      onResetToGlobal={resetFor(SettingKey.FOCUS_INPUT_ON_EDITOR_CONTEXT)}
     >
       <ToggleSwitch
         checked={focusInputOnEditorContext}

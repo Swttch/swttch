@@ -30,7 +30,7 @@ export function SpokenLanguageRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
   const { displaySettings: claudeDisplaySettings } = useClaudeDisplaySettings();
 
   const voice = (displaySettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
@@ -69,6 +69,7 @@ export function SpokenLanguageRow() {
       label={t('general.voice.speechLanguage.label')}
       isOverridden={isOverridden('voice')}
       isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
       description={
         <>
           {showsFallbackWarning

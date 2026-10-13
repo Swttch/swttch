@@ -10,7 +10,7 @@ export function DebugModeRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const debugMode = (displaySettings[SettingKey.DEBUG_MODE] as boolean | undefined) ?? false;
 
@@ -20,6 +20,7 @@ export function DebugModeRow() {
       description={t('advanced.debugging.debugMode.description')}
       isOverridden={isOverridden(SettingKey.DEBUG_MODE)}
       isInherited={isInherited(SettingKey.DEBUG_MODE)}
+      onResetToGlobal={resetFor(SettingKey.DEBUG_MODE)}
     >
       <ToggleSwitch
         checked={debugMode}

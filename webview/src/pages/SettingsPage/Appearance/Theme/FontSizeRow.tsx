@@ -9,7 +9,7 @@ export function FontSizeRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const rawFontSize = displaySettings[SettingKey.FONT_SIZE] as number | undefined;
   const inherited = isInherited(SettingKey.FONT_SIZE);
@@ -20,6 +20,7 @@ export function FontSizeRow() {
       description={t('appearance.theme.fontSize.description')}
       isOverridden={isOverridden(SettingKey.FONT_SIZE)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.FONT_SIZE)}
     >
       <input
         type="number"

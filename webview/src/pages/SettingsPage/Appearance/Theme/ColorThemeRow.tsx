@@ -14,7 +14,7 @@ export function ColorThemeRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const themeValue = (displaySettings[SettingKey.THEME] as ThemeMode | undefined) ?? ThemeMode.SYSTEM;
   const inherited = isInherited(SettingKey.THEME);
@@ -45,6 +45,7 @@ export function ColorThemeRow() {
       description={t('appearance.theme.colorTheme.description')}
       isOverridden={isOverridden(SettingKey.THEME)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.THEME)}
     >
       <Select
         value={themeValue}

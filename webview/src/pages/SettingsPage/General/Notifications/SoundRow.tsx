@@ -44,7 +44,7 @@ export function SoundRow() {
   const { sounds, loading, error } = useSystemSounds();
   const { settings } = useSettings();
   const isOverridden = useIsOverriddenByProject();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const stored = settings[SettingKey.NOTIFICATION_SOUND_VOLUME];
   // The default step until a value is saved, matching what the backend assumes
   // for a settings file that has no volume in it yet.
@@ -83,6 +83,7 @@ export function SoundRow() {
       description={description}
       isOverridden={isOverridden(SettingKey.NOTIFICATION_SOUND)}
       isInherited={isInherited(SettingKey.NOTIFICATION_SOUND)}
+      onResetToGlobal={resetFor(SettingKey.NOTIFICATION_SOUND)}
     >
       <Select
         value={selection}

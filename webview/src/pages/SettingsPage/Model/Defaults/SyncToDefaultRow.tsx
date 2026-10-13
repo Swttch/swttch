@@ -13,7 +13,7 @@ export function SyncToDefaultRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
@@ -21,6 +21,7 @@ export function SyncToDefaultRow() {
       description={t('cli.model.syncToDefault.description')}
       isOverridden={isOverridden(SettingKey.SYNC_MODEL_TO_DEFAULT)}
       isInherited={isInherited(SettingKey.SYNC_MODEL_TO_DEFAULT)}
+      onResetToGlobal={resetFor(SettingKey.SYNC_MODEL_TO_DEFAULT)}
     >
       <ToggleSwitch
         checked={settings[SettingKey.SYNC_MODEL_TO_DEFAULT]}

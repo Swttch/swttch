@@ -678,7 +678,9 @@
     "projectOverrideLabel": "项",
     "inherited": "此项目未设置，使用全局设置的值",
     "inheritedLabel": "全",
-    "openDocs": "打开文档"
+    "openDocs": "打开文档",
+    "projectValue": "此项目设置了自己的值，覆盖了全局设置",
+    "projectValueReset": "恢复为全局"
   },
   "ide": {
     "sectionTitle": "IDE 集成",

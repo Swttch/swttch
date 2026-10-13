@@ -16,7 +16,7 @@ export function SilenceTimeoutRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const voice = (displaySettings[SettingKey.VOICE] as VoiceSettings | undefined) ?? {};
   const silenceTimeout = voice.silenceTimeout ?? VOICE_SILENCE_TIMEOUT_DEFAULT;
@@ -29,6 +29,7 @@ export function SilenceTimeoutRow() {
       })}
       isOverridden={isOverridden('voice')}
       isInherited={isInherited('voice')}
+      onResetToGlobal={resetFor('voice')}
     >
       <input
         type="number"

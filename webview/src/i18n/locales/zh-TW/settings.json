@@ -678,7 +678,9 @@
     "projectOverrideLabel": "專",
     "inherited": "此專案未設定，使用全域設定的值",
     "inheritedLabel": "全",
-    "openDocs": "開啟文件"
+    "openDocs": "開啟文件",
+    "projectValue": "此專案設定了自己的值，覆寫了全域設定",
+    "projectValueReset": "還原為全域"
   },
   "ide": {
     "sectionTitle": "IDE 整合",

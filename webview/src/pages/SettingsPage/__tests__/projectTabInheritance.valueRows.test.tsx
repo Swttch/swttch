@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ComponentType } from 'react';
 import { render, screen } from '@testing-library/react';
 import enSettings from '@/i18n/locales/en/settings.json';
+import { projectValueBadge, resetFromBadge } from './projectValueBadge';
 
 /**
  * #547 for the rows that draw a value rather than a switch: text and number
@@ -20,6 +21,7 @@ let mockClaudeOwn: Store = {};
 let mockClaudeMerged: Store = {};
 
 const noop = vi.fn();
+const { appReset, claudeReset } = vi.hoisted(() => ({ appReset: vi.fn(), claudeReset: vi.fn() }));
 
 vi.mock('@/contexts/SettingsContext', () => {
   const value = () => ({
@@ -29,7 +31,7 @@ vi.mock('@/contexts/SettingsContext', () => {
     overrides: [] as string[],
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: appReset,
     ideAttached: false,
     ideProduct: '',
   });
@@ -44,7 +46,7 @@ vi.mock('@/contexts/ClaudeSettingsContext', () => {
     overrides: [] as string[],
     updateSetting: noop,
     updateSettingWithScope: noop,
-    resetToGlobal: noop,
+    resetToGlobal: claudeReset,
   });
   return { useClaudeSettings: value, useClaudeSettingsOrNull: value };
 });
@@ -187,6 +189,8 @@ function setStores(row: ValueRow, own: Store, merged: Store) {
 }
 
 beforeEach(() => {
+  appReset.mockReset();
+  claudeReset.mockReset();
   mockScope = 'global';
   mockAppOwn = {};
   mockAppMerged = {};
@@ -208,14 +212,19 @@ describe.each(VALUE_ROWS)('$name', (row) => {
 
       row.expectShows(row.inheritedValue);
       expect(inheritedBadge()).toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
 
-    it("shows the project's own value, unmarked, when the project set one", () => {
+    it("shows the project's own value, unmarked, when the project set one", async () => {
       setStores(row, { [key]: row.ownValue }, { [key]: row.ownValue });
       render(<Row />);
 
       row.expectShows(row.ownValue);
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).toBeInTheDocument();
+      await resetFromBadge();
+      const reset = row.store === 'claude' ? claudeReset : appReset;
+      expect(reset).toHaveBeenCalledWith(row.key);
     });
   });
 
@@ -226,6 +235,7 @@ describe.each(VALUE_ROWS)('$name', (row) => {
 
       row.expectShows(row.ownValue);
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
   });
 });

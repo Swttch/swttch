@@ -10,7 +10,7 @@ export function FileCheckpointingRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   // Claude's schema defaults this one to `true`, unlike the toggles around it —
   // an absent value means the feature is ON, so the fallback has to say so.
@@ -23,6 +23,7 @@ export function FileCheckpointingRow() {
       description={t('general.fileCheckpointing.description')}
       isOverridden={isOverridden('fileCheckpointingEnabled')}
       isInherited={isInherited('fileCheckpointingEnabled')}
+      onResetToGlobal={resetFor('fileCheckpointingEnabled')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

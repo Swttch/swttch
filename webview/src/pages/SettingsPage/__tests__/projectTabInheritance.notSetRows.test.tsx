@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ComponentType } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import enSettings from '@/i18n/locales/en/settings.json';
+import { projectValueBadge, resetFromBadge } from './projectValueBadge';
 
 /**
  * #547 for the rows that used to answer "nothing is set here" on the project
@@ -227,14 +228,27 @@ describe.each(NOT_SET_ROWS)('$name', (row) => {
 
       row.expectShows(row.inheritedValue);
       expect(inheritedBadge()).toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
 
-    it("shows the project's own value, unmarked, when the project set one", () => {
+    it("shows the project's own value, unmarked, when the project set one", async () => {
       setStores(row, row.withValue(row.ownValue), row.withValue(row.ownValue));
       render(<Row />);
 
       row.expectShows(row.ownValue);
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).toBeInTheDocument();
+
+      // The reset link in the badge's tooltip takes the project's value back.
+      // Claude's permissions live in one object, so there the link rewrites the
+      // object without the key rather than deleting a top-level key.
+      await resetFromBadge();
+      const [storedKey] = Object.keys(row.withValue(row.ownValue));
+      if (storedKey === 'permissions') {
+        expect(updateSettingMock).toHaveBeenCalledWith('permissions', {});
+      } else {
+        expect(resetToGlobalMock).toHaveBeenCalledWith(storedKey);
+      }
     });
   });
 
@@ -245,6 +259,7 @@ describe.each(NOT_SET_ROWS)('$name', (row) => {
 
       row.expectShows(row.ownValue);
       expect(inheritedBadge()).not.toBeInTheDocument();
+      expect(projectValueBadge()).not.toBeInTheDocument();
     });
   });
 });

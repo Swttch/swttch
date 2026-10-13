@@ -7,8 +7,13 @@ import { usePermissionsConfig } from '../usePermissionsConfig';
 /** Whether bypass mode may be entered at all. */
 export function BypassModeRow() {
   const { t } = useTranslation('settings');
-  const { displayedPermissions, isPermissionInherited, savePermissionsKey, deletePermissionsKey } =
-    usePermissionsConfig();
+  const {
+    displayedPermissions,
+    isPermissionInherited,
+    resetPermissionFor,
+    savePermissionsKey,
+    deletePermissionsKey,
+  } = usePermissionsConfig();
 
   const bypassDisabled = displayedPermissions.disableBypassPermissionsMode === 'disable';
 
@@ -17,6 +22,7 @@ export function BypassModeRow() {
       label={t('permissions.bypassMode.label')}
       description={t('permissions.bypassMode.description')}
       isInherited={isPermissionInherited('disableBypassPermissionsMode')}
+      onResetToGlobal={resetPermissionFor('disableBypassPermissionsMode')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

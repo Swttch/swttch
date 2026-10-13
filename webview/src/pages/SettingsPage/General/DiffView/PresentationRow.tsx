@@ -19,7 +19,7 @@ export function PresentationRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const surface = useResolvedDiffSurface();
   // Whether an overlay is even possible here. Same rule the code that opens the
@@ -39,6 +39,7 @@ export function PresentationRow() {
       label={t('diffView.presentation.label')}
       isOverridden={isOverridden(SettingKey.BROWSER_DIFF_PRESENTATION)}
       isInherited={isInherited(SettingKey.BROWSER_DIFF_PRESENTATION)}
+      onResetToGlobal={resetFor(SettingKey.BROWSER_DIFF_PRESENTATION)}
       description={
         surface !== DiffSurface.BUILT_IN
           ? t('diffView.presentation.builtInOnly')

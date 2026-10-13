@@ -16,7 +16,7 @@ export function DefaultModelRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings: claudeSettings, updateSetting: updateClaudeSetting } = useClaudeSettings();
-  const { isInherited } = useClaudeDisplaySettings();
+  const { isInherited, resetFor } = useClaudeDisplaySettings();
   const { controlResponse } = useCliConfig();
   const { cliVersion } = useVersionInfo();
   const { probedAvailable, probedCanonicalModel, probeFableAvailability } = useFableProbe();
@@ -59,6 +59,7 @@ export function DefaultModelRow() {
       description={t('cli.model.description')}
       isOverridden={isOverridden('model')}
       isInherited={isInherited('model')}
+      onResetToGlobal={resetFor('model')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

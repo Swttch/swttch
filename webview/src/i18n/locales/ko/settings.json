@@ -678,7 +678,9 @@
     "projectOverrideLabel": "프",
     "inherited": "이 프로젝트에는 설정되어 있지 않습니다. 전역 설정의 값을 사용합니다",
     "inheritedLabel": "전",
-    "openDocs": "문서 열기"
+    "openDocs": "문서 열기",
+    "projectValue": "이 프로젝트가 자기 값을 정해 전역 설정을 덮어쓰고 있습니다",
+    "projectValueReset": "초기화"
   },
   "ide": {
     "sectionTitle": "IDE 연동",

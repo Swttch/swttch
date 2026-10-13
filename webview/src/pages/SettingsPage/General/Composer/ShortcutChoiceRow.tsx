@@ -17,6 +17,7 @@ interface Props {
   error?: string;
   isOverridden?: boolean;
   isInherited?: boolean;
+  onResetToGlobal?: () => void;
 }
 
 /**
@@ -44,6 +45,7 @@ export function ShortcutChoiceRow(props: Props) {
     error,
     isOverridden,
     isInherited,
+    onResetToGlobal,
   } = props;
 
   return (
@@ -52,6 +54,7 @@ export function ShortcutChoiceRow(props: Props) {
       description={description}
       isOverridden={isOverridden}
       isInherited={isInherited}
+      onResetToGlobal={onResetToGlobal}
     >
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">

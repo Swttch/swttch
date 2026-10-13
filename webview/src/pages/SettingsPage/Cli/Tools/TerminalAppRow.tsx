@@ -36,7 +36,7 @@ export function TerminalAppRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { settings, updateSetting } = useSettings();
-  const { isInherited } = useDisplaySettings();
+  const { isInherited, resetFor } = useDisplaySettings();
   const { send } = useBridge();
   const isJetBrainsEnv = isJetBrains();
 
@@ -79,6 +79,7 @@ export function TerminalAppRow() {
       }
       isOverridden={isOverridden(SettingKey.TERMINAL_APP)}
       isInherited={isInherited(SettingKey.TERMINAL_APP)}
+      onResetToGlobal={resetFor(SettingKey.TERMINAL_APP)}
     >
       {isJetBrainsEnv ? (
         <span className="text-sm text-text-tertiary">{t('cli.terminal.app.jetbrainsValue')}</span>

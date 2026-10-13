@@ -682,7 +682,9 @@
     "projectOverrideLabel": "P",
     "inherited": "Not set in this project. The global value is used",
     "inheritedLabel": "G",
-    "openDocs": "Open docs"
+    "openDocs": "Open docs",
+    "projectValue": "This project sets its own value, overriding the global one",
+    "projectValueReset": "Reset to global"
   },
   "ide": {
     "sectionTitle": "IDE integration",

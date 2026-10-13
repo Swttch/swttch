@@ -15,7 +15,7 @@ export function SoftWrapRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { updateSetting } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   return (
     <SettingRow
@@ -23,6 +23,7 @@ export function SoftWrapRow() {
       description={t('appearance.softWrap.description')}
       isOverridden={isOverridden(SettingKey.SOFT_WRAP)}
       isInherited={isInherited(SettingKey.SOFT_WRAP)}
+      onResetToGlobal={resetFor(SettingKey.SOFT_WRAP)}
     >
       <ToggleSwitch
         checked={displaySettings[SettingKey.SOFT_WRAP] === true}

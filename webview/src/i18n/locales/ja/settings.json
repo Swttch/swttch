@@ -678,7 +678,9 @@
     "projectOverrideLabel": "プ",
     "inherited": "このプロジェクトでは未設定です。グローバル設定の値を使用しています",
     "inheritedLabel": "グ",
-    "openDocs": "ドキュメントを開く"
+    "openDocs": "ドキュメントを開く",
+    "projectValue": "このプロジェクトが独自の値を設定し、グローバル設定を上書きしています",
+    "projectValueReset": "グローバルに戻す"
   },
   "ide": {
     "sectionTitle": "IDE 連携",

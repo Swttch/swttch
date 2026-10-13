@@ -27,7 +27,7 @@ export function FollowUpBehaviorRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const stored = displaySettings as ComposerShortcutSettings;
   const behavior = resolveFollowUpBehavior(stored);
@@ -62,6 +62,7 @@ export function FollowUpBehaviorRow() {
       }
       isOverridden={isOverridden(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR)}
       isInherited={isInherited(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR)}
+      onResetToGlobal={resetFor(SettingKey.COMPOSER_FOLLOW_UP_BEHAVIOR)}
     >
       <Select
         value={behavior}

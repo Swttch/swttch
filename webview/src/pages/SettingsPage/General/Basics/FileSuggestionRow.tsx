@@ -16,7 +16,7 @@ export function FileSuggestionRow() {
   const isOverridden = useIsOverriddenByProject();
   const { t } = useTranslation('settings');
   const { updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   const stored =
     (displaySettings.fileSuggestion as FileSuggestionConfig | null | undefined)?.command ?? '';
@@ -40,6 +40,7 @@ export function FileSuggestionRow() {
       description={t('general.fileSuggestion.description')}
       isOverridden={isOverridden('fileSuggestion')}
       isInherited={isInherited('fileSuggestion')}
+      onResetToGlobal={resetFor('fileSuggestion')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}

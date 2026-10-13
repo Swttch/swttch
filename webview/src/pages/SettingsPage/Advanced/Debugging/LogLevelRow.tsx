@@ -13,7 +13,7 @@ export function LogLevelRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting, scope, resetToGlobal } = useSettings();
-  const { displaySettings, isInherited } = useDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useDisplaySettings();
 
   const value = (displaySettings[SettingKey.LOG_LEVEL] as LogLevel | undefined) ?? LogLevel.INFO;
   const inherited = isInherited(SettingKey.LOG_LEVEL);
@@ -38,6 +38,7 @@ export function LogLevelRow() {
       description={t('advanced.debugging.logLevel.description')}
       isOverridden={isOverridden(SettingKey.LOG_LEVEL)}
       isInherited={inherited}
+      onResetToGlobal={resetFor(SettingKey.LOG_LEVEL)}
     >
       <Select
         value={value}

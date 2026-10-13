@@ -17,7 +17,7 @@ export function ShowThinkingSummariesRow() {
   const { t } = useTranslation('settings');
   const isOverridden = useIsOverriddenByProject();
   const { updateSetting } = useClaudeSettings();
-  const { displaySettings, isInherited } = useClaudeDisplaySettings();
+  const { displaySettings, isInherited, resetFor } = useClaudeDisplaySettings();
 
   const showThinkingSummaries = (displaySettings.showThinkingSummaries as boolean | undefined) ?? false;
 
@@ -27,6 +27,7 @@ export function ShowThinkingSummariesRow() {
       description={t('general.showThinkingSummaries.description')}
       isOverridden={isOverridden('showThinkingSummaries')}
       isInherited={isInherited('showThinkingSummaries')}
+      onResetToGlobal={resetFor('showThinkingSummaries')}
       badge={
         <SettingBadge
           variant={SettingBadgeVariant.ClaudeNative}
