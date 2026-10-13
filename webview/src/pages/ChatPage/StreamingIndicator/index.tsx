@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ICON_FRAMES, TEXT_CHANGE_DELAYS, getVerbs } from './constants.ts';
 import { useScramble } from './useScramble.ts';
 import { randomPick } from './utils.ts';
+import { resolveSpinnerVerbs } from './spinnerVerbs.ts';
 import { useTranslation } from '@/i18n';
+import { useClaudeSettingsOrNull } from '@/contexts/ClaudeSettingsContext';
 
 interface Props {
     /**
@@ -31,8 +33,23 @@ export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null, a
     // 아이콘 프레임 인덱스
     const [frameIdx, setFrameIdx] = useState(0);
 
+    // The user's spinnerVerbs setting (#548). Mounted with no settings provider (an isolated
+    // render), the indicator keeps the built-in verbs.
+    const spinnerVerbs = useClaudeSettingsOrNull()?.settings.spinnerVerbs;
+
+    // Held in a ref so the timer reads the latest list when it fires: a language or settings
+    // change takes effect from the next rotation.
+    const verbsRef = useRef<readonly string[]>([]);
+    verbsRef.current = resolveSpinnerVerbs(getVerbs(), spinnerVerbs);
+
     // 현재 동사
-    const [verb, setVerb] = useState<string>(() => randomPick(getVerbs()));
+    const [verb, setVerb] = useState<string>(() => randomPick(verbsRef.current));
+
+    // How many times the verb has been rotated. The next timer is armed when this changes,
+    // not when the verb does: with one verb the pick is the same as before, `verb` never
+    // changes, and a timer armed on its value stopped after the first rotation and never read
+    // a setting edited later (#548).
+    const [rotation, setRotation] = useState(0);
 
     // 텍스트 변경 카운트 (딜레이 스케줄 추적)
     const changeCountRef = useRef<number>(0);
@@ -53,9 +70,9 @@ export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null, a
         }
         const delay = getNextDelay();
         textTimerRef.current = setTimeout(() => {
-            const next = randomPick(getVerbs(), currentVerb);
-            changeCountRef.current += 1;
+            const next = randomPick(verbsRef.current, currentVerb);            changeCountRef.current += 1;
             setVerb(next);
+            setRotation((count) => count + 1);
         }, delay);
     }, [getNextDelay]);
 
@@ -70,9 +87,9 @@ export const StreamingIndicator: React.FC<Props> = ({ countdownSeconds = null, a
     // 텍스트 변경 스케줄 초기화
     useEffect(() => {
         scheduleNextChange(verb);
-        // verb가 바뀔 때마다 다음 변경을 재스케줄
+        // Arm the next change after every rotation
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [verb]);
+    }, [rotation]);
 
     // cleanup
     useEffect(() => {
