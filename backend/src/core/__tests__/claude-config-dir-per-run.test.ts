@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { homedir } from 'os';
 
 /**
  * Every run of `claude` settles which Claude data directory it belongs to first.
@@ -77,6 +78,32 @@ describe('Claude.exec settles the config directory before running', () => {
     // purpose, and it must not inherit a project's directory.
     expect(resolveClaudeConfigDirOverride).toHaveBeenLastCalledWith(undefined);
     expect(process.env.CLAUDE_CONFIG_DIR).toBeUndefined();
+  });
+});
+
+describe('Claude.exec hands the CLI a ~ already expanded (#538)', () => {
+  const inherited = () => Claude as unknown as { inheritedConfigDir: string | undefined };
+
+  it('expands a leading ~ in the settings override', async () => {
+    resolveClaudeConfigDirOverride.mockResolvedValue('~/.claude-work');
+
+    await Claude.exec(['--version'], { cwd: '/project/a' });
+
+    expect(process.env.CLAUDE_CONFIG_DIR).toBe(`${homedir()}/.claude-work`);
+  });
+
+  it('expands a leading ~ in the value inherited at startup', async () => {
+    const before = inherited().inheritedConfigDir;
+    inherited().inheritedConfigDir = '~/.claude-work';
+    try {
+      resolveClaudeConfigDirOverride.mockResolvedValue(null);
+
+      await Claude.exec(['--version'], { cwd: '/project/a' });
+
+      expect(process.env.CLAUDE_CONFIG_DIR).toBe(`${homedir()}/.claude-work`);
+    } finally {
+      inherited().inheritedConfigDir = before;
+    }
   });
 });
 

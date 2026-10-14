@@ -9,6 +9,7 @@ import {
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
 import { normalizeSettingValue } from './features/path-settings';
+import { expandHomeDir } from './features/claudeConfigDir';
 import { getStrippableAuthEnvKeys } from './features/claude-settings';
 import { augmentedPath } from './augmented-path';
 import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
@@ -82,11 +83,14 @@ export class Claude {
       Claude.resolvedWin32Path = null;
     }
 
+    // Both sources go through expandHomeDir: a `~` typed in the settings screen never met a
+    // shell, and one exported inside quotes was never expanded by it. The CLI expands
+    // neither, so it would look up credentials under a different keychain name (#538).
     const override = await resolveClaudeConfigDirOverride(workingDir);
     if (override) {
-      process.env.CLAUDE_CONFIG_DIR = override;
+      process.env.CLAUDE_CONFIG_DIR = expandHomeDir(override);
     } else if (Claude.inheritedConfigDir !== undefined) {
-      process.env.CLAUDE_CONFIG_DIR = Claude.inheritedConfigDir;
+      process.env.CLAUDE_CONFIG_DIR = expandHomeDir(Claude.inheritedConfigDir);
     } else {
       delete process.env.CLAUDE_CONFIG_DIR;
     }

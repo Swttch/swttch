@@ -117,6 +117,32 @@ describe('getClaudeConfigDirHandler', () => {
     expect(lastAck(connections)).toMatchObject({ effective: '/global' });
   });
 
+  it('shows a leading ~ expanded while reporting the stored value as typed (#538)', async () => {
+    const connections = createMockConnections();
+    vi.mocked(readSettingsFile).mockResolvedValue({ env: { CLAUDE_CONFIG_DIR: '~/.claude-work' } });
+
+    await invoke(connections, { scope: 'global' });
+
+    // The input box keeps what the user typed; the "active" line shows what the CLI receives.
+    expect(lastAck(connections)).toMatchObject({
+      effective: `${homedir()}/.claude-work`,
+      globalSetting: '~/.claude-work',
+    });
+  });
+
+  it('shows an inherited startup value with a leading ~ expanded, reporting it as inherited', async () => {
+    const connections = createMockConnections();
+    vi.mocked(readSettingsFile).mockResolvedValue({});
+    setInherited('~/.claude-work');
+
+    await invoke(connections, { scope: 'global' });
+
+    expect(lastAck(connections)).toMatchObject({
+      effective: `${homedir()}/.claude-work`,
+      inherited: '~/.claude-work',
+    });
+  });
+
   it('does not read project settings when no workingDir is given', async () => {
     const connections = createMockConnections();
     vi.mocked(readSettingsFile).mockResolvedValue({});
