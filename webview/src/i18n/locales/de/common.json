@@ -172,6 +172,7 @@
     "sleepGuardHint4Lead": "Das Zuklappen versetzt den Rechner nicht in den Ruhezustand,",
     "sleepGuardHint4Rest": "und jede dafür geänderte Systemeinstellung wird beim Ausschalten oder Beenden von Swttch zurückgesetzt.",
     "sleepGuardChangedSetting": "Eine andere App hat die Deckeleinstellung geändert. Swttch merkt sich diesen Wert und stellt ihn beim Ausschalten wieder her.",
+    "sleepGuardError": "Ruhezustand verhindern konnte nicht eingeschaltet werden",
     "sleepGuardChangedScheme": "Sie haben den Energiesparplan gewechselt, daher gilt die Einstellung im neuen Plan nicht. Der von Swttch geänderte Plan wird beim Ausschalten zurückgesetzt.",
     "pairingHint": "Scannen, um ein Gerät zu koppeln. Der QR-Code enthält einen Einmal-Code, der bald abläuft. Bei Problemen neu erzeugen.",
     "regeneratePairing": "Code neu erzeugen"

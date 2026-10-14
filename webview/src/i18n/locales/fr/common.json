@@ -172,6 +172,7 @@
     "sleepGuardHint4Lead": "Fermer le capot ne le met pas en veille,",
     "sleepGuardHint4Rest": "et tout réglage système modifié pour cela revient à son état d'origine quand vous désactivez ou quittez Swttch.",
     "sleepGuardChangedSetting": "Une autre application a modifié le réglage du capot. Swttch conserve cette valeur et la rétablit à la désactivation.",
+    "sleepGuardError": "Impossible d’activer « Empêcher la mise en veille »",
     "sleepGuardChangedScheme": "Vous avez changé de mode d'alimentation, donc le mode actuel n'a pas ce réglage. Le mode modifié par Swttch revient à la normale à la désactivation.",
     "pairingHint": "Scannez pour appairer un appareil. Le QR contient un code à usage unique qui expire rapidement. Régénérez-le s'il cesse de fonctionner.",
     "regeneratePairing": "Régénérer le code"

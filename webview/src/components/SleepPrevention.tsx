@@ -34,6 +34,22 @@ export function SleepPreventionSwitch(props: SwitchProps) {
   return <ToggleSwitch checked={checked} onChange={onChange} disabled={loading} />;
 }
 
+/**
+ * Why the switch would not turn on, shown right under it. The message is the
+ * backend's own sentence; the title names sleep prevention, never the tunnel.
+ * There is no retry link: the switch itself is the retry.
+ */
+export function SleepPreventionError(props: { message: string }) {
+  const { message } = props;
+  const { t } = useTranslation('common');
+  return (
+    <div role="alert" className="mt-3 py-2 px-3 text-sm text-state-error-fg bg-state-error-bg rounded space-y-1">
+      <div className="font-medium">{t('tunnelModal.sleepGuardError')}</div>
+      <div className="text-xs opacity-90">{message}</div>
+    </div>
+  );
+}
+
 /** What the user needs to know about the limits, shown while the switch is on. */
 export function SleepPreventionHint(props: { externalChange?: SleepExternalChange }) {
   const { externalChange = 'none' } = props;

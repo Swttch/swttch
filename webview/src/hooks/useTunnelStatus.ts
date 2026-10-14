@@ -35,6 +35,12 @@ interface TunnelStatus {
   sleepLoading: boolean;
   /** Someone else changed the lid setting the sleep guard holds; only the user's click may move the switch. */
   sleepExternalChange: SleepExternalChange;
+  /**
+   * Why the last attempt to turn sleep prevention on failed, or null. Kept apart
+   * from `error`: that one belongs to the tunnel, and its panel titles every
+   * message "Couldn't start the tunnel" and retries the tunnel.
+   */
+  sleepError: string | null;
   error: string | null;
   errorCode: TunnelErrorCode | null;
   handleTunnelToggle: (checked: boolean) => Promise<void>;
@@ -56,6 +62,7 @@ export function useTunnelStatus(): TunnelStatus {
   const [preventSleep, setPreventSleep] = useState(false);
   const [sleepLoading, setSleepLoading] = useState(false);
   const [sleepExternalChange, setSleepExternalChange] = useState<SleepExternalChange>('none');
+  const [sleepError, setSleepError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<TunnelErrorCode | null>(null);
   const [pairUrl, setPairUrl] = useState<string | null>(null);
@@ -149,6 +156,7 @@ export function useTunnelStatus(): TunnelStatus {
       setPreventSleep(p.enabled as boolean);
       setSleepExternalChange(asExternalChange(p.externalChange));
       setSleepLoading(false);
+      if (p.enabled) setSleepError(null);
     });
     return () => { unsubTunnel(); unsubInstall(); unsubSleep(); };
   }, [subscribe, startTunnelNow]);
@@ -192,13 +200,15 @@ export function useTunnelStatus(): TunnelStatus {
   }, []);
 
   const handleSleepToggle = useCallback(async (checked: boolean) => {
-    setError(null);
+    // Sleep prevention never reads or writes the tunnel's `error`: the two
+    // switches are independent features and each shows its own failure.
+    setSleepError(null);
     if (checked) {
       setSleepLoading(true);
       try {
         const res = await send(MessageType.SLEEP_GUARD_ENABLE, {});
         if (res.status === 'error') {
-          setError(res.error as string);
+          setSleepError(res.error as string);
           setSleepLoading(false);
         }
       } catch {
@@ -224,6 +234,7 @@ export function useTunnelStatus(): TunnelStatus {
     preventSleep,
     sleepLoading,
     sleepExternalChange,
+    sleepError,
     error,
     errorCode,
     handleTunnelToggle,

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { XMarkIcon, ClipboardDocumentIcon, ClipboardDocumentCheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { QRCodeSVG } from 'qrcode.react';
 import { ToggleSwitch } from '@/components/ToggleSwitch';
-import { SleepPreventionSwitch, SleepPreventionHint, useSleepPreventionCopy } from '@/components/SleepPrevention';
+import { SleepPreventionSwitch, SleepPreventionHint, SleepPreventionError, useSleepPreventionCopy } from '@/components/SleepPrevention';
 import { Portal } from '@/components/Portal';
 import { TunnelStatusNotice } from '@/components/TunnelStatusNotice';
 import { useTunnelStatus } from '@/hooks';
@@ -29,6 +29,7 @@ export function TunnelModal(props: Props) {
     preventSleep,
     sleepLoading,
     sleepExternalChange,
+    sleepError,
     error,
     errorCode,
     handleTunnelToggle,
@@ -191,6 +192,7 @@ export function TunnelModal(props: Props) {
                 onChange={handleSleepToggle}
               />
             </div>
+            {sleepError && <SleepPreventionError message={sleepError} />}
             {preventSleep && <SleepPreventionHint externalChange={sleepExternalChange} />}
           </div>
         </div>

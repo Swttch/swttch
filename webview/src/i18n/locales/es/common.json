@@ -172,6 +172,7 @@
     "sleepGuardHint4Lead": "Cerrar la tapa no lo suspende,",
     "sleepGuardHint4Rest": "y cualquier ajuste del sistema cambiado para ello vuelve a su valor original al desactivarlo o cerrar Swttch.",
     "sleepGuardChangedSetting": "Otra aplicación cambió el ajuste de la tapa. Swttch conserva ese valor y lo restaura al desactivarlo.",
+    "sleepGuardError": "No se pudo activar Evitar suspensión",
     "sleepGuardChangedScheme": "Cambió de plan de energía, así que el plan actual no tiene este ajuste. El plan que Swttch modificó vuelve a la normalidad al desactivarlo.",
     "pairingHint": "Escanea para vincular un dispositivo. El QR contiene un código de un solo uso que caduca pronto. Vuelve a generarlo si deja de funcionar.",
     "regeneratePairing": "Volver a generar el código"

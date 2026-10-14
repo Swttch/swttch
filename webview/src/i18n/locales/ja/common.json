@@ -172,6 +172,7 @@
     "sleepGuardHint4Lead": "蓋を閉じてもスリープしません。",
     "sleepGuardHint4Rest": "そのために変更したシステム設定は、オフにするか Swttch を終了すると元に戻ります。",
     "sleepGuardChangedSetting": "別の場所で蓋の設定が変更されました。Swttch はその値を記憶し、オフにしたときにその値に戻します。",
+    "sleepGuardError": "スリープの防止をオンにできませんでした",
     "sleepGuardChangedScheme": "電源プランを切り替えたため、現在のプランにはこの設定が適用されていません。Swttch が変更したプランは、オフにすると元に戻ります。",
     "pairingHint": "スキャンするとデバイスを接続できます。QR にはまもなく期限切れになるワンタイムコードが含まれます。動作しない場合は再生成してください。",
     "regeneratePairing": "コードを再生成"
