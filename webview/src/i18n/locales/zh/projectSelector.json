@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} 个会话",
   "sessionCount_one": "{{count}} 个会话",
   "sessionCount_other": "{{count}} 个会话",
+  "folderMissing": "找不到文件夹",
+  "folderMissingHint": "此项目的文件夹已不存在。从菜单中删除该项目即可将其从列表中移除。",
   "errors": {
     "loadFailed": "加载项目失败"
   }

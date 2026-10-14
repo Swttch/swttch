@@ -24,7 +24,7 @@
     "failed": "Deine Daten konnten nicht aktualisiert werden ({{name}}), daher lassen sich Prompts und Projekte nicht laden. Beim Zurückkehren zu diesem Fenster wird es automatisch erneut versucht.",
     "retry": "Erneut versuchen",
     "retrying": "Neuer Versuch läuft…",
-    "unreadable": "Einige alte Dateien konnten nicht gelesen werden: {{folders}}. Erlaube den Zugriff auf diese Ordner in den Systemeinstellungen. Sie werden danach automatisch erneut gelesen.",
+    "unreadable": "Einige alte Dateien konnten nicht gelesen werden: {{folders}}. Erlaube den Zugriff auf diese Ordner in den Systemeinstellungen. Sie werden danach automatisch erneut gelesen. Eine beschädigte Datei lässt sich auch dann nicht lesen und bleibt unverändert.",
     "dismiss": "Schließen"
   },
   "whatsNew": {
@@ -57,6 +57,10 @@
       "message": "Fehler: Diese Sitzung wird bereits verwendet.",
       "reclaiming": "Wird zurückgeholt...",
       "reclaim": "Sitzung zurückholen"
+    },
+    "workingDirMissing": {
+      "message": "Der Projektordner existiert nicht mehr: {{path}}. Er wurde möglicherweise gelöscht oder verschoben, oder das Laufwerk oder die WSL-Distribution, auf der er lag, ist nicht mehr vorhanden. Stellen Sie den Ordner wieder her, um dieses Projekt weiter zu nutzen.",
+      "openProjects": "Anderes Projekt wählen"
     }
   },
   "chatInput": {

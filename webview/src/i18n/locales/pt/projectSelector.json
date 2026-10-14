@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} sessões",
   "sessionCount_one": "{{count}} sessão",
   "sessionCount_other": "{{count}} sessões",
+  "folderMissing": "Pasta não encontrada",
+  "folderMissingHint": "A pasta deste projeto não existe mais. Exclua o projeto pelo menu para removê-lo da lista.",
   "errors": {
     "loadFailed": "Falha ao carregar projetos"
   }

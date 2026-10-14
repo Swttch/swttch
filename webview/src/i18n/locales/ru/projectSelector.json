@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} сессий",
   "sessionCount_one": "{{count}} сессия",
   "sessionCount_other": "{{count}} сессии",
+  "folderMissing": "Папка не найдена",
+  "folderMissingHint": "Папка этого проекта больше не существует. Удалите проект через меню, чтобы убрать его из списка.",
   "errors": {
     "loadFailed": "Не удалось загрузить проекты"
   }

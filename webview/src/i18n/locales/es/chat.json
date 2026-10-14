@@ -24,7 +24,7 @@
     "failed": "No se pudieron actualizar tus datos ({{name}}), así que no se pueden cargar los prompts ni los proyectos. Se vuelve a intentar automáticamente cuando regresas a esta ventana.",
     "retry": "Reintentar",
     "retrying": "Reintentando…",
-    "unreadable": "No se pudieron leer algunos archivos antiguos: {{folders}}. Permite el acceso a estas carpetas en los ajustes del sistema. Se volverán a leer automáticamente.",
+    "unreadable": "No se pudieron leer algunos archivos antiguos: {{folders}}. Permite el acceso a estas carpetas en los ajustes del sistema. Se volverán a leer automáticamente. Un archivo dañado no se puede leer ni así y se deja como está.",
     "dismiss": "Cerrar"
   },
   "whatsNew": {
@@ -57,6 +57,10 @@
       "message": "Error: Esta sesión ya está en uso.",
       "reclaiming": "Reclamando...",
       "reclaim": "Reclamar sesión"
+    },
+    "workingDirMissing": {
+      "message": "La carpeta del proyecto ya no existe: {{path}}. Puede que se haya eliminado o movido, o que la unidad o la distribución de WSL que la contenía ya no esté disponible. Restaura la carpeta para volver a usar este proyecto.",
+      "openProjects": "Elegir otro proyecto"
     }
   },
   "chatInput": {

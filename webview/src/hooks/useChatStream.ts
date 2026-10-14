@@ -5,6 +5,7 @@ import { ContentBlockType } from '../dto/message/ContentBlockDto';
 import { toInstance, LoadedMessageType, MessageRole } from '../dto/common';
 import { parsePartialJson } from '../utils/parsePartialJson';
 import { MessageType } from '@/shared';
+import { WorkingDirMissingError } from './WorkingDirMissingError';
 import { parseControlRequestResult } from './controlRequestResult';
 import { SIDE_QUESTION_SUBTYPE } from '../contexts/SideQuestionContext';
 import type { ControlRequestResult, ControlResponseEvent } from './controlRequestResult';
@@ -1387,11 +1388,14 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
       // 형식 1 (close handler): { type: 'CLI_EXIT_ERROR', reason: '...', error: '...' }
       // 형식 2 (spawn error):   { error: '...' }
       const errorMessage = reason || errorField || 'Unknown service error';
-      const err = new Error(
-        errorType
-          ? `Service error: ${errorType} - ${errorMessage}`
-          : `Service error: ${errorMessage}`
-      );
+      const err =
+        errorType === MessageType.WORKING_DIR_MISSING
+          ? new WorkingDirMissingError(String(payload?.workingDir ?? ''), errorMessage)
+          : new Error(
+              errorType
+                ? `Service error: ${errorType} - ${errorMessage}`
+                : `Service error: ${errorMessage}`
+            );
       setError(err);
       onErrorRef.current?.(err);
       endStreaming();

@@ -1,5 +1,6 @@
 import { readFile, realpath } from 'fs/promises';
 import { join } from 'path';
+import { isFolderGone } from '../project-folder';
 import { ImportCounts, LegacyImport } from '../entities/migration/LegacyImport';
 import { MigrationContext } from '../entities/migration/Migration';
 import { PromptCategoryCollection } from '../entities/prompt/PromptCategory.collection';
@@ -176,6 +177,7 @@ export default class ImportLegacyPrompts extends LegacyImport<LegacyPrompts> {
       // A project that is the home folder itself holds the shared file, which is
       // not a project's.
       if ((await realpath(projectPath).catch(() => projectPath)) === sharedReal) continue;
+      if (await isFolderGone(project.path)) continue;
 
       const old = await readLegacyFile(projectPath);
       if (old.file) scopes.push(new LegacyScope(project.id, old.file));
@@ -216,6 +218,7 @@ export default class ImportLegacyPrompts extends LegacyImport<LegacyPrompts> {
       if (project === null) continue;
       const projectPath = join(project.path, LEGACY_DIR_NAME, LEGACY_FILE_NAME);
       if ((await realpath(projectPath).catch(() => projectPath)) === sharedReal) continue;
+      if (await isFolderGone(project.path)) continue;
 
       const old = await readLegacyFile(projectPath);
       if (old.file) scopes.push(new LegacyScope(project.id, old.file));

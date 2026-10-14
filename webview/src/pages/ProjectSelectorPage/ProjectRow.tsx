@@ -15,6 +15,8 @@ interface Props {
   description?: string;
   path: string;
   sessionCount: number;
+  /** The project's folder is no longer on disk. */
+  folderMissing: boolean;
   /** Home directory of the machine the paths were recorded on, when known. */
   homeDir: string | null;
   /** True for the row the keyboard is currently on. */
@@ -35,6 +37,7 @@ export function ProjectRow(props: Props) {
     description,
     path,
     sessionCount,
+    folderMissing,
     homeDir,
     isActive,
     isFavorite,
@@ -151,6 +154,17 @@ export function ProjectRow(props: Props) {
                 </svg>
               </span>
             </span>
+
+            {folderMissing && (
+              <Tooltip content={t('folderMissingHint')}>
+                <span
+                  tabIndex={0}
+                  className="flex-shrink-0 rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg"
+                >
+                  {t('folderMissing')}
+                </span>
+              </Tooltip>
+            )}
 
             {sessionCount > 0 && (
               <span className="flex-shrink-0 text-xs text-text-tertiary">

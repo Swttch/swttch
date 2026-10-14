@@ -24,7 +24,7 @@
     "failed": "Vos données n'ont pas pu être mises à jour ({{name}}), donc les prompts et les projets ne peuvent pas être chargés. Une nouvelle tentative a lieu automatiquement quand vous revenez à cette fenêtre.",
     "retry": "Réessayer",
     "retrying": "Nouvelle tentative…",
-    "unreadable": "Certains anciens fichiers n'ont pas pu être lus : {{folders}}. Autorisez l'accès à ces dossiers dans les réglages système. Ils seront relus automatiquement.",
+    "unreadable": "Certains anciens fichiers n'ont pas pu être lus : {{folders}}. Autorisez l'accès à ces dossiers dans les réglages système. Ils seront relus automatiquement. Un fichier endommagé reste illisible même alors et est laissé tel quel.",
     "dismiss": "Fermer"
   },
   "whatsNew": {
@@ -57,6 +57,10 @@
       "message": "Erreur : cette session est déjà utilisée.",
       "reclaiming": "Récupération...",
       "reclaim": "Récupérer la session"
+    },
+    "workingDirMissing": {
+      "message": "Le dossier du projet n'existe plus : {{path}}. Il a peut-être été supprimé ou déplacé, ou le lecteur ou la distribution WSL qui le contenait a disparu. Restaurez le dossier pour utiliser à nouveau ce projet.",
+      "openProjects": "Choisir un autre projet"
     }
   },
   "chatInput": {

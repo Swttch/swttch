@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} sessions",
   "sessionCount_one": "{{count}} session",
   "sessionCount_other": "{{count}} sessions",
+  "folderMissing": "Dossier introuvable",
+  "folderMissingHint": "Le dossier de ce projet n'existe plus. Supprimez le projet depuis son menu pour le retirer de la liste.",
   "errors": {
     "loadFailed": "Échec du chargement des projets"
   }

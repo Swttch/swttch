@@ -24,7 +24,7 @@
     "failed": "Não foi possível atualizar seus dados ({{name}}), então os prompts e os projetos não podem ser carregados. Uma nova tentativa é feita automaticamente quando você volta a esta janela.",
     "retry": "Tentar novamente",
     "retrying": "Tentando novamente…",
-    "unreadable": "Alguns arquivos antigos não puderam ser lidos: {{folders}}. Permita o acesso a essas pastas nas configurações do sistema. Elas serão lidas novamente de forma automática.",
+    "unreadable": "Alguns arquivos antigos não puderam ser lidos: {{folders}}. Permita o acesso a essas pastas nas configurações do sistema. Elas serão lidas novamente de forma automática. Um arquivo danificado não pode ser lido nem assim e é deixado como está.",
     "dismiss": "Fechar"
   },
   "whatsNew": {
@@ -57,6 +57,10 @@
       "message": "Erro: Esta sessão já está em uso.",
       "reclaiming": "Reivindicando...",
       "reclaim": "Reivindicar Sessão"
+    },
+    "workingDirMissing": {
+      "message": "A pasta do projeto não existe mais: {{path}}. Ela pode ter sido excluída ou movida, ou a unidade ou a distribuição WSL que a continha não está mais disponível. Restaure a pasta para voltar a usar este projeto.",
+      "openProjects": "Escolher outro projeto"
     }
   },
   "chatInput": {

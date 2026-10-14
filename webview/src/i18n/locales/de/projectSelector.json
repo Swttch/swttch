@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} Sitzungen",
   "sessionCount_one": "{{count}} Sitzung",
   "sessionCount_other": "{{count}} Sitzungen",
+  "folderMissing": "Ordner nicht gefunden",
+  "folderMissingHint": "Der Ordner dieses Projekts existiert nicht mehr. Löschen Sie das Projekt über das Menü, um es aus der Liste zu entfernen.",
   "errors": {
     "loadFailed": "Projekte konnten nicht geladen werden"
   }

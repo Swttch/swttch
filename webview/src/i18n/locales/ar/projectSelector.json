@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} جلسات",
   "sessionCount_one": "جلسة واحدة",
   "sessionCount_other": "{{count}} جلسة",
+  "folderMissing": "المجلد غير موجود",
+  "folderMissingHint": "مجلد هذا المشروع لم يعد موجودًا. احذف المشروع من قائمته لإزالته من هذه القائمة.",
   "errors": {
     "loadFailed": "فشل تحميل المشاريع"
   }

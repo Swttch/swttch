@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} セッション",
   "sessionCount_one": "{{count}} セッション",
   "sessionCount_other": "{{count}} セッション",
+  "folderMissing": "フォルダーが見つかりません",
+  "folderMissingHint": "このプロジェクトのフォルダーは存在しません。メニューからプロジェクトを削除すると、一覧から消えます。",
   "errors": {
     "loadFailed": "プロジェクトの読み込みに失敗しました"
   }

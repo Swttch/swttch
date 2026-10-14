@@ -2,6 +2,7 @@ import { homedir } from 'os';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
+import { markMissingFolders } from '../features/getProjectsList';
 import { syncProjectsList } from '../features/syncProjectsList';
 import { readFavoritePaths, readProjectMeta } from '../features/projectPreferences';
 import { Claude } from '../claude';
@@ -23,7 +24,7 @@ export async function getProjectsHandler(
   // A list that could not be read is reported as an error and not sent as an empty
   // one: "No projects" would look like every project was lost.
   let error: string | null = null;
-  const projects = await syncProjectsList(true).catch((err) => {
+  const projects = await syncProjectsList(true).then(markMissingFolders).catch((err) => {
     console.error('[node-backend]', 'Error reading projects list:', err);
     error = err instanceof Error ? err.message : String(err);
     return [];

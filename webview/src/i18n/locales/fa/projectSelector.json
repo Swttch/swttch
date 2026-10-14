@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} نشست",
   "sessionCount_one": "{{count}} نشست",
   "sessionCount_other": "{{count}} نشست",
+  "folderMissing": "پوشه پیدا نشد",
+  "folderMissingHint": "پوشه این پروژه دیگر وجود ندارد. پروژه را از منوی آن حذف کنید تا از این فهرست برداشته شود.",
   "errors": {
     "loadFailed": "بارگذاری پروژه‌ها ناموفق بود"
   }

@@ -772,6 +772,8 @@ export enum MessageType {
   CLI_EXIT_ERROR = 'CLI_EXIT_ERROR',
   /** WSL host/path mismatch detected (Windows + WSL). */
   WSL_HOST_MISMATCH = 'WSL_HOST_MISMATCH',
+  /** The project's working directory is no longer on disk, so the CLI cannot be started in it. */
+  WORKING_DIR_MISSING = 'WORKING_DIR_MISSING',
   /** Structured diagnosis of an authentication failure. */
   AUTH_ERROR_DIAGNOSIS = 'AUTH_ERROR_DIAGNOSIS',
   /**

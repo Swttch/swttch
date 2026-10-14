@@ -6,6 +6,7 @@ import { ContextType, getTextContent, isAuthErrorMessage, isLimitErrorMessage } 
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { MessageType } from '@/shared';
 import { CONTROL_REQUEST_COMMAND_PREFIX } from '../useControlRequestCommand';
+import { WorkingDirMissingError } from '../WorkingDirMissingError';
 
 // Mock requestAnimationFrame and cancelAnimationFrame
 const rafCallbacks: ((time: number) => void)[] = [];
@@ -755,6 +756,22 @@ describe('useChatStream', () => {
       expect(result.current.error).toBeDefined();
       expect(result.current.error?.message).toContain('CONNECTION_ERROR');
       expect(result.current.error?.message).toContain('Network timeout');
+    });
+
+    it('turns a missing-working-directory error into a WorkingDirMissingError that carries the folder', () => {
+      const { bridge, emit } = createMockBridge();
+      const { result } = renderHook(() => useChatStream({ bridge }));
+
+      act(() => {
+        emit(MessageType.SERVICE_ERROR, {
+          type: MessageType.WORKING_DIR_MISSING,
+          reason: 'The working directory /private/tmp/ccg-demo no longer exists.',
+          workingDir: '/private/tmp/ccg-demo',
+        });
+      });
+
+      expect(result.current.error).toBeInstanceOf(WorkingDirMissingError);
+      expect((result.current.error as WorkingDirMissingError).workingDir).toBe('/private/tmp/ccg-demo');
     });
 
     it('스트리밍이 종료된다', () => {

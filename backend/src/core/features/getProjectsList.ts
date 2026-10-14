@@ -2,6 +2,7 @@ import { stat } from 'fs/promises';
 import { workingDirName } from '../../shared';
 import { ProjectCollection } from '../entities/project/Project.collection';
 import type { Project } from '../entities/project/Project.entity';
+import { isFolderGone } from '../project-folder';
 
 /**
  * One project in the list the project picker shows, in the shape the webview has
@@ -29,6 +30,17 @@ export class ProjectListEntry {
       new Date(project.lastModified).toISOString(),
       new Date(project.createdAt).toISOString(),
     );
+  }
+}
+
+/** An entry whose folder has been looked at, as the project picker is sent it. */
+export class CheckedProjectListEntry extends ProjectListEntry {
+  constructor(
+    entry: ProjectListEntry,
+    /** Whether the folder is no longer on disk. */
+    readonly folderMissing: boolean,
+  ) {
+    super(entry.name, entry.path, entry.sessionCount, entry.lastModified, entry.createdAt);
   }
 }
 
@@ -63,4 +75,14 @@ async function isDirectory(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Looks at every folder of the list at once and marks the ones that are gone, so
+ * the project picker can say so instead of opening a project that cannot start.
+ * Kept apart from [getProjectsList] because that list is also read by callers that
+ * must not wait on the disk (or on a share that has stalled).
+ */
+export async function markMissingFolders(entries: ProjectListEntry[]): Promise<CheckedProjectListEntry[]> {
+  return Promise.all(entries.map(async (entry) => new CheckedProjectListEntry(entry, await isFolderGone(entry.path))));
 }

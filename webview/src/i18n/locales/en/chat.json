@@ -24,7 +24,7 @@
     "failed": "Your data could not be updated ({{name}}), so prompts and projects cannot be loaded. It is tried again when you return to this window.",
     "retry": "Try again",
     "retrying": "Trying again…",
-    "unreadable": "Some old files could not be read: {{folders}}. Allow access to these folders in your system settings. They are read again automatically.",
+    "unreadable": "Some old files could not be read: {{folders}}. Allow access to these folders in your system settings. They are read again automatically. A damaged file cannot be read even then and is left as it is.",
     "dismiss": "Close"
   },
   "whatsNew": {
@@ -57,6 +57,10 @@
       "message": "Error: This session is already in use.",
       "reclaiming": "Reclaiming...",
       "reclaim": "Reclaim Session"
+    },
+    "workingDirMissing": {
+      "message": "The project folder no longer exists: {{path}}. It may have been deleted or moved, or the drive or WSL distribution that held it is gone. Restore the folder to use this project again.",
+      "openProjects": "Choose another project"
     }
   },
   "chatInput": {

@@ -13,6 +13,8 @@ interface Project {
   sessionCount: number;
   lastModified: string;
   createdAt: string;
+  /** The folder is no longer on disk. */
+  folderMissing?: boolean;
 }
 
 /** A display-only alias/note overlay for one project (never the real name). */
@@ -397,6 +399,7 @@ export function ProjectSelectorPage() {
                   description={meta?.description}
                   path={project.path}
                   sessionCount={project.sessionCount}
+                  folderMissing={project.folderMissing === true}
                   homeDir={homeDir}
                   isActive={index === activeIndex}
                   isFavorite={isFavorite(project.path)}

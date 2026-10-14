@@ -40,6 +40,8 @@
   "sessionCount": "{{count}} 個工作階段",
   "sessionCount_one": "{{count}} 個工作階段",
   "sessionCount_other": "{{count}} 個工作階段",
+  "folderMissing": "找不到資料夾",
+  "folderMissingHint": "此專案的資料夾已不存在。從選單刪除該專案即可將其從清單中移除。",
   "errors": {
     "loadFailed": "載入專案失敗"
   }

@@ -23,6 +23,7 @@ import { settleControlResponse } from './control-response-waiter';
 import { isDebugEnabled, logDebug } from '../logging/log-level';
 import { readRegistry } from './features/account-store';
 import { getProjectSessionsPath } from './features/getProjectSessionsPath';
+import { isFolderGone } from './project-folder';
 import { removeSessionTitleOverride } from './features/sessionTitleOverrides';
 import { renamedSessionTitle } from './features/sessionRenamedReply';
 import { MessageType, SessionActivity } from '../shared';
@@ -469,6 +470,23 @@ export async function ensureClaudeProcess(
       type: MessageType.WSL_HOST_MISMATCH,
       reason: msg,
       error: msg,
+    });
+    connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
+    return;
+  }
+
+  // A project whose folder was deleted (or sits on a drive or distribution that is gone)
+  // stays in the project list. Starting the CLI there fails with `spawn claude ENOENT`,
+  // which reads as "claude is not installed" because Node gives the same message for a
+  // missing `cwd`. Say what is wrong instead.
+  if (await isFolderGone(workingDir)) {
+    const msg = `The working directory ${workingDir} no longer exists.`;
+    console.error('[node-backend]', msg);
+    connections.broadcastToSession(targetSessionId, MessageType.SERVICE_ERROR, {
+      type: MessageType.WORKING_DIR_MISSING,
+      reason: msg,
+      error: msg,
+      workingDir,
     });
     connections.broadcastToSession(targetSessionId, MessageType.STREAM_END);
     return;
