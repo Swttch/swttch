@@ -56,6 +56,62 @@ export function removeQueuedMessage(sessionId: string, id: string): boolean {
   return true;
 }
 
+/**
+ * Fold the entry right after [id] into [id] — for follow-ups that were typed as
+ * several messages but belong together. The merged entry keeps [id]'s id, slot
+ * and `queuedAt`; its text is both texts separated by a blank line and its
+ * attachments are both lists, this entry's first.
+ *
+ * Returns false when there is nothing to merge with ([id] unknown or last).
+ */
+export function mergeQueuedMessageWithNext(sessionId: string, id: string): boolean {
+  const queue = queues.get(sessionId);
+  if (!queue) return false;
+  const index = queue.findIndex(entry => entry.id === id);
+  if (index === -1 || index === queue.length - 1) return false;
+  const [current, next] = [queue[index], queue[index + 1]];
+  const attachments = current.attachments || next.attachments
+    ? [...(current.attachments ?? []), ...(next.attachments ?? [])]
+    : undefined;
+  queue.splice(index, 2, { ...current, content: `${current.content}\n\n${next.content}`, attachments });
+  return true;
+}
+
+/** Move the entry with [id] to [toIndex] (clamped to the queue). False when [id] is unknown. */
+export function moveQueuedMessage(sessionId: string, id: string, toIndex: number): boolean {
+  const queue = queues.get(sessionId);
+  if (!queue) return false;
+  const from = queue.findIndex(entry => entry.id === id);
+  if (from === -1) return false;
+  const [entry] = queue.splice(from, 1);
+  queue.splice(Math.max(0, Math.min(toIndex, queue.length)), 0, entry);
+  return true;
+}
+
+/**
+ * Remove the entry with [id] and return it with the index it had, so a caller
+ * that fails to deliver it can put it back where it was ({@link restoreQueuedMessage}).
+ */
+export function takeQueuedMessage(
+  sessionId: string,
+  id: string,
+): { entry: QueuedMessageEntry; index: number } | undefined {
+  const queue = queues.get(sessionId);
+  if (!queue) return undefined;
+  const index = queue.findIndex(entry => entry.id === id);
+  if (index === -1) return undefined;
+  const [entry] = queue.splice(index, 1);
+  if (queue.length === 0) queues.delete(sessionId);
+  return { entry, index };
+}
+
+/** Put a taken entry back at [index] (or the end, if the queue got shorter meanwhile). */
+export function restoreQueuedMessage(sessionId: string, entry: QueuedMessageEntry, index: number): void {
+  const queue = queues.get(sessionId) ?? [];
+  queue.splice(Math.min(index, queue.length), 0, entry);
+  queues.set(sessionId, queue);
+}
+
 /** Everything currently waiting for [sessionId], oldest first. Never mutated by the caller. */
 export function getQueuedMessages(sessionId: string): QueuedMessageEntry[] {
   return queues.get(sessionId) ?? [];

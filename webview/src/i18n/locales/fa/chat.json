@@ -129,7 +129,11 @@
       "hint": "(Tab برای تکمیل)"
     },
     "queuedMessages": {
-      "cancel": "حذف از صف"
+      "cancel": "حذف از صف",
+      "steer": "همین حالا تغییر مسیر بده",
+      "merge": "ادغام این دو پیام",
+      "moveUp": "انتقال به بالا",
+      "moveDown": "انتقال به پایین"
     },
     "ariaLabel": "پیام به Claude",
     "autoModeFallback": "حالت خودکار اینجا در دسترس نیست — به‌جای آن از حالت مجوز پیش‌فرض استفاده می‌شود.",
@@ -171,6 +175,11 @@
       "closeAriaLabel": "بستن کتابخانهٔ پرامپت",
       "editPrompt": "ویرایش",
       "deletePrompt": "حذف"
+    },
+    "followUpMenu": {
+      "label": "وقتی Claude در حال کار است",
+      "queue": "قرار دادن پیام‌ها در صف",
+      "steer": "تغییر مسیر اجرای فعلی"
     }
   },
   "sessionHeader": {

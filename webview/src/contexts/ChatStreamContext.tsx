@@ -89,6 +89,12 @@ interface ChatStreamContextType {
   queueMessage: (content: string, attachments?: Attachment[]) => void;
   /** Remove one held message from the backend queue by id, before it is sent. */
   cancelQueuedMessage: (id: string) => void;
+  /** Fold the next held message into this one. */
+  mergeQueuedMessageWithNext: (id: string) => void;
+  /** Move one held message to another position in the queue. */
+  moveQueuedMessage: (id: string, toIndex: number) => void;
+  /** Take one held message out of the queue and send it to the CLI now. */
+  steerQueuedMessage: (id: string) => void;
 
   resetStreamState: () => void;
   // From useChatStream (message manipulation)
@@ -629,6 +635,45 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [bridge, session]
   );
 
+  /** Fold the held message after [id] into [id]; the backend broadcasts the result. */
+  const mergeQueuedMessageWithNext = useCallback(
+    (id: string) => {
+      const sessionId = session.currentSessionId;
+      if (!sessionId) return;
+
+      bridge.send(MessageType.MERGE_QUEUED_MESSAGES, { sessionId, id }).catch((error) => {
+        console.error('[ChatStreamContext] Failed to merge queued messages:', error);
+      });
+    },
+    [bridge, session]
+  );
+
+  /** Move one held message to [toIndex]; the backend broadcasts the new order. */
+  const moveQueuedMessage = useCallback(
+    (id: string, toIndex: number) => {
+      const sessionId = session.currentSessionId;
+      if (!sessionId) return;
+
+      bridge.send(MessageType.MOVE_QUEUED_MESSAGE, { sessionId, id, toIndex }).catch((error) => {
+        console.error('[ChatStreamContext] Failed to move queued message:', error);
+      });
+    },
+    [bridge, session]
+  );
+
+  /** Send one held message to the CLI now instead of after the current turn. */
+  const steerQueuedMessage = useCallback(
+    (id: string) => {
+      const sessionId = session.currentSessionId;
+      if (!sessionId) return;
+
+      bridge.send(MessageType.STEER_QUEUED_MESSAGE, { sessionId, id }).catch((error) => {
+        console.error('[ChatStreamContext] Failed to steer queued message:', error);
+      });
+    },
+    [bridge, session]
+  );
+
   // Ask a side question (`/btw`) and show it in the side-question window.
   //
   // A bare `/btw` only opens the window, where the question is then typed: the
@@ -823,6 +868,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     queuedMessages,
     queueMessage,
     cancelQueuedMessage,
+    mergeQueuedMessageWithNext,
+    moveQueuedMessage,
+    steerQueuedMessage,
 
     resetStreamState: chatStreamResetStreamState,
 
@@ -887,6 +935,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     queuedMessages,
     queueMessage,
     cancelQueuedMessage,
+    mergeQueuedMessageWithNext,
+    moveQueuedMessage,
+    steerQueuedMessage,
     tools,
     diffs,
     isThinkingExpanded,

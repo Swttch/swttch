@@ -129,7 +129,11 @@
       "hint": "(按 Tab 補全)"
     },
     "queuedMessages": {
-      "cancel": "從佇列中移除"
+      "cancel": "從佇列中移除",
+      "steer": "立即引導",
+      "merge": "合併這兩則訊息",
+      "moveUp": "上移",
+      "moveDown": "下移"
     },
     "ariaLabel": "傳送訊息給 Claude",
     "autoModeFallback": "此處無法使用自動模式 — 將改用預設權限模式。",
@@ -171,6 +175,11 @@
       "closeAriaLabel": "關閉提示詞庫",
       "editPrompt": "編輯",
       "deletePrompt": "刪除"
+    },
+    "followUpMenu": {
+      "label": "Claude 工作時",
+      "queue": "訊息加入佇列",
+      "steer": "引導目前執行"
     }
   },
   "sessionHeader": {

@@ -129,7 +129,11 @@
       "hint": "(Tab للإكمال)"
     },
     "queuedMessages": {
-      "cancel": "إزالة من قائمة الانتظار"
+      "cancel": "إزالة من قائمة الانتظار",
+      "steer": "توجيه الآن",
+      "merge": "دمج هاتين الرسالتين",
+      "moveUp": "نقل لأعلى",
+      "moveDown": "نقل لأسفل"
     },
     "ariaLabel": "مراسلة Claude",
     "autoModeFallback": "الوضع التلقائي غير متاح هنا — سيُستخدم وضع الأذونات الافتراضي بدلًا منه.",
@@ -171,6 +175,11 @@
       "closeAriaLabel": "إغلاق مكتبة المطالبات",
       "editPrompt": "تعديل",
       "deletePrompt": "حذف"
+    },
+    "followUpMenu": {
+      "label": "أثناء عمل Claude",
+      "queue": "إضافة الرسائل إلى قائمة الانتظار",
+      "steer": "توجيه التشغيل الحالي"
     }
   },
   "sessionHeader": {
