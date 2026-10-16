@@ -129,7 +129,11 @@
       "hint": "(Tab zum Übernehmen)"
     },
     "queuedMessages": {
-      "cancel": "Aus der Warteschlange entfernen"
+      "cancel": "Aus der Warteschlange entfernen",
+      "steer": "Jetzt steuern",
+      "merge": "Diese beiden Nachrichten zusammenführen",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten"
     },
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",
@@ -171,6 +175,11 @@
       "closeAriaLabel": "Prompt-Bibliothek schließen",
       "editPrompt": "Bearbeiten",
       "deletePrompt": "Löschen"
+    },
+    "followUpMenu": {
+      "label": "Während Claude arbeitet",
+      "queue": "Nachrichten in die Warteschlange stellen",
+      "steer": "Aktuellen Lauf steuern"
     }
   },
   "sessionHeader": {

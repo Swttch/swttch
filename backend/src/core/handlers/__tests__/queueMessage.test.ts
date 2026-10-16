@@ -10,10 +10,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import { MessageType } from '../../../shared';
-import { queueMessageHandler, cancelQueuedMessageHandler, getQueuedMessagesHandler } from '../queueMessage';
-import { getQueuedMessages, clearAllQueuedMessages } from '../../features/messageQueue';
+import {
+  queueMessageHandler,
+  cancelQueuedMessageHandler,
+  getQueuedMessagesHandler,
+  mergeQueuedMessagesHandler,
+  moveQueuedMessageHandler,
+  steerQueuedMessageHandler,
+} from '../queueMessage';
+import { getQueuedMessages, clearAllQueuedMessages, enqueueMessage } from '../../features/messageQueue';
+import { sendMessageToProcess } from '../../claude-process';
 
 vi.mock('../../claude', () => ({ Claude: { killTree: vi.fn() } }));
+vi.mock('../../claude-process', () => ({ sendMessageToProcess: vi.fn() }));
 
 function createMockWs() {
   return { readyState: 1, send: vi.fn(), close: vi.fn() } as unknown as import('ws').WebSocket;
@@ -21,7 +30,10 @@ function createMockWs() {
 
 const bridge = {} as Bridge;
 
-beforeEach(() => clearAllQueuedMessages());
+beforeEach(() => {
+  clearAllQueuedMessages();
+  vi.mocked(sendMessageToProcess).mockReset();
+});
 
 function queue(connections: ConnectionManager, connectionId: string, overrides: Partial<{
   sessionId: string; workingDir: string; content: string;
@@ -146,5 +158,99 @@ describe('getQueuedMessagesHandler', () => {
     const [raw] = (ws.send as ReturnType<typeof vi.fn>).mock.calls[0];
     const ack = JSON.parse(raw as string);
     expect(ack.payload.queue.map((e: { content: string }) => e.content)).toEqual(['already queued']);
+  });
+});
+
+function request(type: MessageType, payload: Record<string, unknown>) {
+  return { type, requestId: 'r', timestamp: 0, payload: { sessionId: 'sess-1', ...payload } };
+}
+function sentTypes(ws: ReturnType<typeof createMockWs>) {
+  return (ws.send as ReturnType<typeof vi.fn>).mock.calls.map(([raw]) => JSON.parse(raw as string).type);
+}
+function seedQueue(...ids: string[]) {
+  ids.forEach((id, i) => enqueueMessage('sess-1', { id, content: id.toUpperCase(), queuedAt: i }));
+}
+function watched() {
+  const connections = new ConnectionManager(true);
+  const ws = createMockWs();
+  const connId = connections.addConnection(ws);
+  connections.subscribe(connId, 'sess-1', '/fixture');
+  (ws.send as ReturnType<typeof vi.fn>).mockClear();
+  return { connections, ws, connId };
+}
+
+describe('mergeQueuedMessagesHandler', () => {
+  it('merges and broadcasts the new queue', async () => {
+    const { connections, ws, connId } = watched();
+    seedQueue('a', 'b');
+    await mergeQueuedMessagesHandler(connId, request(MessageType.MERGE_QUEUED_MESSAGES, { id: 'a' }), connections, bridge);
+    expect(getQueuedMessages('sess-1').map(e => e.content)).toEqual(['A\n\nB']);
+    expect(sentTypes(ws)).toEqual(expect.arrayContaining([MessageType.QUEUED_MESSAGES_CHANGED, MessageType.ACK]));
+  });
+
+  it('acks a stale id without an error', async () => {
+    const { connections, ws, connId } = watched();
+    seedQueue('a');
+    await mergeQueuedMessagesHandler(connId, request(MessageType.MERGE_QUEUED_MESSAGES, { id: 'gone' }), connections, bridge);
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a']);
+    expect(sentTypes(ws)).not.toContain(MessageType.ERROR);
+    expect(sentTypes(ws)).toContain(MessageType.ACK);
+  });
+});
+
+describe('moveQueuedMessageHandler', () => {
+  it('moves and broadcasts the new order', async () => {
+    const { connections, ws, connId } = watched();
+    seedQueue('a', 'b', 'c');
+    await moveQueuedMessageHandler(connId, request(MessageType.MOVE_QUEUED_MESSAGE, { id: 'c', toIndex: 0 }), connections, bridge);
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['c', 'a', 'b']);
+    expect(sentTypes(ws)).toContain(MessageType.QUEUED_MESSAGES_CHANGED);
+  });
+
+  it('leaves the queue alone for a non-integer index and still acks', async () => {
+    const { connections, ws, connId } = watched();
+    seedQueue('a', 'b', 'c');
+    await moveQueuedMessageHandler(connId, request(MessageType.MOVE_QUEUED_MESSAGE, { id: 'c', toIndex: 0.5 }), connections, bridge);
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a', 'b', 'c']);
+    expect(sentTypes(ws)).not.toContain(MessageType.ERROR);
+    expect(sentTypes(ws)).toContain(MessageType.ACK);
+  });
+});
+
+describe('steerQueuedMessageHandler', () => {
+  it('acks a stale id without sending anything or changing the queue', async () => {
+    const { connections, ws, connId } = watched();
+    seedQueue('a');
+    await steerQueuedMessageHandler(connId, request(MessageType.STEER_QUEUED_MESSAGE, { id: 'gone' }), connections, bridge);
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a']);
+    expect(sentTypes(ws)).not.toContain(MessageType.ERROR);
+    expect(sentTypes(ws)).toContain(MessageType.ACK);
+  });
+
+  it('sends the entry to the CLI now, removes it, and tells every watcher including the sender', async () => {
+    const { connections, ws, connId } = watched();
+    vi.mocked(sendMessageToProcess).mockReturnValue(true);
+    seedQueue('a', 'b');
+
+    await steerQueuedMessageHandler(connId, request(MessageType.STEER_QUEUED_MESSAGE, { id: 'b' }), connections, bridge);
+
+    expect(sendMessageToProcess).toHaveBeenCalledWith(connections, 'sess-1', 'B', undefined);
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a']);
+    expect(sentTypes(ws)).toEqual(expect.arrayContaining([
+      MessageType.USER_MESSAGE_BROADCAST, MessageType.QUEUED_MESSAGES_CHANGED, MessageType.ACK,
+    ]));
+  });
+
+  it('puts the entry back where it was when no CLI process can take it', async () => {
+    const { connections, ws, connId } = watched();
+    vi.mocked(sendMessageToProcess).mockReturnValue(false);
+    seedQueue('a', 'b', 'c');
+
+    await steerQueuedMessageHandler(connId, request(MessageType.STEER_QUEUED_MESSAGE, { id: 'b' }), connections, bridge);
+
+    expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a', 'b', 'c']);
+    expect(sentTypes(ws)).not.toContain(MessageType.USER_MESSAGE_BROADCAST);
+    expect(sentTypes(ws)).toContain(MessageType.ACK);
   });
 });

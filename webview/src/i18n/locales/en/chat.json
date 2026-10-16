@@ -129,7 +129,11 @@
       "hint": "(Tab to accept)"
     },
     "queuedMessages": {
-      "cancel": "Remove from queue"
+      "cancel": "Remove from queue",
+      "steer": "Steer now",
+      "merge": "Merge these two messages",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
     },
     "ariaLabel": "Message Claude",
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",
@@ -171,6 +175,11 @@
       "closeAriaLabel": "Close prompt library",
       "editPrompt": "Edit",
       "deletePrompt": "Delete"
+    },
+    "followUpMenu": {
+      "label": "While Claude is working",
+      "queue": "Queue messages",
+      "steer": "Steer the current run"
     }
   },
   "sessionHeader": {

@@ -4,10 +4,15 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import type { QueuedMessage } from '../../shared';
+import { sendMessageToProcess } from '../claude-process';
 import {
   enqueueMessage,
   removeQueuedMessage,
   getQueuedMessages,
+  mergeQueuedMessageWithNext,
+  moveQueuedMessage,
+  takeQueuedMessage,
+  restoreQueuedMessage,
   type QueuedMessageEntry,
 } from '../features/messageQueue';
 
@@ -108,4 +113,82 @@ export async function getQueuedMessagesHandler(
     sessionId,
     queue: sessionId ? getQueuedMessages(sessionId).map(toWirePayload) : [],
   });
+}
+
+/**
+ * MERGE_QUEUED_MESSAGES — fold the message after [id] into [id], for follow-ups
+ * that were typed as several messages but belong together.
+ */
+export async function mergeQueuedMessagesHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const sessionId = message.payload?.sessionId as string | undefined;
+  const id = message.payload?.id as string | undefined;
+
+  if (sessionId && id) {
+    mergeQueuedMessageWithNext(sessionId, id);
+    broadcastQueue(sessionId, connections);
+  }
+
+  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/** MOVE_QUEUED_MESSAGE — move one held message to [toIndex] in [sessionId]'s queue. */
+export async function moveQueuedMessageHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const sessionId = message.payload?.sessionId as string | undefined;
+  const id = message.payload?.id as string | undefined;
+  const toIndex = message.payload?.toIndex as number | undefined;
+
+  if (sessionId && id && typeof toIndex === 'number' && Number.isInteger(toIndex)) {
+    moveQueuedMessage(sessionId, id, toIndex);
+    broadcastQueue(sessionId, connections);
+  }
+
+  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
+}
+
+/**
+ * STEER_QUEUED_MESSAGE — take one held message out of the queue and write it to
+ * the CLI now, the same way a "steer" follow-up is sent mid-turn, instead of
+ * waiting for the current turn to end.
+ *
+ * Delivery mirrors the end-of-turn release in `claude-process.ts`: the user
+ * message is broadcast to every watcher, sender included, because no tab drew
+ * it optimistically. When no process can take it, the entry goes back to the
+ * slot it came from rather than being lost.
+ */
+export async function steerQueuedMessageHandler(
+  connectionId: string,
+  message: IPCMessage,
+  connections: ConnectionManager,
+  _bridge: Bridge,
+): Promise<void> {
+  const sessionId = message.payload?.sessionId as string | undefined;
+  const id = message.payload?.id as string | undefined;
+
+  if (sessionId && id) {
+    const taken = takeQueuedMessage(sessionId, id);
+    if (taken) {
+      const sent = sendMessageToProcess(connections, sessionId, taken.entry.content, taken.entry.attachments);
+      if (sent) {
+        connections.broadcastToSession(sessionId, MessageType.USER_MESSAGE_BROADCAST, {
+          content: taken.entry.content,
+          sessionId,
+        });
+      } else {
+        restoreQueuedMessage(sessionId, taken.entry, taken.index);
+      }
+    }
+    broadcastQueue(sessionId, connections);
+  }
+
+  connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId });
 }

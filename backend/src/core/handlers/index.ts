@@ -4,7 +4,14 @@ import type { IPCMessage } from '../types';
 import { ClientEnv, MessageType } from '../../shared';
 import { Claude } from '../claude';
 import { sendMessageHandler } from './sendMessage';
-import { queueMessageHandler, cancelQueuedMessageHandler, getQueuedMessagesHandler } from './queueMessage';
+import {
+  queueMessageHandler,
+  cancelQueuedMessageHandler,
+  getQueuedMessagesHandler,
+  mergeQueuedMessagesHandler,
+  moveQueuedMessageHandler,
+  steerQueuedMessageHandler,
+} from './queueMessage';
 import { stopGenerationHandler } from './stopGeneration';
 import { stopSessionHandler } from './stopSession';
 import { sendControlRequestHandler } from './sendControlRequest';
@@ -536,6 +543,15 @@ export async function handleMessage(
       break;
     case MessageType.GET_QUEUED_MESSAGES:
       await getQueuedMessagesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.MERGE_QUEUED_MESSAGES:
+      await mergeQueuedMessagesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.MOVE_QUEUED_MESSAGE:
+      await moveQueuedMessageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.STEER_QUEUED_MESSAGE:
+      await steerQueuedMessageHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.SCHEDULE_MESSAGE:
       await scheduleMessageHandler(connectionId, message, connections, bridge);

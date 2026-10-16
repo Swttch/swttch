@@ -131,6 +131,19 @@ function TestChatComponent() {
           Cancel {m.content}
         </button>
       ))}
+      {ctx.queuedMessages.map(m => (
+        <React.Fragment key={`actions-${m.id}`}>
+          <button data-testid={`merge-${m.id}`} onClick={() => ctx.mergeQueuedMessageWithNext(m.id)}>
+            Merge {m.content}
+          </button>
+          <button data-testid={`move-${m.id}`} onClick={() => ctx.moveQueuedMessage(m.id, 2)}>
+            Move {m.content}
+          </button>
+          <button data-testid={`steer-${m.id}`} onClick={() => ctx.steerQueuedMessage(m.id)}>
+            Steer {m.content}
+          </button>
+        </React.Fragment>
+      ))}
     </div>
   );
 }
@@ -349,5 +362,60 @@ describe('queued follow-up message integration', () => {
       emitBridgeEvent(MessageType.QUEUED_MESSAGES_CHANGED, { sessionId: 'queue-session', queue: [] });
     });
     expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
+  });
+
+  it('sends MERGE_QUEUED_MESSAGES with the matching id when the merge button is clicked', async () => {
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.QUEUED_MESSAGES_CHANGED, {
+        sessionId: 'queue-session',
+        queue: [{ id: 'q1', content: 'merge me', queuedAt: 1 }],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('merge-q1'));
+    });
+
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.MERGE_QUEUED_MESSAGES, { sessionId: 'queue-session', id: 'q1' });
+    // The list changes only when the backend broadcasts it, never from the click.
+    expect(screen.getByTestId('queue-count')).toHaveTextContent('1');
+  });
+
+  it('sends MOVE_QUEUED_MESSAGE with the matching id and target index when the move button is clicked', async () => {
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.QUEUED_MESSAGES_CHANGED, {
+        sessionId: 'queue-session',
+        queue: [{ id: 'q1', content: 'move me', queuedAt: 1 }],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('move-q1'));
+    });
+
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.MOVE_QUEUED_MESSAGE, { sessionId: 'queue-session', id: 'q1', toIndex: 2 });
+    expect(screen.getByTestId('queue-contents')).toHaveTextContent('move me');
+  });
+
+  it('sends STEER_QUEUED_MESSAGE with the matching id when the steer button is clicked', async () => {
+    render(<TestWrapper><TestChatComponent /></TestWrapper>);
+
+    await act(async () => {
+      emitBridgeEvent(MessageType.QUEUED_MESSAGES_CHANGED, {
+        sessionId: 'queue-session',
+        queue: [{ id: 'q1', content: 'steer me', queuedAt: 1 }],
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('steer-q1'));
+    });
+
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.STEER_QUEUED_MESSAGE, { sessionId: 'queue-session', id: 'q1' });
+    expect(screen.getByTestId('queue-count')).toHaveTextContent('1');
   });
 });
