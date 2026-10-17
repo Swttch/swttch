@@ -1,4 +1,4 @@
-import { spawn as cpSpawn, type ChildProcess, type SpawnOptions } from 'child_process';
+import { spawn as cpSpawn, spawnSync, type ChildProcess, type SpawnOptions } from 'child_process';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 
@@ -32,6 +32,23 @@ export function jobWrapperPath(): string {
 }
 
 /**
+ * A corporate execution policy can block powershell.exe altogether. In that case
+ * the Job Object wrapper is unavailable, but chat must still launch through the
+ * same plain shell fallback used when the wrapper asset is missing.
+ */
+function canLaunchPowerShell(): boolean {
+  try {
+    const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'exit 0'], {
+      shell: false,
+      windowsHide: true,
+    });
+    return !result.error && result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Spawn the chat CLI inside a Job Object. `sessionId` is passed as a wrapper argv
  * token ONLY so the on-disk registry's sessionId-keyed orphan sweep can find and
  * kill this wrapper (its death closes the job). If the wrapper asset is missing for
@@ -48,6 +65,10 @@ export function spawnWin32JobCli(
   const wrapper = jobWrapperPath();
   if (!existsSync(wrapper)) {
     console.error('[node-backend]', `Job wrapper not found at ${wrapper} — spawning without a job (orphan guard degraded)`);
+    return cpSpawn(command, args, { ...options, shell: true });
+  }
+  if (!canLaunchPowerShell()) {
+    console.error('[node-backend]', 'PowerShell is unavailable — spawning without a job (orphan guard degraded)');
     return cpSpawn(command, args, { ...options, shell: true });
   }
   return cpSpawn(

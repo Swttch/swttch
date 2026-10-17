@@ -1,5 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
+const { spawnMock, spawnSyncMock } = vi.hoisted(() => ({
+  spawnMock: vi.fn(),
+  spawnSyncMock: vi.fn(),
+}));
+
+vi.mock('child_process', () => ({
+  spawn: spawnMock,
+  spawnSync: spawnSyncMock,
+}));
+
 // Mock fs so the BASH_ENV tests can decide whether the shipped script "exists"
 // without depending on where the suite happens to run from.
 vi.mock('fs', () => ({ existsSync: vi.fn(() => true) }));
@@ -13,7 +23,7 @@ vi.mock('url', () => ({
 }));
 
 import { existsSync } from 'fs';
-import { buildWin32CmdLine, toMsysPath, utf8BashEnv } from '../win-job';
+import { buildWin32CmdLine, spawnWin32JobCli, toMsysPath, utf8BashEnv } from '../win-job';
 
 describe('buildWin32CmdLine', () => {
   it('joins command + args with single spaces (mirrors Node win32 shell:true)', () => {
@@ -35,6 +45,34 @@ describe('buildWin32CmdLine', () => {
 
   it('returns the bare command when there are no args', () => {
     expect(buildWin32CmdLine('claude', [])).toBe('claude');
+  });
+});
+
+describe('spawnWin32JobCli', () => {
+  const options = { cwd: 'C:\\project', env: { PATH: 'C:\\tools' } };
+
+  afterEach(() => {
+    spawnMock.mockReset();
+    spawnSyncMock.mockReset();
+    vi.mocked(existsSync).mockReturnValue(true);
+  });
+
+  it('uses the Job Object wrapper when PowerShell is available', () => {
+    spawnSyncMock.mockReturnValue({ status: 0, error: undefined });
+    spawnWin32JobCli('claude', ['-p', 'hello'], 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'powershell.exe',
+      expect.arrayContaining(['-File', 'C:\\Users\\me\\ccg\\win-bash-env.sh', 'session-1']),
+      expect.objectContaining({ shell: false, env: expect.objectContaining({ CCG_JOB_CMDLINE: 'claude -p hello' }) }),
+    );
+  });
+
+  it('falls back to the plain shell spawn when PowerShell is blocked', () => {
+    spawnSyncMock.mockReturnValue({ status: null, error: new Error('spawn UNKNOWN') });
+    spawnWin32JobCli('claude', ['-p', 'hello'], 'session-1', options);
+
+    expect(spawnMock).toHaveBeenCalledWith('claude', ['-p', 'hello'], expect.objectContaining({ shell: true }));
   });
 });
 
