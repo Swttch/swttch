@@ -17,23 +17,30 @@ export function messageDropZone(pointerY: number, rect: { top: number; height: n
   return 'merge';
 }
 
+type Box = { top: number; left: number; width: number; height: number };
+
+function contains(box: Box, pointer: { x: number; y: number }): boolean {
+  return pointer.x >= box.left && pointer.x <= box.left + box.width &&
+    pointer.y >= box.top && pointer.y <= box.top + box.height;
+}
+
 /**
- * What to tell the drag hook for a pointer position and the drop target the
- * drag layer reports: the target's id and zone, or null when there is no
- * target or the pointer is outside its box. The drag layer keeps reporting the
- * last overlapped bubble while the pointer is already outside every bubble, so
- * a release there must not count as a drop on it.
+ * What to tell the drag hook for a pointer position, the drop target the drag
+ * layer reports and the box of the whole stack: the target's id and zone, 'gap'
+ * when the pointer is inside the stack but not on that target (the few pixels
+ * between two fanned-out bubbles), or null when it is outside the stack. The
+ * drag layer keeps reporting the last overlapped bubble while the pointer is
+ * already between bubbles or away, so the stack's box, not the target's, tells
+ * a release outside (discarded) from one in a gap (kept).
  */
 export function hoverFromPointer(
-  target: { id: string | number; shape?: { boundingRectangle: { top: number; left: number; width: number; height: number } } | null } | null | undefined,
+  target: { id: string | number; shape?: { boundingRectangle: Box } | null } | null | undefined,
   pointer: { x: number; y: number },
-): { id: string; zone: MessageDropZone } | null {
+  container: Box | null | undefined,
+): { id: string; zone: MessageDropZone } | 'gap' | null {
+  if (!container || !contains(container, pointer)) return null;
   const rect = target?.shape?.boundingRectangle;
-  if (!target || !rect) return null;
-  const inside =
-    pointer.x >= rect.left && pointer.x <= rect.left + rect.width &&
-    pointer.y >= rect.top && pointer.y <= rect.top + rect.height;
-  if (!inside) return null;
+  if (!target || !rect || !contains(rect, pointer)) return 'gap';
   return { id: String(target.id), zone: messageDropZone(pointer.y, rect) };
 }
 

@@ -1,11 +1,12 @@
+import { useRef } from 'react';
 import { PaperAirplaneIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { DragDropProvider } from '@dnd-kit/react';
+import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import type { QueuedMessage } from '@/shared';
 import { MessageBox } from '../message-renderers/components/MessageBox';
-import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
 import { hoverFromPointer } from './queuedMessageDrag';
 import { useQueuedMessageDrag } from './useQueuedMessageDrag';
 
@@ -47,10 +48,15 @@ function restingSlotClass(depthIdx: number) {
 /** During a drag the stack stays fanned out even when the pointer leaves it, or the targets would vanish. */
 const FANNED_SLOT_CLASS = 'relative mt-1.5';
 
-/** Drag starts only after the pointer moved a few pixels (no press-and-hold), so a plain click still expands the bubble. */
+/**
+ * A mouse or pen starts a drag only after the pointer moved a few pixels (no press-and-hold), so a plain click
+ * still expands the bubble. A finger needs a short press first, or every swipe over the stack would start a drag.
+ */
 const QUEUED_DRAG_SENSORS = [
   PointerSensor.configure({
-    activationConstraints: [new PointerActivationConstraints.Distance({ value: 5 })],
+    activationConstraints: (event: PointerEvent) => event.pointerType === 'touch'
+      ? [new PointerActivationConstraints.Delay({ value: 250, tolerance: 5 })]
+      : [new PointerActivationConstraints.Distance({ value: 5 })],
   }),
 ];
 
@@ -68,14 +74,15 @@ const QUEUED_DRAG_SENSORS = [
  * merge the two — see `useQueuedMessageDrag` for the hold that decides which.
  * Optimistic sorting is turned off: the hook, not the drag layer, decides when
  * the others make room. A click still expands the bubble (`MessageBox`'s own
- * behavior); the drag only starts after the pointer has moved 5 pixels (no hold delay),
- * and never from the icon buttons.
+ * behavior); with a mouse or pen the drag only starts after the pointer has moved 5 pixels
+ * (no hold delay), with a finger after a 250 ms press, and never from the icon buttons.
  *
  * The message on top at rest is the OLDEST, not the most recently queued: it
  * is the one about to be released to the CLI next, which is the one worth
  * seeing without having to hover first.
  */
 export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMove }: QueuedMessagesStackProps) {
+  const container = useRef<HTMLDivElement>(null);
   const drag = useQueuedMessageDrag({ messageIds: messages.map(m => m.id), onMove, onMerge });
   if (messages.length === 0) return null;
 
@@ -88,8 +95,13 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
     operation: { target?: Parameters<typeof hoverFromPointer>[0]; position: { current: { x: number; y: number } } },
     to?: { x: number; y: number },
   ) => {
-    const found = hoverFromPointer(operation.target, to ?? operation.position.current);
-    drag.hover(found?.id ?? null, found?.zone ?? null);
+    const found = hoverFromPointer(
+      operation.target,
+      to ?? operation.position.current,
+      container.current?.getBoundingClientRect(),
+    );
+    if (found === 'gap') drag.hoverGap();
+    else drag.hover(found?.id ?? null, found?.zone ?? null);
   };
 
   return (
@@ -107,9 +119,10 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
       onDragMove={(event) => hover(event.operation, event.to)}
       onDragEnd={(event) => (event.canceled ? drag.cancel() : drag.drop())}
     >
-      <div className="group/queue relative mb-2" data-testid="queued-messages-stack">
+      <div ref={container} className="group/queue relative mb-2" data-testid="queued-messages-stack">
         {messages.length > 1 && (
           <div
+            data-testid="queued-messages-count"
             // Fades out once the stack is open — the list already answers "how many" by being that many bubbles tall.
             // pointer-events-none: invisible must not mean it still blocks the top bubble's icons.
             className={`pointer-events-none absolute -top-2 -end-2 z-20 flex h-5 min-w-5 items-center justify-center rounded-full border border-border-default bg-surface-raised px-1 text-[0.6923rem] font-medium text-text-secondary transition-opacity duration-150 group-hover/queue:opacity-0 group-focus-within/queue:opacity-0 ${fanned ? 'opacity-0' : ''}`}

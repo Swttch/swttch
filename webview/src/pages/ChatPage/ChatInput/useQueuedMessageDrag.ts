@@ -18,6 +18,8 @@ export interface QueuedMessageDrag {
   start: (id: string) => void;
   /** The pointer is over [targetId] in [zone]; null for both means outside the stack. */
   hover: (targetId: string | null, zone: MessageDropZone | null) => void;
+  /** The pointer is inside the stack but over no message (the gap between two): keep what is previewed. */
+  hoverGap: () => void;
   drop: () => void;
   cancel: () => void;
 }
@@ -33,10 +35,14 @@ export interface QueuedMessageDrag {
  * could be aimed at anything.
  *
  * The queue itself only changes on drop, through one `onMove` or `onMerge`.
+ * After a move, the dropped order stays on screen until the queue the backend
+ * broadcasts differs from the one the drop started from, so the old order
+ * never flashes back in between.
  */
 export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): QueuedMessageDrag {
   const [draggingId, setDraggingState] = useState<string | null>(null);
   const [preview, setPreviewState] = useState<string[] | null>(null);
+  const [settled, setSettled] = useState<{ base: string[]; order: string[] } | null>(null);
   const [mergeTargetId, setMergeTargetState] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingKey = useRef<string | null>(null);
@@ -68,7 +74,9 @@ export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): 
   const arrange = (ids: string[], order: string[] | null) => order === null
     ? ids
     : [...order.filter(id => ids.includes(id)), ...ids.filter(id => !order.includes(id))];
-  const orderedIds = arrange(messageIds, preview);
+  const stillSettled = settled !== null
+    && settled.base.length === messageIds.length && settled.base.every((id, i) => id === messageIds[i]);
+  const orderedIds = arrange(messageIds, preview ?? (stillSettled ? settled.order : null));
 
   const reset = () => {
     clearTimer();
@@ -76,6 +84,7 @@ export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): 
     setDragging(null);
     setPreview(null);
     setMergeTarget(null);
+    setSettled(null);
   };
 
   const start = (id: string) => {
@@ -107,6 +116,12 @@ export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): 
     }, MESSAGE_DRAG_DWELL_MS);
   };
 
+  const hoverGap = () => {
+    if (draggingRef.current === null) return;
+    outside.current = false;
+    clearTimer();
+  };
+
   const drop = () => {
     const source = draggingRef.current;
     const wasOutside = outside.current;
@@ -121,8 +136,10 @@ export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): 
     }
     if (finalOrder === null) return;
     const toIndex = finalOrder.indexOf(source);
-    if (toIndex !== ids.indexOf(source)) callbacks.current.onMove(source, toIndex);
+    if (toIndex === ids.indexOf(source)) return;
+    setSettled({ base: ids, order: finalOrder });
+    callbacks.current.onMove(source, toIndex);
   };
 
-  return { orderedIds, draggingId, mergeTargetId, start, hover, drop, cancel: reset };
+  return { orderedIds, draggingId, mergeTargetId, start, hover, hoverGap, drop, cancel: reset };
 }

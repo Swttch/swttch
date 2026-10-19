@@ -33,6 +33,7 @@ function dragging(state: { draggingId: string; mergeTargetId?: string | null }) 
     mergeTargetId: state.mergeTargetId ?? null,
     start: vi.fn(),
     hover: vi.fn(),
+    hoverGap: vi.fn(),
     drop: vi.fn(),
     cancel: vi.fn(),
   });
@@ -50,13 +51,6 @@ describe('QueuedMessagesStack icons', () => {
       .map(b => b.getAttribute('aria-label'))
       .filter(l => l?.startsWith('chatInput.queuedMessages.'));
     expect(labels).toEqual(['chatInput.queuedMessages.steer', 'chatInput.queuedMessages.remove']);
-  });
-
-  it('has no move or merge buttons any more', () => {
-    setup();
-    expect(screen.queryByLabelText('chatInput.queuedMessages.moveUp')).toBeNull();
-    expect(screen.queryByLabelText('chatInput.queuedMessages.moveDown')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'chatInput.queuedMessages.merge' })).toBeNull();
   });
 
   it('calls each handler with the message id', () => {
@@ -88,7 +82,7 @@ describe('QueuedMessagesStack while dragging', () => {
   it('hides the count badge', () => {
     dragging({ draggingId: 'c' });
     setup();
-    expect(screen.getByText('3').className.split(' ')).toContain('opacity-0');
+    expect(screen.getByTestId('queued-messages-count').className.split(' ')).toContain('opacity-0');
   });
 
   it('outlines the merge target and labels it', () => {

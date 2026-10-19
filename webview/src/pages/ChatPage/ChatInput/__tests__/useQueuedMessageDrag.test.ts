@@ -94,7 +94,7 @@ describe('useQueuedMessageDrag', () => {
     act(() => result.current.drop());
     expect(onMove).toHaveBeenCalledWith('c', 0);
     expect(onMerge).not.toHaveBeenCalled();
-    expect(result.current.orderedIds).toEqual(['a', 'b', 'c']);
+    expect(result.current.orderedIds).toEqual(['c', 'a', 'b']);
   });
 
   it('does nothing on a drop before anything was previewed', () => {
@@ -158,5 +158,97 @@ describe('useQueuedMessageDrag', () => {
     act(() => drag.drop());
     expect(onMove).toHaveBeenCalledWith('c', 0);
     expect(onMerge).not.toHaveBeenCalled();
+  });
+
+  it('keeps a previewed move when the pointer crosses a gap, and still moves on drop', () => {
+    const { result, onMove } = setup();
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'before'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => result.current.hoverGap());
+    expect(result.current.orderedIds).toEqual(['c', 'a', 'b']);
+    act(() => result.current.drop());
+    expect(onMove).toHaveBeenCalledWith('c', 0);
+  });
+
+  it('cancels the pending hold when the pointer crosses a gap', () => {
+    const { result } = setup();
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'before'));
+    wait(100);
+    act(() => result.current.hoverGap());
+    wait(MESSAGE_DRAG_DWELL_MS);
+    expect(result.current.orderedIds).toEqual(['a', 'b', 'c']);
+  });
+
+  it('a gap after the pointer was outside counts as inside again', () => {
+    const { result, onMove } = setup();
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'before'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => result.current.hover(null, null));
+    act(() => result.current.hoverGap());
+    act(() => result.current.drop());
+    expect(onMove).toHaveBeenCalledWith('c', 0);
+  });
+
+  it('keeps the dropped order until the backend queue changes', () => {
+    const onMove = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ ids }) => useQueuedMessageDrag({ messageIds: ids, onMove, onMerge: vi.fn() }),
+      { initialProps: { ids: ['a', 'b', 'c'] } },
+    );
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'before'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => result.current.drop());
+    expect(onMove).toHaveBeenCalledWith('c', 0);
+    expect(result.current.orderedIds).toEqual(['c', 'a', 'b']);
+    rerender({ ids: ['a', 'b', 'c'] });
+    expect(result.current.orderedIds).toEqual(['c', 'a', 'b']);
+    rerender({ ids: ['c', 'a', 'b', 'd'] });
+    expect(result.current.orderedIds).toEqual(['c', 'a', 'b', 'd']);
+  });
+
+  it('forgets the dropped order when a new drag starts', () => {
+    const { result } = setup();
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'before'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => result.current.drop());
+    act(() => result.current.start('b'));
+    expect(result.current.orderedIds).toEqual(['a', 'b', 'c']);
+  });
+
+  it('does nothing on drop when the merge target left the queue during the drag', () => {
+    const onMove = vi.fn();
+    const onMerge = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ ids }) => useQueuedMessageDrag({ messageIds: ids, onMove, onMerge }),
+      { initialProps: { ids: ['a', 'b', 'c'] } },
+    );
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'merge'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    rerender({ ids: ['b', 'c'] });
+    act(() => result.current.drop());
+    expect(onMerge).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on drop when the dragged message left the queue during the drag', () => {
+    const onMove = vi.fn();
+    const onMerge = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ ids }) => useQueuedMessageDrag({ messageIds: ids, onMove, onMerge }),
+      { initialProps: { ids: ['a', 'b', 'c'] } },
+    );
+    act(() => result.current.start('c'));
+    act(() => result.current.hover('a', 'merge'));
+    wait(MESSAGE_DRAG_DWELL_MS);
+    rerender({ ids: ['a', 'b'] });
+    act(() => result.current.drop());
+    expect(onMerge).not.toHaveBeenCalled();
+    expect(onMove).not.toHaveBeenCalled();
   });
 });

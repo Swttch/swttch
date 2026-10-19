@@ -36,22 +36,32 @@ describe('placeMessage', () => {
 
 describe('hoverFromPointer', () => {
   const target = { id: 'b', shape: { boundingRectangle: { top: 100, left: 10, width: 200, height: 40 } } };
+  const container = { top: 50, left: 0, width: 220, height: 200 };
 
   it('gives the id and zone while the pointer is inside the target', () => {
-    expect(hoverFromPointer(target, { x: 50, y: 120 })).toEqual({ id: 'b', zone: 'merge' });
-    expect(hoverFromPointer(target, { x: 50, y: 102 })).toEqual({ id: 'b', zone: 'before' });
+    expect(hoverFromPointer(target, { x: 50, y: 120 }, container)).toEqual({ id: 'b', zone: 'merge' });
+    expect(hoverFromPointer(target, { x: 50, y: 102 }, container)).toEqual({ id: 'b', zone: 'before' });
   });
 
-  it('gives null when the pointer is outside on any side', () => {
-    expect(hoverFromPointer(target, { x: 50, y: 99 })).toBeNull();
-    expect(hoverFromPointer(target, { x: 50, y: 141 })).toBeNull();
-    expect(hoverFromPointer(target, { x: 9, y: 120 })).toBeNull();
-    expect(hoverFromPointer(target, { x: 211, y: 120 })).toBeNull();
+  it('gives gap when the pointer is inside the stack but off the target', () => {
+    expect(hoverFromPointer(target, { x: 50, y: 143 }, container)).toBe('gap');
+    expect(hoverFromPointer(target, { x: 5, y: 120 }, container)).toBe('gap');
   });
 
-  it('gives null without a target or a shape', () => {
-    expect(hoverFromPointer(null, { x: 50, y: 120 })).toBeNull();
-    expect(hoverFromPointer(undefined, { x: 50, y: 120 })).toBeNull();
-    expect(hoverFromPointer({ id: 'b' }, { x: 50, y: 120 })).toBeNull();
+  it('gives gap without a target or a shape while inside the stack', () => {
+    expect(hoverFromPointer(null, { x: 50, y: 120 }, container)).toBe('gap');
+    expect(hoverFromPointer(undefined, { x: 50, y: 120 }, container)).toBe('gap');
+    expect(hoverFromPointer({ id: 'b' }, { x: 50, y: 120 }, container)).toBe('gap');
+  });
+
+  it('gives null when the pointer is outside the stack on any side, whatever the target', () => {
+    expect(hoverFromPointer(target, { x: 50, y: 49 }, container)).toBeNull();
+    expect(hoverFromPointer(target, { x: 50, y: 251 }, container)).toBeNull();
+    expect(hoverFromPointer(target, { x: -1, y: 120 }, container)).toBeNull();
+    expect(hoverFromPointer(target, { x: 221, y: 120 }, container)).toBeNull();
+  });
+
+  it('gives null when the stack has no box', () => {
+    expect(hoverFromPointer(target, { x: 50, y: 120 }, undefined)).toBeNull();
   });
 });
