@@ -131,4 +131,32 @@ describe('useQueuedMessageDrag', () => {
     expect(onMerge).not.toHaveBeenCalled();
     expect(result.current.draggingId).toBeNull();
   });
+
+  it('counts a hover fired right after start, with one captured handle', () => {
+    const { result } = setup();
+    const drag = result.current;
+    act(() => { drag.start('c'); drag.hover('a', 'merge'); });
+    wait(MESSAGE_DRAG_DWELL_MS);
+    expect(result.current.mergeTargetId).toBe('a');
+  });
+
+  it('merges on drop through a stale handle', () => {
+    const { result, onMerge, onMove } = setup();
+    const drag = result.current;
+    act(() => { drag.start('c'); drag.hover('a', 'merge'); });
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => drag.drop());
+    expect(onMerge).toHaveBeenCalledWith('c', 'a');
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it('moves on drop through a stale handle', () => {
+    const { result, onMerge, onMove } = setup();
+    const drag = result.current;
+    act(() => { drag.start('c'); drag.hover('a', 'before'); });
+    wait(MESSAGE_DRAG_DWELL_MS);
+    act(() => drag.drop());
+    expect(onMove).toHaveBeenCalledWith('c', 0);
+    expect(onMerge).not.toHaveBeenCalled();
+  });
 });

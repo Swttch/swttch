@@ -35,12 +35,26 @@ export interface QueuedMessageDrag {
  * The queue itself only changes on drop, through one `onMove` or `onMerge`.
  */
 export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): QueuedMessageDrag {
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string[] | null>(null);
-  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [draggingId, setDraggingState] = useState<string | null>(null);
+  const [preview, setPreviewState] = useState<string[] | null>(null);
+  const [mergeTargetId, setMergeTargetState] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingKey = useRef<string | null>(null);
   const outside = useRef(false);
+
+  // The drag layer fires several callbacks between two renders, so the handlers read these refs,
+  // kept in step with the state at every write; the state only feeds the render.
+  const draggingRef = useRef<string | null>(null);
+  const previewRef = useRef<string[] | null>(null);
+  const mergeTargetRef = useRef<string | null>(null);
+  const idsRef = useRef(messageIds);
+  idsRef.current = messageIds;
+  const callbacks = useRef({ onMove, onMerge });
+  callbacks.current = { onMove, onMerge };
+
+  const setDragging = (id: string | null) => { draggingRef.current = id; setDraggingState(id); };
+  const setPreview = (ids: string[] | null) => { previewRef.current = ids; setPreviewState(ids); };
+  const setMergeTarget = (id: string | null) => { mergeTargetRef.current = id; setMergeTargetState(id); };
 
   const clearTimer = useCallback(() => {
     if (timer.current !== null) clearTimeout(timer.current);
@@ -51,61 +65,63 @@ export function useQueuedMessageDrag({ messageIds, onMove, onMerge }: Options): 
   useEffect(() => clearTimer, [clearTimer]);
 
   // A message queued or sent during the drag still shows; one that left the queue disappears.
-  const orderedIds = preview === null
-    ? messageIds
-    : [...preview.filter(id => messageIds.includes(id)), ...messageIds.filter(id => !preview.includes(id))];
+  const arrange = (ids: string[], order: string[] | null) => order === null
+    ? ids
+    : [...order.filter(id => ids.includes(id)), ...ids.filter(id => !order.includes(id))];
+  const orderedIds = arrange(messageIds, preview);
 
   const reset = () => {
     clearTimer();
     outside.current = false;
-    setDraggingId(null);
+    setDragging(null);
     setPreview(null);
-    setMergeTargetId(null);
+    setMergeTarget(null);
   };
 
   const start = (id: string) => {
     reset();
-    setDraggingId(id);
+    setDragging(id);
   };
 
   const hover = (targetId: string | null, zone: MessageDropZone | null) => {
-    if (draggingId === null) return;
+    const source = draggingRef.current;
+    if (source === null) return;
     outside.current = targetId === null;
-    if (targetId === null || zone === null || targetId === draggingId) {
+    if (targetId === null || zone === null || targetId === source) {
       clearTimer();
-      if (targetId !== mergeTargetId) setMergeTargetId(null);
+      setMergeTarget(null);
       return;
     }
     const key = `${targetId}:${zone}`;
     if (key === pendingKey.current) return;
-    if (zone !== 'merge' || targetId !== mergeTargetId) setMergeTargetId(null);
+    if (zone !== 'merge' || targetId !== mergeTargetRef.current) setMergeTarget(null);
     clearTimer();
     pendingKey.current = key;
-    const source = draggingId;
     timer.current = setTimeout(() => {
       timer.current = null;
       if (zone === 'merge') {
-        setMergeTargetId(targetId);
+        setMergeTarget(targetId);
       } else {
-        setPreview(current => placeMessage(current ?? messageIds, source, targetId, zone));
+        setPreview(placeMessage(previewRef.current ?? idsRef.current, source, targetId, zone));
       }
     }, MESSAGE_DRAG_DWELL_MS);
   };
 
   const drop = () => {
-    const source = draggingId;
+    const source = draggingRef.current;
     const wasOutside = outside.current;
-    const target = mergeTargetId;
-    const finalOrder = preview === null ? null : orderedIds;
+    const target = mergeTargetRef.current;
+    const ids = idsRef.current;
+    const finalOrder = previewRef.current === null ? null : arrange(ids, previewRef.current);
     reset();
-    if (source === null || wasOutside || !messageIds.includes(source)) return;
+    if (source === null || wasOutside || !ids.includes(source)) return;
     if (target !== null) {
-      onMerge(source, target);
+      if (ids.includes(target)) callbacks.current.onMerge(source, target);
       return;
     }
     if (finalOrder === null) return;
     const toIndex = finalOrder.indexOf(source);
-    if (toIndex !== messageIds.indexOf(source)) onMove(source, toIndex);
+    if (toIndex !== ids.indexOf(source)) callbacks.current.onMove(source, toIndex);
   };
 
   return { orderedIds, draggingId, mergeTargetId, start, hover, drop, cancel: reset };
