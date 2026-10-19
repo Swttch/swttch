@@ -129,11 +129,9 @@
       "hint": "(Tab pour valider)"
     },
     "queuedMessages": {
-      "cancel": "Retirer de la file d’attente",
+      "remove": "Retirer de la file d’attente",
       "steer": "Orienter maintenant",
-      "merge": "Fusionner ces deux messages",
-      "moveUp": "Monter",
-      "moveDown": "Descendre"
+      "mergePreview": "Fusionner"
     },
     "ariaLabel": "Message à Claude",
     "autoModeFallback": "Le mode automatique n'est pas disponible ici — utilisation du mode d'autorisation par défaut à la place.",

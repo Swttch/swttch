@@ -129,11 +129,9 @@
       "hint": "(Tab to accept)"
     },
     "queuedMessages": {
-      "cancel": "Remove from queue",
+      "remove": "Remove from queue",
       "steer": "Steer now",
-      "merge": "Merge these two messages",
-      "moveUp": "Move up",
-      "moveDown": "Move down"
+      "mergePreview": "Merge"
     },
     "ariaLabel": "Message Claude",
     "autoModeFallback": "Auto mode isn't available here — using the default permission mode instead.",

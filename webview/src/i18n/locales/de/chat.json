@@ -129,11 +129,9 @@
       "hint": "(Tab zum Übernehmen)"
     },
     "queuedMessages": {
-      "cancel": "Aus der Warteschlange entfernen",
+      "remove": "Aus der Warteschlange entfernen",
       "steer": "Jetzt steuern",
-      "merge": "Diese beiden Nachrichten zusammenführen",
-      "moveUp": "Nach oben",
-      "moveDown": "Nach unten"
+      "mergePreview": "Zusammenführen"
     },
     "ariaLabel": "Nachricht an Claude",
     "autoModeFallback": "Der Auto-Modus ist hier nicht verfügbar — der Standard-Berechtigungsmodus wird stattdessen verwendet.",

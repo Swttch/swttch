@@ -129,11 +129,9 @@
       "hint": "(Tab으로 완성)"
     },
     "queuedMessages": {
-      "cancel": "대기열에서 제거",
+      "remove": "대기열에서 제거",
       "steer": "지금 조정",
-      "merge": "이 두 메시지 병합",
-      "moveUp": "위로 이동",
-      "moveDown": "아래로 이동"
+      "mergePreview": "병합"
     },
     "ariaLabel": "Claude에게 메시지 보내기",
     "autoModeFallback": "여기서는 자동 모드를 사용할 수 없어 기본 권한 모드를 대신 사용합니다.",

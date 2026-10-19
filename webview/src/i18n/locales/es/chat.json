@@ -129,11 +129,9 @@
       "hint": "(Tab para completar)"
     },
     "queuedMessages": {
-      "cancel": "Quitar de la cola",
+      "remove": "Quitar de la cola",
       "steer": "Redirigir ahora",
-      "merge": "Combinar estos dos mensajes",
-      "moveUp": "Subir",
-      "moveDown": "Bajar"
+      "mergePreview": "Combinar"
     },
     "ariaLabel": "Mensaje para Claude",
     "autoModeFallback": "El modo automático no está disponible aquí — se usará el modo de permisos predeterminado.",

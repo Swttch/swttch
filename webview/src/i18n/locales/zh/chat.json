@@ -129,11 +129,9 @@
       "hint": "(按 Tab 补全)"
     },
     "queuedMessages": {
-      "cancel": "从队列中移除",
+      "remove": "从队列中移除",
       "steer": "立即引导",
-      "merge": "合并这两条消息",
-      "moveUp": "上移",
-      "moveDown": "下移"
+      "mergePreview": "合并"
     },
     "ariaLabel": "给 Claude 发消息",
     "autoModeFallback": "此处无法使用自动模式 — 将改用默认权限模式。",

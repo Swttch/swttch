@@ -129,11 +129,9 @@
       "hint": "(Tab para completar)"
     },
     "queuedMessages": {
-      "cancel": "Remover da fila",
+      "remove": "Remover da fila",
       "steer": "Orientar agora",
-      "merge": "Mesclar estas duas mensagens",
-      "moveUp": "Mover para cima",
-      "moveDown": "Mover para baixo"
+      "mergePreview": "Mesclar"
     },
     "ariaLabel": "Mensagem para o Claude",
     "autoModeFallback": "O modo automático não está disponível aqui — usando o modo de permissão padrão.",
