@@ -57,23 +57,28 @@ export function removeQueuedMessage(sessionId: string, id: string): boolean {
 }
 
 /**
- * Fold the entry right after [id] into [id] — for follow-ups that were typed as
- * several messages but belong together. The merged entry keeps [id]'s id, slot
- * and `queuedAt`; its text is both texts separated by a blank line and its
- * attachments are both lists, this entry's first.
+ * Merge the message [sourceId] into the message [targetId] — for messages that
+ * were typed separately but belong together. Any two messages can be merged,
+ * not only neighbors. The dragged message's text goes after the target's,
+ * separated by a blank line, so the user picks the order by choosing what to
+ * drag onto what. The merged message keeps the target's id, slot and
+ * `queuedAt`; its attachments are the target's, then the dragged message's.
  *
- * Returns false when there is nothing to merge with ([id] unknown or last).
+ * Returns false when there is nothing to merge (same id, or an id that is not queued).
  */
-export function mergeQueuedMessageWithNext(sessionId: string, id: string): boolean {
+export function mergeQueuedMessages(sessionId: string, sourceId: string, targetId: string): boolean {
+  if (sourceId === targetId) return false;
   const queue = queues.get(sessionId);
   if (!queue) return false;
-  const index = queue.findIndex(entry => entry.id === id);
-  if (index === -1 || index === queue.length - 1) return false;
-  const [current, next] = [queue[index], queue[index + 1]];
-  const attachments = current.attachments || next.attachments
-    ? [...(current.attachments ?? []), ...(next.attachments ?? [])]
+  const source = queue.find(message => message.id === sourceId);
+  const targetIndex = queue.findIndex(message => message.id === targetId);
+  if (!source || targetIndex === -1) return false;
+  const target = queue[targetIndex];
+  const attachments = target.attachments || source.attachments
+    ? [...(target.attachments ?? []), ...(source.attachments ?? [])]
     : undefined;
-  queue.splice(index, 2, { ...current, content: `${current.content}\n\n${next.content}`, attachments });
+  queue[targetIndex] = { ...target, content: `${target.content}\n\n${source.content}`, attachments };
+  queue.splice(queue.indexOf(source), 1);
   return true;
 }
 

@@ -13,7 +13,7 @@ import {
   dequeueNextMessage,
   clearQueuedMessages,
   clearAllQueuedMessages,
-  mergeQueuedMessageWithNext,
+  mergeQueuedMessages,
   moveQueuedMessage,
   takeQueuedMessage,
   restoreQueuedMessage,
@@ -120,38 +120,48 @@ function seed(...ids: string[]) {
 }
 const ids = () => getQueuedMessages('s').map(e => e.id);
 
-describe('mergeQueuedMessageWithNext', () => {
+describe('mergeQueuedMessages', () => {
   beforeEach(() => clearAllQueuedMessages());
 
-  it('folds the next entry into this one, keeping this one id, slot and queuedAt', () => {
+  it('adds the dragged message after the target, in the target place, keeping its id and queuedAt', () => {
     seed('a', 'b', 'c');
-    expect(mergeQueuedMessageWithNext('s', 'a')).toBe(true);
+    expect(mergeQueuedMessages('s', 'c', 'a')).toBe(true);
     const [merged, rest] = getQueuedMessages('s');
-    expect(merged).toMatchObject({ id: 'a', content: 'A\n\nB', queuedAt: 0 });
-    expect(rest.id).toBe('c');
+    expect(merged).toMatchObject({ id: 'a', content: 'A\n\nC', queuedAt: 0 });
+    expect(rest.id).toBe('b');
+    expect(ids()).toEqual(['a', 'b']);
   });
 
-  it('concatenates attachments, this entry first', () => {
+  it('works when the dragged message sits above the target', () => {
+    seed('a', 'b', 'c');
+    expect(mergeQueuedMessages('s', 'a', 'c')).toBe(true);
+    expect(ids()).toEqual(['b', 'c']);
+    expect(getQueuedMessages('s')[1]).toMatchObject({ id: 'c', content: 'C\n\nA', queuedAt: 2 });
+  });
+
+  it('puts the target attachments first, then the dragged message ones', () => {
     const img = { type: 'image' as const, fileName: 'x.png', mimeType: 'image/png', base64: '' };
     const file = { type: 'file' as const, fileName: 'y.ts', absolutePath: '/y.ts' };
     enqueueMessage('s', { id: 'a', content: 'A', queuedAt: 0, attachments: [img] });
     enqueueMessage('s', { id: 'b', content: 'B', queuedAt: 1, attachments: [file] });
-    mergeQueuedMessageWithNext('s', 'a');
-    expect(getQueuedMessages('s')[0].attachments).toEqual([img, file]);
+    mergeQueuedMessages('s', 'a', 'b');
+    expect(getQueuedMessages('s')[0].attachments).toEqual([file, img]);
   });
 
-  it('leaves attachments undefined when neither entry had any', () => {
+  it('leaves attachments undefined when neither message had any', () => {
     seed('a', 'b');
-    mergeQueuedMessageWithNext('s', 'a');
+    mergeQueuedMessages('s', 'b', 'a');
     expect(getQueuedMessages('s')[0].attachments).toBeUndefined();
   });
 
-  it('refuses the last entry and unknown ids', () => {
+  it('refuses a message merged onto itself and unknown ids', () => {
     seed('a', 'b');
-    expect(mergeQueuedMessageWithNext('s', 'b')).toBe(false);
-    expect(mergeQueuedMessageWithNext('s', 'zz')).toBe(false);
-    expect(mergeQueuedMessageWithNext('none', 'a')).toBe(false);
+    expect(mergeQueuedMessages('s', 'a', 'a')).toBe(false);
+    expect(mergeQueuedMessages('s', 'zz', 'a')).toBe(false);
+    expect(mergeQueuedMessages('s', 'a', 'zz')).toBe(false);
+    expect(mergeQueuedMessages('none', 'a', 'b')).toBe(false);
     expect(ids()).toEqual(['a', 'b']);
+    expect(getQueuedMessages('s').map(m => m.content)).toEqual(['A', 'B']);
   });
 });
 

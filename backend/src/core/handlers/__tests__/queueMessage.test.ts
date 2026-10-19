@@ -180,18 +180,28 @@ function watched() {
 }
 
 describe('mergeQueuedMessagesHandler', () => {
-  it('merges and broadcasts the new queue', async () => {
+  it('merges the dragged message onto the target and broadcasts the new queue', async () => {
     const { connections, ws, connId } = watched();
-    seedQueue('a', 'b');
-    await mergeQueuedMessagesHandler(connId, request(MessageType.MERGE_QUEUED_MESSAGES, { id: 'a' }), connections, bridge);
-    expect(getQueuedMessages('sess-1').map(e => e.content)).toEqual(['A\n\nB']);
+    seedQueue('a', 'b', 'c');
+    await mergeQueuedMessagesHandler(
+      connId,
+      request(MessageType.MERGE_QUEUED_MESSAGES, { sourceId: 'c', targetId: 'a' }),
+      connections,
+      bridge,
+    );
+    expect(getQueuedMessages('sess-1').map(m => m.content)).toEqual(['A\n\nC', 'B']);
     expect(sentTypes(ws)).toEqual(expect.arrayContaining([MessageType.QUEUED_MESSAGES_CHANGED, MessageType.ACK]));
   });
 
   it('acks a stale id without an error', async () => {
     const { connections, ws, connId } = watched();
     seedQueue('a');
-    await mergeQueuedMessagesHandler(connId, request(MessageType.MERGE_QUEUED_MESSAGES, { id: 'gone' }), connections, bridge);
+    await mergeQueuedMessagesHandler(
+      connId,
+      request(MessageType.MERGE_QUEUED_MESSAGES, { sourceId: 'gone', targetId: 'a' }),
+      connections,
+      bridge,
+    );
     expect(getQueuedMessages('sess-1').map(e => e.id)).toEqual(['a']);
     expect(sentTypes(ws)).not.toContain(MessageType.ERROR);
     expect(sentTypes(ws)).toContain(MessageType.ACK);

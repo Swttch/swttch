@@ -9,7 +9,7 @@ import {
   enqueueMessage,
   removeQueuedMessage,
   getQueuedMessages,
-  mergeQueuedMessageWithNext,
+  mergeQueuedMessages,
   moveQueuedMessage,
   takeQueuedMessage,
   restoreQueuedMessage,
@@ -116,8 +116,8 @@ export async function getQueuedMessagesHandler(
 }
 
 /**
- * MERGE_QUEUED_MESSAGES — fold the message after [id] into [id], for follow-ups
- * that were typed as several messages but belong together.
+ * MERGE_QUEUED_MESSAGES — merge the dragged message [sourceId] into [targetId],
+ * for messages that were typed separately but belong together.
  */
 export async function mergeQueuedMessagesHandler(
   connectionId: string,
@@ -126,10 +126,11 @@ export async function mergeQueuedMessagesHandler(
   _bridge: Bridge,
 ): Promise<void> {
   const sessionId = message.payload?.sessionId as string | undefined;
-  const id = message.payload?.id as string | undefined;
+  const sourceId = message.payload?.sourceId as string | undefined;
+  const targetId = message.payload?.targetId as string | undefined;
 
-  if (sessionId && id) {
-    mergeQueuedMessageWithNext(sessionId, id);
+  if (sessionId && sourceId && targetId) {
+    mergeQueuedMessages(sessionId, sourceId, targetId);
     broadcastQueue(sessionId, connections);
   }
 
