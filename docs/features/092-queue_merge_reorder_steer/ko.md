@@ -86,7 +86,7 @@ Steer를 고른 상태에서는 설정 설명에 적힌 단축키가 **메시지
 
 **Steer now** 는 메시지를 대기열에서 꺼내 **현재 턴 도중에 바로** Claude에게 보냅니다. Steer 방식에서 보낸 메시지와 같은 방식입니다. Claude는 작업하는 중에 그 메시지를 받아 방향을 바꿀 수 있습니다. 대기 중인 다른 메시지들은 제자리에 남습니다.
 
-![Claude가 ping 명령 여덟 개 중 첫 번째를 아직 실행 중이다. Steer now로 보낸 합친 메시지가 이미 그 명령 아래 대화에 나타나 있고, 대기열에는 "Then list the TODO comments in the backend folder."만 남아 있다.](./assets/steer-now.png)
+![Claude가 아직 이야기를 쓰고 있다. Steer now로 보낸 합친 메시지가 이미 그 아래 대화에 나타나 있고, 대기열에는 "Then list the TODO comments in the backend folder."만 남아 있다.](./assets/steer-now.png)
 
 그 순간 Claude가 입력을 받을 수 없으면 Steer now는 아무 일도 하지 않고 메시지는 제자리에 남습니다.
 

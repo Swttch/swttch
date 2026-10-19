@@ -86,7 +86,7 @@ Drag a message and hold it over the **middle** of another one until that one is 
 
 **Steer now** takes the message out of the queue and sends it to Claude **immediately, in the middle of the current turn**, the same way a message sent in Steer mode is. Claude receives it while working and can change course. The other queued messages stay where they are.
 
-![Claude is still on the first of eight ping commands. The merged message, sent with Steer now, already appears in the conversation below that command, and only "Then list the TODO comments in the backend folder." is left in the queue.](./assets/steer-now.png)
+![Claude is still writing a story. The merged message, sent with Steer now, already appears in the conversation below it, and only "Then list the TODO comments in the backend folder." is left in the queue.](./assets/steer-now.png)
 
 If Claude can't take input at that moment, Steer now does nothing and the message stays in place.
 
