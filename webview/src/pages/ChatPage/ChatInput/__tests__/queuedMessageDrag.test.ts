@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hoverFromPointer, messageDropZone, placeMessage } from '../queuedMessageDrag';
+import { STACK_EDGE_MARGIN, hoverFromPointer, messageDropZone, placeMessage } from '../queuedMessageDrag';
 
 const rect = { top: 100, height: 40 };
 
@@ -52,6 +52,15 @@ describe('hoverFromPointer', () => {
     expect(hoverFromPointer(null, { x: 50, y: 120 }, container)).toBe('gap');
     expect(hoverFromPointer(undefined, { x: 50, y: 120 }, container)).toBe('gap');
     expect(hoverFromPointer({ id: 'b' }, { x: 50, y: 120 }, container)).toBe('gap');
+  });
+
+  it('reads the band just above the stack as before the first message and just below as after the last', () => {
+    const ends = { first: 'a', last: 'c' };
+    expect(hoverFromPointer(target, { x: 50, y: 40 }, container, ends)).toEqual({ id: 'a', zone: 'before' });
+    expect(hoverFromPointer(target, { x: 50, y: 260 }, container, ends)).toEqual({ id: 'c', zone: 'after' });
+    expect(hoverFromPointer(target, { x: 50, y: 50 - STACK_EDGE_MARGIN - 1 }, container, ends)).toBeNull();
+    expect(hoverFromPointer(target, { x: 50, y: 250 + STACK_EDGE_MARGIN + 1 }, container, ends)).toBeNull();
+    expect(hoverFromPointer(target, { x: -1, y: 40 }, container, ends)).toBeNull();
   });
 
   it('gives null when the pointer is outside the stack on any side, whatever the target', () => {

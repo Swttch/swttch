@@ -26,9 +26,9 @@ function setup(list = messages) {
 const bubble = (id: string) => screen.getByTestId(`queued-message-${id}`);
 
 /** Pretend a drag is in flight, since jsdom cannot drive the drag layer's pointer. */
-function dragging(state: { draggingId: string; mergeTargetId?: string | null }) {
+function dragging(state: { draggingId: string; mergeTargetId?: string | null; orderedIds?: string[] }) {
   vi.mocked(useQueuedMessageDrag).mockReturnValue({
-    orderedIds: messages.map(m => m.id),
+    orderedIds: state.orderedIds ?? messages.map(m => m.id),
     draggingId: state.draggingId,
     mergeTargetId: state.mergeTargetId ?? null,
     start: vi.fn(),
@@ -70,6 +70,16 @@ describe('QueuedMessagesStack icons', () => {
 });
 
 describe('QueuedMessagesStack while dragging', () => {
+  // Moving the held message's element in the page makes the drag layer lose the copy under the pointer.
+  it('shows a previewed order without moving any message in the page', () => {
+    dragging({ draggingId: 'c', orderedIds: ['c', 'a', 'b'] });
+    setup();
+    const slots = [...document.querySelectorAll<HTMLElement>('[data-queued-slot]')];
+    const idOf = (slot: HTMLElement) => slot.querySelector('[data-testid^="queued-message-"]')?.getAttribute('data-testid');
+    expect(slots.map(idOf)).toEqual(['queued-message-a', 'queued-message-b', 'queued-message-c']);
+    expect(slots.map(slot => slot.style.order)).toEqual(['1', '2', '0']);
+  });
+
   it('keeps every message fanned out', () => {
     dragging({ draggingId: 'c' });
     setup();

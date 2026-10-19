@@ -87,8 +87,9 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
   if (messages.length === 0) return null;
 
   const fanned = drag.draggingId !== null;
-  const byId = new Map(messages.map(m => [m.id, m]));
-  const ordered = drag.orderedIds.flatMap(id => byId.get(id) ?? []);
+  // The page keeps the queue's order and only the flex `order` shows the preview: moving the held
+  // message's element in the page would make the drag layer drop the copy that follows the pointer.
+  const visualIndex = new Map(drag.orderedIds.map((id, index) => [id, index]));
 
   /** `to` is where the pointer is going; the operation's own position is a snapshot from before the move. */
   const hover = (
@@ -99,6 +100,7 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
       operation.target,
       to ?? operation.position.current,
       container.current?.getBoundingClientRect(),
+      { first: drag.orderedIds[0], last: drag.orderedIds[drag.orderedIds.length - 1] },
     );
     if (found === 'gap') drag.hoverGap();
     else drag.hover(found?.id ?? null, found?.zone ?? null);
@@ -130,12 +132,13 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
             {messages.length}
           </div>
         )}
-        <div className="relative">
-          {ordered.map((message, index) => {
+        <div className="relative flex flex-col">
+          {messages.map((message) => {
+            const index = visualIndex.get(message.id) ?? 0;
             const depthIdx = Math.min(index, STACK_TRANSLATE.length - 1);
             const slotClass = index === 0 ? 'relative z-10' : fanned ? FANNED_SLOT_CLASS : restingSlotClass(depthIdx);
             return (
-              <div key={message.id} className={slotClass} data-queued-slot>
+              <div key={message.id} className={slotClass} style={{ order: index }} data-queued-slot>
                 <QueuedMessageBubble
                   message={message}
                   index={index}
