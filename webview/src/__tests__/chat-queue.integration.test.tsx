@@ -133,7 +133,7 @@ function TestChatComponent() {
       ))}
       {ctx.queuedMessages.map(m => (
         <React.Fragment key={`actions-${m.id}`}>
-          <button data-testid={`merge-${m.id}`} onClick={() => ctx.mergeQueuedMessageWithNext(m.id)}>
+          <button data-testid={`merge-${m.id}`} onClick={() => ctx.mergeQueuedMessages(m.id, 'target-id')}>
             Merge {m.content}
           </button>
           <button data-testid={`move-${m.id}`} onClick={() => ctx.moveQueuedMessage(m.id, 2)}>
@@ -364,7 +364,7 @@ describe('queued follow-up message integration', () => {
     expect(screen.getByTestId('queue-count')).toHaveTextContent('0');
   });
 
-  it('sends MERGE_QUEUED_MESSAGES with the matching id when the merge button is clicked', async () => {
+  it('sends MERGE_QUEUED_MESSAGES with the dragged and target ids', async () => {
     render(<TestWrapper><TestChatComponent /></TestWrapper>);
 
     await act(async () => {
@@ -378,7 +378,11 @@ describe('queued follow-up message integration', () => {
       fireEvent.click(screen.getByTestId('merge-q1'));
     });
 
-    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.MERGE_QUEUED_MESSAGES, { sessionId: 'queue-session', id: 'q1' });
+    expect(mockBridge.send).toHaveBeenCalledWith(MessageType.MERGE_QUEUED_MESSAGES, {
+      sessionId: 'queue-session',
+      sourceId: 'q1',
+      targetId: 'target-id',
+    });
     // The list changes only when the backend broadcasts it, never from the click.
     expect(screen.getByTestId('queue-count')).toHaveTextContent('1');
   });

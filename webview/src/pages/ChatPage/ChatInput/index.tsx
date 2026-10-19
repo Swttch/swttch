@@ -128,7 +128,7 @@ export function ChatInput() {
   const { currentSessionId, currentSession, sessionState, workingDirectory, inputMode: mode, cycleInputMode: cycleMode, setInputMode, availableModes, autoFallbackNotice, dismissAutoFallback } = useSessionContext();
   const chatStream = useChatStreamContext();
   const onboarding = useOnboarding();
-  const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessageWithNext, moveQueuedMessage, steerQueuedMessage } = chatStream;
+  const { handleSubmit: onSubmit, isStreaming, stop: onStop, queuedMessages, cancelQueuedMessage, mergeQueuedMessages, moveQueuedMessage, steerQueuedMessage } = chatStream;
   const { input: value, setInput: onChange } = useChatInputState();
   const inputHistory = useInputHistory({ workingDirectory, sessionId: currentSessionId });
   const { pushToHistory, navigateUp, navigateDown, resetHistory } = inputHistory;
@@ -1290,10 +1290,10 @@ export function ChatInput() {
           setting). Drawn exactly as ChatStreamContext.queuedMessages reports
           it — this component holds nothing of its own. */}
       <QueuedMessagesStack
-        entries={queuedMessages}
+        messages={queuedMessages}
         onCancel={cancelQueuedMessage}
         onSteer={steerQueuedMessage}
-        onMergeWithNext={mergeQueuedMessageWithNext}
+        onMerge={mergeQueuedMessages}
         onMove={moveQueuedMessage}
       />
       {/* 메인 인풋 컨테이너 — drag/drop은 window 레벨 리스너가 패널 전체에서 처리한다.

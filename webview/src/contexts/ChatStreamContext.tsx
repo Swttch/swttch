@@ -89,8 +89,8 @@ interface ChatStreamContextType {
   queueMessage: (content: string, attachments?: Attachment[]) => void;
   /** Remove one held message from the backend queue by id, before it is sent. */
   cancelQueuedMessage: (id: string) => void;
-  /** Fold the next held message into this one. */
-  mergeQueuedMessageWithNext: (id: string) => void;
+  /** Merge the dragged held message into another one, its text after the target's. */
+  mergeQueuedMessages: (sourceId: string, targetId: string) => void;
   /** Move one held message to another position in the queue. */
   moveQueuedMessage: (id: string, toIndex: number) => void;
   /** Take one held message out of the queue and send it to the CLI now. */
@@ -635,13 +635,13 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     [bridge, session]
   );
 
-  /** Fold the held message after [id] into [id]; the backend broadcasts the result. */
-  const mergeQueuedMessageWithNext = useCallback(
-    (id: string) => {
+  /** Merge the held message [sourceId] into [targetId]; the backend broadcasts the result. */
+  const mergeQueuedMessages = useCallback(
+    (sourceId: string, targetId: string) => {
       const sessionId = session.currentSessionId;
       if (!sessionId) return;
 
-      bridge.send(MessageType.MERGE_QUEUED_MESSAGES, { sessionId, id }).catch((error) => {
+      bridge.send(MessageType.MERGE_QUEUED_MESSAGES, { sessionId, sourceId, targetId }).catch((error) => {
         console.error('[ChatStreamContext] Failed to merge queued messages:', error);
       });
     },
@@ -868,7 +868,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     queuedMessages,
     queueMessage,
     cancelQueuedMessage,
-    mergeQueuedMessageWithNext,
+    mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
 
@@ -935,7 +935,7 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
     queuedMessages,
     queueMessage,
     cancelQueuedMessage,
-    mergeQueuedMessageWithNext,
+    mergeQueuedMessages,
     moveQueuedMessage,
     steerQueuedMessage,
     tools,

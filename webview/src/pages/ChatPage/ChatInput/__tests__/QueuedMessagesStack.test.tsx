@@ -1,87 +1,101 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueuedMessagesStack } from '../QueuedMessagesStack';
+import { useQueuedMessageDrag } from '../useQueuedMessageDrag';
 
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const entries = [
+vi.mock('../useQueuedMessageDrag', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../useQueuedMessageDrag')>();
+  return { ...actual, useQueuedMessageDrag: vi.fn(actual.useQueuedMessageDrag) };
+});
+
+const messages = [
   { id: 'a', content: 'first', queuedAt: 0 },
   { id: 'b', content: 'second', queuedAt: 1 },
   { id: 'c', content: 'third', queuedAt: 2 },
 ];
 
-function setup(list = entries) {
-  const handlers = { onCancel: vi.fn(), onSteer: vi.fn(), onMergeWithNext: vi.fn(), onMove: vi.fn() };
-  render(<QueuedMessagesStack entries={list} {...handlers} />);
+function setup(list = messages) {
+  const handlers = { onCancel: vi.fn(), onSteer: vi.fn(), onMerge: vi.fn(), onMove: vi.fn() };
+  render(<QueuedMessagesStack messages={list} {...handlers} />);
   return handlers;
 }
 const bubble = (id: string) => screen.getByTestId(`queued-message-${id}`);
 
-describe('QueuedMessagesStack toolbar', () => {
-  it('offers only the moves that make sense at each position', () => {
-    setup();
-    expect(within(bubble('a')).queryByLabelText('chatInput.queuedMessages.moveUp')).toBeNull();
-    expect(within(bubble('a')).getByLabelText('chatInput.queuedMessages.moveDown')).toBeTruthy();
-    expect(within(bubble('c')).queryByLabelText('chatInput.queuedMessages.moveDown')).toBeNull();
-    expect(within(bubble('b')).queryByText('chatInput.queuedMessages.merge')).toBeNull();
+/** Pretend a drag is in flight, since jsdom cannot drive the drag layer's pointer. */
+function dragging(state: { draggingId: string; mergeTargetId?: string | null }) {
+  vi.mocked(useQueuedMessageDrag).mockReturnValue({
+    orderedIds: messages.map(m => m.id),
+    draggingId: state.draggingId,
+    mergeTargetId: state.mergeTargetId ?? null,
+    start: vi.fn(),
+    hover: vi.fn(),
+    drop: vi.fn(),
+    cancel: vi.fn(),
+  });
+}
+
+describe('QueuedMessagesStack icons', () => {
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import('../useQueuedMessageDrag')>('../useQueuedMessageDrag');
+    vi.mocked(useQueuedMessageDrag).mockImplementation(actual.useQueuedMessageDrag);
   });
 
-  it('a single message can only be sent now or removed', () => {
-    setup([entries[0]]);
+  it('gives every message the same two icons, even a single one', () => {
+    setup([messages[0]]);
     const labels = within(bubble('a')).getAllByRole('button')
       .map(b => b.getAttribute('aria-label'))
       .filter(l => l?.startsWith('chatInput.queuedMessages.'));
-    expect(labels).toEqual(['chatInput.queuedMessages.steer', 'chatInput.queuedMessages.cancel']);
+    expect(labels).toEqual(['chatInput.queuedMessages.steer', 'chatInput.queuedMessages.remove']);
   });
 
-  it('calls each handler with the entry id and target index', () => {
-    const h = setup();
-    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.steer'));
-    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.moveUp'));
-    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.moveDown'));
-    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.cancel'));
-    expect(h.onSteer).toHaveBeenCalledWith('b');
-    expect(h.onMove).toHaveBeenNthCalledWith(1, 'b', 0);
-    expect(h.onMove).toHaveBeenNthCalledWith(2, 'b', 2);
-    expect(h.onCancel).toHaveBeenCalledWith('b');
-  });
-});
-
-describe('QueuedMessagesStack merge buttons', () => {
-  const mergeButtons = () => screen.getAllByRole('button', { name: 'chatInput.queuedMessages.merge' });
-
-  it('puts one merge button between each pair of messages', () => {
+  it('has no move or merge buttons any more', () => {
     setup();
-    expect(mergeButtons()).toHaveLength(2);
-  });
-
-  it('has no merge button for a single message', () => {
-    setup([entries[0]]);
+    expect(screen.queryByLabelText('chatInput.queuedMessages.moveUp')).toBeNull();
+    expect(screen.queryByLabelText('chatInput.queuedMessages.moveDown')).toBeNull();
     expect(screen.queryByRole('button', { name: 'chatInput.queuedMessages.merge' })).toBeNull();
   });
 
-  it('merges the message above the button into the one below it', () => {
+  it('calls each handler with the message id', () => {
     const h = setup();
-    fireEvent.click(mergeButtons()[1]);
-    expect(h.onMergeWithNext).toHaveBeenCalledWith('b');
+    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.steer'));
+    fireEvent.click(within(bubble('b')).getByLabelText('chatInput.queuedMessages.remove'));
+    expect(h.onSteer).toHaveBeenCalledWith('b');
+    expect(h.onCancel).toHaveBeenCalledWith('b');
   });
 
-  it('outlines the two messages it would merge while hovered', () => {
+  it('does not expand the bubble when an icon is clicked', () => {
     setup();
-    const outlined = () => ['a', 'b', 'c'].filter(id => bubble(id).className.includes('ring-1'));
-    fireEvent.mouseEnter(mergeButtons()[0]);
-    expect(outlined()).toEqual(['a', 'b']);
-    fireEvent.mouseLeave(mergeButtons()[0]);
-    expect(outlined()).toEqual([]);
+    fireEvent.click(within(bubble('a')).getByLabelText('chatInput.queuedMessages.steer'));
+    const box = bubble('a').querySelector('[data-message-box]');
+    expect(box?.className).toContain('max-h-[28px]');
+  });
+});
+
+describe('QueuedMessagesStack while dragging', () => {
+  it('keeps every message fanned out', () => {
+    dragging({ draggingId: 'c' });
+    setup();
+    for (const id of ['b', 'c']) {
+      const slot = bubble(id).closest('[data-queued-slot]') as HTMLElement;
+      expect(slot.className.split(' ')).not.toContain('absolute');
+    }
   });
 
-  it('drops the outline once merged, since the clicked button goes away without a mouseleave', () => {
+  it('hides the count badge', () => {
+    dragging({ draggingId: 'c' });
     setup();
-    const outlined = () => ['a', 'b', 'c'].filter(id => bubble(id).className.includes('ring-1'));
-    fireEvent.mouseEnter(mergeButtons()[0]);
-    fireEvent.click(mergeButtons()[0]);
-    expect(outlined()).toEqual([]);
+    expect(screen.getByText('3').className.split(' ')).toContain('opacity-0');
+  });
+
+  it('outlines the merge target and labels it', () => {
+    dragging({ draggingId: 'c', mergeTargetId: 'a' });
+    setup();
+    expect(bubble('a').className).toContain('ring-1');
+    expect(within(bubble('a')).getByText('chatInput.queuedMessages.mergePreview')).toBeTruthy();
+    expect(bubble('b').className).not.toContain('ring-1');
   });
 });
