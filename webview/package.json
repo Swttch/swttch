@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ark-ui/react": "^5.39.1",
+    "@dnd-kit/dom": "^0.5.0",
     "@dnd-kit/helpers": "^0.5.0",
     "@dnd-kit/react": "^0.5.0",
     "@heroicons/react": "^2.2.0",

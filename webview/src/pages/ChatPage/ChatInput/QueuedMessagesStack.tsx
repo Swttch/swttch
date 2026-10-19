@@ -5,7 +5,8 @@ import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
 import type { QueuedMessage } from '@/shared';
 import { MessageBox } from '../message-renderers/components/MessageBox';
-import { messageDropZone } from './queuedMessageDrag';
+import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
+import { hoverFromPointer } from './queuedMessageDrag';
 import { useQueuedMessageDrag } from './useQueuedMessageDrag';
 
 interface QueuedMessagesStackProps {
@@ -46,6 +47,13 @@ function restingSlotClass(depthIdx: number) {
 /** During a drag the stack stays fanned out even when the pointer leaves it, or the targets would vanish. */
 const FANNED_SLOT_CLASS = 'relative mt-1.5';
 
+/** Drag starts only after the pointer moved a few pixels (no press-and-hold), so a plain click still expands the bubble. */
+const QUEUED_DRAG_SENSORS = [
+  PointerSensor.configure({
+    activationConstraints: [new PointerActivationConstraints.Distance({ value: 5 })],
+  }),
+];
+
 /**
  * The queued messages, drawn above the composer.
  *
@@ -60,7 +68,8 @@ const FANNED_SLOT_CLASS = 'relative mt-1.5';
  * merge the two — see `useQueuedMessageDrag` for the hold that decides which.
  * Optimistic sorting is turned off: the hook, not the drag layer, decides when
  * the others make room. A click still expands the bubble (`MessageBox`'s own
- * behavior); the drag only starts after the pointer has moved a few pixels.
+ * behavior); the drag only starts after the pointer has moved 5 pixels (no hold delay),
+ * and never from the icon buttons.
  *
  * The message on top at rest is the OLDEST, not the most recently queued: it
  * is the one about to be released to the CLI next, which is the one worth
@@ -74,22 +83,28 @@ export function QueuedMessagesStack({ messages, onCancel, onSteer, onMerge, onMo
   const byId = new Map(messages.map(m => [m.id, m]));
   const ordered = drag.orderedIds.flatMap(id => byId.get(id) ?? []);
 
+  /** `to` is where the pointer is going; the operation's own position is a snapshot from before the move. */
+  const hover = (
+    operation: { target?: Parameters<typeof hoverFromPointer>[0]; position: { current: { x: number; y: number } } },
+    to?: { x: number; y: number },
+  ) => {
+    const found = hoverFromPointer(operation.target, to ?? operation.position.current);
+    drag.hover(found?.id ?? null, found?.zone ?? null);
+  };
+
   return (
     <DragDropProvider
-      onDragStart={(event) => drag.start(String(event.operation.source?.id))}
+      sensors={QUEUED_DRAG_SENSORS}
+      onDragStart={(event) => {
+        const source = event.operation.source;
+        if (source) drag.start(String(source.id));
+      }}
       onDragOver={(event) => {
         // The hold in useQueuedMessageDrag decides when the list moves, not the drag layer.
         event.preventDefault();
+        hover(event.operation);
       }}
-      onDragMove={(event) => {
-        const { target, position } = event.operation;
-        const rect = target?.shape?.boundingRectangle;
-        if (!target || !rect) {
-          drag.hover(null, null);
-          return;
-        }
-        drag.hover(String(target.id), messageDropZone(position.current.y, rect));
-      }}
+      onDragMove={(event) => hover(event.operation, event.to)}
       onDragEnd={(event) => (event.canceled ? drag.cancel() : drag.drop())}
     >
       <div className="group/queue relative mb-2" data-testid="queued-messages-stack">

@@ -17,6 +17,26 @@ export function messageDropZone(pointerY: number, rect: { top: number; height: n
   return 'merge';
 }
 
+/**
+ * What to tell the drag hook for a pointer position and the drop target the
+ * drag layer reports: the target's id and zone, or null when there is no
+ * target or the pointer is outside its box. The drag layer keeps reporting the
+ * last overlapped bubble while the pointer is already outside every bubble, so
+ * a release there must not count as a drop on it.
+ */
+export function hoverFromPointer(
+  target: { id: string | number; shape?: { boundingRectangle: { top: number; left: number; width: number; height: number } } | null } | null | undefined,
+  pointer: { x: number; y: number },
+): { id: string; zone: MessageDropZone } | null {
+  const rect = target?.shape?.boundingRectangle;
+  if (!target || !rect) return null;
+  const inside =
+    pointer.x >= rect.left && pointer.x <= rect.left + rect.width &&
+    pointer.y >= rect.top && pointer.y <= rect.top + rect.height;
+  if (!inside) return null;
+  return { id: String(target.id), zone: messageDropZone(pointer.y, rect) };
+}
+
 /** [ids] with [sourceId] moved right before or right after [targetId]. Unchanged when either is unknown. */
 export function placeMessage(
   ids: string[],

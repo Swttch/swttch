@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { messageDropZone, placeMessage } from '../queuedMessageDrag';
+import { hoverFromPointer, messageDropZone, placeMessage } from '../queuedMessageDrag';
 
 const rect = { top: 100, height: 40 };
 
@@ -31,5 +31,27 @@ describe('placeMessage', () => {
   it('leaves the order alone for an unknown message', () => {
     expect(placeMessage(['a', 'b'], 'zz', 'a', 'before')).toEqual(['a', 'b']);
     expect(placeMessage(['a', 'b'], 'a', 'zz', 'before')).toEqual(['a', 'b']);
+  });
+});
+
+describe('hoverFromPointer', () => {
+  const target = { id: 'b', shape: { boundingRectangle: { top: 100, left: 10, width: 200, height: 40 } } };
+
+  it('gives the id and zone while the pointer is inside the target', () => {
+    expect(hoverFromPointer(target, { x: 50, y: 120 })).toEqual({ id: 'b', zone: 'merge' });
+    expect(hoverFromPointer(target, { x: 50, y: 102 })).toEqual({ id: 'b', zone: 'before' });
+  });
+
+  it('gives null when the pointer is outside on any side', () => {
+    expect(hoverFromPointer(target, { x: 50, y: 99 })).toBeNull();
+    expect(hoverFromPointer(target, { x: 50, y: 141 })).toBeNull();
+    expect(hoverFromPointer(target, { x: 9, y: 120 })).toBeNull();
+    expect(hoverFromPointer(target, { x: 211, y: 120 })).toBeNull();
+  });
+
+  it('gives null without a target or a shape', () => {
+    expect(hoverFromPointer(null, { x: 50, y: 120 })).toBeNull();
+    expect(hoverFromPointer(undefined, { x: 50, y: 120 })).toBeNull();
+    expect(hoverFromPointer({ id: 'b' }, { x: 50, y: 120 })).toBeNull();
   });
 });
