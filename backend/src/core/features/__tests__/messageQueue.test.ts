@@ -193,21 +193,21 @@ describe('moveQueuedMessage', () => {
 describe('takeQueuedMessage / restoreQueuedMessage', () => {
   beforeEach(() => clearAllQueuedMessages());
 
-  it('takes an entry out with its index, and restore puts it back there', () => {
+  it('takes a message out with its index, and restore puts it back there', () => {
     seed('a', 'b', 'c');
     const taken = takeQueuedMessage('s', 'b');
-    expect(taken?.entry.id).toBe('b');
+    expect(taken?.message.id).toBe('b');
     expect(taken?.index).toBe(1);
     expect(ids()).toEqual(['a', 'c']);
-    restoreQueuedMessage('s', taken!.entry, taken!.index);
+    restoreQueuedMessage('s', taken!.message, taken!.index);
     expect(ids()).toEqual(['a', 'b', 'c']);
   });
 
-  it('forgets the session once its last entry is taken, and restore recreates it', () => {
+  it('forgets the session once its last message is taken, and restore recreates it', () => {
     seed('a');
     const taken = takeQueuedMessage('s', 'a');
     expect(getQueuedMessages('s')).toEqual([]);
-    restoreQueuedMessage('s', taken!.entry, 5);
+    restoreQueuedMessage('s', taken!.message, 5);
     expect(ids()).toEqual(['a']);
   });
 

@@ -158,12 +158,12 @@ export async function moveQueuedMessageHandler(
 
 /**
  * STEER_QUEUED_MESSAGE — take one held message out of the queue and write it to
- * the CLI now, the same way a "steer" follow-up is sent mid-turn, instead of
+ * the CLI now, the same way a "steer" message is sent mid-turn, instead of
  * waiting for the current turn to end.
  *
  * Delivery mirrors the end-of-turn release in `claude-process.ts`: the user
  * message is broadcast to every watcher, sender included, because no tab drew
- * it optimistically. When no process can take it, the entry goes back to the
+ * it optimistically. When no process can take it, the message goes back to the
  * slot it came from rather than being lost.
  */
 export async function steerQueuedMessageHandler(
@@ -178,14 +178,14 @@ export async function steerQueuedMessageHandler(
   if (sessionId && id) {
     const taken = takeQueuedMessage(sessionId, id);
     if (taken) {
-      const sent = sendMessageToProcess(connections, sessionId, taken.entry.content, taken.entry.attachments);
+      const sent = sendMessageToProcess(connections, sessionId, taken.message.content, taken.message.attachments);
       if (sent) {
         connections.broadcastToSession(sessionId, MessageType.USER_MESSAGE_BROADCAST, {
-          content: taken.entry.content,
+          content: taken.message.content,
           sessionId,
         });
       } else {
-        restoreQueuedMessage(sessionId, taken.entry, taken.index);
+        restoreQueuedMessage(sessionId, taken.message, taken.index);
       }
     }
     broadcastQueue(sessionId, connections);

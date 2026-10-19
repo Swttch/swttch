@@ -82,38 +82,38 @@ export function mergeQueuedMessages(sessionId: string, sourceId: string, targetI
   return true;
 }
 
-/** Move the entry with [id] to [toIndex] (clamped to the queue). False when [id] is unknown. */
+/** Move the message with [id] to [toIndex] (clamped to the queue). False when [id] is unknown. */
 export function moveQueuedMessage(sessionId: string, id: string, toIndex: number): boolean {
   const queue = queues.get(sessionId);
   if (!queue) return false;
-  const from = queue.findIndex(entry => entry.id === id);
+  const from = queue.findIndex(message => message.id === id);
   if (from === -1) return false;
-  const [entry] = queue.splice(from, 1);
-  queue.splice(Math.max(0, Math.min(toIndex, queue.length)), 0, entry);
+  const [message] = queue.splice(from, 1);
+  queue.splice(Math.max(0, Math.min(toIndex, queue.length)), 0, message);
   return true;
 }
 
 /**
- * Remove the entry with [id] and return it with the index it had, so a caller
+ * Remove the message with [id] and return it with the index it had, so a caller
  * that fails to deliver it can put it back where it was ({@link restoreQueuedMessage}).
  */
 export function takeQueuedMessage(
   sessionId: string,
   id: string,
-): { entry: QueuedMessageEntry; index: number } | undefined {
+): { message: QueuedMessageEntry; index: number } | undefined {
   const queue = queues.get(sessionId);
   if (!queue) return undefined;
-  const index = queue.findIndex(entry => entry.id === id);
+  const index = queue.findIndex(message => message.id === id);
   if (index === -1) return undefined;
-  const [entry] = queue.splice(index, 1);
+  const [message] = queue.splice(index, 1);
   if (queue.length === 0) queues.delete(sessionId);
-  return { entry, index };
+  return { message, index };
 }
 
-/** Put a taken entry back at [index] (or the end, if the queue got shorter meanwhile). */
-export function restoreQueuedMessage(sessionId: string, entry: QueuedMessageEntry, index: number): void {
+/** Put a taken message back at [index] (or the end, if the queue got shorter meanwhile). */
+export function restoreQueuedMessage(sessionId: string, message: QueuedMessageEntry, index: number): void {
   const queue = queues.get(sessionId) ?? [];
-  queue.splice(Math.min(index, queue.length), 0, entry);
+  queue.splice(Math.min(index, queue.length), 0, message);
   queues.set(sessionId, queue);
 }
 
