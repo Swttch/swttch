@@ -5,6 +5,7 @@
     "locatingNode": "Поиск Node.js...",
     "preparingBackend": "Подготовка файлов бэкенда...",
     "waitingForPort": "Ожидание готовности бэкенда...",
+    "checkingPowerShell": "Проверка PowerShell...",
     "loadingUi": "Загрузка экрана...",
     "loadingUiRemote": "Загрузка экрана (SSH)..."
   },

@@ -1,13 +1,12 @@
+import { EventEmitter } from 'events';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
-const { spawnMock, spawnSyncMock } = vi.hoisted(() => ({
+const { spawnMock } = vi.hoisted(() => ({
   spawnMock: vi.fn(),
-  spawnSyncMock: vi.fn(),
 }));
 
 vi.mock('child_process', () => ({
   spawn: spawnMock,
-  spawnSync: spawnSyncMock,
 }));
 
 // Mock fs so the BASH_ENV tests can decide whether the shipped script "exists"
@@ -23,7 +22,7 @@ vi.mock('url', () => ({
 }));
 
 import { existsSync } from 'fs';
-import { buildWin32CmdLine, spawnWin32JobCli, toMsysPath, utf8BashEnv } from '../win-job';
+import { buildWin32CmdLine, toMsysPath, utf8BashEnv } from '../win-job';
 
 describe('buildWin32CmdLine', () => {
   it('joins command + args with single spaces (mirrors Node win32 shell:true)', () => {
@@ -48,17 +47,94 @@ describe('buildWin32CmdLine', () => {
   });
 });
 
+// The PowerShell check keeps its answer in module state, so each test loads the module
+// afresh. Otherwise the answer one test settled would decide the next one's.
+async function loadWinJob() {
+  vi.resetModules();
+  return import('../win-job');
+}
+
+/** A child process that reports `outcome` on the next tick, once the caller has attached its listeners. */
+function fakeChild(outcome: { exit?: [number | null, string | null]; error?: Error; killed?: boolean }) {
+  const child = new EventEmitter() as EventEmitter & { killed: boolean };
+  child.killed = outcome.killed ?? false;
+  queueMicrotask(() => {
+    if (outcome.error) child.emit('error', outcome.error);
+    else child.emit('exit', ...(outcome.exit ?? [0, null]));
+  });
+  return child;
+}
+
+describe('checkPowerShell', () => {
+  const env = { PATH: 'C:\\tools' };
+
+  afterEach(() => {
+    spawnMock.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it('reports PowerShell usable when it exits with code 0', async () => {
+    const { checkPowerShell, POWERSHELL_CHECK_TIMEOUT_MS } = await loadWinJob();
+    spawnMock.mockReturnValue(fakeChild({ exit: [0, null] }));
+
+    await expect(checkPowerShell(env)).resolves.toBe(true);
+    // The environment chat will spawn with, because powershell.exe is found through its PATH,
+    // and a bound so a PowerShell that never exits cannot hold the backend back.
+    expect(spawnMock).toHaveBeenCalledWith(
+      'powershell.exe',
+      expect.any(Array),
+      expect.objectContaining({ shell: false, stdio: 'ignore', env, timeout: POWERSHELL_CHECK_TIMEOUT_MS }),
+    );
+  });
+
+  it('reports it unusable when the launch throws spawn UNKNOWN', async () => {
+    const { checkPowerShell } = await loadWinJob();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockImplementation(() => {
+      throw Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' });
+    });
+
+    await expect(checkPowerShell(env)).resolves.toBe(false);
+    expect(logged).toHaveBeenCalledWith('[node-backend]', expect.stringContaining('spawn UNKNOWN'));
+  });
+
+  it('reports it unusable when the launch fails with an error event', async () => {
+    const { checkPowerShell } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockReturnValue(fakeChild({ error: Object.assign(new Error('spawn EACCES'), { code: 'EACCES' }) }));
+
+    await expect(checkPowerShell(env)).resolves.toBe(false);
+  });
+
+  it('reports it unusable when PowerShell exits with a non-zero code', async () => {
+    const { checkPowerShell } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockReturnValue(fakeChild({ exit: [1, null] }));
+
+    await expect(checkPowerShell(env)).resolves.toBe(false);
+  });
+
+  it('reports it unusable, and says why, when PowerShell was stopped for not exiting', async () => {
+    const { checkPowerShell } = await loadWinJob();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockReturnValue(fakeChild({ exit: [null, 'SIGTERM'], killed: true }));
+
+    await expect(checkPowerShell(env)).resolves.toBe(false);
+    expect(logged).toHaveBeenCalledWith('[node-backend]', expect.stringContaining('did not exit within'));
+  });
+});
+
 describe('spawnWin32JobCli', () => {
   const options = { cwd: 'C:\\project', env: { PATH: 'C:\\tools' } };
 
   afterEach(() => {
     spawnMock.mockReset();
-    spawnSyncMock.mockReset();
+    vi.restoreAllMocks();
     vi.mocked(existsSync).mockReturnValue(true);
   });
 
-  it('uses the Job Object wrapper when PowerShell is available', () => {
-    spawnSyncMock.mockReturnValue({ status: 0, error: undefined });
+  it('uses the Job Object wrapper before any check has run', async () => {
+    const { spawnWin32JobCli } = await loadWinJob();
     spawnWin32JobCli('claude', ['-p', 'hello'], 'session-1', options);
 
     expect(spawnMock).toHaveBeenCalledWith(
@@ -68,10 +144,31 @@ describe('spawnWin32JobCli', () => {
     );
   });
 
-  it('falls back to the plain shell spawn when PowerShell is blocked', () => {
-    spawnSyncMock.mockReturnValue({ status: null, error: new Error('spawn UNKNOWN') });
+  it('uses the Job Object wrapper after PowerShell was found usable', async () => {
+    const { checkPowerShell, spawnWin32JobCli } = await loadWinJob();
+    spawnMock.mockReturnValueOnce(fakeChild({ exit: [0, null] }));
+    await checkPowerShell();
+    spawnMock.mockClear();
+
     spawnWin32JobCli('claude', ['-p', 'hello'], 'session-1', options);
 
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock).toHaveBeenCalledWith('powershell.exe', expect.any(Array), expect.objectContaining({ shell: false }));
+  });
+
+  it('falls back to the plain shell spawn after PowerShell was found blocked', async () => {
+    const { checkPowerShell, spawnWin32JobCli } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockImplementationOnce(() => {
+      throw Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' });
+    });
+    await checkPowerShell();
+    spawnMock.mockClear();
+
+    spawnWin32JobCli('claude', ['-p', 'hello'], 'session-1', options);
+
+    // Straight to the CLI: no second PowerShell launch to find out again.
+    expect(spawnMock).toHaveBeenCalledTimes(1);
     expect(spawnMock).toHaveBeenCalledWith('claude', ['-p', 'hello'], expect.objectContaining({ shell: true }));
   });
 });

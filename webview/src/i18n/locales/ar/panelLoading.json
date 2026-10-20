@@ -5,6 +5,7 @@
     "locatingNode": "جارٍ البحث عن Node.js...",
     "preparingBackend": "جارٍ تحضير ملفات الواجهة الخلفية...",
     "waitingForPort": "في انتظار جاهزية الواجهة الخلفية...",
+    "checkingPowerShell": "جارٍ التحقق من PowerShell...",
     "loadingUi": "جارٍ تحميل الشاشة...",
     "loadingUiRemote": "جارٍ تحميل الشاشة (SSH)..."
   },

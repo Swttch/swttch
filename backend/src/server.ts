@@ -34,6 +34,7 @@ import { refreshOutcomeNotice } from './core/features/refreshOutcomeNotice';
 import { initLogger, getLogger } from './logging';
 import { LogWebSocketServer } from './logging/log-ws';
 import { Claude } from './core/claude';
+import { checkPowerShell } from './core/win-job';
 import { sweepOrphanCliProcesses } from './core/cli-registry';
 import { removeContainersById } from './core/mcp-container-reclaimer';
 import { startParentWatchdog, resolveWatchedPid } from './core/parent-watchdog';
@@ -47,7 +48,8 @@ import { drainMcpContainerReclaims } from './core/mcp-container-reclaimer';
  * JetBrains 모드: JETBRAINS_MODE=true 환경변수로 감지
  * - Kotlin이 Node.js를 spawn할 때 이 환경변수를 설정
  * - WEBVIEW_DIR: WebView 정적 파일 경로 (Kotlin이 추출 후 전달)
- * - Node.js는 PORT:{n}\n을 stdout 첫 줄에 출력 (Kotlin이 읽음)
+ * - Node.js는 PORT:{n}\n을 stdout에 출력 (Kotlin이 읽음). Windows의 JetBrains 모드에서는
+ *   그 앞에 PHASE:{단계}\n 줄이 먼저 올 수 있다 (Kotlin이 대기 문구를 바꾸는 데 씀)
  * - IDE는 /rpc WebSocket 경로로 연결하여 JSON-RPC 통신
  * - stderr는 로그 출력
  *
@@ -291,6 +293,19 @@ async function main() {
 
   // Load CLI path from settings before any handler can spawn claude
   await Claude.refresh();
+
+  // Windows only: find out whether powershell.exe can be launched, so the chat spawn
+  // knows whether it may use the Job Object wrapper (see win-job.ts). Awaited here, before
+  // the port opens, so no chat can ask before the answer exists.
+  //
+  // The `PHASE:` line tells the plugin what the wait is for, and the plugin shows it in the
+  // panel's placeholder; without it a PowerShell that is slow to answer looks like a frozen
+  // start. Only the plugin reads it, so a backend started from a terminal does not print it.
+  // Lines before `PORT:` that the plugin does not recognize are only logged.
+  if (process.platform === 'win32') {
+    if (isJetBrainsMode) process.stdout.write('PHASE:CHECKING_POWERSHELL\n');
+    await checkPowerShell(Claude.env);
+  }
 
   // Orphan sweep: a backend that died hard (SIGKILL bypasses every
   // JS-level guard from the process-group hard-binding) leaves its CLI children running

@@ -5,6 +5,7 @@
     "locatingNode": "Procurando o Node.js...",
     "preparingBackend": "Preparando os arquivos do backend...",
     "waitingForPort": "Aguardando o backend ficar pronto...",
+    "checkingPowerShell": "Verificando o PowerShell...",
     "loadingUi": "Carregando a tela...",
     "loadingUiRemote": "Carregando a tela (SSH)..."
   },

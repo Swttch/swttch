@@ -5,6 +5,7 @@
     "locatingNode": "در حال یافتن Node.js...",
     "preparingBackend": "در حال آماده‌سازی فایل‌های بک‌اند...",
     "waitingForPort": "در انتظار آماده شدن بک‌اند...",
+    "checkingPowerShell": "در حال بررسی PowerShell...",
     "loadingUi": "در حال بارگذاری صفحه...",
     "loadingUiRemote": "در حال بارگذاری صفحه (SSH)..."
   },

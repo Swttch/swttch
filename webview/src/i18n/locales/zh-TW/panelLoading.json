@@ -5,6 +5,7 @@
     "locatingNode": "正在尋找 Node.js...",
     "preparingBackend": "正在準備後端檔案...",
     "waitingForPort": "正在等待後端就緒...",
+    "checkingPowerShell": "正在檢查 PowerShell...",
     "loadingUi": "正在載入畫面...",
     "loadingUiRemote": "正在載入畫面 (SSH)..."
   },

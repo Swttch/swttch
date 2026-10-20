@@ -17,6 +17,14 @@ enum class LoadingPhase(val key: String) {
     WAITING_FOR_PORT("phase.waitingForPort"),
 
     /**
+     * The Windows backend is finding out whether PowerShell can be launched, before it
+     * opens its port. The backend announces it with a `PHASE:CHECKING_POWERSHELL` line,
+     * so it only ever appears where that check runs: not on macOS or Linux, and not for
+     * a backend running inside WSL.
+     */
+    CHECKING_POWERSHELL("phase.checkingPowerShell"),
+
+    /**
      * The backend answered and the page is on its way.
      *
      * Last phase before the browser takes over the panel. It covers the webview
@@ -37,6 +45,22 @@ enum class LoadingPhase(val key: String) {
     val message: String get() = PanelLoadingMessages.get(key)
 
     companion object {
+        /** Prefix of the stdout line a backend prints before `PORT:` to name what it is waiting on. */
+        const val BACKEND_PHASE_PREFIX = "PHASE:"
+
+        /**
+         * The phase a backend named on its stdout [line], or null when the line is not a
+         * phase announcement or names a phase this plugin does not know. A backend newer
+         * than the plugin reading it can name one the plugin lacks; that must not fail.
+         */
+        fun fromBackendLine(line: String): LoadingPhase? {
+            if (!line.startsWith(BACKEND_PHASE_PREFIX)) return null
+            return when (line.removePrefix(BACKEND_PHASE_PREFIX).trim()) {
+                "CHECKING_POWERSHELL" -> CHECKING_POWERSHELL
+                else -> null
+            }
+        }
+
         /**
          * The phase for a page on its way, from the remote clients attached to the IDE
          * (`ClientPortForwarder.attachedClients()`).

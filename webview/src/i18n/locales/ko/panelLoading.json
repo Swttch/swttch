@@ -5,6 +5,7 @@
     "locatingNode": "Node.js를 찾는 중...",
     "preparingBackend": "백엔드 파일을 준비하는 중...",
     "waitingForPort": "백엔드가 준비되기를 기다리는 중...",
+    "checkingPowerShell": "PowerShell을 확인하는 중...",
     "loadingUi": "화면을 불러오는 중...",
     "loadingUiRemote": "화면을 불러오는 중 (SSH)..."
   },

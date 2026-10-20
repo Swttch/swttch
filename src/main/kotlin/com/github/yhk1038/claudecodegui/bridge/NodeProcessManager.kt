@@ -667,6 +667,9 @@ class NodeProcessManager(
                 } else {
                     // Not a PORT line — might be debug output before PORT
                     logger.info("[Node.js pre-PORT] $line")
+                    // A backend names what it is waiting on before it opens its port, so the
+                    // placeholder can say so instead of sitting on "waiting for the backend".
+                    LoadingPhase.fromBackendLine(line)?.let { onProgress?.invoke(it) }
                 }
                 continue
             }

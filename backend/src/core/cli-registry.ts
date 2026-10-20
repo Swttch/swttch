@@ -2,6 +2,7 @@ import { execFileSync, type ChildProcess } from 'child_process';
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { basename, join } from 'path';
+import { isPowerShellUsable } from './win-job';
 
 /**
  * On-disk registry of live chat CLI processes.
@@ -151,6 +152,10 @@ function liveSessionProcs(sessionId: string): number[] {
   // id makes `-like '*<id>*'` collapse to `-like '*'` (every process → machine-wide
   // taskkill) and quotes/wildcards let a crafted id inject or over-broaden the match.
   if (!isValidSessionId(sessionId)) return [];
+  // A PowerShell that cannot be launched cannot answer. Asking anyway would hold the startup
+  // sweep, and with it the backend, for as long as a hung PowerShell takes to exit. Every win32
+  // liveness question goes through here, so this one guard covers the sweep.
+  if (!isPowerShellUsable()) return [];
   try {
     const out = execFileSync(
       'powershell.exe',
