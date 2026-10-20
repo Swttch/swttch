@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { DropdownToggle } from './DropdownToggle';
 import { DropdownMenu } from './DropdownMenu';
 import { useSessionContext } from '@/contexts/SessionContext';
+import { generatedTitleArrivedAt } from '@/contexts/generatedTitle';
 import { useSessionList } from '@/components/SessionList/useSessionList';
 import { useSessionListKeyboard } from '@/components/SessionList/useSessionListKeyboard';
 import { useChatInputFocus } from '@/contexts/ChatInputFocusContext';
@@ -29,7 +30,7 @@ export function isClickOutsideDropdown(dropdown: Element | null, target: Node): 
 
 export function SessionDropdown() {
   const { t } = useTranslation('chat');
-  const { currentSession, switchSession, loadSessions, sessionsServiceError, isLoading } =
+  const { currentSession, switchSession, loadSessions, sessionsServiceError, isLoading, generatedTitle } =
     useSessionContext();
   const { focus: focusComposer } = useChatInputFocus();
   const {
@@ -48,6 +49,7 @@ export function SessionDropdown() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const sessionTitle = currentSession?.title || t('sessionHeader.sessionDropdown.pastConversations');
+  const titleArrivedAt = generatedTitleArrivedAt(generatedTitle, currentSession?.id, sessionTitle);
 
   const closeDropdown = () => {
     setIsOpen(false);
@@ -97,6 +99,7 @@ export function SessionDropdown() {
     <div className={`${isMobile() ? '' : 'relative'} min-w-0`} ref={dropdownRef}>
       <DropdownToggle
         sessionTitle={sessionTitle}
+        titleArrivedAt={titleArrivedAt}
         isOpen={isOpen}
         onClick={() => setIsOpen(!isOpen)}
       />

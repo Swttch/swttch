@@ -17,6 +17,7 @@ import { Route, routeToPath, sessionToPath, parseSessionIdFromPath, withWorkingD
 import { InputMode, getAvailableModes, resolveConfiguredInputMode, FALLBACK_INPUT_MODE } from '../types/chatInput';
 import {isJetBrains} from "@/config/environment.ts";
 import { MessageType } from '@/shared';
+import type { GeneratedSessionTitle } from './generatedTitle';
 
 
 interface SessionContextValue {
@@ -24,6 +25,8 @@ interface SessionContextValue {
   currentSessionId: string | null;
   currentSession: SessionMetaDto | null;
   sessions: SessionMetaDto[];
+  /** The newest generated title, or null before any has arrived in this window. */
+  generatedTitle: GeneratedSessionTitle | null;
   /** Non-fatal reason the backend couldn't list sessions (e.g. WSL host mismatch on win32). */
   sessionsServiceError: SessionServiceError | null;
   sessionState: SessionState;
@@ -195,6 +198,11 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
 
   const [sessions, setSessions] = useState<SessionMetaDto[]>([]);
+  // The rows as of the latest render, for the one thing that needs them outside a
+  // render: putting a title back when a rename fails.
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const [generatedTitle, setGeneratedTitle] = useState<GeneratedSessionTitle | null>(null);
   /**
    * The open session's id, for the list refresh to read without depending on it.
    *
@@ -494,7 +502,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
   // Subscribe to SESSIONS_UPDATED for cross-tab session list sync
   useEffect(() => {
     const unsubscribe = subscribe(MessageType.SESSIONS_UPDATED, (message) => {
-      const { action, session } = message.payload as { action: string; session: { sessionId: string; title?: string } };
+      const { action, session } = message.payload as {
+        action: string;
+        session: { sessionId: string; title?: string; generated?: boolean };
+      };
       if (action === 'started') {
         // Another window just created a session and sent the row it drew.
         //
@@ -507,6 +518,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
         return;
       }
       if (action === 'rename' && session?.sessionId && session.title) {
+        // A title Claude Code just generated arrives with the flag; one a user typed does not.
+        if (session.generated === true) {
+          setGeneratedTitle({ sessionId: session.sessionId, title: session.title, arrivedAt: Date.now() });
+        }
         setSessions(prev => prev.map(s =>
           s.id === session.sessionId
             ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { title: session.title })
@@ -596,8 +611,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
     const trimmed = title.trim();
     if (!trimmed) return;
 
-    // Optimistic update so the new title shows immediately; the backend
-    // persists the override and broadcasts SESSIONS_UPDATED to other tabs.
+    // Optimistic update so the new title shows immediately. The backend has the
+    // CLI run `/rename`, which can take seconds when no CLI is running the session,
+    // and broadcasts SESSIONS_UPDATED to other tabs once it is done.
+    const previousTitles = sessionsRef.current.filter(s => s.id === sessionId).map(s => s.title);
     setSessions(prev => prev.map(s =>
       s.id === sessionId
         ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { title: trimmed })
@@ -608,6 +625,17 @@ export function SessionProvider({ children }: SessionProviderProps) {
       await api.sessions.rename(sessionId, trimmed, workingDirectory ?? undefined);
     } catch (error) {
       console.error('[SessionContext] Failed to rename session:', error);
+      // The name was not recorded, so showing it would be telling the user
+      // something that a reload takes back. Put the old one back, unless a newer
+      // name has arrived in the meantime.
+      const [previousTitle] = previousTitles;
+      if (previousTitle !== undefined) {
+        setSessions(prev => prev.map(s =>
+          s.id === sessionId && s.title === trimmed
+            ? Object.assign(Object.create(Object.getPrototypeOf(s)), s, { title: previousTitle })
+            : s
+        ));
+      }
     }
   }, [api.sessions, workingDirectory]);
 
@@ -703,6 +731,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     setSessionState,
     setWorkingDirectory,
     isNewlyCreatedSession,
+    generatedTitle,
   };
 
   return (

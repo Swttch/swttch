@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GroupedSessions, GROUP_ORDER, getSessionOriginLabel } from './utils';
 import { SessionItem } from './SessionItem';
+import { generatedTitleArrivedAt } from '@/contexts/generatedTitle';
 import { useSessionListScale } from './scale';
 import { useTranslation } from '@/i18n';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
@@ -150,7 +151,10 @@ export function SessionList(props: Props) {
   // there is nothing to disambiguate and no reason to spend a second line on
   // every row. The count answers both, because the backend only counts
   // directories that actually contributed a session.
-  const scopeDirCount = useSessionContextOrNull()?.scopeDirCount ?? null;
+  const sessionContext = useSessionContextOrNull();
+  const scopeDirCount = sessionContext?.scopeDirCount ?? null;
+  // A title Claude Code has just generated is drawn letter by letter on its own row.
+  const generatedTitle = sessionContext?.generatedTitle;
   const isMerged = useMemo(() => {
     // A backend that reported a count has settled it; nothing here overrides.
     if (scopeDirCount !== null) return scopeDirCount > 1;
@@ -228,6 +232,7 @@ export function SessionList(props: Props) {
                 onSelect={() => onSelectSession(session.id)}
                 onDelete={() => onDeleteSession(session.id)}
                 onRename={(title) => onRenameSession(session.id, title)}
+                titleArrivedAt={generatedTitleArrivedAt(generatedTitle, session.id, session.title)}
               />
             ))}
           </div>
