@@ -16,10 +16,13 @@ interface Props {
  * dock icon shows — one place owns what "72%, amber, pulsing" looks like.
  */
 export function BatteryVisual(props: Props) {
-  const { remaining, isLoading } = props;
+  const { isLoading } = props;
+  // The CLI reports window usage as a fraction that passes 1 once the cap is exceeded,
+  // so the caller's `100 - utilization` can go below zero. A battery has no such state.
+  const remaining = Math.max(0, Math.min(100, props.remaining));
   const color = getBatteryColor(remaining);
   const isPulsing = remaining < 20;
-  const fillWidth = Math.max(0, Math.min(100, remaining));
+  const fillWidth = remaining;
 
   return (
     <span className="flex items-center gap-1">
