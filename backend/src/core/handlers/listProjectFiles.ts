@@ -7,6 +7,7 @@ import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { MessageType } from '../../shared';
 import { resolveWslCwd } from '../wsl-path';
+import { consoleSafeExecOptions } from '../console-safe';
 import { readMergedClaudeSettings } from '../features/claude-settings';
 import {
   parseFileSuggestion,
@@ -33,7 +34,11 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function isGitRepo(workingDir: string): Promise<boolean> {
   try {
-    await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], { cwd: workingDir });
+    await execFileAsync(
+      'git',
+      ['rev-parse', '--is-inside-work-tree'],
+      consoleSafeExecOptions({ cwd: workingDir }),
+    );
     return true;
   } catch {
     return false;
@@ -110,7 +115,7 @@ export async function fetchFilesAndDirs(workingDir: string): Promise<{ files: st
       //   2. untracked-but-not-ignored files (top level; --exclude-standard
       //      keeps .gitignore honoured)
       // Issue #201.
-      const gitOpts = { cwd: workingDir, maxBuffer: 10 * 1024 * 1024 };
+      const gitOpts = consoleSafeExecOptions({ cwd: workingDir, maxBuffer: 10 * 1024 * 1024 });
       const [tracked, untracked] = await Promise.all([
         execFileAsync('git', ['ls-files', '--cached', '--recurse-submodules'], gitOpts),
         execFileAsync('git', ['ls-files', '--others', '--exclude-standard'], gitOpts),

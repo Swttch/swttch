@@ -3,6 +3,7 @@ import { startCliAutoUpdate } from './core/cli-auto-update';
 import { createLoopbackRequest } from './ws/loopback-request';
 import { execFileSync, execSync } from 'child_process';
 import { selectKillablePids } from './core/port-utils';
+import { consoleSafeExecOptions } from './core/console-safe';
 import { startWebSocketServer, type BridgeMap } from './ws/ws-server';
 import { BrowserBridge } from './bridge/browser-bridge';
 import { JetBrainsBridge } from './bridge/jetbrains-bridge';
@@ -79,9 +80,9 @@ function listeningPidsOnPort(port: number): number[] {
   // ensures we only reclaim the port from a stale backend, never the IDE.
   if (process.platform === 'win32') {
     try {
-      const output = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, {
+      const output = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, consoleSafeExecOptions({
         encoding: 'utf8',
-      }).trim();
+      })).trim();
       if (!output) return [];
       // Last column of each netstat row is the PID.
       const rawPids = output
@@ -123,7 +124,7 @@ function childPidsOf(pid: number): number[] {
 function sigkillPid(pid: number): void {
   try {
     if (process.platform === 'win32') {
-      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)]);
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)], consoleSafeExecOptions());
     } else {
       process.kill(pid, 'SIGKILL');
     }

@@ -2,6 +2,7 @@ import { execFile, spawn } from 'child_process';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
+import { consoleSafeExecOptions } from '../console-safe';
 
 const execFileAsync = promisify(execFile);
 
@@ -64,7 +65,7 @@ async function resolveSuggestionShell(): Promise<{ shell: string; args: string[]
  */
 async function findGitBashOnWindows(): Promise<string | null> {
   try {
-    const { stdout } = await execFileAsync('where', ['git']);
+    const { stdout } = await execFileAsync('where', ['git'], consoleSafeExecOptions());
     const gitExe = stdout
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -105,6 +106,7 @@ export async function runFileSuggestionCommand(
       env: { ...process.env, CLAUDE_PROJECT_DIR: workingDir },
       timeout: COMMAND_TIMEOUT_MS,
       killSignal: 'SIGKILL',
+      ...consoleSafeExecOptions(),
     });
 
     let out = '';

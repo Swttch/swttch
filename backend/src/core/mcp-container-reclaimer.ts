@@ -44,6 +44,7 @@
 import { execFile, type ChildProcess } from 'child_process';
 import { promisify } from 'util';
 import { augmentedEnv } from './augmented-path';
+import { consoleSafeExecOptions } from './console-safe';
 import { collectMcpServerConfigs } from './features/mcp-config-files';
 import { recordCliContainers } from './cli-registry';
 import type { McpServerConfig } from '../shared';
@@ -391,6 +392,7 @@ async function matchesConfiguredCommand(id: string, servers: DockerMcpServer[]):
 function docker(args: string[]): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync('docker', args, {
     timeout: DOCKER_TIMEOUT_MS,
+    ...consoleSafeExecOptions(),
     // The backend can be launched by a GUI with a PATH that omits where docker
     // lives, the same gap augmentedPath already closes for `claude` (#59, #76).
     env: augmentedEnv(),

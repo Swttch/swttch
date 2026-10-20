@@ -7,6 +7,7 @@ import {
 import { augmentedEnv } from './augmented-path';
 import { resolveWslCwd } from './wsl-path';
 import { execViaCmdArgv, isDirectlyExecutable } from './win-exec';
+import { consoleSafeExecOptions } from './console-safe';
 import { pickWin32Launcher } from './which-launcher';
 
 /**
@@ -128,7 +129,7 @@ export class Command {
    */
   spawn(spawnOptions?: SpawnOptions): ChildProcess {
     return cpSpawn(this.bin, this.args, {
-      ...spawnOptions,
+      ...consoleSafeExecOptions(spawnOptions),
       cwd: this.cwd(),
       env: { ...this.env(), ...spawnOptions?.env },
       shell:
@@ -145,7 +146,7 @@ export class Command {
   which(): Promise<string | null> {
     const finder = process.platform === 'win32' ? 'where' : 'which';
     return new Promise((resolve) => {
-      cpExecFile(finder, [this.bin], { env: this.env(), timeout: 5_000 }, (err, stdout) => {
+      cpExecFile(finder, [this.bin], consoleSafeExecOptions({ env: this.env(), timeout: 5_000 }), (err, stdout) => {
         if (err) return resolve(null);
         const out = stdout?.toString() ?? '';
         if (process.platform === 'win32') return resolve(pickWin32Launcher(out));
@@ -164,6 +165,7 @@ export class Command {
           env: this.env(),
           timeout: this.options.timeout ?? DEFAULT_TIMEOUT_MS,
           maxBuffer: this.options.maxBuffer,
+          ...consoleSafeExecOptions(),
         },
         (err, stdout, stderr) => {
           const out = stdout?.toString() ?? '';

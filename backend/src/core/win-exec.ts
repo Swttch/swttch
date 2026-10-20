@@ -4,6 +4,7 @@ import {
   type ExecFileOptionsWithBufferEncoding,
 } from 'child_process';
 import { decodeConsoleOutput } from './console-encoding';
+import { consoleSafeExecOptions } from './console-safe';
 
 /**
  * Windows-only: run an external launcher through cmd.exe with an argv ARRAY so
@@ -90,7 +91,7 @@ export async function execViaCmdArgv(
     // Match Claude.exec's historic 10s default; callers (CLI update, which
     // downloads + links) pass their own longer timeout to override it.
     timeout: 10000,
-    ...options,
+    ...consoleSafeExecOptions(options),
     encoding: 'buffer',
     // shell:false — Node spawns cmd.exe directly, not nested in another shell.
     // windowsVerbatimArguments stays false so Node's standard quoting applies

@@ -1,4 +1,5 @@
 import { spawn as cpSpawn, type ChildProcess, type SpawnOptions } from 'child_process';
+import { consoleSafeExecOptions } from './console-safe';
 import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 
@@ -142,15 +143,15 @@ export function spawnWin32JobCli(
   const wrapper = jobWrapperPath();
   if (!existsSync(wrapper)) {
     console.error('[node-backend]', `Job wrapper not found at ${wrapper} — spawning without a job (orphan guard degraded)`);
-    return cpSpawn(command, args, { ...options, shell: true });
+    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
   }
   if (!powerShellUsable) {
-    return cpSpawn(command, args, { ...options, shell: true });
+    return cpSpawn(command, args, { ...consoleSafeExecOptions(options), shell: true });
   }
   return cpSpawn(
     'powershell.exe',
     ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', wrapper, sessionId],
-    { ...options, shell: false, env: { ...options.env, CCG_JOB_CMDLINE: cmdline } },
+    { ...consoleSafeExecOptions(options), shell: false, env: { ...options.env, CCG_JOB_CMDLINE: cmdline } },
   );
 }
 

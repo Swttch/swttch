@@ -2,6 +2,8 @@ import { execFile } from 'child_process';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { consoleSafeExecOptions } from '../../console-safe';
+
 import type { WindowsDetection, WindowsRegistryKey } from './resolveApp';
 
 /**
@@ -37,7 +39,7 @@ async function pathExists(p: string): Promise<boolean> {
 /** Runs `reg query "<fullKeyPath>"` and returns raw stdout, or null if the key doesn't exist / the command failed. */
 function execRegQuery(fullKeyPath: string): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile('reg', ['query', fullKeyPath], (error, stdout) => {
+    execFile('reg', ['query', fullKeyPath], consoleSafeExecOptions(), (error, stdout) => {
       if (error) {
         resolve(null);
         return;

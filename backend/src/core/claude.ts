@@ -15,6 +15,7 @@ import { augmentedPath } from './augmented-path';
 import { attachMcpContainerReclaim } from './mcp-container-reclaimer';
 import { resolveWslCwd } from './wsl-path';
 import { execViaCmdArgv } from './win-exec';
+import { consoleSafeExecOptions } from './console-safe';
 import { pickWin32Launcher } from './which-launcher';
 import { spawnWin32JobCli, utf8BashEnv } from './win-job';
 import { decodeConsoleOutput } from './console-encoding';
@@ -134,7 +135,7 @@ export class Claude {
       process.platform === 'win32' && win32JobSessionId
         ? spawnWin32JobCli(Claude.command, args, win32JobSessionId, { ...options, cwd, env })
         : cpSpawn(Claude.command, args, {
-            ...options,
+            ...consoleSafeExecOptions(options),
             cwd,
             shell: options?.shell ?? (process.platform === 'win32'),
             env,
@@ -240,7 +241,7 @@ export class Claude {
     if (proc.exitCode !== null || proc.signalCode !== null) return;
     if (process.platform === 'win32') {
       try {
-        execFileSync('taskkill', ['/F', '/T', '/PID', String(proc.pid)]);
+        execFileSync('taskkill', ['/F', '/T', '/PID', String(proc.pid)], consoleSafeExecOptions());
       } catch {
         proc.kill();
       }
@@ -300,7 +301,7 @@ export class Claude {
       // recover them; decodeConsoleOutput below reads them with the right codepage.
       const execOptions: ExecFileOptionsWithBufferEncoding = {
         timeout: 10000,
-        ...options,
+        ...consoleSafeExecOptions(options),
         encoding: 'buffer',
         cwd: resolveWslCwd(options?.cwd),
         // On Windows the `claude` launcher is a .cmd/.ps1 wrapper that execFile
@@ -404,6 +405,7 @@ export class Claude {
       env: Claude.env,
       timeout: 5000,
       encoding: 'buffer',
+      ...consoleSafeExecOptions(),
     };
     return new Promise((resolve) => {
       cpExecFile(cmd, [Claude.command], whichOptions, (err, stdout) => {

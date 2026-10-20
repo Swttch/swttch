@@ -2,6 +2,7 @@ import { existsSync } from 'fs';
 import { join, delimiter, resolve } from 'path';
 import { execFileSync } from 'child_process';
 import { candidateBinDirs } from './claude-bin-paths';
+import { consoleSafeExecOptions } from './console-safe';
 
 /**
  * Build an augmented PATH that includes well-known bin directories where the
@@ -32,7 +33,7 @@ export function buildAugmentedPath(): string {
     const nvmDefaultBin = execFileSync(
       'bash',
       ['-c', `source '${escapedNvmScript}' --no-use 2>/dev/null && nvm which current 2>/dev/null`],
-      { encoding: 'utf-8', timeout: 3000 },
+      consoleSafeExecOptions({ encoding: 'utf-8', timeout: 3000 }),
     ).trim();
     if (nvmDefaultBin) {
       const nvmBinDir = nvmDefaultBin.substring(0, nvmDefaultBin.lastIndexOf('/'));

@@ -148,7 +148,9 @@ describe('playSystemSound', () => {
       // SoundPlayer survives as the in-script fallback, so a machine that
       // cannot load presentationCore still gets its notification.
       expect(script).toContain('New-Object Media.SoundPlayer');
-      expect(rest).toEqual([]);
+      // windowsHide and nothing else: no shell, and no PowerShell window flashing each time
+      // a sound plays (#539).
+      expect(rest).toEqual([{ windowsHide: true }]);
     });
 
     it('scales the MediaPlayer volume to the requested step', async () => {

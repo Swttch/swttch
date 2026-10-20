@@ -19,11 +19,12 @@ import type { WindowsDetection } from '../resolveApp';
 
 type ExecFileCallback = (error: unknown, stdout: string, stderr: string) => void;
 
-/** Wires execFile('reg', ['query', keyPath], cb) to `handler(keyPath)`. */
+/** Wires execFile('reg', ['query', keyPath], options, cb) to `handler(keyPath)`. */
 function mockRegQuery(handler: (keyPath: string) => string | null) {
   vi.mocked(cpExecFile).mockImplementation(((
     _cmd: string,
     args: string[],
+    _options: unknown,
     cb: ExecFileCallback,
   ) => {
     const keyPath = args[1];
@@ -84,6 +85,25 @@ describe('resolveWindowsApp', () => {
 
     const result = await resolveWindowsApp(win);
     expect(result).toBe(expectedExe);
+  });
+
+  it('runs every `reg query` with windowsHide so no console window flashes (#539)', async () => {
+    const win: WindowsDetection = {
+      registryKeys: [{ hive: 'HKCU', subKey: 'test-hide-key' }],
+      displayNamePrefixes: ['Hidden'],
+      publishers: ['Nobody'],
+    };
+    mockRegQuery(() => null);
+    vi.mocked(fsAccess).mockRejectedValue(new Error('ENOENT'));
+
+    await resolveWindowsApp(win);
+
+    const calls = vi.mocked(cpExecFile).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) {
+      expect(call[0]).toBe('reg');
+      expect(call[2]).toEqual(expect.objectContaining({ windowsHide: true }));
+    }
   });
 
   it('strips quotes and the icon index from a DisplayIcon value', async () => {

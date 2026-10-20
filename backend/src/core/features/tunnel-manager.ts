@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { arch, platform, tmpdir, homedir } from 'os';
 import { augmentedEnv } from '../augmented-path';
 import { downloadToFile } from './download-file';
+import { consoleSafeExecOptions } from '../console-safe';
 
 const execAsync = promisify(execCallback);
 
@@ -83,10 +84,10 @@ export async function installCloudflared(): Promise<string> {
     }
   } else if (os === 'win32') {
     try {
-      await execAsync('where winget', { env });
+      await execAsync('where winget', consoleSafeExecOptions({ env }));
       console.error('[node-backend]', 'Installing cloudflared via winget...');
-      await execAsync('winget install --id Cloudflare.cloudflared --accept-source-agreements --accept-package-agreements', { env });
-      const { stdout } = await execAsync('where cloudflared', { env });
+      await execAsync('winget install --id Cloudflare.cloudflared --accept-source-agreements --accept-package-agreements', consoleSafeExecOptions({ env }));
+      const { stdout } = await execAsync('where cloudflared', consoleSafeExecOptions({ env }));
       return stdout.trim().split('\n')[0];
     } catch {
       // winget not available or install failed, fall through
@@ -186,7 +187,7 @@ export function restoreTunnelState(): void {
 async function findCloudflared(): Promise<string | null> {
   const whichCmd = platform() === 'win32' ? 'where cloudflared' : 'which cloudflared';
   try {
-    const { stdout } = await execAsync(whichCmd, { env: augmentedEnv() });
+    const { stdout } = await execAsync(whichCmd, consoleSafeExecOptions({ env: augmentedEnv() }));
     const binPath = stdout.trim().split('\n')[0];
     if (binPath) return binPath;
   } catch {
@@ -290,7 +291,7 @@ function killTunnelPid(pid: number): void {
   if (process.platform === 'win32') {
     // Windows ignores SIGTERM; taskkill /T also reaps the detached child tree.
     try {
-      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)]);
+      execFileSync('taskkill', ['/F', '/T', '/PID', String(pid)], consoleSafeExecOptions());
     } catch {
       // already gone
     }

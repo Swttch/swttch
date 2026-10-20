@@ -3,6 +3,7 @@ import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmS
 import { homedir } from 'os';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { consoleSafeExecOptions } from '../core/console-safe';
 
 /**
  * Real OS desktop notifications, raised by the backend through a bundled
@@ -730,6 +731,7 @@ export function installWindowsAppId(exe: string): void {
   spawnSync(exe, ['-install', WINDOWS_APP_ID, exe, WINDOWS_APP_ID], {
     stdio: 'ignore',
     timeout: 5000,
+    ...consoleSafeExecOptions(),
   });
 }
 
@@ -865,7 +867,7 @@ function launch(
   return new Promise<void>((resolve) => {
     try {
       // stdout is piped rather than ignored because macOS reports a click on it.
-      const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'ignore'] });
+      const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'ignore'], ...consoleSafeExecOptions() });
       if (groupId !== undefined) {
         // Retire the previous one for this group: its banner has just been
         // replaced, so it is waiting for a click that can no longer happen.

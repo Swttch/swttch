@@ -572,7 +572,7 @@ describe('showOsNotification', () => {
     expect(spawnMock).toHaveBeenCalledWith(
       windowsNotifierExe(),
       buildWindowsNotifierArgs({ title: 't', body: 'b' }),
-      { stdio: ['ignore', 'pipe', 'ignore'] },
+      { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true },
     );
   });
 
@@ -595,7 +595,7 @@ describe('showOsNotification', () => {
       expect(spawnMock).toHaveBeenLastCalledWith(
         installedExec,
         buildMacNotifierArgs({ title: 't', body: 'b', groupId: 'panel-7' }),
-        { stdio: ['ignore', 'pipe', 'ignore'] },
+        { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true },
       );
       // The copy comes from the shipped bundle, never from the plugin resource
       // dir being run in place.
@@ -955,6 +955,10 @@ describe('Windows AppUserModelID registration', () => {
       windowsNotifierExe(),
       WINDOWS_APP_ID,
     ]);
+    // ntfytoast is a console program: without windowsHide it would flash a window (#539).
+    expect((install as unknown[] | undefined)?.[2]).toEqual(
+      expect.objectContaining({ windowsHide: true }),
+    );
   });
 
   // Rewriting a shortcut that is already there costs a process launch per
@@ -985,7 +989,7 @@ describe('Windows AppUserModelID registration', () => {
     expect(spawnMock).toHaveBeenCalledWith(
       windowsNotifierExe(),
       buildWindowsNotifierArgs({ title: 't', body: 'b' }),
-      { stdio: ['ignore', 'pipe', 'ignore'] },
+      { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true },
     );
   });
 

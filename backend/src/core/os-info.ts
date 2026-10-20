@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { readFile } from 'fs/promises';
 import { release, version } from 'os';
+import { consoleSafeExecOptions } from './console-safe';
 import { parseOsRelease, formatOsRelease } from './os-release';
 
 /**
@@ -35,7 +36,7 @@ function kernelFallback(): string {
 /** Run a fixed system binary and capture stdout. Resolves to null on any failure. */
 function runSystemBinary(bin: string, args: string[]): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile(bin, args, { timeout: EXEC_TIMEOUT_MS }, (err, stdout) => {
+    execFile(bin, args, consoleSafeExecOptions({ timeout: EXEC_TIMEOUT_MS }), (err, stdout) => {
       resolve(err ? null : stdout);
     });
   });

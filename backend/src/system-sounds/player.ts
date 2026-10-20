@@ -1,6 +1,7 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, type ChildProcess, type SpawnOptions } from 'child_process';
 import { scanSystemSounds, type SystemSound } from './scanner';
 import { assertPowerShellUsable } from '../core/win-job';
+import { consoleSafeExecOptions } from '../core/console-safe';
 
 const POWERSHELL_UNSAFE_CHARS = /["'`$]/;
 
@@ -46,12 +47,12 @@ export function normalizeVolumeStep(value: unknown): number {
  * chance to surface synchronous/immediate errors (ENOENT, etc). The caller
  * does not wait for the child to exit.
  */
-function spawnNoShell(command: string, args: string[]): Promise<ChildProcess> {
+function spawnNoShell(command: string, args: string[], options?: SpawnOptions): Promise<ChildProcess> {
   return new Promise((resolve, reject) => {
     let settled = false;
     let child: ChildProcess;
     try {
-      child = spawn(command, args);
+      child = options ? spawn(command, args, options) : spawn(command, args);
     } catch (err) {
       reject(err);
       return;
@@ -120,7 +121,9 @@ async function playOnWindows(sound: SystemSound, volumeStep: number): Promise<vo
     `  (New-Object Media.SoundPlayer "${sound.path}").PlaySync()`,
     '}',
   ].join(' ');
-  await spawnNoShell('powershell', ['-NoProfile', '-Command', script]);
+  // The only console program here that runs on Windows, so the only one that can flash a
+  // PowerShell window each time a sound plays (#539).
+  await spawnNoShell('powershell', ['-NoProfile', '-Command', script], consoleSafeExecOptions());
 }
 
 /**

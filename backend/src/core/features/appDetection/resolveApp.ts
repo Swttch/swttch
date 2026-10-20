@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { access, readdir } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
+import { consoleSafeExecOptions } from '../../console-safe';
 
 const execFileAsync = promisify(execFile);
 
@@ -208,7 +209,7 @@ export async function resolveWindowsPath(
   }
   if (win.whereCmd) {
     try {
-      const { stdout } = await execFileAsync('where', [win.whereCmd]);
+      const { stdout } = await execFileAsync('where', [win.whereCmd], consoleSafeExecOptions());
       const first = stdout
         .split(/\r?\n/)
         .map((s) => s.trim())
