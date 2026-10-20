@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 import {isMobile} from "@/config/environment.ts";
-import { MOBILE_BASE_ZOOM } from "@/utils/zoom";
+import { MOBILE_BASE_ZOOM, setZoomVariable } from "@/utils/zoom";
 
 // Capture the per-launch pairing code from `?pair=` BEFORE anything opens a
 // backend WebSocket or React Router mutates the URL. Resolves any already-known
@@ -28,6 +28,7 @@ installGlobalErrorHooks();
 // (CmdOrCtrl +/-) multiplies into, so the two never overwrite each other.
 if (isMobile()) {
   document.documentElement.style.zoom = String(MOBILE_BASE_ZOOM);
+  setZoomVariable(MOBILE_BASE_ZOOM);
 
   // CSS zoom makes content larger than viewport, causing the browser to
   // force-scroll the html element when the virtual keyboard opens.

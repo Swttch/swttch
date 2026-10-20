@@ -77,6 +77,20 @@ describe('zoom ladder round-trip', () => {
 describe('applyZoom', () => {
   afterEach(() => {
     document.documentElement.style.zoom = '';
+    document.documentElement.style.removeProperty('--ui-zoom');
+  });
+
+  // index.css divides a dragged element's measured screen-pixel lengths by this
+  // variable; if it fell out of step with `zoom`, the drag copy would jump again.
+  it('publishes the effective zoom as --ui-zoom, in step with zoom', () => {
+    applyZoom(0.9);
+    expect(document.documentElement.style.getPropertyValue('--ui-zoom')).toBe('0.9');
+    expect(document.documentElement.style.getPropertyValue('--ui-zoom')).toBe(document.documentElement.style.zoom);
+  });
+
+  it('publishes the base-zoom product, not the bare level', () => {
+    applyZoom(2, 1.25);
+    expect(document.documentElement.style.getPropertyValue('--ui-zoom')).toBe('2.5');
   });
 
   it('writes the level to the document element', () => {

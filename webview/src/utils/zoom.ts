@@ -66,4 +66,18 @@ export function zoomOut(level: number): number {
 export function applyZoom(level: number, baseZoom = ZOOM_DEFAULT): void {
   const effective = clampZoom(level) * baseZoom;
   document.documentElement.style.zoom = String(effective);
+  setZoomVariable(effective);
+}
+
+/**
+ * Publish the effective zoom as `--ui-zoom`, so a stylesheet can cancel it.
+ *
+ * CSS `zoom` multiplies every length inside the page, including a length that was
+ * already measured in screen pixels. The drag layer measures a dragged element with
+ * `getBoundingClientRect()` (screen pixels) and writes the result back as `top`,
+ * `left`, `width` and `height`, which the zoom then scales a second time. Divide
+ * those by `--ui-zoom` in CSS (see index.css) to land back on the screen pixels.
+ */
+export function setZoomVariable(effective: number): void {
+  document.documentElement.style.setProperty('--ui-zoom', String(effective));
 }

@@ -4,6 +4,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   Dragged element under the UI zoom
+   The drag layer (`@dnd-kit`) measures the dragged element in screen pixels and
+   writes `--dnd-top/left/width/height` back as `position: fixed` lengths. `<html>`
+   carries CSS `zoom` (utils/zoom.ts), which scales those lengths a second time:
+   at 90% the copy was drawn at 90% of where it was measured, so it jumped up and
+   to the left as soon as a drag began, by a tenth of its distance from the corner.
+   `--ui-zoom` is the effective zoom; dividing by it lands back on the screen pixels.
+   `html:root` outranks the drag layer's own `:root [data-dnd-dragging]` rule, which
+   is injected later and would otherwise win.
+   ============================================ */
+html:root [data-dnd-dragging] {
+  top: calc(var(--dnd-top, 0px) / var(--ui-zoom, 1)) !important;
+  left: calc(var(--dnd-left, 0px) / var(--ui-zoom, 1)) !important;
+  width: calc(var(--dnd-width, auto) / var(--ui-zoom, 1));
+  max-width: calc(var(--dnd-width, auto) / var(--ui-zoom, 1));
+  height: calc(var(--dnd-height, auto) / var(--ui-zoom, 1));
+  max-height: calc(var(--dnd-height, auto) / var(--ui-zoom, 1));
+}
+
 @layer utilities {
   .no-scrollbar {
     -ms-overflow-style: none;
