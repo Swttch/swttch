@@ -45,3 +45,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   리와인드와 포크를 `--help`에 없는 CLI 플래그(`--rewind-files`, `--resume-session-at`)로 구현
 - [474-effort-apply-flag-settings.md](./474-effort-apply-flag-settings.md) —
   실행 중인 CLI의 effort 변경에 미문서화 `control_request{subtype:"apply_flag_settings"}`를 먼저 사용
+- [562-generate-session-title.md](./562-generate-session-title.md) —
+  새 세션의 제목 생성에 미문서화 `control_request{subtype:"generate_session_title"}`를, 이름 변경에 `rename_session`을 사용
