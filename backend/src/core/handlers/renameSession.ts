@@ -4,7 +4,8 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { getProjectSessionsPath } from '../features/getProjectSessionsPath';
-import { writeSessionTitleOverride } from '../features/sessionTitleOverrides';
+import { removeSessionTitleOverride } from '../features/sessionTitleOverrides';
+import { normalizeSessionName, renameSessionThroughCli } from '../features/cli-rename';
 import { MessageType } from '../../shared';
 
 export async function renameSessionHandler(
@@ -48,11 +49,19 @@ export async function renameSessionHandler(
       return;
     }
 
-    await writeSessionTitleOverride(sessionsDir, sessionId, title);
+    // The CLI's own `/rename` records the name, so every client reads it from the
+    // transcript. The webview has already drawn the new name by the time this runs;
+    // an error here is what makes it put the old one back.
+    await renameSessionThroughCli(connections, sessionId, title, workingDir);
 
+    // A name typed here before this version was kept in a file only this app read,
+    // and it outranks the transcript. The CLI's name is the newer one, so it goes.
+    await removeSessionTitleOverride(sessionsDir, sessionId);
+
+    const shownTitle = normalizeSessionName(title);
     connections.broadcastToAll(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
-      session: { sessionId, title },
+      session: { sessionId, title: shownTitle },
     });
 
     connections.sendTo(connectionId, MessageType.ACK, { requestId: message.requestId, status: 'ok' });

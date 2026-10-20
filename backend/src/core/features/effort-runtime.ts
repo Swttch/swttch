@@ -101,7 +101,7 @@ function turnIsInFlight(connections: ConnectionManager, sessionId: string): bool
  * they go straight away and are echoed to the chat, since the CLI does not echo user
  * messages back on stdout.
  */
-function sendAsCommands(connections: ConnectionManager, sessionId: string, commands: string[]): boolean {
+export function sendAsCommands(connections: ConnectionManager, sessionId: string, commands: string[]): boolean {
   const inFlight = turnIsInFlight(connections, sessionId);
   for (const content of commands) {
     if (inFlight) {

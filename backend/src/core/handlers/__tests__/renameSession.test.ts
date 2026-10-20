@@ -9,13 +9,19 @@ vi.mock('../../features/getProjectSessionsPath', () => ({
 }));
 
 vi.mock('../../features/sessionTitleOverrides', () => ({
-  writeSessionTitleOverride: vi.fn(),
+  removeSessionTitleOverride: vi.fn(),
+}));
+
+vi.mock('../../features/cli-rename', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../features/cli-rename')>()),
+  renameSessionThroughCli: vi.fn(),
 }));
 
 import { existsSync } from 'fs';
 import { renameSessionHandler } from '../renameSession';
 import { getProjectSessionsPath } from '../../features/getProjectSessionsPath';
-import { writeSessionTitleOverride } from '../../features/sessionTitleOverrides';
+import { removeSessionTitleOverride } from '../../features/sessionTitleOverrides';
+import { renameSessionThroughCli } from '../../features/cli-rename';
 import type { ConnectionManager } from '../../../ws/connection-manager';
 import type { Bridge } from '../../../bridge/bridge-interface';
 import type { IPCMessage } from '../../types';
@@ -23,7 +29,8 @@ import { MessageType } from '../../../shared';
 
 const mockExistsSync = vi.mocked(existsSync);
 const mockGetPath = vi.mocked(getProjectSessionsPath);
-const mockWriteOverride = vi.mocked(writeSessionTitleOverride);
+const mockRemoveOverride = vi.mocked(removeSessionTitleOverride);
+const mockRenameThroughCli = vi.mocked(renameSessionThroughCli);
 
 function createMockConnections() {
   return {
@@ -34,6 +41,15 @@ function createMockConnections() {
 
 const mockBridge = {} as Bridge;
 
+function renameMessage(payload: Record<string, unknown>): IPCMessage {
+  return {
+    type: MessageType.RENAME_SESSION,
+    payload,
+    timestamp: 0,
+    requestId: 'req-1',
+  };
+}
+
 describe('renameSessionHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,127 +59,119 @@ describe('renameSessionHandler', () => {
 
   it('returns an error when sessionId is missing', async () => {
     const connections = createMockConnections();
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { title: 'New', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler('conn-1', renameMessage({ title: 'New', workingDir: '/test' }), connections, mockBridge);
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
   it('returns an error when title is missing or blank', async () => {
     const connections = createMockConnections();
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'abc123', title: '   ', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: '   ', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
   it('returns an error when workingDir is missing', async () => {
     const connections = createMockConnections();
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'abc123', title: 'New' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: 'New' }),
+      connections,
+      mockBridge,
+    );
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
   it('rejects path traversal with .. in sessionId', async () => {
     const connections = createMockConnections();
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: '../../../etc/passwd', title: 'New', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: '../../../etc/passwd', title: 'New', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
       error: 'Invalid sessionId',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
   it('rejects sessionId with a path separator', async () => {
     const connections = createMockConnections();
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'subdir/file', title: 'New', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'subdir/file', title: 'New', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
       error: 'Invalid sessionId',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
   it('returns an error when the session file does not exist', async () => {
     const connections = createMockConnections();
     mockExistsSync.mockReturnValue(false);
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'abc123', title: 'New', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: 'New', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
 
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
       error: 'Session not found',
     }));
-    expect(mockWriteOverride).not.toHaveBeenCalled();
+    expect(mockRenameThroughCli).not.toHaveBeenCalled();
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
   });
 
-  it('persists the title, broadcasts the rename, and acks ok for a valid request', async () => {
+  it('renames through the CLI, drops the legacy override, broadcasts, and acks ok for a valid request', async () => {
     const connections = createMockConnections();
-    mockWriteOverride.mockResolvedValue(undefined);
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'abc123', title: '  My Renamed Session  ', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
+    mockRenameThroughCli.mockResolvedValue('request_to_resumed_cli');
+    mockRemoveOverride.mockResolvedValue(undefined);
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
-
-    expect(mockWriteOverride).toHaveBeenCalledWith(
-      '/home/user/.claude/projects/-test',
-      'abc123',
-      'My Renamed Session',
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: '  My Renamed Session  ', workingDir: '/test' }),
+      connections,
+      mockBridge,
     );
+
+    expect(mockRenameThroughCli).toHaveBeenCalledWith(connections, 'abc123', 'My Renamed Session', '/test');
+    expect(mockRemoveOverride).toHaveBeenCalledWith('/home/user/.claude/projects/-test', 'abc123');
     expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
       action: 'rename',
       session: { sessionId: 'abc123', title: 'My Renamed Session' },
@@ -173,21 +181,39 @@ describe('renameSessionHandler', () => {
     }));
   });
 
-  it('returns an error when persistence throws', async () => {
+  it('broadcasts the name as the CLI will keep it: one line', async () => {
     const connections = createMockConnections();
-    mockWriteOverride.mockRejectedValue(new Error('disk full'));
-    const message: IPCMessage = {
-      type: MessageType.RENAME_SESSION,
-      payload: { sessionId: 'abc123', title: 'New', workingDir: '/test' },
-      timestamp: 0,
-      requestId: 'req-1',
-    };
+    mockRenameThroughCli.mockResolvedValue('request_to_live_cli');
 
-    await renameSessionHandler('conn-1', message, connections, mockBridge);
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: 'two\nlines', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
 
+    expect(connections.broadcastToAll).toHaveBeenCalledWith(MessageType.SESSIONS_UPDATED, {
+      action: 'rename',
+      session: { sessionId: 'abc123', title: 'two lines' },
+    });
+  });
+
+  it('returns an error, and leaves any legacy override alone, when the CLI does not rename', async () => {
+    const connections = createMockConnections();
+    mockRenameThroughCli.mockRejectedValue(new Error('claude /rename timed out'));
+
+    await renameSessionHandler(
+      'conn-1',
+      renameMessage({ sessionId: 'abc123', title: 'New', workingDir: '/test' }),
+      connections,
+      mockBridge,
+    );
+
+    expect(mockRemoveOverride).not.toHaveBeenCalled();
+    expect(connections.broadcastToAll).not.toHaveBeenCalled();
     expect(connections.sendTo).toHaveBeenCalledWith('conn-1', MessageType.ACK, expect.objectContaining({
       status: 'error',
-      error: 'disk full',
+      error: 'claude /rename timed out',
     }));
   });
 });
