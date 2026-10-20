@@ -106,6 +106,20 @@ export function isPowerShellUsable(): boolean {
   return powerShellUsable;
 }
 
+/**
+ * Stops a feature that is about to start PowerShell when the boot check found it cannot be
+ * launched, with a message the person can read where the feature reports its error.
+ *
+ * Without it the feature starts PowerShell anyway and fails with `spawn UNKNOWN`, which says
+ * nothing about why, or waits for a PowerShell that never answers. `what` is the thing the
+ * person was trying to do, as a noun phrase ("Playing a sound").
+ */
+export function assertPowerShellUsable(what: string): void {
+  if (!powerShellUsable) {
+    throw new Error(`${what} needs PowerShell, which cannot be launched on this computer.`);
+  }
+}
+
 function describeFailure(err: unknown): string {
   const code = (err as NodeJS.ErrnoException | undefined)?.code;
   return code ? `spawn ${code}` : String(err);

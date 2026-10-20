@@ -51,6 +51,17 @@ describe('SoundsApi', () => {
       expect(result).toEqual([]);
     });
 
+    it('throws the backend\'s reason when the backend could not list the sounds', async () => {
+      vi.mocked(bridge.request).mockResolvedValueOnce({
+        status: 'error',
+        error: 'Playing a sound needs PowerShell, which cannot be launched on this computer.',
+      });
+
+      await expect(api.list()).rejects.toThrow(
+        'Playing a sound needs PowerShell, which cannot be launched on this computer.',
+      );
+    });
+
     it('returns an empty array when the response is null', async () => {
       vi.mocked(bridge.request).mockResolvedValueOnce(null);
 

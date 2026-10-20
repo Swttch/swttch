@@ -38,6 +38,8 @@ describe('exporting and importing the prompt library', () => {
   let sent: Array<{ type: string; payload: Record<string, any> }>;
   let saved: string | null;
   let pickedPath: string | null;
+  /** When set, the host cannot show its dialogs, as on Windows without PowerShell. */
+  let dialogFailure: Error | null;
 
   const connections = {
     sendTo: (_id: string, type: string, payload: Record<string, any>) => {
@@ -46,10 +48,14 @@ describe('exporting and importing the prompt library', () => {
   } as unknown as ConnectionManager;
   const bridge = {
     saveFile: async ({ contents }: { contents: string }) => {
+      if (dialogFailure) throw dialogFailure;
       saved = contents;
       return { path: join(scratch, 'out.json') };
     },
-    pickFiles: async () => ({ paths: pickedPath ? [pickedPath] : [] }),
+    pickFiles: async () => {
+      if (dialogFailure) throw dialogFailure;
+      return { paths: pickedPath ? [pickedPath] : [] };
+    },
   } as unknown as Bridge;
 
   const ask = async (
@@ -75,6 +81,7 @@ describe('exporting and importing the prompt library', () => {
     project = mkdtempSync(join(tmpdir(), 'ccg-transfer-proj-'));
     saved = null;
     pickedPath = null;
+    dialogFailure = null;
     switchMachine('source');
   });
 
@@ -152,6 +159,19 @@ describe('exporting and importing the prompt library', () => {
   };
 
   describe('the file', () => {
+    it('answers with an error, not silence, when the host cannot show its save dialog', async () => {
+      await make('global', 'a');
+      dialogFailure = new Error('Choosing where to save needs PowerShell, which cannot be launched on this computer.');
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const ack = await ask(exportPromptsHandler, MessageType.EXPORT_PROMPTS, { scope: 'global', ids: [] });
+
+      expect(ack).toMatchObject({
+        status: 'error',
+        error: 'Choosing where to save needs PowerShell, which cannot be launched on this computer.',
+      });
+    });
+
     it('is v2, lists the prompts in the library order and carries the order inside each category', async () => {
       const review = await makeCategory('review');
       const a = await make('global', 'a', [review]);
@@ -428,6 +448,18 @@ describe('exporting and importing the prompt library', () => {
       const ack = await ask(previewPromptImportHandler, MessageType.PREVIEW_PROMPT_IMPORT, { scope: 'global' });
 
       expect(ack).toMatchObject({ status: 'ok', cancelled: true });
+    });
+
+    it('answers with an error, not silence, when the host cannot show its file dialog', async () => {
+      dialogFailure = new Error('Choosing files needs PowerShell, which cannot be launched on this computer.');
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const ack = await ask(previewPromptImportHandler, MessageType.PREVIEW_PROMPT_IMPORT, { scope: 'global' });
+
+      expect(ack).toMatchObject({
+        status: 'error',
+        error: 'Choosing files needs PowerShell, which cannot be launched on this computer.',
+      });
     });
 
     it('ignores links that are not links', async () => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { SettingRow } from '../../common';
 import { Select, type SelectOption } from '@/components/Select';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -99,6 +100,8 @@ export function OpenFilesWithRow() {
   const handleChoose = async () => {
     // A native dialog waits on the person, so the request has no clock.
     const res = await send(MessageType.PICK_FILES, { mode: 'files', multiple: false }, { timeout: null });
+    // The host could not show its file dialog; the reason is the backend's.
+    if (typeof res?.error === 'string') toast.error(res.error);
     const picked = (res?.paths as string[] | undefined)?.[0];
     if (picked) {
       updateCustom({ path: picked });

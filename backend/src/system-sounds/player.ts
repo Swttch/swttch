@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { scanSystemSounds, type SystemSound } from './scanner';
+import { assertPowerShellUsable } from '../core/win-job';
 
 const POWERSHELL_UNSAFE_CHARS = /["'`$]/;
 
@@ -95,6 +96,7 @@ async function playOnDarwin(sound: SystemSound, volumeStep: number): Promise<voi
  * load presentationCore still gets its notification, just without the volume.
  */
 async function playOnWindows(sound: SystemSound, volumeStep: number): Promise<void> {
+  assertPowerShellUsable('Playing a sound');
   if (POWERSHELL_UNSAFE_CHARS.test(sound.path)) {
     throw new Error(`Unsafe character in sound path: ${sound.path}`);
   }

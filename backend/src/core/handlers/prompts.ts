@@ -244,10 +244,19 @@ export async function exportPromptsHandler(
   const now = new Date();
   const links = linksFromOrder(await readPromptOrderByCategory(scope, projectPath));
   const file = buildExportFile(chosen, await listCategories(), now, links);
-  const result = await bridge.saveFile({
-    suggestedName: exportFileName(now),
-    contents: `${JSON.stringify(file, null, 2)}\n`,
-  });
+  let result: { path: string | null };
+  try {
+    result = await bridge.saveFile({
+      suggestedName: exportFileName(now),
+      contents: `${JSON.stringify(file, null, 2)}\n`,
+    });
+  } catch (err) {
+    // The host could not show its save dialog (Windows without PowerShell, for one). The
+    // screen shows its generic "failed" note; the reason is in the log.
+    console.error('[node-backend]', 'exportPrompts: could not ask where to save:', err);
+    sendError(connections, connectionId, message, err instanceof Error ? err.message : String(err));
+    return;
+  }
 
   sendOk(connections, connectionId, message, { path: result.path, count: chosen.length });
 }
@@ -267,7 +276,14 @@ export async function previewPromptImportHandler(
   const scope = readScope(message);
   const projectPath = readProjectPath(message);
 
-  const picked = await bridge.pickFiles({ mode: 'files', multiple: false });
+  let picked: { paths: string[] };
+  try {
+    picked = await bridge.pickFiles({ mode: 'files', multiple: false });
+  } catch (err) {
+    console.error('[node-backend]', 'previewPromptImport: could not ask which file:', err);
+    sendError(connections, connectionId, message, err instanceof Error ? err.message : String(err));
+    return;
+  }
   const filePath = picked.paths[0];
   if (!filePath) {
     // Cancelled. Not an error, and not a preview either.

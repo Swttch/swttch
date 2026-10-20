@@ -5,6 +5,9 @@ import { MessageType } from '@/shared';
 
 interface ListSystemSoundsResponse {
   sounds?: SystemSound[];
+  /** `'error'` when the backend could not list them; `error` then says why. */
+  status?: string;
+  error?: string;
 }
 
 /**
@@ -41,6 +44,12 @@ export class SoundsApi {
       MessageType.LIST_SYSTEM_SOUNDS,
       {},
     );
+    // A handler that fails answers with an ACK that carries the reason, which does not reject
+    // the request. Reading that as "no sounds" would send the settings row to its empty state
+    // and the reason would never be shown.
+    if (response?.status === 'error') {
+      throw new Error(response.error ?? 'Unknown error');
+    }
     return response?.sounds ?? [];
   }
 

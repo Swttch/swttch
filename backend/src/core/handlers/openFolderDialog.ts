@@ -2,6 +2,7 @@ import { execFile, exec } from 'child_process';
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
+import { assertPowerShellUsable } from '../win-job';
 import { MessageType } from '../../shared';
 
 function openFolderDialogMac(): Promise<string | null> {
@@ -64,6 +65,12 @@ function openFolderDialogLinux(): Promise<string | null> {
 
 function openFolderDialogWindows(): Promise<string | null> {
   return new Promise((resolve, reject) => {
+    try {
+      assertPowerShellUsable('Choosing a folder');
+    } catch (err) {
+      reject(err);
+      return;
+    }
     const script = [
       'Add-Type -AssemblyName System.Windows.Forms;',
       '$f = New-Object System.Windows.Forms.FolderBrowserDialog;',
@@ -105,8 +112,11 @@ export async function openFolderDialogHandler(
 
     connections.sendTo(connectionId, MessageType.FOLDER_SELECTED, { path: selectedPath });
   } catch (err) {
-    connections.sendTo(connectionId, MessageType.ERROR, {
-      message: err instanceof Error ? err.message : String(err),
+    // Answered as FOLDER_SELECTED with no path, the message the screens are waiting on, so
+    // they stop waiting and can say why. A bare ERROR reached nobody who asked.
+    connections.sendTo(connectionId, MessageType.FOLDER_SELECTED, {
+      path: null,
+      error: err instanceof Error ? err.message : String(err),
     });
   }
 }

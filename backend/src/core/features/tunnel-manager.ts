@@ -5,6 +5,7 @@ import { exec as execCallback } from 'child_process';
 import { promisify } from 'util';
 import { arch, platform, tmpdir, homedir } from 'os';
 import { augmentedEnv } from '../augmented-path';
+import { downloadToFile } from './download-file';
 
 const execAsync = promisify(execCallback);
 
@@ -104,8 +105,8 @@ export async function installCloudflared(): Promise<string> {
   if (url.endsWith('.tgz')) {
     await execAsync(`curl -fsSL "${url}" | tar -xz -C "${localBinDir}"`, { env });
   } else if (os === 'win32') {
-    // Windows: use PowerShell for download
-    await execAsync(`powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${localBin}'"`, { timeout: 60_000, env });
+    // Windows: Node downloads it itself. PowerShell is not available on every machine.
+    await downloadToFile(url, localBin, { timeoutMs: 60_000 });
   } else {
     await execAsync(`curl -fsSL -o "${localBin}" "${url}"`, { env });
   }

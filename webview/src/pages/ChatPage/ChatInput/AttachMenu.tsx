@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import Tippy from '@tippyjs/react/headless';
 import type { Instance } from 'tippy.js';
+import toast from 'react-hot-toast';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { basename } from './basename';
 import { MessageType } from '@/shared';
@@ -96,7 +97,9 @@ export function AttachMenu(props: Props) {
   const pickFiles = useCallback(async () => {
     // A native dialog waits on the person, so the request has no clock: a pick
     // made after any delay still becomes a chip.
-    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'files', multiple: true }, { timeout: null }) as { paths: string[] } | null;
+    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'files', multiple: true }, { timeout: null }) as { paths?: string[]; error?: string } | null;
+    // The host could not show its file dialog; the reason is the backend's.
+    if (response?.error) toast.error(response.error);
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFileAttachment(p, basename(p));
@@ -104,7 +107,8 @@ export function AttachMenu(props: Props) {
   }, [bridge, addFileAttachment]);
 
   const pickFolders = useCallback(async () => {
-    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'folders', multiple: true }, { timeout: null }) as { paths: string[] } | null;
+    const response = await bridge.send(MessageType.PICK_FILES, { mode: 'folders', multiple: true }, { timeout: null }) as { paths?: string[]; error?: string } | null;
+    if (response?.error) toast.error(response.error);
     if (!response?.paths) return;
     for (const p of response.paths) {
       addFolderAttachment(p, basename(p));

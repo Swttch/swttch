@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import type { FileIcon } from './fileIcon';
+import { isPowerShellUsable } from '../win-job';
 
 const ICON_TIMEOUT_MS = 15_000;
 
@@ -71,6 +72,9 @@ const runWithPowerShell: WindowsRunner = (script) =>
   });
 
 export async function readWindowsIcon(extension: string, run: WindowsRunner = runWithPowerShell): Promise<FileIcon | null> {
+  // No PowerShell, no icon from the system: the chip keeps the one it draws itself, and PowerShell is not
+  // started for every file type just to fail again.
+  if (!isPowerShellUsable()) return null;
   const base64 = await run(windowsIconScript(extension));
   return base64 ? { mimeType: 'image/png', base64 } : null;
 }

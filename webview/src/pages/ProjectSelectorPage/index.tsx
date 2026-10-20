@@ -1,4 +1,5 @@
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { ProjectRow } from './ProjectRow';
 import { ProjectSortToggle } from './ProjectSortToggle';
 import { type ProjectSortOrder, persistSortOrder, readSortOrder } from './sortOrderStorage';
@@ -122,6 +123,8 @@ export function ProjectSelectorPage() {
     const unsubscribe = subscribe(MessageType.FOLDER_SELECTED, (message) => {
       const selectedPath = message.payload?.path as string | null;
       unsubscribe();
+      // The host could not show its folder dialog; the reason is the backend's.
+      if (typeof message.payload?.error === 'string') toast.error(message.payload.error);
       if (selectedPath) {
         setWorkingDirectory(selectedPath, { replace: false });
       }

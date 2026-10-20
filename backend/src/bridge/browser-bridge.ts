@@ -3,6 +3,7 @@ import { writeFile } from 'fs/promises';
 import type { Bridge } from './bridge-interface';
 import { readMergedSettings } from '../core/features/settings';
 import { Claude } from '../core/claude';
+import { assertPowerShellUsable, isPowerShellUsable } from '../core/win-job';
 import { detectInstalledEditors } from '../core/features/detectEditors';
 import { resolveOpenAtLine } from '../core/features/appDetection/openAtLine';
 import {
@@ -338,7 +339,15 @@ export class BrowserBridge implements Bridge {
   }
 
   private pickFilesWindows(mode: string, multiple: boolean): Promise<{ paths: string[] }> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // Say why instead of answering as if the person had cancelled: an empty answer here
+      // reads as "you chose nothing", and the dialog they are waiting for never appears.
+      try {
+        assertPowerShellUsable('Choosing files');
+      } catch (err) {
+        reject(err);
+        return;
+      }
       let script: string;
 
       if (mode === 'folders') {
@@ -449,7 +458,13 @@ if ($dialog.ShowDialog() -eq 'OK') {
   }
 
   private askForSavePathWindows(suggestedName: string): Promise<string | null> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      try {
+        assertPowerShellUsable('Choosing where to save');
+      } catch (err) {
+        reject(err);
+        return;
+      }
       const script = [
         'Add-Type -AssemblyName System.Windows.Forms',
         '$dialog = New-Object System.Windows.Forms.SaveFileDialog',
@@ -614,10 +629,21 @@ if ($dialog.ShowDialog() -eq 'OK') {
           detached: true,
         }).unref();
       } else if (app === 'PowerShell' || app === 'powershell') {
-        spawn('powershell', ['-NoExit', '-Command', `Set-Location -LiteralPath '${workingDir.replace(/'/g, "''")}'; claude`], {
-          stdio: 'ignore',
-          detached: true,
-        }).unref();
+        if (isPowerShellUsable()) {
+          spawn('powershell', ['-NoExit', '-Command', `Set-Location -LiteralPath '${workingDir.replace(/'/g, "''")}'; claude`], {
+            stdio: 'ignore',
+            detached: true,
+          }).unref();
+        } else {
+          // PowerShell cannot be launched here, and a terminal that never opens is worse than
+          // the Command Prompt one: it runs the same `claude` in the same folder.
+          console.error('[node-backend]', 'PowerShell cannot be launched on this computer — opening Command Prompt instead');
+          spawn('cmd', ['/c', 'start', '""', 'cmd', '/k', `cd /d "${workingDir}" && claude`], {
+            stdio: 'ignore',
+            detached: true,
+            shell: false,
+          }).unref();
+        }
       } else if (app === 'Git Bash' || app === 'bash') {
         const gitBashPath = `${process.env['PROGRAMFILES'] ?? 'C:\\Program Files'}\\Git\\bin\\bash.exe`;
         spawn(gitBashPath, [`--cd=${workingDir}`, '-c', 'claude; exec bash'], {

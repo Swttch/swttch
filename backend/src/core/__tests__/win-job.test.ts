@@ -124,6 +124,42 @@ describe('checkPowerShell', () => {
   });
 });
 
+describe('assertPowerShellUsable', () => {
+  afterEach(() => {
+    spawnMock.mockReset();
+    vi.restoreAllMocks();
+  });
+
+  it('lets a feature go ahead before any check has run', async () => {
+    const { assertPowerShellUsable, isPowerShellUsable } = await loadWinJob();
+
+    expect(isPowerShellUsable()).toBe(true);
+    expect(() => assertPowerShellUsable('Playing a sound')).not.toThrow();
+  });
+
+  it('lets a feature go ahead after PowerShell was found usable', async () => {
+    const { checkPowerShell, assertPowerShellUsable } = await loadWinJob();
+    spawnMock.mockReturnValue(fakeChild({ exit: [0, null] }));
+    await checkPowerShell();
+
+    expect(() => assertPowerShellUsable('Playing a sound')).not.toThrow();
+  });
+
+  it('stops a feature after PowerShell was found blocked, naming what it was for', async () => {
+    const { checkPowerShell, assertPowerShellUsable, isPowerShellUsable } = await loadWinJob();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    spawnMock.mockImplementation(() => {
+      throw Object.assign(new Error('spawn UNKNOWN'), { code: 'UNKNOWN' });
+    });
+    await checkPowerShell();
+
+    expect(isPowerShellUsable()).toBe(false);
+    expect(() => assertPowerShellUsable('Playing a sound')).toThrow(
+      'Playing a sound needs PowerShell, which cannot be launched on this computer.',
+    );
+  });
+});
+
 describe('spawnWin32JobCli', () => {
   const options = { cwd: 'C:\\project', env: { PATH: 'C:\\tools' } };
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
@@ -94,6 +95,8 @@ export function WorkingDirDropdown() {
   const onAddWorkingDir = useCallback(() => {
     const unsubscribe = subscribe(MessageType.FOLDER_SELECTED, (message) => {
       unsubscribe();
+      // The host could not show its folder dialog; the reason is the backend's.
+      if (typeof message.payload?.error === 'string') toast.error(message.payload.error);
       const selectedPath = message.payload?.path;
       if (typeof selectedPath === 'string' && selectedPath.length > 0) {
         // macOS folder dialog appends a trailing slash; strip it so the URL

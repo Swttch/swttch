@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process';
 import { readJsonForUpdate, updateJsonFile } from './atomic-json';
+import { assertPowerShellUsable } from '../win-job';
 import {
   acquireLid,
   createLidStrategy,
@@ -298,6 +299,8 @@ export async function enableSleepGuard(options: EnableOptions = {}): Promise<voi
         sleepGuardEnabled = true;
         return;
       }
+      // Fails here, with a reason the switch can show, instead of after the helper's start timeout.
+      assertPowerShellUsable('Keeping the computer awake');
       const proc = spawnWin32Inhibitor();
       try {
         await awaitWin32Ready(proc);
