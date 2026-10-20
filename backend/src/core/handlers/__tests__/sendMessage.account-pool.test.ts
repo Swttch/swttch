@@ -7,10 +7,12 @@ import { sendMessageHandler } from '../sendMessage';
 import { withAccount } from '../../features/account-manager';
 import { ensureClaudeProcess, restartClaudeSessionProcess, sendMessageToProcess } from '../../claude-process';
 import { claimAccountPoolContinuation, clearAccountPoolRecovery } from '../../features/account-pool-recovery-store';
+import { requestSessionTitleAfterSend } from '../../features/session-title-runtime';
 vi.mock('../../features/account-manager', () => ({ withAccount: vi.fn(async (_id: string, action: () => Promise<void>) => action()) }));
 vi.mock('../../claude-process', () => ({ ensureClaudeProcess: vi.fn(), restartClaudeSessionProcess: vi.fn(), sendMessageToProcess: vi.fn() }));
 vi.mock('../../features/account-pool-recovery-store', () => ({ claimAccountPoolContinuation: vi.fn(async () => true), clearAccountPoolRecovery: vi.fn() }));
 vi.mock('../../features/telemetry', () => ({ trackEvent: vi.fn() }));
+vi.mock('../../features/session-title-runtime', () => ({ requestSessionTitleAfterSend: vi.fn() }));
 vi.mock('../../features/fable-probe', () => ({ invalidateFableProbeCache: vi.fn() }));
 vi.mock('../getUsage', () => ({ resetUsageCache: vi.fn() }));
 vi.mock('../getAllUsage', () => ({ resetAllUsageCache: vi.fn() }));
@@ -45,6 +47,14 @@ it('does not send a reminder claimed by another tab', async () => {
   expect(withAccount).not.toHaveBeenCalled();
   expect(ensureClaudeProcess).not.toHaveBeenCalled();
   expect(sendMessageToProcess).not.toHaveBeenCalled();
+});
+it('asks for a session title once the prompt has been handed to the CLI, saying whether the session is new', async () => {
+  await sendMessageHandler('tab', { type: MessageType.SEND_MESSAGE, requestId: 'r', timestamp: 0,
+    payload: { sessionId: 'session', workingDir: '/fixture', content: 'first prompt', isNewSession: true } }, connections, bridge);
+  expect(requestSessionTitleAfterSend).toHaveBeenCalledWith(connections, 'session', 'first prompt', true, '/fixture');
+  expect(vi.mocked(sendMessageToProcess).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(requestSessionTitleAfterSend).mock.invocationCallOrder[0]);
+  await send('a later prompt');
+  expect(requestSessionTitleAfterSend).toHaveBeenLastCalledWith(connections, 'session', 'a later prompt', false, '/fixture');
 });
 it('clears recovery for a normal user turn without changing accounts', async () => {
   await send('another request');

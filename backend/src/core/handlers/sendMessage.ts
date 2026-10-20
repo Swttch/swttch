@@ -4,6 +4,7 @@ import type { IPCMessage } from '../types';
 import { generateSessionId } from '../features/generateSessionId';
 import { ensureClaudeProcess, sendMessageToProcess, restartClaudeSessionProcess } from '../claude-process';
 import { trackEvent } from '../features/telemetry';
+import { requestSessionTitleAfterSend } from '../features/session-title-runtime';
 import { MessageType, ACCOUNT_POOL_CONTINUE_REMINDER } from '../../shared';
 import { withAccount } from '../features/account-manager';
 import { resetUsageCache } from './getUsage';
@@ -76,6 +77,10 @@ export async function sendMessageHandler(
       } else {
         await send();
       }
+
+      // Name a new session the way the terminal does. Not awaited: the title is
+      // for the list and arrives while the first reply streams.
+      requestSessionTitleAfterSend(connections, resolvedSessionId, content, isNewSession, workingDir);
 
       // Broadcast user message to other subscribers (excluding sender)
       connections.broadcastToSession(resolvedSessionId, MessageType.USER_MESSAGE_BROADCAST, {
