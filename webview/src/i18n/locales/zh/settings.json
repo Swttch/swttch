@@ -187,6 +187,14 @@
       "label": "显示思考摘要",
       "description": "请求 Claude 提供思考内容的摘要,并显示在思考块中。\n键: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "自动生成会话标题",
+      "description": "与终端中一样，Claude Code 会根据新会话的第一条消息为其生成标题。"
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "未命名的会话按最后一条提示显示",
+      "description": "没有名称也没有生成标题的会话，按最后一条提示而不是第一条提示显示。"
+    },
     "nonessentialTraffic": {
       "label": "阻止非必要流量",
       "description": "将 Claude Code 的网络通信限制为响应提示所必需的部分。",

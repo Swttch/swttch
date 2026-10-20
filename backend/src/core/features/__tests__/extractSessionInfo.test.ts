@@ -712,4 +712,106 @@ describe('extractSessionInfo', () => {
       expect((await extractSessionInfo(await writeJsonl([user, assistant]))).title).toBe('First prompt');
     });
   });
+
+  describe('ai-title and last-prompt (the order the Claude Code extensions list by)', () => {
+    const user = JSON.stringify({
+      uuid: 'u1',
+      parentUuid: null,
+      type: 'user',
+      timestamp: '2025-01-01T00:00:00Z',
+      message: { content: [{ type: 'text', text: 'First prompt' }] },
+    });
+    const assistant = JSON.stringify({
+      uuid: 'u2',
+      parentUuid: 'u1',
+      type: 'assistant',
+      timestamp: '2025-01-01T00:01:00Z',
+      message: { content: [{ type: 'text', text: 'Reply' }] },
+    });
+    const aiTitle = (value: string | number) =>
+      JSON.stringify({ type: 'ai-title', aiTitle: value, sessionId: 's1' });
+    const customTitle = (value: string) =>
+      JSON.stringify({ type: 'custom-title', customTitle: value, sessionId: 's1' });
+    const lastPrompt = (value?: string) =>
+      JSON.stringify({ type: 'last-prompt', ...(value !== undefined && { lastPrompt: value }), leafUuid: 'u2', sessionId: 's1' });
+    const summary = JSON.stringify({ type: 'summary', leafUuid: 'u2', summary: 'Auto summary' });
+
+    it('lists a session under its ai-title instead of its first prompt', async () => {
+      const filePath = await writeJsonl([user, assistant, aiTitle('Generated name')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Generated name');
+    });
+
+    it('uses the newest ai-title when the tail holds several', async () => {
+      const filePath = await writeJsonl([user, assistant, aiTitle('Older'), aiTitle('Newer')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newer');
+    });
+
+    it('reads an ai-title that sits before the first prompt', async () => {
+      const filePath = await writeJsonl([aiTitle('Head name'), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Head name');
+    });
+
+    it('ignores empty and non-string ai-title values', async () => {
+      const filePath = await writeJsonl([aiTitle('Kept'), aiTitle(''), aiTitle(42), user, assistant]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Kept');
+    });
+
+    it('ranks custom-title above ai-title, wherever each sits', async () => {
+      expect(
+        (await extractSessionInfo(await writeJsonl([customTitle('My name'), user, assistant, aiTitle('Generated')]))).title,
+      ).toBe('My name');
+      expect(
+        (await extractSessionInfo(await writeJsonl([aiTitle('Generated'), user, assistant, customTitle('My name')]))).title,
+      ).toBe('My name');
+    });
+
+    it('ranks ai-title above last-prompt, summary and the first prompt', async () => {
+      const filePath = await writeJsonl([summary, user, assistant, lastPrompt('Newest prompt'), aiTitle('Generated')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Generated');
+    });
+
+    it('lists a session with no name or ai-title under its newest prompt', async () => {
+      const filePath = await writeJsonl([user, assistant, lastPrompt('Newest prompt')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newest prompt');
+    });
+
+    it('ranks last-prompt above a summary', async () => {
+      const filePath = await writeJsonl([summary, user, assistant, lastPrompt('Newest prompt')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newest prompt');
+    });
+
+    it('uses the newest last-prompt that carries text', async () => {
+      const filePath = await writeJsonl([user, assistant, lastPrompt('Older prompt'), lastPrompt('Newer prompt'), lastPrompt()]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('Newer prompt');
+    });
+
+    it('words a last-prompt like a first prompt: one line, no system tags', async () => {
+      const filePath = await writeJsonl([user, assistant, lastPrompt('<command-name>/init</command-name>')]);
+
+      expect((await extractSessionInfo(filePath)).title).toBe('/init');
+      expect((await extractSessionInfo(await writeJsonl([user, assistant, lastPrompt('two\nlines')]))).title).toBe('two lines');
+    });
+
+    it('skips last-prompt when the option turns it off', async () => {
+      const withSummary = await writeJsonl([summary, user, assistant, lastPrompt('Newest prompt')]);
+      const plain = await writeJsonl([user, assistant, lastPrompt('Newest prompt')]);
+
+      expect((await extractSessionInfo(withSummary, { includeLastPrompt: false })).title).toBe('Auto summary');
+      expect((await extractSessionInfo(plain, { includeLastPrompt: false })).title).toBe('First prompt');
+    });
+
+    it('still lists an ai-title when last-prompt is turned off', async () => {
+      const filePath = await writeJsonl([user, assistant, lastPrompt('Newest prompt'), aiTitle('Generated')]);
+
+      expect((await extractSessionInfo(filePath, { includeLastPrompt: false })).title).toBe('Generated');
+    });
+  });
 });

@@ -187,6 +187,14 @@
       "label": "Mostrar resumos do raciocínio",
       "description": "Pede ao Claude um resumo do raciocínio e o mostra dentro do bloco de raciocínio.\nChave: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "Gerar títulos de sessão automaticamente",
+      "description": "O Claude Code dá nome a uma sessão nova a partir da primeira mensagem, como no terminal."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "Listar sessões sem nome pelo último prompt",
+      "description": "Sessões sem nome e sem título gerado aparecem pelo último prompt em vez do primeiro."
+    },
     "nonessentialTraffic": {
       "label": "Bloquear tráfego não essencial",
       "description": "Limita o Claude Code ao tráfego de que uma solicitação precisa.",

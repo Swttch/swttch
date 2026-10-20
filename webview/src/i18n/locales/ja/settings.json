@@ -187,6 +187,14 @@
       "label": "思考の要約を表示",
       "description": "Claude に思考内容の要約を求め、思考ブロックの中に表示します。\nキー: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "セッションのタイトルを自動生成",
+      "description": "ターミナルと同じように、Claude Code が新しいセッションの最初のメッセージからタイトルを付けます。"
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "名前のないセッションを最後のプロンプトで表示",
+      "description": "名前も生成されたタイトルもないセッションを、最初のプロンプトではなく最後のプロンプトで表示します。"
+    },
     "nonessentialTraffic": {
       "label": "不要な通信をブロック",
       "description": "Claude Code の通信を、プロンプトへの応答に必要なものだけに制限します。",

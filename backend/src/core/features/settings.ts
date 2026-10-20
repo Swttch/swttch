@@ -100,6 +100,18 @@ const DEFAULT_SETTINGS: Record<string, unknown> = {
   // native `model` default, matching the CLI's single global default. GUI-only:
   // the CLI has no per-session override to gate. See issue #354.
   syncModelToDefault: true,
+  // Whether the CLI names a session from its first prompt, as it does in the
+  // terminal. On, the first send also asks the CLI for a title, which the CLI
+  // records itself as an `ai-title` entry. Off, the session is listed under what
+  // its transcript already says. GUI-only: the CLI has no switch for this (its
+  // closest one, CLAUDE_CODE_DISABLE_TERMINAL_TITLE, turns off all terminal title
+  // handling). See issue #562.
+  generateSessionTitles: true,
+  // Whether a session that has neither a name nor a generated title is listed
+  // under its newest prompt, the way the Claude Code extensions for VS Code and
+  // Cursor and the desktop app list it. Off, it is listed under its summary or
+  // first prompt, as this app did before. See issue #562.
+  sessionTitleFromLastPrompt: true,
   // Header dock arrangement: `order` is the row order in the ⋮ menu (and, once
   // filtered to `visible`, the dock's icon order too); `visible` names which of
   // those items are pulled out into the dock. Both empty means "not configured
@@ -164,6 +176,8 @@ const COMMENT_MAP: Record<string, string> = {
   browserDiffPresentation: '브라우저에서 우리 diff 페이지를 어떻게 띄울지: "new-tab"(새 브라우저 탭) | "overlay"(현재 세션 위 모달). IDE에서는 에디터 탭으로 뜨므로 이 값과 무관하다',
   ultracode: '[레거시] 네이티브 settings.json으로 이관됨(CLI가 읽는 공식 키). 마이그레이션이 비우는 용도로만 남김',
   syncModelToDefault: '모델을 바꾸면(드롭다운·순환 단축키) 현재 세션뿐 아니라 CLI 기본 모델(네이티브 model 설정)도 함께 갱신. true가 CLI의 원래 동작과 동일',
+  generateSessionTitles: '첫 프롬프트를 보내면 CLI에 세션 제목 생성을 요청할지. true면 CLI가 터미널에서처럼 제목을 만들어 ai-title 항목으로 직접 기록한다. false면 트랜스크립트에 있는 것(이름, 요약, 첫 프롬프트)으로 표시. CLI에는 이 스위치가 없는 GUI 전용 설정',
+  sessionTitleFromLastPrompt: '이름도 생성된 제목(ai-title)도 없는 세션을 마지막 프롬프트로 표시할지. true가 VS Code·Cursor 확장과 데스크톱 앱의 표시 방식. false면 요약, 첫 프롬프트 순',
   dockLayout: '상단바 우측 도크 배치: { order, visible } — order는 더보기(⋮) 메뉴 전체 항목의 순서, visible은 그 중 도크에 노출할 항목 id 집합. 둘 다 비면 미설정(전부 숨김)',
   env: 'CLAUDE_CONFIG_DIR 전용. 다른 환경 변수는 네이티브 settings.json의 env에 둔다',
   showDiffInIde: '[레거시] diffSurface로 대체됨. 마이그레이션이 값을 옮기고 비우는 용도로만 남김',
@@ -545,6 +559,8 @@ function validateSetting(key: string, value: unknown): string | null {
     case 'allowAllCommandsByDefault':
     case 'attachEditorContext':
     case 'syncModelToDefault':
+    case 'generateSessionTitles':
+    case 'sessionTitleFromLastPrompt':
       if (typeof value !== 'boolean') {
         return `${key} must be a boolean`;
       }

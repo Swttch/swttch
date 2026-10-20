@@ -187,6 +187,14 @@
       "label": "Afficher les résumés de réflexion",
       "description": "Demande à Claude un résumé de sa réflexion et l'affiche dans le bloc de réflexion.\nClé: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "Générer automatiquement les titres de session",
+      "description": "Claude Code nomme une nouvelle session d'après son premier message, comme dans le terminal."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "Afficher les sessions sans nom par leur dernier prompt",
+      "description": "Les sessions sans nom ni titre généré sont listées d'après leur dernier prompt plutôt que le premier."
+    },
     "nonessentialTraffic": {
       "label": "Bloquer le trafic non essentiel",
       "description": "Limite Claude Code au trafic nécessaire pour répondre.",

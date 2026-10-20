@@ -88,6 +88,15 @@ function deriveTitleFromUserText(text: string): string | null {
   return cleaned.length > 0 ? cleaned : null;
 }
 
+/**
+ * A `last-prompt` entry's text as a title, worded the way the first prompt is,
+ * or null when the entry carries no text (the CLI also writes it with only a
+ * leafUuid) or nothing meaningful is left once system tags are stripped.
+ */
+function lastPromptTitle(value: unknown): string | null {
+  return typeof value === 'string' ? deriveTitleFromUserText(value) : null;
+}
+
 function extractTextFromContent(content: MessageContent): string | null {
   if (Array.isArray(content)) {
     const lastTextBlock = content.filter((block) => block.type === 'text').pop();
@@ -112,6 +121,10 @@ interface HeadScan {
   summary: string | null;
   /** The last `/rename` seen in the part of the file the scan read. */
   customTitle: string | null;
+  /** The last `ai-title` (the CLI's generated name) seen in the part of the file the scan read. */
+  aiTitle: string | null;
+  /** The last `last-prompt` seen in the part of the file the scan read. */
+  lastPrompt: string | null;
   messageCount: number;
   hasUserOrAssistant: boolean;
   isSidechain: boolean;
@@ -139,6 +152,8 @@ function scanHead(file: string): Promise<HeadScan> {
     let firstUserPrompt: string | null = null;
     let firstSummary: string | null = null;
     let lastCustomTitle: string | null = null;
+    let lastAiTitle: string | null = null;
+    let lastLastPrompt: string | null = null;
     let hasUserOrAssistant = false;
     let sidechainGateSeen = false;
     let isSidechainFromGate = false;
@@ -164,6 +179,8 @@ function scanHead(file: string): Promise<HeadScan> {
         title: firstUserPrompt,
         summary: firstSummary,
         customTitle: lastCustomTitle,
+        aiTitle: lastAiTitle,
+        lastPrompt: lastLastPrompt,
         messageCount,
         hasUserOrAssistant,
         isSidechain: isSidechainFromGate,
@@ -223,6 +240,24 @@ function scanHead(file: string): Promise<HeadScan> {
         return;
       }
 
+      // The CLI writes its generated name as an `ai-title` entry (it has no
+      // timestamp either) and the newest one wins. Same rule as the entries above:
+      // recorded, and the scan reads on.
+      if (type === 'ai-title') {
+        if (typeof entry.aiTitle === 'string' && entry.aiTitle) {
+          lastAiTitle = entry.aiTitle;
+        }
+        return;
+      }
+
+      // `last-prompt` carries the text of the newest prompt. The CLI keeps
+      // rewriting it, so the newest one seen wins.
+      if (type === 'last-prompt') {
+        const candidate = lastPromptTitle(entry.lastPrompt);
+        if (candidate) lastLastPrompt = candidate;
+        return;
+      }
+
       if (!type || !COUNTED_TYPES.has(type)) return;
 
       messageCount++;
@@ -271,7 +306,17 @@ export interface TailScan {
   lastTimestamp: string | null;
   summary: string | null;
   customTitle: string | null;
+  aiTitle: string | null;
+  lastPrompt: string | null;
 }
+
+const EMPTY_TAIL: TailScan = {
+  lastTimestamp: null,
+  summary: null,
+  customTitle: null,
+  aiTitle: null,
+  lastPrompt: null,
+};
 
 /**
  * Read the last window of the file for the values the forward scan skipped.
@@ -284,9 +329,9 @@ export async function scanTail(file: string): Promise<TailScan> {
   const handle = await open(file, 'r');
   try {
     const { size } = await handle.stat();
-    if (size === 0) return { lastTimestamp: null, summary: null, customTitle: null };
+    if (size === 0) return { ...EMPTY_TAIL };
 
-    let result: TailScan = { lastTimestamp: null, summary: null, customTitle: null };
+    let result: TailScan = { ...EMPTY_TAIL };
 
     for (const windowSize of TAIL_WINDOW_SIZES) {
       const length = Math.min(windowSize, size);
@@ -312,6 +357,8 @@ function readWindow(buffer: Buffer): TailScan {
   let lastTimestamp: string | null = null;
   let summary: string | null = null;
   let customTitle: string | null = null;
+  let aiTitle: string | null = null;
+  let lastPrompt: string | null = null;
 
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
@@ -342,6 +389,20 @@ function readWindow(buffer: Buffer): TailScan {
       continue;
     }
 
+    // Walking backwards, the first ai-title met is the newest one.
+    if (type === 'ai-title') {
+      if (aiTitle === null && typeof entry.aiTitle === 'string' && entry.aiTitle) {
+        aiTitle = entry.aiTitle;
+      }
+      continue;
+    }
+
+    // Likewise the first last-prompt that carries text is the newest prompt.
+    if (type === 'last-prompt') {
+      if (lastPrompt === null) lastPrompt = lastPromptTitle(entry.lastPrompt);
+      continue;
+    }
+
     // Same rule as the forward scan: only a counted entry moves the clock.
     if (lastTimestamp === null && type && COUNTED_TYPES.has(type)) {
       const timestamp = (entry.timestamp as string) ?? null;
@@ -349,10 +410,24 @@ function readWindow(buffer: Buffer): TailScan {
     }
   }
 
-  return { lastTimestamp, summary, customTitle };
+  return { lastTimestamp, summary, customTitle, aiTitle, lastPrompt };
 }
 
-export async function extractSessionInfo(file: string): Promise<SessionInfo> {
+export interface ExtractSessionInfoOptions {
+  /**
+   * Whether the newest prompt names a session that has no name or generated
+   * title, ahead of its summary and first prompt. On by default: the Claude Code
+   * extensions for VS Code and Cursor and the desktop app all list such a session
+   * under its last prompt.
+   */
+  includeLastPrompt?: boolean;
+}
+
+export async function extractSessionInfo(
+  file: string,
+  options: ExtractSessionInfoOptions = {},
+): Promise<SessionInfo> {
+  const includeLastPrompt = options.includeLastPrompt ?? true;
   const head = await scanHead(file);
 
   if (head.skipSession) {
@@ -367,7 +442,7 @@ export async function extractSessionInfo(file: string): Promise<SessionInfo> {
 
   // Reading to the end already produced every value, so opening the file a
   // second time would only re-read bytes the scan has seen.
-  const tail = head.readToEnd ? { lastTimestamp: null, summary: null, customTitle: null } : await scanTail(file);
+  const tail = head.readToEnd ? EMPTY_TAIL : await scanTail(file);
 
   // The scan stops early only once a real user prompt has settled the title, so
   // any session that stopped early demonstrably holds a conversation. That is
@@ -384,10 +459,24 @@ export async function extractSessionInfo(file: string): Promise<SessionInfo> {
     };
   }
 
-  // A rename made in the CLI outranks everything. The tail holds the newest one
-  // when the scan stopped early, and the head's last value covers the rest.
+  // The order the Claude Code extensions for VS Code and Cursor and the desktop
+  // app list a session by, so one session reads the same in every client:
+  //   1. a name chosen with `/rename` (custom-title)
+  //   2. the title the CLI generated from the conversation (ai-title)
+  //   3. the newest prompt (last-prompt), unless the setting turns it off
+  //   4. a summary entry, then the first prompt
+  // Within each, the tail holds the newest entry when the scan stopped early, and
+  // the head's last value covers the rest.
   const title =
-    tail.customTitle ?? head.customTitle ?? head.summary ?? tail.summary ?? head.title ?? 'No title';
+    tail.customTitle ??
+    head.customTitle ??
+    tail.aiTitle ??
+    head.aiTitle ??
+    (includeLastPrompt ? (tail.lastPrompt ?? head.lastPrompt) : null) ??
+    head.summary ??
+    tail.summary ??
+    head.title ??
+    'No title';
 
   return {
     title,

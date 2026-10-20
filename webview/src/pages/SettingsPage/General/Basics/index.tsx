@@ -13,6 +13,8 @@ import { ChatPaginationRow } from './ChatPaginationRow';
 import { ClaudeConfigDirRow } from './ClaudeConfigDirRow';
 import { ShowThinkingSummariesRow } from './ShowThinkingSummariesRow';
 import { NonessentialTrafficRow } from './NonessentialTrafficRow';
+import { GenerateSessionTitlesRow } from './GenerateSessionTitlesRow';
+import { SessionTitleFromLastPromptRow } from './SessionTitleFromLastPromptRow';
 
 /**
  * The settings that are about the app as a whole rather than about one surface
@@ -37,6 +39,8 @@ export function BasicsSection() {
       <HostModeRow />
       <OpenSettingsRow />
       <ChatPaginationRow />
+      <GenerateSessionTitlesRow />
+      <SessionTitleFromLastPromptRow />
       <ShowThinkingSummariesRow />
       <ClaudeConfigDirRow />
       <NonessentialTrafficRow />

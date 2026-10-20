@@ -4,6 +4,7 @@ import { join } from 'path';
 import { extractSessionInfo, scanTail, type SessionInfo } from './extractSessionInfo';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
+import { includeLastPromptInTitles } from './sessionTitleSettings';
 
 /**
  * [sessionDir] is the working directory the session was recorded under. It is
@@ -171,6 +172,16 @@ export async function resolvePage(
     return loaded;
   };
 
+  // The switch is per project, so it is read once per directory the page draws from.
+  const lastPromptByDir = new Map<string, boolean>();
+  const includeLastPromptFor = async (sessionDir: string): Promise<boolean> => {
+    const cached = lastPromptByDir.get(sessionDir);
+    if (cached !== undefined) return cached;
+    const loaded = await includeLastPromptInTitles(sessionDir);
+    lastPromptByDir.set(sessionDir, loaded);
+    return loaded;
+  };
+
   const sessions: SessionListEntry[] = [];
   let cursor = offset;
 
@@ -189,7 +200,9 @@ export async function resolvePage(
 
     const infos = await mapWithLimit(batch, READ_CONCURRENCY, async (key) => {
       try {
-        const info = await extractSessionInfo(key.fullPath);
+        const info = await extractSessionInfo(key.fullPath, {
+          includeLastPrompt: await includeLastPromptFor(key.sessionDir),
+        });
         return { key, info };
       } catch (err) {
         console.error('[node-backend]', 'Failed to parse session file:', key.sessionId, err);

@@ -187,6 +187,14 @@
       "label": "Mostrar resúmenes del razonamiento",
       "description": "Pide a Claude un resumen de su razonamiento y lo muestra dentro del bloque de razonamiento.\nClave: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "Generar títulos de sesión automáticamente",
+      "description": "Claude Code nombra una sesión nueva a partir de su primer mensaje, como en la terminal."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "Mostrar las sesiones sin nombre por su último prompt",
+      "description": "Las sesiones sin nombre ni título generado se muestran por su último prompt en lugar del primero."
+    },
     "nonessentialTraffic": {
       "label": "Bloquear tráfico no esencial",
       "description": "Limita Claude Code al tráfico que necesita una solicitud.",

@@ -2,6 +2,7 @@ import { join } from 'path';
 import { extractSessionInfo } from './extractSessionInfo';
 import { getProjectSessionsPath } from './getProjectSessionsPath';
 import { readSessionTitleOverrides } from './sessionTitleOverrides';
+import { includeLastPromptInTitles } from './sessionTitleSettings';
 import type { SessionListEntry } from './getSessionsList';
 
 /**
@@ -27,7 +28,9 @@ export async function getSessionEntry(
 ): Promise<SessionListEntry | null> {
   try {
     const sessionsPath = await getProjectSessionsPath(workingDir);
-    const info = await extractSessionInfo(join(sessionsPath, `${sessionId}.jsonl`));
+    const info = await extractSessionInfo(join(sessionsPath, `${sessionId}.jsonl`), {
+      includeLastPrompt: await includeLastPromptInTitles(workingDir),
+    });
     if (info.isSidechain) return null;
 
     const overrides = await readSessionTitleOverrides(sessionsPath);

@@ -98,6 +98,8 @@ import { VolumeRow } from '../General/Notifications/VolumeRow';
 import { AutoOpenRow } from '../General/DiffView/AutoOpenRow';
 import { SurfaceRow } from '../General/DiffView/SurfaceRow';
 import { SyncToDefaultRow } from '../Model/Defaults/SyncToDefaultRow';
+import { GenerateSessionTitlesRow } from '../General/Basics/GenerateSessionTitlesRow';
+import { SessionTitleFromLastPromptRow } from '../General/Basics/SessionTitleFromLastPromptRow';
 import { DefaultModelRow } from '../Model/Defaults/DefaultModelRow';
 import { CliPathRow } from '../Cli/Tools/CliPathRow';
 import { NodePathRow } from '../Cli/Tools/NodePathRow';
@@ -118,6 +120,8 @@ const MERGED_ROWS: MergedRow[] = [
   { name: 'AutoOpenRow', Row: AutoOpenRow, store: 'app', key: 'autoOpenDiffOnPermission' },
   { name: 'SurfaceRow', Row: SurfaceRow, store: 'app', key: 'diffSurface' },
   { name: 'SyncToDefaultRow', Row: SyncToDefaultRow, store: 'app', key: 'syncModelToDefault' },
+  { name: 'GenerateSessionTitlesRow', Row: GenerateSessionTitlesRow, store: 'app', key: 'generateSessionTitles' },
+  { name: 'SessionTitleFromLastPromptRow', Row: SessionTitleFromLastPromptRow, store: 'app', key: 'sessionTitleFromLastPrompt' },
   { name: 'DefaultModelRow', Row: DefaultModelRow, store: 'claude', key: 'model' },
   { name: 'CliPathRow', Row: CliPathRow, store: 'app', key: 'cliPath' },
   { name: 'NodePathRow', Row: NodePathRow, store: 'app', key: 'nodePath' },

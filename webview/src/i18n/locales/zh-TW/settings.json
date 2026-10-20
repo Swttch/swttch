@@ -187,6 +187,14 @@
       "label": "顯示思考摘要",
       "description": "請 Claude 提供思考內容的摘要,並顯示在思考區塊中。\n鍵: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "自動產生工作階段標題",
+      "description": "與終端機中一樣，Claude Code 會根據新工作階段的第一則訊息為其產生標題。"
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "未命名的工作階段以最後一則提示顯示",
+      "description": "沒有名稱也沒有產生標題的工作階段，以最後一則提示而非第一則提示顯示。"
+    },
     "nonessentialTraffic": {
       "label": "封鎖非必要流量",
       "description": "將 Claude Code 的網路通訊限制為回應提示所必需的部分。",

@@ -187,6 +187,14 @@
       "label": "생각 요약 보기",
       "description": "Claude에게 생각 내용의 요약을 요청해서 생각 블록 안에 보여줍니다.\n키: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "세션 제목 자동 생성",
+      "description": "터미널에서처럼 Claude Code가 새 세션의 첫 메시지로 세션 제목을 만들어 줍니다."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "이름 없는 세션을 마지막 프롬프트로 표시",
+      "description": "이름도 생성된 제목도 없는 세션을 첫 프롬프트 대신 마지막 프롬프트로 표시합니다."
+    },
     "nonessentialTraffic": {
       "label": "비필수 통신 차단",
       "description": "Claude Code가 답변에 꼭 필요한 통신만 하도록 제한합니다.",

@@ -187,6 +187,14 @@
       "label": "Zusammenfassungen des Denkens anzeigen",
       "description": "Bittet Claude um eine Zusammenfassung seines Denkens und zeigt sie im Denkblock an.\nSchlüssel: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "Sitzungstitel automatisch erzeugen",
+      "description": "Claude Code benennt eine neue Sitzung wie im Terminal nach ihrer ersten Nachricht."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "Unbenannte Sitzungen nach dem letzten Prompt anzeigen",
+      "description": "Sitzungen ohne Namen und ohne erzeugten Titel werden nach dem letzten statt nach dem ersten Prompt aufgeführt."
+    },
     "nonessentialTraffic": {
       "label": "Nicht notwendigen Datenverkehr blockieren",
       "description": "Beschränkt Claude Code auf den Datenverkehr, den eine Anfrage braucht.",

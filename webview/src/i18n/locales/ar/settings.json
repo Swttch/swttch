@@ -187,6 +187,14 @@
       "label": "عرض ملخصات التفكير",
       "description": "يطلب من Claude ملخصًا لتفكيره ويعرضه داخل كتلة التفكير.\nالمفتاح: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "إنشاء عناوين الجلسات تلقائيًا",
+      "description": "يسمّي Claude Code الجلسة الجديدة من أول رسالة فيها، كما يفعل في الطرفية."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "عرض الجلسات بلا اسم بحسب آخر رسالة",
+      "description": "تُعرض الجلسات التي بلا اسم ولا عنوان مُنشأ بحسب آخر رسالة بدلًا من الأولى."
+    },
     "nonessentialTraffic": {
       "label": "حظر حركة البيانات غير الضرورية",
       "description": "يقصر Claude Code على حركة البيانات التي يحتاجها الرد.",

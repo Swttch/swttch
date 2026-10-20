@@ -211,6 +211,17 @@ export enum SettingKey {
   // This ON/OFF switch is itself GUI-only — the CLI has no such toggle, since it
   // has no concept of a session-only model change to gate. See issue #354.
   SYNC_MODEL_TO_DEFAULT = 'syncModelToDefault',
+
+  // Whether the first send of a new session also asks the CLI for a session title,
+  // as the CLI does by itself in the terminal. The CLI records the title in the
+  // transcript (an `ai-title` entry), so every Claude Code client lists the session
+  // under it. GUI-only: the CLI has no switch for this. See issue #562.
+  GENERATE_SESSION_TITLES = 'generateSessionTitles',
+
+  // Whether a session with neither a name nor a generated title is listed under the
+  // latest message sent in it, the way Claude Code's own clients list it. Off, it is
+  // listed under its summary or first message. See issue #562.
+  SESSION_TITLE_FROM_LAST_PROMPT = 'sessionTitleFromLastPrompt',
 }
 
 /**
@@ -432,6 +443,8 @@ export interface SettingsState {
   [SettingKey.SHOW_DIFF_IN_IDE]: boolean | null;
   [SettingKey.DOCK_LAYOUT]: DockLayout;
   [SettingKey.SYNC_MODEL_TO_DEFAULT]: boolean;
+  [SettingKey.GENERATE_SESSION_TITLES]: boolean;
+  [SettingKey.SESSION_TITLE_FROM_LAST_PROMPT]: boolean;
 }
 
 /**
@@ -478,4 +491,6 @@ export const DEFAULT_SETTINGS: SettingsState = {
   [SettingKey.SHOW_DIFF_IN_IDE]: null,
   [SettingKey.DOCK_LAYOUT]: { order: [], visible: [] },
   [SettingKey.SYNC_MODEL_TO_DEFAULT]: true,
+  [SettingKey.GENERATE_SESSION_TITLES]: true,
+  [SettingKey.SESSION_TITLE_FROM_LAST_PROMPT]: true,
 };

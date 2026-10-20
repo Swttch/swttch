@@ -187,6 +187,14 @@
       "label": "Show thinking summaries",
       "description": "Ask Claude for a summary of its thinking and show it inside the thinking block.\nKey: showThinkingSummaries"
     },
+    "generateSessionTitles": {
+      "label": "Generate session titles automatically",
+      "description": "Claude Code names a new session from its first message, as it does in the terminal."
+    },
+    "sessionTitleFromLastPrompt": {
+      "label": "List unnamed sessions by their last prompt",
+      "description": "Sessions with no name or generated title are listed by their last prompt instead of their first."
+    },
     "nonessentialTraffic": {
       "label": "Block nonessential traffic",
       "description": "Limits Claude Code to the traffic a prompt needs.",
