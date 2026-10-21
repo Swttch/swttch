@@ -129,6 +129,24 @@ export function _resetCliConfigCache(): void {
   pendingByWorkingDir.clear();
 }
 
+/**
+ * The `--settings` value that keeps the config probe from running hooks.
+ *
+ * The probe only asks for the catalog of commands, agents and models, which hooks do not
+ * contribute to, yet every SessionStart hook still ran and its whole output came back on
+ * stdout: one measured response was 6.5MB of hook output around a 58KB catalog (#571).
+ * `disableAllHooks` is a documented CLI setting, so the catalog stays what a terminal user
+ * gets while the hook output is never produced.
+ *
+ * On Windows the CLI is started through cmd.exe without any quoting of the arguments, which
+ * strips unescaped double quotes and would leave invalid JSON. `\"` survives cmd.exe and is
+ * turned back into `"` when the launcher splits its command line.
+ */
+export function configProbeSettingsArg(platform: NodeJS.Platform = process.platform): string {
+  const json = JSON.stringify({ disableAllHooks: true });
+  return platform === 'win32' ? json.replace(/"/g, '\\"') : json;
+}
+
 async function loadCliConfigInternal(workingDir: string): Promise<CliConfigControlResponse | null> {
   const args = [
     '-p',
@@ -137,6 +155,7 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
     '--input-format', 'stream-json',
     '--verbose',
     '--permission-mode', 'default',
+    '--settings', configProbeSettingsArg(),
   ];
 
   // spawnAuthed: the config probe runs as the same authenticated identity as chat

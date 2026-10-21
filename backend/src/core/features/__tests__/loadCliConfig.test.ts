@@ -14,7 +14,7 @@ vi.mock('../../claude', () => ({
 }));
 
 import { Claude } from '../../claude';
-import { loadCliConfig, parseCliConfigResponse, _resetCliConfigCache } from '../loadCliConfig';
+import { loadCliConfig, parseCliConfigResponse, configProbeSettingsArg, _resetCliConfigCache } from '../loadCliConfig';
 
 function makeFakeProc(stdoutPayload: string): ChildProcess {
   const proc = new EventEmitter() as unknown as ChildProcess;
@@ -91,6 +91,25 @@ describe('loadCliConfig', () => {
       expect(first?.response.response.commands[0].name).toBe('first');
       expect(second?.response.response.commands[0].name).toBe('second');
       expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('probe arguments', () => {
+    it('starts the probe with hooks switched off, so SessionStart output is never emitted (#571)', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementation(async () => makeFakeProc(controlResponse('skill-a')));
+
+      await loadCliConfig('/project/a');
+
+      const args = vi.mocked(Claude.spawnAuthed).mock.calls[0][0];
+      const at = args.indexOf('--settings');
+      expect(at).toBeGreaterThanOrEqual(0);
+      expect(JSON.parse(args[at + 1])).toEqual({ disableAllHooks: true });
+    });
+
+    it('escapes the quotes of the settings JSON on Windows, where cmd.exe strips unescaped ones', () => {
+      expect(configProbeSettingsArg('win32')).toBe('{\\"disableAllHooks\\":true}');
+      expect(configProbeSettingsArg('darwin')).toBe('{"disableAllHooks":true}');
+      expect(configProbeSettingsArg('linux')).toBe('{"disableAllHooks":true}');
     });
   });
 
