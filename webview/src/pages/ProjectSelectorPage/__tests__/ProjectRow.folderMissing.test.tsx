@@ -30,13 +30,13 @@ describe('ProjectRow when the project folder is gone', () => {
   it('tells the user that the folder was not found', () => {
     render(row(true));
 
-    expect(screen.getByText('folderMissing')).toBeInTheDocument();
+    expect(screen.getByLabelText('deleteConfirm.title')).toBeInTheDocument();
   });
 
   it('shows no such tag while the folder is there', () => {
     render(row(false));
 
-    expect(screen.queryByText('folderMissing')).toBeNull();
+    expect(screen.queryByLabelText('deleteConfirm.title')).toBeNull();
   });
 
   it('asks for confirmation when the tag is clicked, without opening the project', async () => {
@@ -44,7 +44,7 @@ describe('ProjectRow when the project folder is gone', () => {
     const onDelete = vi.fn(async () => true);
     render(row(true, { onSelect, onDelete }));
 
-    fireEvent.click(screen.getByText('folderMissing'));
+    fireEvent.click(screen.getByLabelText('deleteConfirm.title'));
 
     expect(await screen.findByText('deleteConfirm.message')).toBeInTheDocument();
     expect(onSelect).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe('ProjectRow when the project folder is gone', () => {
     const onDelete = vi.fn(async () => true);
     render(row(true, { onDelete }));
 
-    fireEvent.click(screen.getByText('folderMissing'));
+    fireEvent.click(screen.getByLabelText('deleteConfirm.title'));
     fireEvent.click(await screen.findByText('deleteConfirm.confirmLabel'));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));

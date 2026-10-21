@@ -1,5 +1,5 @@
 import { KeyboardEvent, MouseEvent, useEffect, useRef } from 'react';
-import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftIcon, FolderIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { MarqueeText } from './MarqueeText';
 import { ProjectRowMenu } from './ProjectRowMenu';
 import { projectBadgeStyle, projectInitials } from './projectBadge';
@@ -176,26 +176,40 @@ export function ProjectRow(props: Props) {
               </span>
 
               {folderMissing && (
-                <Tooltip content={t('folderMissingHint')}>
+                // Opens below the badge: above it the tooltip lands on the
+                // project name this badge belongs to.
+                <Tooltip content={t('folderMissingHint')} placement="bottom">
                   <span
                     role="button"
                     tabIndex={0}
+                    aria-label={t('deleteConfirm.title')}
                     onClick={handleDeleteClick}
                     onKeyDown={handleDeleteKeyDown}
-                    // Both labels share one grid cell, so the badge is as wide
-                    // as the longer of the two and swapping them on hover never
-                    // nudges the star or the name beside it.
-                    className="group/badge inline-grid flex-shrink-0 cursor-pointer rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg transition-colors hover:brightness-125 focus:brightness-125"
+                    // The folder-with-a-slash icon and the trash icon share one
+                    // grid cell, so swapping them on hover never nudges the
+                    // star or the name beside it.
+                    className="group/badge inline-grid flex-shrink-0 cursor-pointer rounded bg-state-error-bg p-1 text-state-error-fg transition-colors hover:brightness-125 focus:brightness-125"
                   >
-                    <span className="col-start-1 row-start-1 text-center group-hover/badge:invisible group-focus/badge:invisible">
-                      {t('folderMissing')}
-                    </span>
                     <span
                       aria-hidden="true"
-                      className="invisible col-start-1 row-start-1 text-center group-hover/badge:visible group-focus/badge:visible"
+                      className="relative col-start-1 row-start-1 group-hover/badge:invisible group-focus/badge:invisible"
                     >
-                      {t('deleteConfirm.title')}
+                      <FolderIcon className="h-3.5 w-3.5" />
+                      <svg
+                        className="absolute inset-0 h-3.5 w-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                      >
+                        <path d="M4 3.5L20 20.5" />
+                      </svg>
                     </span>
+                    <TrashIcon
+                      aria-hidden="true"
+                      className="invisible col-start-1 row-start-1 h-3.5 w-3.5 group-hover/badge:visible group-focus/badge:visible"
+                    />
                   </span>
                 </Tooltip>
               )}
