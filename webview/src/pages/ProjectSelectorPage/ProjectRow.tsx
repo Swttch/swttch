@@ -57,7 +57,7 @@ export function ProjectRow(props: Props) {
   // A row whose folder is gone is muted as a whole (avatar, name, path, session
   // count); only the delete badge keeps full strength, since it is the one thing
   // on the row worth acting on.
-  const dim = folderMissing ? ' opacity-50' : '';
+  const dim = folderMissing ? ' opacity-20' : '';
 
   // Keep the keyboard cursor on screen. Arrow keys move it while focus stays in
   // the search box, so nothing else would scroll the row into view.
@@ -231,7 +231,7 @@ export function ProjectRow(props: Props) {
           <MarqueeText
             text={abbreviateHomeDir(path, homeDir)}
             className={`text-[0.7692rem] text-text-tertiary ${
-              folderMissing ? 'opacity-50' : 'group-hover:text-text-secondary'
+              folderMissing ? 'opacity-20' : 'group-hover:text-text-secondary'
             }`}
           />
         </span>
