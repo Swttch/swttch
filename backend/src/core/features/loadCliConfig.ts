@@ -85,7 +85,10 @@ const cacheByWorkingDir = new Map<string, CliConfigControlResponse>();
 const pendingByWorkingDir = new Map<string, Promise<CliConfigControlResponse | null>>();
 
 export interface LoadCliConfigOptions {
-  /** Skip the cache and respawn the CLI (used by UI-triggered refresh). */
+  /**
+   * Skip the cache and ask the CLI again (used by UI-triggered refresh). A probe that is
+   * already running for the same workingDir is joined instead of starting another.
+   */
   refresh?: boolean;
 }
 
@@ -98,9 +101,12 @@ export async function loadCliConfig(
   workingDir: string,
   options: LoadCliConfigOptions = {},
 ): Promise<CliConfigControlResponse | null> {
+  // A refresh discards the finished answer so a skill added at runtime is found (#176), but
+  // not a probe that is still running: several windows ask at the same moment when the app
+  // starts, and each of them starting its own CLI multiplied the work (#571). A refresh that
+  // arrives while a probe is running joins it; one that arrives after it finished starts a new one.
   if (options.refresh) {
     cacheByWorkingDir.delete(workingDir);
-    pendingByWorkingDir.delete(workingDir);
   }
   const cached = cacheByWorkingDir.get(workingDir);
   if (cached) {

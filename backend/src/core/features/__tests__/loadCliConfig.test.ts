@@ -94,6 +94,76 @@ describe('loadCliConfig', () => {
     });
   });
 
+  describe('refreshes that overlap (#571)', () => {
+    it('shares one probe between simultaneous refreshes of the same project', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementation(async () => makeFakeProc(controlResponse('skill-a')));
+
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () => loadCliConfig('/project/a', { refresh: true })),
+      );
+
+      expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(1);
+      expect(results).toHaveLength(8);
+      for (const config of results) {
+        expect(config?.response.response.commands[0].name).toBe('skill-a');
+      }
+    });
+
+    it('keeps projects apart: simultaneous refreshes of two projects start one probe each', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementation(async (_args, workingDir) =>
+        makeFakeProc(controlResponse(workingDir === '/project/a' ? 'skill-a' : 'skill-b')),
+      );
+
+      const [a1, b1, a2, b2] = await Promise.all([
+        loadCliConfig('/project/a', { refresh: true }),
+        loadCliConfig('/project/b', { refresh: true }),
+        loadCliConfig('/project/a', { refresh: true }),
+        loadCliConfig('/project/b', { refresh: true }),
+      ]);
+
+      expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(2);
+      expect(a1?.response.response.commands[0].name).toBe('skill-a');
+      expect(a2?.response.response.commands[0].name).toBe('skill-a');
+      expect(b1?.response.response.commands[0].name).toBe('skill-b');
+      expect(b2?.response.response.commands[0].name).toBe('skill-b');
+    });
+
+    it('starts a new probe for a refresh that arrives after the previous one finished, so added skills show up (#176)', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementationOnce(async () => makeFakeProc(controlResponse('before')));
+      await Promise.all([
+        loadCliConfig('/project/a', { refresh: true }),
+        loadCliConfig('/project/a', { refresh: true }),
+      ]);
+
+      vi.mocked(Claude.spawnAuthed).mockImplementationOnce(async () => makeFakeProc(controlResponse('after')));
+      const later = await loadCliConfig('/project/a', { refresh: true });
+
+      expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(2);
+      expect(later?.response.response.commands[0].name).toBe('after');
+    });
+
+    it('settles every waiting caller when the shared probe cannot start, and the next call starts fresh', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementationOnce(async () => {
+        throw new Error('spawn failed');
+      });
+
+      const settled = await Promise.allSettled([
+        loadCliConfig('/project/a', { refresh: true }),
+        loadCliConfig('/project/a', { refresh: true }),
+        loadCliConfig('/project/a', { refresh: true }),
+      ]);
+
+      expect(settled.every((s) => s.status === 'rejected')).toBe(true);
+      expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(1);
+
+      vi.mocked(Claude.spawnAuthed).mockImplementationOnce(async () => makeFakeProc(controlResponse('recovered')));
+      const next = await loadCliConfig('/project/a', { refresh: true });
+
+      expect(next?.response.response.commands[0].name).toBe('recovered');
+      expect(vi.mocked(Claude.spawnAuthed)).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('probe arguments', () => {
     it('starts the probe with hooks switched off, so SessionStart output is never emitted (#571)', async () => {
       vi.mocked(Claude.spawnAuthed).mockImplementation(async () => makeFakeProc(controlResponse('skill-a')));
