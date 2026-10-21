@@ -149,11 +149,14 @@ export function ProjectRow(props: Props) {
                 title={favoriteLabel}
                 // A pinned row keeps its star visible; the rest reveal one on
                 // hover or when the keyboard cursor lands, so an unpinned list
-                // stays quiet.
+                // stays quiet. An invisible star still takes up room, so it
+                // goes last (after the folder-missing badge) instead of leaving
+                // a gap between the name and the badge; it also means hovering
+                // the row never moves the badge.
                 className={`flex flex-shrink-0 items-center justify-center rounded p-1 transition-opacity hover:text-text-primary ${
                   isFavorite
                     ? 'text-accent-primary opacity-100'
-                    : 'text-text-tertiary opacity-0 focus:opacity-100 group-hover:opacity-100 group-data-[active]:opacity-100'
+                    : 'order-last text-text-tertiary opacity-0 focus:opacity-100 group-hover:opacity-100 group-data-[active]:opacity-100'
                 }`}
               >
                 <svg
@@ -182,7 +185,7 @@ export function ProjectRow(props: Props) {
                     // Both labels share one grid cell, so the badge is as wide
                     // as the longer of the two and swapping them on hover never
                     // nudges the star or the name beside it.
-                    className="group/badge ms-1 inline-grid flex-shrink-0 cursor-pointer rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg transition-colors hover:brightness-125 focus:brightness-125"
+                    className="group/badge inline-grid flex-shrink-0 cursor-pointer rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg transition-colors hover:brightness-125 focus:brightness-125"
                   >
                     <span className="col-start-1 row-start-1 text-center group-hover/badge:invisible group-focus/badge:invisible">
                       {t('folderMissing')}
