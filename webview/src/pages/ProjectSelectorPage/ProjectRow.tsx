@@ -54,6 +54,11 @@ export function ProjectRow(props: Props) {
   // letters — the alias takes its place instead, exactly as item 2 asked.
   const shownName = alias || name;
 
+  // A row whose folder is gone is muted as a whole (avatar, name, path, session
+  // count); only the delete badge keeps full strength, since it is the one thing
+  // on the row worth acting on.
+  const dim = folderMissing ? ' opacity-50' : '';
+
   // Keep the keyboard cursor on screen. Arrow keys move it while focus stays in
   // the search box, so nothing else would scroll the row into view.
   useEffect(() => {
@@ -109,7 +114,7 @@ export function ProjectRow(props: Props) {
         <span
           aria-hidden="true"
           style={projectBadgeStyle(path)}
-          className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded text-xs font-semibold"
+          className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded text-xs font-semibold${dim}`}
         >
           {projectInitials(shownName)}
         </span>
@@ -117,7 +122,9 @@ export function ProjectRow(props: Props) {
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-1">
-              <span className="truncate text-sm font-medium text-text-primary">{shownName}</span>
+              <span className={`truncate text-sm font-medium text-text-primary${dim}`}>
+                {shownName}
+              </span>
 
               {/*
                 A real <button> cannot contain another <button> — the parser
@@ -216,7 +223,7 @@ export function ProjectRow(props: Props) {
             </span>
 
             {sessionCount > 0 && (
-              <span className="flex-shrink-0 text-xs text-text-tertiary">
+              <span className={`flex-shrink-0 text-xs text-text-tertiary${dim}`}>
                 {t('sessionCount', { count: sessionCount })}
               </span>
             )}
