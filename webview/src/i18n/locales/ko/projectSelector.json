@@ -41,7 +41,7 @@
   "sessionCount_one": "세션 {{count}}개",
   "sessionCount_other": "세션 {{count}}개",
   "folderMissing": "폴더 없음",
-  "folderMissingHint": "이 프로젝트의 폴더가 더 이상 없습니다. 메뉴에서 프로젝트를 삭제하면 목록에서 사라집니다.",
+  "folderMissingHint": "이 프로젝트의 폴더가 더 이상 없습니다. 클릭하면 프로젝트를 삭제하고 목록에서 지웁니다.",
   "errors": {
     "loadFailed": "프로젝트를 불러오지 못했습니다"
   }

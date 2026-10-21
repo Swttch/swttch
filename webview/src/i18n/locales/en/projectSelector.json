@@ -41,7 +41,7 @@
   "sessionCount_one": "{{count}} session",
   "sessionCount_other": "{{count}} sessions",
   "folderMissing": "Folder not found",
-  "folderMissingHint": "This project's folder no longer exists. Delete the project from its menu to remove it from this list.",
+  "folderMissingHint": "This project's folder no longer exists. Click to delete the project and remove it from this list.",
   "errors": {
     "loadFailed": "Failed to load projects"
   }

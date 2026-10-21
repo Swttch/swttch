@@ -41,7 +41,7 @@
   "sessionCount_one": "{{count}} セッション",
   "sessionCount_other": "{{count}} セッション",
   "folderMissing": "フォルダーが見つかりません",
-  "folderMissingHint": "このプロジェクトのフォルダーは存在しません。メニューからプロジェクトを削除すると、一覧から消えます。",
+  "folderMissingHint": "このプロジェクトのフォルダーは存在しません。クリックするとプロジェクトを削除し、一覧から消します。",
   "errors": {
     "loadFailed": "プロジェクトの読み込みに失敗しました"
   }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { EllipsisVerticalIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { ProjectMetaDialog } from './ProjectMetaDialog';
-import { useConfirmDialog } from '@/components/ConfirmDialog/useConfirmDialog';
+import { useProjectDelete } from './useProjectDelete';
 import { useTranslation } from '@/i18n';
 
 interface Props {
@@ -28,7 +28,7 @@ export function ProjectRowMenu(props: Props) {
   const { displayName, realName, currentName, currentDescription, path, onDelete, onSaveMeta } =
     props;
   const { t } = useTranslation('projectSelector');
-  const { confirmDialog, confirm } = useConfirmDialog();
+  const { confirmDialog, requestDelete } = useProjectDelete(displayName, onDelete);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -56,18 +56,9 @@ export function ProjectRowMenu(props: Props) {
     void navigator.clipboard.writeText(path);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     setOpen(false);
-    const ok = await confirm({
-      title: t('deleteConfirm.title'),
-      message: t('deleteConfirm.message', { name: displayName }),
-      confirmLabel: t('deleteConfirm.confirmLabel'),
-      variant: 'danger',
-    });
-    if (!ok) return;
-
-    const deleted = await onDelete();
-    toast[deleted ? 'success' : 'error'](t(deleted ? 'deleteDone' : 'deleteFailed'));
+    void requestDelete();
   };
 
   const handleSaveMeta = async (name: string, description: string) => {
@@ -136,7 +127,7 @@ export function ProjectRowMenu(props: Props) {
           <button
             type="button"
             role="menuitem"
-            onClick={() => void handleDelete()}
+            onClick={handleDelete}
             className="block w-full px-3 py-2 text-start text-xs text-state-error-fg transition-colors hover:bg-surface-hover"
           >
             {t('menu.delete')}

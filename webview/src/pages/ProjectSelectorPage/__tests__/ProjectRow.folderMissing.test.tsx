@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -7,7 +7,10 @@ vi.mock('@/i18n', () => ({
 
 import { ProjectRow } from '../ProjectRow';
 
-const row = (folderMissing: boolean) => (
+const row = (
+  folderMissing: boolean,
+  handlers: { onSelect?: () => void; onDelete?: () => Promise<boolean> } = {},
+) => (
   <ProjectRow
     name="ccg-demo"
     path="/private/tmp/ccg-demo"
@@ -16,9 +19,9 @@ const row = (folderMissing: boolean) => (
     homeDir="/Users/me"
     isActive={false}
     isFavorite={false}
-    onSelect={() => {}}
+    onSelect={handlers.onSelect ?? (() => {})}
     onToggleFavorite={() => {}}
-    onDelete={async () => true}
+    onDelete={handlers.onDelete ?? (async () => true)}
     onSaveMeta={async () => true}
   />
 );
@@ -34,5 +37,27 @@ describe('ProjectRow when the project folder is gone', () => {
     render(row(false));
 
     expect(screen.queryByText('folderMissing')).toBeNull();
+  });
+
+  it('asks for confirmation when the tag is clicked, without opening the project', async () => {
+    const onSelect = vi.fn();
+    const onDelete = vi.fn(async () => true);
+    render(row(true, { onSelect, onDelete }));
+
+    fireEvent.click(screen.getByText('folderMissing'));
+
+    expect(await screen.findByText('deleteConfirm.message')).toBeInTheDocument();
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes the project once the confirmation is accepted', async () => {
+    const onDelete = vi.fn(async () => true);
+    render(row(true, { onDelete }));
+
+    fireEvent.click(screen.getByText('folderMissing'));
+    fireEvent.click(await screen.findByText('deleteConfirm.confirmLabel'));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
   });
 });

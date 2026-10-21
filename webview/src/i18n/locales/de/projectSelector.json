@@ -41,7 +41,7 @@
   "sessionCount_one": "{{count}} Sitzung",
   "sessionCount_other": "{{count}} Sitzungen",
   "folderMissing": "Ordner nicht gefunden",
-  "folderMissingHint": "Der Ordner dieses Projekts existiert nicht mehr. Löschen Sie das Projekt über das Menü, um es aus der Liste zu entfernen.",
+  "folderMissingHint": "Der Ordner dieses Projekts existiert nicht mehr. Klicken Sie, um das Projekt zu löschen und aus der Liste zu entfernen.",
   "errors": {
     "loadFailed": "Projekte konnten nicht geladen werden"
   }

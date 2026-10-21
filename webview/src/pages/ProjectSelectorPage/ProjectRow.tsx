@@ -3,6 +3,7 @@ import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import { MarqueeText } from './MarqueeText';
 import { ProjectRowMenu } from './ProjectRowMenu';
 import { projectBadgeStyle, projectInitials } from './projectBadge';
+import { useProjectDelete } from './useProjectDelete';
 import { Tooltip } from '@/components/Tooltip';
 import { abbreviateHomeDir } from '@/shared';
 import { useTranslation } from '@/i18n';
@@ -59,6 +60,10 @@ export function ProjectRow(props: Props) {
     if (isActive) ref.current?.scrollIntoView({ block: 'nearest' });
   }, [isActive]);
 
+  // The confirm dialog is rendered beside the open button, not inside it, so
+  // clicks in the dialog never bubble into onSelect.
+  const { confirmDialog, requestDelete } = useProjectDelete(shownName, onDelete);
+
   const favoriteLabel = isFavorite ? t('removeFavorite') : t('addFavorite');
 
   // Toggling the star must not also fire the row's onSelect, since the star
@@ -73,6 +78,19 @@ export function ProjectRow(props: Props) {
     e.preventDefault();
     e.stopPropagation();
     onToggleFavorite();
+  };
+
+  // Same reasoning as the star: the badge sits INSIDE the open button, so its
+  // click must not also open the project.
+  const handleDeleteClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    void requestDelete();
+  };
+  const handleDeleteKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    e.stopPropagation();
+    void requestDelete();
   };
 
   return (
@@ -153,18 +171,32 @@ export function ProjectRow(props: Props) {
                   />
                 </svg>
               </span>
-            </span>
 
-            {folderMissing && (
-              <Tooltip content={t('folderMissingHint')}>
-                <span
-                  tabIndex={0}
-                  className="flex-shrink-0 rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg"
-                >
-                  {t('folderMissing')}
-                </span>
-              </Tooltip>
-            )}
+              {folderMissing && (
+                <Tooltip content={t('folderMissingHint')}>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={handleDeleteClick}
+                    onKeyDown={handleDeleteKeyDown}
+                    // Both labels share one grid cell, so the badge is as wide
+                    // as the longer of the two and swapping them on hover never
+                    // nudges the star or the name beside it.
+                    className="group/badge ms-1 inline-grid flex-shrink-0 cursor-pointer rounded bg-state-error-bg px-1.5 py-0.5 text-[0.6923rem] text-state-error-fg transition-colors hover:brightness-125 focus:brightness-125"
+                  >
+                    <span className="col-start-1 row-start-1 text-center group-hover/badge:invisible group-focus/badge:invisible">
+                      {t('folderMissing')}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="invisible col-start-1 row-start-1 text-center group-hover/badge:visible group-focus/badge:visible"
+                    >
+                      {t('deleteConfirm.title')}
+                    </span>
+                  </span>
+                </Tooltip>
+              )}
+            </span>
 
             {sessionCount > 0 && (
               <span className="flex-shrink-0 text-xs text-text-tertiary">
@@ -174,7 +206,9 @@ export function ProjectRow(props: Props) {
           </span>
           <MarqueeText
             text={abbreviateHomeDir(path, homeDir)}
-            className="text-[0.7692rem] text-text-tertiary group-hover:text-text-secondary"
+            className={`text-[0.7692rem] text-text-tertiary ${
+              folderMissing ? 'opacity-50' : 'group-hover:text-text-secondary'
+            }`}
           />
         </span>
       </button>
@@ -188,6 +222,8 @@ export function ProjectRow(props: Props) {
         onDelete={onDelete}
         onSaveMeta={onSaveMeta}
       />
+
+      {confirmDialog}
     </div>
   );
 }

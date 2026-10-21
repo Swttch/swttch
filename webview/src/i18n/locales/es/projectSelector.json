@@ -41,7 +41,7 @@
   "sessionCount_one": "{{count}} sesión",
   "sessionCount_other": "{{count}} sesiones",
   "folderMissing": "Carpeta no encontrada",
-  "folderMissingHint": "La carpeta de este proyecto ya no existe. Elimina el proyecto desde su menú para quitarlo de la lista.",
+  "folderMissingHint": "La carpeta de este proyecto ya no existe. Haz clic para eliminar el proyecto y quitarlo de la lista.",
   "errors": {
     "loadFailed": "Error al cargar los proyectos"
   }
