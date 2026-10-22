@@ -162,6 +162,7 @@ function TestChatComponent() {
       <div data-testid="is-streaming">{String(ctx.isStreaming)}</div>
       <div data-testid="error">{ctx.error?.message || 'none'}</div>
       <div data-testid="streaming-id">{ctx.streamingMessageId || 'none'}</div>
+      <div data-testid="context-tokens">{ctx.contextWindowUsage?.totalTokens ?? 'none'}</div>
       <input
         data-testid="input"
         value={input}
@@ -733,5 +734,71 @@ describe('채팅 스트리밍 통합 테스트', () => {
     // Verify final state
     expect(screen.getByTestId('messages-count')).toHaveTextContent('2');
     expect(screen.getAllByTestId(/^msg-/).length).toBe(2);
+  });
+
+  describe('컨텍스트 뱃지의 사용 토큰 (#585)', () => {
+    const zeroUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+
+    async function startTurn() {
+      mockSession.currentSessionId = 'context-usage-session';
+      render(<TestWrapper><TestChatComponent /></TestWrapper>);
+      fireEvent.change(screen.getByTestId('input'), { target: { value: 'hello' } });
+      fireEvent.click(screen.getByTestId('submit'));
+    }
+
+    function emitCli(event: Record<string, unknown>) {
+      emitBridgeEvent(MessageType.CLI_EVENT, event);
+    }
+
+    it('0으로 시작한 message_start를 message_delta의 실제 값으로 바로잡는다', async () => {
+      await startTurn();
+      await act(async () => {
+        // The three frames the reporter captured behind a LiteLLM gateway.
+        emitCli({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1', usage: zeroUsage } } });
+        emitCli({ type: 'assistant', message: { id: 'm1', role: 'assistant', usage: zeroUsage, content: [{ type: 'text', text: 'hi' }] } });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent('none');
+
+      await act(async () => {
+        emitCli({ type: 'stream_event', event: { type: 'message_delta', usage: { input_tokens: 9525, output_tokens: 33, cache_read_input_tokens: 1024 } } });
+        emitCli({ type: 'result' });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent(String(9525 + 33 + 1024));
+    });
+
+    it('다음 메시지가 0으로 시작해도 이전의 실제 값을 0으로 덮지 않는다', async () => {
+      await startTurn();
+      await act(async () => {
+        emitCli({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1', usage: zeroUsage } } });
+        emitCli({ type: 'stream_event', event: { type: 'message_delta', usage: { input_tokens: 9525, output_tokens: 33, cache_read_input_tokens: 1024 } } });
+        emitCli({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm2', usage: zeroUsage } } });
+        emitCli({ type: 'assistant', message: { id: 'm2', role: 'assistant', usage: zeroUsage, content: [{ type: 'text', text: 'again' }] } });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent(String(9525 + 33 + 1024));
+    });
+
+    it('직결 API의 message_delta는 입력 토큰을 유지한 채 최종 출력 토큰만 더한다', async () => {
+      await startTurn();
+      await act(async () => {
+        // Measured on CLI 2.1.308 against the API directly.
+        emitCli({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1', usage: { input_tokens: 2, cache_creation_input_tokens: 150, cache_read_input_tokens: 59791, output_tokens: 2 } } } });
+        emitCli({ type: 'assistant', message: { id: 'm1', role: 'assistant', usage: { input_tokens: 2, cache_creation_input_tokens: 150, cache_read_input_tokens: 59791, output_tokens: 2 }, content: [{ type: 'text', text: 'ok' }] } });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent(String(2 + 150 + 59791 + 2));
+      await act(async () => {
+        emitCli({ type: 'stream_event', event: { type: 'message_delta', usage: { input_tokens: 2, cache_creation_input_tokens: 150, cache_read_input_tokens: 59791, output_tokens: 227 } } });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent('60170');
+    });
+
+    it('서브에이전트의 message_delta는 이 대화의 뱃지에 반영하지 않는다', async () => {
+      await startTurn();
+      await act(async () => {
+        emitCli({ type: 'stream_event', event: { type: 'message_start', message: { id: 'm1', usage: zeroUsage } } });
+        emitCli({ type: 'stream_event', event: { type: 'message_delta', usage: { input_tokens: 100, output_tokens: 10 } } });
+        emitCli({ type: 'stream_event', parent_tool_use_id: 'toolu_sub', event: { type: 'message_delta', usage: { input_tokens: 900000, output_tokens: 5 } } });
+      });
+      expect(screen.getByTestId('context-tokens')).toHaveTextContent('110');
+    });
   });
 });

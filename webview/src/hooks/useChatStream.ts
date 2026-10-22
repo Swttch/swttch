@@ -4,6 +4,8 @@ import type { TextBlockDto, ToolUseBlockDto, ThinkingBlockDto, ImageBlockDto, Im
 import { ContentBlockType } from '../dto/message/ContentBlockDto';
 import { toInstance, LoadedMessageType, MessageRole } from '../dto/common';
 import { parsePartialJson } from '../utils/parsePartialJson';
+import { mergeMessageUsage, totalMessageTokens } from '../utils/messageUsage';
+import type { MessageUsage } from '../utils/messageUsage';
 import { MessageType } from '@/shared';
 import { WorkingDirMissingError } from './WorkingDirMissingError';
 import { parseControlRequestResult } from './controlRequestResult';
@@ -169,6 +171,11 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     contextWindow: number;
     maxOutputTokens: number;
   } | null>(null);
+
+  // Usage of the API message now streaming, built from its `message_start` and
+  // `message_delta`. The `assistant` frame repeats only the `message_start`
+  // numbers, which read zero behind a gateway that sends the real ones last (#585).
+  const streamingMessageUsageRef = useRef<MessageUsage | null>(null);
 
   // RAF 스로틀링 관련 refs
   const pendingTextRef = useRef<string>('');
@@ -655,22 +662,16 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
     setAuthDiagnosis(null);
     console.log('[useChatStream] Loaded messages:', convertedMessages.length);
 
-    // 마지막 assistant 메시지에서 usage 복원
+    // 마지막 assistant 메시지에서 usage 복원. 합계가 0인 항목은 건너뛴다 — 아직 오지 않은
+    // 보고일 뿐 컨텍스트가 비었다는 뜻이 아니다(#585).
     for (let i = convertedMessages.length - 1; i >= 0; i--) {
       const msg = convertedMessages[i];
       if (msg.type === LoadedMessageType.Assistant && msg.message?.usage) {
-        const usage = msg.message.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_creation_input_tokens?: number;
-          cache_read_input_tokens?: number;
-        };
-        if (typeof usage.input_tokens === 'number') {
+        const usage = msg.message.usage as MessageUsage;
+        const restoredTotalTokens = totalMessageTokens(usage);
+        if (typeof usage.input_tokens === 'number' && restoredTotalTokens > 0) {
           setContextWindowUsage({
-            totalTokens: usage.input_tokens
-              + (usage.cache_creation_input_tokens ?? 0)
-              + (usage.cache_read_input_tokens ?? 0)
-              + (usage.output_tokens ?? 0),
+            totalTokens: restoredTotalTokens,
             // 세션 로드 시엔 modelUsage(result 전용)에 접근할 수 없어 실제 contextWindow를
             // 모른다. 0으로 두면 게이지는 첫 result 이후 정확한 값으로 표시된다. 임의의 200k로
             // 넣으면 1M 모델에서 5배 부풀려진 사용률을 보이므로 금지.
@@ -872,9 +873,32 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
             sealStreamingAssistant();
           }
           if (startedApiMessageId) streamingApiMessageIdRef.current = startedApiMessageId;
+          if (!cliEvent.parent_tool_use_id) {
+            streamingMessageUsageRef.current = (innerEvent.message as { usage?: MessageUsage } | undefined)?.usage ?? null;
+          }
           // Falls through: the event carries no delta, so the handlers below are
           // no-ops for it, and returning here would be a behaviour change beyond
           // the seal.
+        }
+
+        // message_delta: the final usage of the message that just ended. It, not
+        // the `assistant` frame, holds the real counts behind a gateway (#585).
+        // A sub-agent's message is not this conversation's context.
+        if (streamEventType === 'message_delta' && !cliEvent.parent_tool_use_id) {
+          const finalUsage = mergeMessageUsage(
+            streamingMessageUsageRef.current,
+            innerEvent.usage as MessageUsage | undefined,
+          );
+          streamingMessageUsageRef.current = finalUsage;
+          const finalTotalTokens = totalMessageTokens(finalUsage);
+          if (finalTotalTokens > 0) {
+            setContextWindowUsage(prev => ({
+              totalTokens: finalTotalTokens,
+              contextWindow: prev?.contextWindow ?? 0,
+              maxOutputTokens: prev?.maxOutputTokens ?? 0,
+            }));
+          }
+          return;
         }
 
         // content_block_start: 새로운 content block 시작
@@ -1057,18 +1081,17 @@ export function useChatStream(options: UseChatStreamOptions): UseChatStreamRetur
         const entryTimestamp = typeof cliEvent.timestamp === 'string' ? cliEvent.timestamp : undefined;
         const messageId = assistantMessage.id as string;
         const incomingContent = assistantMessage.content;
-        const assistantUsage = assistantMessage.usage as {
-          input_tokens?: number;
-          output_tokens?: number;
-          cache_creation_input_tokens?: number;
-          cache_read_input_tokens?: number;
-        } | null;
-        if (assistantUsage && typeof assistantUsage.input_tokens === 'number') {
+        // The frame's own usage is the `message_start` one; joined with what the
+        // stream has said since, it is whole. A total of zero is a report that has
+        // not arrived yet, never a context that emptied, so it leaves the badge be.
+        const assistantUsage = mergeMessageUsage(
+          assistantMessage.usage as MessageUsage | null,
+          streamingMessageUsageRef.current,
+        );
+        const assistantTotalTokens = totalMessageTokens(assistantUsage);
+        if (assistantTotalTokens > 0) {
           setContextWindowUsage(prev => ({
-            totalTokens: assistantUsage.input_tokens!
-              + (assistantUsage.cache_creation_input_tokens ?? 0)
-              + (assistantUsage.cache_read_input_tokens ?? 0)
-              + (assistantUsage.output_tokens ?? 0),
+            totalTokens: assistantTotalTokens,
             contextWindow: prev?.contextWindow ?? 0,
             maxOutputTokens: prev?.maxOutputTokens ?? 0,
           }));
