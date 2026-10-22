@@ -85,6 +85,7 @@ import { openSessionHandler } from './openSession';
 import { setTabNameHandler } from './setTabName';
 import { setPrimarySelectionHandler } from './setPrimarySelection';
 import { getClipboardHandler } from './getClipboard';
+import { setClipboardHandler } from './setClipboard';
 import { openSettingsHandler } from './openSettings';
 import { restartBackendHandler } from './restartBackend';
 import { openTerminalHandler } from './openTerminal';
@@ -445,6 +446,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_CLIPBOARD:
       await getClipboardHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SET_CLIPBOARD:
+      await setClipboardHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.OPEN_SETTINGS:
       await openSettingsHandler(connectionId, message, connections, bridge);

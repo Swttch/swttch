@@ -6,6 +6,7 @@ import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
 import com.github.yhk1038.claudecodegui.bridge.OpenFileTargets
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardReader
+import com.github.yhk1038.claudecodegui.bridge.SystemClipboardWriter
 import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.editor.TabActivity
@@ -137,6 +138,7 @@ class ClaudeCodePanel(
     // Fills the Linux PRIMARY selection with what the webview reports as selected (#513).
     private val systemSelectionWriter = SystemSelectionWriter()
     private val systemClipboardReader = SystemClipboardReader()
+    private val systemClipboardWriter = SystemClipboardWriter()
 
     // Browser is owned by ClaudeCodeBrowserService, NOT by this panel.
     // This allows the browser to survive dispose-recreate cycles during tab move/split.
@@ -2785,6 +2787,16 @@ class ClaudeCodePanel(
                 ApplicationManager.getApplication().invokeLater {
                     if (!systemSelectionWriter.write(text)) {
                         logger.debug("System selection not set (no such buffer here, or it refused)")
+                    }
+                }
+            }
+
+            override suspend fun setClipboard(text: String) {
+                // Clipboard manager access belongs on the EDT. Debug level keeps
+                // repeated copy operations out of the normal IDE log.
+                ApplicationManager.getApplication().invokeLater {
+                    if (!systemClipboardWriter.write(text)) {
+                        logger.debug("System clipboard not set (it refused or text was empty)")
                     }
                 }
             }

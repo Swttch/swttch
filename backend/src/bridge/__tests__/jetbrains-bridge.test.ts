@@ -377,6 +377,13 @@ describe('redactRpcLog', () => {
     expect(out).toContain('"workingDir":"/p"');
   });
 
+  it('keeps copied clipboard text out of the log and reports only its length', () => {
+    const out = redactRpcLog(req(MessageType.SET_CLIPBOARD, { text: 'clipboard secret', workingDir: '/p' }));
+    expect(out).not.toContain('clipboard secret');
+    expect(out).toContain('<redacted:16 chars>');
+    expect(out).toContain('"workingDir":"/p"');
+  });
+
   it('masks the pairing code carried in an OPEN_URL url', () => {
     const url =
       'http://localhost:33741/sessions/abc?workingDir=%2F%2Fwsl.localhost%2FUbuntu&pair=23C0UmxnhcediFn6MRYLr_a-I9kDBtxt';
@@ -490,6 +497,27 @@ describe('JetBrainsBridge.getClipboard', () => {
     const sent = sentMessage(wsB);
     expect(sent?.method).toBe(MessageType.GET_CLIPBOARD);
     expect(sent?.params).toEqual({ workingDir: '/projB/src' });
+    expect(sent?.id).toBeTruthy();
+  });
+});
+
+describe('JetBrainsBridge.setClipboard', () => {
+  it('sends copied text to the IDE that serves the project', () => {
+    const bridge = new JetBrainsBridge();
+    const wsA = createMockWs();
+    const wsB = createMockWs();
+    bridge.addRpcClient(wsA as never);
+    bridge.addRpcClient(wsB as never);
+    registerRoots(wsA, ['/projA']);
+    registerRoots(wsB, ['/projB']);
+
+    void bridge.setClipboard({ text: 'copied from chat', workingDir: '/projB/src' }).catch(() => {});
+
+    expect(wsA.send).not.toHaveBeenCalled();
+    expect(wsB.send).toHaveBeenCalledTimes(1);
+    const sent = sentMessage(wsB);
+    expect(sent?.method).toBe(MessageType.SET_CLIPBOARD);
+    expect(sent?.params).toEqual({ text: 'copied from chat', workingDir: '/projB/src' });
     expect(sent?.id).toBeTruthy();
   });
 });

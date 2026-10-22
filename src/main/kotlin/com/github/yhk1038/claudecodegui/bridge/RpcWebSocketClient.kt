@@ -346,8 +346,10 @@ class RpcWebSocketClient(
                     return@launch
                 }
 
-                // The params of SET_PRIMARY_SELECTION are the text the user selected, which must not reach the log.
-                val loggedParams = if (method == "SET_PRIMARY_SELECTION") "<redacted>" else params.toString()
+                // Clipboard text is user content and must not reach the log.
+                val loggedParams = if (method == "SET_PRIMARY_SELECTION" || method == "SET_CLIPBOARD") {
+                    "<redacted>"
+                } else params.toString()
                 logger.info("[DEBUG:handleMessage] method=$method, id=$id, params=$loggedParams")
 
                 // Past the notification guard above, this is a request with a non-null id,
@@ -502,6 +504,11 @@ class RpcWebSocketClient(
                 parsePrimarySelectionText(params)?.let { rpcHandler.setPrimarySelection(it) }
                 buildJsonObject {}
             }
+            "SET_CLIPBOARD" -> {
+                // Empty or malformed reports leave the host clipboard alone.
+                parseClipboardText(params)?.let { rpcHandler.setClipboard(it) }
+                buildJsonObject {}
+            }
             "GET_CLIPBOARD" -> {
                 val contents = rpcHandler.getClipboard()
                 buildJsonObject {
@@ -649,6 +656,10 @@ class RpcWebSocketClient(
  * unit-tested without a live WebSocket (see PrimarySelectionParamsTest).
  */
 internal fun parsePrimarySelectionText(params: JsonObject): String? =
+    (params["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
+
+/** Extracts non-empty copied text from SET_CLIPBOARD params without logging it. */
+internal fun parseClipboardText(params: JsonObject): String? =
     (params["text"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotEmpty() }
 
 /**

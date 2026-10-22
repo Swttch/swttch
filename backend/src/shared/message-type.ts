@@ -884,6 +884,8 @@ export enum MessageType {
    * clipboard. inbound webview→backend, then Node↔Kotlin
    */
   GET_CLIPBOARD = 'GET_CLIPBOARD',
+  /** The webview reports text copied in JCEF so the IDE can update its system clipboard. */
+  SET_CLIPBOARD = 'SET_CLIPBOARD',
   /** The project list payload in response to GET_PROJECTS. */
   PROJECTS_LIST = 'PROJECTS_LIST',
 

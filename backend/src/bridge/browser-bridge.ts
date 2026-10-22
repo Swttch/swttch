@@ -626,6 +626,11 @@ if ($dialog.ShowDialog() -eq 'OK') {
     return { text: null, image: null };
   }
 
+  async setClipboard(_params: { text: string; workingDir?: string }): Promise<void> {
+    // A real browser owns the clipboard that performed the copy. The host
+    // bridge is only needed for JCEF, where the IDE owns a separate process.
+  }
+
   async openTerminal(workingDir: string): Promise<void> {
     // The terminal is opened *in* this project, so its choice is resolved per
     // project too — global still applies when the project sets none (issue #7).

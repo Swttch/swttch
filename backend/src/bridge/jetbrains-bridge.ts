@@ -559,6 +559,10 @@ export class JetBrainsBridge implements Bridge {
     const result = await this.request(MessageType.GET_CLIPBOARD, params);
     return parseClipboardResult(result);
   }
+
+  async setClipboard(params: { text: string; workingDir?: string }): Promise<void> {
+    await this.request(MessageType.SET_CLIPBOARD, params);
+  }
 }
 
 /**
@@ -606,7 +610,7 @@ export function parseProjectRoots(params: Record<string, unknown> | undefined): 
  * masked too as defense in depth.
  */
 export function redactRpcLog(request: JsonRpcRequest): string {
-  if (request.method === MessageType.SET_PRIMARY_SELECTION) {
+  if (request.method === MessageType.SET_PRIMARY_SELECTION || request.method === MessageType.SET_CLIPBOARD) {
     // The text is whatever the user selected in the chat, so only its length is logged (#513).
     const text = request.params?.['text'];
     const length = typeof text === 'string' ? text.length : 0;

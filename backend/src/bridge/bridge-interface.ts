@@ -288,4 +288,7 @@ export interface Bridge {
   getClipboard(params: {
     workingDir?: string;
   }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }>;
+
+  /** Put text copied inside JCEF into the IDE's system clipboard. */
+  setClipboard(params: { text: string; workingDir?: string }): Promise<void>;
 }

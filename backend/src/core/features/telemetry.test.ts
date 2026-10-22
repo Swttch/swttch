@@ -252,6 +252,7 @@ describe('trackActivity (활동 단일 진입점)', () => {
       MessageType.GET_PLUGIN_UPDATES, MessageType.GET_TUNNEL_STATUS, MessageType.GET_TUNNEL_PREREQS, MessageType.GET_WORKING_DIR,
       MessageType.GET_AVAILABLE_TERMINALS, MessageType.GET_DETECTED_CLI_PATH, MessageType.GET_DETECTED_NODE_PATH,
       MessageType.GET_SETTINGS, MessageType.GET_CLAUDE_SETTINGS, MessageType.GET_SESSIONS, MessageType.RECLAIM_SESSION, MessageType.LIST_PROJECT_FILES,
+      MessageType.SET_CLIPBOARD,
     ];
     excluded.forEach((t) => trackActivity(t));
     await flushTelemetry();

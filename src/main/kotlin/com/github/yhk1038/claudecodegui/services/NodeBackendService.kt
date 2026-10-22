@@ -306,6 +306,10 @@ class NodeBackendService : Disposable {
                 any()?.setPrimarySelection(text) ?: warn("setPrimarySelection")
             }
 
+            override suspend fun setClipboard(text: String) {
+                any()?.setClipboard(text) ?: warn("setClipboard")
+            }
+
             override suspend fun getClipboard(): ClipboardContents =
                 any()?.getClipboard() ?: run { warn("getClipboard"); ClipboardContents.EMPTY }
 

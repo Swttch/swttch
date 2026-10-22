@@ -25,6 +25,7 @@ import { HelpModalHost } from './components/HelpModal';
 import { LinkMenu } from './components/LinkMenu';
 import { usePanelFocusReporter } from './hooks/usePanelFocusReporter';
 import { usePrimarySelectionReporter } from './hooks/usePrimarySelectionReporter';
+import { useClipboardReporter } from './hooks/useClipboardReporter';
 import { useSettingsOverlayNavigation } from './hooks/useSettingsOverlayNavigation';
 import { useNotificationSoundMigration } from './hooks/useNotificationSound';
 import { OPEN_ACCOUNT_USAGE_EVENT } from './commandPalette/sections/model/AccountUsageItem';
@@ -51,6 +52,8 @@ function AppContent() {
   // The IDE's embedded browser (2026.2+) no longer fills the Linux PRIMARY
   // selection, so what the user selects is reported for the host to fill it.
   usePrimarySelectionReporter();
+  // JCEF owns a separate browser clipboard process, so report copies to the IDE host.
+  useClipboardReporter();
   // The CLI reports the usage windows as a turn runs; take them instead of polling.
   useUsageStreamRefresh();
   // Lets non-React callers (toasts, palette items) open settings as an overlay.
