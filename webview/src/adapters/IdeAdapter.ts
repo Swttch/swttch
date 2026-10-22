@@ -64,6 +64,18 @@ export interface IdeAdapter {
   openFile(filePath: string, line?: number, column?: number): Promise<void>;
 
   /**
+   * Hand a file to the system's default app for its type, even when the IDE has an
+   * editor for it. Rejects when it could not be opened (same error as openFile).
+   */
+  openFileWithSystemApp(filePath: string): Promise<void>;
+
+  /**
+   * Show a file in the system's file manager, selected where the OS can. Rejects
+   * when it could not be shown (same error as openFile).
+   */
+  revealFile(filePath: string): Promise<void>;
+
+  /**
    * Open Claude in an external terminal
    * - In JetBrains: Opens Claude in the IDE's built-in terminal
    * - In Browser: Opens the configured terminal app and runs claude

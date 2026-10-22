@@ -97,6 +97,16 @@ export class BrowserAdapter implements IdeAdapter {
     console.log('[BrowserAdapter] Sent OPEN_FILE request:', filePath, line ?? '');
   }
 
+  async openFileWithSystemApp(filePath: string): Promise<void> {
+    const res = await getBridge().request(MessageType.OPEN_FILE_WITH_SYSTEM_APP, { filePath });
+    assertFileOpened(res, filePath);
+  }
+
+  async revealFile(filePath: string): Promise<void> {
+    const res = await getBridge().request(MessageType.REVEAL_FILE, { filePath });
+    assertFileOpened(res, filePath);
+  }
+
   async openDevTools(): Promise<void> {
     // A browser opens its own DevTools with the user's own shortcut, and there is
     // no JCEF window for us to open. The settings button is disabled without an

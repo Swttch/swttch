@@ -67,6 +67,16 @@ export class JetBrainsAdapter implements IdeAdapter {
     console.log('[JetBrainsAdapter] Sent OPEN_TERMINAL via WebSocket bridge:', workingDir);
   }
 
+  async openFileWithSystemApp(filePath: string): Promise<void> {
+    const res = await getBridge().request(MessageType.OPEN_FILE_WITH_SYSTEM_APP, { filePath });
+    assertFileOpened(res, filePath);
+  }
+
+  async revealFile(filePath: string): Promise<void> {
+    const res = await getBridge().request(MessageType.REVEAL_FILE, { filePath });
+    assertFileOpened(res, filePath);
+  }
+
   async openDevTools(): Promise<void> {
     await getBridge().request(MessageType.OPEN_DEV_TOOLS, {});
     console.log('[JetBrainsAdapter] Sent OPEN_DEV_TOOLS via WebSocket bridge');
