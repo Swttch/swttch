@@ -741,6 +741,7 @@
     "copyAddress": "کپی نشانی پیوند",
     "copyDone": "نشانی پیوند کپی شد",
     "copyFailed": "کپی نشانی پیوند ممکن نشد",
+    "openFailed": "باز کردن پیوند ممکن نشد",
     "openInBrowser": "باز کردن در مرورگر"
   },
   "fileLink": {

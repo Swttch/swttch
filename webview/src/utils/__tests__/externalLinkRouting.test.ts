@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import toast from 'react-hot-toast';
 import { _resetRuntimeCache } from '@/config/environment';
+import { i18n } from '@/i18n';
 import { installExternalLinkRouting } from '../externalLinkRouting';
 
 const openUrl = vi.fn((_url: string) => Promise.resolve());
@@ -109,5 +111,15 @@ describe('installExternalLinkRouting', () => {
     const link = addLink({ href: 'https://example.com/a', target: '_blank' });
     fire(link, 'click', 0);
     expect(openUrl).not.toHaveBeenCalled();
+  });
+
+  it('tells the user when the link could not be opened (#567)', async () => {
+    const errorToast = vi.spyOn(toast, 'error').mockReturnValue('id');
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    openUrl.mockRejectedValueOnce(new Error('no browser'));
+    fire(addLink({ href: 'https://example.com/a', target: '_blank' }), 'click', 0);
+    await vi.waitFor(() => expect(errorToast).toHaveBeenCalledWith(i18n.t('chat:externalLink.openFailed')));
+    errorToast.mockRestore();
+    errorLog.mockRestore();
   });
 });

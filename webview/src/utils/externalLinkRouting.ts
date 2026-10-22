@@ -1,4 +1,6 @@
+import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
+import { i18n } from '@/i18n';
 import { isJetBrains } from '@/config/environment';
 import { linkMenuStore } from './linkMenuStore';
 
@@ -38,7 +40,10 @@ function route(event: MouseEvent): void {
   event.preventDefault();
   getAdapter()
     .openUrl(url)
-    .catch((err) => console.error('[externalLinkRouting] Failed to open external link:', err));
+    .catch((err) => {
+      console.error('[externalLinkRouting] Failed to open external link:', err);
+      toast.error(i18n.t('chat:externalLink.openFailed'));
+    });
 }
 
 /**

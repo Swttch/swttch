@@ -741,6 +741,7 @@
     "copyAddress": "复制链接地址",
     "copyDone": "已复制链接地址",
     "copyFailed": "无法复制链接地址",
+    "openFailed": "无法打开链接",
     "openInBrowser": "在浏览器中打开"
   },
   "fileLink": {

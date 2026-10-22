@@ -745,6 +745,7 @@
     "copyAddress": "Copy link address",
     "copyDone": "Link address copied",
     "copyFailed": "Could not copy the link address",
+    "openFailed": "Could not open the link",
     "openInBrowser": "Open in browser"
   },
   "fileLink": {

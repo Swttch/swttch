@@ -741,6 +741,7 @@
     "copyAddress": "Copiar la dirección del enlace",
     "copyDone": "Dirección del enlace copiada",
     "copyFailed": "No se pudo copiar la dirección del enlace",
+    "openFailed": "No se pudo abrir el enlace",
     "openInBrowser": "Abrir en el navegador"
   },
   "fileLink": {

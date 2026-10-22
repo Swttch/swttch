@@ -757,6 +757,7 @@
     "copyAddress": "نسخ عنوان الرابط",
     "copyDone": "تم نسخ عنوان الرابط",
     "copyFailed": "تعذّر نسخ عنوان الرابط",
+    "openFailed": "تعذّر فتح الرابط",
     "openInBrowser": "فتح في المتصفح"
   },
   "fileLink": {

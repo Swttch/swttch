@@ -81,7 +81,10 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
       event.stopPropagation();
       getAdapter()
         .openUrl(href)
-        .catch((err) => console.error('[MarkdownFileLink] Failed to open external link:', err));
+        .catch((err) => {
+          console.error('[MarkdownFileLink] Failed to open external link:', err);
+          toast.error(i18n.t('chat:externalLink.openFailed'));
+        });
     };
     return (
       <a href={href} target="_blank" rel="noreferrer" className={MARKDOWN_LINK_CLASS} onClick={openExternal}>

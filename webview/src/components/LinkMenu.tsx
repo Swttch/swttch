@@ -104,7 +104,10 @@ function menuItems(target: LinkMenuTarget, t: TFunction<'chat'>): MenuItem[] {
         run: () => {
           getAdapter()
             .openUrl(target.url)
-            .catch((err) => console.error('[LinkMenu] Failed to open external link:', err));
+            .catch((err) => {
+              console.error('[LinkMenu] Failed to open external link:', err);
+              toast.error(t('externalLink.openFailed'));
+            });
         },
       },
       {

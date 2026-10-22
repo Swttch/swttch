@@ -66,6 +66,18 @@ describe('LinkMenu — external link', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
+  it('tells the user when the link could not be opened (#567)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    openUrl.mockRejectedValueOnce(new Error('no browser'));
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: i18n.t('chat:externalLink.openInBrowser') }));
+    });
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('closes on Escape and on a press outside the menu', () => {
     render(<LinkMenu />);
     act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
