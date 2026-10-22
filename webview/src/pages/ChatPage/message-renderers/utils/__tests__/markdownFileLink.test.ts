@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  normalizeMarkdownLinkUrls,
   parseMarkdownFileLink,
   normalizeDotSegments,
   resolveMarkdownFileLink,
@@ -138,5 +139,48 @@ describe('resolveMarkdownFileLink', () => {
 
   it('returns null for an external link', () => {
     expect(resolveMarkdownFileLink('https://example.com', '/wd')).toBeNull();
+  });
+});
+
+// A WSL project folder reaches the webview as a Windows UNC path. Resolving a
+// relative link against it used to drop the `\\wsl$\Ubuntu` root, so the backend was
+// asked for `/wsl$/Ubuntu/…` and answered "not found" (issue #567).
+describe('Windows UNC paths (WSL project folders)', () => {
+  const wslDir = '\\\\wsl$\\Ubuntu\\home\\me\\proj';
+
+  it('keeps the \\host\share root when normalizing', () => {
+    expect(normalizeDotSegments('\\\\wsl$\\Ubuntu\\home\\me\\x.png')).toBe('//wsl$/Ubuntu/home/me/x.png');
+    expect(normalizeDotSegments('//wsl.localhost/Ubuntu/home/me/x.png')).toBe('//wsl.localhost/Ubuntu/home/me/x.png');
+  });
+
+  it('never lets .. climb above the share', () => {
+    expect(normalizeDotSegments('\\\\wsl$\\Ubuntu\\..\\..\\x.png')).toBe('//wsl$/Ubuntu/x.png');
+  });
+
+  it('carries a UNC path through a link href and back', () => {
+    const href = toLocalFileHref('\\\\wsl$\\Ubuntu\\home\\me\\x.png');
+    expect(href.startsWith('//')).toBe(false); // must not read as a protocol-relative URL
+    expect(parseMarkdownFileLink(href)).toEqual({ path: '//wsl$/Ubuntu/home/me/x.png', line: undefined });
+  });
+
+  it('resolves a relative link against a UNC working directory', () => {
+    expect(resolveMarkdownFileLink('tmp/levelcmp/x.png', wslDir)).toBeNull(); // not a ./ link: handled by the preprocessor
+    const markdown = normalizeMarkdownLinkUrls('[x](tmp/levelcmp/x.png)', wslDir);
+    const href = /\]\((.*)\)/.exec(markdown)![1];
+    expect(parseMarkdownFileLink(href)).toEqual({
+      path: '//wsl$/Ubuntu/home/me/proj/tmp/levelcmp/x.png',
+      line: undefined,
+    });
+  });
+
+  it('treats a backslash UNC link as a local file, not as a relative path', () => {
+    const markdown = normalizeMarkdownLinkUrls('[x](\\\\wsl$\\Ubuntu\\home\\me\\proj\\x.png)', '/ignored');
+    const href = /\]\((.*)\)/.exec(markdown)![1];
+    expect(parseMarkdownFileLink(href)?.path).toBe('//wsl$/Ubuntu/home/me/proj/x.png');
+  });
+
+  it('still treats a protocol-relative URL as external', () => {
+    expect(parseMarkdownFileLink('//example.com/x.png')).toBeNull();
+    expect(normalizeMarkdownLinkUrls('[x](//example.com/x.png)', '/wd')).toBe('[x](//example.com/x.png)');
   });
 });

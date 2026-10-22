@@ -19,6 +19,15 @@ function isWindowsAbsolute(href: string): boolean {
 }
 
 /**
+ * True for a Windows UNC path written with backslashes (`\\host\share\…`). The IDE
+ * hands the webview a WSL project folder in this form (`\\wsl$\Ubuntu\home\me\proj`),
+ * so a relative link resolved against it must keep the `\\host\share` root intact.
+ */
+function isWindowsUnc(href: string): boolean {
+  return /^\\\\[^\\/]/.test(href);
+}
+
+/**
  * Strip a `file://` URL down to the plain absolute path it names, or `null` if
  * the href is not a `file:` URL for THIS machine.
  *
@@ -64,7 +73,7 @@ export function parseMarkdownFileLink(href: string): MarkdownFileLink | null {
 
   const isPosixAbsolute = href.startsWith('/') && !href.startsWith('//'); // exclude protocol-relative //host
   const isRelative = href.startsWith('./') || href.startsWith('../');
-  if (!isPosixAbsolute && !isWindowsAbsolute(href) && !isRelative) return null;
+  if (!isPosixAbsolute && !isWindowsAbsolute(href) && !isWindowsUnc(href) && !isRelative) return null;
 
   const match = LINE_ANCHOR.exec(href);
   const line = match ? Number(match[1]) : undefined;
@@ -74,6 +83,8 @@ export function parseMarkdownFileLink(href: string): MarkdownFileLink | null {
   // A Windows drive path travels as `/C:/…` (leading slash so rehype-sanitize
   // doesn't parse `C:` as a URL scheme and strip the link); restore `C:/…`.
   if (/^\/[A-Za-z]:[\\/]/.test(path)) path = path.slice(1);
+  // A UNC path travels as `/%2F%2Fhost/share/…` (see toLocalFileHref); drop the carry `/`.
+  if (/^\/%2F%2F/i.test(path)) path = path.slice(1);
   try {
     path = decodeURIComponent(path);
   } catch {
@@ -91,7 +102,12 @@ export function parseMarkdownFileLink(href: string): MarkdownFileLink | null {
  */
 export function toLocalFileHref(path: string): string {
   const normalized = normalizeDotSegments(path);
-  return /^[A-Za-z]:\//.test(normalized) ? `/${normalized}` : normalized;
+  if (/^[A-Za-z]:\//.test(normalized)) return `/${normalized}`;
+  // A UNC path (`//host/share/…`) would read as a protocol-relative URL, which is
+  // external. Carry its leading slashes percent-encoded behind a single `/`;
+  // {@link parseMarkdownFileLink} decodes them back.
+  if (normalized.startsWith('//')) return `/%2F%2F${normalized.slice(2)}`;
+  return normalized;
 }
 
 /**
@@ -105,11 +121,16 @@ export function normalizeDotSegments(p: string): string {
   if (typeof p !== 'string' || p.length === 0) return p;
 
   const drive = /^([A-Za-z]:)[\\/]/.exec(p);
+  const unc = /^[\\/]{2}([^\\/]+)[\\/]+([^\\/]+)(?:[\\/]+|$)/.exec(p);
   let prefix = '';
   let rest = p;
   if (drive) {
     prefix = `${drive[1]}/`;
     rest = p.slice(drive[0].length);
+  } else if (unc) {
+    // `\\host\share` is the root: `..` must never climb above it.
+    prefix = `//${unc[1]}/${unc[2]}/`;
+    rest = p.slice(unc[0].length);
   } else if (p.startsWith('/')) {
     prefix = '/';
     rest = p.slice(1);
@@ -174,11 +195,12 @@ export function normalizeMarkdownLinkUrls(markdown: string, workingDir: string |
       // handling below carries it (see fileUrlToPath for why it cannot stay a URL).
       url = fileUrlToPath(url) ?? url;
       const isWindowsAbsolute = /^[A-Za-z]:[\\/]/.test(url);
+      const isUnc = isWindowsUnc(url);
       // A single-letter "scheme" followed by / or \ is a Windows drive, not a URL scheme.
-      const isExternal = !isWindowsAbsolute
+      const isExternal = !isWindowsAbsolute && !isUnc
         && (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url) || url.startsWith('//') || url.startsWith('#'));
       if (isExternal) return match;
-      if (url.startsWith('/') || isWindowsAbsolute) return `[${text}](${toLocalFileHref(url)})`;
+      if (url.startsWith('/') || isWindowsAbsolute || isUnc) return `[${text}](${toLocalFileHref(url)})`;
       if (workingDir) return `[${text}](${toLocalFileHref(resolveFilePath(url, workingDir))})`;
       return url.startsWith('./') || url.startsWith('../') ? match : `[${text}](./${url})`;
     },
