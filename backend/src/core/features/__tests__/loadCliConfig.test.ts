@@ -14,7 +14,13 @@ vi.mock('../../claude', () => ({
 }));
 
 import { Claude } from '../../claude';
-import { loadCliConfig, parseCliConfigResponse, configProbeSettingsArg, _resetCliConfigCache } from '../loadCliConfig';
+import {
+  loadCliConfig,
+  parseCliConfigResponse,
+  configProbeSettingsArg,
+  CliConfigStreamParser,
+  _resetCliConfigCache,
+} from '../loadCliConfig';
 
 function makeFakeProc(stdoutPayload: string): ChildProcess {
   const proc = new EventEmitter() as unknown as ChildProcess;
@@ -180,6 +186,107 @@ describe('loadCliConfig', () => {
       expect(configProbeSettingsArg('win32')).toBe('{\\"disableAllHooks\\":true}');
       expect(configProbeSettingsArg('darwin')).toBe('{"disableAllHooks":true}');
       expect(configProbeSettingsArg('linux')).toBe('{"disableAllHooks":true}');
+    });
+  });
+
+  describe('CliConfigStreamParser (#571)', () => {
+    const response = {
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id: 'config_init',
+        response: {
+          commands: [{ name: '한글-명령 🚀', description: '설명 🎉 ünïcode', argumentHint: '' }],
+          agents: [],
+          output_style: 'default',
+          available_output_styles: [],
+          models: [],
+          account: { email: '', subscriptionType: '' },
+          pid: 1,
+          future_field: { nested: ['값', '🙂'] },
+        },
+      },
+    };
+    const responseLine = JSON.stringify(response);
+
+    function feedInChunks(parser: CliConfigStreamParser, text: string, size: number) {
+      const bytes = Buffer.from(text, 'utf8');
+      let found: ReturnType<CliConfigStreamParser['push']> = null;
+      for (let at = 0; at < bytes.length; at += size) {
+        found = parser.push(bytes.subarray(at, at + size)) ?? found;
+      }
+      return found;
+    }
+
+    it('keeps multi-byte characters intact when a chunk boundary falls inside them, at every chunk size', () => {
+      for (const size of [1, 2, 3, 5, 7, 64]) {
+        const parser = new CliConfigStreamParser();
+        const found = feedInChunks(parser, responseLine + '\n', size);
+        expect(found).toEqual(response);
+      }
+    });
+
+    it('finds a last line that has no trailing newline when the stream ends', () => {
+      const parser = new CliConfigStreamParser();
+      expect(feedInChunks(parser, responseLine, 9)).toBeNull();
+      expect(parser.end()).toEqual(response);
+    });
+
+    it('handles CRLF line endings and several lines in one chunk', () => {
+      const parser = new CliConfigStreamParser();
+      const found = parser.push(
+        Buffer.from(`{"type":"system"}\r\nnot json\r\n${responseLine}\r\n{"type":"result"}\r\n`, 'utf8'),
+      );
+      expect(found).toEqual(response);
+    });
+
+    it('ignores noise and returns null when no control_response ever arrives', () => {
+      const parser = new CliConfigStreamParser();
+      expect(parser.push(Buffer.from('garbage\n{"type":"system"}\n\n   \n'))).toBeNull();
+      expect(parser.end()).toBeNull();
+    });
+
+    it('finds the response around a very large hook event', () => {
+      const hook = JSON.stringify({ type: 'system', subtype: 'hook_response', output: 'X'.repeat(300_000) });
+      const parser = new CliConfigStreamParser();
+      const found = feedInChunks(parser, `${hook}\n${responseLine}\n${hook}\n`, 16 * 1024);
+      expect(found).toEqual(response);
+    });
+
+    it('parses each completed line once, however many chunks the line arrived in', () => {
+      const hook = JSON.stringify({ type: 'system', subtype: 'hook_response', output: 'X'.repeat(200_000) });
+      const parse = vi.spyOn(JSON, 'parse');
+      try {
+        const parser = new CliConfigStreamParser();
+        feedInChunks(parser, `${hook}\n${responseLine}\n`, 1024);
+        // 200KB in 1KB chunks is ~200 chunks. Re-parsing the accumulated text on every chunk
+        // (what the probe did before) would call JSON.parse hundreds of times.
+        expect(parse.mock.calls.length).toBe(2);
+      } finally {
+        parse.mockRestore();
+      }
+    });
+
+    it('resolves a probe whose output arrives in one-byte chunks and ends without a newline', async () => {
+      vi.mocked(Claude.spawnAuthed).mockImplementation(async () => {
+        const proc = new EventEmitter() as unknown as ChildProcess;
+        const stdout = new Readable({ read() {} });
+        (proc as unknown as { stdout: Readable }).stdout = stdout;
+        (proc as unknown as { stderr: Readable }).stderr = new Readable({ read() {} });
+        (proc as unknown as { stdin: Writable }).stdin = new Writable({ write(_c, _e, cb) { cb(); } });
+        (proc as unknown as { pid: number }).pid = 4321;
+        setImmediate(() => {
+          proc.emit('spawn');
+          for (const byte of Buffer.from(responseLine, 'utf8')) stdout.push(Buffer.from([byte]));
+          stdout.push(null);
+          setImmediate(() => proc.emit('close', 0));
+        });
+        return proc;
+      });
+
+      const config = await loadCliConfig('/project/a');
+
+      expect(config).toEqual(response);
     });
   });
 

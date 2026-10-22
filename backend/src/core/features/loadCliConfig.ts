@@ -1,3 +1,4 @@
+import { StringDecoder } from 'string_decoder';
 import { Claude } from '../claude';
 
 export interface SlashCommandInfo {
@@ -49,32 +50,84 @@ export interface AccountInfo {
 
 export type CliConfigControlResponse = ControlResponse<CliInitResponse>;
 
+/** The control_response event on one stdout line, or null for any other line (or noise). */
+function parseConfigLine(line: string): CliConfigControlResponse | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  let event: Record<string, unknown>;
+  try {
+    event = JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
+
+  return event.type === 'control_response' ? (event as unknown as CliConfigControlResponse) : null;
+}
+
 /**
  * Parse CLI stdout to find the control_response event and return it as-is.
  * Returns null if no control_response is found.
  */
 export function parseCliConfigResponse(stdout: string): CliConfigControlResponse | null {
-  const lines = stdout.split('\n');
-
   let cliConfigResponse: CliConfigControlResponse | null = null;
 
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-
-    let event: Record<string, unknown>;
-    try {
-      event = JSON.parse(trimmed);
-    } catch {
-      return;
-    }
-
-    if (event.type === 'control_response') {
-      cliConfigResponse = event as unknown as CliConfigControlResponse;
-    }
-  })
+  for (const line of stdout.split('\n')) {
+    const config = parseConfigLine(line);
+    if (config) cliConfigResponse = config;
+  }
 
   return cliConfigResponse;
+}
+
+/**
+ * Finds the control_response in a CLI's stdout as the chunks arrive.
+ *
+ * Each completed line is parsed once. The probe used to append every chunk to one string and
+ * parse all of it again, so a single 6.5MB hook event arriving in about a hundred chunks was
+ * scanned a hundred times (#571). Bytes go through a StringDecoder, which holds back the
+ * start of a multi-byte character cut by a chunk boundary instead of replacing it.
+ */
+export class CliConfigStreamParser {
+  private readonly decoder = new StringDecoder('utf8');
+  /** Pieces of the line still waiting for its newline; joined once, when the line completes. */
+  private partial: string[] = [];
+  private found: CliConfigControlResponse | null = null;
+
+  /** Feed a chunk; returns the control_response as soon as its line is complete. */
+  push(chunk: Buffer | string): CliConfigControlResponse | null {
+    if (this.found) return this.found;
+
+    const text = typeof chunk === 'string' ? chunk : this.decoder.write(chunk);
+
+    // Only the new text is searched for a newline. Searching the whole unfinished line again
+    // on every chunk would make one huge line cost as much as re-parsing it did.
+    let from = 0;
+    let newline = text.indexOf('\n', from);
+    while (newline !== -1) {
+      this.partial.push(text.slice(from, newline));
+      const config = parseConfigLine(this.partial.join(''));
+      this.partial = [];
+      if (config) {
+        this.found = config;
+        return config;
+      }
+      from = newline + 1;
+      newline = text.indexOf('\n', from);
+    }
+    if (from < text.length) this.partial.push(text.slice(from));
+    return null;
+  }
+
+  /** The stream ended: the last line may have no trailing newline. */
+  end(): CliConfigControlResponse | null {
+    if (this.found) return this.found;
+
+    this.partial.push(this.decoder.end());
+    this.found = parseConfigLine(this.partial.join(''));
+    this.partial = [];
+    return this.found;
+  }
 }
 
 // Cache + dedup per workingDir. The Node backend is shared across all IDE
@@ -189,12 +242,13 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
       resolve(value);
     };
 
-    let stdout = '';
+    const parser = new CliConfigStreamParser();
+    let stdoutBytes = 0;
 
     proc.stdout?.on('data', (data: Buffer) => {
-      stdout += data.toString();
+      stdoutBytes += data.length;
 
-      const config = parseCliConfigResponse(stdout);
+      const config = parser.push(data);
       if (!config) return;
 
       console.error('[loadCliConfig] resolved from stdout');
@@ -222,8 +276,8 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
     });
 
     proc.on('close', (code) => {
-      console.error('[loadCliConfig] process closed with code:', code, 'stdout length:', stdout.length);
-      const config = parseCliConfigResponse(stdout);
+      console.error('[loadCliConfig] process closed with code:', code, 'stdout length:', stdoutBytes);
+      const config = parser.end();
       console.error('[loadCliConfig] close fallback:', config ? 'found' : 'null');
       safeResolve(config);
     });
