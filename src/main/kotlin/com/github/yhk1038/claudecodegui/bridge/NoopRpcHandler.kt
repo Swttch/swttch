@@ -15,6 +15,8 @@ package com.github.yhk1038.claudecodegui.bridge
  */
 object NoopRpcHandler : NodeProcessManager.RpcHandler {
     override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean = false
+    override suspend fun openFileWithSystemApp(path: String): Boolean = false
+    override suspend fun revealFile(path: String): Boolean = false
     override suspend fun openDiff(
         filePath: String,
         oldContent: String,

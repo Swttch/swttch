@@ -5,6 +5,10 @@ export interface Bridge {
    * Optional: callers with no project context still get the global behaviour.
    */
   openFile(path: string, line?: number, column?: number, workingDir?: string): Promise<void>;
+  /** Hand [path] to the system's default app for its type. Rejects when it could not be opened. */
+  openFileWithSystemApp(path: string): Promise<void>;
+  /** Show [path] in the system's file manager, selected. Rejects when it could not be shown. */
+  revealFile(path: string): Promise<void>;
   openDiff(params: {
     filePath: string;
     oldContent: string;

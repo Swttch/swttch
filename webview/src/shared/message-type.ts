@@ -412,6 +412,18 @@ export enum MessageType {
   // -- Editor / file / project navigation --
   /** Open a file in an IDE editor tab. */
   OPEN_FILE = 'OPEN_FILE',
+  /**
+   * Hand a file to the system's default app for its type, even when the IDE has an
+   * editor for it. Inbound webview→backend; the backend sends the same type on to
+   * the IDE (Node→Kotlin) in JetBrains mode, or opens it itself in a browser.
+   */
+  OPEN_FILE_WITH_SYSTEM_APP = 'OPEN_FILE_WITH_SYSTEM_APP',
+  /**
+   * Show a file in the system's file manager with the file selected. Inbound
+   * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
+   * done by the backend itself in a browser.
+   */
+  REVEAL_FILE = 'REVEAL_FILE',
   /** Open a new Claude Code editor tab in the IDE. */
   OPEN_NEW_TAB = 'OPEN_NEW_TAB',
   /** Open a specific session (focus/route to it). */

@@ -1,5 +1,6 @@
 import { execFile, spawn } from 'child_process';
 import { writeFile } from 'fs/promises';
+import { dirname } from 'path';
 import type { Bridge } from './bridge-interface';
 import { readMergedSettings } from '../core/features/settings';
 import { Claude } from '../core/claude';
@@ -59,6 +60,36 @@ export class BrowserBridge implements Bridge {
 
     // 3) OS default opener.
     return this.launchOsDefault(this.toOsPath(path));
+  }
+
+  async openFileWithSystemApp(path: string): Promise<void> {
+    return this.launchOsDefault(this.toOsPath(path));
+  }
+
+  /** Show a file in the OS file manager with the file selected (its folder, where the OS cannot select). */
+  async revealFile(path: string): Promise<void> {
+    const osPath = this.toOsPath(path);
+    return new Promise<void>((resolve, reject) => {
+      const done = (err: Error | null) => {
+        if (err) {
+          console.error('[node-backend]', 'Failed to reveal file:', err.message);
+          reject(err);
+          return;
+        }
+        resolve();
+      };
+      if (process.platform === 'darwin') {
+        execFile('open', ['-R', osPath], done);
+      } else if (process.platform === 'win32') {
+        // explorer exits 1 even when it showed the file, as for opening one.
+        execFile('explorer', ['/select,', osPath], (err) => {
+          const exitCode = (err as { code?: unknown } | null)?.code;
+          done(err && exitCode !== 1 ? err : null);
+        });
+      } else {
+        execFile('xdg-open', [dirname(osPath)], done);
+      }
+    });
   }
 
   /**

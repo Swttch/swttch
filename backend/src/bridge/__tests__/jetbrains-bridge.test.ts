@@ -597,3 +597,36 @@ describe('JetBrainsBridge.openFile — reports a file the IDE could not open (#5
     await expect(opened).rejects.toThrow('C:/x.png');
   });
 });
+
+describe('JetBrainsBridge — system app and file manager requests (#567)', () => {
+  function bridgeWithClient() {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+    return { bridge, ws };
+  }
+
+  it('sends OPEN_FILE_WITH_SYSTEM_APP with the path and resolves on ok', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const done = bridge.openFileWithSystemApp('C:/x.png');
+    expect(sentMethod(ws)).toBe(MessageType.OPEN_FILE_WITH_SYSTEM_APP);
+    expect(JSON.parse(ws.send.mock.calls[0][0]).params).toEqual({ path: 'C:/x.png' });
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: { ok: true } });
+    await expect(done).resolves.toBeUndefined();
+  });
+
+  it('rejects when the IDE could not hand the file to the system app', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const done = bridge.openFileWithSystemApp('C:/x.png');
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: { ok: false } });
+    await expect(done).rejects.toThrow('C:/x.png');
+  });
+
+  it('sends REVEAL_FILE with the path and rejects on ok:false', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const done = bridge.revealFile('C:/x.png');
+    expect(sentMethod(ws)).toBe(MessageType.REVEAL_FILE);
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: { ok: false } });
+    await expect(done).rejects.toThrow('C:/x.png');
+  });
+});

@@ -54,7 +54,7 @@ export async function openFileHandler(
 }
 
 /** ACK an OPEN_FILE request, carrying success so the webview can surface a failure. */
-function ackOpenFile(
+export function ackOpenFile(
   connections: ConnectionManager,
   connectionId: string,
   message: IPCMessage,
@@ -72,7 +72,7 @@ function ackOpenFile(
  * IDE attached fall back to the browser bridge unchanged, and a JCEF client
  * already resolves to the JetBrains bridge.
  */
-function resolveOpenFileBridge(
+export function resolveOpenFileBridge(
   connectionId: string,
   connections: ConnectionManager,
   bridge: Bridge,

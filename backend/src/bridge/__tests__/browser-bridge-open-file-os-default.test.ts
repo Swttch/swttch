@@ -76,3 +76,56 @@ describe('BrowserBridge.openFile — OS default opener', () => {
     expect(execFile).toHaveBeenCalledWith('xdg-open', ['/home/me/x.png'], expect.any(Function));
   });
 });
+
+// "Show in file manager" and "open with the system app" from the file link's menu (#567).
+describe('BrowserBridge — system app and file manager', () => {
+  let originalPlatform: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+  });
+
+  afterEach(() => {
+    if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform);
+  });
+
+  const setPlatform = (platform: NodeJS.Platform) => Object.defineProperty(process, 'platform', { value: platform });
+
+  it('opens with the system app regardless of the chosen editor, with a backslash path on Windows', async () => {
+    setPlatform('win32');
+    vi.mocked(readMergedSettings).mockResolvedValue({
+      settings: { openFilesWith: 'Cursor', openFilesWithCustom: null },
+      overrides: [],
+    });
+    await new BrowserBridge().openFileWithSystemApp('C:/Users/me/x.png');
+    expect(execFile).toHaveBeenCalledWith('explorer', ['C:\\Users\\me\\x.png'], expect.any(Function));
+    expect(readMergedSettings).not.toHaveBeenCalled();
+  });
+
+  it('selects the file in Windows explorer', async () => {
+    setPlatform('win32');
+    await new BrowserBridge().revealFile('C:/Users/me/x.png');
+    expect(execFile).toHaveBeenCalledWith('explorer', ['/select,', 'C:\\Users\\me\\x.png'], expect.any(Function));
+  });
+
+  it('reveals with open -R on macOS', async () => {
+    setPlatform('darwin');
+    await new BrowserBridge().revealFile('/Users/me/x.png');
+    expect(execFile).toHaveBeenCalledWith('open', ['-R', '/Users/me/x.png'], expect.any(Function));
+  });
+
+  it('opens the containing folder on Linux, where no file manager can select', async () => {
+    setPlatform('linux');
+    await new BrowserBridge().revealFile('/home/me/x.png');
+    expect(execFile).toHaveBeenCalledWith('xdg-open', ['/home/me'], expect.any(Function));
+  });
+
+  it('rejects when the file manager cannot be started', async () => {
+    setPlatform('darwin');
+    vi.mocked(execFile).mockImplementationOnce(((_c: string, _a: string[], cb?: ExecCallback) => {
+      cb?.(Object.assign(new Error('spawn open ENOENT'), { code: 'ENOENT' }));
+    }) as never);
+    await expect(new BrowserBridge().revealFile('/Users/me/x.png')).rejects.toThrow('ENOENT');
+  });
+});

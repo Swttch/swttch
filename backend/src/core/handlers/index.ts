@@ -71,6 +71,7 @@ import { getUsageHandler } from './getUsage';
 import { getUsageReportHandler } from './getUsageReport';
 import { getAllUsageHandler } from './getAllUsage';
 import { openFileHandler } from './openFile';
+import { openFileWithSystemAppHandler, revealFileHandler } from './fileActions';
 import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
 import { getDiffPreviewHandler } from './getDiffPreview';
@@ -399,6 +400,12 @@ export async function handleMessage(
       break;
     case MessageType.OPEN_FILE:
       await openFileHandler(connectionId, message, connections, bridge, bridges);
+      break;
+    case MessageType.OPEN_FILE_WITH_SYSTEM_APP:
+      await openFileWithSystemAppHandler(connectionId, message, connections, bridge, bridges);
+      break;
+    case MessageType.REVEAL_FILE:
+      await revealFileHandler(connectionId, message, connections, bridge, bridges);
       break;
     case MessageType.OPEN_DIFF:
       await openDiffHandler(connectionId, message, connections, bridge);

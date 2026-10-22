@@ -228,6 +228,12 @@ class NodeProcessManager(
          * shown at all (so the backend can tell the user instead of acking success).
          */
         suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean
+
+        /** Hands [path] to the system's default app for its type. True when it was handed over. */
+        suspend fun openFileWithSystemApp(path: String): Boolean
+
+        /** Shows [path] in the system's file manager, selected where the OS can. True when it was shown. */
+        suspend fun revealFile(path: String): Boolean
         suspend fun openDiff(
             filePath: String,
             oldContent: String,

@@ -2551,6 +2551,38 @@ class ClaudeCodePanel(
                 }
             }
 
+            /** The file on disk under whichever spelling this IDE can see, or null. */
+            private fun fileOnDisk(path: String): File? =
+                OpenFileTargets.candidates(path, project.basePath, SystemInfo.isWindows)
+                    .map { File(it) }
+                    .firstOrNull { it.exists() }
+
+            override suspend fun openFileWithSystemApp(path: String): Boolean {
+                val file = fileOnDisk(path) ?: return false
+                return openWithSystemApp(file)
+            }
+
+            override suspend fun revealFile(path: String): Boolean {
+                val file = fileOnDisk(path) ?: return false
+                return withContext(Dispatchers.IO) {
+                    try {
+                        if (!Desktop.isDesktopSupported()) return@withContext false
+                        val desktop = Desktop.getDesktop()
+                        when {
+                            // Windows and macOS select the file in their file manager.
+                            desktop.isSupported(Desktop.Action.BROWSE_FILE_DIR) -> desktop.browseFileDirectory(file)
+                            // Elsewhere the best that can be done is to open its folder.
+                            desktop.isSupported(Desktop.Action.OPEN) -> desktop.open(file.parentFile ?: file)
+                            else -> return@withContext false
+                        }
+                        true
+                    } catch (e: Exception) {
+                        logger.warn("File manager could not show ${file.path}", e)
+                        false
+                    }
+                }
+            }
+
             override suspend fun openDiff(
                 filePath: String,
                 oldContent: String,
