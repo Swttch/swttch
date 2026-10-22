@@ -567,3 +567,33 @@ describe('JetBrainsBridge request deadlines', () => {
     await rejects;
   });
 });
+
+describe('JetBrainsBridge.openFile — reports a file the IDE could not open (#567)', () => {
+  function bridgeWithClient() {
+    const bridge = new JetBrainsBridge();
+    const ws = createMockWs();
+    bridge.addRpcClient(ws as never);
+    return { bridge, ws };
+  }
+
+  it('resolves when the IDE opened the file', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const opened = bridge.openFile('C:/x.png');
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: { ok: true } });
+    await expect(opened).resolves.toBeUndefined();
+  });
+
+  it('resolves for an IDE that predates the ok flag', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const opened = bridge.openFile('C:/x.png');
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: {} });
+    await expect(opened).resolves.toBeUndefined();
+  });
+
+  it('rejects when the IDE answers ok:false', async () => {
+    const { bridge, ws } = bridgeWithClient();
+    const opened = bridge.openFile('C:/x.png');
+    ws.emitMessage({ jsonrpc: '2.0', id: 'rpc-1', result: { ok: false } });
+    await expect(opened).rejects.toThrow('C:/x.png');
+  });
+});

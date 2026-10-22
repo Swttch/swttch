@@ -4,6 +4,7 @@ import com.github.yhk1038.claudecodegui.actions.OpenClaudeCodeAction
 import com.github.yhk1038.claudecodegui.bridge.ClipboardContents
 import com.github.yhk1038.claudecodegui.bridge.NodeProcessManager
 import com.github.yhk1038.claudecodegui.bridge.NotificationOutcome
+import com.github.yhk1038.claudecodegui.bridge.OpenFileTargets
 import com.github.yhk1038.claudecodegui.bridge.SystemClipboardReader
 import com.github.yhk1038.claudecodegui.bridge.SystemSelectionWriter
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
@@ -92,6 +93,7 @@ import org.cef.handler.CefRequestHandlerAdapter
 import org.cef.network.CefRequest
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.Desktop
 import java.awt.FileDialog
 import java.awt.Frame
 import java.awt.Image
@@ -2471,10 +2473,16 @@ class ClaudeCodePanel(
     private fun createRpcHandler(): NodeProcessManager.RpcHandler {
         return object : NodeProcessManager.RpcHandler {
 
-            override suspend fun openFile(path: String, line: Int?, column: Int?) {
+            override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
+                // The backend names the file the way it sees it; a WSL backend speaks Linux
+                // paths the Windows IDE cannot look up as written (#567).
+                val spellings = OpenFileTargets.candidates(path, project.basePath, SystemInfo.isWindows)
+                val lookedUp = CompletableDeferred<VirtualFile?>()
                 ApplicationManager.getApplication().invokeLater {
                     try {
-                        val virtualFile = LocalFileSystem.getInstance().findFileByPath(path)
+                        val virtualFile = spellings.firstNotNullOfOrNull {
+                            LocalFileSystem.getInstance().findFileByPath(it)
+                        }
                         if (virtualFile != null) {
                             if (line != null && line > 0) {
                                 // line/column from tools are 1-based; OpenFileDescriptor is 0-based.
@@ -2485,13 +2493,57 @@ class ClaudeCodePanel(
                             } else {
                                 EditorOpener.requestOpenFile(FileEditorManager.getInstance(project), virtualFile)
                             }
-                            logger.info("Opened file: $path${if (line != null && line > 0) ":$line" else ""}")
-                        } else {
-                            logger.warn("File not found: $path")
                         }
+                        lookedUp.complete(virtualFile)
                     } catch (e: Exception) {
                         logger.error("Failed to open file: $path", e)
+                        lookedUp.complete(null)
                     }
+                }
+
+                val virtualFile = lookedUp.await()
+                // An editor that took the file shows it. Some files have none (a PNG when the
+                // image viewer is off, a folder), and the request then does nothing at all.
+                if (virtualFile != null && awaitEditorOpened(virtualFile)) {
+                    logger.info("Opened file: $path${if (line != null && line > 0) ":$line" else ""}")
+                    return true
+                }
+
+                // No editor: do what a double-click in the file manager would do.
+                val onDisk = spellings.map { File(it) }.firstOrNull { it.exists() }
+                if (onDisk != null && openWithSystemApp(onDisk)) {
+                    logger.info("No IDE editor for $path; opened it with the system app")
+                    return true
+                }
+                logger.warn("Could not open file: $path (tried: ${spellings.joinToString()})")
+                return false
+            }
+
+            /** True once the IDE shows [file] in an editor, polling briefly because the open is asynchronous. */
+            private suspend fun awaitEditorOpened(file: VirtualFile): Boolean {
+                repeat(OPEN_FILE_POLL_COUNT) {
+                    val isOpen = CompletableDeferred<Boolean>()
+                    ApplicationManager.getApplication().invokeLater {
+                        isOpen.complete(
+                            runCatching { FileEditorManager.getInstance(project).isFileOpen(file) }.getOrDefault(false)
+                        )
+                    }
+                    if (isOpen.await()) return true
+                    delay(OPEN_FILE_POLL_INTERVAL_MS)
+                }
+                return false
+            }
+
+            private suspend fun openWithSystemApp(file: File): Boolean = withContext(Dispatchers.IO) {
+                try {
+                    if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                        return@withContext false
+                    }
+                    Desktop.getDesktop().open(file)
+                    true
+                } catch (e: Exception) {
+                    logger.warn("System app could not open ${file.path}", e)
+                    false
                 }
             }
 
@@ -3215,6 +3267,13 @@ class ClaudeCodePanel(
          * `wsl.exe` start, while still bounding the formerly-unbounded wait. See issue #97.
          */
         private const val BACKEND_START_TIMEOUT_MS = 30_000L
+
+        /**
+         * How long a clicked file gets to appear in an editor before the panel concludes
+         * no editor takes it and falls back to the system app: 30 checks, 50ms apart.
+         */
+        private const val OPEN_FILE_POLL_COUNT = 30
+        private const val OPEN_FILE_POLL_INTERVAL_MS = 50L
 
         /**
          * How long to wait before each re-ask for a port forward the IDE did not grant

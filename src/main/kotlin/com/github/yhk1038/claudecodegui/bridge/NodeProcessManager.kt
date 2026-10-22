@@ -222,7 +222,12 @@ class NodeProcessManager(
      * The Node.js backend calls these when it needs IDE-native functionality.
      */
     interface RpcHandler {
-        suspend fun openFile(path: String, line: Int? = null, column: Int? = null)
+        /**
+         * Opens [path] in the IDE, or hands it to the system's default app when no editor
+         * takes it. Returns true when either happened, false when the file could not be
+         * shown at all (so the backend can tell the user instead of acking success).
+         */
+        suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean
         suspend fun openDiff(
             filePath: String,
             oldContent: String,
