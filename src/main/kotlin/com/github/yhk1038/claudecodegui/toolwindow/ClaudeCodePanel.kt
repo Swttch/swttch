@@ -2519,13 +2519,17 @@ class ClaudeCodePanel(
                 return false
             }
 
-            /** True once the IDE shows [file] in an editor, polling briefly because the open is asynchronous. */
+            /**
+             * True once an editor is showing [file], polling briefly because the open is asynchronous.
+             * Asks for the file's editors rather than whether it is "open": a file the IDE once opened
+             * (and could not restore, with its editor plugin off) can still count as open with no editor.
+             */
             private suspend fun awaitEditorOpened(file: VirtualFile): Boolean {
                 repeat(OPEN_FILE_POLL_COUNT) {
                     val isOpen = CompletableDeferred<Boolean>()
                     ApplicationManager.getApplication().invokeLater {
                         isOpen.complete(
-                            runCatching { FileEditorManager.getInstance(project).isFileOpen(file) }.getOrDefault(false)
+                            runCatching { FileEditorManager.getInstance(project).getEditors(file).isNotEmpty() }.getOrDefault(false)
                         )
                     }
                     if (isOpen.await()) return true
