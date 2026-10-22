@@ -96,18 +96,37 @@ function menuItems(target: LinkMenuTarget, t: TFunction<'chat'>): MenuItem[] {
       .then(() => toast.success(done))
       .catch(() => toast.error(failed));
   };
-  return [
-    {
-      label: t('externalLink.openInBrowser'),
-      run: () => {
-        getAdapter()
-          .openUrl(target.url)
-          .catch((err) => console.error('[LinkMenu] Failed to open external link:', err));
+
+  if (target.kind === 'external') {
+    return [
+      {
+        label: t('externalLink.openInBrowser'),
+        run: () => {
+          getAdapter()
+            .openUrl(target.url)
+            .catch((err) => console.error('[LinkMenu] Failed to open external link:', err));
+        },
       },
-    },
+      {
+        label: t('externalLink.copyAddress'),
+        run: copy(target.url, t('externalLink.copyDone'), t('externalLink.copyFailed')),
+      },
+    ];
+  }
+
+  // A local file: the same actions a terminal user has through the file manager.
+  const { path, line, column } = target;
+  const failed = (err: unknown) => {
+    console.error('[LinkMenu] Failed to act on file link:', err);
+    toast.error(t('fileOpenFailed', { path }));
+  };
+  return [
+    { label: t('fileLink.open'), run: () => getAdapter().openFile(path, line, column).catch(failed) },
     {
-      label: t('externalLink.copyAddress'),
-      run: copy(target.url, t('externalLink.copyDone'), t('externalLink.copyFailed')),
+      label: t('fileLink.openWithSystemApp'),
+      run: () => getAdapter().openFileWithSystemApp(path).catch(failed),
     },
+    { label: t('fileLink.showInFileManager'), run: () => getAdapter().revealFile(path).catch(failed) },
+    { label: t('fileLink.copyPath'), run: copy(path, t('fileLink.copyDone'), t('fileLink.copyFailed')) },
   ];
 }

@@ -742,5 +742,13 @@
     "copyDone": "링크 주소를 복사했습니다",
     "copyFailed": "링크 주소를 복사하지 못했습니다",
     "openInBrowser": "브라우저에서 열기"
+  },
+  "fileLink": {
+    "copyDone": "경로를 복사했습니다",
+    "copyFailed": "경로를 복사하지 못했습니다",
+    "copyPath": "경로 복사",
+    "open": "열기",
+    "openWithSystemApp": "기본 앱으로 열기",
+    "showInFileManager": "파일 관리자에서 보기"
   }
 }

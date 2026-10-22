@@ -758,5 +758,13 @@
     "copyDone": "تم نسخ عنوان الرابط",
     "copyFailed": "تعذّر نسخ عنوان الرابط",
     "openInBrowser": "فتح في المتصفح"
+  },
+  "fileLink": {
+    "copyDone": "تم نسخ المسار",
+    "copyFailed": "تعذّر نسخ المسار",
+    "copyPath": "نسخ المسار",
+    "open": "فتح",
+    "openWithSystemApp": "فتح بالتطبيق الافتراضي",
+    "showInFileManager": "إظهار في مدير الملفات"
   }
 }

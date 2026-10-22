@@ -7,11 +7,14 @@ import { linkMenuStore } from '@/utils/linkMenuStore';
 import { installExternalLinkRouting } from '@/utils/externalLinkRouting';
 
 const openUrl = vi.fn((_url: string) => Promise.resolve());
+const openFile = vi.fn((_path: string, _line?: number, _column?: number) => Promise.resolve());
+const openFileWithSystemApp = vi.fn((_path: string) => Promise.resolve());
+const revealFile = vi.fn((_path: string) => Promise.resolve());
 const writeText = vi.fn((_text: string) => Promise.resolve());
 
 vi.mock('@/adapters', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/adapters')>()),
-  getAdapter: () => ({ openUrl }),
+  getAdapter: () => ({ openUrl, openFile, openFileWithSystemApp, revealFile }),
 }));
 
 const URL_UNDER_POINTER = 'https://example.com/pull/71';
@@ -19,6 +22,9 @@ const URL_UNDER_POINTER = 'https://example.com/pull/71';
 describe('LinkMenu — external link', () => {
   beforeEach(() => {
     openUrl.mockClear();
+    openFile.mockClear();
+    openFileWithSystemApp.mockClear();
+    revealFile.mockClear();
     writeText.mockClear();
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
   });
@@ -127,5 +133,83 @@ describe('LinkMenu — external link', () => {
       expect(notPrevented).toBe(true);
       expect(screen.queryByRole('menu')).toBeNull();
     });
+  });
+});
+
+// The same menu for a local file link (#567): what a terminal user does with a file.
+describe('LinkMenu — local file link', () => {
+  const FILE = 'C:/Users/me/AppData/Local/Temp/perf/x.png';
+
+  beforeEach(() => {
+    openFile.mockClear();
+    openFileWithSystemApp.mockClear();
+    revealFile.mockClear();
+    writeText.mockClear();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  });
+
+  afterEach(() => {
+    act(() => linkMenuStore.close());
+    document.body.innerHTML = '';
+  });
+
+  const openMenu = (line?: number, column?: number) => {
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'file', path: FILE, line, column }, x: 40, y: 60 }));
+  };
+  const item = (key: string) => screen.getByRole('menuitem', { name: i18n.t(`chat:fileLink.${key}`) });
+
+  it('offers open, open with the system app, show in the file manager and copy path', () => {
+    openMenu();
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      i18n.t('chat:fileLink.open'),
+      i18n.t('chat:fileLink.openWithSystemApp'),
+      i18n.t('chat:fileLink.showInFileManager'),
+      i18n.t('chat:fileLink.copyPath'),
+    ]);
+  });
+
+  it('opens the file at its line and closes', async () => {
+    openMenu(12, 3);
+    await act(async () => {
+      fireEvent.click(item('open'));
+    });
+    expect(openFile).toHaveBeenCalledWith(FILE, 12, 3);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('hands the file to the system app', async () => {
+    openMenu();
+    await act(async () => {
+      fireEvent.click(item('openWithSystemApp'));
+    });
+    expect(openFileWithSystemApp).toHaveBeenCalledWith(FILE);
+  });
+
+  it('shows the file in the file manager', async () => {
+    openMenu();
+    await act(async () => {
+      fireEvent.click(item('showInFileManager'));
+    });
+    expect(revealFile).toHaveBeenCalledWith(FILE);
+  });
+
+  it('copies the exact path', async () => {
+    openMenu();
+    await act(async () => {
+      fireEvent.click(item('copyPath'));
+    });
+    expect(writeText).toHaveBeenCalledWith(FILE);
+  });
+
+  it('tells the user when an action fails', async () => {
+    revealFile.mockRejectedValueOnce(new Error('not-found'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    openMenu();
+    await act(async () => {
+      fireEvent.click(item('showInFileManager'));
+    });
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });

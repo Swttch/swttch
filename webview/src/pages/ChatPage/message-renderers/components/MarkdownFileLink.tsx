@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { i18n } from '@/i18n';
+import { linkMenuStore } from '@/utils/linkMenuStore';
 import { resolveMarkdownFileLink } from '../utils/markdownFileLink';
 
 // Streamdown's default link classes, re-applied because a custom component fully
@@ -32,6 +33,17 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
           toast.error(i18n.t('chat:fileOpenFailed', { path: link.path }));
         });
     };
+    // The same right click an external link has: a menu with what the browser's own
+    // does not offer. A middle click does what a click does, as it does on a web link.
+    const openMenu = (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      linkMenuStore.open({
+        target: { kind: 'file', path: link.path, line: link.line, column: link.column },
+        x: event.clientX,
+        y: event.clientY,
+      });
+    };
     return (
       <span
         className={`${MARKDOWN_LINK_CLASS} cursor-pointer`}
@@ -39,6 +51,10 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
         tabIndex={0}
         title={link.path}
         onClick={open}
+        onAuxClick={(event) => {
+          if (event.button === 1) open(event);
+        }}
+        onContextMenu={openMenu}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') open(event);
         }}

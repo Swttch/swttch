@@ -1,5 +1,7 @@
 /** What the menu is about: the thing right-clicked. */
-export type LinkMenuTarget = { kind: 'external'; url: string };
+export type LinkMenuTarget =
+  | { kind: 'external'; url: string }
+  | { kind: 'file'; path: string; line?: number; column?: number };
 
 /** Where the link menu is open: its target and the pointer's position. */
 export interface LinkMenuState {

@@ -742,5 +742,13 @@
     "copyDone": "リンクのアドレスをコピーしました",
     "copyFailed": "リンクのアドレスをコピーできませんでした",
     "openInBrowser": "ブラウザで開く"
+  },
+  "fileLink": {
+    "copyDone": "パスをコピーしました",
+    "copyFailed": "パスをコピーできませんでした",
+    "copyPath": "パスをコピー",
+    "open": "開く",
+    "openWithSystemApp": "既定のアプリで開く",
+    "showInFileManager": "ファイルマネージャーで表示"
   }
 }

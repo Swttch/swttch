@@ -746,5 +746,13 @@
     "copyDone": "Link address copied",
     "copyFailed": "Could not copy the link address",
     "openInBrowser": "Open in browser"
+  },
+  "fileLink": {
+    "copyDone": "Path copied",
+    "copyFailed": "Could not copy the path",
+    "copyPath": "Copy path",
+    "open": "Open",
+    "openWithSystemApp": "Open with system app",
+    "showInFileManager": "Show in file manager"
   }
 }

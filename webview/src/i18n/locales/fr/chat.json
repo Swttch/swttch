@@ -742,5 +742,13 @@
     "copyDone": "Adresse du lien copiée",
     "copyFailed": "Impossible de copier l’adresse du lien",
     "openInBrowser": "Ouvrir dans le navigateur"
+  },
+  "fileLink": {
+    "copyDone": "Chemin copié",
+    "copyFailed": "Impossible de copier le chemin",
+    "copyPath": "Copier le chemin",
+    "open": "Ouvrir",
+    "openWithSystemApp": "Ouvrir avec l’application par défaut",
+    "showInFileManager": "Afficher dans le gestionnaire de fichiers"
   }
 }

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { StreamingMessage } from '../StreamingMessage';
+import { linkMenuStore } from '@/utils/linkMenuStore';
 
 const mockOpenFile = vi.fn((_path: string, _line?: number, _column?: number) => Promise.resolve());
 const mockOpenUrl = vi.fn((_url: string) => Promise.resolve());
@@ -170,5 +171,42 @@ describe('StreamingMessage — bare plain-text file references', () => {
     const code = container.querySelector('[data-streamdown="inline-code"]');
     expect(code?.textContent).toBe('src/app.ts:42');
     expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
+  describe('right and middle click (#567)', () => {
+    afterEach(() => linkMenuStore.close());
+
+    it('a right click opens the link menu for the file instead of the browser menu', () => {
+      render(<StreamingMessage content="See [foo.ts:12](/abs/foo.ts#L12)." isStreaming={false} />);
+      const notPrevented = fireEvent.contextMenu(screen.getByRole('button', { name: 'foo.ts:12' }), {
+        clientX: 30,
+        clientY: 50,
+      });
+      expect(notPrevented).toBe(false);
+      expect(linkMenuStore.get()).toEqual({
+        target: { kind: 'file', path: '/abs/foo.ts', line: 12, column: undefined },
+        x: 30,
+        y: 50,
+      });
+      expect(mockOpenFile).not.toHaveBeenCalled();
+    });
+
+    it('a middle click does what a click does', () => {
+      render(<StreamingMessage content="See [foo.ts:12](/abs/foo.ts#L12)." isStreaming={false} />);
+      fireEvent(
+        screen.getByRole('button', { name: 'foo.ts:12' }),
+        new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }),
+      );
+      expect(mockOpenFile).toHaveBeenCalledWith('/abs/foo.ts', 12, undefined);
+    });
+
+    it('a right-button auxclick is not an open', () => {
+      render(<StreamingMessage content="See [foo.ts](/abs/foo.ts)." isStreaming={false} />);
+      fireEvent(
+        screen.getByRole('button', { name: 'foo.ts' }),
+        new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 2 }),
+      );
+      expect(mockOpenFile).not.toHaveBeenCalled();
+    });
   });
 });

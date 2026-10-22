@@ -742,5 +742,13 @@
     "copyDone": "已复制链接地址",
     "copyFailed": "无法复制链接地址",
     "openInBrowser": "在浏览器中打开"
+  },
+  "fileLink": {
+    "copyDone": "已复制路径",
+    "copyFailed": "无法复制路径",
+    "copyPath": "复制路径",
+    "open": "打开",
+    "openWithSystemApp": "用系统应用打开",
+    "showInFileManager": "在文件管理器中显示"
   }
 }
