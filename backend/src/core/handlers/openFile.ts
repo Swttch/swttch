@@ -3,6 +3,7 @@ import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
 import { ClientEnv, MessageType } from '../../shared';
+import { resolveGitBashDrivePath } from '../features/resolveGitBashDrivePath';
 
 export async function openFileHandler(
   connectionId: string,
@@ -11,7 +12,9 @@ export async function openFileHandler(
   bridge: Bridge,
   bridges: Record<ClientEnv, Bridge>,
 ): Promise<void> {
-  const filePath = message.payload?.filePath as string;
+  const requestedPath = message.payload?.filePath as string;
+  // A Windows backend may be handed Git Bash's `/c/…` form of a drive path.
+  const filePath = requestedPath ? resolveGitBashDrivePath(requestedPath) : requestedPath;
   // Validate at runtime rather than asserting: a non-number line/column (a caller
   // slip) must not flow downstream to the IDE as a bogus coordinate.
   const rawLine = message.payload?.line;
