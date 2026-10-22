@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
+import { Tooltip } from '@/components/Tooltip';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { i18n } from '@/i18n';
 import { linkMenuStore } from '@/utils/linkMenuStore';
@@ -45,22 +46,23 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
       });
     };
     return (
-      <span
-        className={`${MARKDOWN_LINK_CLASS} cursor-pointer`}
-        role="button"
-        tabIndex={0}
-        title={link.path}
-        onClick={open}
-        onAuxClick={(event) => {
-          if (event.button === 1) open(event);
-        }}
-        onContextMenu={openMenu}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') open(event);
-        }}
-      >
-        {children}
-      </span>
+      <Tooltip content={link.path}>
+        <span
+          className={`${MARKDOWN_LINK_CLASS} cursor-pointer`}
+          role="button"
+          tabIndex={0}
+          onClick={open}
+          onAuxClick={(event) => {
+            if (event.button === 1) open(event);
+          }}
+          onContextMenu={openMenu}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') open(event);
+          }}
+        >
+          {children}
+        </span>
+      </Tooltip>
     );
   }
 

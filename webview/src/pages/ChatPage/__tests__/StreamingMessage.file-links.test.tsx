@@ -173,6 +173,14 @@ describe('StreamingMessage — bare plain-text file references', () => {
     expect(mockOpenFile).not.toHaveBeenCalled();
   });
 
+  it('shows the resolved path in the app tooltip, not a native title', async () => {
+    render(<StreamingMessage content="See [x](./src/foo.ts)." isStreaming={false} />);
+    const link = screen.getByRole('button', { name: 'x' });
+    expect(link.getAttribute('title')).toBeNull();
+    fireEvent.mouseEnter(link);
+    expect(await screen.findByText('/wd/src/foo.ts')).toBeTruthy();
+  });
+
   describe('right and middle click (#567)', () => {
     afterEach(() => linkMenuStore.close());
 
