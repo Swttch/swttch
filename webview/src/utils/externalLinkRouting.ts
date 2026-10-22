@@ -1,6 +1,6 @@
 import { getAdapter } from '@/adapters';
 import { isJetBrains } from '@/config/environment';
-import { externalLinkMenuStore } from './externalLinkMenuStore';
+import { linkMenuStore } from './linkMenuStore';
 
 /** Schemes the IDE's browser should open; anything else is left to the page. */
 const ROUTED_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
@@ -52,7 +52,7 @@ function routeContextMenu(event: MouseEvent): void {
   const url = findExternalUrl(event);
   if (!url) return;
   event.preventDefault();
-  externalLinkMenuStore.open({ url, x: event.clientX, y: event.clientY });
+  linkMenuStore.open({ target: { kind: 'external', url }, x: event.clientX, y: event.clientY });
 }
 
 /**

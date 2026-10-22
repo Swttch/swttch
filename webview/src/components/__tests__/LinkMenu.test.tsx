@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { i18n } from '@/i18n';
 import { _resetRuntimeCache } from '@/config/environment';
-import { ExternalLinkMenu } from '../ExternalLinkMenu';
-import { externalLinkMenuStore } from '@/utils/externalLinkMenuStore';
+import { LinkMenu } from '../LinkMenu';
+import { linkMenuStore } from '@/utils/linkMenuStore';
 import { installExternalLinkRouting } from '@/utils/externalLinkRouting';
 
 const openUrl = vi.fn((_url: string) => Promise.resolve());
@@ -16,7 +16,7 @@ vi.mock('@/adapters', async (importOriginal) => ({
 
 const URL_UNDER_POINTER = 'https://example.com/pull/71';
 
-describe('ExternalLinkMenu', () => {
+describe('LinkMenu — external link', () => {
   beforeEach(() => {
     openUrl.mockClear();
     writeText.mockClear();
@@ -24,25 +24,25 @@ describe('ExternalLinkMenu', () => {
   });
 
   afterEach(() => {
-    act(() => externalLinkMenuStore.close());
+    act(() => linkMenuStore.close());
     document.body.innerHTML = '';
   });
 
   it('shows nothing until a link is right-clicked', () => {
-    render(<ExternalLinkMenu />);
+    render(<LinkMenu />);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('offers to open the link in the browser and to copy its address', () => {
-    render(<ExternalLinkMenu />);
-    act(() => externalLinkMenuStore.open({ url: URL_UNDER_POINTER, x: 40, y: 60 }));
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
     expect(screen.getByRole('menuitem', { name: i18n.t('chat:externalLink.openInBrowser') })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: i18n.t('chat:externalLink.copyAddress') })).toBeTruthy();
   });
 
   it('copies the exact address of the link and closes', async () => {
-    render(<ExternalLinkMenu />);
-    act(() => externalLinkMenuStore.open({ url: URL_UNDER_POINTER, x: 40, y: 60 }));
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
     await act(async () => {
       fireEvent.click(screen.getByRole('menuitem', { name: i18n.t('chat:externalLink.copyAddress') }));
     });
@@ -51,8 +51,8 @@ describe('ExternalLinkMenu', () => {
   });
 
   it('opens the link in the browser and closes', async () => {
-    render(<ExternalLinkMenu />);
-    act(() => externalLinkMenuStore.open({ url: URL_UNDER_POINTER, x: 40, y: 60 }));
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
     await act(async () => {
       fireEvent.click(screen.getByRole('menuitem', { name: i18n.t('chat:externalLink.openInBrowser') }));
     });
@@ -61,12 +61,12 @@ describe('ExternalLinkMenu', () => {
   });
 
   it('closes on Escape and on a press outside the menu', () => {
-    render(<ExternalLinkMenu />);
-    act(() => externalLinkMenuStore.open({ url: URL_UNDER_POINTER, x: 40, y: 60 }));
+    render(<LinkMenu />);
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('menu')).toBeNull();
 
-    act(() => externalLinkMenuStore.open({ url: URL_UNDER_POINTER, x: 40, y: 60 }));
+    act(() => linkMenuStore.open({ target: { kind: 'external', url: URL_UNDER_POINTER }, x: 40, y: 60 }));
     fireEvent.mouseDown(document.body);
     expect(screen.queryByRole('menu')).toBeNull();
   });
@@ -97,7 +97,7 @@ describe('ExternalLinkMenu', () => {
     }
 
     it('replaces the browser menu with ours for an external link', () => {
-      render(<ExternalLinkMenu />);
+      render(<LinkMenu />);
       let notPrevented = true;
       act(() => {
         notPrevented = rightClick(URL_UNDER_POINTER);
@@ -107,7 +107,7 @@ describe('ExternalLinkMenu', () => {
     });
 
     it('leaves the browser menu alone for a link to our own page', () => {
-      render(<ExternalLinkMenu />);
+      render(<LinkMenu />);
       let notPrevented = false;
       act(() => {
         notPrevented = rightClick(`${window.location.origin}/settings/general`);
@@ -119,7 +119,7 @@ describe('ExternalLinkMenu', () => {
     it('leaves the browser menu alone outside the IDE', () => {
       delete (window as unknown as { __JCEF__?: boolean }).__JCEF__;
       _resetRuntimeCache();
-      render(<ExternalLinkMenu />);
+      render(<LinkMenu />);
       let notPrevented = false;
       act(() => {
         notPrevented = rightClick(URL_UNDER_POINTER);

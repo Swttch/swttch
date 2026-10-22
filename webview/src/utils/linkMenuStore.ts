@@ -1,14 +1,17 @@
-/** Where the link menu is open: the address under the pointer and the pointer's position. */
-export interface ExternalLinkMenuState {
-  url: string;
+/** What the menu is about: the thing right-clicked. */
+export type LinkMenuTarget = { kind: 'external'; url: string };
+
+/** Where the link menu is open: its target and the pointer's position. */
+export interface LinkMenuState {
+  target: LinkMenuTarget;
   x: number;
   y: number;
 }
 
-let state: ExternalLinkMenuState | null = null;
+let state: LinkMenuState | null = null;
 const listeners = new Set<() => void>();
 
-function set(next: ExternalLinkMenuState | null): void {
+function set(next: LinkMenuState | null): void {
   state = next;
   listeners.forEach((listener) => listener());
 }
@@ -18,9 +21,9 @@ function set(next: ExternalLinkMenuState | null): void {
  * document-level listener, outside React, and the menu itself is a component:
  * this is the small shared state between the two.
  */
-export const externalLinkMenuStore = {
-  get: (): ExternalLinkMenuState | null => state,
-  open: (next: ExternalLinkMenuState): void => set(next),
+export const linkMenuStore = {
+  get: (): LinkMenuState | null => state,
+  open: (next: LinkMenuState): void => set(next),
   close: (): void => set(null),
   subscribe: (listener: () => void): (() => void) => {
     listeners.add(listener);
