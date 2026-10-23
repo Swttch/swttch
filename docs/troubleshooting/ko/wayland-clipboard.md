@@ -2,7 +2,7 @@
 
 🌐 [English](../en/wayland-clipboard.md) | **한국어** | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_최종 업데이트: 2026-10-05_
+_최종 업데이트: 2026-10-23_
 
 ## 증상
 
@@ -56,6 +56,8 @@ JCEF 를 쓰는 다른 JetBrains 플러그인들에서도 같은 증상이 보�
 
 IDE 프로세스 자체는 이 클립보드를 읽을 수 있어서, 새 플러그인 버전은 붙여넣기가 빈 채로 도착할 때마다 IDE 에 클립보드를 대신 읽어 달라고 요청합니다. 그러면 설정 없이도 붙여넣기가 됩니다.
 
+플러그인 안에서 복사한 글자도 같은 X11 클립보드에만 남아 에디터나 다른 프로그램에 붙지 않았기 때문에, 새 플러그인 버전은 채팅에서 복사한 글자를 IDE 에 넘겨 IDE 가 시스템 클립보드에 올리게 합니다.
+
 이전 버전을 쓰시거나 붙여넣기가 여전히 안 되면 아래 설정을 써주세요.
 
 ## 해결 방법
@@ -98,6 +100,7 @@ JetBrains 의 네이티브 Wayland 지원이 안정화되면 필요 없어집니
 
 ### 이 저장소의 이슈
 
+- [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)
 

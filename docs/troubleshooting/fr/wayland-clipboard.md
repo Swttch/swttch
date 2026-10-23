@@ -2,7 +2,7 @@
 
 🌐 [English](../en/wayland-clipboard.md) | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | **Français**
 
-_Dernière mise à jour : 2026-10-05_
+_Dernière mise à jour : 2026-10-23_
 
 ## Symptômes
 
@@ -56,6 +56,8 @@ Le même symptôme est signalé dans d'autres plugins JetBrains qui utilisent JC
 
 Le processus de l'IDE lui-même peut lire ce presse-papiers, donc les versions récentes du plugin le demandent à l'IDE chaque fois qu'un collage arrive vide, et le collage fonctionne alors sans aucun réglage.
 
+Le texte copié dans le plugin restait lui aussi uniquement dans ce presse-papiers X11 et n'arrivait ni dans l'éditeur ni dans d'autres programmes ; les versions récentes du plugin transmettent donc à l'IDE ce que vous copiez dans le chat, et l'IDE le place dans le presse-papiers du système.
+
 Si vous utilisez une version plus ancienne, ou si un collage échoue encore, utilisez le réglage ci-dessous.
 
 ## Comment le corriger
@@ -98,6 +100,7 @@ Voter pour lui aide à en relever la priorité.
 
 ### Issues de ce dépôt
 
+- [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)
 

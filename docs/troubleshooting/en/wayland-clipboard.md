@@ -2,7 +2,7 @@
 
 🌐 **English** | [한국어](../ko/wayland-clipboard.md) | [日本語](../ja/wayland-clipboard.md) | [中文](../zh/wayland-clipboard.md) | [Español](../es/wayland-clipboard.md) | [Deutsch](../de/wayland-clipboard.md) | [Français](../fr/wayland-clipboard.md)
 
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-23_
 
 ## Symptoms
 
@@ -56,6 +56,8 @@ The same symptom is reported in other JetBrains plugins that use JCEF.
 
 The IDE process itself can read that clipboard, so newer plugin versions ask the IDE for it whenever a paste arrives empty, and the paste then works without any setting.
 
+Text copied inside the plugin used to stay on that separate X11 clipboard as well and never reached the editor or other programs, so newer plugin versions also hand what you copy in the chat to the IDE, which puts it on the system clipboard.
+
 If you are on an older version, or a paste still fails, use the setting below.
 
 ## How to fix it
@@ -98,6 +100,7 @@ Voting on it helps raise its priority.
 
 ### Issues in this repository
 
+- [#581 — Copy from chat doesn't reach the system clipboard on Linux/Wayland (JCEF out-of-process), so it can't be pasted into the editor](https://github.com/Swttch/swttch/issues/581)
 - [#278 — Cannot paste external text into chat input on Fedora KDE (Wayland)](https://github.com/Swttch/swttch/issues/278)
 - [#262 — no paste function at linux fedora](https://github.com/Swttch/swttch/issues/262)
 
