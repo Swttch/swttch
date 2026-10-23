@@ -1,5 +1,6 @@
 import { StringDecoder } from 'string_decoder';
 import { Claude } from '../claude';
+import { buildArtifactEnv } from '../claude-process';
 
 export interface SlashCommandInfo {
   name: string;
@@ -227,6 +228,10 @@ async function loadCliConfigInternal(workingDir: string): Promise<CliConfigContr
       TERM: 'dumb',
       CI: 'true',
       CLAUDECODE: undefined,
+      // This probe produces the slash-command list the menu shows. It has to ask
+      // the CLI the same question the chat session does, or `/slides` would be
+      // listed by one and missing from the other (#584).
+      ...buildArtifactEnv(),
     },
   });
 

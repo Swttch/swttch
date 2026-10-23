@@ -262,6 +262,40 @@ export function buildCheckpointingEnv(
   return { CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true' };
 }
 
+/**
+ * The env that lets the CLI offer Artifacts (the Artifact tools and `/slides`,
+ * `/design`) to this session (issue #584).
+ *
+ * The CLI decides per session whether Artifacts exist at all. A session it
+ * classes as SDK / headless is switched OFF by default unless
+ * CLAUDE_CODE_ARTIFACT is set; its own reason string for that case is
+ * `sdk_default_off`. Someone typing `claude` in a terminal is not in that class,
+ * so they get `/slides` in the slash menu and a working Artifact tool without
+ * configuring anything. We spawn with `-p --input-format stream-json`, which
+ * lands in the SDK class, so without the variable `/slides` is absent from the
+ * `initialize` command list and the CLI answers a typed `/slides` with "not
+ * installed in this session". Measured on the same machine, same CLI (2.1.308),
+ * same account: 71 commands without the variable, 74 with it, `/slides` among
+ * them, while the terminal REPL lists it either way.
+ *
+ * So spawning without it is us taking away something the CLI gives a terminal
+ * user, and passing it restores the parity rather than adding a feature of ours.
+ * Every other condition (feature flag, plan, organisation policy) is still the
+ * CLI's own, so an account the CLI does not offer Artifacts to gets none here
+ * either.
+ *
+ * Whatever the user already answered wins, including an explicit off: a value
+ * exported in the shell that started us is passed through untouched, because
+ * the CLI reads it itself and turning it off in a terminal has to turn it off
+ * here too. Only an absent value is filled in.
+ */
+export function buildArtifactEnv(
+  inherited: NodeJS.ProcessEnv = process.env,
+): { CLAUDE_CODE_ARTIFACT?: string } {
+  if (inherited.CLAUDE_CODE_ARTIFACT !== undefined) return {};
+  return { CLAUDE_CODE_ARTIFACT: '1' };
+}
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -612,6 +646,7 @@ export async function ensureClaudeProcess(
       CI: 'true',
       CLAUDECODE: undefined,
       ...buildCheckpointingEnv(claudeSettings),
+      ...buildArtifactEnv(),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with

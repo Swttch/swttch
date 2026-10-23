@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildArtifactEnv,
   buildCheckpointingEnv,
   buildClaudeArgs,
   isWorkflowRunning,
@@ -231,6 +232,44 @@ describe('buildCheckpointingEnv', () => {
     expect(buildCheckpointingEnv({ fileCheckpointingEnabled: null })).toEqual({
       CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING: 'true',
     });
+  });
+});
+
+describe('buildArtifactEnv', () => {
+  // A headless spawn gets no Artifacts (and so no `/slides`) unless this variable
+  // is set, so an unanswered value has to resolve to ON — that is what a terminal
+  // user gets from the CLI's own default (#584).
+  it('turns Artifacts on when the shell did not answer', () => {
+    expect(buildArtifactEnv({})).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+  });
+
+  // The CLI reads this variable itself; a user who exported it, on or off, has
+  // answered, and the same answer has to apply here as in the terminal.
+  it('passes nothing when the shell already set it on', () => {
+    expect(buildArtifactEnv({ CLAUDE_CODE_ARTIFACT: '1' })).toEqual({});
+  });
+
+  it('passes nothing when the shell explicitly turned it off', () => {
+    expect(buildArtifactEnv({ CLAUDE_CODE_ARTIFACT: '0' })).toEqual({});
+    expect(buildArtifactEnv({ CLAUDE_CODE_ARTIFACT: 'false' })).toEqual({});
+  });
+
+  // An empty string is still an answer the CLI parses, so it is not ours to overwrite.
+  it('passes nothing when the shell set it to an empty string', () => {
+    expect(buildArtifactEnv({ CLAUDE_CODE_ARTIFACT: '' })).toEqual({});
+  });
+
+  it('reads the real process env when no env is given', () => {
+    const before = process.env.CLAUDE_CODE_ARTIFACT;
+    try {
+      delete process.env.CLAUDE_CODE_ARTIFACT;
+      expect(buildArtifactEnv()).toEqual({ CLAUDE_CODE_ARTIFACT: '1' });
+      process.env.CLAUDE_CODE_ARTIFACT = '0';
+      expect(buildArtifactEnv()).toEqual({});
+    } finally {
+      if (before === undefined) delete process.env.CLAUDE_CODE_ARTIFACT;
+      else process.env.CLAUDE_CODE_ARTIFACT = before;
+    }
   });
 });
 
