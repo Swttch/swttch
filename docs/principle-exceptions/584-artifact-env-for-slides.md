@@ -10,7 +10,11 @@
 
 `CLAUDE.md`의 **★ 핵심 원칙** 중 **2번 「공식 지원 비의존」**이다. "공식 SDK 라이브러리나 미문서화 내부 프로토콜에 의존하지 않는다."
 
-`CLAUDE_CODE_ARTIFACT`는 CLI가 소스 안에서 읽는 환경변수이고, 공식 문서에서 이 변수를 찾지 못했다. 찾지 못했다는 말이며, 문서에 없다고 확인했다는 말이 아니다.
+`CLAUDE_CODE_ARTIFACT`는 CLI가 소스 안에서 읽는 환경변수이고, 공식 문서에는 없다. 2026-10-23에 공식 환경변수 문서(code.claude.com/docs/en/env-vars)를 읽었다. 이 문서의 표에는 이름에 ARTIFACT가 들어간 변수가 `CLAUDE_CODE_ARTIFACT_AUTO_OPEN`, `CLAUDE_CODE_ARTIFACT_COMMENTS`, `CLAUDE_CODE_ARTIFACT_COMMENTS_AUTOREACT`, `CLAUDE_CODE_ARTIFACT_PUBLISH_EDITS`, `CLAUDE_CODE_DISABLE_ARTIFACT`로 다섯 개 있고, 이름이 정확히 `CLAUDE_CODE_ARTIFACT`인 항목은 없다. 다만 그 표는 이 페이지의 앞쪽 100,000자까지만 읽었다.
+
+공식 아티팩트 문서(code.claude.com/docs/en/artifacts)의 「Availability」 표는 아티팩트가 "Agent SDK, GitHub Action, MCP 서버 맥락, 사용자의 터미널이나 스크립트에서 `-p`로 실행할 때, 그리고 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`가 설정됐을 때" 기본으로 꺼져 있다고 적는다. 즉 **SDK형 세션에서 꺼 두는 것은 문서화된 기본값이다.** 같은 문서는 `/slides`가 Claude Code v2.1.265 이상과 아티팩트를 쓸 수 있는 세션을 요구하고, 조직이 Slides 템플릿을 끄면 `/slides`가 나타나지 않는다고 적는다. 그러나 SDK형 세션에서 아티팩트를 켜는 방법은 적혀 있지 않다.
+
+그러므로 이 예외는 문서화된 기본값을 소스에서 읽은 스위치로 뒤집는 일이다. 원칙 문장은 고치지 않았고, 여기 예외로 남긴다.
 
 원칙 문장은 고치지 않았고, 여기 예외로 남긴다.
 
@@ -74,8 +78,16 @@ CLI 소스에서 이유를 읽었다. CLI는 세션마다 아티팩트 기능(`A
 - CLI가 SDK형 세션에도 기본으로 아티팩트를 켜는 경우. 변수가 불필요해진다.
 - 이 변수를 주면 터미널에는 없는 동작이 생기는 경우. 동등성이 아니라 새 동작이 된다.
 
+## 문서화된 제한은 그대로 남는다
+
+이 변수는 문서가 정한 사용 조건을 풀지 않는다. 공식 문서가 요구하는 조건은 CLI가 계속 판정한다.
+
+- claude.ai 계정 로그인이 있어야 한다. API 키, 게이트웨이 토큰, 클라우드 공급자 자격증명으로는 게시되지 않는다.
+- Amazon Bedrock, Google Cloud, Microsoft Foundry에서는 쓸 수 없다.
+- 조직 정책(CMEK, HIPAA, Zero Data Retention)과 Slides 템플릿 설정이 막으면 막힌다.
+
 ## 확인하지 못한 것
 
-- 데스크탑이 `/slides`를 얻는 방식. 환경변수 `CLAUDE_CODE_ENTRYPOINT`, 계정·조직 UUID, OAuth 범위, 데스크탑 버전 등을 하나씩 넣어도 재현되지 않았다.
+- 데스크탑이 `/slides`를 얻는 방식. 환경변수 `CLAUDE_CODE_ENTRYPOINT`, 계정·조직 UUID, OAuth 범위, 데스크탑 버전 등을 하나씩 넣어도 재현되지 않았다. 공식 문서는 데스크탑 앱 1.13576.0 이상이 아티팩트를 지원한다고만 적는다.
 - 2.1.308 외의 CLI 버전. 이 소스 읽기와 측정은 2.1.308과 2.1.309에서만 했다.
 - 구버전 IDE(242)에서의 동작. 신버전 IDE(263)에서만 눈으로 확인했다.
