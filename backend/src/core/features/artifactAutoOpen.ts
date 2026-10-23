@@ -12,14 +12,17 @@
  * not open the page, nobody does.
  *
  * What the CLI skips, we skip:
- * - an update of an Artifact that already exists (it names the page in `url`),
+ * - an update of an Artifact that already exists,
  * - a failed call,
  * - `CLAUDE_CODE_ARTIFACT_AUTO_OPEN` set to an off value (`0`, `false`, `no`,
  *   `off`), the switch the official docs give for exactly this.
  *
- * It follows the tool call, not a sentence of the result. The result text is the
- * CLI's wording and differs per kind of publish, so the address is only searched
- * for in it, never matched against a fixed phrase.
+ * Telling a first publish from an update takes the result, not the call. An
+ * update does not have to name the page: publishing the same `file_path` again,
+ * with or without `edits`, updates the page the CLI bound that file to, and the
+ * call carries no `url`. The two result shapes that mean "new" are described at
+ * `CREATED_PAGE` and `FIRST_VERSION_PAGE`. Anything else is left alone: opening
+ * a tab on every update would be worse than missing one first publish.
  *
  * Timing: like `EditedFileTracker`, the call is recorded from the `assistant`
  * event and acted on when the matching `tool_result` arrives, because the
@@ -59,11 +62,33 @@ function toolResultText(block: Record<string, unknown>): string {
 }
 
 /**
- * Whether an `Artifact` call publishes a new page. An update carries the page's
- * address as `url`; `quickstart`, `list`, `read` and the other actions carry an
- * `action` of their own; a create has neither.
+ * The two ways a result says the page is new, both measured on CLI 2.1.309:
+ * - publishing a file: `Published <file> at <address> (Version 1, version id …)`,
+ *   where the first publish is Version 1 and the next is Version 2;
+ * - creating from an Artifact type (what `/slides` does): `Created a new
+ *   Artifact at <address> (version 1792777235-07a8) from the Artifact type …`,
+ *   whose parenthesis holds a version id, not a counter, so only the sentence
+ *   itself says the page is new.
  */
-function isFirstPublish(input: Record<string, unknown>): boolean {
+const CREATED_PAGE = new RegExp(`Created a new Artifact at (${ARTIFACT_URL.source})`, 'i');
+const FIRST_VERSION_PAGE = new RegExp(`(${ARTIFACT_URL.source})\\s*\\(version\\s+(\\d+)\\s*[,)]`, 'i');
+
+/** The address of a page this result reports as new, or undefined. */
+function newPageUrlFrom(text: string): string | undefined {
+  const created = CREATED_PAGE.exec(text);
+  if (created !== null) return created[1];
+  const published = FIRST_VERSION_PAGE.exec(text);
+  if (published !== null && Number(published[2]) === 1) return published[1];
+  return undefined;
+}
+
+/**
+ * Whether an `Artifact` call could publish a page at all. `quickstart`, `list`,
+ * `read` and the other actions carry an `action` of their own, and an update
+ * that names the page in `url` is one already. Whether the page is new is read
+ * from the result, since publishing a file again names no `url`.
+ */
+function isPublishCall(input: Record<string, unknown>): boolean {
   if (typeof input['url'] === 'string' && input['url'].length > 0) return false;
   const action = input['action'];
   return action === undefined || action === 'publish';
@@ -81,7 +106,7 @@ export class ArtifactAutoOpener {
       const id = block['id'];
       if (typeof id !== 'string' || id.length === 0) continue;
       const input = (block['input'] as Record<string, unknown> | undefined) ?? {};
-      if (isFirstPublish(input)) this.pending.add(id);
+      if (isPublishCall(input)) this.pending.add(id);
     }
   }
 
@@ -100,7 +125,7 @@ export class ArtifactAutoOpener {
       const id = block['tool_use_id'];
       if (typeof id !== 'string' || !this.pending.delete(id)) continue;
       if (disabled || block['is_error'] === true) continue;
-      const url = ARTIFACT_URL.exec(toolResultText(block))?.[0];
+      const url = newPageUrlFrom(toolResultText(block));
       if (url !== undefined) urls.push(url);
     }
     return urls;
