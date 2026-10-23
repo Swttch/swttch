@@ -4,6 +4,7 @@
 > 수정 이력은 이 파일을 고쳐 적지 말고 `git log -- docs/principle-exceptions/584-artifact-env-for-slides.md`로 확인한다.
 
 - 관련 이슈: [#584](https://github.com/Swttch/swttch/issues/584) (`/slides`를 플러그인에서 쓰고 싶다는 요청)
+- 관련 PR: [#591](https://github.com/Swttch/swttch/pull/591)
 
 ## 어떤 원칙을 위반하는가
 
