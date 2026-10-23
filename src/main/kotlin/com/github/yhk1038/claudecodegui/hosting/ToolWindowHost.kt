@@ -6,6 +6,7 @@ import com.github.yhk1038.claudecodegui.editor.TabActivityTracker
 import com.github.yhk1038.claudecodegui.editor.WorkingTabIcon
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.toolwindow.ClaudeCodePanel
+import com.github.yhk1038.claudecodegui.toolwindow.SessionViewJudge
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -203,7 +204,7 @@ class ToolWindowHost(private val project: Project) : ChatHost {
                         // looking, and only answering it ends the wait.
                         TabActivity.AWAITING -> UNREAD_ICON
                         TabActivity.IDLE ->
-                            if (tw.contentManager.selectedContent === tabContent) BASE_ICON
+                            if (SessionViewJudge.isViewing(project, tabId)) BASE_ICON
                             else UNREAD_ICON
                     }
                 }
@@ -285,6 +286,25 @@ class ToolWindowHost(private val project: Project) : ChatHost {
             if (content.getUserData(TAB_ID_KEY) == tabId) return content
         }
         return null
+    }
+
+    /**
+     * Take the unread dot off every tab whose session the user is now looking at.
+     *
+     * Selecting a tab clears its dot, but arriving can also be the IDE regaining focus
+     * or the tool window being shown with the tab already selected, and neither fires
+     * a selection event ([UnreadBadgeClearer]). A tab that is still busy keeps its icon
+     * for the reason given on [busyTabs]. Must run on the EDT.
+     */
+    fun clearUnreadWhereViewed() {
+        val toolWindow = ToolWindowManager.getInstance(project)
+            .getToolWindow(TOOL_WINDOW_ID) ?: return
+        val contentManager = toolWindow.contentManagerIfCreated ?: return
+        for (content in contentManager.contents) {
+            val tabId = content.getUserData(TAB_ID_KEY) ?: continue
+            if (content.icon !== UNREAD_ICON || tabId in busyTabs) continue
+            if (SessionViewJudge.isViewing(project, tabId)) content.icon = BASE_ICON
+        }
     }
 
     companion object {

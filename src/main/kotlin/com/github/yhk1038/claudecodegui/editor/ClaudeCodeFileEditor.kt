@@ -2,10 +2,10 @@ package com.github.yhk1038.claudecodegui.editor
 
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.toolwindow.ClaudeCodePanel
+import com.github.yhk1038.claudecodegui.toolwindow.SessionViewJudge
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.fileEditor.FileEditorStateLevel
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
@@ -124,10 +124,7 @@ class ClaudeCodeFileEditor(
         }
     }
 
-    private fun isTabActive(): Boolean {
-        val fem = FileEditorManager.getInstance(project)
-        return fem.selectedEditors.any { it === this }
-    }
+    private fun isTabActive(): Boolean = SessionViewJudge.isViewing(project, virtualFile.tabId)
 
     override fun getComponent(): JComponent = panel
 

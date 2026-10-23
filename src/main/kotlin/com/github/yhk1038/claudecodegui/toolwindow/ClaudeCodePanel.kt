@@ -2968,18 +2968,15 @@ class ClaudeCodePanel(
                 ApplicationManager.getApplication().invokeLater {
                     // Gate here, not in the webview: JCEF's document.hidden is unreliable
                     // for editor-tab / app-focus changes (works in 2024.2, not 2026.1).
-                    // Suppress only when the user is actually looking at THIS session —
-                    // its editor tab is the selected editor AND the IDE window is focused
-                    // (the same signal the unread tab badge uses).
-                    val fem = FileEditorManager.getInstance(project)
-                    val thisTabSelected = fem.selectedEditors.any {
-                        (it.file as? ClaudeCodeVirtualFile)?.tabId == tabId
-                    }
-                    val ideFocused = WindowManager.getInstance().getFrame(project)?.isActive == true
+                    // Suppress only when the user is actually looking at THIS session. What
+                    // "looking" means is SessionViewJudge's to answer, for the banner and the
+                    // unread badge alike (#583).
+                    val ideFocused = SessionViewJudge.ideFocused(project)
+                    val viewing = SessionViewJudge.isViewing(SessionViewJudge.read(project, tabId), ideFocused)
                     // Which app a click on the OS banner should raise. Reported in every
                     // outcome because it describes this IDE, not this one notification.
                     val activateBundleId = HostAppBundleId.get()
-                    if (thisTabSelected && ideFocused) {
+                    if (viewing) {
                         logger.info("Skipping notification (user viewing this session): $title")
                         result.complete(
                             NotificationOutcome(

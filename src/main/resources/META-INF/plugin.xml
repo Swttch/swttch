@@ -186,6 +186,11 @@
         <listener
             class="com.github.yhk1038.claudecodegui.editor.FileSaveNotifier"
             topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <!-- Take an unread badge off when the IDE regains focus on a session the
+             user is now looking at (#583) -->
+        <listener
+            class="com.github.yhk1038.claudecodegui.toolwindow.OnIdeActivated"
+            topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
 
     <!-- Clean up session state only on real tab close (not on tab move/split) -->
@@ -193,6 +198,10 @@
         <listener
             class="com.github.yhk1038.claudecodegui.editor.ClaudeCodeEditorManagerListener"
             topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+        <!-- Same, for the tool window being shown with the tab already selected (#583) -->
+        <listener
+            class="com.github.yhk1038.claudecodegui.toolwindow.OnToolWindowShown"
+            topic="com.intellij.openapi.wm.ex.ToolWindowManagerListener"/>
     </projectListeners>
 
     <actions>
