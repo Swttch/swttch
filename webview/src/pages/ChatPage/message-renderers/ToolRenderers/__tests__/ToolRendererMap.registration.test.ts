@@ -50,6 +50,9 @@ const BUILT_IN_TOOLS = [
     'ReadMcpResourceDirTool',
     'SendUserMessage',
     'SubagentHandback',
+    'Artifact',
+    'ArtifactComments',
+    'ArtifactData',
 ];
 
 /**

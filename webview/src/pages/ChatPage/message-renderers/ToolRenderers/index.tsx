@@ -15,6 +15,7 @@ import {WebFetchRenderer} from "./WebFetchRenderer.tsx";
 import {WebSearchRenderer} from "./WebSearchRenderer.tsx";
 import {WriteRenderer} from "./WriteRenderer.tsx";
 import {SkillRenderer} from "./SkillRenderer.tsx";
+import {ArtifactRenderer} from "./ArtifactRenderer.tsx";
 import {ToolSearchRenderer} from "./ToolSearchRenderer.tsx";
 import {TaskOutputRenderer} from "./TaskOutputRenderer.tsx";
 import {TaskStopRenderer} from "./TaskStopRenderer.tsx";
@@ -88,6 +89,10 @@ export const ToolRendererMap = new Map<string, FC<ToolRendererProps>>([
     ['ReadMcpResourceDirTool', McpResourceRenderer],
     ['SendUserMessage', SendUserMessageRenderer],
     ['SubagentHandback', SubagentHandbackRenderer],
+    // The Artifact tools `/slides` and `/design` drive (#584).
+    ['Artifact', ArtifactRenderer],
+    ['ArtifactComments', ArtifactRenderer],
+    ['ArtifactData', ArtifactRenderer],
 
     // Legacy tool names. The CLI keeps an alias table that normalizes these onto
     // the current names, so a session recorded under an older CLI — or a user
