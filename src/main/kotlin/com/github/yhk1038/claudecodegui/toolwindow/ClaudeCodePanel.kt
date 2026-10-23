@@ -2792,12 +2792,18 @@ class ClaudeCodePanel(
             }
 
             override suspend fun setClipboard(text: String) {
-                // Clipboard manager access belongs on the EDT. Debug level keeps
-                // repeated copy operations out of the normal IDE log.
+                // Clipboard manager access belongs on the EDT. The webview waits for the answer: a
+                // copy that did not take must reach the user as "copy failed", or they paste
+                // something older and believe it is what they copied. A deadline keeps a clipboard
+                // that never answers from leaving the copy button waiting for good.
+                val placed = CompletableDeferred<Boolean>()
                 ApplicationManager.getApplication().invokeLater {
-                    if (!systemClipboardWriter.write(text)) {
-                        logger.debug("System clipboard not set (it refused or text was empty)")
-                    }
+                    placed.complete(systemClipboardWriter.write(text))
+                }
+                val done = withTimeoutOrNull(CLIPBOARD_READ_TIMEOUT_MS) { placed.await() }
+                if (done != true) {
+                    logger.warn("Clipboard write failed (${if (done == null) "timed out" else "refused"})")
+                    throw IllegalStateException("The system clipboard did not accept the text")
                 }
             }
 

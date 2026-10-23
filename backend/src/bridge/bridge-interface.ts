@@ -289,6 +289,20 @@ export interface Bridge {
     workingDir?: string;
   }): Promise<{ text: string | null; image: { mimeType: string; base64: string } | null }>;
 
-  /** Put text copied inside JCEF into the IDE's system clipboard. */
+  /**
+   * Put text copied inside JCEF into the IDE's system clipboard.
+   *
+   * The writing counterpart of [getClipboard], for the same reason: on a Wayland desktop the embedded
+   * browser is a separate X11 process, and what it writes lands in a clipboard of its own that the IDE
+   * window and every other program never see.
+   *
+   *   JetBrains:  the host writes the clipboard the IDE itself uses.
+   *   Standalone: a real browser writes the system clipboard itself, so there is nothing left to do.
+   *               That makes the no-op honest: a standalone user loses nothing without it.
+   *
+   * [workingDir] routes the request to the IDE host serving that project when several IDEs share one
+   * backend. Rejects when the host could not place the text, so the webview can report the copy as
+   * failed instead of letting the user paste something older.
+   */
   setClipboard(params: { text: string; workingDir?: string }): Promise<void>;
 }

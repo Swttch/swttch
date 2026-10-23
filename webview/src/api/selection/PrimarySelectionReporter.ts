@@ -1,3 +1,5 @@
+import { selectedText } from './selectedText';
+
 /**
  * Reports the text the user has selected, so the host can put it into the Linux
  * PRIMARY selection: the buffer a middle click pastes from, which any program
@@ -62,7 +64,7 @@ export class PrimarySelectionReporter {
   }
 
   private reportSelection(options: { alwaysClaim: boolean }): void {
-    const text = this.selectedText();
+    const text = selectedText(this.doc);
     if (text === '') {
       // Forget it, so selecting the same text again later is reported again.
       this.lastReported = '';
@@ -71,19 +73,5 @@ export class PrimarySelectionReporter {
     if (!options.alwaysClaim && text === this.lastReported) return;
     this.lastReported = text;
     this.report(text);
-  }
-
-  /** The selected text, from a text field or from the page, or '' when there is none. */
-  private selectedText(): string {
-    const active = this.doc.activeElement;
-    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
-      // Never what was typed into a password field, selected or not.
-      if (active instanceof HTMLInputElement && active.type === 'password') return '';
-      const { selectionStart, selectionEnd, value } = active;
-      if (selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd) {
-        return value.slice(selectionStart, selectionEnd);
-      }
-    }
-    return this.doc.getSelection()?.toString() ?? '';
   }
 }

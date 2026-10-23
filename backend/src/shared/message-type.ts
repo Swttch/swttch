@@ -884,7 +884,16 @@ export enum MessageType {
    * clipboard. inbound webview→backend, then Node↔Kotlin
    */
   GET_CLIPBOARD = 'GET_CLIPBOARD',
-  /** The webview reports text copied in JCEF so the IDE can update its system clipboard. */
+  /**
+   * The webview asks the host to put text on the system clipboard, carrying
+   * { text, workingDir }, when the user copies something in the chat (a copy
+   * button, Ctrl+C, cut or Copy in the context menu). Asked by the webview because
+   * the embedded browser (a separate X11 process on a Wayland desktop) writes a
+   * clipboard of its own that the IDE window and other programs never see (#581).
+   * The ACK is empty once the host placed the text and an error when it could not,
+   * so a failed copy can be reported. The browser bridge has nothing to do: a
+   * browser writes its own clipboard. inbound webview→backend, then Node↔Kotlin
+   */
   SET_CLIPBOARD = 'SET_CLIPBOARD',
   /** The project list payload in response to GET_PROJECTS. */
   PROJECTS_LIST = 'PROJECTS_LIST',

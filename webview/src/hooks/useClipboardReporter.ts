@@ -6,6 +6,13 @@ import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
 
 /**
+ * How long a copy waits for the host to place the text. Placing it is instant when it works, so
+ * this only ends the wait for a host that never answers, which would otherwise leave a copy button
+ * waiting for the bridge's thirty seconds when the browser's own write also failed.
+ */
+const HOST_CLIPBOARD_WRITE_TIMEOUT_MS = 5_000;
+
+/**
  * Keep the IDE's system clipboard in sync with copies made inside JCEF.
  *
  * A normal browser owns the clipboard process that performs the copy, so only
@@ -18,17 +25,13 @@ export function useClipboardReporter(): void {
     if (!isJetBrains()) return;
     const bridge = getBridge();
     const clipboard = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
-    const reporter = new ClipboardReporter(document, clipboard, (text) => {
-      try {
-        bridge.sendRaw({
-          type: MessageType.SET_CLIPBOARD,
-          payload: { text, workingDir },
-          timestamp: Date.now(),
-        });
-      } catch {
-        // A disconnected socket cannot update the host; a later copy retries.
-      }
-    });
+    const reporter = new ClipboardReporter(document, clipboard, (text) =>
+      bridge.request(
+        MessageType.SET_CLIPBOARD,
+        { text, workingDir },
+        { timeout: HOST_CLIPBOARD_WRITE_TIMEOUT_MS },
+      ),
+    );
     return reporter.attach();
   }, [workingDir]);
 }
