@@ -6,6 +6,7 @@ import { triggerCliAutoUpdate } from './cli-auto-update';
 import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
+import { ArtifactAutoOpener } from './features/artifactAutoOpen';
 import { getWorkflowTracker, peekWorkflowTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
@@ -32,6 +33,10 @@ import { ingestRateLimitWindows } from './handlers/getUsage';
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
 const editedFileTracker = new EditedFileTracker();
+
+// Opens a page the first time Claude publishes it, as the terminal does (#593).
+// The CLI only does that itself in an interactive session, never under -p.
+const artifactAutoOpener = new ArtifactAutoOpener();
 
 // Tracks background dynamic workflows and streams live progress to the webview.
 // Lazily created on the first stream event because it needs the (single,
@@ -1310,6 +1315,15 @@ function handleStreamEvent(
   if (pathsToRefresh.length > 0) {
     bridge.refreshFiles({ paths: pathsToRefresh }).catch((err) => {
       console.error('[node-backend]', 'Failed to refresh files in IDE:', err);
+    });
+  }
+
+  // Open a freshly published Artifact in the browser once its tool_result brings
+  // the address. Read-only: the event is still forwarded below unchanged.
+  artifactAutoOpener.recordPublishes(event);
+  for (const url of artifactAutoOpener.collectUrlsToOpen(event)) {
+    bridge.openUrl(url).catch((err) => {
+      console.error('[node-backend]', 'Failed to open Artifact in browser:', err);
     });
   }
 
