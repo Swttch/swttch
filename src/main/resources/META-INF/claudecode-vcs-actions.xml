@@ -1,0 +1,8 @@
+<idea-plugin>
+    <!-- The VCS module owns the Commit UI and its action group. -->
+    <actions>
+        <reference ref="ClaudeCode.GenerateCommitMessage">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="last"/>
+        </reference>
+    </actions>
+</idea-plugin>
