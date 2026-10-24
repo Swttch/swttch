@@ -1,0 +1,106 @@
+# 새 아티팩트가 저절로 열리고, 채팅이 그 알약을 쥐고 있고, 페이지·PDF·그림이 채팅 옆에서 미리 보입니다
+
+> Language: [English](./en.md) · **한국어**
+
+아티팩트는 Claude Code가 세션에서 만든 내용을 claude.ai의 비공개 주소로 게시하는 페이지입니다. `/slides`가 만드는 슬라이드 덱이 그 예입니다([첫 번째 조각](../094-slides_and_artifact_cards/ko.md)). 이 문서는 그 둘레에서 일어나는 일을 다룹니다. 브라우저가 저절로 열리는 것, 세션의 페이지를 손 닿는 곳에 두는 작은 알약, 파일 경로를 누르면 채팅 옆에서 페이지·PDF·그림·영상을 보여 주는 pane입니다.
+
+모두 터미널이 하는 것과 같게 하고, Claude Code Desktop이 보여 주는 것을 IDE가 담을 수 있는 만큼 가져오려는 것입니다. [#593](https://github.com/Swttch/swttch/issues/593)에서 요청했습니다.
+
+## 처음 게시한 뒤 브라우저가 저절로 열립니다
+
+터미널에서는 Claude가 페이지를 처음 게시하면 Claude Code가 브라우저로 그 페이지를 엽니다. 이 채팅은 Claude Code를 그 규칙상 절대 열지 않는 방식으로 띄우기 때문에, 지금까지는 링크만 채팅에 남고 아무 일도 일어나지 않았습니다. 이제 채팅이 직접 페이지를 엽니다.
+
+| 상황 | 일어나는 일 |
+| --- | --- |
+| Claude가 새 페이지를 게시했다 | 기본 브라우저가 그 페이지를 한 번 엽니다 |
+| Claude가 이미 게시한 페이지를 갱신했다(같은 파일이거나 페이지 주소) | 아무것도 열리지 않습니다. 이미 열려 있는 탭이 새 내용을 보여 줍니다 |
+| 호출이 실패했다 | 아무것도 열리지 않습니다 |
+| 지난 세션을 불러와 스크롤한다 | 아무것도 열리지 않습니다. 지켜보는 동안 일어난 게시만 브라우저를 엽니다 |
+| IDE를 띄우는 환경에서 `CLAUDE_CODE_ARTIFACT_AUTO_OPEN`이 `0`, `false`, `no`, `off`이다 | 아무것도 열리지 않습니다. Claude Code 문서가 알려 주는 바로 그 스위치입니다 |
+
+페이지를 보려면 그 브라우저에 claude.ai 로그인이 있어야 합니다. 아티팩트는 어느 것이나 마찬가지이고, 새 페이지는 나에게만 열립니다.
+
+브라우저는 채팅의 백엔드가 도는 컴퓨터에서 열립니다. IDE에서는 그것이 내 컴퓨터입니다. 터널로 다른 컴퓨터의 채팅을 쓰고 있다면, 지금 보는 화면이 아니라 그 컴퓨터에서 페이지가 열립니다. 그 컴퓨터의 터미널이 하는 것과 같습니다.
+
+## 입력창 아래 알약이 세션의 페이지를 쥐고 있습니다
+
+세션이 페이지를 하나라도 게시하면, 입력창 아래 태그 줄에 페이지 아이콘이 붙은 작은 알약이 나타납니다.
+
+![채팅 입력창. 안내 문구는 "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, Enter to send"입니다. 그 아래 줄에서 "Bypass permissions" 다음에 페이지 아이콘과 "quarterly-reliability-revi…" 글자가 든 알약이 있고, 뒤에 "Sonnet 5.5"와 컨텍스트 퍼센트가 이어집니다.](./assets/artifact-pill-one.png)
+
+- 페이지가 하나면 알약에 그 이름이 나옵니다. **누르면** 브라우저에서 그 페이지가 열립니다.
+- 여럿이면 알약에 "2 Artifacts" 같은 개수가 나옵니다. **누르면** 위로 목록이 열리고 최근 것이 맨 위입니다. 하나를 고르면 브라우저에서 열립니다.
+
+![같은 입력창 위로 작은 목록이 떠 있는 화면. 목록의 제목은 "Artifacts in this session"이고 페이지 아이콘이 붙은 줄이 둘 있습니다. "incident-timeline"과 "quarterly-reliability-review"입니다. 그 아래 알약에는 "2 Artifacts"라고 적혀 있습니다.](./assets/artifact-pill-list.png)
+
+- **`Ctrl+]`** 는 포인터 없이 가장 최근 페이지를 다시 엽니다. 터미널과 같습니다. 맥에서도 `Ctrl`이고 `Cmd`는 되지 않습니다. 터미널의 키가 맥에서도 `Ctrl+]`이기 때문입니다.
+- `Esc`나 다른 곳을 누르면 목록이 닫힙니다.
+
+알약은 대화에서 읽어 오므로, 기록에서 연 세션도 방금 게시한 세션과 같게 페이지를 보여 줍니다.
+
+**이름은 이렇게 정해집니다.** Claude가 게시할 때 페이지에 제목을 주었으면 그것이 이름입니다. 주지 않았으면 게시한 파일의 이름에서 확장자를 뗀 것을 씁니다. 페이지 안의 `<title>`은 Claude Code가 돌려주는 내용에 들어 있지 않아서, 제목이 파일 이름과 다른 페이지는 여기서는 파일 이름으로, 브라우저 탭에서는 제목으로 보입니다.
+
+**키의 한계.** 맥에서 한글 입력 소스가 선택되어 있으면 시스템이 `Ctrl+]`를 채팅이 보기 전에 다른 키로 바꿔 버려서 이 단축키가 아무 일도 하지 않습니다. 영어 입력 소스로 바꾸거나 알약을 누르세요. 알약은 키보드와 상관없이 동작합니다.
+
+## 페이지·PDF·그림·영상이 채팅 옆에서 열립니다
+
+채팅 안의 이 종류 파일 경로를 누르면(Claude의 답, `Write`나 `Read` 카드, 파일 칩) IDE 편집기 대신 채팅 끝쪽에 pane이 열립니다.
+
+| 종류 | 파일 | pane이 받는 최대 크기 |
+| --- | --- | --- |
+| 페이지 | `.html`, `.htm` | 5 MB |
+| 그림 | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.bmp`, `.avif` | 10 MB |
+| PDF | `.pdf` | 50 MB |
+| 영상 | `.mp4`, `.m4v`, `.mov`, `.webm` | 200 MB |
+
+![오른쪽에 pane이 열린 채팅. pane 머리에는 "page.html"과 "Open in editor", "Open with system app", 닫기 표시가 있습니다. 그 아래 흰 페이지에 "ccg593 page"라는 제목과 "stand-alone page" 줄, "script ran" 줄이 보입니다.](./assets/preview-page.png)
+
+pane 머리에는 컨트롤이 셋 있습니다.
+
+- **Open in editor**는 같은 파일을 IDE 편집기로 엽니다. 고치려던 파일일 때 씁니다.
+- **Open with system app**은 내 컴퓨터가 그 종류에 쓰는 앱으로 엽니다.
+- **닫기 표시**나 `Esc`는 pane을 닫습니다. 다른 경로를 누르면 pane의 내용이 바뀝니다.
+
+소스 코드 같은 나머지는 전과 같이 편집기에서 열립니다. `page.html#L40`처럼 줄을 가리키는 클릭도 편집기로 갑니다. 줄은 편집기에서만 뜻이 있기 때문입니다.
+
+### 페이지
+
+페이지는 격리된 프레임 안에서 그려집니다. 스크립트는 돌지만 채팅에는 손댈 수 없습니다. 옆에 있는 파일은 읽지 못합니다. `style.css`나 `logo.png`를 상대경로로 불러오는 페이지는 그것들 없이 보입니다. 혼자 서도록 쓴 페이지는, Claude가 대부분의 요청에서 만드는 것이 그렇습니다, 그대로 보입니다.
+
+### PDF
+
+![PDF를 보여 주는 pane. 머리는 "doc.pdf"입니다. 그 아래에 브라우저의 PDF 뷰어가 있고, 왼쪽에 쪽 목록, 위에 "1 / 1"과 "85%"가 든 도구줄, 그리고 "ccg593 pdf"라고 적힌 쪽이 보입니다.](./assets/preview-pdf.png)
+
+PDF는 IDE에 내장된 브라우저가 평소의 뷰어로 그립니다. 그릴 수 있는지는 그 브라우저에 달려 있습니다. 맥의 IntelliJ IDEA 2024.2와 263 얼리액세스 빌드에서는 그려졌습니다. 내 IDE에서 안 그려지면 **Open with system app**을 쓰세요.
+
+### 영상
+
+![재생할 수 없는 영상을 보여 주는 pane. 머리는 "clip.mp4"입니다. pane 가운데에 "This video cannot be played here. The IDE's built-in browser may not support its encoding. Open it with the system app instead."라고 적혀 있습니다.](./assets/preview-video-unplayable.png)
+
+IDE에 내장된 브라우저에는 대부분의 `.mp4`가 쓰는 H.264 디코더가 없습니다. 그런 영상은 위 문장이 나오고, **Open with system app**으로 재생하면 됩니다. VP9로 만든 `.webm`은 pane에서 재생됩니다.
+
+### 너무 크거나 읽을 수 없는 파일
+
+표의 한도를 넘는 파일, 옮겨지거나 지워진 파일, pane이 보여 주지 않는 종류는 각각 이유를 한 문장으로 말하고, 머리의 **Open in editor**와 **Open with system app**은 그대로 있습니다. 내 컴퓨터에서 밖으로 보내는 것은 없습니다. pane은 내 컴퓨터의 채팅 백엔드를 거쳐 4 MB 조각으로 파일을 읽습니다.
+
+## 하지 않는 것
+
+- 아티팩트 페이지 자체를 IDE 안에 그리지는 않습니다. 페이지는 claude.ai 로그인이 필요하고 주소를 다른 페이지가 프레임에 넣을 수도 없어서 브라우저에서 엽니다. IDE의 자체 브라우저가 그것을 담을 수 있는지는 [#593](https://github.com/Swttch/swttch/issues/593)에서 계속 확인하고 있습니다.
+- 터미널의 `/artifacts` 같은 내 모든 아티팩트 목록은 없습니다. Claude Code가 그 명령을 이 채팅에 주지 않습니다. 알약은 지금 세션의 페이지만 모읍니다.
+- pane은 파일이 바뀌는 것을 따라가지 않고, 페이지 안의 상대경로도 풀지 않습니다.
+
+## 안 될 때
+
+| 보이는 것 | 이유와 할 일 |
+| --- | --- |
+| Claude가 페이지를 게시했는데 브라우저가 안 열렸다 | IDE를 띄우는 환경에서 `CLAUDE_CODE_ARTIFACT_AUTO_OPEN`이 `0`, `false`, `no`, `off`가 아닌지 확인하세요. 알약은 그대로 있으니 눌러 보세요 |
+| 브라우저가 두 번 열렸다 | Claude Code 버전과 함께 [#593](https://github.com/Swttch/swttch/issues/593)에 알려 주세요. 채팅은 Claude Code가 여는 일을 맡기고 있다고 가정합니다 |
+| 알약이 없다 | 성공한 게시 뒤에 나옵니다. 실패한 호출이나 `quickstart`, `list`, `read`는 게시한 페이지로 치지 않습니다 |
+| `Ctrl+]`가 아무 일도 안 한다 | 맥의 한글 입력 소스이거나 IDE가 그 키를 따로 쓰고 있습니다. 알약을 누르세요 |
+| pane의 페이지에 스타일이나 그림이 없다 | 다른 파일을 상대경로로 부르는 페이지입니다. 시스템 앱으로 여세요 |
+| PDF가 비어 있다 | IDE 내장 브라우저가 그리지 못했습니다. **Open with system app**을 쓰세요 |
+| 영상 자리에 문장이 나온다 | IDE 브라우저가 그 인코딩을 지원하지 않습니다. **Open with system app**을 쓰세요 |
+
+---
+
+[#593](https://github.com/Swttch/swttch/issues/593)에서 요청했습니다. [#584](https://github.com/Swttch/swttch/issues/584)와 [#591](https://github.com/Swttch/swttch/pull/591) 위에 쌓았습니다. `/slides` 뒤의 환경변수는 [584-artifact-env-for-slides.md](../../principle-exceptions/584-artifact-env-for-slides.md)에 기록했습니다.
