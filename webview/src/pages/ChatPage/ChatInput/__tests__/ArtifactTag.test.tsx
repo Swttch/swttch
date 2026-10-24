@@ -72,6 +72,13 @@ describe('ArtifactTag', () => {
         expect(openUrl).toHaveBeenCalledWith(B);
     });
 
+    it('reopens the most recent page on the physical bracket key when the layout prints another character', () => {
+        messages = [published('First', A), published('Second', B)];
+        render(<ArtifactTag/>);
+        fireEvent.keyDown(window, {key: 'Dead', code: 'BracketRight', ctrlKey: true});
+        expect(openUrl).toHaveBeenCalledWith(B);
+    });
+
     it.each([
         {key: ']'},
         {key: ']', metaKey: true},

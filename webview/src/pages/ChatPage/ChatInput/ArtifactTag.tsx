@@ -53,7 +53,10 @@ export function ArtifactTag() {
     useEffect(() => {
         if (latestUrl === undefined) return;
         const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key !== ']' || !e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
+            // The physical key too: a layout that does not print "]" with Ctrl held still has it on BracketRight.
+            // A Hangul input source on macOS turns Ctrl+] into another key altogether (measured: key "ㅁ", code
+            // "KeyA"), which neither check can recover; the pill is the way in there.
+            if ((e.key !== ']' && e.code !== 'BracketRight') || !e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
             e.preventDefault();
             e.stopPropagation();
             openArtifact(latestUrl);
