@@ -774,7 +774,8 @@
     "loading": "Loading…",
     "unsupported": "This kind of file cannot be previewed here.",
     "tooLarge": "This file is {{size}}, over the {{limit}} the preview can show. Open it in the editor or with the system app instead.",
-    "unreadable": "Could not read this file. It may have been moved or deleted."
+    "unreadable": "Could not read this file. It may have been moved or deleted.",
+    "unplayable": "This video cannot be played here. The IDE’s built-in browser may not support its encoding. Open it with the system app instead."
   },
   "fileLink": {
     "copyDone": "Path copied",

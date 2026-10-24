@@ -108,6 +108,22 @@ describe('FilePreviewPane', () => {
     await waitFor(() => expect(container.querySelector(selector)?.getAttribute('src')).toBe('blob:preview'));
   });
 
+  // Measured in the IDE 2024.2.6: its browser has no H.264 decoder, the player appears but fails
+  // with "no supported streams", so the pane must say so instead of leaving a dead player.
+  it('says a video cannot be played when the player fails, and keeps the system app one click away', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'video', mimeType: 'video/mp4', size: 3, offset: 0, base64: b64('abc') });
+    const { container } = render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/clip.mp4'));
+    await waitFor(() => expect(container.querySelector('video')).not.toBeNull());
+
+    fireEvent.error(container.querySelector('video')!);
+
+    expect(await screen.findByText('filePreview.unplayable')).toBeInTheDocument();
+    expect(container.querySelector('video')).toBeNull();
+    fireEvent.click(screen.getByText('filePreview.openWithSystemApp'));
+    expect(openFileWithSystemApp).toHaveBeenCalledWith('/p/clip.mp4');
+  });
+
   it('draws a PDF in a frame and releases the bytes when the pane closes', async () => {
     request.mockResolvedValue({ ok: true, kind: 'pdf', mimeType: 'application/pdf', size: 3, offset: 0, base64: b64('abc') });
     render(<FilePreviewPane />);

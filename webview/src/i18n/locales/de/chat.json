@@ -770,7 +770,8 @@
     "loading": "Wird geladen…",
     "unsupported": "Diese Dateiart kann hier nicht in der Vorschau angezeigt werden.",
     "tooLarge": "Diese Datei ist {{size}} groß und überschreitet die {{limit}}, die die Vorschau anzeigen kann. Öffne sie im Editor oder mit der System-App.",
-    "unreadable": "Diese Datei konnte nicht gelesen werden. Sie wurde möglicherweise verschoben oder gelöscht."
+    "unreadable": "Diese Datei konnte nicht gelesen werden. Sie wurde möglicherweise verschoben oder gelöscht.",
+    "unplayable": "Dieses Video kann hier nicht abgespielt werden. Der integrierte Browser der IDE unterstützt die Kodierung möglicherweise nicht. Öffne es mit der System-App."
   },
   "fileLink": {
     "copyDone": "Pfad kopiert",

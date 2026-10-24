@@ -770,7 +770,8 @@
     "loading": "Cargando…",
     "unsupported": "Este tipo de archivo no se puede previsualizar aquí.",
     "tooLarge": "Este archivo pesa {{size}} y supera los {{limit}} que puede mostrar la vista previa. Ábrelo en el editor o con la aplicación del sistema.",
-    "unreadable": "No se pudo leer este archivo. Puede que se haya movido o eliminado."
+    "unreadable": "No se pudo leer este archivo. Puede que se haya movido o eliminado.",
+    "unplayable": "Este vídeo no se puede reproducir aquí. Puede que el navegador integrado del IDE no admita su codificación. Ábrelo con la aplicación del sistema."
   },
   "fileLink": {
     "copyDone": "Ruta copiada",
