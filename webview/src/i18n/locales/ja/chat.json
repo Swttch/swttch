@@ -89,6 +89,13 @@
       "remaining": "自動圧縮まで残り {{percent}}% のコンテキストがあります。",
       "clickToCompact": "クリックして今すぐ圧縮します。"
     },
+    "artifacts": {
+      "fallbackTitle": "アーティファクト",
+      "count": "アーティファクト {{total}} 件",
+      "listTitle": "このセッションのアーティファクト",
+      "openOne": "ブラウザで開く · Ctrl+]",
+      "openLatest": "選んでブラウザで開く · Ctrl+] で最新のものを開く"
+    },
     "dragOverlay": {
       "dropHere": "ここにファイルまたはフォルダをドロップ"
     },

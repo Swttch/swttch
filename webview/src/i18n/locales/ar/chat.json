@@ -89,6 +89,13 @@
       "remaining": "{{percent}}% من السياق متبقٍّ حتى الضغط التلقائي.",
       "clickToCompact": "انقر للضغط الآن."
     },
+    "artifacts": {
+      "fallbackTitle": "أرتيفاكت",
+      "count": "{{total}} أرتيفاكت",
+      "listTitle": "أرتيفاكتات هذه الجلسة",
+      "openOne": "فتح في المتصفح · Ctrl+]",
+      "openLatest": "اختر واحدًا لفتحه في المتصفح · Ctrl+] يفتح الأحدث"
+    },
     "dragOverlay": {
       "dropHere": "أفلت الملفات أو المجلدات هنا"
     },

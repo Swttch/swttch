@@ -89,6 +89,13 @@
       "remaining": "距離自動壓縮還剩 {{percent}}% 的上下文。",
       "clickToCompact": "點選以立即壓縮。"
     },
+    "artifacts": {
+      "fallbackTitle": "成品",
+      "count": "{{total}} 個成品",
+      "listTitle": "此工作階段的成品",
+      "openOne": "在瀏覽器中開啟 · Ctrl+]",
+      "openLatest": "選擇一個在瀏覽器中開啟 · Ctrl+] 開啟最新的"
+    },
     "dragOverlay": {
       "dropHere": "將檔案或資料夾拖放到此處"
     },

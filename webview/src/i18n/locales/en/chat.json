@@ -89,6 +89,13 @@
       "remaining": "{{percent}}% of context remaining until auto-compact.",
       "clickToCompact": "Click to compact now."
     },
+    "artifacts": {
+      "fallbackTitle": "Artifact",
+      "count": "{{total}} Artifacts",
+      "listTitle": "Artifacts in this session",
+      "openOne": "Open in the browser · Ctrl+]",
+      "openLatest": "Pick one to open in the browser · Ctrl+] opens the latest"
+    },
     "dragOverlay": {
       "dropHere": "Drop files or folders here"
     },

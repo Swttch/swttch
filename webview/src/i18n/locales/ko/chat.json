@@ -89,6 +89,13 @@
       "remaining": "자동 압축까지 컨텍스트 {{percent}}% 남음.",
       "clickToCompact": "클릭하면 지금 압축합니다."
     },
+    "artifacts": {
+      "fallbackTitle": "아티팩트",
+      "count": "아티팩트 {{total}}개",
+      "listTitle": "이 세션의 아티팩트",
+      "openOne": "브라우저에서 열기 · Ctrl+]",
+      "openLatest": "골라서 브라우저에서 열기 · Ctrl+]는 가장 최근 것을 연다"
+    },
     "dragOverlay": {
       "dropHere": "파일이나 폴더를 여기에 드롭하세요"
     },

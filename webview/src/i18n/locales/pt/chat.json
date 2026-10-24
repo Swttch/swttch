@@ -89,6 +89,13 @@
       "remaining": "{{percent}}% de contexto restante até a compactação automática.",
       "clickToCompact": "Clique para compactar agora."
     },
+    "artifacts": {
+      "fallbackTitle": "Artefato",
+      "count": "{{total}} artefatos",
+      "listTitle": "Artefatos desta sessão",
+      "openOne": "Abrir no navegador · Ctrl+]",
+      "openLatest": "Escolha um para abrir no navegador · Ctrl+] abre o mais recente"
+    },
     "dragOverlay": {
       "dropHere": "Solte arquivos ou pastas aqui"
     },

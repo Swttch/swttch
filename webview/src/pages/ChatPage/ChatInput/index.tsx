@@ -31,6 +31,7 @@ import { clipboardIsEmpty } from './clipboardIsEmpty';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
 import { IdeSelectionTag } from './IdeSelectionTag';
+import { ArtifactTag } from './ArtifactTag';
 import { ModelTag } from './ModelTag';
 import { DragOverlay } from './DragOverlay';
 import { AttachMenu } from './AttachMenu';
@@ -1512,6 +1513,8 @@ export function ChatInput() {
             </div>
             {/* IDE 컨텍스트 태그: 현재 열린 파일/선택을 표시하고 포함 여부를 토글 */}
             <IdeSelectionTag />
+            {/* 이 세션이 게시한 Artifact: 이름(여럿이면 개수), 클릭 또는 Ctrl+]로 브라우저에서 연다 (#593) */}
+            <ArtifactTag />
         </>}
         barEnd={<>
             {/* 모델 태그는 좁아지면 말줄임되고(min-w-0 — 프레임이 준다), 액션

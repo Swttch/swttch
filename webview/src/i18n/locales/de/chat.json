@@ -89,6 +89,13 @@
       "remaining": "{{percent}}% des Kontexts verbleiben bis zur automatischen Komprimierung.",
       "clickToCompact": "Klicken, um jetzt zu komprimieren."
     },
+    "artifacts": {
+      "fallbackTitle": "Artefakt",
+      "count": "{{total}} Artefakte",
+      "listTitle": "Artefakte dieser Sitzung",
+      "openOne": "Im Browser öffnen · Strg+]",
+      "openLatest": "Eines zum Öffnen im Browser auswählen · Strg+] öffnet das neueste"
+    },
     "dragOverlay": {
       "dropHere": "Dateien oder Ordner hier ablegen"
     },

@@ -89,6 +89,13 @@
       "remaining": "距自动压缩还剩 {{percent}}% 的上下文。",
       "clickToCompact": "点击立即压缩。"
     },
+    "artifacts": {
+      "fallbackTitle": "工件",
+      "count": "{{total}} 个工件",
+      "listTitle": "本会话的工件",
+      "openOne": "在浏览器中打开 · Ctrl+]",
+      "openLatest": "选择一个在浏览器中打开 · Ctrl+] 打开最新的"
+    },
     "dragOverlay": {
       "dropHere": "将文件或文件夹拖放到此处"
     },
