@@ -128,6 +128,7 @@ import {
 import { loginHandler } from './login';
 import { submitLoginCodeHandler } from './submitLoginCode';
 import { openUrlHandler } from './openUrl';
+import { getFileContentHandler } from './getFileContent';
 import { getAvailableTerminalsHandler } from './getAvailableTerminals';
 import { getAvailableEditorsHandler } from './getAvailableEditors';
 import { getDetectedCliPathHandler } from './getDetectedCliPath';
@@ -609,6 +610,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_FILE_PREVIEW:
       await getFilePreviewHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_FILE_CONTENT:
+      await getFileContentHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.UPLOAD_FILE_CHUNK:
       await uploadFileChunkHandler(connectionId, message, connections, bridge);

@@ -762,6 +762,16 @@
     "openFailed": "リンクを開けませんでした",
     "openInBrowser": "ブラウザで開く"
   },
+  "filePreview": {
+    "label": "{{name}} のプレビュー",
+    "close": "プレビューを閉じる",
+    "openInEditor": "エディターで開く",
+    "openWithSystemApp": "システムのアプリで開く",
+    "loading": "読み込み中…",
+    "unsupported": "この種類のファイルはここではプレビューできません。",
+    "tooLarge": "このファイルは {{size}} で、プレビューで表示できる {{limit}} を超えています。エディターかシステムのアプリで開いてください。",
+    "unreadable": "このファイルを読み取れませんでした。移動または削除された可能性があります。"
+  },
   "fileLink": {
     "copyDone": "パスをコピーしました",
     "copyFailed": "パスをコピーできませんでした",

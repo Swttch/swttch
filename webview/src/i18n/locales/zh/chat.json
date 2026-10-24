@@ -762,6 +762,16 @@
     "openFailed": "无法打开链接",
     "openInBrowser": "在浏览器中打开"
   },
+  "filePreview": {
+    "label": "{{name}} 的预览",
+    "close": "关闭预览",
+    "openInEditor": "在编辑器中打开",
+    "openWithSystemApp": "用系统应用打开",
+    "loading": "正在加载…",
+    "unsupported": "这里无法预览此类文件。",
+    "tooLarge": "此文件大小为 {{size}}，超过了预览可显示的 {{limit}}。请改用编辑器或系统应用打开。",
+    "unreadable": "无法读取此文件，它可能已被移动或删除。"
+  },
   "fileLink": {
     "copyDone": "已复制路径",
     "copyFailed": "无法复制路径",

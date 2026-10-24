@@ -455,6 +455,8 @@ export enum MessageType {
   UPLOAD_FILE_CHUNK = 'UPLOAD_FILE_CHUNK',
   /** Ask what an attachment card can show of a file: its first lines, the picture, or a video's bytes. Answered with kind 'none' when the icon is all there is. */
   GET_FILE_PREVIEW = 'GET_FILE_PREVIEW',
+  /** Ask for one piece of a file the preview pane shows next to the chat (a page, a picture, a PDF or a video), starting at an offset. Answered with base64 bytes and the whole size, or with a reason the file cannot be shown. */
+  GET_FILE_CONTENT = 'GET_FILE_CONTENT',
   /** Ask for the icon the operating system draws for a file extension. Answered with a base64 PNG, or with nothing where the system cannot be asked. */
   GET_FILE_ICON = 'GET_FILE_ICON',
   /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */

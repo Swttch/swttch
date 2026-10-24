@@ -1,4 +1,4 @@
-import {getAdapter} from "@/adapters";
+import {openChatFile} from "@/utils/openChatFile";
 import {ToolUseBlockDto} from "@/types";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolHeader, ToolWrapper} from "./common";
@@ -25,7 +25,7 @@ export function ReadRenderer(props: RendererProps) {
                 <div
                     dir="ltr"
                     className={cn("text-text-primary/80 text-[0.9230rem] font-mono", path && "cursor-pointer hover:underline")}
-                    onClick={path ? () => getAdapter().openFile(path) : undefined}
+                    onClick={path ? () => openChatFile(path) : undefined}
                 >{fileName}</div>
             </ToolHeader>
         </ToolWrapper>

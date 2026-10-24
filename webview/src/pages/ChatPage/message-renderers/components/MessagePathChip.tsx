@@ -1,6 +1,6 @@
 import React from 'react';
 import toast from 'react-hot-toast';
-import { getAdapter } from '../../../../adapters';
+import { openChatFile } from '@/utils/openChatFile';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { i18n } from '@/i18n';
 import { pathFromToken, lineFromToken, isFolderToken, resolveFilePath } from '../utils/tokenizeMessagePaths';
@@ -27,8 +27,7 @@ export const MessagePathChip = (props: Props) => {
     // Stop the parent MessageBox from toggling its expand/collapse state.
     event.stopPropagation();
     const filePath = resolveFilePath(pathFromToken(token), workingDirectory);
-    getAdapter()
-      .openFile(filePath, lineFromToken(token))
+    openChatFile(filePath, lineFromToken(token))
       .catch((err) => {
         console.error('[MessagePathChip] Failed to open file:', err);
         toast.error(i18n.t('chat:fileOpenFailed', { path: filePath }));

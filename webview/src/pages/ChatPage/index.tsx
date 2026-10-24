@@ -17,6 +17,7 @@ import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
+import { FilePreviewPane } from '@/components/FilePreviewPane';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
@@ -514,6 +515,8 @@ function ChatPageContent() {
       </div>
 
       <BackgroundTasksPanel />
+      {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
+      <FilePreviewPane />
       <SideQuestionModal />
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />

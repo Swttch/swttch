@@ -762,6 +762,16 @@
     "openFailed": "No se pudo abrir el enlace",
     "openInBrowser": "Abrir en el navegador"
   },
+  "filePreview": {
+    "label": "Vista previa de {{name}}",
+    "close": "Cerrar la vista previa",
+    "openInEditor": "Abrir en el editor",
+    "openWithSystemApp": "Abrir con la aplicación del sistema",
+    "loading": "Cargando…",
+    "unsupported": "Este tipo de archivo no se puede previsualizar aquí.",
+    "tooLarge": "Este archivo pesa {{size}} y supera los {{limit}} que puede mostrar la vista previa. Ábrelo en el editor o con la aplicación del sistema.",
+    "unreadable": "No se pudo leer este archivo. Puede que se haya movido o eliminado."
+  },
   "fileLink": {
     "copyDone": "Ruta copiada",
     "copyFailed": "No se pudo copiar la ruta",

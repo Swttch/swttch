@@ -762,6 +762,16 @@
     "openFailed": "Não foi possível abrir o link",
     "openInBrowser": "Abrir no navegador"
   },
+  "filePreview": {
+    "label": "Pré-visualização de {{name}}",
+    "close": "Fechar a pré-visualização",
+    "openInEditor": "Abrir no editor",
+    "openWithSystemApp": "Abrir com o app do sistema",
+    "loading": "Carregando…",
+    "unsupported": "Este tipo de arquivo não pode ser pré-visualizado aqui.",
+    "tooLarge": "Este arquivo tem {{size}} e passa dos {{limit}} que a pré-visualização consegue mostrar. Abra-o no editor ou com o app do sistema.",
+    "unreadable": "Não foi possível ler este arquivo. Ele pode ter sido movido ou excluído."
+  },
   "fileLink": {
     "copyDone": "Caminho copiado",
     "copyFailed": "Não foi possível copiar o caminho",

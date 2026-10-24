@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
+import { openChatFile } from '@/utils/openChatFile';
 import { Tooltip } from '@/components/Tooltip';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { i18n } from '@/i18n';
@@ -27,8 +28,7 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
     const open = (event: React.SyntheticEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      getAdapter()
-        .openFile(link.path, link.line, link.column)
+      openChatFile(link.path, link.line, link.column)
         .catch((err) => {
           console.error('[MarkdownFileLink] Failed to open file link:', err);
           toast.error(i18n.t('chat:fileOpenFailed', { path: link.path }));

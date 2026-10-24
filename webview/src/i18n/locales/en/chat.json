@@ -766,6 +766,16 @@
     "openFailed": "Could not open the link",
     "openInBrowser": "Open in browser"
   },
+  "filePreview": {
+    "label": "Preview of {{name}}",
+    "close": "Close preview",
+    "openInEditor": "Open in editor",
+    "openWithSystemApp": "Open with system app",
+    "loading": "Loading…",
+    "unsupported": "This kind of file cannot be previewed here.",
+    "tooLarge": "This file is {{size}}, over the {{limit}} the preview can show. Open it in the editor or with the system app instead.",
+    "unreadable": "Could not read this file. It may have been moved or deleted."
+  },
   "fileLink": {
     "copyDone": "Path copied",
     "copyFailed": "Could not copy the path",

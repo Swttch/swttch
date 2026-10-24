@@ -762,6 +762,16 @@
     "openFailed": "링크를 열지 못했습니다",
     "openInBrowser": "브라우저에서 열기"
   },
+  "filePreview": {
+    "label": "{{name}} 미리보기",
+    "close": "미리보기 닫기",
+    "openInEditor": "편집기에서 열기",
+    "openWithSystemApp": "시스템 앱으로 열기",
+    "loading": "불러오는 중…",
+    "unsupported": "이 종류의 파일은 여기서 미리볼 수 없다.",
+    "tooLarge": "이 파일은 {{size}}라서 미리보기가 보여 줄 수 있는 {{limit}}를 넘는다. 편집기나 시스템 앱으로 열어 보세요.",
+    "unreadable": "이 파일을 읽지 못했다. 옮겨졌거나 지워졌을 수 있다."
+  },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",
     "copyFailed": "경로를 복사하지 못했습니다",

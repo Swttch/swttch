@@ -762,6 +762,16 @@
     "openFailed": "Link konnte nicht geöffnet werden",
     "openInBrowser": "Im Browser öffnen"
   },
+  "filePreview": {
+    "label": "Vorschau von {{name}}",
+    "close": "Vorschau schließen",
+    "openInEditor": "Im Editor öffnen",
+    "openWithSystemApp": "Mit System-App öffnen",
+    "loading": "Wird geladen…",
+    "unsupported": "Diese Dateiart kann hier nicht in der Vorschau angezeigt werden.",
+    "tooLarge": "Diese Datei ist {{size}} groß und überschreitet die {{limit}}, die die Vorschau anzeigen kann. Öffne sie im Editor oder mit der System-App.",
+    "unreadable": "Diese Datei konnte nicht gelesen werden. Sie wurde möglicherweise verschoben oder gelöscht."
+  },
   "fileLink": {
     "copyDone": "Pfad kopiert",
     "copyFailed": "Pfad konnte nicht kopiert werden",
