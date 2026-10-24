@@ -3,11 +3,12 @@ import { readFile } from 'fs/promises';
 import { join, extname, resolve, sep } from 'path';
 import { timingSafeEqual } from 'crypto';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { authToken } from '../config/environment';
+import { authToken, projectRoot } from '../config/environment';
 import { ConnectionManager } from './connection-manager';
 import { ConnectionHeartbeat, type HeartbeatSocket } from './connection-heartbeat';
 import { handleEditorContextRequest } from './editor-context-route';
 import { handleIdeSelectionRequest } from './ide-selection-route';
+import { handleCommitMessageRequest } from './commit-message-route';
 import { handleStatusRequest } from './status-route';
 import type { Bridge } from '../bridge/bridge-interface';
 import type { IPCMessage } from '../core/types';
@@ -532,6 +533,38 @@ export function startWebSocketServer(
             return;
           }
           const result = handleIdeSelectionRequest(connections, rawBody);
+          res.writeHead(result.status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result.body));
+          return;
+        }
+
+        // IDE Commit-dialog action → one-shot Claude request. The Kotlin action sends
+        // only the project root and selected paths; this backend owns git/Claude work.
+        if (req.method === 'POST' && urlPath === '/internal/commit-message') {
+          let rawBody: string;
+          try {
+            rawBody = await readRequestBody(req);
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Failed to read request body' }));
+            return;
+          }
+          const abortController = new AbortController();
+          const abortIfClientDisconnected = (): void => {
+            if (!res.writableEnded) abortController.abort();
+          };
+          res.once('close', abortIfClientDisconnected);
+          let result;
+          try {
+            result = await handleCommitMessageRequest(
+              rawBody,
+              undefined,
+              projectRoot,
+              abortController.signal,
+            );
+          } finally {
+            res.off('close', abortIfClientDisconnected);
+          }
           res.writeHead(result.status, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result.body));
           return;

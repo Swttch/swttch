@@ -8,6 +8,7 @@ import {
   type ExecFileOptionsWithBufferEncoding,
 } from 'child_process';
 import { readMergedSettings, resolveClaudeConfigDirOverride } from './features/settings';
+import { readMergedClaudeSettings } from './features/claude-settings';
 import { normalizeSettingValue } from './features/path-settings';
 import { expandHomeDir } from './features/claudeConfigDir';
 import { getStrippableAuthEnvKeys } from './features/claude-settings';
@@ -195,8 +196,19 @@ export class Claude {
     // Every auth-bearing spawn goes through here, which is exactly the set that must not
     // read or write the wrong project's Claude data directory.
     await Claude.applyConfigDir(workingDir);
+    const { settings } = await readMergedClaudeSettings(workingDir);
+    const nativeEnv = settings.env;
+    const settingsEnv = nativeEnv && typeof nativeEnv === 'object' && !Array.isArray(nativeEnv)
+      ? Object.fromEntries(
+          Object.entries(nativeEnv).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+        )
+      : {};
     const stripEnv = await Claude.authStripEnv(workingDir);
-    return Claude.spawn(args, { ...options, env: { ...options?.env, ...stripEnv } }, win32JobSessionId);
+    return Claude.spawn(
+      args,
+      { ...options, env: { ...settingsEnv, ...options?.env, ...stripEnv } },
+      win32JobSessionId,
+    );
   }
 
   /**

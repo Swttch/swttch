@@ -30,6 +30,10 @@
       262 this simply stays unresolved and changes nothing.
     -->
     <depends optional="true" config-file="claudecode-vcs.xml">com.intellij.platform.vcs</depends>
+    <!-- Qoder registers the same Commit toolbar action through the VCS module
+         alias. Git4Idea alone is insufficient on the 2026.2 modular platform:
+         its dependent action descriptor was not merged into ActionManager. -->
+    <depends optional="true" config-file="claudecode-vcs-actions.xml">com.intellij.modules.vcs</depends>
 
     <resource-bundle>messages.ClaudeCodeBundle</resource-bundle>
 
@@ -205,6 +209,13 @@
     </projectListeners>
 
     <actions>
+        <action
+            id="ClaudeCode.GenerateCommitMessage"
+            class="com.github.yhk1038.claudecodegui.actions.GenerateCommitMessageAction"
+            text="Generate Commit Message"
+            description="Generate a commit message from selected changes with Claude"
+            icon="/icons/claudeCode.svg"/>
+
         <!-- Action to open Claude Code panel -->
         <action
             id="ClaudeCode.Open"
