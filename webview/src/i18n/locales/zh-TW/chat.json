@@ -762,6 +762,19 @@
     "openFailed": "無法開啟連結",
     "openInBrowser": "在瀏覽器中開啟"
   },
+  "sessionRail": {
+    "title": "工作階段欄",
+    "environment": "環境",
+    "context": "上下文",
+    "outputs": "產出",
+    "outputsEmpty": "目前沒有內容。Claude 為你產生的檔案、圖片和頁面會顯示在這裡。",
+    "showMore": "顯示更多",
+    "contextUsed": "已使用 {{percent}}%",
+    "contextLoading": "正在載入用量...",
+    "contextUnavailable": "無法讀取用量。",
+    "contextNote": "最後更新：剛剛。目前回覆結束後會重新整理。",
+    "toolImage": "{{tool}} 圖片"
+  },
   "filePreview": {
     "label": "{{name}} 的預覽",
     "close": "關閉預覽",

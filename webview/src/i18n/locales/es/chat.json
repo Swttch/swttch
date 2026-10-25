@@ -762,6 +762,19 @@
     "openFailed": "No se pudo abrir el enlace",
     "openInBrowser": "Abrir en el navegador"
   },
+  "sessionRail": {
+    "title": "Panel de sesión",
+    "environment": "Entorno",
+    "context": "Contexto",
+    "outputs": "Resultados",
+    "outputsEmpty": "Todavía no hay nada. Los archivos, imágenes y páginas que Claude crea para ti aparecen en esta lista.",
+    "showMore": "Mostrar más",
+    "contextUsed": "{{percent}} % usado",
+    "contextLoading": "Cargando el uso...",
+    "contextUnavailable": "No se pudo leer el uso.",
+    "contextNote": "Última actualización: ahora. Se actualiza cuando termina la respuesta actual.",
+    "toolImage": "Imagen de {{tool}}"
+  },
   "filePreview": {
     "label": "Vista previa de {{name}}",
     "close": "Cerrar la vista previa",

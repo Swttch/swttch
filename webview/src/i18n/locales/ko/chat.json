@@ -762,6 +762,19 @@
     "openFailed": "링크를 열지 못했습니다",
     "openInBrowser": "브라우저에서 열기"
   },
+  "sessionRail": {
+    "title": "세션 레일",
+    "environment": "환경",
+    "context": "컨텍스트",
+    "outputs": "결과물",
+    "outputsEmpty": "아직 없습니다. Claude가 만들어 주는 파일, 그림, 페이지가 이 목록에 나옵니다.",
+    "showMore": "더 보기",
+    "contextUsed": "{{percent}}% 사용됨",
+    "contextLoading": "사용량을 불러오는 중...",
+    "contextUnavailable": "사용량을 읽을 수 없습니다.",
+    "contextNote": "마지막 업데이트: 지금. 현재 응답이 끝나면 새로고침됩니다.",
+    "toolImage": "{{tool}} 이미지"
+  },
   "filePreview": {
     "label": "{{name}} 미리보기",
     "close": "미리보기 닫기",

@@ -778,6 +778,19 @@
     "openFailed": "تعذّر فتح الرابط",
     "openInBrowser": "فتح في المتصفح"
   },
+  "sessionRail": {
+    "title": "شريط الجلسة",
+    "environment": "البيئة",
+    "context": "السياق",
+    "outputs": "المخرجات",
+    "outputsEmpty": "لا يوجد شيء بعد. تظهر هنا الملفات والصور والصفحات التي ينشئها Claude لك.",
+    "showMore": "عرض المزيد",
+    "contextUsed": "تم استخدام {{percent}}%",
+    "contextLoading": "جارٍ تحميل الاستخدام...",
+    "contextUnavailable": "تعذّرت قراءة الاستخدام.",
+    "contextNote": "آخر تحديث: الآن. يتم التحديث عند انتهاء الرد الحالي.",
+    "toolImage": "صورة {{tool}}"
+  },
   "filePreview": {
     "label": "معاينة {{name}}",
     "close": "إغلاق المعاينة",

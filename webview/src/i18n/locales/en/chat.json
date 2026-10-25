@@ -766,6 +766,19 @@
     "openFailed": "Could not open the link",
     "openInBrowser": "Open in browser"
   },
+  "sessionRail": {
+    "title": "Session rail",
+    "environment": "Environment",
+    "context": "Context",
+    "outputs": "Outputs",
+    "outputsEmpty": "Nothing here yet. Files, pictures and pages Claude makes for you appear in this list.",
+    "showMore": "Show more",
+    "contextUsed": "{{percent}}% used",
+    "contextLoading": "Loading the usage...",
+    "contextUnavailable": "The usage could not be read.",
+    "contextNote": "Updated now. It refreshes when the current reply ends.",
+    "toolImage": "{{tool}} image"
+  },
   "filePreview": {
     "label": "Preview of {{name}}",
     "close": "Close preview",

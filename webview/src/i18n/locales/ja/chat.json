@@ -762,6 +762,19 @@
     "openFailed": "リンクを開けませんでした",
     "openInBrowser": "ブラウザで開く"
   },
+  "sessionRail": {
+    "title": "セッションレール",
+    "environment": "環境",
+    "context": "コンテキスト",
+    "outputs": "成果物",
+    "outputsEmpty": "まだありません。Claudeが作成したファイル、画像、ページがここに並びます。",
+    "showMore": "もっと見る",
+    "contextUsed": "{{percent}}% 使用",
+    "contextLoading": "使用状況を読み込み中...",
+    "contextUnavailable": "使用状況を読み取れませんでした。",
+    "contextNote": "最終更新: 今。現在の応答が終わると更新されます。",
+    "toolImage": "{{tool}}の画像"
+  },
   "filePreview": {
     "label": "{{name}} のプレビュー",
     "close": "プレビューを閉じる",

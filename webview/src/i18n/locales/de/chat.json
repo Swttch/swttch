@@ -762,6 +762,19 @@
     "openFailed": "Link konnte nicht geöffnet werden",
     "openInBrowser": "Im Browser öffnen"
   },
+  "sessionRail": {
+    "title": "Sitzungsleiste",
+    "environment": "Umgebung",
+    "context": "Kontext",
+    "outputs": "Ergebnisse",
+    "outputsEmpty": "Noch nichts vorhanden. Dateien, Bilder und Seiten, die Claude für dich erstellt, erscheinen in dieser Liste.",
+    "showMore": "Mehr anzeigen",
+    "contextUsed": "{{percent}} % verwendet",
+    "contextLoading": "Nutzung wird geladen...",
+    "contextUnavailable": "Die Nutzung konnte nicht gelesen werden.",
+    "contextNote": "Zuletzt aktualisiert: jetzt. Wird aktualisiert, wenn die aktuelle Antwort endet.",
+    "toolImage": "{{tool}}-Bild"
+  },
   "filePreview": {
     "label": "Vorschau von {{name}}",
     "close": "Vorschau schließen",

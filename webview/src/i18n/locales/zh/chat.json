@@ -762,6 +762,19 @@
     "openFailed": "无法打开链接",
     "openInBrowser": "在浏览器中打开"
   },
+  "sessionRail": {
+    "title": "会话栏",
+    "environment": "环境",
+    "context": "上下文",
+    "outputs": "产出",
+    "outputsEmpty": "暂无内容。Claude 为你生成的文件、图片和页面会显示在这里。",
+    "showMore": "显示更多",
+    "contextUsed": "已使用 {{percent}}%",
+    "contextLoading": "正在加载用量...",
+    "contextUnavailable": "无法读取用量。",
+    "contextNote": "最后更新：刚刚。当前回复结束后会刷新。",
+    "toolImage": "{{tool}} 图片"
+  },
   "filePreview": {
     "label": "{{name}} 的预览",
     "close": "关闭预览",

@@ -21,6 +21,7 @@ import { FilePreviewPane } from '@/components/FilePreviewPane';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
+import { SessionRail } from './SessionRail';
 import { DiffOverlay } from '../DiffPage/DiffOverlay';
 import { CHAT_FOOTER_ID } from './chatFooter';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
@@ -518,6 +519,7 @@ function ChatPageContent() {
       {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
       <FilePreviewPane />
       <SideQuestionModal />
+      <SessionRail />
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}

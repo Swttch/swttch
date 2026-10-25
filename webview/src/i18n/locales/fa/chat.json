@@ -762,6 +762,19 @@
     "openFailed": "باز کردن پیوند ممکن نشد",
     "openInBrowser": "باز کردن در مرورگر"
   },
+  "sessionRail": {
+    "title": "نوار نشست",
+    "environment": "محیط",
+    "context": "زمینه",
+    "outputs": "خروجی‌ها",
+    "outputsEmpty": "هنوز چیزی وجود ندارد. فایل‌ها، تصاویر و صفحاتی که Claude برای شما می‌سازد در این فهرست نمایش داده می‌شوند.",
+    "showMore": "نمایش بیشتر",
+    "contextUsed": "{{percent}}٪ استفاده شده",
+    "contextLoading": "در حال بارگذاری میزان استفاده...",
+    "contextUnavailable": "خواندن میزان استفاده ممکن نشد.",
+    "contextNote": "آخرین به‌روزرسانی: همین حالا. با پایان پاسخ فعلی به‌روز می‌شود.",
+    "toolImage": "تصویر {{tool}}"
+  },
   "filePreview": {
     "label": "پیش‌نمایش {{name}}",
     "close": "بستن پیش‌نمایش",

@@ -762,6 +762,19 @@
     "openFailed": "Impossible d’ouvrir le lien",
     "openInBrowser": "Ouvrir dans le navigateur"
   },
+  "sessionRail": {
+    "title": "Rail de session",
+    "environment": "Environnement",
+    "context": "Contexte",
+    "outputs": "Productions",
+    "outputsEmpty": "Rien pour l'instant. Les fichiers, images et pages que Claude crée pour vous apparaissent dans cette liste.",
+    "showMore": "Afficher plus",
+    "contextUsed": "{{percent}} % utilisé",
+    "contextLoading": "Chargement de l'utilisation...",
+    "contextUnavailable": "Impossible de lire l'utilisation.",
+    "contextNote": "Dernière mise à jour : maintenant. Actualisé à la fin de la réponse en cours.",
+    "toolImage": "Image de {{tool}}"
+  },
   "filePreview": {
     "label": "Aperçu de {{name}}",
     "close": "Fermer l’aperçu",
