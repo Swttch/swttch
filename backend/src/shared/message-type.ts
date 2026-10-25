@@ -639,6 +639,10 @@ export enum MessageType {
   GET_SESSION_ASSETS = 'GET_SESSION_ASSETS',
   /** Ask for one attached image's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex}. The reply is the block's own `source` object, passed through unedited. inbound webview→backend */
   GET_SESSION_ASSET_DATA = 'GET_SESSION_ASSET_DATA',
+  /** Ask for the index of everything the session made or was handed back, as {workingDir, sessionId}: pictures tools returned, files sent with SendUserFile and published Artifact pages. The reply carries coordinates and metadata only, never the base64. inbound webview→backend */
+  GET_SESSION_OUTPUTS = 'GET_SESSION_OUTPUTS',
+  /** Ask for one tool-returned picture's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex, partIndex}. The reply is the image block's own `source` object, passed through unedited. inbound webview→backend */
+  GET_SESSION_OUTPUT_DATA = 'GET_SESSION_OUTPUT_DATA',
 
   // -- Session sends --
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */

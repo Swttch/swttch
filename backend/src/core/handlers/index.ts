@@ -192,6 +192,8 @@ import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
 import { searchSessionHandler } from './searchSession';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
+import { getSessionOutputsHandler } from './getSessionOutputs';
+import { getSessionOutputDataHandler } from './getSessionOutputData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
 import { getMcpServersHandler } from './getMcpServersHandler';
@@ -763,6 +765,12 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_ASSET_DATA:
       await getSessionAssetDataHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_OUTPUTS:
+      await getSessionOutputsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_OUTPUT_DATA:
+      await getSessionOutputDataHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);
