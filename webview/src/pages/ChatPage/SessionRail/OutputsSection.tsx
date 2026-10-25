@@ -4,31 +4,33 @@ import toast from "react-hot-toast";
 import {getAdapter} from "@/adapters";
 import {ImageLightbox} from "@/components/ImageLightbox";
 import {useChatStreamContext} from "@/contexts/ChatStreamContext";
+import {isPictureOutput, outputKey, useSessionOutputImages, useSessionOutputs} from "@/hooks/useSessionOutputs";
 import {i18n, useTranslation} from "@/i18n";
+import type {SessionOutput} from "@/shared";
 import {openChatFile} from "@/utils/openChatFile";
-import {loadSentMedia} from "../message-renderers/ToolRenderers/sendUserFile";
-import {collectSessionOutputs, toolLabel, type SessionOutput} from "./sessionOutputs";
+import {toolLabel} from "@/utils/toolLabel";
 
 /** How many rows show before "Show more": the same five Claude Desktop shows. */
 export const OUTPUTS_SHOWN = 5;
 
-function timeOf(iso: string | undefined): string {
+function timeOf(iso: string | null): string {
     if (!iso) return '';
     const date = new Date(iso);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleTimeString(i18n.language, {hour: 'numeric', minute: '2-digit'});
 }
 
-function iconOf(output: SessionOutput) {
-    if (output.kind === 'artifact') return GlobeAltIcon;
-    if (output.kind === 'image' || output.isImage) return PhotoIcon;
-    if (/^(PPTX|PPT|KEY)$/.test(output.badge)) return PresentationChartBarIcon;
-    return /^(CSV|TSV|XLSX|XLS)$/.test(output.badge) ? TableCellsIcon : DocumentIcon;
+function extensionOf(name: string): string {
+    const dot = name.lastIndexOf('.');
+    return dot > 0 ? name.slice(dot + 1).toUpperCase() : '';
 }
 
-/** A picture row opens the viewer; anything else opens where the transcript would open it. */
-function isPicture(output: SessionOutput): boolean {
-    return output.kind === 'image' || (output.kind === 'file' && output.isImage);
+function iconOf(output: SessionOutput) {
+    if (output.kind === 'artifact') return GlobeAltIcon;
+    if (isPictureOutput(output)) return PhotoIcon;
+    const badge = output.kind === 'file' ? extensionOf(output.name) : '';
+    if (/^(PPTX|PPT|KEY)$/.test(badge)) return PresentationChartBarIcon;
+    return /^(CSV|TSV|XLSX|XLS)$/.test(badge) ? TableCellsIcon : DocumentIcon;
 }
 
 function openArtifact(url: string) {
@@ -41,35 +43,36 @@ function openArtifact(url: string) {
  * What the session has made for the reader: published pages, files sent with
  * `SendUserFile` and pictures tools returned (#593). It is where the terminal's
  * `/artifacts` list lives in this panel.
+ *
+ * Read from the backend's index of the whole session, the one the Assets screen
+ * shows too, so a long session lists what it made before the part the chat has
+ * loaded. It asks again when the session gains a message.
  */
 export function OutputsSection() {
     const {t} = useTranslation('chat');
     const {messages} = useChatStreamContext();
-    const outputs = useMemo(() => collectSessionOutputs(messages), [messages]);
+    const index = useSessionOutputs(true, messages.length);
+    const {loaded, ensure} = useSessionOutputImages();
     const [expanded, setExpanded] = useState(false);
-    const [viewing, setViewing] = useState<number | null>(null);
-    const [srcs, setSrcs] = useState<(string | null)[]>([]);
+    const [viewing, setViewing] = useState<string | null>(null);
 
-    const pictures = useMemo(() => outputs.filter(isPicture), [outputs]);
+    // Newest first, as the rail lists them.
+    const outputs = useMemo(() => [...(index ?? [])].reverse(), [index]);
+    const pictures = useMemo(() => outputs.filter(isPictureOutput), [outputs]);
 
     const openPicture = (output: SessionOutput) => {
-        const index = pictures.indexOf(output);
-        setViewing(index);
-        setSrcs(pictures.map((p) => (p.kind === 'image' ? p.src : null)));
-        pictures.forEach((p, i) => {
-            if (p.kind !== 'file') return;
-            void loadSentMedia(p.path).then((src) => {
-                setSrcs((current) => current.map((value, at) => (at === i ? src : value)));
-            });
-        });
+        setViewing(outputKey(output));
+        // The viewer steps through every picture of the list, so its neighbours are fetched too.
+        pictures.forEach(ensure);
     };
 
     const activate = (output: SessionOutput) => {
-        if (isPicture(output)) openPicture(output);
+        if (isPictureOutput(output)) openPicture(output);
         else if (output.kind === 'artifact') openArtifact(output.url);
         else if (output.kind === 'file') openChatFile(output.path);
     };
 
+    if (index === undefined) return <p className="py-1 text-[0.8462rem] text-text-tertiary">{t('sessionRail.contextLoading')}</p>;
     if (outputs.length === 0) return <p className="py-1 text-[0.8462rem] text-text-tertiary">{t('sessionRail.outputsEmpty')}</p>;
 
     const shown = expanded ? outputs : outputs.slice(0, OUTPUTS_SHOWN);
@@ -84,9 +87,9 @@ export function OutputsSection() {
                         : output.kind === 'artifact'
                             ? (output.title || t('chatInput.artifacts.fallbackTitle'))
                             : t('sessionRail.toolImage', {tool: toolLabel(output.tool)});
-                    const time = output.kind === 'artifact' ? '' : timeOf(output.time);
+                    const time = output.kind === 'artifact' ? '' : timeOf(output.timestamp);
                     return (
-                        <li key={output.key}>
+                        <li key={outputKey(output)}>
                             <button
                                 type="button"
                                 className="flex w-full items-center gap-2 rounded px-1 py-1 text-start text-text-primary hover:bg-surface-hover"
@@ -109,8 +112,16 @@ export function OutputsSection() {
                     {t('sessionRail.showMore')}
                 </button>
             )}
-            {viewing !== null && viewing >= 0 && (
-                <ImageLightbox srcs={srcs} initialIndex={viewing} onClose={() => setViewing(null)}/>
+            {viewing !== null && (
+                <ImageLightbox
+                    srcs={pictures.map((p) => loaded[outputKey(p)] ?? null)}
+                    initialIndex={Math.max(pictures.findIndex((p) => outputKey(p) === viewing), 0)}
+                    onClose={() => setViewing(null)}
+                    onIndexChange={(i) => {
+                        const output = pictures[i];
+                        if (output) ensure(output);
+                    }}
+                />
             )}
         </>
     );

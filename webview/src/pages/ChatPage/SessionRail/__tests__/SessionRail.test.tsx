@@ -25,6 +25,12 @@ vi.mock('@/contexts/BridgeContext', () => ({useBridgeContext: () => bridge}));
 vi.mock('@/components/ImageLightbox', () => ({
     ImageLightbox: (p: {srcs: (string | null)[]; initialIndex: number}) => <div data-testid="lightbox">{p.initialIndex}/{p.srcs.length}</div>,
 }));
+let outputsIndex: unknown[] | undefined = [];
+vi.mock('@/hooks/useSessionOutputs', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/hooks/useSessionOutputs')>()),
+    useSessionOutputs: () => outputsIndex,
+    useSessionOutputImages: () => ({loaded: {}, ensure: vi.fn()}),
+}));
 vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
     getBridge: () => ({request: vi.fn(() => Promise.resolve({kind: 'none'}))}),
@@ -50,12 +56,9 @@ const REPORT = `## Context Usage
 | Free space | 607.2k | 60.7% |
 `;
 
-function sent(id: string, files: object[]): LoadedMessageDto[] {
-    return [
-        {type: 'assistant', message: {content: [{type: 'tool_use', id, name: 'SendUserFile', input: {files: files.map((f) => (f as {path: string}).path)}}]}},
-        {type: 'user', timestamp: '2026-10-26T01:02:03.000Z', message: {content: [{type: 'tool_result', tool_use_id: id, content: 'ok'}]}, toolUseResult: {attachments: files}},
-    ] as unknown as LoadedMessageDto[];
-}
+const fileRow = (name: string, isImage = false, entryUuid = 'u1', attachmentIndex = 0) => ({
+    kind: 'file', entryUuid, blockIndex: 0, attachmentIndex, path: `/a/${name}`, name, size: 1, isImage, timestamp: '2026-10-26T01:02:03.000Z',
+});
 
 function openRail() {
     act(() => {
@@ -70,6 +73,7 @@ beforeEach(() => {
     send.mockReset();
     send.mockResolvedValue({status: 'ok', markdown: REPORT});
     messages = [];
+    outputsIndex = [];
 });
 
 describe('SessionRail', () => {
@@ -113,8 +117,7 @@ describe('SessionRail', () => {
     });
 
     it('lists outputs newest first, opens a file where the transcript does, and shows more after five', () => {
-        const files = Array.from({length: 7}, (_, i) => ({path: `/a/f${i}.txt`, size: 1, isImage: false}));
-        messages = sent('t1', files);
+        outputsIndex = Array.from({length: 7}, (_, i) => fileRow(`f${i}.txt`, false, 'u1', i));
         render(<SessionRail/>);
         openRail();
         expect(screen.getByText('f6.txt')).toBeInTheDocument();
@@ -125,17 +128,25 @@ describe('SessionRail', () => {
         expect(screen.getByText('f0.txt')).toBeInTheDocument();
     });
 
-    it('opens a sent picture in the viewer and a published page in the browser', () => {
-        messages = [
-            ...sent('t1', [{path: '/a/photo.jpg', size: 1, isImage: true}]),
-            {type: 'assistant', message: {content: [{type: 'tool_use', id: 't2', name: 'Artifact', input: {title: 'Deck', file_path: '/a/d.html'}}]}},
-            {type: 'user', message: {content: [{type: 'tool_result', tool_use_id: 't2', content: 'Created a new Artifact at https://claude.ai/artifact/abc123 (version v1)'}]}},
-        ] as unknown as LoadedMessageDto[];
+    it('opens a sent picture in the viewer, a returned picture by its tool, and a published page in the browser', () => {
+        outputsIndex = [
+            fileRow('photo.jpg', true),
+            {kind: 'image', entryUuid: 'u2', blockIndex: 0, partIndex: 0, mediaType: 'image/png', byteSize: 3, timestamp: null, tool: 'mcp__Claude_Browser__computer'},
+            {kind: 'artifact', entryUuid: 'u3', blockIndex: 0, url: 'https://claude.ai/artifact/abc123', title: 'Deck', timestamp: null},
+        ];
         render(<SessionRail/>);
         openRail();
+        expect(screen.getByText(/sessionRail\.toolImage.*Claude Browser/)).toBeInTheDocument();
         fireEvent.click(screen.getByText('photo.jpg'));
-        expect(screen.getByTestId('lightbox')).toHaveTextContent('0/1');
+        expect(screen.getByTestId('lightbox')).toHaveTextContent('1/2');
         fireEvent.click(screen.getByText('Deck'));
         expect(openUrl).toHaveBeenCalledWith('https://claude.ai/artifact/abc123');
+    });
+
+    it('says so while the session index is still being read', () => {
+        outputsIndex = undefined as unknown as unknown[];
+        render(<SessionRail/>);
+        openRail();
+        expect(screen.getAllByText('sessionRail.contextLoading').length).toBeGreaterThan(0);
     });
 });
