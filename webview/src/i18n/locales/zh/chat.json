@@ -795,7 +795,10 @@
     "unsupported": "这里无法预览此类文件。",
     "tooLarge": "此文件大小为 {{size}}，超过了预览可显示的 {{limit}}。请改用编辑器或系统应用打开。",
     "unreadable": "无法读取此文件，它可能已被移动或删除。",
-    "unplayable": "此视频无法在这里播放。IDE 内置浏览器可能不支持它的编码。请改用系统应用打开。"
+    "unplayable": "此视频无法在这里播放。IDE 内置浏览器可能不支持它的编码。请改用系统应用打开。",
+    "openPublished": "打开已发布的页面",
+    "expand": "展开",
+    "collapse": "收起"
   },
   "fileLink": {
     "copyDone": "已复制路径",

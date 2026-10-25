@@ -795,7 +795,10 @@
     "unsupported": "這裡無法預覽此類檔案。",
     "tooLarge": "此檔案大小為 {{size}}，超過預覽可顯示的 {{limit}}。請改用編輯器或系統應用程式開啟。",
     "unreadable": "無法讀取此檔案，可能已被移動或刪除。",
-    "unplayable": "此影片無法在這裡播放。IDE 內建瀏覽器可能不支援它的編碼。請改用系統應用程式開啟。"
+    "unplayable": "此影片無法在這裡播放。IDE 內建瀏覽器可能不支援它的編碼。請改用系統應用程式開啟。",
+    "openPublished": "開啟已發佈的頁面",
+    "expand": "展開",
+    "collapse": "收合"
   },
   "fileLink": {
     "copyDone": "已複製路徑",

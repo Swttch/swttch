@@ -1,14 +1,21 @@
-/** The file the preview pane is showing, with the line the click named when it had one. */
+/** The file the preview pane is showing, with the published address when the file is a page the agent published. */
 export interface FilePreviewTarget {
   path: string;
+  publishedUrl?: string;
 }
 
 let target: FilePreviewTarget | null = null;
+let expanded = false;
 const listeners = new Set<() => void>();
+
+function notify(): void {
+  listeners.forEach((listener) => listener());
+}
 
 function set(next: FilePreviewTarget | null): void {
   target = next;
-  listeners.forEach((listener) => listener());
+  if (next === null) expanded = false;
+  notify();
 }
 
 /**
@@ -18,7 +25,13 @@ function set(next: FilePreviewTarget | null): void {
  */
 export const filePreviewPaneStore = {
   get: (): FilePreviewTarget | null => target,
-  open: (path: string): void => set({ path }),
+  /** True while the pane covers the whole chat instead of sitting beside it. */
+  isExpanded: (): boolean => expanded,
+  open: (path: string, publishedUrl?: string): void => set(publishedUrl ? { path, publishedUrl } : { path }),
+  toggleExpanded: (): void => {
+    expanded = !expanded;
+    notify();
+  },
   close: (): void => set(null),
   subscribe: (listener: () => void): (() => void) => {
     listeners.add(listener);

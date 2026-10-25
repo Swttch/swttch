@@ -795,7 +795,10 @@
     "unsupported": "Ce type de fichier ne peut pas être prévisualisé ici.",
     "tooLarge": "Ce fichier fait {{size}}, au-delà des {{limit}} que l’aperçu peut afficher. Ouvrez-le dans l’éditeur ou avec l’application du système.",
     "unreadable": "Impossible de lire ce fichier. Il a peut-être été déplacé ou supprimé.",
-    "unplayable": "Cette vidéo ne peut pas être lue ici. Le navigateur intégré à l’IDE ne prend peut-être pas en charge son encodage. Ouvrez-la avec l’application du système."
+    "unplayable": "Cette vidéo ne peut pas être lue ici. Le navigateur intégré à l’IDE ne prend peut-être pas en charge son encodage. Ouvrez-la avec l’application du système.",
+    "openPublished": "Ouvrir la page publiée",
+    "expand": "Agrandir",
+    "collapse": "Réduire"
   },
   "fileLink": {
     "copyDone": "Chemin copié",

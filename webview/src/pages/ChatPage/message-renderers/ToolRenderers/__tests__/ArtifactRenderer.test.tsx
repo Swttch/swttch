@@ -9,7 +9,7 @@ vi.mock('@/components/FilePreviewPane/loadFileContent', async (importOriginal) =
     ...(await importOriginal<typeof import('@/components/FilePreviewPane/loadFileContent')>()),
     loadFileContent: (...args: unknown[]) => loadFileContent(...args),
 }));
-vi.mock('@/utils/openChatFile', () => ({openChatFile: (p: string) => openChatFile(p)}));
+vi.mock('@/utils/filePreviewPaneStore', () => ({filePreviewPaneStore: {open: (p: string, u?: string) => openChatFile(p, u)}}));
 
 beforeEach(() => {
     loadFileContent.mockReset();
@@ -134,7 +134,7 @@ describe('ArtifactRenderer', () => {
         );
         const card = await screen.findByRole('button', {name: 'Demo Page'});
         fireEvent.click(card);
-        expect(openChatFile).toHaveBeenCalledWith('/a/b/page.html');
+        expect(openChatFile).toHaveBeenCalledWith('/a/b/page.html', PAGE);
     });
 
     it('makes the card of the page an update names before any result arrives', () => {

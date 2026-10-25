@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import {ChevronRightIcon, GlobeAltIcon} from "@heroicons/react/24/outline";
 import {decodeText, loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 import {htmlTitleOf} from "@/utils/htmlTitle";
-import {openChatFile} from "@/utils/openChatFile";
+import {filePreviewPaneStore} from "@/utils/filePreviewPaneStore";
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultText} from "./common";
@@ -106,7 +106,7 @@ export function ArtifactRenderer(props: RendererProps) {
         return (
             <ToolWrapper message={props.message}>
                 {pageFile && /\.html?$/i.test(pageFile) ? (
-                    <button type="button" onClick={() => void openChatFile(pageFile)} className={cardClass}>{content}</button>
+                    <button type="button" onClick={() => filePreviewPaneStore.open(pageFile, pageUrl)} className={cardClass}>{content}</button>
                 ) : (
                     <a href={pageUrl} target="_blank" rel="noopener noreferrer" className={cardClass}>{content}</a>
                 )}

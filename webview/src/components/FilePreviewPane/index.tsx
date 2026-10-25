@@ -6,6 +6,11 @@ import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { formatFileSize } from '@/pages/ChatPage/ChatInput/AttachmentPreview/formatFileSize';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
 import { htmlTitleOf } from '@/utils/htmlTitle';
+import { Tooltip } from '@/components/Tooltip';
+import { PANE_COLUMN_WIDTH, useIsWide } from './usePaneColumn';
+import {
+  ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowTopRightOnSquareIcon, CodeBracketIcon, GlobeAltIcon, XMarkIcon,
+} from '@heroicons/react/24/outline';
 import { decodeText, loadFileContent, type FileContentKind } from './loadFileContent';
 
 type PaneState =
@@ -38,13 +43,18 @@ export function FilePreviewPane() {
   const target = useSyncExternalStore(filePreviewPaneStore.subscribe, filePreviewPaneStore.get);
   const path = target?.path;
   const { t } = useTranslation('chat');
+  const expanded = useSyncExternalStore(filePreviewPaneStore.subscribe, filePreviewPaneStore.isExpanded);
+  const wide = useIsWide();
+  const column = wide && !expanded;
   const [state, setState] = useState<PaneState>({ status: 'loading' });
+  const [frameLoaded, setFrameLoaded] = useState(false);
 
   useEffect(() => {
     if (path === undefined) return;
     let cancelled = false;
     let objectUrl: string | undefined;
     setState({ status: 'loading' });
+    setFrameLoaded(false);
 
     void loadFileContent(path, () => cancelled).then((result) => {
       if (cancelled) return;
@@ -80,41 +90,59 @@ export function FilePreviewPane() {
   const name = basename(path);
   // A page is named by its own <title>, as Desktop's pane names it, else by its file.
   const heading = state.status === 'ready' && state.kind === 'html' ? (htmlTitleOf(state.html) ?? name) : name;
+  const publishedUrl = target?.publishedUrl;
+  const iconButton = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-hover hover:text-text-primary';
 
   return (
     <aside
       role="complementary"
       aria-label={t('filePreview.label', { name })}
-      className="fixed inset-y-0 end-0 z-40 flex w-full max-w-[720px] flex-col border-s border-border-default bg-surface-raised shadow-xl"
+      className={`fixed inset-y-0 end-0 z-40 flex flex-col border-s border-border-default bg-surface-raised ${column || expanded ? '' : 'shadow-xl'}`}
+      // Beside the chat it takes its own column; expanded, or in a window too narrow for two columns, it covers the chat.
+      style={{ width: column ? PANE_COLUMN_WIDTH : '100%', maxWidth: column || expanded ? undefined : 720 }}
     >
-      <header className="flex shrink-0 items-center gap-1 border-b border-border-default px-3 py-2">
+      <header className="flex shrink-0 items-center gap-0.5 border-b border-border-default px-3 py-2">
         <span dir="ltr" className="min-w-0 flex-1 truncate text-[0.9231rem] font-medium text-text-primary">{heading}</span>
-        <button
-          type="button"
-          className="shrink-0 rounded px-2 py-1 text-[0.8461rem] text-text-secondary hover:bg-surface-hover"
-          onClick={() => getAdapter().openFile(path).catch((err) => failed(err, path))}
-        >
-          {t('filePreview.openInEditor')}
-        </button>
-        <button
-          type="button"
-          className="shrink-0 rounded px-2 py-1 text-[0.8461rem] text-text-secondary hover:bg-surface-hover"
-          onClick={() => getAdapter().openFileWithSystemApp(path).catch((err) => failed(err, path))}
-        >
-          {t('filePreview.openWithSystemApp')}
-        </button>
-        <button
-          type="button"
-          aria-label={t('filePreview.close')}
-          className="shrink-0 rounded px-2 py-1 text-text-secondary hover:bg-surface-hover"
-          onClick={() => filePreviewPaneStore.close()}
-        >
-          ✕
-        </button>
+        {publishedUrl && (
+          <Tooltip content={t('filePreview.openPublished')} placement="bottom">
+            <a href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t('filePreview.openPublished')} className={iconButton}>
+              <GlobeAltIcon className="h-4 w-4" />
+            </a>
+          </Tooltip>
+        )}
+        <Tooltip content={t('filePreview.openInEditor')} placement="bottom">
+          <button type="button" aria-label={t('filePreview.openInEditor')} className={iconButton}
+            onClick={() => getAdapter().openFile(path).catch((err) => failed(err, path))}>
+            <CodeBracketIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <Tooltip content={t('filePreview.openWithSystemApp')} placement="bottom">
+          <button type="button" aria-label={t('filePreview.openWithSystemApp')} className={iconButton}
+            onClick={() => getAdapter().openFileWithSystemApp(path).catch((err) => failed(err, path))}>
+            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
+        <Tooltip content={expanded ? t('filePreview.collapse') : t('filePreview.expand')} placement="bottom">
+          <button type="button" aria-label={expanded ? t('filePreview.collapse') : t('filePreview.expand')} className={iconButton}
+            onClick={() => filePreviewPaneStore.toggleExpanded()}>
+            {expanded ? <ArrowsPointingInIcon className="h-4 w-4" /> : <ArrowsPointingOutIcon className="h-4 w-4" />}
+          </button>
+        </Tooltip>
+        <Tooltip content={t('filePreview.close')} placement="bottom">
+          <button type="button" aria-label={t('filePreview.close')} className={iconButton}
+            onClick={() => filePreviewPaneStore.close()}>
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </Tooltip>
       </header>
 
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto">
-        {state.status === 'loading' && <p className="text-[0.8461rem] text-text-tertiary">{t('filePreview.loading')}</p>}
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto">
+        {/* Until the content is in place a spinner stands where it will be, so the pane never shows an empty white sheet. */}
+        {(state.status === 'loading' || (state.status === 'ready' && state.kind === 'html' && !frameLoaded)) && (
+          <div role="status" aria-label={t('filePreview.loading')} className="absolute inset-0 flex items-center justify-center">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-border-default border-t-text-secondary" />
+          </div>
+        )}
 
         {state.status === 'failed' && (
           <p className="px-6 text-center text-[0.8461rem] text-text-secondary">
@@ -136,7 +164,8 @@ export function FilePreviewPane() {
             title={name}
             sandbox="allow-scripts allow-forms allow-popups"
             srcDoc={state.html}
-            className="h-full w-full border-0 bg-white"
+            onLoad={() => setFrameLoaded(true)}
+            className={`h-full w-full border-0 bg-white ${frameLoaded ? '' : 'invisible'}`}
           />
         )}
         {state.status === 'ready' && state.kind === 'pdf' && (

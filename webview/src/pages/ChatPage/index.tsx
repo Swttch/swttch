@@ -18,6 +18,7 @@ import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
 import { FilePreviewPane } from '@/components/FilePreviewPane';
+import { PANE_COLUMN_WIDTH, usePaneColumn } from '@/components/FilePreviewPane/usePaneColumn';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
@@ -130,6 +131,7 @@ function ChatPageContent() {
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
+  const paneColumn = usePaneColumn();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -376,7 +378,13 @@ function ChatPageContent() {
   // default of a mousedown stops the browser from starting a word or drag
   // selection anywhere in the chat.
   return (
-    <div className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0">
+    <>
+    {/* While the preview pane is a column, the chat is narrowed to what is left of the window. The
+        transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
+    <div
+      className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0"
+      style={paneColumn ? { width: `calc(100% - ${PANE_COLUMN_WIDTH})`, transform: 'translateZ(0)' } : undefined}
+    >
       {/*
         Header - Minimal
 
@@ -516,8 +524,6 @@ function ChatPageContent() {
       </div>
 
       <BackgroundTasksPanel />
-      {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
-      <FilePreviewPane />
       <SideQuestionModal />
       <SessionRail />
       <ScheduledMessagesPanel />
@@ -542,5 +548,8 @@ function ChatPageContent() {
       <AnnouncementModalSlot />
       <WhatsNewSlot />
     </div>
+    {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
+    <FilePreviewPane />
+    </>
   );
 }

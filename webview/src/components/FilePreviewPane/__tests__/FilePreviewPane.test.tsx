@@ -98,6 +98,46 @@ describe('FilePreviewPane', () => {
     expect(sandbox).not.toContain('allow-same-origin');
   });
 
+  // A white sheet that flashes before the page paints reads as a glitch: a spinner stands in until the page is there.
+  it('shows a spinner while the page is read, and none once it is drawn', async () => {
+    let answer!: (value: unknown) => void;
+    request.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    expect(screen.getByRole('status')).toBeInTheDocument();
+
+    await act(async () => answer({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') }));
+    const frame = await screen.findByTitle('page.html');
+    fireEvent.load(frame);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(frame.className).not.toContain('invisible');
+  });
+
+  it('offers the published address of a page the agent published', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/abc'));
+
+    const link = await screen.findByRole('link', { name: 'filePreview.openPublished' });
+    expect(link).toHaveAttribute('href', 'https://claude.ai/artifact/abc');
+  });
+
+  it('expands over the chat and folds back, and closing forgets the expansion', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    await screen.findByTitle('page.html');
+
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.expand' }));
+    expect(filePreviewPaneStore.isExpanded()).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.collapse' }));
+    expect(filePreviewPaneStore.isExpanded()).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.expand' }));
+    act(() => filePreviewPaneStore.close());
+    expect(filePreviewPaneStore.isExpanded()).toBe(false);
+  });
+
   it.each([
     ['image', 'shot.png', 'image/png', 'img'],
     ['video', 'clip.mp4', 'video/mp4', 'video'],
@@ -120,7 +160,7 @@ describe('FilePreviewPane', () => {
 
     expect(await screen.findByText('filePreview.unplayable')).toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
-    fireEvent.click(screen.getByText('filePreview.openWithSystemApp'));
+    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openWithSystemApp'}));
     expect(openFileWithSystemApp).toHaveBeenCalledWith('/p/clip.mp4');
   });
 
@@ -150,9 +190,9 @@ describe('FilePreviewPane', () => {
     act(() => filePreviewPaneStore.open('/p/gone.pdf'));
     expect(await screen.findByText('filePreview.unreadable')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('filePreview.openInEditor'));
+    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openInEditor'}));
     expect(openFile).toHaveBeenCalledWith('/p/gone.pdf');
-    fireEvent.click(screen.getByText('filePreview.openWithSystemApp'));
+    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openWithSystemApp'}));
     expect(openFileWithSystemApp).toHaveBeenCalledWith('/p/gone.pdf');
   });
 
