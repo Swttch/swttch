@@ -737,6 +737,8 @@
     "openScreen": "このセッションのアセットを見る",
     "showAll": "すべて表示",
     "sponsorHint": "恐れ入りますが、他のメッセージのアセットへ移動できるのは、スポンサーの皆さまへのささやかな特典とさせていただいております",
+    "outputsTitle": "Claudeが作ったもの",
+    "sentFiles": "送信されたファイル",
     "pinToDock": "ドックに固定",
     "unpinFromDock": "ドックの固定を解除"
   },

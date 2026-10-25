@@ -8,14 +8,19 @@ import {
   LearnMoreButton,
 } from '@/components/ImageLightbox/SponsorGateNotice';
 import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSessionAssets';
+import { isPictureOutput, outputKey, useSessionOutputImages, useSessionOutputs } from '@/hooks/useSessionOutputs';
+import { getAdapter } from '@/adapters';
+import { openChatFile } from '@/utils/openChatFile';
+import { toolLabel } from '@/utils/toolLabel';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
-import { SponsorGate, SponsorGateStep, SponsorGateSurface, type SessionAsset } from '@/shared';
+import { SponsorGate, SponsorGateStep, SponsorGateSurface, type SessionAsset, type SessionOutput } from '@/shared';
 import { reportSponsorGate } from '@/utils/reportSponsorGate';
 import { useTranslation } from '@/i18n';
 import { useDockLayout } from '@/pages/ChatPage/SessionHeader/dock/useDockLayout';
 import { toggleDockVisible } from '@/pages/ChatPage/SessionHeader/dock/toggleDockVisible';
 import { DockItemId } from '@/types/settings';
 import { AssetThumbnail } from './AssetThumbnail';
+import { OutputTile } from './OutputTile';
 
 interface Props {
   onClose: () => void;
@@ -54,6 +59,27 @@ export function groupByMessage(assets: SessionAsset[]): AssetGroup[] {
   return groups;
 }
 
+/** One tool result and the outputs it produced. */
+export interface OutputGroup {
+  entryUuid: string;
+  timestamp: string | null;
+  outputs: SessionOutput[];
+}
+
+/** Folds the flat outputs index back into the entries that produced them. */
+export function groupOutputsByEntry(outputs: SessionOutput[]): OutputGroup[] {
+  const groups: OutputGroup[] = [];
+  for (const output of outputs) {
+    const last = groups[groups.length - 1];
+    if (last && last.entryUuid === output.entryUuid) {
+      last.outputs.push(output);
+      continue;
+    }
+    groups.push({ entryUuid: output.entryUuid, timestamp: output.timestamp, outputs: [output] });
+  }
+  return groups;
+}
+
 function formatTime(timestamp: string | null): string {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -79,6 +105,35 @@ export function AssetsModal(props: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const groups = useMemo(() => groupByMessage(assets ?? []), [assets]);
+
+  // What Claude made: pictures its tools returned, files it sent, pages it published.
+  const outputs = useSessionOutputs(true);
+  const { loaded: outputsLoaded, ensure: ensureOutput } = useSessionOutputImages();
+  const outputGroups = useMemo(() => groupOutputsByEntry(outputs ?? []), [outputs]);
+  const [openedOutputKey, setOpenedOutputKey] = useState<string | null>(null);
+  const openedOutput = useMemo(
+    () => (outputs ?? []).find((o) => outputKey(o) === openedOutputKey) ?? null,
+    [outputs, openedOutputKey],
+  );
+  const outputPictures = useMemo(() => (outputs ?? []).filter(isPictureOutput), [outputs]);
+  // The same rule as for attachments: a sponsor steps across the session, anyone else stays inside one entry.
+  const outputScope = useMemo(() => {
+    if (!openedOutput) return [];
+    return isSponsor ? outputPictures : outputPictures.filter((o) => o.entryUuid === openedOutput.entryUuid);
+  }, [openedOutput, isSponsor, outputPictures]);
+  const outputsLocked = openedOutput && !isSponsor ? outputPictures.length - outputScope.length : 0;
+  const openOther = (output: SessionOutput) => {
+    if (output.kind === 'artifact') void getAdapter().openUrl(output.url);
+    else if (output.kind === 'file') openChatFile(output.path);
+  };
+  const outputCaption = (group: OutputGroup): string => {
+    const first = group.outputs[0];
+    if (first.kind === 'image') return toolLabel(first.tool);
+    // The tile below already names the page, so the caption names the kind.
+    if (first.kind === 'artifact') return t('chatInput.artifacts.fallbackTitle');
+    return t('assets.sentFiles');
+  };
+  const total = (assets?.length ?? 0) + (outputs?.length ?? 0);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -144,9 +199,9 @@ export function AssetsModal(props: Props) {
                   text reads as smaller than the text beside it. */}
               <PhotoIcon className="w-5 h-5 text-text-secondary" />
               {t('assets.title')}
-              {assets && assets.length > 0 && (
+              {total > 0 && (
                 <span className="text-xs font-normal text-text-tertiary tabular-nums">
-                  {assets.length}
+                  {total}
                 </span>
               )}
             </h2>
@@ -193,7 +248,7 @@ export function AssetsModal(props: Props) {
           )}
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-            {assets && assets.length === 0 && (
+            {assets && assets.length === 0 && outputs && outputs.length === 0 && (
               <p className="text-sm text-text-tertiary text-center py-10">{t('assets.empty')}</p>
             )}
 
@@ -219,9 +274,56 @@ export function AssetsModal(props: Props) {
                 </div>
               </div>
             ))}
+
+            {outputGroups.length > 0 && (
+              <h3 className="pt-2 text-xs font-medium text-text-secondary">{t('assets.outputsTitle')}</h3>
+            )}
+            {outputGroups.map((group) => (
+              <div key={`${group.entryUuid}:${group.outputs[0].kind}`} className="space-y-2">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-[0.6923rem] text-text-tertiary tabular-nums shrink-0">
+                    {formatTime(group.timestamp)}
+                  </span>
+                  <span className="text-xs text-text-secondary truncate">{outputCaption(group)}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.outputs.map((output) => (
+                    <OutputTile
+                      key={outputKey(output)}
+                      output={output}
+                      src={outputsLoaded[outputKey(output)] ?? null}
+                      onNeeded={() => ensureOutput(output)}
+                      onOpenPicture={() => setOpenedOutputKey(outputKey(output))}
+                      onOpenOther={() => openOther(output)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {openedOutput && (
+        <ImageLightbox
+          srcs={outputScope.map((o) => outputsLoaded[outputKey(o)] ?? null)}
+          initialIndex={Math.max(outputScope.findIndex((o) => outputKey(o) === openedOutputKey), 0)}
+          onClose={() => setOpenedOutputKey(null)}
+          onIndexChange={(i) => {
+            const output = outputScope[i];
+            if (output) ensureOutput(output);
+          }}
+          notice={
+            outputsLocked > 0 ? (
+              <MoreInSessionNotice count={outputsLocked} onShowAll={() => setOpenedOutputKey(null)} />
+            ) : undefined
+          }
+          edgeHint={
+            outputsLocked > 0 ? <EdgeSponsorHint from={SponsorGateSurface.AssetsScreen} /> : undefined
+          }
+          onOpenAssets={() => setOpenedOutputKey(null)}
+        />
+      )}
 
       {opened && (
         <ImageLightbox

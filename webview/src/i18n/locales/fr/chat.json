@@ -737,6 +737,8 @@
     "openScreen": "Voir les ressources de cette session",
     "showAll": "Tout afficher",
     "sponsorHint": "Passer aux ressources d’autres messages est une petite attention réservée à nos sponsors",
+    "outputsTitle": "Créé par Claude",
+    "sentFiles": "Fichiers envoyés",
     "pinToDock": "Épingler au dock",
     "unpinFromDock": "Détacher du dock"
   },

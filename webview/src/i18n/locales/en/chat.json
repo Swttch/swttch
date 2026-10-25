@@ -741,6 +741,8 @@
     "openScreen": "View this session’s assets",
     "showAll": "Show all",
     "sponsorHint": "Moving to other messages’ assets is a little perk I keep for sponsors",
+    "outputsTitle": "Made by Claude",
+    "sentFiles": "Files sent",
     "pinToDock": "Pin to dock",
     "unpinFromDock": "Unpin from dock"
   },

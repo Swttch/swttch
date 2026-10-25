@@ -737,6 +737,8 @@
     "openScreen": "이 세션의 에셋 보기",
     "showAll": "전체 보기",
     "sponsorHint": "아쉽게도 다른 메시지의 에셋까지\n이어서 넘겨보는 것은\n후원자 분들을 위한 작은 혜택으로\n제공하고 있습니다",
+    "outputsTitle": "Claude가 만든 것",
+    "sentFiles": "보낸 파일",
     "pinToDock": "도크에 고정",
     "unpinFromDock": "도크 고정 해제"
   },

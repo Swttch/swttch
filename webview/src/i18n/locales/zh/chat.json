@@ -737,6 +737,8 @@
     "openScreen": "查看此会话的资源",
     "showAll": "查看全部",
     "sponsorHint": "跨消息浏览资源，是我们为赞助者准备的一点小心意，还请见谅",
+    "outputsTitle": "Claude 生成的内容",
+    "sentFiles": "已发送的文件",
     "pinToDock": "固定到工具坞",
     "unpinFromDock": "取消固定"
   },

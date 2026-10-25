@@ -737,6 +737,8 @@
     "openScreen": "檢視此工作階段的資源",
     "showAll": "檢視全部",
     "sponsorHint": "跨訊息瀏覽資源，是我們為贊助者準備的一點小心意，還請見諒",
+    "outputsTitle": "Claude 產生的內容",
+    "sentFiles": "已傳送的檔案",
     "pinToDock": "釘選到工具列",
     "unpinFromDock": "取消釘選"
   },
