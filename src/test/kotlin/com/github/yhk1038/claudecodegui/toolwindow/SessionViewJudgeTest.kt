@@ -37,4 +37,21 @@ class SessionViewJudgeTest {
         assertFalse(SessionViewJudge.isViewing(placement(editor = true), ideFocused = false))
         assertFalse(SessionViewJudge.isViewing(placement(visible = true, selected = true), ideFocused = false))
     }
+
+    @Test
+    fun `a banner is dismissed when the user arrives at its session`() {
+        assertTrue(SessionViewJudge.shouldDismissBanner(true, placement(editor = true), ideFocused = true))
+        assertTrue(SessionViewJudge.shouldDismissBanner(true, placement(visible = true, selected = true), ideFocused = true))
+    }
+
+    @Test
+    fun `a banner stays while the user is not at its session or the IDE is in the background`() {
+        assertFalse(SessionViewJudge.shouldDismissBanner(true, placement(visible = true, selected = false), ideFocused = true))
+        assertFalse(SessionViewJudge.shouldDismissBanner(true, placement(editor = true), ideFocused = false))
+    }
+
+    @Test
+    fun `there is nothing to dismiss without a banner`() {
+        assertFalse(SessionViewJudge.shouldDismissBanner(false, placement(editor = true), ideFocused = true))
+    }
 }
