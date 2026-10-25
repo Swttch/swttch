@@ -12,9 +12,9 @@ vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     getBridge: () => ({request}),
 }));
 vi.mock('@/utils/openChatFile', () => ({openChatFile: (p: string) => openChatFile(p)}));
-vi.mock('@/components/ImageLightbox', () => ({
-    ImageLightbox: (p: {srcs: (string | null)[]; initialIndex: number}) => (
-        <div data-testid="lightbox">{p.initialIndex}/{p.srcs.length}</div>
+vi.mock('@/components/SessionGalleryViewer', () => ({
+    SessionGalleryViewer: (p: {localSrcs: string[]; openedIndex: number; entryUuid?: string; localKeys?: string[]}) => (
+        <div data-testid="lightbox">{p.openedIndex}/{p.localSrcs.length}/{p.entryUuid ?? '-'}/{p.localKeys?.join(',') ?? '-'}</div>
     ),
 }));
 
@@ -26,7 +26,8 @@ function toolUse(files: string[], display?: string): ToolUseBlockDto {
 
 function result(attachments: object[], display?: string): LoadedMessageDto {
     return {
-        message: {content: [{type: ContentBlockType.ToolResult, content: 'ok'}]},
+        uuid: 'e9',
+        message: {content: [{type: ContentBlockType.ToolResult, tool_use_id: 't1', content: 'ok'}]},
         toolUseResult: {display, attachments},
     } as unknown as LoadedMessageDto;
 }
@@ -77,7 +78,7 @@ describe('SendUserFileRenderer', () => {
         expect(images).toHaveLength(2);
         expect(images[0].className).toContain('w-[120px]');
         fireEvent.click(images[1]);
-        expect(await screen.findByTestId('lightbox')).toHaveTextContent('1/2');
+        expect(await screen.findByTestId('lightbox')).toHaveTextContent('1/2/e9/e9:0:f0,e9:0:f1');
         await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
     });
 

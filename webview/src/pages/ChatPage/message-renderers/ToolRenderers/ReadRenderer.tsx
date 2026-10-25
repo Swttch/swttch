@@ -1,10 +1,10 @@
 import {openChatFile} from "@/utils/openChatFile";
 import {ToolUseBlockDto} from "@/types";
 import {cn} from "@/utils/cn";
-import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultImages, toolResultIsError, toolResultText} from "./common";
+import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultImages, toolResultIsError, toolResultPictureKeys, toolResultText} from "./common";
 import {useTranslation} from "@/i18n";
 import {useState} from "react";
-import {ImageLightbox} from "@/components/ImageLightbox";
+import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 
 class ReadToolUseDto extends ToolUseBlockDto {
     caller: { type: 'direct' };
@@ -20,6 +20,7 @@ export function ReadRenderer(props: RendererProps) {
     // A picture the CLI read comes back as an image block; Claude Desktop draws it
     // under the row at the width of the message, so the reader sees what Claude saw.
     const images = toolResultImages(props.toolResult);
+    const imageKeys = toolResultPictureKeys(props.toolResult, toolUse.id);
     // What came back as text (the numbered lines of a file, the note a PDF read leaves), shown the
     // way Claude Desktop shows an opened Read row: in a box under the path. A picture has none.
     const output = images.length === 0 && !toolResultIsError(props.toolResult) ? toolResultText(props.toolResult) : '';
@@ -49,7 +50,15 @@ export function ReadRenderer(props: RendererProps) {
                     <img src={src} alt={fileName} className="block max-w-full rounded-md" />
                 </button>
             ))}
-            {viewing !== null && <ImageLightbox srcs={images} initialIndex={viewing} onClose={() => setViewing(null)} />}
+            {viewing !== null && (
+                <SessionGalleryViewer
+                    entryUuid={props.toolResult?.uuid}
+                    localSrcs={images}
+                    localKeys={imageKeys}
+                    openedIndex={viewing}
+                    onClose={() => setViewing(null)}
+                />
+            )}
         </ToolWrapper>
     )
 }

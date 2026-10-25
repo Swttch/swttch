@@ -5,8 +5,10 @@ import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
 vi.mock('@/utils/openChatFile', () => ({openChatFile: vi.fn()}));
-vi.mock('@/components/ImageLightbox', () => ({
-    ImageLightbox: (p: {srcs: string[]; initialIndex: number}) => <div data-testid="lightbox">{p.initialIndex}/{p.srcs.length}</div>,
+vi.mock('@/components/SessionGalleryViewer', () => ({
+    SessionGalleryViewer: (p: {localSrcs: string[]; openedIndex: number; entryUuid?: string; localKeys?: string[]}) => (
+        <div data-testid="lightbox">{p.openedIndex}/{p.localSrcs.length}/{p.entryUuid ?? '-'}/{p.localKeys?.join(',') ?? '-'}</div>
+    ),
 }));
 
 const toolUse = Object.assign(new ToolUseBlockDto(), {
@@ -17,7 +19,7 @@ const toolUse = Object.assign(new ToolUseBlockDto(), {
 });
 
 function resultWith(inner: unknown): LoadedMessageDto {
-    return {message: {content: [{type: ContentBlockType.ToolResult, content: inner}]}} as unknown as LoadedMessageDto;
+    return {uuid: 'e1', message: {content: [{type: ContentBlockType.ToolResult, tool_use_id: 'tool_1', content: inner}]}} as unknown as LoadedMessageDto;
 }
 
 describe('ReadRenderer — a picture the CLI read is drawn under the row', () => {
@@ -28,11 +30,11 @@ describe('ReadRenderer — a picture the CLI read is drawn under the row', () =>
     });
 
     it('opens the viewer when the picture is clicked', () => {
-        const result = resultWith([{type: 'image', source: {type: 'base64', media_type: 'image/png', data: 'QUJD'}}]);
+        const result = resultWith([{type: 'text', text: 'note'}, {type: 'image', source: {type: 'base64', media_type: 'image/png', data: 'QUJD'}}]);
         render(<ReadRenderer toolUse={toolUse} toolResult={result} />);
         expect(screen.queryByTestId('lightbox')).toBeNull();
         fireEvent.click(screen.getByRole('img', {name: 'picture.png'}));
-        expect(screen.getByTestId('lightbox')).toHaveTextContent('0/1');
+        expect(screen.getByTestId('lightbox')).toHaveTextContent('0/1/e1/e1:0:1');
     });
 
     it('shows the text of a text result in a box and draws no picture', () => {

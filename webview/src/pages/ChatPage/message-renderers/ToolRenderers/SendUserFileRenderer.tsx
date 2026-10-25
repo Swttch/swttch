@@ -1,8 +1,8 @@
 import {useEffect, useState} from "react";
-import {ImageLightbox} from "@/components/ImageLightbox";
+import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 import {openChatFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
-import {RendererProps, ToolWrapper} from "./common";
+import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
 import {formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture or video, null while loading or when it cannot be had. */
@@ -90,6 +90,10 @@ export function SendUserFileRenderer(props: RendererProps) {
     const videos = files.filter((f) => f.isVideo);
     const pictures = files.filter((f) => f.isImage && !f.isVideo);
     const large = display === 'render' && pictures.length === 1;
+    // Where each sent picture sits in the session, so the viewer can step on to the others.
+    const blockIndex = toolResultBlockIndex(props.toolResult, props.toolUse.id);
+    const entryUuid = props.toolResult?.uuid;
+    const pictureKeys = entryUuid && blockIndex >= 0 ? pictures.map((file) => `${entryUuid}:${blockIndex}:f${files.indexOf(file)}`) : undefined;
 
     return (
         <ToolWrapper message={props.message}>
@@ -105,22 +109,34 @@ export function SendUserFileRenderer(props: RendererProps) {
                         ))}
                     </div>
                 )}
-                {opened !== null && <PictureViewer pictures={pictures} index={opened} onClose={() => setOpened(null)}/>}
+                {opened !== null && <PictureViewer pictures={pictures} keys={pictureKeys} entryUuid={props.toolResult?.uuid} index={opened} onClose={() => setOpened(null)}/>}
             </div>
         </ToolWrapper>
     );
 }
 
-function PictureViewer({pictures, index, onClose}: {pictures: SentFile[]; index: number; onClose: () => void}) {
-    const [srcs, setSrcs] = useState<(string | null)[]>(() => pictures.map(() => null));
+/**
+ * The viewer for the pictures of one `SendUserFile` call. A sponsor steps from
+ * here across every picture of the session; the sent pictures are read from disk
+ * first, so the viewer opens on the right one without a round trip.
+ */
+function PictureViewer({pictures, keys, entryUuid, index, onClose}: {
+    pictures: SentFile[];
+    keys: string[] | undefined;
+    entryUuid: string | undefined;
+    index: number;
+    onClose: () => void;
+}) {
+    const [srcs, setSrcs] = useState<string[] | null>(null);
     useEffect(() => {
         let alive = true;
         Promise.all(pictures.map((file) => loadSentMedia(file.path))).then((loaded) => {
-            if (alive) setSrcs(loaded);
+            if (alive) setSrcs(loaded.map((src) => src ?? ''));
         });
         return () => {
             alive = false;
         };
     }, [pictures]);
-    return <ImageLightbox srcs={srcs} initialIndex={index} onClose={onClose}/>;
+    if (srcs === null) return null;
+    return <SessionGalleryViewer entryUuid={entryUuid} localSrcs={srcs} localKeys={keys} openedIndex={index} onClose={onClose}/>;
 }
