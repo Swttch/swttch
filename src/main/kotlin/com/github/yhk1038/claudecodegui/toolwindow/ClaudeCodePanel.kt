@@ -185,6 +185,23 @@ class ClaudeCodePanel(
      */
     private var attentionBalloon: Notification? = null
 
+    /**
+     * Takes this panel's banner down if the user is now looking at the session it announces.
+     * Called when the user arrives (IDE focus, tool window shown, tab selected); the banner
+     * was only judged when it was raised. Must run on the EDT.
+     */
+    internal fun dismissBannerIfViewed() {
+        val balloon = attentionBalloon
+        if (!SessionViewJudge.shouldDismissBanner(
+                hasBanner = balloon != null,
+                placement = SessionViewJudge.read(project, tabId),
+                ideFocused = SessionViewJudge.ideFocused(project),
+            )
+        ) return
+        balloon?.expire()
+        attentionBalloon = null
+    }
+
     // One-shot guard so re-attach (tab move/split) does NOT re-schedule realization.
     private val realizationGate = RealizationGate()
 

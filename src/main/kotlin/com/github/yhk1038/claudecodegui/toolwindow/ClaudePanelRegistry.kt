@@ -3,6 +3,7 @@ package com.github.yhk1038.claudecodegui.toolwindow
 import com.github.yhk1038.claudecodegui.services.NodeBackendService
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -50,6 +51,12 @@ object ClaudePanelRegistry {
      */
     fun panelsOf(projectBasePath: String): List<ClaudeCodePanel> =
         panels.filter { it.projectBasePath == projectBasePath && it.isRealized }
+
+    /** Takes down the banner of every panel of [project] whose session the user is looking at. EDT only. */
+    fun dismissBannersWhereViewed(project: Project) {
+        val base = project.basePath ?: return
+        panels.filter { it.projectBasePath == base }.forEach { it.dismissBannerIfViewed() }
+    }
 
     /**
      * Loads every panel of [projectBasePath] again from the backend's current port.

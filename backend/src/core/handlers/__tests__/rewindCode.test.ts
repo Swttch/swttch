@@ -39,7 +39,7 @@ function ackOf(connections: ConnectionManager) {
 describe('rewindCodeHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSettings.mockResolvedValue({ settings: {}, overrides: [] });
+    mockSettings.mockResolvedValue({ settings: {}, overrides: [], unreadable: [] });
     mockExec.mockResolvedValue({ stdout: `Files rewound to state at message ${SEND}\n`, stderr: '' });
   });
 
@@ -71,7 +71,7 @@ describe('rewindCodeHandler', () => {
   // A user who turned Claude's own setting off gets told the feature is off,
   // rather than a rewind that reports success while restoring nothing.
   it('omits the env when the user turned checkpointing off', async () => {
-    mockSettings.mockResolvedValue({ settings: { fileCheckpointingEnabled: false }, overrides: [] });
+    mockSettings.mockResolvedValue({ settings: { fileCheckpointingEnabled: false }, overrides: [], unreadable: [] });
     const connections = createMockConnections();
 
     await rewindCodeHandler('c1', request({ sessionId: SESSION, sendUuid: SEND, workingDir: '/repo' }), connections, mockBridge);

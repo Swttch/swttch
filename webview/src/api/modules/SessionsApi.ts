@@ -2,7 +2,23 @@ import { plainToInstance } from 'class-transformer';
 import { BridgeClient } from '../bridge/BridgeClient';
 import { SessionMetaDto } from '../../dto';
 import type { ApiConfig } from '../ClaudeCodeApi';
-import { MessageType } from '@/shared';
+import { MessageType, type SessionSearchHit } from '@/shared';
+
+/** What a session search found: coordinates and counts, never the entries. */
+export interface SessionSearchResult {
+  hits: SessionSearchHit[];
+  total: number;
+  /** The match limit stopped the search, so older entries were not looked at. */
+  truncated: boolean;
+}
+
+interface SearchSessionResponse {
+  status?: string;
+  error?: string;
+  hits?: SessionSearchHit[];
+  total?: number;
+  truncated?: boolean;
+}
 
 /**
  * A non-fatal reason the backend could not list sessions for this working dir.
@@ -148,10 +164,41 @@ export class SessionsApi {
   /**
    * Load older messages before a specific message cursor (paging)
    * Triggers SESSION_LOADED event with prepend: true
+   *
+   * `includeUuid` widens the page back to that entry, however far it sits, and
+   * no further. The find bar uses it to bring a match into the transcript
+   * without loading the stretch of history that is older than the match.
    */
-  async loadOlder(sessionId: string, beforeUuid: string, workingDir?: string, limit?: number): Promise<void> {
+  async loadOlder(
+    sessionId: string,
+    beforeUuid: string,
+    workingDir?: string,
+    limit?: number,
+    includeUuid?: string,
+  ): Promise<void> {
     const dir = workingDir ?? this.getConfig().workingDir;
-    await this.bridge.request(MessageType.LOAD_OLDER_MESSAGES, { sessionId, workingDir: dir, beforeUuid, limit });
+    await this.bridge.request(MessageType.LOAD_OLDER_MESSAGES, { sessionId, workingDir: dir, beforeUuid, limit, includeUuid });
+  }
+
+  /**
+   * Search a session's whole history for some text without loading it: the
+   * entries that contain it, newest first, with how many times each does.
+   */
+  async search(sessionId: string, query: string, workingDir?: string): Promise<SessionSearchResult> {
+    const dir = workingDir ?? this.getConfig().workingDir;
+    const response = await this.bridge.request<SearchSessionResponse>(MessageType.SEARCH_SESSION, {
+      sessionId,
+      workingDir: dir,
+      query,
+    });
+    if (response?.status !== 'ok' || !Array.isArray(response.hits)) {
+      throw new Error(response?.error ?? 'Session search failed');
+    }
+    return {
+      hits: response.hits,
+      total: typeof response.total === 'number' ? response.total : 0,
+      truncated: response.truncated === true,
+    };
   }
 
   /**

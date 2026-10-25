@@ -393,6 +393,10 @@
     "signed": "Conectado",
     "reSign": "Reconectar"
   },
+  "settingsFileProblem": {
+    "unreadable": "O Swttch não consegue ler {{file}}, então todas as configurações do Claude aparecem como não definidas e as alterações não podem ser salvas. Motivo: {{reason}}",
+    "saveFailed": "Não foi possível salvar a configuração. Motivo: {{reason}}"
+  },
   "authError": {
     "banner": "Você não está conectado ao Claude Code.",
     "login": "Entrar",
@@ -612,7 +616,14 @@
     "loadingWorkingDirectory": "Carregando diretório de trabalho...",
     "loadingEarlierMessages": "Carregando mensagens anteriores…",
     "loadOlderMessages": "Carregar mensagens mais antigas",
-    "jumpToMessage": "Ir para esta mensagem"
+    "jumpToMessage": "Ir para esta mensagem",
+    "searchPlaceholder": "Buscar no chat",
+    "searchCount": "{{current}} de {{total}}",
+    "searchNoResults": "Sem resultados",
+    "searchLoadingHistory": "Carregando mensagens anteriores para buscar",
+    "searchPrevious": "Resultado anterior",
+    "searchNext": "Próximo resultado",
+    "searchClose": "Fechar"
   },
   "sendActions": {
     "collapseReply": "Recolher resposta",

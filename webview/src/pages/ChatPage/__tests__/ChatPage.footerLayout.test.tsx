@@ -107,6 +107,7 @@ vi.mock('../ChatInput', () => ({
   },
 }));
 vi.mock('../AccountSwitchErrorBanner', () => ({ AccountSwitchErrorBanner: stub('acct') }));
+vi.mock('../SettingsFileProblemBanner', () => ({ SettingsFileProblemBanner: stub('settings-file') }));
 vi.mock('../SendIndex', () => ({ SendIndex: stub('sendIndex'), SEND_INDEX_RAIL_WIDTH: 16 }));
 vi.mock('@/hooks/useSessionSends', () => ({ useSessionSends: () => [] }));
 

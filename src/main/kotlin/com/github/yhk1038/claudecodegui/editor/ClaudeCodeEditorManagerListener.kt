@@ -1,5 +1,6 @@
 package com.github.yhk1038.claudecodegui.editor
 
+import com.github.yhk1038.claudecodegui.toolwindow.UnreadBadgeClearer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
@@ -22,6 +23,11 @@ class ClaudeCodeEditorManagerListener : FileEditorManagerListener {
 
     override fun selectionChanged(event: FileEditorManagerEvent) {
         val file = event.newFile
+        if (file is ClaudeCodeVirtualFile) {
+            // The new selection is not yet visible to the judge inside the event.
+            val project = event.manager.project
+            ApplicationManager.getApplication().invokeLater { UnreadBadgeClearer.clear(project) }
+        }
         if (file is ClaudeCodeVirtualFile && file.badgeState.clearedBySelection) {
             if (file.setBadge(TabBadge.NONE)) {
                 (event.manager as? FileEditorManagerEx)?.refreshIcons()

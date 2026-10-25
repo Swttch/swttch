@@ -393,6 +393,10 @@
     "signed": "已登入",
     "reSign": "重新登入"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch 無法讀取 {{file}}，因此所有 Claude 設定都顯示為未設定，變更也無法儲存。原因：{{reason}}",
+    "saveFailed": "無法儲存設定。原因：{{reason}}"
+  },
   "authError": {
     "banner": "尚未登入 Claude Code。",
     "login": "登入",
@@ -612,7 +616,14 @@
     "loadingWorkingDirectory": "正在載入工作目錄...",
     "loadingEarlierMessages": "正在載入較早的訊息…",
     "loadOlderMessages": "載入較舊的訊息",
-    "jumpToMessage": "跳至該訊息位置"
+    "jumpToMessage": "跳至該訊息位置",
+    "searchPlaceholder": "在聊天中尋找",
+    "searchCount": "{{current}} / {{total}}",
+    "searchNoResults": "沒有結果",
+    "searchLoadingHistory": "正在載入較舊的訊息以便搜尋",
+    "searchPrevious": "上一個結果",
+    "searchNext": "下一個結果",
+    "searchClose": "關閉"
   },
   "sendActions": {
     "collapseReply": "摺疊回覆",

@@ -365,6 +365,7 @@
       "openSideQuestion": "طرح سؤال جانبي (/btw)",
       "refreshSessionList": "تحديث قائمة الجلسات أثناء فتحها",
       "zoomIn": "تكبير",
+      "findInChat": "البحث في المحادثة",
       "zoomOut": "تصغير",
       "zoomReset": "إعادة ضبط التكبير",
       "openClaudeCode": "فتح Claude Code من IDE",

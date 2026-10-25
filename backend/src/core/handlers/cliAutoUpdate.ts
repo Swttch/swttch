@@ -57,8 +57,8 @@ export async function setCliAutoUpdateHandler(
   if (result.status === 'ok') {
     // The file watcher says the same thing a moment later, but only when it is running;
     // announcing it here keeps every open tab in step either way, as SAVE_CLAUDE_SETTINGS does.
-    const { settings, overrides } = await readMergedClaudeSettings();
-    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides });
+    const { settings, overrides, unreadable } = await readMergedClaudeSettings();
+    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides, unreadable });
   }
   const state = await readCliAutoUpdateState();
   // Turned on and nothing else keeps it off: check now rather than at the next chat.
@@ -105,8 +105,8 @@ export async function setNonessentialTrafficHandler(
   const result = await saveNonessentialTraffic(disabled);
   if (result.status === 'ok') {
     // The About screen's auto-update switch reads the same variable; this keeps it in step.
-    const { settings, overrides } = await readMergedClaudeSettings();
-    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides });
+    const { settings, overrides, unreadable } = await readMergedClaudeSettings();
+    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides, unreadable });
   }
   const state = await readNonessentialTrafficState();
   // Lifting the limit can be what turns auto-updates back on; if so, check now.

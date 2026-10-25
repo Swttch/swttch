@@ -50,6 +50,14 @@ object SessionViewJudge {
         return onScreen && ideFocused
     }
 
+    /**
+     * Whether a banner already on screen should be taken down: the user has arrived at the
+     * session it announces, so it no longer has anything to announce. The banner is judged
+     * once when it is raised; this is the other half, for the user coming back later.
+     */
+    fun shouldDismissBanner(hasBanner: Boolean, placement: SessionPlacement, ideFocused: Boolean): Boolean =
+        hasBanner && isViewing(placement, ideFocused)
+
     /** Whether the IDE window of [project] has focus. Must run on the EDT. */
     fun ideFocused(project: Project): Boolean =
         WindowManager.getInstance().getFrame(project)?.isActive == true

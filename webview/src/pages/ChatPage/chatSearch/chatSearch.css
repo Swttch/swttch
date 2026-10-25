@@ -1,0 +1,11 @@
+/* Find in chat (issue #531). Painted by the CSS Custom Highlight API, so the
+   transcript's DOM is never rewritten to mark a match. */
+::highlight(chat-search) {
+  background-color: rgb(250 204 21 / 0.35);
+  color: inherit;
+}
+
+::highlight(chat-search-current) {
+  background-color: rgb(249 115 22 / 0.65);
+  color: inherit;
+}

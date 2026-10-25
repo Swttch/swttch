@@ -393,6 +393,10 @@
     "signed": "Angemeldet",
     "reSign": "Erneut anmelden"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch kann {{file}} nicht lesen. Deshalb erscheinen alle Claude-Einstellungen als nicht gesetzt, und Änderungen lassen sich nicht speichern. Grund: {{reason}}",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden. Grund: {{reason}}"
+  },
   "authError": {
     "banner": "Du bist bei Claude Code nicht angemeldet.",
     "login": "Anmelden",
@@ -612,7 +616,14 @@
     "loadingWorkingDirectory": "Arbeitsverzeichnis wird geladen...",
     "loadingEarlierMessages": "Frühere Nachrichten werden geladen…",
     "loadOlderMessages": "Ältere Nachrichten laden",
-    "jumpToMessage": "Zu dieser Nachricht springen"
+    "jumpToMessage": "Zu dieser Nachricht springen",
+    "searchPlaceholder": "Im Chat suchen",
+    "searchCount": "{{current}} von {{total}}",
+    "searchNoResults": "Keine Treffer",
+    "searchLoadingHistory": "Ältere Nachrichten werden zum Suchen geladen",
+    "searchPrevious": "Vorheriger Treffer",
+    "searchNext": "Nächster Treffer",
+    "searchClose": "Schließen"
   },
   "sendActions": {
     "collapseReply": "Antwort einklappen",

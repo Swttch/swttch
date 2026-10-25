@@ -450,11 +450,11 @@ export async function loadSessionMessages(
     recovery as the cursor-miss below applies: serve something reachable rather
     than nothing.
   */
-  let pageSize = limit ?? 50;
-  if (includeUuid) {
-    const target = activeChainMessages.findIndex(m => m.uuid === includeUuid);
-    if (target !== -1) pageSize = Math.max(pageSize, total - target);
-  }
+  const basePageSize = limit ?? 50;
+  const includeIndex = includeUuid ? activeChainMessages.findIndex(m => m.uuid === includeUuid) : -1;
+  // The newest page, which is what a load with no cursor serves, has to reach
+  // all the way from the end of the chain back to the target.
+  const pageSize = includeIndex !== -1 ? Math.max(basePageSize, total - includeIndex) : basePageSize;
 
   let slicedMessages: SessionMessage[] = [];
   let hasMore = false;
@@ -467,8 +467,15 @@ export async function loadSessionMessages(
     // Find the index of the message with beforeUuid
     const index = activeChainMessages.findIndex(m => m.uuid === beforeUuid);
     if (index !== -1) {
-      // Return older messages (indices before index)
-      const startIndex = snapStartToUuid(activeChainMessages, Math.max(0, index - pageSize));
+      // Return older messages (indices before index).
+      //
+      // With a target (the find bar moving to a match that is not loaded yet)
+      // the page runs back to the target and no further. Reusing the widened
+      // `pageSize` above would also count the entries NEWER than the cursor,
+      // which the client already holds, and read that many extra entries
+      // before the target for nothing.
+      const reach = includeIndex !== -1 && includeIndex < index ? index - includeIndex : 0;
+      const startIndex = snapStartToUuid(activeChainMessages, Math.max(0, index - Math.max(basePageSize, reach)));
       slicedMessages = activeChainMessages.slice(startIndex, index);
       hasMore = startIndex > 0;
     } else {

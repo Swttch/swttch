@@ -397,6 +397,10 @@
     "signed": "Signed",
     "reSign": "Re-Sign"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch cannot read {{file}}, so every Claude setting looks unset and changes cannot be saved. Reason: {{reason}}",
+    "saveFailed": "Could not save the setting. Reason: {{reason}}"
+  },
   "authError": {
     "banner": "You're signed out of Claude Code.",
     "login": "Sign in",
@@ -616,7 +620,14 @@
     "loadingWorkingDirectory": "Loading working directory...",
     "loadingEarlierMessages": "Loading earlier messages…",
     "loadOlderMessages": "Load older messages",
-    "jumpToMessage": "Jump to this message"
+    "jumpToMessage": "Jump to this message",
+    "searchPlaceholder": "Find in chat",
+    "searchCount": "{{current}} of {{total}}",
+    "searchNoResults": "No results",
+    "searchLoadingHistory": "Loading earlier messages to search",
+    "searchPrevious": "Previous match",
+    "searchNext": "Next match",
+    "searchClose": "Close"
   },
   "sendActions": {
     "collapseReply": "Collapse reply",

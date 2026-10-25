@@ -361,6 +361,7 @@
       "openSideQuestion": "Fazer uma pergunta paralela (/btw)",
       "refreshSessionList": "Atualizar a lista de sessões enquanto ela estiver aberta",
       "zoomIn": "Aumentar o zoom",
+      "findInChat": "Buscar na conversa",
       "zoomOut": "Diminuir o zoom",
       "zoomReset": "Restaurar o zoom",
       "openClaudeCode": "Abrir o Claude Code a partir da IDE",

@@ -393,6 +393,10 @@
     "signed": "サインイン済み",
     "reSign": "再サインイン"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch が {{file}} を読み取れないため、Claude の設定がすべて未設定に見え、変更も保存できません。理由: {{reason}}",
+    "saveFailed": "設定を保存できませんでした。理由: {{reason}}"
+  },
   "authError": {
     "banner": "Claude Code にログインしていません。",
     "login": "ログイン",
@@ -612,7 +616,14 @@
     "loadingWorkingDirectory": "作業ディレクトリを読み込み中...",
     "loadingEarlierMessages": "以前のメッセージを読み込み中…",
     "loadOlderMessages": "以前のメッセージを読み込む",
-    "jumpToMessage": "このメッセージの位置へ移動"
+    "jumpToMessage": "このメッセージの位置へ移動",
+    "searchPlaceholder": "チャット内を検索",
+    "searchCount": "{{current}} / {{total}}",
+    "searchNoResults": "結果なし",
+    "searchLoadingHistory": "検索のため以前のメッセージを読み込み中",
+    "searchPrevious": "前の結果",
+    "searchNext": "次の結果",
+    "searchClose": "閉じる"
   },
   "sendActions": {
     "collapseReply": "応答を折りたたむ",

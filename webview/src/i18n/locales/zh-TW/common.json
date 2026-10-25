@@ -361,6 +361,7 @@
       "openSideQuestion": "提一個旁支問題 (/btw)",
       "refreshSessionList": "在工作階段清單開啟時重新整理清單",
       "zoomIn": "放大",
+      "findInChat": "在對話中尋找",
       "zoomOut": "縮小",
       "zoomReset": "重設縮放",
       "openClaudeCode": "從 IDE 開啟 Claude Code",

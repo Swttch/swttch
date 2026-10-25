@@ -361,6 +361,7 @@
       "openSideQuestion": "横から質問する (/btw)",
       "refreshSessionList": "セッション一覧が開いているときに更新",
       "zoomIn": "拡大",
+      "findInChat": "会話内を検索",
       "zoomOut": "縮小",
       "zoomReset": "ズームをリセット",
       "openClaudeCode": "IDEからClaude Codeを開く",
