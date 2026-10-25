@@ -96,6 +96,19 @@ describe('SendUserFileRenderer', () => {
         await waitFor(() => expect(screen.getByText('PNG')).toBeInTheDocument());
     });
 
+    it('keeps pictures and cards in the order they were sent, in one block', async () => {
+        request.mockResolvedValue(PNG);
+        const r = result([
+            {path: '/a/t.csv', size: 1, isImage: false},
+            {path: '/a/p.png', size: 1, isImage: true},
+        ]);
+        const {container} = render(<SendUserFileRenderer toolUse={toolUse(['/a/t.csv', '/a/p.png'])} toolResult={r}/>);
+        await screen.findByRole('img');
+        const grid = container.querySelector('.flex-wrap') as HTMLElement;
+        expect(grid.children).toHaveLength(2);
+        expect(grid.children[0]).toHaveTextContent('t.csv');
+    });
+
     it('plays a video in a player', async () => {
         URL.createObjectURL = vi.fn(() => 'blob:x');
         request.mockResolvedValue({kind: 'video', mimeType: 'video/mp4', base64: 'QUJD'});

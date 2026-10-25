@@ -27,7 +27,7 @@ function FileCard({file}: {file: SentFile}) {
             type="button"
             title={file.name}
             onClick={() => openChatFile(file.path)}
-            className="flex h-[120px] w-full min-w-0 flex-col justify-between rounded-lg border border-border-default bg-surface-hover/40 p-2.5 text-left hover:bg-surface-hover transition-colors"
+            className="flex h-[120px] w-[120px] shrink-0 flex-col justify-between rounded-lg border border-border-default bg-surface-hover/40 p-2.5 text-left hover:bg-surface-hover transition-colors"
         >
             <span className="self-start rounded-full border border-border-default px-1.5 text-[0.625rem] leading-4 text-text-secondary">
                 {file.badge || 'FILE'}
@@ -89,23 +89,20 @@ export function SendUserFileRenderer(props: RendererProps) {
 
     const videos = files.filter((f) => f.isVideo);
     const pictures = files.filter((f) => f.isImage && !f.isVideo);
-    const cards = files.filter((f) => !f.isVideo && !f.isImage);
     const large = display === 'render' && pictures.length === 1;
 
     return (
         <ToolWrapper message={props.message}>
             <div className="flex flex-col gap-2">
                 {videos.map((file) => <Video key={file.path} file={file}/>)}
-                {pictures.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                        {pictures.map((file, index) => (
-                            <Picture key={file.path} file={file} large={large} onOpen={() => setOpened(index)}/>
+                {/* One grid in the order the files were sent, as Desktop draws it: a picture and a card sit side by side. */}
+                {files.some((f) => !f.isVideo) && (
+                    <div className={large ? "flex flex-col gap-2" : "flex max-w-[376px] flex-wrap gap-2"}>
+                        {files.filter((f) => !f.isVideo).map((file) => (
+                            file.isImage
+                                ? <Picture key={file.path} file={file} large={large} onOpen={() => setOpened(pictures.indexOf(file))}/>
+                                : <FileCard key={file.path} file={file}/>
                         ))}
-                    </div>
-                )}
-                {cards.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 max-w-[420px]">
-                        {cards.map((file) => <FileCard key={file.path} file={file}/>)}
                     </div>
                 )}
                 {opened !== null && <PictureViewer pictures={pictures} index={opened} onClose={() => setOpened(null)}/>}
