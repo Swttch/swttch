@@ -4,7 +4,11 @@ import toast from "react-hot-toast";
 import {getAdapter} from "@/adapters";
 import {ImageLightbox} from "@/components/ImageLightbox";
 import {useChatStreamContext} from "@/contexts/ChatStreamContext";
-import {isPictureOutput, outputKey, useSessionOutputImages, useSessionOutputs} from "@/hooks/useSessionOutputs";
+import {useSponsorStatus} from "@/hooks/queries/useSponsorStatus";
+import {isPictureOutput, outputKey, useSessionOutputs} from "@/hooks/useSessionOutputs";
+import {useSessionPictureLoader, useSessionPictures} from "@/hooks/useSessionPictures";
+import {MoreInSessionNotice, EdgeSponsorHint} from "@/components/ImageLightbox/SponsorGateNotice";
+import {SponsorGateSurface} from "@/shared";
 import {i18n, useTranslation} from "@/i18n";
 import type {SessionOutput} from "@/shared";
 import {openChatFile} from "@/utils/openChatFile";
@@ -52,19 +56,21 @@ export function OutputsSection() {
     const {t} = useTranslation('chat');
     const {messages} = useChatStreamContext();
     const index = useSessionOutputs(true, messages.length);
-    const {loaded, ensure} = useSessionOutputImages();
-    const [expanded, setExpanded] = useState(false);
+    // The viewer steps through the pictures you attached and the ones Claude made, under the same
+    // sponsor rule as the Assets screen.
+    const {loaded, ensure} = useSessionPictureLoader();
+    const {isSponsor} = useSponsorStatus();
     const [viewing, setViewing] = useState<string | null>(null);
+    const sessionPictures = useSessionPictures(viewing !== null) ?? [];
+    const [expanded, setExpanded] = useState(false);
 
     // Newest first, as the rail lists them.
     const outputs = useMemo(() => [...(index ?? [])].reverse(), [index]);
-    const pictures = useMemo(() => outputs.filter(isPictureOutput), [outputs]);
+    const opened = sessionPictures.find((p) => p.key === viewing) ?? null;
+    const scope = opened ? (isSponsor ? sessionPictures : sessionPictures.filter((p) => p.entryUuid === opened.entryUuid)) : [];
+    const lockedCount = opened && !isSponsor ? sessionPictures.length - scope.length : 0;
 
-    const openPicture = (output: SessionOutput) => {
-        setViewing(outputKey(output));
-        // The viewer steps through every picture of the list, so its neighbours are fetched too.
-        pictures.forEach(ensure);
-    };
+    const openPicture = (output: SessionOutput) => setViewing(outputKey(output));
 
     const activate = (output: SessionOutput) => {
         if (isPictureOutput(output)) openPicture(output);
@@ -112,15 +118,17 @@ export function OutputsSection() {
                     {t('sessionRail.showMore')}
                 </button>
             )}
-            {viewing !== null && (
+            {opened && (
                 <ImageLightbox
-                    srcs={pictures.map((p) => loaded[outputKey(p)] ?? null)}
-                    initialIndex={Math.max(pictures.findIndex((p) => outputKey(p) === viewing), 0)}
+                    srcs={scope.map((p) => loaded[p.key] ?? null)}
+                    initialIndex={Math.max(scope.findIndex((p) => p.key === viewing), 0)}
                     onClose={() => setViewing(null)}
                     onIndexChange={(i) => {
-                        const output = pictures[i];
-                        if (output) ensure(output);
+                        const picture = scope[i];
+                        if (picture) ensure(picture);
                     }}
+                    notice={lockedCount > 0 ? <MoreInSessionNotice count={lockedCount} onShowAll={() => setViewing(null)}/> : undefined}
+                    edgeHint={lockedCount > 0 ? <EdgeSponsorHint from={SponsorGateSurface.Viewer}/> : undefined}
                 />
             )}
         </>

@@ -31,6 +31,15 @@ vi.mock('@/hooks/useSessionOutputs', async (importOriginal) => ({
     useSessionOutputs: () => outputsIndex,
     useSessionOutputImages: () => ({loaded: {}, ensure: vi.fn()}),
 }));
+vi.mock('@/hooks/queries/useSponsorStatus', () => ({useSponsorStatus: () => ({isSponsor: false})}));
+vi.mock('@/hooks/useSessionPictures', async () => {
+    const actual = await vi.importActual<typeof import('@/hooks/useSessionPictures')>('@/hooks/useSessionPictures');
+    const {isPictureOutput} = await vi.importActual<typeof import('@/hooks/useSessionOutputs')>('@/hooks/useSessionOutputs');
+    return {
+        useSessionPictures: () => (outputsIndex === undefined ? undefined : actual.mergePictures([], (outputsIndex as never[]).filter(isPictureOutput))),
+        useSessionPictureLoader: () => ({loaded: {}, ensure: vi.fn()}),
+    };
+});
 vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
     getBridge: () => ({request: vi.fn(() => Promise.resolve({kind: 'none'}))}),
@@ -138,7 +147,8 @@ describe('SessionRail', () => {
         openRail();
         expect(screen.getByText(/sessionRail\.toolImage.*Claude Browser/)).toBeInTheDocument();
         fireEvent.click(screen.getByText('photo.jpg'));
-        expect(screen.getByTestId('lightbox')).toHaveTextContent('1/2');
+        // Not a sponsor: the viewer stays inside the entry that was clicked.
+        expect(screen.getByTestId('lightbox')).toHaveTextContent('0/1');
         fireEvent.click(screen.getByText('Deck'));
         expect(openUrl).toHaveBeenCalledWith('https://claude.ai/artifact/abc123');
     });

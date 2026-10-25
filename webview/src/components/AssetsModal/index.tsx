@@ -7,8 +7,9 @@ import {
   EdgeSponsorHint,
   LearnMoreButton,
 } from '@/components/ImageLightbox/SponsorGateNotice';
-import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSessionAssets';
-import { isPictureOutput, outputKey, useSessionOutputImages, useSessionOutputs } from '@/hooks/useSessionOutputs';
+import { assetKey, useSessionAssets } from '@/hooks/useSessionAssets';
+import { outputKey, useSessionOutputs } from '@/hooks/useSessionOutputs';
+import { useSessionPictureLoader, useSessionPictures } from '@/hooks/useSessionPictures';
 import { getAdapter } from '@/adapters';
 import { openChatFile } from '@/utils/openChatFile';
 import { toolLabel } from '@/utils/toolLabel';
@@ -98,7 +99,6 @@ export function AssetsModal(props: Props) {
   const { onClose } = props;
   const { t } = useTranslation('chat');
   const assets = useSessionAssets(true);
-  const { loaded, ensure } = useSessionAssetLoader();
   const { isSponsor } = useSponsorStatus();
 
   const [openedKey, setOpenedKey] = useState<string | null>(null);
@@ -108,20 +108,11 @@ export function AssetsModal(props: Props) {
 
   // What Claude made: pictures its tools returned, files it sent, pages it published.
   const outputs = useSessionOutputs(true);
-  const { loaded: outputsLoaded, ensure: ensureOutput } = useSessionOutputImages();
+  // One loader and one list of pictures for the whole screen, so the viewer can step from what you attached into
+  // what Claude made and back, and a tile and the viewer never fetch the same picture twice.
+  const { loaded, ensureAsset, ensureOutput, ensure: ensurePicture } = useSessionPictureLoader();
+  const pictures = useSessionPictures(true);
   const outputGroups = useMemo(() => groupOutputsByEntry(outputs ?? []), [outputs]);
-  const [openedOutputKey, setOpenedOutputKey] = useState<string | null>(null);
-  const openedOutput = useMemo(
-    () => (outputs ?? []).find((o) => outputKey(o) === openedOutputKey) ?? null,
-    [outputs, openedOutputKey],
-  );
-  const outputPictures = useMemo(() => (outputs ?? []).filter(isPictureOutput), [outputs]);
-  // The same rule as for attachments: a sponsor steps across the session, anyone else stays inside one entry.
-  const outputScope = useMemo(() => {
-    if (!openedOutput) return [];
-    return isSponsor ? outputPictures : outputPictures.filter((o) => o.entryUuid === openedOutput.entryUuid);
-  }, [openedOutput, isSponsor, outputPictures]);
-  const outputsLocked = openedOutput && !isSponsor ? outputPictures.length - outputScope.length : 0;
   const openOther = (output: SessionOutput) => {
     if (output.kind === 'artifact') void getAdapter().openUrl(output.url);
     else if (output.kind === 'file') openChatFile(output.path);
@@ -155,16 +146,14 @@ export function AssetsModal(props: Props) {
 
   // What the viewer may step through, following the same rule as the transcript:
   // a sponsor crosses the session, anyone else stays inside the message.
-  const opened = useMemo(
-    () => (assets ?? []).find((a) => assetKey(a) === openedKey) ?? null,
-    [assets, openedKey],
-  );
+  const allPictures = pictures ?? [];
+  const opened = useMemo(() => allPictures.find((p) => p.key === openedKey) ?? null, [allPictures, openedKey]);
   const scope = useMemo(() => {
     if (!opened) return [];
-    return isSponsor ? (assets ?? []) : (assets ?? []).filter((a) => a.entryUuid === opened.entryUuid);
-  }, [opened, isSponsor, assets]);
+    return isSponsor ? allPictures : allPictures.filter((p) => p.entryUuid === opened.entryUuid);
+  }, [opened, isSponsor, allPictures]);
 
-  const lockedCount = opened && !isSponsor ? (assets?.length ?? 0) - scope.length : 0;
+  const lockedCount = opened && !isSponsor ? allPictures.length - scope.length : 0;
 
   /*
     Counted once per viewer, exactly as the transcript does it. This screen used
@@ -267,7 +256,7 @@ export function AssetsModal(props: Props) {
                     <AssetThumbnail
                       key={assetKey(asset)}
                       src={loaded[assetKey(asset)] ?? null}
-                      onNeeded={() => ensure(asset)}
+                      onNeeded={() => ensureAsset(asset)}
                       onOpen={() => setOpenedKey(assetKey(asset))}
                     />
                   ))}
@@ -291,9 +280,9 @@ export function AssetsModal(props: Props) {
                     <OutputTile
                       key={outputKey(output)}
                       output={output}
-                      src={outputsLoaded[outputKey(output)] ?? null}
+                      src={loaded[outputKey(output)] ?? null}
                       onNeeded={() => ensureOutput(output)}
-                      onOpenPicture={() => setOpenedOutputKey(outputKey(output))}
+                      onOpenPicture={() => setOpenedKey(outputKey(output))}
                       onOpenOther={() => openOther(output)}
                     />
                   ))}
@@ -304,35 +293,14 @@ export function AssetsModal(props: Props) {
         </div>
       </div>
 
-      {openedOutput && (
-        <ImageLightbox
-          srcs={outputScope.map((o) => outputsLoaded[outputKey(o)] ?? null)}
-          initialIndex={Math.max(outputScope.findIndex((o) => outputKey(o) === openedOutputKey), 0)}
-          onClose={() => setOpenedOutputKey(null)}
-          onIndexChange={(i) => {
-            const output = outputScope[i];
-            if (output) ensureOutput(output);
-          }}
-          notice={
-            outputsLocked > 0 ? (
-              <MoreInSessionNotice count={outputsLocked} onShowAll={() => setOpenedOutputKey(null)} />
-            ) : undefined
-          }
-          edgeHint={
-            outputsLocked > 0 ? <EdgeSponsorHint from={SponsorGateSurface.AssetsScreen} /> : undefined
-          }
-          onOpenAssets={() => setOpenedOutputKey(null)}
-        />
-      )}
-
       {opened && (
         <ImageLightbox
-          srcs={scope.map((a) => loaded[assetKey(a)] ?? null)}
-          initialIndex={Math.max(scope.findIndex((a) => assetKey(a) === openedKey), 0)}
+          srcs={scope.map((p) => loaded[p.key] ?? null)}
+          initialIndex={Math.max(scope.findIndex((p) => p.key === openedKey), 0)}
           onClose={() => setOpenedKey(null)}
           onIndexChange={(i) => {
-            const asset = scope[i];
-            if (asset) ensure(asset);
+            const picture = scope[i];
+            if (picture) ensurePicture(picture);
           }}
           // The same notice the transcript shows, from the same component. Built
           // separately, the two drifted: this one lost its link and its report.
