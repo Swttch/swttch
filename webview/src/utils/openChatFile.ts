@@ -12,6 +12,36 @@ const PREVIEW_EXTENSIONS = new Set([
   'mp4', 'm4v', 'mov', 'webm',
 ]);
 
+/**
+ * Text a file Claude handed over is read as, in the pane, as code: Desktop's file
+ * viewer shows these. A path named in the chat is not opened this way, since a
+ * source file there is meant for the editor.
+ */
+const SENT_TEXT_EXTENSIONS = new Set([
+  'txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'yaml', 'yml', 'toml', 'xml', 'log', 'ini',
+  'py', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'css', 'sh', 'sql', 'mmd', 'rb', 'go', 'rs', 'java', 'kt',
+]);
+
+/** True when a file Claude handed over opens in the pane: what a path click shows there, and text as code. */
+export function isSentFileViewable(path: string): boolean {
+  if (isPreviewablePath(path)) return true;
+  const name = path.split(/[\/]/).pop() ?? '';
+  const dot = name.lastIndexOf('.');
+  return dot > 0 && SENT_TEXT_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
+}
+
+/**
+ * Open a file Claude handed over: in the pane when it can be shown there, else
+ * the way any path in the chat opens.
+ */
+export function openSentFile(path: string): Promise<void> {
+  if (isSentFileViewable(path)) {
+    filePreviewPaneStore.open(path);
+    return Promise.resolve();
+  }
+  return openChatFile(path);
+}
+
 /** True when the preview pane shows this file, so a click opens it there. */
 export function isPreviewablePath(path: string): boolean {
   const name = path.split(/[\\/]/).pop() ?? '';

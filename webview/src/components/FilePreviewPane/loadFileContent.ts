@@ -1,7 +1,7 @@
 import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 
-export type FileContentKind = 'html' | 'image' | 'pdf' | 'video';
+export type FileContentKind = 'html' | 'image' | 'pdf' | 'video' | 'text';
 
 /** What the backend answers for one piece (`backend/src/core/features/fileContent.ts`). */
 interface BackendChunk {

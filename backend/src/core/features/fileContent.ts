@@ -7,7 +7,7 @@ import { resolveSentFilePath } from './sentFileStore';
  * will take (#593). Desktop's Browser pane shows the same kinds when a file path
  * in the chat is clicked.
  */
-export type FileContentKind = 'html' | 'image' | 'pdf' | 'video';
+export type FileContentKind = 'html' | 'image' | 'pdf' | 'video' | 'text';
 
 interface ContentType {
   kind: FileContentKind;
@@ -21,6 +21,8 @@ const MB = 1024 * 1024;
 /** A page is text the pane holds in memory and hands to a frame. */
 const HTML_MAX_BYTES = 5 * MB;
 const IMAGE_MAX_BYTES = 10 * MB;
+/** Source and data files are shown as text, which the pane draws line by line, so the ceiling is small. */
+const TEXT_MAX_BYTES = 2 * MB;
 const PDF_MAX_BYTES = 50 * MB;
 /** A video the pane plays from memory, so the ceiling is what a webview can hold comfortably. */
 const VIDEO_MAX_BYTES = 200 * MB;
@@ -37,6 +39,12 @@ const CONTENT_TYPES: Record<string, ContentType> = {
   svg: { kind: 'image', mimeType: 'image/svg+xml', maxBytes: IMAGE_MAX_BYTES },
   bmp: { kind: 'image', mimeType: 'image/bmp', maxBytes: IMAGE_MAX_BYTES },
   avif: { kind: 'image', mimeType: 'image/avif', maxBytes: IMAGE_MAX_BYTES },
+  // Text a reader opens to look at: shown as code with line numbers, as Desktop's file viewer does.
+  ...Object.fromEntries(
+    ['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'jsonl', 'yaml', 'yml', 'toml', 'xml', 'log', 'ini',
+      'py', 'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'css', 'sh', 'sql', 'mmd', 'rb', 'go', 'rs', 'java', 'kt']
+      .map((ext): [string, ContentType] => [ext, { kind: 'text', mimeType: 'text/plain', maxBytes: TEXT_MAX_BYTES }]),
+  ),
   mp4: { kind: 'video', mimeType: 'video/mp4', maxBytes: VIDEO_MAX_BYTES },
   m4v: { kind: 'video', mimeType: 'video/x-m4v', maxBytes: VIDEO_MAX_BYTES },
   mov: { kind: 'video', mimeType: 'video/quicktime', maxBytes: VIDEO_MAX_BYTES },

@@ -12,7 +12,7 @@ vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
     getBridge: () => ({request}),
 }));
 vi.mock('react-hot-toast', () => ({default: {error: toastError}}));
-vi.mock('@/utils/openChatFile', () => ({openChatFile: (p: string) => openChatFile(p)}));
+vi.mock('@/utils/openChatFile', () => ({openSentFile: (p: string) => openChatFile(p)}));
 // The tooltip's content is what is under test, not Tippy's popper: expose it.
 vi.mock('@/components/Tooltip', () => ({
     Tooltip: (p: {content: React.ReactNode; children: React.ReactElement}) => (

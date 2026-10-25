@@ -6,6 +6,7 @@ import { basename } from '@/pages/ChatPage/ChatInput/basename';
 import { htmlTitleOf } from '@/utils/htmlTitle';
 import { Tooltip } from '@/components/Tooltip';
 import { PaneMenu } from './PaneMenu';
+import { TextView } from './TextView';
 import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from './pageBackground';
 import { MIN_CHAT_WIDTH, MIN_PANE_WIDTH, useIsWide, usePaneColumnWidth } from './usePaneColumn';
 import {
@@ -15,7 +16,8 @@ import { decodeText, loadFileContent, type FileContentKind } from './loadFileCon
 
 type PaneState =
   | { status: 'loading' }
-  | { status: 'ready'; kind: Exclude<FileContentKind, 'html'>; url: string }
+  | { status: 'ready'; kind: Exclude<FileContentKind, 'html' | 'text'>; url: string }
+  | { status: 'ready'; kind: 'text'; text: string }
   | { status: 'ready'; kind: 'html'; html: string }
   | { status: 'failed'; reason: 'unsupported' | 'tooLarge' | 'unreadable' | 'unplayable'; size?: number; maxBytes?: number };
 
@@ -61,6 +63,10 @@ export function FilePreviewPane() {
       if (cancelled) return;
       if (!result.ok) {
         setState({ status: 'failed', reason: result.reason, size: result.size, maxBytes: result.maxBytes });
+        return;
+      }
+      if (result.kind === 'text') {
+        setState({ status: 'ready', kind: 'text', text: decodeText(result.pieces) });
         return;
       }
       if (result.kind === 'html') {
@@ -158,7 +164,7 @@ export function FilePreviewPane() {
             heading={heading}
             path={path}
             name={name}
-            source={state.status === 'ready' && state.kind === 'html' ? state.html : undefined}
+            source={state.status === 'ready' ? (state.kind === 'html' ? state.html : state.kind === 'text' ? state.text : undefined) : undefined}
             publishedUrl={publishedUrl}
             onReload={() => setReloads((count) => count + 1)}
           />
@@ -214,6 +220,7 @@ export function FilePreviewPane() {
             />
           </div>
         )}
+        {state.status === 'ready' && state.kind === 'text' && <TextView text={state.text} />}
         {state.status === 'ready' && state.kind === 'pdf' && (
           <iframe title={name} src={state.url} className="h-full w-full border-0" />
         )}

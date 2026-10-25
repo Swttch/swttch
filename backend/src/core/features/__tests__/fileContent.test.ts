@@ -28,7 +28,12 @@ describe('contentTypeOf', () => {
     expect(contentTypeOf(path)?.kind).toBe(kind);
   });
 
-  it.each(['notes.txt', 'main.ts', 'archive.zip', 'Makefile', 'photo.heic'])('%s is not shown in the pane', (path) => {
+  // Text is read as code (the web side decides which clicks open it; a path named in the chat still goes to the editor).
+  it.each(['notes.txt', 'main.ts', 'data.csv', 'diagram.mmd'])('%s is shown as text', (path) => {
+    expect(contentTypeOf(path)?.kind).toBe('text');
+  });
+
+  it.each(['archive.zip', 'deck.pptx', 'Makefile', 'photo.heic'])('%s is not shown in the pane', (path) => {
     expect(contentTypeOf(path)).toBeUndefined();
   });
 });
@@ -88,9 +93,20 @@ describe('readFileContentChunk', () => {
   });
 
   it('says unsupported for a kind the pane does not show', async () => {
-    const path = join(dir, 'notes.txt');
+    const path = join(dir, 'deck.pptx');
     await writeFile(path, 'hi');
     expect(await readFileContentChunk(path, 0)).toEqual({ ok: false, reason: 'unsupported' });
+  });
+
+  it('answers a text file as text, and refuses a big one', async () => {
+    const path = join(dir, 'data.csv');
+    await writeFile(path, 'a,b\n1,2\n');
+    const answer = await readFileContentChunk(path, 0);
+    expect(answer).toMatchObject({ ok: true, kind: 'text', mimeType: 'text/plain', size: 8 });
+
+    const big = join(dir, 'big.log');
+    await writeFile(big, Buffer.alloc(2 * 1024 * 1024 + 1, 97));
+    expect(await readFileContentChunk(big, 0)).toMatchObject({ ok: false, reason: 'tooLarge' });
   });
 
   it('says unreadable for a file that is gone and for a folder', async () => {

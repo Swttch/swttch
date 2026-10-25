@@ -4,7 +4,7 @@ import {ArrowDownTrayIcon} from "@heroicons/react/24/outline";
 import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 import {Tooltip} from "@/components/Tooltip";
 import {i18n, useTranslation} from "@/i18n";
-import {openChatFile} from "@/utils/openChatFile";
+import {openSentFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
 import {RendererProps, ToolWrapper, toolResultBlockIndex} from "./common";
 import {downloadSentFile, formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
@@ -67,7 +67,7 @@ function FileCard({file}: {file: SentFile}) {
         <Item file={file} className="h-[120px] w-[120px] shrink-0">
             <button
                 type="button"
-                onClick={() => openChatFile(file.path)}
+                onClick={() => openSentFile(file.path)}
                 className="flex h-full w-full min-w-0 flex-col justify-between rounded-lg border border-border-default bg-surface-hover/40 p-2.5 text-left transition-colors hover:bg-surface-hover"
             >
                 <span className="self-start rounded-full border border-border-default px-1.5 text-[0.625rem] leading-4 text-text-secondary">
@@ -90,7 +90,7 @@ function FileChip({file}: {file: SentFile}) {
         <Item file={file} className="inline-flex max-w-full" downloadClassName="end-2.5 top-1/2 -translate-y-1/2">
             <button
                 type="button"
-                onClick={() => openChatFile(file.path)}
+                onClick={() => openSentFile(file.path)}
                 className="flex max-w-full items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/40 py-2.5 pe-3 ps-3 text-left transition-colors hover:bg-surface-hover"
             >
                 <span className="shrink-0 rounded-full border border-border-default px-2 text-[0.6875rem] leading-4 text-text-secondary">
