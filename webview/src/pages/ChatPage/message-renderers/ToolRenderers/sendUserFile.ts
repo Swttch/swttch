@@ -107,6 +107,11 @@ export function loadSentMedia(path: string): Promise<string | null> {
     });
 
     cache.set(path, pending);
+    // An answer of "nothing to show" is only true right now (the file may be written or restored
+    // later), so it is not kept: the next time the card mounts it asks again.
+    void pending.then((value) => {
+        if (value === null && cache.get(path) === pending) cache.delete(path);
+    });
     return pending;
 }
 

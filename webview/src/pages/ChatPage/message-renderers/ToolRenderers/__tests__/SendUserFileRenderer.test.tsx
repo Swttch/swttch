@@ -121,6 +121,18 @@ describe('SendUserFileRenderer', () => {
         await waitFor(() => expect(screen.getByText('PNG')).toBeInTheDocument());
     });
 
+    // A picture that was missing when the card first drew (gone, then written or restored) must not
+    // stay a chip for good: the next draw asks again.
+    it('asks again on the next draw after the file was missing', async () => {
+        request.mockResolvedValueOnce({kind: 'none'});
+        const first = draw([{path: '/a/gone.png', size: 181}]);
+        await waitFor(() => expect(screen.getByText('PNG')).toBeInTheDocument());
+        first.unmount();
+        request.mockResolvedValue(PNG);
+        draw([{path: '/a/gone.png', size: 181}]);
+        expect(await screen.findByRole('img')).toBeInTheDocument();
+    });
+
     it('plays video in a player, and a m4v as a card', async () => {
         // A video is read in pieces, the way the preview pane reads one (any size Claude Desktop plays).
         request.mockImplementation(async (_type: string, payload: {path: string}) =>
