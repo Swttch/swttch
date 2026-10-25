@@ -70,6 +70,14 @@ describe('LinkCardRenderer', () => {
         await waitFor(() => expect(screen.getByText(/github\.com/)).toBeInTheDocument());
     });
 
+    it('opens the page in the browser from the picture too', async () => {
+        request.mockResolvedValue({url: URL_593, host: 'github.com', title: 'T', image: 'data:image/png;base64,QUJD'});
+        render(<LinkCardRenderer toolUse={tool} url={URL_593}/>);
+        await screen.findByText('T');
+        fireEvent.click(document.querySelector('img')!);
+        expect(openUrl).toHaveBeenCalledWith(URL_593);
+    });
+
     it('opens the page in the browser from the button, and offers the link menu from the dots', async () => {
         request.mockResolvedValue({url: URL_593, host: 'github.com'});
         render(<LinkCardRenderer toolUse={tool} url={URL_593}/>);

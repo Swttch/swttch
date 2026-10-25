@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { FilePreviewPane } from '../index';
 import { decodeText, loadFileContent } from '../loadFileContent';
@@ -269,6 +269,8 @@ describe('the page colour', () => {
 });
 
 describe('the resize handle', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   const wide = () => {
     window.matchMedia = ((query: string) => ({
       matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {},
@@ -292,16 +294,19 @@ describe('the resize handle', () => {
     await screen.findByTitle('page.html');
     const handle = screen.getByRole('separator');
 
-    // The pane's far edge is 8px in from the window: a pointer at x=700 leaves 1200 - 8 - 700.
-    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 700 });
+    // The pane is as wide as the pointer has moved toward the chat from where the drag began: no jump on grab.
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 800 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 800 });
+    expect(filePreviewPaneStore.getWidth()).toBe(400);
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 700 });
-    expect(filePreviewPaneStore.getWidth()).toBe(492);
-    expect(screen.getByRole('complementary').style.width).toBe('492px');
+    expect(filePreviewPaneStore.getWidth()).toBe(500);
+    expect(screen.getByRole('complementary').style.width).toBe('500px');
 
     // Too far toward the chat stops where the chat keeps its room; too far the other way, at the minimum.
-    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: -2000 });
     expect(filePreviewPaneStore.getWidth()).toBe(1200 - 360 - 16);
-    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 1190 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 2000 });
     expect(filePreviewPaneStore.getWidth()).toBe(320);
 
     fireEvent.doubleClick(handle);

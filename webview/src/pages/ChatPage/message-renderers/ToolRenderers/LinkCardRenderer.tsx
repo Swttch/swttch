@@ -84,7 +84,12 @@ export function LinkCardRenderer({url, ...props}: RendererProps & {url: string})
         <ToolWrapper message={props.message}>
             <div className="w-full max-w-[480px] overflow-hidden rounded-2xl border border-border-default bg-surface-hover/30">
                 {/* Cropped from the top to a wide band, as Claude Desktop crops its screenshot. */}
-                {card?.image && <img src={card.image} alt="" className="block aspect-[8/3] w-full object-cover object-top"/>}
+                {/* The picture opens the page, as the Open button does. */}
+                {card?.image && (
+                    <button type="button" aria-label={t('linkCard.open')} onClick={() => openLink(url)} className="block w-full cursor-pointer">
+                        <img src={card.image} alt="" className="block aspect-[8/3] w-full object-cover object-top"/>
+                    </button>
+                )}
                 {/* While the page is still being read, the band's place is kept and a spinner stands in it, so the card does not jump when the picture arrives. */}
                 {card === null && (
                     <div role="status" aria-label={t('linkCard.loading')} className="flex aspect-[8/3] w-full items-center justify-center bg-surface-hover/40">

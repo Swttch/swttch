@@ -86,8 +86,10 @@ describe('SendUserFileRenderer', () => {
     it('draws a file sent alone as a one-line chip', () => {
         draw([{path: '/a/big40mb.mp4.bin', size: 41322937}]);
         expect(screen.getByText('41.3MB')).toBeInTheDocument();
-        expect(screen.getByText('big40mb.mp4.bin').closest('button')?.className).toContain('rounded-lg');
+        expect(screen.getByText('big40mb.mp4.bin').closest('button')?.className).toContain('rounded-xl');
         expect(screen.getByText('big40mb.mp4.bin').closest('button')?.className).not.toContain('h-full');
+        // The size gives way to the download button on hover.
+        expect(screen.getByText('41.3MB').className).toContain('group-hover/sent:opacity-0');
     });
 
     it('draws pictures as thumbnails, side by side with the cards, in the order they were sent', async () => {

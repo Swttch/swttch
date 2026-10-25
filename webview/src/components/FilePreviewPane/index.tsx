@@ -46,6 +46,7 @@ export function FilePreviewPane() {
   const [frameLoaded, setFrameLoaded] = useState(false);
   const [pageBackground, setPageBackground] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const drag = useRef<{ startX: number; startWidth: number; scale: number } | null>(null);
   const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
@@ -127,15 +128,24 @@ export function FilePreviewPane() {
             onPointerDown={(e) => {
               e.preventDefault();
               e.currentTarget.setPointerCapture(e.pointerId);
+              // Measured from where the drag began, and in the pane's own units: a zoomed or scaled page
+              // reports pointer positions in screen pixels, so the distance moved is divided by the scale.
+              const aside = e.currentTarget.closest('aside');
+              const startWidth = aside?.offsetWidth ?? 0;
+              const scale = aside && startWidth > 0 ? aside.getBoundingClientRect().width / startWidth : 1;
+              drag.current = { startX: e.clientX, startWidth, scale: scale > 0 ? scale : 1 };
             }}
             onPointerMove={(e) => {
-              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-              // The pane's far edge sits 0.5rem (8px) in from the window's edge.
-              const next = window.innerWidth - 8 - e.clientX;
-              const max = Math.max(MIN_PANE_WIDTH, window.innerWidth - MIN_CHAT_WIDTH - 16);
+              const start = drag.current;
+              if (!start || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              const next = start.startWidth + (start.startX - e.clientX) / start.scale;
+              const max = Math.max(MIN_PANE_WIDTH, window.innerWidth / start.scale - MIN_CHAT_WIDTH - 16);
               filePreviewPaneStore.setWidth(Math.round(Math.min(max, Math.max(MIN_PANE_WIDTH, next))));
             }}
-            onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+            onPointerUp={(e) => {
+              drag.current = null;
+              e.currentTarget.releasePointerCapture(e.pointerId);
+            }}
             onDoubleClick={() => filePreviewPaneStore.setWidth(null)}
           >
             <div className="mx-auto h-full w-px bg-transparent transition-colors group-hover/resize:bg-text-tertiary group-active/resize:bg-text-secondary" />

@@ -50,12 +50,12 @@ function DownloadButton({file, className}: {file: SentFile; className?: string})
 }
 
 /** Wraps an item so its full path shows on hover, and the download button has something to sit on. */
-function Item({file, className, children}: {file: SentFile; className?: string; children: React.ReactNode}) {
+function Item({file, className, downloadClassName, children}: {file: SentFile; className?: string; downloadClassName?: string; children: React.ReactNode}) {
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
             <div className={cn("group/sent relative", className)}>
                 {children}
-                <DownloadButton file={file}/>
+                <DownloadButton file={file} className={downloadClassName}/>
             </div>
         </Tooltip>
     );
@@ -87,17 +87,22 @@ function FileCard({file}: {file: SentFile}) {
 /** A file sent alone: one line, the kind, the name and the size. */
 function FileChip({file}: {file: SentFile}) {
     return (
-        <Item file={file} className="inline-flex max-w-full">
+        <Item file={file} className="inline-flex max-w-full" downloadClassName="end-2.5 top-1/2 -translate-y-1/2">
             <button
                 type="button"
                 onClick={() => openChatFile(file.path)}
-                className="flex max-w-full items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/40 py-2.5 pe-11 ps-3 text-left transition-colors hover:bg-surface-hover"
+                className="flex max-w-full items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/40 py-2.5 pe-3 ps-3 text-left transition-colors hover:bg-surface-hover"
             >
                 <span className="shrink-0 rounded-full border border-border-default px-2 text-[0.6875rem] leading-4 text-text-secondary">
                     {file.badge || 'FILE'}
                 </span>
                 <span dir="auto" className="truncate text-[1rem] leading-6 text-text-primary">{file.name}</span>
-                {file.size !== undefined && <span className="shrink-0 text-[0.8125rem] text-text-tertiary">{formatSentSize(file.size)}</span>}
+                {/* The size sits at the chip's right end; on hover the download button takes its place. */}
+                {file.size !== undefined && (
+                    <span className="ms-auto shrink-0 ps-2 text-[0.8125rem] text-text-tertiary transition-opacity duration-200 group-hover/sent:opacity-0">
+                        {formatSentSize(file.size)}
+                    </span>
+                )}
             </button>
         </Item>
     );
