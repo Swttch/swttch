@@ -1,10 +1,13 @@
 import {describe, it, expect, vi} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {ReadRenderer} from '../ReadRenderer';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
 vi.mock('@/utils/openChatFile', () => ({openChatFile: vi.fn()}));
+vi.mock('@/components/ImageLightbox', () => ({
+    ImageLightbox: (p: {srcs: string[]; initialIndex: number}) => <div data-testid="lightbox">{p.initialIndex}/{p.srcs.length}</div>,
+}));
 
 const toolUse = Object.assign(new ToolUseBlockDto(), {
     type: ContentBlockType.ToolUse,
@@ -22,6 +25,14 @@ describe('ReadRenderer — a picture the CLI read is drawn under the row', () =>
         const result = resultWith([{type: 'image', source: {type: 'base64', media_type: 'image/png', data: 'QUJD'}}]);
         render(<ReadRenderer toolUse={toolUse} toolResult={result} />);
         expect(screen.getByRole('img', {name: 'picture.png'})).toHaveAttribute('src', 'data:image/png;base64,QUJD');
+    });
+
+    it('opens the viewer when the picture is clicked', () => {
+        const result = resultWith([{type: 'image', source: {type: 'base64', media_type: 'image/png', data: 'QUJD'}}]);
+        render(<ReadRenderer toolUse={toolUse} toolResult={result} />);
+        expect(screen.queryByTestId('lightbox')).toBeNull();
+        fireEvent.click(screen.getByRole('img', {name: 'picture.png'}));
+        expect(screen.getByTestId('lightbox')).toHaveTextContent('0/1');
     });
 
     it('shows the text of a text result in a box and draws no picture', () => {

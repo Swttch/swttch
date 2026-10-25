@@ -3,6 +3,8 @@ import {ToolUseBlockDto} from "@/types";
 import {cn} from "@/utils/cn";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultImages, toolResultIsError, toolResultText} from "./common";
 import {useTranslation} from "@/i18n";
+import {useState} from "react";
+import {ImageLightbox} from "@/components/ImageLightbox";
 
 class ReadToolUseDto extends ToolUseBlockDto {
     caller: { type: 'direct' };
@@ -13,6 +15,7 @@ class ReadToolUseDto extends ToolUseBlockDto {
 
 export function ReadRenderer(props: RendererProps) {
     const {t} = useTranslation('chatTools');
+    const [viewing, setViewing] = useState<number | null>(null);
     const toolUse = props.toolUse as unknown as ReadToolUseDto;
     // A picture the CLI read comes back as an image block; Claude Desktop draws it
     // under the row at the width of the message, so the reader sees what Claude saw.
@@ -41,13 +44,12 @@ export function ReadRenderer(props: RendererProps) {
                 </Container>
             )}
             {images.map((src, index) => (
-                <img
-                    key={index}
-                    src={src}
-                    alt={fileName}
-                    className="mt-1.5 mb-1 block max-w-full rounded-md"
-                />
+                // Clicking the picture opens the viewer, as it does in Claude Desktop.
+                <button key={index} type="button" onClick={() => setViewing(index)} className="mt-1.5 mb-1 block max-w-full cursor-zoom-in">
+                    <img src={src} alt={fileName} className="block max-w-full rounded-md" />
+                </button>
             ))}
+            {viewing !== null && <ImageLightbox srcs={images} initialIndex={viewing} onClose={() => setViewing(null)} />}
         </ToolWrapper>
     )
 }
