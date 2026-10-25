@@ -798,7 +798,11 @@
     "unplayable": "Este vídeo no se puede reproducir aquí. Puede que el navegador integrado del IDE no admita su codificación. Ábrelo con la aplicación del sistema.",
     "openPublished": "Abrir la página publicada",
     "expand": "Ampliar",
-    "collapse": "Reducir"
+    "collapse": "Reducir",
+    "download": "Exportar",
+    "copySource": "Copiar el código de la página",
+    "reload": "Recargar",
+    "copied": "Código de la página copiado"
   },
   "fileLink": {
     "copyDone": "Ruta copiada",

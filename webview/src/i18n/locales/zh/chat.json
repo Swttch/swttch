@@ -798,7 +798,11 @@
     "unplayable": "此视频无法在这里播放。IDE 内置浏览器可能不支持它的编码。请改用系统应用打开。",
     "openPublished": "打开已发布的页面",
     "expand": "展开",
-    "collapse": "收起"
+    "collapse": "收起",
+    "download": "导出",
+    "copySource": "复制页面源码",
+    "reload": "刷新",
+    "copied": "已复制页面源码"
   },
   "fileLink": {
     "copyDone": "已复制路径",

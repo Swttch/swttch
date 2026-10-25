@@ -802,7 +802,11 @@
     "unplayable": "This video cannot be played here. The IDE’s built-in browser may not support its encoding. Open it with the system app instead.",
     "openPublished": "Open the published page",
     "expand": "Expand",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "download": "Export",
+    "copySource": "Copy page source",
+    "reload": "Reload",
+    "copied": "Page source copied"
   },
   "fileLink": {
     "copyDone": "Path copied",

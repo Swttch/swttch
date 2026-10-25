@@ -798,7 +798,11 @@
     "unplayable": "Dieses Video kann hier nicht abgespielt werden. Der integrierte Browser der IDE unterstützt die Kodierung möglicherweise nicht. Öffne es mit der System-App.",
     "openPublished": "Veröffentlichte Seite öffnen",
     "expand": "Vergrößern",
-    "collapse": "Verkleinern"
+    "collapse": "Verkleinern",
+    "download": "Exportieren",
+    "copySource": "Seitenquelltext kopieren",
+    "reload": "Neu laden",
+    "copied": "Seitenquelltext kopiert"
   },
   "fileLink": {
     "copyDone": "Pfad kopiert",

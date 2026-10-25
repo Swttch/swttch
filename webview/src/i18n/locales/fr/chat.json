@@ -798,7 +798,11 @@
     "unplayable": "Cette vidéo ne peut pas être lue ici. Le navigateur intégré à l’IDE ne prend peut-être pas en charge son encodage. Ouvrez-la avec l’application du système.",
     "openPublished": "Ouvrir la page publiée",
     "expand": "Agrandir",
-    "collapse": "Réduire"
+    "collapse": "Réduire",
+    "download": "Exporter",
+    "copySource": "Copier le source de la page",
+    "reload": "Actualiser",
+    "copied": "Source de la page copié"
   },
   "fileLink": {
     "copyDone": "Chemin copié",

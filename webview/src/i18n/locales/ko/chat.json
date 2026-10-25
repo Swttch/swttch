@@ -798,7 +798,11 @@
     "unplayable": "이 영상은 여기서 재생할 수 없다. IDE에 내장된 브라우저가 이 영상의 인코딩을 지원하지 않을 수 있다. 시스템 앱으로 열어 보세요.",
     "openPublished": "게시된 페이지 열기",
     "expand": "확대",
-    "collapse": "축소"
+    "collapse": "축소",
+    "download": "내보내기",
+    "copySource": "페이지 소스 복사",
+    "reload": "새로고침",
+    "copied": "페이지 소스를 복사했습니다"
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

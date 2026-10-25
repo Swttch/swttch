@@ -6,9 +6,10 @@ import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 
 const openFile = vi.fn(() => Promise.resolve());
 const openFileWithSystemApp = vi.fn(() => Promise.resolve());
+const openUrl = vi.fn(() => Promise.resolve());
 const request = vi.fn();
 
-vi.mock('@/adapters', () => ({ getAdapter: () => ({ openFile, openFileWithSystemApp }) }));
+vi.mock('@/adapters', () => ({ getAdapter: () => ({ openFile, openFileWithSystemApp, openUrl }) }));
 vi.mock('@/api/bridge/Bridge', () => ({ getBridge: () => ({ request }) }));
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn() } }));
 vi.mock('@/i18n', () => ({
@@ -21,10 +22,14 @@ vi.mock('@/i18n', () => ({
 /** The fixtures are ASCII, so btoa spells them without Node's Buffer. */
 const b64 = (text: string) => btoa(text);
 
+/** What the pane offers for the file lives in the menu under its title. */
+const openMenu = () => fireEvent.click(screen.getByRole('button', { name: /./, expanded: false }));
+
 beforeEach(() => {
   request.mockReset();
   openFile.mockClear();
   openFileWithSystemApp.mockClear();
+  openUrl.mockClear();
   filePreviewPaneStore.close();
   URL.createObjectURL = vi.fn(() => 'blob:preview');
   URL.revokeObjectURL = vi.fn();
@@ -118,8 +123,10 @@ describe('FilePreviewPane', () => {
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/abc'));
 
-    const link = await screen.findByRole('link', { name: 'filePreview.openPublished' });
-    expect(link).toHaveAttribute('href', 'https://claude.ai/artifact/abc');
+    await screen.findByTitle('page.html');
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'filePreview.openPublished' }));
+    expect(openUrl).toHaveBeenCalledWith('https://claude.ai/artifact/abc');
   });
 
   it('expands over the chat and folds back, and closing forgets the expansion', async () => {
@@ -160,7 +167,8 @@ describe('FilePreviewPane', () => {
 
     expect(await screen.findByText('filePreview.unplayable')).toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
-    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openWithSystemApp'}));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {name: 'filePreview.openWithSystemApp'}));
     expect(openFileWithSystemApp).toHaveBeenCalledWith('/p/clip.mp4');
   });
 
@@ -190,9 +198,11 @@ describe('FilePreviewPane', () => {
     act(() => filePreviewPaneStore.open('/p/gone.pdf'));
     expect(await screen.findByText('filePreview.unreadable')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openInEditor'}));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {name: 'filePreview.openInEditor'}));
     expect(openFile).toHaveBeenCalledWith('/p/gone.pdf');
-    fireEvent.click(screen.getByRole('button', {name: 'filePreview.openWithSystemApp'}));
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', {name: 'filePreview.openWithSystemApp'}));
     expect(openFileWithSystemApp).toHaveBeenCalledWith('/p/gone.pdf');
   });
 

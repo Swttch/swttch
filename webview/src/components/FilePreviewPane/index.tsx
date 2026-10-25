@@ -1,15 +1,14 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import toast from 'react-hot-toast';
-import { getAdapter } from '@/adapters';
-import { i18n, useTranslation } from '@/i18n';
+import { useTranslation } from '@/i18n';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { formatFileSize } from '@/pages/ChatPage/ChatInput/AttachmentPreview/formatFileSize';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
 import { htmlTitleOf } from '@/utils/htmlTitle';
 import { Tooltip } from '@/components/Tooltip';
+import { PaneMenu } from './PaneMenu';
 import { PANE_COLUMN_WIDTH, useIsWide } from './usePaneColumn';
 import {
-  ArrowsPointingInIcon, ArrowsPointingOutIcon, ArrowTopRightOnSquareIcon, CodeBracketIcon, GlobeAltIcon, XMarkIcon,
+  ArrowsPointingInIcon, ArrowsPointingOutIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { decodeText, loadFileContent, type FileContentKind } from './loadFileContent';
 
@@ -18,11 +17,6 @@ type PaneState =
   | { status: 'ready'; kind: Exclude<FileContentKind, 'html'>; url: string }
   | { status: 'ready'; kind: 'html'; html: string }
   | { status: 'failed'; reason: 'unsupported' | 'tooLarge' | 'unreadable' | 'unplayable'; size?: number; maxBytes?: number };
-
-function failed(err: unknown, path: string) {
-  console.error('[FilePreviewPane] Failed to open file:', err);
-  toast.error(i18n.t('chat:fileOpenFailed', { path }));
-}
 
 /**
  * A page, picture, PDF or video the chat named, shown in a pane on the end side
@@ -48,6 +42,7 @@ export function FilePreviewPane() {
   const column = wide && !expanded;
   const [state, setState] = useState<PaneState>({ status: 'loading' });
   const [frameLoaded, setFrameLoaded] = useState(false);
+  const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
     if (path === undefined) return;
@@ -74,7 +69,7 @@ export function FilePreviewPane() {
       cancelled = true;
       if (objectUrl !== undefined) URL.revokeObjectURL(objectUrl);
     };
-  }, [path]);
+  }, [path, reloads]);
 
   useEffect(() => {
     if (path === undefined) return;
@@ -97,31 +92,22 @@ export function FilePreviewPane() {
     <aside
       role="complementary"
       aria-label={t('filePreview.label', { name })}
-      className={`fixed inset-y-0 end-0 z-40 flex flex-col border-s border-border-default bg-surface-raised ${column || expanded ? '' : 'shadow-xl'}`}
+      // A rounded card set in from the window's edge, as Claude Desktop's is, rather than a slab against it.
+      className="fixed bottom-2 end-2 top-2 z-40 flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface-raised shadow-lg"
       // Beside the chat it takes its own column; expanded, or in a window too narrow for two columns, it covers the chat.
-      style={{ width: column ? PANE_COLUMN_WIDTH : '100%', maxWidth: column || expanded ? undefined : 720 }}
+      style={{ width: column ? PANE_COLUMN_WIDTH : 'calc(100% - 1rem)', maxWidth: column || expanded ? undefined : 720 }}
     >
-      <header className="flex shrink-0 items-center gap-0.5 border-b border-border-default px-3 py-2">
-        <span dir="ltr" className="min-w-0 flex-1 truncate text-[0.9231rem] font-medium text-text-primary">{heading}</span>
-        {publishedUrl && (
-          <Tooltip content={t('filePreview.openPublished')} placement="bottom">
-            <a href={publishedUrl} target="_blank" rel="noopener noreferrer" aria-label={t('filePreview.openPublished')} className={iconButton}>
-              <GlobeAltIcon className="h-4 w-4" />
-            </a>
-          </Tooltip>
-        )}
-        <Tooltip content={t('filePreview.openInEditor')} placement="bottom">
-          <button type="button" aria-label={t('filePreview.openInEditor')} className={iconButton}
-            onClick={() => getAdapter().openFile(path).catch((err) => failed(err, path))}>
-            <CodeBracketIcon className="h-4 w-4" />
-          </button>
-        </Tooltip>
-        <Tooltip content={t('filePreview.openWithSystemApp')} placement="bottom">
-          <button type="button" aria-label={t('filePreview.openWithSystemApp')} className={iconButton}
-            onClick={() => getAdapter().openFileWithSystemApp(path).catch((err) => failed(err, path))}>
-            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-          </button>
-        </Tooltip>
+      <header className="flex shrink-0 items-center gap-0.5 border-b border-border-subtle px-2.5 py-2">
+        <div className="min-w-0 flex-1">
+          <PaneMenu
+            heading={heading}
+            path={path}
+            name={name}
+            source={state.status === 'ready' && state.kind === 'html' ? state.html : undefined}
+            publishedUrl={publishedUrl}
+            onReload={() => setReloads((count) => count + 1)}
+          />
+        </div>
         <Tooltip content={expanded ? t('filePreview.collapse') : t('filePreview.expand')} placement="bottom">
           <button type="button" aria-label={expanded ? t('filePreview.collapse') : t('filePreview.expand')} className={iconButton}
             onClick={() => filePreviewPaneStore.toggleExpanded()}>

@@ -798,7 +798,11 @@
     "unplayable": "此影片無法在這裡播放。IDE 內建瀏覽器可能不支援它的編碼。請改用系統應用程式開啟。",
     "openPublished": "開啟已發佈的頁面",
     "expand": "展開",
-    "collapse": "收合"
+    "collapse": "收合",
+    "download": "匯出",
+    "copySource": "複製頁面原始碼",
+    "reload": "重新整理",
+    "copied": "已複製頁面原始碼"
   },
   "fileLink": {
     "copyDone": "已複製路徑",

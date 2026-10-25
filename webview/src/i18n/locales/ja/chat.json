@@ -798,7 +798,11 @@
     "unplayable": "この動画はここでは再生できません。IDE 内蔵のブラウザーがエンコード形式に対応していない可能性があります。システムのアプリで開いてください。",
     "openPublished": "公開されたページを開く",
     "expand": "拡大",
-    "collapse": "縮小"
+    "collapse": "縮小",
+    "download": "エクスポート",
+    "copySource": "ページのソースをコピー",
+    "reload": "再読み込み",
+    "copied": "ページのソースをコピーしました"
   },
   "fileLink": {
     "copyDone": "パスをコピーしました",

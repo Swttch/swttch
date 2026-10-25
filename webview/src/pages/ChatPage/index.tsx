@@ -383,7 +383,7 @@ function ChatPageContent() {
         transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
     <div
       className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0"
-      style={paneColumn ? { width: `calc(100% - ${PANE_COLUMN_WIDTH})`, transform: 'translateZ(0)' } : undefined}
+      style={paneColumn ? { width: `calc(100% - ${PANE_COLUMN_WIDTH} - 1rem)`, transform: 'translateZ(0)' } : undefined}
     >
       {/*
         Header - Minimal
