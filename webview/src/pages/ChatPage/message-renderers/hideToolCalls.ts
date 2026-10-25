@@ -21,6 +21,8 @@ const ALWAYS_VISIBLE_TOOLS = new Set([
   'EnterPlanMode',
   'ExitPlanMode',
   'SendUserMessage',
+  // What it sends is the point of the turn: a picture or file made for the reader.
+  'SendUserFile',
   'Brief',
 ]);
 
