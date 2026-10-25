@@ -74,6 +74,10 @@ export function collectSessionOutputs(messages: readonly LoadedMessageDto[]): Se
                 continue;
             }
 
+            // A picture Read opened is a file the session was given, not something it made: Desktop's list
+            // has screenshots from tools and sent files, and none for a Read.
+            if (block.name === 'Read') continue;
+
             imagesOf(result.block).forEach((src, index) => {
                 outputs.push({kind: 'image', key: `${block.id}:${index}`, src, tool: block.name, time});
             });

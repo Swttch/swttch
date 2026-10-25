@@ -34,6 +34,14 @@ describe('collectSessionOutputs', () => {
         expect(only).toMatchObject({kind: 'image', tool: 'mcp__browser__screenshot', src: 'data:image/png;base64,QUJD'});
     });
 
+    it('does not list a picture a Read opened', () => {
+        const messages = [
+            assistant(use('t7', 'Read', {file_path: '/a/p.png'})),
+            user([result('t7', [{type: 'image', source: {type: 'base64', media_type: 'image/png', data: 'QUJD'}}])]),
+        ];
+        expect(collectSessionOutputs(messages)).toEqual([]);
+    });
+
     it('lists a published Artifact and puts it first', () => {
         const messages = [
             assistant(use('t3', 'SendUserFile', {files: ['/a/x.pdf']})),
