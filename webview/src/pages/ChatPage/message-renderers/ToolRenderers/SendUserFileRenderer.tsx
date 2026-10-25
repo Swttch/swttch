@@ -50,11 +50,12 @@ function Picture({file, large, onOpen}: {file: SentFile; large: boolean; onOpen:
         return <div className={cn("rounded-lg bg-surface-hover/40", large ? "h-40 w-full" : "h-[120px] w-[120px]")}/>;
     }
     return (
-        <button type="button" onClick={onOpen} className="block max-w-full overflow-hidden rounded-lg border border-border-default">
+        <button type="button" onClick={onOpen} className="block max-w-full overflow-hidden rounded-lg border border-border-default bg-surface-hover/40">
             <img
                 src={src}
                 alt={file.name}
-                className={large ? "block max-w-full" : "block h-[120px] w-[120px] object-cover"}
+                // Desktop letterboxes a thumbnail inside its card instead of cropping it.
+                className={large ? "block max-w-full" : "block h-[120px] w-[120px] object-contain"}
             />
         </button>
     );

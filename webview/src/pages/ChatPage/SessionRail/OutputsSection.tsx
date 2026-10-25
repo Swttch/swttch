@@ -1,5 +1,5 @@
 import {useMemo, useState} from "react";
-import {DocumentIcon, GlobeAltIcon, PhotoIcon, TableCellsIcon} from "@heroicons/react/24/outline";
+import {DocumentIcon, GlobeAltIcon, PhotoIcon, PresentationChartBarIcon, TableCellsIcon} from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import {getAdapter} from "@/adapters";
 import {ImageLightbox} from "@/components/ImageLightbox";
@@ -22,7 +22,8 @@ function timeOf(iso: string | undefined): string {
 function iconOf(output: SessionOutput) {
     if (output.kind === 'artifact') return GlobeAltIcon;
     if (output.kind === 'image' || output.isImage) return PhotoIcon;
-    return /^(CSV|TSV|XLSX)$/.test(output.badge) ? TableCellsIcon : DocumentIcon;
+    if (/^(PPTX|PPT|KEY)$/.test(output.badge)) return PresentationChartBarIcon;
+    return /^(CSV|TSV|XLSX|XLS)$/.test(output.badge) ? TableCellsIcon : DocumentIcon;
 }
 
 /** A picture row opens the viewer; anything else opens where the transcript would open it. */
