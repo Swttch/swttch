@@ -189,6 +189,7 @@ import {
 } from './prompts';
 import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
+import { searchSessionHandler } from './searchSession';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
@@ -761,6 +762,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.SEARCH_SESSION:
+      await searchSessionHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.ASSET_ACTIVITY:
       assetActivityHandler(connectionId, message, connections, bridge);

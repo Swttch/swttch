@@ -20,6 +20,16 @@ import { useSendActions } from './useSendActions';
 import { useSectionFold } from './useSectionFold';
 import { CollapsedReplyNotice } from './CollapsedReplyNotice';
 import { useTranslation } from '@/i18n';
+import { ChatSearchBar } from './chatSearch/ChatSearchBar';
+import { useChatSearch, type ChatSearchSource } from './chatSearch/useChatSearch';
+
+/** The find bar's source when the page offers none: it counts what is loaded. */
+const LOADED_ONLY: ChatSearchSource = {
+  sessionKey: null,
+  searchSession: () => Promise.reject(new Error('No backend search')),
+  isEntryLoaded: () => true,
+  loadThrough: () => Promise.resolve(),
+};
 
 interface Props {
   isStreaming: boolean;
@@ -46,11 +56,16 @@ interface Props {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  /**
+   * How the find bar reaches the part of the session that is not on the screen.
+   * Without it the bar searches only what is loaded.
+   */
+  findInChat?: ChatSearchSource;
 }
 
 export function ChatMessageArea(props: Props) {
   const { t } = useTranslation('chat');
-  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, sections, carriedSend, hasMore, isLoadingMore, onLoadMore } = props;
+  const { isStreaming, disconnectCountdown = null, apiRetry = null, mergedMessages, sections, carriedSend, hasMore, isLoadingMore, onLoadMore, findInChat = LOADED_ONLY } = props;
   const { workingDirectory } = useSessionContext();
   const { retry: onRetry } = useChatStreamContext();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,6 +80,16 @@ export function ChatMessageArea(props: Props) {
   const sendActions = useSendActions(mergedMessages);
 
   const isEmpty = mergedMessages.length === 0;
+
+  // Find in chat (issue #531). Also above the early returns, and told whether
+  // there is a transcript yet so Cmd/Ctrl+F is left alone on the other screens.
+  const search = useChatSearch({
+    rootRef: containerRef,
+    enabled: Boolean(workingDirectory) && !isEmpty,
+    contentVersion: mergedMessages,
+    fold,
+    ...findInChat,
+  });
 
   // No working directory: show ProjectSelector or loading
   if (!workingDirectory) {
@@ -87,6 +112,7 @@ export function ChatMessageArea(props: Props) {
   // Render messages with widgets
   return (
     <div ref={containerRef} className="flex-1 text-xs">
+      <ChatSearchBar search={search} />
       {(isLoadingMore || hasMore) && (
         <div className="flex justify-center py-4">
           {isLoadingMore ? (

@@ -622,7 +622,14 @@
     "loadingWorkingDirectory": "Загрузка рабочего каталога...",
     "loadingEarlierMessages": "Загрузка более ранних сообщений…",
     "loadOlderMessages": "Загрузить более старые сообщения",
-    "jumpToMessage": "Перейти к этому сообщению"
+    "jumpToMessage": "Перейти к этому сообщению",
+    "searchPlaceholder": "Поиск в чате",
+    "searchCount": "{{current}} из {{total}}",
+    "searchNoResults": "Ничего не найдено",
+    "searchLoadingHistory": "Загрузка более старых сообщений для поиска",
+    "searchPrevious": "Предыдущее совпадение",
+    "searchNext": "Следующее совпадение",
+    "searchClose": "Закрыть"
   },
   "sendActions": {
     "collapseReply": "Свернуть ответ",

@@ -620,7 +620,14 @@
     "loadingWorkingDirectory": "Loading working directory...",
     "loadingEarlierMessages": "Loading earlier messages…",
     "loadOlderMessages": "Load older messages",
-    "jumpToMessage": "Jump to this message"
+    "jumpToMessage": "Jump to this message",
+    "searchPlaceholder": "Find in chat",
+    "searchCount": "{{current}} of {{total}}",
+    "searchNoResults": "No results",
+    "searchLoadingHistory": "Loading earlier messages to search",
+    "searchPrevious": "Previous match",
+    "searchNext": "Next match",
+    "searchClose": "Close"
   },
   "sendActions": {
     "collapseReply": "Collapse reply",

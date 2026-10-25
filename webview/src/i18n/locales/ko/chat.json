@@ -616,7 +616,14 @@
     "loadingWorkingDirectory": "작업 디렉터리 불러오는 중...",
     "loadingEarlierMessages": "이전 메시지 불러오는 중…",
     "loadOlderMessages": "이전 메시지 더 보기",
-    "jumpToMessage": "이 메시지 위치로 이동"
+    "jumpToMessage": "이 메시지 위치로 이동",
+    "searchPlaceholder": "채팅에서 찾기",
+    "searchCount": "{{current}} / {{total}}",
+    "searchNoResults": "결과 없음",
+    "searchLoadingHistory": "검색을 위해 이전 메시지를 불러오는 중",
+    "searchPrevious": "이전 결과",
+    "searchNext": "다음 결과",
+    "searchClose": "닫기"
   },
   "sendActions": {
     "collapseReply": "응답 접기",

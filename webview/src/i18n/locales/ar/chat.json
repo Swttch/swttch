@@ -628,7 +628,14 @@
     "loadingWorkingDirectory": "جارٍ تحميل دليل العمل...",
     "loadingEarlierMessages": "جارٍ تحميل الرسائل السابقة…",
     "loadOlderMessages": "تحميل الرسائل الأقدم",
-    "jumpToMessage": "الانتقال إلى هذه الرسالة"
+    "jumpToMessage": "الانتقال إلى هذه الرسالة",
+    "searchPlaceholder": "بحث في الدردشة",
+    "searchCount": "{{current}} من {{total}}",
+    "searchNoResults": "لا توجد نتائج",
+    "searchLoadingHistory": "جارٍ تحميل الرسائل الأقدم للبحث",
+    "searchPrevious": "النتيجة السابقة",
+    "searchNext": "النتيجة التالية",
+    "searchClose": "إغلاق"
   },
   "sendActions": {
     "collapseReply": "طيّ الرد",

@@ -5,6 +5,7 @@ import { ListeningNotice } from './ListeningNotice';
 import { SessionHeader } from './SessionHeader';
 import { useDesktopTabActions } from './useDesktopTabActions';
 import { ChatMessageArea } from './ChatMessageArea';
+import type { ChatSearchSource } from './chatSearch/useChatSearch';
 import { PermissionBanner } from './PermissionBanner';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
@@ -183,6 +184,7 @@ function ChatPageContent() {
     rememberScrollPosition,
     prevScrollTopRef,
     lastScrollHeightRef,
+    autoFollowRef,
   } = useChatAutoScroll(currentSessionId, messages, isStreaming);
 
   // Page tracking refs
@@ -271,9 +273,23 @@ function ChatPageContent() {
     pendingUserAnswer: pendingUserAnswer !== null,
   });
 
-  const loadMore = useCallback(() => {
+  // Read at the moment of a request rather than closed over, because a request
+  // can be made after waiting for another one to finish, and the cursor it
+  // would then hold is the one from before that page arrived.
+  const oldestLoadedUuidRef = useRef<string | null>(null);
+  oldestLoadedUuidRef.current = oldestLoadedUuid;
+
+  /**
+   * Ask for the page before the oldest one loaded, or null when there is nothing
+   * to ask for (nothing older, or a request already in flight).
+   *
+   * With `includeUuid` the page runs back to that entry and no further, which is
+   * how the find bar brings a match that is not loaded into the transcript.
+   */
+  const requestOlderPage = useCallback((includeUuid?: string): Promise<void> | null => {
     const el = scrollContainerRef.current;
-    if (!el || !hasMoreOlderRef.current || !oldestLoadedUuid || isLoadingMoreRef.current || !currentSessionId) return;
+    const cursor = oldestLoadedUuidRef.current;
+    if (!el || !hasMoreOlderRef.current || !cursor || isLoadingMoreRef.current || !currentSessionId) return null;
 
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
@@ -286,15 +302,58 @@ function ChatPageContent() {
     // an empty page, an all-duplicate page, or an error — so paging can neither get
     // permanently stuck nor fire a duplicate request with the same cursor while one
     // is still in flight.
-    api.sessions.loadOlder(currentSessionId, oldestLoadedUuid)
-      .catch(err => {
-        console.error('[ChatPage] Failed to load older messages:', err);
-      })
+    return api.sessions.loadOlder(currentSessionId, cursor, undefined, undefined, includeUuid)
       .finally(() => {
         isLoadingMoreRef.current = false;
         setIsLoadingMore(false);
       });
-  }, [currentSessionId, oldestLoadedUuid, api.sessions]);
+  }, [currentSessionId, api.sessions]);
+
+  const loadMore = useCallback(() => {
+    requestOlderPage()?.catch(err => {
+      console.error('[ChatPage] Failed to load older messages:', err);
+    });
+  }, [requestOlderPage]);
+
+  // The find bar moves to a match that is not loaded: bring the transcript back
+  // to its entry. A scroll prefetch may already be running, so it is waited out
+  // first rather than answered with a second request for the same page.
+  const loadThrough = useCallback(async (uuid: string): Promise<void> => {
+    for (let waited = 0; isLoadingMoreRef.current && waited < 100; waited++) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    await requestOlderPage(uuid);
+  }, [requestOlderPage]);
+
+  // Which entries the transcript holds, asked about from outside the render.
+  // The set is rebuilt only when the messages are not the ones it was built from.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const loadedUuidsRef = useRef<{ source: unknown; uuids: Set<string> } | null>(null);
+  const isEntryLoaded = useCallback((uuid: string): boolean => {
+    const source = messagesRef.current;
+    if (loadedUuidsRef.current?.source !== source) {
+      const uuids = new Set<string>();
+      for (const message of source) if (typeof message.uuid === 'string') uuids.add(message.uuid);
+      loadedUuidsRef.current = { source, uuids };
+    }
+    return loadedUuidsRef.current.uuids.has(uuid);
+  }, []);
+
+  const findInChat = useMemo<ChatSearchSource>(() => ({
+    sessionKey: currentSessionId,
+    searchSession: (query: string) => {
+      if (!currentSessionId) return Promise.reject(new Error('No session to search'));
+      return api.sessions.search(currentSessionId, query);
+    },
+    isEntryLoaded,
+    loadThrough,
+    // The find bar moving the view to a match is the reader leaving the bottom.
+    // The frame loop cannot be left to notice it: see `beforeJump`.
+    beforeJump: () => {
+      autoFollowRef.current = false;
+    },
+  }), [currentSessionId, api.sessions, isEntryLoaded, loadThrough, autoFollowRef]);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -379,6 +438,7 @@ function ChatPageContent() {
           hasMore={hasMoreOlder}
           isLoadingMore={isLoadingMore}
           onLoadMore={loadMore}
+          findInChat={findInChat}
         />
 
         <div id="scroll-bottom-marker" />

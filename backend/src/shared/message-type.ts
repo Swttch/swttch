@@ -642,6 +642,10 @@ export enum MessageType {
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */
   GET_SESSION_SENDS = 'GET_SESSION_SENDS',
 
+  // -- Session search --
+  /** Search one session's whole history for a piece of text, as {workingDir, sessionId, query}. The reply lists, newest entry first, which entries contain the text and how many times each does — {uuid, count} rows and a total, never the entries. The find bar uses it so that looking for something does not mean loading the whole transcript: the count is known at once, and the transcript is only loaded back as far as the match the person moves to (LOAD_OLDER_MESSAGES with includeUuid). inbound webview→backend */
+  SEARCH_SESSION = 'SEARCH_SESSION',
+
   // -- Assets telemetry --
   /** The webview reports something that happened on the Assets surfaces, as {kind, ...}. Purely a measurement signal: everything it describes (a gate shown, an invitation followed, the screen opened) happens in the webview and reaches the backend no other way. The kind — and, for a screen open, the entry point — become part of the EVENT NAME rather than properties, because Rybbit counts unique users per event name but not per custom property, and a conversion rate needs people. Never carries text the user typed. inbound webview→backend */
   ASSET_ACTIVITY = 'ASSET_ACTIVITY',

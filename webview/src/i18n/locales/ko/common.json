@@ -361,6 +361,7 @@
       "openSideQuestion": "곁가지 질문하기 (/btw)",
       "refreshSessionList": "세션 목록이 열려 있을 때 새로고침",
       "zoomIn": "확대",
+      "findInChat": "대화 내용에서 찾기",
       "zoomOut": "축소",
       "zoomReset": "확대 비율 되돌리기",
       "openClaudeCode": "IDE에서 Claude Code 열기",

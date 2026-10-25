@@ -616,7 +616,14 @@
     "loadingWorkingDirectory": "Arbeitsverzeichnis wird geladen...",
     "loadingEarlierMessages": "Frühere Nachrichten werden geladen…",
     "loadOlderMessages": "Ältere Nachrichten laden",
-    "jumpToMessage": "Zu dieser Nachricht springen"
+    "jumpToMessage": "Zu dieser Nachricht springen",
+    "searchPlaceholder": "Im Chat suchen",
+    "searchCount": "{{current}} von {{total}}",
+    "searchNoResults": "Keine Treffer",
+    "searchLoadingHistory": "Ältere Nachrichten werden zum Suchen geladen",
+    "searchPrevious": "Vorheriger Treffer",
+    "searchNext": "Nächster Treffer",
+    "searchClose": "Schließen"
   },
   "sendActions": {
     "collapseReply": "Antwort einklappen",
