@@ -129,6 +129,17 @@ describe('SendUserFileRenderer', () => {
         expect(screen.getByText('M4V')).toBeInTheDocument();
     });
 
+    it('draws a video too big to play as a chip when it is sent alone, and as a card among others', async () => {
+        request.mockResolvedValue({kind: 'none'});
+        const alone = draw([{path: '/a/big40mb.mp4', size: 41322937}]);
+        await waitFor(() => expect(screen.getByText('41.3MB')).toBeInTheDocument());
+        expect(screen.getByText('big40mb.mp4').closest('button')?.className).not.toContain('h-full');
+        alone.unmount();
+
+        draw([{path: '/a/big40mb.mp4', size: 41322937}, {path: '/a/t.csv', size: 5}]);
+        await waitFor(() => expect(screen.getByText('big40mb.mp4').closest('button')?.className).toContain('h-full'));
+    });
+
     it('plays sound in a player with the file name above it', async () => {
         request.mockResolvedValue({kind: 'audio', mimeType: 'audio/mpeg', base64: 'QUJD'});
         const {container} = draw([{path: '/a/sample.mp3', size: 3}]);

@@ -128,10 +128,10 @@ function Picture({file, alone, onOpen}: {file: SentFile; alone: boolean; onOpen:
     );
 }
 
-function Video({file}: {file: SentFile}) {
+function Video({file, alone}: {file: SentFile; alone: boolean}) {
     const src = useSentMedia(file.path);
     const [broken, setBroken] = useState(false);
-    if (src === null || broken) return <FileCard file={file}/>;
+    if (src === null || broken) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
     if (src === undefined) return <div className="h-[160px] w-[320px] max-w-full rounded-lg bg-surface-hover/40"/>;
     return (
         <video
@@ -145,9 +145,9 @@ function Video({file}: {file: SentFile}) {
 }
 
 /** A sound in a player with its name above it, as Claude Desktop draws it. */
-function Audio({file}: {file: SentFile}) {
+function Audio({file, alone}: {file: SentFile; alone: boolean}) {
     const src = useSentMedia(file.path);
-    if (src === null) return <FileCard file={file}/>;
+    if (src === null) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
     return (
         <div className="flex flex-col gap-1">
             <span dir="auto" className="text-[0.6875rem] text-text-tertiary">{file.name}</span>
@@ -187,7 +187,7 @@ export function SendUserFileRenderer(props: RendererProps) {
     return (
         <ToolWrapper message={props.message}>
             <div className="flex flex-col items-start gap-2">
-                {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file}/> : <Audio key={file.path} file={file}/>))}
+                {players.map((file) => (file.kind === 'video' ? <Video key={file.path} file={file} alone={alone}/> : <Audio key={file.path} file={file} alone={alone}/>))}
                 {rest.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {rest.map((file) => {
