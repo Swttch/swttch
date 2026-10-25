@@ -90,17 +90,17 @@ export function ChatSearchBar({ search }: Props) {
             status
           )}
         </span>
-        <Tooltip content={t('chatMessageArea.searchPrevious')} placement="bottom">
+        <Tooltip content={t('chatMessageArea.searchPrevious')} placement="bottom" inBody>
           <button type="button" className={ICON_BUTTON} disabled={search.total === 0} onClick={search.previous} aria-label={t('chatMessageArea.searchPrevious')}>
             <ChevronUpIcon className="w-4 h-4" />
           </button>
         </Tooltip>
-        <Tooltip content={t('chatMessageArea.searchNext')} placement="bottom">
+        <Tooltip content={t('chatMessageArea.searchNext')} placement="bottom" inBody>
           <button type="button" className={ICON_BUTTON} disabled={search.total === 0} onClick={search.next} aria-label={t('chatMessageArea.searchNext')}>
             <ChevronDownIcon className="w-4 h-4" />
           </button>
         </Tooltip>
-        <Tooltip content={t('chatMessageArea.searchClose')} placement="bottom">
+        <Tooltip content={t('chatMessageArea.searchClose')} placement="bottom" inBody>
           <button type="button" className={ICON_BUTTON} onClick={search.close} aria-label={t('chatMessageArea.searchClose')}>
             <XMarkIcon className="w-4 h-4" />
           </button>

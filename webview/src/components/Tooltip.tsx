@@ -34,6 +34,12 @@ interface Props {
      */
     selectable?: boolean;
     /**
+     * Render the tooltip into <body> instead of next to the button. For a button
+     * inside a positioned, shrink-to-fit box (a floating bar), where the tooltip
+     * would otherwise be laid out as part of that box and land off to one side.
+     */
+    inBody?: boolean;
+    /**
      * Called when the tooltip actually becomes visible.
      *
      * Needed because mounting is NOT showing here: Tippy's headless `render`
@@ -46,7 +52,7 @@ interface Props {
 }
 
 export function Tooltip(props: Props) {
-    const {content, children, placement = "top", selectable = false, onShow} = props;
+    const {content, children, placement = "top", selectable = false, inBody = false, onShow} = props;
     const interactive = props.interactive || selectable;
 
     const instance = useRef<Instance | null>(null);
@@ -85,7 +91,7 @@ export function Tooltip(props: Props) {
                 }
                 return undefined;
             }}
-            appendTo={interactive ? () => document.body : undefined}
+            appendTo={interactive || inBody ? () => document.body : undefined}
             render={(attrs) => (
                 <div
                     // Never wider than the window. Tippy flips to the opposite

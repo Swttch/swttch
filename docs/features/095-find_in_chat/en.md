@@ -64,7 +64,7 @@ Matches are numbered in the order they appear in the conversation, so the number
 Two things follow from this:
 
 - A match far back costs the loading of everything between it and where you are, because the conversation is one unbroken run and cannot have a gap in the middle. Going back match by match loads it in small steps instead of all at once.
-- The count for the part that is not loaded yet comes from the session file and not from the screen. Once you reach it, the number is the screen's own, and it can move by a match or two where the file holds text the screen does not show, such as the inside of a tool's request.
+- The count for the part that is not loaded yet comes from the session file and not from the screen. Once you reach it, the number is the screen's own, and it can be lower than the first number where the file holds text the screen does not show, such as the inside of a tool's request or a long tool output. In two sessions of thousands of lines that are full of tool cards the difference was 17% and 6% for a common word (`922` became `766`, and `1543` became `1453`).
 
 `No results` is shown once the whole session file has been searched. If the search of the file fails, the bar still works on what is loaded.
 
