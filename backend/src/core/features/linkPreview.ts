@@ -18,7 +18,8 @@ export interface LinkPreview {
 
 const PAGE_TIMEOUT_MS = 6000;
 const PAGE_MAX_BYTES = 512 * 1024;
-const IMAGE_TIMEOUT_MS = 6000;
+// Sites build a preview image on its first request (GitHub does), which can take several seconds.
+const IMAGE_TIMEOUT_MS = 15000;
 const IMAGE_MAX_BYTES = 1024 * 1024;
 const USER_AGENT = 'Mozilla/5.0 (compatible; Swttch link preview)';
 
