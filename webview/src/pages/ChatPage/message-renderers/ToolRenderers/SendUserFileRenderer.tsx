@@ -2,7 +2,7 @@ import {useEffect, useState} from "react";
 import {ImageLightbox} from "@/components/ImageLightbox";
 import {openChatFile} from "@/utils/openChatFile";
 import {cn} from "@/utils/cn";
-import {RendererProps} from "./common";
+import {RendererProps, ToolWrapper} from "./common";
 import {formatSentSize, loadSentMedia, sentFilesOf, type SentFile} from "./sendUserFile";
 
 /** The `src` of a sent picture or video, null while loading or when it cannot be had. */
@@ -92,22 +92,24 @@ export function SendUserFileRenderer(props: RendererProps) {
     const large = display === 'render' && pictures.length === 1;
 
     return (
-        <div className="my-2 flex flex-col gap-2">
-            {videos.map((file) => <Video key={file.path} file={file}/>)}
-            {pictures.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                    {pictures.map((file, index) => (
-                        <Picture key={file.path} file={file} large={large} onOpen={() => setOpened(index)}/>
-                    ))}
-                </div>
-            )}
-            {cards.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 max-w-[420px]">
-                    {cards.map((file) => <FileCard key={file.path} file={file}/>)}
-                </div>
-            )}
-            {opened !== null && <PictureViewer pictures={pictures} index={opened} onClose={() => setOpened(null)}/>}
-        </div>
+        <ToolWrapper message={props.message}>
+            <div className="flex flex-col gap-2">
+                {videos.map((file) => <Video key={file.path} file={file}/>)}
+                {pictures.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {pictures.map((file, index) => (
+                            <Picture key={file.path} file={file} large={large} onOpen={() => setOpened(index)}/>
+                        ))}
+                    </div>
+                )}
+                {cards.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 max-w-[420px]">
+                        {cards.map((file) => <FileCard key={file.path} file={file}/>)}
+                    </div>
+                )}
+                {opened !== null && <PictureViewer pictures={pictures} index={opened} onClose={() => setOpened(null)}/>}
+            </div>
+        </ToolWrapper>
     );
 }
 

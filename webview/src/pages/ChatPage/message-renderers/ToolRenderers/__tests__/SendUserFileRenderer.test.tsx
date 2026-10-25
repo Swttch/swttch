@@ -5,10 +5,12 @@ import {_resetSentMediaCache, formatSentSize, sentFilesOf} from '../sendUserFile
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
 
-const request = vi.fn();
-const openChatFile = vi.fn();
+const {request, openChatFile} = vi.hoisted(() => ({request: vi.fn(), openChatFile: vi.fn()}));
 
-vi.mock('@/api/bridge/Bridge', () => ({getBridge: () => ({request})}));
+vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
+    getBridge: () => ({request}),
+}));
 vi.mock('@/utils/openChatFile', () => ({openChatFile: (p: string) => openChatFile(p)}));
 vi.mock('@/components/ImageLightbox', () => ({
     ImageLightbox: (p: {srcs: (string | null)[]; initialIndex: number}) => (
