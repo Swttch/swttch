@@ -1,4 +1,8 @@
+import {useEffect, useState} from "react";
 import {ChevronRightIcon, GlobeAltIcon} from "@heroicons/react/24/outline";
+import {decodeText, loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
+import {htmlTitleOf} from "@/utils/htmlTitle";
+import {openChatFile} from "@/utils/openChatFile";
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
 import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultText} from "./common";
@@ -56,6 +60,21 @@ function pageTitleOf(input: ArtifactToolUseDto['input'] | undefined): string {
     return file.replace(/\.[^.]+$/, '');
 }
 
+/** The `<title>` of the page at `path`, once read; undefined while loading or when the page names none. */
+function usePageTitle(path: string | undefined): string | undefined {
+    const [title, setTitle] = useState<string | undefined>(undefined);
+    useEffect(() => {
+        if (!path || !/\.html?$/i.test(path)) return;
+        let cancelled = false;
+        void loadFileContent(path, () => cancelled).then((result) => {
+            if (cancelled || !result.ok || result.kind !== 'html') return;
+            setTitle(htmlTitleOf(decodeText(result.pieces)));
+        });
+        return () => { cancelled = true; };
+    }, [path]);
+    return title;
+}
+
 export function ArtifactRenderer(props: RendererProps) {
     const {t} = useTranslation('chatTools');
     const toolUse = props.toolUse as unknown as ArtifactToolUseDto;
@@ -66,24 +85,31 @@ export function ArtifactRenderer(props: RendererProps) {
     // An update names the page by its address, which the link row below already
     // shows as something to click. Saying it twice in a row reads as a glitch.
     const headerSubject = subject === pageUrl ? '' : subject;
+    const pageFile = input?.file_path;
+    const pageTitle = usePageTitle(pageFile);
 
     // A page that was published (or updated) is a card with its name that opens it, as Claude
     // Desktop draws it. The sentence the CLI answers with ("Published ... Version 1, version id ...")
     // says nothing the card does not, so it is left out; any other kind of call keeps its result.
     const publishes = input?.action === undefined || input.action === 'publish';
     if (publishes && pageUrl && toolUse.name === 'Artifact') {
+        const cardClass = "flex w-full max-w-[420px] items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/30 px-3.5 py-2.5 text-left text-text-primary no-underline transition-colors hover:bg-surface-hover";
+        const content = (
+            <>
+                <GlobeAltIcon className="h-4 w-4 shrink-0 text-text-secondary"/>
+                <span dir="auto" className="min-w-0 flex-1 truncate text-[0.9231rem]">{pageTitle || pageTitleOf(input) || t('tool.artifactFallbackTitle')}</span>
+                <ChevronRightIcon className="h-4 w-4 shrink-0 text-text-tertiary"/>
+            </>
+        );
+        // The page is a file on this machine, so it opens in the pane beside the chat as Desktop opens it;
+        // a call that names no file can only point at the published address.
         return (
             <ToolWrapper message={props.message}>
-                <a
-                    href={pageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full max-w-[420px] items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/30 px-3.5 py-2.5 text-text-primary no-underline transition-colors hover:bg-surface-hover"
-                >
-                    <GlobeAltIcon className="h-4 w-4 shrink-0 text-text-secondary"/>
-                    <span dir="auto" className="min-w-0 flex-1 truncate text-[0.9231rem]">{pageTitleOf(input) || t('tool.artifactFallbackTitle')}</span>
-                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-text-tertiary"/>
-                </a>
+                {pageFile && /\.html?$/i.test(pageFile) ? (
+                    <button type="button" onClick={() => void openChatFile(pageFile)} className={cardClass}>{content}</button>
+                ) : (
+                    <a href={pageUrl} target="_blank" rel="noopener noreferrer" className={cardClass}>{content}</a>
+                )}
             </ToolWrapper>
         );
     }

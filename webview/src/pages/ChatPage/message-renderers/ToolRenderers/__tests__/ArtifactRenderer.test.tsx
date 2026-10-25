@@ -1,8 +1,21 @@
-import {describe, it, expect} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {beforeEach, describe, it, expect, vi} from 'vitest';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {ArtifactRenderer, artifactCallSubject, artifactUrlFrom} from '../ArtifactRenderer';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
+
+const {loadFileContent, openChatFile} = vi.hoisted(() => ({loadFileContent: vi.fn(), openChatFile: vi.fn()}));
+vi.mock('@/components/FilePreviewPane/loadFileContent', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/components/FilePreviewPane/loadFileContent')>()),
+    loadFileContent: (...args: unknown[]) => loadFileContent(...args),
+}));
+vi.mock('@/utils/openChatFile', () => ({openChatFile: (p: string) => openChatFile(p)}));
+
+beforeEach(() => {
+    loadFileContent.mockReset();
+    openChatFile.mockReset();
+    loadFileContent.mockResolvedValue({ok: false, reason: 'unreadable'});
+});
 
 function makeToolUse(input: Record<string, unknown>, name = 'Artifact'): ToolUseBlockDto {
     return Object.assign(new ToolUseBlockDto(), {
@@ -99,14 +112,29 @@ describe('ArtifactRenderer', () => {
         expect(screen.queryByText(/Created a new Artifact/)).not.toBeInTheDocument();
     });
 
-    it('names the card after the file published when the call gave no title', () => {
+    it('names the card after the file published when the call gave no title and the page names itself nothing', () => {
         render(
             <ArtifactRenderer
                 toolUse={makeToolUse({file_path: '/a/b/page.html'})}
                 toolResult={makeToolResult(`Published /a/b/page.html at ${PAGE} (Version 1, version id x)`)}
             />,
         );
-        expect(screen.getByRole('link', {name: 'page'})).toHaveAttribute('href', PAGE);
+        expect(screen.getByRole('button', {name: 'page'})).toBeInTheDocument();
+    });
+
+    // Desktop names the card by the page's own <title>, and opens the page beside the chat.
+    it('names the card by the page title and opens the page in the pane on click', async () => {
+        const html = '<!doctype html><title>Demo Page</title><body>hi</body>';
+        loadFileContent.mockResolvedValue({ok: true, kind: 'html', mimeType: 'text/html', blob: new Blob([html]), pieces: [new TextEncoder().encode(html)]});
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({file_path: '/a/b/page.html'})}
+                toolResult={makeToolResult(`Published /a/b/page.html at ${PAGE} (Version 1, version id x)`)}
+            />,
+        );
+        const card = await screen.findByRole('button', {name: 'Demo Page'});
+        fireEvent.click(card);
+        expect(openChatFile).toHaveBeenCalledWith('/a/b/page.html');
     });
 
     it('makes the card of the page an update names before any result arrives', () => {

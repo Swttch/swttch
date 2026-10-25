@@ -5,6 +5,7 @@ import { i18n, useTranslation } from '@/i18n';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { formatFileSize } from '@/pages/ChatPage/ChatInput/AttachmentPreview/formatFileSize';
 import { basename } from '@/pages/ChatPage/ChatInput/basename';
+import { htmlTitleOf } from '@/utils/htmlTitle';
 import { decodeText, loadFileContent, type FileContentKind } from './loadFileContent';
 
 type PaneState =
@@ -77,6 +78,8 @@ export function FilePreviewPane() {
   if (path === undefined) return null;
 
   const name = basename(path);
+  // A page is named by its own <title>, as Desktop's pane names it, else by its file.
+  const heading = state.status === 'ready' && state.kind === 'html' ? (htmlTitleOf(state.html) ?? name) : name;
 
   return (
     <aside
@@ -85,7 +88,7 @@ export function FilePreviewPane() {
       className="fixed inset-y-0 end-0 z-40 flex w-full max-w-[720px] flex-col border-s border-border-default bg-surface-raised shadow-xl"
     >
       <header className="flex shrink-0 items-center gap-1 border-b border-border-default px-3 py-2">
-        <span dir="ltr" className="min-w-0 flex-1 truncate text-[0.9231rem] font-medium text-text-primary">{name}</span>
+        <span dir="ltr" className="min-w-0 flex-1 truncate text-[0.9231rem] font-medium text-text-primary">{heading}</span>
         <button
           type="button"
           className="shrink-0 rounded px-2 py-1 text-[0.8461rem] text-text-secondary hover:bg-surface-hover"
