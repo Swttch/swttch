@@ -105,7 +105,11 @@ The session rail is a panel with three sections, the same three Claude Code Desk
 - **Context**: closed until you open it. Opening it asks Claude Code's own `/context` command and draws the usage as a percentage, a bar and one row per category, and it asks again when a running reply ends. If the command cannot be read, it says so.
 - **Outputs**: what the session made for you, newest first: the pages it published, the files it sent, and the pictures its tools returned. It shows five rows and **Show more** lists the rest. Click a page and it opens in your browser, a picture opens the viewer, any other file opens like a path in the chat. This is where the terminal's `/artifacts` list lives in this chat.
 
-The list is read from the messages the chat has loaded, so a long session that has not been scrolled back to its start lists only what is loaded.
+The list comes from the whole session, not only from the part the chat has loaded, and it is the same list the Assets screen shows.
+
+### The Assets screen lists them too
+
+The Assets screen used to hold only the pictures you attached. It now has a second part, **Made by Claude**: the pictures its tools returned (a `Read` of a png, a screenshot), the files it sent with `SendUserFile`, and the Artifact pages it published, grouped by the step that made them. A picture opens the viewer, with the same rule as your attachments: anyone sees every thumbnail, and stepping across the whole session is the sponsors' perk. A file opens where a path in the chat opens, and a page opens in your browser.
 
 ## What this does not do
 
