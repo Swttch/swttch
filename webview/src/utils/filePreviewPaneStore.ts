@@ -6,6 +6,8 @@ export interface FilePreviewTarget {
 
 let target: FilePreviewTarget | null = null;
 let expanded = false;
+// The width the reader dragged the pane to, in pixels; null while it has its default width.
+let width: number | null = null;
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -27,6 +29,12 @@ export const filePreviewPaneStore = {
   get: (): FilePreviewTarget | null => target,
   /** True while the pane covers the whole chat instead of sitting beside it. */
   isExpanded: (): boolean => expanded,
+  getWidth: (): number | null => width,
+  /** Remember the width the reader dragged to (null goes back to the default). Kept for the life of the page, across files. */
+  setWidth: (next: number | null): void => {
+    width = next;
+    notify();
+  },
   open: (path: string, publishedUrl?: string): void => set(publishedUrl ? { path, publishedUrl } : { path }),
   toggleExpanded: (): void => {
     expanded = !expanded;

@@ -807,7 +807,8 @@
     "download": "Export",
     "copySource": "Copy page source",
     "reload": "Reload",
-    "copied": "Page source copied"
+    "copied": "Page source copied",
+    "resize": "Resize"
   },
   "fileLink": {
     "copyDone": "Path copied",

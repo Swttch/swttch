@@ -18,7 +18,7 @@ import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
 import { FilePreviewPane } from '@/components/FilePreviewPane';
-import { PANE_COLUMN_WIDTH, usePaneColumn } from '@/components/FilePreviewPane/usePaneColumn';
+import { usePaneColumn, usePaneColumnWidth } from '@/components/FilePreviewPane/usePaneColumn';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
@@ -132,6 +132,7 @@ function ChatPageContent() {
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
   const paneColumn = usePaneColumn();
+  const paneColumnWidth = usePaneColumnWidth();
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -383,7 +384,7 @@ function ChatPageContent() {
         transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
     <div
       className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0"
-      style={paneColumn ? { width: `calc(100% - ${PANE_COLUMN_WIDTH} - 1rem)`, transform: 'translateZ(0)' } : undefined}
+      style={paneColumn ? { width: `calc(100% - ${paneColumnWidth} - 1rem)`, transform: 'translateZ(0)' } : undefined}
     >
       {/*
         Header - Minimal

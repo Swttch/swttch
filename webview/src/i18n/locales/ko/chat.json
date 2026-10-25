@@ -803,7 +803,8 @@
     "download": "내보내기",
     "copySource": "페이지 소스 복사",
     "reload": "새로고침",
-    "copied": "페이지 소스를 복사했습니다"
+    "copied": "페이지 소스를 복사했습니다",
+    "resize": "크기 조정"
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

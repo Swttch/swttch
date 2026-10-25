@@ -91,13 +91,13 @@ function FileChip({file}: {file: SentFile}) {
             <button
                 type="button"
                 onClick={() => openChatFile(file.path)}
-                className="flex max-w-full items-center gap-2 rounded-lg border border-border-default bg-surface-hover/40 py-1.5 pe-9 ps-2.5 text-left transition-colors hover:bg-surface-hover"
+                className="flex max-w-full items-center gap-2.5 rounded-xl border border-border-default bg-surface-hover/40 py-2.5 pe-11 ps-3 text-left transition-colors hover:bg-surface-hover"
             >
-                <span className="shrink-0 rounded-full border border-border-default px-1.5 text-[0.625rem] leading-4 text-text-secondary">
+                <span className="shrink-0 rounded-full border border-border-default px-2 text-[0.6875rem] leading-4 text-text-secondary">
                     {file.badge || 'FILE'}
                 </span>
-                <span dir="auto" className="truncate text-[0.8125rem] text-text-primary">{file.name}</span>
-                {file.size !== undefined && <span className="shrink-0 text-[0.6875rem] text-text-tertiary">{formatSentSize(file.size)}</span>}
+                <span dir="auto" className="truncate text-[1rem] leading-6 text-text-primary">{file.name}</span>
+                {file.size !== undefined && <span className="shrink-0 text-[0.8125rem] text-text-tertiary">{formatSentSize(file.size)}</span>}
             </button>
         </Item>
     );

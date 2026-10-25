@@ -267,3 +267,55 @@ describe('the page colour', () => {
     expect(aside.style.backgroundColor).toBe('rgb(26, 26, 26)');
   });
 });
+
+describe('the resize handle', () => {
+  const wide = () => {
+    window.matchMedia = ((query: string) => ({
+      matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+  };
+
+  beforeEach(() => {
+    filePreviewPaneStore.setWidth(null);
+    Object.defineProperty(window, 'innerWidth', { value: 1200, configurable: true });
+    // jsdom has no pointer capture: let the handle behave as if it held it.
+    HTMLElement.prototype.setPointerCapture = vi.fn();
+    HTMLElement.prototype.releasePointerCapture = vi.fn();
+    HTMLElement.prototype.hasPointerCapture = vi.fn(() => true);
+  });
+
+  it('sets the pane to where the handle is dragged, within bounds, and a double click restores the default', async () => {
+    wide();
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    await screen.findByTitle('page.html');
+    const handle = screen.getByRole('separator');
+
+    // The pane's far edge is 8px in from the window: a pointer at x=700 leaves 1200 - 8 - 700.
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 700 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 700 });
+    expect(filePreviewPaneStore.getWidth()).toBe(492);
+    expect(screen.getByRole('complementary').style.width).toBe('492px');
+
+    // Too far toward the chat stops where the chat keeps its room; too far the other way, at the minimum.
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 10 });
+    expect(filePreviewPaneStore.getWidth()).toBe(1200 - 360 - 16);
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 1190 });
+    expect(filePreviewPaneStore.getWidth()).toBe(320);
+
+    fireEvent.doubleClick(handle);
+    expect(filePreviewPaneStore.getWidth()).toBeNull();
+  });
+
+  it('is not there when the pane covers the chat', async () => {
+    window.matchMedia = ((query: string) => ({
+      matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    await screen.findByTitle('page.html');
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
+});

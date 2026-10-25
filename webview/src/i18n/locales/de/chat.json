@@ -803,7 +803,8 @@
     "download": "Exportieren",
     "copySource": "Seitenquelltext kopieren",
     "reload": "Neu laden",
-    "copied": "Seitenquelltext kopiert"
+    "copied": "Seitenquelltext kopiert",
+    "resize": "Größe ändern"
   },
   "fileLink": {
     "copyDone": "Pfad kopiert",

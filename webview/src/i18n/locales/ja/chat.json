@@ -803,7 +803,8 @@
     "download": "エクスポート",
     "copySource": "ページのソースをコピー",
     "reload": "再読み込み",
-    "copied": "ページのソースをコピーしました"
+    "copied": "ページのソースをコピーしました",
+    "resize": "サイズを変更"
   },
   "fileLink": {
     "copyDone": "パスをコピーしました",

@@ -7,7 +7,7 @@ import { htmlTitleOf } from '@/utils/htmlTitle';
 import { Tooltip } from '@/components/Tooltip';
 import { PaneMenu } from './PaneMenu';
 import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from './pageBackground';
-import { PANE_COLUMN_WIDTH, useIsWide } from './usePaneColumn';
+import { MIN_CHAT_WIDTH, MIN_PANE_WIDTH, useIsWide, usePaneColumnWidth } from './usePaneColumn';
 import {
   ArrowsPointingInIcon, ArrowsPointingOutIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -40,6 +40,7 @@ export function FilePreviewPane() {
   const { t } = useTranslation('chat');
   const expanded = useSyncExternalStore(filePreviewPaneStore.subscribe, filePreviewPaneStore.isExpanded);
   const wide = useIsWide();
+  const columnWidth = usePaneColumnWidth();
   const column = wide && !expanded;
   const [state, setState] = useState<PaneState>({ status: 'loading' });
   const [frameLoaded, setFrameLoaded] = useState(false);
@@ -114,8 +115,33 @@ export function FilePreviewPane() {
       className="fixed bottom-2 end-2 top-2 z-40 flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface-raised text-text-primary shadow-lg"
       // Beside the chat it takes its own column; expanded, or in a window too narrow for two columns, it covers the chat.
       // The card is painted in the page's colour too, so the bar and the page are one surface.
-      style={{ width: column ? PANE_COLUMN_WIDTH : 'calc(100% - 1rem)', maxWidth: column || expanded ? undefined : 720, ...barStyle }}
+      style={{ width: column ? columnWidth : 'calc(100% - 1rem)', maxWidth: column || expanded ? undefined : 720, ...barStyle }}
     >
+      {column && (
+        <Tooltip content={t('filePreview.resize')} placement="left">
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t('filePreview.resize')}
+            className="group/resize absolute inset-y-0 start-0 z-10 w-2 cursor-col-resize touch-none"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              // The pane's far edge sits 0.5rem (8px) in from the window's edge.
+              const next = window.innerWidth - 8 - e.clientX;
+              const max = Math.max(MIN_PANE_WIDTH, window.innerWidth - MIN_CHAT_WIDTH - 16);
+              filePreviewPaneStore.setWidth(Math.round(Math.min(max, Math.max(MIN_PANE_WIDTH, next))));
+            }}
+            onPointerUp={(e) => e.currentTarget.releasePointerCapture(e.pointerId)}
+            onDoubleClick={() => filePreviewPaneStore.setWidth(null)}
+          >
+            <div className="mx-auto h-full w-px bg-transparent transition-colors group-hover/resize:bg-text-tertiary group-active/resize:bg-text-secondary" />
+          </div>
+        </Tooltip>
+      )}
       <header className="flex shrink-0 items-center gap-0.5 px-2.5 py-2">
         <div className="min-w-0 flex-1">
           <PaneMenu

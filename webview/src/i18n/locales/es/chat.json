@@ -803,7 +803,8 @@
     "download": "Exportar",
     "copySource": "Copiar el código de la página",
     "reload": "Recargar",
-    "copied": "Código de la página copiado"
+    "copied": "Código de la página copiado",
+    "resize": "Cambiar tamaño"
   },
   "fileLink": {
     "copyDone": "Ruta copiada",

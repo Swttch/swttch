@@ -1,8 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 
-/** The width of the pane when it sits beside the chat. */
-export const PANE_COLUMN_WIDTH = 'min(45vw, 720px)';
+/** The width of the pane when it sits beside the chat and the reader has not dragged it. */
+export const DEFAULT_PANE_COLUMN_WIDTH = 'min(45vw, 720px)';
+
+/** How narrow the pane or the chat may be dragged. */
+export const MIN_PANE_WIDTH = 320;
+export const MIN_CHAT_WIDTH = 360;
 
 /** Below this window width there is no room for two columns, so the pane covers the chat as before. */
 const WIDE_QUERY = '(min-width: 760px)';
@@ -32,4 +36,10 @@ export function usePaneColumn(): boolean {
   const expanded = useSyncExternalStore(filePreviewPaneStore.subscribe, filePreviewPaneStore.isExpanded);
   const wide = useIsWide();
   return open && wide && !expanded;
+}
+
+/** The pane's width as a CSS length: where the reader dragged it to, else the default. */
+export function usePaneColumnWidth(): string {
+  const dragged = useSyncExternalStore(filePreviewPaneStore.subscribe, filePreviewPaneStore.getWidth);
+  return dragged === null ? DEFAULT_PANE_COLUMN_WIDTH : `${dragged}px`;
 }

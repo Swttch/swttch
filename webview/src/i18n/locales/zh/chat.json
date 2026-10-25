@@ -803,7 +803,8 @@
     "download": "导出",
     "copySource": "复制页面源码",
     "reload": "刷新",
-    "copied": "已复制页面源码"
+    "copied": "已复制页面源码",
+    "resize": "调整大小"
   },
   "fileLink": {
     "copyDone": "已复制路径",
