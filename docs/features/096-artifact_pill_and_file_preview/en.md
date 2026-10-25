@@ -83,10 +83,34 @@ The browser built into the IDE does not include the H.264 decoder, which is what
 
 A file over the limit in the table, a file that has been moved or deleted, and a kind the pane does not show each get one sentence saying so, with **Open in editor** and **Open with system app** still in the header. Nothing is sent from your computer: the pane reads the file through the chat's own backend on your machine, in pieces of 4 MB.
 
+## Files and pictures Claude sends show up in the chat
+
+Claude Code can hand you a file with its `SendUserFile` tool, and read a picture with `Read`. Both now draw what they carry in the chat, the way Claude Code Desktop does, instead of a bare tool row.
+
+- **A picture Claude read** (`Read` of a png, jpg, gif or webp) appears under its row at the width of the message.
+- **Files Claude sent** appear as one block: a video as a player, pictures as thumbnails, everything else as a grid of cards.
+  - A **thumbnail** is 120 px, with the picture fitted inside it and not cropped. Click one and a viewer opens ("1 of 3", with arrows to step through the pictures of that block).
+  - A picture sent alone with `display: render` is drawn whole, at the width of the message.
+  - A **card** shows the kind of file in its corner (`PDF`, `CSV`, `PPTX`...), its name and its size. Click one and it opens where a path in the chat opens: the pane described above for a page, a picture, a PDF or a video, the editor for the rest.
+  - A **video** plays in a player. The IDE's built-in browser has no H.264 decoder, so an `.mp4` that uses it falls back to a card.
+- **A file Claude wrote** (`Write`) lists its lines, numbered and marked as added, in a box you can scroll, up to the first 200 lines. **A file Claude read** (`Read`) shows what came back in a box under its row.
+
+A picture or video the chat cannot read (moved, deleted, over 10 MB for a picture or 32 MB for a video) shows as a card instead.
+
+## The session rail
+
+The session rail is a panel with three sections, the same three Claude Code Desktop's session rail opens with. It sits in the header dock: open the **⋮** menu and choose **Session rail**, or drag it out to the dock itself to get an icon. `Esc` or a click outside closes it.
+
+- **Environment**: the folder the session runs in and the branch Claude Code last recorded for it.
+- **Context**: closed until you open it. Opening it asks Claude Code's own `/context` command and draws the usage as a percentage, a bar and one row per category, and it asks again when a running reply ends. If the command cannot be read, it says so.
+- **Outputs**: what the session made for you, newest first: the pages it published, the files it sent, and the pictures its tools returned. It shows five rows and **Show more** lists the rest. Click a page and it opens in your browser, a picture opens the viewer, any other file opens like a path in the chat. This is where the terminal's `/artifacts` list lives in this chat.
+
+The list is read from the messages the chat has loaded, so a long session that has not been scrolled back to its start lists only what is loaded.
+
 ## What this does not do
 
 - It does not draw the Artifact page itself inside the IDE. The page needs a claude.ai login, and the address cannot be framed by another page, so it opens in your browser. Whether the IDE's own browser can carry it is still being checked in [#593](https://github.com/Swttch/swttch/issues/593).
-- It has no list of all your Artifacts like the terminal's `/artifacts`. Claude Code does not offer that command to this chat. The pill lists the pages of the current session only.
+- It does not list every Artifact you own, as the terminal's `/artifacts` does. Claude Code does not offer that command to this chat. The pill and the session rail's Outputs list the pages of the current session only.
 - The pane does not follow a file as it changes, and it does not resolve relative paths inside a page.
 
 ## If something does not work
