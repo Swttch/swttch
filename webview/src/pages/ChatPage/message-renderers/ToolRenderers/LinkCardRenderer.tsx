@@ -82,19 +82,20 @@ export function LinkCardRenderer({url, ...props}: RendererProps & {url: string})
     const host = card?.host ?? '';
     return (
         <ToolWrapper message={props.message}>
-            <div className="max-w-[560px] overflow-hidden rounded-xl border border-border-default bg-surface-hover/30">
-                {card?.image && <img src={card.image} alt="" className="block w-full object-cover object-top"/>}
-                <div className="flex items-center gap-3 px-3 py-2.5">
+            <div className="w-full max-w-[720px] overflow-hidden rounded-2xl border border-border-default bg-surface-hover/30">
+                {/* Cropped from the top to a wide band, as Claude Desktop crops its screenshot. */}
+                {card?.image && <img src={card.image} alt="" className="block aspect-[8/3] w-full object-cover object-top"/>}
+                <div className="flex items-center gap-4 px-4 py-3.5">
                     <div className="min-w-0 flex-1">
-                        <div dir="auto" className="truncate text-[0.9231rem] text-text-primary">{card?.title || url}</div>
-                        <div dir="ltr" className="truncate text-[0.7692rem] text-text-tertiary">
+                        <div dir="auto" className="truncate text-[1.0769rem] leading-6 text-text-primary">{card?.title || url}</div>
+                        <div dir="ltr" className="mt-0.5 truncate text-[0.9231rem] leading-5 text-text-tertiary">
                             {host}{host && ' · '}{t('linkCard.openedInBrowser')}
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => openLink(url)}
-                        className="shrink-0 rounded-md bg-surface-hover px-2.5 py-1 text-[0.8462rem] text-text-primary transition-colors hover:bg-surface-pressed"
+                        className="shrink-0 rounded-lg bg-surface-hover px-3.5 py-1.5 text-[0.9231rem] text-text-primary transition-colors hover:bg-surface-pressed"
                     >
                         {t('linkCard.open')}
                     </button>
@@ -105,7 +106,7 @@ export function LinkCardRenderer({url, ...props}: RendererProps & {url: string})
                             const rect = event.currentTarget.getBoundingClientRect();
                             linkMenuStore.open({target: {kind: 'external', url}, x: rect.left, y: rect.bottom + 4});
                         }}
-                        className="shrink-0 rounded-md p-1 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                        className="shrink-0 rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                     >
                         <EllipsisVerticalIcon className="h-5 w-5"/>
                     </button>
