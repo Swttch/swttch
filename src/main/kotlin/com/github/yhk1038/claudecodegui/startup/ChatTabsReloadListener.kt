@@ -4,6 +4,7 @@ import com.github.yhk1038.claudecodegui.bridge.PluginResourceExtractor
 import com.github.yhk1038.claudecodegui.editor.ClaudeCodeVirtualFile
 import com.github.yhk1038.claudecodegui.hosting.ChatHostRouter
 import com.github.yhk1038.claudecodegui.hosting.HostMode
+import com.github.yhk1038.claudecodegui.platform.EditorPanes
 import com.github.yhk1038.claudecodegui.settings.SettingsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
@@ -48,8 +49,14 @@ class ChatTabsReloadListener : DynamicPluginListener {
                 .toSet()
             val editorTabMode = SettingsManager.getInstance().getHostMode() == HostMode.EDITOR_TAB
             val order = ReloadedTabsSnapshot.selectOpenTabs(recorded, openEditorTabIds, editorTabMode)
+            val panes = if (editorTabMode) EditorPanes.paneIndexByTabId(project) else emptyMap()
             val tabs = order.map { tabId ->
-                ReloadedTab(tabId, state.getPath(tabId), state.getEffectiveTitle(tabId))
+                ReloadedTab(
+                    tabId,
+                    state.getPath(tabId),
+                    state.getEffectiveTitle(tabId),
+                    ReloadedTabsSnapshot.paneOf(panes[tabId] ?: 0),
+                )
             }
             PropertiesComponent.getInstance(project).setValue(SNAPSHOT_KEY, ReloadedTabsSnapshot.encode(tabs).ifEmpty { null })
             logger.info("Remembered ${tabs.size} chat tab(s) across the plugin unload for ${project.name}")
@@ -93,6 +100,11 @@ class ChatTabsReloadListener : DynamicPluginListener {
             EditorTabStateService.useFromEdt(project) {
                 val host = ChatHostRouter.currentHost(project)
                 for (tab in tabs) host.openOrFocus(project, tab.tabId, tab.path, tab.title)
+                // Tabs that sat in another pane are opened in the active one; put
+                // them back. Only tabs of an editor-tab host can be in a pane.
+                if (SettingsManager.getInstance().getHostMode() == HostMode.EDITOR_TAB) {
+                    EditorPanes.moveToSecondPane(project, ReloadedTabsSnapshot.tabsForSecondPane(tabs))
+                }
             }
         }
     }

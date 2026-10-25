@@ -13,7 +13,13 @@ import java.net.URLEncoder
  * are URL-encoded so a title containing the separator characters cannot split a
  * record.
  */
-internal data class ReloadedTab(val tabId: String, val path: String?, val title: String?)
+internal data class ReloadedTab(
+    val tabId: String,
+    val path: String?,
+    val title: String?,
+    /** 0 for the first editor pane, 1 for any pane after it. A split is restored as one more pane. */
+    val pane: Int = 0,
+)
 
 internal object ReloadedTabsSnapshot {
 
@@ -33,9 +39,23 @@ internal object ReloadedTabsSnapshot {
     fun selectOpenTabs(recordedOrder: List<String>, openEditorTabIds: Set<String>, editorTabMode: Boolean): List<String> =
         if (editorTabMode) recordedOrder.filter { it in openEditorTabIds } else recordedOrder
 
+    /**
+     * The tabs that must move to the second pane to match where they were. Tabs
+     * that were in the first pane are left alone because the IDE opens new tabs there.
+     */
+    fun tabsForSecondPane(wanted: List<ReloadedTab>): List<String> =
+        wanted.filter { it.pane == 1 }.map { it.tabId }
+
+    /**
+     * Collapse the pane a tab was found in to 0 (first) or 1 (any later pane).
+     * Restoring one extra side-by-side pane keeps tabs that were together
+     * together; deeper or vertical layouts are not reproduced.
+     */
+    fun paneOf(windowIndex: Int): Int = if (windowIndex <= 0) 0 else 1
+
     fun encode(tabs: List<ReloadedTab>): String =
         tabs.joinToString(RECORD_SEPARATOR) { tab ->
-            listOf(tab.tabId, tab.path.orEmpty(), tab.title.orEmpty())
+            listOf(tab.tabId, tab.path.orEmpty(), tab.title.orEmpty(), tab.pane.toString())
                 .joinToString(FIELD_SEPARATOR) { URLEncoder.encode(it, Charsets.UTF_8) }
         }
 
@@ -48,6 +68,7 @@ internal object ReloadedTabsSnapshot {
                 tabId = tabId,
                 path = fields.getOrNull(1)?.takeIf { it.isNotEmpty() },
                 title = fields.getOrNull(2)?.takeIf { it.isNotEmpty() },
+                pane = fields.getOrNull(3)?.toIntOrNull()?.coerceIn(0, 1) ?: 0,
             )
         }
     }

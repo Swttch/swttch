@@ -18,6 +18,28 @@ class ReloadedTabsSnapshotTest {
     }
 
     @Test
+    fun `the pane a tab was in survives a round trip and older records mean the first pane`() {
+        val tabs = listOf(ReloadedTab("a", "/sessions/x", "A", pane = 0), ReloadedTab("b", null, null, pane = 1))
+
+        assertEquals(tabs, ReloadedTabsSnapshot.decode(ReloadedTabsSnapshot.encode(tabs)))
+        assertEquals(listOf(ReloadedTab("old", "/p", "T", pane = 0)), ReloadedTabsSnapshot.decode("old\t%2Fp\tT"))
+    }
+
+    @Test
+    fun `any pane after the first is restored as the second pane`() {
+        assertEquals(0, ReloadedTabsSnapshot.paneOf(0))
+        assertEquals(1, ReloadedTabsSnapshot.paneOf(1))
+        assertEquals(1, ReloadedTabsSnapshot.paneOf(3))
+    }
+
+    @Test
+    fun `only tabs that were in a later pane are moved`() {
+        val tabs = listOf(ReloadedTab("a", null, null, 0), ReloadedTab("b", null, null, 1), ReloadedTab("c", null, null, 1))
+
+        assertEquals(listOf("b", "c"), ReloadedTabsSnapshot.tabsForSecondPane(tabs))
+    }
+
+    @Test
     fun `nothing remembered decodes to no tabs`() {
         assertTrue(ReloadedTabsSnapshot.decode(null).isEmpty())
         assertTrue(ReloadedTabsSnapshot.decode("").isEmpty())
