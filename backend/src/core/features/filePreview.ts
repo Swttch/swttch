@@ -1,5 +1,6 @@
 import { open, readFile, stat } from 'fs/promises';
 import { extname } from 'path';
+import { resolveSentFilePath } from './sentFileStore';
 
 /**
  * What a card can show of a file instead of its icon: the first lines of a text
@@ -11,6 +12,7 @@ export type FilePreview =
   | { kind: 'text'; text: string }
   | { kind: 'image'; mimeType: string; base64: string }
   | { kind: 'video'; mimeType: string; base64: string }
+  | { kind: 'audio'; mimeType: string; base64: string }
   | { kind: 'none' };
 
 const NONE: FilePreview = { kind: 'none' };
@@ -29,6 +31,12 @@ const IMAGE_TYPES: Record<string, string> = {
 };
 
 /** Containers a browser can usually decode. Whether THIS file decodes is the webview's call. */
+/** Sound a browser plays as it is. */
+const AUDIO_TYPES: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+};
+
 const VIDEO_TYPES: Record<string, string> = {
   mov: 'video/quicktime',
   mp4: 'video/mp4',
@@ -59,6 +67,11 @@ const TEXT_EXTENSIONS = new Set([
  */
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 32 * 1024 * 1024;
+/**
+ * What a file Claude sent is read up to, for a picture, a video or a sound: the most Claude
+ * Desktop uploads when a file is sent, so what it draws and what we draw agree.
+ */
+export const SENT_MEDIA_MAX_BYTES = 30 * 1024 * 1024;
 /** How much of a file is read to find its first lines. */
 const TEXT_SNIFF_BYTES = 4096;
 const TEXT_LINES = 12;
@@ -83,19 +96,25 @@ function firstLines(bytes: Buffer): FilePreview {
 /** A preview together with the file's size in bytes, which every answer for a real file carries. */
 export type FilePreviewAnswer = FilePreview & { size?: number };
 
-async function previewOf(path: string, size: number): Promise<FilePreview> {
+async function previewOf(path: string, size: number, sent: boolean): Promise<FilePreview> {
   const extension = extname(path).slice(1).toLowerCase();
 
   const imageType = IMAGE_TYPES[extension];
   if (imageType) {
-    if (size > MAX_IMAGE_BYTES) return NONE;
+    if (size > (sent ? SENT_MEDIA_MAX_BYTES : MAX_IMAGE_BYTES)) return NONE;
     return { kind: 'image', mimeType: imageType, base64: (await readFile(path)).toString('base64') };
   }
 
   const videoType = VIDEO_TYPES[extension];
   if (videoType) {
-    if (size > MAX_VIDEO_BYTES) return NONE;
+    if (size > (sent ? SENT_MEDIA_MAX_BYTES : MAX_VIDEO_BYTES)) return NONE;
     return { kind: 'video', mimeType: videoType, base64: (await readFile(path)).toString('base64') };
+  }
+
+  const audioType = AUDIO_TYPES[extension];
+  if (audioType && sent) {
+    if (size > SENT_MEDIA_MAX_BYTES) return NONE;
+    return { kind: 'audio', mimeType: audioType, base64: (await readFile(path)).toString('base64') };
   }
 
   if (!TEXT_EXTENSIONS.has(extension)) return NONE;
@@ -116,12 +135,17 @@ async function previewOf(path: string, size: number): Promise<FilePreview> {
  * `metadataOnly` answers with the size alone and reads no content, for a chip that
  * has no room for a preview but still names its size in a tooltip.
  */
-export async function readFilePreview(path: string, options: { metadataOnly?: boolean } = {}): Promise<FilePreviewAnswer> {
+export async function readFilePreview(
+  path: string,
+  options: { metadataOnly?: boolean; sentFile?: boolean } = {},
+): Promise<FilePreviewAnswer> {
   try {
-    const info = await stat(path);
+    // A file Claude sent is read from the copy kept when it was sent once the original is gone.
+    const readable = options.sentFile ? await resolveSentFilePath(path) : path;
+    const info = await stat(readable);
     if (!info.isFile()) return NONE;
     if (options.metadataOnly || info.size === 0) return { ...NONE, size: info.size };
-    return { ...(await previewOf(path, info.size)), size: info.size };
+    return { ...(await previewOf(readable, info.size, options.sentFile === true)), size: info.size };
   } catch {
     // Gone, unreadable or locked: the card keeps its icon.
     return NONE;

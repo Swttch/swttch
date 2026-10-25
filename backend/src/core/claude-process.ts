@@ -7,6 +7,7 @@ import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis'
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
 import { ArtifactAutoOpener } from './features/artifactAutoOpen';
+import { keepSentFile, sentFilePathsOf } from './features/sentFileStore';
 import { getWorkflowTracker, peekWorkflowTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
@@ -1326,6 +1327,10 @@ function handleStreamEvent(
       console.error('[node-backend]', 'Failed to open Artifact in browser:', err);
     });
   }
+
+  // Keep a copy of every file Claude sends, so the chat can still show it once the original is
+  // moved or deleted, as Claude Desktop does by uploading it. Read-only for the event.
+  for (const path of sentFilePathsOf(event)) void keepSentFile(path);
 
   // Detect background dynamic workflows and stream their live progress. Pure
   // side-effect — the raw CLI event is still forwarded unchanged below.
