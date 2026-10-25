@@ -32,6 +32,7 @@ export interface CommandOptions {
   cwd?: string;
   timeout?: number;
   maxBuffer?: number;
+  signal?: AbortSignal;
   /** Extra env, merged on top of the augmented PATH (these win on conflict). */
   env?: NodeJS.ProcessEnv;
   /** Invocation style (default Direct). */
@@ -164,6 +165,7 @@ export class Command {
           cwd: this.cwd(),
           env: this.env(),
           timeout: this.options.timeout ?? DEFAULT_TIMEOUT_MS,
+          signal: this.options.signal,
           maxBuffer: this.options.maxBuffer,
           ...consoleSafeExecOptions(),
         },
@@ -171,7 +173,10 @@ export class Command {
           const out = stdout?.toString() ?? '';
           const errOut = stderr?.toString() ?? '';
           // Same as exec()'s win32 branch: attach output so callers can classify a failure.
-          if (err) return reject(Object.assign(err, { stdout: out, stderr: errOut }));
+          if (err) {
+            if (this.options.signal?.aborted) return reject(new Error('Command aborted'));
+            return reject(Object.assign(err, { stdout: out, stderr: errOut }));
+          }
           resolve({ stdout: out, stderr: errOut });
         },
       );

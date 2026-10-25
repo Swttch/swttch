@@ -487,6 +487,9 @@ class NodeProcessManager(
                         ?: backendFile.absolutePath
                     val wslEnv = buildMap {
                         put("JETBRAINS_MODE", "true")
+                        // The backend accepts IDE-initiated file operations only for
+                        // its project root, so give WSL the Linux-side root path.
+                        wslCwd?.let { put("CCG_PROJECT_ROOT", it) }
                         put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         put("PORT", requestedPort.toString())
@@ -527,6 +530,7 @@ class NodeProcessManager(
                     val env = buildMap {
                         putAll(EnvironmentUtil.getEnvironmentMap())
                         put("JETBRAINS_MODE", "true")
+                        projectRoot?.let { put("CCG_PROJECT_ROOT", it) }
                         put("CCG_HOST_PID", hostPid())
                         put("CCG_CLIENT_INFO", clientInfo)
                         // Hand the backend the user's real shell PATH so anything it spawns

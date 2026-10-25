@@ -23,6 +23,7 @@ export const isProd = () => process.env.NODE_ENV === 'production';
 // .env에 넣지 않는다 — `_`를 붙여 빌드 박제로 만들면 런타임 주입이 무력화된다.
 export const isJetBrainsMode = process.env.JETBRAINS_MODE === 'true';
 export const ccgClientInfo = process.env.CCG_CLIENT_INFO ?? '';
+export const projectRoot = process.env.CCG_PROJECT_ROOT?.trim() || undefined;
 
 // ── 공지(Server-Driven Announcements) 배포 엔드포인트 ────────
 // 공지 목록을 내려주는 원격 엔드포인트 base URL. 텔레메트리와 달리 빌드 타임 박제
