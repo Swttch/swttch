@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from '@/i18n';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 import { formatFileSize } from '@/pages/ChatPage/ChatInput/AttachmentPreview/formatFileSize';
@@ -6,6 +6,7 @@ import { basename } from '@/pages/ChatPage/ChatInput/basename';
 import { htmlTitleOf } from '@/utils/htmlTitle';
 import { Tooltip } from '@/components/Tooltip';
 import { PaneMenu } from './PaneMenu';
+import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from './pageBackground';
 import { PANE_COLUMN_WIDTH, useIsWide } from './usePaneColumn';
 import {
   ArrowsPointingInIcon, ArrowsPointingOutIcon, XMarkIcon,
@@ -42,6 +43,8 @@ export function FilePreviewPane() {
   const column = wide && !expanded;
   const [state, setState] = useState<PaneState>({ status: 'loading' });
   const [frameLoaded, setFrameLoaded] = useState(false);
+  const [pageBackground, setPageBackground] = useState<string | null>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export function FilePreviewPane() {
     let objectUrl: string | undefined;
     setState({ status: 'loading' });
     setFrameLoaded(false);
+    setPageBackground(null);
 
     void loadFileContent(path, () => cancelled).then((result) => {
       if (cancelled) return;
@@ -71,6 +75,17 @@ export function FilePreviewPane() {
     };
   }, [path, reloads]);
 
+  // The page reports the colour it paints, so the header can wear it (see pageBackground.ts).
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.source !== frameRef.current?.contentWindow) return;
+      const data = e.data as { type?: unknown; color?: unknown } | null;
+      if (data?.type === PAGE_BACKGROUND_MESSAGE && typeof data.color === 'string') setPageBackground(data.color);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
   useEffect(() => {
     if (path === undefined) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -86,18 +101,22 @@ export function FilePreviewPane() {
   // A page is named by its own <title>, as Desktop's pane names it, else by its file.
   const heading = state.status === 'ready' && state.kind === 'html' ? (htmlTitleOf(state.html) ?? name) : name;
   const publishedUrl = target?.publishedUrl;
-  const iconButton = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-hover hover:text-text-primary';
+  // The bar wears the page's colour, so its text takes whichever of light and dark reads on it.
+  const light = pageBackground ? isLightColor(pageBackground) : undefined;
+  const barStyle = pageBackground && light !== undefined ? { backgroundColor: pageBackground, color: light ? '#1f1f1f' : '#ececec' } : undefined;
+  const iconButton = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)] hover:opacity-100';
 
   return (
     <aside
       role="complementary"
       aria-label={t('filePreview.label', { name })}
       // A rounded card set in from the window's edge, as Claude Desktop's is, rather than a slab against it.
-      className="fixed bottom-2 end-2 top-2 z-40 flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface-raised shadow-lg"
+      className="fixed bottom-2 end-2 top-2 z-40 flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface-raised text-text-primary shadow-lg"
       // Beside the chat it takes its own column; expanded, or in a window too narrow for two columns, it covers the chat.
-      style={{ width: column ? PANE_COLUMN_WIDTH : 'calc(100% - 1rem)', maxWidth: column || expanded ? undefined : 720 }}
+      // The card is painted in the page's colour too, so the bar and the page are one surface.
+      style={{ width: column ? PANE_COLUMN_WIDTH : 'calc(100% - 1rem)', maxWidth: column || expanded ? undefined : 720, ...barStyle }}
     >
-      <header className="flex shrink-0 items-center gap-0.5 border-b border-border-subtle px-2.5 py-2">
+      <header className="flex shrink-0 items-center gap-0.5 px-2.5 py-2">
         <div className="min-w-0 flex-1">
           <PaneMenu
             heading={heading}
@@ -146,13 +165,18 @@ export function FilePreviewPane() {
         )}
 
         {state.status === 'ready' && state.kind === 'html' && (
-          <iframe
-            title={name}
-            sandbox="allow-scripts allow-forms allow-popups"
-            srcDoc={state.html}
-            onLoad={() => setFrameLoaded(true)}
-            className={`h-full w-full border-0 bg-white ${frameLoaded ? '' : 'invisible'}`}
-          />
+          // Cut a pixel into the clipping box on every side: a frame on a fractional edge would otherwise let
+          // its white backing show as a hairline along the card's right and bottom border.
+          <div className="absolute inset-0 overflow-hidden">
+            <iframe
+              ref={frameRef}
+              title={name}
+              sandbox="allow-scripts allow-forms allow-popups"
+              srcDoc={withBackgroundProbe(state.html)}
+              onLoad={() => setFrameLoaded(true)}
+              className={`absolute -inset-px h-[calc(100%+2px)] w-[calc(100%+2px)] border-0 bg-white ${frameLoaded ? '' : 'invisible'}`}
+            />
+          </div>
         )}
         {state.status === 'ready' && state.kind === 'pdf' && (
           <iframe title={name} src={state.url} className="h-full w-full border-0" />

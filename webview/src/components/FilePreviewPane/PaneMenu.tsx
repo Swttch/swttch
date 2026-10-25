@@ -86,10 +86,10 @@ export function PaneMenu({ heading, path, name, source, publishedUrl, onReload }
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.9231rem] font-medium text-text-primary transition-colors hover:bg-surface-hover"
+        className="flex max-w-full items-center gap-1 rounded-lg px-2 py-1 text-[0.9231rem] font-medium transition-colors hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)]"
       >
         <span dir="ltr" className="truncate">{heading}</span>
-        <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+        <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 opacity-60" />
       </button>
 
       {open && (

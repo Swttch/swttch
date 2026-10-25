@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { FilePreviewPane } from '../index';
 import { decodeText, loadFileContent } from '../loadFileContent';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
+import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from '../pageBackground';
 
 const openFile = vi.fn(() => Promise.resolve());
 const openFileWithSystemApp = vi.fn(() => Promise.resolve());
@@ -97,7 +98,7 @@ describe('FilePreviewPane', () => {
     act(() => filePreviewPaneStore.open('/p/page.html'));
 
     const frame = await screen.findByTitle('page.html');
-    expect(frame.getAttribute('srcdoc')).toBe('<h1>hi</h1>');
+    expect(frame.getAttribute('srcdoc')).toContain('<h1>hi</h1>');
     const sandbox = frame.getAttribute('sandbox') ?? '';
     expect(sandbox).toContain('allow-scripts');
     expect(sandbox).not.toContain('allow-same-origin');
@@ -229,5 +230,40 @@ describe('FilePreviewPane', () => {
     act(() => filePreviewPaneStore.open('/p/two.png'));
     await screen.findByAltText('two.png');
     expect(screen.queryByAltText('one.png')).toBeNull();
+  });
+});
+
+describe('the page colour', () => {
+  it('judges which text reads on a colour, and refuses what is not one', () => {
+    expect(isLightColor('rgb(255, 255, 255)')).toBe(true);
+    expect(isLightColor('rgb(26, 26, 26)')).toBe(false);
+    expect(isLightColor('rgba(10, 20, 30, 0.5)')).toBe(false);
+    expect(isLightColor('red')).toBeUndefined();
+  });
+
+  it('hands the page a probe that only reports, and keeps the page text whole', () => {
+    const framed = withBackgroundProbe('<h1>hi</h1>');
+    expect(framed.startsWith('<h1>hi</h1>')).toBe(true);
+    expect(framed).toContain(PAGE_BACKGROUND_MESSAGE);
+  });
+
+  // The bar and the page are one surface: the card takes the colour the page reports about itself.
+  it('paints the card in the colour the page reports', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    const frame = await screen.findByTitle('page.html');
+    const aside = screen.getByRole('complementary');
+
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { source: (frame as HTMLIFrameElement).contentWindow, data: { type: PAGE_BACKGROUND_MESSAGE, color: 'rgb(26, 26, 26)' } }));
+    });
+    expect(aside.style.backgroundColor).toBe('rgb(26, 26, 26)');
+
+    // A message from anything but the page's own frame is not believed.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { source: window, data: { type: PAGE_BACKGROUND_MESSAGE, color: 'rgb(255, 0, 0)' } }));
+    });
+    expect(aside.style.backgroundColor).toBe('rgb(26, 26, 26)');
   });
 });
