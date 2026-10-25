@@ -397,6 +397,10 @@
     "signed": "Signed",
     "reSign": "Re-Sign"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch cannot read {{file}}, so every Claude setting looks unset and changes cannot be saved. Reason: {{reason}}",
+    "saveFailed": "Could not save the setting. Reason: {{reason}}"
+  },
   "authError": {
     "banner": "You're signed out of Claude Code.",
     "login": "Sign in",

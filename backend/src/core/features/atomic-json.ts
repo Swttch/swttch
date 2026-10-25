@@ -69,6 +69,18 @@ function describeValue(value: unknown): string {
 }
 
 /**
+ * The text without a leading byte order mark.
+ *
+ * Windows Notepad and Windows PowerShell 5 (`Set-Content -Encoding utf8`) save UTF-8 with a BOM, and
+ * `JSON.parse` rejects it ("Unexpected token '\uFEFF'"). The Claude CLI reads such a file without
+ * complaint, so a settings file a user edited by hand on Windows worked in the terminal and read as
+ * "unreadable" here: every setting looked unset, and every write was refused (#595).
+ */
+export function stripBom(text: string): string {
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+/**
  * Read a JSON file as the read half of a read-modify-write, reporting an absent
  * file and an unreadable one as different things.
  *
@@ -85,7 +97,7 @@ export async function readJsonForUpdate(filePath: string): Promise<JsonReadForUp
 
   let raw: string;
   try {
-    raw = await readFile(filePath, 'utf-8');
+    raw = stripBom(await retryTransient(() => readFile(filePath, 'utf-8')));
   } catch (err) {
     return { status: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
   }

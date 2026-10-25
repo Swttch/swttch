@@ -393,6 +393,10 @@
     "signed": "已登录",
     "reSign": "重新登录"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch 无法读取 {{file}}，因此所有 Claude 设置都显示为未设置，更改也无法保存。原因：{{reason}}",
+    "saveFailed": "无法保存设置。原因：{{reason}}"
+  },
   "authError": {
     "banner": "尚未登录 Claude Code。",
     "login": "登录",
