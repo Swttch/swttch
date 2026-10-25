@@ -22,6 +22,7 @@ export function useCurrentToolUse(): ToolUseBlockDto | undefined {
 
 export * from './RendererProps';
 export * from './toolStatus';
+export * from './toolResultImages';
 
 /**
  * A user's denial decision, shown in the error colour the way the CLI shows it,
