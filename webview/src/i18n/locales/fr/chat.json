@@ -777,6 +777,10 @@
     "contextNote": "Dernière mise à jour : maintenant. Actualisé à la fin de la réponse en cours.",
     "toolImage": "Image de {{tool}}"
   },
+  "sentFiles": {
+    "download": "Télécharger",
+    "downloadFailed": "Impossible d'enregistrer le fichier"
+  },
   "filePreview": {
     "label": "Aperçu de {{name}}",
     "close": "Fermer l’aperçu",

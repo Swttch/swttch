@@ -1,7 +1,7 @@
 import { basename } from 'path';
 import { loadActiveChain, type SessionMessage } from './loadSessionMessages';
 import { base64ByteLength } from './collectSessionAssets';
-import type { SessionOutput, SessionOutputRef } from '../../shared';
+import { sentFileKind, type SessionOutput, type SessionOutputRef } from '../../shared';
 
 /** An Artifact page's address, as the CLI's result sentence prints it. */
 const ARTIFACT_URL = /https:\/\/claude\.ai\/(?:code\/)?artifact\/[A-Za-z0-9_-]+/;
@@ -105,7 +105,8 @@ export async function collectSessionOutputs(workingDir: string, sessionId: strin
             path,
             name: basename(path),
             size: typeof attachment.size === 'number' ? attachment.size : undefined,
-            isImage: attachment.isImage === true,
+            // By extension, as Claude Desktop draws it, not the CLI's own narrower verdict.
+            isImage: sentFileKind(path) === 'picture',
             timestamp,
           });
         });

@@ -777,6 +777,10 @@
     "contextNote": "Zuletzt aktualisiert: jetzt. Wird aktualisiert, wenn die aktuelle Antwort endet.",
     "toolImage": "{{tool}}-Bild"
   },
+  "sentFiles": {
+    "download": "Herunterladen",
+    "downloadFailed": "Die Datei konnte nicht gespeichert werden"
+  },
   "filePreview": {
     "label": "Vorschau von {{name}}",
     "close": "Vorschau schließen",

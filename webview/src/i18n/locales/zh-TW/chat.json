@@ -777,6 +777,10 @@
     "contextNote": "最後更新：剛剛。目前回覆結束後會重新整理。",
     "toolImage": "{{tool}} 圖片"
   },
+  "sentFiles": {
+    "download": "下載",
+    "downloadFailed": "無法儲存檔案"
+  },
   "filePreview": {
     "label": "{{name}} 的預覽",
     "close": "關閉預覽",

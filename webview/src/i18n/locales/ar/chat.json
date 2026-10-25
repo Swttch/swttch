@@ -793,6 +793,10 @@
     "contextNote": "آخر تحديث: الآن. يتم التحديث عند انتهاء الرد الحالي.",
     "toolImage": "صورة {{tool}}"
   },
+  "sentFiles": {
+    "download": "تنزيل",
+    "downloadFailed": "تعذّر حفظ الملف"
+  },
   "filePreview": {
     "label": "معاينة {{name}}",
     "close": "إغلاق المعاينة",

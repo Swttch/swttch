@@ -777,6 +777,10 @@
     "contextNote": "Última actualización: ahora. Se actualiza cuando termina la respuesta actual.",
     "toolImage": "Imagen de {{tool}}"
   },
+  "sentFiles": {
+    "download": "Descargar",
+    "downloadFailed": "No se pudo guardar el archivo"
+  },
   "filePreview": {
     "label": "Vista previa de {{name}}",
     "close": "Cerrar la vista previa",

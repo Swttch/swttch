@@ -777,6 +777,10 @@
     "contextNote": "最后更新：刚刚。当前回复结束后会刷新。",
     "toolImage": "{{tool}} 图片"
   },
+  "sentFiles": {
+    "download": "下载",
+    "downloadFailed": "无法保存文件"
+  },
   "filePreview": {
     "label": "{{name}} 的预览",
     "close": "关闭预览",

@@ -777,6 +777,10 @@
     "contextNote": "最終更新: 今。現在の応答が終わると更新されます。",
     "toolImage": "{{tool}}の画像"
   },
+  "sentFiles": {
+    "download": "ダウンロード",
+    "downloadFailed": "ファイルを保存できませんでした"
+  },
   "filePreview": {
     "label": "{{name}} のプレビュー",
     "close": "プレビューを閉じる",

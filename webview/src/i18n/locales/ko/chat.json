@@ -777,6 +777,10 @@
     "contextNote": "마지막 업데이트: 지금. 현재 응답이 끝나면 새로고침됩니다.",
     "toolImage": "{{tool}} 이미지"
   },
+  "sentFiles": {
+    "download": "다운로드",
+    "downloadFailed": "파일을 저장하지 못했습니다"
+  },
   "filePreview": {
     "label": "{{name}} 미리보기",
     "close": "미리보기 닫기",

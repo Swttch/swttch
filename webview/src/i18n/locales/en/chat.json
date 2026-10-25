@@ -781,6 +781,10 @@
     "contextNote": "Updated now. It refreshes when the current reply ends.",
     "toolImage": "{{tool}} image"
   },
+  "sentFiles": {
+    "download": "Download",
+    "downloadFailed": "Could not save the file"
+  },
   "filePreview": {
     "label": "Preview of {{name}}",
     "close": "Close preview",

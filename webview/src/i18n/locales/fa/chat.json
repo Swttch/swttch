@@ -777,6 +777,10 @@
     "contextNote": "آخرین به‌روزرسانی: همین حالا. با پایان پاسخ فعلی به‌روز می‌شود.",
     "toolImage": "تصویر {{tool}}"
   },
+  "sentFiles": {
+    "download": "دانلود",
+    "downloadFailed": "ذخیره فایل ممکن نشد"
+  },
   "filePreview": {
     "label": "پیش‌نمایش {{name}}",
     "close": "بستن پیش‌نمایش",
