@@ -459,6 +459,8 @@ export enum MessageType {
   GET_FILE_CONTENT = 'GET_FILE_CONTENT',
   /** Ask for one piece of any file, as {path, offset}, so the chat can save it to disk (the download button on a file Claude sent). Answered with base64 bytes and the whole size, or with the reason it cannot be read. A file Claude sent is read from the copy kept when it was sent once the original is gone. inbound webview→backend */
   GET_FILE_BYTES = 'GET_FILE_BYTES',
+  /** Ask what a web page looks like on a card, as {url}: its title, its site and a picture that stands for it (the page's own preview image). Answered with those, or with only what could be read; never an error for a page that cannot be reached. inbound webview→backend */
+  GET_LINK_PREVIEW = 'GET_LINK_PREVIEW',
   /** Ask for the icon the operating system draws for a file extension. Answered with a base64 PNG, or with nothing where the system cannot be asked. */
   GET_FILE_ICON = 'GET_FILE_ICON',
   /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */

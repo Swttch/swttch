@@ -194,6 +194,7 @@ import { searchSessionHandler } from './searchSession';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
 import { getSessionOutputsHandler } from './getSessionOutputs';
 import { getFileBytesHandler } from './getFileBytes';
+import { getLinkPreviewHandler } from './getLinkPreview';
 import { getSessionOutputDataHandler } from './getSessionOutputData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
@@ -766,6 +767,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_ASSET_DATA:
       await getSessionAssetDataHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_LINK_PREVIEW:
+      await getLinkPreviewHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_FILE_BYTES:
       await getFileBytesHandler(connectionId, message, connections, bridge);
