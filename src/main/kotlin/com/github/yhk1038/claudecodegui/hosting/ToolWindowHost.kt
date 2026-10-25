@@ -7,6 +7,7 @@ import com.github.yhk1038.claudecodegui.editor.WorkingTabIcon
 import com.github.yhk1038.claudecodegui.services.EditorTabStateService
 import com.github.yhk1038.claudecodegui.toolwindow.ClaudeCodePanel
 import com.github.yhk1038.claudecodegui.toolwindow.SessionViewJudge
+import com.github.yhk1038.claudecodegui.toolwindow.UnreadBadgeClearer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
@@ -245,6 +246,8 @@ class ToolWindowHost(private val project: Project) : ChatHost {
                 if (tabId !in busyTabs) {
                     event.content.icon = BASE_ICON
                 }
+                // Same for a banner raised while the user was elsewhere.
+                ApplicationManager.getApplication().invokeLater { UnreadBadgeClearer.clear(project) }
             }
 
             override fun contentRemoved(event: ContentManagerEvent) {
