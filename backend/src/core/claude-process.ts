@@ -302,6 +302,19 @@ export function buildArtifactEnv(
   return { CLAUDE_CODE_ARTIFACT: '1' };
 }
 
+/**
+ * The env that lets the CLI offer `SendUserFile` (Claude hands the user a file or
+ * picture, which the chat then shows as a card). A headless `-p` spawn leaves the
+ * tool out unless this variable is set, while the terminal REPL has it. The user's
+ * own value, on or off, wins; only an absent value is filled in (#593).
+ */
+export function buildAttachmentsEnv(
+  inherited: NodeJS.ProcessEnv = process.env,
+): { CLAUDE_CODE_ATTACHMENTS_BY_PATH?: string } {
+  if (inherited.CLAUDE_CODE_ATTACHMENTS_BY_PATH !== undefined) return {};
+  return { CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' };
+}
+
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
 const sessionsWithResult = new Set<string>();
 
@@ -653,6 +666,7 @@ export async function ensureClaudeProcess(
       CLAUDECODE: undefined,
       ...buildCheckpointingEnv(claudeSettings),
       ...buildArtifactEnv(),
+      ...buildAttachmentsEnv(),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with

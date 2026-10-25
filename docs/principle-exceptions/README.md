@@ -49,3 +49,5 @@ NNN-짧은-주제.md      NNN = 이슈 또는 PR 번호
   새 세션의 제목 생성에 미문서화 `control_request{subtype:"generate_session_title"}`를, 이름 변경에 `rename_session`을 사용
 - [584-artifact-env-for-slides.md](./584-artifact-env-for-slides.md) —
   CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ARTIFACT=1`을 주어 터미널처럼 `/slides`와 `Artifact` 도구를 받는다
+- [593-attachments-env-for-sendfile.md](./593-attachments-env-for-sendfile.md) —
+  CLI를 띄울 때 문서화되지 않은 환경변수 `CLAUDE_CODE_ATTACHMENTS_BY_PATH=1`을 주어 터미널처럼 `SendUserFile` 도구를 받는다
