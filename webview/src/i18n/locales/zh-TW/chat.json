@@ -784,7 +784,8 @@
   "linkCard": {
     "openedInBrowser": "已在瀏覽器中開啟",
     "open": "開啟",
-    "more": "更多選項"
+    "more": "更多選項",
+    "loading": "載入中…"
   },
   "filePreview": {
     "label": "{{name}} 的預覽",

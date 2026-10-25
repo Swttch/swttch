@@ -800,7 +800,8 @@
   "linkCard": {
     "openedInBrowser": "فُتح في المتصفح",
     "open": "فتح",
-    "more": "خيارات إضافية"
+    "more": "خيارات إضافية",
+    "loading": "جارٍ التحميل…"
   },
   "filePreview": {
     "label": "معاينة {{name}}",

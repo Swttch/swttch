@@ -792,7 +792,8 @@
   "linkCard": {
     "openedInBrowser": "Открыто в браузере",
     "open": "Открыть",
-    "more": "Другие параметры"
+    "more": "Другие параметры",
+    "loading": "Загрузка…"
   },
   "filePreview": {
     "label": "Предпросмотр {{name}}",

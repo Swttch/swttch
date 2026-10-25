@@ -784,7 +784,8 @@
   "linkCard": {
     "openedInBrowser": "브라우저에서 열림",
     "open": "열기",
-    "more": "더 많은 옵션"
+    "more": "더 많은 옵션",
+    "loading": "불러오는 중…"
   },
   "filePreview": {
     "label": "{{name}} 미리보기",

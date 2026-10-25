@@ -784,7 +784,8 @@
   "linkCard": {
     "openedInBrowser": "已在浏览器中打开",
     "open": "打开",
-    "more": "更多选项"
+    "more": "更多选项",
+    "loading": "加载中…"
   },
   "filePreview": {
     "label": "{{name}} 的预览",

@@ -784,7 +784,8 @@
   "linkCard": {
     "openedInBrowser": "Aberto no navegador",
     "open": "Abrir",
-    "more": "Mais opções"
+    "more": "Mais opções",
+    "loading": "Carregando…"
   },
   "filePreview": {
     "label": "Pré-visualização de {{name}}",

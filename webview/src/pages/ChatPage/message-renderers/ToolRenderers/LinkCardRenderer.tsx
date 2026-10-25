@@ -82,9 +82,15 @@ export function LinkCardRenderer({url, ...props}: RendererProps & {url: string})
     const host = card?.host ?? '';
     return (
         <ToolWrapper message={props.message}>
-            <div className="w-full max-w-[720px] overflow-hidden rounded-2xl border border-border-default bg-surface-hover/30">
+            <div className="w-full max-w-[480px] overflow-hidden rounded-2xl border border-border-default bg-surface-hover/30">
                 {/* Cropped from the top to a wide band, as Claude Desktop crops its screenshot. */}
                 {card?.image && <img src={card.image} alt="" className="block aspect-[8/3] w-full object-cover object-top"/>}
+                {/* While the page is still being read, the band's place is kept and a spinner stands in it, so the card does not jump when the picture arrives. */}
+                {card === null && (
+                    <div role="status" aria-label={t('linkCard.loading')} className="flex aspect-[8/3] w-full items-center justify-center bg-surface-hover/40">
+                        <span className="h-6 w-6 animate-spin rounded-full border-2 border-border-default border-t-text-secondary"/>
+                    </div>
+                )}
                 <div className="flex items-center gap-4 px-4 py-3.5">
                     <div className="min-w-0 flex-1">
                         <div dir="auto" className="truncate text-[1.0769rem] leading-6 text-text-primary">{card?.title || url}</div>

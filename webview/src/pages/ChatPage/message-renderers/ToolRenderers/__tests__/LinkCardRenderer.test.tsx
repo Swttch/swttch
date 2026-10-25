@@ -45,6 +45,17 @@ describe('LinkCardRenderer', () => {
         expect(request).toHaveBeenCalledWith(expect.anything(), {url: URL_593});
     });
 
+    // The picture's place is kept while the page is read, so the card does not jump when it arrives.
+    it('keeps the picture band with a spinner in it while the page is read, and drops it for a page with no picture', async () => {
+        let answer!: (value: unknown) => void;
+        request.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
+        render(<LinkCardRenderer toolUse={tool} url={URL_593}/>);
+        expect(screen.getByRole('status').className).toContain('aspect-[8/3]');
+
+        answer({url: URL_593, host: 'github.com'});
+        await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+    });
+
     it('shows the address when the page told nothing, and no picture', async () => {
         request.mockResolvedValue({url: URL_593, host: 'github.com'});
         render(<LinkCardRenderer toolUse={tool} url={URL_593}/>);

@@ -784,7 +784,8 @@
   "linkCard": {
     "openedInBrowser": "در مرورگر باز شد",
     "open": "باز کردن",
-    "more": "گزینه‌های بیشتر"
+    "more": "گزینه‌های بیشتر",
+    "loading": "در حال بارگذاری…"
   },
   "filePreview": {
     "label": "پیش‌نمایش {{name}}",
