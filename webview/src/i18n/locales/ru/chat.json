@@ -397,6 +397,10 @@
     "signed": "Вход выполнен",
     "reSign": "Войти заново"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch не может прочитать {{file}}, поэтому все настройки Claude выглядят незаданными, а изменения не сохраняются. Причина: {{reason}}",
+    "saveFailed": "Не удалось сохранить настройку. Причина: {{reason}}"
+  },
   "authError": {
     "banner": "Вы не вошли в Claude Code.",
     "login": "Войти",

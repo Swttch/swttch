@@ -2,6 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Streamdown} from 'streamdown';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
+import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '../../utils/mermaidPlugin';
 import './streaming.css';
 import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/common";
 import {useWorkingDirOrNull} from '@/contexts/WorkingDirContext';
@@ -30,6 +31,7 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
     message,
     footer,
 }) => {
+    const mermaidOptions = useMermaidOptions();
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
     const markdownRef = useRef<HTMLDivElement>(null);
 
@@ -62,8 +64,10 @@ export const StreamingMessage: React.FC<StreamingMessageProps> = ({
                         controls={{
                             code: true,
                             table: true,
+                            mermaid: MERMAID_CONTROLS,
                         }}
-                        plugins={{ math, code }}
+                        plugins={{ math, code, mermaid }}
+                        mermaid={mermaidOptions}
                     >
                         {prepareAssistantMarkdown(content, workingDirectory)}
                     </Streamdown>

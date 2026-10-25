@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ClaudeSettingsState, DEFAULT_CLAUDE_SETTINGS } from '@/types/claude-settings';
 import { useBridgeContext } from '@/contexts/BridgeContext';
@@ -6,11 +6,22 @@ import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { MessageType } from '@/shared';
 import { isShadowedByProject } from '@/utils/settingsScope';
 
+/** A Claude settings file that exists but could not be read (the backend's UnreadableSettingsFile). */
+export interface UnreadableSettingsFile {
+  file: string;
+  reason: string;
+}
+
 interface ClaudeSettingsContextValue {
   settings: ClaudeSettingsState;
   scopeSettings: Partial<ClaudeSettingsState>;
   isLoading: boolean;
   overrides: string[];
+  /** Settings files that exist but could not be read. While any is listed, every setting looks unset. */
+  unreadable: UnreadableSettingsFile[];
+  /** Why the last save was refused or failed; null once a later save went through. */
+  saveError: string | null;
+  clearSaveError: () => void;
   scope: 'global' | 'project';
   setScope: (scope: 'global' | 'project') => void;
   updateSetting: <K extends keyof ClaudeSettingsState>(key: K, value: ClaudeSettingsState[K]) => Promise<void>;
@@ -23,8 +34,12 @@ interface ClaudeSettingsResponse {
   status?: string;
   settings?: ClaudeSettingsState;
   overrides?: string[];
+  unreadable?: UnreadableSettingsFile[];
   error?: string;
 }
+
+/** How often to re-read settings while a settings file is unreadable. */
+const UNREADABLE_RECHECK_MS = 3000;
 
 const ClaudeSettingsContext = createContext<ClaudeSettingsContextValue | null>(null);
 
@@ -37,6 +52,8 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
   const { workingDirectory } = useWorkingDir();
   const queryClient = useQueryClient();
   const [scope, setScope] = useState<'global' | 'project'>('global');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const clearSaveError = useCallback(() => setSaveError(null), []);
 
   // queryKey base is the message type itself (see CLAUDE.md consistent-naming).
   // 'merged' is the effective settings the app consumes; the scope variant is the
@@ -48,6 +65,9 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
     queryKey: mergedKey,
     queryFn: () => send<ClaudeSettingsResponse>(MessageType.GET_CLAUDE_SETTINGS, { workingDir: workingDirectory }),
     enabled: isConnected,
+    // A file that is unreadable because another program holds it open stops being unreadable without any
+    // change to its contents, so no file-change push ever says so. Ask again until it reads (#595).
+    refetchInterval: (query) => ((query.state.data?.unreadable?.length ?? 0) > 0 ? UNREADABLE_RECHECK_MS : false),
   });
 
   const scopeQuery = useQuery<ClaudeSettingsResponse>({
@@ -58,6 +78,15 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
 
   const settings = mergedQuery.data?.settings ?? DEFAULT_CLAUDE_SETTINGS;
   const overrides = mergedQuery.data?.overrides ?? [];
+  const unreadable = mergedQuery.data?.unreadable ?? [];
+
+  // A save is refused because a file could not be read. When that file reads again, the refusal no longer
+  // describes anything, and leaving it up would claim a save failed that would now go through (#595).
+  const hadUnreadable = useRef(false);
+  useEffect(() => {
+    if (hadUnreadable.current && unreadable.length === 0) setSaveError(null);
+    hadUnreadable.current = unreadable.length > 0;
+  }, [unreadable.length]);
   const scopeSettings = scopeQuery.data?.settings ?? {};
   const isLoading = mergedQuery.isLoading;
 
@@ -69,10 +98,16 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       const payload = message.payload as Record<string, unknown>;
       const newSettings = payload?.settings as ClaudeSettingsState | undefined;
       const newOverrides = payload?.overrides as string[] | undefined;
+      const newUnreadable = payload?.unreadable as UnreadableSettingsFile[] | undefined;
       if (newSettings) {
         queryClient.setQueryData<ClaudeSettingsResponse>(
           [MessageType.GET_CLAUDE_SETTINGS, 'merged', workingDirectory],
-          (old) => ({ ...old, settings: newSettings, ...(newOverrides ? { overrides: newOverrides } : {}) }),
+          (old) => ({
+            ...old,
+            settings: newSettings,
+            ...(newOverrides ? { overrides: newOverrides } : {}),
+            ...(newUnreadable ? { unreadable: newUnreadable } : {}),
+          }),
         );
       }
       // Mark scope variants stale without an immediate refetch — they re-sync on
@@ -119,10 +154,14 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       try {
         if (!isConnected) throw new Error('Bridge not connected');
         await persist(key, value, scope);
+        setSaveError(null);
         queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
       } catch (error) {
         queryClient.setQueryData(cacheKey, previous); // rollback
         console.warn('[ClaudeSettingsContext] Failed to save setting:', error);
+        setSaveError(error instanceof Error ? error.message : String(error));
+        // The refusal usually means a file became unreadable; ask again so the banner can say which.
+        queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
         throw error;
       }
     },
@@ -135,10 +174,13 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       try {
         if (!isConnected) throw new Error('Not connected');
         await persist(key, value, targetScope);
+        setSaveError(null);
         queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
       } catch (error) {
         queryClient.setQueryData(cacheKey, previous);
         console.warn('[ClaudeSettingsContext] Failed to save setting with scope:', error);
+        setSaveError(error instanceof Error ? error.message : String(error));
+        queryClient.invalidateQueries({ queryKey: [MessageType.GET_CLAUDE_SETTINGS] });
       }
     },
     [applyOptimistic, queryClient, isConnected, persist],
@@ -165,6 +207,9 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       scopeSettings,
       isLoading,
       overrides,
+      unreadable,
+      saveError,
+      clearSaveError,
       scope,
       setScope,
       updateSetting,

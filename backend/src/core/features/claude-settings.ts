@@ -1,5 +1,5 @@
-import { readFile, mkdir } from 'fs/promises';
-import { existsSync, watch } from 'fs';
+import { mkdir } from 'fs/promises';
+import { watch } from 'fs';
 import { join } from 'path';
 import { getClaudeConfigDir } from './claudeConfigDir';
 import { readJsonForUpdate, updateJsonFile, type JsonUpdateResult } from './atomic-json';
@@ -78,15 +78,32 @@ export function deepMergeSettings(
  * the two cases separately.
  */
 export async function readJsonFileSafe(filePath: string): Promise<Record<string, unknown>> {
-  try {
-    if (!existsSync(filePath)) return {};
-    const raw = await readFile(filePath, 'utf-8');
-    const parsed: unknown = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return parsed as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+  return (await readSettingsLayer(filePath)).data;
+}
+
+/** A settings file that exists but could not be read, and why. */
+export interface UnreadableSettingsFile {
+  file: string;
+  reason: string;
+}
+
+interface SettingsLayer {
+  data: Record<string, unknown>;
+  /** Why the file could not be used, when it exists but could not be. Absent for a missing or readable file. */
+  unreadable?: UnreadableSettingsFile;
+}
+
+/**
+ * One settings file as a layer of the merge: its keys, plus the reason when it could not be read.
+ *
+ * Readers still get `{}` for an unusable file (a settings screen has to draw something), but the reason is
+ * kept so the screen can say why every setting looks unset. Collapsing it silently is what made a settings
+ * file saved with a BOM, or held open by another program, look like "the effort slider resets to Low" (#595).
+ */
+async function readSettingsLayer(filePath: string): Promise<SettingsLayer> {
+  const read = await readJsonForUpdate(filePath);
+  if (read.status === 'ok') return { data: read.data };
+  return { data: {}, unreadable: { file: filePath, reason: read.reason } };
 }
 
 /**
@@ -100,13 +117,20 @@ export async function readJsonFileSafe(filePath: string): Promise<Record<string,
  * which is exactly the layering `${VAR}` expansion depends on (#364).
  */
 export async function readClaudeSettings(): Promise<Record<string, unknown>> {
+  return (await readClaudeSettingsLayers()).settings;
+}
+
+async function readClaudeSettingsLayers(): Promise<{ settings: Record<string, unknown>; unreadable: UnreadableSettingsFile[] }> {
   try {
-    const base = await readJsonFileSafe(claudeSettingsFile());
-    const local = await readJsonFileSafe(claudeSettingsLocalFile());
-    return deepMergeSettings(base, local);
+    const base = await readSettingsLayer(claudeSettingsFile());
+    const local = await readSettingsLayer(claudeSettingsLocalFile());
+    return {
+      settings: deepMergeSettings(base.data, local.data),
+      unreadable: [base.unreadable, local.unreadable].filter((u): u is UnreadableSettingsFile => u !== undefined),
+    };
   } catch (err) {
     console.error('[node-backend]', 'Failed to read Claude settings:', err);
-    return {};
+    return { settings: {}, unreadable: [] };
   }
 }
 
@@ -198,29 +222,41 @@ export async function saveClaudeSetting(
  * and {projectPath}/.claude/settings.local.json, merging local over base.
  */
 export async function readProjectClaudeSettings(projectPath: string): Promise<Record<string, unknown>> {
+  return (await readProjectClaudeSettingsLayers(projectPath)).settings;
+}
+
+async function readProjectClaudeSettingsLayers(
+  projectPath: string,
+): Promise<{ settings: Record<string, unknown>; unreadable: UnreadableSettingsFile[] }> {
   try {
-    const base = await readJsonFileSafe(join(projectPath, '.claude', 'settings.json'));
-    const local = await readJsonFileSafe(join(projectPath, '.claude', 'settings.local.json'));
-    return deepMergeSettings(base, local);
+    const base = await readSettingsLayer(join(projectPath, '.claude', 'settings.json'));
+    const local = await readSettingsLayer(join(projectPath, '.claude', 'settings.local.json'));
+    return {
+      settings: deepMergeSettings(base.data, local.data),
+      unreadable: [base.unreadable, local.unreadable].filter((u): u is UnreadableSettingsFile => u !== undefined),
+    };
   } catch (err) {
     console.error('[node-backend]', 'Failed to read project Claude settings:', err);
-    return {};
+    return { settings: {}, unreadable: [] };
   }
 }
 
 /**
  * Read merged Claude settings: global → project
  */
-export async function readMergedClaudeSettings(projectPath?: string): Promise<{ settings: Record<string, unknown>; overrides: string[] }> {
-  const globalSettings = await readClaudeSettings();
+export async function readMergedClaudeSettings(
+  projectPath?: string,
+): Promise<{ settings: Record<string, unknown>; overrides: string[]; unreadable: UnreadableSettingsFile[] }> {
+  const global = await readClaudeSettingsLayers();
   if (!projectPath) {
-    return { settings: globalSettings, overrides: [] };
+    return { settings: global.settings, overrides: [], unreadable: global.unreadable };
   }
-  const projectSettings = await readProjectClaudeSettings(projectPath);
-  const overrides = Object.keys(projectSettings);
+  const project = await readProjectClaudeSettingsLayers(projectPath);
+  const overrides = Object.keys(project.settings);
   return {
-    settings: deepMergeSettings(globalSettings, projectSettings),
+    settings: deepMergeSettings(global.settings, project.settings),
     overrides,
+    unreadable: [...global.unreadable, ...project.unreadable],
   };
 }
 

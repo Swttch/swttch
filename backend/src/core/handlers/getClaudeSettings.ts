@@ -1,7 +1,12 @@
 import type { ConnectionManager } from '../../ws/connection-manager';
 import type { Bridge } from '../../bridge/bridge-interface';
 import type { IPCMessage } from '../types';
-import { readMergedClaudeSettings, readClaudeSettings, readProjectClaudeSettings } from '../features/claude-settings';
+import {
+  readMergedClaudeSettings,
+  readClaudeSettings,
+  readProjectClaudeSettings,
+  type UnreadableSettingsFile,
+} from '../features/claude-settings';
 import { getSettingsWatcher } from '../features/settings-watcher';
 import { MessageType } from '../../shared';
 
@@ -20,6 +25,7 @@ export async function getClaudeSettingsHandler(
 
   let settings: Record<string, unknown>;
   let overrides: string[] = [];
+  let unreadable: UnreadableSettingsFile[] = [];
 
   if (scope === 'global') {
     settings = await readClaudeSettings();
@@ -29,6 +35,7 @@ export async function getClaudeSettingsHandler(
     const result = await readMergedClaudeSettings(workingDir);
     settings = result.settings;
     overrides = result.overrides;
+    unreadable = result.unreadable;
   }
 
   connections.sendTo(connectionId, MessageType.ACK, {
@@ -36,5 +43,6 @@ export async function getClaudeSettingsHandler(
     status: 'ok',
     settings,
     overrides,
+    unreadable,
   });
 }

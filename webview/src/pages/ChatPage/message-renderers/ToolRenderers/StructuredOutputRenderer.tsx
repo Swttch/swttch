@@ -1,6 +1,7 @@
 import {Streamdown} from 'streamdown';
 import {math} from '@/utils/mathPlugin';
 import {code} from '@/utils/codePlugin';
+import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '@/utils/mermaidPlugin';
 import {ToolUseBlockDto} from "@/dto";
 import {Container, RendererProps, ToolHeader, ToolWrapper} from "./common";
 
@@ -22,6 +23,7 @@ class StructuredOutputToolUseDto extends ToolUseBlockDto {
  * hard-coding to one workflow's fields (issue #383).
  */
 export function StructuredOutputRenderer(props: RendererProps) {
+    const mermaidOptions = useMermaidOptions();
     const toolUse = props.toolUse as unknown as StructuredOutputToolUseDto;
     const input = toolUse.input ?? {};
     const report = typeof input.report === 'string' ? input.report : undefined;
@@ -42,8 +44,9 @@ export function StructuredOutputRenderer(props: RendererProps) {
                 <div className="markdown-content mb-2">
                     <Streamdown
                         mode="static"
-                        controls={{ code: true, table: true }}
-                        plugins={{ math, code }}
+                        controls={{ code: true, table: true, mermaid: MERMAID_CONTROLS }}
+                        plugins={{ math, code, mermaid }}
+                        mermaid={mermaidOptions}
                     >
                         {report}
                     </Streamdown>

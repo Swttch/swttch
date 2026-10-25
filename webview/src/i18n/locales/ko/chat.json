@@ -393,6 +393,10 @@
     "signed": "로그인됨",
     "reSign": "다시 로그인"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch가 {{file}}을(를) 읽을 수 없어 모든 Claude 설정이 꺼진 것처럼 보이고, 변경도 저장되지 않습니다. 이유: {{reason}}",
+    "saveFailed": "설정을 저장하지 못했습니다. 이유: {{reason}}"
+  },
   "authError": {
     "banner": "Claude Code에 로그인되어 있지 않습니다.",
     "login": "로그인",

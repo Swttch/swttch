@@ -393,6 +393,10 @@
     "signed": "وارد شده",
     "reSign": "ورود مجدد"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch نمی‌تواند {{file}} را بخواند، بنابراین همهٔ تنظیمات Claude تنظیم‌نشده به نظر می‌رسند و تغییرات ذخیره نمی‌شوند. دلیل: {{reason}}",
+    "saveFailed": "ذخیرهٔ تنظیم انجام نشد. دلیل: {{reason}}"
+  },
   "authError": {
     "banner": "به Claude Code وارد نشده‌اید.",
     "login": "ورود",

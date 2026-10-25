@@ -13,7 +13,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 
 /**
- * Takes an unread badge off when the user arrives at the session it was drawn for.
+ * Takes an unread badge, and the attention banner, off when the user arrives at the session it was drawn for.
  *
  * A badge is drawn when a turn ends on a session the user is not looking at (see
  * [SessionViewJudge]), and that now includes a session on a tab that is selected while
@@ -39,6 +39,7 @@ object UnreadBadgeClearer {
         }
         if (changed) (manager as? FileEditorManagerEx)?.refreshIcons()
         ToolWindowHost.getInstance(project).clearUnreadWhereViewed()
+        ClaudePanelRegistry.dismissBannersWhereViewed(project)
     }
 }
 

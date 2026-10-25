@@ -3,6 +3,7 @@ import {Streamdown} from 'streamdown';
 import {ChevronRightIcon} from '@heroicons/react/20/solid';
 import {math} from '../../utils/mathPlugin';
 import {code} from '../../utils/codePlugin';
+import {mermaid, MERMAID_CONTROLS, useMermaidOptions} from '../../utils/mermaidPlugin';
 import './streaming.css';
 import {ToolWrapper} from "@/pages/ChatPage/message-renderers/ToolRenderers/common";
 import {useChatStreamContext} from '../../contexts/ChatStreamContext';
@@ -33,6 +34,7 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
     className = '',
     message,
 }) => {
+    const mermaidOptions = useMermaidOptions();
     const { t } = useTranslation('chat');
     const [shouldAnimate, setShouldAnimate] = useState(isStreaming);
     const markdownRef = useRef<HTMLDivElement>(null);
@@ -103,8 +105,10 @@ export const ThinkingStreamingMessage: React.FC<ThinkingStreamingMessageProps> =
                             controls={{
                                 code: true,
                                 table: true,
+                                mermaid: MERMAID_CONTROLS,
                             }}
-                            plugins={{ math, code }}
+                            plugins={{ math, code, mermaid }}
+                            mermaid={mermaidOptions}
                         >
                             {prepareAssistantMarkdown(thinking, workingDirectory)}
                         </Streamdown>

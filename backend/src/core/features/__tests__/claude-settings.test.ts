@@ -6,6 +6,7 @@ import {
   deepMergeSettings,
   readJsonFileSafe,
   readClaudeSettings,
+  readMergedClaudeSettings,
   saveClaudeSetting,
 } from '../claude-settings';
 import { readSettingsEnv } from '../settings-env';
@@ -166,6 +167,10 @@ describe('claude-settings', () => {
     it('returns the object for a normal settings file', async () => {
       expect(await readJsonFileSafe(write('f.json', '{"env":{"A":"1"}}'))).toEqual({ env: { A: '1' } });
     });
+
+    it('returns the object for a file saved with a UTF-8 byte order mark (#595)', async () => {
+      expect(await readJsonFileSafe(write('g.json', '\uFEFF{"effortLevel":"high"}'))).toEqual({ effortLevel: 'high' });
+    });
   });
 
   describe('readClaudeSettings()', () => {
@@ -194,11 +199,68 @@ describe('claude-settings', () => {
       expect((await readClaudeSettings()).env).toEqual({ A: '1', B: 'two', C: '3' });
     });
 
+    it('reads settings.json saved with a byte order mark instead of dropping every key (#595)', async () => {
+      write('settings.json', '\uFEFF{"effortLevel":"max","theme":"dark"}');
+
+      expect(await readClaudeSettings()).toEqual({ effortLevel: 'max', theme: 'dark' });
+    });
+
     it('keeps settings.json when settings.local.json is unusable', async () => {
       write('settings.json', '{"env":{"KEPT":"1"}}');
       write('settings.local.json', 'null');
 
       expect((await readClaudeSettings()).env).toEqual({ KEPT: '1' });
+    });
+  });
+
+  // A file that exists but cannot be read looks, to every reader, exactly like no settings at all. The merged
+  // read therefore names the files it gave up on, so a screen can say why every setting looks unset (#595).
+  describe('readMergedClaudeSettings() unreadable files', () => {
+    let configDir: string;
+    let projectDir: string;
+    let saved: string | undefined;
+
+    beforeEach(() => {
+      configDir = mkdtempSync(join(tmpdir(), 'ccg-un-'));
+      projectDir = mkdtempSync(join(tmpdir(), 'ccg-unproj-'));
+      saved = process.env.CLAUDE_CONFIG_DIR;
+      process.env.CLAUDE_CONFIG_DIR = configDir;
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+      else process.env.CLAUDE_CONFIG_DIR = saved;
+      rmSync(configDir, { recursive: true, force: true });
+      rmSync(projectDir, { recursive: true, force: true });
+    });
+
+    it('lists nothing when every file reads, or is absent', async () => {
+      writeFileSync(join(configDir, 'settings.json'), '{"effortLevel":"high"}', 'utf-8');
+
+      const result = await readMergedClaudeSettings(projectDir);
+      expect(result.unreadable).toEqual([]);
+      expect(result.settings.effortLevel).toBe('high');
+    });
+
+    it('names a global settings file that is not valid JSON, with the parser reason', async () => {
+      const file = join(configDir, 'settings.json');
+      writeFileSync(file, '{ "effortLevel": ', 'utf-8');
+
+      const result = await readMergedClaudeSettings(projectDir);
+      expect(result.settings).toEqual({});
+      expect(result.unreadable).toHaveLength(1);
+      expect(result.unreadable[0].file).toBe(file);
+      expect(result.unreadable[0].reason).not.toBe('');
+    });
+
+    it('names an unreadable project settings file next to the readable global one', async () => {
+      writeFileSync(join(configDir, 'settings.json'), '{"effortLevel":"high"}', 'utf-8');
+      mkdirSync(join(projectDir, '.claude'), { recursive: true });
+      const file = join(projectDir, '.claude', 'settings.local.json');
+      writeFileSync(file, '[1,2,3]', 'utf-8');
+
+      const result = await readMergedClaudeSettings(projectDir);
+      expect(result.settings.effortLevel).toBe('high');
+      expect(result.unreadable.map((u) => u.file)).toEqual([file]);
     });
   });
 

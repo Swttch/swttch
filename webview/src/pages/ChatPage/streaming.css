@@ -314,6 +314,105 @@
   opacity: 1;
 }
 
+/*
+  Mermaid diagrams (issue #556).
+
+  Streamdown lays the diagram, its zoom panel and its fullscreen view out with
+  Tailwind classes written in its own bundle. This app's Tailwind only scans
+  `src/`, so the classes that appear nowhere else here are never generated, and
+  the colours are shadcn names (background, muted, foreground) this theme does
+  not define. Without the rules below the inline diagram collapses to a strip
+  that clips its zoom panel, and fullscreen opens as a small box with no
+  backdrop and its close button in the middle of the screen.
+
+  Each rule gives one of those classes its Tailwind meaning, scoped to the
+  diagram, with the colours taken from this app's tokens.
+*/
+[data-streamdown="mermaid-block"] .min-h-28 {
+  min-height: 7rem;
+}
+
+[data-streamdown="mermaid-block"] .size-full {
+  width: 100%;
+  height: 100%;
+}
+
+[data-streamdown="mermaid-block"] .h-auto {
+  height: auto;
+}
+
+[data-streamdown="mermaid-block"] .left-2 {
+  left: 0.5rem;
+}
+
+[data-streamdown="mermaid-block"] .top-4 {
+  top: 1rem;
+}
+
+[data-streamdown="mermaid-block"] .right-4 {
+  right: 1rem;
+}
+
+[data-streamdown="mermaid-block"] [class*="[&_svg]:h-auto"] svg {
+  height: auto;
+}
+
+[data-streamdown="mermaid-block"] [class*="[&_svg]:w-auto"] svg {
+  width: auto;
+}
+
+/* The fullscreen layer: covers the chat, so it needs a real backdrop. */
+[data-streamdown="mermaid-block"] .bg-background\/95 {
+  background-color: rgb(var(--surface-base-rgb) / 0.95);
+}
+
+/* The zoom panel floating over the diagram. */
+[data-streamdown="mermaid-block"] .bg-background\/90 {
+  background-color: rgb(var(--surface-raised-rgb) / 0.9);
+}
+
+[data-streamdown="mermaid-block"] .text-muted-foreground {
+  color: rgb(var(--text-secondary-rgb));
+}
+
+[data-streamdown="mermaid-block"] .hover\:bg-muted:hover {
+  background-color: rgb(var(--surface-hover-rgb));
+}
+
+[data-streamdown="mermaid-block"] .hover\:text-foreground:hover {
+  color: rgb(var(--text-primary-rgb));
+}
+
+/*
+  Fullscreen's close button sits at the layer's top-right corner, which is
+  under the chat's top bar. The layer is `fixed`, but it is drawn inside the
+  scroll container, and that container's `z-0` keeps everything in it below the
+  bar's `z-30` whatever their own z-index — the button was there, just covered.
+  Moving it down by the bar's height (TOP_BAR_HEIGHT, 40px) brings it into view;
+  with the bar hidden it only sits a little lower than it would.
+*/
+[data-streamdown="mermaid-block"] button[title="Exit fullscreen"] {
+  top: calc(40px + 1rem);
+}
+
+/*
+  Streamdown 2.1 draws the zoom-out button with its check-mark icon, so it reads
+  as "confirm". Swap in the zoom-in icon's magnifier with only the horizontal
+  bar of its plus — the same glyph set, as a minus.
+*/
+[data-streamdown="mermaid-block"] button[title="Zoom out"] svg {
+  display: none;
+}
+
+[data-streamdown="mermaid-block"] button[title="Zoom out"]::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.5 6.5C1.5 3.73858 3.73858 1.5 6.5 1.5C9.26142 1.5 11.5 3.73858 11.5 6.5C11.5 9.26142 9.26142 11.5 6.5 11.5C3.73858 11.5 1.5 9.26142 1.5 6.5ZM6.5 0C2.91015 0 0 2.91015 0 6.5C0 10.0899 2.91015 13 6.5 13C8.02469 13 9.42677 12.475 10.5353 11.596L13.9697 15.0303L14.5 15.5607L15.5607 14.5L15.0303 13.9697L11.596 10.5353C12.475 9.42677 13 8.02469 13 6.5C13 2.91015 10.0899 0 6.5 0ZM4.125 5.875H8.875V7.125H4.125V5.875Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.5 6.5C1.5 3.73858 3.73858 1.5 6.5 1.5C9.26142 1.5 11.5 3.73858 11.5 6.5C11.5 9.26142 9.26142 11.5 6.5 11.5C3.73858 11.5 1.5 9.26142 1.5 6.5ZM6.5 0C2.91015 0 0 2.91015 0 6.5C0 10.0899 2.91015 13 6.5 13C8.02469 13 9.42677 12.475 10.5353 11.596L13.9697 15.0303L14.5 15.5607L15.5607 14.5L15.0303 13.9697L11.596 10.5353C12.475 9.42677 13 8.02469 13 6.5C13 2.91015 10.0899 0 6.5 0ZM4.125 5.875H8.875V7.125H4.125V5.875Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 /* Blockquote */
 [data-streamdown="blockquote"] {
   border-left: 3px solid var(--ide-accent);
