@@ -9,6 +9,7 @@ import { PermissionBanner } from './PermissionBanner';
 import { AskUserQuestionInputPanel } from './AskUserQuestionInputPanel';
 import { AcceptPlanPanel } from './AcceptPlanPanel';
 import { BannerArea } from './BannerArea';
+import { SettingsFileProblemBanner } from './SettingsFileProblemBanner';
 import { MigrationBanner } from './MigrationBanner';
 import { UpdateBanner } from './UpdateBanner';
 import { ConnectionLostBanner } from './ConnectionLostBanner';
@@ -339,6 +340,7 @@ function ChatPageContent() {
         <AuthErrorBanner />
         <BrowserPermissionBanner />
         <AccountSwitchErrorBanner />
+        <SettingsFileProblemBanner />
         <AnnouncementTopBannerSlot />
       </BannerArea>
 

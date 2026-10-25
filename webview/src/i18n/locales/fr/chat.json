@@ -393,6 +393,10 @@
     "signed": "Connecté",
     "reSign": "Se reconnecter"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch ne peut pas lire {{file}} : tous les réglages de Claude apparaissent comme non définis et les modifications ne peuvent pas être enregistrées. Raison : {{reason}}",
+    "saveFailed": "Impossible d'enregistrer le réglage. Raison : {{reason}}"
+  },
   "authError": {
     "banner": "Vous n'êtes pas connecté à Claude Code.",
     "login": "Se connecter",

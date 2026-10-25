@@ -53,6 +53,19 @@ describe('atomic-json', () => {
       write('{"env":{"A":"1"}}');
       expect(await readJsonForUpdate(file())).toEqual({ status: 'ok', data: { env: { A: '1' } } });
     });
+
+    // Windows Notepad and Windows PowerShell 5 save UTF-8 with a BOM. The Claude CLI reads such a file,
+    // JSON.parse does not: the file read as unreadable, every setting looked unset and every write was
+    // refused, so the effort slider could not leave its first step (#595).
+    it('reads a file saved with a UTF-8 byte order mark', async () => {
+      write('\uFEFF{"effortLevel":"high"}');
+      expect(await readJsonForUpdate(file())).toEqual({ status: 'ok', data: { effortLevel: 'high' } });
+    });
+
+    it('treats a file that holds only a byte order mark as empty', async () => {
+      write('\uFEFF');
+      expect(await readJsonForUpdate(file())).toEqual({ status: 'ok', data: {} });
+    });
   });
 
   describe('updateJsonFile()', () => {

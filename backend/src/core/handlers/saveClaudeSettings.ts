@@ -18,8 +18,8 @@ export async function saveClaudeSettingsHandler(
   const result = await saveClaudeSettingToScope(key, value, scope, workingDir);
 
   if (result.status === 'ok') {
-    const { settings, overrides } = await readMergedClaudeSettings(workingDir);
-    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides });
+    const { settings, overrides, unreadable } = await readMergedClaudeSettings(workingDir);
+    connections.broadcastToAll(MessageType.CLAUDE_SETTINGS_CHANGED, { settings, overrides, unreadable });
   }
 
   connections.sendTo(connectionId, MessageType.ACK, {

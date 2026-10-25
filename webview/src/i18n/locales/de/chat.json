@@ -393,6 +393,10 @@
     "signed": "Angemeldet",
     "reSign": "Erneut anmelden"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch kann {{file}} nicht lesen. Deshalb erscheinen alle Claude-Einstellungen als nicht gesetzt, und Änderungen lassen sich nicht speichern. Grund: {{reason}}",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden. Grund: {{reason}}"
+  },
   "authError": {
     "banner": "Du bist bei Claude Code nicht angemeldet.",
     "login": "Anmelden",

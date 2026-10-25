@@ -393,6 +393,10 @@
     "signed": "Sesión iniciada",
     "reSign": "Volver a iniciar sesión"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch no puede leer {{file}}, así que todos los ajustes de Claude aparecen sin definir y los cambios no se pueden guardar. Motivo: {{reason}}",
+    "saveFailed": "No se pudo guardar el ajuste. Motivo: {{reason}}"
+  },
   "authError": {
     "banner": "No has iniciado sesión en Claude Code.",
     "login": "Iniciar sesión",

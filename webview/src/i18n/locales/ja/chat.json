@@ -393,6 +393,10 @@
     "signed": "サインイン済み",
     "reSign": "再サインイン"
   },
+  "settingsFileProblem": {
+    "unreadable": "Swttch が {{file}} を読み取れないため、Claude の設定がすべて未設定に見え、変更も保存できません。理由: {{reason}}",
+    "saveFailed": "設定を保存できませんでした。理由: {{reason}}"
+  },
   "authError": {
     "banner": "Claude Code にログインしていません。",
     "login": "ログイン",
