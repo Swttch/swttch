@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "アーティファクト",
     "softWrap": {
       "wrap": "長い行を折り返す",
       "unwrap": "折り返しを解除"

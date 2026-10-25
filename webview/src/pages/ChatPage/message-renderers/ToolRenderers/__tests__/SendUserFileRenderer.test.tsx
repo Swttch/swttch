@@ -122,7 +122,11 @@ describe('SendUserFileRenderer', () => {
     });
 
     it('plays video in a player, and a m4v as a card', async () => {
-        request.mockResolvedValue({kind: 'video', mimeType: 'video/mp4', base64: 'QUJD'});
+        // A video is read in pieces, the way the preview pane reads one (any size Claude Desktop plays).
+        request.mockImplementation(async (_type: string, payload: {path: string}) =>
+            payload.path.endsWith('.mp4')
+                ? {ok: true, kind: 'video', mimeType: 'video/mp4', size: 3, offset: 0, base64: 'QUJD'}
+                : {kind: 'none'});
         const {container} = draw([{path: '/a/c.mp4', size: 3}, {path: '/a/d.m4v', size: 3}]);
         await waitFor(() => expect(container.querySelector('video')).not.toBeNull());
         expect(container.querySelector('video')).toHaveAttribute('src', 'blob:x');

@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "آرتیفکت",
     "softWrap": {
       "wrap": "شکستن خطوط بلند",
       "unwrap": "توقف شکستن خط"

@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "아티팩트",
     "softWrap": {
       "wrap": "긴 줄 접기",
       "unwrap": "줄바꿈 해제"

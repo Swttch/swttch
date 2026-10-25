@@ -2,6 +2,7 @@
   "tool": {
     "in": "輸入",
     "out": "輸出",
+    "artifactFallbackTitle": "成品",
     "softWrap": {
       "wrap": "摺疊長行",
       "unwrap": "取消換行"

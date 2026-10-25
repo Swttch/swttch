@@ -5,6 +5,7 @@ import { join } from 'path';
 import { keepSentFile, resolveSentFilePath, sentFileCopyPath, sentFilePathsOf, SENT_FILE_MAX_BYTES } from '../sentFileStore';
 import { readFileBytesChunk } from '../fileBytes';
 import { readFilePreview } from '../filePreview';
+import { readFileContentChunk } from '../fileContent';
 
 let dir: string;
 let previousHome: string | undefined;
@@ -62,6 +63,16 @@ describe('a kept copy of a sent file', () => {
     await rm(big);
 
     expect(await resolveSentFilePath(big)).toBe(big);
+  });
+});
+
+describe('a sent video whose original is gone', () => {
+  it('is still read in pieces for the player, from the kept copy', async () => {
+    const original = join(dir, 'clip.mp4');
+    await writeFile(original, Buffer.from('VIDEO'));
+    await keepSentFile(original);
+    await rm(original);
+    expect(await readFileContentChunk(original, 0)).toMatchObject({ ok: true, kind: 'video', size: 5 });
   });
 });
 

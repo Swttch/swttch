@@ -83,7 +83,7 @@ describe('ArtifactRenderer', () => {
     });
 
     // The reason the card exists: the reader needs a way to open what was published.
-    it('links the published page from the result', () => {
+    it('draws a published page as a card with its name that opens the page', () => {
         render(
             <ArtifactRenderer
                 toolUse={makeToolUse({type_url: 'https://claude.ai/artifact/t', title: 'Deck'})}
@@ -91,22 +91,37 @@ describe('ArtifactRenderer', () => {
             />,
         );
 
-        const link = screen.getByRole('link', {name: PAGE});
-        expect(link).toHaveAttribute('href', PAGE);
-        expect(link).toHaveAttribute('target', '_blank');
-        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        const card = screen.getByRole('link', {name: 'Deck'});
+        expect(card).toHaveAttribute('href', PAGE);
+        expect(card).toHaveAttribute('target', '_blank');
+        expect(card).toHaveAttribute('rel', 'noopener noreferrer');
+        // The CLI's answering sentence is left out: the card says what it says.
+        expect(screen.queryByText(/Created a new Artifact/)).not.toBeInTheDocument();
     });
 
-    it('links the page an update names before any result arrives', () => {
-        render(<ArtifactRenderer toolUse={makeToolUse({url: PAGE, files: {}})} />);
-        expect(screen.getByRole('link', {name: PAGE})).toHaveAttribute('href', PAGE);
+    it('names the card after the file published when the call gave no title', () => {
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({file_path: '/a/b/page.html'})}
+                toolResult={makeToolResult(`Published /a/b/page.html at ${PAGE} (Version 1, version id x)`)}
+            />,
+        );
+        expect(screen.getByRole('link', {name: 'page'})).toHaveAttribute('href', PAGE);
     });
 
-    // An update's subject is the page address itself. The link row already shows
-    // it, so the header must not repeat it right above.
-    it('shows the page address once for an update', () => {
+    it('makes the card of the page an update names before any result arrives', () => {
         render(<ArtifactRenderer toolUse={makeToolUse({url: PAGE, files: {}})} />);
-        expect(screen.getAllByText(PAGE)).toHaveLength(1);
+        expect(screen.getByRole('link')).toHaveAttribute('href', PAGE);
+    });
+
+    it('keeps the result of a call that publishes nothing', () => {
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({action: 'list'})}
+                toolResult={makeToolResult(`Showing 1 of 1: ${PAGE}`)}
+            />,
+        );
+        expect(screen.getByText(/Showing 1 of 1/)).toBeInTheDocument();
     });
 
     it('shows the result text', () => {

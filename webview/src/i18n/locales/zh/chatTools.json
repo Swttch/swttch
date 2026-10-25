@@ -2,6 +2,7 @@
   "tool": {
     "in": "输入",
     "out": "输出",
+    "artifactFallbackTitle": "工件",
     "softWrap": {
       "wrap": "折叠长行",
       "unwrap": "取消折行"

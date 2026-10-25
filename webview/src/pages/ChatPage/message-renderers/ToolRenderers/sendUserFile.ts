@@ -1,6 +1,7 @@
 import type {LoadedMessageDto} from "@/types";
 import {getBridge} from "@/api/bridge/Bridge";
 import {MessageType, sentFileExtension, sentFileKind, type SentFileKind} from "@/shared";
+import {loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
 
 /** One file the CLI's `SendUserFile` tool put in front of the user. */
 export interface SentFile {
@@ -85,6 +86,12 @@ export function loadSentMedia(path: string): Promise<string | null> {
     if (known) return known;
 
     const pending = (async (): Promise<string | null> => {
+        // A video is read in pieces like the preview pane reads one, so a large one (Claude Desktop
+        // plays a 40MB video in the chat) does not have to cross the connection as a single message.
+        if (sentFileKind(path) === 'video') {
+            const loaded = await loadFileContent(path);
+            return loaded.ok && loaded.kind === 'video' ? URL.createObjectURL(loaded.blob) : null;
+        }
         const answer = (await getBridge().request(MessageType.GET_FILE_PREVIEW, {path, sentFile: true})) as BackendMedia | undefined;
         if (!answer?.base64 || !answer.mimeType) return null;
         const dataUrl = `data:${answer.mimeType};base64,${answer.base64}`;

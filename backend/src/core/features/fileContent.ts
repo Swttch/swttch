@@ -1,5 +1,6 @@
 import { open, stat } from 'fs/promises';
 import { extname } from 'path';
+import { resolveSentFilePath } from './sentFileStore';
 
 /**
  * The files the preview pane can show next to the chat, and how much of one it
@@ -76,7 +77,9 @@ export async function readFileContentChunk(path: string, offset: number): Promis
   if (type === undefined) return { ok: false, reason: 'unsupported' };
 
   try {
-    const info = await stat(path);
+    // A file Claude sent is read from the copy kept when it was sent once the original is gone.
+    const readable = await resolveSentFilePath(path);
+    const info = await stat(readable);
     if (!info.isFile()) return { ok: false, reason: 'unreadable' };
     if (info.size > type.maxBytes) return { ok: false, reason: 'tooLarge', size: info.size, maxBytes: type.maxBytes };
 
@@ -84,7 +87,7 @@ export async function readFileContentChunk(path: string, offset: number): Promis
     const length = Math.max(0, Math.min(FILE_CONTENT_CHUNK_BYTES, info.size - start));
     const buffer = Buffer.alloc(length);
     if (length > 0) {
-      const handle = await open(path, 'r');
+      const handle = await open(readable, 'r');
       try {
         await handle.read(buffer, 0, length, start);
       } finally {

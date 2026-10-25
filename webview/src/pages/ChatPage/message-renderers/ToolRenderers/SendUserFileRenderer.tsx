@@ -132,14 +132,15 @@ function Video({file, alone}: {file: SentFile; alone: boolean}) {
     const src = useSentMedia(file.path);
     const [broken, setBroken] = useState(false);
     if (src === null || broken) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
-    if (src === undefined) return <div className="h-[160px] w-[320px] max-w-full rounded-lg bg-surface-hover/40"/>;
+    if (src === undefined) return <div className="aspect-video w-full max-w-[480px] rounded-xl bg-surface-hover/40"/>;
     return (
         <video
             src={src}
             controls
             preload="metadata"
             onError={() => setBroken(true)}
-            className="block max-w-[320px] rounded-lg"
+            // 480px wide, as Claude Desktop draws it in the chat.
+            className="block w-full max-w-[480px] rounded-xl"
         />
     );
 }

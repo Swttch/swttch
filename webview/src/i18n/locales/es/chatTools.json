@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "Artefacto",
     "softWrap": {
       "wrap": "Ajustar líneas largas",
       "unwrap": "Dejar de ajustar"
