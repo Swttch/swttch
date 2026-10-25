@@ -612,7 +612,14 @@
     "loadingWorkingDirectory": "Chargement du répertoire de travail...",
     "loadingEarlierMessages": "Chargement des messages précédents…",
     "loadOlderMessages": "Charger les messages plus anciens",
-    "jumpToMessage": "Aller à ce message"
+    "jumpToMessage": "Aller à ce message",
+    "searchPlaceholder": "Rechercher dans le chat",
+    "searchCount": "{{current}} sur {{total}}",
+    "searchNoResults": "Aucun résultat",
+    "searchLoadingHistory": "Chargement des messages plus anciens pour la recherche",
+    "searchPrevious": "Résultat précédent",
+    "searchNext": "Résultat suivant",
+    "searchClose": "Fermer"
   },
   "sendActions": {
     "collapseReply": "Réduire la réponse",

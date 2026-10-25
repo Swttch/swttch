@@ -361,6 +361,7 @@
       "openSideQuestion": "Poser une question en aparté (/btw)",
       "refreshSessionList": "Actualiser la liste des sessions quand elle est ouverte",
       "zoomIn": "Zoom avant",
+      "findInChat": "Rechercher dans la conversation",
       "zoomOut": "Zoom arrière",
       "zoomReset": "Réinitialiser le zoom",
       "openClaudeCode": "Ouvrir Claude Code depuis l'IDE",

@@ -363,6 +363,7 @@
       "openSideQuestion": "Задать побочный вопрос (/btw)",
       "refreshSessionList": "Обновить список сессий, пока он открыт",
       "zoomIn": "Увеличить масштаб",
+      "findInChat": "Поиск по беседе",
       "zoomOut": "Уменьшить масштаб",
       "zoomReset": "Сбросить масштаб",
       "openClaudeCode": "Открыть Claude Code из IDE",

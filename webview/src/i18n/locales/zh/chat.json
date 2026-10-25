@@ -612,7 +612,14 @@
     "loadingWorkingDirectory": "正在加载工作目录...",
     "loadingEarlierMessages": "正在加载更早的消息…",
     "loadOlderMessages": "加载更早的消息",
-    "jumpToMessage": "跳转到该消息位置"
+    "jumpToMessage": "跳转到该消息位置",
+    "searchPlaceholder": "在聊天中查找",
+    "searchCount": "{{current}} / {{total}}",
+    "searchNoResults": "无结果",
+    "searchLoadingHistory": "正在加载更早的消息以便搜索",
+    "searchPrevious": "上一个结果",
+    "searchNext": "下一个结果",
+    "searchClose": "关闭"
   },
   "sendActions": {
     "collapseReply": "折叠回复",

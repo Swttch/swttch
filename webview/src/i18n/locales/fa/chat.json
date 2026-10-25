@@ -612,7 +612,14 @@
     "loadingWorkingDirectory": "در حال بارگذاری دایرکتوری کاری...",
     "loadingEarlierMessages": "در حال بارگذاری پیام‌های قبلی…",
     "loadOlderMessages": "بارگذاری پیام‌های قدیمی‌تر",
-    "jumpToMessage": "رفتن به این پیام"
+    "jumpToMessage": "رفتن به این پیام",
+    "searchPlaceholder": "جستجو در گفتگو",
+    "searchCount": "{{current}} از {{total}}",
+    "searchNoResults": "نتیجه‌ای نیست",
+    "searchLoadingHistory": "در حال بارگذاری پیام‌های قدیمی‌تر برای جستجو",
+    "searchPrevious": "نتیجه قبلی",
+    "searchNext": "نتیجه بعدی",
+    "searchClose": "بستن"
   },
   "sendActions": {
     "collapseReply": "جمع کردن پاسخ",
