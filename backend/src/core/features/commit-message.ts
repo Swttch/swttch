@@ -13,8 +13,6 @@ const MAX_PATHS_PER_GIT_COMMAND = 64;
 const MAX_PATHSPEC_CHARS_PER_GIT_COMMAND = 8_000;
 const LITERAL_PATHSPEC_ENV: NodeJS.ProcessEnv = { GIT_LITERAL_PATHSPECS: '1' };
 const OFFICIAL_ANTHROPIC_HOST = 'api.anthropic.com';
-const ANTHROPIC_VERSION = '2023-06-01';
-const MAX_COMMIT_MESSAGE_TOKENS = 2_048;
 
 interface GitOutput {
   stdout: string;
@@ -24,12 +22,6 @@ interface GitOutput {
 interface CommitMessageContext {
   diff: string;
   recentCommitMessages: string[];
-}
-
-interface DirectAnthropicRequest {
-  baseUrl: string;
-  headers: Record<string, string>;
-  model: string;
 }
 
 export interface GenerateCommitMessageOptions {
@@ -131,7 +123,7 @@ export async function collectCommitMessageContext(
       signal,
     ))).then((outputs) => outputs.map((output) => output.stdout).join('')),
     runGit(
-      ['log', `-n${RECENT_COMMIT_COUNT}`, '--pretty=format:%s'],
+      ['log', `-n${RECENT_COMMIT_COUNT}`, '--pretty=oneline'],
       workingDir,
       hasHead ? [0] : [0, 128],
       undefined,
@@ -170,9 +162,11 @@ export async function collectCommitMessageContext(
 
   return {
     diff: truncateText(diff, MAX_DIFF_CHARS),
+    // `--pretty=oneline` instead of `format:%s`: on Windows, Command refuses any argument
+    // containing '%' because cmd.exe would expand it. The leading hash is dropped here.
     recentCommitMessages: log.stdout
       .split('\n')
-      .map((message) => message.trim())
+      .map((line) => line.replace(/^[0-9a-f]{7,64}\s+/i, '').trim())
       .filter(Boolean),
   };
 }
@@ -237,6 +231,10 @@ export function buildClaudeCommitMessageArgs(restricted = true, lowEffort = true
     'text',
     '--model',
     'haiku',
+    // `--tools=` (one token): an empty argument would be dropped by the Windows shell spawn.
+    '--tools=',
+    '--strict-mcp-config',
+    '--disable-slash-commands',
     ...(lowEffort ? ['--effort', 'low'] : []),
     ...(restricted ? ['--restricted'] : []),
   ];
@@ -257,76 +255,6 @@ function supportsRestrictedMode(settings: Record<string, unknown>): boolean {
     return new URL(baseUrl).hostname === OFFICIAL_ANTHROPIC_HOST;
   } catch {
     return false;
-  }
-}
-
-function readDirectAnthropicRequest(settings: Record<string, unknown>): DirectAnthropicRequest | null {
-  const baseUrl = readStringEnvValue(settings, 'ANTHROPIC_BASE_URL');
-  const apiKey = readStringEnvValue(settings, 'ANTHROPIC_API_KEY');
-  const authToken = readStringEnvValue(settings, 'ANTHROPIC_AUTH_TOKEN');
-  const model = readStringEnvValue(settings, 'ANTHROPIC_DEFAULT_HAIKU_MODEL')
-    ?? readStringEnvValue(settings, 'ANTHROPIC_SMALL_FAST_MODEL');
-  if (!baseUrl || (!apiKey && !authToken) || !model) return null;
-
-  return {
-    baseUrl,
-    headers: apiKey ? { 'x-api-key': apiKey } : { authorization: `Bearer ${authToken}` },
-    model,
-  };
-}
-
-async function runDirectAnthropicCommitMessage(
-  prompt: string,
-  request: DirectAnthropicRequest,
-  signal?: AbortSignal,
-): Promise<string> {
-  if (signal?.aborted) throw new Error('Commit message generation cancelled');
-
-  const abortController = new AbortController();
-  const abort = (): void => abortController.abort();
-  const timer = setTimeout(() => abortController.abort(), CLAUDE_TIMEOUT_MS);
-  signal?.addEventListener('abort', abort, { once: true });
-
-  try {
-    const endpoint = `${request.baseUrl.replace(/\/+$/, '')}/v1/messages`;
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: new Headers({
-        'anthropic-version': ANTHROPIC_VERSION,
-        'content-type': 'application/json',
-        ...request.headers,
-      }),
-      body: JSON.stringify({
-        model: request.model,
-        max_tokens: MAX_COMMIT_MESSAGE_TOKENS,
-        thinking: { type: 'disabled' },
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      signal: abortController.signal,
-    });
-    const payload = await response.json() as {
-      content?: Array<{ text?: string; type?: string }>;
-    };
-    if (!response.ok) throw new Error(`Claude API returned HTTP ${response.status}`);
-
-    const output = (payload.content ?? [])
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text ?? '')
-      .join('');
-    if (output.length > MAX_CLAUDE_OUTPUT_CHARS) {
-      throw new Error('Claude commit-message output is too large');
-    }
-    return output;
-  } catch (err) {
-    if (abortController.signal.aborted) {
-      throw new Error(signal?.aborted
-        ? 'Commit message generation cancelled'
-        : 'Claude commit-message generation timed out');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener('abort', abort);
   }
 }
 
@@ -403,10 +331,6 @@ export async function runClaudeCommitMessage(
   signal?: AbortSignal,
 ): Promise<string> {
   const { settings } = await readMergedClaudeSettings(workingDir);
-  const directRequest = readDirectAnthropicRequest(settings);
-  if (directRequest) {
-    return runDirectAnthropicCommitMessage(prompt, directRequest, signal);
-  }
 
   let supportsRestricted = supportsRestrictedMode(settings);
   let supportsLowEffort = true;

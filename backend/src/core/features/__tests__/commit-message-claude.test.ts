@@ -91,58 +91,9 @@ describe('generateCommitMessage Claude compatibility', () => {
     else process.env.ANTHROPIC_API_KEY = previousApiKey;
     if (previousAuthToken === undefined) delete process.env.ANTHROPIC_AUTH_TOKEN;
     else process.env.ANTHROPIC_AUTH_TOKEN = previousAuthToken;
-    vi.unstubAllGlobals();
   });
 
-  it('uses a one-shot Anthropic-compatible API request when credentials are configured', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        content: [{ type: 'text', text: 'feat: add new content' }],
-      }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    claudeSettingsMocks.readMergedClaudeSettings.mockResolvedValue({
-      settings: {
-        env: {
-          ANTHROPIC_BASE_URL: 'https://open.bigmodel.cn/api/anthropic',
-          ANTHROPIC_AUTH_TOKEN: 'token',
-          ANTHROPIC_DEFAULT_HAIKU_MODEL: 'glm-5.3-flash',
-        },
-      },
-      overrides: ['env'],
-    });
-
-    const controller = new AbortController();
-    const message = await runClaudeCommitMessage(
-      'Generate a commit message.',
-      '/repo',
-      controller.signal,
-    );
-
-    expect(message).toBe('feat: add new content');
-    expect(claudeMocks.spawnAuthed).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      'https://open.bigmodel.cn/api/anthropic/v1/messages',
-    );
-    const options = fetchMock.mock.calls[0][1] as RequestInit & { headers: Headers };
-    expect(options.method).toBe('POST');
-    expect(options.signal).toBeInstanceOf(AbortSignal);
-    expect(options.signal).not.toBe(controller.signal);
-    expect(options.headers.get('authorization')).toBe('Bearer token');
-    expect(options.headers.get('anthropic-version')).toBe('2023-06-01');
-    expect(JSON.parse(options.body as string)).toEqual({
-      model: 'glm-5.3-flash',
-      max_tokens: 2048,
-      thinking: { type: 'disabled' },
-      messages: [{ role: 'user', content: 'Generate a commit message.' }],
-    });
-  });
-
-  it('falls back to the CLI when the gateway has no direct API credentials', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+  it('spawns the CLI for a third-party gateway without credentials in settings', async () => {
     claudeSettingsMocks.readMergedClaudeSettings.mockResolvedValue({
       settings: {
         env: {
@@ -158,13 +109,10 @@ describe('generateCommitMessage Claude compatibility', () => {
     const message = await runClaudeCommitMessage('Generate a commit message.', '/repo');
 
     expect(message).toBe('feat: add new content');
-    expect(fetchMock).not.toHaveBeenCalled();
     expect(claudeMocks.spawnAuthed).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to the CLI when the system has no explicit fast-model mapping', async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+  it('spawns the CLI even when settings hold a gateway token and never reads it itself', async () => {
     claudeSettingsMocks.readMergedClaudeSettings.mockResolvedValue({
       settings: {
         env: {
@@ -181,7 +129,6 @@ describe('generateCommitMessage Claude compatibility', () => {
     const message = await runClaudeCommitMessage('Generate a commit message.', '/repo');
 
     expect(message).toBe('feat: add new content');
-    expect(fetchMock).not.toHaveBeenCalled();
     expect(claudeMocks.spawnAuthed).toHaveBeenCalledTimes(1);
   });
 
