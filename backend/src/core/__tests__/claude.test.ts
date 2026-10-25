@@ -446,6 +446,7 @@ describe('Claude.spawnAuthed — native settings env', () => {
         env: { ANTHROPIC_BASE_URL: 'https://claude.example.test/api' },
       },
       overrides: [],
+      unreadable: [],
     });
     vi.mocked(cpSpawn).mockClear();
 
@@ -460,7 +461,7 @@ describe('Claude.spawnAuthed — native settings env', () => {
     } finally {
       if (previousBaseUrl === undefined) delete process.env.ANTHROPIC_BASE_URL;
       else process.env.ANTHROPIC_BASE_URL = previousBaseUrl;
-      vi.mocked(readMergedClaudeSettings).mockResolvedValue({ settings: {}, overrides: [] });
+      vi.mocked(readMergedClaudeSettings).mockResolvedValue({ settings: {}, overrides: [], unreadable: [] });
     }
   });
 });
