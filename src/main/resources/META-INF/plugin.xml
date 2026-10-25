@@ -191,6 +191,10 @@
         <listener
             class="com.github.yhk1038.claudecodegui.toolwindow.OnIdeActivated"
             topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+        <!-- Reopen the open chat tabs after an update that applies without an IDE restart (#598) -->
+        <listener
+            class="com.github.yhk1038.claudecodegui.startup.ChatTabsReloadListener"
+            topic="com.intellij.ide.plugins.DynamicPluginListener"/>
     </applicationListeners>
 
     <!-- Clean up session state only on real tab close (not on tab move/split) -->
