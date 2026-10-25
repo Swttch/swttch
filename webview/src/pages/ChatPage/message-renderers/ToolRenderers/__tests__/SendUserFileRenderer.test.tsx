@@ -195,7 +195,7 @@ describe('the download button', () => {
         const buttons = screen.getAllByRole('button', {name: 'Download'});
         expect(buttons).toHaveLength(2);
         expect(buttons[0].className).toContain('opacity-0');
-        expect(buttons[0].className).toContain('group-hover:opacity-100');
+        expect(buttons[0].className).toContain('group-hover/sent:opacity-100');
         expect(buttons[0].className).toContain('transition-opacity');
 
         fireEvent.click(buttons[1]);

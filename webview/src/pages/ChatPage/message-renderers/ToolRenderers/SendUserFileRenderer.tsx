@@ -40,7 +40,7 @@ function DownloadButton({file, className}: {file: SentFile; className?: string})
             }}
             className={cn(
                 "absolute end-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-surface-overlay text-text-primary",
-                "opacity-0 transition-opacity duration-200 hover:bg-surface-hover focus-visible:opacity-100 group-hover:opacity-100",
+                "opacity-0 transition-opacity duration-200 hover:bg-surface-hover focus-visible:opacity-100 group-hover/sent:opacity-100",
                 className,
             )}
         >
@@ -53,7 +53,7 @@ function DownloadButton({file, className}: {file: SentFile; className?: string})
 function Item({file, className, children}: {file: SentFile; className?: string; children: React.ReactNode}) {
     return (
         <Tooltip content={<span dir="ltr">{file.path}</span>} placement="bottom">
-            <div className={cn("group relative", className)}>
+            <div className={cn("group/sent relative", className)}>
                 {children}
                 <DownloadButton file={file}/>
             </div>
@@ -132,15 +132,15 @@ function Video({file, alone}: {file: SentFile; alone: boolean}) {
     const src = useSentMedia(file.path);
     const [broken, setBroken] = useState(false);
     if (src === null || broken) return alone ? <FileChip file={file}/> : <FileCard file={file}/>;
-    if (src === undefined) return <div className="aspect-video w-full max-w-[480px] rounded-xl bg-surface-hover/40"/>;
+    if (src === undefined) return <div className="aspect-video w-full max-w-[320px] rounded-xl bg-surface-hover/40"/>;
     return (
         <video
             src={src}
             controls
             preload="metadata"
             onError={() => setBroken(true)}
-            // 480px wide, as Claude Desktop draws it in the chat.
-            className="block w-full max-w-[480px] rounded-xl"
+            // 320px wide (two thirds of the 480px Claude Desktop uses), keeping the video's own ratio.
+            className="block w-full max-w-[320px] rounded-xl"
         />
     );
 }
