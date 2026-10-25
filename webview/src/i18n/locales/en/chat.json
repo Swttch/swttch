@@ -785,6 +785,11 @@
     "download": "Download",
     "downloadFailed": "Could not save the file"
   },
+  "linkCard": {
+    "openedInBrowser": "Opened in browser",
+    "open": "Open",
+    "more": "More options"
+  },
   "filePreview": {
     "label": "Preview of {{name}}",
     "close": "Close preview",

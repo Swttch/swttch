@@ -781,6 +781,11 @@
     "download": "دانلود",
     "downloadFailed": "ذخیره فایل ممکن نشد"
   },
+  "linkCard": {
+    "openedInBrowser": "در مرورگر باز شد",
+    "open": "باز کردن",
+    "more": "گزینه‌های بیشتر"
+  },
   "filePreview": {
     "label": "پیش‌نمایش {{name}}",
     "close": "بستن پیش‌نمایش",

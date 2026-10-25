@@ -781,6 +781,11 @@
     "download": "下载",
     "downloadFailed": "无法保存文件"
   },
+  "linkCard": {
+    "openedInBrowser": "已在浏览器中打开",
+    "open": "打开",
+    "more": "更多选项"
+  },
   "filePreview": {
     "label": "{{name}} 的预览",
     "close": "关闭预览",

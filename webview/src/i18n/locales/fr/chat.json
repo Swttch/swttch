@@ -781,6 +781,11 @@
     "download": "Télécharger",
     "downloadFailed": "Impossible d'enregistrer le fichier"
   },
+  "linkCard": {
+    "openedInBrowser": "Ouvert dans le navigateur",
+    "open": "Ouvrir",
+    "more": "Plus d'options"
+  },
   "filePreview": {
     "label": "Aperçu de {{name}}",
     "close": "Fermer l’aperçu",

@@ -781,6 +781,11 @@
     "download": "Baixar",
     "downloadFailed": "Não foi possível salvar o arquivo"
   },
+  "linkCard": {
+    "openedInBrowser": "Aberto no navegador",
+    "open": "Abrir",
+    "more": "Mais opções"
+  },
   "filePreview": {
     "label": "Pré-visualização de {{name}}",
     "close": "Fechar a pré-visualização",

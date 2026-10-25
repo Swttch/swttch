@@ -781,6 +781,11 @@
     "download": "ダウンロード",
     "downloadFailed": "ファイルを保存できませんでした"
   },
+  "linkCard": {
+    "openedInBrowser": "ブラウザで開きました",
+    "open": "開く",
+    "more": "その他のオプション"
+  },
   "filePreview": {
     "label": "{{name}} のプレビュー",
     "close": "プレビューを閉じる",

@@ -781,6 +781,11 @@
     "download": "Herunterladen",
     "downloadFailed": "Die Datei konnte nicht gespeichert werden"
   },
+  "linkCard": {
+    "openedInBrowser": "Im Browser geöffnet",
+    "open": "Öffnen",
+    "more": "Weitere Optionen"
+  },
   "filePreview": {
     "label": "Vorschau von {{name}}",
     "close": "Vorschau schließen",

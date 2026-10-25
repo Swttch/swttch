@@ -797,6 +797,11 @@
     "download": "تنزيل",
     "downloadFailed": "تعذّر حفظ الملف"
   },
+  "linkCard": {
+    "openedInBrowser": "فُتح في المتصفح",
+    "open": "فتح",
+    "more": "خيارات إضافية"
+  },
   "filePreview": {
     "label": "معاينة {{name}}",
     "close": "إغلاق المعاينة",
