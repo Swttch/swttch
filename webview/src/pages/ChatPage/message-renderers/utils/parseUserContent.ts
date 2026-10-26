@@ -98,6 +98,11 @@ export function parseUserContent(content: string): {
     cleanText = cleanText.replace(new RegExp(`^\\s*//?${commandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'g'), '');
   }
 
+  // Step H2: the wrapper the app puts round a pasted block. Desktop shows the pasted
+  // text without it, so only the tags go (the closing one carries an id too:
+  // `</pasted_content id="6c03">`); the pasted text stays.
+  cleanText = cleanText.replace(/<\/?pasted_content(?:\s[^>]*)?>/g, '');
+
   // Step I: 중복 공백/줄바꿈 정리
   cleanText = cleanText
     .replace(/\n{3,}/g, '\n\n')

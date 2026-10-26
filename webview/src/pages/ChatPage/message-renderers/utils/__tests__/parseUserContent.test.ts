@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { parseUserContent } from '../parseUserContent';
 
 describe('parseUserContent', () => {
+  it('붙여넣기 블록을 감싼 <pasted_content> 태그(닫는 태그의 id 포함)만 지우고 본문은 남긴다', () => {
+    const text = '<pasted_content id="6c03">\n`/p/demo` 폴더에 만들어 주세요.\n끝.\n</pasted_content id="6c03">';
+    expect(parseUserContent(text).text).toBe('`/p/demo` 폴더에 만들어 주세요.\n끝.');
+  });
+
   it('태그 없는 일반 텍스트를 그대로 반환한다', () => {
     const result = parseUserContent('Hello, world!');
     expect(result.text).toBe('Hello, world!');
