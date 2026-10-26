@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 import { useBridgeContext } from '@/contexts/BridgeContext';
+import { useChooseFolder } from '@/hooks/useChooseFolder';
 import { useWorkingDir } from '@/contexts/WorkingDirContext';
 import { useSessionContext } from '@/contexts/SessionContext';
-import { Route, routeToPath, withWorkingDir } from '@/router/routes';
 import { SessionState } from '@/types';
 import { classifyWorkingDirs, WorkingDirEntry } from './classifyWorkingDirs';
 import { WorkingDirToggle } from './WorkingDirToggle';
@@ -22,7 +20,6 @@ export function WorkingDirDropdown() {
   const { settings, updateSettingWithScope } = useSettings();
   const includeNested = settings[SettingKey.INCLUDE_NESTED_SESSIONS] ?? false;
   const { sessionState } = useSessionContext();
-  const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
   const [entries, setEntries] = useState<WorkingDirEntry[]>([]);
@@ -85,29 +82,10 @@ export function WorkingDirDropdown() {
 
   const onNavigate = useCallback(() => setIsOpen(false), []);
 
-  // Adding a working directory hands off to the host's native folder dialog.
-  // The bridge fires back FOLDER_SELECTED once the user picks (or cancels),
-  // so we subscribe transiently and route into the new working dir.
-  //
-  // `setWorkingDirectory` won't help here — its routing guard only fires from
-  // PROJECT_SELECTOR (or when leaving with a null dir), and we are sitting on
-  // NEW_SESSION. Navigate explicitly the same way our <Link> rows do.
-  const onAddWorkingDir = useCallback(() => {
-    const unsubscribe = subscribe(MessageType.FOLDER_SELECTED, (message) => {
-      unsubscribe();
-      // The host could not show its folder dialog; the reason is the backend's.
-      if (typeof message.payload?.error === 'string') toast.error(message.payload.error);
-      const selectedPath = message.payload?.path;
-      if (typeof selectedPath === 'string' && selectedPath.length > 0) {
-        // macOS folder dialog appends a trailing slash; strip it so the URL
-        // matches sessions-index `projectPath` exactly (no slash).
-        const normalized = selectedPath.replace(/\/+$/, '') || selectedPath;
-        setIsOpen(false);
-        navigate(withWorkingDir(routeToPath(Route.NEW_SESSION), normalized));
-      }
-    });
-    void send(MessageType.OPEN_FOLDER_DIALOG, {});
-  }, [send, subscribe, navigate]);
+  // Adding a working directory hands off to the host's native folder dialog and routes into
+  // the folder that is chosen.
+  const closeMenu = useCallback(() => setIsOpen(false), []);
+  const onAddWorkingDir = useChooseFolder(closeMenu);
 
   // On mobile the menu anchors to the viewport edges instead of this toggle, so
   // the positioning context has to be dropped — same as SessionDropdown.

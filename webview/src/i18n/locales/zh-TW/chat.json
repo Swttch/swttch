@@ -57,11 +57,12 @@
       "message": "錯誤：此工作階段正在使用中。",
       "reclaiming": "正在接管...",
       "reclaim": "接管工作階段"
-    },
-    "workingDirMissing": {
-      "message": "專案資料夾已不存在：{{path}}。資料夾可能已被刪除或移動，或是存放它的磁碟機或 WSL 發行版已不存在。還原該資料夾後即可繼續使用此專案。",
-      "openProjects": "選擇其他專案"
     }
+  },
+  "missingFolder": {
+    "message": "工作資料夾已不存在。請選擇其他資料夾以繼續。",
+    "chooseFolder": "選擇資料夾",
+    "openProjects": "選擇其他專案"
   },
   "chatInput": {
     "actionButtons": {

@@ -57,11 +57,12 @@
       "message": "エラー: このセッションはすでに使用中です。",
       "reclaiming": "再取得中...",
       "reclaim": "セッションを再取得"
-    },
-    "workingDirMissing": {
-      "message": "プロジェクトのフォルダーが存在しません: {{path}}。フォルダーが削除または移動されたか、フォルダーがあったドライブや WSL ディストリビューションがなくなった可能性があります。フォルダーを復元すると、このプロジェクトを再び使えます。",
-      "openProjects": "別のプロジェクトを選ぶ"
     }
+  },
+  "missingFolder": {
+    "message": "作業フォルダが存在しなくなりました。続けるには別のフォルダを選んでください。",
+    "chooseFolder": "フォルダを選択",
+    "openProjects": "別のプロジェクトを選ぶ"
   },
   "chatInput": {
     "actionButtons": {

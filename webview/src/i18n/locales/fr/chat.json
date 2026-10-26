@@ -57,11 +57,12 @@
       "message": "Erreur : cette session est déjà utilisée.",
       "reclaiming": "Récupération...",
       "reclaim": "Récupérer la session"
-    },
-    "workingDirMissing": {
-      "message": "Le dossier du projet n'existe plus : {{path}}. Il a peut-être été supprimé ou déplacé, ou le lecteur ou la distribution WSL qui le contenait a disparu. Restaurez le dossier pour utiliser à nouveau ce projet.",
-      "openProjects": "Choisir un autre projet"
     }
+  },
+  "missingFolder": {
+    "message": "Le dossier de travail n'existe plus. Choisissez un autre dossier pour continuer.",
+    "chooseFolder": "Choisir un dossier",
+    "openProjects": "Choisir un autre projet"
   },
   "chatInput": {
     "actionButtons": {

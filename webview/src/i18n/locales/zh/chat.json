@@ -57,11 +57,12 @@
       "message": "错误:此会话正在被使用。",
       "reclaiming": "正在接管...",
       "reclaim": "接管会话"
-    },
-    "workingDirMissing": {
-      "message": "项目文件夹已不存在：{{path}}。文件夹可能已被删除或移动，或者存放它的驱动器或 WSL 发行版已不存在。恢复该文件夹后即可继续使用此项目。",
-      "openProjects": "选择其他项目"
     }
+  },
+  "missingFolder": {
+    "message": "工作文件夹已不存在。请选择其他文件夹以继续。",
+    "chooseFolder": "选择文件夹",
+    "openProjects": "选择其他项目"
   },
   "chatInput": {
     "actionButtons": {
