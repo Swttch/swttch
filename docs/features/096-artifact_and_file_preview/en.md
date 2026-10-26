@@ -6,16 +6,16 @@ An Artifact is a page that Claude Code publishes from your session to a private 
 
 All of it is meant to match what the terminal does, and to take over what Claude Code Desktop shows, as far as an IDE can carry it. It was asked for in [#593](https://github.com/Swttch/swttch/issues/593).
 
-## The browser opens by itself after the first publish
+## A new Artifact opens in your browser by itself
 
-In a terminal, the first time Claude publishes a page, Claude Code opens it in your browser. This chat starts Claude Code in a way that, by its own rule, never does that, so until now the link sat in the chat and nothing happened. Now the chat opens the page itself.
+In a terminal, when Claude creates a new Artifact page, Claude Code opens it in your browser. This chat starts Claude Code in a way that, by its own rule, never does that, so until now the link sat in the chat and nothing happened. Now the chat opens the page itself.
 
 | Situation | What happens |
 | --- | --- |
-| Claude publishes a new page | Your default browser opens the page, once |
-| Claude updates a page it already published (same file, or the page's address) | Nothing opens. The tab you already have shows the new version |
+| Claude creates a new page | Your default browser opens the page, once |
+| Claude updates a page it already created (same file, or the page's address) | Nothing opens and nothing closes. The tab you already have shows the new version when you refresh it |
 | The call fails | Nothing opens |
-| You scroll through an old session | Nothing opens. Only a publish that happens while you watch opens the browser |
+| You scroll through an old session | Nothing opens. Only a page created while you watch opens the browser |
 | `CLAUDE_CODE_ARTIFACT_AUTO_OPEN` is `0`, `false`, `no` or `off` in the environment that starts the IDE | Nothing opens, the same switch Claude Code's own documentation gives |
 
 The page needs your claude.ai login in that browser, the same as any Artifact. A new page is private to you.
