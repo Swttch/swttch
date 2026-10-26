@@ -59,6 +59,7 @@ vi.mock('../../../contexts/ChatStreamContext', () => ({
   }),
 }));
 vi.mock('../../../hooks/useScheduledDelivery/useScheduledDelivery', () => ({ useScheduledDelivery: () => {} }));
+vi.mock('@/hooks/useWorkingDirGone', () => ({ useWorkingDirGone: () => false }));
 vi.mock('../../../contexts/SessionContext', () => ({
   useSessionContext: () => ({ currentSessionId: 's1', currentSession: { title: 't' } }),
 }));

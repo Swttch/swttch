@@ -57,11 +57,12 @@
       "message": "Error: Esta sesión ya está en uso.",
       "reclaiming": "Reclamando...",
       "reclaim": "Reclamar sesión"
-    },
-    "workingDirMissing": {
-      "message": "La carpeta del proyecto ya no existe: {{path}}. Puede que se haya eliminado o movido, o que la unidad o la distribución de WSL que la contenía ya no esté disponible. Restaura la carpeta para volver a usar este proyecto.",
-      "openProjects": "Elegir otro proyecto"
     }
+  },
+  "missingFolder": {
+    "message": "La carpeta de trabajo ya no existe. Elige otra carpeta para continuar.",
+    "chooseFolder": "Elegir carpeta",
+    "openProjects": "Elegir otro proyecto"
   },
   "chatInput": {
     "actionButtons": {

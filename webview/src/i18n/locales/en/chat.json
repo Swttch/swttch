@@ -57,11 +57,12 @@
       "message": "Error: This session is already in use.",
       "reclaiming": "Reclaiming...",
       "reclaim": "Reclaim Session"
-    },
-    "workingDirMissing": {
-      "message": "The project folder no longer exists: {{path}}. It may have been deleted or moved, or the drive or WSL distribution that held it is gone. Restore the folder to use this project again.",
-      "openProjects": "Choose another project"
     }
+  },
+  "missingFolder": {
+    "message": "The working folder no longer exists. Choose another folder to continue.",
+    "chooseFolder": "Choose folder",
+    "openProjects": "Choose another project"
   },
   "chatInput": {
     "actionButtons": {
