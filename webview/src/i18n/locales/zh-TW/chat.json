@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "{{name}} 的預覽",
-    "close": "關閉預覽",
+    "close": "關閉",
     "openInEditor": "在編輯器中開啟",
     "openWithSystemApp": "用系統應用程式開啟",
     "loading": "載入中…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "構件",
     "untitled": "無標題"
+  },
+  "artifactMenu": {
+    "switch": "切換構件",
+    "madeByMe": "我建立的構件",
+    "updated": "{{when}}更新",
+    "copyMarkdown": "複製為 Markdown",
+    "rename": "重新命名",
+    "duplicate": "建立副本",
+    "share": "分享",
+    "openOnWeb": "在網頁中開啟",
+    "pin": "釘選",
+    "unpin": "取消釘選",
+    "report": "檢舉構件",
+    "delete": "刪除構件",
+    "deleteTitle": "刪除「{{name}}」？",
+    "deleteMessage": "其連結將對所有人失效，且無法復原。",
+    "deleted": "已刪除構件",
+    "renamed": "已重新命名",
+    "pinned": "已釘選",
+    "unpinned": "已取消釘選",
+    "markdownCopied": "已複製為 Markdown",
+    "failed": "操作未成功",
+    "checking": "檢查中…",
+    "kitMissing": "安裝擴充工具包後即可使用。",
+    "kitTooOld": "更新擴充工具包後即可使用。",
+    "notLinked": "在您的帳戶清單中找不到此構件。",
+    "notOwner": "僅擁有者可以執行。",
+    "unsupported": "尚未支援。",
+    "notLoaded": "頁面尚未載入。",
+    "duplicated": "已建立副本:{{name}}",
+    "cannotCopy": "無法複製此成品"
   }
 }

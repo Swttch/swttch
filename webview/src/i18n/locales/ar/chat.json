@@ -806,7 +806,7 @@
   },
   "filePreview": {
     "label": "معاينة {{name}}",
-    "close": "إغلاق المعاينة",
+    "close": "إغلاق",
     "openInEditor": "فتح في المحرر",
     "openWithSystemApp": "فتح بتطبيق النظام",
     "loading": "جارٍ التحميل…",
@@ -837,5 +837,36 @@
   "artifactChip": {
     "label": "عنصر",
     "untitled": "بدون عنوان"
+  },
+  "artifactMenu": {
+    "switch": "تبديل العنصر",
+    "madeByMe": "عنصر أنشأته",
+    "updated": "حُدّث {{when}}",
+    "copyMarkdown": "نسخ بصيغة Markdown",
+    "rename": "إعادة تسمية",
+    "duplicate": "تكرار",
+    "share": "مشاركة",
+    "openOnWeb": "فتح على الويب",
+    "pin": "تثبيت",
+    "unpin": "إلغاء التثبيت",
+    "report": "الإبلاغ عن العنصر",
+    "delete": "حذف العنصر",
+    "deleteTitle": "هل تريد حذف «{{name}}»؟",
+    "deleteMessage": "سيتوقف رابطه عن العمل للجميع ولا يمكن استعادته.",
+    "deleted": "تم حذف العنصر",
+    "renamed": "تمت إعادة التسمية",
+    "pinned": "تم التثبيت",
+    "unpinned": "تم إلغاء التثبيت",
+    "markdownCopied": "تم النسخ بصيغة Markdown",
+    "failed": "لم تنجح العملية",
+    "checking": "جارٍ التحقق…",
+    "kitMissing": "ثبّت حزمة الإضافات لاستخدام هذا.",
+    "kitTooOld": "حدّث حزمة الإضافات لاستخدام هذا.",
+    "notLinked": "لم يُعثر على هذا العنصر في قائمة حسابك.",
+    "notOwner": "المالك وحده يستطيع ذلك.",
+    "unsupported": "غير مدعوم بعد.",
+    "notLoaded": "لم تُحمَّل الصفحة بعد.",
+    "duplicated": "تم إنشاء نسخة: {{name}}",
+    "cannotCopy": "لا يمكن نسخ هذا العنصر"
   }
 }

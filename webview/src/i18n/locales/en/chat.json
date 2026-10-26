@@ -794,7 +794,7 @@
   },
   "filePreview": {
     "label": "Preview of {{name}}",
-    "close": "Close preview",
+    "close": "Close",
     "openInEditor": "Open in editor",
     "openWithSystemApp": "Open with system app",
     "loading": "Loading…",
@@ -825,5 +825,36 @@
   "artifactChip": {
     "label": "Artifact",
     "untitled": "Untitled"
+  },
+  "artifactMenu": {
+    "switch": "Switch artifact",
+    "madeByMe": "Artifact I made",
+    "updated": "Updated {{when}}",
+    "copyMarkdown": "Copy as Markdown",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "share": "Share",
+    "openOnWeb": "Open on the web",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "report": "Report artifact",
+    "delete": "Delete artifact",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleteMessage": "Its link stops working for everyone, and it cannot be restored.",
+    "deleted": "Artifact deleted",
+    "renamed": "Renamed",
+    "pinned": "Pinned",
+    "unpinned": "Unpinned",
+    "markdownCopied": "Copied as Markdown",
+    "failed": "That did not work",
+    "checking": "Checking…",
+    "kitMissing": "Install the extend kit to use this.",
+    "kitTooOld": "Update the extend kit to use this.",
+    "notLinked": "This artifact was not found in your account list.",
+    "notOwner": "Only the owner can do this.",
+    "unsupported": "Not supported yet.",
+    "notLoaded": "The page is not loaded yet.",
+    "duplicated": "Made a copy: {{name}}",
+    "cannotCopy": "This artifact cannot be copied"
   }
 }

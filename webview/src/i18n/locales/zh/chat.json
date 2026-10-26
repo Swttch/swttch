@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "{{name}} 的预览",
-    "close": "关闭预览",
+    "close": "关闭",
     "openInEditor": "在编辑器中打开",
     "openWithSystemApp": "用系统应用打开",
     "loading": "正在加载…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "工件",
     "untitled": "无标题"
+  },
+  "artifactMenu": {
+    "switch": "切换工件",
+    "madeByMe": "我创建的工件",
+    "updated": "{{when}}更新",
+    "copyMarkdown": "复制为 Markdown",
+    "rename": "重命名",
+    "duplicate": "复制副本",
+    "share": "分享",
+    "openOnWeb": "在网页中打开",
+    "pin": "固定",
+    "unpin": "取消固定",
+    "report": "举报工件",
+    "delete": "删除工件",
+    "deleteTitle": "删除“{{name}}”？",
+    "deleteMessage": "其链接将对所有人失效，且无法恢复。",
+    "deleted": "已删除工件",
+    "renamed": "已重命名",
+    "pinned": "已固定",
+    "unpinned": "已取消固定",
+    "markdownCopied": "已复制为 Markdown",
+    "failed": "操作未成功",
+    "checking": "正在检查…",
+    "kitMissing": "安装扩展工具包后可使用。",
+    "kitTooOld": "更新扩展工具包后可使用。",
+    "notLinked": "在您的账户列表中未找到此工件。",
+    "notOwner": "仅所有者可以执行。",
+    "unsupported": "暂不支持。",
+    "notLoaded": "页面尚未加载。",
+    "duplicated": "已创建副本:{{name}}",
+    "cannotCopy": "无法复制此工件"
   }
 }

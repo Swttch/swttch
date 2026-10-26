@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "{{name}} のプレビュー",
-    "close": "プレビューを閉じる",
+    "close": "閉じる",
     "openInEditor": "エディターで開く",
     "openWithSystemApp": "システムのアプリで開く",
     "loading": "読み込み中…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "アーティファクト",
     "untitled": "無題"
+  },
+  "artifactMenu": {
+    "switch": "アーティファクトを切り替え",
+    "madeByMe": "自分が作ったアーティファクト",
+    "updated": "{{when}}に更新",
+    "copyMarkdown": "Markdownとしてコピー",
+    "rename": "名前を変更",
+    "duplicate": "複製",
+    "share": "共有",
+    "openOnWeb": "Webで開く",
+    "pin": "ピン留め",
+    "unpin": "ピン留めを外す",
+    "report": "アーティファクトを報告",
+    "delete": "アーティファクトを削除",
+    "deleteTitle": "「{{name}}」を削除しますか？",
+    "deleteMessage": "リンクは誰にも開けなくなり、元に戻せません。",
+    "deleted": "アーティファクトを削除しました",
+    "renamed": "名前を変更しました",
+    "pinned": "ピン留めしました",
+    "unpinned": "ピン留めを外しました",
+    "markdownCopied": "Markdownとしてコピーしました",
+    "failed": "できませんでした",
+    "checking": "確認中…",
+    "kitMissing": "拡張キットをインストールすると使えます。",
+    "kitTooOld": "拡張キットを更新すると使えます。",
+    "notLinked": "アカウントの一覧にこのアーティファクトが見つかりません。",
+    "notOwner": "所有者のみ可能です。",
+    "unsupported": "まだ対応していません。",
+    "notLoaded": "ページがまだ読み込まれていません。",
+    "duplicated": "コピーを作成しました: {{name}}",
+    "cannotCopy": "このアーティファクトは複製できません"
   }
 }

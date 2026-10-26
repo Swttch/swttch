@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "{{name}} 미리보기",
-    "close": "미리보기 닫기",
+    "close": "닫기",
     "openInEditor": "편집기에서 열기",
     "openWithSystemApp": "시스템 앱으로 열기",
     "loading": "불러오는 중…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "아티팩트",
     "untitled": "제목 없음"
+  },
+  "artifactMenu": {
+    "switch": "아티팩트 전환",
+    "madeByMe": "내가 만든 아티팩트",
+    "updated": "{{when}} 업데이트됨",
+    "copyMarkdown": "마크다운으로 복사",
+    "rename": "이름 변경",
+    "duplicate": "복제",
+    "share": "공유",
+    "openOnWeb": "웹에서 열기",
+    "pin": "고정",
+    "unpin": "고정 해제",
+    "report": "아티팩트 신고",
+    "delete": "아티팩트 삭제",
+    "deleteTitle": "“{{name}}”을(를) 삭제할까요?",
+    "deleteMessage": "링크가 모두에게 더는 열리지 않게 되고 되돌릴 수 없습니다.",
+    "deleted": "아티팩트를 삭제했습니다",
+    "renamed": "이름을 바꿨습니다",
+    "pinned": "고정했습니다",
+    "unpinned": "고정을 해제했습니다",
+    "markdownCopied": "마크다운으로 복사했습니다",
+    "failed": "처리하지 못했습니다",
+    "checking": "확인하는 중…",
+    "kitMissing": "확장킷을 설치하면 쓸 수 있습니다.",
+    "kitTooOld": "확장킷을 업데이트하면 쓸 수 있습니다.",
+    "notLinked": "계정의 아티팩트 목록에서 이 아티팩트를 찾지 못했습니다.",
+    "notOwner": "소유자만 할 수 있습니다.",
+    "unsupported": "아직 지원하지 않습니다.",
+    "notLoaded": "페이지를 아직 불러오지 못했습니다.",
+    "duplicated": "복사본을 만들었습니다: {{name}}",
+    "cannotCopy": "이 아티팩트는 복제할 수 없습니다"
   }
 }

@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "Vorschau von {{name}}",
-    "close": "Vorschau schließen",
+    "close": "Schließen",
     "openInEditor": "Im Editor öffnen",
     "openWithSystemApp": "Mit System-App öffnen",
     "loading": "Wird geladen…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "Artefakt",
     "untitled": "Ohne Titel"
+  },
+  "artifactMenu": {
+    "switch": "Artefakt wechseln",
+    "madeByMe": "Von mir erstelltes Artefakt",
+    "updated": "{{when}} aktualisiert",
+    "copyMarkdown": "Als Markdown kopieren",
+    "rename": "Umbenennen",
+    "duplicate": "Duplizieren",
+    "share": "Teilen",
+    "openOnWeb": "Im Web öffnen",
+    "pin": "Anheften",
+    "unpin": "Loslösen",
+    "report": "Artefakt melden",
+    "delete": "Artefakt löschen",
+    "deleteTitle": "„{{name}}“ löschen?",
+    "deleteMessage": "Der Link funktioniert dann für niemanden mehr, und es lässt sich nicht wiederherstellen.",
+    "deleted": "Artefakt gelöscht",
+    "renamed": "Umbenannt",
+    "pinned": "Angeheftet",
+    "unpinned": "Losgelöst",
+    "markdownCopied": "Als Markdown kopiert",
+    "failed": "Das hat nicht geklappt",
+    "checking": "Wird geprüft…",
+    "kitMissing": "Installiere das Extend-Kit, um das zu nutzen.",
+    "kitTooOld": "Aktualisiere das Extend-Kit, um das zu nutzen.",
+    "notLinked": "Dieses Artefakt wurde in deiner Kontoliste nicht gefunden.",
+    "notOwner": "Nur der Eigentümer kann das tun.",
+    "unsupported": "Noch nicht unterstützt.",
+    "notLoaded": "Die Seite ist noch nicht geladen.",
+    "duplicated": "Kopie erstellt: {{name}}",
+    "cannotCopy": "Dieses Artefakt kann nicht dupliziert werden"
   }
 }

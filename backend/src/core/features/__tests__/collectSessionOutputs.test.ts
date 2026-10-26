@@ -50,14 +50,14 @@ describe('collectSessionOutputs', () => {
       call('a1', 't3', 'Artifact', { title: 'Deck' }),
       result('u3', 't3', `Created a new Artifact at ${url} (version v1)`),
       call('a2', 't4', 'Artifact', { file_path: '/a/deck.html' }),
-      result('u4', 't4', `Published /a/deck.html at ${url} (Version 2, version id 2)`),
+      result('u4', 't4', `Published /a/deck.html at ${url} (Version 2, version id 1792995944-6b05)`),
       call('a3', 't5', 'Artifact', { action: 'list' }),
       result('u5', 't5', `Showing 1: ${url}`),
     ]);
     const rows = await collectSessionOutputs('/w', 's');
     expect(rows).toHaveLength(1);
     // The file it was published from, so the chat can open it beside the transcript.
-    expect(rows[0]).toMatchObject({ kind: 'artifact', url, title: 'deck', entryUuid: 'u4', filePath: '/a/deck.html' });
+    expect(rows[0]).toMatchObject({ kind: 'artifact', url, title: 'deck', entryUuid: 'u4', filePath: '/a/deck.html', versionId: '1792995944-6b05' });
   });
 
   it('skips a failed call and a result with no matching call', async () => {

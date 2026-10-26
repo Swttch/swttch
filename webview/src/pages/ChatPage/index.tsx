@@ -18,7 +18,7 @@ import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
 import { FilePreviewPane } from '@/components/FilePreviewPane';
-import { usePaneColumn, usePaneColumnWidth } from '@/components/FilePreviewPane/usePaneColumn';
+import { usePaneColumn, usePaneWidth } from '@/components/FilePreviewPane/usePaneColumn';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
@@ -132,7 +132,7 @@ function ChatPageContent() {
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
   const paneColumn = usePaneColumn();
-  const paneColumnWidth = usePaneColumnWidth();
+  const paneColumnWidth = usePaneWidth(true);
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();

@@ -5,10 +5,18 @@ import { useSessionScope } from './useSessionAssets';
 
 /** What the session knows of one Artifact page it published. */
 export interface SessionArtifact {
+  /** The address the page was published at. */
+  url: string;
   title: string;
+  /** The version id the publish answered with, which ties the page to its entry in the account's list. */
+  versionId?: string;
   /** The file on this machine the page was published from, when the call named one. */
   filePath?: string;
   timestamp: string | null;
+}
+
+function toArtifact(o: Extract<SessionOutput, { kind: 'artifact' }>): SessionArtifact {
+  return { url: o.url, title: o.title, versionId: o.versionId, filePath: o.filePath, timestamp: o.timestamp };
 }
 
 /** An Artifact address's own id, which the same page's different spellings share. */
@@ -55,7 +63,7 @@ export function useSessionArtifact(url: string): SessionArtifact | undefined {
     void outputsOf(workingDir, sessionId).then((outputs) => {
       if (!alive) return;
       const found = outputs.find((o) => o.kind === 'artifact' && idOf(o.url) === id);
-      setArtifact(found && found.kind === 'artifact' ? { title: found.title, filePath: found.filePath, timestamp: found.timestamp } : undefined);
+      setArtifact(found && found.kind === 'artifact' ? toArtifact(found) : undefined);
     });
     return () => {
       alive = false;
@@ -63,4 +71,25 @@ export function useSessionArtifact(url: string): SessionArtifact | undefined {
   }, [url, workingDir, sessionId]);
 
   return artifact;
+}
+
+/**
+ * Every Artifact page the current session published, oldest first: what the pane's "switch artifact"
+ * list shows. Asked again whenever `version` changes, so a page published meanwhile appears.
+ */
+export function useSessionArtifactList(version?: unknown): SessionArtifact[] {
+  const { workingDir, sessionId } = useSessionScope();
+  const [list, setList] = useState<SessionArtifact[]>([]);
+  useEffect(() => {
+    if (!workingDir || !sessionId) return;
+    let alive = true;
+    void outputsOf(workingDir, sessionId).then((outputs) => {
+      if (!alive) return;
+      setList(outputs.flatMap((o) => (o.kind === 'artifact' ? [toArtifact(o)] : [])));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [workingDir, sessionId, version]);
+  return list;
 }

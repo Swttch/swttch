@@ -125,13 +125,16 @@ export async function collectSessionOutputs(workingDir: string, sessionId: strin
           (filePath ? basename(filePath).replace(/\.[^.]+$/, '') : '');
         // A page published again moves to the end, and keeps its earlier title when this call names none.
         const earlier = outputs.findIndex((o) => o.kind === 'artifact' && o.url === url);
-        const before = earlier === -1 ? undefined : (outputs.splice(earlier, 1)[0] as { title: string; filePath?: string });
+        const before = earlier === -1 ? undefined : (outputs.splice(earlier, 1)[0] as { title: string; filePath?: string; versionId?: string });
         const kept = before?.title ?? '';
         const keptPath = before?.filePath;
         const publishedPath = filePath || keptPath;
+        // "(Version 2, version id 1792995944-6b05)": the id the account's list calls the page's `live` version.
+        const versionId = /version id ([A-Za-z0-9_-]+)/.exec(textOf(b.content))?.[1] ?? before?.versionId;
         outputs.push({
           kind: 'artifact', entryUuid, blockIndex, url, title: title || kept,
           ...(publishedPath ? { filePath: publishedPath } : {}),
+          ...(versionId ? { versionId } : {}),
           timestamp,
         });
         return;

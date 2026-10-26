@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "Aperçu de {{name}}",
-    "close": "Fermer l’aperçu",
+    "close": "Fermer",
     "openInEditor": "Ouvrir dans l’éditeur",
     "openWithSystemApp": "Ouvrir avec l’application du système",
     "loading": "Chargement…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "Artefact",
     "untitled": "Sans titre"
+  },
+  "artifactMenu": {
+    "switch": "Changer d’artefact",
+    "madeByMe": "Artefact que j’ai créé",
+    "updated": "Mis à jour {{when}}",
+    "copyMarkdown": "Copier en Markdown",
+    "rename": "Renommer",
+    "duplicate": "Dupliquer",
+    "share": "Partager",
+    "openOnWeb": "Ouvrir sur le web",
+    "pin": "Épingler",
+    "unpin": "Désépingler",
+    "report": "Signaler l’artefact",
+    "delete": "Supprimer l’artefact",
+    "deleteTitle": "Supprimer « {{name}} » ?",
+    "deleteMessage": "Son lien cessera de fonctionner pour tout le monde et il ne pourra pas être restauré.",
+    "deleted": "Artefact supprimé",
+    "renamed": "Renommé",
+    "pinned": "Épinglé",
+    "unpinned": "Désépinglé",
+    "markdownCopied": "Copié en Markdown",
+    "failed": "Cela n’a pas fonctionné",
+    "checking": "Vérification…",
+    "kitMissing": "Installez le kit d’extension pour l’utiliser.",
+    "kitTooOld": "Mettez à jour le kit d’extension pour l’utiliser.",
+    "notLinked": "Cet artefact est introuvable dans la liste de votre compte.",
+    "notOwner": "Seul le propriétaire peut le faire.",
+    "unsupported": "Pas encore pris en charge.",
+    "notLoaded": "La page n’est pas encore chargée.",
+    "duplicated": "Copie créée : {{name}}",
+    "cannotCopy": "Cet artefact ne peut pas être dupliqué"
   }
 }

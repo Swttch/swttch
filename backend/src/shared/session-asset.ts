@@ -96,6 +96,8 @@ export type SessionOutput =
       title: string;
       /** The file on this machine that was published, when the call named one. */
       filePath?: string;
+      /** The version id the publish answered with (`1792995944-6b05`), which ties this page to its entry in the account's artifact list. */
+      versionId?: string;
       timestamp: string | null;
     };
 

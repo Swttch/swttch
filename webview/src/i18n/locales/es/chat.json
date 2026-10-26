@@ -790,7 +790,7 @@
   },
   "filePreview": {
     "label": "Vista previa de {{name}}",
-    "close": "Cerrar la vista previa",
+    "close": "Cerrar",
     "openInEditor": "Abrir en el editor",
     "openWithSystemApp": "Abrir con la aplicación del sistema",
     "loading": "Cargando…",
@@ -821,5 +821,36 @@
   "artifactChip": {
     "label": "Artefacto",
     "untitled": "Sin título"
+  },
+  "artifactMenu": {
+    "switch": "Cambiar de artefacto",
+    "madeByMe": "Artefacto que creé",
+    "updated": "Actualizado {{when}}",
+    "copyMarkdown": "Copiar como Markdown",
+    "rename": "Renombrar",
+    "duplicate": "Duplicar",
+    "share": "Compartir",
+    "openOnWeb": "Abrir en la web",
+    "pin": "Fijar",
+    "unpin": "Desfijar",
+    "report": "Denunciar artefacto",
+    "delete": "Eliminar artefacto",
+    "deleteTitle": "¿Eliminar «{{name}}»?",
+    "deleteMessage": "Su enlace dejará de funcionar para todos y no se podrá recuperar.",
+    "deleted": "Artefacto eliminado",
+    "renamed": "Renombrado",
+    "pinned": "Fijado",
+    "unpinned": "Desfijado",
+    "markdownCopied": "Copiado como Markdown",
+    "failed": "No se pudo",
+    "checking": "Comprobando…",
+    "kitMissing": "Instala el kit de extensión para usar esto.",
+    "kitTooOld": "Actualiza el kit de extensión para usar esto.",
+    "notLinked": "Este artefacto no está en la lista de tu cuenta.",
+    "notOwner": "Solo el propietario puede hacerlo.",
+    "unsupported": "Todavía no es compatible.",
+    "notLoaded": "La página aún no se ha cargado.",
+    "duplicated": "Copia creada: {{name}}",
+    "cannotCopy": "Este artefacto no se puede duplicar"
   }
 }

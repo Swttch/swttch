@@ -3,15 +3,21 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { FilePreviewPane } from '../index';
 import { decodeText, loadFileContent } from '../loadFileContent';
 import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
-import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from '../pageBackground';
+import { PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from '../pageBackground';
 
 const openFile = vi.fn(() => Promise.resolve());
 const openFileWithSystemApp = vi.fn(() => Promise.resolve());
 const openUrl = vi.fn(() => Promise.resolve());
-const request = vi.fn();
+const { request } = vi.hoisted(() => ({ request: vi.fn() }));
 
-vi.mock('@/adapters', () => ({ getAdapter: () => ({ openFile, openFileWithSystemApp, openUrl }) }));
-vi.mock('@/api/bridge/Bridge', () => ({ getBridge: () => ({ request }) }));
+vi.mock('@/adapters', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/adapters')>()),
+  getAdapter: () => ({ openFile, openFileWithSystemApp, openUrl }),
+}));
+vi.mock('@/api/bridge/Bridge', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/bridge/Bridge')>()),
+  getBridge: () => ({ request }),
+}));
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn() } }));
 vi.mock('@/i18n', () => ({
   i18n: { t: (key: string) => key },
@@ -126,7 +132,7 @@ describe('FilePreviewPane', () => {
 
     await screen.findByTitle('page.html');
     openMenu();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'filePreview.openPublished' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'artifactMenu.openOnWeb' }));
     expect(openUrl).toHaveBeenCalledWith('https://claude.ai/artifact/abc');
   });
 
@@ -234,20 +240,13 @@ describe('FilePreviewPane', () => {
 });
 
 describe('the page colour', () => {
-  it('judges which text reads on a colour, and refuses what is not one', () => {
-    expect(isLightColor('rgb(255, 255, 255)')).toBe(true);
-    expect(isLightColor('rgb(26, 26, 26)')).toBe(false);
-    expect(isLightColor('rgba(10, 20, 30, 0.5)')).toBe(false);
-    expect(isLightColor('red')).toBeUndefined();
-  });
-
   it('hands the page a probe that only reports, and keeps the page text whole', () => {
     const framed = withBackgroundProbe('<h1>hi</h1>');
     expect(framed.startsWith('<h1>hi</h1>')).toBe(true);
     expect(framed).toContain(PAGE_BACKGROUND_MESSAGE);
   });
 
-  // The bar and the page are one surface: the card takes the colour the page reports about itself.
+  // The card takes the colour the page reports about itself, so no other colour shows at its rounded edge.
   it('paints the card in the colour the page reports', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
@@ -271,9 +270,9 @@ describe('the page colour', () => {
 describe('the resize handle', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  const wide = () => {
+  const mediaMatches = (matches: boolean) => {
     window.matchMedia = ((query: string) => ({
-      matches: true, media: query, addEventListener: () => {}, removeEventListener: () => {},
+      matches, media: query, addEventListener: () => {}, removeEventListener: () => {},
     })) as unknown as typeof window.matchMedia;
   };
 
@@ -287,7 +286,7 @@ describe('the resize handle', () => {
   });
 
   it('sets the pane to where the handle is dragged, within bounds, and a double click restores the default', async () => {
-    wide();
+    mediaMatches(true);
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
@@ -301,25 +300,39 @@ describe('the resize handle', () => {
     expect(filePreviewPaneStore.getWidth()).toBe(400);
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 700 });
     expect(filePreviewPaneStore.getWidth()).toBe(500);
-    expect(screen.getByRole('complementary').style.width).toBe('500px');
+    expect(screen.getByRole('complementary').style.width).toContain('500px');
 
     // Too far toward the chat stops where the chat keeps its room; too far the other way, at the minimum.
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: -2000 });
-    expect(filePreviewPaneStore.getWidth()).toBe(1200 - 360 - 16);
+    expect(filePreviewPaneStore.getWidth()).toBe(1200 - 320 - 16);
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 2000 });
-    expect(filePreviewPaneStore.getWidth()).toBe(320);
+    expect(filePreviewPaneStore.getWidth()).toBe(250);
 
     fireEvent.doubleClick(handle);
     expect(filePreviewPaneStore.getWidth()).toBeNull();
   });
 
-  it('is not there when the pane covers the chat', async () => {
-    window.matchMedia = ((query: string) => ({
-      matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {},
-    })) as unknown as typeof window.matchMedia;
+  it('is there while the pane floats over the chat, with the same minimum', async () => {
+    mediaMatches(false);
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
+    await screen.findByTitle('page.html');
+    const handle = screen.getByRole('separator');
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 800 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: -5000 });
+    expect(filePreviewPaneStore.getWidth()).toBe(1200 - 16);
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 5000 });
+    expect(filePreviewPaneStore.getWidth()).toBe(250);
+  });
+
+  it('is not there when the pane is expanded over the chat', async () => {
+    mediaMatches(true);
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
+    act(() => filePreviewPaneStore.toggleExpanded());
     await screen.findByTitle('page.html');
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
@@ -347,6 +360,9 @@ describe('the path line and the source view', () => {
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     expect(await screen.findByTitle('page.html')).toBeInTheDocument();
+    // A published page is the page and nothing around it: no path line, no way to its source.
+    expect(screen.queryByText(/page\.html$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'filePreview.showSource' })).not.toBeInTheDocument();
   });
 
   it('offers an SVG\'s markup too, and nothing for a picture that has none', async () => {
@@ -378,9 +394,22 @@ describe('the name and the menu header', () => {
   it('says in the menu how long ago the file was written', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, modifiedAt: Date.now() - 3 * 3600 * 1000, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
-    await screen.findByTitle('page.html');
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    await screen.findByText('<h1>hi</h1>');
     openMenu();
     expect(screen.getByText(/filePreview\.modified/)).toHaveTextContent('3 hours ago');
+  });
+});
+
+describe('the width rule', () => {
+  it('is two fifths of the window, never under 250px, and leaves the chat its 320px only beside it', async () => {
+    const { paneWidthCss, maxPaneWidth } = await import('../usePaneColumn');
+    expect(paneWidthCss(null, true)).toBe('calc(min(max(250px, 40vw), 100vw - 336px) / var(--ui-zoom, 1))');
+    expect(paneWidthCss(null, false)).toBe('calc(min(max(250px, 40vw), 100vw - 16px) / var(--ui-zoom, 1))');
+    expect(paneWidthCss(120, true)).toBe('calc(min(250px, 100vw - 336px) / var(--ui-zoom, 1))');
+    expect(paneWidthCss(500, false)).toBe('calc(min(500px, 100vw - 16px) / var(--ui-zoom, 1))');
+    expect(maxPaneWidth(1200, true)).toBe(1200 - 320 - 16);
+    expect(maxPaneWidth(500, false)).toBe(500 - 16);
+    expect(maxPaneWidth(300, true)).toBe(250);
   });
 });

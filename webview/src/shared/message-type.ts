@@ -459,6 +459,10 @@ export enum MessageType {
   GET_FILE_CONTENT = 'GET_FILE_CONTENT',
   /** Ask for one piece of any file, as {path, offset}, so the chat can save it to disk (the download button on a file Claude sent). Answered with base64 bytes and the whole size, or with the reason it cannot be read. A file Claude sent is read from the copy kept when it was sent once the original is gone. inbound webview→backend */
   GET_FILE_BYTES = 'GET_FILE_BYTES',
+  /** Ask what the kit's `swttch-ext` command can do on this machine, as {workingDir?}. Answered with {status, installed, capabilities, version}; installed is false when the kit is missing or has no such command, and the capabilities then are empty. The chat offers only the artifact menu items the capabilities name. inbound webview→backend */
+  GET_EXT_CAPABILITIES = 'GET_EXT_CAPABILITIES',
+  /** Run one `swttch-ext api` call, as {service, call, params, yes?, workingDir?}: renaming, pinning or deleting an artifact. Answered with the kit's own {ok:true, data} or {ok:false, error:{code, message, status?, hint?}}; the codes extend_kit_missing and extend_kit_too_old say the kit cannot do it. inbound webview→backend */
+  RUN_EXT_API = 'RUN_EXT_API',
   /** Ask what a web page looks like on a card, as {url}: its title, its site and a picture that stands for it (the page's own preview image). Answered with those, or with only what could be read; never an error for a page that cannot be reached. inbound webview→backend */
   GET_LINK_PREVIEW = 'GET_LINK_PREVIEW',
   /** Ask for the icon the operating system draws for a file extension. Answered with a base64 PNG, or with nothing where the system cannot be asked. */
