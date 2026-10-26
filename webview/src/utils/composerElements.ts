@@ -16,10 +16,18 @@ const elementListeners = new Set<ElementListener>();
 type ImageListener = (png: Blob, name: string) => void;
 const imageListeners = new Set<ImageListener>();
 
-/** The chip text for an element: its tag, then its accessible name when it has one. */
+/**
+ * What an element chip's text starts with: room for the pointer icon the chip paints in front of its tag. The
+ * chip is highlighted text in a mirror layer that must stay glyph-aligned with the editable layer, so the icon
+ * cannot take room of its own; two en spaces hold it.
+ */
+export const ELEMENT_CHIP_ICON_ROOM = '\u2002\u2002\u2009';
+
+/** The chip text for an element: room for its icon, its tag, then its accessible name when it has one. */
 export function elementToken(tag: string, name: string): string {
   const label = name.trim().replace(/\s+/g, ' ').slice(0, 40);
-  return label ? `<${tag.toLowerCase()}/> ${label}` : `<${tag.toLowerCase()}/>`;
+  const head = `${ELEMENT_CHIP_ICON_ROOM}<${tag.toLowerCase()}/>`;
+  return label ? `${head} ${label}\u2002` : `${head}\u2002`;
 }
 
 /** Puts the element in the message box. */

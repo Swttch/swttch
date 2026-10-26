@@ -1,42 +1,634 @@
-import { useEffect, useRef, useState } from 'react';
-import { DesktopIcon } from './DesktopIcon';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import Tippy from '@tippyjs/react/headless';
 import { useTranslation } from '@/i18n';
 import { Tooltip } from '@/components/Tooltip';
-import { paneIconButton } from './PaneShell';
+import { DesktopIcon, ShapeIcon, type DesktopIconName } from './DesktopIcon';
 
-export type AnnotateTool = 'select' | 'pen' | 'shape' | 'text';
-export type Shape = 'rectangle' | 'ellipse' | 'arrow';
+export type AnnotateTool = 'select' | 'pen' | 'line' | 'arrow' | 'rect' | 'ellipse' | 'step' | 'text';
+type DrawTool = Exclude<AnnotateTool, 'select'>;
 
-const COLORS = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ffffff'];
-const WIDTHS = [2, 3, 5, 8];
+const DRAW_TOOLS: DrawTool[] = ['pen', 'line', 'arrow', 'rect', 'ellipse', 'text', 'step'];
+const SHAPE_TOOLS: DrawTool[] = ['line', 'arrow', 'rect', 'ellipse', 'step'];
+const COLORS = ['#E03131', '#1971C2', '#2F9E44', '#1F1E1D', '#FFFFFF'] as const;
+const COLOR_KEYS = ['red', 'blue', 'green', 'black', 'white'] as const;
+const WIDTHS = [2, 4, 8, 12] as const;
+const WIDTH_KEYS = ['thin', 'medium', 'thick', 'extraThick'] as const;
 
-interface Props {
-  /** The page's own clicks are used to pick an element, while the select tool is on. */
+interface Stroke {
+  tool: DrawTool;
+  color: string;
+  width: number;
+  /** A pen's path; the two corners of a line, arrow, rectangle or ellipse; the place of a step or a text. */
+  points: Array<{ x: number; y: number }>;
+  text?: string;
+  step?: number;
+}
+
+// Claude Desktop's annotation bar, measured on its own: a 30px dark bar with a 1px border, 24px square buttons,
+// and three layouts by the width it has (all tools, the tools folded into one menu, and the minimum).
+const BAR = '#1f1e1d';
+const BORDER = '#363534';
+const INK = '#efeeeb';
+const DIM = '#8e8d8b';
+const PRESSED_BG = '#142238';
+const PRESSED_INK = '#7396d4';
+const HOVER = 'rgba(255,255,255,0.08)';
+
+/** A length in the page's pixels, whatever the app's zoom is. */
+const z = (n: number): string => `calc(${n}px/var(--ui-zoom,1))`;
+
+type Layout = 'full' | 'compact' | 'minimal';
+
+interface MenuItemSpec {
+  key: string;
+  label: string;
+  leading?: ReactNode;
+  checked?: boolean;
+  /** Said at the side of the item on hover, for items that show only a picture. */
+  hint?: string;
+  onSelect: () => void;
+}
+
+function Chip({ fill, square }: { fill: string; square?: boolean }) {
+  const light = fill === '#FFFFFF' || fill === '#1F1E1D';
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'block',
+        width: z(14),
+        height: z(14),
+        borderRadius: square ? z(3) : '9999px',
+        background: fill,
+        boxShadow: `0 0 0 ${z(1)} ${light ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.12)'}`,
+      }}
+    />
+  );
+}
+
+function WidthChip({ width }: { width: number }) {
+  return <span aria-hidden style={{ display: 'block', width: z(20), height: `calc(${width}px/var(--ui-zoom,1))`, borderRadius: '9999px', background: 'currentColor' }} />;
+}
+
+function Icon({ name, size = 16, style }: { name: DesktopIconName; size?: number; style?: CSSProperties }) {
+  return <DesktopIcon name={name} style={{ width: z(size), height: z(size), flex: 'none', ...style }} />;
+}
+
+function ToolIcon({ tool }: { tool: AnnotateTool }) {
+  switch (tool) {
+    case 'select':
+      return <Icon name="CursorFilled" />;
+    case 'pen':
+      return <Icon name="Edit" />;
+    case 'line':
+      return <Icon name="LineSegment" />;
+    case 'arrow':
+      return <Icon name="ArrowLine" />;
+    case 'text':
+      return <Icon name="TextT" />;
+    case 'rect':
+    case 'ellipse':
+    case 'step':
+      return <ShapeIcon name={tool} style={{ width: z(16), height: z(16), flex: 'none' }} />;
+  }
+}
+
+const buttonBase: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: z(24),
+  borderRadius: z(6),
+  border: 0,
+  background: 'transparent',
+  color: INK,
+  cursor: 'default',
+  flex: 'none',
+};
+
+/** A square ghost button with an icon, as the bar's tools are; pressed means the tool is armed. */
+function IconButton({ label, tip, pressed, disabled, onClick, children, width = 24 }: {
+  label: string;
+  tip?: ReactNode;
+  pressed?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+  width?: number;
+}) {
+  const [hover, setHover] = useState(false);
+  return (
+    <Tooltip desktop content={tip ?? label} placement="top">
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={pressed}
+        disabled={disabled}
+        onClick={onClick}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          ...buttonBase,
+          width: z(width),
+          background: pressed ? PRESSED_BG : hover && !disabled ? HOVER : 'transparent',
+          color: pressed ? PRESSED_INK : INK,
+          opacity: disabled ? 0.45 : 1,
+        }}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+function Separator() {
+  return <span aria-hidden style={{ width: z(1), height: z(16), background: BORDER, flex: 'none' }} />;
+}
+
+/** Empty room between two parts of the bar, in the pixels Desktop's bar leaves (measured). */
+function Sp({ w }: { w: number }) {
+  return <span aria-hidden style={{ width: z(w), flex: 'none' }} />;
+}
+
+/** A menu that opens above the bar: the item list, with a check on the one chosen. */
+function Menu({ label, trigger, items, open, onOpen, tip, disabled, pressed, align = 'top-start', groups }: {
+  label: string;
+  trigger: ReactNode;
+  items?: MenuItemSpec[];
+  open: boolean;
+  onOpen: (next: boolean) => void;
+  tip?: ReactNode;
+  disabled?: boolean;
+  pressed?: boolean;
+  align?: 'top-start' | 'top';
+  /** Several lists with a rule between them, and submenus. */
+  groups?: ReactNode;
+}) {
+  const [hover, setHover] = useState(false);
+  // A click inside the page is in another document, so it never reaches the click-outside check below; the
+  // window losing focus to that page is what tells the menu to close.
+  useEffect(() => {
+    if (!open) return;
+    const close = () => onOpen(false);
+    window.addEventListener('blur', close);
+    return () => window.removeEventListener('blur', close);
+  }, [open, onOpen]);
+  return (
+    <Tippy
+      visible={open}
+      interactive
+      placement={align}
+      offset={[0, 8]}
+      appendTo={() => document.body}
+      onClickOutside={(_, event) => {
+        if (event.target instanceof Element && event.target.closest('[data-tippy-root]')) return;
+        onOpen(false);
+      }}
+      render={(attrs) => (
+        <div
+          role="menu"
+          aria-label={label}
+          {...attrs}
+          style={{
+            zIndex: 60,
+            background: BAR,
+            border: `${z(1)} solid ${BORDER}`,
+            borderRadius: z(10),
+            padding: z(4),
+            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            color: INK,
+            font: `${z(13)}/${z(18)} system-ui, sans-serif`,
+            minWidth: z(items?.some((i) => i.leading && !i.label) ? 40 : 150),
+          }}
+        >
+          {groups ?? items?.map((item) => <MenuItem key={item.key} item={item} />)}
+        </div>
+      )}
+    >
+      <span style={{ display: 'flex' }}>
+        <Tooltip desktop content={tip ?? label} placement="top">
+          <button
+            type="button"
+            aria-label={label}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            disabled={disabled}
+            onClick={() => onOpen(!open)}
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+              ...buttonBase,
+              gap: z(4),
+              paddingLeft: z(5),
+              paddingRight: z(6),
+              background: pressed ? PRESSED_BG : open || (hover && !disabled) ? HOVER : 'transparent',
+              color: pressed ? PRESSED_INK : INK,
+              opacity: disabled ? 0.45 : 1,
+            }}
+          >
+            {trigger}
+            <Icon name="CaretDown" size={12} style={{ color: DIM }} />
+          </button>
+        </Tooltip>
+      </span>
+    </Tippy>
+  );
+}
+
+function MenuItem({ item }: { item: MenuItemSpec }) {
+  const [hover, setHover] = useState(false);
+  const row = (
+    <button
+      type="button"
+      role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+      aria-checked={item.checked}
+      aria-label={item.label || item.hint}
+      onClick={item.onSelect}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: z(8),
+        width: '100%',
+        height: z(28),
+        padding: `0 ${z(8)}`,
+        border: 0,
+        borderRadius: z(6),
+        background: hover ? HOVER : 'transparent',
+        color: INK,
+        textAlign: 'start',
+        cursor: 'default',
+      }}
+    >
+      {item.leading}
+      {item.label && <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>}
+      {item.checked && <Icon name="Check" size={14} style={{ marginInlineStart: z(8) }} />}
+    </button>
+  );
+  return item.hint ? (
+    <Tooltip desktop content={item.hint} placement="right">
+      {row}
+    </Tooltip>
+  ) : (
+    row
+  );
+}
+
+interface BarProps {
+  picking: boolean;
+  tool: AnnotateTool;
   onToolChange: (tool: AnnotateTool) => void;
-  /** Sends the page with the marks over it to the chat; given the canvas the marks are drawn on. */
-  onAddToChat: (marks: HTMLCanvasElement) => void;
-  onExit: () => void;
+  onTogglePick: () => void;
+  color: string;
+  onColorChange: (color: string) => void;
+  width: number;
+  onWidthChange: (width: number) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  hasStrokes: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onClear: () => void;
+  onAddToChat: () => void;
+  onClose: () => void;
 }
 
 /**
- * Claude Desktop's "Annotate": a bar floating at the bottom of the page (select, pen, shape, text, and
- * exit) and a layer over the page to draw on, "to show Claude what you mean". The marks are drawn over
- * the page and are not part of it. Desktop sends the drawing with a screenshot of the page; this panel
- * cannot capture the page it draws in a frame, so the marks stay here until the bar is closed.
+ * Claude Desktop's annotation bar, floating at the bottom of the page. It has the room it has: with enough, every
+ * tool is a button; with less, the tools fold into one menu; with the least, the colour and the line width go into
+ * that menu too and "Add to chat" is only a plus. The layout is decided by measuring the bar in the layouts and
+ * the room, as Desktop does.
  */
-export function AnnotateLayer({ onToolChange, onAddToChat, onExit }: Props) {
+function AnnotationBar(props: BarProps) {
   const { t } = useTranslation('chat');
-  const [tool, setTool] = useState<AnnotateTool>('pen');
-  const [shape, setShape] = useState<Shape>('rectangle');
-  const [shapeMenu, setShapeMenu] = useState(false);
-  const [ink, setInk] = useState(COLORS[0]);
-  const [lineWidth, setLineWidth] = useState(3);
-  const [styleMenu, setStyleMenu] = useState<'color' | 'width' | null>(null);
+  const { picking, tool, onToolChange, onTogglePick, color, onColorChange, width, onWidthChange } = props;
+  const wrap = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<Layout>('full');
+  const widths = useRef({ full: 0, compact: 0 });
+  const [menu, setMenu] = useState<'tool' | 'shape' | 'color' | 'width' | null>(null);
+  const [shape, setShape] = useState<DrawTool>('rect');
+  const [nested, setNested] = useState<'color' | 'width' | null>(null);
+
+  const hasMarks = props.hasStrokes || props.canUndo || props.canRedo;
+
+  const decide = useCallback(() => {
+    const el = inner.current;
+    const room = wrap.current?.clientWidth;
+    if (!el || !room) return;
+    // The bar's own width, whatever room there is: its borders, and what is in it at its natural size.
+    const natural = el.offsetWidth + 2;
+    if (layout === 'full') widths.current.full = natural;
+    else if (layout === 'compact') widths.current.compact = natural;
+    const next: Layout = widths.current.full <= room ? 'full' : widths.current.compact <= room ? 'compact' : 'minimal';
+    if (next !== layout) setLayout(next);
+  }, [layout]);
+
+  useLayoutEffect(decide);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const observer = new ResizeObserver(decide);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [decide]);
+  // What is on the bar changes its widths, so what was measured is measured again.
+  useEffect(() => {
+    widths.current = { full: 0, compact: 0 };
+    setLayout('full');
+  }, [hasMarks]);
+
+  const label = (tl: AnnotateTool) => t(`filePreview.tool.${tl}`);
+  const pick = (tl: AnnotateTool) => {
+    setMenu(null);
+    setNested(null);
+    // Choosing a tool ends picking an element: the two are one choice, as in the menu's check mark.
+    if (picking) onTogglePick();
+    onToolChange(tool === tl ? 'select' : tl);
+  };
+  const pickShape = (tl: DrawTool) => {
+    setShape(tl);
+    setMenu(null);
+    if (picking) onTogglePick();
+    onToolChange(tl);
+  };
+
+  const colorItems: MenuItemSpec[] = COLORS.map((c, i) => ({
+    key: c,
+    label: '',
+    hint: t(`filePreview.color.${COLOR_KEYS[i]}`),
+    leading: <Chip fill={c} />,
+    checked: c === color,
+    onSelect: () => {
+      onColorChange(c);
+      setMenu(null);
+      setNested(null);
+    },
+  }));
+  const widthItems: MenuItemSpec[] = WIDTHS.map((w, i) => ({
+    key: String(w),
+    label: '',
+    hint: t(`filePreview.width.${WIDTH_KEYS[i]}`),
+    leading: <WidthChip width={w} />,
+    checked: w === width,
+    onSelect: () => {
+      onWidthChange(w);
+      setMenu(null);
+      setNested(null);
+    },
+  }));
+  const colorName = t(`filePreview.color.${COLOR_KEYS[COLORS.indexOf(color as (typeof COLORS)[number])] ?? 'red'}`);
+  const widthName = t(`filePreview.width.${WIDTH_KEYS[WIDTHS.indexOf(width as (typeof WIDTHS)[number])] ?? 'medium'}`);
+
+  const leading = (
+    <IconButton label={t('filePreview.selectElement')} pressed={picking} onClick={onTogglePick}>
+      <Icon name="Cursor" />
+    </IconButton>
+  );
+
+  const toolItems: MenuItemSpec[] = [
+    { key: 'pick', label: t('filePreview.selectElement'), leading: <Icon name="Cursor" />, checked: picking, onSelect: () => { setMenu(null); onTogglePick(); } },
+    ...DRAW_TOOLS.map((tl) => ({
+      key: tl,
+      label: label(tl),
+      leading: <ToolIcon tool={tl} />,
+      checked: tool === tl,
+      onSelect: () => pick(tl),
+    })),
+  ];
+
+  const colorTrigger = <Chip fill={color} />;
+  const widthTrigger = <WidthChip width={width} />;
+
+  const tools =
+    layout === 'full' ? (
+      <>
+        {leading}
+        <Sp w={6} />
+        <IconButton label={label('pen')} pressed={tool === 'pen'} onClick={() => pick('pen')}>
+          <ToolIcon tool="pen" />
+        </IconButton>
+        <Sp w={8.5} />
+        <Menu
+          label={t('filePreview.shapes')}
+          tip={t('filePreview.shapes')}
+          trigger={<ToolIcon tool={shape} />}
+          pressed={SHAPE_TOOLS.includes(tool as DrawTool) && tool === shape}
+         
+          open={menu === 'shape'}
+          onOpen={(o) => setMenu(o ? 'shape' : null)}
+          items={SHAPE_TOOLS.map((tl) => ({ key: tl, label: label(tl), leading: <ToolIcon tool={tl} />, checked: tool === tl, onSelect: () => pickShape(tl) }))}
+        />
+        <Sp w={8.5} />
+        <IconButton label={label('text')} pressed={tool === 'text'} onClick={() => pick('text')}>
+          <ToolIcon tool="text" />
+        </IconButton>
+      </>
+    ) : (
+      <Menu
+        label={t('filePreview.annotationTool')}
+        tip={t('filePreview.annotationTool')}
+        trigger={picking ? <Icon name="Cursor" /> : <ToolIcon tool={tool} />}
+        pressed={false}
+        open={menu === 'tool'}
+        onOpen={(o) => { setMenu(o ? 'tool' : null); setNested(null); }}
+        groups={
+          <>
+            {toolItems.map((item) => <MenuItem key={item.key} item={item} />)}
+            {layout === 'minimal' && (
+              <>
+                <div style={{ height: z(1), background: BORDER, margin: `${z(4)} 0` }} />
+                <NestedMenu label={t('filePreview.inkColor')} hint={colorName} leading={colorTrigger} open={nested === 'color'} onOpen={(o) => setNested(o ? 'color' : null)} items={colorItems} />
+                <NestedMenu label={t('filePreview.lineWidth')} hint={widthName} leading={widthTrigger} open={nested === 'width'} onOpen={(o) => setNested(o ? 'width' : null)} items={widthItems} />
+              </>
+            )}
+          </>
+        }
+      />
+    );
+
+  return (
+    <div ref={wrap} style={{ position: 'absolute', left: z(10), right: z(10), bottom: z(10), display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 20 }}>
+      <div
+        ref={bar}
+        role="toolbar"
+        aria-label={t('filePreview.annotate')}
+        data-layout={layout}
+        style={{
+          pointerEvents: 'auto',
+          boxSizing: 'border-box',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          border: `${z(1)} solid ${BORDER}`,
+          borderRadius: z(12),
+          background: BAR,
+          color: INK,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.28)',
+          font: `${z(13)}/${z(18)} system-ui, sans-serif`,
+        }}
+      >
+        <div
+          ref={inner}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            width: 'max-content',
+            height: z(30),
+            paddingLeft: z(layout === 'full' ? 6 : 9),
+            paddingRight: z(5.5),
+          }}
+        >
+        <div role="group" aria-label={t('filePreview.annotationTool')} style={{ display: 'flex', alignItems: 'center' }}>
+          {tools}
+        </div>
+        {layout !== 'minimal' && (
+          <>
+            <Sp w={layout === 'full' ? 6 : 8} />
+            <Separator />
+            <Sp w={9} />
+            <Menu
+              label={t('filePreview.inkColor')}
+              tip={colorName}
+              trigger={colorTrigger}
+             
+              open={menu === 'color'}
+              onOpen={(o) => setMenu(o ? 'color' : null)}
+              items={colorItems}
+            />
+            <Sp w={11} />
+            <Menu
+              label={t('filePreview.lineWidth')}
+              tip={widthName}
+              trigger={widthTrigger}
+             
+              open={menu === 'width'}
+              onOpen={(o) => setMenu(o ? 'width' : null)}
+              items={widthItems}
+            />
+            <Sp w={8} />
+            <Separator />
+          </>
+        )}
+        {layout === 'minimal' && (
+          <>
+            <Sp w={8} />
+            <Separator />
+          </>
+        )}
+        <Sp w={7} />
+        {hasMarks && (
+          <>
+            <IconButton label={t('filePreview.undo')} disabled={!props.canUndo} onClick={props.onUndo}>
+              <Icon name="ArrowCounterClockwise" />
+            </IconButton>
+            <IconButton label={t('filePreview.redo')} disabled={!props.canRedo} onClick={props.onRedo}>
+              <Icon name="ArrowClockwise" />
+            </IconButton>
+            <IconButton label={t('filePreview.clearAll')} disabled={!props.hasStrokes} onClick={props.onClear}>
+              <Icon name="Trash" />
+            </IconButton>
+            <Sp w={4} />
+          </>
+        )}
+        <Tooltip desktop content={props.hasStrokes ? t('filePreview.annotateAddToChat') : t('filePreview.selectElementDetail')} placement="top">
+          <span style={{ display: 'flex' }}>
+            <button
+              type="button"
+              aria-label={t('filePreview.annotateAddToChat')}
+              disabled={!props.hasStrokes}
+              onClick={props.onAddToChat}
+              style={{
+                ...buttonBase,
+                height: z(23),
+                marginTop: z(1),
+                width: layout === 'minimal' ? z(23) : undefined,
+                padding: layout === 'minimal' ? 0 : `0 ${z(7.5)}`,
+                background: INK,
+                color: BAR,
+                whiteSpace: 'nowrap',
+                opacity: props.hasStrokes ? 1 : 0.3,
+              }}
+            >
+              {layout === 'minimal' ? <Icon name="Add" /> : t('filePreview.annotateAddToChat')}
+            </button>
+          </span>
+        </Tooltip>
+        <Sp w={layout === 'full' ? 6 : layout === 'compact' ? 5.25 : 6.5} />
+        <IconButton label={t('filePreview.annotateExit')} onClick={props.onClose}>
+          <Icon name="X" />
+        </IconButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NestedMenu({ label, hint, leading, open, onOpen, items }: {
+  label: string;
+  hint: string;
+  leading: ReactNode;
+  open: boolean;
+  onOpen: (open: boolean) => void;
+  items: MenuItemSpec[];
+}) {
+  const [hover, setHover] = useState(false);
+  return (
+    <Tippy
+      visible={open}
+      interactive
+      placement="right-start"
+      offset={[0, 6]}
+      appendTo={() => document.body}
+      render={(attrs) => (
+        <div role="menu" aria-label={label} {...attrs} style={{ zIndex: 61, background: BAR, border: `${z(1)} solid ${BORDER}`, borderRadius: z(10), padding: z(4), minWidth: z(40), color: INK, boxShadow: '0 4px 16px rgba(0,0,0,0.35)' }}>
+          {items.map((item) => <MenuItem key={item.key} item={item} />)}
+        </div>
+      )}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => onOpen(!open)}
+        onMouseEnter={() => { setHover(true); onOpen(true); }}
+        onMouseLeave={() => setHover(false)}
+        style={{ display: 'flex', alignItems: 'center', gap: z(8), width: '100%', height: z(28), padding: `0 ${z(8)}`, border: 0, borderRadius: z(6), background: hover || open ? HOVER : 'transparent', color: INK, textAlign: 'start', cursor: 'default' }}
+      >
+        {leading}
+        <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ color: DIM, whiteSpace: 'nowrap' }}>{hint}</span>
+        <Icon name="CaretDown" size={12} style={{ color: DIM, transform: 'rotate(-90deg)' }} />
+      </button>
+    </Tippy>
+  );
+}
+
+interface Props {
+  /** The reader is pointing at an element on the page; drawing waits. */
+  picking: boolean;
+  onTogglePick: () => void;
+  /** Sends the page with the marks over it to the chat; given the canvas the marks are drawn on. */
+  onAddToChat: (marks: HTMLCanvasElement) => void;
+  onClose: () => void;
+}
+
+/**
+ * Claude Desktop's annotation tools over a page: the bar, and a layer to draw on. The marks are strokes kept in a
+ * list, so undo, redo and clear are what they say; they are drawn over the page and are not part of it.
+ */
+export function AnnotateLayer({ picking, onTogglePick, onAddToChat, onClose }: Props) {
+  const { t } = useTranslation('chat');
+  const [tool, setTool] = useState<AnnotateTool>('select');
+  const [color, setColor] = useState<string>(COLORS[0]);
+  const [width, setWidth] = useState<number>(4);
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [undone, setUndone] = useState<Stroke[]>([]);
+  const [live, setLive] = useState<Stroke | null>(null);
   const [typing, setTyping] = useState<{ x: number; y: number } | null>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef<{ x: number; y: number; snapshot?: ImageData } | null>(null);
-
-  useEffect(() => onToolChange(tool), [tool, onToolChange]);
 
   // The canvas has the layer's own size, in the pixels the reader sees.
   useEffect(() => {
@@ -47,54 +639,39 @@ export function AnnotateLayer({ onToolChange, onAddToChat, onExit }: Props) {
       if (rect && (el.width !== Math.round(rect.width) || el.height !== Math.round(rect.height))) {
         el.width = Math.round(rect.width);
         el.height = Math.round(rect.height);
+        redraw();
       }
     };
     fit();
     const observer = new ResizeObserver(fit);
     if (el.parentElement) observer.observe(el.parentElement);
     return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const point = (e: React.PointerEvent): { x: number; y: number } => {
+  const redraw = useCallback(() => {
+    const el = canvas.current;
+    const ctx = el?.getContext('2d');
+    if (!el || !ctx) return;
+    ctx.clearRect(0, 0, el.width, el.height);
+    for (const stroke of live ? [...strokes, live] : strokes) drawStroke(ctx, stroke);
+  }, [strokes, live]);
+  useEffect(redraw, [redraw]);
+
+  const drawing = !picking && tool !== 'select';
+  const point = (e: React.PointerEvent) => {
     const rect = canvas.current!.getBoundingClientRect();
     return { x: ((e.clientX - rect.left) / rect.width) * canvas.current!.width, y: ((e.clientY - rect.top) / rect.height) * canvas.current!.height };
   };
-  const context = () => {
-    const ctx = canvas.current!.getContext('2d')!;
-    ctx.strokeStyle = ink;
-    ctx.fillStyle = ink;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'round';
-    return ctx;
+  const commit = (stroke: Stroke) => {
+    setStrokes((list) => [...list, stroke]);
+    setUndone([]);
   };
-
-  const drawShape = (from: { x: number; y: number }, to: { x: number; y: number }) => {
-    const ctx = context();
-    ctx.beginPath();
-    if (shape === 'rectangle') ctx.rect(from.x, from.y, to.x - from.x, to.y - from.y);
-    else if (shape === 'ellipse') ctx.ellipse((from.x + to.x) / 2, (from.y + to.y) / 2, Math.abs(to.x - from.x) / 2, Math.abs(to.y - from.y) / 2, 0, 0, Math.PI * 2);
-    else {
-      const angle = Math.atan2(to.y - from.y, to.x - from.x);
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - 14 * Math.cos(angle - Math.PI / 7), to.y - 14 * Math.sin(angle - Math.PI / 7));
-      ctx.moveTo(to.x, to.y);
-      ctx.lineTo(to.x - 14 * Math.cos(angle + Math.PI / 7), to.y - 14 * Math.sin(angle + Math.PI / 7));
-    }
-    ctx.stroke();
-  };
-
-  const tools: Array<{ id: AnnotateTool; label: string; icon: React.ReactNode }> = [
-    { id: 'select', label: t('filePreview.selectElement'), icon: <DesktopIcon name="Cursor" className="h-5 w-5" /> },
-    { id: 'pen', label: t('filePreview.annotatePen'), icon: <DesktopIcon name="Edit" className="h-5 w-5" /> },
-    { id: 'shape', label: t('filePreview.annotateShape'), icon: <DesktopIcon name="Shapes" className="h-5 w-5" /> },
-    { id: 'text', label: t('filePreview.annotateText'), icon: <DesktopIcon name="TextT" className="h-5 w-5" /> },
-  ];
+  const nextStep = () => strokes.filter((s) => s.tool === 'step').length + 1;
 
   return (
     <>
-      {tool !== 'select' && (
+      {drawing && (
         <div className="absolute inset-0 z-10">
           <canvas
             ref={canvas}
@@ -107,42 +684,32 @@ export function AnnotateLayer({ onToolChange, onAddToChat, onExit }: Props) {
                 setTyping(p);
                 return;
               }
-              const ctx = context();
-              drawing.current = { ...p, snapshot: tool === 'shape' ? ctx.getImageData(0, 0, canvas.current!.width, canvas.current!.height) : undefined };
-              if (tool === 'pen') {
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
+              if (tool === 'step') {
+                commit({ tool, color, width, points: [p], step: nextStep() });
+                return;
               }
+              setLive({ tool: tool as DrawTool, color, width, points: [p] });
             }}
             onPointerMove={(e) => {
-              const start = drawing.current;
-              if (!start || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
+              if (!live || !e.currentTarget.hasPointerCapture(e.pointerId)) return;
               const p = point(e);
-              if (tool === 'pen') {
-                const ctx = context();
-                ctx.lineTo(p.x, p.y);
-                ctx.stroke();
-              } else if (tool === 'shape' && start.snapshot) {
-                canvas.current!.getContext('2d')!.putImageData(start.snapshot, 0, 0);
-                drawShape(start, p);
-              }
+              setLive((s) => (s ? { ...s, points: s.tool === 'pen' ? [...s.points, p] : [s.points[0], p] } : s));
             }}
             onPointerUp={(e) => {
-              drawing.current = null;
               e.currentTarget.releasePointerCapture(e.pointerId);
+              if (live && live.points.length > 1) commit(live);
+              setLive(null);
             }}
           />
           {typing && (
             <input
               autoFocus
-              aria-label={t('filePreview.annotateText')}
+              aria-label={t('filePreview.tool.text')}
               className="absolute min-w-[6rem] rounded border bg-white/90 px-1 text-[0.9231rem] outline-none"
-              style={{ color: ink, borderColor: ink, left: `${(typing.x / (canvas.current?.width ?? 1)) * 100}%`, top: `${(typing.y / (canvas.current?.height ?? 1)) * 100}%` }}
+              style={{ color, borderColor: color, left: `${(typing.x / (canvas.current?.width ?? 1)) * 100}%`, top: `${(typing.y / (canvas.current?.height ?? 1)) * 100}%` }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const ctx = context();
-                  ctx.font = '16px sans-serif';
-                  ctx.fillText(e.currentTarget.value, typing.x, typing.y + 14);
+                if (e.key === 'Enter' && e.currentTarget.value !== '') {
+                  commit({ tool: 'text', color, width, points: [typing], text: e.currentTarget.value });
                   setTyping(null);
                 } else if (e.key === 'Escape') {
                   e.stopPropagation();
@@ -154,117 +721,95 @@ export function AnnotateLayer({ onToolChange, onAddToChat, onExit }: Props) {
           )}
         </div>
       )}
-      <div
-        role="toolbar"
-        aria-label={t('filePreview.annotate')}
-        className="absolute bottom-[calc(14px/var(--ui-zoom,1))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-border-default bg-[#1f1f1f] p-[calc(4px/var(--ui-zoom,1))] text-white shadow-lg"
-      >
-        {tools.map(({ id, label, icon }) => (
-          <div key={id} className="relative flex items-center">
-            <Tooltip desktop content={label} placement="top">
-              <button
-                type="button"
-                aria-label={label}
-                aria-pressed={tool === id}
-                className={`${paneIconButton} ${tool === id ? '!opacity-100 bg-white/20' : ''}`}
-                onClick={() => {
-                  setTool(id);
-                  setShapeMenu(false);
-                }}
-              >
-                {icon}
-              </button>
-            </Tooltip>
-            {id === 'shape' && (
-              <>
-                <button
-                  type="button"
-                  aria-label={t('filePreview.annotateShapes')}
-                  aria-expanded={shapeMenu}
-                  className="-ms-1 flex h-7 w-4 items-center justify-center opacity-70 hover:opacity-100"
-                  onClick={() => setShapeMenu((value) => !value)}
-                >
-                  <DesktopIcon name="CaretDown" className="h-3 w-3" />
-                </button>
-                {shapeMenu && (
-                  <div role="menu" className="absolute bottom-full start-0 mb-2 w-36 rounded-xl border border-border-default bg-[#1f1f1f] p-1 text-[0.8461rem] shadow-lg">
-                    {(['rectangle', 'ellipse', 'arrow'] as const).map((id2) => (
-                      <button
-                        key={id2}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={shape === id2}
-                        className="flex w-full items-center rounded-lg px-2.5 py-1.5 text-start hover:bg-white/15"
-                        onClick={() => {
-                          setShape(id2);
-                          setTool('shape');
-                          setShapeMenu(false);
-                        }}
-                      >
-                        {t(`filePreview.shape.${id2}`)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        ))}
-        <span aria-hidden className="mx-1 h-4 w-px bg-white/25" />
-        <div className="relative flex items-center">
-          <button
-            type="button"
-            aria-label={t('filePreview.annotateColor')}
-            aria-expanded={styleMenu === 'color'}
-            className="flex h-7 items-center gap-1 rounded-lg px-1.5 hover:bg-white/15"
-            onClick={() => setStyleMenu((v) => (v === 'color' ? null : 'color'))}
-          >
-            <span className="h-4 w-4 rounded-full border border-white/40" style={{ background: ink }} />
-            <DesktopIcon name="CaretDown" className="h-3 w-3 opacity-70" />
-          </button>
-          {styleMenu === 'color' && (
-            <div role="menu" className="absolute bottom-full start-0 mb-2 flex gap-1.5 rounded-xl border border-border-default bg-[#1f1f1f] p-2 shadow-lg">
-              {COLORS.map((c) => (
-                <button key={c} type="button" role="menuitemradio" aria-checked={ink === c} aria-label={c} className="h-5 w-5 rounded-full border border-white/40" style={{ background: c, outline: ink === c ? '2px solid white' : undefined, outlineOffset: 1 }} onClick={() => { setInk(c); setStyleMenu(null); }} />
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative flex items-center">
-          <button
-            type="button"
-            aria-label={t('filePreview.annotateWidth')}
-            aria-expanded={styleMenu === 'width'}
-            className="flex h-7 items-center gap-1 rounded-lg px-1.5 hover:bg-white/15"
-            onClick={() => setStyleMenu((v) => (v === 'width' ? null : 'width'))}
-          >
-            <span className="w-4 rounded-full bg-white" style={{ height: lineWidth }} />
-            <DesktopIcon name="CaretDown" className="h-3 w-3 opacity-70" />
-          </button>
-          {styleMenu === 'width' && (
-            <div role="menu" className="absolute bottom-full start-0 mb-2 flex w-16 flex-col gap-2 rounded-xl border border-border-default bg-[#1f1f1f] p-2.5 shadow-lg">
-              {WIDTHS.map((w) => (
-                <button key={w} type="button" role="menuitemradio" aria-checked={lineWidth === w} aria-label={`${w}px`} className="flex h-3 items-center rounded hover:bg-white/15" onClick={() => { setLineWidth(w); setStyleMenu(null); }}>
-                  <span className="w-full rounded-full bg-white" style={{ height: w }} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <span aria-hidden className="mx-1 h-4 w-px bg-white/25" />
-        <button
-          type="button"
-          className="h-7 rounded-lg bg-white px-3 text-[0.8461rem] font-medium text-black hover:bg-white/85"
-          onClick={() => canvas.current && onAddToChat(canvas.current)}
-        >
-          {t('filePreview.annotateAddToChat')}
-        </button>
-        <Tooltip desktop content={t('filePreview.annotateExit')} placement="top">
-          <button type="button" aria-label={t('filePreview.annotateExit')} className={paneIconButton} onClick={onExit}>
-            <DesktopIcon name="X" className="h-5 w-5" />
-          </button>
-        </Tooltip>
-      </div>
+      {/* The marks stay drawn while another tool is picked, so the canvas is kept even when nothing is being drawn. */}
+      {!drawing && <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 z-10 h-full w-full" />}
+      <AnnotationBar
+        picking={picking}
+        tool={tool}
+        onToolChange={setTool}
+        onTogglePick={onTogglePick}
+        color={color}
+        onColorChange={setColor}
+        width={width}
+        onWidthChange={setWidth}
+        canUndo={strokes.length > 0}
+        canRedo={undone.length > 0}
+        hasStrokes={strokes.length > 0}
+        onUndo={() => {
+          const last = strokes[strokes.length - 1];
+          if (!last) return;
+          setStrokes(strokes.slice(0, -1));
+          setUndone((list) => [...list, last]);
+        }}
+        onRedo={() => {
+          const last = undone[undone.length - 1];
+          if (!last) return;
+          setUndone(undone.slice(0, -1));
+          setStrokes((list) => [...list, last]);
+        }}
+        onClear={() => {
+          setStrokes([]);
+          setUndone([]);
+        }}
+        onAddToChat={() => canvas.current && onAddToChat(canvas.current)}
+        onClose={onClose}
+      />
     </>
   );
+}
+
+function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke): void {
+  ctx.save();
+  ctx.strokeStyle = s.color;
+  ctx.fillStyle = s.color;
+  ctx.lineWidth = s.width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const [a, b] = [s.points[0], s.points[s.points.length - 1]];
+  ctx.beginPath();
+  switch (s.tool) {
+    case 'pen':
+      ctx.moveTo(a.x, a.y);
+      for (const p of s.points.slice(1)) ctx.lineTo(p.x, p.y);
+      break;
+    case 'line':
+    case 'arrow': {
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      if (s.tool === 'arrow') {
+        const angle = Math.atan2(b.y - a.y, b.x - a.x);
+        const head = 10 + s.width * 1.5;
+        for (const turn of [-Math.PI / 7, Math.PI / 7]) {
+          ctx.moveTo(b.x, b.y);
+          ctx.lineTo(b.x - head * Math.cos(angle + turn), b.y - head * Math.sin(angle + turn));
+        }
+      }
+      break;
+    }
+    case 'rect':
+      ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+      break;
+    case 'ellipse':
+      ctx.ellipse((a.x + b.x) / 2, (a.y + b.y) / 2, Math.abs(b.x - a.x) / 2, Math.abs(b.y - a.y) / 2, 0, 0, Math.PI * 2);
+      break;
+    case 'step': {
+      ctx.arc(a.x, a.y, 12 + s.width, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = s.color === '#FFFFFF' ? '#1F1E1D' : '#FFFFFF';
+      ctx.font = `600 ${12 + s.width}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(s.step ?? 1), a.x, a.y + 1);
+      ctx.restore();
+      return;
+    }
+    case 'text':
+      ctx.font = `${14 + s.width * 2}px sans-serif`;
+      ctx.textBaseline = 'top';
+      ctx.fillText(s.text ?? '', a.x, a.y);
+      ctx.restore();
+      return;
+  }
+  ctx.stroke();
+  ctx.restore();
 }

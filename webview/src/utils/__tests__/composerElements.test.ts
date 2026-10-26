@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addElementToComposer, elementToken, expandElementTokens, subscribeComposerElements } from '../composerElements';
+import { ELEMENT_CHIP_ICON_ROOM, addElementToComposer, elementToken, expandElementTokens, subscribeComposerElements } from '../composerElements';
 import { withInspector } from '@/components/FilePreviewPane/pageInspect';
 
 describe('composerElements', () => {
   it('names the chip by tag and accessible name', () => {
-    expect(elementToken('H1', ' image   page ')).toBe('<h1/> image page');
-    expect(elementToken('div', '')).toBe('<div/>');
+    expect(elementToken('H1', ' image   page ')).toBe(`${ELEMENT_CHIP_ICON_ROOM}<h1/> image page\u2002`);
+    expect(elementToken('div', '')).toBe(`${ELEMENT_CHIP_ICON_ROOM}<div/>\u2002`);
   });
 
   it('tells the composer and writes the element out after the message', () => {

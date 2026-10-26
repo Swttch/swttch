@@ -23,7 +23,7 @@ import { formatFileSize } from '@/pages/ChatPage/ChatInput/AttachmentPreview/for
 import { getBridge } from '@/api/bridge/Bridge';
 import { MessageType } from '@/shared';
 import { useDefaultBrowser } from './useDefaultBrowser';
-import { AnnotateLayer, type AnnotateTool } from './AnnotateLayer';
+import { AnnotateLayer } from './AnnotateLayer';
 import { BrowserMenu, VIEWPORTS, type ViewportId } from './BrowserMenu';
 import { PAGE_SELECT_MESSAGE, PAGE_SNAPSHOT_MESSAGE, elementFromMessage, snapshotFromMessage } from './pageInspect';
 import { PaneShell, paneIconButton } from './PaneShell';
@@ -226,7 +226,10 @@ export function BrowserPane() {
   const lastModified = useRef<number | undefined>(undefined);
   const [viewport, setViewport] = useState<ViewportId>('responsive');
   const [autoCheck, setAutoCheck] = useState(false);
+  // The annotation bar, and pointing at an element (which the bar shows as its first tool). Pointing from the address bar
+  // brings the bar up with it and puts it away again once an element is picked.
   const [annotating, setAnnotating] = useState(false);
+  const barForPick = useRef(false);
   const histories = useRef(new Map<number, History>());
 
   useEffect(() => {
@@ -292,6 +295,10 @@ export function BrowserPane() {
           // The element becomes a chip in the message box, as in Desktop; its markup goes with the message.
           addElementToComposer(elementToken(element.tag, element.name), element);
           setSelecting(false);
+          if (barForPick.current) {
+            barForPick.current = false;
+            setAnnotating(false);
+          }
         }
       }
     };
@@ -354,7 +361,6 @@ export function BrowserPane() {
   }, [path]);
 
   // Selecting an element asks the page to outline what is under the pointer and report a click.
-  const [tool, setTool] = useState<AnnotateTool>('pen');
   const [selecting, setSelecting] = useState(false);
   const [detecting, setDetecting] = useState(false);
   // Whether a page on the web forbids being shown in a frame, as the site's own headers say.
@@ -362,8 +368,8 @@ export function BrowserPane() {
   const defaultBrowser = useDefaultBrowser();
   const snapshotWaiters = useRef(new Map<string, (png: string | null) => void>());
   useEffect(() => {
-    frameRef.current?.contentWindow?.postMessage({ type: PAGE_SELECT_MESSAGE, on: selecting || (annotating && tool === 'select') }, '*');
-  }, [selecting, annotating, tool, frameLoaded]);
+    frameRef.current?.contentWindow?.postMessage({ type: PAGE_SELECT_MESSAGE, on: selecting }, '*');
+  }, [selecting, frameLoaded]);
 
   // The page as it is shown, as a PNG data URL, or null when the page could not be drawn.
   const requestSnapshot = () =>
@@ -398,14 +404,34 @@ export function BrowserPane() {
     out.toBlob((blob) => blob && addImageToComposer(blob, 'annotated-page.png'));
   };
 
-  // "Save screenshot" on the menu: the page as it is shown, saved as a picture.
+  // "Save screenshot" on the menu: the page as it is shown, saved as a picture. Downloaded from a blob address,
+  // not the data address itself: a download of a long data address fails silently in some browsers.
   const saveScreenshot = async () => {
     const png = await requestSnapshot();
     if (!png) throw new Error('no snapshot');
+    const fileName = `${(web && path ? siteLabel(path) : basename(path ?? '') || 'page').replace(/\.[^.]+$/, '')}.png`;
+    // The host's own save dialog first: the IDE's embedded browser carries no download out of the page at all.
+    try {
+      const answer = (await getBridge().request(MessageType.SAVE_IMAGE, { suggestedName: fileName, base64: png.slice(png.indexOf(',') + 1) }, { timeout: null })) as { path?: string | null; error?: string } | null;
+      if (answer?.path) {
+        toast.success(t('filePreview.menu.screenshotSaved', { path: answer.path }));
+        return;
+      }
+      if (answer && answer.path === null && !answer.error) return; // They cancelled the dialog.
+    } catch {
+      // The host could not ask; the browser's own download is next.
+    }
+    const blob = await (await fetch(png)).blob();
+    const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = png;
-    link.download = `${(basename(path) || 'page').replace(/\.[^.]+$/, '')}.png`;
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
+    // Revoked on a timer: revoking while the browser is still reading the blob cancels the save.
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    toast.success(t('filePreview.menu.screenshotDownloaded'));
   };
 
   const html = state.status === 'ready' ? state.html : undefined;
@@ -572,9 +598,11 @@ export function BrowserPane() {
             autoCheck={autoCheck}
             onAutoCheck={setAutoCheck}
             onSaveScreenshot={saveScreenshot}
+            screenshotDisabled={blank || web}
             annotating={annotating}
             onToggleAnnotate={() => {
               setSelecting(false);
+              barForPick.current = false;
               setAnnotating((value) => !value);
             }}
             annotateDisabled={blank || (!web && state.status !== 'ready')}
@@ -629,8 +657,19 @@ export function BrowserPane() {
               disabled={blank || web || state.status !== 'ready'}
               className={`${navButton} ${selecting ? '!opacity-100 bg-[color-mix(in_srgb,currentColor_12%,transparent)]' : ''}`}
               onClick={() => {
-                setAnnotating(false);
-                setSelecting((value) => !value);
+                if (selecting) {
+                  setSelecting(false);
+                  if (barForPick.current) {
+                    barForPick.current = false;
+                    setAnnotating(false);
+                  }
+                  return;
+                }
+                setSelecting(true);
+                if (!annotating) {
+                  barForPick.current = true;
+                  setAnnotating(true);
+                }
               }}
             >
               <DesktopIcon name={selecting ? 'CursorFilled' : 'Cursor'} className="h-4 w-4" />
@@ -782,7 +821,16 @@ export function BrowserPane() {
           </div>
         </div>
       )}
-      {annotating && !blank && (web || state.status === 'ready') && <AnnotateLayer onToolChange={setTool} onAddToChat={addAnnotationToChat} onExit={() => setAnnotating(false)} />}
+      {annotating && !blank && (web || state.status === 'ready') && <AnnotateLayer
+          picking={selecting}
+          onTogglePick={() => setSelecting((value) => !value)}
+          onAddToChat={addAnnotationToChat}
+          onClose={() => {
+            barForPick.current = false;
+            setSelecting(false);
+            setAnnotating(false);
+          }}
+        />}
     </PaneShell>
   );
 }

@@ -830,7 +830,7 @@
     "annotateShape": "도형",
     "annotateShapes": "도형 선택",
     "annotateText": "텍스트",
-    "annotateExit": "주석 닫기",
+    "annotateExit": "닫기",
     "selectElement": "요소 선택",
     "annotateAddToChat": "채팅에 추가",
     "annotateColor": "색상",
@@ -884,7 +884,9 @@
       },
       "browserFallback": "웹 브라우저",
       "showAnnotate": "주석 도구 표시",
-      "hideAnnotate": "주석 도구 숨기기"
+      "hideAnnotate": "주석 도구 숨기기",
+      "screenshotSaved": "스크린샷을 저장했습니다: {{path}}",
+      "screenshotDownloaded": "스크린샷을 내려받았습니다."
     },
     "error": {
       "title": "미리보기를 불러올 수 없습니다",
@@ -902,7 +904,39 @@
       "title": "이 사이트는 이 패널 안에서 열 수 없습니다",
       "detail": "이 사이트는 보안을 위해 다른 프로그램의 화면 안에 자기 페이지가 끼워져 열리는 것을 허용하지 않습니다. 로그인한 계정을 노리는 가짜 화면 속임수를 막으려는 사이트의 설정이라서, 이 패널에서는 바꿀 수 없습니다.",
       "open": "{{browser}}에서 열기"
-    }
+    },
+    "tool": {
+      "select": "요소 선택",
+      "pen": "펜",
+      "line": "선",
+      "arrow": "화살표",
+      "rect": "사각형",
+      "ellipse": "타원",
+      "text": "텍스트",
+      "step": "단계"
+    },
+    "color": {
+      "red": "빨강",
+      "blue": "파랑",
+      "green": "초록",
+      "black": "검정",
+      "white": "흰색"
+    },
+    "width": {
+      "thin": "얇게",
+      "medium": "보통",
+      "thick": "굵게",
+      "extraThick": "아주 굵게"
+    },
+    "annotationTool": "주석 도구",
+    "shapes": "도형",
+    "inkColor": "잉크 색상",
+    "lineWidth": "선 굵기",
+    "undo": "실행 취소",
+    "redo": "다시 실행",
+    "clearAll": "모두 지우기",
+    "exitSelection": "선택 모드 끝내기",
+    "selectElementDetail": "페이지에서 요소를 클릭하여 추가하세요."
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

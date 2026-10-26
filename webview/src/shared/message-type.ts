@@ -434,6 +434,11 @@ export enum MessageType {
    */
   GET_FAVICON = 'GET_FAVICON',
   /**
+   * Save a picture the webview made, `{ suggestedName, base64 }`, where the person chooses (the host's own save dialog).
+   * Inbound webview→backend; ACKed with `{ path }` (null when cancelled) or `{ error }`.
+   */
+  SAVE_IMAGE = 'SAVE_IMAGE',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.

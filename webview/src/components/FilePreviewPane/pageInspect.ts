@@ -103,16 +103,23 @@ function nameOf(e){
 function focusable(e){return e.matches('a[href],button,input,select,textarea,[tabindex]')}
 function ensure(){
   if(layers)return;
-  layers=['rgba(246,178,107,.66)','rgba(255,229,153,.66)','rgba(147,196,125,.55)','rgba(111,168,220,.66)'].map(function(c){
+  // Margin, border and padding are rings (a border of the box's own width), the content a filled box, so no part of the
+  // page is covered by more than one colour and the element stays readable under the overlay.
+  layers=['rgba(246,178,107,.66)','rgba(255,229,153,.66)','rgba(147,196,125,.55)','rgba(111,168,220,.66)'].map(function(c,i){
     var d=document.createElement('div');
-    d.style.cssText='position:fixed;pointer-events:none;z-index:2147483646;box-sizing:border-box;display:none;background:'+c;
+    d.style.cssText='position:fixed;pointer-events:none;z-index:2147483646;box-sizing:border-box;display:none;border:0 solid '+c+';background:'+(i===3?c:'transparent');
     document.documentElement.appendChild(d);return d;
   });
+  // The info card, drawn as Chromium's own inspect overlay draws it (measured on Claude Desktop's): a white card with a
+  // blue tab and a notch pointing at the element, the tag and size, and the accessibility facts below.
   card=document.createElement('div');
-  card.style.cssText='position:fixed;pointer-events:none;z-index:2147483647;display:none;background:#fff;color:#202124;font:12px/1.6 system-ui,sans-serif;padding:8px 10px;border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.3);min-width:180px';
+  card.style.cssText='position:fixed;pointer-events:none;z-index:2147483647;display:none;font:13px/18.6px -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;color:#323941;text-align:left';
+  card.innerHTML='<div data-tab style="position:absolute;left:0;width:120px;height:8px;z-index:1;background:linear-gradient(#4993eb,#4286d6)"></div>'
+   +'<svg data-notch width="13" height="7" viewBox="0 0 13 7" style="position:absolute;left:12px;z-index:2"><polygon points="0,7 6.5,0 13,7" fill="#fff"/></svg>'
+   +'<div data-body style="position:absolute;left:0;background:#fff;border-radius:4px;padding:4px 9px 6px;box-shadow:0 2px 8px rgba(0,0,0,.28);white-space:nowrap"></div>';
   document.documentElement.appendChild(card);
 }
-function place(d,l,t,w,h){d.style.display='block';d.style.left=l+'px';d.style.top=t+'px';d.style.width=Math.max(0,w)+'px';d.style.height=Math.max(0,h)+'px'}
+function place(d,l,t,w,h,ring){d.style.display='block';d.style.left=l+'px';d.style.top=t+'px';d.style.width=Math.max(0,w)+'px';d.style.height=Math.max(0,h)+'px';if(ring)d.style.borderWidth=ring.map(function(v){return Math.max(0,v)+'px'}).join(' ')}
 function esc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
 function mark(e){
   ensure();
@@ -122,15 +129,36 @@ function mark(e){
   var m=sides.map(function(s){return px(c['margin'+s])});
   var b=sides.map(function(s){return px(c['border'+s+'Width'])});
   var p=sides.map(function(s){return px(c['padding'+s])});
-  place(layers[0],r.left-m[3],r.top-m[0],r.width+m[1]+m[3],r.height+m[0]+m[2]);
-  place(layers[1],r.left,r.top,r.width,r.height);
-  place(layers[2],r.left+b[3],r.top+b[0],r.width-b[1]-b[3],r.height-b[0]-b[2]);
+  place(layers[0],r.left-m[3],r.top-m[0],r.width+m[1]+m[3],r.height+m[0]+m[2],m);
+  place(layers[1],r.left,r.top,r.width,r.height,b);
+  place(layers[2],r.left+b[3],r.top+b[0],r.width-b[1]-b[3],r.height-b[0]-b[2],p);
   place(layers[3],r.left+b[3]+p[3],r.top+b[0]+p[0],r.width-b[1]-b[3]-p[1]-p[3],r.height-b[0]-b[2]-p[0]-p[2]);
   var tag=e.tagName.toLowerCase(),cls=(e.getAttribute('class')||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return '.'+x}).join('');
-  card.innerHTML='<div><span style="color:#881280">'+tag+'</span><span style="color:#1a1aa6">'+(e.id?'#'+esc(e.id):'')+esc(cls)+'</span> <span style="color:#5f6368">'+Math.round(r.width*100)/100+' × '+Math.round(r.height*100)/100+'</span></div><div style="margin:4px 0 2px;color:#5f6368;font-size:10px;letter-spacing:.06em;font-weight:600">ACCESSIBILITY</div><div>Name <span style="color:#5f6368">'+esc(nameOf(e).slice(0,40))+'</span></div><div>Role <span style="color:#5f6368">'+roleOf(e)+'</span></div><div>Keyboard-focusable <span style="color:#5f6368">'+(focusable(e)?'Yes':'No')+'</span></div>';
+  var NS=' ',size=function(v){return String(Math.round(v*100)/100)};
+  var ok='<svg width="16" height="16" viewBox="0 0 16 16" style="vertical-align:-3px;margin-left:1px"><circle cx="8" cy="8" r="5.5" fill="none" stroke="#9e9e9e" stroke-width="1.4"/><path d="M4.2 4.2 11.8 11.8" stroke="#9e9e9e" stroke-width="1.4"/></svg>';
+  var yes='<svg width="16" height="16" viewBox="0 0 16 16" style="vertical-align:-3px;margin-left:1px"><path d="M3.5 8.5 6.5 11.5 12.5 4.5" fill="none" stroke="#2e7d32" stroke-width="1.5"/></svg>';
+  var row=function(k,v,g){return '<div style="display:flex;justify-content:space-between;line-height:19.6px;gap:'+(g||10)+'px"><span style="color:#666">'+k+'</span><span>'+v+'</span></div>'};
+  var body=card.querySelector('[data-body]');
+  body.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px"><span><b style="color:#881280">'+tag+'</b><span style="color:#1a1aa6">'+(e.id?'#'+esc(e.id):'')+esc(cls)+'</span></span><span>'+size(r.width)+NS+'×'+NS+size(r.height)+'</span></div>'
+   +'<div style="display:flex;align-items:center;gap:8px;margin:14px 0 6px;color:#333;font-size:10px;line-height:12px;letter-spacing:.035em;font-weight:600"><span>ACCESSIBILITY</span><i style="flex:1;height:1px;background:#ddd"></i></div>'
+   +row('Name',esc(nameOf(e).slice(0,40)))+row('Role',roleOf(e))+row('Keyboard-focusable',focusable(e)?yes:ok,2);
   card.style.display='block';
-  var below=r.bottom+8,top=below+card.offsetHeight>innerHeight?Math.max(4,r.top-card.offsetHeight-8):below;
-  card.style.left=Math.max(4,Math.min(r.left,innerWidth-card.offsetWidth-4))+'px';card.style.top=top+'px';
+  var ch=body.offsetHeight+8,cw=body.offsetWidth;
+  var mb=m[2],mt=m[0];
+  var belowTop=Math.round(r.bottom+mb)+1,aboveTop=Math.round(r.top-mt)-1-ch;
+  var below=belowTop+ch<=innerHeight||aboveTop<4;
+  var tab=card.querySelector('[data-tab]'),notch=card.querySelector('[data-notch]');
+  card.style.width=cw+'px';card.style.height=ch+'px';
+  if(below){
+    tab.style.top='0';tab.style.borderRadius='7px 7px 0 0';body.style.top='8px';
+    notch.style.top='1px';notch.style.transform='none';
+    card.style.top=belowTop+'px';
+  }else{
+    tab.style.top=(ch-8)+'px';tab.style.borderRadius='0 0 7px 7px';body.style.top='0';
+    notch.style.top=(ch-8)+'px';notch.style.transform='scaleY(-1)';
+    card.style.top=aboveTop+'px';
+  }
+  card.style.left=Math.round(Math.max(4,Math.min(r.left,innerWidth-cw-4)))+'px';
 }
 function snap(rect,done){
   var finished=false;function end(v){if(!finished){finished=true;done(v)}}
@@ -149,7 +177,13 @@ function snap(rect,done){
         if(cw<=0||ch<=0)return end(null);
         var k=Math.min(1,1200/Math.max(cw,ch));
         var cv=document.createElement('canvas');cv.width=Math.round(cw*k);cv.height=Math.round(ch*k);
-        cv.getContext('2d').drawImage(img,x,y,cw,ch,0,0,cv.width,cv.height);
+        var cx=cv.getContext('2d');
+        // A page paints its canvas with the colour of its root or body, which the picture of its markup does not carry along.
+        var bg=getComputedStyle(document.documentElement).backgroundColor;
+        if(!bg||/rgba\(.*,\s*0\)$/.test(bg)||bg==='transparent')bg=getComputedStyle(document.body).backgroundColor;
+        if(!bg||/rgba\(.*,\s*0\)$/.test(bg)||bg==='transparent')bg='#ffffff';
+        cx.fillStyle=bg;cx.fillRect(0,0,cv.width,cv.height);
+        cx.drawImage(img,x,y,cw,ch,0,0,cv.width,cv.height);
         end(cv.toDataURL('image/png'));
       }catch(x){end(null)}
     };
@@ -178,7 +212,7 @@ function context(el){
 addEventListener('message',function(m){
   var d=m.data;if(!d)return;
   if(d.type==='${PAGE_SELECT_MESSAGE}'){
-    on=!!d.on;if(!on)mark(null);document.documentElement.style.cursor=on?'crosshair':'';
+    on=!!d.on;if(!on)mark(null);
   }else if(d.type==='${PAGE_SNAPSHOT_MESSAGE}'){
     var hidden=layers?layers.concat(card):[];hidden.forEach(function(x){x.style.display='none'});
     snap(null,function(png){try{parent.postMessage({type:'${PAGE_SNAPSHOT_REPLY}',id:String(d.id),png:png},'*')}catch(x){}});

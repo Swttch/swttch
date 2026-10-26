@@ -65,6 +65,8 @@ interface Props {
   annotateDisabled: boolean;
   /** Saves the page as shown as a picture. */
   onSaveScreenshot: () => Promise<void>;
+  /** A page of another site cannot be drawn into a picture from here; the row says so. */
+  screenshotDisabled: boolean;
   /** Open a file the reader picked, in a tab. */
   onOpenFile: (path: string) => void;
 }
@@ -75,7 +77,7 @@ interface Props {
  * needs the browser engine Desktop draws this pane with (a screenshot, cookies, the sites Claude may act on)
  * is on the menu and dimmed, with the reason on hover, as the Artifact menu does for what it cannot do.
  */
-export function BrowserMenu({ path, address, viewport, onViewport, autoCheck, onAutoCheck, onSaveScreenshot, annotating, onToggleAnnotate, annotateDisabled, onOpenFile }: Props) {
+export function BrowserMenu({ path, address, viewport, onViewport, autoCheck, onAutoCheck, onSaveScreenshot, screenshotDisabled, annotating, onToggleAnnotate, annotateDisabled, onOpenFile }: Props) {
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const list = useRef<Instance | null>(null);
@@ -115,7 +117,7 @@ export function BrowserMenu({ path, address, viewport, onViewport, autoCheck, on
             await navigator.clipboard.writeText(address);
             toast.success(t('filePreview.menu.copied'));
           })}>{t('filePreview.menu.copyUrl')}</Row>
-          <Row hint={hint('saveScreenshot')} onSelect={run(onSaveScreenshot)}>{t('filePreview.menu.saveScreenshot')}</Row>
+          <Row hint={hint('saveScreenshot')} off={screenshotDisabled ? unavailable : undefined} onSelect={run(onSaveScreenshot)}>{t('filePreview.menu.saveScreenshot')}</Row>
           <Row hint={hint('annotate')} off={annotateDisabled ? unavailable : undefined} onSelect={run(onToggleAnnotate)}>{annotating ? t('filePreview.menu.hideAnnotate') : t('filePreview.menu.showAnnotate')}</Row>
           <Row hint={hint('openHtmlFile')} onSelect={run(async () => {
             const answer = (await getBridge().request(MessageType.PICK_FILES, { mode: 'files', multiple: false }, { timeout: null })) as { paths?: string[]; error?: string } | null;

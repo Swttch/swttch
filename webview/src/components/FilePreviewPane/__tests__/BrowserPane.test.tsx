@@ -204,8 +204,10 @@ describe('the browser pane\'s new tab, menu and annotation', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'filePreview.menu.showAnnotate' }));
     const bar = screen.getByRole('toolbar', { name: 'filePreview.annotate' });
     expect(Array.from(bar.querySelectorAll('button')).map((b) => b.getAttribute('aria-label')).slice(0, 4)).toEqual([
-      'filePreview.selectElement', 'filePreview.annotatePen', 'filePreview.annotateShape', 'filePreview.annotateShapes',
+      'filePreview.selectElement', 'filePreview.tool.pen', 'filePreview.shapes', 'filePreview.tool.text',
     ]);
+    expect(screen.queryByTestId('annotate-canvas')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.tool.pen' }));
     expect(screen.getByTestId('annotate-canvas')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'filePreview.annotateExit' }));
     expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();

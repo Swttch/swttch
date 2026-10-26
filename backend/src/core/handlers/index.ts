@@ -74,6 +74,7 @@ import { openFileHandler } from './openFile';
 import { openFileWithSystemAppHandler, revealFileHandler } from './fileActions';
 import { getDefaultBrowserHandler } from './defaultBrowser';
 import { getFaviconHandler, getPageUrlHandler } from './pageUrl';
+import { saveImageHandler } from './saveImage';
 import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
 import { getDiffPreviewHandler } from './getDiffPreview';
@@ -414,6 +415,9 @@ export async function handleMessage(
       break;
     case MessageType.OPEN_FILE_WITH_SYSTEM_APP:
       await openFileWithSystemAppHandler(connectionId, message, connections, bridge, bridges);
+      break;
+    case MessageType.SAVE_IMAGE:
+      await saveImageHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_FAVICON:
       await getFaviconHandler(connectionId, message, connections);

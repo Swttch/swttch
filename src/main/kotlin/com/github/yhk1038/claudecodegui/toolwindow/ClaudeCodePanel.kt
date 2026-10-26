@@ -2906,10 +2906,14 @@ class ClaudeCodePanel(
              */
             override suspend fun saveFile(suggestedName: String, contents: String): String? {
                 val result = CompletableDeferred<String?>()
-                ApplicationManager.getApplication().invokeLater {
+                // A plain AWT event, not the IDE's `invokeLater`: the IDE's runs under a thread context that stays installed while
+                // the modal dialog below pumps events, and the IDE then reports "Thread context was already set" as an error
+                // each time a file is saved.
+                javax.swing.SwingUtilities.invokeLater {
                     try {
                         val dialog = FileDialog(null as Frame?, "Save File", FileDialog.SAVE)
-                        project.basePath?.let { dialog.directory = it }
+                        // Native Windows dialogs read the folder in the system's own spelling; a forward-slash path was ignored.
+                        project.basePath?.let { dialog.directory = File(it).absolutePath }
                         dialog.file = suggestedName
                         dialog.isVisible = true
 
