@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEffort } from '@/hooks/useEffort';
-import { ULTRACODE_LABEL, buildEffortLevels } from '@/types/effort';
+import { ULTRACODE_LABEL, buildEffortSteps } from '@/types/effort';
 
 /** How long the last key press waits before the level is written. */
 export const EFFORT_STEP_DEBOUNCE_MS = 500;
@@ -31,7 +31,7 @@ export function useEffortStepper(debounceMs: number = EFFORT_STEP_DEBOUNCE_MS): 
   const effort = useEffort();
   const { supportsEffort, levels: supported, current, ultracodeAvailable, ultracodeEnabled, setLevel, enableUltracode } = effort;
 
-  const levels = buildEffortLevels(supported);
+  const levels = buildEffortSteps(supported);
   const count = levels.length + (ultracodeAvailable ? 1 : 0);
   const ultracodeIndex = ultracodeAvailable ? count - 1 : -1;
   const storedIndex = ultracodeEnabled

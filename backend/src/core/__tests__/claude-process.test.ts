@@ -10,9 +10,40 @@ import {
   needsRestartForThinkingDisplay,
   readReportedMode,
   resolveEffortFlag,
+  resolveLegacyEffortLevel,
   resolveThinkingDisplayFlag,
   stopWorkflowsForSession,
 } from '../claude-process';
+
+// What an upgraded user's sessions keep running at (#604). Every slider before it wrote the top-level
+// `effortLevel` and every spawn passed it as `--effort`; that must not stop for a user who never moved to
+// per-model levels, and must stop for one who did, since the flag outranks `modelSettings`.
+describe('resolveLegacyEffortLevel', () => {
+  it('is the top-level level of a user with no per-model level, as the flag always carried it', () => {
+    expect(resolveLegacyEffortLevel({ effortLevel: 'high' })).toBe('high');
+    expect(resolveLegacyEffortLevel({ effortLevel: 'max', modelSettings: {} })).toBe('max');
+    expect(resolveLegacyEffortLevel({ effortLevel: 'low', modelSettings: { 'claude-opus-5-5': { maxEffortLevel: 'high' } } })).toBe('low');
+  });
+
+  it('is nothing once any model has a level of its own, so the flag cannot outrank it', () => {
+    expect(resolveLegacyEffortLevel({
+      effortLevel: 'high',
+      modelSettings: { 'claude-sonnet-5-5': { effortLevel: 'low' } },
+    })).toBeUndefined();
+  });
+
+  it('is nothing when the top-level level is unset, empty or not a string', () => {
+    expect(resolveLegacyEffortLevel({})).toBeUndefined();
+    expect(resolveLegacyEffortLevel({ effortLevel: '' })).toBeUndefined();
+    expect(resolveLegacyEffortLevel({ effortLevel: null })).toBeUndefined();
+    expect(resolveLegacyEffortLevel({ effortLevel: 3 })).toBeUndefined();
+  });
+
+  it('ignores a modelSettings that is not an object', () => {
+    expect(resolveLegacyEffortLevel({ effortLevel: 'high', modelSettings: 'oops' })).toBe('high');
+    expect(resolveLegacyEffortLevel({ effortLevel: 'high', modelSettings: [{ effortLevel: 'low' }] })).toBe('high');
+  });
+});
 
 describe('buildClaudeArgs', () => {
   it('includes the core stream-json print-mode flags and the session flag', () => {

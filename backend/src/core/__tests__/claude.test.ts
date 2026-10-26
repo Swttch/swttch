@@ -17,6 +17,12 @@ vi.mock('../features/settings', () => ({
   readSettingsFile: vi.fn().mockResolvedValue({ cliPath: null }),
   readMergedSettings: vi.fn().mockResolvedValue({ settings: { cliPath: null }, overrides: [] }),
   resolveClaudeConfigDirOverride: vi.fn().mockResolvedValue(null),
+  getStrippableAuthEnvKeys: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../features/claude-settings', () => ({
+  readMergedClaudeSettings: vi.fn().mockResolvedValue({ settings: {}, overrides: [] }),
+  getStrippableAuthEnvKeys: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock child_process so we can inspect the options passed to spawn/execFile
@@ -45,6 +51,8 @@ vi.mock('child_process', () => ({
 }));
 
 import { spawn as cpSpawn, execFile as cpExecFile } from 'child_process';
+import { readMergedSettings } from '../features/settings';
+import { readMergedClaudeSettings } from '../features/claude-settings';
 import { Claude } from '../claude';
 
 const ORIGINAL_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR;
@@ -421,5 +429,39 @@ describe('Claude.applyConfigDir — per-project cliPath', () => {
     await Claude.applyConfigDir('/proj-b');
 
     expect(Claude.command).toBe('/b/claude');
+  });
+});
+
+describe('Claude.spawnAuthed — native settings env', () => {
+  afterEach(() => {
+    vi.mocked(readMergedSettings).mockResolvedValue({ settings: { cliPath: null }, overrides: [] });
+    vi.clearAllMocks();
+  });
+
+  it('projects explicit Claude settings env over inherited host env', async () => {
+    const previousBaseUrl = process.env.ANTHROPIC_BASE_URL;
+    process.env.ANTHROPIC_BASE_URL = 'http://127.0.0.1:1';
+    vi.mocked(readMergedClaudeSettings).mockResolvedValue({
+      settings: {
+        env: { ANTHROPIC_BASE_URL: 'https://claude.example.test/api' },
+      },
+      overrides: [],
+      unreadable: [],
+    });
+    vi.mocked(cpSpawn).mockClear();
+
+    try {
+      await Claude.spawnAuthed([], '/project', { env: { TERM: 'dumb' } });
+
+      const options = vi.mocked(cpSpawn).mock.calls[0][2] as {
+        env: Record<string, string | undefined>;
+      };
+      expect(options.env.ANTHROPIC_BASE_URL).toBe('https://claude.example.test/api');
+      expect(options.env.TERM).toBe('dumb');
+    } finally {
+      if (previousBaseUrl === undefined) delete process.env.ANTHROPIC_BASE_URL;
+      else process.env.ANTHROPIC_BASE_URL = previousBaseUrl;
+      vi.mocked(readMergedClaudeSettings).mockResolvedValue({ settings: {}, overrides: [], unreadable: [] });
+    }
   });
 });

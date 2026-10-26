@@ -57,11 +57,12 @@
       "message": "Erro: Esta sessão já está em uso.",
       "reclaiming": "Reivindicando...",
       "reclaim": "Reivindicar Sessão"
-    },
-    "workingDirMissing": {
-      "message": "A pasta do projeto não existe mais: {{path}}. Ela pode ter sido excluída ou movida, ou a unidade ou a distribuição WSL que a continha não está mais disponível. Restaure a pasta para voltar a usar este projeto.",
-      "openProjects": "Escolher outro projeto"
     }
+  },
+  "missingFolder": {
+    "message": "A pasta de trabalho não existe mais. Escolha outra pasta para continuar.",
+    "chooseFolder": "Escolher pasta",
+    "openProjects": "Escolher outro projeto"
   },
   "chatInput": {
     "actionButtons": {

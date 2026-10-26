@@ -151,6 +151,7 @@ import { setPermissionModeHandler } from './setPermissionMode';
 import { probeFableAvailabilityHandler } from './probeFableAvailability';
 import { getWorkingDirHandler } from './getWorkingDir';
 import { getIdeRootHandler } from './getIdeRoot';
+import { getWorkingDirStatusHandler } from './getWorkingDirStatus';
 import { tunnelStartHandler } from './tunnelStart';
 import { tunnelStopHandler } from './tunnelStop';
 import { getTunnelStatusHandler } from './getTunnelStatus';
@@ -667,6 +668,9 @@ export async function handleMessage(
       break;
     case MessageType.GET_WORKING_DIR:
       getWorkingDirHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_WORKING_DIR_STATUS:
+      await getWorkingDirStatusHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_IDE_ROOT:
       await getIdeRootHandler(connectionId, message, connections, bridge);

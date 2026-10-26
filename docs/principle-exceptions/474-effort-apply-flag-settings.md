@@ -1,6 +1,6 @@
 # 실행 중인 CLI의 effort 변경에 미문서화 `control_request{subtype:"apply_flag_settings"}`를 먼저 쓴다
 
-> 마지막 갱신: 2026-10-06
+> 마지막 갱신: 2026-10-26 ([#604](https://github.com/Swttch/swttch/issues/604))
 > 수정 이력은 이 파일을 고쳐 적지 말고 `git log -- docs/principle-exceptions/474-effort-apply-flag-settings.md`로 확인한다.
 
 - 관련 이슈: [#474](https://github.com/Swttch/swttch/issues/474) (`max`만 반영되던 문제. 이 문서는 같은 문제의 일반형을 다룬다)
@@ -37,7 +37,7 @@ effort 슬라이더가 값을 쓰는 곳은 `~/.claude/settings.json`의 `effort
 | 공식 `/effort <level>` 명령 | 예, 다음 턴부터. `max`와 `ultracode`도 된다 | 두 줄. 사용자 항목 `<command-name>/effort</command-name>`과 시스템 항목 `Set effort level to ... (this session only)` | 공식 |
 | `apply_flag_settings` 제어 요청 | 예, 즉시. `max`와 `ultracode`도 된다 | 없음 | **미문서화. 예외** |
 
-`apply_flag_settings`는 `{effortLevel, ultracode}`를 세션 한정 설정 층에 합쳐 넣는다. `ultracode`는 `false`와 `null` 둘 다 끄고, `effortLevel: null`은 덮어쓴 값을 지워 설정 파일의 값으로 되돌린다. 이 요청을 쓴 세션의 대화 기록에는 effort와 관련된 사용자·시스템 항목이 하나도 남지 않았다.
+`apply_flag_settings`는 `{effortLevel, ultracode}`를 세션 한정 설정 층에 합쳐 넣는다. `ultracode`는 `false`와 `null` 둘 다 끄고, `effortLevel: null`은 덮어쓴 값을 지운다. 다만 지운 뒤의 레벨은 설정 파일의 값이 아니라 모델 기본값이다(2026-10-26, CLI 2.1.310, `modelSettings`를 프로젝트 설정에 두고 잼. `modelSettings`가 low인 Sonnet에서 null 뒤에 medium이 나왔고, `--effort high`로 시작한 CLI에서도 같았다). 그래서 Auto는 이 요청으로 보내지 않는다. 이 요청을 쓴 세션의 대화 기록에는 effort와 관련된 사용자·시스템 항목이 하나도 남지 않았다.
 
 ## 어느 기준으로 예외가 되는가
 
@@ -62,10 +62,10 @@ CLI는 이 요청을 실행 중인 세션의 레벨을 바꾸는 길로 직접 �
 원칙 2번이 실제로 막으려는 것은 **종속**이다. "CLI에선 되는데 GUI만 막히는" 상태가 되는 것. 그래서 종속이 성립하지 않도록 다음을 강제했다.
 
 - **쓰는 것은 `apply_flag_settings`의 두 키 `effortLevel`과 `ultracode`뿐이다.** `get_settings` 같은 다른 미문서화 요청은 쓰지 않는다. 방금 끝난 응답이 어떤 effort로 실행됐는지는 요청으로 묻지 않고, CLI가 대화 기록에 적은 `effort`와 `perTurnEffort`를 읽는다.
-- **고른 값이 항상 먼저 저장된다.** 이후에 뜨는 CLI는 그 값을 `--effort`로 받는다. `--effort`는 `claude --help`에 문서화된 공식 플래그이고 터미널 사용자가 치는 것과 같으므로 이 부분에는 예외가 필요 없다. 시작할 때의 문제(둘째)는 이 플래그로 고쳤다. 단 `claude --help`에 `--effort`가 적힌 CLI에만 넘긴다. 2.0.22는 이 플래그를 `error: unknown option '--effort'`로 거부하고 종료해서 대화가 시작되지 않는다.
+- **고른 값은 모델별로 먼저 저장되고, 그 세션에서 뜨는 CLI는 그 값을 `--effort`로 받는다.** 저장 위치는 `modelSettings.<모델>.effortLevel`이다. `--effort`는 `modelSettings`를 포함한 모든 설정보다 우선하므로(2026-10-26 실측) 값이 없는 세션은 플래그를 넘기지 않아야 CLI가 모델별 값을 스스로 읽는다. 그래서 설정 파일의 값을 매 spawn마다 넘기던 방식을 그만두고, 그 세션에서 슬라이더를 움직였을 때만 넘긴다([#604](https://github.com/Swttch/swttch/issues/604)). `max`는 설정 파일이 담지 못하므로 그 세션에서만 유지한다. 예전 슬라이더가 최상위 `effortLevel`에만 저장해 둔 사용자는 모델별 레벨이 하나도 없는 동안 그 값을 이전처럼 `--effort`로 받는다(업그레이드로 세션이 도는 레벨이 바뀌지 않게). 어느 모델이든 자기 레벨이 생기면 이 값은 플래그로 넘기지 않는다. CLI는 이 최상위 값을 Sonnet과 Opus 모두에서 무시하므로(2.1.310 실측), 첫 모델별 레벨을 쓰는 순간 다른 모델이 기본값으로 떨어지지 않도록 그 모델들의 항목에 예전 값을 옮겨 적는다. Auto는 모델별 항목과 함께 최상위 `effortLevel`도 지운다(예전 Auto도 그랬다). `--effort`는 `claude --help`에 문서화된 공식 플래그이고 터미널 사용자가 치는 것과 같으므로 이 부분에는 예외가 필요 없다. 시작할 때의 문제(둘째)는 이 플래그로 고쳤다. 단 `claude --help`에 `--effort`가 적힌 CLI에만 넘긴다. 2.0.22는 이 플래그를 `error: unknown option '--effort'`로 거부하고 종료해서 대화가 시작되지 않는다.
 - **실패하면 자동으로 공식 `/effort`로 내려간다.** 8초 안에 응답이 없거나, 에러 응답이거나, 요청을 모르는 CLI이면 `/effort <level>`(`ultracode`는 `/effort ultracode on|off`)을 일반 메시지로 보낸다. 턴이 진행 중이면 CLI가 도중에 도착한 메시지를 버리므로 턴이 끝난 뒤 보낸다.
-- **둘 다 닿지 않으면 다음 메시지에서 CLI를 다시 띄운다.** 그 세션의 기록된 레벨을 어떤 요청과도 같지 않은 값으로 바꿔 두고, 다시 뜬 CLI가 저장된 레벨을 `--effort`로 받는다. 느려질 뿐 틀리지는 않는다.
-- **실행 중인 CLI가 없으면 아무것도 보내지 않는다.** 첫 메시지 전에는 저장된 값이 spawn 때 `--effort`로 넘어간다.
+- **둘 다 닿지 않으면 다음 메시지에서 CLI를 다시 띄운다.** 그 세션의 기록된 레벨을 어떤 요청과도 같지 않은 값으로 바꿔 두고, 다시 뜬 CLI가 그 세션의 선택을 `--effort`로 받는다(선택이 없으면 플래그 없이 뜬다). 느려질 뿐 틀리지는 않는다. Auto는 처음부터 이 경로로 전달한다.
+- **실행 중인 CLI가 없으면 아무것도 보내지 않는다.** 첫 메시지 전에 고른 값은 연결에 보관됐다가 첫 spawn 때 `--effort`로 넘어간다.
 - **레벨 문자열은 `^[a-z]{2,16}$`만 받는다.** 폴백이 그 문자열을 명령에 쓰기 때문이다.
 
 ## 이 예외가 정당하지 않게 되는 조건

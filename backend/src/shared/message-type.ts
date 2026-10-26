@@ -509,6 +509,8 @@ export enum MessageType {
   SET_PROJECT_META = 'SET_PROJECT_META',
   /** Read the current working directory the backend resolved. */
   GET_WORKING_DIR = 'GET_WORKING_DIR',
+  /** Ask whether a working directory is still on disk (inbound webview→backend; answered with WORKING_DIR_STATUS). */
+  GET_WORKING_DIR_STATUS = 'GET_WORKING_DIR_STATUS',
   /** Resolve the IDE project root containing the working directory. */
   GET_IDE_ROOT = 'GET_IDE_ROOT',
   /** Resolve the on-disk output path of a background task. */
@@ -830,6 +832,8 @@ export enum MessageType {
   WSL_HOST_MISMATCH = 'WSL_HOST_MISMATCH',
   /** The project's working directory is no longer on disk, so the CLI cannot be started in it. */
   WORKING_DIR_MISSING = 'WORKING_DIR_MISSING',
+  /** Whether a working directory is still on disk, in response to GET_WORKING_DIR_STATUS (outbound backend→webview; payload { workingDir, gone }). */
+  WORKING_DIR_STATUS = 'WORKING_DIR_STATUS',
   /** Structured diagnosis of an authentication failure. */
   AUTH_ERROR_DIAGNOSIS = 'AUTH_ERROR_DIAGNOSIS',
   /**

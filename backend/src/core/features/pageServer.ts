@@ -110,7 +110,10 @@ function handle(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
   res.writeHead(200, { ...headers, 'Content-Length': size });
-  if (req.method === 'HEAD') return res.end();
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
   createReadStream(file).on('error', () => res.destroy()).pipe(res);
 }
 

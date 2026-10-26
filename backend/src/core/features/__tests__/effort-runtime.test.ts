@@ -108,10 +108,39 @@ describe('applyEffortToLiveCli', () => {
     expect(needsRestartForEffort('high', 'high')).toBe(false);
   });
 
-  it('records a dropped override as no level, which is what a fresh spawn would pass', async () => {
+  // Measured on CLI 2.1.310 with the model's level in `modelSettings`: apply_flag_settings null leaves the
+  // CLI at the model default, not at the level the settings name. So Auto is a restart, not a request (#604).
+  it('delivers Auto by marking the session for a restart, and sends the CLI no request', async () => {
     const { connections, setEffortLevel } = connectionsWith(live());
-    await applyEffortToLiveCli(connections, 's1', { effortLevel: null });
-    expect(setEffortLevel).toHaveBeenCalledWith('s1', null);
+    const via = await applyEffortToLiveCli(connections, 's1', { effortLevel: null });
+
+    expect(via).toBe('undelivered');
+    expect(sendControlRequestToProcess).not.toHaveBeenCalled();
+    expect(sendMessageToProcess).not.toHaveBeenCalled();
+    expect(setEffortLevel).toHaveBeenCalledWith('s1', EFFORT_LEVEL_UNKNOWN);
+    // The next spawn passes no flag (no pick), and the recorded level matches no request, so it restarts.
+    expect(needsRestartForEffort(EFFORT_LEVEL_UNKNOWN, undefined)).toBe(true);
+  });
+
+  it('still tells the running CLI the ultracode half of an Auto change, and still restarts for the level', async () => {
+    waitForControlResponse.mockResolvedValue({});
+    sendControlRequestToProcess.mockReturnValue(true);
+    const { connections, setEffortLevel } = connectionsWith(live());
+    await applyEffortToLiveCli(connections, 's1', { effortLevel: null, ultracode: false });
+
+    expect(sendControlRequestToProcess).toHaveBeenCalledWith(
+      connections,
+      's1',
+      expect.any(String),
+      { subtype: 'apply_flag_settings', settings: { ultracode: false } },
+    );
+    expect(setEffortLevel).toHaveBeenLastCalledWith('s1', EFFORT_LEVEL_UNKNOWN);
+  });
+
+  it('has nothing to restart for Auto when no CLI is running', async () => {
+    const { connections, setEffortLevel } = connectionsWith(undefined);
+    expect(await applyEffortToLiveCli(connections, 's1', { effortLevel: null })).toBe('not_running');
+    expect(setEffortLevel).not.toHaveBeenCalled();
   });
 
   it('records max as the flag a fresh spawn would pass, so the next message does not restart for it', async () => {

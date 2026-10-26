@@ -73,7 +73,7 @@ If you set `CLAUDE_CODE_ARTIFACT` yourself in the environment that starts the ID
 
 ## What has not changed
 
-This chat does not show the page itself. It gives you the link, and the page opens in your browser. The browser now opens by itself after the first publish, and pages, PDFs and pictures preview beside the chat: see [A new Artifact opens for you](../096-artifact_and_file_preview/en.md). Showing the page inside the IDE and the terminal's `/artifacts` list are being tracked in [#593](https://github.com/Swttch/swttch/issues/593).
+This chat does not show the page itself. It gives you the link, and the page opens in your browser. The browser now opens by itself after the first publish, and pages, PDFs and pictures preview beside the chat: see [A new Artifact opens for you](../097-artifact_and_file_preview/en.md). Showing the page inside the IDE and the terminal's `/artifacts` list are being tracked in [#593](https://github.com/Swttch/swttch/issues/593).
 
 ---
 

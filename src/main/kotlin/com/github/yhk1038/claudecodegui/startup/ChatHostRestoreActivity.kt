@@ -56,6 +56,10 @@ class ChatHostRestoreActivity : ProjectActivity {
         createTabStateOffTheEdt(project)
         resolveHostMode(project)
         ChatHostRouter.currentHost(project).restorePersistedSessions(project)
+        // Chat tabs an update closed while the IDE was running: the layout the IDE
+        // saved no longer has them, so the host's restore above cannot bring them
+        // back (issue #598).
+        ChatTabsReloadListener.reopenRemembered(project)
     }
 
     /**

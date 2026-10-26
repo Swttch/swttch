@@ -35,6 +35,8 @@ import {
 import { PromptLibraryModal } from '@/components/PromptLibraryModal';
 import { useMcpServers, MCP_SERVERS_QUERY_KEY } from '@/hooks/useMcpServers';
 import { useQueryClient } from '@tanstack/react-query';
+import { MissingFolderBar } from './MissingFolderBar';
+import { useWorkingDirGone } from '@/hooks/useWorkingDirGone';
 import { useChatStreamContext } from '../../contexts/ChatStreamContext';
 import { useScheduledDelivery } from '../../hooks/useScheduledDelivery/useScheduledDelivery';
 import { useSessionContext } from '../../contexts/SessionContext';
@@ -134,6 +136,9 @@ function ChatPageContent() {
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
   const paneColumn = usePaneColumn();
   const paneColumnWidth = usePaneWidth(true);
+  // The folder this session works in was deleted or moved. The CLI cannot start there, so
+  // the input gives way to a bar offering another folder.
+  const folderGone = useWorkingDirGone(error);
   // Always on: receive due scheduled-message deliveries pushed to this tab and
   // send them through the normal composer path (independent of any limit banner).
   useScheduledDelivery();
@@ -505,6 +510,8 @@ function ChatPageContent() {
                   onDeny={(reason) => denyPermission(pendingPermission.controlRequestId, reason)}
                   onOpenDiffOverlay={setDiffOverlayToolUseId}
               />
+          ) : folderGone ? (
+              <MissingFolderBar />
           ) : (
               /* The setup card is up, so there is nothing useful to type yet —
                  a prompt sent now would reach a CLI that is missing or signed

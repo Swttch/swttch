@@ -57,11 +57,12 @@
       "message": "Fehler: Diese Sitzung wird bereits verwendet.",
       "reclaiming": "Wird zurückgeholt...",
       "reclaim": "Sitzung zurückholen"
-    },
-    "workingDirMissing": {
-      "message": "Der Projektordner existiert nicht mehr: {{path}}. Er wurde möglicherweise gelöscht oder verschoben, oder das Laufwerk oder die WSL-Distribution, auf der er lag, ist nicht mehr vorhanden. Stellen Sie den Ordner wieder her, um dieses Projekt weiter zu nutzen.",
-      "openProjects": "Anderes Projekt wählen"
     }
+  },
+  "missingFolder": {
+    "message": "Der Arbeitsordner existiert nicht mehr. Wähle einen anderen Ordner, um fortzufahren.",
+    "chooseFolder": "Ordner wählen",
+    "openProjects": "Anderes Projekt wählen"
   },
   "chatInput": {
     "actionButtons": {

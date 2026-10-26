@@ -82,6 +82,13 @@ interface SessionRecord {
    */
   effortLevel: string | null;
   /**
+   * The level the user picked with the slider in THIS session, or null when none was picked (or the
+   * pick was Auto). Unlike `effortLevel` it describes the session rather than one process, so it
+   * outlives the CLI: every spawn of the session passes it as `--effort`, and a session that never had
+   * a pick passes no flag, which leaves the level to the CLI's own `modelSettings` (#604).
+   */
+  effortPick: string | null;
+  /**
    * Thinking display passed to the LIVE process as `--thinking-display`, or null
    * when the spawn passed no such flag. Recorded for the same reason as
    * `effortLevel`: the flag only applies at spawn, so turning
@@ -105,6 +112,12 @@ interface SessionRecord {
 
 interface ClientRecord {
   subscribedSessionId: string | null;
+  /**
+   * The effort level picked on this connection while its chat had no session yet (nothing sent), waiting
+   * for the first spawn to take it over as the session's pick. Undefined when nothing is waiting; null is a
+   * pick of Auto, which differs from none only in that it clears an earlier pick.
+   */
+  pendingEffortPick?: string | null;
   env: ClientEnv;
   /**
    * IDE panel that owns this webview connection (JetBrains mode only). Set from the
@@ -1008,6 +1021,7 @@ export class ConnectionManager {
         activity: SessionActivity.Idle,
         inputMode: null,
         effortLevel: null,
+        effortPick: null,
         thinkingDisplay: null,
         accountId: null,
       };
@@ -1060,6 +1074,34 @@ export class ConnectionManager {
   /** Effort level the session's live CLI is pinned to, or null when it is not pinned. */
   getEffortLevel(sessionId: string): string | null {
     return this.sessionRegistry.get(sessionId)?.effortLevel ?? null;
+  }
+
+  /** Record the level the user picked for the session, or null for none (Auto). See `effortPick`. */
+  setEffortPick(sessionId: string, effortLevel: string | null): void {
+    const session = this.getOrCreateSession(sessionId);
+    session.effortPick = effortLevel;
+  }
+
+  /** The level the user picked in this session, or null when none was picked. */
+  getEffortPick(sessionId: string): string | null {
+    return this.sessionRegistry.get(sessionId)?.effortPick ?? null;
+  }
+
+  /** Hold a pick made on [connectionId] before its chat had a session. See `pendingEffortPick`. */
+  setPendingEffortPick(connectionId: string, effortLevel: string | null): void {
+    const client = this.clientMap.get(connectionId);
+    if (client) client.pendingEffortPick = effortLevel;
+  }
+
+  /**
+   * Hand the pick held for [connectionId] to [sessionId], now that the chat has one. Nothing happens when
+   * nothing is held, so a session that already has a pick keeps it.
+   */
+  adoptPendingEffortPick(connectionId: string, sessionId: string): void {
+    const client = this.clientMap.get(connectionId);
+    if (!client || client.pendingEffortPick === undefined) return;
+    this.setEffortPick(sessionId, client.pendingEffortPick);
+    client.pendingEffortPick = undefined;
   }
 
   /**
