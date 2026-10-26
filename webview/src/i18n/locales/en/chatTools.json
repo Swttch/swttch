@@ -339,5 +339,8 @@
         "query": "query"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

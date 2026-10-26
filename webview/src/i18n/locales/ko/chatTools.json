@@ -335,5 +335,8 @@
         "query": "쿼리"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "다음 발신자로부터 메시지 수신"
   }
 }

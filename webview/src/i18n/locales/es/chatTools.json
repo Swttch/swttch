@@ -339,5 +339,8 @@
         "query": "consulta"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

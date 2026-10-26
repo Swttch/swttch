@@ -48,6 +48,26 @@ describe('restoreQueuedMessages', () => {
     expect(result[2].message?.content).toBe('벌써?');
   });
 
+  it('does not rebuild a queued background notice as a user message, which would draw an empty bubble', () => {
+    const notice = '<task-notification>\n<task-type>artifact-watch-lifecycle</task-type>\n<summary>Stopped watching</summary>\n</task-notification>';
+    const result = restoreQueuedMessages([
+      user('u1', 'hi'),
+      queueOp('enqueue', notice, '2026-07-26T17:00:02.000Z'),
+      queueOp('remove', notice, '2026-07-26T17:00:03.000Z'),
+      assistant('a1', 'ok'),
+    ]);
+    expect(result.map((m) => m.uuid)).toEqual(['u1', 'a1']);
+  });
+
+  it('still rebuilds a queued message that has text around a reminder', () => {
+    const text = '<system-reminder>x</system-reminder>\n\nplease continue';
+    const result = restoreQueuedMessages([
+      queueOp('enqueue', text, '2026-07-26T17:00:02.000Z'),
+      queueOp('remove', text, '2026-07-26T17:00:03.000Z'),
+    ]);
+    expect(result).toHaveLength(1);
+  });
+
   it('drops enqueue/dequeue pairs, which the CLI already wrote as user entries', () => {
     const messages = [
       queueOp('enqueue', 'hello', '2026-07-26T17:29:29.145Z'),

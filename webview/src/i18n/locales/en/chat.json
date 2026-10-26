@@ -248,6 +248,9 @@
       "expandSubtree": "Expand {{name}}",
       "refreshTitle": "Refresh the list",
       "includeNested": "Include nested"
+    },
+    "browser": {
+      "title": "Browser"
     }
   },
   "acceptPlan": {
@@ -812,7 +815,98 @@
     "resize": "Resize",
     "showSource": "View source",
     "showRendered": "View rendered",
-    "modified": "Modified {{when}}"
+    "modified": "Modified {{when}}",
+    "linkTitle": "Open this link?",
+    "linkMessage": "This page wants to open {{url}}. It opens in {{browser}}.",
+    "linkOpen": "Open in browser",
+    "back": "Back",
+    "forward": "Forward",
+    "more": "More",
+    "closeOthers": "Close other tabs",
+    "closeTab": "Close tab",
+    "address": "Page address",
+    "tabs": "Browser tabs",
+    "newTab": "New tab",
+    "blankTitle": "Browse with Claude",
+    "blankBody": "Enter a URL or ask Claude to open a site. Claude can read, click, and type.",
+    "annotate": "Annotate",
+    "annotatePen": "Draw",
+    "annotateShape": "Shape",
+    "annotateShapes": "Shapes",
+    "annotateText": "Text",
+    "annotateExit": "Exit annotation",
+    "selectElement": "Select element",
+    "annotateAddToChat": "Add to chat",
+    "annotateColor": "Color",
+    "annotateWidth": "Line width",
+    "elementCopied": "Element copied",
+    "shape": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "arrow": "Arrow"
+    },
+    "viewport": {
+      "responsive": "Responsive",
+      "mobile": "Mobile",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "desktop": "Desktop"
+    },
+    "menu": {
+      "openInBrowser": "Open in {{browser}}",
+      "copyUrl": "Copy URL",
+      "copied": "Copied",
+      "saveScreenshot": "Save screenshot",
+      "openHtmlFile": "Open HTML file…",
+      "viewport": "Viewport",
+      "openLinksBuiltIn": "Open links in built-in browser",
+      "autoOpenFiles": "Auto-open files Claude writes",
+      "autoCheck": "Check for changes automatically",
+      "allowedSites": "Manage allowed sites…",
+      "cookies": "Cookies",
+      "importCookies": "Import cookies…",
+      "keepCookies": "Keep cookies",
+      "shared": "Shared",
+      "clearData": "Clear browsing data",
+      "unavailable": "This panel has no browser engine of its own, so this is not available here.",
+      "failed": "That did not work.",
+      "openInBrowserUnknown": "Open in browser",
+      "hint": {
+        "openInBrowser": "Opens this page's file in your computer's web browser.",
+        "copyUrl": "Copies the address in the address bar.",
+        "saveScreenshot": "Saves the page as shown as an image.",
+        "openHtmlFile": "Pick an HTML file on this computer and open it in a new tab.",
+        "viewport": "Choose the screen size the page is drawn at.",
+        "openLinksBuiltIn": "Opens the page's links inside this panel.",
+        "autoOpenFiles": "Opens HTML files Claude writes in a tab automatically.",
+        "autoCheck": "Loads the page again when its file changes.",
+        "allowedSites": "Manage the sites Claude may work with.",
+        "importCookies": "Brings in another browser's cookies.",
+        "keepCookies": "Choose how long cookies stay after a tab closes.",
+        "clearData": "Deletes this panel's cookies and site data.",
+        "annotate": "Draw on the page to show Claude what you mean."
+      },
+      "browserFallback": "your web browser",
+      "showAnnotate": "Show annotation tools",
+      "hideAnnotate": "Hide annotation tools"
+    },
+    "error": {
+      "title": "Unable to load preview",
+      "titleUnsupported": "This file cannot be previewed",
+      "titleTooLarge": "This file is too large to preview",
+      "deleted": "The file may have been deleted or moved.",
+      "back": "Back to browser"
+    },
+    "addressPlaceholder": "Enter a URL",
+    "blankDevServerPrompt": "Want to preview your app?",
+    "blankDevServerAction": "Detect dev servers",
+    "blankDevServerNone": "No running dev server was found.",
+    "webUnsupported": "Claude can't support the content of this page.",
+    "webBlocked": {
+      "title": "This site cannot be opened inside this panel",
+      "detail": "For security, this site does not allow its pages to be shown inside another program's window. It is a setting meant to stop fake screens that target a signed-in account, so it cannot be changed from this panel.",
+      "open": "Open in {{browser}}"
+    }
   },
   "fileLink": {
     "copyDone": "Path copied",

@@ -335,5 +335,8 @@
         "query": "查询"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

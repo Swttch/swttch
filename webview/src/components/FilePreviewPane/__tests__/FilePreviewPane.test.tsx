@@ -8,7 +8,11 @@ import { PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from '../pageBackground'
 const openFile = vi.fn(() => Promise.resolve());
 const openFileWithSystemApp = vi.fn(() => Promise.resolve());
 const openUrl = vi.fn(() => Promise.resolve());
-const { request } = vi.hoisted(() => ({ request: vi.fn() }));
+const { request, source } = vi.hoisted(() => ({ request: vi.fn(), source: { value: 'local' as 'local' | 'remote' } }));
+vi.mock('../pageFrame', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../pageFrame')>()),
+  pageSource: () => source.value,
+}));
 
 vi.mock('@/adapters', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/adapters')>()),
@@ -33,6 +37,7 @@ const b64 = (text: string) => btoa(text);
 const openMenu = () => fireEvent.click(screen.getByRole('button', { name: /./, expanded: false }));
 
 beforeEach(() => {
+  source.value = 'local';
   request.mockReset();
   openFile.mockClear();
   openFileWithSystemApp.mockClear();
@@ -203,7 +208,7 @@ describe('FilePreviewPane', () => {
     request.mockResolvedValue({ ok: false, reason: 'unreadable' });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/gone.pdf'));
-    expect(await screen.findByText('filePreview.unreadable')).toBeInTheDocument();
+    expect(await screen.findByText('filePreview.error.deleted')).toBeInTheDocument();
 
     openMenu();
     fireEvent.click(screen.getByRole('menuitem', {name: 'filePreview.openInEditor'}));
@@ -339,7 +344,8 @@ describe('the resize handle', () => {
 });
 
 describe('the path line and the source view', () => {
-  it('shows where the file is, and opens a page handed over as a file on its source, with the page one click away', async () => {
+  it('shows where the file is, and opens a page handed over as a file on another machine on its source, with the page one click away', async () => {
+    source.value = 'remote';
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/private/tmp/ccg-demo/demo593/page.html'));
@@ -392,6 +398,7 @@ describe('the name and the menu header', () => {
   });
 
   it('says in the menu how long ago the file was written', async () => {
+    source.value = 'remote';
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, modifiedAt: Date.now() - 3 * 3600 * 1000, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/p/page.html'));

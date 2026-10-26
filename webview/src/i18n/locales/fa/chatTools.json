@@ -335,5 +335,8 @@
         "query": "پرس‌وجو"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

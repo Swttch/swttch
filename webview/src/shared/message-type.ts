@@ -419,6 +419,21 @@ export enum MessageType {
    */
   OPEN_FILE_WITH_SYSTEM_APP = 'OPEN_FILE_WITH_SYSTEM_APP',
   /**
+   * Ask which browser the operating system opens a web address in ("Google Chrome").
+   * Inbound webview→backend; ACKed with `{ name: string | null }`.
+   */
+  GET_DEFAULT_BROWSER = 'GET_DEFAULT_BROWSER',
+  /**
+   * Ask where a page in a file on this machine is served as a web page of its own, for the Browser pane
+   * (`{ path, workingDir?, inject? }`). Inbound webview→backend; ACKed with `{ port, pathname, root }` or `{ error }`.
+   */
+  GET_PAGE_URL = 'GET_PAGE_URL',
+  /**
+   * Ask for the icon of a web page (`{ url }`), for a Browser pane tab. Inbound webview→backend; ACKed with
+   * `{ icon: string | null }`, a data URL.
+   */
+  GET_FAVICON = 'GET_FAVICON',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.

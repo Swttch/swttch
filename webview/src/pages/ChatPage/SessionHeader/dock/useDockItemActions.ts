@@ -11,6 +11,7 @@ import { useTunnelAction } from '../useTunnelAction';
 import { openAssetsModal } from './actions';
 import { AssetScreenSource } from '@/shared';
 import { TOGGLE_SESSION_RAIL_EVENT } from '../../SessionRail/event';
+import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 
 /**
  * One `activate` per dock item, so the dock icon and the ⋮ menu row trigger the
@@ -77,6 +78,7 @@ export function useDockItemActions(): DockItemActions {
       [DockItemId.SIDE_QUESTION]: toggleSideQuestion,
       [DockItemId.SESSION_RAIL]: toggleSessionRail,
       [DockItemId.NEW_TAB]: openNewTab,
+      [DockItemId.BROWSER]: () => filePreviewPaneStore.toggleBrowser(),
     }),
     [openUsage, toggleScheduled, toggleWorkflows, tunnel.activate, openSettings, openNewTab, openAssetsFromMenu, toggleSideQuestion, toggleSessionRail],
   );

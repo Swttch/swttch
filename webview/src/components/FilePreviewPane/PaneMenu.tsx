@@ -2,11 +2,12 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 
 import toast from 'react-hot-toast';
 import {
   ArrowDownTrayIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, ChevronDownIcon, CodeBracketIcon,
-  ComputerDesktopIcon, DocumentDuplicateIcon,
+  ComputerDesktopIcon, DocumentDuplicateIcon, EllipsisVerticalIcon,
 } from '@heroicons/react/24/outline';
 import { getAdapter } from '@/adapters';
 import { i18n, useTranslation } from '@/i18n';
 import { relativeTime } from './relativeTime';
+import { paneIconButton } from './PaneShell';
 import { downloadSentFile } from '@/pages/ChatPage/message-renderers/ToolRenderers/sendUserFile';
 
 interface PaneMenuProps {
@@ -21,6 +22,8 @@ interface PaneMenuProps {
   /** When the file was last written, when known. */
   modifiedAt?: number;
   onReload: () => void;
+  /** `title`: the page's name with a chevron (the Artifact pane's); `more`: a "⋮" button (the browser pane's, which names the page in its tab). */
+  trigger?: 'title' | 'more';
 }
 
 type Icon = ComponentType<{ className?: string }>;
@@ -45,7 +48,7 @@ function Item({ icon: Icon, onSelect, children }: { icon: Icon; onSelect: () => 
  * itself stays light. What needs an account on claude.ai there (rename, share,
  * pin, delete) is not offered, since it cannot be done to a file on this machine.
  */
-export function PaneMenu({ heading, path, name, source, publishedUrl, modifiedAt, onReload }: PaneMenuProps) {
+export function PaneMenu({ heading, path, name, source, publishedUrl, modifiedAt, onReload, trigger = 'title' }: PaneMenuProps) {
   const { t, i18n: i18next } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,21 +87,34 @@ export function PaneMenu({ heading, path, name, source, publishedUrl, modifiedAt
 
   return (
     <div ref={rootRef} className="relative min-w-0">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="flex max-w-full items-center gap-1 rounded-lg px-[calc(6px/var(--ui-zoom,1))] py-1 text-[0.9231rem] font-medium transition-colors hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)]"
-      >
-        <span dir="ltr" className="truncate">{heading}</span>
-        <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 opacity-60" />
-      </button>
+      {trigger === 'more' ? (
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={t('filePreview.more')}
+          onClick={() => setOpen((value) => !value)}
+          className={`${paneIconButton} ${open ? '!opacity-100 bg-[color-mix(in_srgb,currentColor_12%,transparent)]' : ''}`}
+        >
+          <EllipsisVerticalIcon className="h-4 w-4" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="flex max-w-full items-center gap-1 rounded-lg px-[calc(6px/var(--ui-zoom,1))] py-1 text-[0.9231rem] font-medium transition-colors hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)]"
+        >
+          <span dir="ltr" className="truncate">{heading}</span>
+          <ChevronDownIcon className="h-3.5 w-3.5 shrink-0 opacity-60" />
+        </button>
+      )}
 
       {open && (
         <div
           role="menu"
-          className="absolute start-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-border-default bg-surface-overlay p-1.5 shadow-lg"
+          className={`absolute top-full z-50 mt-1.5 w-64 rounded-xl border border-border-default bg-surface-overlay p-1.5 shadow-lg ${trigger === 'more' ? 'end-0' : 'start-0'}`}
         >
           <div className="px-2.5 pb-1.5 pt-1">
             <div dir="ltr" className="truncate text-[0.8461rem] text-text-primary">{name}</div>

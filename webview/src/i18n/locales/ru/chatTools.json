@@ -347,5 +347,8 @@
         "query": "запрос"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

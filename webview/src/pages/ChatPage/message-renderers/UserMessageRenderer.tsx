@@ -15,6 +15,7 @@ import { MessageSessionMentionChip } from './components/MessageSessionMentionChi
 import { stripSessionMentionTags } from '../ChatInput/sessionMentionTag';
 import { InterruptedMessageRenderer } from './InterruptedMessageRenderer';
 import { PeerAgentMessageRenderer } from './PeerAgentMessageRenderer';
+import { CrossSessionMessageRenderer, parseCrossSessionMessage } from './CrossSessionMessageRenderer';
 import { NotificationLine } from './NotificationMessageRenderer';
 import { MessageBox } from './components/MessageBox';
 import { IfVisible, hasVisibleGlyph } from './components/IfVisible';
@@ -55,6 +56,16 @@ export const UserMessageRenderer: React.FC<UserMessageRendererProps> = ({ messag
   // would otherwise show its raw wrapped text verbatim (issue #383).
   if (message.origin?.kind === 'peer') {
     return <PeerAgentMessageRenderer message={message} />;
+  }
+  // A message another session sent: one folded line naming the sender, as in Claude Desktop (#593).
+  const crossSession = parseCrossSessionMessage(getTextContent(message));
+  if (crossSession) {
+    return (
+      <CrossSessionMessageRenderer
+        message={crossSession}
+        renderBody={(body) => <UserMessageRenderer message={{ ...message, message: { ...message.message, content: body } as LoadedMessageDto['message'] }} />}
+      />
+    );
   }
 
   const imageBlocks = useMemo(() => {

@@ -339,5 +339,8 @@
         "query": "Abfrage"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

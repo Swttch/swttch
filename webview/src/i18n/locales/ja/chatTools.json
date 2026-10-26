@@ -335,5 +335,8 @@
         "query": "クエリ"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

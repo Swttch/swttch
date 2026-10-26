@@ -1,3 +1,5 @@
+import { insertAtCursor } from '@/hooks/useEditorContext';
+import { pngFromBase64, subscribeComposerElements, subscribeComposerImages } from '@/utils/composerElements';
 import { useCallback, useEffect, useRef, KeyboardEvent, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
@@ -23,7 +25,7 @@ import { useBackgroundTaskActions } from '@/hooks/useBackgroundTaskActions';
 import { useSendToSession } from '@/hooks/useSendToAgent';
 import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
-import { SessionState } from '@/types';
+import { ImageAttachSource, SessionState } from '@/types';
 import { useAttachments } from './hooks/useAttachments';
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
 import { clipboardCarriesFile } from './clipboardCarriesFile';
@@ -736,6 +738,20 @@ export function ChatInput() {
     onInsertToken: (token) =>
       setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token])),
   });
+
+  // A page element picked in the Browser pane arrives as a chip at the caret.
+  useEffect(() => subscribeComposerElements((token, element) => {
+    if (element.screenshot) void addImageAttachment(new File([pngFromBase64(element.screenshot)], 'element.png', { type: 'image/png' }), ImageAttachSource.Button);
+    const el = textareaRef.current;
+    const caret = el ? getCaretOffset(el) : value.length;
+    const { nextValue, nextCaret } = insertAtCursor(value, `${token} `, caret);
+    onChange(nextValue);
+    setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token]));
+    requestAnimationFrame(() => { if (textareaRef.current) setCaretOffset(textareaRef.current, nextCaret); });
+  }), [value, onChange, textareaRef, addImageAttachment]);
+  useEffect(() => subscribeComposerImages((png, name) => {
+    void addImageAttachment(new File([png], name, { type: 'image/png' }), ImageAttachSource.Button);
+  }), [addImageAttachment]);
 
   const handleCompact = useCallback(() => {
     const slashSection = palette.sections.find(s => s.id === PanelSectionId.SlashCommands);

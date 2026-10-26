@@ -248,6 +248,9 @@
       "expandSubtree": "{{name}} 펼치기",
       "refreshTitle": "목록 새로고침",
       "includeNested": "하위 프로젝트 포함"
+    },
+    "browser": {
+      "title": "브라우저"
     }
   },
   "acceptPlan": {
@@ -794,7 +797,7 @@
     "openInEditor": "편집기에서 열기",
     "openWithSystemApp": "시스템 앱으로 열기",
     "loading": "불러오는 중…",
-    "unsupported": "이 종류의 파일은 여기서 미리볼 수 없다.",
+    "unsupported": "이 종류의 파일은 여기서 미리볼 수 없습니다.",
     "tooLarge": "이 파일은 {{size}}라서 미리보기가 보여 줄 수 있는 {{limit}}를 넘는다. 편집기나 시스템 앱으로 열어 보세요.",
     "unreadable": "이 파일을 읽지 못했다. 옮겨졌거나 지워졌을 수 있다.",
     "unplayable": "이 영상은 여기서 재생할 수 없다. IDE에 내장된 브라우저가 이 영상의 인코딩을 지원하지 않을 수 있다. 시스템 앱으로 열어 보세요.",
@@ -808,7 +811,98 @@
     "resize": "크기 조정",
     "showSource": "소스 보기",
     "showRendered": "렌더링 보기",
-    "modified": "{{when}} 수정됨"
+    "modified": "{{when}} 수정됨",
+    "linkTitle": "링크를 열까요?",
+    "linkMessage": "이 페이지가 {{url}} 주소를 열려고 합니다. {{browser}}에서 열립니다.",
+    "linkOpen": "브라우저에서 열기",
+    "back": "뒤로",
+    "forward": "앞으로",
+    "more": "더 보기",
+    "closeOthers": "다른 탭 닫기",
+    "closeTab": "탭 닫기",
+    "address": "페이지 주소",
+    "tabs": "브라우저 탭",
+    "newTab": "새 탭",
+    "blankTitle": "Claude로 브라우징하기",
+    "blankBody": "URL을 입력하거나 Claude에게 사이트를 열어달라고 요청하세요. Claude는 읽기, 클릭, 입력이 가능합니다.",
+    "annotate": "주석",
+    "annotatePen": "그리기",
+    "annotateShape": "도형",
+    "annotateShapes": "도형 선택",
+    "annotateText": "텍스트",
+    "annotateExit": "주석 닫기",
+    "selectElement": "요소 선택",
+    "annotateAddToChat": "채팅에 추가",
+    "annotateColor": "색상",
+    "annotateWidth": "선 두께",
+    "elementCopied": "요소를 복사했습니다",
+    "shape": {
+      "rectangle": "사각형",
+      "ellipse": "원",
+      "arrow": "화살표"
+    },
+    "viewport": {
+      "responsive": "반응형",
+      "mobile": "모바일",
+      "tablet": "태블릿",
+      "laptop": "노트북",
+      "desktop": "데스크톱"
+    },
+    "menu": {
+      "openInBrowser": "다음 브라우저에서 열기: {{browser}}",
+      "copyUrl": "URL 복사",
+      "copied": "복사했습니다",
+      "saveScreenshot": "스크린샷 저장",
+      "openHtmlFile": "HTML 파일 열기…",
+      "viewport": "뷰포트",
+      "openLinksBuiltIn": "기본 제공 브라우저로 링크 열기",
+      "autoOpenFiles": "Claude가 작성한 파일 자동으로 열기",
+      "autoCheck": "변경사항 자동 확인",
+      "allowedSites": "허용된 사이트 관리…",
+      "cookies": "쿠키",
+      "importCookies": "쿠키 가져오기…",
+      "keepCookies": "쿠키 유지",
+      "shared": "공유됨",
+      "clearData": "브라우징 데이터 삭제",
+      "unavailable": "이 패널에는 자체 브라우저 엔진이 없어 여기서는 쓸 수 없습니다.",
+      "failed": "실행하지 못했습니다.",
+      "openInBrowserUnknown": "브라우저에서 열기",
+      "hint": {
+        "openInBrowser": "이 페이지 파일을 컴퓨터의 웹 브라우저에서 엽니다.",
+        "copyUrl": "주소줄의 주소를 복사합니다.",
+        "saveScreenshot": "지금 보이는 페이지를 이미지로 저장합니다.",
+        "openHtmlFile": "컴퓨터에서 HTML 파일을 골라 새 탭에서 엽니다.",
+        "viewport": "페이지를 그릴 화면 크기를 고릅니다.",
+        "openLinksBuiltIn": "페이지의 링크를 이 패널 안에서 엽니다.",
+        "autoOpenFiles": "Claude가 만든 HTML 파일을 자동으로 탭에 엽니다.",
+        "autoCheck": "파일이 바뀌면 페이지를 자동으로 다시 불러옵니다.",
+        "allowedSites": "Claude가 다룰 수 있는 사이트를 관리합니다.",
+        "importCookies": "다른 브라우저의 쿠키를 가져옵니다.",
+        "keepCookies": "탭을 닫아도 쿠키를 얼마나 남길지 고릅니다.",
+        "clearData": "이 패널의 쿠키와 사이트 데이터를 지웁니다.",
+        "annotate": "페이지 위에 그려서 Claude에게 보여 줍니다."
+      },
+      "browserFallback": "웹 브라우저",
+      "showAnnotate": "주석 도구 표시",
+      "hideAnnotate": "주석 도구 숨기기"
+    },
+    "error": {
+      "title": "미리보기를 불러올 수 없습니다",
+      "titleUnsupported": "미리볼 수 없는 파일입니다",
+      "titleTooLarge": "파일이 너무 커서 미리볼 수 없습니다",
+      "deleted": "파일이 삭제되었거나 이동되었을 수 있습니다.",
+      "back": "브라우저로 돌아가기"
+    },
+    "addressPlaceholder": "URL 입력",
+    "blankDevServerPrompt": "앱을 미리 볼까요?",
+    "blankDevServerAction": "개발 서버 감지",
+    "blankDevServerNone": "실행 중인 개발 서버를 찾지 못했습니다.",
+    "webUnsupported": "Claude는 이 페이지의 콘텐츠를 지원할 수 없습니다.",
+    "webBlocked": {
+      "title": "이 사이트는 이 패널 안에서 열 수 없습니다",
+      "detail": "이 사이트는 보안을 위해 다른 프로그램의 화면 안에 자기 페이지가 끼워져 열리는 것을 허용하지 않습니다. 로그인한 계정을 노리는 가짜 화면 속임수를 막으려는 사이트의 설정이라서, 이 패널에서는 바꿀 수 없습니다.",
+      "open": "{{browser}}에서 열기"
+    }
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

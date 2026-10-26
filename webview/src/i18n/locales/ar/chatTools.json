@@ -359,5 +359,8 @@
         "query": "استعلام"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

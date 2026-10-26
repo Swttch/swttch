@@ -2,6 +2,13 @@ import { LoadedMessageDto } from '../../types';
 import { LoadedMessageType, MessageRole } from '../../dto/common';
 import { isQueueOperation, queuedMidTurnCounts, type QueueOperationEntry } from '@/shared';
 
+const ENVELOPE = /<(task-notification|system-reminder)>[\s\S]*?<\/\1>/g;
+
+/** True when nothing but model-facing envelopes is left of the text once they are taken out. */
+function isOnlyEnvelopes(text: string): boolean {
+  return text.includes('<') && text.replace(ENVELOPE, '').trim() === '';
+}
+
 /**
  * Rebuild the user messages that the CLI only recorded as queue bookkeeping.
  *
@@ -45,6 +52,9 @@ export function restoreQueuedMessages(messages: LoadedMessageDto[]): LoadedMessa
     const entry = message as unknown as QueueOperationEntry;
     if (entry.operation !== 'remove' || typeof entry.content !== 'string') continue;
     if ((restorable.get(entry.content) ?? 0) === 0) continue;
+    // A queued background notice (`<task-notification>`, a `<system-reminder>`) is text for the model, not
+    // something the user sent: drawn as a user message it is an empty bubble once its tags are stripped.
+    if (isOnlyEnvelopes(entry.content)) continue;
 
     const index = (rebuiltSoFar.get(entry.content) ?? 0) + 1;
     rebuiltSoFar.set(entry.content, index);
