@@ -807,7 +807,8 @@
     "copied": "페이지 소스를 복사했습니다",
     "resize": "크기 조정",
     "showSource": "소스 보기",
-    "showRendered": "렌더링 보기"
+    "showRendered": "렌더링 보기",
+    "modified": "{{when}} 수정됨"
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

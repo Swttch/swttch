@@ -51,6 +51,7 @@ export function FilePreviewPane() {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const drag = useRef<{ startX: number; startWidth: number; scale: number } | null>(null);
   const [reloads, setReloads] = useState(0);
+  const [modifiedAt, setModifiedAt] = useState<number | undefined>(undefined);
   const [showSource, setShowSource] = useState(false);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export function FilePreviewPane() {
         setState({ status: 'failed', reason: result.reason, size: result.size, maxBytes: result.maxBytes });
         return;
       }
+      setModifiedAt(result.modifiedAt);
       if (result.kind === 'text') {
         setState({ status: 'ready', kind: 'text', text: decodeText(result.pieces) });
         return;
@@ -113,7 +115,8 @@ export function FilePreviewPane() {
 
   const name = basename(path);
   // A page is named by its own <title>, as Desktop's pane names it, else by its file.
-  const heading = state.status === 'ready' && state.kind === 'html' ? (htmlTitleOf(state.html) ?? name) : name;
+  // A page that names itself nothing is called by its file, without the extension, as its card in the chat is.
+  const heading = state.status === 'ready' && state.kind === 'html' ? (htmlTitleOf(state.html) ?? name.replace(/\.[^.]+$/, '')) : name;
   const publishedUrl = target?.publishedUrl;
   // The bar wears the page's colour, so its text takes whichever of light and dark reads on it.
   const light = pageBackground ? isLightColor(pageBackground) : undefined;
@@ -174,6 +177,7 @@ export function FilePreviewPane() {
             name={name}
             source={state.status === 'ready' ? (state.kind === 'html' ? state.html : state.kind === 'text' ? state.text : undefined) : undefined}
             publishedUrl={publishedUrl}
+            modifiedAt={modifiedAt}
             onReload={() => setReloads((count) => count + 1)}
           />
         </div>

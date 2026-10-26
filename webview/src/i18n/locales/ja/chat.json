@@ -807,7 +807,8 @@
     "copied": "ページのソースをコピーしました",
     "resize": "サイズを変更",
     "showSource": "ソースを表示",
-    "showRendered": "表示結果を見る"
+    "showRendered": "表示結果を見る",
+    "modified": "{{when}}に更新"
   },
   "fileLink": {
     "copyDone": "パスをコピーしました",

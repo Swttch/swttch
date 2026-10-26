@@ -807,7 +807,8 @@
     "copied": "已複製頁面原始碼",
     "resize": "調整大小",
     "showSource": "檢視原始碼",
-    "showRendered": "檢視渲染結果"
+    "showRendered": "檢視渲染結果",
+    "modified": "{{when}}修改"
   },
   "fileLink": {
     "copyDone": "已複製路徑",

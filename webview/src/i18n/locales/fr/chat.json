@@ -807,7 +807,8 @@
     "copied": "Source de la page copié",
     "resize": "Redimensionner",
     "showSource": "Voir la source",
-    "showRendered": "Voir le rendu"
+    "showRendered": "Voir le rendu",
+    "modified": "Modifié {{when}}"
   },
   "fileLink": {
     "copyDone": "Chemin copié",

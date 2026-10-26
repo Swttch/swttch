@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtemp, writeFile, rm, mkdir } from 'fs/promises';
+import { mkdtemp, writeFile, rm, mkdir, stat } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { contentTypeOf, readFileContentChunk, FILE_CONTENT_CHUNK_BYTES } from '../fileContent';
@@ -49,6 +49,8 @@ describe('readFileContentChunk', () => {
       mimeType: 'text/html',
       size: 14,
       offset: 0,
+      // When the file was written, so the pane can say how long ago.
+      modifiedAt: (await stat(path)).mtimeMs,
       base64: Buffer.from('<h1>hello</h1>').toString('base64'),
     });
   });

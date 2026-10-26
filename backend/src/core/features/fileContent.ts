@@ -66,6 +66,8 @@ export type FileContentAnswer =
       size: number;
       /** Where this piece starts in the file. */
       offset: number;
+      /** When the file was last written, in milliseconds since the epoch. */
+      modifiedAt: number;
       base64: string;
     }
   | { ok: false; reason: 'unsupported' | 'tooLarge' | 'unreadable'; size?: number; maxBytes?: number };
@@ -108,6 +110,7 @@ export async function readFileContentChunk(path: string, offset: number): Promis
       mimeType: type.mimeType,
       size: info.size,
       offset: start,
+      modifiedAt: info.mtimeMs,
       base64: buffer.toString('base64'),
     };
   } catch {

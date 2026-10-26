@@ -807,7 +807,8 @@
     "copied": "Seitenquelltext kopiert",
     "resize": "Größe ändern",
     "showSource": "Quelltext anzeigen",
-    "showRendered": "Darstellung anzeigen"
+    "showRendered": "Darstellung anzeigen",
+    "modified": "Geändert {{when}}"
   },
   "fileLink": {
     "copyDone": "Pfad kopiert",

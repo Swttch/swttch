@@ -807,7 +807,8 @@
     "copied": "Código de la página copiado",
     "resize": "Cambiar tamaño",
     "showSource": "Ver el código",
-    "showRendered": "Ver el resultado"
+    "showRendered": "Ver el resultado",
+    "modified": "Modificado {{when}}"
   },
   "fileLink": {
     "copyDone": "Ruta copiada",

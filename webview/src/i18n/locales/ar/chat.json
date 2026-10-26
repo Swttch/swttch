@@ -823,7 +823,8 @@
     "copied": "تم نسخ مصدر الصفحة",
     "resize": "تغيير الحجم",
     "showSource": "عرض المصدر",
-    "showRendered": "عرض النتيجة"
+    "showRendered": "عرض النتيجة",
+    "modified": "عُدِّل {{when}}"
   },
   "fileLink": {
     "copyDone": "تم نسخ المسار",

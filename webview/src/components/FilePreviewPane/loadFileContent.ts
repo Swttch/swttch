@@ -11,12 +11,13 @@ interface BackendChunk {
   mimeType?: string;
   size?: number;
   offset?: number;
+  modifiedAt?: number;
   base64?: string;
   maxBytes?: number;
 }
 
 export type FileContentResult =
-  | { ok: true; kind: FileContentKind; mimeType: string; blob: Blob; pieces: Uint8Array[] }
+  | { ok: true; kind: FileContentKind; mimeType: string; blob: Blob; pieces: Uint8Array[]; modifiedAt?: number }
   | { ok: false; reason: 'unsupported' | 'tooLarge' | 'unreadable'; size?: number; maxBytes?: number };
 
 /** The pieces of a page, read as the text they spell. A page is held in memory whole, so the pieces are joined first: a character can straddle two of them. */
@@ -50,6 +51,7 @@ export async function loadFileContent(path: string, isCancelled: () => boolean =
   let kind: FileContentKind | undefined;
   let mimeType = '';
   let loaded = 0;
+  let modifiedAt: number | undefined;
 
   try {
     for (;;) {
@@ -60,6 +62,7 @@ export async function loadFileContent(path: string, isCancelled: () => boolean =
       }
 
       kind = answer.kind;
+      modifiedAt = answer.modifiedAt;
       mimeType = answer.mimeType ?? '';
       const bytes = base64ToBytes(answer.base64);
       pieces.push(bytes);
@@ -74,5 +77,5 @@ export async function loadFileContent(path: string, isCancelled: () => boolean =
   }
 
   if (kind === undefined) return { ok: false, reason: 'unreadable' };
-  return { ok: true, kind, mimeType, blob: new Blob(pieces as BlobPart[], { type: mimeType }), pieces };
+  return { ok: true, kind, mimeType, blob: new Blob(pieces as BlobPart[], { type: mimeType }), pieces, modifiedAt };
 }

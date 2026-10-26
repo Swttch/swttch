@@ -358,3 +358,22 @@ describe('the path line and the source view', () => {
     expect(screen.queryByRole('button', { name: 'filePreview.showSource' })).not.toBeInTheDocument();
   });
 });
+
+describe('the name and the menu header', () => {
+  it('calls a page with no title by its file without the extension, as its card does', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/notitle.html'));
+    await screen.findByTitle('notitle.html');
+    expect(screen.getByRole('button', { name: 'notitle' })).toBeInTheDocument();
+  });
+
+  it('says in the menu how long ago the file was written', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, modifiedAt: Date.now() - 3 * 3600 * 1000, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html'));
+    await screen.findByTitle('page.html');
+    openMenu();
+    expect(screen.getByText(/filePreview\.modified/)).toHaveTextContent('3 hours ago');
+  });
+});

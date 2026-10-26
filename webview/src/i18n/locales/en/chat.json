@@ -811,7 +811,8 @@
     "copied": "Page source copied",
     "resize": "Resize",
     "showSource": "View source",
-    "showRendered": "View rendered"
+    "showRendered": "View rendered",
+    "modified": "Modified {{when}}"
   },
   "fileLink": {
     "copyDone": "Path copied",

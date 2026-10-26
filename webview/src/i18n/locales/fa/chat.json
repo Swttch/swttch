@@ -807,7 +807,8 @@
     "copied": "منبع صفحه کپی شد",
     "resize": "تغییر اندازه",
     "showSource": "نمایش منبع",
-    "showRendered": "نمایش نتیجه"
+    "showRendered": "نمایش نتیجه",
+    "modified": "ویرایش {{when}}"
   },
   "fileLink": {
     "copyDone": "مسیر کپی شد",

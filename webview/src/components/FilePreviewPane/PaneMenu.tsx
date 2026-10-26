@@ -6,6 +6,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { getAdapter } from '@/adapters';
 import { i18n, useTranslation } from '@/i18n';
+import { relativeTime } from './relativeTime';
 import { downloadSentFile } from '@/pages/ChatPage/message-renderers/ToolRenderers/sendUserFile';
 
 interface PaneMenuProps {
@@ -17,6 +18,8 @@ interface PaneMenuProps {
   source?: string;
   /** The address the page was published at, when it was published. */
   publishedUrl?: string;
+  /** When the file was last written, when known. */
+  modifiedAt?: number;
   onReload: () => void;
 }
 
@@ -42,8 +45,8 @@ function Item({ icon: Icon, onSelect, children }: { icon: Icon; onSelect: () => 
  * itself stays light. What needs an account on claude.ai there (rename, share,
  * pin, delete) is not offered, since it cannot be done to a file on this machine.
  */
-export function PaneMenu({ heading, path, name, source, publishedUrl, onReload }: PaneMenuProps) {
-  const { t } = useTranslation('chat');
+export function PaneMenu({ heading, path, name, source, publishedUrl, modifiedAt, onReload }: PaneMenuProps) {
+  const { t, i18n: i18next } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +103,11 @@ export function PaneMenu({ heading, path, name, source, publishedUrl, onReload }
           <div className="px-2.5 pb-1.5 pt-1">
             <div dir="ltr" className="truncate text-[0.8461rem] text-text-primary">{name}</div>
             <div dir="ltr" className="truncate text-[0.7692rem] text-text-tertiary">{path}</div>
+            {modifiedAt !== undefined && (
+              <div className="truncate text-[0.7692rem] text-text-tertiary">
+                {t('filePreview.modified', { when: relativeTime(modifiedAt, Date.now(), i18next?.language ?? 'en') })}
+              </div>
+            )}
           </div>
           <div className="my-1 border-t border-border-subtle" />
           <Item icon={ArrowDownTrayIcon} onSelect={run(async () => {
