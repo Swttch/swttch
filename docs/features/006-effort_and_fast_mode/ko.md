@@ -2,7 +2,7 @@
 
 > 언어: [English](./en.md) · **한국어**
 >
-> 관련: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152), [#474](https://github.com/Swttch/swttch/issues/474)
+> 관련: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152), [#474](https://github.com/Swttch/swttch/issues/474), [#604](https://github.com/Swttch/swttch/issues/604)
 
 **Model** 섹션의 두 컨트롤 **Effort**와 **Fast mode**는 모델별로 속도와 깊이를 조절하게 해줍니다. 둘 다 Claude Code CLI에서 이미 설정할 수 있는 것을, 채팅을 벗어나지 않고 바로 조작할 수 있도록 인라인 컨트롤로 꺼내온 것입니다.
 
@@ -22,7 +22,11 @@ Effort는 목록이 아니라 **슬라이더**입니다. 각 눈금은 현재 �
 | `xhigh` | Extra high |
 | `max` | Max |
 
-- **Auto**는 눈금이 아닙니다. 아직 단계를 고르지 않았을 때 표시되는 라벨로, "CLI 기본값을 사용"한다는 뜻입니다. 단계를 하나라도 고르면 슬라이더는 실제 단계 안에서만 움직입니다.
+- **Auto**는 Low 왼쪽의 첫 번째 눈금입니다. "이 모델의 단계를 내가 고르지 않았으니 CLI가 정하게 한다"는 뜻입니다. CLI는 그 모델에 대해 `modelSettings`에 적어 둔 단계가 있으면 그것을, 없으면 모델 자체의 기본값을 씁니다. 고른 단계를 되돌리려면 슬라이더를 Auto로 옮기면 됩니다. ([#604](https://github.com/Swttch/swttch/issues/604) 이전에는 Auto가 첫 선택 전에만 보이는 라벨이었고, 한 번 고르면 `settings.json`을 직접 고치지 않는 한 돌아갈 방법이 없었습니다.)
+![모델 패널의 Effort 행이 Effort (Auto)로 표시된 모습. 슬라이더에 눈금이 일곱 개 있고 손잡이는 맨 왼쪽 첫 눈금에 있다. 마지막 눈금은 보라색이다.](./assets/effort-slider-auto.png)
+
+Ultracode를 쓸 수 있으면 슬라이더에는 Auto, Low, Medium, High, Extra high, Max, Ultracode의 일곱 눈금이 있습니다. 위 그림은 Auto에 놓인 모습입니다.
+
 - 슬라이더를 **클릭하거나 드래그**하면 해당 단계로 이동합니다. **행을 클릭**(또는 Enter)하면 다음 단계로 순환하며, 마지막에서 첫 단계로 돌아옵니다.
 
 ### Ultracode (최상단 스텝)
@@ -38,7 +42,7 @@ Effort는 예전에 모드 팝업(**Shift + Tab**) 아래쪽에 있었습니다.
 
 ### 키보드로 조작하기
 
-![화살표 키로 모델 하나가 강조된 모델 패널. 오른쪽 위에 패널이 받는 키가 적혀 있다: ⌘⇧M Open panel, 위아래 화살표 Move model, 좌우 화살표 Change effort. 아래쪽 구분선 밑에 Effort (Low) 슬라이더가 있다.](./assets/model-panel.png)
+![Sonnet 5.5가 선택된 모델 패널. 오른쪽 위에 패널이 받는 키가 적혀 있다: ⌘⇧M Open panel, 위아래 화살표 Move model, 좌우 화살표 Change effort. 아래쪽 구분선 밑에 Effort (Low) 슬라이더가 있고, 손잡이가 두 번째 눈금에 있다.](./assets/model-panel.png)
 
 모델 패널을 열면 키보드 포커스가 패널 안으로 들어가므로, 마우스 없이 모두 조작할 수 있습니다. 패널 오른쪽 위에 받는 키가 적혀 있습니다.
 
@@ -57,7 +61,18 @@ Effort는 예전에 모드 팝업(**Shift + Tab**) 아래쪽에 있었습니다.
 
 - 변경은 **실행 중인 채팅**에 적용됩니다. 다시 시작하지 않으며, 다음 응답부터 반영됩니다.
 - 응답이 끝나면 CLI가 실제로 쓴 effort를 기록하고, 패널은 그 **적용된** 값을 보여 줍니다. 내가 정한 값과 다르면, 슬라이더를 다시 움직일 때까지 실제로 쓰인 값을 보여 줍니다.
-- 슬라이더는 **모든 채팅과 모델이 함께 쓰는 설정 하나**입니다. Claude 사용자 설정에 `effortLevel`로 저장됩니다.
+- 단계는 **그 단계를 고른 모델**에 속합니다. 슬라이더는 지금 선택된 모델의 단계를 보여 주므로, Opus와 Sonnet이 각자의 단계를 따로 가질 수 있고, 모델을 바꾸면 슬라이더도 그 모델의 값으로 바뀝니다.
+- 저장 위치는 Claude Code CLI가 쓰는 곳과 같은 Claude 사용자 설정이고, `modelSettings.<모델>.effortLevel`입니다(예: `modelSettings.claude-sonnet-5-5.effortLevel`). 새 채팅이나 터미널의 `claude`도 여기서 읽습니다. Auto를 고르면 그 항목이 지워집니다.
+- 이 파일에는 CLI가 `low`, `medium`, `high`, `xhigh`만 받습니다. 그래서 **Max**는 고른 그 채팅에서만 유지되고 저장되지 않습니다.
+- **채팅이 열려 있을 때 Auto를 고르면** 다음 메시지를 보낼 때 반영됩니다. 그 채팅의 CLI가 단계를 강제하지 않은 채 한 번 다시 시작하고, 대화는 이어서 진행됩니다.
+- 슬라이더를 움직이지 않은 채팅에서는 Swttch가 CLI에 단계를 전혀 강제하지 않으므로, `~/.claude/settings.json`에 모델별로 적어 둔 단계가 터미널에서와 똑같이 적용됩니다.
+
+### 모델마다 다른 단계
+
+한 모델은 깊게, 다른 모델은 가볍게 쓸 수 있습니다. 예를 들어 Opus는 **High**, Sonnet은 **Low**로 둘 수 있습니다. 모델을 고르고 슬라이더를 옮긴 뒤, 다른 모델을 고르고 슬라이더를 다시 옮기면 됩니다. 각 선택은 그 모델에만 저장됩니다.
+
+- [#604](https://github.com/Swttch/swttch/issues/604) 이전에 슬라이더만 쓰던 분의 `settings.json`에는 최상위 `effortLevel` 하나가 있고, 예전에는 모든 채팅이 그 값을 CLI에 넘겼습니다. 어느 모델에서든 슬라이더를 움직이기 전까지는 달라지는 것이 없습니다. 움직이는 순간 예전 단계가 나머지 모델의 개별 단계로 옮겨 적혀서, 어느 모델도 조용히 기본값으로 떨어지지 않습니다.
+- **`opusplan`**(Opus가 계획하고 Sonnet이 실행): 슬라이더는 모델 선택창에 보이는 모델을 따릅니다. Claude Code CLI 2.1.310에서 재 보니, `opusplan`으로 시작한 채팅은 계획 단계와 실행 단계를 모두 시작한 모델의 단계로 실행합니다. 계획을 다른 모델에 넘길 때 CLI가 단계를 바꾸지 않습니다. 이것은 CLI의 동작이며 이 슬라이더가 바꾸는 것이 아닙니다.
 
 ### 오래된 Claude Code CLI 버전
 

@@ -60,8 +60,9 @@ const UNSUPPORTED_REQUEST = /unsupported control request subtype/i;
 
 export interface EffortChange {
   /**
-   * The level to run at, or null to drop the override so the CLI falls back to
-   * what its settings files say. Absent leaves the level as it is.
+   * The level to run at, or null for Auto: no level picked, the CLI decides from its settings.
+   * A running CLI cannot be told that (see applyEffortToLiveCli), so null is delivered by a
+   * restart at the next message. Absent leaves the level as it is.
    */
   effortLevel?: string | null;
   /** Ultracode on or off. Absent leaves it as it is. */
@@ -138,6 +139,22 @@ export async function applyEffortToLiveCli(
   // A CLI that predates `--effort` has no effort levels to change (its model list says so, so the
   // slider is not drawn), and the level the session is recorded under would never match a spawn.
   if (!(await cliTakesEffortFlag())) return 'not_running';
+
+  // Auto (null) cannot be told to a running CLI. Measured on CLI 2.1.310, with the model's level in
+  // `modelSettings`: after `apply_flag_settings{effortLevel: null}` the CLI ran at the model's default
+  // (medium), not at the level `modelSettings` names (low), and the same after a `--effort` start. A
+  // dropped override is not a return to the settings. So Auto is delivered by the restart: the session
+  // is marked, and the next message starts a CLI with no flag, which reads the settings itself (#604).
+  if (change.effortLevel === null) {
+    connections.setEffortLevel(sessionId, EFFORT_LEVEL_UNKNOWN);
+    // The ultracode half of the same change, if any, still reaches the running CLI.
+    if (change.ultracode !== undefined) {
+      const rest = await applyEffortToLiveCli(connections, sessionId, { ultracode: change.ultracode });
+      connections.setEffortLevel(sessionId, EFFORT_LEVEL_UNKNOWN);
+      return rest === 'not_running' ? 'not_running' : 'undelivered';
+    }
+    return 'undelivered';
+  }
 
   const settings: Record<string, unknown> = {};
   if (change.effortLevel !== undefined) settings.effortLevel = change.effortLevel;

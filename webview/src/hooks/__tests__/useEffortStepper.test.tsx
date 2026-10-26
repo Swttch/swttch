@@ -33,14 +33,14 @@ afterEach(() => vi.useRealTimers());
 describe('useEffortStepper', () => {
   it('starts on the stored step', () => {
     const { result } = renderHook(() => useEffortStepper());
-    expect(result.current.index).toBe(1);
+    expect(result.current.index).toBe(2);
     expect(result.current.label).toBe('Medium');
   });
 
   it('draws the new step at once, before anything is written', () => {
     const { result } = renderHook(() => useEffortStepper());
     act(() => result.current.stepBy(1));
-    expect(result.current.index).toBe(2);
+    expect(result.current.index).toBe(3);
     expect(result.current.label).toBe('High');
     expect(setLevel).not.toHaveBeenCalled();
   });
@@ -65,7 +65,7 @@ describe('useEffortStepper', () => {
     stored.current = 'max';
     const { result } = renderHook(() => useEffortStepper());
     act(() => result.current.stepBy(1));
-    expect(result.current.index).toBe(4);
+    expect(result.current.index).toBe(5);
     act(() => { result.current.stepBy(-1); result.current.stepBy(-1); result.current.stepBy(-1); result.current.stepBy(-1); result.current.stepBy(-1); });
     expect(result.current.index).toBe(0);
   });
@@ -76,14 +76,14 @@ describe('useEffortStepper', () => {
     act(() => result.current.stepBy(-1));
     await act(async () => { vi.advanceTimersByTime(EFFORT_STEP_DEBOUNCE_MS); });
     expect(setLevel).not.toHaveBeenCalled();
-    expect(result.current.index).toBe(1);
+    expect(result.current.index).toBe(2);
   });
 
   it('reaches the ultracode step as the top step and enables it', async () => {
     stored = { current: 'max', ultracodeAvailable: true, ultracodeEnabled: false };
     const { result } = renderHook(() => useEffortStepper());
     act(() => result.current.stepBy(1));
-    expect(result.current.index).toBe(5);
+    expect(result.current.index).toBe(6);
     expect(result.current.label).toContain('Ultracode');
 
     await act(async () => { vi.advanceTimersByTime(EFFORT_STEP_DEBOUNCE_MS); });
@@ -95,11 +95,30 @@ describe('useEffortStepper', () => {
     setLevel.mockRejectedValue(new Error('write failed'));
     const { result } = renderHook(() => useEffortStepper());
     act(() => result.current.stepBy(1));
-    expect(result.current.index).toBe(2);
+    expect(result.current.index).toBe(3);
 
     await act(async () => { vi.advanceTimersByTime(EFFORT_STEP_DEBOUNCE_MS); });
     expect(setLevel).toHaveBeenCalledTimes(1);
+    expect(result.current.index).toBe(2);
+  });
+
+  it('has Auto as the first step, below Low, and stepping onto it writes auto', async () => {
+    stored.current = 'low';
+    const { result } = renderHook(() => useEffortStepper());
     expect(result.current.index).toBe(1);
+    act(() => result.current.stepBy(-1));
+    expect(result.current.index).toBe(0);
+    expect(result.current.label).toBe('Auto');
+
+    await act(async () => { vi.advanceTimersByTime(EFFORT_STEP_DEBOUNCE_MS); });
+    expect(setLevel).toHaveBeenCalledWith('auto');
+  });
+
+  it('starts on the Auto step when no level is stored', () => {
+    stored.current = 'auto';
+    const { result } = renderHook(() => useEffortStepper());
+    expect(result.current.index).toBe(0);
+    expect(result.current.label).toBe('Auto');
   });
 
   it('still applies the pending step when its owner closes inside the wait', () => {

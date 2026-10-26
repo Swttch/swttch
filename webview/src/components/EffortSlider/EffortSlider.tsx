@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent } from 'react';
 import { useEffort } from '@/hooks/useEffort';
-import { buildEffortLevels } from '@/types/effort';
+import { buildEffortSteps } from '@/types/effort';
 import { useTranslation } from '@/i18n';
 import { indexFromOffset } from './geometry';
 
@@ -27,8 +27,8 @@ const SPAN = '(100% - var(--thumb-size) - 2 * var(--thumb-inset))';
  *
  * When ultracode is available, a synthetic top step is appended (rendered
  * purple): landing on it engages ultracode (xhigh effort + workflows) instead
- * of setting a plain effort level. The level steps are the model's
- * `supportedEffortLevels`; `auto` is only the unset-state label, never a step.
+ * of setting a plain effort level. The first step is Auto ("no level picked, the
+ * CLI decides"), then the model's `supportedEffortLevels`.
  *
  * Returns null when the current model doesn't support effort, so callers can
  * drop it in unconditionally.
@@ -51,8 +51,9 @@ export function EffortSlider(props: Props) {
 
   if (!supportsEffort) return null;
 
-  const levels = buildEffortLevels(supported);
-  // Total steps = real levels + (ultracode ? 1 trailing step : 0).
+  // `auto` first, then the model's levels.
+  const levels = buildEffortSteps(supported);
+  // Total steps = auto + real levels + (ultracode ? 1 trailing step : 0).
   const count = levels.length + (ultracodeAvailable ? 1 : 0);
   const ultracodeIndex = ultracodeAvailable ? count - 1 : -1;
   const storedIndex = ultracodeEnabled

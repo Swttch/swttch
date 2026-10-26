@@ -66,6 +66,41 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // #604: the level picked with the slider belongs to the session, not to one process of it.
+  describe('effort pick', () => {
+    it('is none until the slider is moved, and outlives the process it was told to', () => {
+      expect(cm.getEffortPick('sess-1')).toBeNull();
+      cm.setEffortPick('sess-1', 'high');
+      cm.setEffortLevel('sess-1', 'high');
+      cm.setProcess('sess-1', null);
+      // The process-bound record is cleared with the process; the session's pick is not.
+      expect(cm.getEffortLevel('sess-1')).toBeNull();
+      expect(cm.getEffortPick('sess-1')).toBe('high');
+    });
+
+    it('holds a pick made before the chat had a session and hands it to the first session, once', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.setPendingEffortPick(connId, 'max');
+      cm.adoptPendingEffortPick(connId, 'sess-1');
+      expect(cm.getEffortPick('sess-1')).toBe('max');
+
+      // Used up: a later session of the same connection does not inherit it.
+      cm.adoptPendingEffortPick(connId, 'sess-2');
+      expect(cm.getEffortPick('sess-2')).toBeNull();
+    });
+
+    it('lets a held Auto clear an earlier pick, and leaves a session alone when nothing is held', () => {
+      const connId = cm.addConnection(createMockWs());
+      cm.setEffortPick('sess-1', 'low');
+      cm.adoptPendingEffortPick(connId, 'sess-1');
+      expect(cm.getEffortPick('sess-1')).toBe('low');
+
+      cm.setPendingEffortPick(connId, null);
+      cm.adoptPendingEffortPick(connId, 'sess-1');
+      expect(cm.getEffortPick('sess-1')).toBeNull();
+    });
+  });
+
   // Issue #540: a handler that started before a disconnect resumes after the
   // connection was removed and subscribes the dead id, leaving a ghost "open".
   describe('subscribe from a removed connection (issue #540)', () => {

@@ -107,25 +107,29 @@ export function readReportedMode(event: Record<string, unknown>): string | null 
 
 /**
  * The level this spawn passes as `--effort`, or undefined to pass nothing and let
- * the CLI use the model's default effort.
+ * the CLI decide the level from its settings and the model's default.
  *
- * Every level the user chose goes as the flag. It used to be only the levels the
- * settings file cannot hold (`max`), on the belief that the CLI reads `effortLevel`
- * from its settings files for the rest. That is not so for every model. Measured on
- * CLI 2.1.291: with `"effortLevel": "high"` in the user's `~/.claude/settings.json`, a
- * session on Sonnet 5.5 answered at `medium` in every turn and said so in the
- * transcript. The CLI reads a user-scope `effortLevel` as a legacy value that only
- * some models take, while a project or local `effortLevel`, a per-model
- * `modelSettings.<model>.effortLevel` and the `--effort` flag all apply. So the slider
- * moved, the settings file changed, and nothing about the session did.
+ * The caller hands over `{ effortLevel }`: the level the user picked with the slider in
+ * this session, or failing that the legacy top-level value (resolveLegacyEffortLevel).
+ * `modelSettings` is never turned into a flag here; the CLI reads it itself.
  *
- * `--effort` is documented in `claude --help`, names five levels (`low, medium, high,
- * xhigh, max`), outranks the settings, and does not pin the process: `/effort` and the
- * session-scoped `apply_flag_settings` still change it afterwards, which is how a
- * level picked mid-chat reaches a running CLI (features/effort-runtime.ts). It is the
- * one route that makes the level on screen the level the CLI runs, for every model,
- * without reproducing how the CLI resolves its settings files, which is its to change.
- * (`max` was the first level to show the gap: the file cannot hold it at all, #474.)
+ * Why a pick goes as the flag at all. Measured on CLI 2.1.291: with
+ * `"effortLevel": "high"` in the user's `~/.claude/settings.json`, a session on Sonnet
+ * 5.5 answered at `medium` in every turn and said so in the transcript. The CLI reads a
+ * user-scope top-level `effortLevel` as a legacy value that only some models take, so
+ * a pick that only reached the file did nothing for such a model (#474). `--effort` is
+ * documented in `claude --help`, names five levels (`low, medium, high, xhigh, max`),
+ * and does not pin the process: `/effort` and the session-scoped `apply_flag_settings`
+ * still change it afterwards (features/effort-runtime.ts).
+ *
+ * Why only a pick goes as the flag. The flag outranks every setting, `modelSettings`
+ * included (measured on CLI 2.1.310: Sonnet with `modelSettings.<model>.effortLevel =
+ * low` ran at `low`, the same process with `--effort high` ran at `high`). Passing the
+ * stored value at every spawn therefore made the first slider move overwrite every
+ * model's own level for good, `opusplan` setups included (#604). A session in which the
+ * slider never moved passes nothing (unless the user still has only the old top-level
+ * value), so the CLI resolves `modelSettings` itself, and the pick is stored per model
+ * for the sessions that follow (model-effort-setting.ts).
  *
  * An unreadable value is passed through rather than guessed at: the CLI answers
  * an unknown level with `Warning: Unknown --effort value '…' — ignoring it and
@@ -141,6 +145,30 @@ export function resolveEffortFlag(
   // A CLI that predates the flag rejects it outright (`error: unknown option '--effort'`,
   // measured on 2.0.22) and the chat never starts, so for such a CLI the level is left out.
   if (!cliTakesEffortFlag) return undefined;
+  return level;
+}
+
+/**
+ * The top-level `effortLevel` of a user who has not moved to per-model levels, which every version of the
+ * slider before #604 wrote and passed as `--effort` at each spawn.
+ *
+ * Dropping it would change what an upgraded user's sessions run at (on a model that takes the level only
+ * from the flag, the slider that said High would answer at the model default), so it keeps going out as the
+ * flag, exactly as before. It stops the moment any model has a level of its own in `modelSettings`: that
+ * user is working per model, and a flag would outrank those levels, which is the bug #604 is about. Within
+ * a session the slider's own pick (connections.getEffortPick) goes first.
+ */
+export function resolveLegacyEffortLevel(settings: Record<string, unknown>): string | undefined {
+  const level = settings.effortLevel;
+  if (typeof level !== 'string' || level === '') return undefined;
+  const perModel = settings.modelSettings;
+  if (perModel !== null && typeof perModel === 'object' && !Array.isArray(perModel)) {
+    for (const entry of Object.values(perModel as Record<string, unknown>)) {
+      if (entry !== null && typeof entry === 'object' && typeof (entry as Record<string, unknown>).effortLevel === 'string') {
+        return undefined;
+      }
+    }
+  }
   return level;
 }
 
@@ -537,9 +565,15 @@ export async function ensureClaudeProcess(
   const { settings: claudeSettings } = await readMergedClaudeSettings(workingDir);
   // Asked of the CLI only when there is a level to pass, so a user who never touched effort
   // does not pay a `claude --help` for it.
+  // The flag carries what the user picked in THIS session, not what the settings files say: the CLI reads
+  // `modelSettings` itself and a flag would outrank it (#604). See resolveEffortFlag.
+  connections.adoptPendingEffortPick(connectionId, targetSessionId);
+  const pickedEffort = {
+    effortLevel: connections.getEffortPick(targetSessionId) ?? resolveLegacyEffortLevel(claudeSettings),
+  };
   const effortLevel = resolveEffortFlag(
-    claudeSettings,
-    resolveEffortFlag(claudeSettings) === undefined ? true : await cliTakesEffortFlag(),
+    pickedEffort,
+    resolveEffortFlag(pickedEffort) === undefined ? true : await cliTakesEffortFlag(),
   );
   const thinkingDisplay = resolveThinkingDisplayFlag(claudeSettings);
 

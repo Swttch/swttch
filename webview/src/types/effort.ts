@@ -80,6 +80,111 @@ export function nextEffortLevel(
   return supported[(idx + 1) % supported.length];
 }
 
+/**
+ * The slider's steps: `auto` first, then the model's supported levels.
+ *
+ * `auto` is "no level picked here, the CLI decides" (its own `modelSettings`, then the model's default).
+ * It used to be only the label of the unset state, drawn on the Low notch, so a user who had moved the
+ * slider could not return to it (#604). It is a step of its own now, and the way back.
+ */
+export function buildEffortSteps(supported: string[]): EffortLevelDef[] {
+  const totalDots = supported.length;
+  return [
+    { key: EFFORT_AUTO, label: labelFor(EFFORT_AUTO), filledDots: 0, totalDots },
+    ...buildEffortLevels(supported),
+  ];
+}
+
+/** A model id as the settings file names it: no `[1m]` suffix, no date. Null for an alias such as `opusplan`. */
+export function canonicalModelName(model: string | null | undefined): string | null {
+  if (typeof model !== 'string') return null;
+  const bare = model.trim().replace(/\[[^\]]*\]$/, '').replace(/-\d{8}$/, '');
+  return bare.startsWith('claude-') ? bare : null;
+}
+
+/**
+ * The model the slider picks a level for, spelled as the settings file names it, or null when it cannot be
+ * told (the picker shows an alias and the catalog does not say what it resolved to). A null means the pick
+ * lasts for the session and is not stored.
+ */
+export function resolveEffortModel(
+  controlResponse: CliConfigControlResponse | null,
+  currentModel: string | null | undefined,
+): string | null {
+  const models: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
+  const info = resolveModelInfo(models, currentModel);
+  return canonicalModelName(info?.resolvedModel) ?? canonicalModelName(currentModel);
+}
+
+/**
+ * The level the settings files give [model]: `modelSettings.<model>.effortLevel`. The CLI matches the
+ * canonical name against dated, `[1m]` and provider spellings of the key, so the keys are compared in
+ * canonical form too. Undefined when nothing is stored, which is Auto.
+ */
+export function storedModelEffort(
+  modelSettings: Record<string, Record<string, unknown>> | null | undefined,
+  model: string | null,
+): string | undefined {
+  if (!modelSettings || !model) return undefined;
+  for (const [key, entry] of Object.entries(modelSettings)) {
+    if (canonicalModelName(key) === model && typeof entry?.effortLevel === 'string') return entry.effortLevel;
+  }
+  return undefined;
+}
+
+/**
+ * The models that should keep the old top-level level when the first per-model level is written.
+ *
+ * Until then the top-level `effortLevel` reached every model, as the `--effort` flag the backend passed.
+ * The moment one model gets a level of its own that flag stops (it would outrank the new level), and the
+ * CLI ignores a top-level value for every model it was measured on (2.1.310, Sonnet and Opus), so each
+ * other model would fall to the model default. Writing the old level into each of them first keeps what
+ * those models ran at. Only models that take the level are listed, spelled as the settings file names them.
+ */
+export function modelsToKeepLegacyEffort(
+  controlResponse: CliConfigControlResponse | null,
+  modelSettings: Record<string, Record<string, unknown>> | null | undefined,
+  topLevelEffort: string | null | undefined,
+  pickedModel: string | null,
+): string[] {
+  if (typeof topLevelEffort !== 'string' || topLevelEffort === '' || hasModelEffort(modelSettings)) return [];
+  const models: ModelInfo[] = controlResponse?.response?.response?.models ?? [];
+  const names = new Set<string>();
+  for (const info of models) {
+    if (!info.supportsEffort || !(info.supportedEffortLevels ?? []).includes(topLevelEffort)) continue;
+    const name = canonicalModelName(info.resolvedModel);
+    if (name && name !== pickedModel) names.add(name);
+  }
+  return [...names];
+}
+
+/** Whether any model has a level of its own in `modelSettings`. */
+export function hasModelEffort(
+  modelSettings: Record<string, Record<string, unknown>> | null | undefined,
+): boolean {
+  return Object.values(modelSettings ?? {}).some((entry) => typeof entry?.effortLevel === 'string');
+}
+
+/**
+ * The level to show as stored for [model].
+ *
+ * Its own `modelSettings` entry first. Failing that, the top-level `effortLevel`, but only while no model
+ * has a level of its own: that top-level value is what every version of the slider before #604 wrote, and
+ * the backend still passes it as `--effort` in exactly that case (legacyEffortFlag in claude-process.ts), so
+ * the slider keeps naming the level the sessions of an upgraded user really run at. The day any model gets
+ * a level of its own, the user is working per model and the top-level value no longer speaks for it.
+ */
+export function storedEffortLevel(
+  modelSettings: Record<string, Record<string, unknown>> | null | undefined,
+  topLevelEffort: string | null | undefined,
+  model: string | null,
+): string | undefined {
+  const own = storedModelEffort(modelSettings, model);
+  if (own !== undefined) return own;
+  if (hasModelEffort(modelSettings)) return undefined;
+  return typeof topLevelEffort === 'string' && topLevelEffort !== '' ? topLevelEffort : undefined;
+}
+
 export function parseEffortLevel(
   value: string | null | undefined,
   supported: string[],
