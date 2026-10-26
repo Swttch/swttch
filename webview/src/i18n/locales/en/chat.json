@@ -821,5 +821,9 @@
     "open": "Open",
     "openWithSystemApp": "Open with system app",
     "showInFileManager": "Show in file manager"
+  },
+  "artifactChip": {
+    "label": "Artifact",
+    "untitled": "Untitled"
   }
 }

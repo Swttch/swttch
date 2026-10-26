@@ -56,7 +56,8 @@ describe('collectSessionOutputs', () => {
     ]);
     const rows = await collectSessionOutputs('/w', 's');
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ kind: 'artifact', url, title: 'deck', entryUuid: 'u4' });
+    // The file it was published from, so the chat can open it beside the transcript.
+    expect(rows[0]).toMatchObject({ kind: 'artifact', url, title: 'deck', entryUuid: 'u4', filePath: '/a/deck.html' });
   });
 
   it('skips a failed call and a result with no matching call', async () => {

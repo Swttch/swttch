@@ -825,5 +825,9 @@
     "open": "Открыть",
     "openWithSystemApp": "Открыть в приложении по умолчанию",
     "showInFileManager": "Показать в файловом менеджере"
+  },
+  "artifactChip": {
+    "label": "Артефакт",
+    "untitled": "Без названия"
   }
 }

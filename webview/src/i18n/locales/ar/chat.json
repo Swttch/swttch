@@ -833,5 +833,9 @@
     "open": "فتح",
     "openWithSystemApp": "فتح بالتطبيق الافتراضي",
     "showInFileManager": "إظهار في مدير الملفات"
+  },
+  "artifactChip": {
+    "label": "عنصر",
+    "untitled": "بدون عنوان"
   }
 }

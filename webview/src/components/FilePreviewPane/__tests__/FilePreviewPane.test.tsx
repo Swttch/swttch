@@ -95,7 +95,7 @@ describe('FilePreviewPane', () => {
   it('draws a page in a frame that has no access to the chat page', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
 
     const frame = await screen.findByTitle('page.html');
     expect(frame.getAttribute('srcdoc')).toContain('<h1>hi</h1>');
@@ -109,7 +109,7 @@ describe('FilePreviewPane', () => {
     let answer!: (value: unknown) => void;
     request.mockReturnValue(new Promise((resolve) => { answer = resolve; }));
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     expect(screen.getByRole('status')).toBeInTheDocument();
 
     await act(async () => answer({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') }));
@@ -133,7 +133,7 @@ describe('FilePreviewPane', () => {
   it('expands over the chat and folds back, and closing forgets the expansion', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     await screen.findByTitle('page.html');
 
     fireEvent.click(screen.getByRole('button', { name: 'filePreview.expand' }));
@@ -251,7 +251,7 @@ describe('the page colour', () => {
   it('paints the card in the colour the page reports', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     const frame = await screen.findByTitle('page.html');
     const aside = screen.getByRole('complementary');
 
@@ -290,7 +290,7 @@ describe('the resize handle', () => {
     wide();
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     await screen.findByTitle('page.html');
     const handle = screen.getByRole('separator');
 
@@ -319,26 +319,33 @@ describe('the resize handle', () => {
     })) as unknown as typeof window.matchMedia;
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     await screen.findByTitle('page.html');
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 });
 
 describe('the path line and the source view', () => {
-  it('shows where the file is, and offers a page\'s own source in place of the drawn page', async () => {
+  it('shows where the file is, and opens a page handed over as a file on its source, with the page one click away', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
     act(() => filePreviewPaneStore.open('/private/tmp/ccg-demo/demo593/page.html'));
-    await screen.findByTitle('page.html');
 
+    expect(await screen.findByText('<h1>hi</h1>')).toBeInTheDocument();
     expect(screen.getByText('… / tmp / ccg-demo / demo593 / page.html')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'filePreview.showSource' }));
     expect(screen.queryByTitle('page.html')).not.toBeInTheDocument();
-    expect(screen.getByText('<h1>hi</h1>')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'filePreview.showRendered' }));
+    expect(await screen.findByTitle('page.html')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.showSource' }));
+    expect(screen.getByText('<h1>hi</h1>')).toBeInTheDocument();
+  });
+
+  it('draws a page published as an Artifact first, not its source', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     expect(await screen.findByTitle('page.html')).toBeInTheDocument();
   });
 
@@ -363,7 +370,7 @@ describe('the name and the menu header', () => {
   it('calls a page with no title by its file without the extension, as its card does', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/notitle.html'));
+    act(() => filePreviewPaneStore.open('/p/notitle.html', 'https://claude.ai/artifact/x'));
     await screen.findByTitle('notitle.html');
     expect(screen.getByRole('button', { name: 'notitle' })).toBeInTheDocument();
   });
@@ -371,7 +378,7 @@ describe('the name and the menu header', () => {
   it('says in the menu how long ago the file was written', async () => {
     request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, modifiedAt: Date.now() - 3 * 3600 * 1000, base64: b64('<h1>hi</h1>') });
     render(<FilePreviewPane />);
-    act(() => filePreviewPaneStore.open('/p/page.html'));
+    act(() => filePreviewPaneStore.open('/p/page.html', 'https://claude.ai/artifact/x'));
     await screen.findByTitle('page.html');
     openMenu();
     expect(screen.getByText(/filePreview\.modified/)).toHaveTextContent('3 hours ago');

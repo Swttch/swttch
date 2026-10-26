@@ -817,5 +817,9 @@
     "open": "Öffnen",
     "openWithSystemApp": "Mit Standard-App öffnen",
     "showInFileManager": "Im Dateimanager anzeigen"
+  },
+  "artifactChip": {
+    "label": "Artefakt",
+    "untitled": "Ohne Titel"
   }
 }

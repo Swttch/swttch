@@ -817,5 +817,9 @@
     "open": "開く",
     "openWithSystemApp": "既定のアプリで開く",
     "showInFileManager": "ファイルマネージャーで表示"
+  },
+  "artifactChip": {
+    "label": "アーティファクト",
+    "untitled": "無題"
   }
 }

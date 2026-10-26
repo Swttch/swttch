@@ -170,13 +170,21 @@ describe('StreamingMessage — bare plain-text file references', () => {
     expect(mockOpenFile).not.toHaveBeenCalled();
   });
 
-  it('does NOT linkify a path:line inside inline code', () => {
+  // Claude Desktop draws a code span that is only a path as a link, not as code.
+  it('draws a path:line inside inline code as a link that opens the file at the line', () => {
     const { container } = render(
-      <StreamingMessage content={'Use `src/app.ts:42` verbatim.'} isStreaming={false} />,
+      <StreamingMessage content={'Use `src/app.ts:42` here.'} isStreaming={false} />,
     );
-    const code = container.querySelector('[data-streamdown="inline-code"]');
-    expect(code?.textContent).toBe('src/app.ts:42');
-    expect(mockOpenFile).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-streamdown="inline-code"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'src/app.ts:42' }));
+    expect(mockOpenFile).toHaveBeenCalledWith('/wd/src/app.ts', 42, undefined);
+  });
+
+  it('leaves inline code that holds more than a path as code', () => {
+    const { container } = render(
+      <StreamingMessage content={'Run `cat src/app.ts` now.'} isStreaming={false} />,
+    );
+    expect(container.querySelector('[data-streamdown="inline-code"]')?.textContent).toBe('cat src/app.ts');
   });
 
   it('shows the resolved path in the app tooltip, not a native title', async () => {

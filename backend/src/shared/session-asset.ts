@@ -94,6 +94,8 @@ export type SessionOutput =
       blockIndex: number;
       url: string;
       title: string;
+      /** The file on this machine that was published, when the call named one. */
+      filePath?: string;
       timestamp: string | null;
     };
 

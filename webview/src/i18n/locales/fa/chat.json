@@ -817,5 +817,9 @@
     "open": "باز کردن",
     "openWithSystemApp": "باز کردن با برنامهٔ پیش‌فرض",
     "showInFileManager": "نمایش در مدیر فایل"
+  },
+  "artifactChip": {
+    "label": "مصنوع",
+    "untitled": "بدون عنوان"
   }
 }

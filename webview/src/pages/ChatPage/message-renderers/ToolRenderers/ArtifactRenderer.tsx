@@ -1,7 +1,5 @@
-import {useEffect, useState} from "react";
 import {ChevronRightIcon, GlobeAltIcon} from "@heroicons/react/24/outline";
-import {decodeText, loadFileContent} from "@/components/FilePreviewPane/loadFileContent";
-import {htmlTitleOf} from "@/utils/htmlTitle";
+import {usePageTitle} from "./pageTitle";
 import {filePreviewPaneStore} from "@/utils/filePreviewPaneStore";
 import {ToolUseBlockDto} from "@/dto";
 import {useTranslation} from "@/i18n";
@@ -58,21 +56,6 @@ function pageTitleOf(input: ArtifactToolUseDto['input'] | undefined): string {
     if (input?.title) return input.title;
     const file = input?.file_path?.split(/[\\/]/).pop() ?? '';
     return file.replace(/\.[^.]+$/, '');
-}
-
-/** The `<title>` of the page at `path`, once read; undefined while loading or when the page names none. */
-function usePageTitle(path: string | undefined): string | undefined {
-    const [title, setTitle] = useState<string | undefined>(undefined);
-    useEffect(() => {
-        if (!path || !/\.html?$/i.test(path)) return;
-        let cancelled = false;
-        void loadFileContent(path, () => cancelled).then((result) => {
-            if (cancelled || !result.ok || result.kind !== 'html') return;
-            setTitle(htmlTitleOf(decodeText(result.pieces)));
-        });
-        return () => { cancelled = true; };
-    }, [path]);
-    return title;
 }
 
 export function ArtifactRenderer(props: RendererProps) {

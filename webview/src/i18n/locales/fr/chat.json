@@ -817,5 +817,9 @@
     "open": "Ouvrir",
     "openWithSystemApp": "Ouvrir avec l’application par défaut",
     "showInFileManager": "Afficher dans le gestionnaire de fichiers"
+  },
+  "artifactChip": {
+    "label": "Artefact",
+    "untitled": "Sans titre"
   }
 }

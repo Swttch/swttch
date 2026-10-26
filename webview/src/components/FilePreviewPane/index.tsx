@@ -75,6 +75,9 @@ export function FilePreviewPane() {
         return;
       }
       if (result.kind === 'html') {
+        // A page opened as a file shows its source first, as Claude Desktop's file viewer does; a page
+        // that was published as an Artifact shows the page.
+        setShowSource(filePreviewPaneStore.get()?.publishedUrl === undefined);
         setState({ status: 'ready', kind: 'html', html: decodeText(result.pieces) });
         return;
       }

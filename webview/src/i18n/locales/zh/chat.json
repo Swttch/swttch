@@ -817,5 +817,9 @@
     "open": "打开",
     "openWithSystemApp": "用系统应用打开",
     "showInFileManager": "在文件管理器中显示"
+  },
+  "artifactChip": {
+    "label": "工件",
+    "untitled": "无标题"
   }
 }

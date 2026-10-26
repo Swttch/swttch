@@ -125,8 +125,15 @@ export async function collectSessionOutputs(workingDir: string, sessionId: strin
           (filePath ? basename(filePath).replace(/\.[^.]+$/, '') : '');
         // A page published again moves to the end, and keeps its earlier title when this call names none.
         const earlier = outputs.findIndex((o) => o.kind === 'artifact' && o.url === url);
-        const kept = earlier === -1 ? '' : (outputs.splice(earlier, 1)[0] as { title: string }).title;
-        outputs.push({ kind: 'artifact', entryUuid, blockIndex, url, title: title || kept, timestamp });
+        const before = earlier === -1 ? undefined : (outputs.splice(earlier, 1)[0] as { title: string; filePath?: string });
+        const kept = before?.title ?? '';
+        const keptPath = before?.filePath;
+        const publishedPath = filePath || keptPath;
+        outputs.push({
+          kind: 'artifact', entryUuid, blockIndex, url, title: title || kept,
+          ...(publishedPath ? { filePath: publishedPath } : {}),
+          timestamp,
+        });
         return;
       }
 
