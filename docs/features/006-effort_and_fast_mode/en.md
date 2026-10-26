@@ -2,7 +2,7 @@
 
 > Languages: **English** · [한국어](./ko.md)
 >
-> Related: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152), [#474](https://github.com/Swttch/swttch/issues/474)
+> Related: [#121](https://github.com/Swttch/swttch/issues/121), [#152](https://github.com/Swttch/swttch/issues/152), [#474](https://github.com/Swttch/swttch/issues/474), [#604](https://github.com/Swttch/swttch/issues/604)
 
 Two of the controls in the **Model** section let you trade speed for depth on a per-model basis: **Effort** and **Fast mode**. Both mirror what the Claude Code CLI already lets you set, surfaced as inline controls so you never have to leave the chat.
 
@@ -22,7 +22,11 @@ Effort is a **slider**, not a list. Each notch is one level the current model su
 | `xhigh` | Extra high |
 | `max` | Max |
 
-- **Auto** is not a notch — it's the label shown while you haven't picked a level, meaning "use the CLI's default." As soon as you pick a level the slider stays within the real levels.
+- **Auto** is the first notch, to the left of Low. It means "I haven't picked a level for this model, so let the CLI decide": the CLI uses the level you wrote for that model in `modelSettings` if there is one, and otherwise the model's own default. Moving the slider back to Auto is how you undo a pick. (Until [#604](https://github.com/Swttch/swttch/issues/604), Auto was only a label shown before your first pick, and there was no way back to it short of editing `settings.json`.)
+![The Effort row of the model panel reading Effort (Auto). The slider has seven notches and its thumb is on the first, left-most one. The last notch is purple.](./assets/effort-slider-auto.png)
+
+With Ultracode available the slider has seven notches: Auto, Low, Medium, High, Extra high, Max and Ultracode. The picture above shows it on Auto.
+
 - **Click or drag** the slider to jump to a level. **Clicking the row** (or pressing Enter on it) cycles to the next level, wrapping back to the first.
 
 ### Ultracode (the top step)
@@ -38,7 +42,7 @@ Effort used to sit at the bottom of the Modes popup (**Shift + Tab**). It moved 
 
 ### Driving it from the keyboard
 
-![The model panel with a model highlighted by the arrow keys. Its top-right corner lists the keys it answers to: ⌘⇧M Open panel, up and down arrows Move model, left and right arrows Change effort. The Effort (Low) slider sits under a divider at the bottom.](./assets/model-panel.png)
+![The model panel with Sonnet 5.5 selected. Its top-right corner lists the keys it answers to: ⌘⇧M Open panel, up and down arrows Move model, left and right arrows Change effort. The Effort (Low) slider sits under a divider at the bottom, with the thumb on its second notch.](./assets/model-panel.png)
 
 Opening the model panel moves keyboard focus into it, so everything works without the mouse. The panel's top-right corner lists the keys it answers to.
 
@@ -57,7 +61,18 @@ Opening the model panel moves keyboard focus into it, so everything works withou
 
 - A change applies to the **running chat** — there is no restart, and it takes effect on the next reply.
 - After each reply, the CLI records the effort it really used. The panel shows that **applied** value. If it ever differs from what you set, the panel shows the value that was actually used until you move the slider again.
-- The slider is **one setting shared by every chat and model**. It is stored in your Claude user settings as `effortLevel`.
+- The level belongs to **the model you picked it for**. The slider shows the level of the model that is selected, so Opus and Sonnet can each keep their own, and switching models switches the slider with them.
+- It is stored in your Claude user settings, in the same place the Claude Code CLI keeps it, as `modelSettings.<model>.effortLevel` (for example `modelSettings.claude-sonnet-5-5.effortLevel`). A new chat, or a terminal session of `claude`, reads it from there. Picking Auto removes that entry.
+- The CLI only accepts `low`, `medium`, `high` and `xhigh` in that file. A pick of **Max** therefore lasts for the chat it was made in and is not saved.
+- **Choosing Auto while a chat is open** takes effect with your next message: the CLI for that chat restarts once, without any level forced on it, and the conversation continues where it left off.
+- If a chat has not had its slider moved, Swttch forces no level on the CLI at all, so the levels you wrote per model in `~/.claude/settings.json` apply as they do in a terminal.
+
+### Different levels for different models
+
+You can keep a deeper level for one model and a lighter one for another, for example Opus on **High** and Sonnet on **Low**. Pick the model, move the slider, pick the other model, move the slider again. Each pick is saved for its own model only.
+
+- Anyone who only ever used the slider before [#604](https://github.com/Swttch/swttch/issues/604) has one top-level `effortLevel` in `settings.json`, which every chat used to pass to the CLI. Nothing changes for you until you move the slider for a model. At that moment the old level is written into the other models as their own level, so none of them silently drops to its default.
+- **`opusplan`** (Opus plans, Sonnet carries out the plan): the slider follows the model the picker shows. Measured on Claude Code CLI 2.1.310, a chat started on `opusplan` runs both phases at the level of the model it starts on; the CLI does not switch levels when it hands the plan to the other model. That is the CLI's behavior, not something this slider changes.
 
 ### Older Claude Code CLI versions
 

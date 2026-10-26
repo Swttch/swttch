@@ -22,6 +22,11 @@ interface ClaudeSettingsContextValue {
   /** Why the last save was refused or failed; null once a later save went through. */
   saveError: string | null;
   clearSaveError: () => void;
+  /**
+   * Show why a save was refused when the save did not go through `updateSetting`, as the effort slider's
+   * does (the backend writes that one itself). Goes through the same banner and clears the same way (#595).
+   */
+  reportSaveError: (error: unknown) => void;
   scope: 'global' | 'project';
   setScope: (scope: 'global' | 'project') => void;
   updateSetting: <K extends keyof ClaudeSettingsState>(key: K, value: ClaudeSettingsState[K]) => Promise<void>;
@@ -54,6 +59,9 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
   const [scope, setScope] = useState<'global' | 'project'>('global');
   const [saveError, setSaveError] = useState<string | null>(null);
   const clearSaveError = useCallback(() => setSaveError(null), []);
+  const reportSaveError = useCallback((error: unknown) => {
+    setSaveError(error instanceof Error ? error.message : String(error));
+  }, []);
 
   // queryKey base is the message type itself (see CLAUDE.md consistent-naming).
   // 'merged' is the effective settings the app consumes; the scope variant is the
@@ -210,6 +218,7 @@ export function ClaudeSettingsProvider({ children }: ClaudeSettingsProviderProps
       unreadable,
       saveError,
       clearSaveError,
+      reportSaveError,
       scope,
       setScope,
       updateSetting,

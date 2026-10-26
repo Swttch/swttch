@@ -24,6 +24,7 @@ function settingsContext(spinnerVerbs: SpinnerVerbsConfig | null) {
     unreadable: [],
     saveError: null,
     clearSaveError: vi.fn(),
+    reportSaveError: vi.fn(),
     scope: 'global',
     setScope: vi.fn(),
     updateSetting: vi.fn(),
