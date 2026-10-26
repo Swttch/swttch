@@ -50,6 +50,7 @@ import { useApi } from '../../contexts/ApiContext';
 import { mergeToolResults } from './mergeToolResults';
 import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
+import { hideCliNotes } from './hideCliNotes';
 import { isOlderPagePrepend } from './paging';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
@@ -219,7 +220,7 @@ function ChatPageContent() {
   // sees the same shape it would for any other conversation. mergeSplitThinkingMessages
   // rejoins a thinking stretch one response wrote as two session entries (#496).
   const mergedMessages = useMemo(
-    () => mergeToolResults(mergeSplitThinkingMessages(restoreQueuedMessages(messages))),
+    () => mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(restoreQueuedMessages(messages)))),
     [messages],
   );
 
