@@ -82,6 +82,21 @@ describe('restoreQueuedMessages', () => {
     expect(result.filter(m => m.message?.content === 'hello')).toHaveLength(1);
   });
 
+  it('shows a cross-session message that was dequeued once, from its user entry (#593)', () => {
+    const body = '<cross-session-message from="s1" name="issue-593">hello from another session</cross-session-message>';
+    const messages = [
+      queueOp('enqueue', body, '2026-07-26T17:29:29.145Z'),
+      queueOp('dequeue', null, '2026-07-26T17:29:29.145Z'),
+      user('u1', body),
+      assistant('a1', 'ok'),
+    ];
+
+    const result = restoreQueuedMessages(messages);
+
+    expect(result.map(m => m.type)).toEqual([LoadedMessageType.User, LoadedMessageType.Assistant]);
+    expect(result.filter(m => m.message?.content === body)).toHaveLength(1);
+  });
+
   it('removes queue-operation entries from the rendered list', () => {
     const messages = [
       queueOp('enqueue', 'x', '2026-07-26T17:00:00.000Z'),
