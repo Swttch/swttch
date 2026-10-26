@@ -18,6 +18,8 @@ In a terminal, when Claude creates a new Artifact page, Claude Code opens it in 
 | You scroll through an old session | Nothing opens. Only a page created while you watch opens the browser |
 | `CLAUDE_CODE_ARTIFACT_AUTO_OPEN` is `0`, `false`, `no` or `off` in the environment that starts the IDE | Nothing opens, the same switch Claude Code's own documentation gives |
 
+Claude Desktop shows the same page in a panel beside the chat. This chat cannot do that: claude.ai does not allow its pages to be drawn inside another program's window, so the page opens in your default browser, as it does in a terminal.
+
 The page needs your claude.ai login in that browser, the same as any Artifact. A new page is private to you.
 
 The browser opens on the machine where the chat's backend runs. In the IDE that is your own computer. If you use the chat through a tunnel to another machine, the page opens there, not on the screen you are looking at, as a terminal on that machine would.
