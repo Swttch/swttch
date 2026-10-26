@@ -781,6 +781,7 @@
     "toolImage": "{{tool}}の画像"
   },
   "sentFiles": {
+    "sharing": "ファイルを共有中…",
     "download": "ダウンロード",
     "downloadFailed": "ファイルを保存できませんでした",
     "opened": "{{name}}を開きました"

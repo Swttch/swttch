@@ -797,6 +797,7 @@
     "toolImage": "صورة {{tool}}"
   },
   "sentFiles": {
+    "sharing": "Sharing files…",
     "download": "تنزيل",
     "downloadFailed": "تعذّر حفظ الملف",
     "opened": "تم فتح {{name}}"

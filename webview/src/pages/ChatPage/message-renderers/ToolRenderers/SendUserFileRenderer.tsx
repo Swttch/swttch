@@ -177,6 +177,7 @@ function Audio({file, alone}: {file: SentFile; alone: boolean}) {
  * Whatever the file is, the pointer over it shows its full path and a download button.
  */
 export function SendUserFileRenderer(props: RendererProps) {
+    const {t} = useTranslation('chat');
     const {files} = sentFilesOf(props.toolUse.input, props.toolResult);
     const [opened, setOpened] = useState<number | null>(null);
 
@@ -189,6 +190,15 @@ export function SendUserFileRenderer(props: RendererProps) {
     const blockIndex = toolResultBlockIndex(props.toolResult, props.toolUse.id);
     const entryUuid = props.toolResult?.uuid;
     const pictureKeys = entryUuid && blockIndex >= 0 ? pictures.map((file) => `${entryUuid}:${blockIndex}:f${files.indexOf(file)}`) : undefined;
+
+    // Until the CLI answers there is nothing to draw but what Claude Desktop says while it works.
+    if (!props.toolResult) {
+        return (
+            <ToolWrapper message={props.message}>
+                <span className="text-text-secondary">{t('sentFiles.sharing')}</span>
+            </ToolWrapper>
+        );
+    }
 
     return (
         <ToolWrapper message={props.message}>

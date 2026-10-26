@@ -781,6 +781,7 @@
     "toolImage": "تصویر {{tool}}"
   },
   "sentFiles": {
+    "sharing": "Sharing files…",
     "download": "دانلود",
     "downloadFailed": "ذخیره فایل ممکن نشد",
     "opened": "{{name}} باز شد"

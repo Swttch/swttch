@@ -781,6 +781,7 @@
     "toolImage": "{{tool}}-Bild"
   },
   "sentFiles": {
+    "sharing": "Dateien werden geteilt…",
     "download": "Herunterladen",
     "downloadFailed": "Die Datei konnte nicht gespeichert werden",
     "opened": "{{name}} geöffnet"

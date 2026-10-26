@@ -117,4 +117,9 @@ describe('parseUserContent', () => {
 
     expect(result.hasLocalCommandStdout).toBe(false);
   });
+
+  it('shows a picked element as its chip text, not the description written out for Claude (#593)', () => {
+    const sent = 'look at this\n\n<picked-element>\nElement <h1/> Screenshot test\nselector: h1\nhtml: <h1>x</h1>\n</picked-element>';
+    expect(parseUserContent(sent).text).toBe('look at this\n\n<h1/> Screenshot test');
+  });
 });

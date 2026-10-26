@@ -789,6 +789,7 @@
     "toolImage": "Изображение: {{tool}}"
   },
   "sentFiles": {
+    "sharing": "Отправка файлов…",
     "download": "Скачать",
     "downloadFailed": "Не удалось сохранить файл",
     "opened": "Открыт файл {{name}}"

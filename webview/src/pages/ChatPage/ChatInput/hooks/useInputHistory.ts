@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useBridge } from '@/hooks/useBridge';
 import { MessageType, isQueueOperation } from '@/shared';
 import { getTextContent, type LoadedMessageDto } from '@/types';
-import { stripSystemReminders } from '@/pages/ChatPage/message-renderers/utils/parseUserContent';
+import { stripPickedElements, stripSystemReminders } from '@/pages/ChatPage/message-renderers/utils/parseUserContent';
 
 /**
  * How close to the end of the loaded history the cursor may get before the next
@@ -33,7 +33,7 @@ function promptTextOf(entry: Record<string, unknown>): string {
   // Only the reminder is taken off here. The `<session-mention>` tag stays, so
   // the composer can put the chip back as a live chip rather than as dead text
   // that looks addressed and is not.
-  return stripSystemReminders(raw).trim();
+  return stripPickedElements(stripSystemReminders(raw)).trim();
 }
 
 interface PromptHistoryResponse {

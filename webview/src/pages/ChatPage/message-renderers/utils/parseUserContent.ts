@@ -36,6 +36,11 @@ export function stripSystemReminders(text: string): string {
   return text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '');
 }
 
+/** Drop what a picked page element stands for: it is written out for Claude after the typed text, not typed. */
+export function stripPickedElements(text: string): string {
+  return text.replace(/<picked-element>[\s\S]*?<\/picked-element>/g, '');
+}
+
 export function parseUserContent(content: string): {
   text: string;
   contexts: Context[];
@@ -102,6 +107,10 @@ export function parseUserContent(content: string): {
   // text without it, so only the tags go (the closing one carries an id too:
   // `</pasted_content id="6c03">`); the pasted text stays.
   cleanText = cleanText.replace(/<\/?pasted_content(?:\s[^>]*)?>/g, '');
+
+  // Step H3: what a picked page element stands for (#593) is written out after the message for Claude. The
+  // reader sees the element's chip text where the whole description sits, as the chip they sent.
+  cleanText = cleanText.replace(/<picked-element>\s*Element ([^\n]*)\n[\s\S]*?<\/picked-element>/g, '$1');
 
   // Step I: 중복 공백/줄바꿈 정리
   cleanText = cleanText

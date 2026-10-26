@@ -781,6 +781,7 @@
     "toolImage": "{{tool}} 圖片"
   },
   "sentFiles": {
+    "sharing": "正在分享檔案…",
     "download": "下載",
     "downloadFailed": "無法儲存檔案",
     "opened": "已開啟 {{name}}"

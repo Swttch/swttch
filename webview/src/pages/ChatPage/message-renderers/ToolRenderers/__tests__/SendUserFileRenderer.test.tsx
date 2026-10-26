@@ -53,6 +53,13 @@ beforeEach(() => {
     URL.revokeObjectURL = vi.fn();
 });
 
+describe('SendUserFileRenderer while the CLI has not answered', () => {
+    it('says the files are being shared, as Claude Desktop does, instead of drawing nothing', () => {
+        render(<SendUserFileRenderer toolUse={toolUse(['/tmp/a.bin'])} toolResult={undefined}/>);
+        expect(screen.getByText('Sharing files…')).toBeInTheDocument();
+    });
+});
+
 describe('sendUserFile helpers', () => {
     it('writes sizes the way Desktop does, in units of 1000', () => {
         expect(formatSentSize(217)).toBe('217BYTE');

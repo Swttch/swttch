@@ -98,7 +98,7 @@ function describe(token: string, e: ComposerElement): string {
   if (e.innerText) lines.push(`text: ${e.innerText}`);
   lines.push(`html: ${e.html}`);
   if (e.siblingHTML) lines.push(`siblings:\n${e.siblingHTML}`);
-  return lines.join('\n');
+  return `<picked-element>\n${lines.join('\n')}\n</picked-element>`;
 }
 
 /** The message with what each chip in the attachment row stands for written out after it; the row is emptied. */
