@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "下载",
-    "downloadFailed": "无法保存文件"
+    "downloadFailed": "无法保存文件",
+    "opened": "已打开 {{name}}"
   },
   "linkCard": {
     "openedInBrowser": "已在浏览器中打开",
@@ -804,7 +805,9 @@
     "copySource": "复制页面源码",
     "reload": "刷新",
     "copied": "已复制页面源码",
-    "resize": "调整大小"
+    "resize": "调整大小",
+    "showSource": "查看源码",
+    "showRendered": "查看渲染结果"
   },
   "fileLink": {
     "copyDone": "已复制路径",

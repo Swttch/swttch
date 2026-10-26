@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "ダウンロード",
-    "downloadFailed": "ファイルを保存できませんでした"
+    "downloadFailed": "ファイルを保存できませんでした",
+    "opened": "{{name}}を開きました"
   },
   "linkCard": {
     "openedInBrowser": "ブラウザで開きました",
@@ -804,7 +805,9 @@
     "copySource": "ページのソースをコピー",
     "reload": "再読み込み",
     "copied": "ページのソースをコピーしました",
-    "resize": "サイズを変更"
+    "resize": "サイズを変更",
+    "showSource": "ソースを表示",
+    "showRendered": "表示結果を見る"
   },
   "fileLink": {
     "copyDone": "パスをコピーしました",

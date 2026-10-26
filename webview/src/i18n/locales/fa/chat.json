@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "دانلود",
-    "downloadFailed": "ذخیره فایل ممکن نشد"
+    "downloadFailed": "ذخیره فایل ممکن نشد",
+    "opened": "{{name}} باز شد"
   },
   "linkCard": {
     "openedInBrowser": "در مرورگر باز شد",
@@ -804,7 +805,9 @@
     "copySource": "کپی منبع صفحه",
     "reload": "بارگذاری مجدد",
     "copied": "منبع صفحه کپی شد",
-    "resize": "تغییر اندازه"
+    "resize": "تغییر اندازه",
+    "showSource": "نمایش منبع",
+    "showRendered": "نمایش نتیجه"
   },
   "fileLink": {
     "copyDone": "مسیر کپی شد",

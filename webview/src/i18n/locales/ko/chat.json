@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "다운로드",
-    "downloadFailed": "파일을 저장하지 못했습니다"
+    "downloadFailed": "파일을 저장하지 못했습니다",
+    "opened": "{{name}}을(를) 열었습니다"
   },
   "linkCard": {
     "openedInBrowser": "브라우저에서 열림",
@@ -804,7 +805,9 @@
     "copySource": "페이지 소스 복사",
     "reload": "새로고침",
     "copied": "페이지 소스를 복사했습니다",
-    "resize": "크기 조정"
+    "resize": "크기 조정",
+    "showSource": "소스 보기",
+    "showRendered": "렌더링 보기"
   },
   "fileLink": {
     "copyDone": "경로를 복사했습니다",

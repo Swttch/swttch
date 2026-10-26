@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "Télécharger",
-    "downloadFailed": "Impossible d'enregistrer le fichier"
+    "downloadFailed": "Impossible d'enregistrer le fichier",
+    "opened": "{{name}} ouvert"
   },
   "linkCard": {
     "openedInBrowser": "Ouvert dans le navigateur",
@@ -804,7 +805,9 @@
     "copySource": "Copier le source de la page",
     "reload": "Actualiser",
     "copied": "Source de la page copié",
-    "resize": "Redimensionner"
+    "resize": "Redimensionner",
+    "showSource": "Voir la source",
+    "showRendered": "Voir le rendu"
   },
   "fileLink": {
     "copyDone": "Chemin copié",

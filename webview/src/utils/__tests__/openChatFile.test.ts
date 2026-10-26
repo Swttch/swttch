@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isPreviewablePath, isSentFileViewable, openChatFile, openSentFile } from '../openChatFile';
 import { filePreviewPaneStore } from '../filePreviewPaneStore';
 
+const { success } = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock('react-hot-toast', () => ({ default: { success } }));
 const openFile = vi.fn(() => Promise.resolve());
 vi.mock('@/adapters', () => ({ getAdapter: () => ({ openFile }) }));
 
@@ -69,5 +71,7 @@ describe('a file Claude handed over', () => {
     await openSentFile('/p/deck.pptx');
     expect(filePreviewPaneStore.get()).toBeNull();
     expect(openFile).toHaveBeenCalledWith('/p/deck.pptx');
+    // Said on screen, so the click does not read as having done nothing.
+    expect(success).toHaveBeenCalledTimes(1);
   });
 });

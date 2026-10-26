@@ -10,13 +10,14 @@ import { TextView } from './TextView';
 import { isLightColor, PAGE_BACKGROUND_MESSAGE, withBackgroundProbe } from './pageBackground';
 import { MIN_CHAT_WIDTH, MIN_PANE_WIDTH, useIsWide, usePaneColumnWidth } from './usePaneColumn';
 import {
-  ArrowsPointingInIcon, ArrowsPointingOutIcon, XMarkIcon,
+  ArrowsPointingInIcon, ArrowsPointingOutIcon, CodeBracketIcon, EyeIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { decodeText, loadFileContent, type FileContentKind } from './loadFileContent';
 
 type PaneState =
   | { status: 'loading' }
-  | { status: 'ready'; kind: Exclude<FileContentKind, 'html' | 'text'>; url: string }
+  // `source` is the file's own text when it has one a reader can look at: a picture drawn from SVG.
+  | { status: 'ready'; kind: Exclude<FileContentKind, 'html' | 'text'>; url: string; source?: string }
   | { status: 'ready'; kind: 'text'; text: string }
   | { status: 'ready'; kind: 'html'; html: string }
   | { status: 'failed'; reason: 'unsupported' | 'tooLarge' | 'unreadable' | 'unplayable'; size?: number; maxBytes?: number };
@@ -50,6 +51,7 @@ export function FilePreviewPane() {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const drag = useRef<{ startX: number; startWidth: number; scale: number } | null>(null);
   const [reloads, setReloads] = useState(0);
+  const [showSource, setShowSource] = useState(false);
 
   useEffect(() => {
     if (path === undefined) return;
@@ -58,6 +60,7 @@ export function FilePreviewPane() {
     setState({ status: 'loading' });
     setFrameLoaded(false);
     setPageBackground(null);
+    setShowSource(false);
 
     void loadFileContent(path, () => cancelled).then((result) => {
       if (cancelled) return;
@@ -74,7 +77,10 @@ export function FilePreviewPane() {
         return;
       }
       objectUrl = URL.createObjectURL(result.blob);
-      setState({ status: 'ready', kind: result.kind, url: objectUrl });
+      setState({
+        status: 'ready', kind: result.kind, url: objectUrl,
+        ...(result.mimeType === 'image/svg+xml' ? { source: decodeText(result.pieces) } : {}),
+      });
     });
 
     return () => {
@@ -112,6 +118,8 @@ export function FilePreviewPane() {
   // The bar wears the page's colour, so its text takes whichever of light and dark reads on it.
   const light = pageBackground ? isLightColor(pageBackground) : undefined;
   const barStyle = pageBackground && light !== undefined ? { backgroundColor: pageBackground, color: light ? '#1f1f1f' : '#ececec' } : undefined;
+  // The text a reader can look at instead of the drawn file: a page's own HTML, an SVG's markup.
+  const sourceText = state.status === 'ready' ? (state.kind === 'html' ? state.html : state.kind === 'image' ? state.source : undefined) : undefined;
   const iconButton = 'flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:bg-[color-mix(in_srgb,currentColor_12%,transparent)] hover:opacity-100';
 
   return (
@@ -183,9 +191,22 @@ export function FilePreviewPane() {
         </Tooltip>
       </header>
 
+      {/* Where the file is, and the way to its source when it has one, as Claude Desktop's viewer has. */}
+      <div className="flex shrink-0 items-center gap-2 px-4 pb-2 text-[0.75rem] opacity-70" dir="ltr">
+        <span className="min-w-0 flex-1 truncate" title="">{breadcrumb(path)}</span>
+        {sourceText !== undefined && (
+          <Tooltip content={showSource ? t('filePreview.showRendered') : t('filePreview.showSource')} placement="bottom">
+            <button type="button" aria-pressed={showSource} aria-label={showSource ? t('filePreview.showRendered') : t('filePreview.showSource')}
+              className={iconButton} onClick={() => setShowSource((value) => !value)}>
+              {showSource ? <EyeIcon className="h-4 w-4" /> : <CodeBracketIcon className="h-4 w-4" />}
+            </button>
+          </Tooltip>
+        )}
+      </div>
+
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto">
         {/* Until the content is in place a spinner stands where it will be, so the pane never shows an empty white sheet. */}
-        {(state.status === 'loading' || (state.status === 'ready' && state.kind === 'html' && !frameLoaded)) && (
+        {(state.status === 'loading' || (state.status === 'ready' && state.kind === 'html' && !frameLoaded && !showSource)) && (
           <div role="status" aria-label={t('filePreview.loading')} className="absolute inset-0 flex items-center justify-center">
             <span className="h-6 w-6 animate-spin rounded-full border-2 border-border-default border-t-text-secondary" />
           </div>
@@ -206,7 +227,8 @@ export function FilePreviewPane() {
           </p>
         )}
 
-        {state.status === 'ready' && state.kind === 'html' && (
+        {showSource && sourceText !== undefined && <TextView text={sourceText} />}
+        {!showSource && state.status === 'ready' && state.kind === 'html' && (
           // Cut a pixel into the clipping box on every side: a frame on a fractional edge would otherwise let
           // its white backing show as a hairline along the card's right and bottom border.
           <div className="absolute inset-0 overflow-hidden">
@@ -224,7 +246,7 @@ export function FilePreviewPane() {
         {state.status === 'ready' && state.kind === 'pdf' && (
           <iframe title={name} src={state.url} className="h-full w-full border-0" />
         )}
-        {state.status === 'ready' && state.kind === 'image' && (
+        {!showSource && state.status === 'ready' && state.kind === 'image' && (
           <img src={state.url} alt={name} className="max-h-full max-w-full object-contain" />
         )}
         {state.status === 'ready' && state.kind === 'video' && (
@@ -238,4 +260,11 @@ export function FilePreviewPane() {
       </div>
     </aside>
   );
+}
+
+/** The path as a trail of folders, the last few of them: `/ private / tmp / demo / page.html`, or `… / tmp / demo / page.html` when it is long. */
+function breadcrumb(path: string): string {
+  const parts = path.split(/[\\/]/).filter((part) => part !== '');
+  const shown = parts.length > 4 ? ['…', ...parts.slice(-4)] : parts;
+  return `${path.startsWith('/') && parts.length <= 4 ? '/ ' : ''}${shown.join(' / ')}`;
 }

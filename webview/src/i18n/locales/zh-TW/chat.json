@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "下載",
-    "downloadFailed": "無法儲存檔案"
+    "downloadFailed": "無法儲存檔案",
+    "opened": "已開啟 {{name}}"
   },
   "linkCard": {
     "openedInBrowser": "已在瀏覽器中開啟",
@@ -804,7 +805,9 @@
     "copySource": "複製頁面原始碼",
     "reload": "重新整理",
     "copied": "已複製頁面原始碼",
-    "resize": "調整大小"
+    "resize": "調整大小",
+    "showSource": "檢視原始碼",
+    "showRendered": "檢視渲染結果"
   },
   "fileLink": {
     "copyDone": "已複製路徑",

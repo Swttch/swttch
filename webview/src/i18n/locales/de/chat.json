@@ -779,7 +779,8 @@
   },
   "sentFiles": {
     "download": "Herunterladen",
-    "downloadFailed": "Die Datei konnte nicht gespeichert werden"
+    "downloadFailed": "Die Datei konnte nicht gespeichert werden",
+    "opened": "{{name}} geöffnet"
   },
   "linkCard": {
     "openedInBrowser": "Im Browser geöffnet",
@@ -804,7 +805,9 @@
     "copySource": "Seitenquelltext kopieren",
     "reload": "Neu laden",
     "copied": "Seitenquelltext kopiert",
-    "resize": "Größe ändern"
+    "resize": "Größe ändern",
+    "showSource": "Quelltext anzeigen",
+    "showRendered": "Darstellung anzeigen"
   },
   "fileLink": {
     "copyDone": "Pfad kopiert",

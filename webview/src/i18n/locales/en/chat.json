@@ -783,7 +783,8 @@
   },
   "sentFiles": {
     "download": "Download",
-    "downloadFailed": "Could not save the file"
+    "downloadFailed": "Could not save the file",
+    "opened": "Opened {{name}}"
   },
   "linkCard": {
     "openedInBrowser": "Opened in browser",
@@ -808,7 +809,9 @@
     "copySource": "Copy page source",
     "reload": "Reload",
     "copied": "Page source copied",
-    "resize": "Resize"
+    "resize": "Resize",
+    "showSource": "View source",
+    "showRendered": "View rendered"
   },
   "fileLink": {
     "copyDone": "Path copied",

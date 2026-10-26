@@ -795,7 +795,8 @@
   },
   "sentFiles": {
     "download": "تنزيل",
-    "downloadFailed": "تعذّر حفظ الملف"
+    "downloadFailed": "تعذّر حفظ الملف",
+    "opened": "تم فتح {{name}}"
   },
   "linkCard": {
     "openedInBrowser": "فُتح في المتصفح",
@@ -820,7 +821,9 @@
     "copySource": "نسخ مصدر الصفحة",
     "reload": "إعادة تحميل",
     "copied": "تم نسخ مصدر الصفحة",
-    "resize": "تغيير الحجم"
+    "resize": "تغيير الحجم",
+    "showSource": "عرض المصدر",
+    "showRendered": "عرض النتيجة"
   },
   "fileLink": {
     "copyDone": "تم نسخ المسار",

@@ -1,4 +1,6 @@
+import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
+import { i18n } from '@/i18n';
 import { filePreviewPaneStore } from './filePreviewPaneStore';
 
 /**
@@ -39,7 +41,12 @@ export function openSentFile(path: string): Promise<void> {
     filePreviewPaneStore.open(path);
     return Promise.resolve();
   }
-  return openChatFile(path);
+  // What the pane cannot show is handed to another app, which opens beside this window: say so, or the click reads as
+  // having done nothing.
+  const name = path.split(/[\\/]/).pop() ?? path;
+  return openChatFile(path).then(() => {
+    toast.success(i18n.t('chat:sentFiles.opened', { name }));
+  });
 }
 
 /** True when the preview pane shows this file, so a click opens it there. */

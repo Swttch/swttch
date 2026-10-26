@@ -324,3 +324,37 @@ describe('the resize handle', () => {
     expect(screen.queryByRole('separator')).not.toBeInTheDocument();
   });
 });
+
+describe('the path line and the source view', () => {
+  it('shows where the file is, and offers a page\'s own source in place of the drawn page', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'html', mimeType: 'text/html', size: 9, offset: 0, base64: b64('<h1>hi</h1>') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/private/tmp/ccg-demo/demo593/page.html'));
+    await screen.findByTitle('page.html');
+
+    expect(screen.getByText('… / tmp / ccg-demo / demo593 / page.html')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.showSource' }));
+    expect(screen.queryByTitle('page.html')).not.toBeInTheDocument();
+    expect(screen.getByText('<h1>hi</h1>')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.showRendered' }));
+    expect(await screen.findByTitle('page.html')).toBeInTheDocument();
+  });
+
+  it('offers an SVG\'s markup too, and nothing for a picture that has none', async () => {
+    request.mockResolvedValue({ ok: true, kind: 'image', mimeType: 'image/svg+xml', size: 5, offset: 0, base64: b64('<svg/>') });
+    const { unmount } = render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/a.svg'));
+    await screen.findByRole('img');
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.showSource' }));
+    expect(screen.getByText('<svg/>')).toBeInTheDocument();
+    unmount();
+
+    request.mockResolvedValue({ ok: true, kind: 'image', mimeType: 'image/png', size: 3, offset: 0, base64: b64('abc') });
+    render(<FilePreviewPane />);
+    act(() => filePreviewPaneStore.open('/p/a.png'));
+    await screen.findByRole('img');
+    expect(screen.queryByRole('button', { name: 'filePreview.showSource' })).not.toBeInTheDocument();
+  });
+});
