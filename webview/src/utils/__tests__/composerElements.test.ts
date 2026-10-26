@@ -1,21 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { ELEMENT_CHIP_ICON_ROOM, addElementToComposer, elementToken, expandElementTokens, subscribeComposerElements } from '../composerElements';
+import { addElementToComposer, elementToken, expandElementTokens, getPendingElements, removePendingElement, subscribeComposerElements } from '../composerElements';
 import { withInspector } from '@/components/FilePreviewPane/pageInspect';
 
 describe('composerElements', () => {
   it('names the chip by tag and accessible name', () => {
-    expect(elementToken('H1', ' image   page ')).toBe(`${ELEMENT_CHIP_ICON_ROOM}<h1/> image page\u2002`);
-    expect(elementToken('div', '')).toBe(`${ELEMENT_CHIP_ICON_ROOM}<div/>\u2002`);
+    expect(elementToken('H1', ' image   page ')).toBe('<h1/> image page');
+    expect(elementToken('div', '')).toBe('<div/>');
   });
 
-  it('tells the composer and writes the element out after the message', () => {
+  it('keeps a picked element as a chip, and writes it out after the message when sent', () => {
     const seen: string[] = [];
     const off = subscribeComposerElements((token) => seen.push(token));
-    addElementToComposer('<h1/> a', { selector: 'h1:nth-of-type(1)', html: '<h1>a</h1>', tag: 'h1', name: 'a', classes: [], attributes: {}, computedStyles: {}, boundingBox: { x: 0, y: 0, width: 1, height: 1 } });
+    const element = { selector: 'h1:nth-of-type(1)', html: '<h1>a</h1>', tag: 'h1', name: 'a', classes: [], attributes: {}, computedStyles: {}, boundingBox: { x: 0, y: 0, width: 1, height: 1 } };
+    addElementToComposer('<h1/> a', element);
     off();
     expect(seen).toEqual(['<h1/> a']);
-    expect(expandElementTokens('look <h1/> a')).toContain('selector: h1:nth-of-type(1)');
+    expect(getPendingElements().map((entry) => entry.token)).toEqual(['<h1/> a']);
+    const sent = expandElementTokens('look');
+    expect(sent).toContain('look');
+    expect(sent).toContain('selector: h1:nth-of-type(1)');
+    expect(getPendingElements()).toEqual([]);
     expect(expandElementTokens('nothing')).toBe('nothing');
+  });
+
+  it('lets a chip be taken out before sending', () => {
+    const element = { selector: 'p', html: '<p/>', tag: 'p', name: '', classes: [], attributes: {}, computedStyles: {}, boundingBox: { x: 0, y: 0, width: 1, height: 1 } };
+    addElementToComposer('<p/>', element);
+    removePendingElement('<p/>');
+    expect(expandElementTokens('x')).toBe('x');
   });
 
   it('injects an inspector script that parses', () => {

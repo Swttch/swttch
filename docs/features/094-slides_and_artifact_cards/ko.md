@@ -73,7 +73,7 @@ IDE를 띄우는 환경에 `CLAUDE_CODE_ARTIFACT`를 직접 정해 두었다면(
 
 ## 바뀌지 않은 것
 
-이 채팅은 페이지 자체를 보여 주지 않습니다. 링크를 주고, 페이지는 브라우저에서 열립니다. 이제 첫 게시 뒤에 브라우저가 저절로 열리고, 입력창 아래 알약이 세션의 페이지를 쥐고 있고, 페이지·PDF·그림은 채팅 옆에서 미리 보입니다. [새 아티팩트가 저절로 열립니다](../096-artifact_pill_and_file_preview/ko.md)를 보세요. 페이지를 IDE 안에서 보여 주는 것과 터미널의 `/artifacts` 목록은 [#593](https://github.com/Swttch/swttch/issues/593)에서 이어서 봅니다.
+이 채팅은 페이지 자체를 보여 주지 않습니다. 링크를 주고, 페이지는 브라우저에서 열립니다. 이제 첫 게시 뒤에 브라우저가 저절로 열리고, 페이지·PDF·그림은 채팅 옆에서 미리 보입니다. [새 아티팩트가 저절로 열립니다](../096-artifact_and_file_preview/ko.md)를 보세요. 페이지를 IDE 안에서 보여 주는 것과 터미널의 `/artifacts` 목록은 [#593](https://github.com/Swttch/swttch/issues/593)에서 이어서 봅니다.
 
 ---
 

@@ -3,39 +3,63 @@ import type { PickedElement } from '@/components/FilePreviewPane/pageInspect';
 /**
  * Things the reader picked or drew in the Browser pane, on their way into the chat (#593).
  *
- * Claude Desktop puts a chip such as `<h1/> image page` in the message box and sends Claude the element
- * with a picture of it. The box here holds text, so the chip is a token in the text, and what the token
- * stands for is kept here until the message is sent, when it is written out after the text. The picture
- * goes in as an image attachment.
+ * Claude Desktop puts a chip such as `<h1/> image page` among the message box's attachments and sends Claude
+ * the element with a picture of it. Here the chip is an entry in the list below, shown in the attachment row;
+ * when the message is sent, what each chip stands for is written out after the text and the list is emptied.
+ * The picture goes in as an image attachment.
  */
 export type ComposerElement = PickedElement;
 
-const elements = new Map<string, ComposerElement>();
-type ElementListener = (token: string, element: ComposerElement) => void;
+/** An element picked in the Browser pane, waiting in the message box's attachment row. */
+export interface PendingElement {
+  token: string;
+  element: ComposerElement;
+  /** File name of the picture of the element that travels as an image attachment, which the chip stands for too. */
+  imageName?: string;
+}
+
+let pending: PendingElement[] = [];
+const pendingListeners = new Set<() => void>();
+type ElementListener = (token: string, element: ComposerElement, imageName: string | undefined) => void;
+let pictureCount = 0;
 const elementListeners = new Set<ElementListener>();
 type ImageListener = (png: Blob, name: string) => void;
 const imageListeners = new Set<ImageListener>();
 
-/**
- * What an element chip's text starts with: room for the pointer icon the chip paints in front of its tag. The
- * chip is highlighted text in a mirror layer that must stay glyph-aligned with the editable layer, so the icon
- * cannot take room of its own; two en spaces hold it.
- */
-export const ELEMENT_CHIP_ICON_ROOM = '\u2002\u2002\u2009';
+function setPending(next: PendingElement[]): void {
+  pending = next;
+  pendingListeners.forEach((listener) => listener());
+}
 
-/** The chip text for an element: room for its icon, its tag, then its accessible name when it has one. */
+/** The chip text for an element: its tag, then its accessible name when it has one. */
 export function elementToken(tag: string, name: string): string {
   const label = name.trim().replace(/\s+/g, ' ').slice(0, 40);
-  const head = `${ELEMENT_CHIP_ICON_ROOM}<${tag.toLowerCase()}/>`;
-  return label ? `${head} ${label}\u2002` : `${head}\u2002`;
+  return label ? `<${tag.toLowerCase()}/> ${label}` : `<${tag.toLowerCase()}/>`;
 }
 
-/** Puts the element in the message box. */
+/** Puts the element in the message box's attachment row. */
 export function addElementToComposer(token: string, element: ComposerElement): void {
-  elements.set(token, element);
-  elementListeners.forEach((listener) => listener(token, element));
+  const imageName = element.screenshot ? `element-${++pictureCount}.png` : undefined;
+  setPending([...pending.filter((entry) => entry.token !== token), { token, element, imageName }]);
+  elementListeners.forEach((listener) => listener(token, element, imageName));
 }
 
+/** Takes one chip out of the row. */
+export function removePendingElement(token: string): void {
+  setPending(pending.filter((entry) => entry.token !== token));
+}
+
+/** The chips in the attachment row, as `useSyncExternalStore` reads them. */
+export function getPendingElements(): readonly PendingElement[] {
+  return pending;
+}
+
+export function subscribePendingElements(listener: () => void): () => void {
+  pendingListeners.add(listener);
+  return () => pendingListeners.delete(listener);
+}
+
+/** Tells the composer an element was picked (it attaches the picture of it). */
 export function subscribeComposerElements(listener: ElementListener): () => void {
   elementListeners.add(listener);
   return () => elementListeners.delete(listener);
@@ -77,9 +101,10 @@ function describe(token: string, e: ComposerElement): string {
   return lines.join('\n');
 }
 
-/** The message with what each element chip stands for written out after it. */
+/** The message with what each chip in the attachment row stands for written out after it; the row is emptied. */
 export function expandElementTokens(text: string): string {
-  const used = [...elements.entries()].filter(([token]) => text.includes(token));
-  if (used.length === 0) return text;
-  return `${text}\n\n${used.map(([token, element]) => describe(token, element)).join('\n\n')}`;
+  if (pending.length === 0) return text;
+  const described = pending.map(({ token, element }) => describe(token, element)).join('\n\n');
+  setPending([]);
+  return text ? `${text}\n\n${described}` : described;
 }

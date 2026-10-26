@@ -1,8 +1,8 @@
-# A new Artifact opens for you, the chat keeps a pill for it, and pages, PDFs and pictures preview beside the chat
+# A new Artifact opens for you, and pages, PDFs and pictures preview beside the chat
 
 > Language: **English** · [한국어](./ko.md)
 
-An Artifact is a page that Claude Code publishes from your session to a private address on claude.ai, as `/slides` does for a deck ([the first piece of this](../094-slides_and_artifact_cards/en.md)). This page covers what happens around it: the browser opening by itself, a small pill that keeps the pages of the session within reach, and a pane that shows a page, a PDF, a picture or a video beside the chat when you click its file path.
+An Artifact is a page that Claude Code publishes from your session to a private address on claude.ai, as `/slides` does for a deck ([the first piece of this](../094-slides_and_artifact_cards/en.md)). This page covers what happens around it: the browser opening by itself, and a pane that shows a page, a PDF, a picture or a video beside the chat when you click its file path.
 
 All of it is meant to match what the terminal does, and to take over what Claude Code Desktop shows, as far as an IDE can carry it. It was asked for in [#593](https://github.com/Swttch/swttch/issues/593).
 
@@ -21,26 +21,6 @@ In a terminal, the first time Claude publishes a page, Claude Code opens it in y
 The page needs your claude.ai login in that browser, the same as any Artifact. A new page is private to you.
 
 The browser opens on the machine where the chat's backend runs. In the IDE that is your own computer. If you use the chat through a tunnel to another machine, the page opens there, not on the screen you are looking at, as a terminal on that machine would.
-
-## A pill under the input keeps the session's pages
-
-Once the session has published a page, a small pill with a page icon appears in the row of tags under the input.
-
-![The input box of the chat. Its placeholder reads "@ to reference files, / for commands, !! to insert prompts, @@ to ask another session, Enter to send". In the row below it, after "Bypass permissions", is a pill with a page icon and the text "quarterly-reliability-revi…", followed by "Sonnet 5.5" and a context percentage.](./assets/artifact-pill-one.png)
-
-- With one page, the pill shows its name. **Click it** and the page opens in your browser.
-- With several, the pill shows a count such as "2 Artifacts". **Click it** and a list opens above it, newest first. Pick one and it opens in your browser.
-
-![The same input box with a small list floating above the pill. The list's heading is "Artifacts in this session" and it has two rows, "incident-timeline" and "quarterly-reliability-review", each with a page icon. The pill below reads "2 Artifacts".](./assets/artifact-pill-list.png)
-
-- **`Ctrl+]`** reopens the most recent page without the pointer, the same as in a terminal. It is `Ctrl` on every system, also on a Mac; `Cmd` does not count, because the terminal's key is `Ctrl+]` there too.
-- `Esc` or a click elsewhere closes the list.
-
-The pill is read from the conversation, so a session you open from the history shows its pages the same as one that just published them.
-
-**What the name is.** If Claude gave the page a title when it published, that is the name. Otherwise the pill uses the name of the file that was published, without its extension. The page's own `<title>` is not part of what Claude Code reports back, so a page whose title differs from its file name shows the file name here, while the browser tab shows the title.
-
-**Limits of the key.** On a Mac with a Hangul input source selected, the system turns `Ctrl+]` into a different key before the chat sees it, and the shortcut does nothing. Switch to the English input source, or click the pill. The pill never depends on the keyboard.
 
 ## A page, a PDF, a picture or a video opens beside the chat
 
@@ -114,17 +94,15 @@ The Assets screen used to hold only the pictures you attached. It now has a seco
 ## What this does not do
 
 - It does not draw the Artifact page itself inside the IDE. The page needs a claude.ai login, and the address cannot be framed by another page, so it opens in your browser. Whether the IDE's own browser can carry it is still being checked in [#593](https://github.com/Swttch/swttch/issues/593).
-- It does not list every Artifact you own, as the terminal's `/artifacts` does. Claude Code does not offer that command to this chat. The pill and the session rail's Outputs list the pages of the current session only.
+- It does not list every Artifact you own, as the terminal's `/artifacts` does. Claude Code does not offer that command to this chat. The session rail's Outputs list the pages of the current session only.
 - The pane does not follow a file as it changes, and it does not resolve relative paths inside a page.
 
 ## If something does not work
 
 | What you see | Why, and what to do |
 | --- | --- |
-| The browser did not open after Claude published a page | Check that `CLAUDE_CODE_ARTIFACT_AUTO_OPEN` is not `0`, `false`, `no` or `off` in the environment that starts the IDE. The pill is still there, click it |
+| The browser did not open after Claude published a page | Check that `CLAUDE_CODE_ARTIFACT_AUTO_OPEN` is not `0`, `false`, `no` or `off` in the environment that starts the IDE. |
 | The browser opened twice | Tell us in [#593](https://github.com/Swttch/swttch/issues/593) with your Claude Code version. The chat expects Claude Code to leave opening to it |
-| The pill is missing | It shows after a publish that succeeded. A call that failed, or `quickstart`, `list` and `read`, does not count as a published page |
-| `Ctrl+]` does nothing | A Hangul input source on a Mac, or the IDE's own binding for the key. Click the pill |
 | A page in the pane lacks its style or pictures | It refers to other files by relative path. Open it with the system app |
 | A PDF is blank | The IDE's built-in browser could not draw it. Use **Open with system app** |
 | A video shows the message | Its encoding is not supported by the IDE's browser. Use **Open with system app** |

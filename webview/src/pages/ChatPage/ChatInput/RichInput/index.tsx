@@ -11,10 +11,8 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type UIEvent as ReactUIEvent,
 } from 'react';
-import { getSelectionRange, setCaretOffset } from '@/utils/domSelection';
-import { atomicKeyResult, elementChipRanges, snapOutOfChip, type AtomicKey } from './atomicChips';
+import { setCaretOffset } from '@/utils/domSelection';
 import { splitIntoSegments } from './segments';
-import { ELEMENT_CHIP_ICON_ROOM } from '@/utils/composerElements';
 import { useIMEComposition, type IMEComposition } from './useIMEComposition';
 import { insertNewlineAtCursor } from './insertNewlineAtCursor';
 import { typedKeys } from '@/commandPalette/typedKeys';
@@ -150,53 +148,6 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
   // Expose the editable div to the parent (focus / domSelection utilities) while
   // keeping our own internal ref for sync work.
   useImperativeHandle(ref, () => elRef.current as HTMLDivElement, []);
-
-  // An element chip is one unit: the caret steps over it and one deletion removes it whole.
-  const handleKeyDown = useCallback(
-    (e: ReactKeyboardEvent<HTMLDivElement>) => {
-      const el = elRef.current;
-      const key = e.key as AtomicKey;
-      const plain = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.nativeEvent.isComposing;
-      if (el && plain && (key === 'Backspace' || key === 'Delete' || key === 'ArrowLeft' || key === 'ArrowRight')) {
-        const text = el.textContent ?? '';
-        const range = getSelectionRange(el);
-        const ranges = elementChipRanges(text, highlightTokens);
-        if (ranges.length > 0 && range.start === range.end) {
-          const result = atomicKeyResult(key, range.start, ranges);
-          if (result) {
-            e.preventDefault();
-            if (result.kind === 'caret') {
-              setCaretOffset(el, result.offset);
-            } else {
-              const next = text.slice(0, result.range.start) + text.slice(result.range.end);
-              el.textContent = next;
-              setCaretOffset(el, result.range.start);
-              setDisplayText(next);
-              onChange(next);
-            }
-            return;
-          }
-        }
-      }
-      onKeyDown?.(e);
-    },
-    [highlightTokens, onKeyDown, onChange],
-  );
-
-  // A caret put inside a chip (a click) moves to the chip's nearer edge.
-  useLayoutEffect(() => {
-    const el = elRef.current;
-    if (!el) return;
-    const snap = () => {
-      if (document.activeElement !== el) return;
-      const range = getSelectionRange(el);
-      if (range.start !== range.end) return;
-      const edge = snapOutOfChip(range.start, elementChipRanges(el.textContent ?? '', highlightTokens));
-      if (edge !== null) setCaretOffset(el, edge);
-    };
-    document.addEventListener('selectionchange', snap);
-    return () => document.removeEventListener('selectionchange', snap);
-  }, [highlightTokens]);
 
   // value → DOM sync. Only writes when the DOM diverges from `value` (prevents
   // caret jumps on every keystroke) and never during IME composition.
@@ -351,8 +302,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
         ) : (
           segments.map((seg, i) =>
             seg.isToken ? (
-              <span key={i} className={seg.text.startsWith(ELEMENT_CHIP_ICON_ROOM) ? 'richInputChip richInputChip--element' : 'richInputChip'}>
-                {seg.text.startsWith(ELEMENT_CHIP_ICON_ROOM) && <span className="richInputChipIcon" aria-hidden="true" />}
+              <span key={i} className="richInputChip">
                 {seg.text}
               </span>
             ) : (
@@ -398,7 +348,7 @@ export const RichInput = forwardRef<HTMLDivElement, Props>((props: Props, ref) =
           .join(' ')}
         onInput={handleInput}
         onBeforeInput={handleBeforeInput}
-        onKeyDown={handleKeyDown}
+        onKeyDown={onKeyDown}
         onKeyUp={onKeyUp}
         onPaste={onPaste}
         onFocus={onFocus}

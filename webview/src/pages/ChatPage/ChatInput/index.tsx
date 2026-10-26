@@ -1,6 +1,5 @@
-import { insertAtCursor } from '@/hooks/useEditorContext';
-import { pngFromBase64, subscribeComposerElements, subscribeComposerImages } from '@/utils/composerElements';
-import { useCallback, useEffect, useRef, KeyboardEvent, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
+import { getPendingElements, pngFromBase64, removePendingElement, subscribeComposerElements, subscribeComposerImages, subscribePendingElements } from '@/utils/composerElements';
+import { useCallback, useEffect, useRef, KeyboardEvent, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from 'react';
 import { CommandPalettePanel } from '@/commandPalette/ui/CommandPalettePanel';
 import { useCommandPalette } from '@/commandPalette/hooks/useCommandPalette';
 import { PanelSectionId, PanelItemType, CommandItem } from '@/types/commandPalette';
@@ -26,6 +25,7 @@ import { useSendToSession } from '@/hooks/useSendToAgent';
 import { EscapeStreak } from './hooks/escapeStreak';
 import { useBridgeContext } from '@/contexts/BridgeContext';
 import { ImageAttachSource, SessionState } from '@/types';
+import { ImageAttachment } from '@/types/attachment';
 import { useAttachments } from './hooks/useAttachments';
 import { useHostClipboardPaste } from './hooks/useHostClipboardPaste';
 import { clipboardCarriesFile } from './clipboardCarriesFile';
@@ -33,7 +33,6 @@ import { clipboardIsEmpty } from './clipboardIsEmpty';
 import { AttachmentPreview } from './AttachmentPreview';
 import { ContextWindowTag } from './ContextWindowTag';
 import { IdeSelectionTag } from './IdeSelectionTag';
-import { ArtifactTag } from './ArtifactTag';
 import { ModelTag } from './ModelTag';
 import { DragOverlay } from './DragOverlay';
 import { AttachMenu } from './AttachMenu';
@@ -161,6 +160,8 @@ export function ChatInput() {
   // EDITOR_CONTEXT, highlighted as chips in the composer. Reset on submit and
   // session switch (where `value` returns to '').
   const [pathTokens, setPathTokens] = useState<string[]>([]);
+  // Elements picked in the Browser pane, shown as chips in the attachment row.
+  const pageElements = useSyncExternalStore(subscribePendingElements, getPendingElements);
 
   const {
     attachments,
@@ -590,7 +591,7 @@ export function ChatInput() {
     if (disabled) return;
     // A file still travelling has no path yet, so the message would leave without it.
     if (uploads.length > 0) return;
-    if (!value.trim() && attachments.length === 0) return;
+    if (!value.trim() && attachments.length === 0 && pageElements.length === 0) return;
 
     if (recipient) {
       // Two forms of the same message. What the user typed, chip and all, is
@@ -632,6 +633,7 @@ export function ChatInput() {
     disabled,
     value,
     attachments,
+    pageElements,
     uploads,
     pushToHistory,
     recipient,
@@ -739,16 +741,17 @@ export function ChatInput() {
       setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token])),
   });
 
-  // A page element picked in the Browser pane arrives as a chip at the caret.
-  useEffect(() => subscribeComposerElements((token, element) => {
-    if (element.screenshot) void addImageAttachment(new File([pngFromBase64(element.screenshot)], 'element.png', { type: 'image/png' }), ImageAttachSource.Button);
-    const el = textareaRef.current;
-    const caret = el ? getCaretOffset(el) : value.length;
-    const { nextValue, nextCaret } = insertAtCursor(value, `${token} `, caret);
-    onChange(nextValue);
-    setPathTokens(prev => (prev.includes(token) ? prev : [...prev, token]));
-    requestAnimationFrame(() => { if (textareaRef.current) setCaretOffset(textareaRef.current, nextCaret); });
-  }), [value, onChange, textareaRef, addImageAttachment]);
+  // A page element picked in the Browser pane arrives as a chip in the attachment row, with its picture.
+  useEffect(() => subscribeComposerElements((_token, element, imageName) => {
+    if (element.screenshot && imageName) void addImageAttachment(new File([pngFromBase64(element.screenshot)], imageName, { type: 'image/png' }), ImageAttachSource.Button);
+  }), [addImageAttachment]);
+  // Taking a chip out takes its picture out with it.
+  const removePageElement = useCallback((token: string) => {
+    const entry = getPendingElements().find((e) => e.token === token);
+    const picture = entry?.imageName ? attachments.find((att) => att instanceof ImageAttachment && att.fileName === entry.imageName) : undefined;
+    if (picture) removeAttachment(picture.id);
+    removePendingElement(token);
+  }, [attachments, removeAttachment]);
   useEffect(() => subscribeComposerImages((png, name) => {
     void addImageAttachment(new File([png], name, { type: 'image/png' }), ImageAttachSource.Button);
   }), [addImageAttachment]);
@@ -1169,7 +1172,7 @@ export function ChatInput() {
     // undo entry, and fires `input`, which handleRichChange picks up.
   }, [handlePaste, pasteFromHost]);
 
-  const hasValue = (!!value.trim() || attachments.length > 0) && uploads.length === 0;
+  const hasValue = (!!value.trim() || attachments.length > 0 || pageElements.length > 0) && uploads.length === 0;
 
   return (
     <div className="max-w-[44rem] mx-auto px-4 pb-[14px] pt-2">
@@ -1492,6 +1495,8 @@ export function ChatInput() {
         {/* 첨부 미리보기 */}
         <AttachmentPreview
           attachments={attachments}
+          elements={pageElements}
+          onRemoveElement={removePageElement}
           uploads={uploads}
           onRemove={removeAttachment}
           onReorder={reorderAttachments}
@@ -1529,8 +1534,6 @@ export function ChatInput() {
             </div>
             {/* IDE 컨텍스트 태그: 현재 열린 파일/선택을 표시하고 포함 여부를 토글 */}
             <IdeSelectionTag />
-            {/* 이 세션이 게시한 Artifact: 이름(여럿이면 개수), 클릭 또는 Ctrl+]로 브라우저에서 연다 (#593) */}
-            <ArtifactTag />
         </>}
         barEnd={<>
             {/* 모델 태그는 좁아지면 말줄임되고(min-w-0 — 프레임이 준다), 액션

@@ -148,41 +148,6 @@ html:root [data-dnd-dragging] {
   box-decoration-break: clone;
 }
 
-/* An element picked in the Browser pane (#593): a rectangular tag with the pointer icon in front, as in Claude
-   Desktop. The icon is painted into the room the token's leading spaces hold, so no layout is added. */
-.richInputChip--element {
-  position: relative;
-  color: var(--text-primary);
-  background-color: color-mix(in srgb, var(--text-primary) 13%, transparent);
-  border-radius: 6px;
-  /* Vertical padding on an inline box does not change the line, so it is free; sideways room is not, so the
-     token's own text holds it (a leading icon room and a trailing thin space) and nothing spills onto the
-     characters beside the chip. */
-  padding-block: 2px;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 22%, transparent);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-.richInputChip--element .richInputChipIcon {
-  /* Takes no room, and stands where the chip's text begins: on the first line when the chip wraps. */
-  display: inline-block;
-  position: relative;
-  width: 0;
-  height: 1em;
-  vertical-align: text-bottom;
-}
-.richInputChip--element .richInputChipIcon::before {
-  content: '';
-  position: absolute;
-  left: 0.1em;
-  top: 0.1em;
-  width: 0.8em;
-  height: 0.8em;
-  background-color: var(--text-secondary);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -1000 1000 1000'%3E%3Cpath transform='scale(1 -1)' d='M174 826Q188 840 207.5 845.0Q227 850 246 844L855 648Q877 642 890.0 623.5Q903 605 903 583Q903 559 888.0 540.0Q873 521 849 516L624 467Q634 470 640.0 478.0Q646 486 645.5 496.5Q645 507 638 515L852 300Q868 285 868.0 263.0Q868 241 852 225L775 148Q760 132 737.5 132.0Q715 132 700 148L485 362Q493 355 503.5 354.5Q514 354 522.0 360.0Q530 366 533 376L484 151Q479 127 460.0 112.0Q441 97 417 97Q395 97 377.0 110.0Q359 123 352 145L156 754Q150 773 155.0 792.5Q160 812 174 826ZM214 786Q207 780 210 771L405 162Q406 158 409.5 155.5Q413 153 417 153Q422 153 425.0 156.0Q428 159 429 163L478 388Q480 399 488.5 405.0Q497 411 507.0 410.5Q517 410 525 402L740 188H735L812 265V260L598 475Q590 483 589.5 493.0Q589 503 595.0 511.5Q601 520 612 522L837 571Q841 572 844.0 575.0Q847 578 847 583Q847 587 844.5 590.5Q842 594 838 595L229 790Q220 793 214 786Z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -1000 1000 1000'%3E%3Cpath transform='scale(1 -1)' d='M174 826Q188 840 207.5 845.0Q227 850 246 844L855 648Q877 642 890.0 623.5Q903 605 903 583Q903 559 888.0 540.0Q873 521 849 516L624 467Q634 470 640.0 478.0Q646 486 645.5 496.5Q645 507 638 515L852 300Q868 285 868.0 263.0Q868 241 852 225L775 148Q760 132 737.5 132.0Q715 132 700 148L485 362Q493 355 503.5 354.5Q514 354 522.0 360.0Q530 366 533 376L484 151Q479 127 460.0 112.0Q441 97 417 97Q395 97 377.0 110.0Q359 123 352 145L156 754Q150 773 155.0 792.5Q160 812 174 826ZM214 786Q207 780 210 771L405 162Q406 158 409.5 155.5Q413 153 417 153Q422 153 425.0 156.0Q428 159 429 163L478 388Q480 399 488.5 405.0Q497 411 507.0 410.5Q517 410 525 402L740 188H735L812 265V260L598 475Q590 483 589.5 493.0Q589 503 595.0 511.5Q601 520 612 522L837 571Q841 572 844.0 575.0Q847 578 847 583Q847 587 844.5 590.5Q842 594 838 595L229 790Q220 793 214 786Z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
 /* Clickable path chips in submitted message bubbles brighten on hover/focus to
    signal they open the file. Plain (folder) chips keep the static appearance. */
 .richInputChip[role='button']:hover,
