@@ -2966,8 +2966,19 @@ class ClaudeCodePanel(
                 }
             }
 
+            /**
+             * Never claims a restart, because the plugin cannot know beforehand.
+             *
+             * Whether an update needs one is decided by the IDE at install time and
+             * differs by IDE build: on 2024.2 the old class loader could not be
+             * released and the IDE asked for a restart, on 263 the new version
+             * loaded into the running window. The only public way to ask ahead of
+             * time goes through an `impl` type the Marketplace does not allow, and
+             * the IDE says it itself once the update is installed. Always saying
+             * "restart needed" was wrong on every build that does not need one.
+             */
             override suspend fun requiresRestart(): Boolean {
-                return true
+                return false
             }
 
             override suspend fun getIdeRoot(workingDir: String?): String? {
