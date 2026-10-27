@@ -686,6 +686,21 @@ export function SessionProvider({ children }: SessionProviderProps) {
     return newlyCreatedSessionIds.current.has(sessionId);
   }, []);
 
+  // The mark only covers the stay in the session that was just created: the first
+  // send is on screen but not on disk yet, so SessionLoader must neither wipe nor
+  // reload it. Once the user leaves, the screen is rebuilt from the transcript
+  // like any other session — a mark that outlived the stay made every later
+  // return skip both the clearing and the loading, and the conversation of the
+  // session the user came from stayed under this session's title (#610).
+  const previousSessionIdRef = useRef<string | null>(currentSessionId);
+  useEffect(() => {
+    const previous = previousSessionIdRef.current;
+    previousSessionIdRef.current = currentSessionId;
+    if (previous && previous !== currentSessionId) {
+      newlyCreatedSessionIds.current.delete(previous);
+    }
+  }, [currentSessionId]);
+
   // LogForwarder에 현재 세션 ID 동기화
   useEffect(() => {
     getLogForwarder()?.setSessionId(currentSessionId);
