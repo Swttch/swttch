@@ -12,6 +12,15 @@ import type {Instance} from "tippy.js";
  * own layout — `truncate`, flex, click handlers — is preserved. `children` must
  * therefore be a single ref-accepting element. When `content` is empty the child
  * is returned untouched, so callers can pass a maybe-undefined value.
+ *
+ * ★ ALWAYS CONSIDER THE UI ZOOM when anything here is placed or sized. `<html>` carries CSS
+ * `zoom` (utils/zoom.ts, `--ui-zoom`), but Tippy measures the button in SCREEN pixels and writes
+ * the tooltip's position back as `transform: translate(x, y)`. Inside the zoomed document that
+ * translation is scaled a second time, so at 90% the tooltip drifted up and to the left of the
+ * button by a tenth of its distance from the window's corner. This has come back more than once.
+ * index.css cancels it for `[data-tippy-root]` (wrapper un-zoomed, tooltip box zoomed again);
+ * keep that rule working, and test any new placement logic, `offset`, `appendTo` or popper
+ * modifier at a zoom other than 100%, never only at 100%, where the error is zero.
  */
 interface Props {
     content?: ReactNode;
@@ -40,6 +49,14 @@ interface Props {
      */
     inBody?: boolean;
     /**
+     * Draw it the way Claude Desktop's tooltips are drawn: a smaller, flatter box in a fixed dark
+     * grey, with `shortcut` after the text in a fainter tone. Rendered into <body>, so it is placed
+     * from the button and kept inside the window whatever box the button sits in.
+     */
+    desktop?: boolean;
+    /** The keys that do the same thing, shown after the text of a `desktop` tooltip (`⌘\\`). */
+    shortcut?: string;
+    /**
      * Called when the tooltip actually becomes visible.
      *
      * Needed because mounting is NOT showing here: Tippy's headless `render`
@@ -52,7 +69,7 @@ interface Props {
 }
 
 export function Tooltip(props: Props) {
-    const {content, children, placement = "top", selectable = false, inBody = false, onShow} = props;
+    const {content, children, placement = "top", selectable = false, inBody = false, desktop = false, shortcut, onShow} = props;
     const interactive = props.interactive || selectable;
 
     const instance = useRef<Instance | null>(null);
@@ -91,7 +108,7 @@ export function Tooltip(props: Props) {
                 }
                 return undefined;
             }}
-            appendTo={interactive || inBody ? () => document.body : undefined}
+            appendTo={interactive || inBody || desktop ? () => document.body : undefined}
             render={(attrs) => (
                 <div
                     // Never wider than the window. Tippy flips to the opposite
@@ -101,13 +118,18 @@ export function Tooltip(props: Props) {
                     // what gives flipping somewhere to go. No spacing token
                     // expresses "the smaller of 32rem and the window", hence the
                     // arbitrary value.
-                    className={`max-w-[min(32rem,calc(100vw-1rem))] whitespace-pre-wrap break-all rounded-md border border-border-default bg-surface-overlay px-2 py-1 text-xs text-text-primary shadow-lg z-50${selectable ? " select-text cursor-text" : ""}`}
+                    className={desktop
+                        // Measured on Claude Desktop's own tooltip: #303030, 13px/18px, 3px 8px, radius 6px, a 1px
+                        // inner ring and a soft drop shadow, text at 93% white.
+                        ? "z-50 flex items-center gap-3 whitespace-nowrap rounded-md bg-[#303030] px-2 py-[3px] text-[0.8125rem] leading-[18px] text-white/90 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04),0_1px_2px_rgba(11,11,11,0.06),0_2px_8px_rgba(0,0,0,0.24)]"
+                        : `max-w-[min(32rem,calc(100vw-1rem))] whitespace-pre-wrap break-all rounded-md border border-border-default bg-surface-overlay px-2 py-1 text-xs text-text-primary shadow-lg z-50${selectable ? " select-text cursor-text" : ""}`}
                     onMouseEnter={selectable ? () => { overTooltip.current = true; } : undefined}
                     onMouseLeave={selectable ? () => { overTooltip.current = false; } : undefined}
                     onMouseDown={selectable ? startPress : undefined}
                     {...attrs}
                 >
                     {content}
+                    {desktop && shortcut && <span className="text-white/50">{shortcut}</span>}
                 </div>
             )}
         >

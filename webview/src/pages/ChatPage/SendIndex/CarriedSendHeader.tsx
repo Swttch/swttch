@@ -1,3 +1,4 @@
+import { CrossSessionMessageRenderer, parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
 import { StickySendHeader } from '../StickySendHeader';
 import { MessageBox } from '../message-renderers/components/MessageBox';
 
@@ -26,6 +27,27 @@ interface Props {
  * real bubble, unabridged.
  */
 export function CarriedSendHeader({ preview }: Props) {
+  const cross = parseCrossSessionPreview(preview);
+  if (cross) {
+    return (
+      <StickySendHeader onClick={() => {}}>
+        <CrossSessionMessageRenderer
+          message={cross}
+          renderBody={(body) => (
+            <div className="group pt-2 pb-4 px-4 space-y-2.5">
+              <div className="flex items-start">
+                <div className="relative min-w-0">
+                  <MessageBox>
+                    <div className="text-text-primary/80 text-[1rem] leading-[1.5] whitespace-pre-wrap break-words">{body}</div>
+                  </MessageBox>
+                </div>
+              </div>
+            </div>
+          )}
+        />
+      </StickySendHeader>
+    );
+  }
   return (
     <StickySendHeader onClick={() => {}}>
       {/*

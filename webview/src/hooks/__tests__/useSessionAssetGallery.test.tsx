@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MessageType, type SessionAsset } from '@/shared';
+import { MessageType, type SessionAsset, type SessionOutput } from '@/shared';
 
 const send = vi.fn();
 const isSponsor = vi.fn(() => false);
@@ -27,6 +27,13 @@ function asset(entryUuid: string, blockIndex: number): SessionAsset {
   return { entryUuid, blockIndex, mediaType: 'image/png', timestamp: null, byteSize: 3, messagePreview: '' };
 }
 
+/** Pictures Claude made: a `Read` picture between the attachments, and a sent file at the end. */
+const OUTPUTS: SessionOutput[] = [
+  { kind: 'image', entryUuid: 'read1', blockIndex: 0, partIndex: 1, mediaType: 'image/png', byteSize: 3, timestamp: null, tool: 'Read' },
+  { kind: 'file', entryUuid: 'send1', blockIndex: 0, attachmentIndex: 0, path: '/a/p.png', name: 'p.png', isImage: true, timestamp: null },
+  { kind: 'file', entryUuid: 'send1', blockIndex: 0, attachmentIndex: 1, path: '/a/t.csv', name: 't.csv', isImage: false, timestamp: null },
+];
+
 /** Three entries, one image each; the middle one is "this message". */
 const SESSION: SessionAsset[] = [asset('older', 0), asset('mine', 1), asset('newer', 0)];
 
@@ -48,13 +55,19 @@ function open(overrides: Partial<Parameters<typeof useSessionAssetGallery>[0]> =
   );
 }
 
+/** Whether the session also holds pictures Claude made; off for the attachment-only cases. */
+let madeByClaude = false;
+
 beforeEach(() => {
+  madeByClaude = false;
   send.mockReset();
   isSponsor.mockReturnValue(false);
   sessionContext.mockReturnValue({ currentSessionId: 's1' });
-  send.mockImplementation(async (type: string) =>
-    type === MessageType.GET_SESSION_ASSETS ? { status: 'ok', assets: SESSION } : { status: 'gone' },
-  );
+  send.mockImplementation(async (type: string) => {
+    if (type === MessageType.GET_SESSION_ASSETS) return { status: 'ok', assets: SESSION };
+    if (type === MessageType.GET_SESSION_OUTPUTS) return { status: 'ok', outputs: madeByClaude ? OUTPUTS : [] };
+    return { status: 'gone' };
+  });
 });
 
 describe('useSessionAssetGallery — non-sponsor', () => {
@@ -180,5 +193,75 @@ describe('useSessionAssetGallery — closed viewer', () => {
     expect(send).not.toHaveBeenCalled();
     expect(result.current.srcs).toEqual(['data:image/png;base64,MINE']);
     expect(result.current.lockedCount).toBe(0);
+  });
+});
+
+describe('useSessionAssetGallery — pictures Claude made', () => {
+  beforeEach(() => {
+    madeByClaude = true;
+  });
+
+  /** The viewer opened on a `Read` picture (the second image of its block). */
+  function openRead(overrides: Partial<Parameters<typeof useSessionAssetGallery>[0]> = {}) {
+    return renderHook(
+      () =>
+        useSessionAssetGallery({
+          entryUuid: 'read1',
+          localSrcs: ['data:image/png;base64,READ'],
+          localKeys: ['read1:0:1'],
+          openedLocalIndex: 0,
+          ...overrides,
+        }),
+      { wrapper },
+    );
+  }
+
+  it('lets a sponsor step from a Read picture across the attachments and the sent picture', async () => {
+    isSponsor.mockReturnValue(true);
+    const { result } = openRead();
+
+    // older, mine, newer (attachments), then the Read picture and the sent png.
+    await waitFor(() => expect(result.current.srcs).toHaveLength(5));
+
+    expect(result.current.initialIndex).toBe(3);
+    expect(result.current.srcs[3]).toBe('data:image/png;base64,READ');
+    expect(result.current.lockedCount).toBe(0);
+  });
+
+  it('lets a sponsor step from an attachment into the pictures Claude made', async () => {
+    isSponsor.mockReturnValue(true);
+    const { result } = open();
+
+    await waitFor(() => expect(result.current.srcs).toHaveLength(5));
+
+    expect(result.current.initialIndex).toBe(1);
+  });
+
+  it('fetches a returned picture by its coordinate, and a sent one from its path', async () => {
+    isSponsor.mockReturnValue(true);
+    const { result } = open();
+    await waitFor(() => expect(result.current.srcs).toHaveLength(5));
+    send.mockImplementation(async (type: string) =>
+      type === MessageType.GET_SESSION_OUTPUT_DATA
+        ? { status: 'ok', source: { type: 'base64', media_type: 'image/png', data: 'RET' } }
+        : { status: 'ok', assets: SESSION, outputs: OUTPUTS },
+    );
+
+    await act(async () => result.current.onIndexChange(3));
+
+    await waitFor(() => expect(result.current.srcs[3]).toBe('data:image/png;base64,RET'));
+    expect(send).toHaveBeenCalledWith(
+      MessageType.GET_SESSION_OUTPUT_DATA,
+      expect.objectContaining({ entryUuid: 'read1', blockIndex: 0, partIndex: 1 }),
+    );
+  });
+
+  it('keeps a non-sponsor inside the clicked picture and counts the rest as locked', async () => {
+    const { result } = openRead();
+
+    await waitFor(() => expect(result.current.lockedCount).toBe(4));
+
+    expect(result.current.srcs).toEqual(['data:image/png;base64,READ']);
+    expect(result.current.initialIndex).toBe(0);
   });
 });

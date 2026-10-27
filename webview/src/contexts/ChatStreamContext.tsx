@@ -1,3 +1,4 @@
+import { expandElementTokens, getPendingElements } from '@/utils/composerElements';
 import { createContext, useContext, ReactNode, useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useChatStream } from '../hooks/useChatStream';
@@ -773,8 +774,9 @@ export function ChatStreamProvider(props: ChatStreamProviderProps) {
   const handleSubmit = useCallback(
     (e: React.FormEvent | undefined, inputMode: InputMode, attachments?: Attachment[], invertFollowUp = false) => {
       if (e) e.preventDefault();
-      const trimmedInput = inputRef.current.trim();
-      if (!trimmedInput && (!attachments || attachments.length === 0)) return;
+      const typedInput = inputRef.current.trim();
+      if (!typedInput && (!attachments || attachments.length === 0) && getPendingElements().length === 0) return;
+      const trimmedInput = expandElementTokens(typedInput);
       // `/usage` (alone, or followed by a space and anything) opens the usage
       // modal instead of being sent to the CLI, matching the /usage slash-command
       // override. Sending it to the CLI just echoed the raw usage text back as a

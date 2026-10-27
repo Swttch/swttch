@@ -1,3 +1,5 @@
+import { useTranslation } from '@/i18n';
+import { parseCrossSessionPreview } from '../message-renderers/CrossSessionMessageRenderer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { matchesShortcut, shouldToggleOnShortcut } from '@/utils/shortcut';
 import type { SessionSend } from '@/shared';
@@ -243,7 +245,10 @@ function isMoveKey(key: string): boolean {
  * shape costs, and it is the same cost the products that ship it already pay.
  */
 function SendIndexCard({ text }: { text: string }) {
-  const lines = text.split('\n').slice(0, CARD_MAX_LINES);
+  const { t } = useTranslation('chatTools');
+  // A message from another session is shown by who sent it and what it says, not with its tags.
+  const cross = parseCrossSessionPreview(text);
+  const lines = (cross ? [`${t('crossSessionMessage.title')} ${cross.name}`.trim(), ...cross.body.split('\n')] : text.split('\n')).slice(0, CARD_MAX_LINES);
 
   return (
     /*

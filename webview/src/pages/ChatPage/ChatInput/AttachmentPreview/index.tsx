@@ -6,6 +6,8 @@ import { ImageLightbox } from '@/components/ImageLightbox';
 import { ImagePreview } from './ImagePreview';
 import { FileChip } from './FileChip';
 import { FolderChip } from './FolderChip';
+import { ElementChip } from './ElementChip';
+import type { PendingElement } from '@/utils/composerElements';
 import { UploadChip } from './UploadChip';
 import { FileTile, FolderTile, UploadTile } from './Tiles';
 import { SortableChip } from './SortableChip';
@@ -15,6 +17,9 @@ import { usePictureSources } from './usePictureSources';
 
 interface Props {
   attachments: Attachment[];
+  /** Elements picked in the Browser pane, drawn first in the row. */
+  elements?: readonly PendingElement[];
+  onRemoveElement?: (token: string) => void;
   /** Files and folders still travelling to the backend; drawn after the finished ones. */
   uploads?: PendingUpload[];
   onRemove: (id: string) => void;
@@ -24,7 +29,7 @@ interface Props {
 }
 
 export function AttachmentPreview(props: Props) {
-  const { attachments, uploads = [], onRemove, onReorder, onCancelUpload } = props;
+  const { attachments, elements = [], onRemoveElement, uploads = [], onRemove, onReorder, onCancelUpload } = props;
 
   // Held here rather than inside ImagePreview: stepping to the next image needs
   // the whole set, and a single preview only knows itself. This is also what
@@ -32,13 +37,16 @@ export function AttachmentPreview(props: Props) {
   const [openedIndex, setOpenedIndex] = useState<number | null>(null);
   const pictureSources = usePictureSources(attachments);
 
-  if (attachments.length === 0 && uploads.length === 0) return null;
+  if (attachments.length === 0 && uploads.length === 0 && elements.length === 0) return null;
 
   // A picture is a picture however it got here: pasted or dropped (inline), or a
   // picture file picked or dropped by path. Pictures are what the viewer steps
   // through, in the order of the row.
   const isPicture = (att: Attachment) => isImageAttachment(att) || (isFileAttachment(att) && isPictureName(att.fileName));
   const pictures = attachments.filter(isPicture);
+  // A picked element's picture is shown inside its chip, not as a tile of its own.
+  const pictureOfElement = (name?: string) => (name ? attachments.find((att) => isImageAttachment(att) && att.fileName === name) : undefined);
+  const hiddenPictureIds = new Set(elements.flatMap((entry) => { const att = pictureOfElement(entry.imageName); return att ? [att.id] : []; }));
 
   // What the viewer can show. A picture file whose picture has not arrived, or is
   // too big to send, is left out, and a click on its card does nothing.
@@ -54,7 +62,7 @@ export function AttachmentPreview(props: Props) {
   // A thumbnail makes the row as tall as a 64px square. Beside it a one-line pill
   // looks lost, so while any picture is in the row the other chips take the same
   // square form; with no picture they stay the compact pills.
-  const asCards = pictures.length > 0;
+  const asCards = pictures.some((att) => !hiddenPictureIds.has(att.id));
 
   // One attachment alone has nowhere to move, so it does not invite a drag.
   const sortable = attachments.length > 1 && onReorder !== undefined;
@@ -87,8 +95,20 @@ export function AttachmentPreview(props: Props) {
         {/* items-start: without it the row stretches every chip to the tallest one,
             so a thumbnail makes the file chips beside it grow as tall as the picture. */}
         <div className="flex flex-wrap items-start gap-2 px-3 py-2">
+          {onRemoveElement && elements.map((entry) => {
+            const picture = pictureOfElement(entry.imageName);
+            return (
+              <ElementChip
+                key={entry.token}
+                token={entry.token}
+                pictureSrc={picture && isImageAttachment(picture) ? picture.dataUrl : undefined}
+                onOpen={picture ? () => openPicture(picture.id) : undefined}
+                onRemove={onRemoveElement}
+              />
+            );
+          })}
           {attachments.map((att, index) => {
-            const chip = chipOf(att);
+            const chip = hiddenPictureIds.has(att.id) ? null : chipOf(att);
             return chip && (
               <SortableChip key={att.id} id={att.id} index={index} sortable={sortable}>
                 {chip}

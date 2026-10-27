@@ -6,6 +6,8 @@ import { triggerCliAutoUpdate } from './cli-auto-update';
 import { diagnoseAuthError, authFailureDetail } from './features/auth-diagnosis';
 import { watchReviewBase } from './features/reviewBaseWatch';
 import { EditedFileTracker } from './features/editedFileTracker';
+import { ArtifactAutoOpener } from './features/artifactAutoOpen';
+import { keepSentFile, sentFilePathsOf } from './features/sentFileStore';
 import { getWorkflowTracker, peekWorkflowTracker } from './features/workflow-tracker';
 import { isWslUncPath } from './wsl-path';
 import { reportBackendError } from './features/telemetry';
@@ -32,6 +34,10 @@ import { ingestRateLimitWindows } from './handlers/getUsage';
 // Tracks files Claude edits so the IDE can be told to reload them once the
 // edit completes on disk. Shared across sessions — tool_use ids are unique.
 const editedFileTracker = new EditedFileTracker();
+
+// Opens a page the first time Claude publishes it, as the terminal does (#593).
+// The CLI only does that itself in an interactive session, never under -p.
+const artifactAutoOpener = new ArtifactAutoOpener();
 
 // Tracks background dynamic workflows and streams live progress to the webview.
 // Lazily created on the first stream event because it needs the (single,
@@ -322,6 +328,19 @@ export function buildArtifactEnv(
 ): { CLAUDE_CODE_ARTIFACT?: string } {
   if (inherited.CLAUDE_CODE_ARTIFACT !== undefined) return {};
   return { CLAUDE_CODE_ARTIFACT: '1' };
+}
+
+/**
+ * The env that lets the CLI offer `SendUserFile` (Claude hands the user a file or
+ * picture, which the chat then shows as a card). A headless `-p` spawn leaves the
+ * tool out unless this variable is set, while the terminal REPL has it. The user's
+ * own value, on or off, wins; only an absent value is filled in (#593).
+ */
+export function buildAttachmentsEnv(
+  inherited: NodeJS.ProcessEnv = process.env,
+): { CLAUDE_CODE_ATTACHMENTS_BY_PATH?: string } {
+  if (inherited.CLAUDE_CODE_ATTACHMENTS_BY_PATH !== undefined) return {};
+  return { CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' };
 }
 
 // result 이벤트 수신 여부 추적 (비정상 종료 시 에러 전파 판단용)
@@ -681,6 +700,7 @@ export async function ensureClaudeProcess(
       CLAUDECODE: undefined,
       ...buildCheckpointingEnv(claudeSettings),
       ...buildArtifactEnv(),
+      ...buildAttachmentsEnv(),
     },
     // win32: route this long-lived chat CLI through a Job Object wrapper so its
     // whole tree (incl. MSYS/git-bash workers that escape taskkill /F /T) dies with
@@ -1346,6 +1366,19 @@ function handleStreamEvent(
       console.error('[node-backend]', 'Failed to refresh files in IDE:', err);
     });
   }
+
+  // Open a freshly published Artifact in the browser once its tool_result brings
+  // the address. Read-only: the event is still forwarded below unchanged.
+  artifactAutoOpener.recordPublishes(event);
+  for (const url of artifactAutoOpener.collectUrlsToOpen(event)) {
+    bridge.openUrl(url).catch((err) => {
+      console.error('[node-backend]', 'Failed to open Artifact in browser:', err);
+    });
+  }
+
+  // Keep a copy of every file Claude sends, so the chat can still show it once the original is
+  // moved or deleted, as Claude Desktop does by uploading it. Read-only for the event.
+  for (const path of sentFilePathsOf(event)) void keepSentFile(path);
 
   // Detect background dynamic workflows and stream their live progress. Pure
   // side-effect — the raw CLI event is still forwarded unchanged below.

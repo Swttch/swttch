@@ -2,6 +2,7 @@
   "tool": {
     "in": "دخل",
     "out": "خرج",
+    "artifactFallbackTitle": "أرتيفاكت",
     "softWrap": {
       "wrap": "التفاف الأسطر الطويلة",
       "unwrap": "إيقاف الالتفاف"
@@ -358,5 +359,8 @@
         "query": "استعلام"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

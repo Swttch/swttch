@@ -24,6 +24,21 @@ html:root [data-dnd-dragging] {
   max-height: calc(var(--dnd-height, auto) / var(--ui-zoom, 1));
 }
 
+/* ============================================
+   Tooltips under the UI zoom
+   Tippy places a tooltip with `transform: translate(x, y)` in screen pixels, measured from the
+   button. The tooltip sits in <body>, inside <html>'s CSS `zoom`, which scales the translation a
+   second time: at 90% it landed a tenth of its distance from the corner up and to the left of the
+   button. The wrapper takes the zoom back off so the translation is exact, and the tooltip box
+   inside puts it on again, so its text and padding still follow the zoom like the rest of the UI.
+   ============================================ */
+[data-tippy-root] {
+  zoom: calc(1 / var(--ui-zoom, 1));
+}
+[data-tippy-root] > * {
+  zoom: var(--ui-zoom, 1);
+}
+
 @layer utilities {
   .no-scrollbar {
     -ms-overflow-style: none;

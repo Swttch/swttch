@@ -1,3 +1,4 @@
+import { reportTitleToParent } from '@/components/FilePreviewPane/pageFrame';
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -72,6 +73,9 @@ function AppContent() {
   const [isAssetsOpen, setIsAssetsOpen] = useState(false);
   const location = useLocation();
   const backgroundLocation = location.state?.backgroundLocation;
+
+  // Shown inside the Browser pane's frame, the page tells its tab the title it has as it changes.
+  useEffect(() => reportTitleToParent(), []);
 
   useEffect(() => {
     const handler = () => setIsAccountUsageOpen(true);

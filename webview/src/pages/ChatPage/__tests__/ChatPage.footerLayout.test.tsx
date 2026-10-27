@@ -49,6 +49,7 @@ vi.mock('../ScheduledMessagesPanel', () => ({
 }));
 vi.mock('@/components/McpModal', () => ({ McpModal: stub('mcp') }));
 vi.mock('@/components/SideQuestionModal', () => ({ SideQuestionModal: stub('sideQuestion') }));
+vi.mock('../SessionRail', () => ({ SessionRail: () => null }));
 vi.mock('../../DiffPage/DiffOverlay', () => ({ DiffOverlay: stub('diff') }));
 vi.mock('@/components/Announcements/placements', () => ({
   AnnouncementTopBannerSlot: stub('annTop'),

@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "Artefakt",
     "softWrap": {
       "wrap": "Lange Zeilen umbrechen",
       "unwrap": "Umbruch aufheben"
@@ -338,5 +339,8 @@
         "query": "Abfrage"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

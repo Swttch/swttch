@@ -243,7 +243,11 @@ export enum DockItemId {
   ASSETS = 'assets',
   /** The "By the way" (`/btw`) window. A newly shipped item, so it lands in the ⋮ menu until it is pulled out. */
   SIDE_QUESTION = 'sideQuestion',
+  /** The session rail (environment, context, outputs). A newly shipped item, so it lands in the ⋮ menu until it is pulled out. */
+  SESSION_RAIL = 'sessionRail',
   NEW_TAB = 'newTab',
+  /** The Browser pane (#593). A newly shipped item, so it lands in the ⋮ menu until it is pulled out. */
+  BROWSER = 'browser',
   // Accounts are NOT a dock item: the switcher is a picker (a list of saved
   // accounts), not a single action, and always sits as its own icon to the
   // right of ⋮ instead. A layout saved with the old 'accountSwitcher' id simply

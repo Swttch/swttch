@@ -90,6 +90,13 @@
       "remaining": "距自动压缩还剩 {{percent}}% 的上下文。",
       "clickToCompact": "点击立即压缩。"
     },
+    "artifacts": {
+      "fallbackTitle": "工件",
+      "count": "{{total}} 个工件",
+      "listTitle": "本会话的工件",
+      "openOne": "在浏览器中打开 · Ctrl+]",
+      "openLatest": "选择一个在浏览器中打开 · Ctrl+] 打开最新的"
+    },
     "dragOverlay": {
       "dropHere": "将文件或文件夹拖放到此处"
     },
@@ -242,6 +249,9 @@
       "expandSubtree": "展开 {{name}}",
       "refreshTitle": "刷新列表",
       "includeNested": "包含子项目"
+    },
+    "browser": {
+      "title": "Browser"
     }
   },
   "acceptPlan": {
@@ -731,6 +741,8 @@
     "openScreen": "查看此会话的资源",
     "showAll": "查看全部",
     "sponsorHint": "跨消息浏览资源，是我们为赞助者准备的一点小心意，还请见谅",
+    "outputsTitle": "Claude 生成的内容",
+    "sentFiles": "已发送的文件",
     "pinToDock": "固定到工具坞",
     "unpinFromDock": "取消固定"
   },
@@ -756,6 +768,178 @@
     "openFailed": "无法打开链接",
     "openInBrowser": "在浏览器中打开"
   },
+  "sessionRail": {
+    "title": "会话栏",
+    "environment": "环境",
+    "context": "上下文",
+    "outputs": "产出",
+    "outputsEmpty": "暂无内容。Claude 为你生成的文件、图片和页面会显示在这里。",
+    "showMore": "显示更多",
+    "contextUsed": "已使用 {{percent}}%",
+    "contextLoading": "正在加载用量...",
+    "contextUnavailable": "无法读取用量。",
+    "contextNote": "最后更新：刚刚。当前回复结束后会刷新。",
+    "toolImage": "{{tool}} 图片"
+  },
+  "sentFiles": {
+    "sharing": "正在共享文件…",
+    "download": "下载",
+    "downloadFailed": "无法保存文件",
+    "opened": "已打开 {{name}}"
+  },
+  "linkCard": {
+    "openedInBrowser": "已在浏览器中打开",
+    "open": "打开",
+    "more": "更多选项",
+    "loading": "加载中…"
+  },
+  "filePreview": {
+    "label": "{{name}} 的预览",
+    "close": "关闭",
+    "openInEditor": "在编辑器中打开",
+    "openWithSystemApp": "用系统应用打开",
+    "loading": "正在加载…",
+    "unsupported": "这里无法预览此类文件。",
+    "tooLarge": "此文件大小为 {{size}}，超过了预览可显示的 {{limit}}。请改用编辑器或系统应用打开。",
+    "unreadable": "无法读取此文件，它可能已被移动或删除。",
+    "unplayable": "此视频无法在这里播放。IDE 内置浏览器可能不支持它的编码。请改用系统应用打开。",
+    "openPublished": "打开已发布的页面",
+    "expand": "展开",
+    "collapse": "收起",
+    "download": "导出",
+    "copySource": "复制页面源码",
+    "reload": "刷新",
+    "copied": "已复制页面源码",
+    "resize": "调整大小",
+    "showSource": "查看源码",
+    "showRendered": "查看渲染结果",
+    "modified": "{{when}}修改",
+    "linkTitle": "要打开此链接吗?",
+    "linkMessage": "此页面想要打开 {{url}}。将在 {{browser}} 中打开。",
+    "linkOpen": "在浏览器中打开",
+    "back": "后退",
+    "forward": "前进",
+    "more": "更多",
+    "closeOthers": "关闭其他标签页",
+    "closeTab": "关闭标签页",
+    "address": "页面地址",
+    "tabs": "浏览器标签页",
+    "newTab": "New tab",
+    "blankTitle": "Browse with Claude",
+    "blankBody": "Enter a URL or ask Claude to open a site. Claude can read, click, and type.",
+    "annotate": "Annotate",
+    "annotatePen": "Draw",
+    "annotateShape": "Shape",
+    "annotateShapes": "Shapes",
+    "annotateText": "Text",
+    "annotateExit": "Exit annotation",
+    "selectElement": "Select element",
+    "annotateAddToChat": "Add to chat",
+    "annotateColor": "Color",
+    "annotateWidth": "Line width",
+    "elementCopied": "Element copied",
+    "shape": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "arrow": "Arrow"
+    },
+    "viewport": {
+      "responsive": "Responsive",
+      "mobile": "Mobile",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "desktop": "Desktop"
+    },
+    "menu": {
+      "openInBrowser": "Open in {{browser}}",
+      "copyUrl": "Copy URL",
+      "copied": "Copied",
+      "saveScreenshot": "Save screenshot",
+      "openHtmlFile": "Open HTML file…",
+      "viewport": "Viewport",
+      "openLinksBuiltIn": "Open links in built-in browser",
+      "autoOpenFiles": "Auto-open files Claude writes",
+      "autoCheck": "Check for changes automatically",
+      "allowedSites": "Manage allowed sites…",
+      "cookies": "Cookies",
+      "importCookies": "Import cookies…",
+      "keepCookies": "Keep cookies",
+      "shared": "Shared",
+      "clearData": "Clear browsing data",
+      "unavailable": "This panel has no browser engine of its own, so this is not available here.",
+      "failed": "That did not work.",
+      "openInBrowserUnknown": "Open in browser",
+      "hint": {
+        "openInBrowser": "Opens this page's file in your computer's web browser.",
+        "copyUrl": "Copies the address in the address bar.",
+        "saveScreenshot": "Saves the page as shown as an image.",
+        "openHtmlFile": "Pick an HTML file on this computer and open it in a new tab.",
+        "viewport": "Choose the screen size the page is drawn at.",
+        "openLinksBuiltIn": "Opens the page's links inside this panel.",
+        "autoOpenFiles": "Opens HTML files Claude writes in a tab automatically.",
+        "autoCheck": "Loads the page again when its file changes.",
+        "allowedSites": "Manage the sites Claude may work with.",
+        "importCookies": "Brings in another browser's cookies.",
+        "keepCookies": "Choose how long cookies stay after a tab closes.",
+        "clearData": "Deletes this panel's cookies and site data.",
+        "annotate": "Draw on the page to show Claude what you mean."
+      },
+      "browserFallback": "网页浏览器",
+      "showAnnotate": "Show annotation tools",
+      "hideAnnotate": "Hide annotation tools",
+      "screenshotSaved": "Screenshot saved: {{path}}",
+      "screenshotDownloaded": "Screenshot downloaded."
+    },
+    "error": {
+      "title": "Unable to load preview",
+      "titleUnsupported": "This file cannot be previewed",
+      "titleTooLarge": "This file is too large to preview",
+      "deleted": "The file may have been deleted or moved.",
+      "back": "Back to browser"
+    },
+    "addressPlaceholder": "Enter a URL",
+    "blankDevServerPrompt": "Want to preview your app?",
+    "blankDevServerAction": "Detect dev servers",
+    "blankDevServerNone": "No running dev server was found.",
+    "webUnsupported": "Claude can't support the content of this page.",
+    "webBlocked": {
+      "title": "This site cannot be opened inside this panel",
+      "detail": "For security, this site does not allow its pages to be shown inside another program's window. It is a setting meant to stop fake screens that target a signed-in account, so it cannot be changed from this panel.",
+      "open": "Open in {{browser}}"
+    },
+    "tool": {
+      "select": "Select element",
+      "pen": "Pen",
+      "line": "Line",
+      "arrow": "Arrow",
+      "rect": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "step": "Step"
+    },
+    "color": {
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "black": "Black",
+      "white": "White"
+    },
+    "width": {
+      "thin": "Thin",
+      "medium": "Medium",
+      "thick": "Thick",
+      "extraThick": "Extra thick"
+    },
+    "annotationTool": "Annotation tool",
+    "shapes": "Shapes",
+    "inkColor": "Ink color",
+    "lineWidth": "Line width",
+    "undo": "Undo",
+    "redo": "Redo",
+    "clearAll": "Clear all",
+    "exitSelection": "Exit selection mode",
+    "selectElementDetail": "Click an element on the page to add it."
+  },
   "fileLink": {
     "copyDone": "已复制路径",
     "copyFailed": "无法复制路径",
@@ -763,5 +947,40 @@
     "open": "打开",
     "openWithSystemApp": "用系统应用打开",
     "showInFileManager": "在文件管理器中显示"
+  },
+  "artifactChip": {
+    "label": "工件",
+    "untitled": "无标题"
+  },
+  "artifactMenu": {
+    "switch": "切换工件",
+    "madeByMe": "我创建的工件",
+    "updated": "{{when}}更新",
+    "copyMarkdown": "复制为 Markdown",
+    "rename": "重命名",
+    "duplicate": "复制副本",
+    "share": "分享",
+    "openOnWeb": "在网页中打开",
+    "pin": "固定",
+    "unpin": "取消固定",
+    "report": "举报工件",
+    "delete": "删除工件",
+    "deleteTitle": "删除“{{name}}”？",
+    "deleteMessage": "其链接将对所有人失效，且无法恢复。",
+    "deleted": "已删除工件",
+    "renamed": "已重命名",
+    "pinned": "已固定",
+    "unpinned": "已取消固定",
+    "markdownCopied": "已复制为 Markdown",
+    "failed": "操作未成功",
+    "checking": "正在检查…",
+    "kitMissing": "安装扩展工具包后可使用。",
+    "kitTooOld": "更新扩展工具包后可使用。",
+    "notLinked": "在您的账户列表中未找到此工件。",
+    "notOwner": "仅所有者可以执行。",
+    "unsupported": "暂不支持。",
+    "notLoaded": "页面尚未加载。",
+    "duplicated": "已创建副本:{{name}}",
+    "cannotCopy": "无法复制此工件"
   }
 }

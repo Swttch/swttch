@@ -1,11 +1,14 @@
 import React, { ReactNode } from 'react';
 import toast from 'react-hot-toast';
 import { getAdapter } from '@/adapters';
+import { openChatFile } from '@/utils/openChatFile';
 import { Tooltip } from '@/components/Tooltip';
 import { useWorkingDirOrNull } from '@/contexts/WorkingDirContext';
 import { i18n } from '@/i18n';
 import { linkMenuStore } from '@/utils/linkMenuStore';
 import { resolveMarkdownFileLink } from '../utils/markdownFileLink';
+import { ArtifactChip } from './ArtifactChip';
+import { artifactUrlFrom } from '../ToolRenderers/ArtifactRenderer';
 
 // Streamdown's default link classes, re-applied because a custom component fully
 // replaces the default renderer (and its styling).
@@ -23,12 +26,14 @@ export const MarkdownFileLink: React.FC<{ href?: string; children?: ReactNode }>
   const workingDirectory = useWorkingDirOrNull()?.workingDirectory ?? null;
   const link = href ? resolveMarkdownFileLink(href, workingDirectory) : null;
 
+  // An Artifact page's address is a chip with the page's name, not the address itself.
+  if (href && artifactUrlFrom(href) === href) return <ArtifactChip url={href} />;
+
   if (link) {
     const open = (event: React.SyntheticEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      getAdapter()
-        .openFile(link.path, link.line, link.column)
+      openChatFile(link.path, link.line, link.column)
         .catch((err) => {
           console.error('[MarkdownFileLink] Failed to open file link:', err);
           toast.error(i18n.t('chat:fileOpenFailed', { path: link.path }));

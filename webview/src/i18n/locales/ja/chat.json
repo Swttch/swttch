@@ -90,6 +90,13 @@
       "remaining": "自動圧縮まで残り {{percent}}% のコンテキストがあります。",
       "clickToCompact": "クリックして今すぐ圧縮します。"
     },
+    "artifacts": {
+      "fallbackTitle": "アーティファクト",
+      "count": "アーティファクト {{total}} 件",
+      "listTitle": "このセッションのアーティファクト",
+      "openOne": "ブラウザで開く · Ctrl+]",
+      "openLatest": "選んでブラウザで開く · Ctrl+] で最新のものを開く"
+    },
     "dragOverlay": {
       "dropHere": "ここにファイルまたはフォルダをドロップ"
     },
@@ -242,6 +249,9 @@
       "expandSubtree": "{{name}} を展開する",
       "refreshTitle": "一覧を更新",
       "includeNested": "下位プロジェクトを含む"
+    },
+    "browser": {
+      "title": "Browser"
     }
   },
   "acceptPlan": {
@@ -731,6 +741,8 @@
     "openScreen": "このセッションのアセットを見る",
     "showAll": "すべて表示",
     "sponsorHint": "恐れ入りますが、他のメッセージのアセットへ移動できるのは、スポンサーの皆さまへのささやかな特典とさせていただいております",
+    "outputsTitle": "Claudeが作ったもの",
+    "sentFiles": "送信されたファイル",
     "pinToDock": "ドックに固定",
     "unpinFromDock": "ドックの固定を解除"
   },
@@ -756,6 +768,178 @@
     "openFailed": "リンクを開けませんでした",
     "openInBrowser": "ブラウザで開く"
   },
+  "sessionRail": {
+    "title": "セッションレール",
+    "environment": "環境",
+    "context": "コンテキスト",
+    "outputs": "成果物",
+    "outputsEmpty": "まだありません。Claudeが作成したファイル、画像、ページがここに並びます。",
+    "showMore": "もっと見る",
+    "contextUsed": "{{percent}}% 使用",
+    "contextLoading": "使用状況を読み込み中...",
+    "contextUnavailable": "使用状況を読み取れませんでした。",
+    "contextNote": "最終更新: 今。現在の応答が終わると更新されます。",
+    "toolImage": "{{tool}}の画像"
+  },
+  "sentFiles": {
+    "sharing": "ファイルを共有中…",
+    "download": "ダウンロード",
+    "downloadFailed": "ファイルを保存できませんでした",
+    "opened": "{{name}}を開きました"
+  },
+  "linkCard": {
+    "openedInBrowser": "ブラウザで開きました",
+    "open": "開く",
+    "more": "その他のオプション",
+    "loading": "読み込み中…"
+  },
+  "filePreview": {
+    "label": "{{name}} のプレビュー",
+    "close": "閉じる",
+    "openInEditor": "エディターで開く",
+    "openWithSystemApp": "システムのアプリで開く",
+    "loading": "読み込み中…",
+    "unsupported": "この種類のファイルはここではプレビューできません。",
+    "tooLarge": "このファイルは {{size}} で、プレビューで表示できる {{limit}} を超えています。エディターかシステムのアプリで開いてください。",
+    "unreadable": "このファイルを読み取れませんでした。移動または削除された可能性があります。",
+    "unplayable": "この動画はここでは再生できません。IDE 内蔵のブラウザーがエンコード形式に対応していない可能性があります。システムのアプリで開いてください。",
+    "openPublished": "公開されたページを開く",
+    "expand": "拡大",
+    "collapse": "縮小",
+    "download": "エクスポート",
+    "copySource": "ページのソースをコピー",
+    "reload": "再読み込み",
+    "copied": "ページのソースをコピーしました",
+    "resize": "サイズを変更",
+    "showSource": "ソースを表示",
+    "showRendered": "表示結果を見る",
+    "modified": "{{when}}に更新",
+    "linkTitle": "リンクを開きますか?",
+    "linkMessage": "このページが {{url}} を開こうとしています。{{browser}} で開きます。",
+    "linkOpen": "ブラウザで開く",
+    "back": "戻る",
+    "forward": "進む",
+    "more": "その他",
+    "closeOthers": "他のタブを閉じる",
+    "closeTab": "タブを閉じる",
+    "address": "ページのアドレス",
+    "tabs": "ブラウザのタブ",
+    "newTab": "New tab",
+    "blankTitle": "Browse with Claude",
+    "blankBody": "Enter a URL or ask Claude to open a site. Claude can read, click, and type.",
+    "annotate": "Annotate",
+    "annotatePen": "Draw",
+    "annotateShape": "Shape",
+    "annotateShapes": "Shapes",
+    "annotateText": "Text",
+    "annotateExit": "Exit annotation",
+    "selectElement": "Select element",
+    "annotateAddToChat": "Add to chat",
+    "annotateColor": "Color",
+    "annotateWidth": "Line width",
+    "elementCopied": "Element copied",
+    "shape": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "arrow": "Arrow"
+    },
+    "viewport": {
+      "responsive": "Responsive",
+      "mobile": "Mobile",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "desktop": "Desktop"
+    },
+    "menu": {
+      "openInBrowser": "Open in {{browser}}",
+      "copyUrl": "Copy URL",
+      "copied": "Copied",
+      "saveScreenshot": "Save screenshot",
+      "openHtmlFile": "Open HTML file…",
+      "viewport": "Viewport",
+      "openLinksBuiltIn": "Open links in built-in browser",
+      "autoOpenFiles": "Auto-open files Claude writes",
+      "autoCheck": "Check for changes automatically",
+      "allowedSites": "Manage allowed sites…",
+      "cookies": "Cookies",
+      "importCookies": "Import cookies…",
+      "keepCookies": "Keep cookies",
+      "shared": "Shared",
+      "clearData": "Clear browsing data",
+      "unavailable": "This panel has no browser engine of its own, so this is not available here.",
+      "failed": "That did not work.",
+      "openInBrowserUnknown": "Open in browser",
+      "hint": {
+        "openInBrowser": "Opens this page's file in your computer's web browser.",
+        "copyUrl": "Copies the address in the address bar.",
+        "saveScreenshot": "Saves the page as shown as an image.",
+        "openHtmlFile": "Pick an HTML file on this computer and open it in a new tab.",
+        "viewport": "Choose the screen size the page is drawn at.",
+        "openLinksBuiltIn": "Opens the page's links inside this panel.",
+        "autoOpenFiles": "Opens HTML files Claude writes in a tab automatically.",
+        "autoCheck": "Loads the page again when its file changes.",
+        "allowedSites": "Manage the sites Claude may work with.",
+        "importCookies": "Brings in another browser's cookies.",
+        "keepCookies": "Choose how long cookies stay after a tab closes.",
+        "clearData": "Deletes this panel's cookies and site data.",
+        "annotate": "Draw on the page to show Claude what you mean."
+      },
+      "browserFallback": "Webブラウザ",
+      "showAnnotate": "Show annotation tools",
+      "hideAnnotate": "Hide annotation tools",
+      "screenshotSaved": "Screenshot saved: {{path}}",
+      "screenshotDownloaded": "Screenshot downloaded."
+    },
+    "error": {
+      "title": "Unable to load preview",
+      "titleUnsupported": "This file cannot be previewed",
+      "titleTooLarge": "This file is too large to preview",
+      "deleted": "The file may have been deleted or moved.",
+      "back": "Back to browser"
+    },
+    "addressPlaceholder": "Enter a URL",
+    "blankDevServerPrompt": "Want to preview your app?",
+    "blankDevServerAction": "Detect dev servers",
+    "blankDevServerNone": "No running dev server was found.",
+    "webUnsupported": "Claude can't support the content of this page.",
+    "webBlocked": {
+      "title": "This site cannot be opened inside this panel",
+      "detail": "For security, this site does not allow its pages to be shown inside another program's window. It is a setting meant to stop fake screens that target a signed-in account, so it cannot be changed from this panel.",
+      "open": "Open in {{browser}}"
+    },
+    "tool": {
+      "select": "Select element",
+      "pen": "Pen",
+      "line": "Line",
+      "arrow": "Arrow",
+      "rect": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "step": "Step"
+    },
+    "color": {
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "black": "Black",
+      "white": "White"
+    },
+    "width": {
+      "thin": "Thin",
+      "medium": "Medium",
+      "thick": "Thick",
+      "extraThick": "Extra thick"
+    },
+    "annotationTool": "Annotation tool",
+    "shapes": "Shapes",
+    "inkColor": "Ink color",
+    "lineWidth": "Line width",
+    "undo": "Undo",
+    "redo": "Redo",
+    "clearAll": "Clear all",
+    "exitSelection": "Exit selection mode",
+    "selectElementDetail": "Click an element on the page to add it."
+  },
   "fileLink": {
     "copyDone": "パスをコピーしました",
     "copyFailed": "パスをコピーできませんでした",
@@ -763,5 +947,40 @@
     "open": "開く",
     "openWithSystemApp": "既定のアプリで開く",
     "showInFileManager": "ファイルマネージャーで表示"
+  },
+  "artifactChip": {
+    "label": "アーティファクト",
+    "untitled": "無題"
+  },
+  "artifactMenu": {
+    "switch": "アーティファクトを切り替え",
+    "madeByMe": "自分が作ったアーティファクト",
+    "updated": "{{when}}に更新",
+    "copyMarkdown": "Markdownとしてコピー",
+    "rename": "名前を変更",
+    "duplicate": "複製",
+    "share": "共有",
+    "openOnWeb": "Webで開く",
+    "pin": "ピン留め",
+    "unpin": "ピン留めを外す",
+    "report": "アーティファクトを報告",
+    "delete": "アーティファクトを削除",
+    "deleteTitle": "「{{name}}」を削除しますか？",
+    "deleteMessage": "リンクは誰にも開けなくなり、元に戻せません。",
+    "deleted": "アーティファクトを削除しました",
+    "renamed": "名前を変更しました",
+    "pinned": "ピン留めしました",
+    "unpinned": "ピン留めを外しました",
+    "markdownCopied": "Markdownとしてコピーしました",
+    "failed": "できませんでした",
+    "checking": "確認中…",
+    "kitMissing": "拡張キットをインストールすると使えます。",
+    "kitTooOld": "拡張キットを更新すると使えます。",
+    "notLinked": "アカウントの一覧にこのアーティファクトが見つかりません。",
+    "notOwner": "所有者のみ可能です。",
+    "unsupported": "まだ対応していません。",
+    "notLoaded": "ページがまだ読み込まれていません。",
+    "duplicated": "コピーを作成しました: {{name}}",
+    "cannotCopy": "このアーティファクトは複製できません"
   }
 }

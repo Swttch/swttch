@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "아티팩트",
     "softWrap": {
       "wrap": "긴 줄 접기",
       "unwrap": "줄바꿈 해제"
@@ -334,5 +335,8 @@
         "query": "쿼리"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "다음 발신자로부터 메시지 수신"
   }
 }

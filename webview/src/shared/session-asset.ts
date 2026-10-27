@@ -46,6 +46,62 @@ export interface SessionAsset extends SessionAssetRef {
 }
 
 /**
+ * Where one picture a tool returned sits in the session: the entry that holds the
+ * tool result, the result block inside it, and the picture inside that block's
+ * content list. One coordinate level deeper than {@link SessionAssetRef}, because
+ * the picture is nested in a `tool_result` rather than sitting in the message.
+ */
+export interface SessionOutputRef {
+  entryUuid: string;
+  /** Position of the `tool_result` block within the entry's `message.content`. */
+  blockIndex: number;
+  /** Position of the image within that block's `content` list. */
+  partIndex: number;
+}
+
+/**
+ * One thing the session made or was handed back, for the Assets screen and the
+ * session rail: a picture a tool returned (a `Read` of a png, a screenshot), a
+ * file Claude sent with `SendUserFile`, or an Artifact page it published.
+ *
+ * Like {@link SessionAsset} this is an index, with no bytes: a picture is fetched
+ * by its coordinate when it is shown, and a sent file is read from its path.
+ */
+export type SessionOutput =
+  | (SessionOutputRef & {
+      kind: 'image';
+      mediaType: string;
+      byteSize: number;
+      timestamp: string | null;
+      /** The tool that returned the picture, as the CLI names it (`Read`, `mcp__server__tool`). */
+      tool: string;
+    })
+  | {
+      kind: 'file';
+      entryUuid: string;
+      blockIndex: number;
+      /** Which of the call's files this is. */
+      attachmentIndex: number;
+      path: string;
+      name: string;
+      size?: number;
+      isImage: boolean;
+      timestamp: string | null;
+    }
+  | {
+      kind: 'artifact';
+      entryUuid: string;
+      blockIndex: number;
+      url: string;
+      title: string;
+      /** The file on this machine that was published, when the call named one. */
+      filePath?: string;
+      /** The version id the publish answered with (`1792995944-6b05`), which ties this page to its entry in the account's artifact list. */
+      versionId?: string;
+      timestamp: string | null;
+    };
+
+/**
  * What happened, for the Assets telemetry. Sent as `ASSET_ACTIVITY`'s `kind`.
  *
  * These become part of the EVENT NAME rather than a property, because Rybbit

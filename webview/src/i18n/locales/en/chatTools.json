@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "Artifact",
     "softWrap": {
       "wrap": "Wrap long lines",
       "unwrap": "Stop wrapping"
@@ -338,5 +339,8 @@
         "query": "query"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

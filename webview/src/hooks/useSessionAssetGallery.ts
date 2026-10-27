@@ -1,13 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useBridgeContext } from '@/contexts/BridgeContext';
-import { MessageType } from '@/shared';
+import { useCallback, useMemo } from 'react';
 import { useSponsorStatus } from './queries/useSponsorStatus';
-import { assetKey, useSessionAssets, useSessionScope } from './useSessionAssets';
-
-interface AssetDataResponse {
-  status?: string;
-  source?: { type?: string; data?: string; media_type?: string };
-}
+import { useSessionPictureLoader, useSessionPictures } from './useSessionPictures';
 
 export interface SessionAssetGallery {
   /** What the viewer should show. `null` entries are indexed but not fetched. */
@@ -53,90 +46,69 @@ export function useSessionAssetGallery(params: {
   localSrcs: string[];
   /** Which of `localSrcs` was clicked; null while the viewer is closed. */
   openedLocalIndex: number | null;
+  /**
+   * The session-wide key of each of `localSrcs`, in the same order, for images Claude
+   * made (a `Read` picture, a sent file) whose place in the session is not "the images
+   * of this entry". Absent for attachments, which are found by `entryUuid`.
+   */
+  localKeys?: string[];
 }): SessionAssetGallery {
-  const { entryUuid, localSrcs, openedLocalIndex } = params;
-  const { send } = useBridgeContext();
+  const { entryUuid, localSrcs, openedLocalIndex, localKeys } = params;
   const { isSponsor } = useSponsorStatus();
 
-  // Read tolerantly: a message renderer is reused in places where the session
-  // providers are not mounted. Without a session there is simply nothing
-  // session-wide to offer, the same outcome as a closed viewer.
-  const { workingDir, sessionId } = useSessionScope();
-
   const isOpen = openedLocalIndex !== null;
-  // Bytes fetched so far, keyed by coordinate. Kept beside the query rather than
-  // inside it because slots are filled one at a time as the user moves.
-  const [fetched, setFetched] = useState<Record<string, string>>({});
+  // Both lists, merged: an attachment gallery steps into what Claude made and back.
+  const pictures = useSessionPictures(isOpen);
+  const { loaded, ensure } = useSessionPictureLoader();
 
-  const assets = useSessionAssets(isOpen);
+  // The keys of this message's own images inside the session-wide list. Matching
+  // attachments by entry uuid is what lets the already-decoded transcript copies be
+  // reused instead of re-fetched; images Claude made are matched by the key they were given.
+  const ownKeys = useMemo(() => {
+    if (localKeys) return localKeys;
+    return (pictures ?? []).filter((p) => p.kind === 'asset' && p.entryUuid === entryUuid).map((p) => p.key);
+  }, [localKeys, pictures, entryUuid]);
 
-  // Where this message's images sit inside the session-wide index. Matching by
-  // entry uuid is what lets the already-decoded transcript copies be reused
-  // instead of re-fetched.
-  const localAssets = useMemo(
-    () => (assets ?? []).filter((a) => a.entryUuid === entryUuid),
-    [assets, entryUuid],
-  );
+  const localSrcByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    ownKeys.forEach((key, i) => {
+      if (i < localSrcs.length) map.set(key, localSrcs[i]);
+    });
+    return map;
+  }, [ownKeys, localSrcs]);
 
-  const sessionWide =
-    isSponsor && Boolean(entryUuid) && localAssets.length > 0 && (assets?.length ?? 0) > 0;
+  const total = pictures?.length ?? 0;
+  const initialKey = openedLocalIndex !== null ? ownKeys[openedLocalIndex] : undefined;
+  const initialAt = pictures && initialKey ? pictures.findIndex((p) => p.key === initialKey) : -1;
 
-  const localOffset = useMemo(() => {
-    if (!sessionWide || !assets) return 0;
-    return assets.findIndex((a) => a.entryUuid === entryUuid);
-  }, [sessionWide, assets, entryUuid]);
+  const sessionWide = isSponsor && Boolean(entryUuid || localKeys) && ownKeys.length > 0 && total > 0 && initialAt >= 0;
 
   const srcs = useMemo<(string | null)[]>(() => {
-    if (!sessionWide || !assets) return localSrcs;
-    return assets.map((asset, i) => {
-      // This message's own images are already in the transcript; reuse them
-      // rather than asking the backend for bytes the page is holding.
-      const local = i - localOffset;
-      if (local >= 0 && local < localSrcs.length && asset.entryUuid === entryUuid) {
-        return localSrcs[local];
-      }
-      return fetched[assetKey(asset)] ?? null;
-    });
-  }, [sessionWide, assets, localSrcs, localOffset, entryUuid, fetched]);
+    if (!sessionWide || !pictures) return localSrcs;
+    // This message's own images are already in the transcript; reuse them rather
+    // than asking the backend for bytes the page is holding.
+    return pictures.map((picture) => localSrcByKey.get(picture.key) ?? loaded[picture.key] ?? null);
+  }, [sessionWide, pictures, localSrcs, localSrcByKey, loaded]);
 
-  const initialIndex = sessionWide ? localOffset + (openedLocalIndex ?? 0) : (openedLocalIndex ?? 0);
+  const initialIndex = sessionWide ? initialAt : (openedLocalIndex ?? 0);
 
   const lockedCount = useMemo(() => {
-    if (sessionWide || !assets) return 0;
-    return Math.max(assets.length - localSrcs.length, 0);
-  }, [sessionWide, assets, localSrcs.length]);
+    if (sessionWide || !pictures) return 0;
+    return Math.max(total - localSrcs.length, 0);
+  }, [sessionWide, pictures, total, localSrcs.length]);
 
-  const hasMoreInSession = (assets?.length ?? 0) > localSrcs.length;
+  const hasMoreInSession = total > localSrcs.length;
 
   const onIndexChange = useCallback(
     (index: number) => {
-      if (!sessionWide || !assets) return;
-      const asset = assets[index];
-      if (!asset) return;
-      const key = assetKey(asset);
-      if (fetched[key] || srcs[index]) return;
-
-      void send<AssetDataResponse>(MessageType.GET_SESSION_ASSET_DATA, {
-        workingDir,
-        sessionId,
-        entryUuid: asset.entryUuid,
-        blockIndex: asset.blockIndex,
-      })
-        .then((res: AssetDataResponse) => {
-          // 'gone' means the entry was rewound away while the viewer was open.
-          // Leaving the slot null keeps the placeholder rather than erroring.
-          if (res?.status !== 'ok' || !res.source?.data) return;
-          const mediaType = res.source.media_type ?? asset.mediaType;
-          setFetched((prev) => ({
-            ...prev,
-            [key]: `data:${mediaType};base64,${res.source!.data}`,
-          }));
-        })
-        .catch(() => {
-          // A failed fetch leaves the placeholder; the user can step away and back.
-        });
+      if (!sessionWide || !pictures) return;
+      const picture = pictures[index];
+      if (!picture) return;
+      if (loaded[picture.key] || localSrcByKey.has(picture.key)) return;
+      // A failed or `gone` fetch leaves the placeholder; the user can step away and back.
+      ensure(picture);
     },
-    [sessionWide, assets, fetched, srcs, send, workingDir, sessionId],
+    [sessionWide, pictures, loaded, localSrcByKey, ensure],
   );
 
   return { srcs, initialIndex, lockedCount, onIndexChange, hasMoreInSession };

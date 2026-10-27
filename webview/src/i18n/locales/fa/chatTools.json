@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "آرتیفکت",
     "softWrap": {
       "wrap": "شکستن خطوط بلند",
       "unwrap": "توقف شکستن خط"
@@ -334,5 +335,8 @@
         "query": "پرس‌وجو"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

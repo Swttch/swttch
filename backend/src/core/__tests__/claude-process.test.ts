@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildArtifactEnv,
+  buildAttachmentsEnv,
   buildCheckpointingEnv,
   buildClaudeArgs,
   isWorkflowRunning,
@@ -381,5 +382,19 @@ describe('workflow tracker accessors before any tracker exists', () => {
 
   it('stops workflows for an unknown session without throwing', () => {
     expect(() => stopWorkflowsForSession('no-such-session')).not.toThrow();
+  });
+});
+
+describe('buildAttachmentsEnv', () => {
+  // Without it a headless spawn has no SendUserFile, so Claude cannot hand a file
+  // to the chat the way it does in the terminal (#593).
+  it('turns it on when the shell did not answer', () => {
+    expect(buildAttachmentsEnv({})).toEqual({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' });
+  });
+
+  it('passes nothing when the shell already answered, on or off', () => {
+    expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '1' })).toEqual({});
+    expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '0' })).toEqual({});
+    expect(buildAttachmentsEnv({ CLAUDE_CODE_ATTACHMENTS_BY_PATH: '' })).toEqual({});
   });
 });

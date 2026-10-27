@@ -419,6 +419,26 @@ export enum MessageType {
    */
   OPEN_FILE_WITH_SYSTEM_APP = 'OPEN_FILE_WITH_SYSTEM_APP',
   /**
+   * Ask which browser the operating system opens a web address in ("Google Chrome").
+   * Inbound webview→backend; ACKed with `{ name: string | null }`.
+   */
+  GET_DEFAULT_BROWSER = 'GET_DEFAULT_BROWSER',
+  /**
+   * Ask where a page in a file on this machine is served as a web page of its own, for the Browser pane
+   * (`{ path, workingDir?, inject? }`). Inbound webview→backend; ACKed with `{ port, pathname, root }` or `{ error }`.
+   */
+  GET_PAGE_URL = 'GET_PAGE_URL',
+  /**
+   * Ask for the icon of a web page (`{ url }`), for a Browser pane tab. Inbound webview→backend; ACKed with
+   * `{ icon: string | null }`, a data URL.
+   */
+  GET_FAVICON = 'GET_FAVICON',
+  /**
+   * Save a picture the webview made, `{ suggestedName, base64 }`, where the person chooses (the host's own save dialog).
+   * Inbound webview→backend; ACKed with `{ path }` (null when cancelled) or `{ error }`.
+   */
+  SAVE_IMAGE = 'SAVE_IMAGE',
+  /**
    * Show a file in the system's file manager with the file selected. Inbound
    * webview→backend, then sent on to the IDE (Node→Kotlin) in JetBrains mode, or
    * done by the backend itself in a browser.
@@ -455,6 +475,16 @@ export enum MessageType {
   UPLOAD_FILE_CHUNK = 'UPLOAD_FILE_CHUNK',
   /** Ask what an attachment card can show of a file: its first lines, the picture, or a video's bytes. Answered with kind 'none' when the icon is all there is. */
   GET_FILE_PREVIEW = 'GET_FILE_PREVIEW',
+  /** Ask for one piece of a file the preview pane shows next to the chat (a page, a picture, a PDF or a video), starting at an offset. Answered with base64 bytes and the whole size, or with a reason the file cannot be shown. */
+  GET_FILE_CONTENT = 'GET_FILE_CONTENT',
+  /** Ask for one piece of any file, as {path, offset}, so the chat can save it to disk (the download button on a file Claude sent). Answered with base64 bytes and the whole size, or with the reason it cannot be read. A file Claude sent is read from the copy kept when it was sent once the original is gone. inbound webview→backend */
+  GET_FILE_BYTES = 'GET_FILE_BYTES',
+  /** Ask what the kit's `swttch-ext` command can do on this machine, as {workingDir?}. Answered with {status, installed, capabilities, version}; installed is false when the kit is missing or has no such command, and the capabilities then are empty. The chat offers only the artifact menu items the capabilities name. inbound webview→backend */
+  GET_EXT_CAPABILITIES = 'GET_EXT_CAPABILITIES',
+  /** Run one `swttch-ext api` call, as {service, call, params, yes?, workingDir?}: renaming, pinning or deleting an artifact. Answered with the kit's own {ok:true, data} or {ok:false, error:{code, message, status?, hint?}}; the codes extend_kit_missing and extend_kit_too_old say the kit cannot do it. inbound webview→backend */
+  RUN_EXT_API = 'RUN_EXT_API',
+  /** Ask what a web page looks like on a card, as {url}: its title, its site and a picture that stands for it (the page's own preview image). Answered with those, or with only what could be read; never an error for a page that cannot be reached. inbound webview→backend */
+  GET_LINK_PREVIEW = 'GET_LINK_PREVIEW',
   /** Ask for the icon the operating system draws for a file extension. Answered with a base64 PNG, or with nothing where the system cannot be asked. */
   GET_FILE_ICON = 'GET_FILE_ICON',
   /** Native save dialog; writes the given contents to the chosen path. Node↔Kotlin */
@@ -639,6 +669,10 @@ export enum MessageType {
   GET_SESSION_ASSETS = 'GET_SESSION_ASSETS',
   /** Ask for one attached image's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex}. The reply is the block's own `source` object, passed through unedited. inbound webview→backend */
   GET_SESSION_ASSET_DATA = 'GET_SESSION_ASSET_DATA',
+  /** Ask for the index of everything the session made or was handed back, as {workingDir, sessionId}: pictures tools returned, files sent with SendUserFile and published Artifact pages. The reply carries coordinates and metadata only, never the base64. inbound webview→backend */
+  GET_SESSION_OUTPUTS = 'GET_SESSION_OUTPUTS',
+  /** Ask for one tool-returned picture's bytes by its coordinate, as {workingDir, sessionId, entryUuid, blockIndex, partIndex}. The reply is the image block's own `source` object, passed through unedited. inbound webview→backend */
+  GET_SESSION_OUTPUT_DATA = 'GET_SESSION_OUTPUT_DATA',
 
   // -- Session sends --
   /** Ask for the index of every send the USER typed in one session, as {workingDir, sessionId}. The reply carries one row per send — uuid, timestamp and a truncated preview — so the send index can draw a tick for the whole session while the transcript itself is still paged. Never carries the entries: a prompt drags whatever was pasted into it, up to 21MB of base64 in the worst session measured here. inbound webview→backend */

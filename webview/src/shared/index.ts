@@ -23,6 +23,7 @@ export * from './permission-rules';
 export * from './queued-message';
 export * from './queued-prompts';
 export * from './session-asset';
+export * from './sent-file-kind';
 export * from './session-search';
 export * from './session-send';
 export * from './session-activity';

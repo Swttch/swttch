@@ -1,7 +1,10 @@
-import {getAdapter} from "@/adapters";
+import {openChatFile} from "@/utils/openChatFile";
 import {ToolUseBlockDto} from "@/types";
 import {cn} from "@/utils/cn";
-import {RendererProps, ToolHeader, ToolWrapper} from "./common";
+import {Container, LabelValue, RendererProps, ToolHeader, ToolWrapper, toolResultImages, toolResultIsError, toolResultPictureKeys, toolResultText} from "./common";
+import {useTranslation} from "@/i18n";
+import {useState} from "react";
+import {SessionGalleryViewer} from "@/components/SessionGalleryViewer";
 
 class ReadToolUseDto extends ToolUseBlockDto {
     caller: { type: 'direct' };
@@ -11,8 +14,16 @@ class ReadToolUseDto extends ToolUseBlockDto {
 }
 
 export function ReadRenderer(props: RendererProps) {
+    const {t} = useTranslation('chatTools');
+    const [viewing, setViewing] = useState<number | null>(null);
     const toolUse = props.toolUse as unknown as ReadToolUseDto;
-    // const toolResult = props.toolResult as BashToolResultDto | undefined;
+    // A picture the CLI read comes back as an image block; Claude Desktop draws it
+    // under the row at the width of the message, so the reader sees what Claude saw.
+    const images = toolResultImages(props.toolResult);
+    const imageKeys = toolResultPictureKeys(props.toolResult, toolUse.id);
+    // What came back as text (the numbered lines of a file, the note a PDF read leaves), shown the
+    // way Claude Desktop shows an opened Read row: in a box under the path. A picture has none.
+    const output = images.length === 0 && !toolResultIsError(props.toolResult) ? toolResultText(props.toolResult) : '';
 
     const name = toolUse.name;
     const path = toolUse.input?.file_path ?? '';
@@ -25,9 +36,29 @@ export function ReadRenderer(props: RendererProps) {
                 <div
                     dir="ltr"
                     className={cn("text-text-primary/80 text-[0.9230rem] font-mono", path && "cursor-pointer hover:underline")}
-                    onClick={path ? () => getAdapter().openFile(path) : undefined}
+                    onClick={path ? () => openChatFile(path) : undefined}
                 >{fileName}</div>
             </ToolHeader>
+            {output && (
+                <Container className="mt-1.5">
+                    <LabelValue label={t('tool.out')} maxHeight="max-h-[105px]">{output}</LabelValue>
+                </Container>
+            )}
+            {images.map((src, index) => (
+                // Clicking the picture opens the viewer, as it does in Claude Desktop.
+                <button key={index} type="button" onClick={() => setViewing(index)} className="mt-1.5 mb-1 block max-w-full cursor-zoom-in">
+                    <img src={src} alt={fileName} className="block max-w-full rounded-md" />
+                </button>
+            ))}
+            {viewing !== null && (
+                <SessionGalleryViewer
+                    entryUuid={props.toolResult?.uuid}
+                    localSrcs={images}
+                    localKeys={imageKeys}
+                    openedIndex={viewing}
+                    onClose={() => setViewing(null)}
+                />
+            )}
         </ToolWrapper>
     )
 }

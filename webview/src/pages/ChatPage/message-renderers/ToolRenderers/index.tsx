@@ -39,6 +39,7 @@ import {ExitWorktreeRenderer} from "./ExitWorktreeRenderer.tsx";
 import {McpResourceRenderer} from "./McpResourceRenderer.tsx";
 import {SendUserMessageRenderer} from "./SendUserMessageRenderer.tsx";
 import {SubagentHandbackRenderer} from "./SubagentHandbackRenderer.tsx";
+import {SendUserFileRenderer} from "./SendUserFileRenderer.tsx";
 import {McpRenderers} from "./Mcp";
 
 interface ToolRendererProps {
@@ -89,6 +90,7 @@ export const ToolRendererMap = new Map<string, FC<ToolRendererProps>>([
     ['ReadMcpResourceDirTool', McpResourceRenderer],
     ['SendUserMessage', SendUserMessageRenderer],
     ['SubagentHandback', SubagentHandbackRenderer],
+    ['SendUserFile', SendUserFileRenderer],
     // The Artifact tools `/slides` and `/design` drive (#584).
     ['Artifact', ArtifactRenderer],
     ['ArtifactComments', ArtifactRenderer],

@@ -242,6 +242,8 @@ describe('ImageAttachments', () => {
 
   it('passes the entry uuid through so the gallery can locate this message', () => {
     render(<ImageAttachments images={IMAGES} entryUuid="entry-1" />);
+    // The gallery is only asked for once the viewer opens.
+    fireEvent.click(screen.getByAltText('Image 1'));
 
     expect(gallery).toHaveBeenCalledWith(expect.objectContaining({ entryUuid: 'entry-1' }));
   });

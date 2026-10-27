@@ -17,9 +17,12 @@ import { ConnectionLostBanner } from './ConnectionLostBanner';
 import { AuthErrorBanner } from './AuthErrorBanner';
 import { BrowserPermissionBanner } from './BrowserPermissionBanner';
 import { BackgroundTasksPanel } from './BackgroundTasksPanel';
+import { FilePreviewPane } from '@/components/FilePreviewPane';
+import { usePaneColumn, usePaneWidth } from '@/components/FilePreviewPane/usePaneColumn';
 import { ScheduledMessagesPanel, ScheduledMessageEditOverlay } from './ScheduledMessagesPanel';
 import { McpModal } from '@/components/McpModal';
 import { SideQuestionModal } from '@/components/SideQuestionModal';
+import { SessionRail } from './SessionRail';
 import { DiffOverlay } from '../DiffPage/DiffOverlay';
 import { CHAT_FOOTER_ID } from './chatFooter';
 import { AnnouncementTopBannerSlot, AnnouncementModalSlot } from '@/components/Announcements/placements';
@@ -49,6 +52,7 @@ import { useApi } from '../../contexts/ApiContext';
 import { mergeToolResults } from './mergeToolResults';
 import { mergeSplitThinkingMessages } from './mergeSplitThinkingMessages';
 import { restoreQueuedMessages } from './restoreQueuedMessages';
+import { hideCliNotes } from './hideCliNotes';
 import { isOlderPagePrepend } from './paging';
 import { useTranslation } from '@/i18n';
 import { AutoResumeProvider } from '@/contexts/AutoResumeContext';
@@ -130,6 +134,8 @@ function ChatPageContent() {
   const { currentSessionId, currentSession } = useSessionContext();
   const { messages, isStreaming, error, disconnectCountdown, apiRetry, hasMoreOlder, oldestLoadedUuid } = useChatStreamContext();
   const { isTopBarDisplayed, topBarHeight } = useTopBar();
+  const paneColumn = usePaneColumn();
+  const paneColumnWidth = usePaneWidth(true);
   // The folder this session works in was deleted or moved. The CLI cannot start there, so
   // the input gives way to a bar offering another folder.
   const folderGone = useWorkingDirGone(error);
@@ -219,7 +225,7 @@ function ChatPageContent() {
   // sees the same shape it would for any other conversation. mergeSplitThinkingMessages
   // rejoins a thinking stretch one response wrote as two session entries (#496).
   const mergedMessages = useMemo(
-    () => mergeToolResults(mergeSplitThinkingMessages(restoreQueuedMessages(messages))),
+    () => mergeToolResults(mergeSplitThinkingMessages(hideCliNotes(restoreQueuedMessages(messages)))),
     [messages],
   );
 
@@ -379,7 +385,13 @@ function ChatPageContent() {
   // default of a mousedown stops the browser from starting a word or drag
   // selection anywhere in the chat.
   return (
-    <div className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0">
+    <>
+    {/* While the preview pane is a column, the chat is narrowed to what is left of the window. The
+        transform makes the chat the frame its fixed header is placed in, so the header narrows with it. */}
+    <div
+      className="flex flex-col w-full h-full bg-surface-base text-text-primary fixed start-0 top-0"
+      style={paneColumn ? { width: `calc(100% - ${paneColumnWidth} - 1rem)`, transform: 'translateZ(0)' } : undefined}
+    >
       {/*
         Header - Minimal
 
@@ -522,6 +534,7 @@ function ChatPageContent() {
 
       <BackgroundTasksPanel />
       <SideQuestionModal />
+      <SessionRail />
       <ScheduledMessagesPanel />
       <ScheduledMessageEditOverlay />
       {mcpModalOpen && <McpModal onClose={() => setMcpModalOpen(false)} />}
@@ -544,5 +557,8 @@ function ChatPageContent() {
       <AnnouncementModalSlot />
       <WhatsNewSlot />
     </div>
+    {/* A page, picture, PDF or video the chat named, beside the chat (#593) */}
+    <FilePreviewPane />
+    </>
   );
 }

@@ -72,6 +72,9 @@ import { getUsageReportHandler } from './getUsageReport';
 import { getAllUsageHandler } from './getAllUsage';
 import { openFileHandler } from './openFile';
 import { openFileWithSystemAppHandler, revealFileHandler } from './fileActions';
+import { getDefaultBrowserHandler } from './defaultBrowser';
+import { getFaviconHandler, getPageUrlHandler } from './pageUrl';
+import { saveImageHandler } from './saveImage';
 import { openDiffHandler } from './openDiff';
 import { openDiffTabHandler } from './openDiffTab';
 import { getDiffPreviewHandler } from './getDiffPreview';
@@ -128,6 +131,7 @@ import {
 import { loginHandler } from './login';
 import { submitLoginCodeHandler } from './submitLoginCode';
 import { openUrlHandler } from './openUrl';
+import { getFileContentHandler } from './getFileContent';
 import { getAvailableTerminalsHandler } from './getAvailableTerminals';
 import { getAvailableEditorsHandler } from './getAvailableEditors';
 import { getDetectedCliPathHandler } from './getDetectedCliPath';
@@ -192,6 +196,12 @@ import { getSessionAssetsHandler } from './getSessionAssets';
 import { getSessionSendsHandler } from './getSessionSends';
 import { searchSessionHandler } from './searchSession';
 import { getSessionAssetDataHandler } from './getSessionAssetData';
+import { getSessionOutputsHandler } from './getSessionOutputs';
+import { getFileBytesHandler } from './getFileBytes';
+import { getExtCapabilitiesHandler } from './getExtCapabilities';
+import { runExtApiHandler } from './runExtApi';
+import { getLinkPreviewHandler } from './getLinkPreview';
+import { getSessionOutputDataHandler } from './getSessionOutputData';
 import { assetActivityHandler } from './assetActivity';
 import { sponsorGateActivityHandler } from './sponsorGateActivity';
 import { getMcpServersHandler } from './getMcpServersHandler';
@@ -407,6 +417,18 @@ export async function handleMessage(
     case MessageType.OPEN_FILE_WITH_SYSTEM_APP:
       await openFileWithSystemAppHandler(connectionId, message, connections, bridge, bridges);
       break;
+    case MessageType.SAVE_IMAGE:
+      await saveImageHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_FAVICON:
+      await getFaviconHandler(connectionId, message, connections);
+      break;
+    case MessageType.GET_PAGE_URL:
+      await getPageUrlHandler(connectionId, message, connections);
+      break;
+    case MessageType.GET_DEFAULT_BROWSER:
+      await getDefaultBrowserHandler(connectionId, message, connections);
+      break;
     case MessageType.REVEAL_FILE:
       await revealFileHandler(connectionId, message, connections, bridge, bridges);
       break;
@@ -611,6 +633,9 @@ export async function handleMessage(
     case MessageType.GET_FILE_PREVIEW:
       await getFilePreviewHandler(connectionId, message, connections, bridge);
       break;
+    case MessageType.GET_FILE_CONTENT:
+      await getFileContentHandler(connectionId, message, connections, bridge);
+      break;
     case MessageType.UPLOAD_FILE_CHUNK:
       await uploadFileChunkHandler(connectionId, message, connections, bridge);
       break;
@@ -763,6 +788,24 @@ export async function handleMessage(
       break;
     case MessageType.GET_SESSION_ASSET_DATA:
       await getSessionAssetDataHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_LINK_PREVIEW:
+      await getLinkPreviewHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_EXT_CAPABILITIES:
+      await getExtCapabilitiesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.RUN_EXT_API:
+      await runExtApiHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_FILE_BYTES:
+      await getFileBytesHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_OUTPUTS:
+      await getSessionOutputsHandler(connectionId, message, connections, bridge);
+      break;
+    case MessageType.GET_SESSION_OUTPUT_DATA:
+      await getSessionOutputDataHandler(connectionId, message, connections, bridge);
       break;
     case MessageType.GET_SESSION_SENDS:
       await getSessionSendsHandler(connectionId, message, connections, bridge);

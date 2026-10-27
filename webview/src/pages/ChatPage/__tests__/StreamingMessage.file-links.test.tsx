@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { StreamingMessage } from '../StreamingMessage';
 import { linkMenuStore } from '@/utils/linkMenuStore';
+import { filePreviewPaneStore } from '@/utils/filePreviewPaneStore';
 
 const mockOpenFile = vi.fn((_path: string, _line?: number, _column?: number) => Promise.resolve());
 const mockOpenUrl = vi.fn((_url: string) => Promise.resolve());
@@ -20,7 +21,10 @@ vi.mock('@/contexts/WorkingDirContext', async (importOriginal) => ({
 }));
 
 describe('StreamingMessage — local file links open in the IDE', () => {
-  beforeEach(() => mockOpenFile.mockClear());
+  beforeEach(() => {
+    mockOpenFile.mockClear();
+    filePreviewPaneStore.close();
+  });
 
   it('opens an absolute local link at its line', () => {
     render(<StreamingMessage content="See [foo.ts:12](/abs/foo.ts#L12)." isStreaming={false} />);
@@ -65,7 +69,9 @@ describe('StreamingMessage — local file links open in the IDE', () => {
     );
     expect(container.textContent).not.toMatch(/\[blocked\]/i);
     fireEvent.click(screen.getByRole('button', { name: 'shot' }));
-    expect(mockOpenFile).toHaveBeenCalledWith('/Users/me/pic.png', undefined, undefined);
+    // A picture opens in the preview pane beside the chat (#593), not in the editor.
+    expect(filePreviewPaneStore.get()).toEqual({ path: '/Users/me/pic.png' });
+    expect(mockOpenFile).not.toHaveBeenCalled();
   });
 
   it('decodes percent-escapes in a file:// path and honors #L', () => {
@@ -164,13 +170,21 @@ describe('StreamingMessage — bare plain-text file references', () => {
     expect(mockOpenFile).not.toHaveBeenCalled();
   });
 
-  it('does NOT linkify a path:line inside inline code', () => {
+  // Claude Desktop draws a code span that is only a path as a link, not as code.
+  it('draws a path:line inside inline code as a link that opens the file at the line', () => {
     const { container } = render(
-      <StreamingMessage content={'Use `src/app.ts:42` verbatim.'} isStreaming={false} />,
+      <StreamingMessage content={'Use `src/app.ts:42` here.'} isStreaming={false} />,
     );
-    const code = container.querySelector('[data-streamdown="inline-code"]');
-    expect(code?.textContent).toBe('src/app.ts:42');
-    expect(mockOpenFile).not.toHaveBeenCalled();
+    expect(container.querySelector('[data-streamdown="inline-code"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'src/app.ts:42' }));
+    expect(mockOpenFile).toHaveBeenCalledWith('/wd/src/app.ts', 42, undefined);
+  });
+
+  it('leaves inline code that holds more than a path as code', () => {
+    const { container } = render(
+      <StreamingMessage content={'Run `cat src/app.ts` now.'} isStreaming={false} />,
+    );
+    expect(container.querySelector('[data-streamdown="inline-code"]')?.textContent).toBe('cat src/app.ts');
   });
 
   it('shows the resolved path in the app tooltip, not a native title', async () => {

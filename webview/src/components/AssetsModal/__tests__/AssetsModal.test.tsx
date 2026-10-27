@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
-import type { SessionAsset } from '@/shared';
+import type { SessionAsset, SessionOutput } from '@/shared';
 
 const assets = vi.fn<() => SessionAsset[] | undefined>(() => []);
 const ensure = vi.fn();
@@ -17,6 +17,21 @@ vi.mock('@/hooks/useSessionAssets', async () => {
     useSessionAssetLoader: () => ({ loaded: loaded(), ensure }),
   };
 });
+const outputs = vi.fn<() => SessionOutput[] | undefined>(() => []);
+const ensureOutput = vi.fn();
+const openChatFile = vi.fn();
+const openUrl = vi.fn(() => Promise.resolve());
+vi.mock('@/hooks/useSessionOutputs', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSessionOutputs')>('@/hooks/useSessionOutputs');
+  return {
+    outputKey: actual.outputKey,
+    isPictureOutput: actual.isPictureOutput,
+    useSessionOutputs: () => outputs(),
+    useSessionOutputImages: () => ({ loaded: {}, ensure: ensureOutput }),
+  };
+});
+vi.mock('@/utils/openChatFile', () => ({ openChatFile: (p: string) => openChatFile(p) }));
+vi.mock('@/adapters', () => ({ getAdapter: () => ({ openUrl }) }));
 vi.mock('@/hooks/queries/useSponsorStatus', () => ({
   useSponsorStatus: () => ({ isSponsor: isSponsor() }),
 }));
@@ -34,7 +49,7 @@ vi.mock('@/pages/ChatPage/SessionHeader/dock/useDockLayout', () => ({
 }));
 
 import { DockItemId } from '@/types/settings';
-import { AssetsModal, groupByMessage } from '../index';
+import { AssetsModal, groupByMessage, groupOutputsByEntry } from '../index';
 
 function asset(entryUuid: string, blockIndex: number, preview = '', timestamp = '2026-09-06T01:00:00.000Z'): SessionAsset {
   return { entryUuid, blockIndex, mediaType: 'image/png', timestamp, byteSize: 3, messagePreview: preview };
@@ -47,6 +62,7 @@ beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
   assets.mockReturnValue([]);
+  outputs.mockReturnValue([]);
   loaded.mockReturnValue({});
   isSponsor.mockReturnValue(false);
   dockVisible.mockReturnValue([]);
@@ -254,5 +270,45 @@ describe('AssetsModal', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe('what Claude made', () => {
+  const file = (name: string, entryUuid = 'u1', attachmentIndex = 0, isImage = false): SessionOutput => ({
+    kind: 'file', entryUuid, blockIndex: 0, attachmentIndex, path: `/a/${name}`, name, size: 1, isImage, timestamp: '2026-10-26T01:00:00.000Z',
+  });
+  const shot = (entryUuid: string): SessionOutput => ({
+    kind: 'image', entryUuid, blockIndex: 0, partIndex: 0, mediaType: 'image/png', byteSize: 3, timestamp: null, tool: 'mcp__Claude_Browser__computer',
+  });
+
+  it('folds outputs back into the entries that produced them', () => {
+    expect(groupOutputsByEntry([file('a.pdf'), file('b.csv', 'u1', 1), shot('u2')]).map((g) => g.outputs.length)).toEqual([2, 1]);
+  });
+
+  it('shows the section with its heading, and no empty message once anything exists', () => {
+    outputs.mockReturnValue([file('deck.pptx')]);
+    render(<AssetsModal onClose={() => {}} />);
+    expect(screen.getByText('Made by Claude')).toBeInTheDocument();
+    expect(screen.getByText('deck.pptx')).toBeInTheDocument();
+    expect(screen.queryByText('No assets attached in this session yet')).toBeNull();
+  });
+
+  it('still says there is nothing when neither list has anything', () => {
+    render(<AssetsModal onClose={() => {}} />);
+    expect(screen.getByText('No assets attached in this session yet')).toBeInTheDocument();
+  });
+
+  it('opens a file, a page, and a returned picture where each belongs', () => {
+    outputs.mockReturnValue([
+      file('deck.pptx'),
+      { kind: 'artifact', entryUuid: 'u3', blockIndex: 0, url: 'https://claude.ai/artifact/abc123', title: 'Report', timestamp: null },
+      shot('u2'),
+    ]);
+    render(<AssetsModal onClose={() => {}} />);
+    fireEvent.click(screen.getByText('deck.pptx'));
+    expect(openChatFile).toHaveBeenCalledWith('/a/deck.pptx');
+    fireEvent.click(screen.getByText('Report'));
+    expect(openUrl).toHaveBeenCalledWith('https://claude.ai/artifact/abc123');
+    expect(screen.getByText('Claude Browser')).toBeInTheDocument();
   });
 });

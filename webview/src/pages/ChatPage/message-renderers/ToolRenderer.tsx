@@ -14,6 +14,7 @@ import {
 } from "./ToolRenderers/common";
 import {declineDisplayText} from "@/shared";
 import {GenericMcpRenderer} from "./ToolRenderers/Mcp/Generic";
+import {LinkCardRenderer, browserUrlOf} from "./ToolRenderers/LinkCardRenderer";
 import {isMcpToolName} from "./ToolRenderers/Mcp/Generic/cursorMcp";
 import {StreamSafeErrorBoundary} from "@/components/StreamSafeErrorBoundary";
 import { useTranslation } from '@/i18n';
@@ -39,6 +40,13 @@ export const ToolRenderer: React.FC<ToolRendererProps> = ({toolUse, message}) =>
         body = (
             <StreamSafeErrorBoundary renderKey={renderKey}>
                 <Renderer toolUse={toolUse} toolResult={toolResult} message={message} />
+            </StreamSafeErrorBoundary>
+        );
+    } else if (browserUrlOf(toolUse.name, toolUse.input) !== undefined) {
+        // A page opened in a browser panel: a card for the page, as Claude Desktop draws it.
+        body = (
+            <StreamSafeErrorBoundary renderKey={renderKey}>
+                <LinkCardRenderer url={browserUrlOf(toolUse.name, toolUse.input) as string} toolUse={toolUse} toolResult={toolResult} message={message} />
             </StreamSafeErrorBoundary>
         );
     } else if (isMcpToolName(toolUse.name)) {

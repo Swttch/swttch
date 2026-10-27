@@ -1,8 +1,21 @@
-import {describe, it, expect} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {beforeEach, describe, it, expect, vi} from 'vitest';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {ArtifactRenderer, artifactCallSubject, artifactUrlFrom} from '../ArtifactRenderer';
 import {ToolUseBlockDto, ContentBlockType} from '@/dto';
 import type {LoadedMessageDto} from '@/types';
+
+const {loadFileContent, openChatFile} = vi.hoisted(() => ({loadFileContent: vi.fn(), openChatFile: vi.fn()}));
+vi.mock('@/components/FilePreviewPane/loadFileContent', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/components/FilePreviewPane/loadFileContent')>()),
+    loadFileContent: (...args: unknown[]) => loadFileContent(...args),
+}));
+vi.mock('@/utils/filePreviewPaneStore', () => ({filePreviewPaneStore: {open: (p: string, u?: string) => openChatFile(p, u)}}));
+
+beforeEach(() => {
+    loadFileContent.mockReset();
+    openChatFile.mockReset();
+    loadFileContent.mockResolvedValue({ok: false, reason: 'unreadable'});
+});
 
 function makeToolUse(input: Record<string, unknown>, name = 'Artifact'): ToolUseBlockDto {
     return Object.assign(new ToolUseBlockDto(), {
@@ -83,7 +96,7 @@ describe('ArtifactRenderer', () => {
     });
 
     // The reason the card exists: the reader needs a way to open what was published.
-    it('links the published page from the result', () => {
+    it('draws a published page as a card with its name that opens the page', () => {
         render(
             <ArtifactRenderer
                 toolUse={makeToolUse({type_url: 'https://claude.ai/artifact/t', title: 'Deck'})}
@@ -91,22 +104,52 @@ describe('ArtifactRenderer', () => {
             />,
         );
 
-        const link = screen.getByRole('link', {name: PAGE});
-        expect(link).toHaveAttribute('href', PAGE);
-        expect(link).toHaveAttribute('target', '_blank');
-        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+        const card = screen.getByRole('link', {name: 'Deck'});
+        expect(card).toHaveAttribute('href', PAGE);
+        expect(card).toHaveAttribute('target', '_blank');
+        expect(card).toHaveAttribute('rel', 'noopener noreferrer');
+        // The CLI's answering sentence is left out: the card says what it says.
+        expect(screen.queryByText(/Created a new Artifact/)).not.toBeInTheDocument();
     });
 
-    it('links the page an update names before any result arrives', () => {
-        render(<ArtifactRenderer toolUse={makeToolUse({url: PAGE, files: {}})} />);
-        expect(screen.getByRole('link', {name: PAGE})).toHaveAttribute('href', PAGE);
+    it('names the card after the file published when the call gave no title and the page names itself nothing', () => {
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({file_path: '/a/b/page.html'})}
+                toolResult={makeToolResult(`Published /a/b/page.html at ${PAGE} (Version 1, version id x)`)}
+            />,
+        );
+        expect(screen.getByRole('button', {name: 'page'})).toBeInTheDocument();
     });
 
-    // An update's subject is the page address itself. The link row already shows
-    // it, so the header must not repeat it right above.
-    it('shows the page address once for an update', () => {
+    // Desktop names the card by the page's own <title>, and opens the page beside the chat.
+    it('names the card by the page title and opens the page in the pane on click', async () => {
+        const html = '<!doctype html><title>Demo Page</title><body>hi</body>';
+        loadFileContent.mockResolvedValue({ok: true, kind: 'html', mimeType: 'text/html', blob: new Blob([html]), pieces: [new TextEncoder().encode(html)]});
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({file_path: '/a/b/page.html'})}
+                toolResult={makeToolResult(`Published /a/b/page.html at ${PAGE} (Version 1, version id x)`)}
+            />,
+        );
+        const card = await screen.findByRole('button', {name: 'Demo Page'});
+        fireEvent.click(card);
+        expect(openChatFile).toHaveBeenCalledWith('/a/b/page.html', PAGE);
+    });
+
+    it('makes the card of the page an update names before any result arrives', () => {
         render(<ArtifactRenderer toolUse={makeToolUse({url: PAGE, files: {}})} />);
-        expect(screen.getAllByText(PAGE)).toHaveLength(1);
+        expect(screen.getByRole('link')).toHaveAttribute('href', PAGE);
+    });
+
+    it('keeps the result of a call that publishes nothing', () => {
+        render(
+            <ArtifactRenderer
+                toolUse={makeToolUse({action: 'list'})}
+                toolResult={makeToolResult(`Showing 1 of 1: ${PAGE}`)}
+            />,
+        );
+        expect(screen.getByText(/Showing 1 of 1/)).toBeInTheDocument();
     });
 
     it('shows the result text', () => {

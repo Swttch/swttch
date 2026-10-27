@@ -18,6 +18,8 @@ import { SettingsButton } from '../SettingsButton';
 import { NewTabButton } from '../NewTabButton';
 import { AssetsButton } from '../AssetsButton';
 import { SideQuestionButton } from '../SideQuestionButton';
+import { SessionRailButton, SessionRailIcon } from '../SessionRailButton';
+import { BrowserButton, BrowserIcon } from '../BrowserButton';
 
 /**
  * One entry per item that can live in the header dock or the ⋮ overflow menu.
@@ -92,10 +94,22 @@ export const DOCK_ITEMS: readonly DockItemDef[] = [
     DockView: SideQuestionButton,
   },
   {
+    id: DockItemId.SESSION_RAIL,
+    labelKey: 'sessionRail.title',
+    icon: SessionRailIcon,
+    DockView: SessionRailButton,
+  },
+  {
     id: DockItemId.NEW_TAB,
     labelKey: 'sessionHeader.newTab.title',
     icon: PlusIcon,
     DockView: NewTabButton,
+  },
+  {
+    id: DockItemId.BROWSER,
+    labelKey: 'sessionHeader.browser.title',
+    icon: BrowserIcon,
+    DockView: BrowserButton,
   },
 ];
 

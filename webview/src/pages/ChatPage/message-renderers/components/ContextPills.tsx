@@ -1,6 +1,6 @@
 import React from 'react';
 import { Context, ContextType } from '../../../../types';
-import { getAdapter } from '../../../../adapters';
+import { openChatFile } from '@/utils/openChatFile';
 
 interface ContextPillsProps {
   context: Context[];
@@ -23,7 +23,7 @@ function getDisplayName(ctx: Context): string {
 
 function handleOpenFile(filePath: string | undefined) {
   if (!filePath) return;
-  getAdapter().openFile(filePath).catch((err) => {
+  openChatFile(filePath).catch((err) => {
     console.error('[ContextPills] Failed to open file:', err);
   });
 }

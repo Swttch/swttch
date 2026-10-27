@@ -17,8 +17,10 @@ export async function getFilePreviewHandler(
 ): Promise<void> {
   const path = message.payload?.path;
   const metadataOnly = message.payload?.metadataOnly === true;
+  // A file Claude sent with SendUserFile: read up to what Claude Desktop uploads, and from the kept copy if the original is gone.
+  const sentFile = message.payload?.sentFile === true;
   const preview = typeof path === 'string' && path !== ''
-    ? await readFilePreview(path, { metadataOnly })
+    ? await readFilePreview(path, { metadataOnly, sentFile })
     : { kind: 'none' as const };
 
   connections.sendTo(connectionId, MessageType.ACK, {

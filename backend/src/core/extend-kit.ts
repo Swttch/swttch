@@ -11,6 +11,8 @@ import { launcherFor, npmPrefixFor } from './install-coordinate';
 export { EXTEND_KIT_PACKAGE };
 /** The executable the package provides, which is how volta knows it. */
 const CCB_BINARY = 'ccb';
+/** The second executable the package provides: calls on the user's account (artifacts). */
+const EXT_BINARY = 'swttch-ext';
 
 /**
  * Locates the user's global @swttch/extend-kit install and RUNS it as `ccb`.
@@ -118,6 +120,21 @@ const CLOSE_TIMEOUT_MS = 5_000;
 
 let cachedRoots: string[] | null = null;
 let cachedEntry: string | null = null;
+let cachedExtEntry: string | null = null;
+let cachedExtCapabilities: string[] | null = null;
+let cachedExtAt = 0;
+/**
+ * How long the command's location and its list of calls are trusted. A user who updates the kit
+ * from a terminal (the new calls only exist in the new version) must see the new menu items
+ * without restarting the IDE; the probe is one short process, so asking again is cheap.
+ */
+const EXT_CACHE_MS = 30_000;
+function forgetStaleExt(): void {
+  if (Date.now() - cachedExtAt < EXT_CACHE_MS) return;
+  cachedExtEntry = null;
+  cachedExtCapabilities = null;
+  cachedExtAt = Date.now();
+}
 /**
  * What the installed kit says it supports, cached until something changes the install.
  *
@@ -348,7 +365,12 @@ async function candidateRoots(): Promise<string[]> {
  */
 async function resolveCcbEntry(): Promise<string> {
   if (cachedEntry) return cachedEntry;
+  cachedEntry = await resolveBinEntry(CCB_BINARY);
+  return cachedEntry;
+}
 
+/** The script a `bin` entry of the installed package names, or {@link ExtendKitMissingError}. */
+async function resolveBinEntry(binary: string): Promise<string> {
   const install = await getExtendKitInstallation();
   if (!install) throw new ExtendKitMissingError();
 
@@ -358,7 +380,7 @@ async function resolveCcbEntry(): Promise<string> {
     const manifest = JSON.parse(
       await readFile(join(packageDir, 'package.json'), 'utf8'),
     ) as { bin?: string | Record<string, string> };
-    relative = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.[CCB_BINARY];
+    relative = typeof manifest.bin === 'string' ? manifest.bin : manifest.bin?.[binary];
   } catch {
     throw new ExtendKitMissingError();
   }
@@ -366,8 +388,6 @@ async function resolveCcbEntry(): Promise<string> {
 
   const entry = join(packageDir, relative);
   if (!existsSync(entry)) throw new ExtendKitMissingError();
-
-  cachedEntry = entry;
   return entry;
 }
 
@@ -699,4 +719,100 @@ export function resetExtendKitCache(): void {
   cachedRoots = null;
   cachedEntry = null;
   cachedCapabilities = null;
+  cachedExtEntry = null;
+  cachedExtCapabilities = null;
+  cachedExtAt = 0;
+}
+
+/** What `swttch-ext api` answers: one object, whatever happened. Mirrors the kit's own shape. */
+export type ExtApiAnswer =
+  | { ok: true; data: unknown }
+  | { ok: false; error: { code: string; message: string; status?: number; hint?: string } };
+
+/** How long one `swttch-ext` call may take, a little over the kit's own 15-second budget per request plus its retry. */
+const EXT_CALL_TIMEOUT_MS = 40_000;
+
+/**
+ * What the installed kit's `swttch-ext` can do, as capability names (`api.frame.retitle`, ...).
+ *
+ * `installed` is false when the kit is missing or is older than the version that has the command;
+ * the capabilities are then empty, and the menu offers nothing it cannot do. A kit that is there
+ * and could not be run is reported as an error to the caller, not as "no capabilities": that is
+ * the distinction {@link readCapabilities} draws for `ccb`, for the same reason.
+ *
+ * @throws ExtendKitProbeFailedError when the command exists and could not be run.
+ */
+export async function getExtCapabilities(workingDir?: string): Promise<{ installed: boolean; capabilities: string[]; version: string | null }> {
+  forgetStaleExt();
+  const version = await getExtendKitVersion();
+  let entry: string;
+  try {
+    entry = cachedExtEntry ?? (cachedExtEntry = await resolveBinEntry(EXT_BINARY));
+  } catch {
+    return { installed: false, capabilities: [], version };
+  }
+  if (!cachedExtCapabilities) {
+    try {
+      const { stdout } = await ccbCommand(entry, ['--capabilities'], 15_000, workingDir, await ccbEnv(workingDir)).exec();
+      const parsed = JSON.parse(lastLine(stdout) ?? '{}') as { capabilities?: string[] };
+      cachedExtCapabilities = parsed.capabilities ?? [];
+    } catch (err) {
+      throw new ExtendKitProbeFailedError(err);
+    }
+  }
+  return { installed: true, capabilities: cachedExtCapabilities, version };
+}
+
+/**
+ * Run one `swttch-ext api` call and return its answer.
+ *
+ * The call runs in a child process, like every other use of the kit: the login that authorizes it
+ * is read over there and never crosses back, and this process sees only the JSON that comes out.
+ * Parameters go in as separate arguments, with no shell between, so a value cannot be read as
+ * anything but a value.
+ *
+ * The answer is the kit's own {ok, data} / {ok:false, error}. Two more codes are added for what
+ * the kit cannot say about itself: `extend_kit_missing` and `extend_kit_too_old`.
+ */
+export async function runExtApi(
+  service: string,
+  call: string,
+  params: Record<string, string>,
+  options: { yes?: boolean; workingDir?: string } = {},
+): Promise<ExtApiAnswer> {
+  const fail = (code: string, message: string): ExtApiAnswer => ({ ok: false, error: { code, message } });
+
+  let caps: Awaited<ReturnType<typeof getExtCapabilities>>;
+  try {
+    caps = await getExtCapabilities(options.workingDir);
+  } catch (err) {
+    return fail('extend_kit_unrunnable', err instanceof Error ? err.message : String(err));
+  }
+  if (!caps.installed) {
+    return fail('extend_kit_missing', `${EXTEND_KIT_PACKAGE} with swttch-ext is not installed`);
+  }
+  if (!caps.capabilities.includes(`api.${service}.${call}`)) {
+    return fail('extend_kit_too_old', `${EXTEND_KIT_PACKAGE} ${caps.version ?? ''} does not support "${service} ${call}"`.trim());
+  }
+
+  const entry = cachedExtEntry ?? (cachedExtEntry = await resolveBinEntry(EXT_BINARY));
+  const args = ['api', service, call];
+  for (const [name, value] of Object.entries(params)) args.push(`--${name}`, value);
+  if (options.yes) args.push('--yes');
+
+  let stdout = '';
+  try {
+    ({ stdout } = await ccbCommand(entry, args, EXT_CALL_TIMEOUT_MS, options.workingDir, await ccbEnv(options.workingDir)).exec());
+  } catch (err) {
+    // A call the server refused exits non-zero and still prints its JSON answer.
+    stdout = (err as { stdout?: string }).stdout ?? '';
+    if (!lastLine(stdout)) return fail('extend_kit_unrunnable', err instanceof Error ? err.message : String(err));
+  }
+  try {
+    const answer = JSON.parse(lastLine(stdout) ?? '') as ExtApiAnswer;
+    if (typeof answer === 'object' && answer !== null && 'ok' in answer) return answer;
+  } catch {
+    // Fall through: not an answer this module can read.
+  }
+  return fail('extend_kit_unreadable', 'swttch-ext answered with something that is not JSON');
 }

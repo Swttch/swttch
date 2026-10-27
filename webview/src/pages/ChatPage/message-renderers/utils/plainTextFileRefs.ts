@@ -18,7 +18,16 @@ const MASKED_SPANS =
  * starting in the middle of a larger token.
  */
 const PLAINTEXT_FILE_REF =
-  /(?<![\w@/.\-#])((?:\.{0,2}\/)?(?:[\w.-]+\/)*[\w.-]+\.[A-Za-z0-9]+)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)/g;
+  /(?<![\w@/.\-#])((?:\.{0,2}\/)?(?:[\w.-]+\/)*[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?(?![\w/-])/g;
+
+/**
+ * An inline code span that holds nothing but one such path (and its locator).
+ * Claude Desktop draws that as a link, not as code, so it is rewritten to one.
+ */
+const CODE_SPAN_PATH =
+  /`([^`\n]*\/[^`\n]*)`/g;
+const WHOLE_PATH =
+  /^((?:\.{0,2}\/)?(?:[\w.-]+\/)+[\w.-]+\.[A-Za-z][A-Za-z0-9]*)(?::(\d+)(?::(\d+))?|#L(\d+)(?:C(\d+))?(?:-L\d+(?:C\d+)?)?)?$/;
 
 /**
  * NUL wrapper for a masked span. A raw NUL never appears in chat markdown, so a
@@ -46,6 +55,23 @@ const MASK_SLOT = new RegExp(`${NUL}(\\d+)${NUL}`, 'g');
  *   URLs are never touched.
  */
 export function linkifyPlainTextFileRefs(markdown: string): string {
+  // A code span that is only a path becomes a link first (fenced blocks are left whole).
+  const pathCodeSpansAsLinks = markdown
+    .split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/)
+    .map((part, index) =>
+      index % 2 === 1
+        ? part
+        : part.replace(CODE_SPAN_PATH, (span, inner: string) => {
+            const match = WHOLE_PATH.exec(inner.trim());
+            if (!match) return span;
+            const [, path, colonLine, colonCol, anchorLine, anchorCol] = match;
+            const line = colonLine ?? anchorLine;
+            const column = colonCol ?? anchorCol;
+            return `[${inner.trim()}](${path}${line ? `#L${line}${column ? `C${column}` : ''}` : ''})`;
+          }),
+    )
+    .join('');
+  markdown = pathCodeSpansAsLinks;
   const masked: string[] = [];
   const withoutSpans = markdown.replace(
     MASKED_SPANS,
@@ -60,7 +86,8 @@ export function linkifyPlainTextFileRefs(markdown: string): string {
       if (!path.includes('/')) return full;
       const line = colonLine ?? anchorLine;
       const column = colonCol ?? anchorCol;
-      const anchor = `#L${line}${column ? `C${column}` : ''}`;
+      // A path with no line locator opens at the top of the file.
+      const anchor = line ? `#L${line}${column ? `C${column}` : ''}` : '';
       return `[${full}](${path}${anchor})`;
     },
   );

@@ -41,16 +41,27 @@ describe('linkifyPlainTextFileRefs', () => {
     expect(linkifyPlainTextFileRefs('reach example.com:8080 now')).toBe('reach example.com:8080 now');
   });
 
-  it('does NOT linkify a path without a line locator', () => {
-    expect(linkifyPlainTextFileRefs('open src/app.ts please')).toBe('open src/app.ts please');
+  it('linkifies a path with no line locator, which opens at the top of the file', () => {
+    expect(linkifyPlainTextFileRefs('open src/app.ts please')).toBe('open [src/app.ts](src/app.ts) please');
+    expect(linkifyPlainTextFileRefs('Published /private/tmp/demo/page.html at')).toBe(
+      'Published [/private/tmp/demo/page.html](/private/tmp/demo/page.html) at',
+    );
+  });
+
+  it('does not take a sentence full stop, a version or a fraction for part of a path', () => {
+    expect(linkifyPlainTextFileRefs('see src/app.ts.')).toBe('see [src/app.ts](src/app.ts).');
+    expect(linkifyPlainTextFileRefs('about 1/2.5 of it')).toBe('about 1/2.5 of it');
   });
 
   it('does NOT linkify a bare time like 10:30', () => {
     expect(linkifyPlainTextFileRefs('meet at 10:30 today')).toBe('meet at 10:30 today');
   });
 
-  it('leaves a ref inside inline code untouched', () => {
-    expect(linkifyPlainTextFileRefs('use `src/app.ts:42` verbatim')).toBe('use `src/app.ts:42` verbatim');
+  it('turns an inline code span that is only a path into a link, and leaves other code alone', () => {
+    expect(linkifyPlainTextFileRefs('use `src/app.ts:42` here')).toBe('use [src/app.ts:42](src/app.ts#L42) here');
+    expect(linkifyPlainTextFileRefs('use `demo/page.html` here')).toBe('use [demo/page.html](demo/page.html) here');
+    expect(linkifyPlainTextFileRefs('run `cat src/app.ts` now')).toBe('run `cat src/app.ts` now');
+    expect(linkifyPlainTextFileRefs('a `page.html` b')).toBe('a `page.html` b');
   });
 
   it('leaves a ref inside a fenced block untouched', () => {

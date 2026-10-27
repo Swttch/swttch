@@ -90,6 +90,13 @@
       "remaining": "{{percent}}% de contexto restante hasta la compactación automática.",
       "clickToCompact": "Haz clic para compactar ahora."
     },
+    "artifacts": {
+      "fallbackTitle": "Artefacto",
+      "count": "{{total}} artefactos",
+      "listTitle": "Artefactos de esta sesión",
+      "openOne": "Abrir en el navegador · Ctrl+]",
+      "openLatest": "Elige uno para abrirlo en el navegador · Ctrl+] abre el más reciente"
+    },
     "dragOverlay": {
       "dropHere": "Suelta archivos o carpetas aquí"
     },
@@ -242,6 +249,9 @@
       "expandSubtree": "Expandir {{name}}",
       "refreshTitle": "Actualizar la lista",
       "includeNested": "Incluir subproyectos"
+    },
+    "browser": {
+      "title": "Browser"
     }
   },
   "acceptPlan": {
@@ -731,6 +741,8 @@
     "openScreen": "Ver los recursos de esta sesión",
     "showAll": "Ver todos",
     "sponsorHint": "Pasar a los recursos de otros mensajes es un pequeño detalle que reservamos a nuestros patrocinadores",
+    "outputsTitle": "Creado por Claude",
+    "sentFiles": "Archivos enviados",
     "pinToDock": "Anclar al dock",
     "unpinFromDock": "Desanclar del dock"
   },
@@ -756,6 +768,178 @@
     "openFailed": "No se pudo abrir el enlace",
     "openInBrowser": "Abrir en el navegador"
   },
+  "sessionRail": {
+    "title": "Panel de sesión",
+    "environment": "Entorno",
+    "context": "Contexto",
+    "outputs": "Resultados",
+    "outputsEmpty": "Todavía no hay nada. Los archivos, imágenes y páginas que Claude crea para ti aparecen en esta lista.",
+    "showMore": "Mostrar más",
+    "contextUsed": "{{percent}} % usado",
+    "contextLoading": "Cargando el uso...",
+    "contextUnavailable": "No se pudo leer el uso.",
+    "contextNote": "Última actualización: ahora. Se actualiza cuando termina la respuesta actual.",
+    "toolImage": "Imagen de {{tool}}"
+  },
+  "sentFiles": {
+    "sharing": "Compartiendo archivos…",
+    "download": "Descargar",
+    "downloadFailed": "No se pudo guardar el archivo",
+    "opened": "{{name}} abierto"
+  },
+  "linkCard": {
+    "openedInBrowser": "Abierto en el navegador",
+    "open": "Abrir",
+    "more": "Más opciones",
+    "loading": "Cargando…"
+  },
+  "filePreview": {
+    "label": "Vista previa de {{name}}",
+    "close": "Cerrar",
+    "openInEditor": "Abrir en el editor",
+    "openWithSystemApp": "Abrir con la aplicación del sistema",
+    "loading": "Cargando…",
+    "unsupported": "Este tipo de archivo no se puede previsualizar aquí.",
+    "tooLarge": "Este archivo pesa {{size}} y supera los {{limit}} que puede mostrar la vista previa. Ábrelo en el editor o con la aplicación del sistema.",
+    "unreadable": "No se pudo leer este archivo. Puede que se haya movido o eliminado.",
+    "unplayable": "Este vídeo no se puede reproducir aquí. Puede que el navegador integrado del IDE no admita su codificación. Ábrelo con la aplicación del sistema.",
+    "openPublished": "Abrir la página publicada",
+    "expand": "Ampliar",
+    "collapse": "Reducir",
+    "download": "Exportar",
+    "copySource": "Copiar el código de la página",
+    "reload": "Recargar",
+    "copied": "Código de la página copiado",
+    "resize": "Cambiar tamaño",
+    "showSource": "Ver el código",
+    "showRendered": "Ver el resultado",
+    "modified": "Modificado {{when}}",
+    "linkTitle": "¿Abrir este enlace?",
+    "linkMessage": "Esta página quiere abrir {{url}}. Se abrirá en {{browser}}.",
+    "linkOpen": "Abrir en el navegador",
+    "back": "Atrás",
+    "forward": "Adelante",
+    "more": "Más",
+    "closeOthers": "Cerrar las otras pestañas",
+    "closeTab": "Cerrar pestaña",
+    "address": "Dirección de la página",
+    "tabs": "Pestañas del navegador",
+    "newTab": "New tab",
+    "blankTitle": "Browse with Claude",
+    "blankBody": "Enter a URL or ask Claude to open a site. Claude can read, click, and type.",
+    "annotate": "Annotate",
+    "annotatePen": "Draw",
+    "annotateShape": "Shape",
+    "annotateShapes": "Shapes",
+    "annotateText": "Text",
+    "annotateExit": "Exit annotation",
+    "selectElement": "Select element",
+    "annotateAddToChat": "Add to chat",
+    "annotateColor": "Color",
+    "annotateWidth": "Line width",
+    "elementCopied": "Element copied",
+    "shape": {
+      "rectangle": "Rectangle",
+      "ellipse": "Ellipse",
+      "arrow": "Arrow"
+    },
+    "viewport": {
+      "responsive": "Responsive",
+      "mobile": "Mobile",
+      "tablet": "Tablet",
+      "laptop": "Laptop",
+      "desktop": "Desktop"
+    },
+    "menu": {
+      "openInBrowser": "Open in {{browser}}",
+      "copyUrl": "Copy URL",
+      "copied": "Copied",
+      "saveScreenshot": "Save screenshot",
+      "openHtmlFile": "Open HTML file…",
+      "viewport": "Viewport",
+      "openLinksBuiltIn": "Open links in built-in browser",
+      "autoOpenFiles": "Auto-open files Claude writes",
+      "autoCheck": "Check for changes automatically",
+      "allowedSites": "Manage allowed sites…",
+      "cookies": "Cookies",
+      "importCookies": "Import cookies…",
+      "keepCookies": "Keep cookies",
+      "shared": "Shared",
+      "clearData": "Clear browsing data",
+      "unavailable": "This panel has no browser engine of its own, so this is not available here.",
+      "failed": "That did not work.",
+      "openInBrowserUnknown": "Open in browser",
+      "hint": {
+        "openInBrowser": "Opens this page's file in your computer's web browser.",
+        "copyUrl": "Copies the address in the address bar.",
+        "saveScreenshot": "Saves the page as shown as an image.",
+        "openHtmlFile": "Pick an HTML file on this computer and open it in a new tab.",
+        "viewport": "Choose the screen size the page is drawn at.",
+        "openLinksBuiltIn": "Opens the page's links inside this panel.",
+        "autoOpenFiles": "Opens HTML files Claude writes in a tab automatically.",
+        "autoCheck": "Loads the page again when its file changes.",
+        "allowedSites": "Manage the sites Claude may work with.",
+        "importCookies": "Brings in another browser's cookies.",
+        "keepCookies": "Choose how long cookies stay after a tab closes.",
+        "clearData": "Deletes this panel's cookies and site data.",
+        "annotate": "Draw on the page to show Claude what you mean."
+      },
+      "browserFallback": "tu navegador web",
+      "showAnnotate": "Show annotation tools",
+      "hideAnnotate": "Hide annotation tools",
+      "screenshotSaved": "Screenshot saved: {{path}}",
+      "screenshotDownloaded": "Screenshot downloaded."
+    },
+    "error": {
+      "title": "Unable to load preview",
+      "titleUnsupported": "This file cannot be previewed",
+      "titleTooLarge": "This file is too large to preview",
+      "deleted": "The file may have been deleted or moved.",
+      "back": "Back to browser"
+    },
+    "addressPlaceholder": "Enter a URL",
+    "blankDevServerPrompt": "Want to preview your app?",
+    "blankDevServerAction": "Detect dev servers",
+    "blankDevServerNone": "No running dev server was found.",
+    "webUnsupported": "Claude can't support the content of this page.",
+    "webBlocked": {
+      "title": "This site cannot be opened inside this panel",
+      "detail": "For security, this site does not allow its pages to be shown inside another program's window. It is a setting meant to stop fake screens that target a signed-in account, so it cannot be changed from this panel.",
+      "open": "Open in {{browser}}"
+    },
+    "tool": {
+      "select": "Select element",
+      "pen": "Pen",
+      "line": "Line",
+      "arrow": "Arrow",
+      "rect": "Rectangle",
+      "ellipse": "Ellipse",
+      "text": "Text",
+      "step": "Step"
+    },
+    "color": {
+      "red": "Red",
+      "blue": "Blue",
+      "green": "Green",
+      "black": "Black",
+      "white": "White"
+    },
+    "width": {
+      "thin": "Thin",
+      "medium": "Medium",
+      "thick": "Thick",
+      "extraThick": "Extra thick"
+    },
+    "annotationTool": "Annotation tool",
+    "shapes": "Shapes",
+    "inkColor": "Ink color",
+    "lineWidth": "Line width",
+    "undo": "Undo",
+    "redo": "Redo",
+    "clearAll": "Clear all",
+    "exitSelection": "Exit selection mode",
+    "selectElementDetail": "Click an element on the page to add it."
+  },
   "fileLink": {
     "copyDone": "Ruta copiada",
     "copyFailed": "No se pudo copiar la ruta",
@@ -763,5 +947,40 @@
     "open": "Abrir",
     "openWithSystemApp": "Abrir con la aplicación del sistema",
     "showInFileManager": "Mostrar en el administrador de archivos"
+  },
+  "artifactChip": {
+    "label": "Artefacto",
+    "untitled": "Sin título"
+  },
+  "artifactMenu": {
+    "switch": "Cambiar de artefacto",
+    "madeByMe": "Artefacto que creé",
+    "updated": "Actualizado {{when}}",
+    "copyMarkdown": "Copiar como Markdown",
+    "rename": "Renombrar",
+    "duplicate": "Duplicar",
+    "share": "Compartir",
+    "openOnWeb": "Abrir en la web",
+    "pin": "Fijar",
+    "unpin": "Desfijar",
+    "report": "Denunciar artefacto",
+    "delete": "Eliminar artefacto",
+    "deleteTitle": "¿Eliminar «{{name}}»?",
+    "deleteMessage": "Su enlace dejará de funcionar para todos y no se podrá recuperar.",
+    "deleted": "Artefacto eliminado",
+    "renamed": "Renombrado",
+    "pinned": "Fijado",
+    "unpinned": "Desfijado",
+    "markdownCopied": "Copiado como Markdown",
+    "failed": "No se pudo",
+    "checking": "Comprobando…",
+    "kitMissing": "Instala el kit de extensión para usar esto.",
+    "kitTooOld": "Actualiza el kit de extensión para usar esto.",
+    "notLinked": "Este artefacto no está en la lista de tu cuenta.",
+    "notOwner": "Solo el propietario puede hacerlo.",
+    "unsupported": "Todavía no es compatible.",
+    "notLoaded": "La página aún no se ha cargado.",
+    "duplicated": "Copia creada: {{name}}",
+    "cannotCopy": "Este artefacto no se puede duplicar"
   }
 }

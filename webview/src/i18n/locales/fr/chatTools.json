@@ -2,6 +2,7 @@
   "tool": {
     "in": "IN",
     "out": "OUT",
+    "artifactFallbackTitle": "Artefact",
     "softWrap": {
       "wrap": "Renvoyer les lignes longues",
       "unwrap": "Arrêter le renvoi"
@@ -338,5 +339,8 @@
         "query": "requête"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }

@@ -7,15 +7,21 @@ import {
   EdgeSponsorHint,
   LearnMoreButton,
 } from '@/components/ImageLightbox/SponsorGateNotice';
-import { assetKey, useSessionAssets, useSessionAssetLoader } from '@/hooks/useSessionAssets';
+import { assetKey, useSessionAssets } from '@/hooks/useSessionAssets';
+import { outputKey, useSessionOutputs } from '@/hooks/useSessionOutputs';
+import { useSessionPictureLoader, useSessionPictures } from '@/hooks/useSessionPictures';
+import { getAdapter } from '@/adapters';
+import { openChatFile } from '@/utils/openChatFile';
+import { toolLabel } from '@/utils/toolLabel';
 import { useSponsorStatus } from '@/hooks/queries/useSponsorStatus';
-import { SponsorGate, SponsorGateStep, SponsorGateSurface, type SessionAsset } from '@/shared';
+import { SponsorGate, SponsorGateStep, SponsorGateSurface, type SessionAsset, type SessionOutput } from '@/shared';
 import { reportSponsorGate } from '@/utils/reportSponsorGate';
 import { useTranslation } from '@/i18n';
 import { useDockLayout } from '@/pages/ChatPage/SessionHeader/dock/useDockLayout';
 import { toggleDockVisible } from '@/pages/ChatPage/SessionHeader/dock/toggleDockVisible';
 import { DockItemId } from '@/types/settings';
 import { AssetThumbnail } from './AssetThumbnail';
+import { OutputTile } from './OutputTile';
 
 interface Props {
   onClose: () => void;
@@ -54,6 +60,27 @@ export function groupByMessage(assets: SessionAsset[]): AssetGroup[] {
   return groups;
 }
 
+/** One tool result and the outputs it produced. */
+export interface OutputGroup {
+  entryUuid: string;
+  timestamp: string | null;
+  outputs: SessionOutput[];
+}
+
+/** Folds the flat outputs index back into the entries that produced them. */
+export function groupOutputsByEntry(outputs: SessionOutput[]): OutputGroup[] {
+  const groups: OutputGroup[] = [];
+  for (const output of outputs) {
+    const last = groups[groups.length - 1];
+    if (last && last.entryUuid === output.entryUuid) {
+      last.outputs.push(output);
+      continue;
+    }
+    groups.push({ entryUuid: output.entryUuid, timestamp: output.timestamp, outputs: [output] });
+  }
+  return groups;
+}
+
 function formatTime(timestamp: string | null): string {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -72,13 +99,32 @@ export function AssetsModal(props: Props) {
   const { onClose } = props;
   const { t } = useTranslation('chat');
   const assets = useSessionAssets(true);
-  const { loaded, ensure } = useSessionAssetLoader();
   const { isSponsor } = useSponsorStatus();
 
   const [openedKey, setOpenedKey] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const groups = useMemo(() => groupByMessage(assets ?? []), [assets]);
+
+  // What Claude made: pictures its tools returned, files it sent, pages it published.
+  const outputs = useSessionOutputs(true);
+  // One loader and one list of pictures for the whole screen, so the viewer can step from what you attached into
+  // what Claude made and back, and a tile and the viewer never fetch the same picture twice.
+  const { loaded, ensureAsset, ensureOutput, ensure: ensurePicture } = useSessionPictureLoader();
+  const pictures = useSessionPictures(true);
+  const outputGroups = useMemo(() => groupOutputsByEntry(outputs ?? []), [outputs]);
+  const openOther = (output: SessionOutput) => {
+    if (output.kind === 'artifact') void getAdapter().openUrl(output.url);
+    else if (output.kind === 'file') openChatFile(output.path);
+  };
+  const outputCaption = (group: OutputGroup): string => {
+    const first = group.outputs[0];
+    if (first.kind === 'image') return toolLabel(first.tool);
+    // The tile below already names the page, so the caption names the kind.
+    if (first.kind === 'artifact') return t('chatInput.artifacts.fallbackTitle');
+    return t('assets.sentFiles');
+  };
+  const total = (assets?.length ?? 0) + (outputs?.length ?? 0);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -100,16 +146,14 @@ export function AssetsModal(props: Props) {
 
   // What the viewer may step through, following the same rule as the transcript:
   // a sponsor crosses the session, anyone else stays inside the message.
-  const opened = useMemo(
-    () => (assets ?? []).find((a) => assetKey(a) === openedKey) ?? null,
-    [assets, openedKey],
-  );
+  const allPictures = pictures ?? [];
+  const opened = useMemo(() => allPictures.find((p) => p.key === openedKey) ?? null, [allPictures, openedKey]);
   const scope = useMemo(() => {
     if (!opened) return [];
-    return isSponsor ? (assets ?? []) : (assets ?? []).filter((a) => a.entryUuid === opened.entryUuid);
-  }, [opened, isSponsor, assets]);
+    return isSponsor ? allPictures : allPictures.filter((p) => p.entryUuid === opened.entryUuid);
+  }, [opened, isSponsor, allPictures]);
 
-  const lockedCount = opened && !isSponsor ? (assets?.length ?? 0) - scope.length : 0;
+  const lockedCount = opened && !isSponsor ? allPictures.length - scope.length : 0;
 
   /*
     Counted once per viewer, exactly as the transcript does it. This screen used
@@ -144,9 +188,9 @@ export function AssetsModal(props: Props) {
                   text reads as smaller than the text beside it. */}
               <PhotoIcon className="w-5 h-5 text-text-secondary" />
               {t('assets.title')}
-              {assets && assets.length > 0 && (
+              {total > 0 && (
                 <span className="text-xs font-normal text-text-tertiary tabular-nums">
-                  {assets.length}
+                  {total}
                 </span>
               )}
             </h2>
@@ -193,7 +237,7 @@ export function AssetsModal(props: Props) {
           )}
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-            {assets && assets.length === 0 && (
+            {assets && assets.length === 0 && outputs && outputs.length === 0 && (
               <p className="text-sm text-text-tertiary text-center py-10">{t('assets.empty')}</p>
             )}
 
@@ -212,8 +256,34 @@ export function AssetsModal(props: Props) {
                     <AssetThumbnail
                       key={assetKey(asset)}
                       src={loaded[assetKey(asset)] ?? null}
-                      onNeeded={() => ensure(asset)}
+                      onNeeded={() => ensureAsset(asset)}
                       onOpen={() => setOpenedKey(assetKey(asset))}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {outputGroups.length > 0 && (
+              <h3 className="pt-2 text-xs font-medium text-text-secondary">{t('assets.outputsTitle')}</h3>
+            )}
+            {outputGroups.map((group) => (
+              <div key={`${group.entryUuid}:${group.outputs[0].kind}`} className="space-y-2">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-[0.6923rem] text-text-tertiary tabular-nums shrink-0">
+                    {formatTime(group.timestamp)}
+                  </span>
+                  <span className="text-xs text-text-secondary truncate">{outputCaption(group)}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.outputs.map((output) => (
+                    <OutputTile
+                      key={outputKey(output)}
+                      output={output}
+                      src={loaded[outputKey(output)] ?? null}
+                      onNeeded={() => ensureOutput(output)}
+                      onOpenPicture={() => setOpenedKey(outputKey(output))}
+                      onOpenOther={() => openOther(output)}
                     />
                   ))}
                 </div>
@@ -225,12 +295,12 @@ export function AssetsModal(props: Props) {
 
       {opened && (
         <ImageLightbox
-          srcs={scope.map((a) => loaded[assetKey(a)] ?? null)}
-          initialIndex={Math.max(scope.findIndex((a) => assetKey(a) === openedKey), 0)}
+          srcs={scope.map((p) => loaded[p.key] ?? null)}
+          initialIndex={Math.max(scope.findIndex((p) => p.key === openedKey), 0)}
           onClose={() => setOpenedKey(null)}
           onIndexChange={(i) => {
-            const asset = scope[i];
-            if (asset) ensure(asset);
+            const picture = scope[i];
+            if (picture) ensurePicture(picture);
           }}
           // The same notice the transcript shows, from the same component. Built
           // separately, the two drifted: this one lost its link and its report.

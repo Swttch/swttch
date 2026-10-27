@@ -2,6 +2,7 @@
   "tool": {
     "in": "ВХОД",
     "out": "ВЫХОД",
+    "artifactFallbackTitle": "Артефакт",
     "softWrap": {
       "wrap": "Переносить длинные строки",
       "unwrap": "Отключить перенос"
@@ -346,5 +347,8 @@
         "query": "запрос"
       }
     }
+  },
+  "crossSessionMessage": {
+    "title": "Message received from"
   }
 }
