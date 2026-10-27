@@ -188,6 +188,16 @@ intellijPlatform {
             untilBuild = provider { null }
         }
         changeNotes = """
+            <h3>0.34.9 - Find in chat, mermaid diagrams, Artifact preview panes, and commit message generation</h3>
+            <ul>
+                <li>Add search within chat across the whole session (#531, reported by @0vvland)</li>
+                <li>Add rendering of mermaid code in replies as diagrams (#556, reported by @brtbrt)</li>
+                <li>Add preview panes for Artifacts and files inside the IDE, with element selection, like Claude Code Desktop (#593)</li>
+                <li>Add commit message generation for the selected changes (#597 by @ylz4647)</li>
+                <li>Fix the Effort slider sticking on Low when the settings file cannot be read, and explain why it cannot be read (#595, reported by @i-kulbitski)</li>
+                <li>Keep Effort levels per model and add an Auto step (#604, reported by @gromran)</li>
+                <li>Fix chat tabs closed by a plugin update not coming back (#603, reported by @HawkOnPK)</li>
+            </ul>
             <h3>0.34.8 - Fix copying on Linux, add /slides, and skip alerts for the session you are viewing</h3>
             <ul>
                 <li>Fix text copied in chat not reaching the editor or other apps on Linux (Wayland) (#589 by @mikemikimike, reported by @stefano-beyondoc)</li>
